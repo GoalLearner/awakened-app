@@ -1,0 +1,9 @@
+# Claude session data
+.claude/
+
+# Stray files
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db

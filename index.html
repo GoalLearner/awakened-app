@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Habits">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Awakened</title>
+  <link rel="stylesheet" href="styles.css?v=80">
+</head>
+<body>
+  <!-- Welcome / cinematic intro screen (first launch only) -->
+  <div id="welcome-screen" class="welcome-screen hidden">
+    <canvas id="wc-canvas" class="wc-canvas"></canvas>
+    <div class="wc-beam"></div>
+    <div class="wc-content">
+      <div id="wc-opener"  class="wc-opener">A new hunter awakens...</div>
+      <div class="wc-title-wrap">
+        <div id="wc-title" class="wc-title">AWAKENED</div>
+        <div id="wc-shockwave" class="wc-shockwave"></div>
+      </div>
+      <div id="wc-tagline" class="wc-tagline">Your daily habits. Your character. Your legacy.</div>
+      <div id="wc-input-wrap" class="wc-input-wrap">
+        <input id="wc-name-input" class="wc-name-input" type="text"
+               placeholder="Enter your hunter name..." maxlength="20"
+               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+      </div>
+      <button id="wc-start-btn" class="wc-start-btn" disabled>START MY QUEST</button>
+      <div id="wc-quote" class="wc-quote">&#8220;90 days of consistency creates a permanent change in your brain.&#8221;</div>
+    </div>
+    <div id="wc-flash" class="wc-flash"></div>
+  </div>
+
+  <!-- Choose Your Path screen -->
+  <div id="path-screen" class="path-screen hidden">
+    <div class="path-header">
+      <div class="path-title">CHOOSE YOUR PATH</div>
+      <div class="path-subtitle">Pick a starting pack or build your own.</div>
+    </div>
+    <div id="path-cards" class="path-cards"></div>
+    <div class="path-note">⚡ Morning Routine unlocks the <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
+    <div class="path-footer">
+      <button id="path-continue-btn" class="path-continue-btn" disabled>CONTINUE →</button>
+    </div>
+  </div>
+
+  <!-- Path screen flash overlay -->
+  <div id="path-flash-overlay" class="path-flash-overlay"></div>
+
+
+  <!-- Onboarding selection screen -->
+  <div id="onboarding" class="onboarding hidden">
+    <div class="ob-header">
+      <h1 class="ob-title">Choose Your Habits</h1>
+      <p class="ob-subtitle">Select the habits you want to build.<br>You can always add more later.</p>
+      <div class="ob-name-row">
+        <label class="ob-name-label" for="ob-name-input">Your Name</label>
+        <input id="ob-name-input" class="ob-name-input" type="text" placeholder="e.g. Jin-Woo" maxlength="20"
+               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+      </div>
+    </div>
+    <div id="ob-list" class="ob-list"></div>
+    <div class="ob-inspiration">
+      <p class="ob-inspiration-quote">"Win the morning, win the day."</p>
+      <p class="ob-inspiration-attr">— Tim Ferriss</p>
+    </div>
+    <div class="ob-footer">
+      <button id="ob-start-btn" class="ob-start-btn" disabled>Start Tracking</button>
+    </div>
+  </div>
+
+  <div id="app">
+    <header>
+      <div class="header-top">
+        <h1>Awakened</h1>
+        <div class="header-right">
+          <span id="current-date" class="date-label"></span>
+          <button id="settings-btn" class="settings-btn" aria-label="Settings">⚙️</button>
+        </div>
+      </div>
+
+      <!-- Rank section -->
+      <div class="rank-section">
+        <div class="rank-left">
+          <span id="rank-badge" class="rank-badge">E</span>
+          <span id="rank-label" class="rank-label">E Rank</span>
+          <span id="rank-pts" class="rank-pts">0 pts</span>
+        </div>
+        <div id="rank-next" class="rank-next">100 to D</div>
+      </div>
+      <div class="rank-track">
+        <div id="rank-bar" class="rank-fill"></div>
+      </div>
+
+      <!-- Double XP weekend banner -->
+      <div id="double-xp-banner" class="double-xp-banner hidden">⚡ DOUBLE XP WEEKEND 🔥</div>
+
+      <!-- Daily progress -->
+      <div class="progress-section">
+        <div class="progress-top-row">
+          <div class="progress-text">
+            <span id="completed-count" class="prog-done">0</span><span class="prog-sep">/</span><span id="total-count" class="prog-total">0</span><span class="prog-label">today</span>
+          </div>
+          <div id="perfect-streak-display" class="perfect-streak-display">
+            <span class="ps-fire">🔥</span><span class="ps-count">0</span>
+          </div>
+        </div>
+        <div class="progress-track">
+          <div id="progress-bar" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Daily motivational quote -->
+      <div id="daily-quote" class="daily-quote hidden"></div>
+
+      <!-- Streak danger warning (11 PM) -->
+      <div id="streak-danger" class="streak-danger hidden">
+        <span class="sd-icon">⚠️</span>
+        <span class="sd-text">Under 1 hour left — finish your habits!</span>
+        <button id="streak-danger-dismiss" class="sd-dismiss" aria-label="Dismiss">✕</button>
+      </div>
+    </header>
+
+    <!-- Tab bar -->
+    <nav class="tab-bar">
+      <button id="tab-profile"  class="tab-btn active" data-tab="profile"  aria-label="Profile">🗡️</button>
+      <button id="tab-habits"   class="tab-btn"        data-tab="habits"   aria-label="Habits">✅</button>
+      <button id="tab-stats"    class="tab-btn"        data-tab="stats"    aria-label="Stats">📊</button>
+      <button id="tab-history"  class="tab-btn"        data-tab="history"  aria-label="History">📅</button>
+      <button id="tab-quests"   class="tab-btn"        data-tab="quests"   aria-label="Quests">⚔️</button>
+      <button id="tab-items"    class="tab-btn"        data-tab="items"    aria-label="Items">🎴</button>
+      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Social">👥</button>
+    </nav>
+
+    <!-- Profile panel (status card only) -->
+    <div id="profile-panel" class="tab-panel" data-panel="profile">
+      <div id="status-content" class="status-content"></div>
+    </div>
+
+    <!-- Stats panel -->
+    <div id="stats-panel" class="tab-panel hidden" data-panel="stats">
+      <div id="stats-content" class="stats-content"></div>
+    </div>
+
+    <!-- Habits panel -->
+    <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
+      <div id="compound-progress" class="compound-progress hidden"></div>
+      <ul id="habit-list" class="habit-list"></ul>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-icon">✓</div>
+        <p>No habits yet.<br>Tap below to add your first.</p>
+      </div>
+    </main>
+
+    <!-- Achievements panel -->
+    <div id="achievements-panel" class="tab-panel hidden" data-panel="achievements">
+      <div id="achievements-grid" class="achievements-grid"></div>
+    </div>
+
+    <!-- History panel -->
+    <div id="history-panel" class="tab-panel hidden" data-panel="history">
+      <div id="history-content" class="history-content"></div>
+    </div>
+
+    <!-- Quests panel (coming soon) -->
+    <div id="quests-panel" class="tab-panel hidden" data-panel="quests">
+      <div class="cs-screen">
+        <div class="cs-icon">⚔️</div>
+        <h2 class="cs-title">QUESTS</h2>
+        <div class="cs-version">Coming in Version 2.0</div>
+        <p class="cs-desc">Enter dungeons. Fight bosses. Earn rare drops. Your rank determines which battles you can enter.</p>
+      </div>
+    </div>
+
+    <!-- Items panel (coming soon) -->
+    <div id="items-panel" class="tab-panel hidden" data-panel="items">
+      <div class="cs-screen">
+        <div class="cs-icon">🎴</div>
+        <h2 class="cs-title">ITEMS</h2>
+        <div class="cs-version">Coming in Version 2.0</div>
+        <p class="cs-desc">Collect armor, weapons and cosmetics from dungeon drops. Equip them to your character.</p>
+        <div class="cs-cards-row">
+          <div class="cs-card cs-card--common">
+            <div class="cs-card-inner">
+              <div class="cs-card-rarity">Common</div>
+              <div class="cs-card-lock">🔒</div>
+            </div>
+          </div>
+          <div class="cs-card cs-card--rare">
+            <div class="cs-card-inner">
+              <div class="cs-card-rarity">Rare</div>
+              <div class="cs-card-lock">🔒</div>
+            </div>
+          </div>
+          <div class="cs-card cs-card--legendary">
+            <div class="cs-card-inner">
+              <div class="cs-card-rarity">Legendary</div>
+              <div class="cs-card-lock">🔒</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social panel (coming soon) -->
+    <div id="social-panel" class="tab-panel hidden" data-panel="social">
+      <div class="cs-screen">
+        <div class="cs-icon">👥</div>
+        <h2 class="cs-title">SOCIAL</h2>
+        <div class="cs-version">Coming in Version 2.0</div>
+        <p class="cs-desc">Challenge friends. Climb the global leaderboard. See who is truly Awakened.</p>
+        <div class="cs-leaderboard">
+          <div class="cs-lb-header">
+            <span class="cs-lb-rank">#</span>
+            <span class="cs-lb-name">Hunter</span>
+            <span class="cs-lb-pts">XP</span>
+          </div>
+          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">1</span><span class="cs-lb-name">ShadowMonarch</span><span class="cs-lb-pts">28,450</span></div>
+          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">2</span><span class="cs-lb-name">IronWill_99</span><span class="cs-lb-pts">21,330</span></div>
+          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">3</span><span class="cs-lb-name">AwakenedOne</span><span class="cs-lb-pts">18,720</span></div>
+          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">4</span><span class="cs-lb-name">DisciplineKing</span><span class="cs-lb-pts">15,100</span></div>
+          <div class="cs-lb-lock">🔒 Locked</div>
+        </div>
+      </div>
+    </div>
+
+    <footer id="main-footer">
+      <button id="add-habit-btn" class="add-btn">
+        <span class="add-plus">+</span>
+        <span>Add Habits</span>
+      </button>
+    </footer>
+  </div>
+
+  <!-- Context menu -->
+  <div id="ctx-overlay" class="ctx-overlay hidden"></div>
+  <div id="ctx-menu" class="ctx-menu hidden">
+    <button id="ctx-edit" class="ctx-item">✏️ Edit Habit</button>
+    <button id="ctx-note" class="ctx-item">📝 <span id="ctx-note-label">Add Note</span></button>
+    <button id="ctx-schedule" class="ctx-item">📅 Schedule</button>
+    <button id="ctx-delete" class="ctx-item ctx-danger">🗑️ Delete</button>
+  </div>
+
+  <!-- Note modal (read-only coaching note) -->
+  <div id="note-overlay" class="modal-overlay hidden"></div>
+  <div id="note-modal" class="modal hidden">
+    <div id="note-modal-header" class="note-modal-header">
+      <span id="note-modal-emoji" class="note-modal-emoji"></span>
+      <span id="note-modal-name" class="note-modal-name"></span>
+    </div>
+    <div id="note-text-display" class="note-text-display"></div>
+    <div class="modal-actions" style="justify-content:center">
+      <button id="note-close-btn" class="btn-primary" style="flex:1">Close</button>
+    </div>
+  </div>
+
+  <!-- Edit modal -->
+  <div id="modal-overlay" class="modal-overlay hidden"></div>
+  <div id="edit-modal" class="modal hidden">
+    <h2>Edit Habit</h2>
+    <div class="emoji-row">
+      <button id="edit-emoji-btn" class="emoji-btn" type="button" aria-label="Pick emoji"></button>
+      <span class="emoji-row-hint">Tap to choose an emoji</span>
+    </div>
+    <input id="edit-input" type="text" maxlength="60"
+           autocomplete="off" autocorrect="off" autocapitalize="sentences">
+    <div class="diff-row" id="edit-diff-row">
+      <button class="diff-btn" data-diff="easy">Easy</button>
+      <button class="diff-btn" data-diff="medium">Medium</button>
+      <button class="diff-btn" data-diff="hard">Hard</button>
+      <button class="diff-btn" data-diff="legendary">Legendary</button>
+    </div>
+    <div id="edit-goal-row" class="edit-goal-row hidden">
+      <span class="edit-goal-label" id="edit-goal-label">Goal</span>
+      <div class="edit-goal-stepper">
+        <button id="edit-goal-dec" class="hd-step-btn" type="button">−</button>
+        <span id="edit-goal-val" class="hd-step-val"></span>
+        <button id="edit-goal-inc" class="hd-step-btn" type="button">+</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="cancel-edit-btn" class="btn-ghost">Cancel</button>
+      <button id="save-edit-btn" class="btn-primary">Save</button>
+    </div>
+  </div>
+
+  <!-- Shared emoji picker -->
+  <div id="emoji-overlay" class="emoji-overlay hidden"></div>
+  <div id="emoji-picker" class="emoji-picker hidden">
+    <div id="emoji-grid" class="emoji-grid"></div>
+    <button id="emoji-clear-btn" class="emoji-clear-btn">✕ Remove emoji</button>
+  </div>
+
+  <!-- Habit library sheet -->
+  <div id="lib-overlay" class="lib-overlay hidden"></div>
+  <div id="lib-sheet" class="lib-sheet hidden">
+    <div class="lib-drag-handle"></div>
+    <div class="lib-header">
+      <h2 class="lib-title">Add Habits</h2>
+      <button id="lib-close-btn" class="lib-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div id="lib-list" class="lib-list"></div>
+  </div>
+
+  <!-- Habit detail / config sheet (slides over lib-sheet) -->
+  <div id="hd-sheet" class="hd-sheet hidden">
+    <div id="hd-content" class="hd-content"></div>
+  </div>
+
+  <!-- Achievement unlock popup -->
+  <div id="ach-popup" class="ach-popup hidden">
+    <div class="ach-popup-card">
+      <div class="ach-popup-label">ACHIEVEMENT UNLOCKED</div>
+      <div id="ach-popup-icon" class="ach-popup-icon"></div>
+      <div id="ach-popup-name" class="ach-popup-name"></div>
+      <div id="ach-popup-desc" class="ach-popup-desc"></div>
+      <div class="ach-popup-hint">Tap to dismiss</div>
+    </div>
+  </div>
+
+  <!-- Class Change Popup -->
+  <div id="class-popup" class="class-popup hidden">
+    <div id="class-popup-card" class="class-popup-card">
+      <div class="class-popup-top">CLASS CHANGED</div>
+      <div id="class-popup-emoji" class="class-popup-emoji"></div>
+      <div id="class-popup-name" class="class-popup-name"></div>
+      <div id="class-popup-desc" class="class-popup-desc"></div>
+      <div class="class-popup-hint">Tap to dismiss</div>
+    </div>
+  </div>
+
+  <!-- Compound Effect Bonus popup -->
+  <div id="compound-popup" class="compound-popup hidden">
+    <div class="cp-card">
+      <div class="cp-label">⚡ COMPOUND EFFECT BONUS</div>
+      <div id="cp-pack-msg" class="cp-pack-msg"></div>
+      <div id="cp-xp" class="cp-xp"></div>
+      <div id="cp-streak" class="cp-streak"></div>
+      <div id="cp-motivation" class="cp-motivation"></div>
+      <div class="cp-hint">Tap to dismiss</div>
+    </div>
+  </div>
+
+  <!-- Day detail popup -->
+  <div id="day-popup-overlay" class="day-popup-overlay hidden"></div>
+  <div id="day-popup" class="day-popup hidden">
+    <div id="day-popup-date" class="day-popup-date"></div>
+    <div id="day-popup-habits" class="day-popup-habits"></div>
+    <div id="day-popup-xp" class="day-popup-xp"></div>
+    <div class="day-popup-hint">Tap to dismiss</div>
+  </div>
+
+  <!-- Rank info popup (tapping rank bar) -->
+  <div id="rank-popup-overlay" class="rank-popup-overlay hidden"></div>
+  <div id="rank-popup" class="rank-popup hidden">
+    <button id="rank-popup-close" class="rank-popup-close" aria-label="Close">✕</button>
+    <div class="rp-rank-row">
+      <span id="rp-badge" class="rp-badge"></span>
+      <div class="rp-rank-info">
+        <div id="rp-rank-name" class="rp-rank-name"></div>
+        <div id="rp-xp-line"  class="rp-xp-line"></div>
+      </div>
+    </div>
+    <div class="rp-bar-wrap">
+      <div id="rp-bar-fill" class="rp-bar-fill"></div>
+    </div>
+    <div id="rp-tonext"  class="rp-tonext"></div>
+    <div class="rp-divider"></div>
+    <div id="rp-avg"     class="rp-avg"></div>
+    <div id="rp-eta"     class="rp-eta"></div>
+  </div>
+
+  <!-- Perfect Day Celebration overlay (lightweight, every perfect day) -->
+  <div id="pdc-overlay" class="pdc-overlay hidden">
+    <canvas id="pdc-canvas" class="pdc-canvas"></canvas>
+    <div class="pdc-content">
+      <div class="pdc-banner">⚡ PERFECT DAY ⚡</div>
+      <div id="pdc-xp" class="pdc-xp"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=79"></script>
+
+  <!-- Schedule picker sheet -->
+  <div id="sched-overlay" class="sched-overlay hidden"></div>
+  <div id="sched-sheet" class="sched-sheet hidden">
+    <div class="sched-drag-handle"></div>
+    <div class="sched-header">
+      <h2 class="sched-title">Schedule</h2>
+    </div>
+    <div class="sched-presets">
+      <button class="sched-preset" data-preset="daily"    type="button">Daily</button>
+      <button class="sched-preset" data-preset="weekdays" type="button">Weekdays</button>
+      <button class="sched-preset" data-preset="weekends" type="button">Weekends</button>
+      <button class="sched-preset" data-preset="3x"       type="button">3× / Week</button>
+    </div>
+    <div class="days-row" id="sched-days-row">
+      <button class="day-btn" data-day="Mon" type="button">M</button>
+      <button class="day-btn" data-day="Tue" type="button">T</button>
+      <button class="day-btn" data-day="Wed" type="button">W</button>
+      <button class="day-btn" data-day="Thu" type="button">T</button>
+      <button class="day-btn" data-day="Fri" type="button">F</button>
+      <button class="day-btn" data-day="Sat" type="button">S</button>
+      <button class="day-btn" data-day="Sun" type="button">S</button>
+    </div>
+    <div class="sched-actions">
+      <button id="sched-cancel-btn" class="btn-ghost">Cancel</button>
+      <button id="sched-save-btn"   class="btn-primary">Save</button>
+    </div>
+  </div>
+
+  <!-- Stat detail sheet -->
+  <div id="stat-detail-overlay" class="stat-detail-overlay hidden"></div>
+  <div id="stat-detail-sheet"   class="stat-detail-sheet hidden">
+    <div class="stat-detail-drag-handle"></div>
+    <div id="stat-detail-header" class="stat-detail-header">
+      <div id="stat-detail-badge" class="stat-detail-badge">
+        <span id="stat-detail-icon" class="stat-detail-icon-em"></span>
+      </div>
+      <div class="stat-detail-title-col">
+        <div class="stat-detail-labelrow">
+          <span id="stat-detail-label" class="stat-detail-label-text"></span>
+          <span id="stat-detail-name"  class="stat-detail-name-text"></span>
+        </div>
+        <span id="stat-detail-level" class="stat-detail-level-text"></span>
+      </div>
+      <button id="stat-detail-close" class="stat-detail-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="stat-detail-prog-section">
+      <div class="stat-detail-prog-track">
+        <div id="stat-detail-prog-bar" class="stat-detail-prog-bar"></div>
+      </div>
+      <div class="stat-detail-prog-labels">
+        <span id="stat-detail-pts"    class="stat-detail-pts-lbl"></span>
+        <span id="stat-detail-tonext" class="stat-detail-next-lbl"></span>
+      </div>
+    </div>
+    <div class="stat-detail-xp-row">
+      <div class="stat-detail-xp-item">
+        <span class="stat-detail-xp-val" id="stat-detail-cur-xp"></span>
+        <span class="stat-detail-xp-lbl">Current XP</span>
+      </div>
+      <div class="stat-detail-xp-divider"></div>
+      <div class="stat-detail-xp-item">
+        <span class="stat-detail-xp-val" id="stat-detail-total-xp"></span>
+        <span class="stat-detail-xp-lbl">Total XP</span>
+      </div>
+    </div>
+    <p id="stat-detail-desc" class="stat-detail-desc"></p>
+    <div class="stat-detail-habits-hdr">LINKED HABITS</div>
+    <div id="stat-detail-habits" class="stat-detail-habits-list"></div>
+  </div>
+
+  <!-- Rank Up Screen -->
+  <div id="rankup-screen" class="rankup-screen hidden">
+    <div id="rankup-particles-container"></div>
+    <div class="rankup-content">
+      <div id="rankup-top-label" class="rankup-top-label">RANK UP</div>
+      <div class="rankup-badge-wrap">
+        <div id="rankup-badge" class="rankup-badge-hero"></div>
+        <div id="rankup-shockwave" class="rankup-shockwave"></div>
+      </div>
+      <div id="rankup-rank-name" class="rankup-rank-name"></div>
+      <div id="rankup-class-unlock" class="rankup-class-unlock"></div>
+      <div class="rankup-trophy-card">
+        <div id="rankup-xp-line" class="rankup-xp-line"></div>
+        <div id="rankup-days-line" class="rankup-days-line"></div>
+      </div>
+      <button id="rankup-continue" class="rankup-continue-btn">CONTINUE</button>
+      <div class="rankup-brand">⚔ Habit RPG</div>
+    </div>
+  </div>
+
+  <!-- Stat Level Up Popup -->
+  <div id="statlvl-popup" class="statlvl-popup hidden">
+    <div id="statlvl-card" class="statlvl-card">
+      <div class="statlvl-label-top">LEVEL UP</div>
+      <div class="statlvl-icon-row">
+        <span id="statlvl-icon" class="statlvl-icon"></span>
+      </div>
+      <div id="statlvl-name" class="statlvl-stat-name"></div>
+      <div id="statlvl-level" class="statlvl-level-num"></div>
+      <div class="statlvl-bar-track">
+        <div id="statlvl-bar" class="statlvl-bar-fill"></div>
+      </div>
+      <div id="statlvl-flavor" class="statlvl-flavor"></div>
+      <div id="statlvl-bonus" class="statlvl-bonus hidden"></div>
+      <div class="statlvl-dismiss-hint">Tap to dismiss</div>
+      <div class="statlvl-brand">⚔ Habit RPG</div>
+    </div>
+  </div>
+
+  <!-- Settings sheet -->
+  <div id="settings-overlay" class="settings-overlay hidden"></div>
+  <div id="settings-sheet"   class="settings-sheet hidden">
+    <div class="settings-drag-handle"></div>
+    <div class="settings-header">
+      <span class="settings-title">Settings</span>
+      <button id="settings-close" class="settings-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-app-info">
+      <div class="settings-app-name">⚔ Habit RPG</div>
+      <div class="settings-app-ver">Version 1.0</div>
+    </div>
+    <!-- Check for Updates -->
+    <div class="settings-update-wrap">
+      <button id="update-check-btn" class="settings-update-btn">
+        <span class="update-btn-icon">🔄</span>
+        <span id="update-check-label">Check for Updates</span>
+      </button>
+      <p class="settings-update-sub">Tap to get the latest version of Awakened</p>
+    </div>
+    <!-- Appearance / Theme Toggle -->
+    <div class="settings-appearance">
+      <div class="settings-section-lbl">APPEARANCE</div>
+      <div class="settings-theme-row">
+        <button class="settings-theme-card" id="theme-dark-btn" data-theme="dark">
+          <span class="settings-theme-icon">🌙</span>
+          <span class="settings-theme-name">Dark Mode</span>
+          <span class="settings-theme-sub">Default</span>
+        </button>
+        <button class="settings-theme-card" id="theme-light-btn" data-theme="light">
+          <span class="settings-theme-icon">☀️</span>
+          <span class="settings-theme-name">Light Mode</span>
+          <span class="settings-theme-sub">New</span>
+        </button>
+      </div>
+
+      <!-- Sound Toggle -->
+      <div class="settings-section-lbl settings-sound-lbl">SOUND</div>
+      <div class="settings-toggle-row">
+        <label class="settings-toggle-label" for="sound-toggle">Habit completion sounds</label>
+        <button id="sound-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habit completion sounds"></button>
+      </div>
+    </div>
+
+    <!-- What's Coming -->
+    <div class="settings-coming-section">
+      <div class="settings-coming-lbl">WHAT'S COMING</div>
+      <div class="settings-coming-list">
+
+        <div class="settings-coming-card">
+          <div class="settings-coming-top">
+            <span class="settings-coming-icon">⚔️</span>
+            <span class="settings-coming-title">Card System</span>
+            <span class="settings-coming-badge">COMING SOON</span>
+          </div>
+          <div class="settings-coming-desc">Earn armor and weapons by completing habits. Equip them to your character.</div>
+        </div>
+
+        <div class="settings-coming-card">
+          <div class="settings-coming-top">
+            <span class="settings-coming-icon">🏰</span>
+            <span class="settings-coming-title">Dungeons &amp; Bosses</span>
+            <span class="settings-coming-badge">COMING SOON</span>
+          </div>
+          <div class="settings-coming-desc">Enter dungeons based on your rank. Defeat bosses through verified habit streaks to earn rare drops.</div>
+        </div>
+
+        <div class="settings-coming-card">
+          <div class="settings-coming-top">
+            <span class="settings-coming-icon">🧙</span>
+            <span class="settings-coming-title">Avatar &amp; Character</span>
+            <span class="settings-coming-badge">COMING SOON</span>
+          </div>
+          <div class="settings-coming-desc">Build and customize your character. Your equipped gear appears on your avatar.</div>
+        </div>
+
+        <div class="settings-coming-card">
+          <div class="settings-coming-top">
+            <span class="settings-coming-icon">🌐</span>
+            <span class="settings-coming-title">Global Leaderboard</span>
+            <span class="settings-coming-badge">COMING SOON</span>
+          </div>
+          <div class="settings-coming-desc">Compete with hunters worldwide. See who is truly awakened.</div>
+        </div>
+
+        <div class="settings-coming-card">
+          <div class="settings-coming-top">
+            <span class="settings-coming-icon">🤖</span>
+            <span class="settings-coming-title">AI Habit Coach</span>
+            <span class="settings-coming-badge">COMING SOON</span>
+          </div>
+          <div class="settings-coming-desc">A personal coach that knows your stats, rank, and habits. Get personalized guidance powered by AI.</div>
+        </div>
+
+        <div class="settings-coming-card">
+          <div class="settings-coming-top">
+            <span class="settings-coming-icon">👥</span>
+            <span class="settings-coming-title">Social &amp; Friends</span>
+            <span class="settings-coming-badge">COMING SOON</span>
+          </div>
+          <div class="settings-coming-desc">Compare stats with friends. Build accountability through shared journeys.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-lbl">DATA</div>
+      <button id="reset-open-btn" class="settings-reset-btn">🗑 Reset All Progress</button>
+      <p class="settings-reset-warn">This will permanently delete all habits, streaks, points, stats, and achievements. This cannot be undone.</p>
+    </div>
+  </div>
+
+  <!-- Perfect Day Streak Celebration Screen -->
+  <div id="perfect-day-screen" class="perfect-day-screen hidden">
+    <canvas id="pd-canvas" class="pd-canvas"></canvas>
+    <div class="pd-content">
+      <div id="pd-emoji"   class="pd-emoji"></div>
+      <div id="pd-title"   class="pd-title"></div>
+      <div id="pd-subtitle" class="pd-subtitle"></div>
+      <div id="pd-bonus"   class="pd-bonus"></div>
+      <button id="pd-dismiss" class="pd-dismiss hidden">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- No Alcohol Friday Challenge Banner -->
+  <div id="fri-challenge-overlay" class="fri-challenge-overlay hidden"></div>
+  <div id="fri-challenge-modal" class="fri-challenge-modal hidden">
+    <div class="fri-challenge-glow-bar"></div>
+    <button id="fri-challenge-close" class="fri-challenge-close-btn" aria-label="Close">✕</button>
+    <div class="fri-challenge-icon">⚔️</div>
+    <div class="fri-challenge-title">WEEKEND WARRIOR CHALLENGE</div>
+    <p id="fri-challenge-msg" class="fri-challenge-msg"></p>
+    <button id="fri-challenge-action" class="fri-challenge-action-btn">Let's Go</button>
+  </div>
+
+  <!-- Reset Step 1: "Are you sure?" -->
+  <div id="reset1-overlay" class="reset-overlay hidden"></div>
+  <div id="reset1-modal"   class="reset-modal hidden">
+    <div class="reset-modal-icon">⚠️</div>
+    <h2 class="reset-modal-title">Are you sure?</h2>
+    <p class="reset-modal-body">All your progress will be permanently deleted — habits, streaks, XP, stats, and achievements.</p>
+    <div class="reset-modal-actions">
+      <button id="reset1-cancel"   class="reset-cancel-btn">Cancel</button>
+      <button id="reset1-continue" class="reset-continue-btn">Continue</button>
+    </div>
+  </div>
+
+  <!-- Reset Step 2: Type RESET -->
+  <div id="reset2-overlay" class="reset-overlay hidden"></div>
+  <div id="reset2-modal"   class="reset-modal hidden">
+    <div class="reset-modal-icon">☠️</div>
+    <h2 class="reset-modal-title">Final Warning</h2>
+    <p class="reset-modal-body">Type <strong>RESET</strong> below to permanently delete all data.</p>
+    <input id="reset-type-input" class="reset-type-input" type="text"
+           placeholder="Type RESET here" maxlength="10"
+           autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+    <div class="reset-modal-actions">
+      <button id="reset2-cancel"  class="reset-cancel-btn">Cancel</button>
+      <button id="reset2-confirm" class="reset-confirm-btn" disabled>Delete Everything</button>
+    </div>
+  </div>
+
+</body>
+</html>
