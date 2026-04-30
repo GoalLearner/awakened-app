@@ -69,6 +69,14 @@ workflows:
       - name: Sync web assets into iOS project
         script: npx cap sync ios
 
+      - name: Install custom app icon
+        script: |
+          # Copy custom AppIcon.appiconset over the Capacitor default
+          rm -rf ios/App/App/Assets.xcassets/AppIcon.appiconset
+          cp -R resources/ios/AppIcon.appiconset ios/App/App/Assets.xcassets/
+          echo "Icon files installed:"
+          ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
+
       - name: Apply code signing profiles
         script: xcode-project use-profiles
 

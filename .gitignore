@@ -13,5 +13,5 @@ node_modules/
 
 # Capacitor — generated at build time by Codemagic
 www/
-ios/
-android/
+/ios/
+/android/
