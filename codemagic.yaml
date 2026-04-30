@@ -43,7 +43,7 @@ workflows:
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
         #   Find it at: appstoreconnect.apple.com → My Apps → App Information
-        APP_STORE_ID:     "ADD_YOUR_NUMERIC_APP_ID_HERE"
+        APP_STORE_ID:     "6764727990"
 
       node:      v24.15.0
       xcode:     latest
