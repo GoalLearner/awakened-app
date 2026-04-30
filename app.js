@@ -58,21 +58,77 @@
 
   // ── DAILY QUOTES (Feature 2) ─────────────────────────────
   const QUOTES = [
-    { text: 'We are what we repeatedly do. Excellence is not an act, but a habit.', attr: '— Aristotle' },
-    { text: 'The secret of your future is hidden in your daily routine.', attr: '— Mike Murdock' },
-    { text: 'Small disciplines repeated with consistency every day lead to great achievements.', attr: '— John Maxwell' },
-    { text: 'You do not rise to the level of your goals. You fall to the level of your systems.', attr: '— James Clear' },
-    { text: 'Every action you take is a vote for the type of person you wish to become.', attr: '— James Clear' },
-    { text: 'The chains of habit are too weak to be felt until they are too strong to be broken.', attr: '— Samuel Johnson' },
-    { text: 'Win the morning, win the day.', attr: '— Tim Ferriss' },
-    { text: 'Motivation gets you started. Habit keeps you going.', attr: '— Jim Ryun' },
-    { text: 'An ounce of practice is worth more than a ton of theory.', attr: '— Mahatma Gandhi' },
-    { text: 'The difference between who you are and who you want to be is what you do.', attr: '— Anonymous' },
-    { text: 'Success is the sum of small efforts repeated day in and day out.', attr: '— Robert Collier' },
-    { text: 'Discipline is the bridge between goals and accomplishment.', attr: '— Jim Rohn' },
-    { text: 'It is not that we have a short time to live, but that we waste a good deal of it.', attr: '— Seneca' },
-    { text: 'A year from now you will wish you had started today.', attr: '— Karen Lamb' },
-    { text: 'Show up every day. That alone puts you ahead of most.', attr: '— Anonymous' },
+    // Habit / discipline classics
+    { text: 'We are what we repeatedly do. Excellence is not an act, but a habit.',                       attr: '— Aristotle' },
+    { text: 'The secret of your future is hidden in your daily routine.',                                  attr: '— Mike Murdock' },
+    { text: 'Small disciplines repeated with consistency every day lead to great achievements.',           attr: '— John Maxwell' },
+    { text: 'You do not rise to the level of your goals. You fall to the level of your systems.',          attr: '— James Clear' },
+    { text: 'Every action you take is a vote for the type of person you wish to become.',                  attr: '— James Clear' },
+    { text: 'The chains of habit are too weak to be felt until they are too strong to be broken.',         attr: '— Samuel Johnson' },
+    { text: 'Win the morning, win the day.',                                                               attr: '— Tim Ferriss' },
+    { text: 'Motivation gets you started. Habit keeps you going.',                                         attr: '— Jim Ryun' },
+    { text: 'An ounce of practice is worth more than a ton of theory.',                                    attr: '— Mahatma Gandhi' },
+    { text: 'The difference between who you are and who you want to be is what you do.',                   attr: '— Anonymous' },
+    { text: 'Success is the sum of small efforts repeated day in and day out.',                            attr: '— Robert Collier' },
+    { text: 'Discipline is the bridge between goals and accomplishment.',                                  attr: '— Jim Rohn' },
+    { text: 'It is not that we have a short time to live, but that we waste a good deal of it.',           attr: '— Seneca' },
+    { text: 'A year from now you will wish you had started today.',                                        attr: '— Karen Lamb' },
+    { text: 'Show up every day. That alone puts you ahead of most.',                                       attr: '— Anonymous' },
+
+    // Stoic / philosophical
+    { text: 'Waste no more time arguing what a good man should be. Be one.',                               attr: '— Marcus Aurelius' },
+    { text: 'You have power over your mind — not outside events. Realize this, and you will find strength.', attr: '— Marcus Aurelius' },
+    { text: 'The impediment to action advances action. What stands in the way becomes the way.',           attr: '— Marcus Aurelius' },
+    { text: 'Confine yourself to the present.',                                                            attr: '— Marcus Aurelius' },
+    { text: 'First say to yourself what you would be; then do what you have to do.',                       attr: '— Epictetus' },
+    { text: 'It is not what happens to you, but how you react to it that matters.',                        attr: '— Epictetus' },
+    { text: 'No man is free who is not master of himself.',                                                attr: '— Epictetus' },
+    { text: 'While we wait for life, life passes.',                                                        attr: '— Seneca' },
+    { text: 'Difficulties strengthen the mind, as labor does the body.',                                   attr: '— Seneca' },
+    { text: 'Luck is what happens when preparation meets opportunity.',                                    attr: '— Seneca' },
+    { text: 'Excellence is never an accident. It is the result of high intention and intelligent execution.', attr: '— Aristotle' },
+
+    // Habit / self-improvement / discipline
+    { text: 'Habits are the compound interest of self-improvement.',                                       attr: '— James Clear' },
+    { text: 'You should be far more concerned with your current trajectory than with your current results.', attr: '— James Clear' },
+    { text: 'Get 1% better every day.',                                                                    attr: '— James Clear' },
+    { text: 'Discipline equals freedom.',                                                                  attr: '— Jocko Willink' },
+    { text: "When things are going bad, don't take yourself with them.",                                   attr: '— Jocko Willink' },
+    { text: 'Clarity about what matters provides clarity about what does not.',                            attr: '— Cal Newport' },
+    { text: 'Human beings are at their best when immersed deeply in something challenging.',               attr: '— Cal Newport' },
+    { text: 'Whatever the mind can conceive and believe, it can achieve.',                                 attr: '— Napoleon Hill' },
+    { text: 'Patience, persistence, and perspiration make an unbeatable combination for success.',         attr: '— Napoleon Hill' },
+    { text: "The key is not to prioritize what's on your schedule, but to schedule your priorities.",      attr: '— Stephen Covey' },
+    { text: 'Begin with the end in mind.',                                                                 attr: '— Stephen Covey' },
+    { text: 'Most people stop at 40% of their true capacity.',                                             attr: '— David Goggins' },
+    { text: "Don't stop when you're tired. Stop when you're done.",                                        attr: '— David Goggins' },
+    { text: 'Stay hard.',                                                                                  attr: '— David Goggins' },
+
+    // Trading psychology / probabilistic thinking
+    { text: 'The best traders think in probabilities.',                                                    attr: '— Mark Douglas' },
+    { text: "You don't need to know what's going to happen next to make money.",                           attr: '— Mark Douglas' },
+    { text: 'Play long-term games with long-term people.',                                                 attr: '— Naval Ravikant' },
+    { text: 'Earn with your mind, not your time.',                                                         attr: '— Naval Ravikant' },
+    { text: 'Read what you love until you love to read.',                                                  attr: '— Naval Ravikant' },
+    { text: 'The most important skill for getting rich is becoming a perpetual learner.',                  attr: '— Naval Ravikant' },
+
+    // Performance / mindset
+    { text: 'Great things come from hard work and perseverance. No excuses.',                              attr: '— Kobe Bryant' },
+    { text: 'Rest at the end, not in the middle.',                                                         attr: '— Kobe Bryant' },
+    { text: 'I have failed over and over again in my life. That is why I succeed.',                        attr: '— Michael Jordan' },
+    { text: 'Some people want it to happen, some wish it would happen, others make it happen.',            attr: '— Michael Jordan' },
+    { text: 'Be water, my friend.',                                                                        attr: '— Bruce Lee' },
+    { text: 'Knowing is not enough; we must apply. Willing is not enough; we must do.',                    attr: '— Bruce Lee' },
+    { text: 'The supreme art of war is to subdue the enemy without fighting.',                             attr: '— Sun Tzu' },
+    { text: 'In the midst of chaos, there is also opportunity.',                                           attr: '— Sun Tzu' },
+
+    // Modern motivation
+    { text: 'Effort is the only currency that creates lasting change.',                                    attr: '— Andrew Huberman' },
+    { text: 'The longer the time horizon, the lower the competition.',                                     attr: '— Alex Hormozi' },
+    { text: "Hard work beats talent when talent doesn't work hard.",                                       attr: '— Alex Hormozi' },
+    { text: 'Focus on being productive instead of busy.',                                                  attr: '— Tim Ferriss' },
+    { text: 'What we fear doing most is usually what we most need to do.',                                 attr: '— Tim Ferriss' },
+    { text: 'It does not matter how slowly you go as long as you do not stop.',                            attr: '— Confucius' },
   ];
 
   const RANKS = [
@@ -2372,6 +2428,69 @@
     } catch (_) {}
   }
 
+  // ── BIG-MOMENT FANFARE ────────────────────────────────────
+  // Triumphant ascending D-major arpeggio (D4 → F#4 → A4 → D5)
+  // with the final D5 sustained as a chord (D5 + A5 fifth) for warmth.
+  // Reusable for compound bonus, rank-ups, major achievements.
+  function playFanfare() {
+    if (!soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+
+      // D major arpeggio (Hz)
+      const D4  = 293.66;
+      const Fs4 = 369.99;
+      const A4  = 440.00;
+      const D5  = 587.33;
+      const A5  = 880.00;
+
+      // Master bus — slight low-pass via a small gain dip on highs would need a filter,
+      // but layered sine+triangle already gives a warm timbre without harshness.
+      const master = ac.createGain();
+      master.gain.value = 1.0;
+      master.connect(ac.destination);
+
+      // Each note = sine (fundamental) + triangle (warm harmonic body)
+      function playNote(freq, start, dur, peak, sustain) {
+        ['sine', 'triangle'].forEach(type => {
+          const osc  = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type   = type;
+          osc.frequency.setValueAtTime(freq, t0 + start);
+          osc.connect(gain);
+          gain.connect(master);
+
+          // Sine carries the melody body; triangle is half-volume for warmth.
+          const g = type === 'sine' ? peak : peak * 0.5;
+
+          // Gentle attack, then either a quick release or a long sustain-decay tail
+          gain.gain.setValueAtTime(0.0001, t0 + start);
+          gain.gain.exponentialRampToValueAtTime(g, t0 + start + 0.025);
+          if (sustain > 0) {
+            gain.gain.setValueAtTime(g,            t0 + start + 0.20);
+            gain.gain.exponentialRampToValueAtTime(g * 0.55, t0 + start + 0.45);
+            gain.gain.exponentialRampToValueAtTime(0.0001,    t0 + start + dur);
+          } else {
+            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+          }
+
+          osc.start(t0 + start);
+          osc.stop(t0 + start + dur + 0.05);
+        });
+      }
+
+      // Ascending arpeggio — confident, not rushed (~100ms per step)
+      playNote(D4,  0.00, 0.22, 0.26, 0);
+      playNote(Fs4, 0.10, 0.22, 0.26, 0);
+      playNote(A4,  0.20, 0.22, 0.26, 0);
+
+      // Sustained triumphant chord on the octave: D5 + A5 (open fifth) = bright, "earned" peak
+      playNote(D5,  0.30, 1.10, 0.32, 1);
+      playNote(A5,  0.30, 1.10, 0.16, 1);   // softer fifth above for richness
+    } catch (_) {}
+  }
+
   // ── FEATURE 1: XP PARTICLES ──────────────────────────────
   const DIFF_PARTICLE_COLOR = {
     easy:      '#a78bfa',
@@ -2415,17 +2534,83 @@
   }
 
   // ── FEATURE 2: DAILY QUOTE ───────────────────────────────
+  // ── QUOTE ROTATION (Feature 2 — rotating display) ────────
+  let _quoteCurrent  = null;
+  let _quoteTimer    = null;
+  let _quoteRotating = false;
+
+  function _quoteApply(el, q) {
+    el.innerHTML = '“' + q.text + '”' + '<span class="dq-attr">' + q.attr + '</span>';
+    _quoteCurrent = q;
+  }
+
+  function _quotePickNext() {
+    if (QUOTES.length <= 1) return QUOTES[0];
+    let q;
+    do { q = QUOTES[Math.floor(Math.random() * QUOTES.length)]; }
+    while (q === _quoteCurrent);
+    return q;
+  }
+
+  function _quoteDisplayMs(text) {
+    const len = (text || '').length;
+    if (len < 40) return 4000;   // short
+    if (len < 80) return 6000;   // medium
+    return 8000;                 // long
+  }
+
+  function _quoteScheduleNext() {
+    if (!_quoteRotating) return;
+    const el = document.getElementById('daily-quote');
+    if (!el || !_quoteCurrent) return;
+
+    const displayMs = _quoteDisplayMs(_quoteCurrent.text);
+
+    _quoteTimer = setTimeout(() => {
+      if (!_quoteRotating) return;
+      // Fade out (500ms via CSS opacity transition)
+      el.style.opacity = '0';
+      _quoteTimer = setTimeout(() => {
+        if (!_quoteRotating) return;
+        // Swap content while invisible, then fade back in
+        _quoteApply(el, _quotePickNext());
+        el.style.opacity = '';   // back to CSS default 0.85
+        _quoteScheduleNext();
+      }, 500);
+    }, displayMs);
+  }
+
+  function startQuoteRotation() {
+    if (_quoteRotating) return;
+    _quoteRotating = true;
+    _quoteScheduleNext();
+  }
+
+  function stopQuoteRotation() {
+    _quoteRotating = false;
+    if (_quoteTimer) { clearTimeout(_quoteTimer); _quoteTimer = null; }
+    // If we paused mid-fade, restore visibility so the user sees the quote on return
+    const el = document.getElementById('daily-quote');
+    if (el) el.style.opacity = '';
+  }
+
   function renderDailyQuote() {
     const el = document.getElementById('daily-quote');
     if (!el) return;
-    // Seed by day-of-year so quote changes each day
-    const d   = new Date();
-    const doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
-    const q   = QUOTES[doy % QUOTES.length];
-    el.innerHTML =
-      '“' + q.text + '”' +
-      '<span class="dq-attr">' + q.attr + '</span>';
     el.classList.remove('hidden');
+
+    // First call this session: show today's deterministic daily quote.
+    // Subsequent calls (e.g., after habit toggles re-render the screen) keep
+    // whatever quote the rotation has currently displayed.
+    if (!_quoteCurrent) {
+      const d   = new Date();
+      const doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+      _quoteApply(el, QUOTES[doy % QUOTES.length]);
+    }
+
+    // The quote lives in the shared header, visible on every tab —
+    // start rotation unconditionally on first render.
+    startQuoteRotation();
   }
 
   // ── FEATURE 3: STREAK DANGER WARNING ─────────────────────
@@ -2631,7 +2816,12 @@
         showHabitToast('Set your goal value to check off this habit');
         return;
       }
+      // Snapshot compound state so we can detect if THIS tap fires the bonus.
+      // If it does, the fanfare in showCompoundPopup() replaces the regular chime.
+      const compoundBefore = JSON.stringify(compoundAwarded);
       check(id);
+      const compoundFiredNow = JSON.stringify(compoundAwarded) !== compoundBefore;
+
       li.classList.add('completed');
       const cb = li.querySelector('.habit-cb');
       cb.classList.add('checked');
@@ -2641,7 +2831,8 @@
       r.addEventListener('animationend', () => r.remove(), { once: true });
 
       // Feature 1: sound + particles + card flash
-      playCheckSound();
+      // Suppress regular chime if compound fanfare is taking over this moment.
+      if (!compoundFiredNow) playCheckSound();
       const diff = habit ? habit.difficulty : 'medium';
       spawnXpParticles(li, diff);
       const DIFF_FLASH = { easy: 'rgba(167,139,250,0.6)', medium: 'rgba(96,165,250,0.6)', hard: 'rgba(251,146,60,0.6)', legendary: 'rgba(251,191,36,0.65)' };
@@ -3407,6 +3598,8 @@
     el.classList.remove('hidden', 'cp-hide');
     void el.offsetWidth; // force reflow so animation replays
     el.classList.add('cp-show');
+    // Triumphant fanfare synced with the modal appearance
+    playFanfare();
     if (compoundPopupTimer) clearTimeout(compoundPopupTimer);
     compoundPopupTimer = setTimeout(hideCompoundPopup, 3000);
   }
@@ -3818,6 +4011,146 @@
     }, { once: true });
   }
 
+  // ── BOTTOM-SHEET DISMISS GESTURE (reusable) ──────────────
+  // Attaches swipe/drag-down-to-dismiss to a bottom sheet element.
+  //   sheet         — the sheet DOM element (must already be styled as bottom sheet)
+  //   overlay       — backdrop element to fade (or null)
+  //   onDismiss     — callback to fully hide sheet+overlay after slide-out completes
+  //   opts:
+  //     baseTransform     — base transform string preserved during drag (default 'translateX(-50%) ')
+  //     handleSelector    — CSS selector for top "drag-zone" elements (drag works from these even
+  //                         when content is scrolled). Anywhere else, we only drag if scrollTop===0.
+  //     dismissThreshold  — fraction of sheet height beyond which release dismisses (default 0.30)
+  //     flickVelocity     — px/ms downward velocity that counts as a "flick" (default 0.6)
+  //     openClass         — class indicating sheet is open (default 'ss-open')
+  function attachSheetDismissGesture(sheet, overlay, onDismiss, opts) {
+    opts = opts || {};
+    const baseTransform    = opts.baseTransform    || 'translateX(-50%) ';
+    const handleSelector   = opts.handleSelector   || '.settings-drag-handle, .settings-header';
+    const dismissThreshold = opts.dismissThreshold || 0.30;
+    const flickVelocity    = opts.flickVelocity    || 0.6;
+    const openClass        = opts.openClass        || 'ss-open';
+
+    let startY = 0, lastY = 0, lastTime = 0, velocity = 0;
+    let dragging = false, allowDrag = false, mouseDown = false;
+
+    function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+    function onStart(e) {
+      if (sheet.classList.contains('hidden')) return;
+      startY   = getY(e);
+      lastY    = startY;
+      lastTime = e.timeStamp || Date.now();
+      velocity = 0;
+      dragging = false;
+
+      // Allow drag-to-dismiss only if user starts in the header/handle region,
+      // OR the sheet's internal scroll is already at the very top.
+      // Otherwise this is a regular content scroll — don't hijack it.
+      const inHandle = e.target && e.target.closest && e.target.closest(handleSelector);
+      const atTop    = sheet.scrollTop <= 0;
+      allowDrag = !!inHandle || atTop;
+    }
+
+    function onMove(e) {
+      if (!allowDrag || sheet.classList.contains('hidden')) return;
+      const y  = getY(e);
+      const dy = y - startY;
+
+      // Only track downward movement
+      if (dy <= 0) {
+        if (dragging) {
+          // User reversed direction — let it snap back gently
+          sheet.style.transition = 'transform 0.18s ease-out';
+          sheet.style.transform  = '';
+          if (overlay) overlay.style.opacity = '';
+          dragging = false;
+        }
+        return;
+      }
+
+      if (!dragging) {
+        dragging = true;
+        sheet.style.transition = 'none';
+        if (overlay) overlay.style.transition = 'none';
+      }
+
+      // Suppress native scroll/rubber-band while we drag
+      if (e.cancelable) e.preventDefault();
+
+      sheet.style.transform = baseTransform + 'translateY(' + dy + 'px)';
+
+      if (overlay) {
+        const sheetH = sheet.offsetHeight || 1;
+        const fade   = Math.min(1, dy / sheetH);
+        overlay.style.opacity = String(1 - fade * 0.85);
+      }
+
+      // Track instantaneous velocity for flick detection
+      const now = e.timeStamp || Date.now();
+      const dt  = now - lastTime;
+      if (dt > 0) velocity = (y - lastY) / dt;
+      lastY    = y;
+      lastTime = now;
+    }
+
+    function onEnd() {
+      mouseDown = false;
+      if (!dragging) return;
+      dragging = false;
+
+      const dy            = lastY - startY;
+      const sheetH        = sheet.offsetHeight || 1;
+      const overThreshold = dy > sheetH * dismissThreshold;
+      const flicked       = velocity > flickVelocity;
+
+      if (overThreshold || flicked) {
+        // Slide the rest of the way down, then run dismiss callback
+        sheet.style.transition = 'transform 0.22s ease-in';
+        sheet.style.transform  = baseTransform + 'translateY(' + sheetH + 'px)';
+        if (overlay) {
+          overlay.style.transition = 'opacity 0.22s ease-in';
+          overlay.style.opacity    = '0';
+        }
+        sheet.addEventListener('transitionend', function done() {
+          // Reset inline styles AFTER classes are updated, so the resting
+          // CSS class transform takes over without a visible jump.
+          sheet.classList.remove(openClass);
+          sheet.style.transition = '';
+          sheet.style.transform  = '';
+          if (overlay) {
+            overlay.style.transition = '';
+            overlay.style.opacity    = '';
+          }
+          if (typeof onDismiss === 'function') onDismiss();
+        }, { once: true });
+      } else {
+        // Snap back to fully open
+        sheet.style.transition = 'transform 0.25s ease-out';
+        sheet.style.transform  = '';
+        if (overlay) {
+          overlay.style.transition = 'opacity 0.25s ease-out';
+          overlay.style.opacity    = '';
+        }
+        sheet.addEventListener('transitionend', function done() {
+          sheet.style.transition = '';
+          if (overlay) overlay.style.transition = '';
+        }, { once: true });
+      }
+    }
+
+    // Touch
+    sheet.addEventListener('touchstart',  onStart, { passive: true  });
+    sheet.addEventListener('touchmove',   onMove,  { passive: false }); // need preventDefault
+    sheet.addEventListener('touchend',    onEnd,   { passive: true  });
+    sheet.addEventListener('touchcancel', onEnd,   { passive: true  });
+
+    // Mouse (desktop PWA)
+    sheet.addEventListener('mousedown', e => { mouseDown = true; onStart(e); });
+    document.addEventListener('mousemove', e => { if (mouseDown) onMove(e); });
+    document.addEventListener('mouseup',   ()   => { if (mouseDown) onEnd();   });
+  }
+
   function showReset1() {
     closeSettings();
     // Small delay so settings sheet closes first
@@ -3962,6 +4295,15 @@
     // Close settings
     document.getElementById('settings-close').addEventListener('click', closeSettings);
     document.getElementById('settings-overlay').addEventListener('click', closeSettings);
+
+    // Swipe-down-to-dismiss gesture (iOS-style)
+    const ssSheet   = document.getElementById('settings-sheet');
+    const ssOverlay = document.getElementById('settings-overlay');
+    attachSheetDismissGesture(ssSheet, ssOverlay, () => {
+      // Same end-state the X button produces — sheet & overlay hidden.
+      ssSheet.classList.add('hidden');
+      ssOverlay.classList.add('hidden');
+    });
     // Theme toggle
     document.getElementById('theme-dark-btn').addEventListener('click', () => applyTheme('dark', true));
     document.getElementById('theme-light-btn').addEventListener('click', () => applyTheme('light', true));
@@ -4201,8 +4543,31 @@
       btn.style.background = color;
     }
 
+    var customWarningShown = false;
+
+    function showCustomWarning() {
+      var ov = document.getElementById('custom-warning-overlay');
+      if (!ov) return;
+      ov.classList.remove('hidden');
+
+      document.getElementById('cw-continue-btn').onclick = function() {
+        ov.classList.add('hidden');
+        // user keeps custom selection — already applied
+      };
+      document.getElementById('cw-switch-btn').onclick = function() {
+        ov.classList.add('hidden');
+        selectCard(morningCard, 'morning', '#f59e0b');
+      };
+    }
+
     morningCard.onclick = function() { selectCard(morningCard, 'morning', '#f59e0b'); };
-    customCard.onclick  = function() { selectCard(customCard,  'custom',  '#a855f7'); };
+    customCard.onclick  = function() {
+      selectCard(customCard, 'custom', '#a855f7');
+      if (!customWarningShown) {
+        customWarningShown = true;
+        showCustomWarning();
+      }
+    };
 
     cardsEl.appendChild(morningCard);
     cardsEl.appendChild(customCard);

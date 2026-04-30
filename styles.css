@@ -3752,7 +3752,9 @@ body.theme-light .ob-inspiration-quote {
 }
 
 .hg-row {
-  display: flex;
+  /* Grid guarantees header and habit rows share identical column tracks. */
+  display: grid;
+  grid-template-columns: 108px repeat(7, minmax(36px, 1fr)) 62px;
   align-items: center;
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
@@ -3763,16 +3765,14 @@ body.theme-light .ob-inspiration-quote {
   border-bottom: 1px solid var(--border) !important;
 }
 
-/* Habit label column */
+/* Habit label column (grid col 1) */
 .hg-label {
-  flex: 0 0 108px;
-  width: 108px;
-  min-width: 108px;
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 9px 8px 9px 12px;
   overflow: hidden;
+  min-width: 0;
 }
 .hg-label-hdr { padding: 8px 8px 8px 12px; }
 .hg-label-emoji {
@@ -3790,10 +3790,8 @@ body.theme-light .ob-inspiration-quote {
   line-height: 1.2;
 }
 
-/* Day header cells */
+/* Day header cells (grid cols 2-8) */
 .hg-day-hdr {
-  flex: 1;
-  min-width: 36px;
   text-align: center;
   font-size: 10px;
   font-weight: 700;
@@ -3801,19 +3799,19 @@ body.theme-light .ob-inspiration-quote {
   padding: 8px 0;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  min-width: 0;
 }
 .hg-day-hdr--today {
   color: var(--accent);
 }
 
-/* Habit cells */
+/* Habit cells (grid cols 2-8). margin creates inset square; aspect-ratio keeps them square. */
 .hg-cell {
-  flex: 1;
-  min-width: 36px;
   aspect-ratio: 1;
   margin: 5px 3px;
   border-radius: 7px;
-  flex-shrink: 0;
+  min-width: 0;
+  justify-self: stretch;
 }
 .hg-cell--done {
   /* background + box-shadow set inline per difficulty color */
@@ -3829,15 +3827,13 @@ body.theme-light .ob-inspiration-quote {
   background: transparent;
 }
 
-/* Perfect badge column */
+/* Perfect badge column (grid col 9) */
 .hg-badge-col {
-  flex: 0 0 62px;
-  width: 62px;
-  min-width: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 6px 0 2px;
+  min-width: 0;
 }
 .hg-perfect-badge {
   font-size: 8px;
@@ -5862,10 +5858,10 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 }
 
 .path-cards {
-  flex: 1;
+  flex: 0 0 auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 40px 28px 20px;
+  padding: 40px 28px 8px;
   display: flex;
   flex-direction: row;
   gap: 16px;
@@ -6004,6 +6000,7 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 
 /* Footer + continue button */
 .path-footer {
+  margin-top: auto;
   padding: 14px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
   flex-shrink: 0;
 }
@@ -6029,6 +6026,94 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 .path-continue-btn:not(:disabled):active {
   transform: scale(0.97);
   opacity: 0.88;
+}
+
+/* ── Make Your Own warning popup ── */
+.custom-warning-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+  animation: cw-fade 0.22s ease-out;
+}
+.custom-warning-overlay.hidden { display: none !important; }
+@keyframes cw-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cw-card {
+  background: linear-gradient(160deg, #1a1a2e 0%, #14142a 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6);
+  border-radius: 22px;
+  padding: 28px 24px 22px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  animation: cw-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes cw-pop {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.cw-icon {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.5));
+}
+.cw-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #fff;
+  margin-bottom: 14px;
+}
+.cw-body {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.55;
+  margin-bottom: 22px;
+}
+.cw-highlight {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.cw-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cw-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.1s, opacity 0.2s;
+}
+.cw-btn:active { transform: scale(0.97); opacity: 0.9; }
+.cw-btn-primary {
+  background: #f59e0b;
+  color: #1a1505;
+}
+.cw-btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Flash overlay for path → onboarding transition */
@@ -6353,7 +6438,14 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   line-height: 1.4;
   border-top: 1px solid var(--border);
   opacity: 0.85;
-  transition: opacity 0.3s;
+  transition: opacity 0.5s ease-in-out;
+  /* Reserve consistent height so rotating quotes of varying length don't
+     shift the rest of the screen. Centered vertically inside the box. */
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .daily-quote.hidden { display: none !important; }
 .daily-quote .dq-attr {

@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=80">
+  <link rel="stylesheet" href="styles.css?v=83">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -46,6 +46,26 @@
     <div class="path-note">⚡ Morning Routine unlocks the <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
     <div class="path-footer">
       <button id="path-continue-btn" class="path-continue-btn" disabled>CONTINUE →</button>
+    </div>
+
+    <!-- Make Your Own warning popup -->
+    <div id="custom-warning-overlay" class="custom-warning-overlay hidden">
+      <div class="cw-card">
+        <div class="cw-icon">⚡</div>
+        <div class="cw-title">Going Solo?</div>
+        <div class="cw-body">
+          <span class="cw-highlight">Morning Routine</span> unlocks the
+          <span class="cw-highlight">Compound Effect Bonus</span> — bonus XP
+          that grows the longer your streak.
+          <br><br>
+          Custom paths don't get this bonus, but you can always start with
+          Morning Routine and customize later.
+        </div>
+        <div class="cw-actions">
+          <button id="cw-switch-btn" class="cw-btn cw-btn-primary">Switch to Morning Routine</button>
+          <button id="cw-continue-btn" class="cw-btn cw-btn-secondary">Continue Custom</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -384,7 +404,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=79"></script>
+  <script src="app.js?v=84"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
