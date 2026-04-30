@@ -45,7 +45,7 @@ workflows:
         #   Find it at: appstoreconnect.apple.com → My Apps → App Information
         APP_STORE_ID:     "ADD_YOUR_NUMERIC_APP_ID_HERE"
 
-      node:      v20.11.0
+      node:      v24.15.0
       xcode:     latest
       cocoapods: default
 
