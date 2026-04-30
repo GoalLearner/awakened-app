@@ -1,0 +1,12 @@
+{
+  "name": "awakened-app",
+  "version": "1.0.0",
+  "description": "Awakened — Daily Habit Tracker PWA",
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

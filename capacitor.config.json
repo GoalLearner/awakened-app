@@ -1,0 +1,17 @@
+{
+  "appId": "com.goallearner.awakened",
+  "appName": "Awakened",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#0a0a0a",
+    "allowsLinkPreview": false,
+    "scrollEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 0
+    }
+  }
+}

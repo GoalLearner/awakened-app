@@ -1,0 +1,105 @@
+# ═══════════════════════════════════════════════════════════════════
+# codemagic.yaml — Awakened iOS Build & App Store Pipeline
+# ═══════════════════════════════════════════════════════════════════
+#
+# BEFORE YOUR FIRST BUILD — complete these steps in Codemagic:
+#
+#  1. Connect GitHub repo at: codemagic.io → Add application
+#  2. Create an App Store Connect API key integration:
+#       Team Settings → Integrations → App Store Connect
+#       Name it exactly: Codemagic
+#  3. Create your app in App Store Connect (apps.apple.com)
+#       then paste its numeric App ID into APP_STORE_ID below
+#  4. Automatic code signing is handled by Codemagic — no manual
+#       certificate management needed.
+#
+# ═══════════════════════════════════════════════════════════════════
+
+workflows:
+
+  ios-app-store:
+    name: Awakened — iOS App Store
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+
+    # ── App Store Connect integration ──────────────────────────────
+    # Must match the connection name created in your Codemagic dashboard
+    integrations:
+      app_store_connect: Codemagic
+
+    environment:
+
+      # ── Automatic code signing ─────────────────────────────────
+      # Codemagic fetches and manages certificates & profiles for you
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.goallearner.awakened
+
+      # ── Build variables ────────────────────────────────────────
+      vars:
+        BUNDLE_ID:        "com.goallearner.awakened"
+        APP_VERSION:      "1.0.0"
+        XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
+        XCODE_SCHEME:     "App"
+        # ↓ Replace with your numeric App ID from App Store Connect
+        #   Find it at: appstoreconnect.apple.com → My Apps → App Information
+        APP_STORE_ID:     "ADD_YOUR_NUMERIC_APP_ID_HERE"
+
+      node:      v20.11.0
+      xcode:     latest
+      cocoapods: default
+
+    # ── Build steps ────────────────────────────────────────────────
+    scripts:
+
+      - name: Install Node dependencies
+        script: npm install
+
+      - name: Copy PWA files into www/ for Capacitor
+        script: |
+          mkdir -p www
+          cp index.html styles.css app.js sw.js manifest.json www/
+
+      - name: Add iOS platform (runs on first build only)
+        script: |
+          if [ ! -d ios ]; then
+            npx cap add ios
+          fi
+
+      - name: Sync web assets into iOS project
+        script: npx cap sync ios
+
+      - name: Apply code signing profiles
+        script: xcode-project use-profiles
+
+      - name: Set version and auto-increment build number
+        script: |
+          cd ios/App
+          # Set marketing version (shown in App Store)
+          agvtool new-marketing-version "$APP_VERSION"
+          # Auto-increment build number from latest TestFlight upload
+          LATEST=$(app-store-connect get-latest-testflight-build-number \
+            "$APP_STORE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $((LATEST + 1))
+
+      - name: Build IPA for App Store
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --config Release
+
+    # ── Artifacts to download after build ──────────────────────────
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    # ── Publishing ─────────────────────────────────────────────────
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Automatically uploads every successful build to TestFlight
+        submit_to_testflight: true
+        # Set to true when you are ready to submit for App Store review
+        submit_to_app_store: false

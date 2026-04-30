@@ -7,3 +7,11 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node
+node_modules/
+
+# Capacitor — generated at build time by Codemagic
+www/
+ios/
+android/
