@@ -789,22 +789,18 @@
   // Both are PERMANENT — never regenerate, never edit. Class shifts
   // after first awakening do NOT update Chapter 2.
   const BEGINNING_TEMPLATE =
-    'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} downloaded a tool and called himself a Hunter.\n' +
-    'He had not yet awakened. He had not yet chosen a path. But the choice had been made — to begin.\n' +
-    'The path waited.';
+    '{DATE}. {NAME} was nothing yet.\n' +
+    'Not a Warrior. Not a Mage. Not a Hunter — only the idea of one.\n' +
+    'But on this day he made the only choice that matters: to begin.';
 
   const ORIGIN_TEMPLATES = {
-    STR:   'On {DATE}, the {WEEKDAY_NOUN} named {NAME} chose the path of the Warrior.\nHe would not be strong because he was lucky. He would be strong because the weak version of himself was no longer enough.\nThe Awakening had begun.',
-    INT:   'On {DATE}, the {WEEKDAY_NOUN} named {NAME} chose the path of the Mage.\nHe would not learn because the world demanded it. He would learn because the unlearned version of himself was no longer enough.\nThe Awakening had begun.',
-    FOCUS: 'On {DATE}, the {WEEKDAY_NOUN} named {NAME} chose the path of the Assassin.\nHe would not focus because focus was easy. He would focus because the distracted version of himself was no longer enough.\nThe Awakening had begun.',
-    WILL:  'On {DATE}, the {WEEKDAY_NOUN} named {NAME} chose the path of the Paladin.\nHe would not endure because nothing tested him. He would endure because the broken version of himself was no longer enough.\nThe Awakening had begun.',
-    VIT:   'On {DATE}, the {WEEKDAY_NOUN} named {NAME} chose the path of the Ranger.\nHe would not heal because his body was given. He would heal because the depleted version of himself was no longer enough.\nThe Awakening had begun.',
-    WLT:   'On {DATE}, the {WEEKDAY_NOUN} named {NAME} chose the path of the Merchant.\nHe would not build wealth because he wanted comfort. He would build wealth because the dependent version of himself was no longer enough.\nThe Awakening had begun.',
-    SAGE:  'On {DATE}, the {WEEKDAY_NOUN} named {NAME} walked all six paths.\nHe would not be balanced because he was lucky. He would be balanced because he refused to specialize before knowing himself.\nThe Awakening had begun.',
-  };
-  const WEEKDAY_NOUNS = {
-    Mon: 'trader',  Tue: 'operator', Wed: 'builder', Thu: 'thinker',
-    Fri: 'fighter', Sat: 'wanderer', Sun: 'seeker',
+    STR:   '{DATE}. {NAME} chose the path of the Warrior.\nNot because strength came naturally. Because weakness had become unbearable.\nThe Awakening had begun.',
+    INT:   '{DATE}. {NAME} chose the path of the Mage.\nNot because the world demanded knowledge. Because ignorance had become the cage.\nThe Awakening had begun.',
+    FOCUS: '{DATE}. {NAME} chose the path of the Assassin.\nNot because focus came easily. Because distraction had cost him too much.\nThe Awakening had begun.',
+    WILL:  '{DATE}. {NAME} chose the path of the Paladin.\nNot because nothing tested him. Because breaking had stopped being an option.\nThe Awakening had begun.',
+    VIT:   '{DATE}. {NAME} chose the path of the Ranger.\nNot because his body was given. Because depletion had become the default he refused.\nThe Awakening had begun.',
+    WLT:   '{DATE}. {NAME} chose the path of the Merchant.\nNot because comfort was the goal. Because dependence had been seen for what it was.\nThe Awakening had begun.',
+    SAGE:  '{DATE}. {NAME} walked all six paths.\nNot because he was lucky. Because he refused to specialize before knowing himself.\nThe Awakening had begun.',
   };
 
   const CLASSES = {
@@ -2523,23 +2519,9 @@
   function generateBeginningStory(dateStr) {
     const useDate     = dateStr || today;
     const dateDisplay = _formatOriginDate(useDate);
-    const noun        = _originWeekdayNoun(useDate);
-    const name        = _originName();
-    // Edge case: when the user's name is literally "Hunter" (the default),
-    // the original template's "called himself a Hunter" creates an awkward
-    // echo — "named Hunter ... called himself a Hunter." Swap the archetype
-    // reference for those users so the line reads clean.
-    let template = BEGINNING_TEMPLATE;
-    if (name === 'Hunter') {
-      template = template.replace(
-        'called himself a Hunter',
-        'answered the call'
-      );
-    }
-    const text = template
-      .replace('{DATE}',         dateDisplay)
-      .replace('{WEEKDAY_NOUN}', noun)
-      .replace('{NAME}',         name);
+    const text = BEGINNING_TEMPLATE
+      .replace('{DATE}', dateDisplay)
+      .replace('{NAME}', _originName());
     return { text, dateISO: useDate, dateDisplay };
   }
 
@@ -2549,11 +2531,9 @@
     if (!tpl) return null;
     const useDate     = dateStr || today;
     const dateDisplay = _formatOriginDate(useDate);
-    const noun        = _originWeekdayNoun(useDate);
     const text = tpl
-      .replace('{DATE}',         dateDisplay)
-      .replace('{WEEKDAY_NOUN}', noun)
-      .replace('{NAME}',         _originName());
+      .replace('{DATE}', dateDisplay)
+      .replace('{NAME}', _originName());
     return { text, classKey, dateISO: useDate, dateDisplay };
   }
 
@@ -2569,6 +2549,34 @@
     if (!story) return;
     originAwakening = story;
     save();
+  }
+
+  // ── v3 TEMPLATE REWRITE — regenerate existing stories using the new
+  // template text while preserving the ORIGINAL stored date and (for
+  // Chapter 2) class. Silent migration — no animation, no toast.
+  function migrateOriginTextV3IfNeeded() {
+    if (localStorage.getItem('hb_origin_v3_migrated') === '1') return;
+    let dirty = false;
+    if (originBeginning && originBeginning.text && originBeginning.dateISO) {
+      const fresh = generateBeginningStory(originBeginning.dateISO);
+      if (fresh) {
+        // Preserve any flags on the original entry (e.g., migrated)
+        fresh.migrated = !!originBeginning.migrated;
+        originBeginning = fresh;
+        dirty = true;
+      }
+    }
+    if (originAwakening && originAwakening.text &&
+        originAwakening.classKey && originAwakening.dateISO) {
+      const fresh = generateAwakeningStory(originAwakening.classKey, originAwakening.dateISO);
+      if (fresh) {
+        fresh.migrated = !!originAwakening.migrated;
+        originAwakening = fresh;
+        dirty = true;
+      }
+    }
+    localStorage.setItem('hb_origin_v3_migrated', '1');
+    if (dirty) save();
   }
 
   // One-time migration on first launch of the two-chapter version.
@@ -9003,6 +9011,9 @@
     setupShieldInfoModal();
     setupOriginStorySheet();
     migrateOriginStoriesIfNeeded();
+    // v3: rewrite story text using the new tightened templates while
+    // preserving original dates/classes. Idempotent via hb_origin_v3_migrated.
+    migrateOriginTextV3IfNeeded();
     // Streak forgiveness: on app open, process missed days (use shields /
     // absorb honest days / break streaks), then surface any queued shield
     // notices as toasts, then check for comeback opportunity if the user
