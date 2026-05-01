@@ -7793,3 +7793,207 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   }
   .wn-drag-handle { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DOUBLE XP BANNER — tappable Weekend Warrior entry point
+   ═══════════════════════════════════════════════════════════════ */
+.double-xp-banner {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, filter 0.18s ease;
+  user-select: none;
+}
+.double-xp-banner:hover  { filter: brightness(1.08); }
+.double-xp-banner:active { transform: scale(0.985); }
+.double-xp-banner:focus-visible {
+  outline: 2px solid rgba(245, 158, 11, 0.8);
+  outline-offset: 2px;
+}
+/* "Active" variant — when user already has No alcohol in their list.
+   Only the text changes; gold styling stays the same per spec. */
+.double-xp-banner.dxb--active { font-size: 0.78rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   WEEKEND WARRIOR — bottom-sheet popup
+   ═══════════════════════════════════════════════════════════════ */
+.ww-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 330;
+  animation: ww-fade 0.22s ease-out;
+}
+.ww-overlay.hidden { display: none !important; }
+@keyframes ww-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.ww-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  max-height: 84vh;
+  z-index: 331;
+  background: var(--bg-raised);
+  border: 1.5px solid rgba(245, 158, 11, 0.32);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  animation: ww-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4),
+              0 0 24px rgba(245, 158, 11, 0.12);
+}
+.ww-sheet.hidden { display: none !important; }
+@keyframes ww-up {
+  from { transform: translateX(-50%) translateY(100%); }
+  to   { transform: translateX(-50%) translateY(0);    }
+}
+
+.ww-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  margin: 12px auto 0;
+  flex-shrink: 0;
+}
+
+.ww-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 8px;
+}
+.ww-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+.ww-close-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+.ww-close-btn:active { background: rgba(255, 255, 255, 0.10); }
+
+.ww-body {
+  padding: 4px 18px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ww-rules {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+}
+.ww-rules b { color: var(--gold); font-weight: 700; }
+
+.ww-add-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 14px;
+  background: var(--gold);
+  color: #1a1505;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.1s ease, opacity 0.18s ease;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+}
+.ww-add-btn:active { transform: scale(0.985); opacity: 0.94; }
+
+.ww-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 6px;
+}
+.ww-day-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+.ww-day-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ww-status {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+}
+.ww-status--complete { color: #22c55e; background: rgba(34, 197, 94, 0.12);  border-color: rgba(34, 197, 94, 0.35); }
+.ww-status--missed   { color: #ef4444; background: rgba(239, 68, 68, 0.10);  border-color: rgba(239, 68, 68, 0.30); }
+.ww-status--pending  { color: var(--gold); background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); }
+.ww-status--future   { color: var(--text-tertiary); background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.06); }
+
+.ww-reward {
+  margin-top: 6px;
+  text-align: center;
+  padding: 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+.ww-reward--earned {
+  color: var(--gold);
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.40);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.15);
+}
+.ww-reward--locked {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.ww-added-flash {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--gold);
+  padding: 16px 0 6px;
+  animation: ww-flash 0.7s ease-out;
+}
+@keyframes ww-flash {
+  0%   { opacity: 0; transform: scale(0.9); }
+  20%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1);    }
+}

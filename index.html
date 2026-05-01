@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=95">
+  <link rel="stylesheet" href="styles.css?v=96">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -118,7 +118,7 @@
       </div>
 
       <!-- Double XP weekend banner -->
-      <div id="double-xp-banner" class="double-xp-banner hidden">⚡ DOUBLE XP WEEKEND 🔥</div>
+      <div id="double-xp-banner" class="double-xp-banner hidden" role="button" tabindex="0" aria-label="Weekend Warrior challenge details">⚡ DOUBLE XP WEEKEND 🔥</div>
 
       <!-- Daily progress -->
       <div class="progress-section">
@@ -340,6 +340,17 @@
     </div>
   </div>
 
+  <!-- Weekend Warrior bottom-sheet (Double XP banner tap target) -->
+  <div id="ww-overlay" class="ww-overlay hidden"></div>
+  <div id="ww-sheet"   class="ww-sheet   hidden">
+    <div class="ww-drag-handle"></div>
+    <div class="ww-header">
+      <span id="ww-title" class="ww-title">⚔️ Weekend Warrior Challenge</span>
+      <button id="ww-close-btn" class="ww-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div id="ww-body" class="ww-body"></div>
+  </div>
+
   <!-- Shared emoji picker -->
   <div id="emoji-overlay" class="emoji-overlay hidden"></div>
   <div id="emoji-picker" class="emoji-picker hidden">
@@ -473,7 +484,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=97"></script>
+  <script src="app.js?v=98"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -478,6 +478,197 @@
     if (!levelUpActive && !achPopupTimer) drainAchQueue();
   }
 
+  // ── WEEKEND WARRIOR BANNER + SHEET ───────────────────────
+  // The Double XP banner on the Habits tab is tappable. Two states
+  // depending on whether "No alcohol" is in the user's active list.
+
+  function userHasNoAlcohol() {
+    return habits.some(h => h.name === 'No alcohol');
+  }
+
+  // Returns 'complete' | 'missed' | 'pending' | 'future' for a given
+  // weekend date (Fri/Sat/Sun). Used to render the State B progress rows.
+  function getWeekendDayStatus(dateStr) {
+    if (!dateStr) return 'future';
+    if (dateStr > today) return 'future';
+    const done = noAlcoholDoneOn(dateStr);
+    if (done) return 'complete';
+    if (dateStr === today) return 'pending';
+    return 'missed';
+  }
+
+  function _wwStatusBadge(status) {
+    switch (status) {
+      case 'complete': return '<span class="ww-status ww-status--complete">✓ Complete</span>';
+      case 'missed':   return '<span class="ww-status ww-status--missed">✗ Missed</span>';
+      case 'pending':  return '<span class="ww-status ww-status--pending">○ Pending</span>';
+      default:         return '<span class="ww-status ww-status--future">— Future</span>';
+    }
+  }
+
+  function _wwRewardLine(friSt, satSt, sunSt) {
+    const completed = [friSt, satSt, sunSt].filter(s => s === 'complete').length;
+    const missed    = [friSt, satSt, sunSt].some(s => s === 'missed');
+    const possible  = [friSt, satSt, sunSt].filter(s => s !== 'missed').length;
+
+    if (completed === 3) {
+      return '<div class="ww-reward ww-reward--earned">🏆 +30 XP earned — Weekend Warrior unlocked</div>';
+    }
+    if (missed && possible < 3) {
+      return '<div class="ww-reward ww-reward--locked">Bonus locked for this weekend — try again next Friday</div>';
+    }
+    return '<div class="ww-reward">Finish all 3 nights to earn +30 XP</div>';
+  }
+
+  // Renders the popup body based on current state. Called on open AND
+  // after a State A → State B transition (when user adds No alcohol).
+  function renderWeekendWarriorBody() {
+    const titleEl = document.getElementById('ww-title');
+    const bodyEl  = document.getElementById('ww-body');
+    if (!titleEl || !bodyEl) return;
+
+    const hasIt = userHasNoAlcohol();
+
+    if (!hasIt) {
+      // ── State A: rules + Add CTA ────────────────────────
+      titleEl.textContent = '⚔️ Weekend Warrior Challenge';
+      bodyEl.innerHTML =
+        '<p class="ww-rules">Complete <b>No alcohol</b> all three nights — Friday, Saturday, and Sunday — to earn <b>+30 bonus XP</b> on Sunday.</p>' +
+        '<p class="ww-rules">Plus: every habit completed Fri-Sun earns <b>Double XP</b>.</p>' +
+        '<button id="ww-add-btn" class="ww-add-btn">+ Add No Alcohol to my habits</button>';
+
+      const addBtn = document.getElementById('ww-add-btn');
+      if (addBtn) addBtn.addEventListener('click', addNoAlcoholFromWWBanner);
+      return;
+    }
+
+    // ── State B: live Fri/Sat/Sun progress ─────────────────
+    titleEl.textContent = '⚔️ Weekend Warrior Active';
+    const w = getWeekendDates();
+    if (!w) {
+      bodyEl.innerHTML = '<p class="ww-rules">The Weekend Warrior challenge runs Friday through Sunday.</p>';
+      return;
+    }
+    const friSt = getWeekendDayStatus(w.fri);
+    const satSt = getWeekendDayStatus(w.sat);
+    const sunSt = getWeekendDayStatus(w.sun);
+
+    bodyEl.innerHTML =
+      '<div class="ww-progress-list">' +
+        '<div class="ww-day-row"><span class="ww-day-name">Friday</span>'   + _wwStatusBadge(friSt) + '</div>' +
+        '<div class="ww-day-row"><span class="ww-day-name">Saturday</span>' + _wwStatusBadge(satSt) + '</div>' +
+        '<div class="ww-day-row"><span class="ww-day-name">Sunday</span>'   + _wwStatusBadge(sunSt) + '</div>' +
+      '</div>' +
+      _wwRewardLine(friSt, satSt, sunSt);
+  }
+
+  function openWeekendWarriorSheet() {
+    const overlay = document.getElementById('ww-overlay');
+    const sheet   = document.getElementById('ww-sheet');
+    if (!overlay || !sheet) return;
+    renderWeekendWarriorBody();
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+
+  function closeWeekendWarriorSheet() {
+    document.getElementById('ww-overlay').classList.add('hidden');
+    document.getElementById('ww-sheet').classList.add('hidden');
+  }
+
+  // Adds the canonical "No alcohol" habit (idempotent) and transitions
+  // the popup from State A → State B with a small confirmation flash.
+  function addNoAlcoholFromWWBanner() {
+    if (userHasNoAlcohol()) {
+      renderWeekendWarriorBody();
+      updateDoubleXpBanner();
+      return;
+    }
+    const def = DEFAULT_HABITS.find(d => d.name === 'No alcohol');
+    if (!def) return;
+    const newH = {
+      id:          uid(),
+      emoji:       def.emoji,
+      name:        def.name,
+      difficulty:  def.difficulty,
+      type:        def.type || 'build',
+      primaryStat: def.primaryStat,
+    };
+    habits.push(newH);
+    if (def.note) habitNotes[newH.id] = def.note;
+    save();
+    renderHabits();
+    updateDoubleXpBanner();
+
+    // Brief "Added! ✓" flash, then transition popup body to State B
+    const bodyEl = document.getElementById('ww-body');
+    if (bodyEl) {
+      bodyEl.innerHTML =
+        '<div class="ww-added-flash">Added! ✓</div>' +
+        '<p class="ww-rules" style="text-align:center">No alcohol — let the Weekend Warrior begin.</p>';
+      setTimeout(renderWeekendWarriorBody, 900);
+    }
+
+    showHabitToast('No alcohol added — let the Weekend Warrior begin');
+  }
+
+  // Updates the Habits-tab Double XP banner: visibility, text, and active
+  // state styling. Called on render() and after habit changes.
+  function updateDoubleXpBanner() {
+    const el = document.getElementById('double-xp-banner');
+    if (!el) return;
+    if (!isWeekend()) {
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    if (userHasNoAlcohol()) {
+      el.classList.add('dxb--active');
+      el.textContent = '⚡ Weekend Warrior active — +30 XP if you finish all 3 nights 🔥';
+    } else {
+      el.classList.remove('dxb--active');
+      el.textContent = '⚡ DOUBLE XP WEEKEND 🔥';
+    }
+  }
+
+  function setupDoubleXpBanner() {
+    const el      = document.getElementById('double-xp-banner');
+    const overlay = document.getElementById('ww-overlay');
+    const sheet   = document.getElementById('ww-sheet');
+    const closeBtn = document.getElementById('ww-close-btn');
+    if (!el || !overlay || !sheet) return;
+
+    el.addEventListener('click', openWeekendWarriorSheet);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openWeekendWarriorSheet();
+      }
+    });
+
+    overlay.addEventListener('click', closeWeekendWarriorSheet);
+    if (closeBtn) closeBtn.addEventListener('click', closeWeekendWarriorSheet);
+
+    // Reuse the swipe-down gesture utility
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, () => {
+        sheet.classList.add('hidden');
+        overlay.classList.add('hidden');
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.ww-drag-handle, .ww-header',
+        scrollTarget:   '.ww-body',
+      });
+    }
+
+    // ESC dismiss on desktop
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
+        closeWeekendWarriorSheet();
+      }
+    });
+  }
+
   // Shows a one-time Friday challenge banner (once per Friday day, per device).
   function setupFridayBanner() {
     if (getTodayDayName() !== 'Fri') return;
@@ -2168,7 +2359,7 @@
   // ── RENDER ────────────────────────────────────────────────
   function render() {
     document.getElementById('current-date').textContent = formatDisplayDate(today);
-    document.getElementById('double-xp-banner').classList.toggle('hidden', !isWeekend());
+    updateDoubleXpBanner();
     document.getElementById('main-footer').style.display = currentTab === 'habits' ? '' : 'none';
     renderRank();
     renderHabits();
@@ -5823,6 +6014,7 @@
     setupSettings();
     setupStreakDanger();
     setupMorningNudge();
+    setupDoubleXpBanner();
     setupHabitInfoSheet();
     setupHabitDetailGesture();
     setupWhatsNewSheet();
