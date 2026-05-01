@@ -483,8 +483,7 @@
     // ── 💪 Physical Performance (0–10) ──────────────────────
     { emoji: '💧', name: 'Hydrate',                                   difficulty: 'easy'                },  // 0
     { emoji: '😴', name: 'Sleep',                                     difficulty: 'medium'              },  // 1
-    { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium',
-      description: 'It all starts the night before. Quality sleep before midnight sets the foundation for everything.' },  // 2
+    { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium'              },  // 2
     { emoji: '🏃', name: 'Cardio',                                    difficulty: 'medium'              },  // 3
     { emoji: '🏋️', name: 'Strength training',                        difficulty: 'hard'                },  // 4
     { emoji: '⚡', name: 'Sprint session',                            difficulty: 'hard'                },  // 5
@@ -588,6 +587,85 @@
   };
   // Enrich each habit definition with its primary stat — single source of truth
   DEFAULT_HABITS.forEach(h => { h.primaryStat = HABIT_PRIMARY_STAT[h.name] || 'FOCUS'; });
+
+  // ── HABIT DESCRIPTIONS ───────────────────────────────────
+  // One curated paragraph per habit, displayed on the View Note /
+  // habit-detail sheet's "About this habit" section. Read-only —
+  // single source of truth for the canonical description.
+  const HABIT_DESCRIPTIONS = {
+    // 💪 Physical Performance
+    'Hydrate':                  'Water is the most underrated performance tool. Your brain, muscles, and recovery all depend on it.',
+    'Sleep':                    'Recovery happens here. Skipping sleep is borrowing energy from tomorrow with high interest.',
+    'Sleep before midnight':    'It all starts the night before. Quality sleep before midnight sets the foundation for everything.',
+    'Cardio':                   'Build the engine. Cardiovascular fitness is the base layer everything else stacks on.',
+    'Strength training':        'You build your body like a fortress. Muscle is metabolic armor — protect what you build.',
+    'Sprint session':           'Maximum effort, minimum time. Sprints train explosiveness and remind you what 100% feels like.',
+    'Daily walk':               'The most underrated practice. Walking solves more problems than most strategies.',
+    'Ice bath or cold plunge':  'The cold reveals who you really are. Discomfort by choice is power.',
+    'Cold shower':              'Two minutes of voluntary suffering. Trains the mind to hold under pressure.',
+    'Mobility & Stretching':    "The body you'll have at 60 is built today. Mobility is the difference between aging and breaking down.",
+    'Protein goal':             'Muscle is built in the kitchen. Without protein, training is just damage with no rebuild.',
+
+    // 🧠 Mental & Focus
+    'Read':                                  'The cheapest mentorship in the world. Every great mind has left their playbook for you.',
+    'Meditate & Breathwork':                 "The space between stimulus and response is where your power lives. Breathwork builds that space.",
+    'Journal':                               "Thoughts you don't write down own you. Thoughts you write down, you own.",
+    'No phone or social media after waking': "The first hour shapes the day. Don't hand it to algorithms before you've claimed it for yourself.",
+    'Review daily goals/intentions':         'Direction beats motion. Five minutes of clarity saves hours of drift.',
+    'Get morning sunlight':                  "Sets your circadian rhythm, your hormones, your mood. The cheapest performance tool you'll ever use.",
+    'No social media before noon':           'Protect your morning brain. The deepest work happens before the noise begins.',
+    'No screens 1 hour before bed':          'Your sleep quality starts an hour before bed. Screens steal it.',
+
+    // 🥗 Nutrition
+    'Whole foods diet':  'Real food builds real bodies. Eat what your great-grandparents would recognize.',
+    'No sugar/junk food':'Sugar is a stimulant disguised as food. The discipline you build here transfers everywhere.',
+    'No alcohol':        'Sleep, recovery, focus, mood — alcohol degrades all four. Sobriety is a performance edge most people refuse to take.',
+    'No caffeine':       'Sometimes the best stimulant is no stimulant. Reset your baseline.',
+
+    // ⚡ Discipline & Productivity
+    'Wake up at consistent time':           'A consistent wake time anchors your whole day. The body trusts predictability.',
+    'Complete your #1 priority task':       'One important thing done beats ten unimportant things. Move the needle that matters.',
+    'Plan tomorrow the night before':       "Tomorrow's success is decided tonight. A 5-minute plan tonight saves 30 minutes of friction tomorrow.",
+    'Tidy/clean space':                     'Your environment is a mirror of your mind. Order outside helps order inside.',
+    'Under 1 hour screen time':             "Time you don't claim, attention economies will. Reclaim the hour.",
+    'Digital declutter':                    'Notifications are interruptions disguised as importance. Cut the noise to hear the signal.',
+    'No doomscrolling until after 5PM':     'The morning is for building, not consuming. Hold the line until the work is done.',
+    'Review your long term goals':          "The compass needs frequent checking. Long-term goals fade if you don't look at them.",
+
+    // 💰 Financial & Growth
+    'Track finances & net worth':                'What you measure, you can manage. Unmeasured money disappears.',
+    'Work on a side project or business':        "Today's small project is tomorrow's leverage. Asymmetric upside lives here.",
+    'Review investments or trading journal':     'The journal is where the lessons live. Every trade reviewed is a teacher rehired.',
+    'Generate one new business or content idea': 'Ideas compound. The mind that produces one today produces ten next month.',
+
+    // 🎯 Learning & Skills
+    'Educational podcast':         'Convert dead time into learning time. Walks, drives, dishes — all classrooms.',
+    'Practice a skill':            'Practice is how potential becomes reality. There is no shortcut.',
+    'Flashcard review':            'Spaced repetition is how memory becomes knowledge. Five minutes today, fluent in months.',
+    'Write down lessons learned':  'A lesson not recorded is a lesson re-learned. Stop paying twice for the same education.',
+    'Learn something new':         'A learning brain is a young brain. Curiosity is the antidote to stagnation.',
+    'Language learning':           'Another language is another way of seeing the world. Daily reps build a second mind.',
+
+    // 🌱 Wellbeing & Relationships
+    'Morning gratitude practice':  "The mind that begins in gratitude doesn't easily fall into resentment. Train the lens.",
+    'Pray or set intentions':      'Whether you call it prayer, meditation, or intention — the act of pausing to align matters more than the label.',
+    'Call or text a family member':"Connection is the longest-running variable in human happiness research. Don't take the people who love you for granted.",
+    'Do something kind for someone':'Kindness is its own reward and its own training. Strong people give without keeping score.',
+    'Barefoot grounding outside':  "Direct contact with the earth is something we've forgotten we need. Try it before dismissing it.",
+    'Vitamins and minerals':       "Cover the basics. The body can't perform on missing inputs.",
+    'Visualization practice':      'The mind that has rehearsed the win is faster to execute it. See it before you live it.',
+    'Sleep early before 11PM':     'Earlier bedtimes compound. Each hour before midnight is worth more than each hour after.',
+  };
+  // Apply the map onto DEFAULT_HABITS at startup. Each habit definition
+  // gets the canonical description text. Habits without an entry are
+  // logged so coverage gaps are obvious during development.
+  DEFAULT_HABITS.forEach(h => {
+    if (HABIT_DESCRIPTIONS[h.name]) {
+      h.description = HABIT_DESCRIPTIONS[h.name];
+    } else if (typeof console !== 'undefined' && console.warn) {
+      console.warn('Habit missing description:', h.name);
+    }
+  });
 
   // ── HABIT STAT-COLOR HELPERS (used by History views) ─────
   function getHabitPrimaryStat(habit) {
