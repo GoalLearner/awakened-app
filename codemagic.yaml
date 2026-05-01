@@ -59,6 +59,8 @@ workflows:
         script: |
           mkdir -p www
           cp index.html styles.css app.js sw.js manifest.json www/
+          # Class avatar silhouettes
+          cp avatar-*.png www/
 
       - name: Add iOS platform (runs on first build only)
         script: |

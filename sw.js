@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v4.27';
+const CACHE_VERSION = 'v4.28';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -12,6 +12,15 @@ const PRECACHE_ASSETS = [
   '/styles.css',
   '/app.js',
   '/manifest.json',
+  // Class avatar silhouettes
+  '/avatar-base.png',
+  '/avatar-warrior.png',
+  '/avatar-ranger.png',
+  '/avatar-mage.png',
+  '/avatar-assassin.png',
+  '/avatar-paladin.png',
+  '/avatar-merchant.png',
+  '/avatar-sage.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────

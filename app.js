@@ -2100,6 +2100,24 @@
     return map[rankId] || 'Civilian';
   }
 
+  // Avatar silhouette per class. Brand new players (0 XP) see the base
+  // silhouette until they earn enough to lock into a class.
+  const AVATAR_FILES = {
+    STR:   'avatar-warrior.png',
+    VIT:   'avatar-ranger.png',
+    INT:   'avatar-mage.png',
+    FOCUS: 'avatar-assassin.png',
+    WILL:  'avatar-paladin.png',
+    WLT:   'avatar-merchant.png',
+    SAGE:  'avatar-sage.png',
+  };
+  function getAvatarSrc() {
+    if (totalPoints === 0) return 'avatar-base.png';
+    return AVATAR_FILES[currentClass] || 'avatar-base.png';
+  }
+  // Tracks the last-rendered avatar so we only crossfade when class actually changes.
+  let _lastAvatarSrc = null;
+
   function getTitle() {
     for (let i = ACHIEVEMENTS.length - 1; i >= 0; i--) {
       if (unlockedAchievements.has(ACHIEVEMENTS[i].id)) return ACHIEVEMENTS[i].name;
@@ -2124,6 +2142,16 @@
           '<span class="sc-top-title">STATUS</span>' +
           (isWeekend() ? '<span class="stats-2x-badge">2x XP</span>' : '') +
         '</div>' +
+        // Avatar portrait — class silhouette (or base for brand-new players)
+        (function() {
+          const src         = getAvatarSrc();
+          const justChanged = (_lastAvatarSrc !== null) && (_lastAvatarSrc !== src);
+          _lastAvatarSrc    = src;
+          return '<div class="sc-avatar-row">' +
+            '<img class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
+                 'src="' + src + '" alt="' + esc(cls.name) + ' avatar" loading="eager">' +
+          '</div>';
+        })() +
         // Hero: rank badge + name + rank + class
         '<div class="sc-hero">' +
           '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '">' + rank.id + '</div>' +
