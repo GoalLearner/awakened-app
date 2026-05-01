@@ -6022,6 +6022,11 @@
   }
 
   // ── DAILY MISSION CARD render ─────────────────────────────
+  // Session-only expand/collapse state. Defaults to COLLAPSED so the
+  // card sits as a single compact row above the pack headers, matching
+  // the visual density of the rest of the Habits tab. Tap to expand.
+  let _dailyMissionExpanded = false;
+
   function renderDailyMissionCard() {
     const wrap = document.getElementById('daily-mission-card');
     if (!wrap) return;
@@ -6030,73 +6035,95 @@
     const mission = getOrPickTodayMission();
     if (!mission) { wrap.classList.add('hidden'); return; }
 
-    const state         = dailyQuests[today] || { manualDone: [], bonusAwarded: false };
     const allComplete   = isMissionComplete(mission);
     const tags          = mission.tags || [];
     const tagBadges     = (tags.includes('outdoor') || tags.includes('nature') ? '<span class="dmc-tag">🌲</span>' : '') +
                           (tags.includes('no-phone') ? '<span class="dmc-tag">📵</span>' : '');
-
     const doneCount = mission.components.filter(c => isMissionComponentDone(c)).length;
     const total     = mission.components.length;
+    const xpAmt     = isWeekend() ? 100 : 50;
+    const xpStr     = '+' + xpAmt + ' XP';
 
-    const componentsHTML = mission.components.map(c => {
-      const done     = isMissionComponentDone(c);
-      const tappable = isMissionComponentTappable(c);
-      const linkedHabit = c.matchType === 'habit'
-        ? habits.find(h => h.name === c.habitName)
-        : null;
-      const subText = linkedHabit
-        ? '<span class="dmc-comp-sub">linked to <b>' + esc(linkedHabit.name) + '</b></span>'
-        : (c.matchType === 'pack'
-            ? '<span class="dmc-comp-sub">auto from pack progress</span>'
-            : '');
-      return '<div class="dmc-comp' + (done ? ' dmc-comp--done' : '') +
-                  (tappable ? ' dmc-comp--tappable' : '') +
-                  '" ' + (tappable ? 'data-mission-comp="' + esc(c.id) + '" role="button" tabindex="0"' : '') + '>' +
-        '<span class="dmc-comp-check">' + (done ? '✓' : '') + '</span>' +
-        '<span class="dmc-comp-text">' + esc(c.text) + subText + '</span>' +
-      '</div>';
-    }).join('');
-
-    if (allComplete) {
-      wrap.classList.add('dmc--complete');
-    } else {
-      wrap.classList.remove('dmc--complete');
-    }
+    if (allComplete) wrap.classList.add('dmc--complete'); else wrap.classList.remove('dmc--complete');
+    if (_dailyMissionExpanded) wrap.classList.add('dmc--expanded'); else wrap.classList.remove('dmc--expanded');
     wrap.classList.remove('hidden');
-    wrap.innerHTML =
-      '<div class="dmc-head">' +
-        '<span class="dmc-eyebrow">' + (allComplete ? '✓ MISSION COMPLETE' : "TODAY'S MISSION") + '</span>' +
-        '<span class="dmc-tags">' + tagBadges + '</span>' +
-        '<span class="dmc-difficulty">LEGENDARY</span>' +
-      '</div>' +
-      '<div class="dmc-bonus">+' + (isWeekend() ? '100' : '50') + ' XP' +
-        (isWeekend() ? ' <span class="dmc-2x">2×</span>' : '') + '</div>' +
-      '<div class="dmc-name">' + esc(mission.name) + '</div>' +
-      '<div class="dmc-desc">' + esc(mission.description) + '</div>' +
-      '<div class="dmc-progress">' + doneCount + ' / ' + total + ' complete</div>' +
-      '<div class="dmc-components">' + componentsHTML + '</div>';
+
+    // ── Compact toggle row (always visible) ────────────────
+    const eyebrow = allComplete ? '✓ MISSION' : "⚔️ TODAY";
+    const status  = allComplete ? '✓ Complete' : doneCount + '/' + total;
+    const chev    = _dailyMissionExpanded ? '▾' : '▸';
+
+    let html =
+      '<button class="dmc-toggle" id="dmc-toggle" type="button" aria-expanded="' + _dailyMissionExpanded + '">' +
+        '<span class="dmc-toggle-eyebrow">' + eyebrow + '</span>' +
+        '<span class="dmc-toggle-name">' + esc(mission.name) + '</span>' +
+        tagBadges +
+        '<span class="dmc-toggle-progress">' + status + '</span>' +
+        '<span class="dmc-toggle-xp">' + xpStr + '</span>' +
+        '<span class="dmc-toggle-chev">' + chev + '</span>' +
+      '</button>';
+
+    // ── Expanded body (only when user has tapped to expand) ─
+    if (_dailyMissionExpanded) {
+      const componentsHTML = mission.components.map(c => {
+        const done     = isMissionComponentDone(c);
+        const tappable = isMissionComponentTappable(c);
+        const linkedHabit = c.matchType === 'habit'
+          ? habits.find(h => h.name === c.habitName)
+          : null;
+        const subText = linkedHabit
+          ? '<span class="dmc-comp-sub">linked to <b>' + esc(linkedHabit.name) + '</b></span>'
+          : (c.matchType === 'pack' ? '<span class="dmc-comp-sub">auto from pack progress</span>' : '');
+        return '<div class="dmc-comp' + (done ? ' dmc-comp--done' : '') +
+                    (tappable ? ' dmc-comp--tappable' : '') +
+                    '" ' + (tappable ? 'data-mission-comp="' + esc(c.id) + '" role="button" tabindex="0"' : '') + '>' +
+          '<span class="dmc-comp-check">' + (done ? '✓' : '') + '</span>' +
+          '<span class="dmc-comp-text">' + esc(c.text) + subText + '</span>' +
+        '</div>';
+      }).join('');
+
+      html +=
+        '<div class="dmc-body">' +
+          '<div class="dmc-bonus">' + xpStr + (isWeekend() ? ' <span class="dmc-2x">2×</span>' : '') +
+            '<span class="dmc-difficulty">LEGENDARY</span>' +
+          '</div>' +
+          '<div class="dmc-desc">' + esc(mission.description) + '</div>' +
+          '<div class="dmc-components">' + componentsHTML + '</div>' +
+        '</div>';
+    }
+
+    wrap.innerHTML = html;
   }
 
   function setupDailyMissionCard() {
     const wrap = document.getElementById('daily-mission-card');
     if (!wrap) return;
-    // Delegated tap on any tappable component → toggle manual done
+    // Delegated taps for: expand/collapse toggle + per-component manual checks
     wrap.addEventListener('click', e => {
       const t = e.target;
       if (!t || !t.closest) return;
-      const row = t.closest('[data-mission-comp]');
-      if (!row) return;
-      e.preventDefault();
-      e.stopPropagation();
-      toggleMissionComponent(row.getAttribute('data-mission-comp'));
+      const comp = t.closest('[data-mission-comp]');
+      if (comp) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMissionComponent(comp.getAttribute('data-mission-comp'));
+        return;
+      }
+      const toggle = t.closest('#dmc-toggle');
+      if (toggle) {
+        e.preventDefault();
+        _dailyMissionExpanded = !_dailyMissionExpanded;
+        renderDailyMissionCard();
+        return;
+      }
     });
     wrap.addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      const row = e.target && e.target.closest && e.target.closest('[data-mission-comp]');
-      if (!row) return;
-      e.preventDefault();
-      toggleMissionComponent(row.getAttribute('data-mission-comp'));
+      const comp = e.target && e.target.closest && e.target.closest('[data-mission-comp]');
+      if (comp) {
+        e.preventDefault();
+        toggleMissionComponent(comp.getAttribute('data-mission-comp'));
+      }
     });
   }
 
