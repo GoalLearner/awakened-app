@@ -3852,14 +3852,15 @@ body.theme-light .ob-inspiration-quote {
   color: var(--accent);
 }
 
-/* Habit cells (grid cols 2-8). Smaller margin = tighter rows. */
+/* Habit cells (grid cols 2-8). Explicit height drives aspect-ratio so
+   the cell width is computed (= height = 24px) regardless of how wide
+   the grid track gets on bigger screens. Centered in its track. */
 .hg-cell {
-  aspect-ratio: 1;
-  margin: 3px 2px;
+  height: 24px;
+  width: 24px;
   border-radius: 5px;
+  margin: 0;
   min-width: 0;
-  max-width: 26px;
-  max-height: 26px;
   justify-self: center;
   align-self: center;
 }
