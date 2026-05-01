@@ -3332,6 +3332,10 @@
   }
 
   function renderHabits() {
+    // Mission card piggy-backs every habit re-render so progress stays
+    // in sync with completions even when switchTab/onMissionProgress
+    // didn't fire (e.g., partial state restoration from localStorage).
+    renderDailyMissionCard();
     const list  = document.getElementById('habit-list');
     const empty = document.getElementById('empty-state');
     const todayHabits = habits.filter(isScheduledToday);
@@ -4743,6 +4747,7 @@
     if (tab === 'profile')      renderProfile();
     if (tab === 'stats')        renderStats();
     if (tab === 'history')      renderHistory();
+    if (tab === 'habits')       renderDailyMissionCard();
     checkStreakDanger();
     checkMorningRoutineNudge();
   }
