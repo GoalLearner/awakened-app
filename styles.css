@@ -707,6 +707,9 @@ footer {
   padding: 12px 16px calc(14px + var(--safe-bottom));
   background: var(--bg);
   border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
 }
 
 .add-btn {
@@ -6878,4 +6881,240 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   letter-spacing: 0.05em;
   border-top: 1px solid var(--border);
   background: rgba(139,92,246,0.06);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MORNING ROUTINE PACK — quick-add button + library entry + modal
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Footer button: gold-accented variant for the Morning Routine quick-add */
+.add-btn--morning {
+  border-color: rgba(245, 158, 11, 0.42);
+  border-style: solid;
+  color: #f59e0b;
+}
+.add-btn--morning .add-plus { color: #f59e0b; }
+.add-btn--morning:active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+  color: #f59e0b;
+  transform: scale(0.98);
+}
+.add-btn--morning.hidden { display: none !important; }
+
+/* When both footer buttons are visible, share width evenly */
+#main-footer .add-btn { flex: 1 1 0; min-width: 0; }
+
+/* Library — Morning Routine pack entry pinned to the top */
+.lib-pack-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg,
+    rgba(245, 158, 11, 0.10) 0%,
+    rgba(245, 158, 11, 0.04) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.lib-pack-entry:active {
+  transform: scale(0.985);
+  border-color: rgba(245, 158, 11, 0.6);
+  background: linear-gradient(135deg,
+    rgba(245, 158, 11, 0.18) 0%,
+    rgba(245, 158, 11, 0.08) 100%);
+}
+.lib-pack-emoji {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.lib-pack-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.lib-pack-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+.lib-pack-bolt {
+  color: #f59e0b;
+  font-size: 0.85rem;
+  margin-left: 2px;
+}
+.lib-pack-sub {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.lib-pack-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  padding: 4px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.lib-pack-chevron {
+  color: rgba(245, 158, 11, 0.6);
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Confirmation modal */
+.mr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: mr-fade 0.22s ease-out;
+}
+.mr-overlay.hidden { display: none !important; }
+@keyframes mr-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.mr-card {
+  background: linear-gradient(160deg, #1a1a2e 0%, #14142a 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.32);
+  border-radius: 22px;
+  padding: 26px 22px 18px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6);
+  animation: mr-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes mr-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.mr-icon {
+  font-size: 2.2rem;
+  text-align: center;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.5));
+}
+.mr-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.mr-subtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin: 6px 4px 14px;
+  line-height: 1.4;
+}
+
+.mr-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 4px;
+  flex: 1 1 auto;
+  margin-bottom: 12px;
+}
+.mr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  transition: opacity 0.18s ease;
+}
+.mr-row + .mr-row { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.mr-row-emoji {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.mr-row-name {
+  flex: 1;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-row-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #f59e0b;
+}
+.mr-row--have {
+  opacity: 0.42;
+}
+.mr-row--have .mr-row-tag {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mr-count {
+  font-size: 0.78rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.62);
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.mr-actions {
+  display: flex;
+  gap: 10px;
+}
+.mr-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.1s ease, opacity 0.18s ease, background 0.18s ease;
+}
+.mr-btn:active:not(:disabled) { transform: scale(0.97); opacity: 0.92; }
+.mr-btn-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.mr-btn-confirm {
+  background: #f59e0b;
+  color: #1a1505;
+}
+.mr-btn-confirm:disabled {
+  background: rgba(245, 158, 11, 0.18);
+  color: rgba(255, 255, 255, 0.42);
+  cursor: not-allowed;
 }

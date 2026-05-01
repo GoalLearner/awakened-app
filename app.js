@@ -546,6 +546,22 @@
     },
   ];
 
+  // ── MORNING ROUTINE — single source of truth helpers ─────────
+  // Everything else (library entry, footer button visibility, modal,
+  // dedup logic) calls into these so the canonical 10-habit list lives
+  // in exactly one place: PACKS[0].habits.
+  function getMorningPack()       { return PACKS.find(p => p.id === 'morning'); }
+  function getMorningHabitDefs()  { return getMorningPack().habits.map(i => DEFAULT_HABITS[i]); }
+  function isMorningHabit(habit)  {
+    if (!habit) return false;
+    const names = new Set(getMorningHabitDefs().map(h => h.name));
+    return names.has(habit.name);
+  }
+  function getMissingMorningHabits() {
+    const activeNames = new Set(habits.map(h => h.name));
+    return getMorningHabitDefs().filter(def => !activeNames.has(def.name));
+  }
+
   // ── STORAGE ───────────────────────────────────────────────
   function load() {
     try {
@@ -1896,6 +1912,7 @@
     const list  = document.getElementById('habit-list');
     const empty = document.getElementById('empty-state');
     const todayHabits = habits.filter(isScheduledToday);
+    updateMorningButtonVisibility();
 
     if (habits.length === 0) {
       list.innerHTML = '';
@@ -2988,6 +3005,94 @@
     document.getElementById('add-habit-btn').addEventListener('click', openLibrary);
     document.getElementById('lib-close-btn').addEventListener('click', closeLibrary);
     document.getElementById('lib-overlay').addEventListener('click', closeLibrary);
+
+    // Morning Routine quick-action button + confirmation modal wiring
+    document.getElementById('add-morning-btn').addEventListener('click', openMorningPackModal);
+    document.getElementById('mr-cancel-btn').addEventListener('click',  closeMorningPackModal);
+    document.getElementById('mr-overlay').addEventListener('click', e => {
+      if (e.target.id === 'mr-overlay') closeMorningPackModal();
+    });
+    document.getElementById('mr-confirm-btn').addEventListener('click', confirmMorningPackAdd);
+  }
+
+  // ── MORNING ROUTINE PACK — UI ────────────────────────────────
+  function updateMorningButtonVisibility() {
+    const btn = document.getElementById('add-morning-btn');
+    if (!btn) return;
+    btn.classList.toggle('hidden', getMissingMorningHabits().length === 0);
+  }
+
+  function openMorningPackModal() {
+    const list   = document.getElementById('mr-list');
+    const count  = document.getElementById('mr-count');
+    const btn    = document.getElementById('mr-confirm-btn');
+    const ov     = document.getElementById('mr-overlay');
+
+    const activeNames = new Set(habits.map(h => h.name));
+    const defs        = getMorningHabitDefs();
+    const missing     = defs.filter(d => !activeNames.has(d.name));
+
+    list.innerHTML = '';
+    defs.forEach(def => {
+      const have = activeNames.has(def.name);
+      const row  = document.createElement('div');
+      row.className = 'mr-row' + (have ? ' mr-row--have' : '');
+      row.innerHTML =
+        '<span class="mr-row-emoji">' + def.emoji + '</span>' +
+        '<span class="mr-row-name">' + esc(def.name) + '</span>' +
+        '<span class="mr-row-tag">' + (have ? '✓ Already added' : '+ Will add') + '</span>';
+      list.appendChild(row);
+    });
+
+    if (missing.length === 0) {
+      count.textContent       = 'All 10 habits already in your routine.';
+      btn.disabled            = true;
+      btn.textContent         = 'All habits already added';
+    } else {
+      count.textContent       = 'Adding ' + missing.length + ' new habit' + (missing.length === 1 ? '' : 's') + ' to your routine';
+      btn.disabled            = false;
+      btn.textContent         = 'Add ' + missing.length + ' Habit' + (missing.length === 1 ? '' : 's');
+    }
+
+    ov.classList.remove('hidden');
+  }
+
+  function closeMorningPackModal() {
+    document.getElementById('mr-overlay').classList.add('hidden');
+  }
+
+  function confirmMorningPackAdd() {
+    const missing = getMissingMorningHabits();
+    if (missing.length === 0) { closeMorningPackModal(); return; }
+
+    // Add in canonical PACKS[0].habits order, preserving each habit's defaults.
+    // No duplicates — getMissingMorningHabits already filtered to absent names.
+    // Newly added habits keep streaks/progress untouched on existing entries.
+    missing.forEach(def => {
+      const newH = {
+        id:         uid(),
+        emoji:      def.emoji,
+        name:       def.name,
+        difficulty: def.difficulty,
+        type:       def.type || 'build',
+      };
+      habits.push(newH);
+      if (def.note) habitNotes[newH.id] = def.note;
+    });
+    save();
+
+    // Mark this player as on the Morning Routine path so the compound badge
+    // tracks correctly for future completions.
+    if (!selectedPackId) {
+      selectedPackId = 'morning';
+      try { localStorage.setItem('hb_path', selectedPackId); } catch (_) {}
+    }
+
+    closeMorningPackModal();
+    closeLibrary();
+    renderHabits();
+    updateMorningButtonVisibility();
+    showHabitToast('Morning Routine added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
   }
 
   function openLibrary() {
@@ -3015,8 +3120,33 @@
       return { cat, available };
     }).filter(d => d.available.length > 0);
 
+    // ── Morning Routine pack entry — always shown at the top ──
+    // Distinct orange/gold styling marks this as a curated pack
+    // (not a regular category) and signals the compound bonus.
+    const mrEntry = document.createElement('div');
+    mrEntry.className = 'lib-pack-entry';
+    const mrMissing = getMissingMorningHabits().length;
+    mrEntry.innerHTML =
+      '<span class="lib-pack-emoji">🌅</span>' +
+      '<span class="lib-pack-text">' +
+        '<span class="lib-pack-title">Morning Routine ' +
+          '<span class="lib-pack-bolt" aria-label="Compound Effect Bonus">⚡</span>' +
+        '</span>' +
+        '<span class="lib-pack-sub">Complete 10-habit starter pack</span>' +
+      '</span>' +
+      '<span class="lib-pack-count">' +
+        (mrMissing === 0 ? 'All added' : '10 habits') +
+      '</span>' +
+      '<span class="lib-pack-chevron">›</span>';
+    mrEntry.addEventListener('click', openMorningPackModal);
+    list.appendChild(mrEntry);
+
     if (!catData.length) {
-      list.innerHTML = '<p class="lib-empty">All habits are already in your list.</p>';
+      // Pack entry above is shown; the rest of the categories area is empty.
+      const empty = document.createElement('p');
+      empty.className = 'lib-empty';
+      empty.textContent = 'All individual habits are already in your list.';
+      list.appendChild(empty);
       return;
     }
 

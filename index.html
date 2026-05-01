@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=86">
+  <link rel="stylesheet" href="styles.css?v=87">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -250,6 +250,10 @@
     </div>
 
     <footer id="main-footer">
+      <button id="add-morning-btn" class="add-btn add-btn--morning hidden">
+        <span class="add-plus">+</span>
+        <span>Add Morning Routine</span>
+      </button>
       <button id="add-habit-btn" class="add-btn">
         <span class="add-plus">+</span>
         <span>Add Habits</span>
@@ -325,6 +329,21 @@
       <button id="lib-close-btn" class="lib-close-btn" aria-label="Close">✕</button>
     </div>
     <div id="lib-list" class="lib-list"></div>
+  </div>
+
+  <!-- Morning Routine pack confirmation modal -->
+  <div id="mr-overlay" class="mr-overlay hidden">
+    <div class="mr-card">
+      <div class="mr-icon">🌅</div>
+      <div class="mr-title">Add Morning Routine?</div>
+      <div class="mr-subtitle">This pack contains 10 habits designed to compound daily.</div>
+      <div id="mr-list" class="mr-list"></div>
+      <div id="mr-count" class="mr-count"></div>
+      <div class="mr-actions">
+        <button id="mr-cancel-btn"  class="mr-btn mr-btn-cancel">Cancel</button>
+        <button id="mr-confirm-btn" class="mr-btn mr-btn-confirm">Add Habits</button>
+      </div>
+    </div>
   </div>
 
   <!-- Habit detail / config sheet (slides over lib-sheet) -->
@@ -404,7 +423,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=87"></script>
+  <script src="app.js?v=88"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
