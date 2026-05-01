@@ -32,6 +32,7 @@
         { emoji: '🔒', title: 'Locked-In Pack',               description: 'A new 16-habit pack covering the full discipline cycle. Master the day, earn a second compound bonus.' },
         { emoji: '🏆', title: 'Personal Records',             description: 'Track lifetime bests across 10 metrics on the Status tab. Break them. Repeat.' },
         { emoji: '🧍', title: 'Civilian Class & The Awakening', description: "Class is now earned, not assumed. Train any stat to Lv5 to awaken into your true path. Lv5 in two paths at once? You choose." },
+        { emoji: '⚔️', title: 'Daily Legendary Mission', description: "A multi-component challenge appears every day. All-or-nothing bonus XP. Weekends lean toward stepping outside. Most won't attempt it — the days you do are the days that count." },
       ],
     },
   };
@@ -256,6 +257,283 @@
       tier: 3,
       motivation: "You've been here before. Don't forget what you're capable of.",
       description: 'Highest rank tier you have ever reached.' },
+    { id: 'total_missions_complete', label: 'missions complete',  accent: '#f59e0b', icon: '⚔️',
+      tier: 1, milestones: [10, 25, 50, 100],
+      motivation: "Most won't attempt them. The days you finish them are the days that count.",
+      description: 'Lifetime count of fully-completed Legendary Missions.' },
+  ];
+
+  // ── DAILY LEGENDARY MISSIONS ─────────────────────────────
+  // 30 multi-component daily challenges. Each has 2-6 components.
+  // Component matchType: 'habit' = auto-checks when matching habit completed
+  //                      'manual' = user toggles to confirm
+  //                      'pack'   = derives from full pack completion
+  const LEGENDARY_MISSIONS = [
+    // EASIER (2-3 components)
+    { id: 'athletes-morning', name: "The Athlete's Morning",
+      description: "Cold plunge, sweat, fuel — the body chooses the day's tone.",
+      tags: ['physical'],
+      components: [
+        { id: 'cold',     text: 'Cold shower',          matchType: 'habit', habitName: 'Cold shower' },
+        { id: 'workout',  text: '30-min workout',       matchType: 'habit', habitName: 'Strength training' },
+        { id: 'protein',  text: 'Protein meal goal',    matchType: 'habit', habitName: 'Protein goal' },
+      ] },
+    { id: 'triple-discipline', name: "The Triple Discipline",
+      description: "Body, mind, knowledge — all three sharpened in one day.",
+      tags: ['discipline', 'mental'],
+      components: [
+        { id: 'workout',  text: 'Workout',              matchType: 'habit', habitName: 'Strength training' },
+        { id: 'meditate', text: 'Meditate & Breathwork',matchType: 'habit', habitName: 'Meditate & Breathwork' },
+        { id: 'read',     text: 'Read 30+ pages',       matchType: 'habit', habitName: 'Read' },
+      ] },
+    { id: 'body-reset', name: "Body Reset",
+      description: "Empty stomach, cold water, long miles. The reset.",
+      tags: ['physical', 'recovery'],
+      components: [
+        { id: 'fasted',   text: 'Fasted morning workout', matchType: 'manual' },
+        { id: 'plunge',   text: 'Cold plunge',          matchType: 'habit', habitName: 'Ice bath or cold plunge' },
+        { id: 'walk',     text: '10k+ steps',           matchType: 'habit', habitName: 'Daily walk' },
+      ] },
+    { id: 'mind-over-matter', name: "Mind Over Matter",
+      description: "Quiet the mind. Move the body. Capture the lesson.",
+      tags: ['mental', 'physical'],
+      components: [
+        { id: 'meditate', text: '30-min meditation',    matchType: 'habit', habitName: 'Meditate & Breathwork' },
+        { id: 'journal',  text: 'Journal',              matchType: 'habit', habitName: 'Journal' },
+        { id: 'workout',  text: '30-min workout',       matchType: 'habit', habitName: 'Strength training' },
+      ] },
+    { id: 'discipline-trio', name: "Discipline Trio",
+      description: "Same time. Cold start. Move the body. Three locks, one day.",
+      tags: ['discipline'],
+      components: [
+        { id: 'wake',     text: 'Wake at consistent time', matchType: 'habit', habitName: 'Wake up at consistent time' },
+        { id: 'cold',     text: 'Cold shower',          matchType: 'habit', habitName: 'Cold shower' },
+        { id: 'workout',  text: 'Workout',              matchType: 'habit', habitName: 'Strength training' },
+      ] },
+    { id: 'nutrition-lock', name: "Nutrition Lock",
+      description: "Eat like the body is a temple. Nothing processed crosses the line.",
+      tags: ['nutrition', 'discipline'],
+      components: [
+        { id: 'whole',    text: 'Whole foods only',     matchType: 'habit', habitName: 'Whole foods diet' },
+        { id: 'protein',  text: 'Protein goal',         matchType: 'habit', habitName: 'Protein goal' },
+        { id: 'no-sugar', text: 'No sugar/junk food',   matchType: 'habit', habitName: 'No sugar/junk food' },
+      ] },
+    { id: 'learning-stack', name: "Learning Stack",
+      description: "Input, practice, capture. The full learning loop in one day.",
+      tags: ['mental'],
+      components: [
+        { id: 'read',     text: 'Read 20+ pages',       matchType: 'habit', habitName: 'Read' },
+        { id: 'practice', text: 'Practice a skill 30+ min', matchType: 'habit', habitName: 'Practice a skill' },
+        { id: 'lessons',  text: 'Write what you learned', matchType: 'habit', habitName: 'Write down lessons learned' },
+      ] },
+    { id: 'connection-reflection', name: "Connection + Reflection",
+      description: "Real conversation. Real reflection.",
+      tags: ['wellbeing'],
+      components: [
+        { id: 'connect',  text: 'Real conversation 30+ min', matchType: 'manual' },
+        { id: 'journal',  text: 'Journal what you learned',  matchType: 'habit', habitName: 'Journal' },
+      ] },
+
+    // MEDIUM (4 components)
+    { id: 'deep-work-sprint', name: "Deep Work Sprint",
+      description: "One block. No noise. Output before consumption.",
+      tags: ['discipline', 'mental'],
+      components: [
+        { id: 'block',    text: '90-min single-task block', matchType: 'manual' },
+        { id: 'no-soc',   text: 'No social until done',    matchType: 'habit', habitName: 'No social media before noon' },
+        { id: 'plan',     text: 'Plan tomorrow',           matchType: 'habit', habitName: 'Plan tomorrow the night before' },
+        { id: 'journal',  text: 'Journal',                 matchType: 'habit', habitName: 'Journal' },
+      ] },
+    { id: 'the-operator', name: "The Operator",
+      description: "Before most people are awake, you've already won.",
+      tags: ['discipline'],
+      components: [
+        { id: 'wake',     text: 'Wake before 6 AM',        matchType: 'manual' },
+        { id: 'plunge',   text: 'Cold plunge',             matchType: 'habit', habitName: 'Ice bath or cold plunge' },
+        { id: 'workout',  text: 'Workout',                 matchType: 'habit', habitName: 'Strength training' },
+        { id: 'block',    text: '90-min focus block before 10 AM', matchType: 'manual' },
+      ] },
+    { id: 'output-sprint', name: "Output Sprint",
+      description: "Make. Ship. Reflect. Read.",
+      tags: ['discipline', 'mental'],
+      components: [
+        { id: 'priority', text: 'Complete #1 priority task', matchType: 'habit', habitName: 'Complete your #1 priority task' },
+        { id: 'ship',     text: 'Ship something publicly',  matchType: 'manual' },
+        { id: 'reflect',  text: 'Reflect on it',            matchType: 'habit', habitName: 'Journal' },
+        { id: 'read',     text: 'Read 20+ pages',           matchType: 'habit', habitName: 'Read' },
+      ] },
+    { id: 'triple-threat', name: "The Triple Threat",
+      description: "Body, mind, focus, restraint — held all at once.",
+      tags: ['discipline'],
+      components: [
+        { id: 'workout',  text: 'Workout',              matchType: 'habit', habitName: 'Strength training' },
+        { id: 'meditate', text: 'Meditate',             matchType: 'habit', habitName: 'Meditate & Breathwork' },
+        { id: 'read',     text: 'Read 30+ pages',       matchType: 'habit', habitName: 'Read' },
+        { id: 'no-soc',   text: 'No social until 5 PM', matchType: 'habit', habitName: 'No doomscrolling until after 5PM' },
+      ] },
+    { id: 'no-input-day', name: "No Input Day",
+      description: "Stop consuming. Listen to what surfaces.",
+      tags: ['no-phone', 'mental'],
+      components: [
+        { id: 'no-soc',   text: 'No social media',         matchType: 'habit', habitName: 'No phone or social media after waking' },
+        { id: 'no-pod',   text: 'No podcasts until 5 PM',  matchType: 'manual' },
+        { id: 'no-music', text: 'No music until 5 PM',     matchType: 'manual' },
+        { id: 'journal',  text: 'Journal what surfaced',   matchType: 'habit', habitName: 'Journal' },
+      ] },
+
+    // HARD (5-6 components)
+    { id: 'locked-in-day', name: "The Locked-In Day",
+      description: "All 10 morning habits + a deep work block + tomorrow planned.",
+      tags: ['discipline'],
+      components: [
+        { id: 'mr',       text: 'All 10 Morning Routine habits', matchType: 'pack', packId: 'morning' },
+        { id: 'block',    text: '90-min deep work block',  matchType: 'manual' },
+        { id: 'plan',     text: 'Plan tomorrow',           matchType: 'habit', habitName: 'Plan tomorrow the night before' },
+      ] },
+    { id: 'awakening-day', name: "The Awakening Day",
+      description: "Full Locked-In pack + journal at the end of the day.",
+      tags: ['discipline'],
+      components: [
+        { id: 'li',       text: 'All 16 Locked-In habits', matchType: 'pack', packId: 'locked-in' },
+        { id: 'journal',  text: 'Journal at end of day',   matchType: 'habit', habitName: 'Journal' },
+      ] },
+    { id: 'the-monk', name: "The Monk",
+      description: "No screens, sunrise to sunset. Two hours of stillness. Pages of writing.",
+      tags: ['no-phone', 'mental'],
+      components: [
+        { id: 'detox',    text: 'Full digital detox sunrise to sunset', matchType: 'manual' },
+        { id: 'meditate', text: '2 hours total meditation',    matchType: 'habit', habitName: 'Meditate & Breathwork' },
+        { id: 'journal',  text: 'Extensive journaling',        matchType: 'habit', habitName: 'Journal' },
+      ] },
+    { id: 'compound-day', name: "Compound Day",
+      description: "Earn the bonus. Then earn three more hard habits on top.",
+      tags: ['discipline'],
+      components: [
+        { id: 'compound', text: 'Earn the Compound Effect Bonus', matchType: 'manual' },
+        { id: 'hard3',    text: 'Complete 3 Hard difficulty habits', matchType: 'manual' },
+        { id: 'read',     text: 'Read 30+ pages',           matchType: 'habit', habitName: 'Read' },
+        { id: 'workout',  text: 'Workout',                  matchType: 'habit', habitName: 'Strength training' },
+      ] },
+    { id: 'the-gauntlet', name: "The Gauntlet",
+      description: "Volume. Pure volume. The body learns by repetition.",
+      tags: ['physical'],
+      components: [
+        { id: 'pushups',  text: '100 pushups',              matchType: 'manual' },
+        { id: 'squats',   text: '100 squats',               matchType: 'manual' },
+        { id: 'plank',    text: '5-min plank',              matchType: 'manual' },
+        { id: 'walk5',    text: '5-mile walk',              matchType: 'habit', habitName: 'Daily walk' },
+      ] },
+    { id: 'total-reset', name: "Total Reset",
+      description: "Empty the tank. Refill from the inside.",
+      tags: ['discipline', 'recovery'],
+      components: [
+        { id: 'fast24',   text: '24-hour fast',             matchType: 'manual' },
+        { id: 'workout',  text: '60-min workout',           matchType: 'habit', habitName: 'Strength training' },
+        { id: 'meditate', text: '30-min meditation',        matchType: 'habit', habitName: 'Meditate & Breathwork' },
+        { id: 'read',     text: 'Read 50+ pages',           matchType: 'habit', habitName: 'Read' },
+      ] },
+    { id: 'hunters-trial', name: "The Hunter's Trial",
+      description: "Six denials. One day. The hardest are worth the most.",
+      tags: ['discipline', 'no-phone'],
+      components: [
+        { id: 'plunge',   text: 'Cold plunge',              matchType: 'habit', habitName: 'Ice bath or cold plunge' },
+        { id: 'fasted',   text: 'Fasted workout',           matchType: 'manual' },
+        { id: 'no-caf',   text: 'No caffeine',              matchType: 'habit', habitName: 'No caffeine' },
+        { id: 'no-alc',   text: 'No alcohol',               matchType: 'habit', habitName: 'No alcohol' },
+        { id: 'no-sugar', text: 'No sugar',                 matchType: 'habit', habitName: 'No sugar/junk food' },
+        { id: 'no-soc',   text: 'No social media all day',  matchType: 'habit', habitName: 'No phone or social media after waking' },
+      ] },
+
+    // THEMED
+    { id: 'mental-sharpen', name: "Mental Sharpen",
+      description: "Read deep. Practice hard. Memorize. Reflect.",
+      tags: ['mental'],
+      components: [
+        { id: 'read',     text: 'Read 50+ pages',           matchType: 'habit', habitName: 'Read' },
+        { id: 'practice', text: 'Practice a skill 60 min',  matchType: 'habit', habitName: 'Practice a skill' },
+        { id: 'memorize', text: 'Memorize a quote',         matchType: 'manual' },
+        { id: 'journal',  text: 'Journal',                  matchType: 'habit', habitName: 'Journal' },
+      ] },
+    { id: 'the-centurion', name: "The Centurion",
+      description: "100 + 100 + 100 + a mile.",
+      tags: ['physical'],
+      components: [
+        { id: 'pushups',  text: '100 pushups',              matchType: 'manual' },
+        { id: 'squats',   text: '100 squats',               matchType: 'manual' },
+        { id: 'situps',   text: '100 sit-ups',              matchType: 'manual' },
+        { id: 'run',      text: '1-mile run',               matchType: 'habit', habitName: 'Cardio' },
+      ] },
+    { id: 'silence-protocol', name: "Silence Protocol",
+      description: "Twelve hours quiet. An hour each: stillness, writing, walking.",
+      tags: ['no-phone', 'mental'],
+      components: [
+        { id: 'no-phone', text: 'No phone for 12 hours',    matchType: 'manual' },
+        { id: 'meditate', text: 'Meditate 60 min',          matchType: 'habit', habitName: 'Meditate & Breathwork' },
+        { id: 'journal',  text: 'Journal 60 min',           matchType: 'habit', habitName: 'Journal' },
+        { id: 'walk',     text: 'Walk 60 min',              matchType: 'habit', habitName: 'Daily walk' },
+      ] },
+    { id: 'discipline-test', name: "The Discipline Test",
+      description: "Six locks. From wake to plan. The full chain held.",
+      tags: ['discipline', 'no-phone'],
+      components: [
+        { id: 'wake',     text: 'Wake before 6 AM',         matchType: 'manual' },
+        { id: 'plunge',   text: 'Cold plunge',              matchType: 'habit', habitName: 'Ice bath or cold plunge' },
+        { id: 'fasted',   text: 'Fasted workout',           matchType: 'manual' },
+        { id: 'no-soc',   text: 'No social until evening',  matchType: 'habit', habitName: 'No social media before noon' },
+        { id: 'read',     text: 'Read 30+ pages',           matchType: 'habit', habitName: 'Read' },
+        { id: 'plan',     text: 'Plan tomorrow',            matchType: 'habit', habitName: 'Plan tomorrow the night before' },
+      ] },
+
+    // OUTDOOR / NATURE / NO-PHONE (weekend-weighted)
+    { id: 'forest-reset', name: "Forest Reset",
+      description: "Phone away. Trees in. Notice what you've stopped seeing.",
+      tags: ['outdoor', 'nature', 'no-phone'],
+      components: [
+        { id: 'walk-nat', text: '2-hour outdoor walk in nature', matchType: 'manual' },
+        { id: 'no-phone', text: 'No phone during walk',     matchType: 'manual' },
+        { id: 'journal',  text: 'Journal what you noticed', matchType: 'habit', habitName: 'Journal' },
+      ] },
+    { id: 'sunrise-mission', name: "Sunrise Mission",
+      description: "Outside before the sun. The day starts before everyone else's.",
+      tags: ['outdoor', 'nature', 'no-phone'],
+      components: [
+        { id: 'pre-sun',  text: 'Wake before sunrise',      matchType: 'manual' },
+        { id: 'sunrise',  text: 'Watch the sunrise outside', matchType: 'habit', habitName: 'Get morning sunlight' },
+        { id: 'walk',     text: '30-min outdoor walk',      matchType: 'habit', habitName: 'Daily walk' },
+        { id: 'no-phone', text: 'No phone until breakfast', matchType: 'habit', habitName: 'No phone or social media after waking' },
+      ] },
+    { id: 'trail-day', name: "Trail Day",
+      description: "Long path. No screen. Bare feet on earth.",
+      tags: ['outdoor', 'nature', 'no-phone', 'physical'],
+      components: [
+        { id: 'hike',     text: 'Hike or walk 5+ miles',    matchType: 'manual' },
+        { id: 'no-phone', text: 'No phone except emergencies', matchType: 'manual' },
+        { id: 'ground',   text: '10-min barefoot grounding', matchType: 'habit', habitName: 'Barefoot grounding outside' },
+      ] },
+    { id: 'the-naturalist', name: "The Naturalist",
+      description: "Four hours outside. Five new things noticed. All written down.",
+      tags: ['outdoor', 'nature'],
+      components: [
+        { id: 'outside4', text: '4+ hours outside today',   matchType: 'manual' },
+        { id: 'notice5',  text: 'Identify 5 new things in nature', matchType: 'manual' },
+        { id: 'journal',  text: 'Journal what you saw',     matchType: 'habit', habitName: 'Journal' },
+      ] },
+    { id: 'phone-off-world-on', name: "Phone Off, World On",
+      description: "Eight hours airplane mode. Real conversation. The world that isn't on a screen.",
+      tags: ['no-phone', 'outdoor', 'wellbeing'],
+      components: [
+        { id: 'airplane', text: 'Airplane mode 8 daylight hours', matchType: 'manual' },
+        { id: 'walk',     text: '1+ hour outdoor walk',     matchType: 'habit', habitName: 'Daily walk' },
+        { id: 'connect',  text: 'In-person meaningful conversation', matchType: 'habit', habitName: 'Call or text a family member' },
+      ] },
+    { id: 'the-long-walk', name: "The Long Walk",
+      description: "Ten miles. Quiet for most of it. Written reflection at the end.",
+      tags: ['outdoor', 'physical', 'no-phone'],
+      components: [
+        { id: 'walk10',   text: '10+ mile walk outdoors',   matchType: 'manual' },
+        { id: 'no-phone', text: 'Phone limited (max 2hr audio)', matchType: 'manual' },
+        { id: 'reflect',  text: 'Reflect in writing afterward', matchType: 'habit', habitName: 'Journal' },
+      ] },
   ];
 
   const ACHIEVEMENTS = [
@@ -419,6 +697,8 @@
   let compoundStreaks  = {}; // packId → { streak, lastDate }
   let compoundAwarded = {}; // packId → date (last award date, prevents double-award)
   let personalRecords  = {}; // prId → { value, meta, lastUpdated }
+  let dailyQuests      = {}; // 'YYYY-MM-DD' → { id, manualDone:[], bonusAwarded }
+  let questHistory     = []; // [{ date, missionId }] — last ~60 entries for repeat avoidance
   let _prCelebrationQueue = [];   // [{ prId, newValue, prevValue, meta, mode }]
   let _prCelebrationActive = false;
   let _suppressPRCelebrations = false; // true during migration backfill
@@ -1093,6 +1373,138 @@
   function isMorningHabit(habit)        { return isHabitInPack(habit, 'morning'); }
   function getMissingMorningHabits()    { return getMissingPackHabits('morning'); }
 
+  // ── DAILY LEGENDARY MISSION — selection + state ─────────────
+  // Returns today's mission object (selecting one if not yet picked).
+  // Persists selection to localStorage, avoids repeats within 21 days,
+  // and weights toward outdoor/nature/no-phone tags on weekends.
+  function getOrPickTodayMission() {
+    const existing = dailyQuests[today];
+    if (existing && existing.id) {
+      const found = LEGENDARY_MISSIONS.find(m => m.id === existing.id);
+      if (found) return found;
+    }
+    // Avoid repeats within last 21 days
+    const recent = new Set(
+      (questHistory || []).slice(-21).map(h => h.missionId)
+    );
+    let pool = LEGENDARY_MISSIONS.filter(m => !recent.has(m.id));
+    if (pool.length === 0) pool = LEGENDARY_MISSIONS.slice();
+
+    let chosen = null;
+    if (isWeekend() && Math.random() < 0.60) {
+      const weekendTags = new Set(['outdoor', 'nature', 'no-phone']);
+      const subset = pool.filter(m => (m.tags || []).some(t => weekendTags.has(t)));
+      if (subset.length > 0) {
+        chosen = subset[Math.floor(Math.random() * subset.length)];
+      }
+    }
+    if (!chosen) {
+      chosen = pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    dailyQuests[today] = { id: chosen.id, manualDone: [], bonusAwarded: false };
+    questHistory.push({ date: today, missionId: chosen.id });
+    if (questHistory.length > 60) questHistory = questHistory.slice(-60);
+    save();
+    return chosen;
+  }
+
+  // Component completion derivation. Returns true if the component
+  // should display as checked. Auto-derives from completion data
+  // for habit-linked components (no stored flag), reads manualDone[]
+  // for manual or fallback components.
+  function isMissionComponentDone(comp) {
+    const state = dailyQuests[today] || { manualDone: [] };
+    const manualDone = state.manualDone || [];
+
+    if (comp.matchType === 'manual') {
+      return manualDone.includes(comp.id);
+    }
+    if (comp.matchType === 'habit') {
+      const userHabit = habits.find(h => h.name === comp.habitName);
+      if (userHabit) {
+        return (completions[today] || []).includes(userHabit.id);
+      }
+      // User doesn't have the habit → fall back to manual toggle
+      return manualDone.includes(comp.id);
+    }
+    if (comp.matchType === 'pack') {
+      // Whole-pack completion: every canonical pack habit checked today
+      const packId = comp.packId;
+      if (packId === 'morning' && typeof userHasAllCanonicalMorning === 'function') {
+        if (!userHasAllCanonicalMorning()) return manualDone.includes(comp.id);
+        const { done, total } = getPackProgress('morning');
+        return total > 0 && done === total;
+      }
+      if (packId === 'locked-in' && typeof userHasAllCanonicalLockedIn === 'function') {
+        if (!userHasAllCanonicalLockedIn()) return manualDone.includes(comp.id);
+        const { done, total } = getPackProgress('locked-in');
+        return total > 0 && done === total;
+      }
+      return manualDone.includes(comp.id);
+    }
+    return false;
+  }
+
+  // Tappable when manual or when habit-linked but user doesn't have the habit
+  function isMissionComponentTappable(comp) {
+    if (comp.matchType === 'manual') return true;
+    if (comp.matchType === 'pack')   return false; // derived-only
+    if (comp.matchType === 'habit') {
+      return !habits.some(h => h.name === comp.habitName);
+    }
+    return false;
+  }
+
+  // Toggle a manual or fallback-manual component on/off
+  function toggleMissionComponent(componentId) {
+    const state = dailyQuests[today];
+    if (!state) return;
+    const list = state.manualDone || (state.manualDone = []);
+    const idx  = list.indexOf(componentId);
+    if (idx >= 0) list.splice(idx, 1); else list.push(componentId);
+    save();
+    onMissionProgress();
+  }
+
+  function isMissionComplete(mission) {
+    if (!mission) return false;
+    return mission.components.every(c => isMissionComponentDone(c));
+  }
+
+  // Called any time a habit is checked or a manual component is toggled.
+  // Awards the +50 XP bonus and fires the celebration on the transition
+  // from incomplete → complete (idempotent via bonusAwarded flag).
+  function onMissionProgress() {
+    const mission = getOrPickTodayMission();
+    if (!mission) return;
+    const state = dailyQuests[today];
+    if (!state) return;
+    if (state.bonusAwarded) {
+      renderDailyMissionCard();
+      return;
+    }
+    if (isMissionComplete(mission)) {
+      state.bonusAwarded = true;
+      const baseXP  = 50;
+      const finalXP = isWeekend() ? baseXP * 2 : baseXP;
+      totalPoints  += finalXP;
+      // PR hooks
+      if (typeof prUpdate === 'function') {
+        prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + finalXP);
+        prUpdate('total_missions_complete', getPR('total_missions_complete').value + 1);
+        // Refresh today's xp PR (compound day, etc.)
+        prUpdate('most_xp_day', computeTodayXP());
+      }
+      save();
+      renderRank();
+      // Queue celebration via levelUpQueue so it sequences after pack bonuses
+      levelUpQueue.unshift({ type: 'mission', mission, xp: finalXP, doubled: isWeekend() });
+      if (!levelUpActive) drainLevelUpQueue();
+    }
+    renderDailyMissionCard();
+  }
+
   // ── STORAGE ───────────────────────────────────────────────
   function load() {
     try {
@@ -1121,6 +1533,8 @@
       compoundStreaks  = JSON.parse(localStorage.getItem('hb_compound')         || '{}');
       compoundAwarded  = JSON.parse(localStorage.getItem('hb_compound_awarded') || '{}');
       personalRecords  = JSON.parse(localStorage.getItem('hb_prs')               || '{}');
+      dailyQuests      = JSON.parse(localStorage.getItem('hb_daily_quests')      || '{}');
+      questHistory     = JSON.parse(localStorage.getItem('hb_quest_history')     || '[]');
       perfectStreak = rawPS ? JSON.parse(rawPS)
         : { count: 0, lastDate: null, prevCount: 0, prevLastDate: null };
       const rawPSA = localStorage.getItem('hb_ps_awarded');
@@ -1157,6 +1571,8 @@
       localStorage.setItem('hb_compound',          JSON.stringify(compoundStreaks));
       localStorage.setItem('hb_compound_awarded',  JSON.stringify(compoundAwarded));
       localStorage.setItem('hb_prs',               JSON.stringify(personalRecords));
+      localStorage.setItem('hb_daily_quests',      JSON.stringify(dailyQuests));
+      localStorage.setItem('hb_quest_history',     JSON.stringify(questHistory));
     } catch (_) {}
   }
 
@@ -1391,6 +1807,10 @@
     if (habit && s.count > getPR('longest_habit_streak').value) {
       prUpdate('longest_habit_streak', s.count, { habitName: habit.name });
     }
+    // Daily Mission auto-progress: if this habit matches a component
+    // of today's quest, the component flips to "done" automatically and
+    // we check whether the whole quest is now complete.
+    if (typeof onMissionProgress === 'function') onMissionProgress();
     // Per-stat streak — find the stat this habit feeds and check its streak
     if (habit) {
       STATS.forEach(st => {
@@ -2023,7 +2443,8 @@
     }
     const item = levelUpQueue.shift();
     levelUpActive = true;
-    if      (item.type === 'rank')        showRankUpScreen(item.rank);
+    if      (item.type === 'mission')     showMissionCompleteScreen(item);
+    else if (item.type === 'rank')        showRankUpScreen(item.rank);
     else if (item.type === 'class')       showClassChangePopup(item.classData);
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
     else if (item.type === 'classChoice') showClassChoiceScreen(item.options);
@@ -2901,6 +3322,7 @@
     document.getElementById('main-footer').style.display = currentTab === 'habits' ? '' : 'none';
     renderRank();
     renderHabits();
+    renderDailyMissionCard();
     renderDailyQuote();
     checkStreakDanger();
     checkMorningRoutineNudge();
@@ -5599,6 +6021,145 @@
     });
   }
 
+  // ── DAILY MISSION CARD render ─────────────────────────────
+  function renderDailyMissionCard() {
+    const wrap = document.getElementById('daily-mission-card');
+    if (!wrap) return;
+    if (currentTab !== 'habits') { wrap.classList.add('hidden'); return; }
+
+    const mission = getOrPickTodayMission();
+    if (!mission) { wrap.classList.add('hidden'); return; }
+
+    const state         = dailyQuests[today] || { manualDone: [], bonusAwarded: false };
+    const allComplete   = isMissionComplete(mission);
+    const tags          = mission.tags || [];
+    const tagBadges     = (tags.includes('outdoor') || tags.includes('nature') ? '<span class="dmc-tag">🌲</span>' : '') +
+                          (tags.includes('no-phone') ? '<span class="dmc-tag">📵</span>' : '');
+
+    const doneCount = mission.components.filter(c => isMissionComponentDone(c)).length;
+    const total     = mission.components.length;
+
+    const componentsHTML = mission.components.map(c => {
+      const done     = isMissionComponentDone(c);
+      const tappable = isMissionComponentTappable(c);
+      const linkedHabit = c.matchType === 'habit'
+        ? habits.find(h => h.name === c.habitName)
+        : null;
+      const subText = linkedHabit
+        ? '<span class="dmc-comp-sub">linked to <b>' + esc(linkedHabit.name) + '</b></span>'
+        : (c.matchType === 'pack'
+            ? '<span class="dmc-comp-sub">auto from pack progress</span>'
+            : '');
+      return '<div class="dmc-comp' + (done ? ' dmc-comp--done' : '') +
+                  (tappable ? ' dmc-comp--tappable' : '') +
+                  '" ' + (tappable ? 'data-mission-comp="' + esc(c.id) + '" role="button" tabindex="0"' : '') + '>' +
+        '<span class="dmc-comp-check">' + (done ? '✓' : '') + '</span>' +
+        '<span class="dmc-comp-text">' + esc(c.text) + subText + '</span>' +
+      '</div>';
+    }).join('');
+
+    if (allComplete) {
+      wrap.classList.add('dmc--complete');
+    } else {
+      wrap.classList.remove('dmc--complete');
+    }
+    wrap.classList.remove('hidden');
+    wrap.innerHTML =
+      '<div class="dmc-head">' +
+        '<span class="dmc-eyebrow">' + (allComplete ? '✓ MISSION COMPLETE' : "TODAY'S MISSION") + '</span>' +
+        '<span class="dmc-tags">' + tagBadges + '</span>' +
+        '<span class="dmc-difficulty">LEGENDARY</span>' +
+      '</div>' +
+      '<div class="dmc-bonus">+' + (isWeekend() ? '100' : '50') + ' XP' +
+        (isWeekend() ? ' <span class="dmc-2x">2×</span>' : '') + '</div>' +
+      '<div class="dmc-name">' + esc(mission.name) + '</div>' +
+      '<div class="dmc-desc">' + esc(mission.description) + '</div>' +
+      '<div class="dmc-progress">' + doneCount + ' / ' + total + ' complete</div>' +
+      '<div class="dmc-components">' + componentsHTML + '</div>';
+  }
+
+  function setupDailyMissionCard() {
+    const wrap = document.getElementById('daily-mission-card');
+    if (!wrap) return;
+    // Delegated tap on any tappable component → toggle manual done
+    wrap.addEventListener('click', e => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const row = t.closest('[data-mission-comp]');
+      if (!row) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMissionComponent(row.getAttribute('data-mission-comp'));
+    });
+    wrap.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const row = e.target && e.target.closest && e.target.closest('[data-mission-comp]');
+      if (!row) return;
+      e.preventDefault();
+      toggleMissionComponent(row.getAttribute('data-mission-comp'));
+    });
+  }
+
+  // ── MISSION COMPLETION CELEBRATION ────────────────────────
+  function playMissionFanfare() {
+    if (!soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+      // Heroic ascending sequence — bigger than compound fanfare
+      const notes = [
+        { f: 392.00, s: 0.00, d: 0.22, p: 0.20 },  // G4
+        { f: 523.25, s: 0.14, d: 0.22, p: 0.22 },  // C5
+        { f: 659.25, s: 0.28, d: 0.22, p: 0.24 },  // E5
+        { f: 783.99, s: 0.42, d: 0.50, p: 0.26 },  // G5
+        { f: 1046.50, s: 0.70, d: 1.40, p: 0.30 }, // C6 sustained
+        { f: 783.99,  s: 0.70, d: 1.40, p: 0.18 }, // G5 layered for chord
+      ];
+      notes.forEach(n => {
+        ['sine', 'triangle'].forEach(type => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(n.f, t0 + n.s);
+          osc.connect(gain); gain.connect(ac.destination);
+          const peak = type === 'sine' ? n.p : n.p * 0.55;
+          gain.gain.setValueAtTime(0.0001, t0 + n.s);
+          gain.gain.exponentialRampToValueAtTime(peak, t0 + n.s + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.s + n.d);
+          osc.start(t0 + n.s);
+          osc.stop(t0 + n.s + n.d + 0.05);
+        });
+      });
+    } catch (_) {}
+  }
+
+  function showMissionCompleteScreen(item) {
+    const overlay = document.getElementById('mission-complete-screen');
+    if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
+    const xpStr = '+' + item.xp + ' XP' + (item.doubled ? '  2×' : '');
+    document.getElementById('mc-name').textContent = item.mission.name;
+    document.getElementById('mc-xp').textContent   = xpStr;
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('mc-show');
+    playMissionFanfare();
+    navigator.vibrate && navigator.vibrate([60, 40, 100, 40, 200, 40, 100]);
+
+    const dismiss = () => {
+      overlay.classList.remove('mc-show');
+      overlay.classList.add('mc-hide');
+      overlay.addEventListener('animationend', () => {
+        overlay.classList.remove('mc-hide');
+        overlay.classList.add('hidden');
+        levelUpActive = false;
+        drainLevelUpQueue();
+      }, { once: true });
+      overlay.removeEventListener('click', dismiss);
+    };
+    overlay.addEventListener('click', dismiss);
+    setTimeout(dismiss, 4000);
+  }
+
   function renderCompoundProgress() {
     const wrap = document.getElementById('compound-progress');
     if (!wrap) return;
@@ -7301,6 +7862,7 @@
     setupCompoundPopup();
     setupBonusInfoPopup();
     setupPRDetailSheet();
+    setupDailyMissionCard();
     migratePRsIfNeeded();
     setupEmojiPicker();
     setupStatDetail();

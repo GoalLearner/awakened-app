@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=108">
+  <link rel="stylesheet" href="styles.css?v=109">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -183,6 +183,8 @@
 
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
+      <!-- Today's Legendary Mission — top of habits tab, above pack header -->
+      <div id="daily-mission-card" class="daily-mission-card hidden"></div>
       <div id="compound-progress" class="compound-progress hidden"></div>
       <ul id="habit-list" class="habit-list"></ul>
       <div id="empty-state" class="empty-state hidden">
@@ -447,6 +449,18 @@
     </div>
   </div>
 
+  <!-- Daily Legendary Mission — completion celebration -->
+  <div id="mission-complete-screen" class="mission-complete-screen hidden">
+    <div class="mc-bg"></div>
+    <div class="mc-content">
+      <div class="mc-eyebrow">⚔️ LEGENDARY MISSION COMPLETE</div>
+      <div id="mc-name" class="mc-name"></div>
+      <div id="mc-xp" class="mc-xp"></div>
+      <div class="mc-quote">"Most won't attempt this. Fewer will finish it."</div>
+      <div class="mc-hint">Tap anywhere to dismiss</div>
+    </div>
+  </div>
+
   <!-- Awakening — full-screen takeover (first-ever class assignment) -->
   <div id="awakening-screen" class="awakening-screen hidden">
     <div class="awk-bg"></div>
@@ -617,7 +631,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=110"></script>
+  <script src="app.js?v=111"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
