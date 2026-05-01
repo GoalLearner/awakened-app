@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v4.55';
+const CACHE_VERSION = 'v4.56';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -68,12 +68,16 @@ self.addEventListener('fetch', e => {
   // ── Network-first for HTML ─────────────────────────────────
   // Always fetch the latest index.html so version bumps are picked
   // up immediately. Falls back to cache only when offline.
+  // CRITICAL: res.clone() must be called SYNCHRONOUSLY (before res is
+  // returned to respondWith and its body is consumed). Calling .clone()
+  // inside an async .then() throws "Response body is already used".
   if (url.pathname === '/' || url.pathname.endsWith('.html')) {
     e.respondWith(
       fetch(e.request)
         .then(res => {
           if (res.ok) {
-            caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+            const cacheCopy = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, cacheCopy));
           }
           return res;
         })
@@ -92,7 +96,8 @@ self.addEventListener('fetch', e => {
         if (cached) return cached;
         return fetch(e.request).then(res => {
           if (res.ok) {
-            caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+            const cacheCopy = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, cacheCopy));
           }
           return res;
         });
