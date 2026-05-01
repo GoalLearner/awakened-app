@@ -8109,3 +8109,227 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   border-color: rgba(124,58,237,0.30);
 }
 .cp-prog-row--lockedin .cp-prog-name { color: #c4b5fd; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CHOOSE YOUR PATH — 3-card layout (Morning Routine / Locked-In / Custom)
+   ═══════════════════════════════════════════════════════════════ */
+.path-cards {
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 28px 16px 8px;
+}
+.path-cards .path-card {
+  flex: 1 1 calc(50% - 8px);
+  min-width: 140px;
+  max-width: 200px;
+}
+/* On wider screens, lay all three side by side */
+@media (min-width: 520px) {
+  .path-cards .path-card {
+    flex: 0 0 calc(33.333% - 12px);
+    min-width: 150px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLICKABLE LIGHTNING BOLT — pack progress strip + library entries
+   ═══════════════════════════════════════════════════════════════ */
+.cp-prog-bolt {
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-size: 1.05rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin: 0 0 0 4px;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.18s ease;
+  font-family: inherit;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.cp-prog-bolt:hover  { background: rgba(245,158,11,0.10); }
+.cp-prog-bolt:active { transform: scale(0.92); }
+.cp-prog-bolt:focus-visible {
+  outline: 2px solid rgba(245,158,11,0.7);
+  outline-offset: 2px;
+}
+.cp-prog-row--lockedin .cp-prog-bolt        { color: #c4b5fd; }
+.cp-prog-row--lockedin .cp-prog-bolt:hover  { background: rgba(124,58,237,0.14); }
+
+/* Library-entry bolts also tappable */
+.lib-pack-bolt {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.18s ease, transform 0.1s ease;
+  display: inline-block;
+}
+.lib-pack-bolt:hover  { background: rgba(245,158,11,0.10); }
+.lib-pack-bolt:active { transform: scale(0.92); }
+.lib-pack-entry--lockedin .lib-pack-bolt:hover { background: rgba(124,58,237,0.14); }
+
+/* ═══════════════════════════════════════════════════════════════
+   BONUS INFO POPUP — explains XP tier formula + pack ROI
+   ═══════════════════════════════════════════════════════════════ */
+.bonus-info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.70);
+  z-index: 350;
+  animation: bi-fade 0.20s ease-out;
+}
+.bonus-info-overlay.hidden { display: none !important; }
+@keyframes bi-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.bonus-info-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 351;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  pointer-events: none;
+}
+.bonus-info-modal.hidden { display: none !important; }
+.bi-card {
+  pointer-events: auto;
+  background: var(--bg-raised);
+  border: 1.5px solid rgba(245,158,11,0.42);
+  border-radius: 18px;
+  padding: 22px 22px 20px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 86vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  box-shadow: 0 0 36px rgba(245,158,11,0.16),
+              0 12px 48px rgba(0,0,0,0.55);
+  animation: bi-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes bi-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.bi-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+.bi-close-btn:active { background: rgba(255,255,255,0.10); }
+
+.bi-icon {
+  font-size: 1.8rem;
+  text-align: center;
+  margin-top: 4px;
+  filter: drop-shadow(0 0 14px rgba(245,158,11,0.55));
+}
+.bi-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--gold);
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 0.02em;
+}
+.bi-subtitle {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 4px;
+  margin-bottom: 18px;
+  font-style: italic;
+}
+
+.bi-section {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+}
+.bi-section-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.bi-tier {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+.bi-tier-day { color: var(--text-secondary); }
+.bi-tier-xp  { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.bi-tier--peak {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.bi-tier--peak .bi-tier-xp { color: #fbbf24; }
+.bi-section-foot {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.bi-section--mr {
+  border-color: rgba(245,158,11,0.28);
+  background: rgba(245,158,11,0.05);
+}
+.bi-section--li {
+  border-color: rgba(124,58,237,0.32);
+  background: rgba(124,58,237,0.06);
+}
+.bi-pack-head {
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+.bi-section--mr .bi-pack-head b { color: var(--gold); }
+.bi-section--li .bi-pack-head b { color: #c4b5fd; }
+.bi-pack-body {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.bi-pack-body b { color: var(--text-primary); font-weight: 700; }
+
+.bi-done-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 14px;
+  background: var(--gold);
+  color: #1a1505;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.1s ease, opacity 0.18s ease;
+}
+.bi-done-btn:active { transform: scale(0.985); opacity: 0.94; }

@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=98">
+  <link rel="stylesheet" href="styles.css?v=99">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -43,7 +43,7 @@
       <div class="path-subtitle">Pick a starting pack or build your own.</div>
     </div>
     <div id="path-cards" class="path-cards"></div>
-    <div class="path-note">⚡ Morning Routine unlocks the <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
+    <div class="path-note">⚡ Morning Routine and Locked-In each unlock a <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
     <div class="path-footer">
       <button id="path-continue-btn" class="path-continue-btn" disabled>CONTINUE →</button>
     </div>
@@ -447,6 +447,50 @@
     </div>
   </div>
 
+  <!-- Bonus Info popup — explains Compound Effect + Locked-In bonus mechanics + ROI -->
+  <div id="bonus-info-overlay" class="bonus-info-overlay hidden"></div>
+  <div id="bonus-info-modal" class="bonus-info-modal hidden">
+    <div class="bi-card">
+      <button id="bi-close-btn" class="bi-close-btn" aria-label="Close">✕</button>
+      <div class="bi-icon">⚡</div>
+      <div class="bi-title">Compound Effect Bonus</div>
+      <div class="bi-subtitle">Bonus XP that grows the longer your streak.</div>
+
+      <div class="bi-section">
+        <div class="bi-section-label">HOW THE BONUS SCALES</div>
+        <div class="bi-tier"><span class="bi-tier-day">Day 1–7</span>      <span class="bi-tier-xp">+5 XP/day</span></div>
+        <div class="bi-tier"><span class="bi-tier-day">Day 8–30</span>     <span class="bi-tier-xp">+10 XP/day</span></div>
+        <div class="bi-tier"><span class="bi-tier-day">Day 31–90</span>    <span class="bi-tier-xp">+20 XP/day</span></div>
+        <div class="bi-tier"><span class="bi-tier-day">Day 91–180</span>   <span class="bi-tier-xp">+30 XP/day</span></div>
+        <div class="bi-tier"><span class="bi-tier-day">Day 181–365</span>  <span class="bi-tier-xp">+50 XP/day</span></div>
+        <div class="bi-tier bi-tier--peak"><span class="bi-tier-day">Day 366+</span> <span class="bi-tier-xp">+75 XP/day</span></div>
+        <div class="bi-section-foot">XP doubles on weekends.</div>
+      </div>
+
+      <div class="bi-section bi-section--mr">
+        <div class="bi-pack-head">🌅 <b>Morning Routine</b> — 10 habits</div>
+        <div class="bi-pack-body">
+          The first hour shapes the day. Sleep, sunlight, intention, movement —
+          consistent mornings compound faster than anything else you do, because
+          they make every other hour easier. Earn this bonus daily by completing
+          all 10 morning habits.
+        </div>
+      </div>
+
+      <div class="bi-section bi-section--li">
+        <div class="bi-pack-head">🔒 <b>Locked-In</b> — 16 habits</div>
+        <div class="bi-pack-body">
+          Morning Routine plus afternoon focus and evening discipline.
+          The full cycle. Most people win one part of the day. Locked-In wins
+          all three — the highest ROI a single day can produce. Stack on top
+          of the Compound Effect Bonus to earn <b>both</b> bonuses on the same day.
+        </div>
+      </div>
+
+      <button id="bi-done-btn" class="bi-done-btn">Got it</button>
+    </div>
+  </div>
+
   <!-- Compound Effect / Locked-In Bonus popup (shared, themed per pack) -->
   <div id="compound-popup" class="compound-popup hidden">
     <div class="cp-card">
@@ -497,7 +541,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=100"></script>
+  <script src="app.js?v=101"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

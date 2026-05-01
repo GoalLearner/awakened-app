@@ -4008,7 +4008,7 @@
       '<span class="lib-pack-emoji">🌅</span>' +
       '<span class="lib-pack-text">' +
         '<span class="lib-pack-title">Morning Routine ' +
-          '<span class="lib-pack-bolt" aria-label="Compound Effect Bonus">⚡</span>' +
+          '<span class="lib-pack-bolt" data-bonus-info aria-label="About the Compound Effect Bonus" role="button" tabindex="0">⚡</span>' +
         '</span>' +
         '<span class="lib-pack-sub">Complete 10-habit starter pack</span>' +
       '</span>' +
@@ -4749,6 +4749,52 @@
     document.getElementById('compound-popup').addEventListener('click', hideCompoundPopup);
   }
 
+  // ── BONUS INFO POPUP ─────────────────────────────────────
+  // Tapping the ⚡ on any pack progress row opens this popup. It explains
+  // the Compound Effect XP tier formula AND the ROI rationale for both
+  // Morning Routine and Locked-In packs.
+  function openBonusInfoPopup() {
+    const ov = document.getElementById('bonus-info-overlay');
+    const md = document.getElementById('bonus-info-modal');
+    if (!ov || !md) return;
+    ov.classList.remove('hidden');
+    md.classList.remove('hidden');
+  }
+  function closeBonusInfoPopup() {
+    const ov = document.getElementById('bonus-info-overlay');
+    const md = document.getElementById('bonus-info-modal');
+    if (!ov || !md) return;
+    ov.classList.add('hidden');
+    md.classList.add('hidden');
+  }
+  function setupBonusInfoPopup() {
+    const ov = document.getElementById('bonus-info-overlay');
+    const closeBtn = document.getElementById('bi-close-btn');
+    const doneBtn  = document.getElementById('bi-done-btn');
+    if (ov)       ov.addEventListener('click', closeBonusInfoPopup);
+    if (closeBtn) closeBtn.addEventListener('click', closeBonusInfoPopup);
+    if (doneBtn)  doneBtn.addEventListener('click', closeBonusInfoPopup);
+
+    // Delegated click — every ⚡ rendered with [data-bonus-info] is clickable
+    // (current pack-progress strip rows, plus any future surfaces that opt in).
+    document.addEventListener('click', e => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const bolt = t.closest('[data-bonus-info]');
+      if (!bolt) return;
+      e.stopPropagation();
+      e.preventDefault();
+      openBonusInfoPopup();
+    });
+
+    // ESC dismiss
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const md = document.getElementById('bonus-info-modal');
+      if (md && !md.classList.contains('hidden')) closeBonusInfoPopup();
+    });
+  }
+
   function renderCompoundProgress() {
     const wrap = document.getElementById('compound-progress');
     if (!wrap) return;
@@ -4758,16 +4804,21 @@
     const rows = BONUS_PACK_IDS.map(packId => {
       const { done, total } = getPackProgress(packId);
       if (total === 0) return '';
-      const pack    = getPackById(packId);
-      const awarded = compoundAwarded[packId] === today;
-      const cs      = compoundStreaks[packId];
-      const streak  = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
-      const cls     = packId === 'locked-in' ? ' cp-prog-row--lockedin' : '';
+      const pack            = getPackById(packId);
+      // Display total = canonical pack size (10 / 16) so users see how
+      // close they are to the FULL bonus, not just to today's owned subset.
+      const canonicalTotal  = getPackHabitDefs(packId).length;
+      const awarded         = compoundAwarded[packId] === today;
+      const cs              = compoundStreaks[packId];
+      const streak          = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
+      const cls             = packId === 'locked-in' ? ' cp-prog-row--lockedin' : '';
       return '<div class="cp-prog-row' + cls + '">' +
         '<span class="cp-prog-name">' + esc(pack.emoji + ' ' + pack.name) + '</span>' +
         '<span class="cp-prog-count' + (awarded ? ' cp-prog-done' : '') + '">' +
-          (awarded ? '✓ Complete' : done + '/' + total) + ' ⚡' +
+          (awarded ? '✓ Complete' : done + '/' + canonicalTotal) +
         '</span>' +
+        // Tappable bolt → opens the Bonus Info popup explaining the formula + ROI
+        '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">⚡</button>' +
         (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' 🔥</span>' : '') +
       '</div>';
     }).filter(Boolean).join('');
@@ -5894,7 +5945,7 @@
     btn.style.background = '';
     btn.onclick          = null;
 
-    var chosen = null; // set to 'morning' or 'custom' when a card is tapped
+    var chosen = null; // 'morning' | 'locked-in' | 'custom'
 
     // ── Card: Morning Routine ──────────────────────────────
     var morningCard = document.createElement('div');
@@ -5907,6 +5958,18 @@
       '<div class="path-card-tagline">Win the morning. Win the day.</div>'      +
       '<div class="path-card-sub">For the intentional starter</div>'            +
       '<div class="path-card-count">10 habits pre-selected</div>';
+
+    // ── Card: Locked-In ────────────────────────────────────
+    var lockedInCard = document.createElement('div');
+    lockedInCard.className = 'path-card';
+    lockedInCard.style.setProperty('--pack-color', '#7c3aed');
+    lockedInCard.innerHTML =
+      '<div class="path-card-check">✓</div>'                                    +
+      '<div class="path-card-emoji">🔒</div>'                                   +
+      '<div class="path-card-name">Locked-In</div>'                             +
+      '<div class="path-card-tagline">Master the day.</div>'                    +
+      '<div class="path-card-sub">For full discipline cycles</div>'             +
+      '<div class="path-card-count">16 habits pre-selected</div>';
 
     // ── Card: Make Your Own ────────────────────────────────
     var customCard = document.createElement('div');
@@ -5922,6 +5985,7 @@
     // ── Card selection helper ──────────────────────────────
     function selectCard(card, id, color) {
       morningCard.classList.remove('path-selected');
+      lockedInCard.classList.remove('path-selected');
       customCard.classList.remove('path-selected');
       card.classList.add('path-selected');
       chosen               = id;
@@ -5946,8 +6010,9 @@
       };
     }
 
-    morningCard.onclick = function() { selectCard(morningCard, 'morning', '#f59e0b'); };
-    customCard.onclick  = function() {
+    morningCard.onclick  = function() { selectCard(morningCard,  'morning',   '#f59e0b'); };
+    lockedInCard.onclick = function() { selectCard(lockedInCard, 'locked-in', '#7c3aed'); };
+    customCard.onclick   = function() {
       selectCard(customCard, 'custom', '#a855f7');
       if (!customWarningShown) {
         customWarningShown = true;
@@ -5956,6 +6021,7 @@
     };
 
     cardsEl.appendChild(morningCard);
+    cardsEl.appendChild(lockedInCard);
     cardsEl.appendChild(customCard);
 
     // ── Continue button ────────────────────────────────────
@@ -5963,7 +6029,10 @@
       if (!chosen) return;
 
       selectedPackId = chosen;
-      var habits = (chosen === 'morning') ? MORNING_HABIT_INDICES.slice() : [];
+      // Pull the chosen pack's habit indices from the canonical PACKS data —
+      // single source of truth, automatically picks up Locked-In's 16 habits.
+      var pack = getPackById(chosen);
+      var habitsForOb = (pack && pack.habits) ? pack.habits.slice() : [];
 
       var flash = document.getElementById('path-flash-overlay');
       if (flash) flash.classList.add('active');
@@ -5971,7 +6040,7 @@
       setTimeout(function() {
         if (flash) flash.classList.remove('active');
         screen.classList.add('hidden');
-        showOnboarding(habits);
+        showOnboarding(habitsForOb);
       }, 340);
     };
   }
@@ -6291,6 +6360,7 @@
     setupEditModal();
     setupNoteModal();
     setupCompoundPopup();
+    setupBonusInfoPopup();
     setupEmojiPicker();
     setupStatDetail();
     setupSettings();
