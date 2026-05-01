@@ -3336,6 +3336,20 @@
     document.getElementById('lib-close-btn').addEventListener('click', closeLibrary);
     document.getElementById('lib-overlay').addEventListener('click', closeLibrary);
 
+    // Swipe-down-to-dismiss on the Add Habits sheet
+    if (typeof attachSheetDismissGesture === 'function') {
+      const libSheet   = document.getElementById('lib-sheet');
+      const libOverlay = document.getElementById('lib-overlay');
+      attachSheetDismissGesture(libSheet, libOverlay, () => {
+        libSheet.classList.add('hidden');
+        libOverlay.classList.add('hidden');
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.lib-drag-handle, .lib-header',
+        scrollTarget:   '#lib-list',
+      });
+    }
+
     // Morning Routine quick-action button + confirmation modal wiring
     document.getElementById('add-morning-btn').addEventListener('click', openMorningPackModal);
     document.getElementById('mr-cancel-btn').addEventListener('click',  closeMorningPackModal);
@@ -3841,6 +3855,17 @@
     document.getElementById('hd-content').innerHTML = '';
   }
 
+  function setupHabitDetailGesture() {
+    if (typeof attachSheetDismissGesture !== 'function') return;
+    const sheet = document.getElementById('hd-sheet');
+    if (!sheet) return;
+    attachSheetDismissGesture(sheet, null, closeHabitDetail, {
+      baseTransform:  'translateX(-50%) ',
+      handleSelector: '.hd-drag-handle',
+      scrollTarget:   '#hd-content',
+    });
+  }
+
   // Creates a labelled section card for the detail screen
   function hdSection(label) {
     const sec = document.createElement('div');
@@ -3932,6 +3957,16 @@
   function setupSchedulePicker() {
     document.getElementById('sched-overlay').addEventListener('click', closeSchedulePicker);
     document.getElementById('sched-cancel-btn').addEventListener('click', closeSchedulePicker);
+
+    // Swipe-down-to-dismiss
+    if (typeof attachSheetDismissGesture === 'function') {
+      const ss = document.getElementById('sched-sheet');
+      const so = document.getElementById('sched-overlay');
+      attachSheetDismissGesture(ss, so, closeSchedulePicker, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.sched-drag-handle, .sched-header',
+      });
+    }
 
     document.getElementById('sched-save-btn').addEventListener('click', () => {
       const habit = habits.find(h => h.id === schedHabitId);
@@ -4496,6 +4531,24 @@
   function setupStatDetail() {
     document.getElementById('stat-detail-close').addEventListener('click',   closeStatDetail);
     document.getElementById('stat-detail-overlay').addEventListener('click', closeStatDetail);
+
+    // Swipe-down-to-dismiss
+    if (typeof attachSheetDismissGesture === 'function') {
+      const sd = document.getElementById('stat-detail-sheet');
+      const so = document.getElementById('stat-detail-overlay');
+      // Direct hide — gesture has already animated the slide-down, so we
+      // skip closeStatDetail (which waits for its own transitionend that
+      // won't fire because the sheet is already off-screen).
+      attachSheetDismissGesture(sd, so, () => {
+        sd.classList.add('hidden');
+        so.classList.add('hidden');
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.stat-detail-drag-handle, .stat-detail-header',
+        openClass:      'sd-open',
+        scrollTarget:   '.stat-detail-habits-list',
+      });
+    }
   }
 
   // ── SETTINGS & RESET ─────────────────────────────────────
@@ -4534,11 +4587,21 @@
     const dismissThreshold = opts.dismissThreshold || 0.30;
     const flickVelocity    = opts.flickVelocity    || 0.6;
     const openClass        = opts.openClass        || 'ss-open';
+    // Optional inner scrollable child selector. When the sheet has
+    // overflow: hidden and a nested scrollable element (e.g., lib-sheet
+    // wraps lib-list), point this at that child so we can correctly tell
+    // whether the user is at the top vs scrolling content.
+    const scrollTargetSel  = opts.scrollTarget     || null;
 
     let startY = 0, lastY = 0, lastTime = 0, velocity = 0;
     let dragging = false, allowDrag = false, mouseDown = false;
 
     function getY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
+
+    function getScrollEl() {
+      if (!scrollTargetSel) return sheet;
+      return sheet.querySelector(scrollTargetSel) || sheet;
+    }
 
     function onStart(e) {
       if (sheet.classList.contains('hidden')) return;
@@ -4552,7 +4615,8 @@
       // OR the sheet's internal scroll is already at the very top.
       // Otherwise this is a regular content scroll — don't hijack it.
       const inHandle = e.target && e.target.closest && e.target.closest(handleSelector);
-      const atTop    = sheet.scrollTop <= 0;
+      const scrollEl = getScrollEl();
+      const atTop    = scrollEl.scrollTop <= 0;
       allowDrag = !!inHandle || atTop;
     }
 
@@ -4617,16 +4681,18 @@
           overlay.style.opacity    = '0';
         }
         sheet.addEventListener('transitionend', function done() {
-          // Reset inline styles AFTER classes are updated, so the resting
-          // CSS class transform takes over without a visible jump.
+          // Order matters: call onDismiss first so the sheet is hidden
+          // (display:none) BEFORE we clear inline transforms — otherwise
+          // sheets without an openClass would briefly snap back to their
+          // base on-screen position.
           sheet.classList.remove(openClass);
+          if (typeof onDismiss === 'function') onDismiss();
           sheet.style.transition = '';
           sheet.style.transform  = '';
           if (overlay) {
             overlay.style.transition = '';
             overlay.style.opacity    = '';
           }
-          if (typeof onDismiss === 'function') onDismiss();
         }, { once: true });
       } else {
         // Snap back to fully open
@@ -5412,6 +5478,7 @@
     setupStreakDanger();
     setupMorningNudge();
     setupHabitInfoSheet();
+    setupHabitDetailGesture();
     setupRankPopup();
 
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);

@@ -1819,6 +1819,15 @@ body.theme-light .ob-inspiration-quote {
 }
 .hd-sheet.hidden { display: none !important; }
 
+.hd-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  margin: 12px auto 0;
+  flex-shrink: 0;
+}
+
 @keyframes hd-up {
   from { transform: translateX(-50%) translateY(100%); }
   to   { transform: translateX(-50%) translateY(0); }
