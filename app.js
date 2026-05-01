@@ -3220,17 +3220,50 @@
   }
 
   // Brief floating toast anchored near the bottom of the screen.
-  function showHabitToast(msg) {
+  // showHabitToast(msg, opts?)
+  // opts.onTap   — if provided, the toast becomes a tap target. Tapping
+  //                it dismisses the toast and runs the callback.
+  // opts.cta     — optional CTA label appended (default: '→')
+  // opts.duration — ms before auto-dismiss (default: 2200; 4000 if tappable)
+  function showHabitToast(msg, opts) {
+    opts = opts || {};
     document.querySelectorAll('.habit-toast').forEach(t => t.remove());
     const toast = document.createElement('div');
-    toast.className = 'habit-toast';
-    toast.textContent = msg;
+    const isTap = typeof opts.onTap === 'function';
+    toast.className = 'habit-toast' + (isTap ? ' habit-toast--tappable' : '');
+    if (isTap) {
+      toast.setAttribute('role', 'button');
+      toast.setAttribute('tabindex', '0');
+      toast.innerHTML =
+        '<span class="ht-msg">' + esc(msg) + '</span>' +
+        '<span class="ht-cta">' + esc(opts.cta || '→') + '</span>';
+    } else {
+      toast.textContent = msg;
+    }
     document.body.appendChild(toast);
     requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('habit-toast--visible')));
-    setTimeout(() => {
+
+    const dismiss = () => {
       toast.classList.remove('habit-toast--visible');
       setTimeout(() => toast.remove(), 300);
-    }, 2200);
+    };
+    const dismissTimer = setTimeout(dismiss, opts.duration || (isTap ? 4000 : 2200));
+
+    if (isTap) {
+      toast.addEventListener('click', () => {
+        clearTimeout(dismissTimer);
+        dismiss();
+        try { opts.onTap(); } catch (_) {}
+      });
+      toast.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          clearTimeout(dismissTimer);
+          dismiss();
+          try { opts.onTap(); } catch (_) {}
+        }
+      });
+    }
   }
 
   // ── SOUND PREFERENCE ─────────────────────────────────────
@@ -3919,7 +3952,11 @@
       // Minimum enforcement for measurable habits
       const habit = habits.find(h => h.id === id);
       if (habit && !meetsMinimum(habit)) {
-        showHabitToast('Set your goal value to check off this habit');
+        // Tappable toast → opens Edit Habit straight to the goal stepper.
+        showHabitToast('Set your goal value to check off this habit', {
+          cta:   'Set goal',
+          onTap: () => openEditModal(habit.id),
+        });
         return;
       }
       // Snapshot compound state so we can detect if THIS tap fires the bonus.
