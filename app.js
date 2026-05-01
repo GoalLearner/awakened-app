@@ -6049,7 +6049,7 @@
     wrap.classList.remove('hidden');
 
     // ── Compact toggle row (always visible) ────────────────
-    const eyebrow = allComplete ? '✓ MISSION' : "⚔️ TODAY";
+    const eyebrow = allComplete ? '✓ DAILY QUEST' : '⚔️ DAILY QUEST';
     const status  = allComplete ? '✓ Complete' : doneCount + '/' + total;
     const chev    = _dailyMissionExpanded ? '▾' : '▸';
 
