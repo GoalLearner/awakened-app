@@ -56,6 +56,15 @@
     return habitDisplayParts(habit).base;
   }
 
+  // Canonical description shown on the View Note sheet.
+  // Pulled from the master library DEFAULT_HABITS by name — never from
+  // user-editable storage. Returns empty string if no description exists.
+  function getHabitDescription(habit) {
+    if (!habit || !habit.name) return '';
+    const def = DEFAULT_HABITS.find(d => d.name === habit.name);
+    return (def && def.description) || '';
+  }
+
   // One-sentence description of what each stat builds — shown in the
   // History tab's per-habit info popup. (The longer multi-sentence
   // STAT_DESCRIPTIONS used by the Stats detail screen lives elsewhere.)
@@ -474,7 +483,8 @@
     // ── 💪 Physical Performance (0–10) ──────────────────────
     { emoji: '💧', name: 'Hydrate',                                   difficulty: 'easy'                },  // 0
     { emoji: '😴', name: 'Sleep',                                     difficulty: 'medium'              },  // 1
-    { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium'              },  // 2
+    { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium',
+      description: 'It all starts the night before. Quality sleep before midnight sets the foundation for everything.' },  // 2
     { emoji: '🏃', name: 'Cardio',                                    difficulty: 'medium'              },  // 3
     { emoji: '🏋️', name: 'Strength training',                        difficulty: 'hard'                },  // 4
     { emoji: '⚡', name: 'Sprint session',                            difficulty: 'hard'                },  // 5
@@ -4253,9 +4263,19 @@
     // Shared stats block
     populateHabitInfoBlock('vn', habit);
 
-    // Editable note — populate from store
-    const ta = document.getElementById('vn-note-input');
-    ta.value = habitNotes[id] || '';
+    // Read-only canonical description from the habit library.
+    // (Any user-typed notes from earlier versions remain in habitNotes
+    // localStorage but are no longer displayed or editable — orphaned
+    // intentionally, not deleted.)
+    const noteEl = document.getElementById('vn-note-display');
+    const desc   = getHabitDescription(habit);
+    if (desc) {
+      noteEl.textContent = desc;
+      noteEl.classList.remove('vn-note-display--empty');
+    } else {
+      noteEl.textContent = 'Description coming soon.';
+      noteEl.classList.add('vn-note-display--empty');
+    }
 
     // Show
     document.getElementById('note-overlay').classList.remove('hidden');
@@ -4263,8 +4283,6 @@
   }
 
   function closeNoteModal() {
-    // Auto-save note on close (defensive — input listener also saves)
-    saveViewNoteText();
     document.getElementById('note-overlay').classList.add('hidden');
     document.getElementById('note-modal').classList.add('hidden');
     _vnHabitId = null;
@@ -4274,25 +4292,11 @@
     _vnPrevFocus = null;
   }
 
-  function saveViewNoteText() {
-    if (!_vnHabitId) return;
-    const ta = document.getElementById('vn-note-input');
-    if (!ta) return;
-    const txt = ta.value || '';
-    if (txt.trim()) {
-      habitNotes[_vnHabitId] = txt;
-    } else {
-      delete habitNotes[_vnHabitId];
-    }
-    save();
-  }
-
   function setupNoteModal() {
     const overlay = document.getElementById('note-overlay');
     const sheet   = document.getElementById('note-modal');
     const closeBtn = document.getElementById('note-close-btn');
     const editBtn  = document.getElementById('vn-edit-btn');
-    const ta       = document.getElementById('vn-note-input');
     if (!overlay || !sheet) return;
 
     overlay.addEventListener('click', closeNoteModal);
@@ -4307,16 +4311,9 @@
       });
     }
 
-    // Auto-save on every keystroke (instant, never lose data)
-    if (ta) {
-      ta.addEventListener('input', saveViewNoteText);
-      ta.addEventListener('blur',  saveViewNoteText);
-    }
-
     // Swipe-down-to-dismiss via the shared utility
     if (typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(sheet, overlay, () => {
-        saveViewNoteText();
         sheet.classList.add('hidden');
         overlay.classList.add('hidden');
         _vnHabitId = null;
@@ -4406,9 +4403,10 @@
       const btn = document.getElementById('edit-emoji-btn');
       openEmojiPicker(btn, editFormEmoji, em => { editFormEmoji = em; setEmojiBtn(btn, em); });
     });
-    document.getElementById('edit-diff-row').querySelectorAll('.diff-btn').forEach(btn => {
-      btn.addEventListener('click', () => { editFormDiff = btn.dataset.diff; setActiveDiff('edit-diff-row', editFormDiff); });
-    });
+    // Difficulty is intentionally read-only on the Edit Habit screen —
+    // a habit's difficulty is a property of the canonical library entry,
+    // not user-adjustable. CSS (.diff-row--locked) handles the visual.
+    // No click listener attached on purpose.
     document.getElementById('edit-goal-dec').addEventListener('click', () => {
       const habit = habits.find(h => h.id === editingId);
       const m = habit && MEASURABLE_HABITS[habit.name];

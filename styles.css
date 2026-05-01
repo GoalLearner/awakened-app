@@ -7531,27 +7531,22 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   letter-spacing: 0.12em;
   color: var(--text-tertiary);
 }
-.vn-note-input {
+/* Read-only canonical description display */
+.vn-note-display {
   width: 100%;
-  min-height: 90px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 12px 14px;
   color: var(--text-primary);
   font-size: 0.92rem;
-  font-family: inherit;
-  line-height: 1.5;
-  resize: vertical;
-  -webkit-appearance: none;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
-.vn-note-input:focus {
-  outline: none;
-  border-color: rgba(139, 92, 246, 0.55);
-  background: rgba(139, 92, 246, 0.05);
-}
-.vn-note-input::placeholder {
+.vn-note-display--empty {
   color: var(--text-tertiary);
   font-style: italic;
 }
@@ -7594,4 +7589,29 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
   }
   .vn-drag-handle { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EDIT HABIT — locked difficulty selector
+   ═══════════════════════════════════════════════════════════════ */
+.diff-row--locked {
+  pointer-events: none;
+  cursor: default;
+}
+.diff-row--locked .diff-btn {
+  opacity: 0.32;
+  cursor: default;
+}
+/* The currently-selected difficulty stays at full opacity so the user
+   can still see what their habit is set to. */
+.diff-row--locked .diff-btn.active {
+  opacity: 1;
+}
+.edit-diff-help {
+  margin: 6px 2px 4px;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
 }

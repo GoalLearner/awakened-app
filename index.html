@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=93">
+  <link rel="stylesheet" href="styles.css?v=94">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -301,11 +301,10 @@
         <div class="hi-stat-cell"><span id="vn-total"   class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
         <div class="hi-stat-cell"><span id="vn-week"    class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
       </div>
-      <!-- Editable personal note -->
+      <!-- Read-only canonical description from the habit definition -->
       <div class="vn-note-section">
-        <div class="vn-section-label">YOUR NOTE</div>
-        <textarea id="vn-note-input" class="vn-note-input" rows="4"
-          placeholder="Add a note about this habit — what it means to you, when you do it, why it matters."></textarea>
+        <div class="vn-section-label">ABOUT THIS HABIT</div>
+        <div id="vn-note-display" class="vn-note-display"></div>
       </div>
     </div>
   </div>
@@ -320,12 +319,13 @@
     </div>
     <input id="edit-input" type="text" maxlength="60"
            autocomplete="off" autocorrect="off" autocapitalize="sentences">
-    <div class="diff-row" id="edit-diff-row">
-      <button class="diff-btn" data-diff="easy">Easy</button>
-      <button class="diff-btn" data-diff="medium">Medium</button>
-      <button class="diff-btn" data-diff="hard">Hard</button>
-      <button class="diff-btn" data-diff="legendary">Legendary</button>
+    <div class="diff-row diff-row--locked" id="edit-diff-row" aria-readonly="true">
+      <button class="diff-btn" data-diff="easy"      tabindex="-1">Easy</button>
+      <button class="diff-btn" data-diff="medium"    tabindex="-1">Medium</button>
+      <button class="diff-btn" data-diff="hard"      tabindex="-1">Hard</button>
+      <button class="diff-btn" data-diff="legendary" tabindex="-1">Legendary</button>
     </div>
+    <div class="edit-diff-help">Difficulty is set by the habit type and can't be changed.</div>
     <div id="edit-goal-row" class="edit-goal-row hidden">
       <span class="edit-goal-label" id="edit-goal-label">Goal</span>
       <div class="edit-goal-stepper">
@@ -473,7 +473,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=94"></script>
+  <script src="app.js?v=95"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
