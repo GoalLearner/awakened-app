@@ -2242,8 +2242,9 @@
     function angle(i) { return (2 * Math.PI * i / N) - Math.PI / 2; }
     function pt(r, i)  { return [CX + r * Math.cos(angle(i)), CY + r * Math.sin(angle(i))]; }
 
-    // Maximum usable radius (leaving room for labels)
-    const LABEL_PAD = 38;
+    // Maximum usable radius (leaving room for labels). Bumped because the
+    // radar now displays smaller (≤200px) so labels are larger in viewBox units.
+    const LABEL_PAD = 50;
     const R_MAX     = CX - LABEL_PAD;
 
     // ── Build SVG string ──────────────────────────────────
@@ -2304,11 +2305,12 @@
       svg += '<circle class="sc-radar-hit" cx="' + hx.toFixed(2) + '" cy="' + hy.toFixed(2) + '" r="18" '
            + 'fill="transparent" data-statid="' + st.id + '"/>';
 
-      // Label: abbreviation on first line, level on second
-      svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly - 5).toFixed(2) + '" '
+      // Label: abbreviation on first line, level on second.
+      // Y offsets widened to keep larger labels from overlapping each other.
+      svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly - 8).toFixed(2) + '" '
            + 'class="sc-radar-lbl" fill="' + st.color + '" text-anchor="middle">'
            + st.label + '</text>';
-      svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly + 10).toFixed(2) + '" '
+      svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly + 14).toFixed(2) + '" '
            + 'class="sc-radar-sublbl" fill="' + (lv >= MAX_LV ? '#f59e0b' : 'rgba(255,255,255,0.45)') + '" text-anchor="middle">'
            + (lv >= MAX_LV ? 'MAX' : 'Lv.' + lv) + '</text>';
     });

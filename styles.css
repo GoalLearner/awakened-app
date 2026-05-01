@@ -4750,12 +4750,23 @@ body.theme-light .ob-inspiration-quote {
 .sc-portrait-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 10px 10px;
+  gap: 6px;
+  padding: 10px 10px 12px;
 }
 .sc-portrait-row .sc-avatar-row { padding: 0; background: none; flex: 0 0 auto; }
-.sc-portrait-row .sc-radar-wrap { flex: 1 1 0; padding: 0; min-width: 0; }
-.sc-portrait-row .sc-radar-svg  { max-width: 100%; }
+.sc-portrait-row .sc-radar-wrap { flex: 1 1 0; padding: 0; min-width: 0; overflow: visible; }
+.sc-portrait-row .sc-radar-svg  { max-width: 200px; width: 100%; }
+
+/* iPhone SE & narrower viewports: stack vertically so neither element gets cramped */
+@media (max-width: 380px) {
+  .sc-portrait-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .sc-portrait-row .sc-avatar         { width: 200px; }
+  .sc-portrait-row .sc-radar-svg      { max-width: 240px; }
+}
 
 /* Class avatar portrait */
 .sc-avatar-row {
@@ -4771,8 +4782,8 @@ body.theme-light .ob-inspiration-quote {
       transparent 80%);
 }
 .sc-avatar {
-  width: auto;
-  height: 150px;
+  width: 200px;
+  height: auto;
   max-width: 100%;
   object-fit: contain;
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45))
@@ -4780,7 +4791,8 @@ body.theme-light .ob-inspiration-quote {
   user-select: none;
   -webkit-user-drag: none;
 }
-.sc-portrait-row .sc-avatar { height: 150px; }
+/* In the side-by-side portrait row, avatar is the dominant element */
+.sc-portrait-row .sc-avatar { width: 200px; height: auto; }
 /* Crossfade only when the player's class actually changed (set by JS). */
 .sc-avatar-changed {
   animation: sc-avatar-in 480ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -4910,7 +4922,9 @@ body.theme-light .ob-inspiration-quote {
 }
 
 .sc-radar-lbl {
-  font-size: 9px;
+  /* viewBox-unit size, 18px so labels render ≥10px even when the radar
+     compresses to ~140px wide on iPhone 14 (scale ~0.57). */
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -4918,7 +4932,8 @@ body.theme-light .ob-inspiration-quote {
 }
 
 .sc-radar-sublbl {
-  font-size: 8px;
+  /* viewBox-unit size, 16px → renders ≥10px on screen at iPhone 14 scale */
+  font-size: 16px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
