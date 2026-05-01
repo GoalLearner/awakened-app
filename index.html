@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=101">
+  <link rel="stylesheet" href="styles.css?v=102">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -447,6 +447,18 @@
     </div>
   </div>
 
+  <!-- ═══ PERSONAL RECORDS — All-PRs grid bottom-sheet ═══ -->
+  <div id="pr-all-overlay" class="pr-all-overlay hidden"></div>
+  <div id="pr-all-sheet"   class="pr-all-sheet   hidden">
+    <div class="pr-drag-handle"></div>
+    <div class="pr-all-header">
+      <span class="pr-all-icon">🏆</span>
+      <span class="pr-all-title">Personal Records</span>
+      <button id="pr-all-close" class="pr-detail-close" aria-label="Close">✕</button>
+    </div>
+    <div id="pr-all-grid" class="pr-all-grid"></div>
+  </div>
+
   <!-- ═══ PERSONAL RECORDS — detail bottom-sheet ═══ -->
   <div id="pr-detail-overlay" class="pr-detail-overlay hidden"></div>
   <div id="pr-detail-sheet"   class="pr-detail-sheet   hidden">
@@ -582,7 +594,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=102"></script>
+  <script src="app.js?v=103"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -5062,25 +5062,63 @@
     document.getElementById('pr-detail-sheet').classList.add('hidden');
   }
 
+  // ── ALL-PR SHEET — opens from the Status tab button ───────
+  function openPRAllSheet() {
+    const ov    = document.getElementById('pr-all-overlay');
+    const sheet = document.getElementById('pr-all-sheet');
+    const grid  = document.getElementById('pr-all-grid');
+    if (!ov || !sheet || !grid) return;
+    grid.innerHTML = buildAllPRTilesHTML();
+    ov.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closePRAllSheet() {
+    document.getElementById('pr-all-overlay').classList.add('hidden');
+    document.getElementById('pr-all-sheet').classList.add('hidden');
+  }
+
   function setupPRDetailSheet() {
-    const ov    = document.getElementById('pr-detail-overlay');
-    const sheet = document.getElementById('pr-detail-sheet');
-    const close = document.getElementById('pr-detail-close');
+    const ov     = document.getElementById('pr-detail-overlay');
+    const sheet  = document.getElementById('pr-detail-sheet');
+    const close  = document.getElementById('pr-detail-close');
+    const allOv    = document.getElementById('pr-all-overlay');
+    const allSheet = document.getElementById('pr-all-sheet');
+    const allClose = document.getElementById('pr-all-close');
+
     if (ov)    ov.addEventListener('click', closePRDetailSheet);
     if (close) close.addEventListener('click', closePRDetailSheet);
+    if (allOv)    allOv.addEventListener('click', closePRAllSheet);
+    if (allClose) allClose.addEventListener('click', closePRAllSheet);
 
-    // Delegated tap — any [data-pr-id] tile opens the detail sheet
+    // Delegated taps:
+    //   - #pr-open-btn (Status-tab button) → opens the All-PRs grid sheet
+    //   - any [data-pr-id] tile → opens the per-PR detail sheet
     document.addEventListener('click', e => {
       const t = e.target;
       if (!t || !t.closest) return;
+      const opener = t.closest('#pr-open-btn');
+      if (opener) {
+        e.stopPropagation();
+        e.preventDefault();
+        openPRAllSheet();
+        return;
+      }
       const tile = t.closest('[data-pr-id]');
       if (!tile) return;
       e.stopPropagation();
       e.preventDefault();
-      openPRDetailSheet(tile.getAttribute('data-pr-id'));
+      const prId = tile.getAttribute('data-pr-id');
+      // If clicking a tile inside the All-PRs sheet, close that sheet first
+      // so the detail sheet replaces it cleanly.
+      if (allSheet && !allSheet.classList.contains('hidden')) {
+        closePRAllSheet();
+        setTimeout(() => openPRDetailSheet(prId), 220);
+      } else {
+        openPRDetailSheet(prId);
+      }
     });
 
-    // Swipe-down dismiss
+    // Swipe-down dismiss for both sheets
     if (sheet && ov && typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(sheet, ov, () => {
         sheet.classList.add('hidden');
@@ -5091,10 +5129,21 @@
         scrollTarget:   '.pr-detail-body',
       });
     }
+    if (allSheet && allOv && typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(allSheet, allOv, () => {
+        allSheet.classList.add('hidden');
+        allOv.classList.add('hidden');
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.pr-drag-handle, .pr-all-header',
+        scrollTarget:   '.pr-all-grid',
+      });
+    }
 
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
-      if (!sheet.classList.contains('hidden')) closePRDetailSheet();
+      if (sheet    && !sheet.classList.contains('hidden'))    closePRDetailSheet();
+      if (allSheet && !allSheet.classList.contains('hidden')) closePRAllSheet();
     });
   }
 
@@ -5336,12 +5385,29 @@
     return def.accent || '#a78bfa';
   }
 
+  // Compact button on the Status tab — taps open the "All PRs" sheet.
+  // The button shows a small headline plus a 1-line summary of standout PRs
+  // (most-habits-day + active-days) so it never feels empty.
   function buildPRStripHTML() {
-    const tiles = PR_DEFS.map(def => {
+    const habitsLifetime = (personalRecords['total_habits_lifetime'] || {}).value || 0;
+    const activeDays     = (personalRecords['total_active_days']     || {}).value || 0;
+    const summary = habitsLifetime.toLocaleString() + ' habits · ' + activeDays.toLocaleString() + ' active days';
+    return '<button id="pr-open-btn" class="pr-open-btn" aria-label="View Personal Records">' +
+      '<span class="pr-open-icon">🏆</span>' +
+      '<span class="pr-open-text">' +
+        '<span class="pr-open-title">PERSONAL RECORDS</span>' +
+        '<span class="pr-open-sub">' + esc(summary) + '</span>' +
+      '</span>' +
+      '<span class="pr-open-chev">›</span>' +
+    '</button>';
+  }
+
+  function buildAllPRTilesHTML() {
+    return PR_DEFS.map(def => {
       const rec    = personalRecords[def.id] || { value: 0 };
       const accent = _prTileAccent(def);
       const valStr = _formatPRValue(def.id, rec.value);
-      return '<button class="pr-tile" data-pr-id="' + esc(def.id) + '" ' +
+      return '<button class="pr-tile pr-tile--grid" data-pr-id="' + esc(def.id) + '" ' +
                   'style="--pr-accent:' + accent + '" ' +
                   'aria-label="View ' + esc(def.label) + ' record">' +
         '<span class="pr-tile-icon">' + def.icon + '</span>' +
@@ -5349,10 +5415,6 @@
         '<span class="pr-tile-label">' + esc(def.label) + '</span>' +
       '</button>';
     }).join('');
-    return '<div class="pr-strip-wrap">' +
-      '<div class="pr-strip-label">PERSONAL RECORDS</div>' +
-      '<div class="pr-strip" id="pr-strip">' + tiles + '</div>' +
-    '</div>';
   }
 
   function buildCompoundBadgesHTML() {

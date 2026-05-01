@@ -8688,3 +8688,114 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 @keyframes pr-fade-out {
   to { opacity: 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PERSONAL RECORDS — Status tab button (replaces inline strip)
+   ═══════════════════════════════════════════════════════════════ */
+.pr-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 36px);
+  margin: 4px 18px 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04));
+  border: 1px solid rgba(245,158,11,0.32);
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  -webkit-appearance: none;
+  text-align: left;
+  transition: transform 0.1s ease, border-color 0.18s ease, background 0.22s ease;
+}
+.pr-open-btn:hover  { border-color: rgba(245,158,11,0.55); background: rgba(245,158,11,0.10); }
+.pr-open-btn:active { transform: scale(0.99); }
+.pr-open-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+.pr-open-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pr-open-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+.pr-open-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.pr-open-chev {
+  font-size: 1.4rem;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PERSONAL RECORDS — All-PRs grid bottom-sheet
+   ═══════════════════════════════════════════════════════════════ */
+.pr-all-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 360;
+  animation: pr-fade 0.20s ease-out;
+}
+.pr-all-overlay.hidden { display: none !important; }
+.pr-all-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  max-height: 82vh;
+  z-index: 361;
+  background: var(--bg-raised);
+  border: 1.5px solid rgba(245,158,11,0.32);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  animation: pr-up 0.30s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.pr-all-sheet.hidden { display: none !important; }
+.pr-all-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 12px;
+}
+.pr-all-icon  { font-size: 1.4rem; line-height: 1; }
+.pr-all-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+.pr-all-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 4px 18px 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Grid-variant tiles — wider with 2 columns, more breathing room */
+.pr-tile.pr-tile--grid {
+  width: 100%;
+  min-height: 104px;
+  padding: 14px 10px 12px;
+  border-radius: 13px;
+  gap: 4px;
+}
+.pr-tile.pr-tile--grid::before {
+  height: 3px;
+  border-radius: 13px 13px 0 0;
+}
+.pr-tile.pr-tile--grid .pr-tile-icon  { font-size: 1.3rem; }
+.pr-tile.pr-tile--grid .pr-tile-value { font-size: 1.45rem; }
+.pr-tile.pr-tile--grid .pr-tile-label { font-size: 0.7rem; }
