@@ -536,18 +536,155 @@
       ] },
   ];
 
+  // Achievement categories drive the section grouping in the UI.
+  const ACH_CATEGORIES = [
+    { id: 'streaks',  label: '🔥 Streaks' },
+    { id: 'rank',     label: '🛡️ Rank & Points' },
+    { id: 'class',    label: '🧍 Class & Awakening' },
+    { id: 'packs',    label: '🌅 Packs' },
+    { id: 'quests',   label: '⚔️ Daily Quests' },
+    { id: 'habits',   label: '🎯 Habit Mastery' },
+    { id: 'lifetime', label: '📅 Lifetime' },
+  ];
+
+  // Each achievement: id, icon, name, desc, category, target, getProgress(ctx).
+  // getProgress(ctx) returns { current: N, target: T } so the UI can show
+  // a live progress bar like "12 / 30 days" on locked rows. ctx is built
+  // once in checkAchievements() and reused by render code.
   const ACHIEVEMENTS = [
-    { id: 'first_step',        icon: '👣', name: 'First Step',        desc: 'Complete your first habit ever' },
-    { id: 'week_warrior',      icon: '🗓️', name: 'Week Warrior',       desc: 'Maintain a 7-day streak on any habit' },
-    { id: 'streak_hunter',     icon: '🔥', name: 'Streak Hunter',      desc: 'Reach a 30-day streak on any habit' },
-    { id: 'iron_will',         icon: '⚔️', name: 'Iron Will',          desc: 'Reach a 100-day streak on any habit' },
-    { id: 'centurion',         icon: '🛡️', name: 'Centurion',          desc: 'Earn 500 total points' },
-    { id: 'the_grind',         icon: '⚡', name: 'The Grind',          desc: 'Earn 2,000 total points' },
-    { id: 'legendary_hunter',  icon: '👑', name: 'Legendary Hunter',   desc: 'Complete a Legendary habit 30 days in a row' },
-    { id: 'awakened',          icon: '💎', name: 'Awakened',           desc: 'Reach A Rank (7,000 pts)' },
-    { id: 'shadow_monarch',    icon: '🌑', name: 'Shadow Monarch',     desc: 'Reach S Rank (14,000 pts)' },
-    { id: 'the_one',           icon: '⭐', name: 'The One',            desc: 'Reach S+ Rank (28,000 pts)' },
-    { id: 'fully_awakened',    icon: '👑', name: 'Fully Awakened',     desc: 'Max all 6 stats — Total Level 120 (+2,000 bonus XP)' },
+    // ── 🔥 STREAKS ──────────────────────────────────────────
+    { id: 'week_warrior',   category: 'streaks', icon: '🗓️', name: 'Week Warrior',
+      desc: '7-day streak on any habit', target: 7,
+      getProgress: c => ({ current: Math.min(c.maxStreak, 7), target: 7 }) },
+    { id: 'streak_hunter',  category: 'streaks', icon: '🔥', name: 'Streak Hunter',
+      desc: '30-day streak on any habit', target: 30,
+      getProgress: c => ({ current: Math.min(c.maxStreak, 30), target: 30 }) },
+    { id: 'iron_will',      category: 'streaks', icon: '⚔️', name: 'Iron Will',
+      desc: '100-day streak on any habit', target: 100,
+      getProgress: c => ({ current: Math.min(c.maxStreak, 100), target: 100 }) },
+    { id: 'streak_200',     category: 'streaks', icon: '🌑', name: 'The 200',
+      desc: '200-day streak on any habit', target: 200,
+      getProgress: c => ({ current: Math.min(c.maxStreak, 200), target: 200 }) },
+    { id: 'streak_365',     category: 'streaks', icon: '🌟', name: 'The 365',
+      desc: 'Full year streak on any habit', target: 365,
+      getProgress: c => ({ current: Math.min(c.maxStreak, 365), target: 365 }) },
+    { id: 'streak_730',     category: 'streaks', icon: '👑', name: 'Two Years In',
+      desc: '730-day streak on any habit', target: 730,
+      getProgress: c => ({ current: Math.min(c.maxStreak, 730), target: 730 }) },
+
+    // ── 🛡️ RANK & POINTS ───────────────────────────────────
+    { id: 'first_step',    category: 'rank', icon: '👣', name: 'First Step',
+      desc: 'Complete your first habit ever',
+      getProgress: c => ({ current: Math.min(c.totalCompletions, 1), target: 1 }) },
+    { id: 'centurion',     category: 'rank', icon: '🛡️', name: 'Centurion',
+      desc: 'Earn 500 total points', target: 500,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 500), target: 500 }) },
+    { id: 'the_grind',     category: 'rank', icon: '⚡', name: 'The Grind',
+      desc: 'Earn 2,000 total points', target: 2000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 2000), target: 2000 }) },
+    { id: 'awakened',      category: 'rank', icon: '💎', name: 'Awakened',
+      desc: 'Reach A Rank (7,000 pts)', target: 7000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 7000), target: 7000 }) },
+    { id: 'shadow_monarch',category: 'rank', icon: '🌑', name: 'Shadow Monarch',
+      desc: 'Reach S Rank (14,000 pts)', target: 14000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 14000), target: 14000 }) },
+    { id: 'the_one',       category: 'rank', icon: '⭐', name: 'The One',
+      desc: 'Reach S+ Rank (28,000 pts)', target: 28000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 28000), target: 28000 }) },
+    { id: 'golden_hour',   category: 'rank', icon: '🏆', name: 'Golden Hour',
+      desc: 'Earn 10,000 lifetime XP', target: 10000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 10000), target: 10000 }) },
+
+    // ── 🧍 CLASS & AWAKENING ───────────────────────────────
+    { id: 'first_awakening', category: 'class', icon: '✨', name: 'First Awakening',
+      desc: 'Earn your first class (any of 7)', target: 1,
+      getProgress: c => ({ current: c.hasClass ? 1 : 0, target: 1 }) },
+    { id: 'specialist',      category: 'class', icon: '📈', name: 'Specialist',
+      desc: 'Reach Lv10 in any single stat', target: 10,
+      getProgress: c => ({ current: Math.min(c.maxStatLv, 10), target: 10 }) },
+    { id: 'master',          category: 'class', icon: '⚜️', name: 'Master',
+      desc: 'Reach Lv20 (MAX) in any single stat', target: 20,
+      getProgress: c => ({ current: Math.min(c.maxStatLv, 20), target: 20 }) },
+    { id: 'polymath',        category: 'class', icon: '🎴', name: 'Polymath',
+      desc: 'Reach Lv5 in 3 or more stats', target: 3,
+      getProgress: c => ({ current: Math.min(c.statsAtLv5, 3), target: 3 }) },
+    { id: 'the_sage',        category: 'class', icon: '🌟', name: 'The Sage',
+      desc: 'Achieve Sage class (all 6 stats Lv5+, balanced)', target: 1,
+      getProgress: c => ({ current: c.isSage ? 1 : 0, target: 1 }) },
+    { id: 'fully_awakened',  category: 'class', icon: '👑', name: 'Fully Awakened',
+      desc: 'Max all 6 stats — Total Level 120 (+2,000 bonus XP)', target: 120,
+      getProgress: c => ({ current: Math.min(c.totalStatLevel, 120), target: 120 }) },
+
+    // ── 🌅 PACKS ────────────────────────────────────────────
+    { id: 'compound_day',    category: 'packs', icon: '⚡', name: 'Compound Day',
+      desc: 'Earn the Compound Effect Bonus once', target: 1,
+      getProgress: c => ({ current: Math.min(c.mrStreak, 1), target: 1 }) },
+    { id: 'compound_week',   category: 'packs', icon: '🌅', name: 'Compound Week',
+      desc: '7-day Morning Routine streak', target: 7,
+      getProgress: c => ({ current: Math.min(c.mrStreak, 7), target: 7 }) },
+    { id: 'compound_month',  category: 'packs', icon: '🔥', name: 'Compound Month',
+      desc: '30-day Morning Routine streak', target: 30,
+      getProgress: c => ({ current: Math.min(c.mrStreak, 30), target: 30 }) },
+    { id: 'locked_in_init',  category: 'packs', icon: '🔒', name: 'Locked-In Initiation',
+      desc: 'Earn the Locked-In Bonus once', target: 1,
+      getProgress: c => ({ current: Math.min(c.liStreak, 1), target: 1 }) },
+    { id: 'locked_in_30',    category: 'packs', icon: '🛡️', name: 'Locked-In Disciple',
+      desc: '30-day Locked-In streak', target: 30,
+      getProgress: c => ({ current: Math.min(c.liStreak, 30), target: 30 }) },
+    { id: 'both_crowns',     category: 'packs', icon: '👑', name: 'Both Crowns',
+      desc: 'Earn both Compound + Locked-In bonuses on the same day', target: 1,
+      getProgress: c => ({ current: c.bothCrownsToday ? 1 : 0, target: 1 }) },
+
+    // ── ⚔️ DAILY QUESTS ─────────────────────────────────────
+    { id: 'quest_first',  category: 'quests', icon: '⚔️', name: 'Quest Slayer',
+      desc: 'Complete your first daily quest', target: 1,
+      getProgress: c => ({ current: Math.min(c.questsComplete, 1), target: 1 }) },
+    { id: 'quest_10',     category: 'quests', icon: '🎯', name: 'Quest Tier 10',
+      desc: 'Complete 10 daily quests', target: 10,
+      getProgress: c => ({ current: Math.min(c.questsComplete, 10), target: 10 }) },
+    { id: 'quest_50',     category: 'quests', icon: '🏹', name: 'Quest Tier 50',
+      desc: 'Complete 50 daily quests', target: 50,
+      getProgress: c => ({ current: Math.min(c.questsComplete, 50), target: 50 }) },
+    { id: 'quest_100',    category: 'quests', icon: '🏆', name: 'Quest Tier 100',
+      desc: 'Complete 100 daily quests', target: 100,
+      getProgress: c => ({ current: Math.min(c.questsComplete, 100), target: 100 }) },
+
+    // ── 🎯 HABIT MASTERY ────────────────────────────────────
+    { id: 'legendary_hunter', category: 'habits', icon: '👑', name: 'Legendary Hunter',
+      desc: 'Complete a Legendary habit 30 days in a row', target: 30,
+      getProgress: c => ({ current: Math.min(c.maxLegStreak, 30), target: 30 }) },
+    { id: 'cold_soul',  category: 'habits', icon: '🧊', name: 'Cold Soul',
+      desc: '30 cold plunge or cold shower completions', target: 30,
+      getProgress: c => ({ current: Math.min(c.coldCount, 30), target: 30 }) },
+    { id: 'bookworm',   category: 'habits', icon: '📖', name: 'Bookworm',
+      desc: 'Read habit completed 100 days', target: 100,
+      getProgress: c => ({ current: Math.min(c.readCount, 100), target: 100 }) },
+    { id: 'iron_body',  category: 'habits', icon: '🏋️', name: 'Iron Body',
+      desc: 'Strength training 100 days', target: 100,
+      getProgress: c => ({ current: Math.min(c.strengthCount, 100), target: 100 }) },
+    { id: 'stoic',      category: 'habits', icon: '🧠', name: 'Stoic',
+      desc: 'Meditate 60 days', target: 60,
+      getProgress: c => ({ current: Math.min(c.meditateCount, 60), target: 60 }) },
+    { id: 'phone_off',  category: 'habits', icon: '📵', name: 'Phone-Off Champion',
+      desc: '30 days of "No phone after waking"', target: 30,
+      getProgress: c => ({ current: Math.min(c.phoneOffCount, 30), target: 30 }) },
+
+    // ── 📅 LIFETIME ─────────────────────────────────────────
+    { id: 'year_active',  category: 'lifetime', icon: '📅', name: 'Year of Sweat',
+      desc: '365 active days lifetime', target: 365,
+      getProgress: c => ({ current: Math.min(c.activeDays, 365), target: 365 }) },
+    { id: 'discipline_test', category: 'lifetime', icon: '⚜️', name: 'Discipline Test',
+      desc: '1,000 lifetime habit completions', target: 1000,
+      getProgress: c => ({ current: Math.min(c.totalCompletions, 1000), target: 1000 }) },
+    { id: 'perfect_week',  category: 'lifetime', icon: '✨', name: 'Perfect Week',
+      desc: '7 perfect days in a row', target: 7,
+      getProgress: c => ({ current: Math.min(c.perfectStreak, 7), target: 7 }) },
+    { id: 'perfect_month', category: 'lifetime', icon: '💎', name: 'Perfect Month',
+      desc: '30 perfect days in a row', target: 30,
+      getProgress: c => ({ current: Math.min(c.perfectStreak, 30), target: 30 }) },
+    { id: 'pr_breaker',    category: 'lifetime', icon: '🏆', name: 'Personal Best',
+      desc: 'Break any Personal Record for the first time', target: 1,
+      getProgress: c => ({ current: c.anyPRSet ? 1 : 0, target: 1 }) },
   ];
 
   const STATS = [
@@ -671,6 +808,7 @@
   let totalPoints = 0;
   let habitNotes = {}; // habitId → note string
   let unlockedAchievements = new Set();
+  let achievementUnlockDates = {};  // achId → 'YYYY-MM-DD' first unlock
   let today = getPTDate();
   let currentTab = 'profile';
   let editingId = null;
@@ -1520,6 +1658,7 @@
       totalPoints = parseInt(localStorage.getItem('hb_points') || '0', 10) || 0;
       const ach   = JSON.parse(localStorage.getItem('hb_achievements') || '[]');
       unlockedAchievements = new Set(ach);
+      achievementUnlockDates = JSON.parse(localStorage.getItem('hb_ach_dates') || '{}');
       const rawStats = localStorage.getItem('hb_stats');
       stats = rawStats ? JSON.parse(rawStats) : initStats();
       const rawSB = localStorage.getItem('hb_stat_bonuses');
@@ -1563,6 +1702,7 @@
       localStorage.setItem('hb_streaks',         JSON.stringify(streaks));
       localStorage.setItem('hb_points',          String(totalPoints));
       localStorage.setItem('hb_achievements',    JSON.stringify([...unlockedAchievements]));
+      localStorage.setItem('hb_ach_dates',       JSON.stringify(achievementUnlockDates));
       localStorage.setItem('hb_stats',           JSON.stringify(stats));
       localStorage.setItem('hb_stat_bonuses',    JSON.stringify([...statBonuses]));
       localStorage.setItem('hb_perfect_streak',  JSON.stringify(perfectStreak));
@@ -1841,44 +1981,79 @@
   }
 
   // ── ACHIEVEMENTS ──────────────────────────────────────────
-  function checkAchievements() {
-    const allStreaks = Object.values(streaks).map(s => s.count || 0);
-    const maxStreak = allStreaks.length ? Math.max(...allStreaks) : 0;
-
-    const legStreaks = habits
-      .filter(h => h.difficulty === 'legendary')
-      .map(h => (streaks[h.id] && streaks[h.id].count) || 0);
-    const maxLegStreak = legStreaks.length ? Math.max(...legStreaks) : 0;
-
+  // Build the achievement evaluation context — used by both unlock checks
+  // and the renderer for live progress bars on locked rows.
+  function buildAchievementContext() {
+    const allStreaks    = Object.values(streaks).map(s => s.count || 0);
+    const maxStreak     = allStreaks.length ? Math.max(...allStreaks) : 0;
+    const legStreaks    = habits.filter(h => h.difficulty === 'legendary')
+                                .map(h => (streaks[h.id] && streaks[h.id].count) || 0);
+    const maxLegStreak  = legStreaks.length ? Math.max(...legStreaks) : 0;
     const totalCompletions = Object.values(completions).reduce((n, arr) => n + arr.length, 0);
-    const rank = getRank(totalPoints);
-
     const totalStatLevel = STATS.reduce((sum, st) => sum + statLevel(stats[st.id]?.pts || 0), 0);
-
-    const conditions = {
-      first_step:       totalCompletions >= 1,
-      week_warrior:     maxStreak >= 7,
-      streak_hunter:    maxStreak >= 30,
-      iron_will:        maxStreak >= 100,
-      centurion:        totalPoints >= 500,
-      the_grind:        totalPoints >= 2000,
-      legendary_hunter: maxLegStreak >= 30,
-      awakened:         totalPoints >= 7000,
-      shadow_monarch:   totalPoints >= 14000,
-      the_one:          totalPoints >= 28000,
-      fully_awakened:   totalStatLevel >= 120,
-    };
-
-    const newlyUnlocked = [];
-    for (const [id, met] of Object.entries(conditions)) {
-      if (met && !unlockedAchievements.has(id)) {
-        unlockedAchievements.add(id);
-        newlyUnlocked.push(ACHIEVEMENTS.find(a => a.id === id));
+    const statsAtLv5 = STATS.filter(st => statLevel(stats[st.id]?.pts || 0) >= 5).length;
+    const maxStatLv  = STATS.reduce((m, st) => Math.max(m, statLevel(stats[st.id]?.pts || 0)), 0);
+    const hasClass   = currentClass && currentClass !== 'CIVILIAN';
+    const isSage     = currentClass === 'SAGE';
+    const mrStreak   = (compoundStreaks && compoundStreaks['morning']   && compoundStreaks['morning'].streak)   || 0;
+    const liStreak   = (compoundStreaks && compoundStreaks['locked-in'] && compoundStreaks['locked-in'].streak) || 0;
+    const bothCrownsToday = compoundAwarded['morning'] === today && compoundAwarded['locked-in'] === today;
+    const questsComplete  = (typeof getPR === 'function')
+      ? (getPR('total_missions_complete').value || 0) : 0;
+    const perfectStreakNow = (perfectStreak && perfectStreak.count) || 0;
+    const anyPRSet = (typeof personalRecords === 'object' &&
+                      Object.keys(personalRecords).some(k => (personalRecords[k] || {}).value > 0));
+    // Per-habit lifetime completion counts for habit-mastery achievements
+    function countCompletionsByName(name) {
+      const habit = habits.find(h => h.name === name);
+      if (!habit) return 0;
+      let n = 0;
+      for (const d in completions) {
+        if (Array.isArray(completions[d]) && completions[d].includes(habit.id)) n++;
       }
+      return n;
     }
+    return {
+      maxStreak,
+      maxLegStreak,
+      totalCompletions,
+      totalPoints,
+      totalStatLevel,
+      statsAtLv5,
+      maxStatLv,
+      hasClass,
+      isSage,
+      mrStreak,
+      liStreak,
+      bothCrownsToday,
+      questsComplete,
+      perfectStreak: perfectStreakNow,
+      anyPRSet,
+      activeDays:    Object.keys(completions).filter(d => (completions[d] || []).length > 0).length,
+      coldCount:     countCompletionsByName('Cold shower') + countCompletionsByName('Ice bath or cold plunge'),
+      readCount:     countCompletionsByName('Read'),
+      strengthCount: countCompletionsByName('Strength training'),
+      meditateCount: countCompletionsByName('Meditate & Breathwork'),
+      phoneOffCount: countCompletionsByName('No phone or social media after waking'),
+    };
+  }
+
+  function checkAchievements() {
+    const ctx = buildAchievementContext();
+    const newlyUnlocked = [];
+    ACHIEVEMENTS.forEach(ach => {
+      if (unlockedAchievements.has(ach.id)) return;
+      const p = (typeof ach.getProgress === 'function') ? ach.getProgress(ctx) : null;
+      if (!p) return;
+      if (p.current >= p.target) {
+        unlockedAchievements.add(ach.id);
+        achievementUnlockDates[ach.id] = today;
+        newlyUnlocked.push(ach);
+      }
+    });
 
     if (newlyUnlocked.length) {
-      // FULLY AWAKENED grants a one-time +2,000 rank XP bonus
+      // FULLY AWAKENED grants a one-time +2,000 rank XP bonus (preserved)
       if (newlyUnlocked.find(a => a && a.id === 'fully_awakened')) {
         totalPoints += 2000;
       }
@@ -3392,22 +3567,115 @@
     }
   }
 
+  function _formatUnlockDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr + 'T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (_) { return dateStr; }
+  }
+
+  function _formatProgressNum(n) {
+    return Number(n || 0).toLocaleString();
+  }
+
   function renderAchievements() {
     const grid = document.getElementById('achievements-grid');
+    if (!grid) return;
     grid.innerHTML = '';
-    ACHIEVEMENTS.forEach(ach => {
-      const unlocked = unlockedAchievements.has(ach.id);
-      const card = document.createElement('div');
-      card.className = 'ach-card ' + (unlocked ? 'unlocked' : 'locked');
-      card.innerHTML =
-        '<div class="ach-icon-wrap">' + ach.icon + '</div>' +
-        '<div class="ach-text">' +
-          '<div class="ach-name">' + esc(ach.name) + '</div>' +
-          '<div class="ach-desc">' + esc(ach.desc) + '</div>' +
-        '</div>' +
-        '<div class="ach-status">' + (unlocked ? '✓' : '🔒') + '</div>';
-      grid.appendChild(card);
+
+    const ctx = buildAchievementContext();
+    const totalCount    = ACHIEVEMENTS.length;
+    const unlockedCount = ACHIEVEMENTS.filter(a => unlockedAchievements.has(a.id)).length;
+
+    // ── Top header: total + per-category breakdown ───────
+    const top = document.createElement('div');
+    top.className = 'ach-top';
+    const catBreakdown = ACH_CATEGORIES.map(cat => {
+      const inCat   = ACHIEVEMENTS.filter(a => a.category === cat.id);
+      const haveCat = inCat.filter(a => unlockedAchievements.has(a.id)).length;
+      return '<span class="ach-cat-pill">' + esc(cat.label.split(' ')[0]) +
+             ' <b>' + haveCat + '/' + inCat.length + '</b></span>';
+    }).join('');
+    top.innerHTML =
+      '<div class="ach-top-summary">' +
+        '<span class="ach-top-num">' + unlockedCount + ' / ' + totalCount + '</span>' +
+        '<span class="ach-top-label">ACHIEVEMENTS UNLOCKED</span>' +
+      '</div>' +
+      '<div class="ach-cat-breakdown">' + catBreakdown + '</div>';
+    grid.appendChild(top);
+
+    // ── Recently unlocked (last 3) ──────────────────────
+    const recent = ACHIEVEMENTS
+      .filter(a => unlockedAchievements.has(a.id) && achievementUnlockDates[a.id])
+      .sort((a, b) => (achievementUnlockDates[b.id] || '').localeCompare(achievementUnlockDates[a.id] || ''))
+      .slice(0, 3);
+    if (recent.length) {
+      const recentSec = document.createElement('div');
+      recentSec.className = 'ach-section';
+      recentSec.innerHTML = '<div class="ach-section-label">RECENTLY UNLOCKED</div>';
+      recent.forEach(ach => recentSec.appendChild(_buildAchCard(ach, ctx, true)));
+      grid.appendChild(recentSec);
+    }
+
+    // ── Categorized sections, locked-by-progress-desc ───
+    ACH_CATEGORIES.forEach(cat => {
+      const inCat = ACHIEVEMENTS.filter(a => a.category === cat.id);
+      if (!inCat.length) return;
+
+      // Sort: unlocked first, then locked sorted by % progress descending
+      const sorted = inCat.slice().sort((a, b) => {
+        const aU = unlockedAchievements.has(a.id) ? 1 : 0;
+        const bU = unlockedAchievements.has(b.id) ? 1 : 0;
+        if (aU !== bU) return bU - aU;
+        if (aU) return 0;
+        const ap = a.getProgress ? a.getProgress(ctx) : { current: 0, target: 1 };
+        const bp = b.getProgress ? b.getProgress(ctx) : { current: 0, target: 1 };
+        return (bp.current / bp.target) - (ap.current / ap.target);
+      });
+
+      const sec = document.createElement('div');
+      sec.className = 'ach-section';
+      const haveCount = inCat.filter(a => unlockedAchievements.has(a.id)).length;
+      sec.innerHTML =
+        '<div class="ach-section-label">' + esc(cat.label) +
+          '<span class="ach-section-count">' + haveCount + '/' + inCat.length + '</span>' +
+        '</div>';
+      sorted.forEach(ach => sec.appendChild(_buildAchCard(ach, ctx, false)));
+      grid.appendChild(sec);
     });
+  }
+
+  function _buildAchCard(ach, ctx, isRecent) {
+    const unlocked = unlockedAchievements.has(ach.id);
+    const card = document.createElement('div');
+    card.className = 'ach-card ' + (unlocked ? 'unlocked' : 'locked') + (isRecent ? ' ach-recent' : '');
+
+    const progress = (typeof ach.getProgress === 'function') ? ach.getProgress(ctx) : null;
+    let progressHTML = '';
+    if (!unlocked && progress) {
+      const pct = Math.min(100, Math.round((progress.current / progress.target) * 100));
+      progressHTML =
+        '<div class="ach-prog-bar"><div class="ach-prog-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="ach-prog-text">' +
+          _formatProgressNum(progress.current) + ' / ' + _formatProgressNum(progress.target) +
+        '</div>';
+    } else if (unlocked) {
+      const stamp = achievementUnlockDates[ach.id];
+      progressHTML = stamp
+        ? '<div class="ach-prog-text ach-prog-text--unlocked">Unlocked ' + _formatUnlockDate(stamp) + '</div>'
+        : '';
+    }
+
+    card.innerHTML =
+      '<div class="ach-icon-wrap">' + ach.icon + '</div>' +
+      '<div class="ach-text">' +
+        '<div class="ach-name">' + esc(ach.name) + '</div>' +
+        '<div class="ach-desc">' + esc(ach.desc) + '</div>' +
+        progressHTML +
+      '</div>' +
+      '<div class="ach-status">' + (unlocked ? '✓' : '🔒') + '</div>';
+    return card;
   }
 
   function renderProfile() {

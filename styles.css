@@ -9453,3 +9453,118 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 @keyframes mc-bg-in  { from { opacity: 0 } to { opacity: 1 } }
 @keyframes mc-cnt-in { from { opacity: 0; transform: translateY(14px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes mc-out    { to { opacity: 0 } }
+
+/* ═══════════════════════════════════════════════════════════════
+   ACHIEVEMENTS — categorized layout + progress bars
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Top summary block */
+.ach-top {
+  margin-bottom: 14px;
+  padding: 14px;
+  background: linear-gradient(160deg, rgba(245,158,11,0.10), rgba(139,92,246,0.06));
+  border: 1px solid rgba(245,158,11,0.30);
+  border-radius: 14px;
+}
+.ach-top-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ach-top-num {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.ach-top-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+.ach-cat-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ach-cat-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 100px;
+  color: var(--text-secondary);
+}
+.ach-cat-pill b {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section blocks */
+.ach-section {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ach-section-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  padding: 6px 4px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ach-section-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card layout — same shape as before with progress block added */
+.ach-card .ach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ach-card.ach-recent {
+  border-color: rgba(245,158,11,0.55);
+  background: linear-gradient(160deg, rgba(245,158,11,0.08), transparent);
+}
+
+/* Progress bar on locked achievements */
+.ach-prog-bar {
+  margin-top: 6px;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.ach-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  border-radius: 100px;
+  transition: width 0.4s ease-out;
+}
+.ach-prog-text {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.ach-prog-text--unlocked {
+  color: #22c55e;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  margin-top: 2px;
+}
