@@ -5152,14 +5152,10 @@
       e.stopPropagation();
       e.preventDefault();
       const prId = tile.getAttribute('data-pr-id');
-      // If clicking a tile inside the All-PRs sheet, close that sheet first
-      // so the detail sheet replaces it cleanly.
-      if (allSheet && !allSheet.classList.contains('hidden')) {
-        closePRAllSheet();
-        setTimeout(() => openPRDetailSheet(prId), 220);
-      } else {
-        openPRDetailSheet(prId);
-      }
+      // STACK the detail sheet on top of the All-PRs sheet (don't close
+      // the parent). Closing the detail then leaves the user on the
+      // All-PRs grid, which is what they expect when navigating back.
+      openPRDetailSheet(prId);
     });
 
     // Swipe-down dismiss for both sheets
@@ -5186,8 +5182,13 @@
 
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
-      if (sheet    && !sheet.classList.contains('hidden'))    closePRDetailSheet();
-      if (allSheet && !allSheet.classList.contains('hidden')) closePRAllSheet();
+      // Close the topmost sheet only — detail is stacked above All-PRs,
+      // so close detail first; only close All-PRs if detail isn't open.
+      if (sheet && !sheet.classList.contains('hidden')) {
+        closePRDetailSheet();
+      } else if (allSheet && !allSheet.classList.contains('hidden')) {
+        closePRAllSheet();
+      }
     });
   }
 

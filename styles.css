@@ -8457,7 +8457,9 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 .pr-detail-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.55);
-  z-index: 360;
+  /* Stacks ABOVE the All-PRs sheet (z 360/361) so the detail sits on top
+     and closing it leaves the user on the All-PRs grid. */
+  z-index: 380;
   animation: pr-fade 0.20s ease-out;
 }
 .pr-detail-overlay.hidden { display: none !important; }
@@ -8471,7 +8473,7 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   width: 100%;
   max-width: 430px;
   max-height: 80vh;
-  z-index: 361;
+  z-index: 381;
   background: var(--bg-raised);
   border: 1.5px solid var(--pr-accent, rgba(255,255,255,0.18));
   border-bottom: none;
