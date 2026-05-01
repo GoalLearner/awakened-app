@@ -8009,3 +8009,103 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   20%  { opacity: 1; transform: scale(1.05); }
   100% { opacity: 1; transform: scale(1);    }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LOCKED-IN PACK — UI styling
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Footer button row (3-button layout) ── */
+.add-btn--full   { width: 100%; }
+.add-pack-row    { display: flex; gap: 8px; margin-top: 8px; }
+.add-pack-row .add-btn { flex: 1; }
+
+/* Locked-In quick-add button (parallel to add-btn--morning) */
+.add-btn--lockedin {
+  background: linear-gradient(135deg, rgba(124,58,237,0.16), rgba(124,58,237,0.08));
+  color: #a78bfa;
+  border: 1px solid rgba(124,58,237,0.55);
+}
+.add-btn--lockedin:active { background: rgba(124,58,237,0.20); }
+.add-btn--lockedin .add-plus { color: #c4b5fd; }
+
+/* ── Library entry — Locked-In variant ── */
+.lib-pack-entry--lockedin {
+  border-color: rgba(124,58,237,0.40);
+  background: linear-gradient(135deg, rgba(124,58,237,0.10), rgba(124,58,237,0.04));
+}
+.lib-pack-entry--lockedin .lib-pack-emoji,
+.lib-pack-entry--lockedin .lib-pack-title { color: #a78bfa; }
+.lib-pack-entry--lockedin .lib-pack-bolt  { color: #c4b5fd; }
+.lib-pack-entry--lockedin .lib-pack-count { color: #a78bfa; }
+
+/* ── Confirmation modal — Locked-In variant ── */
+.mr-card--lockedin {
+  border-color: rgba(124,58,237,0.45);
+  box-shadow: 0 0 32px rgba(124,58,237,0.18), 0 12px 40px rgba(0,0,0,0.5);
+}
+.mr-card--lockedin .mr-icon  { filter: drop-shadow(0 0 14px rgba(124,58,237,0.55)); }
+.mr-card--lockedin .mr-title { color: #c4b5fd; }
+.mr-card--lockedin .mr-btn-confirm {
+  background: #7c3aed;
+  color: #f5f3ff;
+}
+.mr-card--lockedin .mr-btn-confirm:active { background: #6d28d9; }
+
+/* ── Locked-In nudge banner — parallel to .morning-nudge ── */
+.lockedin-nudge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 8px 0 4px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(124,58,237,0.08));
+  border: 1px solid rgba(124,58,237,0.45);
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 0.84rem;
+  color: #ddd6fe;
+  line-height: 1.45;
+  transition: transform 0.1s ease;
+  user-select: none;
+}
+.lockedin-nudge.hidden { display: none !important; }
+.lockedin-nudge:active { transform: scale(0.985); }
+.lockedin-nudge .li-icon { font-size: 1.1rem; flex-shrink: 0; }
+.lockedin-nudge .li-text { flex: 1; }
+.lockedin-nudge .li-text b { color: #c4b5fd; font-weight: 700; }
+.lockedin-nudge .li-dismiss {
+  background: transparent;
+  border: none;
+  color: rgba(196,181,253,0.6);
+  font-size: 0.95rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+}
+.lockedin-nudge .li-dismiss:active { background: rgba(124,58,237,0.18); }
+
+/* ── Compound popup theming — pack-specific colors ── */
+.compound-popup.cp--lockedin .cp-card {
+  border-color: rgba(124,58,237,0.55);
+  box-shadow: 0 0 48px rgba(124,58,237,0.30), 0 12px 48px rgba(0,0,0,0.55);
+}
+.compound-popup.cp--lockedin .cp-label,
+.compound-popup.cp--lockedin .cp-streak,
+.compound-popup.cp--lockedin .cp-xp {
+  color: #c4b5fd;
+}
+.compound-popup.cp--lockedin .cp-pack-msg {
+  color: #ddd6fe;
+}
+
+/* ── Pack progress strip — Locked-In row tint ── */
+.cp-prog-row--lockedin {
+  background: rgba(124,58,237,0.08);
+  border-color: rgba(124,58,237,0.30);
+}
+.cp-prog-row--lockedin .cp-prog-name { color: #c4b5fd; }

@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=97">
+  <link rel="stylesheet" href="styles.css?v=98">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -151,6 +151,13 @@
         <span class="mn-text" id="mn-text"></span>
         <button id="morning-nudge-dismiss" class="mn-dismiss" aria-label="Dismiss">✕</button>
       </div>
+
+      <!-- Locked-In nudge — shows when user has 14 or 15 of 16 canonical Locked-In habits -->
+      <div id="lockedin-nudge" class="lockedin-nudge hidden" role="button" tabindex="0">
+        <span class="li-icon">🔒</span>
+        <span class="li-text" id="li-text"></span>
+        <button id="lockedin-nudge-dismiss" class="li-dismiss" aria-label="Dismiss">✕</button>
+      </div>
     </header>
 
     <!-- Tab bar -->
@@ -257,14 +264,20 @@
     </div>
 
     <footer id="main-footer">
-      <button id="add-morning-btn" class="add-btn add-btn--morning hidden">
-        <span class="add-plus">+</span>
-        <span>Add Morning Routine</span>
-      </button>
-      <button id="add-habit-btn" class="add-btn">
+      <button id="add-habit-btn" class="add-btn add-btn--full">
         <span class="add-plus">+</span>
         <span>Add Habits</span>
       </button>
+      <div class="add-pack-row">
+        <button id="add-morning-btn" class="add-btn add-btn--morning hidden">
+          <span class="add-plus">+</span>
+          <span>Morning Routine</span>
+        </button>
+        <button id="add-lockedin-btn" class="add-btn add-btn--lockedin hidden">
+          <span class="add-plus">+</span>
+          <span>Locked-In</span>
+        </button>
+      </div>
     </footer>
   </div>
 
@@ -391,12 +404,12 @@
     </div>
   </div>
 
-  <!-- Morning Routine pack confirmation modal -->
+  <!-- Pack confirmation modal — themed per pack via JS (#mr-overlay reused by both MR and Locked-In) -->
   <div id="mr-overlay" class="mr-overlay hidden">
-    <div class="mr-card">
-      <div class="mr-icon">🌅</div>
-      <div class="mr-title">Add Morning Routine?</div>
-      <div class="mr-subtitle">This pack contains 10 habits designed to compound daily.</div>
+    <div class="mr-card mr-card--morning">
+      <div id="mr-icon"     class="mr-icon">🌅</div>
+      <div id="mr-title"    class="mr-title">Add Morning Routine?</div>
+      <div id="mr-subtitle" class="mr-subtitle">This pack contains 10 habits designed to compound daily.</div>
       <div id="mr-list" class="mr-list"></div>
       <div id="mr-count" class="mr-count"></div>
       <div class="mr-actions">
@@ -434,10 +447,10 @@
     </div>
   </div>
 
-  <!-- Compound Effect Bonus popup -->
+  <!-- Compound Effect / Locked-In Bonus popup (shared, themed per pack) -->
   <div id="compound-popup" class="compound-popup hidden">
     <div class="cp-card">
-      <div class="cp-label">⚡ COMPOUND EFFECT BONUS</div>
+      <div id="cp-label" class="cp-label">⚡ COMPOUND EFFECT BONUS</div>
       <div id="cp-pack-msg" class="cp-pack-msg"></div>
       <div id="cp-xp" class="cp-xp"></div>
       <div id="cp-streak" class="cp-streak"></div>
@@ -484,7 +497,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=99"></script>
+  <script src="app.js?v=100"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -29,6 +29,7 @@
         { emoji: '🎨', title: 'History in Color',             description: "Every completion box now reflects the stat you're building. Tap any habit to see why." },
         { emoji: '📖', title: 'Habit Detail Pages',           description: 'Long-press any habit to view full stats, streak data, and the philosophy behind it.' },
         { emoji: '🎺', title: 'Triumphant Fanfare',           description: 'Completing the full Morning Routine now plays the celebration it deserves.' },
+        { emoji: '🔒', title: 'Locked-In Pack',               description: 'A new 16-habit pack covering the full discipline cycle. Master the day, earn a second compound bonus.' },
       ],
     },
   };
@@ -962,6 +963,15 @@
 
   // ── PACKS (Choose Your Path) ─────────────────────────────
   // Indices reference DEFAULT_HABITS (63 habits total, indices 0-62)
+  // ── PACK COMPOSITION ───────────────────────────────────────
+  // Indices into DEFAULT_HABITS. Locked-In is a SUPERSET of Morning
+  // Routine — its habit list is composed from Morning's + 6 extras.
+  // Single source of truth: change indices here, every UI surface follows.
+  const _MORNING_HABIT_INDICES = [2, 23, 14, 16, 41, 6, 46, 12, 4, 19];
+  // Locked-In adds: priority task(24), no social before noon(17),
+  // no doomscrolling 5PM(29), plan tomorrow(25), no screens before bed(18), read(11)
+  const _LOCKED_IN_EXTRA_INDICES = [24, 17, 29, 25, 18, 11];
+
   const PACKS = [
     {
       id:      'morning',
@@ -970,10 +980,21 @@
       tagline: 'Win the morning. Win the day.',
       sub:     'For the intentional starter',
       color:   '#f59e0b',
-      // Sleep before midnight(2), Wake up consistent(23), No phone after waking(14),
-      // Morning sunlight(16), Morning gratitude(41), Daily walk(6),
-      // Vitamins(46), Meditate & Breathwork(12), Strength training(4), Whole foods(19)
-      habits: [2, 23, 14, 16, 41, 6, 46, 12, 4, 19],
+      bonusLabel: '⚡ COMPOUND EFFECT BONUS',
+      packLabel:  'Compound Effect Bonus',
+      habits: _MORNING_HABIT_INDICES.slice(),
+    },
+    {
+      id:      'locked-in',
+      emoji:   '🔒',
+      name:    'Locked-In',
+      tagline: 'Master the day.',
+      sub:     'The full discipline cycle — morning, afternoon, and evening.',
+      color:   '#7c3aed',          // violet — distinct from MR's gold
+      bonusLabel: '🔒 LOCKED-IN BONUS',
+      packLabel:  'Locked-In Bonus',
+      // Composed: 10 MR habits + 6 LI extras = 16 total. NEVER hardcode.
+      habits: [..._MORNING_HABIT_INDICES, ..._LOCKED_IN_EXTRA_INDICES],
     },
     {
       id:      'custom',
@@ -985,21 +1006,37 @@
     },
   ];
 
-  // ── MORNING ROUTINE — single source of truth helpers ─────────
-  // Everything else (library entry, footer button visibility, modal,
-  // dedup logic) calls into these so the canonical 10-habit list lives
-  // in exactly one place: PACKS[0].habits.
-  function getMorningPack()       { return PACKS.find(p => p.id === 'morning'); }
-  function getMorningHabitDefs()  { return getMorningPack().habits.map(i => DEFAULT_HABITS[i]); }
-  function isMorningHabit(habit)  {
+  // Bonus-eligible packs in fire-order. MR fires before Locked-In so
+  // when both complete in the same tick, the Compound Effect modal
+  // shows first, then the Locked-In Bonus modal queues behind it.
+  const BONUS_PACK_IDS = ['morning', 'locked-in'];
+
+  // ── PACK HELPERS — generic, work for any packId ────────────
+  function getPackById(packId)         { return PACKS.find(p => p.id === packId); }
+  function getPackHabitDefs(packId) {
+    const p = getPackById(packId);
+    return (p && p.habits) ? p.habits.map(i => DEFAULT_HABITS[i]) : [];
+  }
+  function isHabitInPack(habit, packId) {
     if (!habit) return false;
-    const names = new Set(getMorningHabitDefs().map(h => h.name));
+    const names = new Set(getPackHabitDefs(packId).map(h => h.name));
     return names.has(habit.name);
   }
-  function getMissingMorningHabits() {
+  function getMissingPackHabits(packId) {
     const activeNames = new Set(habits.map(h => h.name));
-    return getMorningHabitDefs().filter(def => !activeNames.has(def.name));
+    return getPackHabitDefs(packId).filter(def => !activeNames.has(def.name));
   }
+  function userHasAllPackHabits(packId) {
+    return getMissingPackHabits(packId).length === 0;
+  }
+
+  // ── MORNING ROUTINE — backward-compat thin wrappers ─────────
+  // Existing call sites continue to work; new code should use the
+  // generic helpers above so future packs (3rd, 4th, ...) drop in cleanly.
+  function getMorningPack()             { return getPackById('morning'); }
+  function getMorningHabitDefs()        { return getPackHabitDefs('morning'); }
+  function isMorningHabit(habit)        { return isHabitInPack(habit, 'morning'); }
+  function getMissingMorningHabits()    { return getMissingPackHabits('morning'); }
 
   // ── STORAGE ───────────────────────────────────────────────
   function load() {
@@ -2415,6 +2452,7 @@
     const empty = document.getElementById('empty-state');
     const todayHabits = habits.filter(isScheduledToday);
     updateMorningButtonVisibility();
+    updateLockedInButtonVisibility();
 
     if (habits.length === 0) {
       list.innerHTML = '';
@@ -3042,6 +3080,45 @@
     } catch (_) {}
   }
 
+  // Locked-In fanfare — the standard fanfare followed by a final
+  // emphatic two-note flourish (D5 → D6) to mark the bigger achievement.
+  function playFanfareLockedIn() {
+    if (!soundEnabled) return;
+    // Reuse the standard fanfare (1.4s)…
+    playFanfare();
+    // …then layer a final octave punch at ~1.55s so it feels like a victory chord.
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime + 1.55;
+
+      const D5  = 587.33;
+      const D6  = 1174.66;
+      const Fs5 = 739.99;
+
+      function punch(freq, start, dur, peak) {
+        ['sine', 'triangle'].forEach(type => {
+          const osc  = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type   = type;
+          osc.frequency.setValueAtTime(freq, t0 + start);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          const g = type === 'sine' ? peak : peak * 0.45;
+          gain.gain.setValueAtTime(0.0001, t0 + start);
+          gain.gain.exponentialRampToValueAtTime(g, t0 + start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+          osc.start(t0 + start);
+          osc.stop(t0 + start + dur + 0.05);
+        });
+      }
+
+      // D5 + Fs5 grace note → D6 octave punch on top
+      punch(D5,  0.00, 0.18, 0.22);
+      punch(Fs5, 0.00, 0.18, 0.14);
+      punch(D6,  0.18, 0.55, 0.32);
+    } catch (_) {}
+  }
+
   // ── FEATURE 1: XP PARTICLES ──────────────────────────────
   const DIFF_PARTICLE_COLOR = {
     easy:      '#a78bfa',
@@ -3202,38 +3279,83 @@
     }
   }
 
-  // ── MORNING ROUTINE NUDGE BANNER ─────────────────────────
-  // Shows when the user has 8 or 9 of the 10 canonical Morning Routine
-  // habits but not all 10 — nudges them to complete the set so the
-  // Compound Effect Bonus unlocks. Tappable: opens the same add-pack
-  // confirmation modal so the missing habits can be added in one step.
-  let morningNudgeDismissedDate = null;
+  // ── PACK NUDGE BANNERS — Morning Routine + Locked-In ──────
+  // Shown on the Habits tab when the user is 1–2 habits short of
+  // completing a canonical bonus pack. Tap → opens the pack add modal.
+  // Priority order (only one banner visible at a time):
+  //   1. Streak Danger        (time-sensitive)
+  //   2. Double XP Weekend    (already showing as gold banner)
+  //   3. Locked-In nudge      (bigger achievement — wins over MR)
+  //   4. Morning Routine nudge
+  let morningNudgeDismissedDate  = null;
+  let lockedInNudgeDismissedDate = null;
 
-  function shouldShowMorningNudge() {
-    // Hide on non-Habits tabs
-    if (currentTab !== 'habits') return false;
-    // Brand-new users (no completions on any day) — let onboarding guide them
-    if (Object.keys(completions || {}).length === 0) return false;
-    // Dismissed today? Stay hidden until tomorrow (date check survives across midnight)
-    if (morningNudgeDismissedDate === today) return false;
-
-    const missing = getMissingMorningHabits().length;
-    // Only nudge at 1–2 missing. 0 = already eligible. 3+ = use the dedicated button.
-    if (missing !== 1 && missing !== 2) return false;
-
-    // Priority: streak danger and double-XP weekend banners outrank the nudge.
-    // If either is showing, suppress the nudge to keep the header uncluttered.
+  function _highPriorityBannerShowing() {
+    if (currentTab !== 'habits') return true; // suppress on other tabs
     const sd = document.getElementById('streak-danger');
     const dx = document.getElementById('double-xp-banner');
-    if (sd && !sd.classList.contains('hidden')) return false;
-    if (dx && !dx.classList.contains('hidden')) return false;
+    if (sd && !sd.classList.contains('hidden')) return true;
+    if (dx && !dx.classList.contains('hidden')) return true;
+    return false;
+  }
 
-    return true;
+  function _isBrandNew() {
+    return Object.keys(completions || {}).length === 0;
+  }
+
+  function shouldShowLockedInNudge() {
+    if (_highPriorityBannerShowing()) return false;
+    if (_isBrandNew()) return false;
+    if (lockedInNudgeDismissedDate === today) return false;
+    const missing = getMissingPackHabits('locked-in').length;
+    return missing === 1 || missing === 2;
+  }
+
+  function shouldShowMorningNudge() {
+    if (_highPriorityBannerShowing()) return false;
+    if (_isBrandNew()) return false;
+    if (morningNudgeDismissedDate === today) return false;
+    // Locked-In nudge wins when both would apply
+    if (shouldShowLockedInNudge()) return false;
+    const missing = getMissingMorningHabits().length;
+    return missing === 1 || missing === 2;
+  }
+
+  function checkLockedInNudge() {
+    const el = document.getElementById('lockedin-nudge');
+    if (!el) return;
+
+    if (!shouldShowLockedInNudge()) {
+      el.classList.add('hidden');
+      return;
+    }
+    const missingDefs = getMissingPackHabits('locked-in');
+    const missing     = missingDefs.length;
+    const txtEl       = document.getElementById('li-text');
+
+    if (missing === 1) {
+      txtEl.innerHTML =
+        "You're <b>1 habit away</b> from the Locked-In Bonus — Add <b>" +
+        esc(missingDefs[0].name) + "</b>.";
+    } else { // missing === 2
+      const a = missingDefs[0].name;
+      const b = missingDefs[1].name;
+      const inlineFits = (a.length + b.length) <= 50;
+      txtEl.innerHTML = inlineFits
+        ? "You're <b>2 habits away</b> from the Locked-In Bonus — Add <b>" +
+          esc(a) + "</b> and <b>" + esc(b) + "</b>."
+        : "You're <b>2 habits away</b> from the Locked-In Bonus — Add 2 more.";
+    }
+
+    el.classList.remove('hidden');
   }
 
   function checkMorningRoutineNudge() {
     const el = document.getElementById('morning-nudge');
     if (!el) return;
+
+    // Always evaluate Locked-In first so its visibility state is current
+    checkLockedInNudge();
 
     if (!shouldShowMorningNudge()) {
       el.classList.add('hidden');
@@ -3251,7 +3373,6 @@
     } else { // missing === 2
       const a = missingDefs[0].name;
       const b = missingDefs[1].name;
-      // Inline both names if combined length is reasonable; otherwise fall back to summary
       const inlineFits = (a.length + b.length) <= 50;
       txtEl.innerHTML = inlineFits
         ? "You're <b>2 habits away</b> from the Compound Effect Bonus — Add <b>" +
@@ -3370,19 +3491,32 @@
   function setupMorningNudge() {
     const el = document.getElementById('morning-nudge');
     const dismissBtn = document.getElementById('morning-nudge-dismiss');
-    if (!el || !dismissBtn) return;
+    if (el && dismissBtn) {
+      el.addEventListener('click', e => {
+        if (e.target === dismissBtn || dismissBtn.contains(e.target)) return;
+        openMorningPackModal();
+      });
+      dismissBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        morningNudgeDismissedDate = today;
+        el.classList.add('hidden');
+      });
+    }
 
-    // Tap anywhere on the banner (except the X) opens the morning add modal
-    el.addEventListener('click', e => {
-      if (e.target === dismissBtn || dismissBtn.contains(e.target)) return;
-      openMorningPackModal();
-    });
-
-    dismissBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      morningNudgeDismissedDate = today;
-      el.classList.add('hidden');
-    });
+    // Locked-In nudge — same pattern, separate dismiss state
+    const liEl = document.getElementById('lockedin-nudge');
+    const liDismissBtn = document.getElementById('lockedin-nudge-dismiss');
+    if (liEl && liDismissBtn) {
+      liEl.addEventListener('click', e => {
+        if (e.target === liDismissBtn || liDismissBtn.contains(e.target)) return;
+        openLockedInPackModal();
+      });
+      liDismissBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        lockedInNudgeDismissedDate = today;
+        liEl.classList.add('hidden');
+      });
+    }
   }
 
   // ── FEATURE 4: RANK INFO POPUP ───────────────────────────
@@ -3706,8 +3840,10 @@
       });
     }
 
-    // Morning Routine quick-action button + confirmation modal wiring
-    document.getElementById('add-morning-btn').addEventListener('click', openMorningPackModal);
+    // Morning Routine + Locked-In quick-action buttons share one confirmation modal
+    document.getElementById('add-morning-btn').addEventListener('click',  openMorningPackModal);
+    const liBtn = document.getElementById('add-lockedin-btn');
+    if (liBtn) liBtn.addEventListener('click', openLockedInPackModal);
     document.getElementById('mr-cancel-btn').addEventListener('click',  closeMorningPackModal);
     document.getElementById('mr-overlay').addEventListener('click', e => {
       if (e.target.id === 'mr-overlay') closeMorningPackModal();
@@ -3721,15 +3857,46 @@
     if (!btn) return;
     btn.classList.toggle('hidden', getMissingMorningHabits().length === 0);
   }
+  function updateLockedInButtonVisibility() {
+    const btn = document.getElementById('add-lockedin-btn');
+    if (!btn) return;
+    btn.classList.toggle('hidden', getMissingPackHabits('locked-in').length === 0);
+  }
 
-  function openMorningPackModal() {
+  // Generic pack-confirmation modal opener. Powers both Morning Routine
+  // and Locked-In via packId. Re-uses the #mr-overlay DOM, themes per pack.
+  let _packModalActiveId = 'morning';
+
+  function openPackConfirmModal(packId) {
+    const pack = getPackById(packId);
+    if (!pack) return;
+    _packModalActiveId = packId;
+
+    const ov     = document.getElementById('mr-overlay');
+    const card   = ov && ov.querySelector('.mr-card');
     const list   = document.getElementById('mr-list');
     const count  = document.getElementById('mr-count');
     const btn    = document.getElementById('mr-confirm-btn');
-    const ov     = document.getElementById('mr-overlay');
+    const iconEl = document.getElementById('mr-icon');
+    const titleEl    = document.getElementById('mr-title');
+    const subtitleEl = document.getElementById('mr-subtitle');
+    if (!ov || !list || !count || !btn) return;
+
+    // Theme (gold for MR, violet for Locked-In)
+    if (card) {
+      card.classList.remove('mr-card--morning', 'mr-card--lockedin');
+      card.classList.add(packId === 'locked-in' ? 'mr-card--lockedin' : 'mr-card--morning');
+    }
+    if (iconEl)     iconEl.textContent     = pack.emoji;
+    if (titleEl)    titleEl.textContent    = 'Add ' + pack.name + '?';
+    if (subtitleEl) {
+      subtitleEl.textContent = packId === 'locked-in'
+        ? '16 habits — the complete discipline cycle.'
+        : 'This pack contains 10 habits designed to compound daily.';
+    }
 
     const activeNames = new Set(habits.map(h => h.name));
-    const defs        = getMorningHabitDefs();
+    const defs        = getPackHabitDefs(packId);
     const missing     = defs.filter(d => !activeNames.has(d.name));
 
     list.innerHTML = '';
@@ -3745,55 +3912,66 @@
     });
 
     if (missing.length === 0) {
-      count.textContent       = 'All 10 habits already in your routine.';
-      btn.disabled            = true;
-      btn.textContent         = 'All habits already added';
+      count.textContent = 'All ' + defs.length + ' habits already in your routine.';
+      btn.disabled      = true;
+      btn.textContent   = 'All habits already added';
     } else {
-      count.textContent       = 'Adding ' + missing.length + ' new habit' + (missing.length === 1 ? '' : 's') + ' to your routine';
-      btn.disabled            = false;
-      btn.textContent         = 'Add ' + missing.length + ' Habit' + (missing.length === 1 ? '' : 's');
+      count.textContent = 'Adding ' + missing.length + ' new habit' + (missing.length === 1 ? '' : 's') + ' to your routine';
+      btn.disabled      = false;
+      btn.textContent   = 'Add ' + missing.length + ' Habit' + (missing.length === 1 ? '' : 's');
     }
 
     ov.classList.remove('hidden');
   }
 
+  // Backward-compat alias used by existing call sites
+  function openMorningPackModal() { openPackConfirmModal('morning'); }
+  function openLockedInPackModal() { openPackConfirmModal('locked-in'); }
+
   function closeMorningPackModal() {
     document.getElementById('mr-overlay').classList.add('hidden');
   }
 
-  function confirmMorningPackAdd() {
-    const missing = getMissingMorningHabits();
+  function confirmPackAdd() {
+    const packId  = _packModalActiveId;
+    const missing = getMissingPackHabits(packId);
     if (missing.length === 0) { closeMorningPackModal(); return; }
 
-    // Add in canonical PACKS[0].habits order, preserving each habit's defaults.
-    // No duplicates — getMissingMorningHabits already filtered to absent names.
-    // Newly added habits keep streaks/progress untouched on existing entries.
+    // Add in canonical pack order, preserving each habit's defaults.
+    // Dedup: getMissingPackHabits already filtered to absent names.
+    // Existing streaks/progress on existing entries remain untouched.
     missing.forEach(def => {
       const newH = {
-        id:         uid(),
-        emoji:      def.emoji,
-        name:       def.name,
-        difficulty: def.difficulty,
-        type:       def.type || 'build',
+        id:          uid(),
+        emoji:       def.emoji,
+        name:        def.name,
+        difficulty:  def.difficulty,
+        type:        def.type || 'build',
+        primaryStat: def.primaryStat,
       };
       habits.push(newH);
       if (def.note) habitNotes[newH.id] = def.note;
     });
     save();
 
-    // Mark this player as on the Morning Routine path so the compound badge
-    // tracks correctly for future completions.
-    if (!selectedPackId) {
+    // Mark the player's path (only on first MR add — Locked-In doesn't override)
+    if (packId === 'morning' && !selectedPackId) {
       selectedPackId = 'morning';
       try { localStorage.setItem('hb_path', selectedPackId); } catch (_) {}
     }
 
+    const pack = getPackById(packId);
     closeMorningPackModal();
     closeLibrary();
     renderHabits();
     updateMorningButtonVisibility();
-    showHabitToast('Morning Routine added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
+    updateLockedInButtonVisibility();
+    updateLockedInButtonVisibility();
+    showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
   }
+
+  // Backward-compat alias for existing wiring
+  function confirmMorningPackAdd() { confirmPackAdd(); }
 
   function openLibrary() {
     renderLibrary();
@@ -3839,7 +4017,28 @@
       '</span>' +
       '<span class="lib-pack-chevron">›</span>';
     mrEntry.addEventListener('click', openMorningPackModal);
+
+    // ── Locked-In pack entry — sits directly below Morning Routine ──
+    // Violet accent distinguishes it from MR's gold; the lock + bolt
+    // signal "bigger achievement, second compound bonus."
+    const liEntry = document.createElement('div');
+    liEntry.className = 'lib-pack-entry lib-pack-entry--lockedin';
+    const liMissing = getMissingPackHabits('locked-in').length;
+    liEntry.innerHTML =
+      '<span class="lib-pack-emoji">🔒</span>' +
+      '<span class="lib-pack-text">' +
+        '<span class="lib-pack-title">Locked-In ' +
+          '<span class="lib-pack-bolt" aria-label="Locked-In Bonus">⚡</span>' +
+        '</span>' +
+        '<span class="lib-pack-sub">Master the full discipline cycle.</span>' +
+      '</span>' +
+      '<span class="lib-pack-count">' +
+        (liMissing === 0 ? 'All added' : '16 habits') +
+      '</span>' +
+      '<span class="lib-pack-chevron">›</span>';
+    liEntry.addEventListener('click', openLockedInPackModal);
     list.appendChild(mrEntry);
+    list.appendChild(liEntry);
 
     if (!catData.length) {
       // Pack entry above is shown; the rest of the categories area is empty.
@@ -4432,32 +4631,35 @@
   }
 
   function getHabitCompoundPackIds(habitName) {
-    return ['morning'].filter(pid =>
+    return BONUS_PACK_IDS.filter(pid =>
       getPackHabitNames(pid).includes(habitName)
     );
   }
 
-  // True only when the user owns all 10 canonical Morning Routine habits.
-  // Bonus eligibility is now driven by habit composition, not pack membership —
-  // custom-path users who happen to have built the same routine qualify too.
+  // Backward-compat wrapper used elsewhere (nudge logic, etc.)
   function userHasAllCanonicalMorning() {
-    return getMissingMorningHabits().length === 0;
+    return userHasAllPackHabits('morning');
   }
+
+  // Bonus-popup queue — guarantees Locked-In's modal never overlaps the
+  // Compound Effect modal. Items are { packId, newStreak, finalXP, doubled }.
+  let _bonusPopupQueue  = [];
+  let _bonusPopupActive = false;
 
   function checkCompoundEffect(habitId) {
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
-    // Only canonical Morning Routine habit completions can trigger the bonus
-    if (!isMorningHabit(habit)) return;
-    // Already awarded today? Skip.
-    if (compoundAwarded['morning'] === today) return;
-    // STRICT GATE: must own all 10 canonical habits — exact name match, no fuzzy matching.
-    // If user has 8 or 9 of 10, the nudge banner shows instead and no bonus is awarded.
-    if (!userHasAllCanonicalMorning()) return;
-    // Existing scheduled-today completion check (handles rest-day scheduling correctly).
-    const { done, total } = getPackProgress('morning');
-    if (total === 0 || done < total) return;
-    awardCompoundEffect('morning');
+    // Walk every bonus-eligible pack in fire-order. Each is independently
+    // gated by composition + completion. Packs both can fire on the same
+    // tick — the modal queue sequences their celebration popups.
+    BONUS_PACK_IDS.forEach(packId => {
+      if (!isHabitInPack(habit, packId)) return;
+      if (compoundAwarded[packId] === today) return;
+      if (!userHasAllPackHabits(packId)) return;
+      const { done, total } = getPackProgress(packId);
+      if (total === 0 || done < total) return;
+      awardCompoundEffect(packId);
+    });
   }
 
   function awardCompoundEffect(packId) {
@@ -4476,22 +4678,54 @@
     renderRank();
     if (currentTab === 'profile') renderProfile();
     renderCompoundProgress();
-    showCompoundPopup(packId, newStreak, finalXP, isWeekend() && finalXP !== baseXP);
+    // Queue instead of show-now so multiple packs sequence cleanly.
+    _bonusPopupQueue.push({
+      packId,
+      newStreak,
+      finalXP,
+      doubled: isWeekend() && finalXP !== baseXP,
+    });
+    drainBonusPopupQueue();
+  }
+
+  function drainBonusPopupQueue() {
+    if (_bonusPopupActive || !_bonusPopupQueue.length) return;
+    const item = _bonusPopupQueue.shift();
+    _bonusPopupActive = true;
+    showCompoundPopup(item.packId, item.newStreak, item.finalXP, item.doubled);
   }
 
   function showCompoundPopup(packId, streak, xp, doubled) {
-    const pack = PACKS.find(p => p.id === packId);
-    if (!pack) return;
-    document.getElementById('cp-pack-msg').textContent   = 'All ' + pack.name + ' habits complete!';
-    document.getElementById('cp-xp').textContent         = '+' + xp + ' XP' + (doubled ? ' 2×' : '');
-    document.getElementById('cp-streak').textContent     = 'Day ' + streak + ' in a row 🔥';
+    const pack = getPackById(packId);
+    if (!pack) { _bonusPopupActive = false; return; }
+    const isLockedIn = packId === 'locked-in';
+
+    // Pack-specific copy
+    const labelEl = document.getElementById('cp-label');
+    if (labelEl) labelEl.textContent = pack.bonusLabel || '⚡ COMPOUND EFFECT BONUS';
+    document.getElementById('cp-pack-msg').textContent =
+      isLockedIn
+        ? 'All 16 habits complete. You owned the day.'
+        : 'All ' + pack.name + ' habits complete!';
+    document.getElementById('cp-xp').textContent     = '+' + xp + ' XP' + (doubled ? ' 2×' : '');
+    document.getElementById('cp-streak').textContent = 'Day ' + streak + ' in a row 🔥';
     document.getElementById('cp-motivation').textContent = getCompoundMotivation(streak);
+
     const el = document.getElementById('compound-popup');
+    // Theme the popup per pack (gold for MR, violet for Locked-In).
+    el.classList.remove('cp--morning', 'cp--lockedin');
+    el.classList.add(isLockedIn ? 'cp--lockedin' : 'cp--morning');
+
     el.classList.remove('hidden', 'cp-hide');
     void el.offsetWidth; // force reflow so animation replays
     el.classList.add('cp-show');
-    // Triumphant fanfare synced with the modal appearance
-    playFanfare();
+    // Pack-specific fanfare. Locked-In gets an extended flourish
+    // because it's the bigger achievement.
+    if (isLockedIn && typeof playFanfareLockedIn === 'function') {
+      playFanfareLockedIn();
+    } else {
+      playFanfare();
+    }
     if (compoundPopupTimer) clearTimeout(compoundPopupTimer);
     compoundPopupTimer = setTimeout(hideCompoundPopup, 3000);
   }
@@ -4503,6 +4737,10 @@
     el.addEventListener('animationend', () => {
       el.classList.remove('cp-hide');
       el.classList.add('hidden');
+      // Now drain any queued bonuses (e.g., Locked-In after MR).
+      _bonusPopupActive = false;
+      // Small delay for breathing room between celebrations
+      setTimeout(drainBonusPopupQueue, 320);
     }, { once: true });
     if (compoundPopupTimer) { clearTimeout(compoundPopupTimer); compoundPopupTimer = null; }
   }
@@ -4514,15 +4752,19 @@
   function renderCompoundProgress() {
     const wrap = document.getElementById('compound-progress');
     if (!wrap) return;
-    const rows = ['morning'].map(packId => {
+    // Show a row for every bonus pack the user has at least one habit in.
+    // Locked-In is a superset of Morning Routine, so when a user is on the
+    // Locked-In path both rows appear; pure MR users see only the MR row.
+    const rows = BONUS_PACK_IDS.map(packId => {
       const { done, total } = getPackProgress(packId);
       if (total === 0) return '';
-      const pack    = PACKS.find(p => p.id === packId);
+      const pack    = getPackById(packId);
       const awarded = compoundAwarded[packId] === today;
       const cs      = compoundStreaks[packId];
       const streak  = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
-      return '<div class="cp-prog-row">' +
-        '<span class="cp-prog-name">' + esc(pack.name) + '</span>' +
+      const cls     = packId === 'locked-in' ? ' cp-prog-row--lockedin' : '';
+      return '<div class="cp-prog-row' + cls + '">' +
+        '<span class="cp-prog-name">' + esc(pack.emoji + ' ' + pack.name) + '</span>' +
         '<span class="cp-prog-count' + (awarded ? ' cp-prog-done' : '') + '">' +
           (awarded ? '✓ Complete' : done + '/' + total) + ' ⚡' +
         '</span>' +
@@ -4538,13 +4780,14 @@
   }
 
   function buildCompoundBadgesHTML() {
-    return ['morning'].filter(packId => {
+    return BONUS_PACK_IDS.filter(packId => {
       const cs = compoundStreaks[packId];
       return cs && cs.streak > 0;
     }).map(packId => {
-      const pack = PACKS.find(p => p.id === packId);
+      const pack = getPackById(packId);
       const s    = compoundStreaks[packId].streak;
-      return '<div class="sc-compound-badge">⚡ ' + esc(pack.name) + ': Day ' + s + '</div>';
+      const icon = packId === 'locked-in' ? '🔒' : '⚡';
+      return '<div class="sc-compound-badge">' + icon + ' ' + esc(pack.name) + ': Day ' + s + '</div>';
     }).join('');
   }
 
