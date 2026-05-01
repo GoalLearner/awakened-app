@@ -4790,6 +4790,14 @@
     // Shared stats block (badge + description + 4-cell grid)
     populateHabitInfoBlock('hi', habit);
 
+    // About this habit — canonical description (read-only)
+    const aboutEl = document.getElementById('hi-about-text');
+    if (aboutEl) {
+      const desc = (typeof getHabitDescription === 'function') ? getHabitDescription(habit) : '';
+      aboutEl.textContent = desc || 'Description coming soon.';
+      aboutEl.classList.toggle('hi-about-text--empty', !desc);
+    }
+
     // Save focus + open
     _hiPrevFocus = document.activeElement;
     overlay.classList.remove('hidden');
@@ -4824,15 +4832,10 @@
     overlay.addEventListener('click', closeHabitInfoSheet);
 
     // "View full details" → close this popup and open the View Note sheet
-    const fullBtn = document.getElementById('hi-full-details-btn');
-    if (fullBtn) {
-      fullBtn.addEventListener('click', () => {
-        const id = _hiHabitId;
-        closeHabitInfoSheet();
-        // Brief delay so the close transition finishes cleanly before opening
-        setTimeout(() => { if (id) openNoteModal(id); }, 320);
-      });
-    }
+    // 'View full details' button removed — the About text now lives
+    // inline in this sheet, so the secondary navigation is unnecessary.
+    // The View Note sheet (long-press → View Note) still exists as the
+    // separate full-detail surface; users can reach it from there.
 
     // Reuse the swipe-down-to-dismiss gesture from settings
     if (typeof attachSheetDismissGesture === 'function') {

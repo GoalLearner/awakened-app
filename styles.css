@@ -9851,3 +9851,33 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   background: transparent;
   border-color: rgba(255,255,255,0.06);
 }
+
+/* History info sheet — inline About this habit section */
+.hi-about-section {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hi-about-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+.hi-about-text {
+  font-size: 0.86rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 11px 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.hi-about-text--empty {
+  color: var(--text-tertiary);
+  font-style: italic;
+}

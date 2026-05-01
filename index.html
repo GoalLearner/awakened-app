@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=118">
+  <link rel="stylesheet" href="styles.css?v=119">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -394,7 +394,11 @@
         <div class="hi-stat-cell"><span id="hi-total"   class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
         <div class="hi-stat-cell"><span id="hi-week"    class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
       </div>
-      <button id="hi-full-details-btn" class="hi-full-details-btn">View full details →</button>
+      <!-- About this habit — canonical description from DEFAULT_HABITS -->
+      <div class="hi-about-section">
+        <div class="hi-about-label">ABOUT THIS HABIT</div>
+        <div id="hi-about-text" class="hi-about-text"></div>
+      </div>
     </div>
   </div>
 
@@ -708,7 +712,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=122"></script>
+  <script src="app.js?v=123"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
