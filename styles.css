@@ -7802,8 +7802,20 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s ease, filter 0.18s ease;
   user-select: none;
+  -webkit-user-select: none;
+  /* Allow taps to register on iOS — touch-action default 'auto' is fine
+     here, but explicit 'manipulation' disables double-tap-zoom delay. */
+  touch-action: manipulation;
+  position: relative;
+  z-index: 11;  /* sit above sibling banners just in case */
 }
-.double-xp-banner:hover  { filter: brightness(1.08); }
+/* Hover only on devices that actually have a pointer.
+   On iOS Safari, applying :hover styles to touch interactions can cause
+   the first tap to "eat" hover instead of firing click — disabling
+   :hover on touch fixes the unclickable banner symptom. */
+@media (hover: hover) {
+  .double-xp-banner:hover { filter: brightness(1.08); }
+}
 .double-xp-banner:active { transform: scale(0.985); }
 .double-xp-banner:focus-visible {
   outline: 2px solid rgba(245, 158, 11, 0.8);

@@ -565,10 +565,19 @@
   function openWeekendWarriorSheet() {
     const overlay = document.getElementById('ww-overlay');
     const sheet   = document.getElementById('ww-sheet');
-    if (!overlay || !sheet) return;
+    console.log('[WW] openWeekendWarriorSheet', {
+      overlay: !!overlay,
+      sheet:   !!sheet,
+      hasNoAlcohol: userHasNoAlcohol(),
+    });
+    if (!overlay || !sheet) {
+      console.warn('[WW] Popup elements missing — index.html may be a stale cached version. Try hard refresh / reinstall.');
+      return;
+    }
     renderWeekendWarriorBody();
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
+    console.log('[WW] Sheet shown');
   }
 
   function closeWeekendWarriorSheet() {
@@ -636,21 +645,51 @@
     const overlay = document.getElementById('ww-overlay');
     const sheet   = document.getElementById('ww-sheet');
     const closeBtn = document.getElementById('ww-close-btn');
-    if (!el || !overlay || !sheet) return;
 
-    el.addEventListener('click', openWeekendWarriorSheet);
+    // Diagnostic logging — leave in for now per spec, user verifies in DevTools
+    console.log('[WW] setupDoubleXpBanner called', {
+      banner:  !!el,
+      overlay: !!overlay,
+      sheet:   !!sheet,
+      closeBtn:!!closeBtn,
+    });
+
+    // CRITICAL FIX: previously this function early-returned if any popup
+    // element was missing, silently abandoning the banner click handler.
+    // Now we attach the click handler unconditionally — popup elements
+    // are checked at click time inside openWeekendWarriorSheet.
+    if (!el) {
+      console.warn('[WW] #double-xp-banner not found — banner cannot be wired');
+      return;
+    }
+
+    // Use BOTH click and pointerup. iOS Safari sometimes fails to fire
+    // click after a :hover style is applied (the "first tap eats hover"
+    // bug). pointerup fires reliably and we de-dupe via a flag.
+    let _wwHandlingTap = false;
+    function bannerActivate(e) {
+      if (_wwHandlingTap) return;
+      _wwHandlingTap = true;
+      setTimeout(() => { _wwHandlingTap = false; }, 350);
+      console.log('[WW] Banner tapped — opening Weekend Warrior sheet');
+      if (e && e.preventDefault) e.preventDefault();
+      openWeekendWarriorSheet();
+    }
+    el.addEventListener('click',     bannerActivate);
+    el.addEventListener('pointerup', bannerActivate);
     el.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openWeekendWarriorSheet();
+        bannerActivate(e);
       }
     });
+    console.log('[WW] click + pointerup handlers attached to #double-xp-banner');
 
-    overlay.addEventListener('click', closeWeekendWarriorSheet);
+    if (overlay) overlay.addEventListener('click', closeWeekendWarriorSheet);
     if (closeBtn) closeBtn.addEventListener('click', closeWeekendWarriorSheet);
 
     // Reuse the swipe-down gesture utility
-    if (typeof attachSheetDismissGesture === 'function') {
+    if (sheet && overlay && typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(sheet, overlay, () => {
         sheet.classList.add('hidden');
         overlay.classList.add('hidden');
@@ -663,7 +702,7 @@
 
     // ESC dismiss on desktop
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
+      if (sheet && e.key === 'Escape' && !sheet.classList.contains('hidden')) {
         closeWeekendWarriorSheet();
       }
     });

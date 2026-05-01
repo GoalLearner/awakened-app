@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v4.43';
+const CACHE_VERSION = 'v4.44';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
