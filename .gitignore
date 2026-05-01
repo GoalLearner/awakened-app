@@ -15,3 +15,6 @@ node_modules/
 www/
 /ios/
 /android/
+
+# Original RGB-only avatar PNGs (backed up before alpha-channel fix)
+avatar-originals-rgb/
