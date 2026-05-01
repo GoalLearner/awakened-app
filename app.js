@@ -215,6 +215,9 @@
   // ── PERSONAL RECORDS (PRs) ───────────────────────────────
   // 10 lifetime-best metrics. Single source of truth — change only here.
   // tier: 1 = subtle toast, 2 = modal, 3 = full-screen takeover
+  // Master switch: when false, PRs still track and display silently
+  // (visible via the 🏆 chip on the Status tab) but never fire popups.
+  const PR_CELEBRATIONS_ENABLED = false;
   const PR_DEFS = [
     { id: 'most_habits_day',       label: 'habits in a day',     accent: '#a855f7', icon: '🏆',
       tier: 2, motivation: "Volume reveals what's possible. Break it again.",
@@ -1191,6 +1194,10 @@
     };
     save();
 
+    // Celebrations disabled — PRs update silently. The user can still see
+    // every value in the All-PRs sheet (🏆 chip on the Status tab). Flip
+    // this constant to re-enable popups/toasts/takeovers in one line.
+    if (!PR_CELEBRATIONS_ENABLED) return;
     if (_suppressPRCelebrations) return;
 
     // Determine celebration mode based on tier + milestone semantics
