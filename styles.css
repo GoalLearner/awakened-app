@@ -9887,14 +9887,16 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
    ═══════════════════════════════════════════════════════════════ */
 .awk-story {
   margin-top: 22px;
-  max-width: 380px;
+  max-width: 420px;
   font-family: ui-serif, Georgia, 'Times New Roman', serif;
   font-size: 0.92rem;
   font-style: italic;
   line-height: 1.65;
   color: rgba(255, 255, 255, 0.92);
-  white-space: pre-wrap;
-  text-align: center;
+  white-space: pre-line;
+  text-align: left;
+  text-wrap: pretty;
+  hyphens: none;
   text-shadow: 0 0 18px rgba(0, 0, 0, 0.6);
   min-height: 120px;
   /* Faint cursor block at the end of the visible text while typing */
@@ -10033,8 +10035,12 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   font-style: italic;
   line-height: 1.7;
   color: var(--text-primary);
-  white-space: pre-wrap;
-  max-width: 420px;
+  white-space: pre-line;     /* respect template breaks, allow natural wrap */
+  text-align: left;          /* prose alignment — eliminates orphan-word lines */
+  text-wrap: pretty;         /* balance line lengths where supported */
+  hyphens: none;
+  max-width: 460px;
+  width: 100%;
 }
 .origin-since {
   font-size: 0.78rem;
@@ -10105,13 +10111,16 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   text-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
 }
 .bg-story {
-  max-width: 460px;
+  max-width: 480px;
   font-family: ui-serif, Georgia, 'Times New Roman', serif;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-style: italic;
-  line-height: 1.7;
+  line-height: 1.65;
   color: rgba(255, 250, 240, 0.92);
-  white-space: pre-wrap;
+  white-space: pre-line;     /* honor template \n, allow natural wrap within */
+  text-align: left;          /* prose feel — no orphan words from centering */
+  text-wrap: pretty;         /* balance line lengths, avoid single-word lines */
+  hyphens: none;
   text-shadow: 0 0 16px rgba(0, 0, 0, 0.7);
   min-height: 180px;
   position: relative;
