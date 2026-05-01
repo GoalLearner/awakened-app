@@ -2942,6 +2942,8 @@
             '<div class="sc-hero-nameline">' +
               '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + '</span>' +
               '<button class="sc-edit-btn" id="sc-name-edit" aria-label="Edit name">✎</button>' +
+              // Compact Personal Records chip — taps open the All-PRs sheet
+              buildPRStripHTML() +
             '</div>' +
             '<div class="sc-hero-rank' + (isSPlus ? ' sc-gold' : '') + '">' +
               rank.label + ' · ' + totalPoints.toLocaleString() + ' pts' +
@@ -2955,8 +2957,6 @@
             buildCompoundBadgesHTML() +
           '</div>' +
         '</div>' +
-        // Personal Records strip — horizontally scrollable tiles
-        buildPRStripHTML() +
         '<div class="sc-divider"></div>' +
         // Avatar portrait beside the radar chart
         (function() {
@@ -5389,16 +5389,11 @@
   // The button shows a small headline plus a 1-line summary of standout PRs
   // (most-habits-day + active-days) so it never feels empty.
   function buildPRStripHTML() {
-    const habitsLifetime = (personalRecords['total_habits_lifetime'] || {}).value || 0;
-    const activeDays     = (personalRecords['total_active_days']     || {}).value || 0;
-    const summary = habitsLifetime.toLocaleString() + ' habits · ' + activeDays.toLocaleString() + ' active days';
-    return '<button id="pr-open-btn" class="pr-open-btn" aria-label="View Personal Records">' +
+    // Compact chip — sits inline next to the name and rank.
+    // Tap opens the full All-PRs grid sheet.
+    return '<button id="pr-open-btn" class="pr-open-chip" aria-label="View Personal Records">' +
       '<span class="pr-open-icon">🏆</span>' +
-      '<span class="pr-open-text">' +
-        '<span class="pr-open-title">PERSONAL RECORDS</span>' +
-        '<span class="pr-open-sub">' + esc(summary) + '</span>' +
-      '</span>' +
-      '<span class="pr-open-chev">›</span>' +
+      '<span class="pr-open-label">PR</span>' +
     '</button>';
   }
 

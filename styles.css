@@ -8799,3 +8799,34 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 .pr-tile.pr-tile--grid .pr-tile-icon  { font-size: 1.3rem; }
 .pr-tile.pr-tile--grid .pr-tile-value { font-size: 1.45rem; }
 .pr-tile.pr-tile--grid .pr-tile-label { font-size: 0.7rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PERSONAL RECORDS — compact chip on the name row
+   ═══════════════════════════════════════════════════════════════ */
+.pr-open-chip {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 8px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(245,158,11,0.06));
+  border: 1px solid rgba(245,158,11,0.40);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, border-color 0.18s ease, background 0.22s ease;
+  height: 26px;
+  line-height: 1;
+}
+.pr-open-chip:hover  { border-color: rgba(245,158,11,0.65); background: rgba(245,158,11,0.14); }
+.pr-open-chip:active { transform: scale(0.95); }
+.pr-open-chip .pr-open-icon  { font-size: 0.95rem; line-height: 1; }
+.pr-open-chip .pr-open-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
