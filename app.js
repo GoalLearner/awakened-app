@@ -2500,6 +2500,13 @@
         { month: 'long', day: 'numeric', year: 'numeric' });
     } catch (_) { return dateStr; }
   }
+  // Short numeric form for chapter header labels — '5/1/2026'
+  function _shortDate(dateStr) {
+    try {
+      return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US',
+        { month: 'numeric', day: 'numeric', year: 'numeric' });
+    } catch (_) { return dateStr; }
+  }
   function _originWeekdayNoun(dateStr) {
     try {
       const wk = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
@@ -6443,7 +6450,7 @@
     // ── Chapter 1: The Beginning ─────────────────────────
     const ch1Label = document.getElementById('origin-ch1-label');
     const ch1Text  = document.getElementById('origin-ch1-text');
-    if (ch1Label) ch1Label.textContent = '📜 THE BEGINNING — ' + originBeginning.dateDisplay;
+    if (ch1Label) ch1Label.textContent = '📜 THE BEGINNING · ' + _shortDate(originBeginning.dateISO);
     if (ch1Text)  ch1Text.textContent  = originBeginning.text;
 
     // ── Chapter 2: The Awakening (or teaser) ─────────────
@@ -6457,7 +6464,7 @@
 
     if (haveCh2) {
       const cls = CLASSES[originAwakening.classKey] || CLASSES.SAGE;
-      if (ch2Label) ch2Label.textContent = '⚔️ THE AWAKENING — ' + originAwakening.dateDisplay;
+      if (ch2Label) ch2Label.textContent = '⚔️ THE AWAKENING · ' + _shortDate(originAwakening.dateISO);
       if (ch2Badge) {
         ch2Badge.style.color       = cls.color;
         ch2Badge.style.borderColor = cls.color + '60';
