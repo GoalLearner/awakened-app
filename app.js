@@ -4767,8 +4767,11 @@
       });
     }
 
-    // Morning Routine + Locked-In quick-action buttons share one confirmation modal
-    document.getElementById('add-morning-btn').addEventListener('click',  openMorningPackModal);
+    // Standalone pack add buttons removed — pack strips themselves are now
+    // the entry point for adding missing pack habits. These guards stay in
+    // case the HTML is reintroduced later without causing a crash.
+    const mrBtn = document.getElementById('add-morning-btn');
+    if (mrBtn) mrBtn.addEventListener('click', openMorningPackModal);
     const liBtn = document.getElementById('add-lockedin-btn');
     if (liBtn) liBtn.addEventListener('click', openLockedInPackModal);
     document.getElementById('mr-cancel-btn').addEventListener('click',  closeMorningPackModal);
@@ -6221,8 +6224,18 @@
       const cs              = compoundStreaks[packId];
       const streak          = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
       const cls             = packId === 'locked-in' ? ' cp-prog-row--lockedin' : '';
-      const missing         = canonicalTotal - done;
-      const hasMissing      = missing > 0 && !awarded;
+      // "Missing canonical habits" = how many of the pack's 10/16 habits the
+      // user doesn't yet have in their active list. Different from "done" which
+      // counts today's completions out of canonical total.
+      const missingDefs   = (typeof getMissingPackHabits === 'function')
+        ? getMissingPackHabits(packId)
+        : (packId === 'morning' && typeof getMissingMorningHabits === 'function'
+            ? getMissingMorningHabits() : []);
+      const missingCount  = missingDefs.length;
+      const hasMissing    = missingCount > 0 && !awarded;
+      const addPill = hasMissing
+        ? '<span class="cp-prog-add">+ ' + missingCount + ' missing</span>'
+        : '';
       return '<div class="cp-prog-row' + cls + (hasMissing ? ' cp-prog-row--addable' : '') +
                   '" data-pack-add="' + esc(packId) + '" role="button" tabindex="0" ' +
                   'aria-label="' + esc(pack.name) + ' progress' + (hasMissing ? ' — tap to add missing habits' : '') + '">' +
@@ -6233,6 +6246,7 @@
         // Tappable bolt → opens the Bonus Info popup explaining the formula + ROI
         '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">⚡</button>' +
         (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' 🔥</span>' : '') +
+        addPill +
       '</div>';
     }).filter(Boolean).join('');
     if (rows) {

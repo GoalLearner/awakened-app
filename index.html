@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=112">
+  <link rel="stylesheet" href="styles.css?v=113">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -265,22 +265,13 @@
     </div>
 
     <footer id="main-footer">
-      <!-- Pack progress bars stacked just above the Add Habits button -->
+      <!-- Pack progress strips — tappable; open Add Pack modal when missing habits -->
       <div id="compound-progress" class="compound-progress compound-progress--footer hidden"></div>
+      <!-- Single Add Habits button — pack add buttons removed; pack strips above own that flow -->
       <button id="add-habit-btn" class="add-btn add-btn--full">
         <span class="add-plus">+</span>
         <span>Add Habits</span>
       </button>
-      <div class="add-pack-row">
-        <button id="add-morning-btn" class="add-btn add-btn--morning hidden">
-          <span class="add-plus">+</span>
-          <span>Morning Routine</span>
-        </button>
-        <button id="add-lockedin-btn" class="add-btn add-btn--lockedin hidden">
-          <span class="add-plus">+</span>
-          <span>Locked-In</span>
-        </button>
-      </div>
     </footer>
   </div>
 
@@ -632,7 +623,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=114"></script>
+  <script src="app.js?v=115"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
