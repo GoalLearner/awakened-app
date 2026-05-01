@@ -30,6 +30,7 @@
         { emoji: '📖', title: 'Habit Detail Pages',           description: 'Long-press any habit to view full stats, streak data, and the philosophy behind it.' },
         { emoji: '🎺', title: 'Triumphant Fanfare',           description: 'Completing the full Morning Routine now plays the celebration it deserves.' },
         { emoji: '🔒', title: 'Locked-In Pack',               description: 'A new 16-habit pack covering the full discipline cycle. Master the day, earn a second compound bonus.' },
+        { emoji: '🏆', title: 'Personal Records',             description: 'Track lifetime bests across 10 metrics on the Status tab. Break them. Repeat.' },
       ],
     },
   };
@@ -211,6 +212,48 @@
     { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.',  min: 28000, max: Infinity, next: null },
   ];
 
+  // ── PERSONAL RECORDS (PRs) ───────────────────────────────
+  // 10 lifetime-best metrics. Single source of truth — change only here.
+  // tier: 1 = subtle toast, 2 = modal, 3 = full-screen takeover
+  const PR_DEFS = [
+    { id: 'most_habits_day',       label: 'habits in a day',     accent: '#a855f7', icon: '🏆',
+      tier: 2, motivation: "Volume reveals what's possible. Break it again.",
+      description: 'Most habits completed in a single day.' },
+    { id: 'most_xp_day',           label: 'XP in a day',         accent: '#a855f7', icon: '⚡',
+      tier: 2, motivation: "Volume reveals what's possible. Break it again.",
+      description: 'Highest XP earned in a single day.' },
+    { id: 'longest_mr_streak',     label: 'longest MR streak',   accent: '#f59e0b', icon: '🌅',
+      tier: 3, takeoverDays: [30, 60, 100, 200, 365],
+      motivation: 'Days you owned. Keep stacking.',
+      description: 'Longest Morning Routine compound streak ever.' },
+    { id: 'longest_li_streak',     label: 'longest LI streak',   accent: '#7c3aed', icon: '🔒',
+      tier: 3, takeoverDays: [30, 60, 100, 200, 365],
+      motivation: 'Days you owned. Keep stacking.',
+      description: 'Longest Locked-In compound streak ever.' },
+    { id: 'longest_stat_streak',   label: 'top stat streak',     accent: 'stat',    icon: '📈',
+      tier: 2, motivation: "Specialization compounds. Don't lose the focus.",
+      description: 'Longest single-stat consistency streak.' },
+    { id: 'longest_habit_streak',  label: 'top habit streak',    accent: '#fbbf24', icon: '🔥',
+      tier: 2, motivation: "Specialization compounds. Don't lose the focus.",
+      description: 'Longest streak ever held by any single habit.' },
+    { id: 'total_habits_lifetime', label: 'habits lifetime',     accent: '#f59e0b', icon: '✅',
+      tier: 1, milestones: [100, 500, 1000, 5000, 10000],
+      motivation: 'Every rep counts. The number only goes up.',
+      description: 'Total habits completed across your entire journey.' },
+    { id: 'total_xp_lifetime',     label: 'XP lifetime',         accent: '#f59e0b', icon: '💎',
+      tier: 1, milestones: [500, 1000, 5000, 10000, 50000],
+      motivation: 'Every rep counts. The number only goes up.',
+      description: 'Total XP earned including all bonuses.' },
+    { id: 'total_active_days',     label: 'active days',         accent: '#f59e0b', icon: '📅',
+      tier: 1, milestones: [50, 100, 365, 730],
+      motivation: 'Every rep counts. The number only goes up.',
+      description: 'Calendar days you completed at least one habit.' },
+    { id: 'highest_rank',          label: 'highest rank',        accent: '#fbbf24', icon: '👑',
+      tier: 3,
+      motivation: "You've been here before. Don't forget what you're capable of.",
+      description: 'Highest rank tier you have ever reached.' },
+  ];
+
   const ACHIEVEMENTS = [
     { id: 'first_step',        icon: '👣', name: 'First Step',        desc: 'Complete your first habit ever' },
     { id: 'week_warrior',      icon: '🗓️', name: 'Week Warrior',       desc: 'Maintain a 7-day streak on any habit' },
@@ -367,6 +410,10 @@
   let psAwarded = new Set();
   let compoundStreaks  = {}; // packId → { streak, lastDate }
   let compoundAwarded = {}; // packId → date (last award date, prevents double-award)
+  let personalRecords  = {}; // prId → { value, meta, lastUpdated }
+  let _prCelebrationQueue = [];   // [{ prId, newValue, prevValue, meta, mode }]
+  let _prCelebrationActive = false;
+  let _suppressPRCelebrations = false; // true during migration backfill
   let histViewYear   = 0;
   let histViewMonth  = 0;
   let histViewMode   = 'weekly'; // 'weekly' | 'monthly' | 'yearly' | 'achievements'
@@ -1065,6 +1112,7 @@
       habitNotes      = JSON.parse(localStorage.getItem('hb_notes')             || '{}');
       compoundStreaks  = JSON.parse(localStorage.getItem('hb_compound')         || '{}');
       compoundAwarded  = JSON.parse(localStorage.getItem('hb_compound_awarded') || '{}');
+      personalRecords  = JSON.parse(localStorage.getItem('hb_prs')               || '{}');
       perfectStreak = rawPS ? JSON.parse(rawPS)
         : { count: 0, lastDate: null, prevCount: 0, prevLastDate: null };
       const rawPSA = localStorage.getItem('hb_ps_awarded');
@@ -1100,6 +1148,7 @@
       localStorage.setItem('hb_notes',             JSON.stringify(habitNotes));
       localStorage.setItem('hb_compound',          JSON.stringify(compoundStreaks));
       localStorage.setItem('hb_compound_awarded',  JSON.stringify(compoundAwarded));
+      localStorage.setItem('hb_prs',               JSON.stringify(personalRecords));
     } catch (_) {}
   }
 
@@ -1109,6 +1158,164 @@
       if (pts >= RANKS[i].min) return RANKS[i];
     }
     return RANKS[0];
+  }
+
+  // ── PERSONAL RECORDS — helpers ────────────────────────────
+  function getPRDef(prId) { return PR_DEFS.find(p => p.id === prId); }
+  function getPR(prId) {
+    return personalRecords[prId] || { value: 0, meta: null, lastUpdated: null };
+  }
+  // Compares newValue against current PR. Updates if greater (numbers) or
+  // higher-tier (rank). Queues the appropriate celebration unless suppressed.
+  function prUpdate(prId, newValue, meta) {
+    const def = getPRDef(prId);
+    if (!def) return;
+    const cur      = getPR(prId);
+    const prevVal  = cur.value || 0;
+    let isNew = false;
+
+    if (prId === 'highest_rank') {
+      // Rank PR: compare tier index, not numeric. Higher index = higher rank.
+      const newIdx = RANKS.findIndex(r => r.id === newValue);
+      const curIdx = cur.value ? RANKS.findIndex(r => r.id === cur.value) : -1;
+      isNew = newIdx > curIdx;
+    } else {
+      isNew = (newValue > prevVal);
+    }
+    if (!isNew) return;
+
+    personalRecords[prId] = {
+      value:        newValue,
+      meta:         meta || cur.meta || null,
+      lastUpdated:  today,
+    };
+    save();
+
+    if (_suppressPRCelebrations) return;
+
+    // Determine celebration mode based on tier + milestone semantics
+    let mode = 'tier' + def.tier; // default
+
+    // Tier 1 PRs only celebrate on round-number milestones
+    if (def.tier === 1) {
+      const hit = (def.milestones || []).some(m => prevVal < m && newValue >= m);
+      if (!hit) return; // increment without milestone — silent
+    }
+    // Tier 3 streak PRs only takeover on specific day thresholds
+    if (def.tier === 3 && def.takeoverDays) {
+      const hit = def.takeoverDays.some(d => prevVal < d && newValue >= d);
+      if (!hit) {
+        // Not a takeover day yet — fall back to tier 2 modal
+        mode = 'tier2';
+      }
+    }
+    // Highest-rank PR: takeover on every new-tier-ever
+    // (already gated by isNew check above — every fire IS a new tier)
+
+    _prCelebrationQueue.push({ prId, newValue, prevValue: prevVal, meta: personalRecords[prId].meta, mode });
+    drainPRCelebrationQueue();
+  }
+
+  // Backfill from existing user data on first launch of v1.1+ (idempotent)
+  function migratePRsIfNeeded() {
+    if (localStorage.getItem('hb_prs_migrated') === '1') return;
+    _suppressPRCelebrations = true;
+    try {
+      // total_habits_lifetime: count every completion logged
+      let totalHabits = 0;
+      let activeDays  = 0;
+      let bestDayCount = 0;
+      for (const d in completions) {
+        const list = completions[d] || [];
+        if (list.length === 0) continue;
+        totalHabits += list.length;
+        activeDays  += 1;
+        if (list.length > bestDayCount) bestDayCount = list.length;
+      }
+      prUpdate('total_habits_lifetime', totalHabits);
+      prUpdate('total_active_days',     activeDays);
+      prUpdate('most_habits_day',       bestDayCount);
+      // total_xp_lifetime: best estimate is current points (no historic XP log)
+      prUpdate('total_xp_lifetime',     totalPoints);
+      // pack streaks: current = lifetime best at upgrade time
+      prUpdate('longest_mr_streak',     ((compoundStreaks['morning']   || {}).streak) || 0);
+      prUpdate('longest_li_streak',     ((compoundStreaks['locked-in'] || {}).streak) || 0);
+      // highest rank: current rank (only goes up from here)
+      prUpdate('highest_rank',          getRank(totalPoints).id);
+      // longest_habit_streak: scan current habit streaks
+      let bestHabit = { name: null, count: 0 };
+      Object.keys(streaks).forEach(hid => {
+        const s = streaks[hid];
+        if (s && s.count > bestHabit.count) {
+          const h = habits.find(hh => hh.id === hid);
+          if (h) bestHabit = { name: h.name, count: s.count };
+        }
+      });
+      if (bestHabit.count > 0) prUpdate('longest_habit_streak', bestHabit.count, { habitName: bestHabit.name });
+      // longest_stat_streak: compute current best across stats
+      let bestStat = { id: null, count: 0 };
+      STATS.forEach(st => {
+        const c = computeCurrentStatStreak(st.id);
+        if (c > bestStat.count) bestStat = { id: st.id, count: c };
+      });
+      if (bestStat.count > 0) prUpdate('longest_stat_streak', bestStat.count, { statId: bestStat.id });
+    } finally {
+      _suppressPRCelebrations = false;
+      localStorage.setItem('hb_prs_migrated', '1');
+    }
+  }
+
+  // Walks back from today day-by-day. Returns the current consecutive-day
+  // count where at least one habit feeding `statId` was completed.
+  function computeCurrentStatStreak(statId) {
+    const stat = STATS.find(s => s.id === statId);
+    if (!stat) return 0;
+    const habitNames = new Set(stat.habits);
+    const habitIdsByName = {};
+    habits.forEach(h => { habitIdsByName[h.name] = h.id; });
+    let d = today;
+    let streak = 0;
+    let safety = 0;
+    while (safety++ < 1000) {
+      const list = completions[d] || [];
+      const dayHasStat = list.some(hid => {
+        const h = habits.find(hh => hh.id === hid);
+        return h && habitNames.has(h.name);
+      });
+      if (!dayHasStat) {
+        // If today is the start (streak=0) and today not done yet, it's OK to break
+        // (streak of 0 means "no current run"). Otherwise the run ends.
+        break;
+      }
+      streak++;
+      d = prevDay(d);
+    }
+    return streak;
+  }
+
+  // Counts XP earned today by walking today's completions (plus any compound bonuses).
+  // Used to update most_xp_day at end of every check().
+  function computeTodayXP() {
+    const list = completions[today] || [];
+    let xp = 0;
+    list.forEach(hid => {
+      const h = habits.find(hh => hh.id === hid);
+      if (!h) return;
+      const base = (DIFFICULTY[h.difficulty || 'easy'] || DIFFICULTY.easy).pts;
+      xp += isWeekend() ? base * 2 : base;
+    });
+    // Add today's compound bonuses
+    BONUS_PACK_IDS.forEach(packId => {
+      if (compoundAwarded[packId] === today) {
+        const cs = compoundStreaks[packId];
+        const streak = (cs && cs.lastDate === today) ? cs.streak : 0;
+        if (streak > 0) {
+          const base = getCompoundXP(streak);
+          xp += isWeekend() ? base * 2 : base;
+        }
+      }
+    });
+    return xp;
   }
 
   function diffPts(diff) {
@@ -1155,6 +1362,33 @@
     checkAchievements();
     checkStatBonuses();
     checkWeekendChallenge(id);
+
+    // ── Personal Records hooks ─────────────────────────────
+    // Lifetime totals: increment on every completion.
+    prUpdate('total_habits_lifetime', getPR('total_habits_lifetime').value + 1);
+    prUpdate('total_xp_lifetime',     getPR('total_xp_lifetime').value     + pts);
+    // Today's PRs: recompute against current totals.
+    const todayCount = (completions[today] || []).length;
+    prUpdate('most_habits_day', todayCount);
+    prUpdate('most_xp_day',     computeTodayXP());
+    // Active days: if this is the first completion of a new day, increment.
+    if (todayCount === 1) {
+      prUpdate('total_active_days', getPR('total_active_days').value + 1);
+    }
+    // Per-habit streak PR
+    if (habit && s.count > getPR('longest_habit_streak').value) {
+      prUpdate('longest_habit_streak', s.count, { habitName: habit.name });
+    }
+    // Per-stat streak — find the stat this habit feeds and check its streak
+    if (habit) {
+      STATS.forEach(st => {
+        if (!st.habits.includes(habit.name)) return;
+        const cur = computeCurrentStatStreak(st.id);
+        if (cur > getPR('longest_stat_streak').value) {
+          prUpdate('longest_stat_streak', cur, { statId: st.id });
+        }
+      });
+    }
   }
 
   function uncheck(id) {
@@ -2475,6 +2709,8 @@
 
   function renderRank() {
     const rank = getRank(totalPoints);
+    // PR hook — track highest rank ever reached (only goes up)
+    prUpdate('highest_rank', rank.id);
     const badge = document.getElementById('rank-badge');
     const label = document.getElementById('rank-label');
     const pts   = document.getElementById('rank-pts');
@@ -2719,6 +2955,8 @@
             buildCompoundBadgesHTML() +
           '</div>' +
         '</div>' +
+        // Personal Records strip — horizontally scrollable tiles
+        buildPRStripHTML() +
         '<div class="sc-divider"></div>' +
         // Avatar portrait beside the radar chart
         (function() {
@@ -4678,6 +4916,12 @@
     renderRank();
     if (currentTab === 'profile') renderProfile();
     renderCompoundProgress();
+
+    // ── Personal Records hooks for pack streaks + lifetime XP ─────
+    prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + finalXP);
+    if (packId === 'morning')   prUpdate('longest_mr_streak', newStreak);
+    if (packId === 'locked-in') prUpdate('longest_li_streak', newStreak);
+
     // Queue instead of show-now so multiple packs sequence cleanly.
     _bonusPopupQueue.push({
       packId,
@@ -4767,6 +5011,249 @@
     ov.classList.add('hidden');
     md.classList.add('hidden');
   }
+  // ── PERSONAL RECORDS — detail popup, celebrations, queue ───
+  function _prMetaSummary(prId, meta) {
+    if (!meta) return '';
+    if (prId === 'longest_habit_streak' && meta.habitName) return meta.habitName;
+    if (prId === 'longest_stat_streak'  && meta.statId)    {
+      const stat = STATS.find(s => s.id === meta.statId);
+      return stat ? stat.icon + ' ' + stat.name : meta.statId;
+    }
+    return '';
+  }
+
+  function _prBeatHint(prId, value) {
+    if (prId === 'highest_rank') {
+      const idx = RANKS.findIndex(r => r.id === value);
+      const next = (idx >= 0 && idx < RANKS.length - 1) ? RANKS[idx + 1].id : null;
+      return next ? 'Reach ' + next + ' rank to break this.' : 'Max rank achieved — nothing left to beat.';
+    }
+    const v = Number(value) || 0;
+    return 'Beat: ' + (v + 1).toLocaleString();
+  }
+
+  function openPRDetailSheet(prId) {
+    const def = getPRDef(prId);
+    if (!def) return;
+    const rec   = personalRecords[prId] || { value: 0, meta: null, lastUpdated: null };
+    const accent = _prTileAccent(def);
+    const sheet = document.getElementById('pr-detail-sheet');
+    const ov    = document.getElementById('pr-detail-overlay');
+    if (!sheet || !ov) return;
+
+    sheet.style.setProperty('--pr-accent', accent);
+    document.getElementById('pr-detail-icon').textContent  = def.icon;
+    document.getElementById('pr-detail-title').textContent = def.description;
+    document.getElementById('pr-detail-value').textContent = _formatPRValue(prId, rec.value);
+    const metaSummary = _prMetaSummary(prId, rec.meta);
+    document.getElementById('pr-detail-meta').textContent = metaSummary
+      ? metaSummary + (rec.lastUpdated ? '  ·  set ' + rec.lastUpdated : '')
+      : (rec.lastUpdated ? 'Set ' + rec.lastUpdated : 'Not yet set');
+    document.getElementById('pr-detail-desc').textContent       = '';
+    document.getElementById('pr-detail-motivation').textContent = def.motivation;
+    document.getElementById('pr-detail-beat').textContent       = _prBeatHint(prId, rec.value);
+
+    ov.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+
+  function closePRDetailSheet() {
+    document.getElementById('pr-detail-overlay').classList.add('hidden');
+    document.getElementById('pr-detail-sheet').classList.add('hidden');
+  }
+
+  function setupPRDetailSheet() {
+    const ov    = document.getElementById('pr-detail-overlay');
+    const sheet = document.getElementById('pr-detail-sheet');
+    const close = document.getElementById('pr-detail-close');
+    if (ov)    ov.addEventListener('click', closePRDetailSheet);
+    if (close) close.addEventListener('click', closePRDetailSheet);
+
+    // Delegated tap — any [data-pr-id] tile opens the detail sheet
+    document.addEventListener('click', e => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const tile = t.closest('[data-pr-id]');
+      if (!tile) return;
+      e.stopPropagation();
+      e.preventDefault();
+      openPRDetailSheet(tile.getAttribute('data-pr-id'));
+    });
+
+    // Swipe-down dismiss
+    if (sheet && ov && typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, ov, () => {
+        sheet.classList.add('hidden');
+        ov.classList.add('hidden');
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.pr-drag-handle, .pr-detail-header',
+        scrollTarget:   '.pr-detail-body',
+      });
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (!sheet.classList.contains('hidden')) closePRDetailSheet();
+    });
+  }
+
+  // ── PR celebration sounds (Web Audio, distinct from fanfare) ──
+  function playPRChime() {
+    if (!soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+      // E5 → G5 → B5 quick uplift
+      const notes = [659.25, 783.99, 987.77];
+      notes.forEach((freq, i) => {
+        ['sine', 'triangle'].forEach(type => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t0 + i * 0.08);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          const peak = type === 'sine' ? 0.18 : 0.08;
+          gain.gain.setValueAtTime(0.0001, t0 + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(peak, t0 + i * 0.08 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.08 + 0.30);
+          osc.start(t0 + i * 0.08);
+          osc.stop(t0 + i * 0.08 + 0.32);
+        });
+      });
+    } catch (_) {}
+  }
+
+  function playPRTakeover() {
+    if (!soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+      // Cinematic ascent: D4 → A4 → D5 → A5 sustained
+      const notes = [
+        { f: 293.66, s: 0.00, d: 0.30, p: 0.22 },
+        { f: 440.00, s: 0.20, d: 0.30, p: 0.22 },
+        { f: 587.33, s: 0.40, d: 0.50, p: 0.26 },
+        { f: 880.00, s: 0.60, d: 1.20, p: 0.28 },
+      ];
+      notes.forEach(n => {
+        ['sine', 'triangle'].forEach(type => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(n.f, t0 + n.s);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          const peak = type === 'sine' ? n.p : n.p * 0.5;
+          gain.gain.setValueAtTime(0.0001, t0 + n.s);
+          gain.gain.exponentialRampToValueAtTime(peak, t0 + n.s + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.s + n.d);
+          osc.start(t0 + n.s);
+          osc.stop(t0 + n.s + n.d + 0.05);
+        });
+      });
+    } catch (_) {}
+  }
+
+  // ── Celebration display + queue ────────────────────────────
+  function showPRTier2Modal(item) {
+    const def = getPRDef(item.prId);
+    if (!def) { _prCelebrationActive = false; drainPRCelebrationQueue(); return; }
+    const accent = _prTileAccent(def);
+    const popup  = document.getElementById('pr-popup');
+    if (!popup) { _prCelebrationActive = false; drainPRCelebrationQueue(); return; }
+    popup.style.setProperty('--pr-accent', accent);
+    document.getElementById('pr-popup-icon').textContent  = def.icon;
+    document.getElementById('pr-popup-title').textContent = def.description;
+    document.getElementById('pr-popup-value').textContent = _formatPRValue(item.prId, item.newValue);
+    const prevTxt = (item.prevValue && item.prevValue > 0)
+      ? 'Previous: ' + _formatPRValue(item.prId, item.prevValue)
+      : 'Your first record. Set the bar.';
+    document.getElementById('pr-popup-prev').textContent = prevTxt;
+    popup.classList.remove('hidden');
+    void popup.offsetWidth;
+    popup.classList.add('pr-popup--show');
+    playPRChime();
+
+    const dismiss = () => {
+      popup.classList.remove('pr-popup--show');
+      popup.classList.add('pr-popup--hide');
+      popup.addEventListener('animationend', () => {
+        popup.classList.remove('pr-popup--hide');
+        popup.classList.add('hidden');
+        _prCelebrationActive = false;
+        setTimeout(drainPRCelebrationQueue, 260);
+      }, { once: true });
+      popup.removeEventListener('click', dismiss);
+    };
+    popup.addEventListener('click', dismiss);
+    setTimeout(dismiss, 3200);
+  }
+
+  function showPRTier3Takeover(item) {
+    const def = getPRDef(item.prId);
+    if (!def) { _prCelebrationActive = false; drainPRCelebrationQueue(); return; }
+    const accent  = _prTileAccent(def);
+    const overlay = document.getElementById('pr-takeover');
+    if (!overlay) { _prCelebrationActive = false; drainPRCelebrationQueue(); return; }
+    overlay.style.setProperty('--pr-accent', accent);
+
+    let headline = '';
+    let sub = def.motivation;
+    if (item.prId === 'longest_mr_streak')      headline = item.newValue + '-DAY MORNING ROUTINE';
+    else if (item.prId === 'longest_li_streak') headline = item.newValue + '-DAY LOCKED-IN';
+    else if (item.prId === 'highest_rank')      headline = item.newValue + ' RANK';
+    else                                        headline = String(item.newValue) + ' ' + def.label.toUpperCase();
+
+    document.getElementById('pr-takeover-headline').textContent = headline;
+    document.getElementById('pr-takeover-sub').textContent      = sub;
+
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('pr-takeover--show');
+    playPRTakeover();
+
+    const dismiss = () => {
+      overlay.classList.remove('pr-takeover--show');
+      overlay.classList.add('pr-takeover--hide');
+      overlay.addEventListener('animationend', () => {
+        overlay.classList.remove('pr-takeover--hide');
+        overlay.classList.add('hidden');
+        _prCelebrationActive = false;
+        setTimeout(drainPRCelebrationQueue, 320);
+      }, { once: true });
+      overlay.removeEventListener('click', dismiss);
+    };
+    overlay.addEventListener('click', dismiss);
+    setTimeout(dismiss, 5000);
+  }
+
+  function drainPRCelebrationQueue() {
+    if (_prCelebrationActive || !_prCelebrationQueue.length) return;
+    // Don't fire PR celebrations until any queued bonus popups have finished.
+    if (_bonusPopupActive || (_bonusPopupQueue && _bonusPopupQueue.length)) {
+      setTimeout(drainPRCelebrationQueue, 400);
+      return;
+    }
+    _prCelebrationActive = true;
+    const item = _prCelebrationQueue.shift();
+    const def  = getPRDef(item.prId);
+    if (item.mode === 'tier1' || (def && def.tier === 1)) {
+      // Tier 1 toast
+      const valStr = _formatPRValue(item.prId, item.newValue);
+      showHabitToast('🏆 ' + valStr + ' ' + def.label);
+      setTimeout(() => {
+        _prCelebrationActive = false;
+        drainPRCelebrationQueue();
+      }, 2400);
+    } else if (item.mode === 'tier3') {
+      showPRTier3Takeover(item);
+    } else {
+      showPRTier2Modal(item);
+    }
+  }
+
   function setupBonusInfoPopup() {
     const ov = document.getElementById('bonus-info-overlay');
     const closeBtn = document.getElementById('bi-close-btn');
@@ -4828,6 +5315,44 @@
     } else {
       wrap.classList.add('hidden');
     }
+  }
+
+  // ── PR STRIP RENDERING ───────────────────────────────────
+  // Horizontal scrollable strip of 10 PR tiles for the Status tab.
+  function _formatPRValue(prId, value) {
+    if (prId === 'highest_rank') return value || '—';
+    if (prId === 'total_xp_lifetime' || prId === 'most_xp_day') return Number(value || 0).toLocaleString();
+    if (prId === 'total_habits_lifetime') return Number(value || 0).toLocaleString();
+    return String(value || 0);
+  }
+
+  function _prTileAccent(def) {
+    if (def.accent === 'stat') {
+      // Use the stat's color from meta
+      const meta = (personalRecords[def.id] || {}).meta || {};
+      const stat = STATS.find(s => s.id === meta.statId);
+      return stat ? stat.color : '#a78bfa';
+    }
+    return def.accent || '#a78bfa';
+  }
+
+  function buildPRStripHTML() {
+    const tiles = PR_DEFS.map(def => {
+      const rec    = personalRecords[def.id] || { value: 0 };
+      const accent = _prTileAccent(def);
+      const valStr = _formatPRValue(def.id, rec.value);
+      return '<button class="pr-tile" data-pr-id="' + esc(def.id) + '" ' +
+                  'style="--pr-accent:' + accent + '" ' +
+                  'aria-label="View ' + esc(def.label) + ' record">' +
+        '<span class="pr-tile-icon">' + def.icon + '</span>' +
+        '<span class="pr-tile-value">' + esc(valStr) + '</span>' +
+        '<span class="pr-tile-label">' + esc(def.label) + '</span>' +
+      '</button>';
+    }).join('');
+    return '<div class="pr-strip-wrap">' +
+      '<div class="pr-strip-label">PERSONAL RECORDS</div>' +
+      '<div class="pr-strip" id="pr-strip">' + tiles + '</div>' +
+    '</div>';
   }
 
   function buildCompoundBadgesHTML() {
@@ -6361,6 +6886,8 @@
     setupNoteModal();
     setupCompoundPopup();
     setupBonusInfoPopup();
+    setupPRDetailSheet();
+    migratePRsIfNeeded();
     setupEmojiPicker();
     setupStatDetail();
     setupSettings();

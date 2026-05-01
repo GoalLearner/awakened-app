@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=99">
+  <link rel="stylesheet" href="styles.css?v=100">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -447,6 +447,47 @@
     </div>
   </div>
 
+  <!-- ═══ PERSONAL RECORDS — detail bottom-sheet ═══ -->
+  <div id="pr-detail-overlay" class="pr-detail-overlay hidden"></div>
+  <div id="pr-detail-sheet"   class="pr-detail-sheet   hidden">
+    <div class="pr-drag-handle"></div>
+    <div class="pr-detail-header">
+      <span id="pr-detail-icon"  class="pr-detail-icon"></span>
+      <span id="pr-detail-title" class="pr-detail-title"></span>
+      <button id="pr-detail-close" class="pr-detail-close" aria-label="Close">✕</button>
+    </div>
+    <div class="pr-detail-body">
+      <div id="pr-detail-value" class="pr-detail-value"></div>
+      <div id="pr-detail-meta"  class="pr-detail-meta"></div>
+      <div id="pr-detail-desc"  class="pr-detail-desc"></div>
+      <div id="pr-detail-motivation" class="pr-detail-motivation"></div>
+      <div id="pr-detail-beat"  class="pr-detail-beat"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PERSONAL RECORDS — Tier 2 modal popup (mid-energy break) ═══ -->
+  <div id="pr-popup" class="pr-popup hidden">
+    <div class="pr-popup-card">
+      <div class="pr-popup-label">🏆 NEW RECORD</div>
+      <div id="pr-popup-icon"     class="pr-popup-icon"></div>
+      <div id="pr-popup-title"    class="pr-popup-title"></div>
+      <div id="pr-popup-value"    class="pr-popup-value"></div>
+      <div id="pr-popup-prev"     class="pr-popup-prev"></div>
+      <div class="pr-popup-hint">Tap to dismiss</div>
+    </div>
+  </div>
+
+  <!-- ═══ PERSONAL RECORDS — Tier 3 full-screen takeover (legendary) ═══ -->
+  <div id="pr-takeover" class="pr-takeover hidden">
+    <div class="pr-takeover-bg"></div>
+    <div class="pr-takeover-content">
+      <div class="pr-takeover-eyebrow">PERSONAL BEST</div>
+      <div id="pr-takeover-headline" class="pr-takeover-headline"></div>
+      <div id="pr-takeover-sub"      class="pr-takeover-sub"></div>
+      <div class="pr-takeover-hint">Tap anywhere to dismiss</div>
+    </div>
+  </div>
+
   <!-- Bonus Info popup — explains Compound Effect + Locked-In bonus mechanics + ROI -->
   <div id="bonus-info-overlay" class="bonus-info-overlay hidden"></div>
   <div id="bonus-info-modal" class="bonus-info-modal hidden">
@@ -541,7 +582,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=101"></script>
+  <script src="app.js?v=102"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
