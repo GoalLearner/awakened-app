@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=89">
+  <link rel="stylesheet" href="styles.css?v=90">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -338,6 +338,26 @@
     <div id="lib-list" class="lib-list"></div>
   </div>
 
+  <!-- History habit info bottom-sheet -->
+  <div id="hi-overlay" class="hi-overlay hidden"></div>
+  <div id="hi-sheet"   class="hi-sheet hidden">
+    <div class="hi-drag-handle"></div>
+    <div class="hi-header">
+      <h2 class="hi-title" id="hi-name"></h2>
+      <button id="hi-close-btn" class="hi-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="hi-body">
+      <div id="hi-stat-badge" class="hi-stat-badge"></div>
+      <div id="hi-stat-desc"  class="hi-stat-desc"></div>
+      <div id="hi-difficulty" class="hi-difficulty"></div>
+      <div class="hi-stats-grid">
+        <div class="hi-stat-cell"><span id="hi-week"  class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
+        <div class="hi-stat-cell"><span id="hi-best"  class="hi-stat-value">0</span><span class="hi-stat-label">Best streak</span></div>
+        <div class="hi-stat-cell"><span id="hi-total" class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Morning Routine pack confirmation modal -->
   <div id="mr-overlay" class="mr-overlay hidden">
     <div class="mr-card">
@@ -430,7 +450,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=90"></script>
+  <script src="app.js?v=91"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

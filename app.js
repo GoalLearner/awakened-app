@@ -49,6 +49,24 @@
     return goal ? base + ' • ' + goal : base;
   }
 
+  // Clean base name (no duration/quantity suffix) — used by the History tab
+  // so rows read "Strength training" instead of "Strength training • 30 min".
+  // Other tabs continue to use habitDisplayName for the full version.
+  function habitBaseName(habit) {
+    return habitDisplayParts(habit).base;
+  }
+
+  // One-sentence description of what each stat builds — shown in the
+  // History tab's per-habit info popup.
+  const STAT_DESCRIPTIONS = {
+    STR:   'Builds your physical strength and discipline.',
+    VIT:   'Builds your vitality, recovery, and physical wellbeing.',
+    INT:   'Builds your knowledge, learning, and mental sharpness.',
+    FOCUS: 'Builds your concentration and resistance to distraction.',
+    WILL:  'Builds your discipline, consistency, and mental toughness.',
+    WLT:   'Builds your financial intelligence and long-term wealth.',
+  };
+
   // Rich HTML for the main card — bullet is styled in muted purple
   function habitDisplayHTML(habit) {
     const { base, goal } = habitDisplayParts(habit);
@@ -1224,6 +1242,50 @@
     if (histViewMode !== 'achievements') hgBuildStatsBar(el);
   }
 
+  // ── HABIT INFO POPUP STATS ───────────────────────────────
+  // Lifetime longest streak — walks every completion date and counts the
+  // longest run of consecutive scheduled-day completions. Honours each
+  // habit's day-of-week schedule via hasScheduledDayBetween.
+  function computeBestStreakForHabit(habit) {
+    const days = habit.days || ALL_DAYS;
+    const dates = Object.keys(completions)
+      .filter(d => Array.isArray(completions[d]) && completions[d].includes(habit.id))
+      .sort();
+    if (dates.length === 0) return 0;
+    let best = 1, cur = 1;
+    for (let i = 1; i < dates.length; i++) {
+      // If no missed scheduled day exists between the previous completion
+      // and this one, the streak continues; otherwise it resets to 1.
+      if (!hasScheduledDayBetween(days, dates[i - 1], dates[i])) {
+        cur += 1;
+      } else {
+        cur = 1;
+      }
+      if (cur > best) best = cur;
+    }
+    return best;
+  }
+
+  // Completions in the trailing 7 days (today inclusive)
+  function computeWeekCompletionsForHabit(habit) {
+    let n = 0;
+    let d = today;
+    for (let i = 0; i < 7; i++) {
+      if (Array.isArray(completions[d]) && completions[d].includes(habit.id)) n++;
+      d = prevDay(d);
+    }
+    return n;
+  }
+
+  // All-time completion count
+  function computeTotalCompletionsForHabit(habit) {
+    let n = 0;
+    for (const d in completions) {
+      if (Array.isArray(completions[d]) && completions[d].includes(habit.id)) n++;
+    }
+    return n;
+  }
+
   // ── WEEKLY VIEW ───────────────────────────────────────────
   function hgBuildWeekly(el) {
     const DAY_ABBR = ['M','T','W','T','F','S','S'];
@@ -1287,10 +1349,13 @@
       const row = document.createElement('div');
       row.className = 'hg-row';
 
-      // Label — full name, bold, no emoji on the History tab
+      // Label — clean base name (no duration suffix), bold, no emoji on the History tab
       const label = document.createElement('div');
       label.className = 'hg-label';
-      label.innerHTML = '<span class="hg-label-name">' + esc(habitDisplayName(habit)) + '</span>';
+      label.innerHTML =
+        '<span class="hg-label-name">' + esc(habitBaseName(habit)) + '</span>' +
+        '<button class="hg-info-btn" aria-label="More info about ' + esc(habitBaseName(habit)) +
+          '" data-habit-info="' + esc(habit.id) + '">ⓘ</button>';
       row.appendChild(label);
 
       // 7 cells
@@ -1386,7 +1451,7 @@
       const card = document.createElement('div');
       card.className = 'hg-habit-card';
 
-      // ── Banner ─── stat-tinted, full bold name, no emoji on History tab
+      // ── Banner ─── stat-tinted, clean base name, info icon
       const banner = document.createElement('div');
       banner.className = 'hg-habit-card-banner';
       banner.style.cssText = 'background:linear-gradient(135deg,'
@@ -1394,8 +1459,13 @@
         + ');border-bottom:1px solid ' + colorWithAlpha(statColor, 0.35) + ';';
       const bName = document.createElement('span');
       bName.className = 'hg-habit-card-name';
-      bName.textContent = habitDisplayName(habit);
-      banner.append(bName);
+      bName.textContent = habitBaseName(habit);
+      const bInfo = document.createElement('button');
+      bInfo.className = 'hg-info-btn';
+      bInfo.setAttribute('aria-label', 'More info about ' + habitBaseName(habit));
+      bInfo.setAttribute('data-habit-info', habit.id);
+      bInfo.textContent = 'ⓘ';
+      banner.append(bName, bInfo);
       card.appendChild(banner);
 
       // ── Mini calendar ────────────────────────────────────
@@ -1530,12 +1600,15 @@
       const row = document.createElement('div');
       row.className = 'hg-year-habit-row';
 
-      // Row header — full bold name, no emoji on History tab
+      // Row header — clean base name, info icon, no emoji on History tab
       const hdr = document.createElement('div');
       hdr.className = 'hg-year-habit-hdr';
       const info = document.createElement('div');
       info.className = 'hg-year-habit-info';
-      info.innerHTML = '<span class="hg-year-habit-name">' + esc(habitDisplayName(habit)) + '</span>';
+      info.innerHTML =
+        '<span class="hg-year-habit-name">' + esc(habitBaseName(habit)) + '</span>' +
+        '<button class="hg-info-btn" aria-label="More info about ' + esc(habitBaseName(habit)) +
+          '" data-habit-info="' + esc(habit.id) + '">ⓘ</button>';
       const stats = document.createElement('div');
       stats.className = 'hg-year-habit-stats';
       stats.textContent = pctStr + '% | ' + doneDays + 'D';
@@ -2827,6 +2900,114 @@
     }
 
     el.classList.remove('hidden');
+  }
+
+  // ── HABIT INFO SHEET (History tab only) ──────────────────
+  let _hiPrevFocus = null;
+  function openHabitInfoSheet(habit) {
+    if (!habit) return;
+    const overlay = document.getElementById('hi-overlay');
+    const sheet   = document.getElementById('hi-sheet');
+    if (!overlay || !sheet) return;
+
+    // Populate header — full display name with duration if applicable
+    document.getElementById('hi-name').textContent = habitDisplayName(habit);
+
+    // Stat badge (icon + label, colored by stat)
+    const statId    = getHabitPrimaryStat(habit);
+    const stat      = STATS.find(s => s.id === statId) || STATS[0];
+    const badge     = document.getElementById('hi-stat-badge');
+    badge.style.background = colorWithAlpha(stat.color, 0.16);
+    badge.style.borderColor = colorWithAlpha(stat.color, 0.55);
+    badge.style.color = stat.color;
+    badge.innerHTML =
+      '<span class="hi-badge-icon">' + stat.icon + '</span>' +
+      '<span class="hi-badge-label">' + esc(stat.label) + ' · ' + esc(stat.name) + '</span>';
+
+    // Stat description
+    document.getElementById('hi-stat-desc').textContent =
+      STAT_DESCRIPTIONS[statId] || STAT_DESCRIPTIONS.FOCUS;
+
+    // Difficulty + XP per completion (base value, before weekend doubling)
+    const diffKey = habit.difficulty || 'easy';
+    const diff    = DIFFICULTY[diffKey] || DIFFICULTY.easy;
+    document.getElementById('hi-difficulty').textContent =
+      diff.label + ' difficulty • +' + diff.pts + ' XP per completion';
+
+    // Completion stats
+    document.getElementById('hi-week').textContent  = computeWeekCompletionsForHabit(habit);
+    document.getElementById('hi-best').textContent  = computeBestStreakForHabit(habit);
+    document.getElementById('hi-total').textContent = computeTotalCompletionsForHabit(habit);
+
+    // Save focus + open
+    _hiPrevFocus = document.activeElement;
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+    requestAnimationFrame(() => sheet.classList.add('hi-open'));
+    // Move focus to the close button for keyboard users
+    setTimeout(() => { document.getElementById('hi-close-btn').focus(); }, 30);
+  }
+
+  function closeHabitInfoSheet() {
+    const overlay = document.getElementById('hi-overlay');
+    const sheet   = document.getElementById('hi-sheet');
+    if (!overlay || !sheet) return;
+    sheet.classList.remove('hi-open');
+    sheet.addEventListener('transitionend', () => {
+      sheet.classList.add('hidden');
+      overlay.classList.add('hidden');
+    }, { once: true });
+    if (_hiPrevFocus && typeof _hiPrevFocus.focus === 'function') {
+      try { _hiPrevFocus.focus(); } catch (_) {}
+    }
+    _hiPrevFocus = null;
+  }
+
+  function setupHabitInfoSheet() {
+    const overlay = document.getElementById('hi-overlay');
+    const sheet   = document.getElementById('hi-sheet');
+    const closeBtn = document.getElementById('hi-close-btn');
+    if (!overlay || !sheet || !closeBtn) return;
+
+    closeBtn.addEventListener('click', closeHabitInfoSheet);
+    overlay.addEventListener('click', closeHabitInfoSheet);
+
+    // Reuse the swipe-down-to-dismiss gesture from settings
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, () => {
+        sheet.classList.add('hidden');
+        overlay.classList.add('hidden');
+        sheet.classList.remove('hi-open');
+        if (_hiPrevFocus && typeof _hiPrevFocus.focus === 'function') {
+          try { _hiPrevFocus.focus(); } catch (_) {}
+        }
+        _hiPrevFocus = null;
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.hi-drag-handle, .hi-header',
+        openClass:      'hi-open',
+      });
+    }
+
+    // ESC key dismiss
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
+        closeHabitInfoSheet();
+      }
+    });
+
+    // Event delegation: any click on a .hg-info-btn opens the info sheet
+    // for the corresponding habit. Stops propagation so it doesn't trigger
+    // any parent click handler (e.g., card tap).
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('.hg-info-btn[data-habit-info]');
+      if (!btn) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const habitId = btn.getAttribute('data-habit-info');
+      const habit   = habits.find(h => h.id === habitId);
+      if (habit) openHabitInfoSheet(habit);
+    });
   }
 
   function setupMorningNudge() {
@@ -5229,6 +5410,7 @@
     setupSettings();
     setupStreakDanger();
     setupMorningNudge();
+    setupHabitInfoSheet();
     setupRankPopup();
 
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);

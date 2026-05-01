@@ -7160,3 +7160,215 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   font-family: inherit;
 }
 .mn-dismiss:active { color: #fcd34d; }
+
+/* ═══════════════════════════════════════════════════════════════
+   HISTORY TAB — Habit info icon + bottom-sheet popup
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Info icon — small ⓘ next to each habit name in History views.
+   Generous tap target (32x32 minimum) via padding so the icon stays subtle. */
+.hg-info-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px 6px;
+  margin-left: 2px;
+  flex-shrink: 0;
+  font-family: inherit;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.hg-info-btn:active { color: #d1d5db; background: rgba(255,255,255,0.05); }
+@media (hover: hover) {
+  .hg-info-btn:hover { color: #d1d5db; }
+}
+
+/* Make the Weekly label container hold name + button inline */
+.hg-label { gap: 4px; }
+.hg-label .hg-info-btn { padding: 4px 4px; font-size: 13px; }
+
+/* Monthly card banner needs space for the info icon to the right */
+.hg-habit-card-banner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hg-habit-card-banner .hg-info-btn {
+  margin-left: auto;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+/* Yearly row info — icon sits next to the name */
+.hg-year-habit-info { display: flex; align-items: center; gap: 2px; }
+
+/* Bottom-sheet popup — same pattern as the Settings sheet */
+.hi-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 320;
+  animation: hi-fade 0.22s ease-out;
+}
+.hi-overlay.hidden { display: none !important; }
+@keyframes hi-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.hi-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%;
+  max-width: 430px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 321;
+  background: var(--bg-raised);
+  border-radius: 22px 22px 0 0;
+  padding-bottom: calc(28px + var(--safe-bottom));
+  transition: transform 0.32s cubic-bezier(0.32, 1.1, 0.55, 1);
+  border: 1.5px solid rgba(139, 92, 246, 0.18);
+  border-bottom: none;
+}
+.hi-sheet.hidden { display: none !important; }
+.hi-sheet.hi-open { transform: translateX(-50%) translateY(0); }
+
+.hi-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+
+.hi-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 20px 8px;
+}
+.hi-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+.hi-close-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+.hi-close-btn:active { background: rgba(255, 255, 255, 0.1); }
+
+.hi-body {
+  padding: 4px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Stat badge — large prominent block with the stat's color */
+.hi-stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1.5px solid;
+  border-radius: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.hi-badge-icon { font-size: 1.5rem; line-height: 1; }
+.hi-badge-label { font-size: 0.95rem; }
+
+.hi-stat-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  padding: 0 2px;
+}
+
+.hi-difficulty {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  letter-spacing: 0.02em;
+}
+
+/* 3-cell stats grid */
+.hi-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.hi-stat-cell {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.hi-stat-value {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.hi-stat-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* Desktop / wide viewports: centered modal instead of bottom sheet */
+@media (min-width: 720px) {
+  .hi-sheet {
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    max-height: 84vh;
+    border-radius: 22px;
+    border-bottom: 1.5px solid rgba(139, 92, 246, 0.18);
+    padding-bottom: 24px;
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+    opacity: 0;
+  }
+  .hi-sheet.hi-open {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  .hi-drag-handle { display: none; }
+}
