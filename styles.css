@@ -9881,3 +9881,182 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   color: var(--text-tertiary);
   font-style: italic;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   AWAKENING — origin story typewriter
+   ═══════════════════════════════════════════════════════════════ */
+.awk-story {
+  margin-top: 22px;
+  max-width: 380px;
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: pre-wrap;
+  text-align: center;
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.6);
+  min-height: 120px;
+  /* Faint cursor block at the end of the visible text while typing */
+  position: relative;
+}
+.awk-story:not(.awk-story--done)::after {
+  content: '▋';
+  margin-left: 2px;
+  color: var(--awk-color, #fff);
+  animation: awk-cursor 0.9s steps(2) infinite;
+}
+@keyframes awk-cursor {
+  50% { opacity: 0.3; }
+}
+.awk-story--done::after { content: ''; }
+.awk-hint { font-size: 0.66rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   STATUS — 'Your Origin' link
+   ═══════════════════════════════════════════════════════════════ */
+.sc-origin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.40);
+  color: var(--gold);
+  border-radius: 100px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+  align-self: flex-start;
+}
+.sc-origin-btn:hover  { background: rgba(245,158,11,0.18); border-color: rgba(245,158,11,0.65); }
+.sc-origin-btn:active { transform: scale(0.96); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ORIGIN STORY — bottom sheet popup
+   ═══════════════════════════════════════════════════════════════ */
+.origin-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  z-index: 540;
+  animation: origin-fade 0.22s ease-out;
+}
+.origin-overlay.hidden { display: none !important; }
+@keyframes origin-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.origin-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 460px;
+  max-height: 88vh;
+  z-index: 541;
+  background: var(--bg-raised);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  animation: origin-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 0 32px rgba(0,0,0,0.5), 0 0 18px var(--origin-accent, rgba(245,158,11,0.25));
+}
+.origin-sheet.hidden { display: none !important; }
+@keyframes origin-up {
+  from { transform: translateX(-50%) translateY(100%); }
+  to   { transform: translateX(-50%) translateY(0); }
+}
+.origin-drag-handle {
+  width: 36px; height: 4px;
+  background: rgba(255,255,255,0.16);
+  border-radius: 2px;
+  margin: 12px auto 0;
+  flex-shrink: 0;
+}
+.origin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px 4px;
+}
+.origin-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.origin-close {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text-secondary);
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.origin-body {
+  padding: 8px 22px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  text-align: center;
+}
+.origin-class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1.5px solid;
+  border-radius: 100px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.origin-text {
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  max-width: 420px;
+}
+.origin-since {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.origin-share-btn {
+  margin-top: 6px;
+  padding: 11px 22px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.08));
+  border: 1px solid rgba(245,158,11,0.55);
+  color: var(--gold);
+  border-radius: 100px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.18s ease;
+}
+.origin-share-btn:hover  { background: linear-gradient(135deg, rgba(245,158,11,0.26), rgba(245,158,11,0.12)); }
+.origin-share-btn:active { transform: scale(0.97); }

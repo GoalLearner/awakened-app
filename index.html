@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=119">
+  <link rel="stylesheet" href="styles.css?v=120">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -507,7 +507,25 @@
       <img id="awk-avatar" class="awk-avatar" alt="" />
       <div id="awk-name" class="awk-name"></div>
       <div id="awk-desc" class="awk-desc"></div>
-      <div class="awk-hint">Tap anywhere to dismiss</div>
+      <!-- Origin story revealed with typewriter effect after class info animates in -->
+      <div id="awk-story" class="awk-story"></div>
+      <div id="awk-hint" class="awk-hint">Tap to skip · or wait</div>
+    </div>
+  </div>
+
+  <!-- Origin Story bottom-sheet — opens from Status tab "Your Origin" link -->
+  <div id="origin-overlay" class="origin-overlay hidden"></div>
+  <div id="origin-sheet"   class="origin-sheet   hidden">
+    <div class="origin-drag-handle"></div>
+    <div class="origin-header">
+      <span class="origin-eyebrow">YOUR ORIGIN</span>
+      <button id="origin-close" class="origin-close" aria-label="Close">✕</button>
+    </div>
+    <div class="origin-body">
+      <div id="origin-class-badge" class="origin-class-badge"></div>
+      <div id="origin-text" class="origin-text"></div>
+      <div id="origin-since" class="origin-since"></div>
+      <button id="origin-share" class="origin-share-btn">📤 Share</button>
     </div>
   </div>
 
@@ -712,7 +730,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=123"></script>
+  <script src="app.js?v=124"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

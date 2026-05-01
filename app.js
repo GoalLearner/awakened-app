@@ -34,6 +34,7 @@
         { emoji: '🧍', title: 'Civilian Class & The Awakening', description: "Class is now earned, not assumed. Train any stat to Lv5 to awaken into your true path. Lv5 in two paths at once? You choose." },
         { emoji: '⚔️', title: 'Daily Legendary Mission', description: "A multi-component challenge appears every day. All-or-nothing bonus XP. Weekends lean toward stepping outside. Most won't attempt it — the days you do are the days that count." },
         { emoji: '🛡️', title: 'Streak Forgiveness',     description: "Earn a Streak Shield every 14 days. Take an Honest Rest once a month. Get Resilience XP when you come back. Streaks should reward consistency, not punish humanity." },
+        { emoji: '📜', title: 'Awakening Origin Stories', description: "Your first awakening generates a permanent personalized story. Saved forever. Yours alone." },
       ],
     },
   };
@@ -780,6 +781,24 @@
     WLT:   'Financial intelligence and growth mindset. Wealth is built through daily micro decisions — tracking, building, reaching, investing. Consistency here compounds harder than any other stat.',
   };
 
+  // ── AWAKENING ORIGIN STORIES ──────────────────────────────
+  // One-time generated narrative artifact saved on first class awakening.
+  // Permanent — never regenerated, never edited. Class shifts after the
+  // first awakening do NOT update this story; it reflects the moment.
+  const ORIGIN_TEMPLATES = {
+    STR:   'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} chose the path of the Warrior.\nHe would not be strong because he was lucky. He would be strong because the weak version of himself was no longer enough.\nThe Awakening had begun.',
+    INT:   'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} chose the path of the Mage.\nHe would not learn because the world demanded it. He would learn because the unlearned version of himself was no longer enough.\nThe Awakening had begun.',
+    FOCUS: 'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} chose the path of the Assassin.\nHe would not focus because focus was easy. He would focus because the distracted version of himself was no longer enough.\nThe Awakening had begun.',
+    WILL:  'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} chose the path of the Paladin.\nHe would not endure because nothing tested him. He would endure because the broken version of himself was no longer enough.\nThe Awakening had begun.',
+    VIT:   'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} chose the path of the Ranger.\nHe would not heal because his body was given. He would heal because the depleted version of himself was no longer enough.\nThe Awakening had begun.',
+    WLT:   'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} chose the path of the Merchant.\nHe would not build wealth because he wanted comfort. He would build wealth because the dependent version of himself was no longer enough.\nThe Awakening had begun.',
+    SAGE:  'On {DATE}, an ordinary {WEEKDAY_NOUN} named {NAME} walked all six paths.\nHe would not be balanced because he was lucky. He would be balanced because he refused to specialize before knowing himself.\nThe Awakening had begun.',
+  };
+  const WEEKDAY_NOUNS = {
+    Mon: 'trader',  Tue: 'operator', Wed: 'builder', Thu: 'thinker',
+    Fri: 'fighter', Sat: 'wanderer', Sun: 'seeker',
+  };
+
   const CLASSES = {
     CIVILIAN: { emoji: '🧍', name: 'Civilian', color: '#6b7280', desc: "You haven't been awakened yet. Train any stat to Lv5 to find your path." },
     STR:   { emoji: '⚔️',  name: 'Warrior',  color: '#ef4444', desc: 'You build your body like a fortress. Discipline is your weapon.' },
@@ -851,6 +870,8 @@
   let lastActiveDate   = null; // last 'YYYY-MM-DD' the user completed any habit
   let totalComebacks   = 0;    // lifetime count
   let streakBreakLog   = [];   // [{ packId, date, brokenStreak }] last 60 entries
+  // Permanent origin-story artifact, generated once at first awakening
+  let originStory      = null; // { text, classKey, dateISO, dateDisplay, migrated? } | null
   let _prCelebrationQueue = [];   // [{ prId, newValue, prevValue, meta, mode }]
   let _prCelebrationActive = false;
   let _suppressPRCelebrations = false; // true during migration backfill
@@ -1841,6 +1862,7 @@
       lastActiveDate   = localStorage.getItem('hb_last_active') || null;
       totalComebacks   = parseInt(localStorage.getItem('hb_total_comebacks') || '0', 10) || 0;
       streakBreakLog   = JSON.parse(localStorage.getItem('hb_streak_breaks')     || '[]');
+      originStory      = JSON.parse(localStorage.getItem('hb_origin_story')      || 'null');
       perfectStreak = rawPS ? JSON.parse(rawPS)
         : { count: 0, lastDate: null, prevCount: 0, prevLastDate: null };
       const rawPSA = localStorage.getItem('hb_ps_awarded');
@@ -1888,6 +1910,7 @@
       if (lastActiveDate) localStorage.setItem('hb_last_active', lastActiveDate);
       localStorage.setItem('hb_total_comebacks',   String(totalComebacks));
       localStorage.setItem('hb_streak_breaks',     JSON.stringify(streakBreakLog));
+      localStorage.setItem('hb_origin_story',      JSON.stringify(originStory));
     } catch (_) {}
   }
 
@@ -2415,6 +2438,9 @@
       const seenAwakeningKey = 'hb_awakened_once';
       if (isAwakening && !localStorage.getItem(seenAwakeningKey)) {
         localStorage.setItem(seenAwakeningKey, '1');
+        // Generate + persist the origin story BEFORE queuing — so the
+        // story is saved even if the user closes the app mid-celebration.
+        saveOriginStoryIfMissing(currentClass);
         levelUpQueue.push({ type: 'awakening', classData: CLASSES[currentClass] });
       } else {
         levelUpQueue.push({ type: 'class', classData: CLASSES[currentClass] });
@@ -2451,6 +2477,62 @@
   }
 
   // ── AWAKENING — first-ever class assignment celebration ──
+  // ── ORIGIN STORY — generation + migration ───────────────
+  function _formatOriginDate(dateStr) {
+    try {
+      return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US',
+        { month: 'long', day: 'numeric', year: 'numeric' });
+    } catch (_) { return dateStr; }
+  }
+  function _originWeekdayNoun(dateStr) {
+    try {
+      const wk = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+      return WEEKDAY_NOUNS[wk] || 'soul';
+    } catch (_) { return 'soul'; }
+  }
+
+  function generateOriginStory(classKey, dateStr) {
+    const tpl = ORIGIN_TEMPLATES[classKey];
+    if (!tpl) return null;
+    const useDate    = dateStr || today;
+    const dateDisplay = _formatOriginDate(useDate);
+    const noun       = _originWeekdayNoun(useDate);
+    const name       = (playerName && playerName.trim() && playerName !== 'Hunter') ? playerName : 'the hunter';
+    const text = tpl
+      .replace('{DATE}',         dateDisplay)
+      .replace('{WEEKDAY_NOUN}', noun)
+      .replace('{NAME}',         name);
+    return { text, classKey, dateISO: useDate, dateDisplay };
+  }
+
+  // Called at the moment of first awakening — saves once, never overwrites.
+  function saveOriginStoryIfMissing(classKey) {
+    if (originStory && originStory.text) return;
+    const story = generateOriginStory(classKey);
+    if (!story) return;
+    originStory = story;
+    save();
+  }
+
+  // Migration: users awakened in a previous version don't have a saved
+  // origin story. Generate one retroactively with a 'Long before' prefix
+  // so the date framing is honest about the migration timing.
+  function migrateOriginStoryIfNeeded() {
+    if (originStory && originStory.text) return;
+    if (localStorage.getItem('hb_awakened_once') !== '1') return;
+    if (!currentClass || currentClass === 'CIVILIAN') return;
+    const story = generateOriginStory(currentClass);
+    if (!story) return;
+    // Prefix 'On <date>' → 'Long before <date>'
+    const onPrefix = 'On ' + story.dateDisplay;
+    if (story.text.indexOf(onPrefix) === 0) {
+      story.text = 'Long before ' + story.dateDisplay + story.text.slice(onPrefix.length);
+    }
+    story.migrated = true;
+    originStory = story;
+    save();
+  }
+
   function _awkAvatarSrc(classKey) {
     const map = {
       STR: 'avatar-warrior.png',  VIT: 'avatar-ranger.png',
@@ -2505,13 +2587,66 @@
     document.getElementById('awk-name').textContent = classData.name.toUpperCase();
     document.getElementById('awk-desc').textContent = classData.desc;
 
+    // Story text — revealed with typewriter after the avatar/title animation
+    const storyEl = document.getElementById('awk-story');
+    const hintEl  = document.getElementById('awk-hint');
+    const fullText = (originStory && originStory.text) ? originStory.text : '';
+    if (storyEl) {
+      storyEl.textContent = '';
+      storyEl.classList.remove('awk-story--done');
+    }
+    if (hintEl) hintEl.textContent = 'Tap to skip · or wait';
+
     overlay.classList.remove('hidden');
     void overlay.offsetWidth;
     overlay.classList.add('awk-show');
     playAwakeningFanfare();
     navigator.vibrate && navigator.vibrate([60, 40, 100, 40, 200]);
 
-    const dismiss = () => {
+    // Typewriter — start after the content fade-in finishes (~800ms)
+    let typeIdx = 0;
+    let typing  = true;
+    let typeTimer = null;
+    const TYPE_MS = 28;
+
+    function tick() {
+      if (!typing || !storyEl) return;
+      typeIdx++;
+      storyEl.textContent = fullText.slice(0, typeIdx);
+      if (typeIdx >= fullText.length) {
+        typing = false;
+        if (storyEl) storyEl.classList.add('awk-story--done');
+        if (hintEl) hintEl.textContent = 'Tap to continue';
+        return;
+      }
+      typeTimer = setTimeout(tick, TYPE_MS);
+    }
+
+    function startTypewriter() {
+      if (!fullText) {
+        typing = false;
+        if (hintEl) hintEl.textContent = 'Tap to continue';
+        return;
+      }
+      typeTimer = setTimeout(tick, 0);
+    }
+    const startTimer = setTimeout(startTypewriter, 850);
+
+    // Auto-dismiss only AFTER the story has fully revealed (typing done) +
+    // a generous read time. Tap behavior: first tap skips typing, second
+    // tap dismisses.
+    let autoDismissTimer = null;
+    function scheduleAutoDismiss() {
+      autoDismissTimer = setTimeout(dismiss, 5500);
+    }
+    // Initial loose auto-dismiss in case story is empty
+    if (!fullText) scheduleAutoDismiss();
+
+    function dismiss() {
+      typing = false;
+      clearTimeout(typeTimer);
+      clearTimeout(startTimer);
+      clearTimeout(autoDismissTimer);
       overlay.classList.remove('awk-show');
       overlay.classList.add('awk-hide');
       overlay.addEventListener('animationend', () => {
@@ -2520,10 +2655,32 @@
         levelUpActive = false;
         drainLevelUpQueue();
       }, { once: true });
-      overlay.removeEventListener('click', dismiss);
-    };
-    overlay.addEventListener('click', dismiss);
-    setTimeout(dismiss, 4000);
+      overlay.removeEventListener('click', onTap);
+    }
+    function onTap() {
+      if (typing) {
+        // Skip typewriter — show full text immediately
+        typing = false;
+        clearTimeout(typeTimer);
+        if (storyEl) {
+          storyEl.textContent = fullText;
+          storyEl.classList.add('awk-story--done');
+        }
+        if (hintEl) hintEl.textContent = 'Tap to continue';
+        scheduleAutoDismiss();
+      } else {
+        dismiss();
+      }
+    }
+    overlay.addEventListener('click', onTap);
+    // Watchdog — if story is so long that it might not finish within reason,
+    // start an auto-dismiss timer once typing completes naturally
+    const watchdog = setInterval(() => {
+      if (!typing && !autoDismissTimer) {
+        scheduleAutoDismiss();
+        clearInterval(watchdog);
+      }
+    }, 200);
   }
 
   // ── CLASS CHOICE — modal pick when 2+ stats hit Lv5 simultaneously
@@ -2564,6 +2721,9 @@
         // Then queue the Awakening celebration if this was the first class
         if (wasCivilian && !localStorage.getItem('hb_awakened_once')) {
           localStorage.setItem('hb_awakened_once', '1');
+          // Save the origin story now — survives if user closes the app
+          // before the celebration finishes.
+          saveOriginStoryIfMissing(classKey);
           levelUpQueue.unshift({ type: 'awakening', classData: CLASSES[classKey] });
         }
         levelUpActive = false;
@@ -4065,6 +4225,10 @@
               cls.emoji + ' ' + cls.name +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
+            // 'Your Origin' — only visible after first awakening
+            ((originStory && originStory.text)
+              ? '<button class="sc-origin-btn" id="sc-origin-btn" type="button">📜 Your Origin</button>'
+              : '') +
             (shifting ? '<div class="sc-shifting" style="margin-top:4px">⚠️ Your class is shifting...</div>' : '') +
             (selectedPackId && PACKS.find(p => p.id === selectedPackId) ? '<div class="sc-hero-path"><span class="sc-path-dot" style="background:' + PACKS.find(p => p.id === selectedPackId).color + '"></span>Path: ' + esc(PACKS.find(p => p.id === selectedPackId).name) + '</div>' : '') +
             buildCompoundBadgesHTML() +
@@ -6183,6 +6347,82 @@
       const packId = row.getAttribute('data-pack-add');
       if (packId === 'morning')   openMorningPackModal();
       else if (packId === 'locked-in') openLockedInPackModal();
+    });
+  }
+
+  // ── ORIGIN STORY popup ───────────────────────────────────
+  function openOriginStorySheet() {
+    if (!originStory || !originStory.text) return;
+    const ov    = document.getElementById('origin-overlay');
+    const sheet = document.getElementById('origin-sheet');
+    if (!ov || !sheet) return;
+    const cls = CLASSES[originStory.classKey] || CLASSES.SAGE;
+    const badge = document.getElementById('origin-class-badge');
+    if (badge) {
+      badge.style.color = cls.color;
+      badge.style.borderColor = cls.color + '60';
+      badge.style.background = cls.color + '14';
+      badge.innerHTML = '<span>' + cls.emoji + '</span><span>' + esc(cls.name) + '</span>';
+    }
+    document.getElementById('origin-text').textContent  = originStory.text;
+    document.getElementById('origin-since').textContent = cls.name + ' since ' + originStory.dateDisplay;
+    sheet.style.setProperty('--origin-accent', cls.color);
+    ov.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeOriginStorySheet() {
+    document.getElementById('origin-overlay').classList.add('hidden');
+    document.getElementById('origin-sheet').classList.add('hidden');
+  }
+  function shareOriginStory() {
+    if (!originStory || !originStory.text) return;
+    const text = '📜 My Awakening:\n\n' + originStory.text + '\n\n— Awakened: Habit RPG';
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+      return;
+    }
+    // Fallback: copy to clipboard with toast confirmation
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        if (typeof showHabitToast === 'function') showHabitToast('Copied to clipboard');
+      });
+    } catch (_) {
+      if (typeof showHabitToast === 'function') showHabitToast('Sharing not supported on this device');
+    }
+  }
+  function setupOriginStorySheet() {
+    const ov    = document.getElementById('origin-overlay');
+    const sheet = document.getElementById('origin-sheet');
+    const close = document.getElementById('origin-close');
+    const share = document.getElementById('origin-share');
+    if (!ov || !sheet) return;
+    if (close) close.addEventListener('click', closeOriginStorySheet);
+    if (ov)    ov.addEventListener('click', closeOriginStorySheet);
+    if (share) share.addEventListener('click', shareOriginStory);
+    // Delegated click — Status tab "Your Origin" button
+    document.addEventListener('click', e => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const btn = t.closest('#sc-origin-btn');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openOriginStorySheet();
+    });
+    // Swipe-down dismiss
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, ov, () => {
+        sheet.classList.add('hidden');
+        ov.classList.add('hidden');
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.origin-drag-handle, .origin-header',
+        scrollTarget:   '.origin-body',
+      });
+    }
+    // ESC dismiss
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) closeOriginStorySheet();
     });
   }
 
@@ -8574,6 +8814,8 @@
     setupDailyMissionCard();
     setupHonestDayModal();
     setupShieldInfoModal();
+    setupOriginStorySheet();
+    migrateOriginStoryIfNeeded();
     // Streak forgiveness: on app open, process missed days (use shields /
     // absorb honest days / break streaks), then surface any queued shield
     // notices as toasts, then check for comeback opportunity if the user
