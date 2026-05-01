@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=110">
+  <link rel="stylesheet" href="styles.css?v=111">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -185,7 +185,6 @@
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
       <!-- Today's Legendary Mission — top of habits tab, above pack header -->
       <div id="daily-mission-card" class="daily-mission-card hidden"></div>
-      <div id="compound-progress" class="compound-progress hidden"></div>
       <ul id="habit-list" class="habit-list"></ul>
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-icon">✓</div>
@@ -266,6 +265,8 @@
     </div>
 
     <footer id="main-footer">
+      <!-- Pack progress bars stacked just above the Add Habits button -->
+      <div id="compound-progress" class="compound-progress compound-progress--footer hidden"></div>
       <button id="add-habit-btn" class="add-btn add-btn--full">
         <span class="add-plus">+</span>
         <span>Add Habits</span>

@@ -6326,6 +6326,11 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   gap: 6px;
 }
 .compound-progress.hidden { display: none !important; }
+/* Footer variant — sits inside #main-footer above the Add Habits button */
+.compound-progress--footer {
+  padding: 0 0 8px;
+  gap: 5px;
+}
 
 .cp-prog-row {
   display: flex;
