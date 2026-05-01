@@ -6216,17 +6216,22 @@
     const wrap = document.getElementById('compound-progress');
     if (!wrap) return;
     // Show a row for every bonus pack the user has at least one habit in.
-    // EXCEPT: Locked-In is a superset of Morning Routine (all 10 MR habits
-    // are inside the 16 LI habits). When the user is on the Locked-In path
-    // we hide the Morning Routine row to avoid showing the same progress
-    // twice. The MR bonus still fires independently — only the UI is hidden.
-    const liActive = (function() {
-      if (typeof getPackProgress !== 'function') return false;
-      const li = getPackProgress('locked-in');
-      return li && li.total > 0;
+    // EXCEPT: hide the Morning Routine row when the user has truly committed
+    // to the Locked-In path. Since LI's 16 = MR's 10 + 6 extras, any LI
+    // habit count > 0 trivially fires (because MR habits also count toward
+    // LI). We must check for at least one of the 6 LI-EXCLUSIVE extras
+    // before suppressing the MR strip. Pure-MR users keep their MR row.
+    const liExclusivelyActive = (function() {
+      const liExtraNames = (typeof _LOCKED_IN_EXTRA_INDICES !== 'undefined' &&
+                            typeof DEFAULT_HABITS !== 'undefined')
+        ? new Set(_LOCKED_IN_EXTRA_INDICES.map(i => DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name).filter(Boolean))
+        : new Set();
+      if (liExtraNames.size === 0) return false;
+      return habits.some(h => liExtraNames.has(h.name));
     })();
     const rows = BONUS_PACK_IDS.map(packId => {
-      if (packId === 'morning' && liActive) return '';
+      if (packId === 'morning' && liExclusivelyActive) return '';
+      if (packId === 'locked-in' && !liExclusivelyActive) return '';
       const { done, total } = getPackProgress(packId);
       if (total === 0) return '';
       const pack            = getPackById(packId);
