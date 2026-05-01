@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=107">
+  <link rel="stylesheet" href="styles.css?v=108">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -447,6 +447,29 @@
     </div>
   </div>
 
+  <!-- Awakening — full-screen takeover (first-ever class assignment) -->
+  <div id="awakening-screen" class="awakening-screen hidden">
+    <div class="awk-bg"></div>
+    <div class="awk-content">
+      <div class="awk-eyebrow">AWAKENED</div>
+      <img id="awk-avatar" class="awk-avatar" alt="" />
+      <div id="awk-name" class="awk-name"></div>
+      <div id="awk-desc" class="awk-desc"></div>
+      <div class="awk-hint">Tap anywhere to dismiss</div>
+    </div>
+  </div>
+
+  <!-- Class Choice — full-screen takeover (multi-stat awakening) -->
+  <div id="class-choice-screen" class="class-choice-screen hidden">
+    <div class="cc-bg"></div>
+    <div class="cc-content">
+      <div class="cc-eyebrow">⚔️ THE PATH AWAITS</div>
+      <div class="cc-headline">Choose Your Path</div>
+      <div class="cc-sub">You have proven mastery in multiple disciplines.</div>
+      <div id="cc-options" class="cc-options"></div>
+    </div>
+  </div>
+
   <!-- ═══ PERSONAL RECORDS — All-PRs grid bottom-sheet ═══ -->
   <div id="pr-all-overlay" class="pr-all-overlay hidden"></div>
   <div id="pr-all-sheet"   class="pr-all-sheet   hidden">
@@ -594,7 +617,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=108"></script>
+  <script src="app.js?v=109"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

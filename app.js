@@ -31,6 +31,7 @@
         { emoji: '🎺', title: 'Triumphant Fanfare',           description: 'Completing the full Morning Routine now plays the celebration it deserves.' },
         { emoji: '🔒', title: 'Locked-In Pack',               description: 'A new 16-habit pack covering the full discipline cycle. Master the day, earn a second compound bonus.' },
         { emoji: '🏆', title: 'Personal Records',             description: 'Track lifetime bests across 10 metrics on the Status tab. Break them. Repeat.' },
+        { emoji: '🧍', title: 'Civilian Class & The Awakening', description: "Class is now earned, not assumed. Train any stat to Lv5 to awaken into your true path. Lv5 in two paths at once? You choose." },
       ],
     },
   };
@@ -364,6 +365,7 @@
   };
 
   const CLASSES = {
+    CIVILIAN: { emoji: '🧍', name: 'Civilian', color: '#6b7280', desc: "You haven't been awakened yet. Train any stat to Lv5 to find your path." },
     STR:   { emoji: '⚔️',  name: 'Warrior',  color: '#ef4444', desc: 'You build your body like a fortress. Discipline is your weapon.' },
     VIT:   { emoji: '🏹',  name: 'Ranger',   color: '#ec4899', desc: 'Your body is your temple. Recovery and endurance are your edge.' },
     INT:   { emoji: '🧙',  name: 'Mage',     color: '#3b82f6', desc: 'Your mind is your greatest asset. Knowledge compounds like interest.' },
@@ -372,6 +374,9 @@
     WLT:   { emoji: '👑',  name: 'Merchant', color: '#f59e0b', desc: 'Every day is an investment. You play the long financial game.' },
     SAGE:  { emoji: '🌟',  name: 'Sage',     color: '#8b5cf6', desc: 'No single path defines you. You are building a complete human.' },
   };
+  const CLASS_LV5_THRESHOLD = 5;
+  const CLASS_SHIFT_DOMINANCE = 1.20;  // 20%+ over current class to shift
+  const CLASS_BALANCE_RATIO   = 0.85;  // within 15% across all 6 stats → Sage
 
   const EMOJIS = [
     '🏃','💪','🧘','🚴','🏊','🏋️',
@@ -1529,37 +1534,119 @@
   }
 
   // ── CLASS SYSTEM ──────────────────────────────────────────
+  // ── CLASS ASSIGNMENT (v1.2 rules) ─────────────────────────
+  // - All stats < Lv5         → CIVILIAN  (the unawakened default)
+  // - 1 stat ≥ Lv5            → that stat's class (auto-assigned, fires Awakening)
+  // - 2+ stats ≥ Lv5 + still Civilian → CHOICE (user picks their path)
+  // - All 6 ≥ Lv5 + within 15% → SAGE
+  // - Has class → shift only if a different stat exceeds current class lv by 20%+
+  function _statLevels() {
+    const lv = STATS.map(st => ({ id: st.id, lv: statLevel(stats[st.id]?.pts || 0) }));
+    lv.sort((a, b) => b.lv - a.lv);
+    return lv;
+  }
+
+  // Returns { class, choice? }. If `choice` is set, the user must pick from
+  // those class ids before the new class is committed.
+  function evaluateClass(currentCls) {
+    const levels     = _statLevels();
+    const qualifiers = levels.filter(l => l.lv >= CLASS_LV5_THRESHOLD);
+
+    if (qualifiers.length === 0) return { class: 'CIVILIAN' };
+
+    // Sage: all 6 qualify and balance is within 15%
+    if (qualifiers.length === 6) {
+      const top = levels[0].lv;
+      const min = levels[5].lv;
+      if (top > 0 && (min / top) >= CLASS_BALANCE_RATIO) {
+        return { class: 'SAGE' };
+      }
+    }
+
+    // Single qualifier — auto-assign
+    if (qualifiers.length === 1) return { class: qualifiers[0].id };
+
+    // Multiple qualifiers, user is still Civilian → must choose
+    if (!currentCls || currentCls === 'CIVILIAN') {
+      return { class: 'CIVILIAN', choice: qualifiers.map(q => q.id) };
+    }
+
+    // Multiple qualifiers, user already has a class → shift only on dominance
+    if (currentCls === 'SAGE') return { class: 'SAGE' };  // Sage is sticky once earned
+
+    const top       = qualifiers[0];
+    const currentLv = (levels.find(l => l.id === currentCls) || { lv: 0 }).lv;
+    if (top.id !== currentCls && currentLv > 0 &&
+        (top.lv / currentLv) >= CLASS_SHIFT_DOMINANCE) {
+      return { class: top.id };
+    }
+    return { class: currentCls };
+  }
+
+  // Backward-compat shim — anything still calling determineClass() gets
+  // a class id the same way the old function did.
   function determineClass() {
-    const levels = STATS.map(st => ({ id: st.id, lv: statLevel(stats[st.id]?.pts || 0) }));
-    levels.sort((a, b) => b.lv - a.lv);
-    const topLv    = levels[0].lv;
-    const secondLv = levels[1].lv;
-    if (topLv <= 1) return 'SAGE';
-    if (secondLv === 0 || topLv / secondLv >= 1.4) return levels[0].id;
-    return 'SAGE';
+    return evaluateClass(currentClass).class;
   }
 
   function isClassShifting() {
-    const levels = STATS.map(st => ({ id: st.id, lv: statLevel(stats[st.id]?.pts || 0) }));
-    levels.sort((a, b) => b.lv - a.lv);
-    const topLv = levels[0].lv, secondLv = levels[1].lv;
-    if (topLv <= 1 || secondLv === 0) return false;
-    const ratio = topLv / secondLv;
-    return ratio >= 1.2 && ratio < 1.4; // transition zone
+    if (!currentClass || currentClass === 'CIVILIAN' || currentClass === 'SAGE') return false;
+    const levels    = _statLevels();
+    const top       = levels[0];
+    if (top.lv < CLASS_LV5_THRESHOLD) return false;
+    const currentLv = (levels.find(l => l.id === currentClass) || { lv: 0 }).lv;
+    if (top.id === currentClass || currentLv === 0) return false;
+    const ratio = top.lv / currentLv;
+    return ratio >= 1.10 && ratio < CLASS_SHIFT_DOMINANCE;  // 10–20% transition zone
+  }
+
+  // For Civilian users — find the stat closest to Lv5 for the progress hint.
+  function getClosestStatToAwaken() {
+    const levels = _statLevels();
+    const top    = levels[0];
+    if (!top) return null;
+    if (top.lv >= CLASS_LV5_THRESHOLD) return null;
+    const tied = levels.filter(l => l.lv === top.lv).map(l => l.id);
+    return { ids: tied, lv: top.lv, target: CLASS_LV5_THRESHOLD };
   }
 
   function checkClassChange(silent) {
-    const newKey = determineClass();
-    if (newKey !== currentClass) {
-      currentClass = newKey;
-      localStorage.setItem('hb_class', currentClass);
-      if (!silent) {
-        levelUpQueue.push({ type: 'class', classData: CLASSES[newKey] });
-        if (!levelUpActive) drainLevelUpQueue();
+    const result = evaluateClass(currentClass);
+
+    // Choice required: 2+ stats hit Lv5 simultaneously while still Civilian
+    if (result.choice && currentClass === 'CIVILIAN') {
+      if (silent) {
+        // Migration path — don't fire popup. User stays Civilian until they
+        // either next earn a single new Lv5 (auto-assign) or open the app
+        // and a level-up triggers the choice naturally.
+        return;
       }
-      if (currentTab === 'profile') renderProfile();
-      if (currentTab === 'stats')   renderStats();
+      levelUpQueue.push({ type: 'classChoice', options: result.choice });
+      if (!levelUpActive) drainLevelUpQueue();
+      return;
     }
+
+    if (result.class === currentClass) return;
+
+    const wasCivilian = (currentClass === 'CIVILIAN' || currentClass === null);
+    currentClass = result.class;
+    localStorage.setItem('hb_class', currentClass);
+
+    if (!silent) {
+      // First-time awakening (Civilian → any class) gets a special celebration.
+      // Subsequent class shifts use the lighter class-change popup.
+      const isAwakening = wasCivilian && currentClass !== 'CIVILIAN';
+      const seenAwakeningKey = 'hb_awakened_once';
+      if (isAwakening && !localStorage.getItem(seenAwakeningKey)) {
+        localStorage.setItem(seenAwakeningKey, '1');
+        levelUpQueue.push({ type: 'awakening', classData: CLASSES[currentClass] });
+      } else {
+        levelUpQueue.push({ type: 'class', classData: CLASSES[currentClass] });
+      }
+      if (!levelUpActive) drainLevelUpQueue();
+    }
+    if (currentTab === 'profile') renderProfile();
+    if (currentTab === 'stats')   renderStats();
   }
 
   function showClassChangePopup(cls) {
@@ -1585,6 +1672,138 @@
     };
     popup.onclick = dismiss;
     timer = setTimeout(dismiss, 3500);
+  }
+
+  // ── AWAKENING — first-ever class assignment celebration ──
+  function _awkAvatarSrc(classKey) {
+    const map = {
+      STR: 'avatar-warrior.png',  VIT: 'avatar-ranger.png',
+      INT: 'avatar-mage.png',     FOCUS: 'avatar-assassin.png',
+      WILL: 'avatar-paladin.png', WLT: 'avatar-merchant.png',
+      SAGE: 'avatar-sage.png',
+    };
+    // Look up by class key — classData passed in is from CLASSES[id]
+    // so resolve via reverse lookup on name/emoji.
+    for (const k in CLASSES) {
+      if (CLASSES[k] === classKey || CLASSES[k].name === classKey.name) return map[k] || 'avatar-base.png';
+    }
+    return 'avatar-base.png';
+  }
+
+  function playAwakeningFanfare() {
+    if (!soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+      // Heroic ascent — A4 → C#5 → E5 → A5 sustained, distinct from compound/PR
+      const notes = [
+        { f: 440.00, s: 0.00, d: 0.30, p: 0.22 },
+        { f: 554.37, s: 0.18, d: 0.32, p: 0.22 },
+        { f: 659.25, s: 0.36, d: 0.36, p: 0.24 },
+        { f: 880.00, s: 0.55, d: 1.40, p: 0.30 },
+        { f: 659.25, s: 0.55, d: 1.40, p: 0.18 },  // E5 layered with A5 for chord body
+      ];
+      notes.forEach(n => {
+        ['sine', 'triangle'].forEach(type => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(n.f, t0 + n.s);
+          osc.connect(gain); gain.connect(ac.destination);
+          const peak = type === 'sine' ? n.p : n.p * 0.55;
+          gain.gain.setValueAtTime(0.0001, t0 + n.s);
+          gain.gain.exponentialRampToValueAtTime(peak, t0 + n.s + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.s + n.d);
+          osc.start(t0 + n.s);
+          osc.stop(t0 + n.s + n.d + 0.05);
+        });
+      });
+    } catch (_) {}
+  }
+
+  function showAwakeningScreen(classData) {
+    const overlay = document.getElementById('awakening-screen');
+    if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
+    overlay.style.setProperty('--awk-color', classData.color);
+    document.getElementById('awk-avatar').src = _awkAvatarSrc(classData);
+    document.getElementById('awk-name').textContent = classData.name.toUpperCase();
+    document.getElementById('awk-desc').textContent = classData.desc;
+
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('awk-show');
+    playAwakeningFanfare();
+    navigator.vibrate && navigator.vibrate([60, 40, 100, 40, 200]);
+
+    const dismiss = () => {
+      overlay.classList.remove('awk-show');
+      overlay.classList.add('awk-hide');
+      overlay.addEventListener('animationend', () => {
+        overlay.classList.remove('awk-hide');
+        overlay.classList.add('hidden');
+        levelUpActive = false;
+        drainLevelUpQueue();
+      }, { once: true });
+      overlay.removeEventListener('click', dismiss);
+    };
+    overlay.addEventListener('click', dismiss);
+    setTimeout(dismiss, 4000);
+  }
+
+  // ── CLASS CHOICE — modal pick when 2+ stats hit Lv5 simultaneously
+  function showClassChoiceScreen(optionKeys) {
+    const overlay = document.getElementById('class-choice-screen');
+    const list    = document.getElementById('cc-options');
+    if (!overlay || !list) { levelUpActive = false; drainLevelUpQueue(); return; }
+
+    const cards = optionKeys.map(key => {
+      const c = CLASSES[key];
+      if (!c) return '';
+      return '<button class="cc-card" data-cc-key="' + esc(key) + '" ' +
+                  'style="--cc-color:' + c.color + '">' +
+        '<img class="cc-card-avatar" src="' + _awkAvatarSrc(c) + '" alt="">' +
+        '<div class="cc-card-emoji">' + c.emoji + '</div>' +
+        '<div class="cc-card-name">' + esc(c.name) + '</div>' +
+        '<div class="cc-card-desc">' + esc(c.desc.split('.')[1] ? c.desc.split('.')[1].trim() : c.desc) + '</div>' +
+        '<div class="cc-card-cta">Choose ' + esc(c.name) + '</div>' +
+      '</button>';
+    }).join('');
+    list.innerHTML = cards;
+
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('cc-show');
+    navigator.vibrate && navigator.vibrate([30, 30, 30]);
+
+    function commit(classKey) {
+      const wasCivilian = (currentClass === 'CIVILIAN' || !currentClass);
+      currentClass = classKey;
+      localStorage.setItem('hb_class', currentClass);
+      // Close the choice overlay immediately
+      overlay.classList.remove('cc-show');
+      overlay.classList.add('cc-hide');
+      overlay.addEventListener('animationend', () => {
+        overlay.classList.remove('cc-hide');
+        overlay.classList.add('hidden');
+        // Then queue the Awakening celebration if this was the first class
+        if (wasCivilian && !localStorage.getItem('hb_awakened_once')) {
+          localStorage.setItem('hb_awakened_once', '1');
+          levelUpQueue.unshift({ type: 'awakening', classData: CLASSES[classKey] });
+        }
+        levelUpActive = false;
+        if (currentTab === 'profile') renderProfile();
+        if (currentTab === 'stats')   renderStats();
+        drainLevelUpQueue();
+      }, { once: true });
+    }
+
+    list.querySelectorAll('.cc-card').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        commit(btn.getAttribute('data-cc-key'));
+      });
+    });
+    // No background-click dismiss — choice is mandatory.
   }
 
   // ── LEVEL UP SCREENS ─────────────────────────────────────
@@ -1804,10 +2023,12 @@
     }
     const item = levelUpQueue.shift();
     levelUpActive = true;
-    if      (item.type === 'rank')       showRankUpScreen(item.rank);
-    else if (item.type === 'class')      showClassChangePopup(item.classData);
-    else if (item.type === 'perfectday') showPerfectDayScreen(item);
-    else                                 showStatLevelUp(item);
+    if      (item.type === 'rank')        showRankUpScreen(item.rank);
+    else if (item.type === 'class')       showClassChangePopup(item.classData);
+    else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
+    else if (item.type === 'classChoice') showClassChoiceScreen(item.options);
+    else if (item.type === 'perfectday')  showPerfectDayScreen(item);
+    else                                  showStatLevelUp(item);
   }
 
   function drainAchQueue() {
@@ -2912,7 +3133,9 @@
     SAGE:  'avatar-sage.png',
   };
   function getAvatarSrc() {
-    if (totalPoints === 0) return 'avatar-base.png';
+    // Civilian (or pre-Lv5 in everything) always shows the base silhouette.
+    if (!currentClass || currentClass === 'CIVILIAN') return 'avatar-base.png';
+    if (totalPoints === 0)                            return 'avatar-base.png';
     return AVATAR_FILES[currentClass] || 'avatar-base.png';
   }
   // Tracks the last-rendered avatar so we only crossfade when class actually changes.
@@ -2959,6 +3182,19 @@
               cls.emoji + ' ' + cls.name +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
+            // Civilian-only: small info indicator + closest-stat progress hint
+            (function() {
+              if (currentClass !== 'CIVILIAN') return '';
+              const closest = getClosestStatToAwaken();
+              if (!closest) return '';
+              const labels = closest.ids.map(id => {
+                const st = STATS.find(s => s.id === id);
+                return st ? st.label : id;
+              }).join(' or ');
+              return '<div class="sc-civilian-rule">Class assigned at Lv5 in any stat</div>' +
+                     '<div class="sc-civilian-hint">Closest path: <b>' + esc(labels) +
+                       '</b> at Lv' + closest.lv + '/' + closest.target + '</div>';
+            })() +
             (shifting ? '<div class="sc-shifting" style="margin-top:4px">⚠️ Your class is shifting...</div>' : '') +
             (selectedPackId && PACKS.find(p => p.id === selectedPackId) ? '<div class="sc-hero-path"><span class="sc-path-dot" style="background:' + PACKS.find(p => p.id === selectedPackId).color + '"></span>Path: ' + esc(PACKS.find(p => p.id === selectedPackId).name) + '</div>' : '') +
             buildCompoundBadgesHTML() +
@@ -7045,6 +7281,29 @@
       // First run — set class silently, no popup
       currentClass = determineClass();
       localStorage.setItem('hb_class', currentClass);
+    }
+    // ── v1.2 migration: re-classify under new Lv5 rules ────────
+    // Existing users currently classified under the old rules (e.g.,
+    // Sage at all-Lv2) get silently re-evaluated. Most early users
+    // will end up Civilian until they earn Lv5 in at least one stat.
+    if (!localStorage.getItem('hb_class_v2_migrated')) {
+      const r = evaluateClass(currentClass);
+      // For migration we never fire popups — even if multi-stat choice
+      // would apply, leave them as their current class (or Civilian if
+      // they don't qualify) and the choice will trigger naturally on
+      // their next level-up after upgrading.
+      const target = r.choice ? 'CIVILIAN' : r.class;
+      if (target !== currentClass) {
+        currentClass = target;
+        localStorage.setItem('hb_class', currentClass);
+      }
+      // Pre-flag awakening as already-seen if user was already in a class
+      // before migration — they shouldn't get the first-time celebration
+      // for a class they were already running.
+      if (currentClass !== 'CIVILIAN') {
+        localStorage.setItem('hb_awakened_once', '1');
+      }
+      localStorage.setItem('hb_class_v2_migrated', '1');
     }
     setupTabs();
     setupLibrary();

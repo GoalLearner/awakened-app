@@ -8908,3 +8908,225 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 /* When the row already has the habit, slightly fade the diff badge so
    the eye is drawn to the missing habits' Add buttons instead. */
 .sdh-row--have .diff-badge { opacity: 0.55; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CIVILIAN — Status tab text
+   ═══════════════════════════════════════════════════════════════ */
+.sc-civilian-rule {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+.sc-civilian-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.sc-civilian-hint b { color: var(--accent); font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════════════
+   AWAKENING — full-screen takeover (first class assignment)
+   ═══════════════════════════════════════════════════════════════ */
+.awakening-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.awakening-screen.hidden { display: none !important; }
+.awk-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 38%,
+      var(--awk-color, #8b5cf6) 0%,
+      rgba(0,0,0,0.92) 55%,
+      #000 100%);
+  opacity: 0;
+}
+.awk-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  opacity: 0;
+}
+.awk-eyebrow {
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.4em;
+  color: var(--awk-color, #fff);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  text-shadow: 0 0 28px var(--awk-color, rgba(139,92,246,0.6));
+}
+.awk-avatar {
+  width: 200px;
+  height: auto;
+  filter: drop-shadow(0 0 36px var(--awk-color, rgba(139,92,246,0.5)))
+          drop-shadow(0 12px 28px rgba(0,0,0,0.6));
+  margin-bottom: 14px;
+}
+.awk-name {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow: 0 0 28px var(--awk-color, rgba(139,92,246,0.55));
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.awk-desc {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.85);
+  font-style: italic;
+  max-width: 340px;
+  line-height: 1.55;
+}
+.awk-hint {
+  position: absolute;
+  bottom: calc(36px + var(--safe-bottom));
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.awk-show .awk-bg      { animation: awk-bg-in 0.50s ease-out forwards; }
+.awk-show .awk-content { animation: awk-cnt-in 0.65s 0.18s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.awk-hide .awk-bg,
+.awk-hide .awk-content { animation: awk-out 0.30s ease-in forwards; }
+@keyframes awk-bg-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes awk-cnt-in { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes awk-out    { to { opacity: 0 } }
+
+/* ═══════════════════════════════════════════════════════════════
+   CLASS CHOICE — full-screen takeover
+   ═══════════════════════════════════════════════════════════════ */
+.class-choice-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 510;
+}
+.class-choice-screen.hidden { display: none !important; }
+.cc-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 30%,
+      rgba(139, 92, 246, 0.30) 0%,
+      rgba(0,0,0,0.92) 55%,
+      #000 100%);
+  opacity: 0;
+}
+.cc-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 18px calc(28px + var(--safe-bottom));
+  opacity: 0;
+}
+.cc-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  text-align: center;
+  text-shadow: 0 0 22px rgba(245,158,11,0.55);
+}
+.cc-headline {
+  font-size: 1.85rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #fff;
+  margin-bottom: 8px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.cc-sub {
+  font-size: 0.92rem;
+  color: rgba(255,255,255,0.75);
+  font-style: italic;
+  margin-bottom: 22px;
+  max-width: 340px;
+  text-align: center;
+  line-height: 1.5;
+}
+.cc-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.cc-card {
+  background: rgba(20, 20, 30, 0.85);
+  border: 1.5px solid var(--cc-color, rgba(255,255,255,0.18));
+  border-radius: 14px;
+  padding: 12px 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  -webkit-appearance: none;
+  text-align: center;
+  transition: transform 0.1s ease, box-shadow 0.22s ease, border-color 0.18s ease;
+}
+.cc-card:hover  { box-shadow: 0 0 28px var(--cc-color, rgba(139,92,246,0.30)); }
+.cc-card:active { transform: scale(0.97); }
+.cc-card-avatar {
+  width: 78px;
+  height: auto;
+  filter: drop-shadow(0 0 14px var(--cc-color, rgba(139,92,246,0.4)));
+}
+.cc-card-emoji { font-size: 1.3rem; line-height: 1; }
+.cc-card-name {
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: var(--cc-color, #fff);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cc-card-desc {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.75);
+  font-style: italic;
+  line-height: 1.35;
+  min-height: 2.7em;
+}
+.cc-card-cta {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--cc-color, #fff);
+  padding: 6px 10px;
+  border: 1px solid var(--cc-color, rgba(255,255,255,0.3));
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+.cc-show .cc-bg      { animation: cc-bg-in 0.45s ease-out forwards; }
+.cc-show .cc-content { animation: cc-cnt-in 0.55s 0.10s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.cc-hide .cc-bg,
+.cc-hide .cc-content { animation: cc-out 0.28s ease-in forwards; }
+@keyframes cc-bg-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes cc-cnt-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cc-out    { to { opacity: 0 } }
