@@ -6248,6 +6248,28 @@
     const ov = document.getElementById('bonus-info-overlay');
     const md = document.getElementById('bonus-info-modal');
     if (!ov || !md) return;
+    // Populate live shield + honest-day counts so users see their current state
+    const shieldEl = document.getElementById('bi-shield-counts');
+    if (shieldEl) {
+      const mr = streakShields['morning']   || 0;
+      const li = streakShields['locked-in'] || 0;
+      shieldEl.innerHTML =
+        '<span class="bi-stat-pill">🌅 ' + mr + '/3</span>' +
+        '<span class="bi-stat-pill">🔒 ' + li + '/3</span>';
+    }
+    const honestEl = document.getElementById('bi-honest-counts');
+    if (honestEl) {
+      const mrUsed = getHonestDayUsesThisMonth('morning');
+      const liUsed = getHonestDayUsesThisMonth('locked-in');
+      const monthLabel = (function() {
+        try { return new Date(today + 'T12:00:00').toLocaleDateString('en-US', { month: 'long' }); }
+        catch (_) { return 'this month'; }
+      })();
+      honestEl.innerHTML =
+        '<span class="bi-stat-pill">🌅 ' + (mrUsed ? 'used' : 'available') + '</span>' +
+        '<span class="bi-stat-pill">🔒 ' + (liUsed ? 'used' : 'available') + '</span>' +
+        '<span class="bi-stat-pill bi-stat-pill--quiet">' + monthLabel + '</span>';
+    }
     ov.classList.remove('hidden');
     md.classList.remove('hidden');
   }

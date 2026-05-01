@@ -9790,3 +9790,64 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 @keyframes cb-bg-in  { from { opacity: 0 } to { opacity: 1 } }
 @keyframes cb-cnt-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes cb-out    { to { opacity: 0 } }
+
+/* ── Bonus Info popup — Streak Forgiveness section ── */
+.bi-section--forgive {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+.bi-section--forgive .bi-section-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.bi-forgive-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.bi-forgive-icon {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 28px;
+  text-align: center;
+}
+.bi-forgive-text { flex: 1; min-width: 0; }
+.bi-forgive-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.bi-forgive-body {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.bi-forgive-body b { color: var(--text-primary); font-weight: 700; }
+.bi-forgive-stat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.bi-stat-pill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text-secondary);
+}
+.bi-stat-pill--quiet {
+  color: var(--text-tertiary);
+  background: transparent;
+  border-color: rgba(255,255,255,0.06);
+}
