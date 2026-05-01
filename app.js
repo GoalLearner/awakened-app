@@ -2142,16 +2142,6 @@
           '<span class="sc-top-title">STATUS</span>' +
           (isWeekend() ? '<span class="stats-2x-badge">2x XP</span>' : '') +
         '</div>' +
-        // Avatar portrait — class silhouette (or base for brand-new players)
-        (function() {
-          const src         = getAvatarSrc();
-          const justChanged = (_lastAvatarSrc !== null) && (_lastAvatarSrc !== src);
-          _lastAvatarSrc    = src;
-          return '<div class="sc-avatar-row">' +
-            '<img class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
-                 'src="' + src + '" alt="' + esc(cls.name) + ' avatar" loading="eager">' +
-          '</div>';
-        })() +
         // Hero: rank badge + name + rank + class
         '<div class="sc-hero">' +
           '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '">' + rank.id + '</div>' +
@@ -2173,7 +2163,19 @@
           '</div>' +
         '</div>' +
         '<div class="sc-divider"></div>' +
-        '<div id="sc-radar-wrap" class="sc-radar-wrap"></div>' +
+        // Avatar portrait beside the radar chart
+        (function() {
+          const src         = getAvatarSrc();
+          const justChanged = (_lastAvatarSrc !== null) && (_lastAvatarSrc !== src);
+          _lastAvatarSrc    = src;
+          return '<div class="sc-portrait-row">' +
+            '<div class="sc-avatar-row">' +
+              '<img class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
+                   'src="' + src + '" alt="' + esc(cls.name) + ' avatar" loading="eager">' +
+            '</div>' +
+            '<div id="sc-radar-wrap" class="sc-radar-wrap"></div>' +
+          '</div>';
+        })() +
         // Metrics strip
         '<div class="sc-metrics">' +
           '<div class="sc-metric">' +
