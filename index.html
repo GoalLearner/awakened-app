@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=94">
+  <link rel="stylesheet" href="styles.css?v=95">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -473,7 +473,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=96"></script>
+  <script src="app.js?v=97"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -584,6 +584,19 @@
     </div>
   </div>
 
+  <!-- What's New bottom-sheet -->
+  <div id="wn-overlay" class="wn-overlay hidden"></div>
+  <div id="wn-sheet"   class="wn-sheet   hidden">
+    <div class="wn-drag-handle"></div>
+    <div class="wn-header">
+      <div class="wn-title">What's New</div>
+      <div id="wn-subtitle" class="wn-subtitle"></div>
+      <button id="wn-close-btn" class="wn-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div id="wn-list" class="wn-list"></div>
+    <div class="wn-footer-text">Tap anywhere or swipe down to dismiss.</div>
+  </div>
+
   <!-- Settings sheet -->
   <div id="settings-overlay" class="settings-overlay hidden"></div>
   <div id="settings-sheet"   class="settings-sheet hidden">
@@ -594,7 +607,7 @@
     </div>
     <div class="settings-app-info">
       <div class="settings-app-name">⚔ Habit RPG</div>
-      <div class="settings-app-ver">Version 1.0</div>
+      <div class="settings-app-ver" id="settings-app-ver">Version 1.0</div>
     </div>
     <!-- Check for Updates -->
     <div class="settings-update-wrap">
@@ -603,6 +616,10 @@
         <span id="update-check-label">Check for Updates</span>
       </button>
       <p class="settings-update-sub">Tap to get the latest version of Awakened</p>
+      <button id="settings-whats-new-btn" class="settings-whats-new-btn">
+        <span class="update-btn-icon">✨</span>
+        <span>What's New</span>
+      </button>
     </div>
     <!-- Appearance / Theme Toggle -->
     <div class="settings-appearance">

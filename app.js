@@ -10,6 +10,47 @@
     legendary: { label: 'Legendary', pts: 10 },
   };
 
+  // ── APP VERSION ──────────────────────────────────────────
+  // Single source of truth for the app's marketing version. Bump this
+  // when shipping a new TestFlight / App Store build (and add the
+  // matching WHATS_NEW entry below).
+  const APP_VERSION = '1.1.0';
+
+  // ── WHAT'S NEW ───────────────────────────────────────────
+  // Version-keyed announcements. The What's New sheet always displays
+  // the highest version's content; future releases just add a new key.
+  const WHATS_NEW = {
+    '1.1.0': {
+      subtitle: 'Welcome back, hunter.',
+      items: [
+        { emoji: '🦸', title: 'Custom Character Avatars',     description: 'Your status screen now shows a class-specific hero silhouette that evolves with your rank.' },
+        { emoji: '🌅', title: 'Add Morning Routine Anytime',  description: 'Missed it during onboarding? Add the full 10-habit pack with one tap from the Habits tab.' },
+        { emoji: '⚡', title: 'Compound Effect for Everyone', description: 'Build the Morning Routine your own way. Custom-path users now earn the daily bonus too.' },
+        { emoji: '🎨', title: 'History in Color',             description: "Every completion box now reflects the stat you're building. Tap any habit to see why." },
+        { emoji: '📖', title: 'Habit Detail Pages',           description: 'Long-press any habit to view full stats, streak data, and the philosophy behind it.' },
+        { emoji: '🎺', title: 'Triumphant Fanfare',           description: 'Completing the full Morning Routine now plays the celebration it deserves.' },
+      ],
+    },
+  };
+
+  // Returns the highest semver key from WHATS_NEW (e.g., "1.1.0")
+  function getLatestWhatsNewVersion() {
+    const keys = Object.keys(WHATS_NEW);
+    if (!keys.length) return null;
+    keys.sort(compareSemver);
+    return keys[keys.length - 1]; // highest at the end after ascending sort
+  }
+  // Returns negative if a < b, positive if a > b, zero if equal.
+  function compareSemver(a, b) {
+    const ap = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
+    const bp = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
+      const av = ap[i] || 0, bv = bp[i] || 0;
+      if (av !== bv) return av - bv;
+    }
+    return 0;
+  }
+
   // Habits that have a quantifiable goal (name → { unit, def, step, min })
   // min = minimum goal value required to check off; bodyweightMin = use stored bodyweight as min
   const MEASURABLE_HABITS = {
@@ -4410,6 +4451,113 @@
     });
   }
 
+  // ── WHAT'S NEW SHEET ─────────────────────────────────────
+  // Auto-shows once on first launch after an update. Manually
+  // re-openable from Settings → "What's New".
+  const WHATS_NEW_SEEN_KEY = 'hb_whats_new_seen';
+
+  function getStoredWhatsNewSeen() {
+    try { return localStorage.getItem(WHATS_NEW_SEEN_KEY) || ''; } catch (_) { return ''; }
+  }
+  function setStoredWhatsNewSeen(version) {
+    try { localStorage.setItem(WHATS_NEW_SEEN_KEY, version); } catch (_) {}
+  }
+
+  function openWhatsNewSheet(opts) {
+    opts = opts || {};
+    const overlay = document.getElementById('wn-overlay');
+    const sheet   = document.getElementById('wn-sheet');
+    if (!overlay || !sheet) return;
+
+    const version = getLatestWhatsNewVersion();
+    const data    = WHATS_NEW[version];
+    if (!data) return;
+
+    document.getElementById('wn-subtitle').textContent =
+      'Version ' + version + ' — ' + data.subtitle;
+
+    const list = document.getElementById('wn-list');
+    list.innerHTML = '';
+    (data.items || []).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'wn-item';
+      row.innerHTML =
+        '<span class="wn-item-emoji">' + item.emoji + '</span>' +
+        '<div class="wn-item-text">' +
+          '<div class="wn-item-title">' + esc(item.title) + '</div>' +
+          '<div class="wn-item-desc">' + esc(item.description) + '</div>' +
+        '</div>';
+      list.appendChild(row);
+    });
+
+    // Track whether THIS open was an auto-show (counts as "seen")
+    sheet.dataset.wnAuto = opts.manual ? '0' : '1';
+
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+
+  function closeWhatsNewSheet() {
+    const overlay = document.getElementById('wn-overlay');
+    const sheet   = document.getElementById('wn-sheet');
+    if (!overlay || !sheet) return;
+    // Only mark as seen when this was an auto-show (or manually-closed
+    // auto-show). Manual opens from Settings don't update the flag.
+    if (sheet.dataset.wnAuto === '1') {
+      const version = getLatestWhatsNewVersion();
+      if (version) setStoredWhatsNewSeen(version);
+    }
+    overlay.classList.add('hidden');
+    sheet.classList.add('hidden');
+    sheet.dataset.wnAuto = '0';
+  }
+
+  function setupWhatsNewSheet() {
+    const overlay  = document.getElementById('wn-overlay');
+    const sheet    = document.getElementById('wn-sheet');
+    const closeBtn = document.getElementById('wn-close-btn');
+    if (!overlay || !sheet || !closeBtn) return;
+
+    closeBtn.addEventListener('click', closeWhatsNewSheet);
+    overlay.addEventListener('click', closeWhatsNewSheet);
+
+    // Spec: "Tap anywhere ... to dismiss" — clicking the sheet itself
+    // (except interactive children) dismisses too.
+    sheet.addEventListener('click', e => {
+      if (e.target.closest('.wn-close-btn')) return; // already handled
+      closeWhatsNewSheet();
+    });
+
+    // Swipe-down dismiss via the shared utility
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, closeWhatsNewSheet, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.wn-drag-handle, .wn-header',
+        scrollTarget:   '.wn-list',
+      });
+    }
+
+    // ESC dismiss on desktop
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
+        closeWhatsNewSheet();
+      }
+    });
+  }
+
+  // Auto-show the What's New sheet on first launch after an update.
+  // Skipped during onboarding (handled by finishOnboarding setting the
+  // seen-version directly), and skipped if the user has already seen
+  // the latest version.
+  function maybeAutoShowWhatsNew() {
+    const latest = getLatestWhatsNewVersion();
+    if (!latest) return;
+    const seen = getStoredWhatsNewSeen();
+    if (seen && compareSemver(seen, latest) >= 0) return;
+    // Defer slightly so the underlying app render settles first
+    setTimeout(() => openWhatsNewSheet({ manual: false }), 480);
+  }
+
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;
 
@@ -5572,6 +5720,9 @@
 
     save();
     needsOnboarding = false;
+    // Brand-new users just saw all the v1.1.0 features for the first time
+    // via onboarding — no need to greet them with a "What's New" popup.
+    setStoredWhatsNewSeen(APP_VERSION);
     document.getElementById('onboarding').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     render();
@@ -5674,7 +5825,22 @@
     setupMorningNudge();
     setupHabitInfoSheet();
     setupHabitDetailGesture();
+    setupWhatsNewSheet();
     setupRankPopup();
+
+    // Reflect canonical APP_VERSION in the Settings header
+    const verEl = document.getElementById('settings-app-ver');
+    if (verEl) verEl.textContent = 'Version ' + APP_VERSION;
+
+    // Settings → "What's New" button (manual open — does NOT update flag)
+    const wnBtn = document.getElementById('settings-whats-new-btn');
+    if (wnBtn) {
+      wnBtn.addEventListener('click', () => {
+        // Close settings first so the new sheet has a clean stage
+        if (typeof closeSettings === 'function') closeSettings();
+        setTimeout(() => openWhatsNewSheet({ manual: true }), 320);
+      });
+    }
 
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);
     document.getElementById('day-popup').addEventListener('click', closeDayPopup);
@@ -5690,6 +5856,9 @@
     } else {
       render();
       setupFridayBanner();
+      // Auto-show What's New for users who already finished onboarding
+      // and have either never seen this version or last saw an older one.
+      maybeAutoShowWhatsNew();
     }
   }
 

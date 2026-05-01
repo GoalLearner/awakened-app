@@ -38,7 +38,7 @@ workflows:
       # ── Build variables ────────────────────────────────────────
       vars:
         BUNDLE_ID:        "com.goallearner.awakened"
-        APP_VERSION:      "1.0.0"
+        APP_VERSION:      "1.1.0"
         XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
