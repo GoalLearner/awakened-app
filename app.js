@@ -33,6 +33,7 @@
         { emoji: '🏆', title: 'Personal Records',             description: 'Track lifetime bests across 10 metrics on the Status tab. Break them. Repeat.' },
         { emoji: '🧍', title: 'Civilian Class & The Awakening', description: "Class is now earned, not assumed. Train any stat to Lv5 to awaken into your true path. Lv5 in two paths at once? You choose." },
         { emoji: '⚔️', title: 'Daily Legendary Mission', description: "A multi-component challenge appears every day. All-or-nothing bonus XP. Weekends lean toward stepping outside. Most won't attempt it — the days you do are the days that count." },
+        { emoji: '🛡️', title: 'Streak Forgiveness',     description: "Earn a Streak Shield every 14 days. Take an Honest Rest once a month. Get Resilience XP when you come back. Streaks should reward consistency, not punish humanity." },
       ],
     },
   };
@@ -837,6 +838,19 @@
   let personalRecords  = {}; // prId → { value, meta, lastUpdated }
   let dailyQuests      = {}; // 'YYYY-MM-DD' → { id, manualDone:[], bonusAwarded }
   let questHistory     = []; // [{ date, missionId }] — last ~60 entries for repeat avoidance
+
+  // ── STREAK FORGIVENESS ─────────────────────────────────
+  // Layer 1: Shields earned via 14-day pack streaks, max 3 per pack
+  let streakShields    = {}; // packId → integer count (0..3)
+  let shieldClaimedAt  = {}; // packId → highest streak count where a shield was earned (so we don't double-grant on re-roll)
+  let pendingShieldNotices = []; // [{ packId, absorbedDate, streak, remaining }] — banners to show on next open
+  // Layer 2: Honest Day — explicit user-chosen rest, 1/month/pack
+  let honestDays       = {}; // packId → ['YYYY-MM-DD', ...] — every Honest Rest day ever
+  // Layer 3: Resilience — pending comeback flag + tracking
+  let pendingComeback  = null; // null | { packId, brokenStreak, breakDate } — set on real break
+  let lastActiveDate   = null; // last 'YYYY-MM-DD' the user completed any habit
+  let totalComebacks   = 0;    // lifetime count
+  let streakBreakLog   = [];   // [{ packId, date, brokenStreak }] last 60 entries
   let _prCelebrationQueue = [];   // [{ prId, newValue, prevValue, meta, mode }]
   let _prCelebrationActive = false;
   let _suppressPRCelebrations = false; // true during migration backfill
@@ -1511,6 +1525,151 @@
   function isMorningHabit(habit)        { return isHabitInPack(habit, 'morning'); }
   function getMissingMorningHabits()    { return getMissingPackHabits('morning'); }
 
+  // ── STREAK FORGIVENESS — helpers ─────────────────────────
+  const SHIELD_THRESHOLD = 14;  // days of consecutive completion to earn one
+  const SHIELD_MAX       = 3;
+  const COMEBACK_TIERS = [
+    { minDays: 30, xp: 200, msg: 'Long road. Same destination. Welcome home, hunter.' },
+    { minDays: 8,  xp: 100, msg: "You disappeared. You came back. That's the only metric that matters." },
+    { minDays: 4,  xp: 50,  msg: 'A week away. The path waited.' },
+    { minDays: 1,  xp: 25,  msg: 'The hunter who returns is stronger than the one who never fell.' },
+  ];
+
+  // Honest Day: 1 per calendar month per pack. Stored as date strings.
+  function getHonestDayUsesThisMonth(packId) {
+    const monthKey = today.slice(0, 7); // 'YYYY-MM'
+    const list = honestDays[packId] || [];
+    return list.filter(d => d.startsWith(monthKey)).length;
+  }
+  function isHonestDay(packId, dateStr) {
+    return (honestDays[packId] || []).includes(dateStr);
+  }
+  function canMarkHonestDayToday(packId) {
+    if (isHonestDay(packId, today)) return false;
+    return getHonestDayUsesThisMonth(packId) < 1;
+  }
+  function markTodayAsHonestDay(packId) {
+    if (!canMarkHonestDayToday(packId)) return false;
+    if (!honestDays[packId]) honestDays[packId] = [];
+    honestDays[packId].push(today);
+    save();
+    return true;
+  }
+
+  // Shield earning — called from awardCompoundEffect after streak increments.
+  // One shield per 14-day milestone (14, 28, 42, ...) up to SHIELD_MAX stored.
+  function tryEarnShield(packId, newStreak) {
+    if (newStreak < SHIELD_THRESHOLD) return false;
+    if ((newStreak % SHIELD_THRESHOLD) !== 0) return false;
+    const lastClaimed = shieldClaimedAt[packId] || 0;
+    if (newStreak <= lastClaimed) return false; // already granted at this threshold
+    const cur = streakShields[packId] || 0;
+    if (cur >= SHIELD_MAX) {
+      shieldClaimedAt[packId] = newStreak;  // record so we don't notify again
+      save();
+      return false;
+    }
+    streakShields[packId] = cur + 1;
+    shieldClaimedAt[packId] = newStreak;
+    save();
+    if (typeof showHabitToast === 'function') {
+      showHabitToast('🛡️ Streak Shield earned. You held ' + newStreak + ' straight days.');
+    }
+    return true;
+  }
+
+  // Day rollover — runs on init and on day-change. For each bonus pack
+  // with an active streak, walks any missed days between lastDate and
+  // yesterday, absorbing each via Honest Day or Shield. If absorption
+  // fails, the streak breaks and a comeback flag is queued.
+  function processStreakRollover() {
+    BONUS_PACK_IDS.forEach(packId => {
+      const cs = compoundStreaks[packId];
+      if (!cs || !cs.lastDate || cs.streak === 0) return;
+      if (cs.lastDate === today)            return;
+      if (cs.lastDate === prevDay(today))   return;
+
+      let cursor = nextDay(cs.lastDate);
+      let broken = false;
+      const safety = 400; // bound the loop
+      let i = 0;
+      while (cursor < today && i++ < safety) {
+        // Absorb via Honest Day
+        if (isHonestDay(packId, cursor)) {
+          cs.lastDate = cursor;
+          cursor = nextDay(cursor);
+          continue;
+        }
+        // Absorb via Shield
+        if ((streakShields[packId] || 0) > 0) {
+          streakShields[packId] -= 1;
+          pendingShieldNotices.push({
+            packId,
+            absorbedDate: cursor,
+            streak:       cs.streak,
+            remaining:    streakShields[packId],
+          });
+          cs.lastDate = cursor;
+          cursor = nextDay(cursor);
+          continue;
+        }
+        broken = true;
+        break;
+      }
+
+      if (broken) {
+        streakBreakLog.push({ packId, date: today, brokenStreak: cs.streak });
+        if (streakBreakLog.length > 60) streakBreakLog = streakBreakLog.slice(-60);
+        // Set comeback only if not already set (don't overwrite earlier break)
+        if (!pendingComeback) {
+          pendingComeback = { packId, brokenStreak: cs.streak, breakDate: today };
+        }
+        cs.streak = 0;
+        cs.lastDate = null;
+      }
+    });
+    save();
+  }
+
+  // Comeback detection — called from check() after a habit is completed.
+  // If a real break is pending and this is the first completion since
+  // the user was last active, fire the Comeback celebration.
+  function checkComebackOnActivity() {
+    if (!pendingComeback) return;
+    if (!lastActiveDate || lastActiveDate === today) return; // already active today
+    // Compute days away based on lastActiveDate
+    const fromMs = Date.parse(lastActiveDate + 'T12:00:00Z');
+    const toMs   = Date.parse(today + 'T12:00:00Z');
+    const daysAway = Math.max(1, Math.round((toMs - fromMs) / 86400000));
+
+    const tier = COMEBACK_TIERS.find(t => daysAway >= t.minDays) || COMEBACK_TIERS[COMEBACK_TIERS.length - 1];
+    totalComebacks += 1;
+    totalPoints    += tier.xp;
+    pendingComeback = null;
+    save();
+    levelUpQueue.unshift({ type: 'comeback', daysAway, xp: tier.xp, msg: tier.msg });
+    if (!levelUpActive) drainLevelUpQueue();
+  }
+
+  // Show queued shield notices as toasts on app open (one per packId batch)
+  function flushPendingShieldNotices() {
+    if (!pendingShieldNotices.length) return;
+    const byPack = {};
+    pendingShieldNotices.forEach(n => {
+      if (!byPack[n.packId]) byPack[n.packId] = n;
+      byPack[n.packId].count = (byPack[n.packId].count || 0) + 1;
+    });
+    pendingShieldNotices = [];
+    save();
+    Object.values(byPack).forEach((n, i) => {
+      const pack = getPackById(n.packId);
+      const name = pack ? pack.name : n.packId;
+      const msg  = '🛡️ Shield used. ' + name + ' streak protected. ' + n.remaining + ' shield' + (n.remaining === 1 ? '' : 's') + ' remaining.';
+      // Stagger so multiple don't pile on each other
+      setTimeout(() => { if (typeof showHabitToast === 'function') showHabitToast(msg, { duration: 4500 }); }, 400 + i * 1800);
+    });
+  }
+
   // ── DAILY LEGENDARY MISSION — selection + state ─────────────
   // Returns today's mission object (selecting one if not yet picked).
   // Persists selection to localStorage, avoids repeats within 21 days,
@@ -1674,6 +1833,14 @@
       personalRecords  = JSON.parse(localStorage.getItem('hb_prs')               || '{}');
       dailyQuests      = JSON.parse(localStorage.getItem('hb_daily_quests')      || '{}');
       questHistory     = JSON.parse(localStorage.getItem('hb_quest_history')     || '[]');
+      streakShields    = JSON.parse(localStorage.getItem('hb_shields')           || '{}');
+      shieldClaimedAt  = JSON.parse(localStorage.getItem('hb_shield_claimed')    || '{}');
+      pendingShieldNotices = JSON.parse(localStorage.getItem('hb_shield_notices') || '[]');
+      honestDays       = JSON.parse(localStorage.getItem('hb_honest_days')       || '{}');
+      pendingComeback  = JSON.parse(localStorage.getItem('hb_pending_comeback')  || 'null');
+      lastActiveDate   = localStorage.getItem('hb_last_active') || null;
+      totalComebacks   = parseInt(localStorage.getItem('hb_total_comebacks') || '0', 10) || 0;
+      streakBreakLog   = JSON.parse(localStorage.getItem('hb_streak_breaks')     || '[]');
       perfectStreak = rawPS ? JSON.parse(rawPS)
         : { count: 0, lastDate: null, prevCount: 0, prevLastDate: null };
       const rawPSA = localStorage.getItem('hb_ps_awarded');
@@ -1713,6 +1880,14 @@
       localStorage.setItem('hb_prs',               JSON.stringify(personalRecords));
       localStorage.setItem('hb_daily_quests',      JSON.stringify(dailyQuests));
       localStorage.setItem('hb_quest_history',     JSON.stringify(questHistory));
+      localStorage.setItem('hb_shields',           JSON.stringify(streakShields));
+      localStorage.setItem('hb_shield_claimed',    JSON.stringify(shieldClaimedAt));
+      localStorage.setItem('hb_shield_notices',    JSON.stringify(pendingShieldNotices));
+      localStorage.setItem('hb_honest_days',       JSON.stringify(honestDays));
+      localStorage.setItem('hb_pending_comeback',  JSON.stringify(pendingComeback));
+      if (lastActiveDate) localStorage.setItem('hb_last_active', lastActiveDate);
+      localStorage.setItem('hb_total_comebacks',   String(totalComebacks));
+      localStorage.setItem('hb_streak_breaks',     JSON.stringify(streakBreakLog));
     } catch (_) {}
   }
 
@@ -1947,6 +2122,12 @@
     if (habit && s.count > getPR('longest_habit_streak').value) {
       prUpdate('longest_habit_streak', s.count, { habitName: habit.name });
     }
+    // ── Streak Forgiveness: comeback detection ────────────────
+    // Fire BEFORE updating lastActiveDate so we still see the old value
+    // to compute days-away accurately.
+    if (typeof checkComebackOnActivity === 'function') checkComebackOnActivity();
+    lastActiveDate = today;
+
     // Daily Mission auto-progress: if this habit matches a component
     // of today's quest, the component flips to "done" automatically and
     // we check whether the whole quest is now complete.
@@ -2619,6 +2800,7 @@
     const item = levelUpQueue.shift();
     levelUpActive = true;
     if      (item.type === 'mission')     showMissionCompleteScreen(item);
+    else if (item.type === 'comeback')    showComebackScreen(item);
     else if (item.type === 'rank')        showRankUpScreen(item.rank);
     else if (item.type === 'class')       showClassChangePopup(item.classData);
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
@@ -3280,6 +3462,13 @@
     if (newDate !== today) {
       today = newDate;
       streakDangerDismissed = false; // reset for new day
+      // Streak Forgiveness: process the missed-day window now that we
+      // know yesterday is locked in. Shields/Honest Days absorb missed
+      // days; otherwise the streak breaks and a comeback flag is set.
+      if (typeof processStreakRollover === 'function') processStreakRollover();
+      if (typeof flushPendingShieldNotices === 'function') {
+        setTimeout(flushPendingShieldNotices, 800);
+      }
       checkClassChange();
       render();
     }
@@ -5882,6 +6071,9 @@
     if (currentTab === 'profile') renderProfile();
     renderCompoundProgress();
 
+    // ── Streak Shield: earn one for every 14-day milestone (max 3) ────
+    tryEarnShield(packId, newStreak);
+
     // ── Personal Records hooks for pack streaks + lifetime XP ─────
     prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + finalXP);
     if (packId === 'morning')   prUpdate('longest_mr_streak', newStreak);
@@ -5958,11 +6150,27 @@
     document.getElementById('compound-popup').addEventListener('click', hideCompoundPopup);
     // Delegated tap on a pack progress row → opens the Add Pack modal
     // for the matching pack so users can fill in the missing habits.
-    // The ⚡ bolt inside the row stops propagation via its own
-    // [data-bonus-info] handler, so bolt-tap still opens info popup.
+    // The ⚡ bolt and 🌙/🛡️ chips inside the row stop propagation via
+    // their own handlers, so chip-tap doesn't trigger this row click.
     document.addEventListener('click', e => {
       const t = e.target;
       if (!t || !t.closest) return;
+      // Honest Day chip
+      const honest = t.closest('[data-honest-pack]');
+      if (honest) {
+        e.preventDefault();
+        e.stopPropagation();
+        openHonestDayModal(honest.getAttribute('data-honest-pack'));
+        return;
+      }
+      // Shield info chip
+      const shield = t.closest('[data-shield-info]');
+      if (shield) {
+        e.preventDefault();
+        e.stopPropagation();
+        openShieldInfoModal();
+        return;
+      }
       // Skip if the bolt was tapped (its handler runs first)
       if (t.closest('[data-bonus-info]')) return;
       const row = t.closest('[data-pack-add]');
@@ -5973,6 +6181,63 @@
       if (packId === 'morning')   openMorningPackModal();
       else if (packId === 'locked-in') openLockedInPackModal();
     });
+  }
+
+  // ── HONEST DAY modal ─────────────────────────────────────
+  let _honestPackPending = null;
+  function openHonestDayModal(packId) {
+    if (!canMarkHonestDayToday(packId)) return;
+    _honestPackPending = packId;
+    const pack = getPackById(packId);
+    const packName = pack ? pack.name : packId;
+    const remainingThisMonth = 1 - getHonestDayUsesThisMonth(packId); // always 1 when canMark is true
+    document.getElementById('hm-body').innerHTML =
+      "You'll skip <b>" + esc(packName) + "</b> today without breaking your streak. " +
+      "Honest about what happened. <b>" + remainingThisMonth + "</b> use" +
+      (remainingThisMonth === 1 ? '' : 's') + " left this month.";
+    document.getElementById('honest-overlay').classList.remove('hidden');
+    document.getElementById('honest-modal').classList.remove('hidden');
+  }
+  function closeHonestDayModal() {
+    document.getElementById('honest-overlay').classList.add('hidden');
+    document.getElementById('honest-modal').classList.add('hidden');
+    _honestPackPending = null;
+  }
+  function confirmHonestDay() {
+    if (!_honestPackPending) { closeHonestDayModal(); return; }
+    const ok = markTodayAsHonestDay(_honestPackPending);
+    closeHonestDayModal();
+    if (ok && typeof showHabitToast === 'function') {
+      showHabitToast('🌙 Honest Rest day marked. Your streak is held.');
+    }
+    if (currentTab === 'habits')   renderCompoundProgress();
+    if (currentTab === 'profile')  renderProfile();
+  }
+  function setupHonestDayModal() {
+    const cancel = document.getElementById('hm-cancel');
+    const confirm = document.getElementById('hm-confirm');
+    const overlay = document.getElementById('honest-overlay');
+    if (cancel)  cancel.addEventListener('click', closeHonestDayModal);
+    if (confirm) confirm.addEventListener('click', confirmHonestDay);
+    if (overlay) overlay.addEventListener('click', closeHonestDayModal);
+  }
+
+  // ── SHIELD INFO modal ────────────────────────────────────
+  function openShieldInfoModal() {
+    document.getElementById('shield-overlay').classList.remove('hidden');
+    document.getElementById('shield-modal').classList.remove('hidden');
+  }
+  function closeShieldInfoModal() {
+    document.getElementById('shield-overlay').classList.add('hidden');
+    document.getElementById('shield-modal').classList.add('hidden');
+  }
+  function setupShieldInfoModal() {
+    const close = document.getElementById('sm-close');
+    const ok    = document.getElementById('sm-ok');
+    const ov    = document.getElementById('shield-overlay');
+    if (close) close.addEventListener('click', closeShieldInfoModal);
+    if (ok)    ok.addEventListener('click', closeShieldInfoModal);
+    if (ov)    ov.addEventListener('click', closeShieldInfoModal);
   }
 
   // ── BONUS INFO POPUP ─────────────────────────────────────
@@ -6453,6 +6718,63 @@
     } catch (_) {}
   }
 
+  // Comeback sound — grounded determination, not triumphant
+  function playComebackChime() {
+    if (!soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+      // Simple A3 → D4 → A4 walking up — steady, resolved
+      const notes = [
+        { f: 220.00, s: 0.00, d: 0.32, p: 0.16 },
+        { f: 293.66, s: 0.20, d: 0.32, p: 0.16 },
+        { f: 440.00, s: 0.40, d: 0.95, p: 0.18 },
+      ];
+      notes.forEach(n => {
+        ['sine', 'triangle'].forEach(type => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(n.f, t0 + n.s);
+          osc.connect(gain); gain.connect(ac.destination);
+          const peak = type === 'sine' ? n.p : n.p * 0.45;
+          gain.gain.setValueAtTime(0.0001, t0 + n.s);
+          gain.gain.exponentialRampToValueAtTime(peak, t0 + n.s + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.s + n.d);
+          osc.start(t0 + n.s);
+          osc.stop(t0 + n.s + n.d + 0.05);
+        });
+      });
+    } catch (_) {}
+  }
+
+  function showComebackScreen(item) {
+    const overlay = document.getElementById('comeback-screen');
+    if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
+    document.getElementById('cb-message').textContent = item.msg || 'The hunter who returns is stronger than the one who never fell.';
+    document.getElementById('cb-xp').textContent      = '+' + item.xp + ' Resilience XP';
+
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('cb-show');
+    playComebackChime();
+    navigator.vibrate && navigator.vibrate([40, 30, 80]);
+
+    const dismiss = () => {
+      overlay.classList.remove('cb-show');
+      overlay.classList.add('cb-hide');
+      overlay.addEventListener('animationend', () => {
+        overlay.classList.remove('cb-hide');
+        overlay.classList.add('hidden');
+        levelUpActive = false;
+        drainLevelUpQueue();
+      }, { once: true });
+      overlay.removeEventListener('click', dismiss);
+    };
+    overlay.addEventListener('click', dismiss);
+    setTimeout(dismiss, 5500);
+  }
+
   function showMissionCompleteScreen(item) {
     const overlay = document.getElementById('mission-complete-screen');
     if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
@@ -6522,6 +6844,18 @@
       const addPill = hasMissing
         ? '<span class="cp-prog-add">+ ' + missingCount + ' missing</span>'
         : '';
+      // Streak Shield indicator — show when ≥1 shield held for this pack
+      const shieldCount = streakShields[packId] || 0;
+      const shieldChip  = shieldCount > 0
+        ? '<span class="cp-prog-shield" data-shield-info="' + esc(packId) + '" role="button" tabindex="0" aria-label="Streak Shields">🛡️ ' + shieldCount + '</span>'
+        : '';
+      // Honest Day chip — only when streak active, not completed today, all habits in,
+      // and an Honest Day is still available this month
+      const honestAvailable = streak > 0 && !awarded && !hasMissing &&
+                              canMarkHonestDayToday(packId);
+      const honestChip = honestAvailable
+        ? '<span class="cp-prog-honest" data-honest-pack="' + esc(packId) + '" role="button" tabindex="0" aria-label="Mark today as Honest Rest">🌙 Rest</span>'
+        : '';
       return '<div class="cp-prog-row' + cls + (hasMissing ? ' cp-prog-row--addable' : '') +
                   '" data-pack-add="' + esc(packId) + '" role="button" tabindex="0" ' +
                   'aria-label="' + esc(pack.name) + ' progress' + (hasMissing ? ' — tap to add missing habits' : '') + '">' +
@@ -6532,6 +6866,8 @@
         // Tappable bolt → opens the Bonus Info popup explaining the formula + ROI
         '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">⚡</button>' +
         (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' 🔥</span>' : '') +
+        shieldChip +
+        honestChip +
         addPill +
       '</div>';
     }).filter(Boolean).join('');
@@ -8211,6 +8547,14 @@
     setupBonusInfoPopup();
     setupPRDetailSheet();
     setupDailyMissionCard();
+    setupHonestDayModal();
+    setupShieldInfoModal();
+    // Streak forgiveness: on app open, process missed days (use shields /
+    // absorb honest days / break streaks), then surface any queued shield
+    // notices as toasts, then check for comeback opportunity if the user
+    // has a pending break flag.
+    processStreakRollover();
+    setTimeout(() => flushPendingShieldNotices(), 800);
     migratePRsIfNeeded();
     setupEmojiPicker();
     setupStatDetail();

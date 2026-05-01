@@ -9568,3 +9568,225 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   text-transform: none;
   margin-top: 2px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   STREAK FORGIVENESS — chips, modals, comeback screen
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Shield + Honest Day chips on pack progress rows */
+.cp-prog-shield {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  border-radius: 100px;
+  background: rgba(96, 165, 250, 0.18);
+  border: 1px solid rgba(96, 165, 250, 0.55);
+  color: #93c5fd;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.cp-prog-shield:hover  { background: rgba(96, 165, 250, 0.28); border-color: rgba(96, 165, 250, 0.75); }
+.cp-prog-shield:active { transform: scale(0.96); }
+
+.cp-prog-honest {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  border-radius: 100px;
+  background: rgba(167, 139, 250, 0.16);
+  border: 1px solid rgba(167, 139, 250, 0.50);
+  color: #c4b5fd;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.cp-prog-honest:hover  { background: rgba(167, 139, 250, 0.26); border-color: rgba(167, 139, 250, 0.70); }
+.cp-prog-honest:active { transform: scale(0.96); }
+
+/* Honest Day modal */
+.honest-overlay,
+.shield-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  z-index: 540;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.honest-overlay.hidden,
+.shield-overlay.hidden { display: none !important; }
+
+.honest-modal,
+.shield-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 541;
+  width: calc(100% - 48px);
+  max-width: 360px;
+  pointer-events: none;
+}
+.honest-modal.hidden,
+.shield-modal.hidden { display: none !important; }
+.hm-card,
+.sm-card {
+  background: var(--bg-raised);
+  border: 1.5px solid rgba(167, 139, 250, 0.40);
+  border-radius: 18px;
+  padding: 24px 22px 18px;
+  text-align: center;
+  pointer-events: auto;
+  box-shadow: 0 0 36px rgba(0,0,0,0.5), 0 0 24px rgba(167, 139, 250, 0.15);
+  animation: hm-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sm-card { border-color: rgba(96, 165, 250, 0.40); box-shadow: 0 0 36px rgba(0,0,0,0.5), 0 0 24px rgba(96, 165, 250, 0.18); position: relative; }
+@keyframes hm-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+.hm-icon, .sm-icon  { font-size: 2.4rem; margin-bottom: 8px; line-height: 1; }
+.hm-title, .sm-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+.hm-body, .sm-body {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+.hm-body b, .sm-body b { color: var(--text-primary); font-weight: 700; }
+
+.hm-actions { display: flex; gap: 8px; }
+.hm-btn {
+  flex: 1;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, opacity 0.18s ease;
+}
+.hm-btn:active { transform: scale(0.97); opacity: 0.9; }
+.hm-btn-primary {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+  color: #0a0a0a;
+}
+.hm-btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sm-close {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text-secondary);
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  -webkit-appearance: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMEBACK — full-screen welcome-back celebration
+   ═══════════════════════════════════════════════════════════════ */
+.comeback-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 550;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.comeback-screen.hidden { display: none !important; }
+.cb-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 38%,
+      rgba(34, 197, 94, 0.20) 0%,
+      rgba(0, 0, 0, 0.94) 55%,
+      #000 100%);
+  opacity: 0;
+}
+.cb-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  opacity: 0;
+}
+.cb-eyebrow {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.34em;
+  color: #4ade80;
+  text-transform: uppercase;
+  margin-bottom: 26px;
+  text-shadow: 0 0 22px rgba(34, 197, 94, 0.55);
+}
+.cb-line {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-style: italic;
+  line-height: 1.55;
+  max-width: 360px;
+  margin-bottom: 6px;
+}
+.cb-line-2 { color: rgba(255, 255, 255, 0.85); margin-bottom: 18px; }
+.cb-message {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.45;
+  max-width: 360px;
+  margin-bottom: 22px;
+  text-shadow: 0 0 18px rgba(34, 197, 94, 0.30);
+}
+.cb-xp {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #4ade80;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(34, 197, 94, 0.45);
+}
+.cb-hint {
+  position: absolute;
+  bottom: calc(36px + var(--safe-bottom));
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.cb-show .cb-bg      { animation: cb-bg-in 0.55s ease-out forwards; }
+.cb-show .cb-content { animation: cb-cnt-in 0.65s 0.20s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.cb-hide .cb-bg,
+.cb-hide .cb-content { animation: cb-out 0.32s ease-in forwards; }
+@keyframes cb-bg-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes cb-cnt-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cb-out    { to { opacity: 0 } }

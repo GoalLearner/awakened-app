@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=116">
+  <link rel="stylesheet" href="styles.css?v=117">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -441,6 +441,48 @@
     </div>
   </div>
 
+  <!-- Honest Day confirmation modal -->
+  <div id="honest-overlay" class="honest-overlay hidden"></div>
+  <div id="honest-modal"   class="honest-modal   hidden">
+    <div class="hm-card">
+      <div class="hm-icon">🌙</div>
+      <div class="hm-title">Mark Today as Honest Rest?</div>
+      <div id="hm-body" class="hm-body"></div>
+      <div class="hm-actions">
+        <button id="hm-cancel" class="hm-btn hm-btn-secondary">Cancel</button>
+        <button id="hm-confirm" class="hm-btn hm-btn-primary">Yes, rest today</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shield info popup -->
+  <div id="shield-overlay" class="shield-overlay hidden"></div>
+  <div id="shield-modal"   class="shield-modal   hidden">
+    <div class="sm-card">
+      <button id="sm-close" class="sm-close" aria-label="Close">✕</button>
+      <div class="sm-icon">🛡️</div>
+      <div class="sm-title">Streak Shield</div>
+      <div class="sm-body">
+        Earned by maintaining a 14-day pack streak. Auto-used when you miss
+        a day so your streak holds. Up to 3 stored per pack.
+      </div>
+      <button id="sm-ok" class="hm-btn hm-btn-primary" style="width:100%">Got it</button>
+    </div>
+  </div>
+
+  <!-- Comeback — full-screen welcome-back celebration after streak break -->
+  <div id="comeback-screen" class="comeback-screen hidden">
+    <div class="cb-bg"></div>
+    <div class="cb-content">
+      <div class="cb-eyebrow">WELCOME BACK</div>
+      <div class="cb-line cb-line-1">Yesterday the unawakened path won.</div>
+      <div class="cb-line cb-line-2">Today, you chose differently.</div>
+      <div id="cb-message" class="cb-message"></div>
+      <div id="cb-xp" class="cb-xp"></div>
+      <div class="cb-hint">Tap anywhere to dismiss</div>
+    </div>
+  </div>
+
   <!-- Daily Legendary Mission — completion celebration -->
   <div id="mission-complete-screen" class="mission-complete-screen hidden">
     <div class="mc-bg"></div>
@@ -623,7 +665,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=120"></script>
+  <script src="app.js?v=121"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
