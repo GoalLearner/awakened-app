@@ -57,8 +57,9 @@
   }
 
   // One-sentence description of what each stat builds — shown in the
-  // History tab's per-habit info popup.
-  const STAT_DESCRIPTIONS = {
+  // History tab's per-habit info popup. (The longer multi-sentence
+  // STAT_DESCRIPTIONS used by the Stats detail screen lives elsewhere.)
+  const STAT_INFO_BLURB = {
     STR:   'Builds your physical strength and discipline.',
     VIT:   'Builds your vitality, recovery, and physical wellbeing.',
     INT:   'Builds your knowledge, learning, and mental sharpness.',
@@ -2926,7 +2927,7 @@
 
     // Stat description
     document.getElementById('hi-stat-desc').textContent =
-      STAT_DESCRIPTIONS[statId] || STAT_DESCRIPTIONS.FOCUS;
+      STAT_INFO_BLURB[statId] || STAT_INFO_BLURB.FOCUS;
 
     // Difficulty + XP per completion (base value, before weekend doubling)
     const diffKey = habit.difficulty || 'easy';
