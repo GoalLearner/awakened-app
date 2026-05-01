@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=92">
+  <link rel="stylesheet" href="styles.css?v=93">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -277,16 +277,36 @@
     <button id="ctx-delete" class="ctx-item ctx-danger">🗑️ Delete</button>
   </div>
 
-  <!-- Note modal (read-only coaching note) -->
-  <div id="note-overlay" class="modal-overlay hidden"></div>
-  <div id="note-modal" class="modal hidden">
-    <div id="note-modal-header" class="note-modal-header">
-      <span id="note-modal-emoji" class="note-modal-emoji"></span>
-      <span id="note-modal-name" class="note-modal-name"></span>
+  <!-- View Note — full habit detail bottom-sheet -->
+  <div id="note-overlay" class="vn-overlay hidden"></div>
+  <div id="note-modal"   class="vn-sheet   hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="vn-header">
+      <span id="note-modal-emoji" class="vn-emoji"></span>
+      <div class="vn-name-row">
+        <span id="note-modal-name" class="vn-name"></span>
+        <span id="vn-diff" class="vn-diff"></span>
+      </div>
+      <button id="vn-edit-btn" class="vn-edit-btn" aria-label="Edit habit">✎</button>
+      <button id="note-close-btn" class="vn-close-btn" aria-label="Close">✕</button>
     </div>
-    <div id="note-text-display" class="note-text-display"></div>
-    <div class="modal-actions" style="justify-content:center">
-      <button id="note-close-btn" class="btn-primary" style="flex:1">Close</button>
+    <div class="vn-body">
+      <!-- Stat builder -->
+      <div id="vn-stat-badge" class="hi-stat-badge"></div>
+      <div id="vn-stat-desc"  class="hi-stat-desc"></div>
+      <!-- Performance stats: 4-cell grid -->
+      <div class="vn-stats-grid">
+        <div class="hi-stat-cell"><span id="vn-current" class="hi-stat-value">0</span><span class="hi-stat-label">Current</span></div>
+        <div class="hi-stat-cell"><span id="vn-best"    class="hi-stat-value">0</span><span class="hi-stat-label">Best</span></div>
+        <div class="hi-stat-cell"><span id="vn-total"   class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
+        <div class="hi-stat-cell"><span id="vn-week"    class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
+      </div>
+      <!-- Editable personal note -->
+      <div class="vn-note-section">
+        <div class="vn-section-label">YOUR NOTE</div>
+        <textarea id="vn-note-input" class="vn-note-input" rows="4"
+          placeholder="Add a note about this habit — what it means to you, when you do it, why it matters."></textarea>
+      </div>
     </div>
   </div>
 
@@ -350,11 +370,13 @@
       <div id="hi-stat-badge" class="hi-stat-badge"></div>
       <div id="hi-stat-desc"  class="hi-stat-desc"></div>
       <div id="hi-difficulty" class="hi-difficulty"></div>
-      <div class="hi-stats-grid">
-        <div class="hi-stat-cell"><span id="hi-week"  class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
-        <div class="hi-stat-cell"><span id="hi-best"  class="hi-stat-value">0</span><span class="hi-stat-label">Best streak</span></div>
-        <div class="hi-stat-cell"><span id="hi-total" class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
+      <div class="hi-stats-grid hi-stats-grid--four">
+        <div class="hi-stat-cell"><span id="hi-current" class="hi-stat-value">0</span><span class="hi-stat-label">Current</span></div>
+        <div class="hi-stat-cell"><span id="hi-best"    class="hi-stat-value">0</span><span class="hi-stat-label">Best</span></div>
+        <div class="hi-stat-cell"><span id="hi-total"   class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
+        <div class="hi-stat-cell"><span id="hi-week"    class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
       </div>
+      <button id="hi-full-details-btn" class="hi-full-details-btn">View full details →</button>
     </div>
   </div>
 
@@ -451,7 +473,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=93"></script>
+  <script src="app.js?v=94"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

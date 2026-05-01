@@ -2903,31 +2903,19 @@
     el.classList.remove('hidden');
   }
 
-  // ── HABIT INFO SHEET (History tab only) ──────────────────
+  // ── HABIT INFO SHEET (History tab — quick read-only view) ────
   let _hiPrevFocus = null;
+  let _hiHabitId   = null;
   function openHabitInfoSheet(habit) {
     if (!habit) return;
     const overlay = document.getElementById('hi-overlay');
     const sheet   = document.getElementById('hi-sheet');
     if (!overlay || !sheet) return;
 
+    _hiHabitId = habit.id;
+
     // Populate header — full display name with duration if applicable
     document.getElementById('hi-name').textContent = habitDisplayName(habit);
-
-    // Stat badge (icon + label, colored by stat)
-    const statId    = getHabitPrimaryStat(habit);
-    const stat      = STATS.find(s => s.id === statId) || STATS[0];
-    const badge     = document.getElementById('hi-stat-badge');
-    badge.style.background = colorWithAlpha(stat.color, 0.16);
-    badge.style.borderColor = colorWithAlpha(stat.color, 0.55);
-    badge.style.color = stat.color;
-    badge.innerHTML =
-      '<span class="hi-badge-icon">' + stat.icon + '</span>' +
-      '<span class="hi-badge-label">' + esc(stat.label) + ' · ' + esc(stat.name) + '</span>';
-
-    // Stat description
-    document.getElementById('hi-stat-desc').textContent =
-      STAT_INFO_BLURB[statId] || STAT_INFO_BLURB.FOCUS;
 
     // Difficulty + XP per completion (base value, before weekend doubling)
     const diffKey = habit.difficulty || 'easy';
@@ -2935,10 +2923,8 @@
     document.getElementById('hi-difficulty').textContent =
       diff.label + ' difficulty • +' + diff.pts + ' XP per completion';
 
-    // Completion stats
-    document.getElementById('hi-week').textContent  = computeWeekCompletionsForHabit(habit);
-    document.getElementById('hi-best').textContent  = computeBestStreakForHabit(habit);
-    document.getElementById('hi-total').textContent = computeTotalCompletionsForHabit(habit);
+    // Shared stats block (badge + description + 4-cell grid)
+    populateHabitInfoBlock('hi', habit);
 
     // Save focus + open
     _hiPrevFocus = document.activeElement;
@@ -2972,6 +2958,17 @@
 
     closeBtn.addEventListener('click', closeHabitInfoSheet);
     overlay.addEventListener('click', closeHabitInfoSheet);
+
+    // "View full details" → close this popup and open the View Note sheet
+    const fullBtn = document.getElementById('hi-full-details-btn');
+    if (fullBtn) {
+      fullBtn.addEventListener('click', () => {
+        const id = _hiHabitId;
+        closeHabitInfoSheet();
+        // Brief delay so the close transition finishes cleanly before opening
+        setTimeout(() => { if (id) openNoteModal(id); }, 320);
+      });
+    }
 
     // Reuse the swipe-down-to-dismiss gesture from settings
     if (typeof attachSheetDismissGesture === 'function') {
@@ -4002,14 +3999,11 @@
     ctxHabitId = id;
     const menu = document.getElementById('ctx-menu');
     const overlay = document.getElementById('ctx-overlay');
-    // Show note option only when a note exists (read-only)
+    // View Note is now the full habit detail sheet (stats + editable note),
+    // so always show it regardless of whether a note has been written yet.
     const ctxNoteBtn = document.getElementById('ctx-note');
-    if (habitNotes[id]) {
-      ctxNoteBtn.classList.remove('hidden');
-      document.getElementById('ctx-note-label').textContent = 'View Note';
-    } else {
-      ctxNoteBtn.classList.add('hidden');
-    }
+    ctxNoteBtn.classList.remove('hidden');
+    document.getElementById('ctx-note-label').textContent = 'View Note';
     menu.classList.remove('hidden');
     overlay.classList.remove('hidden');
     const rect = el.getBoundingClientRect();
@@ -4195,25 +4189,150 @@
     }).join('');
   }
 
-  // ── NOTES MODAL (read-only) ───────────────────────────────
+  // ── SHARED HABIT INFO RENDERING ──────────────────────────
+  // Populates a stat badge, description text node, and 4-cell stats
+  // grid for any popup that displays habit performance info. Both the
+  // History info popup (prefix 'hi') and the View Note bottom-sheet
+  // (prefix 'vn') call this with the same habit so the data and styling
+  // stay perfectly consistent across the two screens.
+  function populateHabitInfoBlock(prefix, habit) {
+    const statId  = getHabitPrimaryStat(habit);
+    const stat    = STATS.find(s => s.id === statId) || STATS[0];
+
+    // Stat badge
+    const badge = document.getElementById(prefix + '-stat-badge');
+    if (badge) {
+      badge.style.background  = colorWithAlpha(stat.color, 0.16);
+      badge.style.borderColor = colorWithAlpha(stat.color, 0.55);
+      badge.style.color       = stat.color;
+      badge.innerHTML =
+        '<span class="hi-badge-icon">' + stat.icon + '</span>' +
+        '<span class="hi-badge-label">' + esc(stat.label) + ' · ' + esc(stat.name) + '</span>';
+    }
+
+    // Stat description
+    const desc = document.getElementById(prefix + '-stat-desc');
+    if (desc) desc.textContent = STAT_INFO_BLURB[statId] || STAT_INFO_BLURB.FOCUS;
+
+    // Performance stats — 4 metrics shared across both popups
+    const cur = document.getElementById(prefix + '-current');
+    if (cur) cur.textContent = (streaks[habit.id] && streaks[habit.id].count) || 0;
+
+    const week  = document.getElementById(prefix + '-week');
+    if (week)  week.textContent  = computeWeekCompletionsForHabit(habit);
+
+    const best  = document.getElementById(prefix + '-best');
+    if (best)  best.textContent  = computeBestStreakForHabit(habit);
+
+    const total = document.getElementById(prefix + '-total');
+    if (total) total.textContent = computeTotalCompletionsForHabit(habit);
+  }
+
+  // ── VIEW NOTE — full habit detail bottom-sheet ───────────
+  // Replaces the previous read-only note modal. Shows everything the
+  // History info popup shows PLUS the editable personal note.
+  let _vnHabitId    = null;
+  let _vnPrevFocus  = null;
+
   function openNoteModal(id) {
     const habit = habits.find(h => h.id === id);
-    if (!habit || !habitNotes[id]) return;
-    document.getElementById('note-modal-emoji').textContent   = habit.emoji || '';
-    document.getElementById('note-modal-name').textContent    = habitDisplayName(habit);
-    document.getElementById('note-text-display').textContent  = habitNotes[id];
+    if (!habit) return;
+    _vnHabitId   = id;
+    _vnPrevFocus = document.activeElement;
+
+    // Header
+    document.getElementById('note-modal-emoji').textContent = habit.emoji || '';
+    document.getElementById('note-modal-name').textContent  = habitDisplayName(habit);
+    const diffKey = habit.difficulty || 'easy';
+    const diff    = DIFFICULTY[diffKey] || DIFFICULTY.easy;
+    document.getElementById('vn-diff').textContent =
+      diff.label + ' · +' + diff.pts + ' XP';
+    document.getElementById('vn-diff').className =
+      'vn-diff vn-diff--' + diffKey;
+
+    // Shared stats block
+    populateHabitInfoBlock('vn', habit);
+
+    // Editable note — populate from store
+    const ta = document.getElementById('vn-note-input');
+    ta.value = habitNotes[id] || '';
+
+    // Show
     document.getElementById('note-overlay').classList.remove('hidden');
     document.getElementById('note-modal').classList.remove('hidden');
   }
 
   function closeNoteModal() {
+    // Auto-save note on close (defensive — input listener also saves)
+    saveViewNoteText();
     document.getElementById('note-overlay').classList.add('hidden');
     document.getElementById('note-modal').classList.add('hidden');
+    _vnHabitId = null;
+    if (_vnPrevFocus && typeof _vnPrevFocus.focus === 'function') {
+      try { _vnPrevFocus.focus(); } catch (_) {}
+    }
+    _vnPrevFocus = null;
+  }
+
+  function saveViewNoteText() {
+    if (!_vnHabitId) return;
+    const ta = document.getElementById('vn-note-input');
+    if (!ta) return;
+    const txt = ta.value || '';
+    if (txt.trim()) {
+      habitNotes[_vnHabitId] = txt;
+    } else {
+      delete habitNotes[_vnHabitId];
+    }
+    save();
   }
 
   function setupNoteModal() {
-    document.getElementById('note-overlay').addEventListener('click', closeNoteModal);
-    document.getElementById('note-close-btn').addEventListener('click', closeNoteModal);
+    const overlay = document.getElementById('note-overlay');
+    const sheet   = document.getElementById('note-modal');
+    const closeBtn = document.getElementById('note-close-btn');
+    const editBtn  = document.getElementById('vn-edit-btn');
+    const ta       = document.getElementById('vn-note-input');
+    if (!overlay || !sheet) return;
+
+    overlay.addEventListener('click', closeNoteModal);
+    closeBtn.addEventListener('click', closeNoteModal);
+
+    // Edit pencil → existing Edit Habit flow
+    if (editBtn) {
+      editBtn.addEventListener('click', () => {
+        const id = _vnHabitId;
+        closeNoteModal();
+        if (id) openEditModal(id);
+      });
+    }
+
+    // Auto-save on every keystroke (instant, never lose data)
+    if (ta) {
+      ta.addEventListener('input', saveViewNoteText);
+      ta.addEventListener('blur',  saveViewNoteText);
+    }
+
+    // Swipe-down-to-dismiss via the shared utility
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, () => {
+        saveViewNoteText();
+        sheet.classList.add('hidden');
+        overlay.classList.add('hidden');
+        _vnHabitId = null;
+      }, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.vn-drag-handle, .vn-header',
+        scrollTarget:   '.vn-body',
+      });
+    }
+
+    // ESC key dismiss
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
+        closeNoteModal();
+      }
+    });
   }
 
   // ── EDIT MODAL ───────────────────────────────────────────

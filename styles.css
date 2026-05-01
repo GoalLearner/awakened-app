@@ -7385,3 +7385,213 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   }
   .hi-drag-handle { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEW NOTE — full habit detail bottom-sheet
+   ═══════════════════════════════════════════════════════════════ */
+.vn-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 320;
+  animation: vn-fade 0.22s ease-out;
+}
+.vn-overlay.hidden { display: none !important; }
+@keyframes vn-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.vn-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  max-height: 88vh;
+  z-index: 321;
+  background: var(--bg-raised);
+  border: 1.5px solid rgba(139, 92, 246, 0.18);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  animation: vn-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.vn-sheet.hidden { display: none !important; }
+@keyframes vn-up {
+  from { transform: translateX(-50%) translateY(100%); }
+  to   { transform: translateX(-50%) translateY(0);    }
+}
+
+.vn-drag-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  margin: 12px auto 0;
+  flex-shrink: 0;
+}
+
+.vn-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px 8px;
+}
+.vn-emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+.vn-name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.vn-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.vn-diff {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  align-self: flex-start;
+  border: 1px solid;
+}
+.vn-diff--easy      { color: #a78bfa; background: rgba(167,139,250,0.10); border-color: rgba(167,139,250,0.32); }
+.vn-diff--medium    { color: #60a5fa; background: rgba(96,165,250,0.10);  border-color: rgba(96,165,250,0.32);  }
+.vn-diff--hard      { color: #fb923c; background: rgba(251,146,60,0.10);  border-color: rgba(251,146,60,0.32);  }
+.vn-diff--legendary { color: #fbbf24; background: rgba(251,191,36,0.10);  border-color: rgba(251,191,36,0.32);  }
+
+.vn-edit-btn,
+.vn-close-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+.vn-edit-btn:active,
+.vn-close-btn:active { background: rgba(255, 255, 255, 0.10); }
+
+.vn-body {
+  padding: 4px 18px 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 4-cell stats grid (used by both vn and updated hi popups) */
+.vn-stats-grid,
+.hi-stats-grid--four {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.vn-stats-grid .hi-stat-cell,
+.hi-stats-grid--four .hi-stat-cell {
+  padding: 10px 4px;
+}
+.vn-stats-grid .hi-stat-value,
+.hi-stats-grid--four .hi-stat-value {
+  font-size: 1.2rem;
+}
+
+/* Personal note section */
+.vn-note-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vn-section-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary);
+}
+.vn-note-input {
+  width: 100%;
+  min-height: 90px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  -webkit-appearance: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.vn-note-input:focus {
+  outline: none;
+  border-color: rgba(139, 92, 246, 0.55);
+  background: rgba(139, 92, 246, 0.05);
+}
+.vn-note-input::placeholder {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* "View full details" button on the History info popup */
+.hi-full-details-btn {
+  margin-top: 4px;
+  padding: 12px;
+  width: 100%;
+  background: rgba(139, 92, 246, 0.10);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+}
+.hi-full-details-btn:active {
+  background: rgba(139, 92, 246, 0.20);
+  transform: scale(0.985);
+}
+
+/* Desktop: centered modal style for View Note (mirrors hi-sheet) */
+@media (min-width: 720px) {
+  .vn-sheet {
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 22px;
+    border-bottom: 1.5px solid rgba(139, 92, 246, 0.18);
+    padding-bottom: 24px;
+    animation: vn-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes vn-pop {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+  }
+  .vn-drag-handle { display: none; }
+}
