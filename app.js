@@ -1971,6 +1971,7 @@
     renderHabits();
     renderDailyQuote();
     checkStreakDanger();
+    checkMorningRoutineNudge();
     if (currentTab === 'profile')      renderProfile();
     if (currentTab === 'stats')        renderStats();
     if (currentTab === 'history')      renderHistory();
@@ -2768,6 +2769,84 @@
     }
   }
 
+  // ── MORNING ROUTINE NUDGE BANNER ─────────────────────────
+  // Shows when the user has 8 or 9 of the 10 canonical Morning Routine
+  // habits but not all 10 — nudges them to complete the set so the
+  // Compound Effect Bonus unlocks. Tappable: opens the same add-pack
+  // confirmation modal so the missing habits can be added in one step.
+  let morningNudgeDismissedDate = null;
+
+  function shouldShowMorningNudge() {
+    // Hide on non-Habits tabs
+    if (currentTab !== 'habits') return false;
+    // Brand-new users (no completions on any day) — let onboarding guide them
+    if (Object.keys(completions || {}).length === 0) return false;
+    // Dismissed today? Stay hidden until tomorrow (date check survives across midnight)
+    if (morningNudgeDismissedDate === today) return false;
+
+    const missing = getMissingMorningHabits().length;
+    // Only nudge at 1–2 missing. 0 = already eligible. 3+ = use the dedicated button.
+    if (missing !== 1 && missing !== 2) return false;
+
+    // Priority: streak danger and double-XP weekend banners outrank the nudge.
+    // If either is showing, suppress the nudge to keep the header uncluttered.
+    const sd = document.getElementById('streak-danger');
+    const dx = document.getElementById('double-xp-banner');
+    if (sd && !sd.classList.contains('hidden')) return false;
+    if (dx && !dx.classList.contains('hidden')) return false;
+
+    return true;
+  }
+
+  function checkMorningRoutineNudge() {
+    const el = document.getElementById('morning-nudge');
+    if (!el) return;
+
+    if (!shouldShowMorningNudge()) {
+      el.classList.add('hidden');
+      return;
+    }
+
+    const missingDefs = getMissingMorningHabits();
+    const missing     = missingDefs.length;
+    const txtEl       = document.getElementById('mn-text');
+
+    if (missing === 1) {
+      txtEl.innerHTML =
+        "You're <b>1 habit away</b> from the Compound Effect Bonus — Add <b>" +
+        esc(missingDefs[0].name) + "</b> to unlock daily +XP.";
+    } else { // missing === 2
+      const a = missingDefs[0].name;
+      const b = missingDefs[1].name;
+      // Inline both names if combined length is reasonable; otherwise fall back to summary
+      const inlineFits = (a.length + b.length) <= 50;
+      txtEl.innerHTML = inlineFits
+        ? "You're <b>2 habits away</b> from the Compound Effect Bonus — Add <b>" +
+          esc(a) + "</b> and <b>" + esc(b) + "</b> to unlock daily +XP."
+        : "You're <b>2 habits away</b> from the Compound Effect Bonus — Add 2 more morning habits to unlock daily +XP.";
+    }
+
+    el.classList.remove('hidden');
+  }
+
+  function setupMorningNudge() {
+    const el = document.getElementById('morning-nudge');
+    const dismissBtn = document.getElementById('morning-nudge-dismiss');
+    if (!el || !dismissBtn) return;
+
+    // Tap anywhere on the banner (except the X) opens the morning add modal
+    el.addEventListener('click', e => {
+      if (e.target === dismissBtn || dismissBtn.contains(e.target)) return;
+      openMorningPackModal();
+    });
+
+    dismissBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      morningNudgeDismissedDate = today;
+      el.classList.add('hidden');
+    });
+  }
+
   // ── FEATURE 4: RANK INFO POPUP ───────────────────────────
   function showRankInfoPopup() {
     const rank      = getRank(totalPoints);
@@ -3066,6 +3145,7 @@
     if (tab === 'stats')        renderStats();
     if (tab === 'history')      renderHistory();
     checkStreakDanger();
+    checkMorningRoutineNudge();
   }
 
   // ── HABIT LIBRARY ─────────────────────────────────────────
@@ -3787,15 +3867,27 @@
     );
   }
 
+  // True only when the user owns all 10 canonical Morning Routine habits.
+  // Bonus eligibility is now driven by habit composition, not pack membership —
+  // custom-path users who happen to have built the same routine qualify too.
+  function userHasAllCanonicalMorning() {
+    return getMissingMorningHabits().length === 0;
+  }
+
   function checkCompoundEffect(habitId) {
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
-    getHabitCompoundPackIds(habit.name).forEach(packId => {
-      if (compoundAwarded[packId] === today) return; // already awarded today
-      const { done, total } = getPackProgress(packId);
-      if (total === 0 || done < total) return;
-      awardCompoundEffect(packId);
-    });
+    // Only canonical Morning Routine habit completions can trigger the bonus
+    if (!isMorningHabit(habit)) return;
+    // Already awarded today? Skip.
+    if (compoundAwarded['morning'] === today) return;
+    // STRICT GATE: must own all 10 canonical habits — exact name match, no fuzzy matching.
+    // If user has 8 or 9 of 10, the nudge banner shows instead and no bonus is awarded.
+    if (!userHasAllCanonicalMorning()) return;
+    // Existing scheduled-today completion check (handles rest-day scheduling correctly).
+    const { done, total } = getPackProgress('morning');
+    if (total === 0 || done < total) return;
+    awardCompoundEffect('morning');
   }
 
   function awardCompoundEffect(packId) {
@@ -5136,13 +5228,14 @@
     setupStatDetail();
     setupSettings();
     setupStreakDanger();
+    setupMorningNudge();
     setupRankPopup();
 
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);
     document.getElementById('day-popup').addEventListener('click', closeDayPopup);
 
     document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDayChange(); });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); }, 60_000);
     registerSW();
 
     if (needsWelcome) {

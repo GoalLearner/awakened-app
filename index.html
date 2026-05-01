@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=88">
+  <link rel="stylesheet" href="styles.css?v=89">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -143,6 +143,13 @@
         <span class="sd-icon">⚠️</span>
         <span class="sd-text">Under 1 hour left — finish your habits!</span>
         <button id="streak-danger-dismiss" class="sd-dismiss" aria-label="Dismiss">✕</button>
+      </div>
+
+      <!-- Morning Routine nudge — shows when user has 8 or 9 of 10 canonical habits -->
+      <div id="morning-nudge" class="morning-nudge hidden" role="button" tabindex="0">
+        <span class="mn-icon">🌅</span>
+        <span class="mn-text" id="mn-text"></span>
+        <button id="morning-nudge-dismiss" class="mn-dismiss" aria-label="Dismiss">✕</button>
       </div>
     </header>
 
@@ -423,7 +430,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=89"></script>
+  <script src="app.js?v=90"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -7111,3 +7111,52 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   color: rgba(255, 255, 255, 0.42);
   cursor: not-allowed;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MORNING ROUTINE NUDGE BANNER — shown at 8/9 of 10 canonical habits
+   ═══════════════════════════════════════════════════════════════ */
+.morning-nudge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: rgba(245, 158, 11, 0.10);
+  border-top: 1px solid rgba(245, 158, 11, 0.32);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.32);
+  cursor: pointer;
+  transition: background 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.morning-nudge.hidden { display: none !important; }
+.morning-nudge:active {
+  background: rgba(245, 158, 11, 0.18);
+}
+.mn-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.45));
+}
+.mn-text {
+  flex: 1;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fcd34d;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+.mn-text b {
+  color: #fde68a;
+  font-weight: 800;
+}
+.mn-dismiss {
+  background: none;
+  border: none;
+  color: rgba(252, 211, 77, 0.6);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.mn-dismiss:active { color: #fcd34d; }
