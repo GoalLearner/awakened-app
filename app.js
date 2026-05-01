@@ -2524,10 +2524,22 @@
     const useDate     = dateStr || today;
     const dateDisplay = _formatOriginDate(useDate);
     const noun        = _originWeekdayNoun(useDate);
-    const text = BEGINNING_TEMPLATE
+    const name        = _originName();
+    // Edge case: when the user's name is literally "Hunter" (the default),
+    // the original template's "called himself a Hunter" creates an awkward
+    // echo — "named Hunter ... called himself a Hunter." Swap the archetype
+    // reference for those users so the line reads clean.
+    let template = BEGINNING_TEMPLATE;
+    if (name === 'Hunter') {
+      template = template.replace(
+        'called himself a Hunter',
+        'answered the call'
+      );
+    }
+    const text = template
       .replace('{DATE}',         dateDisplay)
       .replace('{WEEKDAY_NOUN}', noun)
-      .replace('{NAME}',         _originName());
+      .replace('{NAME}',         name);
     return { text, dateISO: useDate, dateDisplay };
   }
 
@@ -2565,6 +2577,12 @@
   // Case C: User has stories → no-op
   function migrateOriginStoriesIfNeeded() {
     if (localStorage.getItem('hb_origin_v2_migrated') === '1') return;
+    // CRITICAL: skip migration entirely while the user is still in
+    // pre-onboarding state. Their playerName is still 'Hunter' (default)
+    // and they haven't typed their real name yet. Wait — completeOnboarding
+    // calls saveBeginningIfMissing AFTER setting the real name, so the
+    // story is generated authentically there instead.
+    if (needsOnboarding) return;
     const isAwakened = currentClass && currentClass !== 'CIVILIAN';
 
     // Beginning — every user gets one
