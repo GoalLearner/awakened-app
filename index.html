@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=120">
+  <link rel="stylesheet" href="styles.css?v=121">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -499,6 +499,16 @@
     </div>
   </div>
 
+  <!-- The Beginning — full-screen reveal after onboarding completion -->
+  <div id="beginning-screen" class="beginning-screen hidden">
+    <div class="bg-bg"></div>
+    <div class="bg-content">
+      <div class="bg-eyebrow">📜 THE BEGINNING</div>
+      <div id="bg-story" class="bg-story"></div>
+      <div id="bg-hint" class="bg-hint">Tap to skip · or wait</div>
+    </div>
+  </div>
+
   <!-- Awakening — full-screen takeover (first-ever class assignment) -->
   <div id="awakening-screen" class="awakening-screen hidden">
     <div class="awk-bg"></div>
@@ -513,7 +523,8 @@
     </div>
   </div>
 
-  <!-- Origin Story bottom-sheet — opens from Status tab "Your Origin" link -->
+  <!-- Origin Story bottom-sheet — opens from Status tab "Your Origin" link.
+       Renders both chapters when available; teases Chapter 2 for Civilians. -->
   <div id="origin-overlay" class="origin-overlay hidden"></div>
   <div id="origin-sheet"   class="origin-sheet   hidden">
     <div class="origin-drag-handle"></div>
@@ -522,9 +533,23 @@
       <button id="origin-close" class="origin-close" aria-label="Close">✕</button>
     </div>
     <div class="origin-body">
-      <div id="origin-class-badge" class="origin-class-badge"></div>
-      <div id="origin-text" class="origin-text"></div>
-      <div id="origin-since" class="origin-since"></div>
+      <!-- Chapter 1 -->
+      <div id="origin-ch1" class="origin-chapter">
+        <div class="origin-ch-label" id="origin-ch1-label">📜 THE BEGINNING</div>
+        <div id="origin-ch1-text" class="origin-text"></div>
+      </div>
+
+      <div id="origin-divider" class="origin-divider hidden"></div>
+
+      <!-- Chapter 2 (rendered when awakened, teaser when not) -->
+      <div id="origin-ch2" class="origin-chapter origin-chapter--ch2">
+        <div class="origin-ch-label" id="origin-ch2-label">⚔️ THE AWAKENING</div>
+        <div id="origin-class-badge" class="origin-class-badge"></div>
+        <div id="origin-ch2-text" class="origin-text"></div>
+        <div id="origin-since" class="origin-since"></div>
+        <div id="origin-ch2-teaser" class="origin-ch2-teaser hidden">Chapter 2 awaits. Train any stat to Lv5 to awaken.</div>
+      </div>
+
       <button id="origin-share" class="origin-share-btn">📤 Share</button>
     </div>
   </div>
@@ -730,7 +755,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=124"></script>
+  <script src="app.js?v=125"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -10060,3 +10060,139 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 }
 .origin-share-btn:hover  { background: linear-gradient(135deg, rgba(245,158,11,0.26), rgba(245,158,11,0.12)); }
 .origin-share-btn:active { transform: scale(0.97); }
+
+/* ═══════════════════════════════════════════════════════════════
+   THE BEGINNING — full-screen reveal after onboarding completion
+   ═══════════════════════════════════════════════════════════════ */
+.beginning-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  background: #000;
+}
+.beginning-screen.hidden { display: none !important; }
+.bg-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%,
+      rgba(245, 158, 11, 0.10) 0%,
+      rgba(20, 20, 35, 0.95) 50%,
+      #000 100%);
+  opacity: 0;
+}
+.bg-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 36px 28px;
+  opacity: 0;
+}
+.bg-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.36em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 38px;
+  text-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
+}
+.bg-story {
+  max-width: 460px;
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  line-height: 1.7;
+  color: rgba(255, 250, 240, 0.92);
+  white-space: pre-wrap;
+  text-shadow: 0 0 16px rgba(0, 0, 0, 0.7);
+  min-height: 180px;
+  position: relative;
+}
+.bg-story:not(.bg-story--done)::after {
+  content: '▋';
+  margin-left: 2px;
+  color: var(--gold);
+  animation: bg-cursor 0.9s steps(2) infinite;
+}
+@keyframes bg-cursor { 50% { opacity: 0.3 } }
+.bg-story--done::after { content: ''; }
+.bg-hint {
+  position: absolute;
+  bottom: calc(38px + var(--safe-bottom));
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+}
+.bg-show .bg-bg      { animation: bg-bg-in 0.55s ease-out forwards; }
+.bg-show .bg-content { animation: bg-cnt-in 0.65s 0.18s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.bg-hide .bg-bg,
+.bg-hide .bg-content { animation: bg-out 0.32s ease-in forwards; }
+@keyframes bg-bg-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes bg-cnt-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bg-out    { to { opacity: 0 } }
+
+/* ═══════════════════════════════════════════════════════════════
+   ORIGIN POPUP — chapter divider, label, teaser
+   ═══════════════════════════════════════════════════════════════ */
+.origin-chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+.origin-ch-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  text-align: center;
+}
+.origin-divider {
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  margin: 6px 0;
+}
+.origin-divider.hidden { display: none !important; }
+.origin-class-badge.hidden { display: none !important; }
+.origin-text.hidden        { display: none !important; }
+.origin-since.hidden       { display: none !important; }
+.origin-ch2-teaser {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+  text-align: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 10px;
+  max-width: 360px;
+  line-height: 1.5;
+}
+.origin-ch2-teaser.hidden { display: none !important; }
+
+/* Status tab origin button — chapter counter pill */
+.sc-origin-chapters {
+  margin-left: 6px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  background: rgba(245, 158, 11, 0.20);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 100px;
+  color: var(--gold);
+  text-transform: uppercase;
+  vertical-align: middle;
+}
