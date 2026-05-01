@@ -2512,7 +2512,11 @@
   }
 
   function _originName() {
-    return (playerName && playerName.trim() && playerName !== 'Hunter') ? playerName : 'the hunter';
+    // Use the user's actual name. The default 'Hunter' is a real name
+    // for narrative purposes — we only fall back to 'the hunter' when
+    // the field is genuinely empty/null.
+    if (playerName && playerName.trim()) return playerName.trim();
+    return 'the hunter';
   }
 
   // Chapter 1 — class-agnostic, generated at onboarding completion.
