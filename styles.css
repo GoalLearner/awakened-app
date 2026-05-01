@@ -8358,19 +8358,20 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
 }
 .pr-strip::-webkit-scrollbar { display: none; }
 
+.pr-strip { gap: 6px; }
 .pr-tile {
   flex: 0 0 auto;
-  width: 104px;
-  min-height: 122px;
+  width: 78px;
+  min-height: 92px;
   background: var(--bg-card);
   border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 8px 10px;
+  border-radius: 11px;
+  padding: 8px 4px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   font-family: inherit;
@@ -8383,35 +8384,40 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3px;
+  height: 2px;
   background: var(--pr-accent, #a78bfa);
-  border-radius: 14px 14px 0 0;
+  border-radius: 11px 11px 0 0;
   opacity: 0.85;
 }
 .pr-tile:hover  { border-color: var(--pr-accent, rgba(167,139,250,0.55)); }
 .pr-tile:active { transform: scale(0.97); }
 .pr-tile-icon {
-  font-size: 1.4rem;
+  font-size: 1.05rem;
   line-height: 1;
 }
 .pr-tile-value {
-  font-size: 1.35rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--pr-accent, var(--text-primary));
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-  line-height: 1.1;
+  letter-spacing: 0;
+  line-height: 1.05;
   text-align: center;
   word-break: break-word;
 }
 .pr-tile-label {
-  font-size: 0.66rem;
+  font-size: 0.55rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.2;
   text-transform: lowercase;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
+  /* Cap to two lines with ellipsis fallback so labels never blow up the box */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ═══════════════════════════════════════════════════════════════
