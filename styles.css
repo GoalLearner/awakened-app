@@ -7188,9 +7188,13 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   .hg-info-btn:hover { color: #d1d5db; }
 }
 
-/* Make the Weekly label container hold name + button inline */
+/* Make the Weekly label container hold name + button inline.
+   Name fills all available space so the info icon pins to a consistent
+   right-edge X position across all rows, regardless of how many lines
+   the habit name wraps to. */
 .hg-label { gap: 4px; }
-.hg-label .hg-info-btn { padding: 4px 4px; font-size: 13px; }
+.hg-label .hg-label-name { flex: 1 1 auto; min-width: 0; }
+.hg-label .hg-info-btn   { padding: 4px 4px; font-size: 13px; flex-shrink: 0; margin-left: auto; }
 
 /* Monthly card banner needs space for the info icon to the right */
 .hg-habit-card-banner {
