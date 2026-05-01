@@ -5915,6 +5915,10 @@
     const sheet  = document.getElementById('stat-detail-sheet');
     const glow   = st.color + '20';
 
+    // Track which stat is open so the delegated Add handler knows
+    // which stat's habit list to refresh after an add.
+    sheet.dataset.statId = st.id;
+
     // Set CSS colour variables
     sheet.style.setProperty('--sd-color', st.color);
     sheet.style.setProperty('--sd-glow',  glow);
@@ -5945,16 +5949,9 @@
     // Description
     document.getElementById('stat-detail-desc').textContent = STAT_DESCRIPTIONS[st.id] || '';
 
-    // Linked habits
-    const listEl = document.getElementById('stat-detail-habits');
-    listEl.innerHTML = st.habits.map(name => {
-      const meta = _habitMeta[name] || { emoji: '', difficulty: 'medium' };
-      return '<div class="sdh-row">' +
-        '<span class="sdh-emoji">' + (meta.emoji || '') + '</span>' +
-        '<span class="sdh-name">'  + esc(name) + '</span>' +
-        '<span class="diff-badge ' + meta.difficulty + '">' + DIFFICULTY[meta.difficulty].label + '</span>' +
-      '</div>';
-    }).join('');
+    // Linked habits — each row shows an Add button if the user doesn't
+    // have the habit yet, or an "Active" indicator if they do. Tap → add.
+    renderStatDetailHabits(st);
 
     // Show sheet
     document.getElementById('stat-detail-overlay').classList.remove('hidden');
@@ -5977,9 +5974,78 @@
     }, { once: true });
   }
 
+  // Render the linked-habits list for a given stat. Each row gets either
+  // a "+ Add" tap target (if the user doesn't have the habit) or a muted
+  // "✓ Active" badge (if they do). Used both on initial open and after
+  // an in-sheet add to refresh state.
+  function renderStatDetailHabits(st) {
+    const listEl = document.getElementById('stat-detail-habits');
+    if (!listEl) return;
+    const activeNames = new Set(habits.map(h => h.name));
+    listEl.innerHTML = st.habits.map(name => {
+      const meta = _habitMeta[name] || { emoji: '', difficulty: 'medium' };
+      const have = activeNames.has(name);
+      const ctrl = have
+        ? '<span class="sdh-active" aria-label="Already in your habits">✓ Active</span>'
+        : '<button class="sdh-add-btn" data-add-habit="' + esc(name) + '" aria-label="Add ' + esc(name) + ' to your habits">+ Add</button>';
+      return '<div class="sdh-row' + (have ? ' sdh-row--have' : '') + '">' +
+        '<span class="sdh-emoji">' + (meta.emoji || '') + '</span>' +
+        '<span class="sdh-name">'  + esc(name) + '</span>' +
+        '<span class="diff-badge ' + meta.difficulty + '">' + DIFFICULTY[meta.difficulty].label + '</span>' +
+        ctrl +
+      '</div>';
+    }).join('');
+  }
+
+  // Adds a canonical habit to the user's active list (idempotent).
+  // Called when the user taps "+ Add" on a linked-habit row in the
+  // stat detail sheet. Refreshes the row in place.
+  function addHabitFromStatSheet(name, statId) {
+    if (habits.some(h => h.name === name)) return;
+    const def = DEFAULT_HABITS.find(d => d.name === name);
+    if (!def) return;
+    const newH = {
+      id:          uid(),
+      emoji:       def.emoji,
+      name:        def.name,
+      difficulty:  def.difficulty,
+      type:        def.type || 'build',
+      primaryStat: def.primaryStat,
+    };
+    habits.push(newH);
+    if (def.note) habitNotes[newH.id] = def.note;
+    save();
+    renderHabits();
+    updateMorningButtonVisibility();
+    updateLockedInButtonVisibility();
+    // Re-render the linked-habits list so the row flips to "Active"
+    const st = STATS.find(s => s.id === statId);
+    if (st) renderStatDetailHabits(st);
+    showHabitToast(name + ' added');
+  }
+
   function setupStatDetail() {
     document.getElementById('stat-detail-close').addEventListener('click',   closeStatDetail);
     document.getElementById('stat-detail-overlay').addEventListener('click', closeStatDetail);
+
+    // Delegated tap on any "+ Add" button inside the linked-habits list.
+    // Looks up the current stat from the sheet to refresh the row in place.
+    const sheet = document.getElementById('stat-detail-sheet');
+    if (sheet) {
+      sheet.addEventListener('click', e => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const btn = t.closest('[data-add-habit]');
+        if (!btn) return;
+        e.stopPropagation();
+        e.preventDefault();
+        const name = btn.getAttribute('data-add-habit');
+        // Stat ID is captured from the sheet's currently-rendered context
+        // by reading the title's stat label (set by openStatDetail).
+        const statId = sheet.dataset.statId || '';
+        addHabitFromStatSheet(name, statId);
+      });
+    }
 
     // Swipe-down-to-dismiss
     if (typeof attachSheetDismissGesture === 'function') {

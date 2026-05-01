@@ -8830,3 +8830,48 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   letter-spacing: 0.08em;
   color: var(--gold);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   STAT DETAIL — linked-habit row Add / Active controls
+   ═══════════════════════════════════════════════════════════════ */
+.sdh-row { gap: 8px; }
+.sdh-row--have { opacity: 0.85; }
+
+.sdh-add-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 12px;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  color: #c4b5fd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+.sdh-add-btn:hover  { background: rgba(139, 92, 246, 0.22); border-color: rgba(139, 92, 246, 0.65); }
+.sdh-add-btn:active { transform: scale(0.96); }
+
+.sdh-active {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.10);
+  border: 1px solid rgba(34, 197, 94, 0.30);
+  white-space: nowrap;
+}
+
+/* When the row already has the habit, slightly fade the diff badge so
+   the eye is drawn to the missing habits' Add buttons instead. */
+.sdh-row--have .diff-badge { opacity: 0.55; }
