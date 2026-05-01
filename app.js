@@ -521,6 +521,67 @@
     { label: '🌱 Wellbeing & Relationships', start: 41, end: 49 },
   ];
 
+  // ── PRIMARY STAT MAP ─────────────────────────────────────
+  // Single source of truth for each habit's primary stat (drives the
+  // History view's cell colors). The History tab is the only place this
+  // map is read for visuals — every habit's `primaryStat` field is
+  // derived from this map at startup.
+  const HABIT_PRIMARY_STAT = {
+    // STR (red)
+    'Strength training': 'STR', 'Sprint session': 'STR', 'Mobility & Stretching': 'STR',
+    'Cardio': 'STR', 'Cold shower': 'STR', 'Ice bath or cold plunge': 'STR',
+    // VIT (pink)
+    'Hydrate': 'VIT', 'Sleep': 'VIT', 'Sleep before midnight': 'VIT',
+    'Sleep early before 11PM': 'VIT', 'Vitamins and minerals': 'VIT', 'Daily walk': 'VIT',
+    'Whole foods diet': 'VIT', 'Protein goal': 'VIT', 'No sugar/junk food': 'VIT',
+    'No alcohol': 'VIT', 'No caffeine': 'VIT', 'Barefoot grounding outside': 'VIT',
+    'Call or text a family member': 'VIT', 'Do something kind for someone': 'VIT',
+    // INT (blue)
+    'Read': 'INT', 'Educational podcast': 'INT', 'Learn something new': 'INT',
+    'Language learning': 'INT', 'Flashcard review': 'INT', 'Practice a skill': 'INT',
+    'Write down lessons learned': 'INT',
+    // FOCUS (yellow)
+    'Meditate & Breathwork': 'FOCUS', 'Get morning sunlight': 'FOCUS',
+    'No phone or social media after waking': 'FOCUS', 'No social media before noon': 'FOCUS',
+    'No screens 1 hour before bed': 'FOCUS', 'Under 1 hour screen time': 'FOCUS',
+    'No doomscrolling until after 5PM': 'FOCUS', 'Digital declutter': 'FOCUS',
+    'Complete your #1 priority task': 'FOCUS',
+    // WILL (orange)
+    'Wake up at consistent time': 'WILL', 'Plan tomorrow the night before': 'WILL',
+    'Tidy/clean space': 'WILL', 'Review daily goals/intentions': 'WILL',
+    'Review your long term goals': 'WILL', 'Journal': 'WILL',
+    'Visualization practice': 'WILL', 'Morning gratitude practice': 'WILL',
+    'Pray or set intentions': 'WILL',
+    // WLT (gold)
+    'Track finances & net worth': 'WLT', 'Work on a side project or business': 'WLT',
+    'Review investments or trading journal': 'WLT',
+    'Generate one new business or content idea': 'WLT',
+  };
+  // Enrich each habit definition with its primary stat — single source of truth
+  DEFAULT_HABITS.forEach(h => { h.primaryStat = HABIT_PRIMARY_STAT[h.name] || 'FOCUS'; });
+
+  // ── HABIT STAT-COLOR HELPERS (used by History views) ─────
+  function getHabitPrimaryStat(habit) {
+    if (habit && habit.primaryStat) return habit.primaryStat;
+    // Backward compat: habit was saved before primaryStat existed → look up by name
+    const def = DEFAULT_HABITS.find(d => d.name === (habit && habit.name));
+    return (def && def.primaryStat) || 'FOCUS';
+  }
+  function getHabitStatColor(habit) {
+    const stId = getHabitPrimaryStat(habit);
+    const st   = STATS.find(s => s.id === stId);
+    return st ? st.color : '#eab308'; // FOCUS yellow as ultimate fallback
+  }
+  // Difficulty → opacity within the stat color (preserves intensity signal)
+  const DIFF_OPACITY = { easy: 0.6, medium: 0.75, hard: 0.9, legendary: 1.0 };
+  function colorWithAlpha(hex, alpha) {
+    if (!hex || hex[0] !== '#' || hex.length !== 7) return hex;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
   // ── PACKS (Choose Your Path) ─────────────────────────────
   // Indices reference DEFAULT_HABITS (63 habits total, indices 0-62)
   const PACKS = [
@@ -1213,8 +1274,10 @@
 
     // One row per habit
     activeHabits.forEach(habit => {
-      const diff  = habit.difficulty || 'easy';
-      const color = HG_DCOL[diff] || HG_DCOL.easy;
+      const diff       = habit.difficulty || 'easy';
+      const statColor  = getHabitStatColor(habit);
+      const opacity    = DIFF_OPACITY[diff] || 0.6;
+      const cellBg     = colorWithAlpha(statColor, opacity);
 
       // Perfect week? Every scheduled past/today day must be done
       const schedPast = dates.filter(ds => ds <= today && isScheduledOn(habit.days, ds));
@@ -1224,14 +1287,10 @@
       const row = document.createElement('div');
       row.className = 'hg-row';
 
-      // Label
+      // Label — full name, bold, no emoji on the History tab
       const label = document.createElement('div');
       label.className = 'hg-label';
-      const dn     = habitDisplayName(habit);
-      const name12 = dn.length > 13 ? dn.slice(0, 12) + '…' : dn;
-      label.innerHTML =
-        '<span class="hg-label-emoji">' + (habit.emoji || '') + '</span>' +
-        '<span class="hg-label-name">' + esc(name12) + '</span>';
+      label.innerHTML = '<span class="hg-label-name">' + esc(habitDisplayName(habit)) + '</span>';
       row.appendChild(label);
 
       // 7 cells
@@ -1242,8 +1301,11 @@
         const isDone     = (completions[ds] || []).includes(habit.id);
 
         if (isDone) {
-          cell.className = 'hg-cell hg-cell--done';
-          cell.style.cssText = 'background:' + color + ';box-shadow:0 0 6px ' + color + '55';
+          cell.className = 'hg-cell hg-cell--done' + (diff === 'legendary' ? ' hg-cell--legendary' : '');
+          // Stat color with difficulty-based opacity. Legendary gets a soft outer glow.
+          cell.style.cssText = 'background:' + cellBg
+            + ';box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.35)
+            + (diff === 'legendary' ? ',0 0 0 1px ' + colorWithAlpha(statColor, 0.9) : '');
         } else if (isFuture) {
           cell.className = 'hg-cell hg-cell--future';
         } else if (isSchedDay) {
@@ -1316,23 +1378,24 @@
     cardsGrid.className = 'hg-month-cards-grid';
 
     activeHabits.forEach(habit => {
-      const diff  = habit.difficulty || 'easy';
-      const color = HG_DCOL[diff] || HG_DCOL.easy;
+      const diff      = habit.difficulty || 'easy';
+      const statColor = getHabitStatColor(habit);
+      const opacity   = DIFF_OPACITY[diff] || 0.6;
+      const cellBg    = colorWithAlpha(statColor, opacity);
 
       const card = document.createElement('div');
       card.className = 'hg-habit-card';
 
-      // ── Banner ───────────────────────────────────────────
+      // ── Banner ─── stat-tinted, full bold name, no emoji on History tab
       const banner = document.createElement('div');
       banner.className = 'hg-habit-card-banner';
-      banner.style.cssText = 'background:linear-gradient(135deg,' + color + '28,' + color + '10);border-bottom:1px solid ' + color + '35;';
-      const bEmoji = document.createElement('span');
-      bEmoji.className = 'hg-habit-card-emoji';
-      bEmoji.textContent = habit.emoji || '';
+      banner.style.cssText = 'background:linear-gradient(135deg,'
+        + colorWithAlpha(statColor, 0.18) + ',' + colorWithAlpha(statColor, 0.06)
+        + ');border-bottom:1px solid ' + colorWithAlpha(statColor, 0.35) + ';';
       const bName = document.createElement('span');
       bName.className = 'hg-habit-card-name';
       bName.textContent = habitDisplayName(habit);
-      banner.append(bEmoji, bName);
+      banner.append(bName);
       card.appendChild(banner);
 
       // ── Mini calendar ────────────────────────────────────
@@ -1379,8 +1442,9 @@
         if (isFuture) {
           cell.classList.add('hg-habit-cal-cell--future');
         } else if (isDone) {
-          cell.classList.add('hg-habit-cal-cell--done');
-          cell.style.cssText = 'background:' + color + ';color:#000;font-weight:700;';
+          cell.classList.add('hg-habit-cal-cell--done' + (diff === 'legendary' ? ' hg-habit-cal-cell--legendary' : ''));
+          cell.style.cssText = 'background:' + cellBg + ';color:#000;font-weight:700;'
+            + (diff === 'legendary' ? 'box-shadow:0 0 0 1px ' + colorWithAlpha(statColor, 0.9) + ';' : '');
         } else if (isSchedDay) {
           cell.classList.add('hg-habit-cal-cell--missed');
         } else {
@@ -1443,8 +1507,10 @@
     wrap.className = 'hg-year-habits-wrap';
 
     habits.forEach(habit => {
-      const diff  = habit.difficulty || 'easy';
-      const color = HG_DCOL[diff] || HG_DCOL.easy;
+      const diff      = habit.difficulty || 'easy';
+      const statColor = getHabitStatColor(habit);
+      const opacity   = DIFF_OPACITY[diff] || 0.6;
+      const cellBg    = colorWithAlpha(statColor, opacity);
 
       // Tally totals for the year
       let schedDays = 0, doneDays = 0;
@@ -1464,13 +1530,12 @@
       const row = document.createElement('div');
       row.className = 'hg-year-habit-row';
 
-      // Row header
+      // Row header — full bold name, no emoji on History tab
       const hdr = document.createElement('div');
       hdr.className = 'hg-year-habit-hdr';
       const info = document.createElement('div');
       info.className = 'hg-year-habit-info';
-      info.innerHTML = '<span class="hg-year-habit-emoji">' + (habit.emoji||'') + '</span>' +
-                       '<span class="hg-year-habit-name">'  + esc(habitDisplayName(habit)) + '</span>';
+      info.innerHTML = '<span class="hg-year-habit-name">' + esc(habitDisplayName(habit)) + '</span>';
       const stats = document.createElement('div');
       stats.className = 'hg-year-habit-stats';
       stats.textContent = pctStr + '% | ' + doneDays + 'D';
@@ -1521,8 +1586,11 @@
           if (isFuture) {
             cell.classList.add('hg-year-habit-cell--future');
           } else if (isDone) {
-            cell.classList.add('hg-year-habit-cell--done');
-            cell.style.background = color;
+            cell.classList.add('hg-year-habit-cell--done' + (diff === 'legendary' ? ' hg-year-habit-cell--legendary' : ''));
+            cell.style.background = cellBg;
+            if (diff === 'legendary') {
+              cell.style.boxShadow = '0 0 0 1px ' + colorWithAlpha(statColor, 0.9);
+            }
           } else if (isSchedDay) {
             cell.classList.add('hg-year-habit-cell--missed');
           } else {
