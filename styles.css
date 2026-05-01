@@ -6331,6 +6331,15 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   padding: 0 0 8px;
   gap: 5px;
 }
+/* When the row has missing canonical habits, give it a clickable affordance */
+.cp-prog-row--addable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.cp-prog-row--addable:hover  { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.35); }
+.cp-prog-row--addable:active { transform: scale(0.99); }
+.cp-prog-row--lockedin.cp-prog-row--addable:hover { background: rgba(124,58,237,0.18); border-color: rgba(124,58,237,0.45); }
 
 .cp-prog-row {
   display: flex;

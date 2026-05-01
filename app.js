@@ -5680,6 +5680,23 @@
 
   function setupCompoundPopup() {
     document.getElementById('compound-popup').addEventListener('click', hideCompoundPopup);
+    // Delegated tap on a pack progress row → opens the Add Pack modal
+    // for the matching pack so users can fill in the missing habits.
+    // The ⚡ bolt inside the row stops propagation via its own
+    // [data-bonus-info] handler, so bolt-tap still opens info popup.
+    document.addEventListener('click', e => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      // Skip if the bolt was tapped (its handler runs first)
+      if (t.closest('[data-bonus-info]')) return;
+      const row = t.closest('[data-pack-add]');
+      if (!row) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const packId = row.getAttribute('data-pack-add');
+      if (packId === 'morning')   openMorningPackModal();
+      else if (packId === 'locked-in') openLockedInPackModal();
+    });
   }
 
   // ── BONUS INFO POPUP ─────────────────────────────────────
@@ -6204,7 +6221,11 @@
       const cs              = compoundStreaks[packId];
       const streak          = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
       const cls             = packId === 'locked-in' ? ' cp-prog-row--lockedin' : '';
-      return '<div class="cp-prog-row' + cls + '">' +
+      const missing         = canonicalTotal - done;
+      const hasMissing      = missing > 0 && !awarded;
+      return '<div class="cp-prog-row' + cls + (hasMissing ? ' cp-prog-row--addable' : '') +
+                  '" data-pack-add="' + esc(packId) + '" role="button" tabindex="0" ' +
+                  'aria-label="' + esc(pack.name) + ' progress' + (hasMissing ? ' — tap to add missing habits' : '') + '">' +
         '<span class="cp-prog-name">' + esc(pack.emoji + ' ' + pack.name) + '</span>' +
         '<span class="cp-prog-count' + (awarded ? ' cp-prog-done' : '') + '">' +
           (awarded ? '✓ Complete' : done + '/' + canonicalTotal) +
