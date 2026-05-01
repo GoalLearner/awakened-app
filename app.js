@@ -6216,9 +6216,17 @@
     const wrap = document.getElementById('compound-progress');
     if (!wrap) return;
     // Show a row for every bonus pack the user has at least one habit in.
-    // Locked-In is a superset of Morning Routine, so when a user is on the
-    // Locked-In path both rows appear; pure MR users see only the MR row.
+    // EXCEPT: Locked-In is a superset of Morning Routine (all 10 MR habits
+    // are inside the 16 LI habits). When the user is on the Locked-In path
+    // we hide the Morning Routine row to avoid showing the same progress
+    // twice. The MR bonus still fires independently — only the UI is hidden.
+    const liActive = (function() {
+      if (typeof getPackProgress !== 'function') return false;
+      const li = getPackProgress('locked-in');
+      return li && li.total > 0;
+    })();
     const rows = BONUS_PACK_IDS.map(packId => {
+      if (packId === 'morning' && liActive) return '';
       const { done, total } = getPackProgress(packId);
       if (total === 0) return '';
       const pack            = getPackById(packId);
