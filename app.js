@@ -3182,19 +3182,6 @@
               cls.emoji + ' ' + cls.name +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
-            // Civilian-only: small info indicator + closest-stat progress hint
-            (function() {
-              if (currentClass !== 'CIVILIAN') return '';
-              const closest = getClosestStatToAwaken();
-              if (!closest) return '';
-              const labels = closest.ids.map(id => {
-                const st = STATS.find(s => s.id === id);
-                return st ? st.label : id;
-              }).join(' or ');
-              return '<div class="sc-civilian-rule">Class assigned at Lv5 in any stat</div>' +
-                     '<div class="sc-civilian-hint">Closest path: <b>' + esc(labels) +
-                       '</b> at Lv' + closest.lv + '/' + closest.target + '</div>';
-            })() +
             (shifting ? '<div class="sc-shifting" style="margin-top:4px">⚠️ Your class is shifting...</div>' : '') +
             (selectedPackId && PACKS.find(p => p.id === selectedPackId) ? '<div class="sc-hero-path"><span class="sc-path-dot" style="background:' + PACKS.find(p => p.id === selectedPackId).color + '"></span>Path: ' + esc(PACKS.find(p => p.id === selectedPackId).name) + '</div>' : '') +
             buildCompoundBadgesHTML() +
