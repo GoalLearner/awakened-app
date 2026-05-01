@@ -4985,7 +4985,7 @@
     }
 
     // ── Accordion state ──────────────────────────────────────
-    let libOpenIdx = 0; // open first available category by default
+    let libOpenIdx = -1; // start with all categories collapsed
 
     function libSetOpen(idx) {
       list.querySelectorAll('.ob-acc-section').forEach((sec, i) => {
@@ -5052,8 +5052,8 @@
       list.appendChild(sec);
     });
 
-    // Open first category after paint
-    requestAnimationFrame(() => libSetOpen(0));
+    // All categories start collapsed; user expands what they want.
+    requestAnimationFrame(() => libSetOpen(-1));
   }
 
   // ── HABIT DETAIL SCREEN ───────────────────────────────────
