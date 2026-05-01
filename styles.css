@@ -4755,12 +4755,12 @@ body.theme-light .ob-inspiration-quote {
 .sc-portrait-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 10px 12px;
+  gap: 4px;
+  padding: 4px 8px 6px;
 }
 .sc-portrait-row .sc-avatar-row { padding: 0; background: none; flex: 0 0 auto; }
 .sc-portrait-row .sc-radar-wrap { flex: 1 1 0; padding: 0; min-width: 0; overflow: visible; }
-.sc-portrait-row .sc-radar-svg  { max-width: 200px; width: 100%; }
+.sc-portrait-row .sc-radar-svg  { max-width: 180px; width: 100%; }
 
 /* iPhone SE & narrower viewports: stack vertically so neither element gets cramped */
 @media (max-width: 380px) {
@@ -4778,7 +4778,7 @@ body.theme-light .ob-inspiration-quote {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  padding: 14px 18px 8px;
+  padding: 4px 12px 2px;
   /* Subtle radial spotlight behind the silhouette */
   background:
     radial-gradient(ellipse 50% 65% at 50% 70%,
@@ -4787,7 +4787,7 @@ body.theme-light .ob-inspiration-quote {
       transparent 80%);
 }
 .sc-avatar {
-  width: 200px;
+  width: 160px;
   height: auto;
   max-width: 100%;
   object-fit: contain;
@@ -4796,8 +4796,8 @@ body.theme-light .ob-inspiration-quote {
   user-select: none;
   -webkit-user-drag: none;
 }
-/* In the side-by-side portrait row, avatar is the dominant element */
-.sc-portrait-row .sc-avatar { width: 200px; height: auto; }
+/* In the side-by-side portrait row, avatar is the dominant element (compact) */
+.sc-portrait-row .sc-avatar { width: 160px; height: auto; }
 /* Crossfade only when the player's class actually changed (set by JS). */
 .sc-avatar-changed {
   animation: sc-avatar-in 480ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -4823,17 +4823,17 @@ body.theme-light .ob-inspiration-quote {
 .sc-hero {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 18px 18px 16px;
+  gap: 14px;
+  padding: 12px 18px 10px;
 }
 
 .sc-rank-hero {
-  width: 66px;
-  height: 66px;
-  border-radius: 16px;
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
   border: 2px solid var(--accent);
   background: var(--accent-glow);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 900;
   color: var(--accent);
   display: flex;
@@ -4955,7 +4955,7 @@ body.theme-light .ob-inspiration-quote {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 13px 4px;
+  padding: 8px 4px;
   border-right: 1px solid rgba(255,255,255,0.05);
 }
 
