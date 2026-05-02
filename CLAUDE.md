@@ -10,8 +10,8 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." There is no backend — every byte of state lives in `localStorage`.
 
-- **Current marketing version:** `1.1.0` (constant `APP_VERSION` in `app.js`)
-- **Service-worker cache version:** `v4.42` (constant `CACHE_VERSION` in `sw.js`)
+- **Current marketing version:** `1.1.1` (constant `APP_VERSION` in `app.js`)
+- **Service-worker cache version:** `v4.87` (constant `CACHE_VERSION` in `sw.js`)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
 
@@ -355,7 +355,7 @@ Every meaningful change must:
 2. Edit `sw.js`: bump `CACHE_VERSION = 'v4.NN'`
 3. (For iOS releases only) Edit `app.js`: bump `APP_VERSION` and add a `WHATS_NEW` entry for the new version
 
-The current state is `styles.css?v=99`, `app.js?v=100`, `sw.js v4.42`, `APP_VERSION = '1.1.0'`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=99`, `app.js?v=135`, `sw.js v4.87`, `APP_VERSION = '1.1.1'`. (Re-check from the files; they drift quickly.)
 
 ---
 

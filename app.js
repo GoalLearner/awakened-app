@@ -14,12 +14,21 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.1.1';
 
   // ── WHAT'S NEW ───────────────────────────────────────────
   // Version-keyed announcements. The What's New sheet always displays
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
+    '1.1.1': {
+      subtitle: 'Polish & fixes.',
+      items: [
+        { emoji: '⚔️', title: 'Awakening Fires on Lv.5',     description: 'Hit your first Lv.5 stat and the Awakening celebration now plays as intended — Chapter 2 of your origin story is written and saved.' },
+        { emoji: '👆', title: 'No More Cascade Dismissals', description: "Stacked celebrations (level up → class change → awakening) no longer collapse on a single tap. Each one waits for its own moment." },
+        { emoji: '📍', title: 'Tappable Stat Labels',         description: 'On the radar chart, the stat names themselves now open the stat detail — not just the dots.' },
+        { emoji: '📖', title: 'Cleaner Origin Story',         description: 'The date now lives only in the chapter header. The prose opens with you — the way it should.' },
+      ],
+    },
     '1.1.0': {
       subtitle: 'Welcome back, hunter.',
       items: [
@@ -789,18 +798,18 @@
   // Both are PERMANENT — never regenerate, never edit. Class shifts
   // after first awakening do NOT update Chapter 2.
   const BEGINNING_TEMPLATE =
-    '{DATE}. {NAME} was nothing yet.\n' +
+    '{NAME} was nothing yet.\n' +
     'Not a Warrior. Not a Mage. Not a Hunter — only the idea of one.\n' +
     'But on this day he made the only choice that matters: to begin.';
 
   const ORIGIN_TEMPLATES = {
-    STR:   '{DATE}. {NAME} chose the path of the Warrior.\nNot because strength came naturally. Because weakness had become unbearable.\nThe Awakening had begun.',
-    INT:   '{DATE}. {NAME} chose the path of the Mage.\nNot because the world demanded knowledge. Because ignorance had become the cage.\nThe Awakening had begun.',
-    FOCUS: '{DATE}. {NAME} chose the path of the Assassin.\nNot because focus came easily. Because distraction had cost him too much.\nThe Awakening had begun.',
-    WILL:  '{DATE}. {NAME} chose the path of the Paladin.\nNot because nothing tested him. Because breaking had stopped being an option.\nThe Awakening had begun.',
-    VIT:   '{DATE}. {NAME} chose the path of the Ranger.\nNot because his body was given. Because depletion had become the default he refused.\nThe Awakening had begun.',
-    WLT:   '{DATE}. {NAME} chose the path of the Merchant.\nNot because comfort was the goal. Because dependence had been seen for what it was.\nThe Awakening had begun.',
-    SAGE:  '{DATE}. {NAME} walked all six paths.\nNot because he was lucky. Because he refused to specialize before knowing himself.\nThe Awakening had begun.',
+    STR:   '{NAME} chose the path of the Warrior.\nNot because strength came naturally. Because weakness had become unbearable.\nThe Awakening had begun.',
+    INT:   '{NAME} chose the path of the Mage.\nNot because the world demanded knowledge. Because ignorance had become the cage.\nThe Awakening had begun.',
+    FOCUS: '{NAME} chose the path of the Assassin.\nNot because focus came easily. Because distraction had cost him too much.\nThe Awakening had begun.',
+    WILL:  '{NAME} chose the path of the Paladin.\nNot because nothing tested him. Because breaking had stopped being an option.\nThe Awakening had begun.',
+    VIT:   '{NAME} chose the path of the Ranger.\nNot because his body was given. Because depletion had become the default he refused.\nThe Awakening had begun.',
+    WLT:   '{NAME} chose the path of the Merchant.\nNot because comfort was the goal. Because dependence had been seen for what it was.\nThe Awakening had begun.',
+    SAGE:  '{NAME} walked all six paths.\nNot because he was lucky. Because he refused to specialize before knowing himself.\nThe Awakening had begun.',
   };
 
   const CLASSES = {
@@ -2488,7 +2497,10 @@
       levelUpActive = false;
       drainLevelUpQueue();
     };
-    popup.onclick = dismiss;
+    // Same tap-disarm guard as the stat level-up popup — prevents one tap
+    // from blowing through several queued popups in a row.
+    popup.onclick = null;
+    setTimeout(() => { popup.onclick = dismiss; }, 400);
     timer = setTimeout(dismiss, 3500);
   }
 
@@ -2583,6 +2595,33 @@
       }
     }
     localStorage.setItem('hb_origin_v3_migrated', '1');
+    if (dirty) save();
+  }
+
+  // ── v4 TEMPLATE REWRITE — strip leading "{DATE}. " from body so the
+  // date only appears once (in the chapter header). Preserves original
+  // dateISO and (for Chapter 2) classKey. Silent.
+  function migrateOriginTextV4IfNeeded() {
+    if (localStorage.getItem('hb_origin_v4_migrated') === '1') return;
+    let dirty = false;
+    if (originBeginning && originBeginning.text && originBeginning.dateISO) {
+      const fresh = generateBeginningStory(originBeginning.dateISO);
+      if (fresh) {
+        fresh.migrated = !!originBeginning.migrated;
+        originBeginning = fresh;
+        dirty = true;
+      }
+    }
+    if (originAwakening && originAwakening.text &&
+        originAwakening.classKey && originAwakening.dateISO) {
+      const fresh = generateAwakeningStory(originAwakening.classKey, originAwakening.dateISO);
+      if (fresh) {
+        fresh.migrated = !!originAwakening.migrated;
+        originAwakening = fresh;
+        dirty = true;
+      }
+    }
+    localStorage.setItem('hb_origin_v4_migrated', '1');
     if (dirty) save();
   }
 
@@ -3028,7 +3067,12 @@
       levelUpActive = false;
       drainLevelUpQueue();
     };
-    popup.onclick = dismiss;
+    // Disarm tap-to-dismiss for the first 400ms so a stray tap from the
+    // PREVIOUS popup in the queue doesn't carry through and instantly close
+    // this one. Without this guard, multi-popup cascades (stat lvl-up → class
+    // change → awakening) all collapse on a single tap.
+    popup.onclick = null;
+    setTimeout(() => { popup.onclick = dismiss; }, 400);
     timer = setTimeout(dismiss, isMax ? 5000 : 3000);
   }
 
@@ -4469,11 +4513,14 @@
 
       // Label: abbreviation on first line, level on second.
       // Y offsets widened to keep larger labels from overlapping each other.
+      // data-statid makes the text itself clickable, not just the hit-circle.
       svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly - 8).toFixed(2) + '" '
-           + 'class="sc-radar-lbl" fill="' + st.color + '" text-anchor="middle">'
+           + 'class="sc-radar-lbl" fill="' + st.color + '" text-anchor="middle" '
+           + 'data-statid="' + st.id + '" style="cursor:pointer">'
            + st.label + '</text>';
       svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly + 14).toFixed(2) + '" '
-           + 'class="sc-radar-sublbl" fill="' + (lv >= MAX_LV ? '#f59e0b' : 'rgba(255,255,255,0.45)') + '" text-anchor="middle">'
+           + 'class="sc-radar-sublbl" fill="' + (lv >= MAX_LV ? '#f59e0b' : 'rgba(255,255,255,0.45)') + '" text-anchor="middle" '
+           + 'data-statid="' + st.id + '" style="cursor:pointer">'
            + (lv >= MAX_LV ? 'MAX' : 'Lv.' + lv) + '</text>';
     });
 
@@ -4488,8 +4535,8 @@
       if (fillEl) fillEl.classList.add('sc-radar-fill--animate');
     }, 20);
 
-    // Tapping an axis hit-zone opens the stat detail sheet
-    wrap.querySelectorAll('.sc-radar-hit[data-statid]').forEach(el => {
+    // Tapping an axis hit-zone OR the text label opens the stat detail sheet
+    wrap.querySelectorAll('[data-statid]').forEach(el => {
       el.style.cursor = 'pointer';
       el.addEventListener('click', () => openStatDetail(el.dataset.statid));
     });
@@ -5379,14 +5426,12 @@
         }
       });
 
-      // Class change: check on any stat level-up
+      // Class change: check on any stat level-up.
+      // Route through checkClassChange() so first-time Civilian → class
+      // transitions fire the Awakening celebration (and persist the
+      // origin story), and multi-stat ties prompt the class-choice screen.
       if (STATS.some(st => statLevel(stats[st.id]?.pts || 0) > (oldStatLevels[st.id] || 0))) {
-        const newClassKey = determineClass();
-        if (newClassKey !== currentClass) {
-          currentClass = newClassKey;
-          localStorage.setItem('hb_class', currentClass);
-          levelUpQueue.push({ type: 'class', classData: CLASSES[newClassKey] });
-        }
+        checkClassChange(false);
       }
 
       if (levelUpQueue.length && !levelUpActive) drainLevelUpQueue();
@@ -9021,6 +9066,9 @@
     // v3: rewrite story text using the new tightened templates while
     // preserving original dates/classes. Idempotent via hb_origin_v3_migrated.
     migrateOriginTextV3IfNeeded();
+    // v4: strip leading date from story body so the date only appears in
+    // the chapter header. Idempotent via hb_origin_v4_migrated.
+    migrateOriginTextV4IfNeeded();
     // Streak forgiveness: on app open, process missed days (use shields /
     // absorb honest days / break streaks), then surface any queued shield
     // notices as toasts, then check for comeback opportunity if the user
