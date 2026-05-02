@@ -353,9 +353,11 @@ Every meaningful change must:
 
 1. Edit `index.html`: bump `?v=N` on the `<link>` for `styles.css` and `<script>` for `app.js`
 2. Edit `sw.js`: bump `CACHE_VERSION = 'v4.NN'`
-3. (For iOS releases only) Edit `app.js`: bump `APP_VERSION` and add a `WHATS_NEW` entry for the new version
+3. (For iOS releases only) **Two `APP_VERSION`s must move together:**
+   - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet).
+   - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=99`, `app.js?v=135`, `sw.js v4.87`, `APP_VERSION = '1.1.1'`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=99`, `app.js?v=135`, `sw.js v4.87`, `APP_VERSION = '1.1.1'` (in BOTH `app.js` and `codemagic.yaml`). (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -393,6 +395,7 @@ The current state is `styles.css?v=99`, `app.js?v=135`, `sw.js v4.87`, `APP_VERS
 - **Adding a new sheet without `attachSheetDismissGesture`.** Users will report "I can't dismiss it." Always wire it up unless it's intentionally a celebration modal.
 - **Hardcoding the canonical 10 habits.** Use `getMorningHabitDefs()`. Always.
 - **Shipping iOS without bumping `APP_VERSION` + `WHATS_NEW`.** TestFlight will reject "same build number" or you'll silently re-show the wrong What's New.
+- **Forgetting to bump `APP_VERSION` in `codemagic.yaml`.** There are TWO `APP_VERSION` values, and they drift apart easily. The constant in `app.js` only drives the in-app What's New sheet. The marketing version in the iOS bundle comes from `codemagic.yaml` → `agvtool new-marketing-version "$APP_VERSION"` → `Info.plist`'s `CFBundleShortVersionString`. If they don't match, App Store Connect rejects with `"The value for key CFBundleShortVersionString [x.y.z] ... must contain a higher version than that of the previously approved version"` even though your in-app version looks bumped. **For every iOS release, edit BOTH files.**
 - **Mutating `DEFAULT_HABITS` after startup.** It's enriched once at load with `primaryStat`. Don't mutate later or you'll create inconsistent state across reloads.
 - **Renaming a habit.** Habit name is the foreign key for stats, packs, descriptions, completion lookups. Renaming a habit silently breaks streak inheritance for any existing user. If you must rename, write a migration in `load()`.
 - **Letting `node_modules/`, `ios/`, `www/`, or the avatar `originals-rgb` folder slip into git.** They're gitignored — verify before pushing.
