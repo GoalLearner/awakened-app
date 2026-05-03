@@ -14,12 +14,21 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '1.1.1';
+  const APP_VERSION = '1.1.2';
 
   // ── WHAT'S NEW ───────────────────────────────────────────
   // Version-keyed announcements. The What's New sheet always displays
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
+    '1.1.2': {
+      subtitle: 'Build your own. Look the part.',
+      items: [
+        { emoji: '⚡', title: 'Create Your Own Habits',     description: "Author personal habits alongside the curated 49. Pick the stat it trains; the system handles the rest. Up to 5 customs at a time, fixed at 3 XP per completion so the rank economy stays honest." },
+        { emoji: '🎨', title: 'New Tab Bar Art',             description: 'Custom-rendered icons replace the emoji set. Premium feel, every tap.' },
+        { emoji: '✨', title: 'Custom Stat Icons',           description: 'STR, VIT, INT, FOCUS, WILL, WLT now have premium-rendered art. Same six stats — better aesthetic.' },
+        { emoji: '🎨', title: 'New App Icon',                 description: 'A glowing eye, awakening. The new mark of the path.' },
+      ],
+    },
     '1.1.1': {
       subtitle: 'Polish & fixes.',
       items: [
@@ -117,6 +126,11 @@
   // user-editable storage. Returns empty string if no description exists.
   function getHabitDescription(habit) {
     if (!habit || !habit.name) return '';
+    // Custom habits aren't in the master library — give them a generic
+    // but on-brand description rather than falling back to "coming soon."
+    if (habit.custom) {
+      return 'A custom habit you chose for yourself. Build it day by day.';
+    }
     const def = DEFAULT_HABITS.find(d => d.name === habit.name);
     return (def && def.description) || '';
   }
@@ -699,25 +713,25 @@
   ];
 
   const STATS = [
-    { id: 'STR',   icon: '⚔️',  label: 'STR',   name: 'Strength',     color: '#ef4444',
+    { id: 'STR',   icon: '⚔️',  iconImg: 'assets/stat-icons/stat-str.png',   label: 'STR',   name: 'Strength',     color: '#ef4444',
       habits: [
         'Strength training', 'Cardio', 'Sprint session', 'Daily walk', 'Protein goal',
       ] },
-    { id: 'VIT',   icon: '❤️',  label: 'VIT',   name: 'Vitality',     color: '#ec4899',
+    { id: 'VIT',   icon: '❤️',  iconImg: 'assets/stat-icons/stat-vit.png',   label: 'VIT',   name: 'Vitality',     color: '#ec4899',
       habits: [
         'Hydrate', 'Sleep', 'Sleep before midnight', 'Cardio', 'Daily walk',
         'Ice bath or cold plunge', 'Mobility & Stretching', 'Get morning sunlight',
         'Whole foods diet', 'No sugar/junk food', 'Barefoot grounding outside',
         'Vitamins and minerals', 'Sleep early before 11PM',
       ] },
-    { id: 'INT',   icon: '🧠',  label: 'INT',   name: 'Intelligence', color: '#3b82f6',
+    { id: 'INT',   icon: '🧠',  iconImg: 'assets/stat-icons/stat-int.png',   label: 'INT',   name: 'Intelligence', color: '#3b82f6',
       habits: [
         'Read', 'Journal', 'Educational podcast', 'Practice a skill',
         'Flashcard review', 'Write down lessons learned', 'Learn something new',
         'Language learning', 'Visualization practice',
         'Review your long term goals', 'Generate one new business or content idea',
       ] },
-    { id: 'FOCUS', icon: '🎯',  label: 'FOCUS', name: 'Focus',        color: '#eab308',
+    { id: 'FOCUS', icon: '🎯',  iconImg: 'assets/stat-icons/stat-focus.png', label: 'FOCUS', name: 'Focus',        color: '#eab308',
       habits: [
         'Meditate & Breathwork', 'No phone or social media after waking',
         'Review daily goals/intentions', 'No social media before noon',
@@ -726,7 +740,7 @@
         'No doomscrolling until after 5PM', 'Review your long term goals',
         'Review investments or trading journal', 'Visualization practice',
       ] },
-    { id: 'WILL',  icon: '🔥',  label: 'WILL',  name: 'Willpower',    color: '#f97316',
+    { id: 'WILL',  icon: '🔥',  iconImg: 'assets/stat-icons/stat-will.png',  label: 'WILL',  name: 'Willpower',    color: '#f97316',
       habits: [
         'Ice bath or cold plunge', 'Cold shower', 'Meditate & Breathwork',
         'No screens 1 hour before bed', 'No sugar/junk food', 'No alcohol', 'No caffeine',
@@ -734,12 +748,33 @@
         'Morning gratitude practice', 'Pray or set intentions',
         'Call or text a family member', 'Do something kind for someone',
       ] },
-    { id: 'WLT',   icon: '💰',  label: 'WLT',   name: 'Wealth',       color: '#f59e0b',
+    { id: 'WLT',   icon: '💰',  iconImg: 'assets/stat-icons/stat-wlt.png',   label: 'WLT',   name: 'Wealth',       color: '#f59e0b',
       habits: [
         'Track finances & net worth', 'Work on a side project or business',
         'Review investments or trading journal', 'Generate one new business or content idea',
       ] },
   ];
+
+  // Render helper — returns an <img> for the stat's custom art if available,
+  // otherwise falls back to the raw emoji. The opts.size controls render
+  // size in CSS px; opts.eager loads immediately (use for above-the-fold).
+  function statIconHtml(st, opts) {
+    opts = opts || {};
+    const sz = opts.size || 32;
+    if (st && st.iconImg) {
+      const cls = 'stat-icon-img' + (opts.cls ? ' ' + opts.cls : '');
+      return '<img class="' + cls + '" src="' + st.iconImg + '" alt="' +
+        (st.label ? st.label.replace(/"/g, '') : '') + '" ' +
+        'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+        'draggable="false" loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async">';
+    }
+    return st && st.icon ? st.icon : '';
+  }
+  // For elements that previously held a single emoji glyph via .textContent.
+  function setStatIcon(el, st, sizePx) {
+    if (!el) return;
+    el.innerHTML = statIconHtml(st, { size: sizePx || 32, eager: true });
+  }
 
   const STAT_BONUS_THRESHOLDS = [
     { level:  5, pts:  25 },
@@ -825,6 +860,12 @@
   const CLASS_LV5_THRESHOLD = 5;
   const CLASS_SHIFT_DOMINANCE = 1.20;  // 20%+ over current class to shift
   const CLASS_BALANCE_RATIO   = 0.85;  // within 15% across all 6 stats → Sage
+
+  // Custom habits are user-authored. They're locked at Medium (3 XP) so they
+  // can't game the rank economy. The cap keeps the curated 49 as the
+  // canonical path — customs are bonus tracking, not a parallel system.
+  const MAX_CUSTOM_HABITS    = 5;
+  const CUSTOM_HABIT_DIFFICULTY = 'medium';
 
   const EMOJIS = [
     '🏃','💪','🧘','🚴','🏊','🏋️',
@@ -964,15 +1005,18 @@
       return { text: 'Weekend Challenge Starts 🏆', cls: 'na-badge-start' };
     }
     if (day === 'Sat') {
-      return noAlcoholDoneOn(weekend.fri)
-        ? { text: 'Day 2 of 3 🔥', cls: 'na-badge-progress' }
-        : { text: 'Challenge Failed ❌', cls: 'na-badge-fail' };
+      // If Friday was missed, stay quiet — the streak forgiveness ethos
+      // doesn't shame misses, it celebrates progress. No badge today.
+      if (!noAlcoholDoneOn(weekend.fri)) return null;
+      return { text: 'Day 2 of 3 🔥', cls: 'na-badge-progress' };
     }
     if (day === 'Sun') {
       const friOk = noAlcoholDoneOn(weekend.fri);
       const satOk = noAlcoholDoneOn(weekend.sat);
       if (friOk && satOk) return { text: 'Final Day — Complete for 30 XP 💰', cls: 'na-badge-final' };
-      return { text: 'Challenge Failed ❌', cls: 'na-badge-fail' };
+      // Challenge can no longer complete — show nothing rather than a
+      // shame badge. The card still works as a normal habit.
+      return null;
     }
     return null;
   }
@@ -2148,7 +2192,7 @@
 
     const pts = diffPts(habit ? habit.difficulty : 'easy');
     totalPoints += pts;
-    applyStatPts(habit ? habit.name : null, pts, 1);
+    applyStatPts(habit, pts, 1);
     save();
     checkAchievements();
     checkStatBonuses();
@@ -2205,7 +2249,7 @@
     const habit = habits.find(h => h.id === id);
     const pts = diffPts(habit ? habit.difficulty : 'easy');
     totalPoints = Math.max(0, totalPoints - pts);
-    applyStatPts(habit ? habit.name : null, pts, -1);
+    applyStatPts(habit, pts, -1);
     save();
   }
 
@@ -2318,9 +2362,27 @@
     return lv;
   }
 
-  function applyStatPts(habitName, pts, direction) {
-    if (!habitName) return;
+  function applyStatPts(habit, pts, direction) {
+    if (!habit) return;
     const MAX_STAT_XP = 6650; // total XP to reach Level 20 (hard cap) — sum of all 19 level thresholds
+
+    // Custom habits don't appear in any STATS[].habits list, so the
+    // name-match path below would skip them. Use getHabitPrimaryStat
+    // (which honors a habit's stored primaryStat) to route their XP.
+    if (habit.custom && habit.primaryStat) {
+      const stId = habit.primaryStat;
+      if (!stats[stId]) stats[stId] = { pts: 0 };
+      const raw = (stats[stId].pts || 0) + direction * pts;
+      stats[stId].pts = Math.max(0, direction > 0 ? Math.min(MAX_STAT_XP, raw) : raw);
+      if (currentTab === 'profile') renderProfile();
+      if (currentTab === 'stats')   renderStats();
+      return;
+    }
+
+    // Curated habits — name-based routing into every STATS bucket they
+    // appear in. (A few habits like "Cardio" build both STR and VIT.)
+    const habitName = habit.name;
+    if (!habitName) return;
     STATS.forEach(st => {
       if (st.habits.includes(habitName)) {
         if (!stats[st.id]) stats[st.id] = { pts: 0 };
@@ -3026,7 +3088,7 @@
       document.querySelector('.statlvl-label-top').textContent = 'LEVEL UP';
     }
 
-    document.getElementById('statlvl-icon').textContent   = stat.icon;
+    setStatIcon(document.getElementById('statlvl-icon'), stat, 64); // Stat Level Up popup — large hero icon
     document.getElementById('statlvl-name').textContent   = isMax
       ? stat.label.toUpperCase() + ' MASTERED'
       : stat.label + ' — ' + stat.name.toUpperCase();
@@ -4203,10 +4265,10 @@
       stripe.className = 'osrs-cell-stripe';
       stripe.style.background = st.color;
 
-      // Icon
+      // Icon — Stats tab tile cards. 32 CSS px, drawn from the custom art.
       const icon = document.createElement('div');
       icon.className = 'osrs-cell-icon';
-      icon.textContent = st.icon;
+      icon.innerHTML = statIconHtml(st, { size: 32, eager: true });
 
       // Abbrev label
       const abbr = document.createElement('div');
@@ -4267,7 +4329,7 @@
       bonusHTML +=
         '<div class="nb-card">' +
           '<div class="nb-top">' +
-            '<span class="nb-icon">' + nx.st.icon + '</span>' +
+            '<span class="nb-icon">' + statIconHtml(nx.st, { size: 32, eager: true }) + '</span>' +
             '<div class="nb-info">' +
               '<span class="nb-label" style="color:' + nx.st.color + '">' + nx.st.label + '</span>' +
               '<span class="nb-sublabel">Reach Level ' + nx.thr.level + '</span>' +
@@ -4353,7 +4415,10 @@
               rank.label + ' · ' + totalPoints.toLocaleString() + ' pts' +
             '</div>' +
             '<div class="sc-hero-class" style="color:' + cls.color + '">' +
-              cls.emoji + ' ' + cls.name +
+              // Civilian is the unawakened default — the standing-person
+              // emoji read as visually noisy and weakened the line. Once
+              // a real class is earned, its emoji stays (Warrior ⚔️ etc.).
+              (currentClass === 'CIVILIAN' ? '' : cls.emoji + ' ') + cls.name +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
             // 'Your Origin' — visible whenever we have at least Chapter 1.
@@ -5622,6 +5687,112 @@
   function openMorningPackModal() { openPackConfirmModal('morning'); }
   function openLockedInPackModal() { openPackConfirmModal('locked-in'); }
 
+  // ── CUSTOM HABIT MODAL ─────────────────────────────────────
+  // User authors a habit: emoji + name + which stat it builds.
+  // Difficulty is FIXED at CUSTOM_HABIT_DIFFICULTY ('medium' / 3 XP) so
+  // customs can't game the rank economy. Capped at MAX_CUSTOM_HABITS.
+  let _customEmoji   = '⚡';
+  let _customStatId  = null;
+
+  function openCustomHabitModal() {
+    if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) return;
+    _customEmoji  = '⚡';
+    _customStatId = null;
+    document.getElementById('custom-emoji-btn').textContent = _customEmoji;
+    document.getElementById('custom-name-input').value = '';
+    document.getElementById('custom-error').classList.add('hidden');
+    renderCustomStatGrid();
+    updateCustomSaveBtn();
+    document.getElementById('custom-overlay').classList.remove('hidden');
+    setTimeout(() => {
+      try { document.getElementById('custom-name-input').focus(); } catch (_) {}
+    }, 80);
+  }
+
+  function closeCustomHabitModal() {
+    document.getElementById('custom-overlay').classList.add('hidden');
+  }
+
+  function renderCustomStatGrid() {
+    const grid = document.getElementById('custom-stat-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    STATS.forEach(st => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'custom-stat-btn' + (_customStatId === st.id ? ' selected' : '');
+      btn.style.setProperty('--cs-color', st.color);
+      btn.style.setProperty('--cs-glow',  colorWithAlpha(st.color, 0.32));
+      btn.innerHTML =
+        '<span class="custom-stat-icon">' + statIconHtml(st, { size: 22 }) + '</span>' +
+        '<span class="custom-stat-name">' + esc(st.label) + '</span>';
+      btn.addEventListener('click', () => {
+        _customStatId = st.id;
+        renderCustomStatGrid();
+        updateCustomSaveBtn();
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  function updateCustomSaveBtn() {
+    const name = (document.getElementById('custom-name-input').value || '').trim();
+    document.getElementById('custom-save-btn').disabled = !(name.length > 0 && _customStatId);
+  }
+
+  function saveCustomHabit() {
+    const name = (document.getElementById('custom-name-input').value || '').trim();
+    const errEl = document.getElementById('custom-error');
+    const showErr = (msg) => { errEl.textContent = msg; errEl.classList.remove('hidden'); };
+
+    if (!name)            return showErr('Give your habit a name.');
+    if (!_customStatId)   return showErr('Pick the stat this habit trains.');
+    if (habits.some(h => h.name.toLowerCase() === name.toLowerCase())) {
+      return showErr('You already have a habit with that name.');
+    }
+    if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) {
+      return showErr('You\'ve reached the ' + MAX_CUSTOM_HABITS + '-custom-habit cap.');
+    }
+
+    const newH = {
+      id:          uid(),
+      emoji:       _customEmoji || '⚡',
+      name:        name,
+      difficulty:  CUSTOM_HABIT_DIFFICULTY,
+      type:        'build',
+      primaryStat: _customStatId,
+      custom:      true,
+    };
+    habits.push(newH);
+    save();
+    renderHabits();
+    renderLibrary();
+    closeCustomHabitModal();
+  }
+
+  function setupCustomHabitModal() {
+    const overlay = document.getElementById('custom-overlay');
+    if (!overlay) return;
+    document.getElementById('custom-cancel-btn').addEventListener('click', closeCustomHabitModal);
+    document.getElementById('custom-save-btn').addEventListener('click', saveCustomHabit);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeCustomHabitModal();
+    });
+    document.getElementById('custom-name-input').addEventListener('input', updateCustomSaveBtn);
+    document.getElementById('custom-name-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !document.getElementById('custom-save-btn').disabled) {
+        e.preventDefault();
+        saveCustomHabit();
+      }
+    });
+    document.getElementById('custom-emoji-btn').addEventListener('click', (e) => {
+      openEmojiPicker(e.currentTarget, _customEmoji, (em) => {
+        _customEmoji = em || '⚡';
+        document.getElementById('custom-emoji-btn').textContent = _customEmoji;
+      });
+    });
+  }
+
   function closeMorningPackModal() {
     document.getElementById('mr-overlay').classList.add('hidden');
   }
@@ -5731,8 +5902,39 @@
       '</span>' +
       '<span class="lib-pack-chevron">›</span>';
     liEntry.addEventListener('click', openLockedInPackModal);
+
+    // ── Create your own — purple-accented, dashed border, sits below packs ──
+    // Always shown (until cap is reached) so users can author personal habits
+    // alongside the curated 49. XP is fixed at Medium so the rank economy
+    // can't be gamed.
+    const customCount    = habits.filter(h => h.custom).length;
+    const customsLeft    = Math.max(0, MAX_CUSTOM_HABITS - customCount);
+    const customEntry    = document.createElement('div');
+    customEntry.className = 'lib-pack-entry lib-pack-entry--custom';
+    customEntry.innerHTML =
+      '<span class="lib-pack-emoji">⚡</span>' +
+      '<span class="lib-pack-text">' +
+        '<span class="lib-pack-title">Create Your Own</span>' +
+        '<span class="lib-pack-sub">' +
+          (customsLeft === 0
+            ? 'Cap reached (' + MAX_CUSTOM_HABITS + ' custom habits)'
+            : 'Your habit, your stat. +3 XP per completion.') +
+        '</span>' +
+      '</span>' +
+      '<span class="lib-pack-count">' +
+        (customsLeft === 0 ? 'Full' : customsLeft + ' left') +
+      '</span>' +
+      '<span class="lib-pack-chevron">›</span>';
+    if (customsLeft > 0) {
+      customEntry.addEventListener('click', openCustomHabitModal);
+    } else {
+      customEntry.style.opacity = '0.55';
+      customEntry.style.cursor  = 'not-allowed';
+    }
+
     list.appendChild(mrEntry);
     list.appendChild(liEntry);
+    list.appendChild(customEntry);
 
     if (!catData.length) {
       // Pack entry above is shown; the rest of the categories area is empty.
@@ -7388,7 +7590,7 @@
       badge.style.borderColor = colorWithAlpha(stat.color, 0.55);
       badge.style.color       = stat.color;
       badge.innerHTML =
-        '<span class="hi-badge-icon">' + stat.icon + '</span>' +
+        '<span class="hi-badge-icon">' + statIconHtml(stat, { size: 18 }) + '</span>' +
         '<span class="hi-badge-label">' + esc(stat.label) + ' · ' + esc(stat.name) + '</span>';
     }
 
@@ -7873,7 +8075,7 @@
     // Header
     document.getElementById('stat-detail-badge').style.background  = st.color + '18';
     document.getElementById('stat-detail-badge').style.borderColor = st.color;
-    document.getElementById('stat-detail-icon').textContent  = st.icon;
+    setStatIcon(document.getElementById('stat-detail-icon'), st, 56); // Stat Detail sheet header
     document.getElementById('stat-detail-label').textContent = st.label;
     document.getElementById('stat-detail-name').textContent  = st.name;
     document.getElementById('stat-detail-level').textContent =
@@ -8237,65 +8439,134 @@
   }
 
   // ── CHECK FOR UPDATES ────────────────────────────────────
+  // Belt-and-suspenders update detection:
+  //   1) Ask the SW to re-check by calling reg.update() and listening for
+  //      the standard 'updatefound' / 'statechange' events.
+  //   2) IN PARALLEL, fetch sw.js directly with a cache-busting query and
+  //      parse out CACHE_VERSION. If it differs from what we have stored
+  //      from the last successful registration, treat that as an update —
+  //      even if the SW system didn't fire 'updatefound' (race condition,
+  //      Safari quirk, byte-compare false-negative).
+  //   3) If everything reports stale, treat as up-to-date.
+  //
+  // When an update IS detected, we wipe ALL caches before reloading so the
+  // new SW pre-caches from the network instead of inheriting a stale entry
+  // through the cache-first fetch handler.
+  const SW_KNOWN_VERSION_KEY = 'hb_sw_known_version';
+
+  function parseSwVersion(text) {
+    // Match: const CACHE_VERSION = 'v4.90';
+    const m = text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    return m ? m[1] : null;
+  }
+
   function checkForUpdates() {
     const btn   = document.getElementById('update-check-btn');
     const label = document.getElementById('update-check-label');
     if (!btn || !label) return;
 
-    // Loading state
     btn.disabled = true;
     btn.classList.add('update-btn--checking');
     label.textContent = 'Checking...';
 
     // No SW support → treat as up to date
     if (!('serviceWorker' in navigator)) {
-      setTimeout(resolveUpToDate, 900);
+      setTimeout(resolveUpToDate, 600);
       return;
     }
 
-    navigator.serviceWorker.getRegistration().then(reg => {
-      if (!reg) { setTimeout(resolveUpToDate, 900); return; }
+    let resolved = false;
 
-      // Already a waiting worker → activate it now
-      if (reg.waiting) {
-        resolveUpdateFound(reg.waiting);
-        return;
-      }
+    // ── Path A: standard SW update check ─────────────────────
+    const swPath = navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) return;
+      if (reg.waiting) { resolveUpdateFound(reg.waiting); return; }
 
-      let updateDetected = false;
-
-      // Listen for a new SW installing during this check
-      reg.addEventListener('updatefound', () => {
+      // Listen for a NEW worker entering the installing state
+      const onUpdateFound = () => {
         const incoming = reg.installing;
         if (!incoming) return;
-        updateDetected = true;
-        incoming.addEventListener('statechange', () => {
+        const onStateChange = () => {
           if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
+            incoming.removeEventListener('statechange', onStateChange);
             resolveUpdateFound(incoming);
           }
-        });
-      }, { once: true });
+        };
+        incoming.addEventListener('statechange', onStateChange);
+      };
+      reg.addEventListener('updatefound', onUpdateFound);
+      // ALSO check if a worker is already installing right now (race-safe)
+      if (reg.installing) onUpdateFound();
+      return reg.update().catch(() => {});
+    }).catch(() => {});
 
-      // Force the browser to re-fetch sw.js and compare
-      reg.update().then(() => {
-        // Allow a short window for statechange to propagate
-        setTimeout(() => {
-          if (!updateDetected) resolveUpToDate();
-        }, 600);
-      }).catch(() => resolveUpToDate());
+    // ── Path B: direct version-string comparison (fallback) ──
+    const versionPath = fetch('sw.js?_=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.ok ? r.text() : '')
+      .then(parseSwVersion)
+      .catch(() => null);
 
-    }).catch(() => resolveUpToDate());
+    // Wait for either path to settle, with a 4-second ceiling so the
+    // user always gets feedback even on flaky networks.
+    Promise.allSettled([swPath, versionPath, wait(2500)]).then(async () => {
+      if (resolved) return;
+      const liveVersion   = await versionPath;
+      const knownVersion  = (() => {
+        try { return localStorage.getItem(SW_KNOWN_VERSION_KEY); } catch (_) { return null; }
+      })();
+      if (liveVersion && knownVersion && liveVersion !== knownVersion) {
+        // Version drift detected — force a hard refresh path. This handles
+        // the case where the SW is "controlling" us with a stale CACHE_VERSION
+        // but we have an even newer sw.js sitting on the server that didn't
+        // get registered as an update for whatever reason.
+        return forceHardRefresh(liveVersion);
+      }
+      resolveUpToDate();
+    });
+
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
     function resolveUpdateFound(worker) {
+      if (resolved) return;
+      resolved = true;
       btn.classList.remove('update-btn--checking');
       btn.classList.add('update-btn--found');
       label.textContent = 'Update found! Reloading...';
-      // Give user 1.5 s to read the message, then swap in the new SW
-      // (controllerchange handler in registerSW() will call location.reload())
-      setTimeout(() => worker.postMessage({ type: 'SKIP_WAITING' }), 1500);
+      setTimeout(() => {
+        // Wipe caches first so the new SW activates with a clean slate.
+        // controllerchange handler in registerSW() calls location.reload()
+        // once the new SW takes over.
+        clearAllCaches().finally(() => {
+          worker.postMessage({ type: 'SKIP_WAITING' });
+        });
+      }, 1200);
+    }
+
+    async function forceHardRefresh(newVersion) {
+      if (resolved) return;
+      resolved = true;
+      btn.classList.remove('update-btn--checking');
+      btn.classList.add('update-btn--found');
+      label.textContent = 'Update found! Reloading...';
+      try { localStorage.setItem(SW_KNOWN_VERSION_KEY, newVersion); } catch (_) {}
+      try {
+        await clearAllCaches();
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+      } catch (_) {}
+      setTimeout(() => location.reload(), 800);
+    }
+
+    function clearAllCaches() {
+      if (!window.caches) return Promise.resolve();
+      return caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
     }
 
     function resolveUpToDate() {
+      if (resolved) return;
+      resolved = true;
       btn.classList.remove('update-btn--checking');
       btn.classList.add('update-btn--uptodate');
       label.textContent = "You're up to date ✓";
@@ -8949,6 +9220,16 @@
 
     navigator.serviceWorker.register('sw.js').then(reg => {
 
+      // Record the live sw.js CACHE_VERSION so checkForUpdates() can compare
+      // against it later. Done in the background — don't block registration.
+      fetch('sw.js?_=' + Date.now(), { cache: 'no-store' })
+        .then(r => r.ok ? r.text() : '')
+        .then(text => {
+          const m = text && text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+          if (m) { try { localStorage.setItem('hb_sw_known_version', m[1]); } catch (_) {} }
+        })
+        .catch(() => {});
+
       // Helper: show the banner for a given waiting worker
       function offerUpdate(worker) {
         showUpdateBanner(() => {
@@ -9077,6 +9358,7 @@
     setTimeout(() => flushPendingShieldNotices(), 800);
     migratePRsIfNeeded();
     setupEmojiPicker();
+    setupCustomHabitModal();
     setupStatDetail();
     setupSettings();
     setupStreakDanger();

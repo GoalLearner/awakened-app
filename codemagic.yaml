@@ -38,7 +38,7 @@ workflows:
       # ── Build variables ────────────────────────────────────────
       vars:
         BUNDLE_ID:        "com.goallearner.awakened"
-        APP_VERSION:      "1.1.1"
+        APP_VERSION:      "1.1.2"
         XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
@@ -61,6 +61,21 @@ workflows:
           cp index.html styles.css app.js sw.js manifest.json www/
           # Class avatar silhouettes
           cp avatar-*.png www/
+          # PWA app-icons (rendered from app-icon-source.png by
+          # scripts/generate-app-icons.ps1; checked into the repo).
+          cp icon-192.png icon-512.png www/
+          # Tab-bar icons (DALL-E art) — copy only the optimized 192×192 PNGs
+          # into www/. The 1254×1254 *-source.png masters stay in the repo
+          # but must NOT ship in the iOS bundle (16 MB of dead weight).
+          mkdir -p www/assets/tab-icons
+          for icon in tab-status tab-habits tab-stats tab-history tab-dungeon tab-items tab-social; do
+            cp "assets/tab-icons/$icon.png" "www/assets/tab-icons/$icon.png"
+          done
+          # Stat icons (DALL-E art) — same pattern as tab icons.
+          mkdir -p www/assets/stat-icons
+          for icon in stat-str stat-vit stat-int stat-focus stat-will stat-wlt; do
+            cp "assets/stat-icons/$icon.png" "www/assets/stat-icons/$icon.png"
+          done
 
       - name: Add iOS platform (runs on first build only)
         script: |

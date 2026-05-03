@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v4.87';
+const CACHE_VERSION = 'v4.96';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -21,6 +21,24 @@ const PRECACHE_ASSETS = [
   '/avatar-paladin.png',
   '/avatar-merchant.png',
   '/avatar-sage.png',
+  // Tab-bar icons (DALL-E art replacing the emoji set)
+  '/assets/tab-icons/tab-status.png',
+  '/assets/tab-icons/tab-habits.png',
+  '/assets/tab-icons/tab-stats.png',
+  '/assets/tab-icons/tab-history.png',
+  '/assets/tab-icons/tab-dungeon.png',
+  '/assets/tab-icons/tab-items.png',
+  '/assets/tab-icons/tab-social.png',
+  // Stat icons (DALL-E art)
+  '/assets/stat-icons/stat-str.png',
+  '/assets/stat-icons/stat-vit.png',
+  '/assets/stat-icons/stat-int.png',
+  '/assets/stat-icons/stat-focus.png',
+  '/assets/stat-icons/stat-will.png',
+  '/assets/stat-icons/stat-wlt.png',
+  // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────
@@ -55,15 +73,10 @@ self.addEventListener('fetch', e => {
   // Only handle same-origin requests
   if (url.origin !== self.location.origin) return;
 
-  // Generate PNG icons dynamically (never cached by URL)
-  if (url.pathname === '/icon-192.png') {
-    e.respondWith(getOrGenerateIcon(192));
-    return;
-  }
-  if (url.pathname === '/icon-512.png') {
-    e.respondWith(getOrGenerateIcon(512));
-    return;
-  }
+  // NOTE: /icon-192.png and /icon-512.png are now real static files in
+  // the project root (generated from app-icon-source.png). The dynamic
+  // OffscreenCanvas-based generator that lived here previously has been
+  // removed — those static files fall through the cache-first path below.
 
   // ── Network-first for HTML ─────────────────────────────────
   // Always fetch the latest index.html so version bumps are picked
@@ -105,79 +118,5 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// ── ICON GENERATION ───────────────────────────────────────────
-async function getOrGenerateIcon(size) {
-  const cache  = await caches.open(CACHE_NAME);
-  const key    = `/icon-${size}.png`;
-  const cached = await cache.match(key);
-  if (cached) return cached;
-
-  const response = await generateIcon(size);
-  cache.put(key, response.clone());
-  return response;
-}
-
-async function generateIcon(size) {
-  try {
-    const canvas = new OffscreenCanvas(size, size);
-    const ctx    = canvas.getContext('2d');
-    const r      = size * 0.22;
-
-    // Rounded dark background
-    ctx.fillStyle = '#0f1a12';
-    roundRect(ctx, 0, 0, size, size, r);
-    ctx.fill();
-
-    // Subtle inner glow ring
-    const grad = ctx.createRadialGradient(size/2, size/2, size*0.1, size/2, size/2, size*0.5);
-    grad.addColorStop(0, 'rgba(34,197,94,0.08)');
-    grad.addColorStop(1, 'rgba(34,197,94,0)');
-    ctx.fillStyle = grad;
-    roundRect(ctx, 0, 0, size, size, r);
-    ctx.fill();
-
-    // Checkmark
-    const lw = size * 0.085;
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth   = lw;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-
-    const cx = size * 0.5;
-    const cy = size * 0.52;
-    const s  = size * 0.38;
-
-    ctx.beginPath();
-    ctx.moveTo(cx - s * 0.48, cy - s * 0.04);
-    ctx.lineTo(cx - s * 0.05, cy + s * 0.42);
-    ctx.lineTo(cx + s * 0.55, cy - s * 0.4);
-    ctx.stroke();
-
-    const blob = await canvas.convertToBlob({ type: 'image/png' });
-    return new Response(blob, {
-      status:  200,
-      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=604800' },
-    });
-  } catch (_) {
-    // Fallback: 1×1 green pixel
-    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-    const bin = atob(b64);
-    const arr = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    return new Response(arr.buffer, { status: 200, headers: { 'Content-Type': 'image/png' } });
-  }
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+// (Procedural icon generator removed — replaced by static PNGs at
+//  /icon-192.png and /icon-512.png rendered from app-icon-source.png.)

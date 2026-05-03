@@ -1218,28 +1218,48 @@ footer {
 
 .tab-btn {
   flex: 1;
-  padding: 10px 4px;
-  min-height: 46px;
-  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 50px keeps every button comfortably above the 44×44 iOS accessibility
+     tap-target minimum while staying compact for symbol-only nav. */
+  min-height: 50px;
+  padding: 6px 4px;
+  background: transparent !important;
+  background-color: transparent !important;
   border: none;
   border-bottom: 2px solid transparent;
-  font-size: 1.35rem;
-  line-height: 1;
+  box-shadow: none;
   font-family: inherit;
   cursor: pointer;
-  opacity: 0.45;
-  filter: none;
-  transition: opacity 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+  transition: filter 0.15s ease, border-color 0.15s ease;
   -webkit-appearance: none;
   appearance: none;
   margin-bottom: -1px;
   white-space: nowrap;
 }
 
+.tab-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  background: transparent !important;
+  background-color: transparent !important;
+  opacity: 0.55;
+  filter: brightness(0.85);
+  transition: opacity 0.18s ease, filter 0.18s ease, transform 0.18s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
 .tab-btn.active {
-  opacity: 1;
   border-bottom-color: var(--accent);
-  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.85));
+}
+.tab-btn.active .tab-icon {
+  opacity: 1;
+  filter: brightness(1.12) drop-shadow(0 0 8px rgba(139, 92, 246, 0.75));
+  transform: scale(1.06);
 }
 
 /* ── TAB PANELS ── */
@@ -2640,6 +2660,39 @@ body.theme-light .ob-inspiration-quote {
   font-size: 1.4rem;
   line-height: 1;
   margin-top: 2px;
+}
+/* When the icon container holds the new <img> art instead of an emoji,
+   collapse the inherited font-size so vertical rhythm matches and the
+   image is the only thing taking up space in the slot. Same pattern is
+   reused for every stat-icon container site below. */
+.osrs-cell-icon:has(.stat-icon-img),
+.nb-icon:has(.stat-icon-img),
+.hi-badge-icon:has(.stat-icon-img),
+.custom-stat-icon:has(.stat-icon-img),
+#statlvl-icon:has(.stat-icon-img),
+#stat-detail-icon:has(.stat-icon-img) {
+  font-size: 0;
+  line-height: 0;
+}
+
+/* The stat-icon image itself — sizing is set inline by statIconHtml() so
+   one CSS rule covers every consumer. We just style for crisp render and
+   subtle accent glow. The drop-shadow uses a near-neutral warm color so
+   it reads on both the dark and light themes without competing with the
+   stat's own color (which is conveyed by the surrounding container). */
+.stat-icon-img {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.22));
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* Hero-size icons in celebration popups get a stronger glow. */
+#statlvl-icon .stat-icon-img,
+#stat-detail-icon .stat-icon-img {
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.45));
 }
 
 .osrs-cell-abbr {
@@ -6830,6 +6883,29 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   filter: drop-shadow(0 0 16px rgba(139,92,246,0.35));
 }
 
+/* Custom-art version of the placeholder icon — used when the emoji is
+   replaced with an <img> pointing at one of the tab-icon PNGs. The art
+   is detailed enough to deserve a real render size on the empty-state
+   screen (96px) instead of the 32px tab-bar size. */
+.cs-icon--art {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  display: block;
+  margin: 16px auto 24px;
+  font-size: 0;            /* defeats inherited 3.2rem from .cs-icon */
+  line-height: 0;
+  background: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* Per-screen glow — Dungeon leans crimson, Items leans gold, Social keeps
+   the brand purple. Subtle but distinguishes the three placeholders. */
+.cs-icon--dungeon { filter: drop-shadow(0 0 18px rgba(220, 38, 38, 0.40)); }
+.cs-icon--items   { filter: drop-shadow(0 0 18px rgba(245, 158, 11, 0.35)); }
+.cs-icon--social  { filter: drop-shadow(0 0 18px rgba(139,  92, 246, 0.40)); }
+
 .cs-title {
   font-size: 1.75rem;
   font-weight: 900;
@@ -7197,6 +7273,156 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   background: rgba(245, 158, 11, 0.18);
   color: rgba(255, 255, 255, 0.42);
   cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CUSTOM HABIT MODAL — name + emoji + stat picker
+   ═══════════════════════════════════════════════════════════════ */
+.custom-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: mr-fade 0.22s ease-out;
+}
+.custom-overlay.hidden { display: none !important; }
+
+.custom-card {
+  background: linear-gradient(160deg, #1a1a2e 0%, #14142a 100%);
+  border: 1.5px solid rgba(168, 85, 247, 0.42);
+  border-radius: 22px;
+  padding: 24px 22px 18px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 0 40px rgba(168, 85, 247, 0.22), 0 12px 40px rgba(0, 0, 0, 0.6);
+  animation: mr-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.custom-title {
+  font-size: 1.18rem; font-weight: 900; color: #fff; text-align: center;
+  letter-spacing: 0.02em;
+}
+.custom-sub {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-align: center;
+  margin: 8px 4px 18px;
+  line-height: 1.45;
+}
+.custom-sub-strong { color: #c4b5fd; font-weight: 700; }
+
+.custom-row {
+  display: flex; gap: 10px; align-items: center;
+  margin-bottom: 18px;
+}
+.custom-emoji-btn {
+  width: 56px; height: 52px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1.6rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.custom-emoji-btn:active { transform: scale(0.96); }
+.custom-emoji-btn:hover  { background: rgba(255, 255, 255, 0.10); border-color: rgba(168,85,247,0.5); }
+.custom-name-input {
+  flex: 1;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  padding: 0 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.custom-name-input::placeholder { color: rgba(255, 255, 255, 0.36); }
+.custom-name-input:focus { border-color: rgba(168, 85, 247, 0.6); }
+
+.custom-stat-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.custom-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.custom-stat-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.1s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.custom-stat-btn:active { transform: scale(0.96); }
+.custom-stat-icon { font-size: 1.2rem; line-height: 1; }
+.custom-stat-name { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; opacity: 0.78; }
+.custom-stat-btn.selected {
+  background: rgba(168, 85, 247, 0.10);
+  border-color: var(--cs-color, #a855f7);
+  box-shadow: 0 0 18px var(--cs-glow, rgba(168, 85, 247, 0.28));
+}
+.custom-stat-btn.selected .custom-stat-name { color: var(--cs-color, #a855f7); opacity: 1; }
+
+.custom-error {
+  font-size: 0.78rem;
+  color: #fca5a5;
+  text-align: center;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.custom-error.hidden { display: none; }
+
+.custom-actions { display: flex; gap: 10px; }
+.custom-btn {
+  flex: 1; padding: 14px;
+  border: none; border-radius: 12px;
+  font-family: inherit; font-size: 0.92rem; font-weight: 800; letter-spacing: 0.04em;
+  cursor: pointer; -webkit-appearance: none;
+  transition: transform 0.1s ease, opacity 0.18s ease, background 0.18s ease;
+}
+.custom-btn:active:not(:disabled) { transform: scale(0.97); opacity: 0.92; }
+.custom-btn-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.custom-btn-save {
+  background: #a855f7;
+  color: #150a24;
+}
+.custom-btn-save:disabled {
+  background: rgba(168, 85, 247, 0.18);
+  color: rgba(255, 255, 255, 0.42);
+  cursor: not-allowed;
+}
+
+/* "Create your own" entry inside the lib-sheet */
+.lib-pack-entry--custom {
+  border: 1px dashed rgba(168, 85, 247, 0.42);
+  background: linear-gradient(180deg, rgba(168,85,247,0.08), rgba(168,85,247,0.04));
+}
+.lib-pack-entry--custom .lib-pack-emoji {
+  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.45));
 }
 
 /* ═══════════════════════════════════════════════════════════════

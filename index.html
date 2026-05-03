@@ -11,7 +11,24 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=122">
+  <link rel="stylesheet" href="styles.css?v=127">
+  <!-- Preload tab-bar icons so they render instantly on first paint
+       instead of pop-in. Above the fold, always visible — eager load. -->
+  <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
+  <link rel="preload" as="image" href="assets/tab-icons/tab-habits.png">
+  <link rel="preload" as="image" href="assets/tab-icons/tab-stats.png">
+  <link rel="preload" as="image" href="assets/tab-icons/tab-history.png">
+  <link rel="preload" as="image" href="assets/tab-icons/tab-dungeon.png">
+  <link rel="preload" as="image" href="assets/tab-icons/tab-items.png">
+  <link rel="preload" as="image" href="assets/tab-icons/tab-social.png">
+  <!-- Stat icons (DALL-E art) — used on Stats tab tiles, Status detail
+       sheet, and various popups. Preload so they render without pop-in. -->
+  <link rel="preload" as="image" href="assets/stat-icons/stat-str.png">
+  <link rel="preload" as="image" href="assets/stat-icons/stat-vit.png">
+  <link rel="preload" as="image" href="assets/stat-icons/stat-int.png">
+  <link rel="preload" as="image" href="assets/stat-icons/stat-focus.png">
+  <link rel="preload" as="image" href="assets/stat-icons/stat-will.png">
+  <link rel="preload" as="image" href="assets/stat-icons/stat-wlt.png">
 </head>
 <body>
   <!-- Welcome / cinematic intro screen (first launch only) -->
@@ -160,15 +177,33 @@
       </div>
     </header>
 
-    <!-- Tab bar -->
+    <!-- Tab bar — symbol-only navigation. id and data-tab attributes are
+         preserved so existing app.js navigation logic keeps working.
+         NOTE: tab icon PNGs in assets/tab-icons/ may need their backgrounds
+         removed via remove.bg (or similar) if dark/white squares appear
+         behind them. The CSS can't make non-transparent PNG pixels see-through. -->
     <nav class="tab-bar">
-      <button id="tab-profile"  class="tab-btn active" data-tab="profile"  aria-label="Profile">🗡️</button>
-      <button id="tab-habits"   class="tab-btn"        data-tab="habits"   aria-label="Habits">✅</button>
-      <button id="tab-stats"    class="tab-btn"        data-tab="stats"    aria-label="Stats">📊</button>
-      <button id="tab-history"  class="tab-btn"        data-tab="history"  aria-label="History">📅</button>
-      <button id="tab-quests"   class="tab-btn"        data-tab="quests"   aria-label="Quests">⚔️</button>
-      <button id="tab-items"    class="tab-btn"        data-tab="items"    aria-label="Items">🎴</button>
-      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Social">👥</button>
+      <button id="tab-profile"  class="tab-btn active" data-tab="profile"  aria-label="Status">
+        <img class="tab-icon" src="assets/tab-icons/tab-status.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
+      <button id="tab-habits"   class="tab-btn"        data-tab="habits"   aria-label="Habits">
+        <img class="tab-icon" src="assets/tab-icons/tab-habits.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
+      <button id="tab-stats"    class="tab-btn"        data-tab="stats"    aria-label="Stats">
+        <img class="tab-icon" src="assets/tab-icons/tab-stats.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
+      <button id="tab-history"  class="tab-btn"        data-tab="history"  aria-label="History">
+        <img class="tab-icon" src="assets/tab-icons/tab-history.png" alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
+      <button id="tab-quests"   class="tab-btn"        data-tab="quests"   aria-label="Dungeon">
+        <img class="tab-icon" src="assets/tab-icons/tab-dungeon.png" alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
+      <button id="tab-items"    class="tab-btn"        data-tab="items"    aria-label="Items">
+        <img class="tab-icon" src="assets/tab-icons/tab-items.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
+      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Social">
+        <img class="tab-icon" src="assets/tab-icons/tab-social.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+      </button>
     </nav>
 
     <!-- Profile panel (status card only) -->
@@ -205,7 +240,7 @@
     <!-- Quests panel (coming soon) -->
     <div id="quests-panel" class="tab-panel hidden" data-panel="quests">
       <div class="cs-screen">
-        <div class="cs-icon">⚔️</div>
+        <img class="cs-icon cs-icon--art cs-icon--dungeon" src="assets/tab-icons/tab-dungeon.png" alt="Dungeon" draggable="false" loading="lazy" decoding="async" onerror="this.style.display='none'">
         <h2 class="cs-title">QUESTS</h2>
         <div class="cs-version">Coming in Version 2.0</div>
         <p class="cs-desc">Enter dungeons. Fight bosses. Earn rare drops. Your rank determines which battles you can enter.</p>
@@ -215,7 +250,7 @@
     <!-- Items panel (coming soon) -->
     <div id="items-panel" class="tab-panel hidden" data-panel="items">
       <div class="cs-screen">
-        <div class="cs-icon">🎴</div>
+        <img class="cs-icon cs-icon--art cs-icon--items" src="assets/tab-icons/tab-items.png" alt="Items" draggable="false" loading="lazy" decoding="async" onerror="this.style.display='none'">
         <h2 class="cs-title">ITEMS</h2>
         <div class="cs-version">Coming in Version 2.0</div>
         <p class="cs-desc">Collect armor, weapons and cosmetics from dungeon drops. Equip them to your character.</p>
@@ -245,7 +280,7 @@
     <!-- Social panel (coming soon) -->
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
       <div class="cs-screen">
-        <div class="cs-icon">👥</div>
+        <img class="cs-icon cs-icon--art cs-icon--social" src="assets/tab-icons/tab-social.png" alt="Social" draggable="false" loading="lazy" decoding="async" onerror="this.style.display='none'">
         <h2 class="cs-title">SOCIAL</h2>
         <div class="cs-version">Coming in Version 2.0</div>
         <p class="cs-desc">Challenge friends. Climb the global leaderboard. See who is truly Awakened.</p>
@@ -413,6 +448,29 @@
       <div class="mr-actions">
         <button id="mr-cancel-btn"  class="mr-btn mr-btn-cancel">Cancel</button>
         <button id="mr-confirm-btn" class="mr-btn mr-btn-confirm">Add Habits</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom habit creation modal -->
+  <div id="custom-overlay" class="custom-overlay hidden">
+    <div class="custom-card">
+      <div class="custom-title">Create Your Own Habit</div>
+      <div class="custom-sub">Reward is fixed at <span class="custom-sub-strong">3 XP per completion</span> (Medium). Pick the stat it builds.</div>
+
+      <div class="custom-row">
+        <button id="custom-emoji-btn" class="custom-emoji-btn" type="button">⚡</button>
+        <input id="custom-name-input" class="custom-name-input" type="text" placeholder="Habit name" maxlength="40" />
+      </div>
+
+      <div class="custom-stat-label">WHICH STAT DOES THIS TRAIN?</div>
+      <div id="custom-stat-grid" class="custom-stat-grid"></div>
+
+      <div id="custom-error" class="custom-error hidden"></div>
+
+      <div class="custom-actions">
+        <button id="custom-cancel-btn" class="custom-btn custom-btn-cancel" type="button">Cancel</button>
+        <button id="custom-save-btn"   class="custom-btn custom-btn-save"   type="button">Create Habit</button>
       </div>
     </div>
   </div>
@@ -755,7 +813,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=135"></script>
+  <script src="app.js?v=142"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
