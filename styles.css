@@ -218,6 +218,27 @@ h1 {
   color: var(--text-primary);
 }
 
+/* ── AWAKENED WORDMARK ─────────────────────────────────────
+   The "Awakened" header text. Cinzel 900 in solid amber (#fbbf24) with
+   a soft amber drop-shadow glow. The gradient violet end clashed with
+   other UI accents, so the wordmark is now cohesively gold. */
+.awakened-wordmark {
+  font-family: 'Cinzel', serif;
+  font-weight: 900 !important;
+  font-size: 32px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  display: inline-block;
+  color: #fbbf24;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: #fbbf24;
+  filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.5));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .date-label {
   font-size: 13px;
   font-weight: 500;
@@ -381,13 +402,30 @@ h1 {
   opacity: 0.3;
 }
 
-.habit-item.drop-target-above {
-  border-top-color: var(--accent);
-  border-top-width: 2px;
+/* Long-press drag — gold drop-line indicator on the left/right edge of
+   the targeted cell. The Habits view is a 3-column grid, so vertical
+   lines (before / after in row-major reading order) read more clearly
+   than horizontal ones. */
+.habit-item.drop-target--before {
+  box-shadow: inset 2px 0 0 0 #fbbf24, 0 0 14px rgba(251, 191, 36, 0.35);
 }
-.habit-item.drop-target-below {
-  border-bottom-color: var(--accent);
-  border-bottom-width: 2px;
+.habit-item.drop-target--after {
+  box-shadow: inset -2px 0 0 0 #fbbf24, 0 0 14px rgba(251, 191, 36, 0.35);
+}
+
+/* While a drag is active, dim every non-dragged sibling so the focused
+   card visually pops. The .drag-ghost (a clone, not in the list) is
+   unaffected by this rule. */
+.habit-list.is-dragging .habit-item:not(.drag-placeholder) {
+  opacity: 0.7;
+  transition: opacity 0.18s ease;
+}
+
+/* Long-press "armed" state — subtle scale-down so the user feels the
+   400ms hold being recognized. Cancels if they release or move > 10px. */
+.habit-item.lp-pressing {
+  transform: scale(0.98);
+  transition: transform 0.18s ease;
 }
 
 /* ── DRAG HANDLE — hidden in grid, shown in reorder mode ── */
@@ -663,11 +701,9 @@ h1 {
   animation: grid-glow-pulse 3s ease-in-out infinite;
 }
 
-/* drop-target bottom uses 3px to match the diff-color border */
-.habit-item.drop-target-below {
-  border-bottom-color: var(--accent);
-  border-bottom-width: 3px;
-}
+/* (Legacy single-column drop-target rule removed — replaced by the
+   2D drop-target--before / drop-target--after styles above for the
+   3-column grid layout.) */
 
 /* ── EMPTY STATE ── */
 .empty-state {
@@ -942,6 +978,294 @@ footer {
   margin-top: 2px;
 }
 .edit-goal-row.hidden { display: none !important; }
+
+/* ── Edit-Habit Reminder Section ─────────────────────────── */
+.edit-reminder-row {
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+.edit-reminder-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 8px;
+}
+.edit-reminder-empty,
+.edit-reminder-set {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.edit-reminder-set.hidden,
+.edit-reminder-empty.hidden { display: none; }
+.edit-reminder-add-btn {
+  flex: 1;
+  background: rgba(168,85,247,0.10);
+  border: 1px dashed rgba(168,85,247,0.42);
+  color: #c4b5fd;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: background 0.15s ease;
+}
+.edit-reminder-add-btn:active { background: rgba(168,85,247,0.18); }
+.edit-reminder-time-icon { font-size: 1.05rem; }
+.edit-reminder-time-display {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+.edit-reminder-time-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0; height: 0;
+}
+.edit-reminder-action-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.edit-reminder-remove-btn { color: #fca5a5; }
+
+/* ── Settings → Reminders ────────────────────────────────── */
+.settings-reminders { margin-top: 18px; }
+
+/* ── Generic collapsible Settings section ─────────────────
+   Reusable for any Settings group: REMINDERS, APPEARANCE, WHAT'S COMING.
+   The header is a button with [aria-expanded] driving the chevron;
+   the body is hidden via display: none when --collapsed (collapsing
+   via grid-row tricks fails when the body has multiple children, so
+   we trade animation for layout correctness). */
+.settings-collapsible-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+.settings-collapsible-toggle:active { background: rgba(255,255,255,0.08); }
+.settings-collapsible-lbl {
+  flex: 1;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.7);
+}
+.settings-collapsible-summary {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  margin-right: 6px;
+}
+.settings-collapsible-chevron {
+  font-size: 1.3rem;
+  line-height: 1;
+  color: rgba(255,255,255,0.5);
+  transition: transform 0.22s ease;
+}
+.settings-collapsible-toggle[aria-expanded="true"] .settings-collapsible-chevron {
+  transform: rotate(90deg);
+}
+.settings-collapsible-body { margin-top: 8px; }
+.settings-collapsible-body.settings-collapsible-body--collapsed { display: none; }
+
+/* Each collapsible sits inside the settings-sheet with consistent
+   horizontal inset. The first one gets a small top breathing room
+   from the section above (header divider). */
+.settings-collapsible {
+  margin: 14px 16px 0;
+}
+.settings-collapsible:first-of-type {
+  margin-top: 18px;
+}
+
+.settings-rem-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+.settings-rem-label { font-size: 0.92rem; color: var(--text-primary); }
+.settings-rem-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.65);
+}
+.settings-rem-value.granted { color: #34d399; }
+.settings-rem-value.denied  { color: #fca5a5; }
+.settings-rem-enable-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  background: #fbbf24;
+  color: #1a1505;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.settings-rem-enable-btn.hidden { display: none; }
+.settings-rem-note {
+  font-size: 0.74rem;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.4;
+  margin: 4px 0 8px;
+}
+.settings-rem-note.hidden { display: none; }
+.settings-rem-select {
+  background: rgba(0,0,0,0.22);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+.settings-rem-quiet-times {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0 4px;
+}
+.settings-rem-time-lbl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.65);
+}
+.settings-rem-time-input {
+  background: rgba(0,0,0,0.22);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+.settings-rem-pause-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+.settings-rem-pause-btn {
+  flex: 1;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.85);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.settings-rem-pause-btn.hidden { display: none; }
+.settings-rem-pause-cancel { color: #fca5a5; }
+.settings-rem-view-all {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.settings-rem-view-arrow {
+  font-size: 1.2rem;
+  color: rgba(255,255,255,0.45);
+  transition: transform 0.18s ease;
+}
+.settings-rem-view-all.expanded .settings-rem-view-arrow {
+  transform: rotate(90deg);
+}
+.settings-rem-list {
+  margin-top: 6px;
+  padding: 4px 0;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.settings-rem-list.hidden { display: none; }
+.settings-rem-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.settings-rem-list-item:last-child { border-bottom: none; }
+.settings-rem-list-name {
+  flex: 1;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-rem-list-time {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-right: 10px;
+}
+.settings-rem-list-remove {
+  background: rgba(252,165,165,0.1);
+  border: 1px solid rgba(252,165,165,0.3);
+  color: #fca5a5;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.settings-rem-list-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.45);
+}
 .edit-goal-label {
   font-size: 0.78rem;
   font-weight: 600;
@@ -954,17 +1278,19 @@ footer {
 }
 
 /* ── DRAG GHOST ── */
+/* The card lifts: scale-up + faint rotate gives the feel of grabbing
+   a real card. Gold-tinted shadow ties to the new wordmark / accents. */
 .drag-ghost {
   position: fixed !important;
   pointer-events: none;
   z-index: 1000;
   margin: 0 !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(139,92,246,0.2);
-  border: 1.5px solid var(--border-accent) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 4px 16px rgba(251,191,36,0.22);
+  border: 1.5px solid rgba(251, 191, 36, 0.35) !important;
   border-radius: var(--radius);
-  opacity: 0.95;
+  opacity: 0.96;
   transition: none !important;
-  transform: scale(1.02);
+  transform: scale(1.05) rotate(-1deg);
   background: var(--bg-card-active) !important;
 }
 
@@ -5206,9 +5532,31 @@ body.theme-light .ob-inspiration-quote {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 22px 20px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+/* Inline header row — "⚔ Habit RPG" on the left, "Sound [toggle]" on the right.
+   Centered overall; the sound block is offset to the right with margin-left:auto. */
+.settings-app-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+}
+.settings-app-sound {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-app-sound-lbl {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
 }
 
 .settings-app-name {

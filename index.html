@@ -11,7 +11,13 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Awakened</title>
-  <link rel="stylesheet" href="styles.css?v=127">
+  <!-- Cinzel — used for the "Awakened" wordmark in the app header. Loaded
+       with display=swap so the system font shows during fetch and gets
+       replaced once Cinzel is ready (no layout-shift flash). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=138">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -114,7 +120,7 @@
   <div id="app">
     <header>
       <div class="header-top">
-        <h1>Awakened</h1>
+        <h1 class="awakened-wordmark">Awakened</h1>
         <div class="header-right">
           <span id="current-date" class="date-label"></span>
           <button id="settings-btn" class="settings-btn" aria-label="Settings">⚙️</button>
@@ -218,8 +224,6 @@
 
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
-      <!-- Today's Legendary Mission — top of habits tab, above pack header -->
-      <div id="daily-mission-card" class="daily-mission-card hidden"></div>
       <ul id="habit-list" class="habit-list"></ul>
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-icon">✓</div>
@@ -237,11 +241,15 @@
       <div id="history-content" class="history-content"></div>
     </div>
 
-    <!-- Quests panel (coming soon) -->
+    <!-- Quests panel — Daily Quest at top, "more coming" placeholder below -->
     <div id="quests-panel" class="tab-panel hidden" data-panel="quests">
+      <!-- Today's Legendary Mission — moved here from the Habits tab so the
+           main flow stays focused on habits. Renders empty when no quest
+           is active today; the placeholder below still shows. -->
+      <div id="daily-mission-card" class="daily-mission-card hidden"></div>
       <div class="cs-screen">
         <img class="cs-icon cs-icon--art cs-icon--dungeon" src="assets/tab-icons/tab-dungeon.png" alt="Dungeon" draggable="false" loading="lazy" decoding="async" onerror="this.style.display='none'">
-        <h2 class="cs-title">QUESTS</h2>
+        <h2 class="cs-title">MORE QUESTS</h2>
         <div class="cs-version">Coming in Version 2.0</div>
         <p class="cs-desc">Enter dungeons. Fight bosses. Earn rare drops. Your rank determines which battles you can enter.</p>
       </div>
@@ -376,6 +384,22 @@
         <button id="edit-goal-inc" class="hd-step-btn" type="button">+</button>
       </div>
     </div>
+
+    <!-- Reminder section — single per-habit notification time -->
+    <div class="edit-reminder-row">
+      <div class="edit-reminder-label">📅 REMINDER</div>
+      <div id="edit-reminder-empty" class="edit-reminder-empty">
+        <button id="edit-reminder-add" class="edit-reminder-add-btn" type="button">+ Add reminder</button>
+      </div>
+      <div id="edit-reminder-set" class="edit-reminder-set hidden">
+        <span class="edit-reminder-time-icon">⏰</span>
+        <span id="edit-reminder-time-display" class="edit-reminder-time-display">7:30 AM</span>
+        <input id="edit-reminder-time-input" type="time" class="edit-reminder-time-input">
+        <button id="edit-reminder-change" class="edit-reminder-action-btn" type="button">Change</button>
+        <button id="edit-reminder-remove" class="edit-reminder-action-btn edit-reminder-remove-btn" type="button">Remove</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button id="cancel-edit-btn" class="btn-ghost">Cancel</button>
       <button id="save-edit-btn" class="btn-primary">Save</button>
@@ -448,6 +472,21 @@
       <div class="mr-actions">
         <button id="mr-cancel-btn"  class="mr-btn mr-btn-cancel">Cancel</button>
         <button id="mr-confirm-btn" class="mr-btn mr-btn-confirm">Add Habits</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification-permission explainer (shown once before iOS native prompt) -->
+  <div id="notif-explain-overlay" class="custom-overlay hidden">
+    <div class="custom-card">
+      <div class="custom-title">📲 Awakened can remind you</div>
+      <div class="custom-sub" style="text-align:center;line-height:1.5;margin-bottom:24px">
+        Get a single reminder for each habit at the time you choose.<br>
+        We send max 3 per day. Quiet hours respected. You're in control.
+      </div>
+      <div class="custom-actions">
+        <button id="notif-explain-cancel" class="custom-btn custom-btn-cancel" type="button">Not now</button>
+        <button id="notif-explain-enable" class="custom-btn custom-btn-save"   type="button">Enable reminders</button>
       </div>
     </div>
   </div>
@@ -813,7 +852,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=142"></script>
+  <script src="app.js?v=151"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -946,7 +985,13 @@
       <button id="settings-close" class="settings-close-btn" aria-label="Close">✕</button>
     </div>
     <div class="settings-app-info">
-      <div class="settings-app-name">⚔ Habit RPG</div>
+      <div class="settings-app-name-row">
+        <div class="settings-app-name">⚔ Habit RPG</div>
+        <div class="settings-app-sound">
+          <span class="settings-app-sound-lbl">Sound</span>
+          <button id="sound-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habit completion sounds"></button>
+        </div>
+      </div>
       <div class="settings-app-ver" id="settings-app-ver">Version 1.0</div>
     </div>
     <!-- Check for Updates -->
@@ -961,33 +1006,103 @@
         <span>What's New</span>
       </button>
     </div>
-    <!-- Appearance / Theme Toggle -->
-    <div class="settings-appearance">
-      <div class="settings-section-lbl">APPEARANCE</div>
-      <div class="settings-theme-row">
-        <button class="settings-theme-card" id="theme-dark-btn" data-theme="dark">
-          <span class="settings-theme-icon">🌙</span>
-          <span class="settings-theme-name">Dark Mode</span>
-          <span class="settings-theme-sub">Default</span>
-        </button>
-        <button class="settings-theme-card" id="theme-light-btn" data-theme="light">
-          <span class="settings-theme-icon">☀️</span>
-          <span class="settings-theme-name">Light Mode</span>
-          <span class="settings-theme-sub">New</span>
-        </button>
-      </div>
-
-      <!-- Sound Toggle -->
-      <div class="settings-section-lbl settings-sound-lbl">SOUND</div>
-      <div class="settings-toggle-row">
-        <label class="settings-toggle-label" for="sound-toggle">Habit completion sounds</label>
-        <button id="sound-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habit completion sounds"></button>
+    <!-- Appearance — collapsible -->
+    <div class="settings-collapsible">
+      <button id="settings-appearance-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="appearance">
+        <span class="settings-collapsible-lbl">🎨 APPEARANCE</span>
+        <span id="settings-appearance-summary" class="settings-collapsible-summary">Dark</span>
+        <span class="settings-collapsible-chevron">›</span>
+      </button>
+      <div id="settings-appearance-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+        <div class="settings-theme-row">
+          <button class="settings-theme-card" id="theme-dark-btn" data-theme="dark">
+            <span class="settings-theme-icon">🌙</span>
+            <span class="settings-theme-name">Dark Mode</span>
+            <span class="settings-theme-sub">Default</span>
+          </button>
+          <button class="settings-theme-card" id="theme-light-btn" data-theme="light">
+            <span class="settings-theme-icon">☀️</span>
+            <span class="settings-theme-name">Light Mode</span>
+            <span class="settings-theme-sub">New</span>
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- What's Coming -->
-    <div class="settings-coming-section">
-      <div class="settings-coming-lbl">WHAT'S COMING</div>
+    <!-- (Sound moved to the header; toggle now lives next to "Habit RPG".) -->
+
+    <!-- Reminders — collapsible -->
+    <div class="settings-collapsible">
+      <button id="settings-rem-section-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="reminders">
+        <span class="settings-collapsible-lbl">📲 REMINDERS</span>
+        <span id="settings-rem-section-summary" class="settings-collapsible-summary">0 active</span>
+        <span class="settings-collapsible-chevron">›</span>
+      </button>
+      <div id="settings-rem-section-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+
+      <!-- Permission status -->
+      <div class="settings-rem-row">
+        <span class="settings-rem-label">Notification permission</span>
+        <span id="settings-rem-permission" class="settings-rem-value">Not set</span>
+      </div>
+      <button id="settings-rem-enable" class="settings-rem-enable-btn hidden" type="button">Enable</button>
+      <p id="settings-rem-web-note" class="settings-rem-note hidden">
+        Reminders work best in the iOS app. Install from App Store for full functionality.
+      </p>
+
+      <!-- Daily limit -->
+      <div class="settings-rem-row">
+        <span class="settings-rem-label">Daily limit</span>
+        <select id="settings-rem-limit" class="settings-rem-select">
+          <option value="3">3 / day (gentle)</option>
+          <option value="5">5 / day</option>
+          <option value="8">8 / day</option>
+          <option value="0">Unlimited</option>
+        </select>
+      </div>
+
+      <!-- Quiet hours -->
+      <div class="settings-rem-row settings-rem-row--toggle">
+        <span class="settings-rem-label">Quiet hours</span>
+        <button id="settings-rem-quiet-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Quiet hours"></button>
+      </div>
+      <div id="settings-rem-quiet-times" class="settings-rem-quiet-times">
+        <label class="settings-rem-time-lbl">From <input id="settings-rem-quiet-start" type="time" class="settings-rem-time-input"></label>
+        <label class="settings-rem-time-lbl">to <input id="settings-rem-quiet-end" type="time" class="settings-rem-time-input"></label>
+      </div>
+      <p class="settings-rem-note">Quiet hours don't block reminders you set explicitly during those times.</p>
+
+      <!-- Pause -->
+      <div class="settings-rem-pause-row">
+        <button id="settings-rem-pause-24" class="settings-rem-pause-btn" type="button">Pause 24h</button>
+        <button id="settings-rem-pause-7d" class="settings-rem-pause-btn" type="button">Pause 7 days</button>
+        <button id="settings-rem-pause-cancel" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button">Cancel pause</button>
+      </div>
+      <p id="settings-rem-pause-status" class="settings-rem-note">Currently: Active</p>
+
+      <!-- Master toggle -->
+      <div class="settings-rem-row settings-rem-row--toggle">
+        <span class="settings-rem-label">Disable all reminders</span>
+        <button id="settings-rem-master-toggle" class="settings-toggle" role="switch" aria-checked="false" aria-label="Disable all reminders"></button>
+      </div>
+
+      <!-- Active count + view-all -->
+      <button id="settings-rem-view-all" class="settings-rem-view-all" type="button">
+        Active reminders: <span id="settings-rem-count">0</span>
+        <span class="settings-rem-view-arrow">›</span>
+      </button>
+      <div id="settings-rem-list" class="settings-rem-list hidden"></div>
+      </div><!-- /settings-rem-section-body -->
+    </div>
+
+    <!-- What's Coming — collapsible -->
+    <div class="settings-collapsible">
+      <button id="settings-coming-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="coming">
+        <span class="settings-collapsible-lbl">🚀 WHAT'S COMING</span>
+        <span class="settings-collapsible-summary">6 features</span>
+        <span class="settings-collapsible-chevron">›</span>
+      </button>
+      <div id="settings-coming-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
       <div class="settings-coming-list">
 
         <div class="settings-coming-card">
@@ -1045,6 +1160,7 @@
         </div>
 
       </div>
+      </div><!-- /settings-coming-body -->
     </div>
 
     <div class="settings-section">

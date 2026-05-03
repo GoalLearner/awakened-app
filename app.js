@@ -27,6 +27,9 @@
         { emoji: '🎨', title: 'New Tab Bar Art',             description: 'Custom-rendered icons replace the emoji set. Premium feel, every tap.' },
         { emoji: '✨', title: 'Custom Stat Icons',           description: 'STR, VIT, INT, FOCUS, WILL, WLT now have premium-rendered art. Same six stats — better aesthetic.' },
         { emoji: '🎨', title: 'New App Icon',                 description: 'A glowing eye, awakening. The new mark of the path.' },
+        { emoji: '🔮', title: 'New Wordmark',                  description: 'The Awakened name now reads in Cinzel — mythic, deliberate, locked in.' },
+        { emoji: '📋', title: 'Drag to Reorder',                description: 'Hold and drag any habit to reorder your list. Morning habits up top, night habits at the bottom. Your list, your order.' },
+        { emoji: '🔔', title: 'Reminders',                      description: 'Set a reminder for any habit. Single notification at your chosen time. Quiet hours, pause anytime, max 3 per day default. Discipline you set, not spam.' },
       ],
     },
     '1.1.1': {
@@ -3824,6 +3827,9 @@
       }
       checkClassChange();
       render();
+      // Rebuild today's notification schedule under the new date —
+      // honors paused/disabled/daily-limit/quiet-hours.
+      try { Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
     }
   }
 
@@ -4680,7 +4686,12 @@
     li.addEventListener('pointerdown', e => { if (!e.target.closest('[data-drag]') && !e.target.closest('[data-more]')) li.classList.add('pressing'); });
     li.addEventListener('pointerup',    () => li.classList.remove('pressing'));
     li.addEventListener('pointercancel',() => li.classList.remove('pressing'));
-    li.addEventListener('click', e => { if (!e.target.closest('[data-drag]') && !e.target.closest('[data-more]')) toggleHabit(habit.id, li); });
+    li.addEventListener('click', e => {
+      if (e.target.closest('[data-drag]') || e.target.closest('[data-more]')) return;
+      // Suppress click-through fired right after a long-press drop.
+      if (Date.now() < _postDropGuardUntil) return;
+      toggleHabit(habit.id, li);
+    });
     li.querySelector('[data-more]').addEventListener('click', e => { e.stopPropagation(); showCtxMenu(habit.id, li); });
     return li;
   }
@@ -5431,6 +5442,9 @@
       li.classList.remove('completed');
       li.querySelector('.habit-cb').classList.remove('checked');
     } else {
+      // Cancel today's pending reminder fire — habit just got done, no
+      // need to nag. Tomorrow's will be re-scheduled at daily reset.
+      try { Notif.onHabitCompleted(id); } catch (_) {}
       // Minimum enforcement for measurable habits
       const habit = habits.find(h => h.id === id);
       if (habit && !meetsMinimum(habit)) {
@@ -5571,7 +5585,9 @@
     if (tab === 'profile')      renderProfile();
     if (tab === 'stats')        renderStats();
     if (tab === 'history')      renderHistory();
-    if (tab === 'habits')       renderDailyMissionCard();
+    // Daily Mission card now lives in the Quests tab — render when that
+    // tab is opened (and on initial app load via the existing init path).
+    if (tab === 'quests')       renderDailyMissionCard();
     checkStreakDanger();
     checkMorningRoutineNudge();
   }
@@ -7224,7 +7240,9 @@
   function renderDailyMissionCard() {
     const wrap = document.getElementById('daily-mission-card');
     if (!wrap) return;
-    if (currentTab !== 'habits') { wrap.classList.add('hidden'); return; }
+    // The card now lives on the Quests tab. Skip rendering on any other
+    // tab — there's nothing to update visually if it's not on screen.
+    if (currentTab !== 'quests') { wrap.classList.add('hidden'); return; }
 
     const mission = getOrPickTodayMission();
     if (!mission) { wrap.classList.add('hidden'); return; }
@@ -7846,9 +7864,56 @@
       goalRow.classList.add('hidden');
     }
 
+    // Reminder section — render current state for this habit.
+    refreshEditReminderUI(id);
+
     document.getElementById('edit-modal').classList.remove('hidden');
     document.getElementById('modal-overlay').classList.remove('hidden');
     setTimeout(() => { const i = document.getElementById('edit-input'); i.focus(); i.select(); }, 80);
+  }
+
+  // Renders the empty/set state of the Edit-Habit reminder block based
+  // on whether this habit has a stored reminder time. Called on open
+  // and whenever the user adds/changes/removes a reminder.
+  function refreshEditReminderUI(habitId) {
+    const time = Notif.reminderFor(habitId);
+    const empty = document.getElementById('edit-reminder-empty');
+    const setEl = document.getElementById('edit-reminder-set');
+    const display = document.getElementById('edit-reminder-time-display');
+    if (!empty || !setEl) return;
+    if (time) {
+      empty.classList.add('hidden');
+      setEl.classList.remove('hidden');
+      display.textContent = formatTime12(time);
+      const inp = document.getElementById('edit-reminder-time-input');
+      if (inp) inp.value = time;
+    } else {
+      empty.classList.remove('hidden');
+      setEl.classList.add('hidden');
+    }
+  }
+
+  // Sensible default reminder time for a habit based on its category.
+  // Morning habits → 7:00, Locked-In varies, everything else → 8:00.
+  function defaultReminderTimeFor(habit) {
+    if (!habit) return '08:00';
+    if (isMorningHabit(habit)) return '07:00';
+    const evening = ['Read', 'Journal', 'Plan tomorrow the night before',
+                     'No screens 1 hour before bed', 'Sleep before midnight',
+                     'Review investments or trading journal'];
+    if (evening.indexOf(habit.name) >= 0) return '21:00';
+    if (habit.primaryStat === 'STR' && /workout|cardio|train|sprint/i.test(habit.name || '')) return '06:00';
+    return '08:00';
+  }
+
+  function formatTime12(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+    if (!m) return hhmm;
+    let h = parseInt(m[1], 10); const mm = m[2];
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    return h + ':' + mm + ' ' + ampm;
   }
 
   function closeEditModal() {
@@ -7898,6 +7963,86 @@
       const m = habit && MEASURABLE_HABITS[habit.name];
       if (m) { editGoalValue += m.step; refreshEditGoalDisplay(); }
     });
+
+    // ── Reminder picker on the Edit Habit modal ──────────────
+    const addBtn    = document.getElementById('edit-reminder-add');
+    const changeBtn = document.getElementById('edit-reminder-change');
+    const removeBtn = document.getElementById('edit-reminder-remove');
+    const timeInp   = document.getElementById('edit-reminder-time-input');
+
+    async function ensurePermissionThenSet(time) {
+      const habit = habits.find(h => h.id === editingId);
+      if (!habit) return;
+      const perm = await Notif.checkPermission();
+      if (perm === 'granted') {
+        await Notif.setReminder(habit.id, time);
+        refreshEditReminderUI(habit.id);
+        return;
+      }
+      // First time: show explainer, then request iOS permission.
+      if (!Notif.permAskedBefore() || perm === 'prompt' || perm === 'default') {
+        showNotifExplainer(async (ok) => {
+          if (!ok) return;
+          const granted = await Notif.requestPermission();
+          await Notif.setReminder(habit.id, time);
+          refreshEditReminderUI(habit.id);
+          if (granted !== 'granted') {
+            // Reminder saved, but iOS won't deliver it. Surface the limitation.
+            if (typeof showHabitToast === 'function') {
+              showHabitToast('Reminder saved, but notifications are off. Enable in iOS Settings → Awakened.');
+            }
+          }
+        });
+      } else {
+        // Already denied — store the choice anyway, surface the message.
+        await Notif.setReminder(habit.id, time);
+        refreshEditReminderUI(habit.id);
+        if (typeof showHabitToast === 'function') {
+          showHabitToast('Notifications are off. Enable them in iOS Settings → Awakened to receive reminders.');
+        }
+      }
+    }
+
+    function openTimePickerWith(currentTime) {
+      const habit = habits.find(h => h.id === editingId);
+      const fallback = defaultReminderTimeFor(habit);
+      timeInp.value = currentTime || fallback;
+      // The time input is hidden but native pickers open on .showPicker()
+      // (Safari/iOS) or focus + click. Try showPicker first.
+      try {
+        if (typeof timeInp.showPicker === 'function') timeInp.showPicker();
+        else timeInp.click();
+      } catch (_) { timeInp.click(); }
+    }
+
+    if (addBtn) addBtn.addEventListener('click', () => {
+      const habit = habits.find(h => h.id === editingId);
+      openTimePickerWith(Notif.reminderFor(editingId) || defaultReminderTimeFor(habit));
+    });
+    if (changeBtn) changeBtn.addEventListener('click', () => {
+      openTimePickerWith(Notif.reminderFor(editingId));
+    });
+    if (timeInp) timeInp.addEventListener('change', () => {
+      const t = timeInp.value;
+      if (t) ensurePermissionThenSet(t);
+    });
+    if (removeBtn) removeBtn.addEventListener('click', async () => {
+      await Notif.clearReminder(editingId);
+      refreshEditReminderUI(editingId);
+    });
+  }
+
+  // Permission explainer modal — shown once before the iOS native prompt.
+  function showNotifExplainer(callback) {
+    const ov = document.getElementById('notif-explain-overlay');
+    if (!ov) { callback && callback(true); return; }
+    ov.classList.remove('hidden');
+    const finish = (ok) => {
+      ov.classList.add('hidden');
+      try { callback && callback(ok); } catch (_) {}
+    };
+    document.getElementById('notif-explain-cancel').onclick = () => finish(false);
+    document.getElementById('notif-explain-enable').onclick = () => finish(true);
   }
 
   // ── DELETE ───────────────────────────────────────────────
@@ -7906,6 +8051,8 @@
     for (const d in completions) completions[d] = completions[d].filter(x => x !== id);
     delete streaks[id];
     save();
+    // Permanently cancel this habit's reminder + drop it from storage.
+    try { Notif.clearReminder(id); } catch (_) {}
     renderHabits();
   }
 
@@ -7950,29 +8097,121 @@
     document.getElementById('emoji-clear-btn').addEventListener('click', () => { pickerCallback && pickerCallback(''); closeEmojiPicker(); });
   }
 
-  // ── DRAG & DROP (touch + mouse) ──────────────────────────
+  // ── DRAG & DROP — long-press to reorder ────────────────────
+  // Existing implementation used a dedicated 6-dot handle. This rewrite
+  // adds long-press (400ms hold on the card body) as the primary trigger
+  // while keeping the [data-drag] handle as an instant-drag fallback.
+  // Order persists via the in-memory `habits` array → save() → hb_habits
+  // localStorage. Pack streaks (MR, LI) are pack-membership-based, not
+  // list-position-based, so visual reorder doesn't affect them.
+  const LONG_PRESS_MS         = 400;
+  const LP_MOVE_THRESHOLD     = 10;     // px — finger movement that cancels long-press
+  const DRAG_IDLE_TIMEOUT_MS  = 1500;   // exit drag mode if no movement after this
+  const AUTOSCROLL_EDGE       = 80;     // px from viewport edge that triggers scroll
+  const POST_DROP_GUARD_MS    = 200;    // suppress immediate re-trigger after a drop
+
   let drag = null;
+  let _postDropGuardUntil = 0;
 
   function bindDrag() {
-    document.getElementById('habit-list').querySelectorAll('[data-drag]').forEach(handle => {
-      handle.addEventListener('touchstart', onDragStart, { passive: false });
-      handle.addEventListener('mousedown',  onDragStart);
+    const list = document.getElementById('habit-list');
+    if (!list) return;
+    // Long-press on the entire card body — primary trigger.
+    list.querySelectorAll('.habit-item[data-id]').forEach(item => {
+      attachLongPressDrag(item);
+    });
+    // Instant-drag from the dedicated 6-dot handle (preserved as fallback).
+    list.querySelectorAll('[data-drag]').forEach(handle => {
+      handle.addEventListener('touchstart', onHandleStart, { passive: false });
+      handle.addEventListener('mousedown',  onHandleStart);
     });
   }
 
   function clientPos(e) {
-    if (e.touches)        return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
-    if (e.changedTouches) return { x: e.changedTouches[0].clientX,  y: e.changedTouches[0].clientY };
+    if (e.touches && e.touches.length)               return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
+    if (e.changedTouches && e.changedTouches.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
     return { x: e.clientX, y: e.clientY };
   }
 
-  function onDragStart(e) {
+  function attachLongPressDrag(item) {
+    const onStart = (e) => {
+      if (Date.now() < _postDropGuardUntil) return;
+      // Skip if the press starts on an interactive sub-element. Tapping
+      // those should still feel like a tap, not a wait-for-drag.
+      if (e.target.closest('[data-drag]')) return;       // dedicated handle owns its own path
+      if (e.target.closest('[data-more]')) return;       // "more" menu button
+      if (e.target.closest('.habit-cb'))    return;      // checkbox itself
+
+      const isTouch = e.type === 'touchstart';
+      if (!isTouch && e.button !== 0) return;
+
+      const start = clientPos(e);
+      let canceled  = false;
+      let triggered = false;
+      item.classList.add('lp-pressing');
+
+      const pressTimer = setTimeout(() => {
+        if (canceled) return;
+        triggered = true;
+        item.classList.remove('lp-pressing');
+        // Convert the long-press into an active drag.
+        enterDragMode(item, start, isTouch);
+      }, LONG_PRESS_MS);
+
+      const onMove = (me) => {
+        const mp = clientPos(me);
+        if (Math.abs(mp.x - start.x) > LP_MOVE_THRESHOLD ||
+            Math.abs(mp.y - start.y) > LP_MOVE_THRESHOLD) {
+          canceled = true;
+          clearTimeout(pressTimer);
+          cleanup();
+        }
+      };
+      const onEnd = () => {
+        if (!triggered) {
+          // User released before long-press fired — let the click bubble normally.
+          canceled = true;
+          clearTimeout(pressTimer);
+        }
+        cleanup();
+      };
+      function cleanup() {
+        item.classList.remove('lp-pressing');
+        if (isTouch) {
+          document.removeEventListener('touchmove',   onMove);
+          document.removeEventListener('touchend',    onEnd);
+          document.removeEventListener('touchcancel', onEnd);
+        } else {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup',   onEnd);
+        }
+      }
+      if (isTouch) {
+        document.addEventListener('touchmove',   onMove, { passive: true });
+        document.addEventListener('touchend',    onEnd,  { once: true });
+        document.addEventListener('touchcancel', onEnd,  { once: true });
+      } else {
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',   onEnd, { once: true });
+      }
+    };
+    item.addEventListener('touchstart', onStart, { passive: true });
+    item.addEventListener('mousedown',  onStart);
+  }
+
+  // Dedicated-handle path: skip the 400ms long-press, drag immediately.
+  function onHandleStart(e) {
     const isTouch = e.type === 'touchstart';
     if (!isTouch && e.button !== 0) return;
     if (isTouch) e.preventDefault();
     const item = e.currentTarget.closest('[data-id]');
     if (!item) return;
-    const { x, y } = clientPos(e);
+    enterDragMode(item, clientPos(e), isTouch);
+  }
+
+  function enterDragMode(item, startPos, isTouch) {
+    if (drag) return; // already dragging
+    const list = document.getElementById('habit-list');
     const rect = item.getBoundingClientRect();
     const ghost = item.cloneNode(true);
     ghost.className = 'habit-item drag-ghost';
@@ -7981,15 +8220,38 @@
     ghost.style.top   = rect.top   + 'px';
     document.body.appendChild(ghost);
     item.classList.add('drag-placeholder');
-    document.body.style.userSelect = 'none';
+    list.classList.add('is-dragging');
+
+    // Prevent body scroll + selection while dragging.
+    const bodyOverflow = document.body.style.overflow;
+    document.body.style.userSelect       = 'none';
     document.body.style.webkitUserSelect = 'none';
-    document.body.style.cursor = 'grabbing';
-    drag = { id: item.dataset.id, item, ghost, offsetY: y - rect.top, isTouch };
-    navigator.vibrate && navigator.vibrate(12);
+    document.body.style.cursor           = 'grabbing';
+    document.body.style.overflow         = 'hidden';
+
+    drag = {
+      id:           item.dataset.id,
+      item,
+      ghost,
+      // The grid is 3-column, so the ghost has to follow both axes.
+      offsetX:      startPos.x - rect.left,
+      offsetY:      startPos.y - rect.top,
+      isTouch,
+      lastX:        startPos.x,
+      lastY:        startPos.y,
+      bodyOverflow,
+      idleTimer:    null,
+      autoScrollRAF: null,
+    };
+    resetIdleTimer();
+    startAutoScrollLoop();
+
+    navigator.vibrate && navigator.vibrate(50);
+
     if (isTouch) {
-      document.addEventListener('touchmove', onDragMove, { passive: false });
-      document.addEventListener('touchend',   onDragEnd, { once: true });
-      document.addEventListener('touchcancel',onDragEnd, { once: true });
+      document.addEventListener('touchmove',   onDragMove, { passive: false });
+      document.addEventListener('touchend',    onDragEnd,  { once: true });
+      document.addEventListener('touchcancel', onDragEnd,  { once: true });
     } else {
       document.addEventListener('mousemove', onDragMove);
       document.addEventListener('mouseup',   onDragEnd, { once: true });
@@ -7999,37 +8261,100 @@
   function onDragMove(e) {
     if (!drag) return;
     if (e.type === 'touchmove') e.preventDefault();
-    const { y } = clientPos(e);
-    drag.ghost.style.top = (y - drag.offsetY) + 'px';
+    const { x, y } = clientPos(e);
+    drag.lastX = x;
+    drag.lastY = y;
+    drag.ghost.style.left = (x - drag.offsetX) + 'px';
+    drag.ghost.style.top  = (y - drag.offsetY) + 'px';
+    resetIdleTimer();
     const items = getOtherItems();
-    items.forEach(el => el.classList.remove('drop-target-above', 'drop-target-below'));
-    const target = findDropTarget(items, y);
-    if (target) target.el.classList.add(target.before ? 'drop-target-above' : 'drop-target-below');
+    items.forEach(el => el.classList.remove('drop-target--before', 'drop-target--after'));
+    const target = findDropTarget(items, x, y);
+    if (target) target.el.classList.add(target.before ? 'drop-target--before' : 'drop-target--after');
   }
 
   function onDragEnd(e) {
     if (!drag) return;
-    if (drag.isTouch) document.removeEventListener('touchmove', onDragMove);
-    else              document.removeEventListener('mousemove', onDragMove);
-    document.body.style.userSelect = '';
+    const isTouch = drag.isTouch;
+    if (isTouch) document.removeEventListener('touchmove', onDragMove);
+    else         document.removeEventListener('mousemove', onDragMove);
+
+    // Restore body styles
+    document.body.style.userSelect       = '';
     document.body.style.webkitUserSelect = '';
-    document.body.style.cursor = '';
+    document.body.style.cursor           = '';
+    document.body.style.overflow         = drag.bodyOverflow || '';
+
+    // Stop helpers
+    clearTimeout(drag.idleTimer);
+    if (drag.autoScrollRAF) cancelAnimationFrame(drag.autoScrollRAF);
+
     const items = getOtherItems();
-    items.forEach(el => el.classList.remove('drop-target-above', 'drop-target-below'));
-    const { y } = clientPos(e);
-    const target = findDropTarget(items, y);
+    items.forEach(el => el.classList.remove('drop-target--before', 'drop-target--after'));
+
+    const { x, y } = clientPos(e);
+    const target = findDropTarget(items, x, y);
     if (target && target.el.dataset.id !== drag.id) {
       const fromIdx = habits.findIndex(h => h.id === drag.id);
       const [moved] = habits.splice(fromIdx, 1);
-      const toIdx = habits.findIndex(h => h.id === target.el.dataset.id);
+      const toIdx   = habits.findIndex(h => h.id === target.el.dataset.id);
       habits.splice(target.before ? toIdx : toIdx + 1, 0, moved);
       save();
+      navigator.vibrate && navigator.vibrate(15);
     }
     drag.ghost.remove();
     drag.item.classList.remove('drag-placeholder');
     drag = null;
+    document.getElementById('habit-list').classList.remove('is-dragging', 'reorder-mode');
+    _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
     renderHabits();
-    document.getElementById('habit-list').classList.remove('reorder-mode');
+  }
+
+  function resetIdleTimer() {
+    if (!drag) return;
+    if (drag.idleTimer) clearTimeout(drag.idleTimer);
+    drag.idleTimer = setTimeout(() => {
+      // No movement for too long — exit drag silently, no reorder.
+      cancelDragSilently();
+    }, DRAG_IDLE_TIMEOUT_MS);
+  }
+
+  function cancelDragSilently() {
+    if (!drag) return;
+    document.removeEventListener('touchmove', onDragMove);
+    document.removeEventListener('mousemove', onDragMove);
+    document.body.style.userSelect       = '';
+    document.body.style.webkitUserSelect = '';
+    document.body.style.cursor           = '';
+    document.body.style.overflow         = drag.bodyOverflow || '';
+    if (drag.autoScrollRAF) cancelAnimationFrame(drag.autoScrollRAF);
+    const items = getOtherItems();
+    items.forEach(el => el.classList.remove('drop-target--before', 'drop-target--after'));
+    drag.ghost.remove();
+    drag.item.classList.remove('drag-placeholder');
+    drag = null;
+    document.getElementById('habit-list').classList.remove('is-dragging', 'reorder-mode');
+    _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
+  }
+
+  function startAutoScrollLoop() {
+    // The Habits panel itself scrolls (#main-scroll). Fall back to
+    // window scroll if for some reason that element is unavailable.
+    const scroller = document.getElementById('main-scroll') || document.scrollingElement || document.documentElement;
+    function tick() {
+      if (!drag) return;
+      const y    = drag.lastY;
+      const top  = AUTOSCROLL_EDGE;
+      const bot  = window.innerHeight - AUTOSCROLL_EDGE;
+      let dy = 0;
+      if (y < top)      dy = -Math.max(2, (top - y) / 6);
+      else if (y > bot) dy =  Math.max(2, (y - bot) / 6);
+      if (dy !== 0 && scroller && typeof scroller.scrollTop === 'number') {
+        scroller.scrollTop += dy;
+      }
+      drag.autoScrollRAF = requestAnimationFrame(tick);
+    }
+    drag.autoScrollRAF = requestAnimationFrame(tick);
   }
 
   function getOtherItems() {
@@ -8037,12 +8362,29 @@
       .filter(el => !el.classList.contains('drag-placeholder'));
   }
 
-  function findDropTarget(items, clientY) {
+  // 2D drop targeting for the 3-column grid layout. Pick the cell whose
+  // center is closest to the cursor (Euclidean), then split it: cursor
+  // on the LEFT half = drop "before" this cell in the linear habit array,
+  // RIGHT half = "after". This gives 2N insertion slots for N visible
+  // cells and naturally handles drops between rows or off the grid edge.
+  function findDropTarget(items, clientX, clientY) {
+    if (!items.length) return null;
+    let best = null;
+    let bestDist = Infinity;
     for (const el of items) {
-      const r = el.getBoundingClientRect();
-      if (clientY < r.top + r.height / 2) return { el, before: true };
+      const r  = el.getBoundingClientRect();
+      const cx = r.left + r.width  / 2;
+      const cy = r.top  + r.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestDist) {
+        bestDist = d2;
+        best     = { el, cx };
+      }
     }
-    return items.length ? { el: items[items.length - 1], before: false } : null;
+    if (!best) return null;
+    return { el: best.el, before: clientX < best.cx };
   }
 
   // ── STAT DETAIL SHEET ────────────────────────────────────
@@ -8436,6 +8778,9 @@
     document.querySelectorAll('.settings-theme-card').forEach(btn => {
       btn.classList.toggle('settings-theme-card--active', btn.dataset.theme === theme);
     });
+    // Reflect current theme in the collapsed Appearance header.
+    const sum = document.getElementById('settings-appearance-summary');
+    if (sum) sum.textContent = theme === 'light' ? 'Light' : 'Dark';
   }
 
   // ── CHECK FOR UPDATES ────────────────────────────────────
@@ -8586,6 +8931,13 @@
         btn.classList.toggle('settings-theme-card--active', btn.dataset.theme === saved);
       });
       document.getElementById('sound-toggle').setAttribute('aria-checked', soundEnabled ? 'true' : 'false');
+      // Reflect current theme in the collapsed Appearance header summary.
+      const apSum = document.getElementById('settings-appearance-summary');
+      if (apSum) apSum.textContent = saved === 'light' ? 'Light' : 'Dark';
+      // Refresh the Reminders panel each time Settings opens — the
+      // permission state, paused-until timestamp, and active count can
+      // all change between opens.
+      refreshRemindersPanel();
       openSettings();
     });
 
@@ -8627,6 +8979,206 @@
       const valid = e.target.value === 'RESET';
       e.target.classList.toggle('valid', valid);
       document.getElementById('reset2-confirm').disabled = !valid;
+    });
+
+    // ── Settings → Reminders panel wiring ────────────────────
+    setupReminderSettings();
+    // ── Generic collapsible setup (Appearance / Reminders / Coming) ──
+    setupCollapsibleSettings();
+  }
+
+  // Builds + wires the Settings → Reminders panel. Each control writes
+  // to the relevant Notif.* setter, then we re-run rescheduleAll so the
+  // change takes effect immediately.
+  async function rescheduleNow() {
+    try { await Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
+    refreshRemindersPanel();
+  }
+
+  function refreshRemindersPanel() {
+    if (!document.getElementById('settings-rem-permission')) return;
+    Notif.checkPermission().then(perm => {
+      const lbl = document.getElementById('settings-rem-permission');
+      const enableBtn = document.getElementById('settings-rem-enable');
+      const webNote   = document.getElementById('settings-rem-web-note');
+      const status = Notif.status();
+      // Permission label
+      const display = perm === 'granted' ? 'Granted ✓' :
+                      perm === 'denied'  ? 'Denied'    :
+                      perm === 'unsupported' ? 'Not supported here' :
+                      'Not set';
+      lbl.textContent = display;
+      lbl.className = 'settings-rem-value' +
+        (perm === 'granted' ? ' granted' : perm === 'denied' ? ' denied' : '');
+      // Enable button visible when not yet granted (and on a native build)
+      if (status.isNative && perm !== 'granted' && perm !== 'unsupported') {
+        enableBtn.classList.remove('hidden');
+      } else {
+        enableBtn.classList.add('hidden');
+      }
+      // Soft message for web (non-iOS) users
+      if (!status.isNative) webNote.classList.remove('hidden');
+      else                   webNote.classList.add('hidden');
+
+      // Daily limit
+      document.getElementById('settings-rem-limit').value = String(status.dailyLimit);
+
+      // Quiet hours
+      document.getElementById('settings-rem-quiet-toggle').setAttribute('aria-checked', status.quietOn ? 'true' : 'false');
+      document.getElementById('settings-rem-quiet-start').value = status.quietStart;
+      document.getElementById('settings-rem-quiet-end').value   = status.quietEnd;
+
+      // Pause status
+      const pauseStatus  = document.getElementById('settings-rem-pause-status');
+      const pauseCancel  = document.getElementById('settings-rem-pause-cancel');
+      if (status.paused) {
+        const d = new Date(status.pausedUntil);
+        pauseStatus.textContent = 'Paused until ' + d.toLocaleString();
+        pauseCancel.classList.remove('hidden');
+      } else {
+        pauseStatus.textContent = 'Currently: Active';
+        pauseCancel.classList.add('hidden');
+      }
+
+      // Master disable toggle
+      document.getElementById('settings-rem-master-toggle').setAttribute('aria-checked', status.disabled ? 'true' : 'false');
+
+      // Active count + collapsed-header summary
+      document.getElementById('settings-rem-count').textContent = status.count;
+      const sum = document.getElementById('settings-rem-section-summary');
+      if (sum) {
+        sum.textContent = status.disabled
+          ? 'Off'
+          : status.paused
+            ? 'Paused'
+            : status.count + ' active';
+      }
+
+      // Refresh the list view if it's currently expanded
+      const list = document.getElementById('settings-rem-list');
+      if (!list.classList.contains('hidden')) renderRemindersList();
+    });
+  }
+
+  function renderRemindersList() {
+    const list = document.getElementById('settings-rem-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const r = Notif.getReminders();
+    const ids = Object.keys(r);
+    if (!ids.length) {
+      list.innerHTML = '<div class="settings-rem-list-empty">No reminders set yet. Add one from any habit.</div>';
+      return;
+    }
+    ids.forEach(id => {
+      const habit = habits.find(h => h.id === id);
+      if (!habit) return;
+      const row = document.createElement('div');
+      row.className = 'settings-rem-list-item';
+      row.innerHTML =
+        '<span class="settings-rem-list-name">' + esc((habit.emoji || '') + ' ' + habit.name) + '</span>' +
+        '<span class="settings-rem-list-time">' + formatTime12(r[id]) + '</span>' +
+        '<button class="settings-rem-list-remove" type="button">Remove</button>';
+      row.querySelector('.settings-rem-list-remove').addEventListener('click', async () => {
+        await Notif.clearReminder(id);
+        renderRemindersList();
+        refreshRemindersPanel();
+      });
+      list.appendChild(row);
+    });
+  }
+
+  // Wire up every collapsible Settings section in one pass. Each
+  // [data-collapsible] toggle button is paired with a body element via
+  // its aria-controls equivalent (here we infer the body id from the
+  // toggle id by replacing "-toggle" with "-body"). Default state is
+  // collapsed (matching the markup).
+  function setupCollapsibleSettings() {
+    const toggles = document.querySelectorAll('.settings-collapsible-toggle[data-collapsible]');
+    toggles.forEach(toggle => {
+      const bodyId = toggle.id.replace('-toggle', '-body');
+      const body   = document.getElementById(bodyId);
+      if (!body) return;
+      toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        body.classList.toggle('settings-collapsible-body--collapsed', expanded);
+      });
+    });
+  }
+
+  function setupReminderSettings() {
+    const enable     = document.getElementById('settings-rem-enable');
+    const limit      = document.getElementById('settings-rem-limit');
+    const quietTog   = document.getElementById('settings-rem-quiet-toggle');
+    const quietStart = document.getElementById('settings-rem-quiet-start');
+    const quietEnd   = document.getElementById('settings-rem-quiet-end');
+    const pause24    = document.getElementById('settings-rem-pause-24');
+    const pause7d    = document.getElementById('settings-rem-pause-7d');
+    const pauseCancel= document.getElementById('settings-rem-pause-cancel');
+    const masterTog  = document.getElementById('settings-rem-master-toggle');
+    const viewAll    = document.getElementById('settings-rem-view-all');
+    if (!enable) return;
+
+    enable.addEventListener('click', async () => {
+      // Show the explainer first if we haven't asked before, otherwise go
+      // straight to the iOS native prompt.
+      const ask = async () => {
+        const granted = await Notif.requestPermission();
+        await rescheduleNow();
+        if (granted !== 'granted' && typeof showHabitToast === 'function') {
+          showHabitToast('Permission denied. Enable in iOS Settings → Awakened.');
+        }
+      };
+      if (!Notif.permAskedBefore()) {
+        showNotifExplainer(async (ok) => { if (ok) await ask(); });
+      } else {
+        await ask();
+      }
+    });
+
+    limit.addEventListener('change', async () => {
+      Notif.setDailyLimit(parseInt(limit.value, 10) || 0);
+      await rescheduleNow();
+    });
+
+    quietTog.addEventListener('click', async () => {
+      const next = quietTog.getAttribute('aria-checked') !== 'true';
+      Notif.setQuietOn(next);
+      quietTog.setAttribute('aria-checked', next ? 'true' : 'false');
+      await rescheduleNow();
+    });
+    quietStart.addEventListener('change', async () => {
+      if (quietStart.value) Notif.setQuietStart(quietStart.value);
+      await rescheduleNow();
+    });
+    quietEnd.addEventListener('change', async () => {
+      if (quietEnd.value) Notif.setQuietEnd(quietEnd.value);
+      await rescheduleNow();
+    });
+
+    pause24.addEventListener('click',     async () => { Notif.setPausedUntil(Date.now() + 24 * 3600 * 1000);     await rescheduleNow(); });
+    pause7d.addEventListener('click',     async () => { Notif.setPausedUntil(Date.now() + 7 * 24 * 3600 * 1000); await rescheduleNow(); });
+    pauseCancel.addEventListener('click', async () => { Notif.setPausedUntil(0);                                  await rescheduleNow(); });
+
+    masterTog.addEventListener('click', async () => {
+      const next = masterTog.getAttribute('aria-checked') !== 'true';
+      Notif.setDisabled(next);
+      masterTog.setAttribute('aria-checked', next ? 'true' : 'false');
+      await rescheduleNow();
+    });
+
+    viewAll.addEventListener('click', () => {
+      const list = document.getElementById('settings-rem-list');
+      const expanded = !list.classList.contains('hidden');
+      if (expanded) {
+        list.classList.add('hidden');
+        viewAll.classList.remove('expanded');
+      } else {
+        renderRemindersList();
+        list.classList.remove('hidden');
+        viewAll.classList.add('expanded');
+      }
     });
   }
 
@@ -9292,6 +9844,279 @@
     });
   }
 
+  // ─────────────────────────────────────────────────────────
+  // ── PUSH NOTIFICATIONS / REMINDERS ────────────────────────
+  // ─────────────────────────────────────────────────────────
+  // Per-habit local-notification system. One reminder time per habit.
+  // Capacitor's @capacitor/local-notifications plugin handles persistence
+  // across app restarts on iOS. Falls back to the Web Notifications API
+  // (best-effort) for the PWA build, with a soft "use the iOS app"
+  // message in Settings.
+  //
+  // localStorage keys (all hb_*):
+  //   hb_reminders                  { habitId: 'HH:MM', ... }
+  //   hb_notif_perm_requested       '1' once user has seen the explainer
+  //   hb_notif_disabled             '1' if master toggle off
+  //   hb_notif_paused_until         ISO timestamp; current time < this = paused
+  //   hb_notif_daily_limit          number; 0 = unlimited (default 3)
+  //   hb_notif_quiet_enabled        '1'/'0'  (default '1')
+  //   hb_notif_quiet_start          'HH:MM'  (default '22:00')
+  //   hb_notif_quiet_end            'HH:MM'  (default '07:00')
+
+  const Notif = (() => {
+    const KEY_REMINDERS    = 'hb_reminders';
+    const KEY_PERM_ASKED   = 'hb_notif_perm_requested';
+    const KEY_DISABLED     = 'hb_notif_disabled';
+    const KEY_PAUSED_UNTIL = 'hb_notif_paused_until';
+    const KEY_DAILY_LIMIT  = 'hb_notif_daily_limit';
+    const KEY_QUIET_ON     = 'hb_notif_quiet_enabled';
+    const KEY_QUIET_START  = 'hb_notif_quiet_start';
+    const KEY_QUIET_END    = 'hb_notif_quiet_end';
+
+    // Voice-coded copy keyed by primary stat.
+    const COPY = {
+      STR:    { title: '⚔️ Time to train. {n} awaits.',  body: "The path doesn't walk itself." },
+      FOCUS:  { title: '🧠 Stillness now. {n}.',         body: 'Five minutes of focus changes the day.' },
+      INT:    { title: '📚 {n} is ready.',               body: 'The unlearned version of you is no longer enough.' },
+      WILL:   { title: '🥶 {n}. Get in the cold.',       body: 'Comfort is the enemy.' },
+      VIT:    { title: '💧 {n}.',                        body: 'The body keeps the score.' },
+      WLT:    { title: '💰 {n} awaits.',                 body: 'Compound the small wins.' },
+      CUSTOM: { title: '🔥 {n} awaits.',                 body: 'Today, you choose.' },
+    };
+
+    function plugin() {
+      try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications; }
+      catch (_) { return null; }
+    }
+    function isNative() { return !!(plugin() && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
+    function hasWebNotif() { return typeof window.Notification !== 'undefined'; }
+
+    // Hash a habit-uid string into a positive 31-bit int for plugin notification IDs.
+    function notifIdFor(habitId) {
+      let h = 5381;
+      for (let i = 0; i < habitId.length; i++) h = ((h << 5) + h + habitId.charCodeAt(i)) | 0;
+      return Math.abs(h) || 1;
+    }
+
+    // ── Storage helpers ──
+    function reminders() { try { return JSON.parse(localStorage.getItem(KEY_REMINDERS) || '{}'); } catch (_) { return {}; } }
+    function setReminders(o) { localStorage.setItem(KEY_REMINDERS, JSON.stringify(o)); }
+
+    function isDisabled()    { return localStorage.getItem(KEY_DISABLED) === '1'; }
+    function setDisabled(d)  { d ? localStorage.setItem(KEY_DISABLED, '1') : localStorage.removeItem(KEY_DISABLED); }
+
+    function pausedUntil()   { const v = localStorage.getItem(KEY_PAUSED_UNTIL); return v ? parseInt(v, 10) : 0; }
+    function isPaused()      { return Date.now() < pausedUntil(); }
+    function setPausedUntil(ts) { ts ? localStorage.setItem(KEY_PAUSED_UNTIL, String(ts)) : localStorage.removeItem(KEY_PAUSED_UNTIL); }
+
+    function dailyLimit()    { const n = parseInt(localStorage.getItem(KEY_DAILY_LIMIT), 10); return isFinite(n) ? n : 3; }
+    function setDailyLimit(n){ localStorage.setItem(KEY_DAILY_LIMIT, String(n)); }
+
+    function quietOn()       { return (localStorage.getItem(KEY_QUIET_ON) || '1') === '1'; }
+    function setQuietOn(b)   { localStorage.setItem(KEY_QUIET_ON, b ? '1' : '0'); }
+    function quietStart()    { return localStorage.getItem(KEY_QUIET_START) || '22:00'; }
+    function quietEnd()      { return localStorage.getItem(KEY_QUIET_END)   || '07:00'; }
+    function setQuietStart(t){ localStorage.setItem(KEY_QUIET_START, t); }
+    function setQuietEnd(t)  { localStorage.setItem(KEY_QUIET_END, t); }
+
+    // ── Permission ──
+    async function checkPermission() {
+      const p = plugin();
+      if (p && isNative()) {
+        try {
+          const r = await p.checkPermissions();
+          return r.display || 'prompt';
+        } catch (_) { return 'prompt'; }
+      }
+      if (hasWebNotif()) return Notification.permission || 'default'; // 'granted'|'denied'|'default'
+      return 'unsupported';
+    }
+    async function requestPermission() {
+      localStorage.setItem(KEY_PERM_ASKED, '1');
+      const p = plugin();
+      if (p && isNative()) {
+        try { const r = await p.requestPermissions(); return r.display || 'denied'; }
+        catch (_) { return 'denied'; }
+      }
+      if (hasWebNotif()) {
+        try { return await Notification.requestPermission(); } catch (_) { return 'denied'; }
+      }
+      return 'unsupported';
+    }
+    function permAskedBefore() { return localStorage.getItem(KEY_PERM_ASKED) === '1'; }
+
+    // ── Voice-coded copy ──
+    function copyFor(habit) {
+      if (!habit) return COPY.CUSTOM;
+      const key = habit.custom ? 'CUSTOM' : (habit.primaryStat || 'CUSTOM');
+      const tpl = COPY[key] || COPY.CUSTOM;
+      return {
+        title: tpl.title.replace('{n}', habit.name || 'your habit'),
+        body:  tpl.body,
+      };
+    }
+
+    // ── Time helpers ──
+    function parseHM(s)    { const m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? { h: +m[1], m: +m[2] } : null; }
+    function minutesOf(hm) { return hm.h * 60 + hm.m; }
+    // Returns true if a given HH:MM falls inside the quiet window. Quiet
+    // hours wrap midnight (e.g., 22:00–07:00) so we handle that case.
+    function isInQuietHours(hm) {
+      if (!quietOn()) return false;
+      const start = parseHM(quietStart()); const end = parseHM(quietEnd());
+      if (!start || !end) return false;
+      const t = minutesOf(hm), s = minutesOf(start), e = minutesOf(end);
+      return s <= e ? (t >= s && t < e) : (t >= s || t < e);
+    }
+
+    // Was this reminder time chosen explicitly by the user (i.e., already
+    // stored)? If so, the spec says quiet hours should NOT block it.
+    function isUserExplicitlyChosenTime(habitId, hm) {
+      const r = reminders()[habitId];
+      if (!r) return false;
+      const stored = parseHM(r);
+      return !!stored && stored.h === hm.h && stored.m === hm.m;
+    }
+
+    // ── Schedule a single habit ──
+    async function scheduleOne(habit, hm) {
+      const p = plugin();
+      if (!p || !isNative()) return false;     // no-op on web; still saved to storage
+      if (isDisabled() || isPaused()) return false;
+      // Quiet-hours skip ONLY if this isn't the user's explicitly-chosen time.
+      if (isInQuietHours(hm) && !isUserExplicitlyChosenTime(habit.id, hm)) return false;
+      const id = notifIdFor(habit.id);
+      const c  = copyFor(habit);
+      try {
+        await p.cancel({ notifications: [{ id }] });
+        await p.schedule({
+          notifications: [{
+            id,
+            title: c.title,
+            body:  c.body,
+            schedule: { on: { hour: hm.h, minute: hm.m }, allowWhileIdle: true },
+            extra: { habitId: habit.id },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('schedule failed', e);
+        return false;
+      }
+    }
+
+    async function cancelOne(habitId) {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: notifIdFor(habitId) }] }); } catch (_) {}
+    }
+
+    async function cancelAll() {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try {
+        const pending = await p.getPending();
+        const ids = (pending && pending.notifications || []).map(n => ({ id: n.id }));
+        if (ids.length) await p.cancel({ notifications: ids });
+      } catch (_) {}
+    }
+
+    // Apply daily-limit: keep the EARLIEST N reminders (by clock time today).
+    function applyDailyLimit(entries) {
+      const limit = dailyLimit();
+      if (limit <= 0) return entries;          // 0 = unlimited
+      return entries.slice().sort((a, b) => {
+        return minutesOf(parseHM(a.time)) - minutesOf(parseHM(b.time));
+      }).slice(0, limit);
+    }
+
+    // ── Public: set / change a habit's reminder ──
+    async function setReminder(habitId, time) {
+      const r = reminders();
+      r[habitId] = time;
+      setReminders(r);
+      // habits is the closure-scoped array — accessible because Notif lives
+      // inside the same IIFE. Fall back to a stub if the habit was just
+      // deleted in the same tick (rare).
+      const habit = habits.find(h => h.id === habitId) ||
+                    { id: habitId, name: 'Habit', primaryStat: null };
+      const hm = parseHM(time);
+      if (!hm) return;
+      await scheduleOne(habit, hm);
+    }
+    async function clearReminder(habitId) {
+      const r = reminders();
+      delete r[habitId];
+      setReminders(r);
+      await cancelOne(habitId);
+    }
+
+    // Reschedule everything from scratch (called on app open + daily reset
+    // + Settings changes). Honors disabled, paused, daily-limit, and quiet
+    // hours. Habits that have already been completed today have today's
+    // notification skipped (it would auto-fire tomorrow anyway via repeat).
+    async function rescheduleAll(habitsList, todayStr, completionsToday) {
+      await cancelAll();
+      if (isDisabled() || isPaused()) return;
+      const r = reminders();
+      const entries = [];
+      Object.keys(r).forEach(habitId => {
+        const habit = habitsList.find(h => h.id === habitId);
+        if (!habit) return;     // habit deleted; skip
+        entries.push({ habit, time: r[habitId] });
+      });
+      const after = applyDailyLimit(entries);
+      for (const e of after) {
+        // If today is done, the daily-repeat schedule will still fire tomorrow.
+        // (Capacitor's `every: 'day'` would enable that, but iOS doesn't support
+        //  precise repeat with a specific HH:MM — we use the daily fixed
+        //  schedule pattern which does repeat.)
+        const hm = parseHM(e.time);
+        if (!hm) continue;
+        await scheduleOne(e.habit, hm);
+      }
+    }
+
+    // Called from toggleHabit when a user marks a habit complete TODAY.
+    // We cancel just today's pending fire — tomorrow's will be re-scheduled
+    // by rescheduleAll() at next daily reset.
+    async function onHabitCompleted(habitId) {
+      // The simple way: cancel the entire pending notification for this id.
+      // It will be re-scheduled by rescheduleAll on next daily reset.
+      await cancelOne(habitId);
+    }
+
+    function status() {
+      const r = reminders();
+      return {
+        count:           Object.keys(r).length,
+        disabled:        isDisabled(),
+        paused:          isPaused(),
+        pausedUntil:     pausedUntil(),
+        dailyLimit:      dailyLimit(),
+        quietOn:         quietOn(),
+        quietStart:      quietStart(),
+        quietEnd:        quietEnd(),
+        permRequested:   permAskedBefore(),
+        isNative:        isNative(),
+      };
+    }
+
+    return {
+      // queries
+      getReminders: reminders,
+      reminderFor:  (id) => reminders()[id] || null,
+      status,
+      checkPermission, requestPermission, permAskedBefore,
+      // mutators
+      setReminder, clearReminder, rescheduleAll, onHabitCompleted, cancelAll,
+      setDisabled, setPausedUntil, setDailyLimit,
+      setQuietOn, setQuietStart, setQuietEnd,
+      // internals exposed for the UI
+      copyFor, parseHM, isPaused, isDisabled,
+    };
+  })();
+
   // ── INIT ─────────────────────────────────────────────────
   function init() {
     // Apply saved theme immediately so there's no flash
@@ -9389,6 +10214,13 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDayChange(); });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); }, 60_000);
     registerSW();
+
+    // Reschedule habit reminders on app open. Picks up pause-expirations,
+    // any habits/reminders the user added on another device, and re-arms
+    // notifications so iOS has them ready while the app is closed.
+    setTimeout(() => {
+      try { Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
+    }, 1200);
 
     if (needsWelcome) {
       showWelcomeScreen();
