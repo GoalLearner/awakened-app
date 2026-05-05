@@ -38,7 +38,7 @@ workflows:
       # ── Build variables ────────────────────────────────────────
       vars:
         BUNDLE_ID:        "com.goallearner.awakened"
-        APP_VERSION:      "1.1.4"
+        APP_VERSION:      "1.1.5"
         XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
@@ -141,6 +141,35 @@ workflows:
           echo "HealthKit Info.plist + entitlement entries set."
           /usr/libexec/PlistBuddy -c "Print :NSHealthShareUsageDescription" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :com.apple.developer.healthkit" "$ENTITLEMENTS"
+
+      - name: Wire entitlements file into Xcode project
+        script: |
+          # v1.1.5 — bug fix for v1.1.4's silent HealthKit failure.
+          # The previous step writes App.entitlements to disk, but
+          # Capacitor's default Xcode project does NOT have
+          # CODE_SIGN_ENTITLEMENTS set in build settings. Without it,
+          # xcodebuild signs the IPA WITHOUT reading our entitlements
+          # file → HealthKit entitlement silently absent → iOS rejects
+          # requestAuthorization with no error visible to the user.
+          # See CLAUDE.md "Common pitfalls" for the full diagnosis.
+          #
+          # This step uses the xcodeproj Ruby gem (preinstalled on
+          # Codemagic macOS images) to set CODE_SIGN_ENTITLEMENTS on
+          # both Debug and Release configs of the App target.
+          cd ios/App
+          ruby -e "
+            require 'xcodeproj'
+            project_path = 'App.xcodeproj'
+            project = Xcodeproj::Project.open(project_path)
+            target = project.targets.find { |t| t.name == 'App' }
+            raise 'App target not found' unless target
+            target.build_configurations.each do |config|
+              config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
+              puts \"Set CODE_SIGN_ENTITLEMENTS for #{config.name}\"
+            end
+            project.save
+            puts 'project.pbxproj saved'
+          "
 
       - name: Install custom app icon
         script: |

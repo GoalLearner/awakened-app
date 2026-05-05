@@ -14,7 +14,7 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '1.1.4';
+  const APP_VERSION = '1.1.5';
 
   // ── HealthKit auto-verification thresholds ───────────────
   // v1.1.4: only the Daily walk habit auto-verifies via Apple Health.
@@ -28,6 +28,12 @@
   // Version-keyed announcements. The What's New sheet always displays
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
+    '1.1.5': {
+      subtitle: 'HealthKit fix.',
+      items: [
+        { emoji: '', title: 'Apple Health Prompt Restored', description: 'Fix: Apple Health permission prompt now appears correctly on first launch.' },
+      ],
+    },
     '1.1.4': {
       subtitle: 'The system is watching now.',
       items: [
