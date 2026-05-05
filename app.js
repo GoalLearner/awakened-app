@@ -4759,6 +4759,7 @@
     // HealthKit walk auto-verify hook. Fires async; no-ops on web /
     // when permission isn't granted / when threshold not met. Will
     // re-trigger renderHabits() if it auto-checks the walk habit.
+    try { alert('[AV] renderHabits ran autoVerify'); } catch (_) {} // DIAGNOSTIC v1.1.5
     try { autoVerifyWalk(); } catch (_) {}
   }
 
@@ -12159,13 +12160,24 @@
   // completes (or short-circuits). Never throws — auto-verify is a
   // silent enhancement.
   async function autoVerifyWalk() {
+    // ── DIAGNOSTIC v1.1.5 ──────────────────────────────────
+    // Remove this whole block once auto-verify is confirmed working
+    // on a real device. Alerts are the only visible feedback on
+    // TestFlight without remote-debug-attach.
+    try { alert('[AV] autoVerifyWalk called'); } catch (_) {}
+
     if (!Health.isAvailable()) return;          // web / non-iOS
     const walk = findWalkHabit();
+    try { alert('[AV] habit found: ' + (walk ? walk.name : 'NULL')); } catch (_) {}
     if (!walk) return;                           // user doesn't have the habit
     if (isChecked(walk.id)) return;              // already done (manual or auto)
-    if (AUTO_VERIFY.wasWalkUncheckedToday()) return;  // user opted out for today
+
+    const todayInUnchecked = AUTO_VERIFY.wasWalkUncheckedToday();
+    try { alert('[AV] today in unchecked dates: ' + (todayInUnchecked ? 'YES — skipping' : 'NO — proceeding')); } catch (_) {}
+    if (todayInUnchecked) return;                // user opted out for today
 
     const status = Health.permissionStatus();
+    try { alert('[AV] permission status: ' + status); } catch (_) {}
 
     // First-encounter path: show pre-prompt, don't query HealthKit yet.
     if (status === 'unknown') {
@@ -12177,6 +12189,7 @@
     if (status !== 'granted') return;
 
     const steps = await Health.getStepsToday();
+    try { alert('[AV] steps today: ' + steps + ' | threshold: ' + HEALTHKIT_WALK_STEP_THRESHOLD); } catch (_) {}
     if (steps == null) return;
     if (steps < HEALTHKIT_WALK_STEP_THRESHOLD) return;
 
@@ -12194,7 +12207,9 @@
     // toggleHabit path (silent mode skips the burst). Otherwise mutate
     // state silently — UI catches up on next renderHabits().
     const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+    try { alert('[AV] about to toggle habit complete'); } catch (_) {}
     toggleHabit(walk.id, li, { silent: true });
+    try { alert('[AV] toggleHabit done'); } catch (_) {}
     console.log('[Health] auto-verified Daily walk:', steps, 'steps');
 
     // Re-render so buildItem() can paint the auto-verify pill into the
@@ -12206,6 +12221,7 @@
 
   // ── INIT ─────────────────────────────────────────────────
   function init() {
+    try { alert('[AV] init() started'); } catch (_) {} // DIAGNOSTIC v1.1.5
     load();
     today = getPTDate();
     histViewYear  = parseInt(today.slice(0, 4), 10);
@@ -12300,6 +12316,7 @@
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) return;
+      try { alert('[AV] visibilitychange fired'); } catch (_) {} // DIAGNOSTIC v1.1.5
       checkDayChange();
       // App resume → invalidate the 5-min step cache and re-attempt
       // walk auto-verify. User may have walked while we were backgrounded.
