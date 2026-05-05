@@ -11967,6 +11967,10 @@
     //
     // Never throws. Auto-verify must be a silent enhancement.
     async function getStepsToday() {
+      // ── DIAGNOSTIC v1.1.5 ──────────────────────────────────
+      // Remove this whole block once auto-verify is confirmed working.
+      try { alert('[STEPS] getStepsToday called'); } catch (_) {}
+
       if (!isAvailable()) return null;
       if (isCacheFresh()) return stepCache.steps;
 
@@ -11989,16 +11993,21 @@
         const start = new Date(todayPT + 'T00:00:00');
         const end = new Date();
 
-        const result = await p.queryHKitSampleType({
+        const queryArgs = {
           sampleName: 'steps',
           startDate: start.toISOString(),
           endDate: end.toISOString(),
           limit: 0, // 0 = unlimited per @perfood README
-        });
+        };
+        try { alert('[STEPS] calling plugin queryHKitSampleType with: ' + JSON.stringify(queryArgs)); } catch (_) {}
+
+        const result = await p.queryHKitSampleType(queryArgs);
+        try { alert('[STEPS] plugin returned: ' + JSON.stringify(result).slice(0, 500)); } catch (_) {}
 
         // result shape: { countReturn, resultData: [{ value, ...}, ...] }
         const samples = (result && result.resultData) || [];
         const total = samples.reduce((sum, s) => sum + (Number(s.value) || 0), 0);
+        try { alert('[STEPS] parsed total: ' + total); } catch (_) {}
 
         stepCache = { steps: total, fetchedAt: Date.now() };
         // First successful read confirms 'granted' — if iOS had silently
@@ -12008,6 +12017,7 @@
         console.log('[Health] steps today:', total, '(samples:', samples.length, ')');
         return total;
       } catch (e) {
+        try { alert('[STEPS] plugin THREW: ' + ((e && e.message) || JSON.stringify(e) || String(e))); } catch (_) {}
         console.warn('[Health] step query failed', e);
         // Don't flip to 'denied' on a single failure — could be transient.
         // Only requestPermissions explicitly setting 'denied' on throw.
