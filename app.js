@@ -29,9 +29,9 @@
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
     '1.1.5': {
-      subtitle: 'HealthKit fix.',
+      subtitle: 'The system is watching now.',
       items: [
-        { emoji: '', title: 'Apple Health Prompt Restored', description: 'Fix: Apple Health permission prompt now appears correctly on first launch.' },
+        { emoji: '', title: 'Walk Auto-Verifies', description: 'Daily walk auto-verifies via Apple Health when you reach 3,000+ steps. No tap needed.' },
       ],
     },
     '1.1.4': {
@@ -4759,7 +4759,6 @@
     // HealthKit walk auto-verify hook. Fires async; no-ops on web /
     // when permission isn't granted / when threshold not met. Will
     // re-trigger renderHabits() if it auto-checks the walk habit.
-    try { alert('[AV] renderHabits ran autoVerify'); } catch (_) {} // DIAGNOSTIC v1.1.5
     try { autoVerifyWalk(); } catch (_) {}
   }
 
@@ -11967,10 +11966,6 @@
     //
     // Never throws. Auto-verify must be a silent enhancement.
     async function getStepsToday() {
-      // ── DIAGNOSTIC v1.1.5 ──────────────────────────────────
-      // Remove this whole block once auto-verify is confirmed working.
-      try { alert('[STEPS] getStepsToday called'); } catch (_) {}
-
       if (!isAvailable()) return null;
       if (isCacheFresh()) return stepCache.steps;
 
@@ -11993,21 +11988,21 @@
         const start = new Date(todayPT + 'T00:00:00');
         const end = new Date();
 
-        const queryArgs = {
-          sampleName: 'steps',
+        // sampleName MUST be 'stepCount' (camelCase, maps to
+        // HKQuantityTypeIdentifierStepCount). The @perfood README
+        // ambiguously suggests 'steps' as an alternative — that string
+        // is accepted only by requestAuthorization, not by the query
+        // API. Passing 'steps' here throws "Error in sample name."
+        const result = await p.queryHKitSampleType({
+          sampleName: 'stepCount',
           startDate: start.toISOString(),
           endDate: end.toISOString(),
           limit: 0, // 0 = unlimited per @perfood README
-        };
-        try { alert('[STEPS] calling plugin queryHKitSampleType with: ' + JSON.stringify(queryArgs)); } catch (_) {}
-
-        const result = await p.queryHKitSampleType(queryArgs);
-        try { alert('[STEPS] plugin returned: ' + JSON.stringify(result).slice(0, 500)); } catch (_) {}
+        });
 
         // result shape: { countReturn, resultData: [{ value, ...}, ...] }
         const samples = (result && result.resultData) || [];
         const total = samples.reduce((sum, s) => sum + (Number(s.value) || 0), 0);
-        try { alert('[STEPS] parsed total: ' + total); } catch (_) {}
 
         stepCache = { steps: total, fetchedAt: Date.now() };
         // First successful read confirms 'granted' — if iOS had silently
@@ -12017,7 +12012,6 @@
         console.log('[Health] steps today:', total, '(samples:', samples.length, ')');
         return total;
       } catch (e) {
-        try { alert('[STEPS] plugin THREW: ' + ((e && e.message) || JSON.stringify(e) || String(e))); } catch (_) {}
         console.warn('[Health] step query failed', e);
         // Don't flip to 'denied' on a single failure — could be transient.
         // Only requestPermissions explicitly setting 'denied' on throw.
@@ -12170,24 +12164,13 @@
   // completes (or short-circuits). Never throws — auto-verify is a
   // silent enhancement.
   async function autoVerifyWalk() {
-    // ── DIAGNOSTIC v1.1.5 ──────────────────────────────────
-    // Remove this whole block once auto-verify is confirmed working
-    // on a real device. Alerts are the only visible feedback on
-    // TestFlight without remote-debug-attach.
-    try { alert('[AV] autoVerifyWalk called'); } catch (_) {}
-
     if (!Health.isAvailable()) return;          // web / non-iOS
     const walk = findWalkHabit();
-    try { alert('[AV] habit found: ' + (walk ? walk.name : 'NULL')); } catch (_) {}
     if (!walk) return;                           // user doesn't have the habit
     if (isChecked(walk.id)) return;              // already done (manual or auto)
-
-    const todayInUnchecked = AUTO_VERIFY.wasWalkUncheckedToday();
-    try { alert('[AV] today in unchecked dates: ' + (todayInUnchecked ? 'YES — skipping' : 'NO — proceeding')); } catch (_) {}
-    if (todayInUnchecked) return;                // user opted out for today
+    if (AUTO_VERIFY.wasWalkUncheckedToday()) return;  // user opted out for today
 
     const status = Health.permissionStatus();
-    try { alert('[AV] permission status: ' + status); } catch (_) {}
 
     // First-encounter path: show pre-prompt, don't query HealthKit yet.
     if (status === 'unknown') {
@@ -12199,7 +12182,6 @@
     if (status !== 'granted') return;
 
     const steps = await Health.getStepsToday();
-    try { alert('[AV] steps today: ' + steps + ' | threshold: ' + HEALTHKIT_WALK_STEP_THRESHOLD); } catch (_) {}
     if (steps == null) return;
     if (steps < HEALTHKIT_WALK_STEP_THRESHOLD) return;
 
@@ -12217,9 +12199,7 @@
     // toggleHabit path (silent mode skips the burst). Otherwise mutate
     // state silently — UI catches up on next renderHabits().
     const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
-    try { alert('[AV] about to toggle habit complete'); } catch (_) {}
     toggleHabit(walk.id, li, { silent: true });
-    try { alert('[AV] toggleHabit done'); } catch (_) {}
     console.log('[Health] auto-verified Daily walk:', steps, 'steps');
 
     // Re-render so buildItem() can paint the auto-verify pill into the
@@ -12231,7 +12211,6 @@
 
   // ── INIT ─────────────────────────────────────────────────
   function init() {
-    try { alert('[AV] init() started'); } catch (_) {} // DIAGNOSTIC v1.1.5
     load();
     today = getPTDate();
     histViewYear  = parseInt(today.slice(0, 4), 10);
@@ -12326,7 +12305,6 @@
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) return;
-      try { alert('[AV] visibilitychange fired'); } catch (_) {} // DIAGNOSTIC v1.1.5
       checkDayChange();
       // App resume → invalidate the 5-min step cache and re-attempt
       // walk auto-verify. User may have walked while we were backgrounded.
