@@ -7164,9 +7164,10 @@
           context: 'library',
           onConfirm: cfg => {
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: cfg.difficulty, type: cfg.type || h.type || 'build' };
-            if (cfg.days)      newH.days      = cfg.days;
-            if (cfg.goal)      newH.goal      = cfg.goal;
-            if (cfg.startDate) newH.startDate = cfg.startDate;
+            if (cfg.days)               newH.days      = cfg.days;
+            if (typeof cfg.stepGoal === 'number') newH.stepGoal = cfg.stepGoal;
+            else if (cfg.goal)          newH.goal      = cfg.goal;
+            if (cfg.startDate)          newH.startDate = cfg.startDate;
             habits.push(newH);
             // Pre-fill note from DEFAULT_HABITS if present
             if (h.note) habitNotes[newH.id] = h.note;
@@ -7222,6 +7223,12 @@
     } else {
       hdGoal = 0;
     }
+    // Step-goal staging — same pattern as hdGoal, mutually exclusive
+    // with the time/count stepper for canonical Daily walk.
+    const hdIsStepGoal = isStepGoalHabit(h);
+    let hdStepGoal;
+    if (typeof ec.stepGoal === 'number') hdStepGoal = ec.stepGoal;
+    else                                  hdStepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
     let hdDiff  = ec.difficulty || h.difficulty;
     let hdStart = ec.startDate  || today;
 
@@ -7338,8 +7345,97 @@
       schedCard.appendChild(schedOpts);
       body.appendChild(schedCard);
 
-      // ── Section 3: Goal Value (measurable habits only) ─────
-      if (measurable) {
+      // ── Section 3: Goal Value ──────────────────────────────
+      // Step-goal habits (canonical Daily walk) get the chip picker
+      // here too — matches the post-onboarding Edit Habit modal so
+      // there's no jarring difference between the two surfaces.
+      if (hdIsStepGoal) {
+        const goalCard = hdSection('Goal Value');
+        const valueRow = document.createElement('div');
+        valueRow.className = 'habit-edit-stepgoal-row';
+        const valueLabel = document.createElement('span');
+        valueLabel.className = 'habit-edit-stepgoal-label';
+        valueLabel.textContent = 'Step goal';
+        const valueDisplay = document.createElement('span');
+        valueDisplay.className = 'habit-edit-stepgoal-value';
+        valueDisplay.textContent = hdStepGoal.toLocaleString() + ' steps';
+        valueRow.append(valueLabel, valueDisplay);
+        goalCard.appendChild(valueRow);
+
+        const chips = document.createElement('div');
+        chips.className = 'habit-edit-stepgoal-chips';
+        const chipDefs = HEALTHKIT_WALK_PRESETS.map(n => ({ preset: String(n), label: n.toLocaleString() }))
+          .concat([{ preset: 'custom', label: 'Custom' }]);
+        chipDefs.forEach(({ preset, label }) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'habit-edit-stepgoal-chip';
+          btn.dataset.preset = preset;
+          btn.textContent = label;
+          chips.appendChild(btn);
+        });
+        const setActive = () => {
+          const isCustom = !HEALTHKIT_WALK_PRESETS.includes(hdStepGoal);
+          chips.querySelectorAll('.habit-edit-stepgoal-chip').forEach(chip => {
+            const p = chip.dataset.preset;
+            const active = (p === 'custom') ? isCustom : (parseInt(p, 10) === hdStepGoal);
+            chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+          });
+        };
+        setActive();
+
+        const customRow = document.createElement('div');
+        customRow.className = 'habit-edit-stepgoal-custom hidden';
+        const customInput = document.createElement('input');
+        customInput.type = 'number';
+        customInput.inputMode = 'numeric';
+        customInput.min = HEALTHKIT_WALK_THRESHOLD_MIN;
+        customInput.max = HEALTHKIT_WALK_THRESHOLD_MAX;
+        customInput.placeholder = 'Enter steps (100–50,000)';
+        customInput.className = 'habit-edit-stepgoal-input';
+        const customSave = document.createElement('button');
+        customSave.type = 'button';
+        customSave.className = 'habit-edit-stepgoal-save';
+        customSave.textContent = 'Save';
+        const customCancel = document.createElement('button');
+        customCancel.type = 'button';
+        customCancel.className = 'habit-edit-stepgoal-cancel';
+        customCancel.textContent = 'Cancel';
+        customRow.append(customInput, customSave, customCancel);
+
+        chips.addEventListener('click', (e) => {
+          const chip = e.target.closest('.habit-edit-stepgoal-chip');
+          if (!chip) return;
+          const p = chip.dataset.preset;
+          if (p === 'custom') {
+            customRow.classList.remove('hidden');
+            customInput.value = String(hdStepGoal);
+            setTimeout(() => customInput.focus(), 50);
+            return;
+          }
+          const n = parseInt(p, 10);
+          if (!Number.isFinite(n)) return;
+          hdStepGoal = n;
+          customRow.classList.add('hidden');
+          valueDisplay.textContent = hdStepGoal.toLocaleString() + ' steps';
+          setActive();
+        });
+        const commitCustom = () => {
+          const parsed = parseInt(customInput.value, 10);
+          const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+          hdStepGoal = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
+          customRow.classList.add('hidden');
+          valueDisplay.textContent = hdStepGoal.toLocaleString() + ' steps';
+          setActive();
+        };
+        customSave.addEventListener('click', commitCustom);
+        customInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitCustom(); });
+        customCancel.addEventListener('click', () => { customRow.classList.add('hidden'); });
+
+        goalCard.appendChild(chips);
+        goalCard.appendChild(customRow);
+        body.appendChild(goalCard);
+      } else if (measurable) {
         const goalCard = hdSection('Goal Value');
 
         // Special bodyweight input for Protein goal
@@ -7432,7 +7528,10 @@
           ndays:      hdNdays,
           difficulty: hdDiff,
           days:       days || undefined,
-          goal:       measurable ? { value: hdGoal, unit: measurable.unit } : undefined,
+          // Goal — mutually exclusive: step-goal habits carry stepGoal,
+          // measurable habits carry the legacy goal{value,unit} shape.
+          goal:       (!hdIsStepGoal && measurable) ? { value: hdGoal, unit: measurable.unit } : undefined,
+          stepGoal:   hdIsStepGoal ? hdStepGoal : undefined,
           startDate:  hdStart !== today ? hdStart : undefined,
         };
         if (opts.onConfirm) {
@@ -7441,7 +7540,8 @@
           // Default (library) behaviour
           const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
           if (days)              newH.days      = days;
-          if (measurable)        newH.goal      = { value: hdGoal, unit: measurable.unit };
+          if (hdIsStepGoal)      newH.stepGoal  = hdStepGoal;
+          else if (measurable)   newH.goal      = { value: hdGoal, unit: measurable.unit };
           if (hdStart !== today) newH.startDate = hdStart;
           habits.push(newH);
           save();
@@ -11287,8 +11387,18 @@
       };
       if (cfg.days)      newH.days      = cfg.days;
       if (cfg.startDate) newH.startDate = cfg.startDate;
-      // If user configured a goal, use it; otherwise set a sensible default for measurable habits
-      if (cfg.goal) {
+      // Goal — mutually exclusive: step-goal habits (canonical Daily
+      // walk) carry stepGoal; everything else uses the legacy
+      // goal{value,unit} shape. v1.1.5+ — see isStepGoalHabit().
+      if (typeof cfg.stepGoal === 'number') {
+        newH.stepGoal = cfg.stepGoal;
+      } else if (isStepGoalHabit(base)) {
+        // User opened the detail sheet but didn't change the goal —
+        // persist the staged default so habit.stepGoal is always set
+        // for canonical Daily walk and getHabitStepGoal returns
+        // consistently without leaning on its fallback.
+        newH.stepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+      } else if (cfg.goal) {
         newH.goal = cfg.goal;
       } else {
         const m = MEASURABLE_HABITS[base.name];
@@ -11397,6 +11507,12 @@
       clearTimeout(autoDismissTimer);
       overlay.classList.remove('bg-show');
       overlay.classList.add('bg-hide');
+      // Sweep any reminder-confirmation toasts left over from the
+      // onboarding-time picker. They live as direct children of <body>
+      // (intentionally, so they survive other overlays) but should NOT
+      // outlive the Beginning chapter — the user has clearly moved on.
+      // Same for the floating hour/minute picker popup it spawns.
+      document.querySelectorAll('.habit-toast--reminder, .ht-rem-popup').forEach(el => el.remove());
       overlay.addEventListener('animationend', () => {
         overlay.classList.remove('bg-hide');
         overlay.classList.add('hidden');
@@ -12384,6 +12500,13 @@
   function showHealthKitPreprompt() {
     if (document.getElementById('hk-preprompt-overlay')) return;
 
+    // Read the user's current goal so the copy reflects reality. Fresh
+    // installs see the default 3,000; users who've already configured
+    // a different value (via Edit Habit during onboarding or after) see
+    // their own number.
+    const walk = (typeof findWalkHabit === 'function') ? findWalkHabit() : null;
+    const initialGoal = walk ? getHabitStepGoal(walk) : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+
     const overlay = document.createElement('div');
     overlay.id = 'hk-preprompt-overlay';
     overlay.className = 'modal-overlay';
@@ -12392,8 +12515,28 @@
         '<h2 class="hk-preprompt-title">Auto-verify your Walk</h2>' +
         '<p class="hk-preprompt-body">' +
           'Awakened can use Apple Health to mark the Daily walk habit complete ' +
-          'when you reach 3,000+ steps — no tap needed.' +
+          'when you reach <button type="button" id="hk-preprompt-goal-btn" class="hk-preprompt-goal-btn">' +
+            initialGoal.toLocaleString() + '+ steps' +
+          '</button> &mdash; no tap needed.' +
         '</p>' +
+        // Inline chip picker — collapsed by default, opens when the
+        // step-goal value above is tapped. Reuses .habit-edit-stepgoal-*
+        // styles for visual consistency with the Edit Habit modal.
+        '<div id="hk-preprompt-stepgoal" class="habit-edit-stepgoal hk-preprompt-stepgoal" hidden>' +
+          '<div class="habit-edit-stepgoal-chips">' +
+            '<button class="habit-edit-stepgoal-chip" data-preset="1000"  type="button">1,000</button>' +
+            '<button class="habit-edit-stepgoal-chip" data-preset="3000"  type="button">3,000</button>' +
+            '<button class="habit-edit-stepgoal-chip" data-preset="5000"  type="button">5,000</button>' +
+            '<button class="habit-edit-stepgoal-chip" data-preset="8000"  type="button">8,000</button>' +
+            '<button class="habit-edit-stepgoal-chip" data-preset="10000" type="button">10,000</button>' +
+            '<button class="habit-edit-stepgoal-chip" data-preset="custom" type="button">Custom</button>' +
+          '</div>' +
+          '<div id="hk-preprompt-stepgoal-custom" class="habit-edit-stepgoal-custom hidden">' +
+            '<input id="hk-preprompt-stepgoal-input" class="habit-edit-stepgoal-input" type="number" inputmode="numeric" min="100" max="50000" placeholder="Enter steps (100–50,000)">' +
+            '<button id="hk-preprompt-stepgoal-save"   class="habit-edit-stepgoal-save"   type="button">Save</button>' +
+            '<button id="hk-preprompt-stepgoal-cancel" class="habit-edit-stepgoal-cancel" type="button">Cancel</button>' +
+          '</div>' +
+        '</div>' +
         '<p class="hk-preprompt-body hk-preprompt-privacy">' +
           'Your steps stay on your device. Awakened never sees them leave your phone.' +
         '</p>' +
@@ -12409,6 +12552,69 @@
       overlay.remove();
     };
 
+    // ── Step-goal picker wiring ──────────────────────────────
+    // Tapping the inline number toggles the chip picker. Tapping a
+    // preset writes via setHabitStepGoal (immediately persists, since
+    // the modal has no Save button — just Enable / Not Now). The
+    // displayed number updates live so the user sees their choice
+    // reflected before they grant permission.
+    const goalBtn  = document.getElementById('hk-preprompt-goal-btn');
+    const picker   = document.getElementById('hk-preprompt-stepgoal');
+    const chipGrp  = picker.querySelector('.habit-edit-stepgoal-chips');
+    const customRow= document.getElementById('hk-preprompt-stepgoal-custom');
+    const customIn = document.getElementById('hk-preprompt-stepgoal-input');
+    const customSave = document.getElementById('hk-preprompt-stepgoal-save');
+    const customCancel = document.getElementById('hk-preprompt-stepgoal-cancel');
+
+    const refreshChipState = () => {
+      const cur = walk ? getHabitStepGoal(walk) : initialGoal;
+      const isCustom = !HEALTHKIT_WALK_PRESETS.includes(cur);
+      picker.querySelectorAll('.habit-edit-stepgoal-chip').forEach(chip => {
+        const p = chip.dataset.preset;
+        const active = (p === 'custom') ? isCustom : (parseInt(p, 10) === cur);
+        chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+      });
+      goalBtn.textContent = cur.toLocaleString() + '+ steps';
+    };
+    refreshChipState();
+
+    goalBtn.addEventListener('click', () => {
+      picker.hidden = !picker.hidden;
+    });
+
+    chipGrp.addEventListener('click', (e) => {
+      const chip = e.target.closest('.habit-edit-stepgoal-chip');
+      if (!chip) return;
+      const p = chip.dataset.preset;
+      if (p === 'custom') {
+        customRow.classList.remove('hidden');
+        customIn.value = walk ? String(getHabitStepGoal(walk)) : String(initialGoal);
+        setTimeout(() => customIn.focus(), 50);
+        return;
+      }
+      const n = parseInt(p, 10);
+      if (!Number.isFinite(n)) return;
+      // Persist only if the user actually has the walk habit (they
+      // should — the pre-prompt is gated on findWalkHabit() returning
+      // truthy in autoVerifyWalk, but be defensive).
+      if (walk) setHabitStepGoal(walk, n);
+      customRow.classList.add('hidden');
+      refreshChipState();
+    });
+
+    const commitCustom = () => {
+      const parsed = parseInt(customIn.value, 10);
+      const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+      const n = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
+      if (walk) setHabitStepGoal(walk, n);
+      customRow.classList.add('hidden');
+      refreshChipState();
+    };
+    customSave.addEventListener('click', commitCustom);
+    customIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitCustom(); });
+    customCancel.addEventListener('click', () => { customRow.classList.add('hidden'); });
+
+    // ── Skip / Enable wiring ─────────────────────────────────
     document.getElementById('hk-preprompt-skip').addEventListener('click', () => {
       console.log('[Health] user declined pre-prompt — proceeding without HealthKit');
       close();

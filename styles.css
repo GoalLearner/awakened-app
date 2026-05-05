@@ -851,6 +851,34 @@ footer {
 .hk-preprompt-secondary:active {
   transform: scale(0.97);
 }
+/* Tappable step-goal value embedded in the pre-prompt copy. Looks
+   like an inline button — accent-tinted, dotted underline, expands
+   into the chip picker on tap. */
+.hk-preprompt-goal-btn {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.hk-preprompt-goal-btn:active {
+  opacity: 0.7;
+}
+/* Chip picker that expands inside the pre-prompt. Tighter top margin
+   so it sits flush with the body paragraph above. */
+.hk-preprompt-stepgoal {
+  margin-top: 4px;
+  padding-top: 10px;
+}
+.hk-preprompt-stepgoal[hidden] { display: none; }
 
 /* ── Edit Habit step-goal control (HealthKit-auto-verifiable habits) ──
    Replaces the time-based "Daily walk goal · 30 min" stepper for habits
