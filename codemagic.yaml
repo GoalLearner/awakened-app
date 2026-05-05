@@ -129,14 +129,18 @@ workflows:
           # Must match the App ID's HealthKit capability in Apple Developer
           # portal. If the IPA fails to install with "Missing entitlement,"
           # confirm HealthKit is enabled on the App ID at developer.apple.com.
+          #
+          # ONLY write com.apple.developer.healthkit (the basic capability).
+          # Do NOT write com.apple.developer.healthkit.access — that key is
+          # for Verifiable Health Records (clinical / medical record access)
+          # and requires separate Apple approval. Including it without
+          # approval makes codesign fail with "Entitlement
+          # com.apple.developer.healthkit.access requires approval from
+          # Apple to include in a profile." Awakened only reads step counts,
+          # which is covered by the basic capability — the .access key is
+          # not needed and was a mis-paste from documentation in v1.1.4.
           /usr/libexec/PlistBuddy -c "Add :com.apple.developer.healthkit bool true" "$ENTITLEMENTS" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :com.apple.developer.healthkit true" "$ENTITLEMENTS"
-
-          # Empty array = no clinical-records or background-delivery extras.
-          # Adding the key with an empty array is required even when we
-          # don't request those extras — its absence breaks codesign in
-          # some Xcode versions.
-          /usr/libexec/PlistBuddy -c "Add :com.apple.developer.healthkit.access array" "$ENTITLEMENTS" 2>/dev/null || true
 
           echo "HealthKit Info.plist + entitlement entries set."
           /usr/libexec/PlistBuddy -c "Print :NSHealthShareUsageDescription" "$PLIST"
