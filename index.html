@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=162">
+  <link rel="stylesheet" href="styles.css?v=165">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -404,6 +404,30 @@
         <button id="edit-goal-dec" class="hd-step-btn" type="button">−</button>
         <span id="edit-goal-val" class="hd-step-val"></span>
         <button id="edit-goal-inc" class="hd-step-btn" type="button">+</button>
+      </div>
+    </div>
+
+    <!-- Step-goal control. Shown for the canonical "Daily walk" habit
+         (non-custom) on every platform — replaces the time-based
+         stepper above when isStepGoalHabit() is true. Auto-verify only
+         fires on iOS, but the goal itself is platform-agnostic. -->
+    <div id="edit-stepgoal" class="habit-edit-stepgoal" hidden>
+      <div class="habit-edit-stepgoal-row">
+        <span class="habit-edit-stepgoal-label">Step goal</span>
+        <span id="edit-stepgoal-value" class="habit-edit-stepgoal-value">3,000 steps</span>
+      </div>
+      <div class="habit-edit-stepgoal-chips">
+        <button class="habit-edit-stepgoal-chip" data-preset="1000"  type="button">1,000</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="3000"  type="button">3,000</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="5000"  type="button">5,000</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="8000"  type="button">8,000</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="10000" type="button">10,000</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="custom" type="button">Custom</button>
+      </div>
+      <div id="edit-stepgoal-custom" class="habit-edit-stepgoal-custom hidden">
+        <input id="edit-stepgoal-input" class="habit-edit-stepgoal-input" type="number" inputmode="numeric" min="100" max="50000" placeholder="Enter steps (100–50,000)">
+        <button id="edit-stepgoal-save"   class="habit-edit-stepgoal-save"   type="button">Save</button>
+        <button id="edit-stepgoal-cancel" class="habit-edit-stepgoal-cancel" type="button">Cancel</button>
       </div>
     </div>
 
@@ -892,7 +916,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=197"></script>
+  <script src="app.js?v=202"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1138,6 +1162,58 @@
       </button>
       <div id="settings-rem-list" class="settings-rem-list hidden"></div>
       </div><!-- /settings-rem-section-body -->
+    </div>
+
+    <!-- Apple Health — collapsible (v1.1.6) -->
+    <div class="settings-collapsible">
+      <button id="settings-health-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="health">
+        <span class="settings-collapsible-lbl">APPLE HEALTH</span>
+        <span id="settings-health-summary" class="settings-collapsible-summary">Not connected</span>
+        <span class="settings-collapsible-chevron">›</span>
+      </button>
+      <div id="settings-health-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+
+        <!-- State A: HealthKit unavailable (web / non-iOS) -->
+        <div id="settings-health-state-unavailable" class="hidden">
+          <p class="settings-rem-note">Apple Health integration is available in the iOS app only.</p>
+        </div>
+
+        <!-- State B: Connected (permission granted) -->
+        <div id="settings-health-state-connected" class="hidden">
+          <div class="settings-rem-row">
+            <span class="settings-rem-label">Status</span>
+            <span id="settings-health-status-value" class="settings-rem-value granted">Connected</span>
+          </div>
+          <div class="settings-rem-row">
+            <span class="settings-rem-label">Source</span>
+            <span class="settings-rem-value">iOS Health</span>
+          </div>
+          <div class="settings-rem-row settings-rem-row--toggle">
+            <span class="settings-rem-label">Auto-verify habits</span>
+            <button id="settings-health-autoverify-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Auto-verify habits"></button>
+          </div>
+          <p class="settings-rem-note">When enabled, your Daily walk completes automatically once you reach your step goal in Apple Health. Manual completion always works.</p>
+          <p id="settings-health-paused-note" class="settings-rem-note hidden">Auto-verify is paused. Tap the toggle to resume.</p>
+          <p class="settings-rem-note">Set your step goal by editing the Daily walk habit.</p>
+
+          <button id="settings-health-manage-link" class="settings-rem-view-all" type="button">
+            Manage data access in iPhone Settings
+            <span class="settings-rem-view-arrow">›</span>
+          </button>
+        </div>
+
+        <!-- State C: Not connected (permission unknown / denied) -->
+        <div id="settings-health-state-disconnected" class="hidden">
+          <div class="settings-rem-row">
+            <span class="settings-rem-label">Status</span>
+            <span class="settings-rem-value">Not connected</span>
+          </div>
+          <p class="settings-rem-note">Connect Apple Health to auto-verify your Daily walk habit when you reach your step goal. Your data stays on your device.</p>
+          <button id="settings-health-connect-btn" class="settings-rem-enable-btn" type="button">Connect Apple Health</button>
+          <p class="settings-rem-note">If you previously declined, you'll need to enable Steps access in iPhone Settings → Privacy &amp; Security → Health → Awakened.</p>
+        </div>
+
+      </div><!-- /settings-health-body -->
     </div>
 
     <!-- What's Coming — collapsible -->

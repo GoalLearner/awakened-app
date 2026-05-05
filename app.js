@@ -17,12 +17,59 @@
   const APP_VERSION = '1.1.5';
 
   // ── HealthKit auto-verification thresholds ───────────────
-  // v1.1.4: only the Daily walk habit auto-verifies via Apple Health.
-  // 3,000 steps ≈ 30 min of moderate-pace walking for an average adult,
-  // matching the canonical "Daily walk · 30 min" habit. Conservative
-  // floor — auto-verify should feel earned, not gamed. Configurable
-  // step goals are scoped for v2.1+; do NOT add a settings UI here.
-  const HEALTHKIT_WALK_STEP_THRESHOLD = 3000;
+  // v1.1.5: Daily walk auto-verifies via Apple Health when steps
+  // reach the user's chosen goal. Default 3,000 ≈ 30 min of
+  // moderate-pace walking, matching the canonical "Daily walk · 30 min"
+  // habit. The goal is stored PER HABIT (habit.stepGoal field) — see
+  // CLAUDE.md "habit identity is the name string" + "single source of
+  // truth" patterns. The Edit Habit modal hosts the configuration UI.
+  // Always read via getHabitStepGoal(habit) — never reference the
+  // default directly outside the helper.
+  const HEALTHKIT_WALK_DEFAULT_THRESHOLD = 3000;
+  const HEALTHKIT_WALK_THRESHOLD_MIN = 100;
+  const HEALTHKIT_WALK_THRESHOLD_MAX = 50000;
+  // Preset chips offered in the Edit Habit step-goal control. "Custom"
+  // outside this list reveals the inline numeric input.
+  const HEALTHKIT_WALK_PRESETS = [1000, 3000, 5000, 8000, 10000];
+
+  function getHabitStepGoal(habit) {
+    if (!habit) return HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+    const n = parseInt(habit.stepGoal, 10);
+    if (Number.isFinite(n) && n >= HEALTHKIT_WALK_THRESHOLD_MIN && n <= HEALTHKIT_WALK_THRESHOLD_MAX) {
+      return n;
+    }
+    return HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+  }
+  function setHabitStepGoal(habit, steps) {
+    if (!habit) return HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+    const parsed = parseInt(steps, 10);
+    const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+    const n = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
+    habit.stepGoal = n;
+    save();
+    return n;
+  }
+  // True for habits whose canonical goal is expressed in steps rather
+  // than time/count. The step-goal control replaces the time/count
+  // stepper in the Edit Habit modal for these habits — on every
+  // platform. (Auto-verify only fires on iOS, but the goal itself is
+  // a property of the habit, not contingent on HealthKit being
+  // currently available.) Custom habits never qualify, even if a user
+  // names theirs "Daily walk" — the canonical foreign key is exclusive
+  // to the system-defined habit.
+  function isStepGoalHabit(habit) {
+    if (!habit) return false;
+    if (habit.custom) return false;
+    if (habit.name !== 'Daily walk') return false;
+    return true;
+  }
+  function isAutoVerifyDisabled() {
+    return localStorage.getItem('hb_healthkit_disabled') === '1';
+  }
+  function setAutoVerifyDisabled(disabled) {
+    if (disabled) localStorage.setItem('hb_healthkit_disabled', '1');
+    else          localStorage.removeItem('hb_healthkit_disabled');
+  }
 
   // ── WHAT'S NEW ───────────────────────────────────────────
   // Version-keyed announcements. The What's New sheet always displays
@@ -31,7 +78,9 @@
     '1.1.5': {
       subtitle: 'The system is watching now.',
       items: [
-        { emoji: '', title: 'Walk Auto-Verifies', description: 'Daily walk auto-verifies via Apple Health when you reach 3,000+ steps. No tap needed.' },
+        { emoji: '', title: 'Walk Auto-Verifies',      description: 'Daily walk auto-verifies via Apple Health when you reach your step goal. No tap needed.' },
+        { emoji: '', title: 'Customizable Step Goal',  description: 'Edit your Daily walk habit to set your step goal — 1,000, 3,000, 5,000, or any amount.' },
+        { emoji: '', title: 'Apple Health Settings',   description: 'Pause auto-verify or manage your connection from Settings.' },
       ],
     },
     '1.1.4': {
@@ -137,8 +186,19 @@
     'Visualization practice':             { unit: 'min',     def: 10,  step: 5,   min: 5  },
   };
 
-  // Returns { base, goal } — goal is null if no goal explicitly set by user
+  // Returns { base, goal } — goal is null if no goal explicitly set by user.
+  //
+  // Step-goal habits (canonical "Daily walk", non-custom) pre-empt the
+  // legacy MEASURABLE_HABITS branch below: their goal text is always
+  // "{N} steps" sourced from getHabitStepGoal(habit). v1.1.4 users may
+  // still have habit.goal = {value: 30, unit: 'min'} stored from the
+  // old time-based stepper — that field is silently ignored from
+  // v1.1.5 onward; no migration. (Their first save in the Edit modal
+  // writes habit.stepGoal; the legacy goal field can stay orphaned.)
   function habitDisplayParts(habit) {
+    if (isStepGoalHabit(habit)) {
+      return { base: habit.name, goal: getHabitStepGoal(habit).toLocaleString() + ' steps' };
+    }
     const m = MEASURABLE_HABITS[habit.name];
     if (!m) return { base: habit.name, goal: null };
     if (!habit.goal) return { base: habit.name, goal: null };
@@ -532,7 +592,7 @@
         { id: 'no-phone', text: 'No phone for 12 hours',    matchType: 'manual' },
         { id: 'meditate', text: 'Meditate 60 min',          matchType: 'habit', habitName: 'Meditate & Breathwork' },
         { id: 'journal',  text: 'Journal 60 min',           matchType: 'habit', habitName: 'Journal' },
-        { id: 'walk',     text: 'Walk 60 min',              matchType: 'habit', habitName: 'Daily walk' },
+        { id: 'walk',     text: 'Long outdoor walk',        matchType: 'habit', habitName: 'Daily walk' },
       ] },
     { id: 'discipline-test', name: "The Discipline Test",
       description: "Six locks. From wake to plan. The full chain held.",
@@ -561,7 +621,7 @@
       components: [
         { id: 'pre-sun',  text: 'Wake before sunrise',      matchType: 'manual' },
         { id: 'sunrise',  text: 'Watch the sunrise outside', matchType: 'habit', habitName: 'Get morning sunlight' },
-        { id: 'walk',     text: '30-min outdoor walk',      matchType: 'habit', habitName: 'Daily walk' },
+        { id: 'walk',     text: 'Outdoor walk',             matchType: 'habit', habitName: 'Daily walk' },
         { id: 'no-phone', text: 'No phone until breakfast', matchType: 'habit', habitName: 'No phone or social media after waking' },
       ] },
     { id: 'trail-day', name: "Trail Day",
@@ -5405,6 +5465,15 @@
 
   // Returns true if a measurable habit's goal meets the minimum threshold.
   function meetsMinimum(habit) {
+    // Step-goal habits (canonical Daily walk) bypass the legacy
+    // MEASURABLE_HABITS minimum check. Their goal is sourced from
+    // habit.stepGoal (defaulting to 3000 via getHabitStepGoal) and
+    // the Edit modal clamps to [100, 50000] — there's nothing to
+    // block. Without this guard, v1.1.5 users with no habit.goal
+    // field yet would hit the "Set your goal value" toast and be
+    // unable to toggle Daily walk manually.
+    if (isStepGoalHabit(habit)) return true;
+
     const m = MEASURABLE_HABITS[habit.name];
     if (!m) return true; // not measurable — always OK
     if (!habit.goal) return false; // no goal set at all
@@ -9005,6 +9074,13 @@
 
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;
+  // HealthKit step-goal staging for the Edit Habit modal. editStepGoal
+  // holds the in-flight value; editStepGoalEnabled gates whether the
+  // step-goal control replaces the time/count stepper for this open.
+  // Mirrors editGoalValue's pattern — staging, not in-place mutation,
+  // so Cancel doesn't need to undo anything.
+  let editStepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+  let editStepGoalEnabled = false;
 
   function refreshEditGoalDisplay() {
     const habit = habits.find(h => h.id === editingId);
@@ -9012,6 +9088,22 @@
     const m = MEASURABLE_HABITS[habit.name];
     if (!m) return;
     document.getElementById('edit-goal-val').textContent = editGoalValue.toLocaleString() + ' ' + m.unit;
+  }
+
+  // Updates the step-goal display + chip-active state in the Edit Habit
+  // modal to match editStepGoal. Called from openEditModal and from
+  // every chip / Save handler.
+  function refreshEditStepGoalDisplay() {
+    const valueEl = document.getElementById('edit-stepgoal-value');
+    if (valueEl) valueEl.textContent = editStepGoal.toLocaleString() + ' steps';
+    const isCustom = !HEALTHKIT_WALK_PRESETS.includes(editStepGoal);
+    document.querySelectorAll('#edit-stepgoal .habit-edit-stepgoal-chip').forEach(chip => {
+      const preset = chip.dataset.preset;
+      let active;
+      if (preset === 'custom') active = isCustom;
+      else                     active = parseInt(preset, 10) === editStepGoal;
+      chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+    });
   }
 
   function openEditModal(id) {
@@ -9024,16 +9116,34 @@
     setEmojiBtn(document.getElementById('edit-emoji-btn'), editFormEmoji);
     setActiveDiff('edit-diff-row', editFormDiff);
 
-    // Show / hide goal stepper for measurable habits
-    const m        = MEASURABLE_HABITS[habit.name];
-    const goalRow  = document.getElementById('edit-goal-row');
-    if (m) {
-      editGoalValue = habit.goal ? habit.goal.value : m.def;
-      document.getElementById('edit-goal-label').textContent = habit.name + ' goal';
-      refreshEditGoalDisplay();
-      goalRow.classList.remove('hidden');
-    } else {
+    // Step-goal vs. time/count stepper — mutually exclusive.
+    // Canonical "Daily walk" (non-custom) swaps in the step-goal chips
+    // on every platform; every other habit keeps the existing stepper.
+    // Auto-verify still only fires on iOS — but the goal is a property
+    // of the habit, not contingent on HealthKit availability.
+    const stepGoalEl = document.getElementById('edit-stepgoal');
+    const goalRow    = document.getElementById('edit-goal-row');
+    editStepGoalEnabled = isStepGoalHabit(habit);
+
+    if (editStepGoalEnabled) {
+      editStepGoal = getHabitStepGoal(habit);
+      stepGoalEl.hidden = false;
       goalRow.classList.add('hidden');
+      // Make sure any open custom-input row from a previous open is hidden.
+      document.getElementById('edit-stepgoal-custom').classList.add('hidden');
+      refreshEditStepGoalDisplay();
+    } else {
+      stepGoalEl.hidden = true;
+      // Existing time/count stepper path.
+      const m = MEASURABLE_HABITS[habit.name];
+      if (m) {
+        editGoalValue = habit.goal ? habit.goal.value : m.def;
+        document.getElementById('edit-goal-label').textContent = habit.name + ' goal';
+        refreshEditGoalDisplay();
+        goalRow.classList.remove('hidden');
+      } else {
+        goalRow.classList.add('hidden');
+      }
     }
 
     // Reminder section — render current state for this habit.
@@ -9101,9 +9211,22 @@
     const habit = habits.find(h => h.id === editingId);
     if (habit) {
       habit.name = name; habit.emoji = editFormEmoji; habit.difficulty = editFormDiff;
-      // Persist goal if this is a measurable habit
-      const m = MEASURABLE_HABITS[habit.name];
-      if (m) habit.goal = { value: editGoalValue, unit: m.unit };
+      // Persist HealthKit step goal if the modal was in step-goal mode.
+      // (editStepGoal is staged inline as user taps chips; we commit it
+      // here so Cancel doesn't accidentally persist a staged value.)
+      if (editStepGoalEnabled) {
+        habit.stepGoal = editStepGoal;
+        // Threshold change may immediately auto-check today if user's
+        // current step count is past the new goal — clear the cache so
+        // renderHabits → autoVerifyWalk re-queries fresh.
+        try { Health.clearCache && Health.clearCache(); } catch (_) {}
+      }
+      // Persist goal if this is a measurable habit (and we weren't in
+      // step-goal mode). Mutually exclusive with the step-goal branch.
+      if (!editStepGoalEnabled) {
+        const m = MEASURABLE_HABITS[habit.name];
+        if (m) habit.goal = { value: editGoalValue, unit: m.unit };
+      }
       save(); renderHabits();
     }
     closeEditModal();
@@ -9135,6 +9258,50 @@
       const m = habit && MEASURABLE_HABITS[habit.name];
       if (m) { editGoalValue += m.step; refreshEditGoalDisplay(); }
     });
+
+    // ── HealthKit step-goal control (Edit Habit modal) ───────
+    // Preset chips stage editStepGoal in memory; commitEdit persists it
+    // to habit.stepGoal. "Custom" reveals the inline numeric input.
+    const stepGoalChips = document.getElementById('edit-stepgoal');
+    if (stepGoalChips) {
+      stepGoalChips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.habit-edit-stepgoal-chip');
+        if (!chip) return;
+        const preset = chip.dataset.preset;
+        if (preset === 'custom') {
+          const customRow = document.getElementById('edit-stepgoal-custom');
+          customRow.classList.remove('hidden');
+          const input = document.getElementById('edit-stepgoal-input');
+          input.value = String(editStepGoal);
+          setTimeout(() => input.focus(), 50);
+          return;
+        }
+        const n = parseInt(preset, 10);
+        if (!Number.isFinite(n)) return;
+        editStepGoal = n;
+        document.getElementById('edit-stepgoal-custom').classList.add('hidden');
+        refreshEditStepGoalDisplay();
+      });
+    }
+    const stepGoalSave   = document.getElementById('edit-stepgoal-save');
+    const stepGoalCancel = document.getElementById('edit-stepgoal-cancel');
+    const stepGoalInput  = document.getElementById('edit-stepgoal-input');
+    const commitStepGoal = () => {
+      if (!stepGoalInput) return;
+      // Same clamping as setHabitStepGoal but applied to staging only.
+      const parsed = parseInt(stepGoalInput.value, 10);
+      const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+      editStepGoal = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
+      document.getElementById('edit-stepgoal-custom').classList.add('hidden');
+      refreshEditStepGoalDisplay();
+    };
+    if (stepGoalSave)  stepGoalSave.addEventListener('click', commitStepGoal);
+    if (stepGoalInput) stepGoalInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitStepGoal(); });
+    if (stepGoalCancel) {
+      stepGoalCancel.addEventListener('click', () => {
+        document.getElementById('edit-stepgoal-custom').classList.add('hidden');
+      });
+    }
 
     // ── Reminder picker on the Edit Habit modal ──────────────
     const addBtn    = document.getElementById('edit-reminder-add');
@@ -10278,6 +10445,10 @@
       // permission state, paused-until timestamp, and active count can
       // all change between opens.
       refreshRemindersPanel();
+      // Refresh the Apple Health panel each time Settings opens — the
+      // user may have changed permission state in iOS Settings between
+      // opens, and the header summary needs to reflect that immediately.
+      refreshHealthPanel();
       openSettings();
     });
 
@@ -10320,7 +10491,9 @@
 
     // ── Settings → Reminders panel wiring ────────────────────
     setupReminderSettings();
-    // ── Generic collapsible setup (Appearance / Reminders / Coming) ──
+    // ── Settings → Apple Health panel wiring (v1.1.6) ────────
+    setupHealthSettings();
+    // ── Generic collapsible setup (Appearance / Reminders / Health / Coming) ──
     setupCollapsibleSettings();
   }
 
@@ -10559,6 +10732,99 @@
         viewAll.classList.add('expanded');
       }
     });
+  }
+
+  // ── Settings → Apple Health panel (v1.1.6) ───────────────
+  // Mirrors refreshRemindersPanel: pure read-from-state, no event
+  // wiring (that's setupHealthSettings). Computes the panel's state
+  // (A/B/C) from Health.* + localStorage and updates the DOM in place.
+  //
+  // States:
+  //   A — HealthKit unavailable (web / non-iOS) → "iOS only"
+  //   B — Permission granted → "Connected" (toggle ON) or "Paused" (toggle OFF)
+  //   C — Permission unknown / denied → "Not connected"
+  function refreshHealthPanel() {
+    const summary    = document.getElementById('settings-health-summary');
+    const stateA     = document.getElementById('settings-health-state-unavailable');
+    const stateB     = document.getElementById('settings-health-state-connected');
+    const stateC     = document.getElementById('settings-health-state-disconnected');
+    if (!summary || !stateA || !stateB || !stateC) return;
+
+    // Hide all three; the active branch reveals one.
+    stateA.classList.add('hidden');
+    stateB.classList.add('hidden');
+    stateC.classList.add('hidden');
+
+    if (typeof Health === 'undefined' || !Health.isAvailable()) {
+      stateA.classList.remove('hidden');
+      summary.textContent = 'iOS only';
+      return;
+    }
+
+    const status   = Health.permissionStatus(); // 'granted' | 'denied' | 'unknown' | 'unavailable'
+    const disabled = isAutoVerifyDisabled();
+
+    if (status === 'granted') {
+      stateB.classList.remove('hidden');
+      const toggle = document.getElementById('settings-health-autoverify-toggle');
+      const pausedNote = document.getElementById('settings-health-paused-note');
+      if (toggle) toggle.setAttribute('aria-checked', disabled ? 'false' : 'true');
+      if (pausedNote) pausedNote.classList.toggle('hidden', !disabled);
+      summary.textContent = disabled ? 'Paused' : 'Connected';
+    } else {
+      // 'unknown' and 'denied' both surface State C — the Connect button's
+      // click handler dispatches to the right path based on which one.
+      stateC.classList.remove('hidden');
+      summary.textContent = 'Not connected';
+    }
+  }
+
+  // Wires the Apple Health panel's interactive controls. Idempotent —
+  // safe to call once during setupSettings.
+  function setupHealthSettings() {
+    const toggle    = document.getElementById('settings-health-autoverify-toggle');
+    const connectBtn= document.getElementById('settings-health-connect-btn');
+    const manageLink= document.getElementById('settings-health-manage-link');
+
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        // Flip the disabled flag based on current toggle state.
+        const next = toggle.getAttribute('aria-checked') !== 'true'; // next = ON?
+        setAutoVerifyDisabled(!next);
+        if (next) {
+          // Clear the in-memory cache so a stale 0-step read doesn't
+          // block immediate re-verification of an already-walked day.
+          try { Health.clearCache && Health.clearCache(); } catch (_) {}
+          // Re-render Habits so any habit already past threshold gets
+          // auto-checked right away — no need to switch tabs first.
+          try { renderHabits(); } catch (_) {}
+        }
+        // No undo of prior auto-checks on pause — that's by design.
+        refreshHealthPanel();
+      });
+    }
+
+    if (connectBtn) {
+      connectBtn.addEventListener('click', async () => {
+        if (typeof Health === 'undefined' || !Health.isAvailable()) return;
+        const status = Health.permissionStatus();
+        if (status === 'unknown') {
+          // First request — fires iOS native sheet.
+          await Health.requestPermissions();
+        } else {
+          // 'denied' — iOS won't allow re-prompting. Deep-link to
+          // Settings so the user can flip the Steps toggle manually.
+          try { window.location.href = 'app-settings:'; } catch (_) {}
+        }
+        refreshHealthPanel();
+      });
+    }
+
+    if (manageLink) {
+      manageLink.addEventListener('click', () => {
+        try { window.location.href = 'app-settings:'; } catch (_) {}
+      });
+    }
   }
 
   // ── WELCOME SCREEN ────────────────────────────────────────
@@ -11044,7 +11310,7 @@
         'No phone or social media after waking': 'Protect your mind in the first 30 minutes. What you consume first shapes your entire day.',
         'Get morning sunlight':               'Get outside. Natural light sets your circadian rhythm and signals your body it is time to conquer.',
         'Morning gratitude practice':         'Three things. Every morning. Rewires your brain toward abundance over time.',
-        'Daily walk':                         'Movement is medicine. A 20-30 minute walk clears the mind and activates the body.',
+        'Daily walk':                         'Movement is medicine. Hit your step goal each day to clear the mind and activate the body.',
         'Vitamins and minerals':              'Your body cannot perform without the right fuel. Non negotiable.',
         'Meditate & Breathwork':              'Stillness is a skill. 10 minutes of presence builds the focus that trading and life demand.',
         'Strength training':                  'The body you build reflects the discipline you practice. Show up for it daily.',
@@ -12165,6 +12431,9 @@
   // silent enhancement.
   async function autoVerifyWalk() {
     if (!Health.isAvailable()) return;          // web / non-iOS
+    // User has paused auto-verify in Settings → Apple Health. Manual
+    // completion path is unaffected. (v1.1.5)
+    if (isAutoVerifyDisabled()) return;
     const walk = findWalkHabit();
     if (!walk) return;                           // user doesn't have the habit
     if (isChecked(walk.id)) return;              // already done (manual or auto)
@@ -12183,7 +12452,8 @@
 
     const steps = await Health.getStepsToday();
     if (steps == null) return;
-    if (steps < HEALTHKIT_WALK_STEP_THRESHOLD) return;
+    const threshold = getHabitStepGoal(walk);
+    if (steps < threshold) return;
 
     // Re-check completion state — Health.getStepsToday is async, the
     // user may have manually tapped during the await.
@@ -12192,7 +12462,7 @@
     AUTO_VERIFY.recordAutoVerify(walk.id, {
       source: 'healthkit-steps',
       value: steps,
-      threshold: HEALTHKIT_WALK_STEP_THRESHOLD,
+      threshold: threshold,
     });
 
     // If the LI is currently in the DOM, animate via the standard

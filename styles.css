@@ -852,6 +852,110 @@ footer {
   transform: scale(0.97);
 }
 
+/* ── Edit Habit step-goal control (HealthKit-auto-verifiable habits) ──
+   Replaces the time-based "Daily walk goal · 30 min" stepper for habits
+   that auto-verify via Apple Health (currently: canonical Daily walk on
+   iOS only). Preset chips + a "Custom" chip that reveals an inline
+   numeric input. Selected chip uses the gold accent treatment that
+   matches Awakened's primary CTA pattern. */
+.habit-edit-stepgoal {
+  margin: 4px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.habit-edit-stepgoal[hidden] { display: none; }
+.habit-edit-stepgoal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 8px;
+}
+.habit-edit-stepgoal-label {
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+.habit-edit-stepgoal-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.habit-edit-stepgoal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+.habit-edit-stepgoal-chip {
+  flex: 1 1 calc(33.333% - 8px);
+  min-width: 0;
+  padding: 9px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.habit-edit-stepgoal-chip:active {
+  transform: scale(0.97);
+}
+.habit-edit-stepgoal-chip--active {
+  background: #fbbf24;
+  border-color: #fbbf24;
+  color: #1a1505;
+}
+.habit-edit-stepgoal-custom {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: stretch;
+}
+.habit-edit-stepgoal-custom.hidden { display: none; }
+.habit-edit-stepgoal-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.22);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.habit-edit-stepgoal-input::placeholder {
+  color: rgba(255,255,255,0.35);
+}
+.habit-edit-stepgoal-save,
+.habit-edit-stepgoal-cancel {
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.habit-edit-stepgoal-save {
+  background: #fbbf24;
+  color: #1a1505;
+  border: 1px solid #fbbf24;
+}
+.habit-edit-stepgoal-cancel {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
 /* ── Auto-verify pill (Habits tab card) ─────────────────────
    Shown next to the check circle when a habit was auto-verified via
    HealthKit today. Subtle by design — a marker, not a celebration. */
