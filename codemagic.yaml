@@ -38,7 +38,7 @@ workflows:
       # ── Build variables ────────────────────────────────────────
       vars:
         BUNDLE_ID:        "com.goallearner.awakened"
-        APP_VERSION:      "1.1.3"
+        APP_VERSION:      "1.1.4"
         XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
@@ -103,6 +103,44 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
           echo "Export compliance flag set."
+
+      - name: Add HealthKit usage description and entitlement
+        script: |
+          # v1.1.4 — auto-verifies the Daily walk habit using Apple Health step
+          # data. We only READ from HealthKit (never write), so only
+          # NSHealthShareUsageDescription is strictly required, but we add the
+          # update key as well to be safe against reviewer-tooling edge cases.
+          PLIST="ios/App/App/Info.plist"
+          ENTITLEMENTS="ios/App/App/App.entitlements"
+
+          # ── Info.plist: usage descriptions ─────────────────────────────
+          # Wording must match what Apple reviewers see in the permission
+          # sheet. Keep it short, honest, and ties data to user value.
+          SHARE_DESC="Awakened uses Apple Health to verify your habits and unlock boss battles in future versions. Your data stays on your device."
+          UPDATE_DESC="Awakened only reads from Apple Health. It does not write to it."
+
+          /usr/libexec/PlistBuddy -c "Add :NSHealthShareUsageDescription string '$SHARE_DESC'" "$PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSHealthShareUsageDescription '$SHARE_DESC'" "$PLIST"
+
+          /usr/libexec/PlistBuddy -c "Add :NSHealthUpdateUsageDescription string '$UPDATE_DESC'" "$PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSHealthUpdateUsageDescription '$UPDATE_DESC'" "$PLIST"
+
+          # ── App.entitlements: HealthKit capability ─────────────────────
+          # Must match the App ID's HealthKit capability in Apple Developer
+          # portal. If the IPA fails to install with "Missing entitlement,"
+          # confirm HealthKit is enabled on the App ID at developer.apple.com.
+          /usr/libexec/PlistBuddy -c "Add :com.apple.developer.healthkit bool true" "$ENTITLEMENTS" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :com.apple.developer.healthkit true" "$ENTITLEMENTS"
+
+          # Empty array = no clinical-records or background-delivery extras.
+          # Adding the key with an empty array is required even when we
+          # don't request those extras — its absence breaks codesign in
+          # some Xcode versions.
+          /usr/libexec/PlistBuddy -c "Add :com.apple.developer.healthkit.access array" "$ENTITLEMENTS" 2>/dev/null || true
+
+          echo "HealthKit Info.plist + entitlement entries set."
+          /usr/libexec/PlistBuddy -c "Print :NSHealthShareUsageDescription" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :com.apple.developer.healthkit" "$ENTITLEMENTS"
 
       - name: Install custom app icon
         script: |

@@ -783,6 +783,115 @@ footer {
 
 .modal-overlay.hidden { display: none !important; }
 
+/* HealthKit pre-prompt explainer (shown once, before iOS native sheet) */
+.hk-preprompt-card {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 201;
+  width: calc(100% - 44px);
+  max-width: 360px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 26px 22px 22px;
+  animation: modal-appear 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--border-accent);
+}
+.hk-preprompt-title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 10px;
+  text-align: center;
+}
+.hk-preprompt-body {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+  text-align: center;
+}
+.hk-preprompt-privacy {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-bottom: 18px;
+}
+.hk-preprompt-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.hk-preprompt-secondary,
+.hk-preprompt-primary {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.hk-preprompt-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.hk-preprompt-primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.hk-preprompt-primary:active,
+.hk-preprompt-secondary:active {
+  transform: scale(0.97);
+}
+
+/* ── Auto-verify pill (Habits tab card) ─────────────────────
+   Shown next to the check circle when a habit was auto-verified via
+   HealthKit today. Subtle by design — a marker, not a celebration. */
+.auto-verify-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  margin-right: 6px;
+  border-radius: 6px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--border-accent);
+  align-self: center;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Auto-verify dot (History weekly cells) ────────────────
+   A tiny accent dot inset in the corner of cells that were
+   auto-verified. Sits over the existing stat-colored fill so the
+   primary visual signal (stat color) remains intact. */
+.hg-cell--auto {
+  position: relative;
+}
+.hg-cell--auto::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 3px var(--accent-glow);
+}
+
 .modal {
   position: fixed;
   left: 50%;

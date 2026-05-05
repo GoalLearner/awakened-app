@@ -14,12 +14,28 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '1.1.3';
+  const APP_VERSION = '1.1.4';
+
+  // ── HealthKit auto-verification thresholds ───────────────
+  // v1.1.4: only the Daily walk habit auto-verifies via Apple Health.
+  // 3,000 steps ≈ 30 min of moderate-pace walking for an average adult,
+  // matching the canonical "Daily walk · 30 min" habit. Conservative
+  // floor — auto-verify should feel earned, not gamed. Configurable
+  // step goals are scoped for v2.1+; do NOT add a settings UI here.
+  const HEALTHKIT_WALK_STEP_THRESHOLD = 3000;
 
   // ── WHAT'S NEW ───────────────────────────────────────────
   // Version-keyed announcements. The What's New sheet always displays
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
+    '1.1.4': {
+      subtitle: 'The system is watching now.',
+      items: [
+        { emoji: '', title: 'Walk Auto-Verifies',  description: "Daily walk now auto-checks via Apple Health. 3,000+ steps and the habit completes itself — no tap needed. Manual still works on Apple Health-disabled devices." },
+        { emoji: '', title: 'Auto Marker',          description: 'Auto-verified completions show a subtle AUTO pill on the habit card and a small dot in History. Earned, not celebrated.' },
+        { emoji: '', title: 'Privacy First',        description: "Your steps stay on your device. Awakened reads what's already there — nothing leaves your phone, nothing gets stored." },
+      ],
+    },
     '1.1.3': {
       subtitle: 'One reminder. The path, illustrated.',
       items: [
@@ -3715,6 +3731,13 @@
           cell.style.cssText = 'background:' + cellBg
             + ';box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.35)
             + (diff === 'legendary' ? ',0 0 0 1px ' + colorWithAlpha(statColor, 0.9) : '');
+          // Tiny corner dot when this completion was auto-verified via
+          // HealthKit. v1.1.4 scope: only Daily walk; design intentionally
+          // does NOT recolor the cell (stat color stays the source-of-truth
+          // signal). See AUTO_VERIFY module.
+          if (typeof AUTO_VERIFY !== 'undefined' && AUTO_VERIFY.isAutoVerifiedOnDate(habit.id, ds)) {
+            cell.classList.add('hg-cell--auto');
+          }
         } else if (isFuture) {
           cell.className = 'hg-cell hg-cell--future';
         } else if (isSchedDay) {
@@ -4726,6 +4749,11 @@
       bindDrag();
     }
     updateProgress();
+
+    // HealthKit walk auto-verify hook. Fires async; no-ops on web /
+    // when permission isn't granted / when threshold not met. Will
+    // re-trigger renderHabits() if it auto-checks the walk habit.
+    try { autoVerifyWalk(); } catch (_) {}
   }
 
   function renderRank() {
@@ -5307,12 +5335,22 @@
     // Set difficulty colour variable for left-border glow and checkbox ring
     li.style.setProperty('--diff-color', DIFF_COLORS[diff] || DIFF_COLORS.easy);
 
+    // Auto-verify pill: shown ONLY when the habit was auto-verified
+    // today via HealthKit (currently only the canonical Daily walk).
+    // Subtle by design — a marker, not a celebration. See CLAUDE.md
+    // "Per-habit reminders" + "HealthKit auto-verify" sections.
+    const isAutoVerified = (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);
+    const autoPillHTML = isAutoVerified
+      ? '<span class="auto-verify-pill" title="Auto-verified via Apple Health">AUTO</span>'
+      : '';
+
     li.innerHTML =
-      // Top row: streak badge (left) + check circle (right)
+      // Top row: streak badge (left) + auto-pill (when set) + check circle (right)
       '<div class="hg-top">' +
         '<div class="streak-badge' + (count > 0 ? ' active' : '') + '">' +
           (count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '') +
         '</div>' +
+        autoPillHTML +
         '<div class="habit-cb' + (done ? ' checked' : '') + '">' +
           '<span class="check-mark">✓</span>' +
         '</div>' +
@@ -6406,15 +6444,42 @@
     setTimeout(dismiss, 2200);
   }
 
-  function toggleHabit(id, li) {
+  // toggleHabit(id, li, opts?)
+  //   opts.silent     — skip burst UI (chime, particles, flash, XP float).
+  //                     Used by HealthKit auto-verify so walking 3,000 steps
+  //                     doesn't trigger the same celebration as a manual tap.
+  //                     Milestone popups (rank-up, stat-up, compound) still
+  //                     fire — those are real moments worth celebrating.
+  //   li may be null  — auto-verify can run when the user is on a different
+  //                     tab. State mutations + popup queueing happen
+  //                     regardless; DOM updates only when li is provided.
+  function toggleHabit(id, li, opts) {
+    opts = opts || {};
+    const silent  = !!opts.silent;
     const wasDone = isChecked(id);
     const oldRank       = wasDone ? null : getRank(totalPoints);
     const oldStatLevels = wasDone ? null : captureStatLevels();
 
     if (wasDone) {
       uncheck(id);
-      li.classList.remove('completed');
-      li.querySelector('.habit-cb').classList.remove('checked');
+      if (li) {
+        li.classList.remove('completed');
+        li.querySelector('.habit-cb').classList.remove('checked');
+      }
+      // If the user un-checks an auto-verified completion, that un-check
+      // is permanent for the day — the auto-verifier must NOT re-check
+      // it on later refresh. Recorded specifically for the canonical
+      // Daily walk habit; other auto-verify habits (future) will need
+      // their own per-habit unchecked-dates lists.
+      try {
+        if (typeof AUTO_VERIFY !== 'undefined' && AUTO_VERIFY.isAutoVerifiedToday(id)) {
+          const h = habits.find(x => x.id === id);
+          if (h && h.name === 'Daily walk' && !h.custom) {
+            AUTO_VERIFY.markWalkUnchecked();
+          }
+          AUTO_VERIFY.clearAutoVerify(id);
+        }
+      } catch (_) {}
     } else {
       // Cancel today's pending reminder fire — habit just got done, no
       // need to nag. Tomorrow's will be re-scheduled at daily reset.
@@ -6423,10 +6488,13 @@
       const habit = habits.find(h => h.id === id);
       if (habit && !meetsMinimum(habit)) {
         // Tappable toast → opens Edit Habit straight to the goal stepper.
-        showHabitToast('Set your goal value to check off this habit', {
-          cta:   'Set goal',
-          onTap: () => openEditModal(habit.id),
-        });
+        // (Skip in silent mode — auto-verify shouldn't pop a CTA toast.)
+        if (!silent) {
+          showHabitToast('Set your goal value to check off this habit', {
+            cta:   'Set goal',
+            onTap: () => openEditModal(habit.id),
+          });
+        }
         return;
       }
       // Snapshot compound state so we can detect if THIS tap fires the bonus.
@@ -6435,33 +6503,41 @@
       check(id);
       const compoundFiredNow = JSON.stringify(compoundAwarded) !== compoundBefore;
 
-      li.classList.add('completed');
-      const cb = li.querySelector('.habit-cb');
-      cb.classList.add('checked');
-      const r = document.createElement('span');
-      r.className = 'cb-ripple';
-      cb.appendChild(r);
-      r.addEventListener('animationend', () => r.remove(), { once: true });
+      if (li) {
+        li.classList.add('completed');
+        const cb = li.querySelector('.habit-cb');
+        cb.classList.add('checked');
+        const r = document.createElement('span');
+        r.className = 'cb-ripple';
+        cb.appendChild(r);
+        r.addEventListener('animationend', () => r.remove(), { once: true });
+      }
 
-      // Feature 1: sound + particles + card flash
+      // Feature 1: sound + particles + card flash + floating XP — the
+      // per-tap "burst." Suppressed in silent mode (auto-verify) so the
+      // experience feels like the system noticed, not like the user tapped.
       // Suppress regular chime if compound fanfare is taking over this moment.
-      if (!compoundFiredNow) playCheckSound();
-      const diff = habit ? habit.difficulty : 'medium';
-      spawnXpParticles(li, diff);
-      const DIFF_FLASH = { easy: 'rgba(167,139,250,0.6)', medium: 'rgba(96,165,250,0.6)', hard: 'rgba(251,146,60,0.6)', legendary: 'rgba(251,191,36,0.65)' };
-      li.style.setProperty('--diff-flash-color', DIFF_FLASH[diff] || 'rgba(139,92,246,0.55)');
-      li.classList.remove('card-flash-anim');
-      void li.offsetWidth;
-      li.classList.add('card-flash-anim');
-      li.addEventListener('animationend', () => li.classList.remove('card-flash-anim'), { once: true });
+      if (!silent) {
+        if (!compoundFiredNow) playCheckSound();
+        if (li) {
+          const diff = habit ? habit.difficulty : 'medium';
+          spawnXpParticles(li, diff);
+          const DIFF_FLASH = { easy: 'rgba(167,139,250,0.6)', medium: 'rgba(96,165,250,0.6)', hard: 'rgba(251,146,60,0.6)', legendary: 'rgba(251,191,36,0.65)' };
+          li.style.setProperty('--diff-flash-color', DIFF_FLASH[diff] || 'rgba(139,92,246,0.55)');
+          li.classList.remove('card-flash-anim');
+          void li.offsetWidth;
+          li.classList.add('card-flash-anim');
+          li.addEventListener('animationend', () => li.classList.remove('card-flash-anim'), { once: true });
 
-      // Floating XP number (always shown; visually distinct on weekends)
-      const xpAmt = habit ? diffPts(habit.difficulty) : 0;
-      const xpFloat = document.createElement('span');
-      xpFloat.className = 'xp-float';
-      xpFloat.innerHTML = iconify('⚡+' + xpAmt + ' XP' + (isWeekend() ? ' 2×' : ''), { size: 14 });
-      li.appendChild(xpFloat);
-      xpFloat.addEventListener('animationend', () => xpFloat.remove(), { once: true });
+          // Floating XP number (always shown; visually distinct on weekends)
+          const xpAmt = habit ? diffPts(habit.difficulty) : 0;
+          const xpFloat = document.createElement('span');
+          xpFloat.className = 'xp-float';
+          xpFloat.innerHTML = iconify('⚡+' + xpAmt + ' XP' + (isWeekend() ? ' 2×' : ''), { size: 14 });
+          li.appendChild(xpFloat);
+          xpFloat.addEventListener('animationend', () => xpFloat.remove(), { once: true });
+        }
+      }
 
       // Detect rank up
       const newRank = getRank(totalPoints);
@@ -6491,14 +6567,16 @@
       else if (!levelUpActive && achQueue.length && !achPopupTimer) drainAchQueue();
     }
 
-    const count = getStreak(id);
-    const badge = li.querySelector('.streak-badge');
-    badge.className = 'streak-badge' + (count > 0 ? ' active' : '');
-    badge.innerHTML = count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '—';
-    if (!wasDone && count > 0) {
-      void badge.offsetWidth;
-      badge.classList.add('pop');
-      badge.addEventListener('animationend', () => badge.classList.remove('pop'), { once: true });
+    if (li) {
+      const count = getStreak(id);
+      const badge = li.querySelector('.streak-badge');
+      badge.className = 'streak-badge' + (count > 0 ? ' active' : '');
+      badge.innerHTML = count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '—';
+      if (!wasDone && count > 0) {
+        void badge.offsetWidth;
+        badge.classList.add('pop');
+        badge.addEventListener('animationend', () => badge.classList.remove('pop'), { once: true });
+      }
     }
 
     if (!wasDone) checkCompoundEffect(id);
@@ -11755,6 +11833,371 @@
   // Notif directly — this is purely for inspectability.
   try { window.Notif = Notif; } catch (_) {}
 
+  // ── HealthKit module ──────────────────────────────────────
+  // Plugin:    @perfood/capacitor-healthkit (Cap 6-compatible, 15mo stale at adoption)
+  // Adopted:   v1.1.4 (May 2026)
+  // Why this:  fresh alternatives (@capgo/capacitor-health, others) all require
+  //            Capacitor 8+. Awakened is on Capacitor 6. @perfood works, has
+  //            4.3k weekly downloads, and a small read-only API surface that's
+  //            unlikely to break.
+  //
+  // Migration target:
+  //   - When we upgrade to Capacitor 8 (likely v1.2 or v2.0): swap to
+  //     @capgo/capacitor-health. It's the actively-maintained successor.
+  //     Repo: github.com/Cap-go/capacitor-health
+  //   - If v2.x bosses need data this plugin can't expose (HRV, VO2 max, raw
+  //     workout segments), self-roll a Swift shim instead. Don't chase forks.
+  //
+  // Wrapper pattern:
+  //   Everything HealthKit-related is funneled through the Health.* surface
+  //   below. Swap cost = rewrite this module. Don't import the plugin elsewhere.
+  // ─────────────────────────────────────────────────────────
+  const Health = (() => {
+    // ── Capabilities ─────────────────────────────────────
+    function isAvailable() {
+      // Capacitor only injects window.Capacitor on native iOS / Android.
+      // Web / PWA users get a no-op surface — every read returns null,
+      // permissionStatus returns 'unavailable'.
+      try {
+        return !!(
+          window.Capacitor &&
+          window.Capacitor.isNativePlatform &&
+          window.Capacitor.isNativePlatform() &&
+          window.Capacitor.getPlatform &&
+          window.Capacitor.getPlatform() === 'ios'
+        );
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function plugin() {
+      // Lazy resolution — the plugin object only exists in the native
+      // bundle. On web this returns undefined and every method below
+      // short-circuits via isAvailable().
+      try {
+        return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHealthkit;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // ── In-memory cache (5 min TTL) ──────────────────────
+    // We never persist step counts. HealthKit is the source of truth;
+    // we just avoid hammering it on every render.
+    const STEP_CACHE_TTL_MS = 5 * 60 * 1000;
+    let stepCache = null; // { steps, fetchedAt }
+
+    function isCacheFresh() {
+      return stepCache && (Date.now() - stepCache.fetchedAt) < STEP_CACHE_TTL_MS;
+    }
+
+    function clearCache() {
+      stepCache = null;
+    }
+
+    // ── Permission status (locally tracked) ──────────────
+    // The plugin has no "is authorized?" introspection method that
+    // works reliably for read-only scopes (Apple intentionally hides
+    // this so apps can't fingerprint denial). We track our last-known
+    // status in localStorage instead.
+    //   'granted'  — request returned without throwing AND a subsequent
+    //                read succeeded (or hasn't been attempted yet)
+    //   'denied'   — read attempt threw a permission-shaped error
+    //   'unknown'  — never requested
+    function permissionStatus() {
+      if (!isAvailable()) return 'unavailable';
+      const s = localStorage.getItem('hb_healthkit_status');
+      return s === 'granted' || s === 'denied' ? s : 'unknown';
+    }
+
+    function setStatus(s) {
+      try { localStorage.setItem('hb_healthkit_status', s); } catch (_) {}
+    }
+
+    // ── Authorization request ────────────────────────────
+    // v1.1.4 only requests stepCount read access. Future versions can
+    // expand `read` to ['steps', 'sleepAnalysis', 'workoutType', ...].
+    // The iOS sheet bundles whatever is in this array into one prompt.
+    async function requestPermissions() {
+      if (!isAvailable()) return 'unavailable';
+      const p = plugin();
+      if (!p) {
+        console.warn('[Health] plugin not registered on native bridge');
+        return 'unavailable';
+      }
+      try {
+        await p.requestAuthorization({
+          read: ['steps'],
+          write: [''],
+          all: [''],
+        });
+        // Apple's HealthKit doesn't report grant/deny back to the app
+        // for read scopes. We optimistically mark 'granted' here; if a
+        // subsequent read throws or returns no data when we expect some,
+        // the read path can downgrade us to 'denied'.
+        setStatus('granted');
+        try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
+        console.log('[Health] permission request completed');
+        return 'granted';
+      } catch (e) {
+        console.warn('[Health] permission request failed', e);
+        setStatus('denied');
+        try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
+        return 'denied';
+      }
+    }
+
+    // ── Step query ───────────────────────────────────────
+    // Returns total steps for today (PT date). Sums all sample values
+    // returned by HealthKit in the [00:00 PT, now] window.
+    //
+    // Returns null on:
+    //   - non-native platform
+    //   - missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws
+    //
+    // Never throws. Auto-verify must be a silent enhancement.
+    async function getStepsToday() {
+      if (!isAvailable()) return null;
+      if (isCacheFresh()) return stepCache.steps;
+
+      const p = plugin();
+      if (!p) return null;
+
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') {
+        // 'unknown' = never requested. Caller should call
+        // requestPermissions() first. We don't auto-prompt here so reads
+        // never trigger an unexpected iOS sheet.
+        return null;
+      }
+
+      try {
+        // PT-anchored "start of today." getPTDate() returns "YYYY-MM-DD"
+        // in America/Los_Angeles. Construct an ISO at midnight PT, which
+        // HealthKit interprets as a wall-clock timestamp.
+        const todayPT = (typeof getPTDate === 'function') ? getPTDate() : new Date().toISOString().slice(0, 10);
+        const start = new Date(todayPT + 'T00:00:00');
+        const end = new Date();
+
+        const result = await p.queryHKitSampleType({
+          sampleName: 'steps',
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          limit: 0, // 0 = unlimited per @perfood README
+        });
+
+        // result shape: { countReturn, resultData: [{ value, ...}, ...] }
+        const samples = (result && result.resultData) || [];
+        const total = samples.reduce((sum, s) => sum + (Number(s.value) || 0), 0);
+
+        stepCache = { steps: total, fetchedAt: Date.now() };
+        // First successful read confirms 'granted' — if iOS had silently
+        // denied, the query would have thrown or returned empty. We
+        // accept zero-step days as legitimate (user just hasn't moved).
+        setStatus('granted');
+        console.log('[Health] steps today:', total, '(samples:', samples.length, ')');
+        return total;
+      } catch (e) {
+        console.warn('[Health] step query failed', e);
+        // Don't flip to 'denied' on a single failure — could be transient.
+        // Only requestPermissions explicitly setting 'denied' on throw.
+        return null;
+      }
+    }
+
+    // Public surface
+    return {
+      isAvailable,
+      requestPermissions,
+      getStepsToday,
+      permissionStatus,
+      clearCache, // exposed for testing / manual refresh
+    };
+  })();
+
+  // Expose for dev / testing — same pattern as Notif.
+  try { window.Health = Health; } catch (_) {}
+
+  // ── AUTO_VERIFY metadata storage ─────────────────────────
+  // Persists which completions were auto-verified (vs. manually tapped)
+  // and which auto-verified completions the user explicitly un-checked
+  // (so we don't re-check them on next refresh).
+  //
+  // localStorage shape:
+  //   hb_completions_auto    { 'YYYY-MM-DD': { habitId: { source, value } } }
+  //   hb_walk_unchecked_dates ['YYYY-MM-DD', ...]   (auto-pruned to 14 days)
+  const AUTO_VERIFY = (() => {
+    function load() {
+      try { return JSON.parse(localStorage.getItem('hb_completions_auto') || '{}'); }
+      catch (_) { return {}; }
+    }
+    function persist(map) {
+      try { localStorage.setItem('hb_completions_auto', JSON.stringify(map)); } catch (_) {}
+    }
+    function loadUnchecked() {
+      try { return JSON.parse(localStorage.getItem('hb_walk_unchecked_dates') || '[]'); }
+      catch (_) { return []; }
+    }
+    function persistUnchecked(arr) {
+      try { localStorage.setItem('hb_walk_unchecked_dates', JSON.stringify(arr)); } catch (_) {}
+    }
+    function recordAutoVerify(id, meta) {
+      if (!today) return;
+      const map = load();
+      if (!map[today]) map[today] = {};
+      map[today][id] = meta || { source: 'unknown' };
+      persist(map);
+    }
+    function clearAutoVerify(id) {
+      const map = load();
+      if (map[today] && map[today][id]) {
+        delete map[today][id];
+        if (!Object.keys(map[today]).length) delete map[today];
+        persist(map);
+      }
+    }
+    function isAutoVerifiedToday(id) {
+      const map = load();
+      return !!(map[today] && map[today][id]);
+    }
+    function isAutoVerifiedOnDate(id, dateStr) {
+      const map = load();
+      return !!(map[dateStr] && map[dateStr][id]);
+    }
+    function markWalkUnchecked() {
+      let arr = loadUnchecked();
+      if (!arr.includes(today)) arr.push(today);
+      // Prune entries older than 14 days. Cheap operation; runs on each
+      // write so the array never grows unbounded.
+      const cutoff = new Date(today + 'T00:00:00');
+      cutoff.setDate(cutoff.getDate() - 14);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      arr = arr.filter(d => d >= cutoffStr);
+      persistUnchecked(arr);
+    }
+    function wasWalkUncheckedToday() {
+      return loadUnchecked().includes(today);
+    }
+    return {
+      recordAutoVerify, clearAutoVerify,
+      isAutoVerifiedToday, isAutoVerifiedOnDate,
+      markWalkUnchecked, wasWalkUncheckedToday,
+    };
+  })();
+  try { window.AutoVerify = AUTO_VERIFY; } catch (_) {}
+
+  // ── Walk auto-verify orchestration ───────────────────────
+  // Locates the canonical "Daily walk" habit (strict equality on name +
+  // not custom — see CLAUDE.md "Habit identity is the name string"
+  // convention). Returns null if missing.
+  function findWalkHabit() {
+    return habits.find(h => h.name === 'Daily walk' && !h.custom) || null;
+  }
+
+  // First-encounter pre-prompt explainer. Shown ONCE per device, before
+  // iOS's native HealthKit permission sheet. The native sheet is opaque
+  // about what permissions an app is asking for and why — this modal
+  // gives users the context to make an informed grant.
+  //
+  // Triggered from autoVerifyWalk() the first time we see the walk habit
+  // on a native iOS build with permissionStatus === 'unknown'.
+  function showHealthKitPreprompt() {
+    if (document.getElementById('hk-preprompt-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'hk-preprompt-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+      '<div class="modal-card hk-preprompt-card">' +
+        '<h2 class="hk-preprompt-title">Auto-verify your Walk</h2>' +
+        '<p class="hk-preprompt-body">' +
+          'Awakened can use Apple Health to mark the Daily walk habit complete ' +
+          'when you reach 3,000+ steps — no tap needed.' +
+        '</p>' +
+        '<p class="hk-preprompt-body hk-preprompt-privacy">' +
+          'Your steps stay on your device. Awakened never sees them leave your phone.' +
+        '</p>' +
+        '<div class="hk-preprompt-actions">' +
+          '<button class="hk-preprompt-secondary" id="hk-preprompt-skip">Not Now</button>' +
+          '<button class="hk-preprompt-primary"   id="hk-preprompt-enable">Enable</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    const close = () => {
+      try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
+      overlay.remove();
+    };
+
+    document.getElementById('hk-preprompt-skip').addEventListener('click', () => {
+      console.log('[Health] user declined pre-prompt — proceeding without HealthKit');
+      close();
+    });
+    document.getElementById('hk-preprompt-enable').addEventListener('click', async () => {
+      close();
+      const result = await Health.requestPermissions();
+      console.log('[Health] permission result:', result);
+      if (result === 'granted') {
+        // Try to verify immediately — if user has already walked today,
+        // they get instant gratification.
+        autoVerifyWalk();
+      }
+    });
+  }
+
+  // Auto-verify entry point. Called from renderHabits() on each render.
+  // Async: returns a promise that resolves after the HealthKit query
+  // completes (or short-circuits). Never throws — auto-verify is a
+  // silent enhancement.
+  async function autoVerifyWalk() {
+    if (!Health.isAvailable()) return;          // web / non-iOS
+    const walk = findWalkHabit();
+    if (!walk) return;                           // user doesn't have the habit
+    if (isChecked(walk.id)) return;              // already done (manual or auto)
+    if (AUTO_VERIFY.wasWalkUncheckedToday()) return;  // user opted out for today
+
+    const status = Health.permissionStatus();
+
+    // First-encounter path: show pre-prompt, don't query HealthKit yet.
+    if (status === 'unknown') {
+      if (localStorage.getItem('hb_healthkit_prompted') !== '1') {
+        showHealthKitPreprompt();
+      }
+      return;
+    }
+    if (status !== 'granted') return;
+
+    const steps = await Health.getStepsToday();
+    if (steps == null) return;
+    if (steps < HEALTHKIT_WALK_STEP_THRESHOLD) return;
+
+    // Re-check completion state — Health.getStepsToday is async, the
+    // user may have manually tapped during the await.
+    if (isChecked(walk.id)) return;
+
+    AUTO_VERIFY.recordAutoVerify(walk.id, {
+      source: 'healthkit-steps',
+      value: steps,
+      threshold: HEALTHKIT_WALK_STEP_THRESHOLD,
+    });
+
+    // If the LI is currently in the DOM, animate via the standard
+    // toggleHabit path (silent mode skips the burst). Otherwise mutate
+    // state silently — UI catches up on next renderHabits().
+    const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+    toggleHabit(walk.id, li, { silent: true });
+    console.log('[Health] auto-verified Daily walk:', steps, 'steps');
+
+    // Re-render so buildItem() can paint the auto-verify pill into the
+    // card. The next autoVerifyWalk() call from that render no-ops via
+    // the isChecked() guard, so no loop.
+    if (currentTab === 'habits') renderHabits();
+  }
+  try { window.autoVerifyWalk = autoVerifyWalk; } catch (_) {}
+
   // ── INIT ─────────────────────────────────────────────────
   function init() {
     load();
@@ -11849,7 +12292,14 @@
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);
     document.getElementById('day-popup').addEventListener('click', closeDayPopup);
 
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDayChange(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      checkDayChange();
+      // App resume → invalidate the 5-min step cache and re-attempt
+      // walk auto-verify. User may have walked while we were backgrounded.
+      try { Health.clearCache && Health.clearCache(); } catch (_) {}
+      try { autoVerifyWalk(); } catch (_) {}
+    });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); }, 60_000);
     registerSW();
 
