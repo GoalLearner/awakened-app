@@ -38,7 +38,7 @@ workflows:
       # ── Build variables ────────────────────────────────────────
       vars:
         BUNDLE_ID:        "com.goallearner.awakened"
-        APP_VERSION:      "1.1.2"
+        APP_VERSION:      "1.1.3"
         XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
@@ -75,6 +75,13 @@ workflows:
           mkdir -p www/assets/stat-icons
           for icon in stat-str stat-vit stat-int stat-focus stat-will stat-wlt; do
             cp "assets/stat-icons/$icon.png" "www/assets/stat-icons/$icon.png"
+          done
+          # Habit icons (DALL-E art) — full curated coverage. Same
+          # pattern: only the optimized 192×192 PNGs ship; the 600×600
+          # *-source.png masters stay out of www/.
+          mkdir -p www/assets/habit-icons
+          for icon in icon-water icon-sleep icon-wake icon-walk icon-cardio icon-strength icon-sunlight icon-gratitude icon-vitamins icon-meditate icon-nutrition icon-nophone icon-business icon-cold icon-connection icon-finance icon-grounding icon-journal icon-learning icon-mobility icon-noalcohol icon-nocaffeine icon-nodoomscroll icon-noscreen-bed icon-nosugar icon-protein icon-read icon-target icon-tidy icon-sprint icon-nosocial icon-priority icon-plan-tomorrow icon-screen-cap icon-podcast icon-pray icon-visualize icon-pack-morning icon-pack-lockedin icon-pack-custom icon-streak icon-xp icon-class-civilian icon-class-warrior icon-class-ranger icon-class-mage icon-class-assassin icon-class-paladin icon-class-merchant icon-class-sage; do
+            cp "assets/habit-icons/$icon.png" "www/assets/habit-icons/$icon.png"
           done
 
       - name: Add iOS platform (runs on first build only)

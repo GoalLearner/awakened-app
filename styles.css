@@ -23,144 +23,6 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ── LIGHT THEME ── */
-body.theme-light {
-  --bg: #e8d5b0;
-  --bg-raised: #eedfc5;
-  --bg-card: #f4ecde;
-  --bg-card-active: #eadcc8;
-  --bg-header: #ddc8a0;
-  --border: rgba(100,70,20,0.15);
-  --border-accent: rgba(139,92,246,0.40);
-  --text-primary: #2c2010;
-  --text-secondary: #6b5c40;
-  --text-tertiary: #9e8c74;
-  --accent: #8b5cf6;
-  --accent-glow: rgba(139,92,246,0.14);
-  --danger: #ef4444;
-  --streak-bg: rgba(251,146,60,0.12);
-  --streak-border: rgba(251,146,60,0.25);
-  --gold-glow: rgba(245,158,11,0.20);
-}
-
-/* ── Smooth theme transition ── */
-/* Applied briefly via JS to prevent flash; removed after 350ms */
-body.theme-transitioning,
-body.theme-transitioning *,
-body.theme-transitioning *::before,
-body.theme-transitioning *::after {
-  transition:
-    background-color 0.3s ease,
-    background 0.3s ease,
-    color 0.3s ease,
-    border-color 0.3s ease,
-    box-shadow 0.3s ease !important;
-}
-
-/* ── Light-mode overrides for hardcoded dark values ── */
-body.theme-light .habit-item {
-  background: #f4ecde;
-  box-shadow: 0 2px 10px rgba(100,70,20,0.10), inset 0 1px 0 rgba(255,255,255,0.5);
-}
-body.theme-light .progress-track {
-  background: rgba(100,70,20,0.12);
-}
-body.theme-light .rank-badge-wrap,
-body.theme-light .streak-badge-wrap {
-  background: rgba(0,0,0,0.05);
-  border-color: rgba(0,0,0,0.1);
-}
-/* Radar chart grid */
-body.theme-light .sc-radar-svg polygon {
-  stroke: rgba(100,70,20,0.18);
-}
-body.theme-light .sc-radar-svg line {
-  stroke: rgba(100,70,20,0.15);
-}
-body.theme-light .sc-radar-sublbl {
-  fill: rgba(44,32,16,0.45) !important;
-}
-
-/* Profile status card text fixes */
-body.theme-light .sc-hero-path {
-  color: var(--text-secondary);
-}
-body.theme-light .sc-compound-badge {
-  background: rgba(100,70,20,0.08);
-  border-color: rgba(100,70,20,0.20);
-  color: var(--text-secondary);
-}
-
-/* Rank/streak badge wrap in header */
-body.theme-light .rank-badge-wrap {
-  background: rgba(100,70,20,0.08);
-  border-color: rgba(100,70,20,0.15);
-}
-
-/* Pack progress rows */
-body.theme-light .pack-progress-row {
-  background: rgba(100,70,20,0.06);
-  border-color: rgba(100,70,20,0.18);
-}
-
-/* Habit item: fix gradient + shadow */
-body.theme-light .habit-item {
-  background: #f4ecde;
-  box-shadow: 0 1px 6px rgba(100,70,20,0.10);
-}
-
-/* Add-habit / empty state dashed border */
-body.theme-light .empty-state,
-body.theme-light .habit-list-empty {
-  border-color: rgba(100,70,20,0.20);
-}
-
-/* Schedule picker / filter buttons */
-body.theme-light .sched-btn,
-body.theme-light .diff-filter-btn {
-  border-color: rgba(100,70,20,0.15);
-  background: rgba(100,70,20,0.05);
-}
-body.theme-light .osrs-panel {
-  background: transparent;
-}
-body.theme-light .osrs-cell {
-  background: #f4ecde;
-  border-color: rgba(100,70,20,0.15);
-  box-shadow: 0 2px 8px rgba(100,70,20,0.10), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-body.theme-light .osrs-cell--dominant {
-  box-shadow: 0 2px 12px rgba(100,70,20,0.15), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-body.theme-light .osrs-cell-track {
-  background: rgba(100,70,20,0.12);
-}
-body.theme-light .statlvl-popup,
-body.theme-light .rankup-screen,
-body.theme-light .compound-popup,
-body.theme-light .perfect-day-screen,
-body.theme-light .welcome-screen,
-body.theme-light .onboarding-screen {
-  /* Popups keep dark dramatic feel */
-  background: var(--bg);
-}
-body.theme-light .settings-sheet {
-  background: #eedfc5;
-}
-body.theme-light .settings-coming-card {
-  background: rgba(0,0,0,0.03);
-}
-body.theme-light .lib-sheet {
-  background: #eedfc5;
-}
-body.theme-light .nb-card,
-body.theme-light .hg-ach-row {
-  background: #f4ecde;
-}
-body.theme-light .stat-detail-sheet {
-  background: #eedfc5;
-}
-
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -274,8 +136,13 @@ h1 {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 20px;
   padding: 3px 10px 3px 7px;
-  transition: background 0.3s, border-color 0.3s;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.3s, border-color 0.3s, transform 0.1s;
 }
+.perfect-streak-display:hover  { background: rgba(255,255,255,0.10); }
+.perfect-streak-display:active { transform: scale(0.96); }
+.perfect-streak-display.ps-gold:hover { background: rgba(245, 158, 11, 0.22); }
 .perfect-streak-display.ps-gold {
   background: rgba(245, 158, 11, 0.15);
   border-color: rgba(245, 158, 11, 0.4);
@@ -377,7 +244,10 @@ h1 {
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
-  min-height: 95px;
+  /* Sized to accommodate the 72px habit icons + 2-line habit name +
+     XP/diff row without clipping. The bumped min-height keeps cards
+     proportional on iPhone-width grids. */
+  min-height: 150px;
   overflow: hidden;
   transition: background 0.15s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.12s ease;
   will-change: transform;
@@ -666,7 +536,7 @@ h1 {
   padding: 2px 0 1px;
 }
 .hg-emoji-wrap .habit-emoji {
-  font-size: 22px;
+  font-size: 48px;
   line-height: 1;
 }
 
@@ -2009,10 +1879,6 @@ footer {
   margin: 0;
   opacity: 0.9;
 }
-body.theme-light .ob-inspiration-quote {
-  color: rgba(44, 32, 16, 0.65);
-}
-
 .ob-footer {
   flex-shrink: 0;
   padding: 14px 16px calc(20px + var(--safe-bottom));
@@ -2460,6 +2326,726 @@ body.theme-light .ob-inspiration-quote {
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.04em;
+}
+
+/* Reminder-confirm toast: visible pill that confirms "Reminder set for
+   X". Tap anywhere on the pill to open a two-column picker (hour | min)
+   that lives as a SEPARATE fixed-position element above the pill — that
+   separation guarantees no clipping/stacking issues with intermediate
+   overlays like the Beginning reveal. */
+/* Force this toast above ANY full-screen overlay (e.g., the Beginning
+   reveal at z-index 600). 9999 was technically enough, but explicit
+   higher value defeats any stacking-context surprises. */
+.habit-toast--reminder { cursor: pointer; z-index: 100000; }
+.habit-toast--reminder .ht-rem-time {
+  font-weight: 800;
+  color: var(--gold);
+  border-bottom: 1px dashed rgba(245, 158, 11, 0.65);
+  padding: 0 2px;
+  pointer-events: none;  /* let clicks pass through to the toast handler */
+}
+.habit-toast--reminder:hover  .ht-rem-time { color: #fbbf24; border-bottom-color: #fbbf24; }
+.habit-toast--reminder:active .ht-rem-time { opacity: 0.85; }
+
+.habit-toast--reminder .ht-rem-dismiss {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.habit-toast--reminder .ht-rem-dismiss:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* Settings → Daily morning reminder button. Looks like the existing
+   time-input row but is actually a button — taps open the centered
+   custom picker modal. Same gold accent treatment. */
+.settings-rem-digest-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  min-width: 110px;
+  text-align: center;
+}
+.settings-rem-digest-btn:hover {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.65);
+  color: #fbbf24;
+}
+.settings-rem-digest-btn:active { transform: scale(0.97); }
+
+/* Centered modal picker — used when Settings button is tapped. Backdrop
+   covers the whole screen; card holds the same hour/minute columns as
+   the toast picker plus a title, current-selection display, and a Done
+   button. */
+.digest-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.digest-picker-overlay--visible { opacity: 1; }
+
+.digest-picker-card {
+  background: linear-gradient(160deg, #1a1a2e 0%, #14142a 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.40);
+  border-radius: 22px;
+  padding: 22px 18px 16px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 24px rgba(245, 158, 11, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: digest-picker-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes digest-picker-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.digest-picker-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+.digest-picker-current {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--gold);
+  text-align: center;
+  letter-spacing: -0.02em;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.35));
+}
+
+/* Reuse the existing .ht-rem-popup / .ht-rem-col styles for the columns,
+   but override the popup's fixed-positioning so it sits in-flow inside
+   the centered card. */
+.digest-picker-cols {
+  position: static !important;
+  transform: none !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  z-index: auto !important;
+  box-shadow: none !important;
+  animation: none !important;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.digest-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.digest-picker-done {
+  flex: 1;
+  padding: 13px 14px;
+  border: none;
+  border-radius: 12px;
+  background: #fbbf24;
+  color: #1a1505;
+  font-family: inherit;
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: transform 0.1s ease, opacity 0.18s ease;
+}
+.digest-picker-done:active { transform: scale(0.97); opacity: 0.92; }
+
+/* Schedule sheet → per-habit reminder section. Sits between the
+   day-buttons row and the Cancel/Save action bar. */
+.sched-reminder-section {
+  margin: 18px 0 4px;
+  padding: 0 4px;
+}
+.sched-reminder-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 8px;
+}
+.sched-reminder-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.sched-reminder-btn {
+  flex: 1;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(245, 158, 11, 0.45);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.sched-reminder-btn:hover { background: rgba(245, 158, 11, 0.10); border-color: rgba(245, 158, 11, 0.65); color: #fbbf24; }
+.sched-reminder-btn:active { transform: scale(0.98); }
+.sched-reminder-btn--set {
+  background: rgba(245, 158, 11, 0.10);
+  border-style: solid;
+  color: var(--gold);
+}
+.sched-reminder-clear {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sched-reminder-clear:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.sched-reminder-clear.hidden { display: none; }
+
+/* View Note → reminder display row. Sits above the "About this habit"
+   description. The label gets its own row; the pill renders below it
+   on its own line so it can't visually overlap the next section.
+   The parent .vn-body flex layout already handles vertical gaps via
+   `gap: 14px`, so no margin-top needed here. */
+.vn-reminder-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vn-reminder-display {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+.vn-reminder-display--set {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: var(--gold);
+}
+.vn-reminder-display--none {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── ALL STREAKS SHEET ─────────────────────────────────── */
+.streaks-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 350;
+}
+.streaks-overlay.hidden { display: none; }
+
+.streaks-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  max-height: 80vh;
+  background: var(--bg-raised);
+  border-radius: 22px 22px 0 0;
+  z-index: 351;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5);
+}
+.streaks-sheet.hidden { display: none; }
+
+.streaks-drag-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 100px;
+  margin: 8px auto 4px;
+  flex-shrink: 0;
+}
+
+.streaks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.streaks-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+.streaks-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.85rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streaks-body {
+  padding: 16px 16px 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.streaks-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--row-accent, var(--accent));
+  border-radius: 14px;
+}
+.streaks-row-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.streaks-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.streaks-row-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  margin-bottom: 2px;
+}
+.streaks-row-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+}
+.streaks-row-count {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.streaks-count-num {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: var(--row-accent, var(--accent));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.streaks-count-lbl {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 4px;
+}
+
+.streaks-path-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  margin-top: 4px;
+}
+.streaks-path-dot {
+  width: 8px; height: 8px; border-radius: 100px;
+  flex-shrink: 0;
+}
+.streaks-path-label {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+.streaks-path-label strong {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+/* Empty state — when there are no streaks active and no path chosen */
+.streaks-empty {
+  text-align: center;
+  padding: 40px 20px 30px;
+}
+.streaks-empty-icon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.streaks-empty-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.streaks-empty-sub {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* ── CLASS LINE (Status hero) — name + emblem are ONE tappable target.
+   The whole .sc-hero-class div is the clickable element; .sc-hero-class-name
+   gets a subtle underline-on-hover so users see "this is interactive,"
+   and the emblem keeps its drop-shadow glow on hover for extra feedback. */
+.sc-hero-class {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  transition: background 0.18s ease;
+}
+.sc-hero-class:hover  { background: rgba(255, 255, 255, 0.04); }
+.sc-hero-class:active { transform: scale(0.98); }
+.sc-hero-class:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.sc-hero-class-name {
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.18s ease;
+}
+.sc-hero-class:hover .sc-hero-class-name {
+  border-bottom-color: currentColor;
+}
+
+/* The emblem inside the class line — visual-only span, no separate
+   click handler. Hover state inherits from the parent's hover. */
+.sc-class-emblem-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  vertical-align: middle;
+  border-radius: 100px;
+  transition: transform 0.12s ease, filter 0.18s ease;
+  pointer-events: none;
+}
+.sc-hero-class:hover  .sc-class-emblem-btn { filter: brightness(1.15) drop-shadow(0 0 8px currentColor); }
+.sc-hero-class:active .sc-class-emblem-btn { transform: scale(0.94); }
+.sc-class-emblem-btn .class-icon-img { display: block; }
+
+/* ── CLASS DETAIL SHEET ──────────────────────────────────── */
+.class-detail-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 350;
+}
+.class-detail-overlay.hidden { display: none; }
+
+.class-detail-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  max-height: 88vh;
+  background: var(--bg-raised);
+  border-radius: 22px 22px 0 0;
+  z-index: 351;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(24px + var(--safe-bottom));
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5);
+}
+.class-detail-sheet.hidden { display: none; }
+
+.class-detail-drag-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 100px;
+  margin: 8px auto 4px;
+  flex-shrink: 0;
+}
+
+.class-detail-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 16px 0;
+}
+.class-detail-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.85rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.class-detail-body {
+  padding: 8px 24px 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Hero emblem — large, with class-color glow ring */
+.cd-emblem-wrap {
+  width: 168px;
+  height: 168px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0 14px;
+  background: radial-gradient(circle at center,
+              color-mix(in srgb, var(--cd-color) 22%, transparent) 0%,
+              transparent 70%);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--cd-color) 35%, transparent);
+}
+
+.cd-name {
+  font-size: 1.7rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+  text-shadow: 0 0 18px currentColor;
+}
+.cd-desc {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 320px;
+  margin: 0 auto 22px;
+}
+
+.cd-stats-section {
+  width: 100%;
+  margin-bottom: 22px;
+}
+.cd-stats-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 10px;
+}
+.cd-stats-hint {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}
+
+.cd-stat-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--cd-tile-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cd-tile-color) 50%, transparent);
+  border-radius: 12px;
+}
+.cd-stat-tile--single { gap: 12px; padding: 12px 20px; }
+.cd-stat-tile-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--cd-tile-color);
+  letter-spacing: 0.06em;
+}
+.cd-stat-tile-lv {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  margin-left: 6px;
+}
+
+.cd-stats-grid--six {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.cd-stats-grid--six .cd-stat-tile {
+  flex-direction: column;
+  padding: 10px 6px;
+  gap: 6px;
+}
+
+/* Awakening chapter excerpt */
+.cd-chapter-section {
+  width: 100%;
+  margin-top: 6px;
+  padding: 16px 18px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 14px;
+  text-align: left;
+}
+.cd-chapter-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.cd-chapter-text {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+  white-space: pre-line;
+  font-style: italic;
+}
+
+/* Two-column time picker — separate fixed-positioned panel. Floats
+   above the toast. Tapping outside (handled in JS) closes it. */
+.ht-rem-popup {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(88px + var(--safe-bottom) + 56px); /* sit above the toast pill */
+  z-index: 10000;
+  max-width: 320px;
+  width: calc(100vw - 32px);
+  background: rgba(20, 16, 36, 0.98);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  /* fade/slide-in animation */
+  animation: ht-rem-popup-in 0.18s ease-out;
+}
+.ht-rem-popup.hidden { display: none; }
+
+@keyframes ht-rem-popup-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.ht-rem-col {
+  flex: 1;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.4) transparent;
+}
+.ht-rem-col::-webkit-scrollbar { width: 4px; }
+.ht-rem-col::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.4);
+  border-radius: 2px;
+}
+.ht-rem-col--mins  { flex: 0 0 90px; }   /* minute column is narrower */
+
+.ht-rem-col-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  margin: 8px 0;
+}
+
+.ht-rem-slot {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.ht-rem-slot:hover {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+.ht-rem-slot--active {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.55);
 }
 
 /* ── Steppers (goal value + ndays) ── */
@@ -3019,6 +3605,136 @@ body.theme-light .ob-inspiration-quote {
 #statlvl-icon .stat-icon-img,
 #stat-detail-icon .stat-icon-img {
   filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.45));
+}
+
+/* ── HABIT ICONS — same pattern as .stat-icon-img ───────────
+   Sizing is set inline by habitIconHtml() so one CSS rule covers every
+   consumer. The :has() selectors below collapse the inherited font-size
+   on emoji containers so the vertical rhythm stays correct when the
+   container holds an <img> instead of a glyph. */
+.habit-icon-img {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+.habit-emoji:has(.habit-icon-img),
+.vn-emoji:has(.habit-icon-img),
+.hd-header-emoji:has(.habit-icon-img),
+.ob-card-emoji:has(.habit-icon-img),
+.mr-row-emoji:has(.habit-icon-img),
+.sdh-emoji:has(.habit-icon-img),
+.day-popup-habit-emoji:has(.habit-icon-img),
+.lib-pack-emoji:has(.pack-icon-img),
+.streaks-row-icon:has(.pack-icon-img),
+.path-card-emoji:has(.pack-icon-img),
+.bi-pack-head:has(.pack-icon-img) .pack-icon-img,
+.cp-prog-name:has(.pack-icon-img) .pack-icon-img,
+.sc-compound-badge:has(.pack-icon-img) .pack-icon-img {
+  /* leave font-size on the parent text — img is sized inline so it sits
+     cleanly without extra glyph spacing. */
+}
+.lib-pack-emoji:has(.pack-icon-img),
+.streaks-row-icon:has(.pack-icon-img),
+.path-card-emoji:has(.pack-icon-img) {
+  font-size: 0;
+  line-height: 0;
+}
+
+/* Pack/path entry icons — same render contract as habit/stat icons.
+   Sizing is set inline by packIconHtml() so one rule covers every consumer. */
+.pack-icon-img,
+.class-icon-img {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* Class popup uses an emoji slot that previously held a single glyph
+   via .textContent. When we inject an <img> via innerHTML, drop the
+   surrounding font-size so there's no leftover line-height baseline. */
+.class-popup-emoji:has(.class-icon-img) {
+  font-size: 0;
+  line-height: 0;
+}
+
+/* Empty-icon collapse — after the v1.1.3 emoji-free pass, several
+   surfaces (achievements, PRs, perfect-day milestone) render their icon
+   slot without any glyph. Collapsing the empty containers prevents
+   awkward whitespace where the emoji used to sit. */
+.ach-popup-icon:empty,
+.cw-icon:empty,
+.bi-icon:empty {
+  display: none;
+}
+
+/* ── STREAK ICON — replaces 🔥 system-wide in live UI ──────
+   Single fixed image. streakIconHtml() sets size inline so consumers
+   don't need per-site CSS. Default vertical-align middle keeps it on
+   the text baseline when used inline (e.g., inside a banner). */
+.streak-icon-img {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* Collapse parent emoji-slot font-size when an img is inside, so the
+   container doesn't reserve extra vertical space for the missing glyph. */
+.ps-fire:has(.streak-icon-img),
+.streak-fire:has(.streak-icon-img),
+.streaks-row-icon:has(.streak-icon-img),
+.streaks-empty-icon:has(.streak-icon-img),
+.cp-prog-streak:has(.streak-icon-img) {
+  font-size: 0;
+  line-height: 0;
+}
+/* Restore baseline alignment for the streak fire pill in the header
+   so the count text + flame img sit on the same row. */
+.ps-fire:has(.streak-icon-img) {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── XP ICON — replaces ⚡ system-wide in live UI ──────────
+   Same render contract as the streak icon. xpIconHtml() sets size
+   inline so consumers don't need per-site CSS. */
+.xp-icon-img {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* Collapse parent emoji-slot font-size when an img is inside, so the
+   container doesn't reserve extra vertical space for the missing glyph. */
+.lib-pack-bolt:has(.xp-icon-img),
+.cp-prog-bolt:has(.xp-icon-img),
+.path-card-emoji:has(.xp-icon-img),
+.cw-icon:has(.xp-icon-img),
+.bi-icon:has(.xp-icon-img),
+.streaks-row-icon:has(.xp-icon-img) {
+  font-size: 0;
+  line-height: 0;
+}
+/* Habit card XP badge: keep the gold accent on text, but make sure
+   the inline icon sits cleanly next to "+N XP" without extra spacing. */
+.habit-xp .xp-icon-img {
+  margin-right: 1px;
+  vertical-align: -2px;
+}
+/* The View Note header and habit-detail config show a hero-size habit
+   icon — give it a soft amber glow to match the celebration treatment
+   on stat icons. */
+.vn-emoji .habit-icon-img,
+.hd-header-emoji .habit-icon-img {
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.32));
 }
 
 .osrs-cell-abbr {
@@ -5672,65 +6388,6 @@ body.theme-light .ob-inspiration-quote {
   text-align: center;
   margin: 8px 0 0;
 }
-body.theme-light .settings-update-btn {
-  background: rgba(13, 21, 32, 0.05);
-  color: #2c2010;
-  border-color: #8b5cf6;
-}
-body.theme-light .settings-update-btn.update-btn--found,
-body.theme-light .settings-update-btn.update-btn--uptodate {
-  background: rgba(34, 197, 94, 0.10);
-  border-color: #16a34a;
-  color: #15803d;
-}
-
-/* ── Appearance / Theme Toggle ── */
-.settings-appearance {
-  padding: 18px 20px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.settings-appearance .settings-section-lbl {
-  margin-bottom: 14px;
-}
-.settings-theme-row {
-  display: flex;
-  gap: 10px;
-}
-.settings-theme-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  border: 2px solid var(--border);
-  cursor: pointer;
-  font-family: inherit;
-  -webkit-appearance: none;
-  appearance: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.settings-theme-card--active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow), inset 0 0 12px var(--accent-glow);
-}
-.settings-theme-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-.settings-theme-name {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.settings-theme-sub {
-  font-size: 0.68rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
 /* ── Sound Toggle ── */
 .settings-sound-lbl {
   margin-top: 18px;
@@ -7762,6 +8419,33 @@ body.theme-light .settings-update-btn.update-btn--uptodate {
   background: rgba(168, 85, 247, 0.18);
   color: rgba(255, 255, 255, 0.42);
   cursor: not-allowed;
+}
+
+/* Reminder-offer modal — time input centered + sized for thumb taps */
+.reminder-offer-time-input {
+  width: 100%;
+  max-width: 220px;
+  padding: 14px 16px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.32);
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.reminder-offer-time-input:focus {
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+}
+/* Native time-picker icon — keep it visible against the dark card. */
+.reminder-offer-time-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.9);
+  cursor: pointer;
 }
 
 /* "Create your own" entry inside the lib-sheet */

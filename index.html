@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=138">
+  <link rel="stylesheet" href="styles.css?v=160">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -66,7 +66,7 @@
       <div class="path-subtitle">Pick a starting pack or build your own.</div>
     </div>
     <div id="path-cards" class="path-cards"></div>
-    <div class="path-note">⚡ Morning Routine and Locked-In each unlock a <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
+    <div class="path-note">Morning Routine and Locked-In each unlock a <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
     <div class="path-footer">
       <button id="path-continue-btn" class="path-continue-btn" disabled>CONTINUE →</button>
     </div>
@@ -74,7 +74,7 @@
     <!-- Make Your Own warning popup -->
     <div id="custom-warning-overlay" class="custom-warning-overlay hidden">
       <div class="cw-card">
-        <div class="cw-icon">⚡</div>
+        <div class="cw-icon"></div>
         <div class="cw-title">Going Solo?</div>
         <div class="cw-body">
           <span class="cw-highlight">Morning Routine</span> unlocks the
@@ -141,7 +141,8 @@
       </div>
 
       <!-- Double XP weekend banner -->
-      <div id="double-xp-banner" class="double-xp-banner hidden" role="button" tabindex="0" aria-label="Weekend Warrior challenge details">⚡ DOUBLE XP WEEKEND 🔥</div>
+      <!-- Static fallback text — JS overwrites with iconify'd HTML on render. -->
+      <div id="double-xp-banner" class="double-xp-banner hidden" role="button" tabindex="0" aria-label="Weekend Warrior challenge details">DOUBLE XP WEEKEND</div>
 
       <!-- Daily progress -->
       <div class="progress-section">
@@ -150,7 +151,8 @@
             <span id="completed-count" class="prog-done">0</span><span class="prog-sep">/</span><span id="total-count" class="prog-total">0</span><span class="prog-label">today</span>
           </div>
           <div id="perfect-streak-display" class="perfect-streak-display">
-            <span class="ps-fire">🔥</span><span class="ps-count">0</span>
+            <!-- Static placeholder — JS replaces with the custom flame icon on render. -->
+            <span class="ps-fire"></span><span class="ps-count">0</span>
           </div>
         </div>
         <div class="progress-track">
@@ -327,6 +329,19 @@
     <button id="ctx-delete" class="ctx-item ctx-danger">🗑️ Delete</button>
   </div>
 
+  <!-- All Streaks bottom-sheet — opened by tapping the 🔥 streak pill
+       in the app header. Surfaces perfect-day streak, Morning Routine
+       compound streak, Locked-In compound streak, and chosen path. -->
+  <div id="streaks-overlay" class="streaks-overlay hidden"></div>
+  <div id="streaks-sheet"   class="streaks-sheet   hidden">
+    <div class="streaks-drag-handle"></div>
+    <div class="streaks-header">
+      <h2 class="streaks-title">All Streaks</h2>
+      <button id="streaks-close-btn" class="streaks-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div id="streaks-body" class="streaks-body"></div>
+  </div>
+
   <!-- View Note — full habit detail bottom-sheet -->
   <div id="note-overlay" class="vn-overlay hidden"></div>
   <div id="note-modal"   class="vn-sheet   hidden">
@@ -351,6 +366,13 @@
         <div class="hi-stat-cell"><span id="vn-total"   class="hi-stat-value">0</span><span class="hi-stat-label">Total</span></div>
         <div class="hi-stat-cell"><span id="vn-week"    class="hi-stat-value">0</span><span class="hi-stat-label">This week</span></div>
       </div>
+      <!-- Reminder state — shows current per-habit reminder or a hint
+           that none is set. Filled in by populateHabitInfoBlock(). -->
+      <div class="vn-reminder-section">
+        <div class="vn-section-label">REMINDER</div>
+        <div id="vn-reminder-display" class="vn-reminder-display"></div>
+      </div>
+
       <!-- Read-only canonical description from the habit definition -->
       <div class="vn-note-section">
         <div class="vn-section-label">ABOUT THIS HABIT</div>
@@ -487,6 +509,23 @@
       <div class="custom-actions">
         <button id="notif-explain-cancel" class="custom-btn custom-btn-cancel" type="button">Not now</button>
         <button id="notif-explain-enable" class="custom-btn custom-btn-save"   type="button">Enable reminders</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-habit reminder offer (B in onboarding spec) — appears after a
+       habit is added or a pack is confirmed. Reuses .custom-overlay /
+       .custom-card. The time-input row is hidden in batch (pack) mode. -->
+  <div id="reminder-offer-overlay" class="custom-overlay hidden">
+    <div class="custom-card">
+      <div id="reminder-offer-title"   class="custom-title">📲 Want a reminder for it?</div>
+      <div id="reminder-offer-sub"     class="custom-sub" style="text-align:center;line-height:1.5;margin-bottom:18px"></div>
+      <div id="reminder-offer-time-row" class="reminder-offer-time-row" style="margin-bottom:18px;text-align:center;display:none">
+        <input id="reminder-offer-time" type="time" value="07:00" class="reminder-offer-time-input">
+      </div>
+      <div class="custom-actions">
+        <button id="reminder-offer-skip" class="custom-btn custom-btn-cancel" type="button">Skip</button>
+        <button id="reminder-offer-save" class="custom-btn custom-btn-save"   type="button">Set Reminder</button>
       </div>
     </div>
   </div>
@@ -720,7 +759,7 @@
   <div id="bonus-info-modal" class="bonus-info-modal hidden">
     <div class="bi-card">
       <button id="bi-close-btn" class="bi-close-btn" aria-label="Close">✕</button>
-      <div class="bi-icon">⚡</div>
+      <div class="bi-icon"></div>
       <div class="bi-title">Compound Effect Bonus</div>
       <div class="bi-subtitle">Bonus XP that grows the longer your streak.</div>
 
@@ -736,7 +775,7 @@
       </div>
 
       <div class="bi-section bi-section--mr">
-        <div class="bi-pack-head">🌅 <b>Morning Routine</b> — 10 habits</div>
+        <div class="bi-pack-head"><img class="pack-icon-img" src="assets/habit-icons/icon-pack-morning.png" style="width:28px;height:28px" alt="" draggable="false" loading="lazy" decoding="async"> <b>Morning Routine</b> — 10 habits</div>
         <div class="bi-pack-body">
           The first hour shapes the day. Sleep, sunlight, intention, movement —
           consistent mornings compound faster than anything else you do, because
@@ -746,7 +785,7 @@
       </div>
 
       <div class="bi-section bi-section--li">
-        <div class="bi-pack-head">🔒 <b>Locked-In</b> — 16 habits</div>
+        <div class="bi-pack-head"><img class="pack-icon-img" src="assets/habit-icons/icon-pack-lockedin.png" style="width:28px;height:28px" alt="" draggable="false" loading="lazy" decoding="async"> <b>Locked-In</b> — 16 habits</div>
         <div class="bi-pack-body">
           Morning Routine plus afternoon focus and evening discipline.
           The full cycle. Most people win one part of the day. Locked-In wins
@@ -805,7 +844,8 @@
   <!-- Compound Effect / Locked-In Bonus popup (shared, themed per pack) -->
   <div id="compound-popup" class="compound-popup hidden">
     <div class="cp-card">
-      <div id="cp-label" class="cp-label">⚡ COMPOUND EFFECT BONUS</div>
+      <!-- Static fallback — JS overwrites with iconify'd HTML on render. -->
+      <div id="cp-label" class="cp-label">COMPOUND EFFECT BONUS</div>
       <div id="cp-pack-msg" class="cp-pack-msg"></div>
       <div id="cp-xp" class="cp-xp"></div>
       <div id="cp-streak" class="cp-streak"></div>
@@ -847,12 +887,12 @@
   <div id="pdc-overlay" class="pdc-overlay hidden">
     <canvas id="pdc-canvas" class="pdc-canvas"></canvas>
     <div class="pdc-content">
-      <div class="pdc-banner">⚡ PERFECT DAY ⚡</div>
+      <div class="pdc-banner">PERFECT DAY</div>
       <div id="pdc-xp" class="pdc-xp"></div>
     </div>
   </div>
 
-  <script src="app.js?v=151"></script>
+  <script src="app.js?v=194"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -876,10 +916,34 @@
       <button class="day-btn" data-day="Sat" type="button">S</button>
       <button class="day-btn" data-day="Sun" type="button">S</button>
     </div>
+
+    <!-- Per-habit reminder. Tappable button opens the same custom hour
+         + 15-min minute picker used by Settings. The Remove button
+         appears only when a reminder is set; tapping it clears it. -->
+    <div class="sched-reminder-section">
+      <div class="sched-reminder-label">REMINDER</div>
+      <div class="sched-reminder-row">
+        <button id="sched-reminder-btn"   class="sched-reminder-btn"   type="button">+ Add reminder</button>
+        <button id="sched-reminder-clear" class="sched-reminder-clear hidden" type="button" aria-label="Remove reminder">Remove</button>
+      </div>
+    </div>
+
     <div class="sched-actions">
       <button id="sched-cancel-btn" class="btn-ghost">Cancel</button>
       <button id="sched-save-btn"   class="btn-primary">Save</button>
     </div>
+  </div>
+
+  <!-- Class detail sheet — opened by tapping the class emblem on the
+       Status tab. Showcases the emblem at hero size + name + description
+       + linked stats + (if awakened) Chapter 2 origin excerpt. -->
+  <div id="class-detail-overlay" class="class-detail-overlay hidden"></div>
+  <div id="class-detail-sheet"   class="class-detail-sheet   hidden">
+    <div class="class-detail-drag-handle"></div>
+    <div class="class-detail-header">
+      <button id="class-detail-close-btn" class="class-detail-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div id="class-detail-body" class="class-detail-body"></div>
   </div>
 
   <!-- Stat detail sheet -->
@@ -1006,35 +1070,12 @@
         <span>What's New</span>
       </button>
     </div>
-    <!-- Appearance — collapsible -->
-    <div class="settings-collapsible">
-      <button id="settings-appearance-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="appearance">
-        <span class="settings-collapsible-lbl">🎨 APPEARANCE</span>
-        <span id="settings-appearance-summary" class="settings-collapsible-summary">Dark</span>
-        <span class="settings-collapsible-chevron">›</span>
-      </button>
-      <div id="settings-appearance-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-        <div class="settings-theme-row">
-          <button class="settings-theme-card" id="theme-dark-btn" data-theme="dark">
-            <span class="settings-theme-icon">🌙</span>
-            <span class="settings-theme-name">Dark Mode</span>
-            <span class="settings-theme-sub">Default</span>
-          </button>
-          <button class="settings-theme-card" id="theme-light-btn" data-theme="light">
-            <span class="settings-theme-icon">☀️</span>
-            <span class="settings-theme-name">Light Mode</span>
-            <span class="settings-theme-sub">New</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- (Sound moved to the header; toggle now lives next to "Habit RPG".) -->
 
     <!-- Reminders — collapsible -->
     <div class="settings-collapsible">
       <button id="settings-rem-section-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="reminders">
-        <span class="settings-collapsible-lbl">📲 REMINDERS</span>
+        <span class="settings-collapsible-lbl">REMINDERS</span>
         <span id="settings-rem-section-summary" class="settings-collapsible-summary">0 active</span>
         <span class="settings-collapsible-chevron">›</span>
       </button>
@@ -1050,16 +1091,20 @@
         Reminders work best in the iOS app. Install from App Store for full functionality.
       </p>
 
-      <!-- Daily limit -->
-      <div class="settings-rem-row">
-        <span class="settings-rem-label">Daily limit</span>
-        <select id="settings-rem-limit" class="settings-rem-select">
-          <option value="3">3 / day (gentle)</option>
-          <option value="5">5 / day</option>
-          <option value="8">8 / day</option>
-          <option value="0">Unlimited</option>
-        </select>
+      <!-- Daily morning reminder — the once-a-day digest. Tap the time
+           button to open a custom picker (hour column + 15-min minute
+           column) — identical to the post-onboarding confirmation toast.
+           This avoids the platform-inconsistent native time wheel. -->
+      <div class="settings-rem-row settings-rem-row--digest">
+        <span class="settings-rem-label">Daily morning reminder</span>
+        <button id="settings-rem-digest-btn" class="settings-rem-digest-btn" type="button">9:00 AM</button>
       </div>
+      <button id="settings-rem-digest-clear" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button" style="margin-bottom:14px">Turn off morning reminder</button>
+
+      <!-- Daily limit removed in v1.1.3 — with the morning-digest-first
+           model, the user controls reminder cadence by choosing whether
+           to add per-habit reminders, not via a global cap. -->
+
 
       <!-- Quiet hours -->
       <div class="settings-rem-row settings-rem-row--toggle">
@@ -1098,7 +1143,7 @@
     <!-- What's Coming — collapsible -->
     <div class="settings-collapsible">
       <button id="settings-coming-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="coming">
-        <span class="settings-collapsible-lbl">🚀 WHAT'S COMING</span>
+        <span class="settings-collapsible-lbl">WHAT'S COMING</span>
         <span class="settings-collapsible-summary">6 features</span>
         <span class="settings-collapsible-chevron">›</span>
       </button>

@@ -10,8 +10,8 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." There is no backend — every byte of state lives in `localStorage`.
 
-- **Current marketing version:** `1.1.2` (constant `APP_VERSION` in `app.js`)
-- **Service-worker cache version:** `v5.09` (constant `CACHE_VERSION` in `sw.js`)
+- **Current marketing version:** `1.1.3` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`)
+- **Service-worker cache version:** `v5.54` (constant `CACHE_VERSION` in `sw.js`)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
 
@@ -25,7 +25,7 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 |------|---------|
 | `index.html` | All markup. Tabs, panels, sheets, modals, banners. |
 | `app.js` | All logic. Single file IIFE — every runtime constant, every render function, every event wiring. |
-| `styles.css` | All styling. Defines a `:root` token set + a `body.theme-light` override. |
+| `styles.css` | All styling. Defines a `:root` token set. Dark-mode only — Light theme was removed in v1.1.3. |
 | `sw.js` | Service worker. Precaches app shell, avatar PNGs, tab/stat icon PNGs, and app icons (icon-192/512). The dynamic OffscreenCanvas icon generator was removed once real icons shipped. |
 | `manifest.json` | PWA manifest. Theme `#0a0a0a`. Standalone portrait. References static `icon-192.png` / `icon-512.png`. |
 | `capacitor.config.json` | Capacitor config. `webDir: www`. |
@@ -41,6 +41,10 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `scripts/optimize-stat-icons.ps1` | Same, for stat icons. |
 | `scripts/generate-app-icons.ps1` | Resizes `app-icon-source.png` to all 18 iOS sizes + 2 PWA sizes. 24-bit RGB output, no alpha (Apple requirement). |
 | `scripts/verify-app-icons.ps1` | Sanity-check: every iOS icon is at exact dimensions and has zero alpha. Run before pushing. |
+| `scripts/resize-iphone-screenshots.ps1` | Resizes raw iPhone PNGs (1290×2796 from 15/16 Pro Max) → 1284×2778, the size Apple's "iPhone 6.5-inch Display" slot accepts. **Outputs 24-bit RGB, no alpha** (Apple rejects screenshots with alpha channels). |
+| `scripts/generate-ipad-screenshots.ps1` | Embeds iPhone screenshots in a 2048×2732 dark-themed canvas for the iPad slot (12.9" iPad Pro size). Same no-alpha guarantee. |
+| `screenshots/iphone/` | Drop raw iPhone screenshots here before running the resize script. Output goes to `screenshots/iphone-65/`. |
+| `screenshots/ipad/` | iPad-letterboxed output, ready for upload. |
 | `package.json` | Capacitor deps + `@capacitor/local-notifications@^6.1.3` (per-habit reminder system). |
 
 ---
@@ -67,7 +71,7 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 --safe-top / --safe-bottom: env(safe-area-inset-*)
 ```
 
-`body.theme-light` overrides these (warm parchment palette, `#e8d5b0` background) but accent purple/gold stay the same.
+Awakened is **dark-mode only** by design. The Light theme was removed in v1.1.3 — do not reintroduce `body.theme-light`, the Appearance settings collapsible, or the `hb_theme` localStorage key.
 
 ### Difficulty colors (used in UI badges)
 
@@ -327,6 +331,30 @@ The PWA icons are now **real static files**. The dynamic `getOrGenerateIcon` / `
 
 ---
 
+## App Store screenshots
+
+Apple has **two strict rules** that don't show up in any obvious place until your upload fails:
+
+1. **Exact pixel dimensions per slot.** The iPhone 6.5" Display slot accepts only `1284×2778` or `1242×2688` (or their landscape transposes). A modern iPhone 15/16 Pro Max takes screenshots at `1290×2796` natively — close, but Apple's validator rejects them. Run `scripts/resize-iphone-screenshots.ps1` to scale them down by ~0.4% (visually identical, validator-approved).
+2. **No alpha channel anywhere.** Even a fully-opaque PNG gets rejected if its file format includes an alpha layer. The script outputs `Format24bppRgb` to strip alpha. Same rule applies to app icons (see above) — the same fix works.
+
+Slot sizes:
+- **iPhone 6.5" Display:** 1284×2778 portrait (or 1242×2688 for older Pro Max). What our scripts target.
+- **iPhone 6.7"/6.9" Display:** 1290×2796 portrait. If you add this slot, your iPhone 15/16 Pro Max screenshots upload **without resizing**. Apple shows this slot only if you explicitly add it via "View All Sizes in Media Manager."
+- **iPad 12.9" / 13":** 2048×2732 portrait. The iPad script embeds iPhone shots in a dark canvas at this size — Apple accepts the letterbox treatment.
+
+Workflow:
+1. Take screenshots on iPhone, AirDrop or USB-copy to PC
+2. Drop the PNGs into `screenshots/iphone/`
+3. Run `scripts/resize-iphone-screenshots.ps1` (iPhone 6.5") + `scripts/generate-ipad-screenshots.ps1` (iPad)
+4. Outputs sit in `screenshots/iphone-65/` and `screenshots/ipad/`
+5. Upload each set into the matching App Store Connect slot
+6. Drag-reorder within App Store Connect after upload — they don't have to be uploaded in display order
+
+Don't worry about the visible 0.4% scale-down — humans can't see it. The Apple-strict pixel-match is purely a validator check.
+
+---
+
 ## Wordmark
 
 `<h1 class="awakened-wordmark">Awakened</h1>` in the app header uses **Cinzel 900** (Google Fonts, loaded via `<link>` in `<head>` with `display=swap`). Solid amber `#fbbf24` fill + `drop-shadow(0 0 16px rgba(251, 191, 36, 0.5))` glow. The earlier gradient version was reverted because the violet end clashed with other UI accents.
@@ -450,7 +478,6 @@ Prefix `hb_` for almost everything:
 | `hb_name`              | string | Player name, default 'Hunter' |
 | `hb_class`             | string | Stored class id |
 | `hb_welcomed`          | `'1'` | Welcome screen seen flag |
-| `hb_theme`             | `'dark' \| 'light'` | |
 | `hb_sound`             | `'on' \| 'off'` | Sound toggle |
 | `hb_whats_new_seen`    | version string (e.g., `'1.1.0'`) | |
 | `hb_friday_banner_<date>` | `'1'` | Per-Friday banner-seen flag |
@@ -512,13 +539,19 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet).
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=138`, `app.js?v=151`, `sw.js v5.09`, `APP_VERSION = '1.1.2'` (in BOTH `app.js` and `codemagic.yaml`). (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=160`, `app.js?v=194`, `sw.js v5.54`, `APP_VERSION = '1.1.3'` (in BOTH `app.js` and `codemagic.yaml`). (Re-check from the files; they drift quickly.)
 
 ---
 
 ## Conventions & non-obvious rules
 
 **Date / time.** All "today" comparisons use `getPTDate()` (PT-locale ISO date). Never `new Date().toISOString()` — that's UTC and breaks streaks for west-coast users.
+
+**Notifications fire in DEVICE-LOCAL time, not PT.** The two systems are intentionally split:
+- **Streak / completion math** is PT-anchored via `getPTDate()` so all users share a single "day" boundary (a user travelling LA → Tokyo doesn't get double-credited or zeroed out mid-flight).
+- **Notification scheduling** uses Capacitor's `schedule.on.{hour, minute}`, which iOS interprets as the device's local clock. A user in NYC who picks 9:00 AM gets the ping at 9 AM Eastern — same UX in every timezone, no manual conversion. The digest re-schedules itself on app open via `Notif.reapplyDigest()`, so it picks up timezone changes automatically when iOS updates the device clock.
+
+Never "fix" notification scheduling to use PT — that would be a bug.
 
 **Single source of truth.** When a piece of data could plausibly live in two places, it doesn't. The 10-habit Morning Routine, primary stats, descriptions, color values — every map has exactly one home and helpers around it. Adding a new habit means editing `DEFAULT_HABITS`, `HABIT_PRIMARY_STAT`, `HABIT_DESCRIPTIONS`, and (if measurable) `MEASURABLE_HABITS`. Nothing else.
 
@@ -570,6 +603,8 @@ The current state is `styles.css?v=138`, `app.js?v=151`, `sw.js v5.09`, `APP_VER
 - **Letting `node_modules/`, `ios/`, `www/`, or the avatar `originals-rgb` folder slip into git.** They're gitignored — verify before pushing.
 - **Forgetting `ITSAppUsesNonExemptEncryption=false`.** Already wired into `codemagic.yaml`. Don't remove it or every TestFlight upload will require manual compliance acknowledgement.
 - **Adding alpha to the app icon.** Apple's icon validator rejects PNGs with an alpha channel. The generation script saves as `Format24bppRgb`. If you bypass the script and resize manually, verify with `scripts/verify-app-icons.ps1` before pushing.
+- **Adding alpha to App Store screenshots.** Same rule as the app icon — `Format24bppRgb`, no alpha. The screenshot scripts already do this. If you write a new image-processing script, **always pass `Format24bppRgb` to `New-Object System.Drawing.Bitmap`** — the default is `Format32bppArgb` which fails Apple's validator silently (the upload appears to succeed, then "Submit for Review" rejects).
+- **Uploading native iPhone 15/16 Pro Max screenshots to the 6.5" slot.** Native dimensions are 1290×2796; the 6.5" slot wants 1284×2778. Off by 6 pixels wide / 18 tall. Run `scripts/resize-iphone-screenshots.ps1` first. (Or: add a 6.7"/6.9" slot via App Store Connect → "View All Sizes in Media Manager" and upload natively without resizing.)
 - **Forgetting to ship `assets/tab-icons/` or `assets/stat-icons/` to `www/`.** The Codemagic step copies them explicitly. If you add a new asset folder, update the copy step or the iOS bundle won't have the file (resulting in broken images in TestFlight only).
 - **Calling `applyStatPts(habitName, ...)`.** The signature changed in v1.1.2 — it now takes the `habit` object so customs route XP via `primaryStat`. Old call-sites that passed `habit.name` will silently no-op for custom habits.
 - **Setting stat icons via `el.textContent = st.icon`.** That reintroduces the emoji. Use `setStatIcon(el, st, sizePx)` or `statIconHtml(st, opts)`.

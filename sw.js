@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.09';
+const CACHE_VERSION = 'v5.54';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -36,6 +36,61 @@ const PRECACHE_ASSETS = [
   '/assets/stat-icons/stat-focus.png',
   '/assets/stat-icons/stat-will.png',
   '/assets/stat-icons/stat-wlt.png',
+  // Habit icons (DALL-E art) — full curated coverage
+  '/assets/habit-icons/icon-water.png',
+  '/assets/habit-icons/icon-sleep.png',
+  '/assets/habit-icons/icon-wake.png',
+  '/assets/habit-icons/icon-walk.png',
+  '/assets/habit-icons/icon-cardio.png',
+  '/assets/habit-icons/icon-strength.png',
+  '/assets/habit-icons/icon-sunlight.png',
+  '/assets/habit-icons/icon-gratitude.png',
+  '/assets/habit-icons/icon-vitamins.png',
+  '/assets/habit-icons/icon-meditate.png',
+  '/assets/habit-icons/icon-nutrition.png',
+  '/assets/habit-icons/icon-nophone.png',
+  '/assets/habit-icons/icon-business.png',
+  '/assets/habit-icons/icon-cold.png',
+  '/assets/habit-icons/icon-connection.png',
+  '/assets/habit-icons/icon-finance.png',
+  '/assets/habit-icons/icon-grounding.png',
+  '/assets/habit-icons/icon-journal.png',
+  '/assets/habit-icons/icon-learning.png',
+  '/assets/habit-icons/icon-mobility.png',
+  '/assets/habit-icons/icon-noalcohol.png',
+  '/assets/habit-icons/icon-nocaffeine.png',
+  '/assets/habit-icons/icon-nodoomscroll.png',
+  '/assets/habit-icons/icon-noscreen-bed.png',
+  '/assets/habit-icons/icon-nosugar.png',
+  '/assets/habit-icons/icon-protein.png',
+  '/assets/habit-icons/icon-read.png',
+  '/assets/habit-icons/icon-target.png',
+  '/assets/habit-icons/icon-tidy.png',
+  '/assets/habit-icons/icon-sprint.png',
+  '/assets/habit-icons/icon-nosocial.png',
+  '/assets/habit-icons/icon-priority.png',
+  '/assets/habit-icons/icon-plan-tomorrow.png',
+  '/assets/habit-icons/icon-screen-cap.png',
+  '/assets/habit-icons/icon-podcast.png',
+  '/assets/habit-icons/icon-pray.png',
+  '/assets/habit-icons/icon-visualize.png',
+  // Pack/path entry icons (Add Habits library headers)
+  '/assets/habit-icons/icon-pack-morning.png',
+  '/assets/habit-icons/icon-pack-lockedin.png',
+  '/assets/habit-icons/icon-pack-custom.png',
+  // Class emblem icons
+  '/assets/habit-icons/icon-class-civilian.png',
+  '/assets/habit-icons/icon-class-warrior.png',
+  '/assets/habit-icons/icon-class-ranger.png',
+  '/assets/habit-icons/icon-class-mage.png',
+  '/assets/habit-icons/icon-class-assassin.png',
+  '/assets/habit-icons/icon-class-paladin.png',
+  '/assets/habit-icons/icon-class-merchant.png',
+  '/assets/habit-icons/icon-class-sage.png',
+  // Streak/flame icon — replaces 🔥 emoji system-wide in live UI
+  '/assets/habit-icons/icon-streak.png',
+  // XP/lightning icon — replaces ⚡ emoji system-wide in live UI
+  '/assets/habit-icons/icon-xp.png',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

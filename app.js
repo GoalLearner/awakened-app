@@ -14,12 +14,24 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '1.1.2';
+  const APP_VERSION = '1.1.3';
 
   // ── WHAT'S NEW ───────────────────────────────────────────
   // Version-keyed announcements. The What's New sheet always displays
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
+    '1.1.3': {
+      subtitle: 'One reminder. The path, illustrated.',
+      items: [
+        { emoji: '', title: 'Morning Reminder',      description: 'A single reminder at the time you choose. No spam. No per-habit pestering. The rest is on you.' },
+        { emoji: '', title: 'Custom Habit Icons',    description: 'Morning Routine and Locked-In habits now show premium-rendered art instead of emoji. Same habits — sharper visual identity.' },
+        { emoji: '', title: 'Per-Habit Reminders',   description: 'Set a reminder time on any individual habit from the Schedule sheet. View Note shows whether one is set.' },
+        { emoji: '', title: 'All Streaks View',      description: 'Tap the streak fire in the header to see Perfect Day, Morning Routine, and Locked-In streaks all in one place.' },
+        { emoji: '', title: 'Emoji-Free Pass',       description: 'A complete pass through every screen — class banners, achievements, celebrations, toasts. Custom DALL-E art and Cinzel typography only.' },
+        { emoji: '', title: 'Daily Check-In',        description: 'A single 6 PM ping that knows where you are. Cleared every habit? It congratulates you. Halfway? It cheers you on. Just starting? It invites you back to the path.' },
+        { emoji: '', title: 'Dark by Design',         description: 'Settings cleaned up. Awakened is dark-mode only by design.' },
+      ],
+    },
     '1.1.2': {
       subtitle: 'Build your own. Look the part.',
       items: [
@@ -566,13 +578,13 @@
 
   // Achievement categories drive the section grouping in the UI.
   const ACH_CATEGORIES = [
-    { id: 'streaks',  label: '🔥 Streaks' },
-    { id: 'rank',     label: '🛡️ Rank & Points' },
-    { id: 'class',    label: '🧍 Class & Awakening' },
-    { id: 'packs',    label: '🌅 Packs' },
-    { id: 'quests',   label: '⚔️ Daily Quests' },
-    { id: 'habits',   label: '🎯 Habit Mastery' },
-    { id: 'lifetime', label: '📅 Lifetime' },
+    { id: 'streaks',  label: 'Streaks' },
+    { id: 'rank',     label: 'Rank & Points' },
+    { id: 'class',    label: 'Class & Awakening' },
+    { id: 'packs',    label: 'Packs' },
+    { id: 'quests',   label: 'Daily Quests' },
+    { id: 'habits',   label: 'Habit Mastery' },
+    { id: 'lifetime', label: 'Lifetime' },
   ];
 
   // Each achievement: id, icon, name, desc, category, target, getProgress(ctx).
@@ -720,7 +732,7 @@
       habits: [
         'Strength training', 'Cardio', 'Sprint session', 'Daily walk', 'Protein goal',
       ] },
-    { id: 'VIT',   icon: '❤️',  iconImg: 'assets/stat-icons/stat-vit.png',   label: 'VIT',   name: 'Vitality',     color: '#ec4899',
+    { id: 'VIT',   icon: '❤️',  iconImg: 'assets/stat-icons/stat-vit.png',   label: 'VIT',   name: 'Vitality',     color: '#22c55e',
       habits: [
         'Hydrate', 'Sleep', 'Sleep before midnight', 'Cardio', 'Daily walk',
         'Ice bath or cold plunge', 'Mobility & Stretching', 'Get morning sunlight',
@@ -734,7 +746,7 @@
         'Language learning', 'Visualization practice',
         'Review your long term goals', 'Generate one new business or content idea',
       ] },
-    { id: 'FOCUS', icon: '🎯',  iconImg: 'assets/stat-icons/stat-focus.png', label: 'FOCUS', name: 'Focus',        color: '#eab308',
+    { id: 'FOCUS', icon: '🎯',  iconImg: 'assets/stat-icons/stat-focus.png', label: 'FOCUS', name: 'Focus',        color: '#475569',
       habits: [
         'Meditate & Breathwork', 'No phone or social media after waking',
         'Review daily goals/intentions', 'No social media before noon',
@@ -777,6 +789,40 @@
   function setStatIcon(el, st, sizePx) {
     if (!el) return;
     el.innerHTML = statIconHtml(st, { size: sizePx || 32, eager: true });
+  }
+
+  // ── HABIT ICON HELPERS ───────────────────────────────────
+  // Mirrors the stat-icon pattern. getHabitIcon returns the PNG path if
+  // the curated habit has a mapping; null otherwise. Custom user habits
+  // ALWAYS return null — they keep their user-chosen emoji. habitIconHtml
+  // returns the proper render markup (img tag OR escaped emoji string).
+  // setHabitIcon writes the markup into an existing element via innerHTML.
+  function getHabitIcon(habit) {
+    if (!habit) return null;
+    if (habit.custom) return null;
+    return (habit.name && HABIT_ICONS[habit.name]) || null;
+  }
+  function habitIconHtml(habit, opts) {
+    opts = opts || {};
+    const sz   = opts.size || 32;
+    const path = getHabitIcon(habit);
+    if (path) {
+      const cls = 'habit-icon-img' + (opts.cls ? ' ' + opts.cls : '');
+      const alt = (habit.name || '').replace(/"/g, '');
+      return '<img class="' + cls + '" src="' + path + '" alt="' + alt + '" ' +
+        'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+        'draggable="false" loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async">';
+    }
+    return habit && habit.emoji ? habit.emoji : '';
+  }
+  function setHabitIcon(el, habit, sizePx) {
+    if (!el) return;
+    const path = getHabitIcon(habit);
+    if (path) {
+      el.innerHTML = habitIconHtml(habit, { size: sizePx || 32, eager: true });
+    } else {
+      el.textContent = habit && habit.emoji ? habit.emoji : '';
+    }
   }
 
   const STAT_BONUS_THRESHOLDS = [
@@ -853,9 +899,9 @@
   const CLASSES = {
     CIVILIAN: { emoji: '🧍', name: 'Civilian', color: '#6b7280', desc: "You haven't been awakened yet. Train any stat to Lv5 to find your path." },
     STR:   { emoji: '⚔️',  name: 'Warrior',  color: '#ef4444', desc: 'You build your body like a fortress. Discipline is your weapon.' },
-    VIT:   { emoji: '🏹',  name: 'Ranger',   color: '#ec4899', desc: 'Your body is your temple. Recovery and endurance are your edge.' },
+    VIT:   { emoji: '🏹',  name: 'Ranger',   color: '#22c55e', desc: 'Your body is your temple. Recovery and endurance are your edge.' },
     INT:   { emoji: '🧙',  name: 'Mage',     color: '#3b82f6', desc: 'Your mind is your greatest asset. Knowledge compounds like interest.' },
-    FOCUS: { emoji: '🥷',  name: 'Assassin', color: '#eab308', desc: 'Precise, locked in, distraction-proof. You operate in silence.' },
+    FOCUS: { emoji: '🥷',  name: 'Assassin', color: '#475569', desc: 'Precise, locked in, distraction-proof. You operate in silence.' },
     WILL:  { emoji: '🛡️', name: 'Paladin',  color: '#f97316', desc: "Unbreakable. You do what others won't on the days they can't." },
     WLT:   { emoji: '👑',  name: 'Merchant', color: '#f59e0b', desc: 'Every day is an investment. You play the long financial game.' },
     SAGE:  { emoji: '🌟',  name: 'Sage',     color: '#8b5cf6', desc: 'No single path defines you. You are building a complete human.' },
@@ -1005,18 +1051,18 @@
     const weekend = getWeekendDates();
     if (!weekend) return null;
     if (day === 'Fri') {
-      return { text: 'Weekend Challenge Starts 🏆', cls: 'na-badge-start' };
+      return { text: 'Weekend Challenge Starts', cls: 'na-badge-start' };
     }
     if (day === 'Sat') {
       // If Friday was missed, stay quiet — the streak forgiveness ethos
       // doesn't shame misses, it celebrates progress. No badge today.
       if (!noAlcoholDoneOn(weekend.fri)) return null;
-      return { text: 'Day 2 of 3 🔥', cls: 'na-badge-progress' };
+      return { text: 'Day 2 of 3', cls: 'na-badge-progress' };
     }
     if (day === 'Sun') {
       const friOk = noAlcoholDoneOn(weekend.fri);
       const satOk = noAlcoholDoneOn(weekend.sat);
-      if (friOk && satOk) return { text: 'Final Day — Complete for 30 XP 💰', cls: 'na-badge-final' };
+      if (friOk && satOk) return { text: 'Final Day — Complete for 30 XP', cls: 'na-badge-final' };
       // Challenge can no longer complete — show nothing rather than a
       // shame badge. The card still works as a normal habit.
       return null;
@@ -1043,7 +1089,7 @@
       label: 'WEEKEND WARRIOR',
       icon:  '🏆',
       name:  'Weekend Challenge Complete!',
-      desc:  '+30 XP Bonus Awarded 🏆',
+      desc:  '+30 XP Bonus Awarded',
     });
     if (!levelUpActive && !achPopupTimer) drainAchQueue();
   }
@@ -1082,7 +1128,7 @@
     const possible  = [friSt, satSt, sunSt].filter(s => s !== 'missed').length;
 
     if (completed === 3) {
-      return '<div class="ww-reward ww-reward--earned">🏆 +30 XP earned — Weekend Warrior unlocked</div>';
+      return '<div class="ww-reward ww-reward--earned">+30 XP earned — Weekend Warrior unlocked</div>';
     }
     if (missed && possible < 3) {
       return '<div class="ww-reward ww-reward--locked">Bonus locked for this weekend — try again next Friday</div>';
@@ -1101,7 +1147,7 @@
 
     if (!hasIt) {
       // ── State A: rules + Add CTA ────────────────────────
-      titleEl.textContent = '⚔️ Weekend Warrior Challenge';
+      titleEl.textContent = 'Weekend Warrior Challenge';
       bodyEl.innerHTML =
         '<p class="ww-rules">Complete <b>No alcohol</b> all three nights — Friday, Saturday, and Sunday — to earn <b>+30 bonus XP</b> on Sunday.</p>' +
         '<p class="ww-rules">Plus: every habit completed Fri-Sun earns <b>Double XP</b>.</p>' +
@@ -1113,7 +1159,7 @@
     }
 
     // ── State B: live Fri/Sat/Sun progress ─────────────────
-    titleEl.textContent = '⚔️ Weekend Warrior Active';
+    titleEl.textContent = 'Weekend Warrior Active';
     const w = getWeekendDates();
     if (!w) {
       bodyEl.innerHTML = '<p class="ww-rules">The Weekend Warrior challenge runs Friday through Sunday.</p>';
@@ -1201,12 +1247,15 @@
       return;
     }
     el.classList.remove('hidden');
+    // innerHTML so the streak icon can render. streakify() escapes the
+    // surrounding text, so this is safe even if upstream copy ever
+    // includes user-generated content (it doesn't, but defensive).
     if (userHasNoAlcohol()) {
       el.classList.add('dxb--active');
-      el.textContent = '⚡ Weekend Warrior active — +30 XP if you finish all 3 nights 🔥';
+      el.innerHTML = streakify('⚡ Weekend Warrior active — +30 XP if you finish all 3 nights 🔥', 16);
     } else {
       el.classList.remove('dxb--active');
-      el.textContent = '⚡ DOUBLE XP WEEKEND 🔥';
+      el.innerHTML = streakify('⚡ DOUBLE XP WEEKEND 🔥', 16);
     }
   }
 
@@ -1287,8 +1336,8 @@
     const nah      = habits.find(h => h.name === 'No alcohol');
     const day1Done = nah && (completions[today] || []).includes(nah.id);
     const msg      = day1Done
-      ? '✅ Day 1 complete. Come back Saturday to continue your Weekend Challenge.'
-      : '⚔️ The Weekend Challenge has begun, Hunter. No alcohol Friday, Saturday, and Sunday earns you 30 bonus XP. Your discipline this weekend defines your rank. Will you claim the reward?';
+      ? 'Day 1 complete. Come back Saturday to continue your Weekend Challenge.'
+      : 'The Weekend Challenge has begun, Hunter. No alcohol Friday, Saturday, and Sunday earns you 30 bonus XP. Your discipline this weekend defines your rank. Will you claim the reward?';
 
     const overlay = document.getElementById('fri-challenge-overlay');
     const modal   = document.getElementById('fri-challenge-modal');
@@ -1381,13 +1430,13 @@
   ];
 
   const OB_CATEGORIES = [
-    { label: '💪 Physical Performance',      start: 0,  end: 11 },
-    { label: '🧠 Mental & Focus',            start: 11, end: 19 },
-    { label: '🥗 Nutrition',                 start: 19, end: 23 },
-    { label: '⚡ Discipline & Productivity', start: 23, end: 31 },
-    { label: '💰 Financial & Growth',        start: 31, end: 35 },
-    { label: '🎯 Learning & Skills',         start: 35, end: 41 },
-    { label: '🌱 Wellbeing & Relationships', start: 41, end: 49 },
+    { label: 'Physical Performance',      start: 0,  end: 11 },
+    { label: 'Mental & Focus',            start: 11, end: 19 },
+    { label: 'Nutrition',                 start: 19, end: 23 },
+    { label: 'Discipline & Productivity', start: 23, end: 31 },
+    { label: 'Financial & Growth',        start: 31, end: 35 },
+    { label: 'Learning & Skills',         start: 35, end: 41 },
+    { label: 'Wellbeing & Relationships', start: 41, end: 49 },
   ];
 
   // ── PRIMARY STAT MAP ─────────────────────────────────────
@@ -1428,6 +1477,294 @@
   };
   // Enrich each habit definition with its primary stat — single source of truth
   DEFAULT_HABITS.forEach(h => { h.primaryStat = HABIT_PRIMARY_STAT[h.name] || 'FOCUS'; });
+
+  // ── HABIT ICONS ──────────────────────────────────────────
+  // Custom DALL-E PNG icons for the canonical Morning Routine + Locked-In
+  // habits. Habit name is the foreign key (matches DEFAULT_HABITS exactly).
+  // Habits not listed here keep their emoji. Custom user habits ALWAYS
+  // keep their emoji — they're never looked up here.
+  //
+  // Mirrors the STATS[].iconImg pattern. Files live in assets/habit-icons/
+  // and are cached by sw.js. See `getHabitIcon`, `habitIconHtml`,
+  // `setHabitIcon` near `statIconHtml` for render helpers.
+  const HABIT_ICONS = {
+    // ── Physical Performance ──
+    'Hydrate':                              'assets/habit-icons/icon-water.png',
+    'Sleep':                                'assets/habit-icons/icon-sleep.png',
+    'Sleep before midnight':                'assets/habit-icons/icon-sleep.png',
+    'Cardio':                               'assets/habit-icons/icon-cardio.png',
+    'Strength training':                    'assets/habit-icons/icon-strength.png',
+    'Sprint session':                       'assets/habit-icons/icon-sprint.png',
+    'Daily walk':                           'assets/habit-icons/icon-walk.png',
+    'Ice bath or cold plunge':              'assets/habit-icons/icon-cold.png',
+    'Cold shower':                          'assets/habit-icons/icon-cold.png',
+    'Mobility & Stretching':                'assets/habit-icons/icon-mobility.png',
+    'Protein goal':                         'assets/habit-icons/icon-protein.png',
+
+    // ── Mental & Focus ──
+    'Read':                                 'assets/habit-icons/icon-read.png',
+    'Meditate & Breathwork':                'assets/habit-icons/icon-meditate.png',
+    'Journal':                              'assets/habit-icons/icon-journal.png',
+    'No phone or social media after waking':'assets/habit-icons/icon-nophone.png',
+    'Review daily goals/intentions':        'assets/habit-icons/icon-target.png',
+    'Get morning sunlight':                 'assets/habit-icons/icon-sunlight.png',
+    'No social media before noon':          'assets/habit-icons/icon-nosocial.png',
+    'No screens 1 hour before bed':         'assets/habit-icons/icon-noscreen-bed.png',
+
+    // ── Nutrition ──
+    'Whole foods diet':                     'assets/habit-icons/icon-nutrition.png',
+    'No sugar/junk food':                   'assets/habit-icons/icon-nosugar.png',
+    'No alcohol':                           'assets/habit-icons/icon-noalcohol.png',
+    'No caffeine':                          'assets/habit-icons/icon-nocaffeine.png',
+
+    // ── Discipline & Productivity ──
+    'Wake up at consistent time':           'assets/habit-icons/icon-wake.png',
+    'Complete your #1 priority task':       'assets/habit-icons/icon-priority.png',
+    'Plan tomorrow the night before':       'assets/habit-icons/icon-plan-tomorrow.png',
+    'Tidy/clean space':                     'assets/habit-icons/icon-tidy.png',
+    'Under 1 hour screen time':             'assets/habit-icons/icon-screen-cap.png',
+    'Digital declutter':                    'assets/habit-icons/icon-tidy.png',
+    'No doomscrolling until after 5PM':     'assets/habit-icons/icon-nodoomscroll.png',
+    'Review your long term goals':          'assets/habit-icons/icon-target.png',
+
+    // ── Financial & Growth ──
+    'Track finances & net worth':           'assets/habit-icons/icon-finance.png',
+    'Work on a side project or business':   'assets/habit-icons/icon-business.png',
+    'Review investments or trading journal':'assets/habit-icons/icon-finance.png',
+    'Generate one new business or content idea': 'assets/habit-icons/icon-business.png',
+
+    // ── Learning & Skills ──
+    'Educational podcast':                  'assets/habit-icons/icon-podcast.png',
+    'Practice a skill':                     'assets/habit-icons/icon-learning.png',
+    'Flashcard review':                     'assets/habit-icons/icon-learning.png',
+    'Write down lessons learned':           'assets/habit-icons/icon-journal.png',
+    'Learn something new':                  'assets/habit-icons/icon-learning.png',
+    'Language learning':                    'assets/habit-icons/icon-learning.png',
+
+    // ── Wellbeing & Relationships ──
+    'Morning gratitude practice':           'assets/habit-icons/icon-gratitude.png',
+    'Pray or set intentions':               'assets/habit-icons/icon-pray.png',
+    'Call or text a family member':         'assets/habit-icons/icon-connection.png',
+    'Do something kind for someone':        'assets/habit-icons/icon-connection.png',
+    'Barefoot grounding outside':           'assets/habit-icons/icon-grounding.png',
+    'Vitamins and minerals':                'assets/habit-icons/icon-vitamins.png',
+    'Visualization practice':               'assets/habit-icons/icon-visualize.png',
+    'Sleep early before 11PM':              'assets/habit-icons/icon-sleep.png',
+  };
+
+  // ── CLASS ICONS ──────────────────────────────────────────
+  // Custom DALL-E art for the 8 class emblems. Renders in the Status
+  // hero class line, class popup, awakening celebration, class-choice
+  // screen, and origin Chapter-2 badge. Falls back to nothing if the
+  // class id isn't mapped (no broken image).
+  const CLASS_ICONS = {
+    'CIVILIAN': 'assets/habit-icons/icon-class-civilian.png',
+    'STR':      'assets/habit-icons/icon-class-warrior.png',
+    'VIT':      'assets/habit-icons/icon-class-ranger.png',
+    'INT':      'assets/habit-icons/icon-class-mage.png',
+    'FOCUS':    'assets/habit-icons/icon-class-assassin.png',
+    'WILL':     'assets/habit-icons/icon-class-paladin.png',
+    'WLT':      'assets/habit-icons/icon-class-merchant.png',
+    'SAGE':     'assets/habit-icons/icon-class-sage.png',
+  };
+  function classIconHtml(classKey, opts) {
+    opts = opts || {};
+    const path = CLASS_ICONS[classKey];
+    if (!path) return '';
+    const sz  = opts.size || 24;
+    const cls = 'class-icon-img' + (opts.cls ? ' ' + opts.cls : '');
+    return '<img class="' + cls + '" src="' + path + '" alt="" ' +
+           'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+           'draggable="false" loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async">';
+  }
+
+  // ── DAILY CHECK-IN ───────────────────────────────────────
+  // Single 6 PM local-time notification that acknowledges the user's
+  // progress on today's habits. Five progress states × 5 variations
+  // each = 25 unique copy strings. Re-scheduled on every meaningful
+  // state change so the body reflects current progress at fire time.
+  // (Sits alongside the morning digest and per-habit reminders, but
+  // has its own reserved notification ID and bypasses the per-habit
+  // daily limit. Subject to: master disable, pause, quiet hours, and
+  // a "Day 1" suppression so brand-new users aren't overwhelmed.)
+  const CHECKIN_TIME = '18:00';
+  const CHECKIN_NOTIF_ID = 99999; // reserved; out of typical djb2 hash range
+
+  const CHECKIN_COPY = {
+    complete: [
+      'All trials cleared, Hunter. Rest well.',
+      'Day complete. Every trial honored.',
+      'Perfect day in motion. Well done, Hunter.',
+      'All habits cleared. The night is yours.',
+      'Day mastered. Rest, Hunter — you earned it.',
+    ],
+    high: [
+      '{N} cleared, {M} remain. Finish strong.',
+      'Almost there, Hunter. {M} trials left.',
+      '{N}/{TOTAL} done. Close the day clean.',
+      '{M} trials between you and a perfect day.',
+      'So close, Hunter. {M} left.',
+    ],
+    mid: [
+      '{N} trials honored. {M} await.',
+      'Halfway, Hunter. The day is still yours.',
+      '{N}/{TOTAL} cleared. Keep moving.',
+      'Solid progress. {M} trials remain.',
+      'The path continues. {M} left.',
+    ],
+    low: [
+      'The day is still open, Hunter.',
+      'Even one more trial counts.',
+      'Pick one, Hunter. Begin.',
+      'Small steps still count. The path remains.',
+      "The night isn't here yet. One trial, then another.",
+    ],
+    none: [
+      "The day isn't done. Choose one.",
+      "One trial, Hunter. That's all it takes.",
+      'The path is still here. Begin.',
+      'Even now, you can move forward.',
+      'The day waits, Hunter. Take one step.',
+    ],
+  };
+
+  function getCheckinProgressState(completed, total) {
+    if (total === 0) return null;
+    if (completed >= total) return 'complete';
+    const pct = (completed / total) * 100;
+    if (pct >= 70) return 'high';
+    if (pct >= 30) return 'mid';
+    if (pct > 0)   return 'low';
+    return 'none';
+  }
+
+  function pickCheckinCopy(state, completed, total) {
+    const variations = CHECKIN_COPY[state];
+    if (!variations || !variations.length) return '';
+    const text = variations[Math.floor(Math.random() * variations.length)];
+    const remaining = total - completed;
+    return text
+      .replace('{N}', completed)
+      .replace('{M}', remaining)
+      .replace('{TOTAL}', total);
+  }
+
+  function getTodaysHabitProgress() {
+    try {
+      const t = (typeof getPTDate === 'function') ? getPTDate() : today;
+      const completedIds = (completions && completions[t]) || [];
+      const scheduled = Array.isArray(habits) ? habits.filter(isScheduledToday) : [];
+      const completed = scheduled.filter(h => completedIds.indexOf(h.id) !== -1).length;
+      return { completed, total: scheduled.length };
+    } catch (_) {
+      return { completed: 0, total: 0 };
+    }
+  }
+
+  // Day-1 suppression — skip the check-in if the user has zero
+  // historical completion days (i.e., they've never tracked a habit
+  // before today). Once they complete their first habit, this returns
+  // false and the check-in fires from the next 6 PM forward.
+  function isDayOne() {
+    try {
+      if (typeof completions !== 'object' || !completions) return true;
+      const days = Object.keys(completions).filter(d => (completions[d] || []).length > 0);
+      return days.length === 0;
+    } catch (_) {
+      return false; // if anything fails, don't suppress — safer to ping
+    }
+  }
+
+  // Compute next 6 PM in DEVICE-LOCAL time (matches the morning digest's
+  // timezone behavior — see CLAUDE.md "Notifications fire in device-local").
+  function computeNextCheckinDate() {
+    const now    = new Date();
+    const target = new Date();
+    target.setHours(18, 0, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    return target;
+  }
+
+  // ── PACK ICONS ───────────────────────────────────────────
+  // Custom DALL-E art for the three pack/path entries at the top of
+  // the Add Habits library. Keys match the rendering call sites in
+  // renderLibrary(). Mirrors the HABIT_ICONS / PACK_ICONS pattern.
+  const PACK_ICONS = {
+    'morning':  'assets/habit-icons/icon-pack-morning.png',
+    'lockedin': 'assets/habit-icons/icon-pack-lockedin.png',
+    'custom':   'assets/habit-icons/icon-pack-custom.png',
+  };
+  function packIconHtml(packKey, opts) {
+    opts = opts || {};
+    const path = PACK_ICONS[packKey];
+    if (!path) return '';
+    const sz  = opts.size || 48;
+    const cls = 'pack-icon-img' + (opts.cls ? ' ' + opts.cls : '');
+    return '<img class="' + cls + '" src="' + path + '" alt="" ' +
+           'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+           'draggable="false" loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async">';
+  }
+
+  // ── STREAK + XP ICONS ────────────────────────────────────
+  // Custom flame + lightning icons replace the 🔥 and ⚡ emoji
+  // system-wide in live UI. (Notifications, descriptions, and historical
+  // WHATS_NEW entries keep the emoji — they go through non-HTML paths.)
+  // The iconify() helper is a generic string transformer: pass any text
+  // and it returns HTML with 🔥 / ⚡ swapped for the matching img tag,
+  // escaping everything else. streakify() remains as a thin alias for
+  // backward compat with earlier call sites.
+  const STREAK_ICON_PATH = 'assets/habit-icons/icon-streak.png';
+  const XP_ICON_PATH     = 'assets/habit-icons/icon-xp.png';
+
+  function streakIconHtml(opts) {
+    opts = opts || {};
+    const sz  = opts.size || 20;
+    const cls = 'streak-icon-img' + (opts.cls ? ' ' + opts.cls : '');
+    return '<img class="' + cls + '" src="' + STREAK_ICON_PATH + '" alt="" ' +
+           'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+           'draggable="false" loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async">';
+  }
+  function xpIconHtml(opts) {
+    opts = opts || {};
+    const sz  = opts.size || 16;
+    const cls = 'xp-icon-img' + (opts.cls ? ' ' + opts.cls : '');
+    return '<img class="' + cls + '" src="' + XP_ICON_PATH + '" alt="" ' +
+           'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+           'draggable="false" loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async">';
+  }
+
+  // Replace every 🔥 / ⚡ in `text` with the matching img tag, escaping
+  // the rest. Surrogate-pair-safe: 🔥 (U+1F525) is two code units, ⚡
+  // (U+26A1) is one. We scan code points to slice cleanly.
+  // Returns SAFE HTML — non-icon spans pass through esc().
+  function iconify(text, opts) {
+    opts = opts || {};
+    const sz       = opts.size || 16;
+    const fireSize = opts.fireSize || sz;
+    const xpSize   = opts.xpSize   || sz;
+    const s = String(text == null ? '' : text);
+    if (!s) return '';
+    if (s.indexOf('🔥') === -1 && s.indexOf('⚡') === -1) return esc(s);
+    const fireImg = streakIconHtml({ size: fireSize });
+    const xpImg   = xpIconHtml({ size: xpSize });
+    let out = '';
+    let buf = '';
+    for (let i = 0; i < s.length; ) {
+      const cp = s.codePointAt(i);
+      if (cp === 0x1F525) {        // 🔥
+        out += esc(buf) + fireImg; buf = ''; i += 2;
+      } else if (cp === 0x26A1) {  // ⚡
+        out += esc(buf) + xpImg;   buf = ''; i += 1;
+      } else {
+        buf += s[i]; i += 1;
+      }
+    }
+    out += esc(buf);
+    return out;
+  }
+  // Backward-compat alias — earlier code calls streakify(). The new
+  // iconify also handles ⚡, which is a strict superset of the old behavior.
+  function streakify(text, sizePx) { return iconify(text, { size: sizePx }); }
 
   // ── HABIT DESCRIPTIONS ───────────────────────────────────
   // One curated paragraph per habit, displayed on the View Note /
@@ -1518,7 +1855,7 @@
   function getHabitStatColor(habit) {
     const stId = getHabitPrimaryStat(habit);
     const st   = STATS.find(s => s.id === stId);
-    return st ? st.color : '#eab308'; // FOCUS yellow as ultimate fallback
+    return st ? st.color : '#475569'; // FOCUS shadow as ultimate fallback
   }
   // Difficulty → opacity within the stat color (preserves intensity signal)
   const DIFF_OPACITY = { easy: 0.6, medium: 0.75, hard: 0.9, legendary: 1.0 };
@@ -1655,7 +1992,7 @@
     shieldClaimedAt[packId] = newStreak;
     save();
     if (typeof showHabitToast === 'function') {
-      showHabitToast('🛡️ Streak Shield earned. You held ' + newStreak + ' straight days.');
+      showHabitToast('Streak Shield earned. You held ' + newStreak + ' straight days.');
     }
     return true;
   }
@@ -1746,7 +2083,7 @@
     Object.values(byPack).forEach((n, i) => {
       const pack = getPackById(n.packId);
       const name = pack ? pack.name : n.packId;
-      const msg  = '🛡️ Shield used. ' + name + ' streak protected. ' + n.remaining + ' shield' + (n.remaining === 1 ? '' : 's') + ' remaining.';
+      const msg  = 'Shield used. ' + name + ' streak protected. ' + n.remaining + ' shield' + (n.remaining === 1 ? '' : 's') + ' remaining.';
       // Stagger so multiple don't pile on each other
       setTimeout(() => { if (typeof showHabitToast === 'function') showHabitToast(msg, { duration: 4500 }); }, 400 + i * 1800);
     });
@@ -2520,6 +2857,12 @@
     const wasCivilian = (currentClass === 'CIVILIAN' || currentClass === null);
     currentClass = result.class;
     localStorage.setItem('hb_class', currentClass);
+    // Re-arm the morning digest so its title ("Awakened — Warrior") and
+    // its body (class-flavored copy) reflect the new class. This is
+    // best-effort and silent — it can no-op on web (Notif.reapplyDigest
+    // checks for the native plugin). Same goes for the 6 PM check-in.
+    try { Notif.reapplyDigest(); } catch (_) {}
+    try { Notif.reapplyCheckin(); } catch (_) {}
 
     if (!silent) {
       // First-time awakening (Civilian → any class) gets a special celebration.
@@ -2547,7 +2890,10 @@
     card.style.borderColor = cls.color + '60';
     card.style.boxShadow   = '0 0 48px ' + cls.color + '30';
     card.style.setProperty('--cp-color', cls.color);
-    document.getElementById('class-popup-emoji').textContent = cls.emoji;
+    // Class emoji replaced with custom emblem icon. Falls back to empty
+    // if the class id isn't mapped (no broken image).
+    const _cpKey = (typeof currentClass === 'string') ? currentClass : null;
+    document.getElementById('class-popup-emoji').innerHTML = classIconHtml(_cpKey, { size: 72 });
     document.getElementById('class-popup-name').textContent  = cls.name;
     document.getElementById('class-popup-desc').textContent  = cls.desc;
     popup.classList.remove('hidden');
@@ -3084,7 +3430,7 @@
     if (isMax) {
       card.classList.add('sl-maxed');
       card.style.boxShadow = '0 0 80px ' + stat.color + '60, 0 0 160px ' + stat.color + '18, 0 -6px 36px rgba(0,0,0,0.55)';
-      document.querySelector('.statlvl-label-top').textContent = '★  STAT MASTERED  ★';
+      document.querySelector('.statlvl-label-top').textContent = 'STAT MASTERED';
     } else {
       card.classList.remove('sl-maxed');
       card.style.boxShadow = '0 0 36px ' + stat.color + '40, 0 -6px 36px rgba(0,0,0,0.55)';
@@ -3105,7 +3451,7 @@
 
     const bonusEl = document.getElementById('statlvl-bonus');
     if (bonusPts) {
-      bonusEl.textContent = isMax ? '👑  MAX BONUS +' + bonusPts + ' XP AWARDED' : '★  BONUS +' + bonusPts + ' XP AWARDED';
+      bonusEl.textContent = isMax ? 'MAX BONUS +' + bonusPts + ' XP AWARDED' : 'BONUS +' + bonusPts + ' XP AWARDED';
       bonusEl.style.color = '#f59e0b';
       bonusEl.classList.remove('hidden');
       card.classList.add('sl-bonus-flash');
@@ -3174,7 +3520,12 @@
   function showAchievementPopup(ach) {
     const popup = document.getElementById('ach-popup');
     document.querySelector('.ach-popup-label').textContent = ach.label || 'ACHIEVEMENT UNLOCKED';
-    document.getElementById('ach-popup-icon').textContent = ach.icon;
+    // Use innerHTML + streakify so 🔥-keyed achievements ("Streak Hunter",
+    // "Compound Month") render the custom flame icon. Other achievement
+    // emojis pass through escaped via streakify.
+    // Achievement icon stripped — card identity comes from the title +
+    // colored ring instead of an emoji glyph. (Emoji-free pass.)
+    document.getElementById('ach-popup-icon').innerHTML = '';
     document.getElementById('ach-popup-name').textContent = ach.name;
     document.getElementById('ach-popup-desc').textContent = ach.desc;
     popup.classList.remove('hidden');
@@ -3757,7 +4108,8 @@
       const row = document.createElement('div');
       row.className = 'hg-ach-row' + (unlocked ? ' hg-ach-row--unlocked' : ' hg-ach-row--locked');
       row.innerHTML =
-        '<div class="hg-ach-icon">' + (unlocked ? ach.icon : '🔒') + '</div>' +
+        // Icon column dropped from achievement rows — emoji-free pass.
+        // Locked vs unlocked state is signaled by the row class only.
         '<div class="hg-ach-info">' +
           '<div class="hg-ach-name">' + esc(ach.name) + '</div>' +
           '<div class="hg-ach-desc">' + esc(ach.desc) + '</div>' +
@@ -3792,7 +4144,7 @@
     if (completedHabits.length) {
       listEl.innerHTML = completedHabits.map(h =>
         '<div class="day-popup-habit">' +
-          (h.emoji ? '<span class="day-popup-habit-emoji">' + h.emoji + '</span>' : '') +
+          ((getHabitIcon(h) || h.emoji) ? '<span class="day-popup-habit-emoji">' + habitIconHtml(h, { size: 22 }) + '</span>' : '') +
           '<span>' + esc(h.name) + '</span>' +
         '</div>'
       ).join('');
@@ -3890,7 +4242,297 @@
     const displayCount = (perfectStreak.lastDate === today || perfectStreak.lastDate === yesterday)
       ? perfectStreak.count : 0;
     el.className = 'perfect-streak-display' + (isPerfect ? ' ps-gold' : '');
-    el.innerHTML = '<span class="ps-fire">🔥</span><span class="ps-count">' + displayCount + '</span>';
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', 'View all streaks');
+    el.innerHTML = '<span class="ps-fire">' + streakIconHtml({ size: 18 }) + '</span><span class="ps-count">' + displayCount + '</span>';
+  }
+
+  // ── ALL STREAKS SHEET ────────────────────────────────────
+  // Opened by tapping the 🔥 streak pill in the header. Shows
+  // perfect-day streak, Morning Routine compound streak, Locked-In
+  // compound streak, and the user's chosen path — all info that
+  // previously lived as cluttered rows on the Status tab.
+  function openStreaksSheet() {
+    const body = document.getElementById('streaks-body');
+    if (!body) return;
+
+    const yesterday = prevDay(today);
+    const pdCount   = (perfectStreak.lastDate === today || perfectStreak.lastDate === yesterday)
+      ? perfectStreak.count : 0;
+    const pdBest    = Math.max(perfectStreak.count || 0, perfectStreak.prevCount || 0);
+
+    // Determine the displayed path. Locked-In is a SUPERSET of Morning
+    // Routine (10 MR habits + 6 extras), so if the user has an active
+    // Locked-In streak, that's the path they're actually walking. Show
+    // the highest-tier active pack:
+    //   1. Locked-In (if streak is active today/yesterday)
+    //   2. Morning Routine (if streak is active OR selectedPackId === 'morning')
+    //   3. Whatever selectedPackId points at (custom path, etc.)
+    let pathPackId = null;
+    const liStreak = compoundStreaks['locked-in'];
+    const mrStreak = compoundStreaks['morning'];
+    const liActive = liStreak && liStreak.streak > 0 &&
+                     (liStreak.lastDate === today || liStreak.lastDate === yesterday);
+    const mrActive = mrStreak && mrStreak.streak > 0 &&
+                     (mrStreak.lastDate === today || mrStreak.lastDate === yesterday);
+    if (liActive)                                pathPackId = 'locked-in';
+    else if (mrActive)                           pathPackId = 'morning';
+    else if (selectedPackId)                     pathPackId = selectedPackId;
+    const path = pathPackId && PACKS.find(p => p.id === pathPackId);
+
+    const compoundRows = BONUS_PACK_IDS
+      .filter(packId => {
+        const cs = compoundStreaks[packId];
+        return cs && (cs.streak > 0 || cs.lastDate);
+      })
+      .map(packId => {
+        const pack = getPackById(packId);
+        const cs   = compoundStreaks[packId] || {};
+        const live = (cs.lastDate === today || cs.lastDate === yesterday) ? (cs.streak || 0) : 0;
+        const accent = packId === 'locked-in' ? '#7c3aed' : '#f59e0b';
+        const iconHTML = packId === 'morning'   ? packIconHtml('morning',  { size: 32 }) :
+                         packId === 'locked-in' ? packIconHtml('lockedin', { size: 32 }) :
+                         iconify(packId === 'locked-in' ? '🔒' : '⚡', { size: 22 });
+        return (
+          '<div class="streaks-row" style="--row-accent:' + accent + '">' +
+            '<div class="streaks-row-icon">' + iconHTML + '</div>' +
+            '<div class="streaks-row-main">' +
+              '<div class="streaks-row-name">' + esc(pack.name) + '</div>' +
+              '<div class="streaks-row-sub">Compound bonus pack</div>' +
+            '</div>' +
+            '<div class="streaks-row-count">' +
+              '<span class="streaks-count-num">' + live + '</span>' +
+              '<span class="streaks-count-lbl">day' + (live === 1 ? '' : 's') + '</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+
+    let html = '';
+
+    // Perfect Day streak — always visible, even at 0
+    html +=
+      '<div class="streaks-row streaks-row--perfect" style="--row-accent:#fbbf24">' +
+        '<div class="streaks-row-icon">' + streakIconHtml({ size: 28 }) + '</div>' +
+        '<div class="streaks-row-main">' +
+          '<div class="streaks-row-name">Perfect Day Streak</div>' +
+          '<div class="streaks-row-sub">' +
+            (pdBest > pdCount ? ('Best: ' + pdBest + ' day' + (pdBest === 1 ? '' : 's')) : 'All habits, every day') +
+          '</div>' +
+        '</div>' +
+        '<div class="streaks-row-count">' +
+          '<span class="streaks-count-num">' + pdCount + '</span>' +
+          '<span class="streaks-count-lbl">day' + (pdCount === 1 ? '' : 's') + '</span>' +
+        '</div>' +
+      '</div>';
+
+    // Compound pack streaks (only if user has data for them)
+    if (compoundRows) html += compoundRows;
+
+    // Path indicator (subtle row at the bottom)
+    if (path) {
+      html +=
+        '<div class="streaks-path-row">' +
+          '<span class="streaks-path-dot" style="background:' + path.color + '"></span>' +
+          '<span class="streaks-path-label">Path: <strong>' + esc(path.name) + '</strong></span>' +
+        '</div>';
+    }
+
+    // Empty state — no streaks active and no path
+    if (pdCount === 0 && !compoundRows && !path) {
+      html =
+        '<div class="streaks-empty">' +
+          '<div class="streaks-empty-icon">' + streakIconHtml({ size: 56 }) + '</div>' +
+          '<div class="streaks-empty-title">No streaks yet.</div>' +
+          '<div class="streaks-empty-sub">Complete every habit scheduled for today to start a Perfect Day streak.</div>' +
+        '</div>';
+    }
+
+    body.innerHTML = html;
+    document.getElementById('streaks-overlay').classList.remove('hidden');
+    document.getElementById('streaks-sheet').classList.remove('hidden');
+  }
+
+  function closeStreaksSheet() {
+    document.getElementById('streaks-overlay').classList.add('hidden');
+    document.getElementById('streaks-sheet').classList.add('hidden');
+  }
+
+  function setupStreaksSheet() {
+    const overlay = document.getElementById('streaks-overlay');
+    const sheet   = document.getElementById('streaks-sheet');
+    const closeBtn = document.getElementById('streaks-close-btn');
+    if (!overlay || !sheet) return;
+
+    overlay.addEventListener('click', closeStreaksSheet);
+    if (closeBtn) closeBtn.addEventListener('click', closeStreaksSheet);
+
+    // Tap the 🔥 streak pill in the header to open the sheet.
+    const pill = document.getElementById('perfect-streak-display');
+    if (pill) {
+      pill.addEventListener('click', openStreaksSheet);
+      pill.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStreaksSheet(); }
+      });
+    }
+
+    // Swipe-down dismiss
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, closeStreaksSheet, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.streaks-drag-handle, .streaks-header',
+        scrollTarget:   '.streaks-body',
+      });
+    }
+
+    // ESC dismisses
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!sheet.classList.contains('hidden')) closeStreaksSheet();
+    });
+  }
+
+  // ── CLASS DETAIL SHEET ───────────────────────────────────
+  // Tap the class emblem on the Status tab → showcases the emblem at
+  // hero size + class info + linked stats + (if awakened) Chapter 2
+  // origin story excerpt. Provides the "tap to learn more" affordance
+  // for the class identity feature.
+  function openClassDetail(classKey) {
+    const cls = (typeof CLASSES === 'object') && CLASSES[classKey];
+    if (!cls) return;
+    const body = document.getElementById('class-detail-body');
+    if (!body) return;
+
+    // Linked stat list — for non-Sage classes, show the primary stat;
+    // for Sage, list all six. (Civilian gets a "no class yet" hint.)
+    let linkedStatsHTML = '';
+    if (classKey === 'CIVILIAN') {
+      linkedStatsHTML =
+        '<div class="cd-stats-label">UNAWAKENED</div>' +
+        '<div class="cd-stats-hint">Train any stat to Lv5 to find your path.</div>';
+    } else if (classKey === 'SAGE') {
+      const tiles = STATS.map(st =>
+        '<div class="cd-stat-tile" style="--cd-tile-color:' + st.color + '">' +
+          statIconHtml(st, { size: 22 }) +
+          '<span class="cd-stat-tile-label">' + esc(st.label) + '</span>' +
+        '</div>'
+      ).join('');
+      linkedStatsHTML =
+        '<div class="cd-stats-label">UNIFIES ALL SIX STATS</div>' +
+        '<div class="cd-stats-grid cd-stats-grid--six">' + tiles + '</div>';
+    } else {
+      const st = STATS.find(s => s.id === classKey);
+      if (st) {
+        const lv = (typeof statLevel === 'function')
+          ? statLevel((stats[st.id] && stats[st.id].pts) || 0)
+          : 0;
+        linkedStatsHTML =
+          '<div class="cd-stats-label">PRIMARY STAT</div>' +
+          '<div class="cd-stat-tile cd-stat-tile--single" style="--cd-tile-color:' + st.color + '">' +
+            statIconHtml(st, { size: 28 }) +
+            '<span class="cd-stat-tile-label">' + esc(st.label) + '</span>' +
+            '<span class="cd-stat-tile-lv">Lv.' + lv + '</span>' +
+          '</div>';
+      }
+    }
+
+    // Chapter 2 excerpt — only if the user has awakened into this exact class.
+    let chapterHTML = '';
+    if (classKey !== 'CIVILIAN' &&
+        originAwakening && originAwakening.text && originAwakening.classKey === classKey) {
+      chapterHTML =
+        '<div class="cd-chapter-section">' +
+          '<div class="cd-chapter-label">⚔️ THE AWAKENING'.replace('⚔️ ', '') +
+            (originAwakening.dateDisplay ? ' · ' + esc(originAwakening.dateDisplay) : '') +
+          '</div>' +
+          '<div class="cd-chapter-text">' + esc(originAwakening.text) + '</div>' +
+        '</div>';
+    }
+
+    body.innerHTML =
+      '<div class="cd-emblem-wrap" style="--cd-color:' + cls.color + '">' +
+        classIconHtml(classKey, { size: 144, eager: true }) +
+      '</div>' +
+      '<div class="cd-name" style="color:' + cls.color + '">' + esc(cls.name) + '</div>' +
+      '<div class="cd-desc">' + esc(cls.desc) + '</div>' +
+      '<div class="cd-stats-section">' + linkedStatsHTML + '</div>' +
+      chapterHTML;
+
+    document.getElementById('class-detail-overlay').classList.remove('hidden');
+    document.getElementById('class-detail-sheet').classList.remove('hidden');
+  }
+
+  function closeClassDetail() {
+    document.getElementById('class-detail-overlay').classList.add('hidden');
+    document.getElementById('class-detail-sheet').classList.add('hidden');
+  }
+
+  function setupClassDetail() {
+    const overlay  = document.getElementById('class-detail-overlay');
+    const sheet    = document.getElementById('class-detail-sheet');
+    const closeBtn = document.getElementById('class-detail-close-btn');
+    if (!overlay || !sheet) return;
+
+    overlay.addEventListener('click', closeClassDetail);
+    if (closeBtn) closeBtn.addEventListener('click', closeClassDetail);
+
+    // Delegated click on the entire class line (name + emblem). Every
+    // render of the Status hero rebuilds the line, so a body-level
+    // listener keeps it wired without re-attaching per render. Both the
+    // text and the emblem are valid tap targets.
+    document.addEventListener('click', (e) => {
+      const t = e.target && e.target.closest && e.target.closest('.sc-hero-class[data-class-key]');
+      if (!t) return;
+      e.stopPropagation();
+      const key = t.getAttribute('data-class-key') || currentClass;
+      openClassDetail(key);
+    });
+    // Keyboard activation — Enter / Space on the focused class line
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const t = document.activeElement;
+      if (!t || !t.classList || !t.classList.contains('sc-hero-class')) return;
+      e.preventDefault();
+      const key = t.getAttribute('data-class-key') || currentClass;
+      openClassDetail(key);
+    });
+
+    // Swipe-down dismiss
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, closeClassDetail, {
+        baseTransform:  'translateX(-50%) ',
+        handleSelector: '.class-detail-drag-handle, .class-detail-header',
+        scrollTarget:   '.class-detail-body',
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!sheet.classList.contains('hidden')) closeClassDetail();
+    });
+  }
+
+  // ── NOTIFICATION TAP ROUTING ─────────────────────────────
+  // When the user taps any notification (digest, check-in, per-habit
+  // reminder), we route them to the Habits tab. The Capacitor plugin
+  // emits 'localNotificationActionPerformed' with the notification's
+  // ID + payload — we listen once on init and switch tabs from there.
+  function setupNotifTapRouting() {
+    try {
+      const cap = window.Capacitor;
+      const plug = cap && cap.Plugins && cap.Plugins.LocalNotifications;
+      if (!plug || !plug.addListener) return;
+      plug.addListener('localNotificationActionPerformed', (event) => {
+        // Always route notification taps to the Habits tab. Easy mental
+        // model — tap any reminder, you land where you act on it.
+        try {
+          const targetTab = 'habits';
+          const btn = document.getElementById('tab-' + targetTab);
+          if (btn) btn.click();
+        } catch (_) {}
+      });
+    } catch (_) { /* native plugin not present (web preview) — no-op */ }
   }
 
   // ── PERFECT DAY SCREEN ────────────────────────────────────
@@ -3950,7 +4592,9 @@
     screen.classList.remove('hidden', 'pd-shake');
     void screen.offsetWidth;
 
-    emojiEl.textContent = ms.emoji;
+    // Milestone emoji stripped — celebration screen reads via title +
+    // subtitle + bonus XP only. (Emoji-free pass.)
+    emojiEl.innerHTML = '';
     subtEl.textContent  = ms.subtitle;
     bonusEl.textContent = '+' + ms.bonus + ' XP Bonus Awarded';
     bonusEl.style.color = ms.color;
@@ -4142,7 +4786,10 @@
     const catBreakdown = ACH_CATEGORIES.map(cat => {
       const inCat   = ACHIEVEMENTS.filter(a => a.category === cat.id);
       const haveCat = inCat.filter(a => unlockedAchievements.has(a.id)).length;
-      return '<span class="ach-cat-pill">' + esc(cat.label.split(' ')[0]) +
+      // First token of cat.label is the emoji ("🔥 Streaks" → "🔥").
+      // streakify swaps 🔥 for the flame icon; other category emojis
+      // pass through escaped.
+      return '<span class="ach-cat-pill">' + streakify(cat.label.split(' ')[0], 14) +
              ' <b>' + haveCat + '/' + inCat.length + '</b></span>';
     }).join('');
     top.innerHTML =
@@ -4186,7 +4833,7 @@
       sec.className = 'ach-section';
       const haveCount = inCat.filter(a => unlockedAchievements.has(a.id)).length;
       sec.innerHTML =
-        '<div class="ach-section-label">' + esc(cat.label) +
+        '<div class="ach-section-label">' + streakify(cat.label, 16) +
           '<span class="ach-section-count">' + haveCount + '/' + inCat.length + '</span>' +
         '</div>';
       sorted.forEach(ach => sec.appendChild(_buildAchCard(ach, ctx, false)));
@@ -4216,7 +4863,7 @@
     }
 
     card.innerHTML =
-      '<div class="ach-icon-wrap">' + ach.icon + '</div>' +
+      // Achievement icon dropped — emoji-free pass.
       '<div class="ach-text">' +
         '<div class="ach-name">' + esc(ach.name) + '</div>' +
         '<div class="ach-desc">' + esc(ach.desc) + '</div>' +
@@ -4420,11 +5067,15 @@
             '<div class="sc-hero-rank' + (isSPlus ? ' sc-gold' : '') + '">' +
               rank.label + ' · ' + totalPoints.toLocaleString() + ' pts' +
             '</div>' +
-            '<div class="sc-hero-class" style="color:' + cls.color + '">' +
-              // Civilian is the unawakened default — the standing-person
-              // emoji read as visually noisy and weakened the line. Once
-              // a real class is earned, its emoji stays (Warrior ⚔️ etc.).
-              (currentClass === 'CIVILIAN' ? '' : cls.emoji + ' ') + cls.name +
+            // Whole class line (name + emblem) is one tappable target —
+            // opens the Class Detail sheet. Inner emblem still has its
+            // own visual hover/press feedback, but tapping the name
+            // works equivalently.
+            '<div class="sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
+              '<span class="sc-hero-class-name">' + esc(cls.name) + '</span>' +
+              ' <span class="sc-class-emblem-btn">' +
+                classIconHtml(currentClass, { size: 36 }) +
+              '</span>' +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
             // 'Your Origin' — visible whenever we have at least Chapter 1.
@@ -4435,8 +5086,10 @@
                 '</button>'
               : '') +
             (shifting ? '<div class="sc-shifting" style="margin-top:4px">⚠️ Your class is shifting...</div>' : '') +
-            (selectedPackId && PACKS.find(p => p.id === selectedPackId) ? '<div class="sc-hero-path"><span class="sc-path-dot" style="background:' + PACKS.find(p => p.id === selectedPackId).color + '"></span>Path: ' + esc(PACKS.find(p => p.id === selectedPackId).name) + '</div>' : '') +
-            buildCompoundBadgesHTML() +
+            // Path badge + compound streak badges (Morning Routine / Locked-In)
+            // were removed from the Status hero in v1.1.4 — that information
+            // now lives in the "All Streaks" sheet, accessible by tapping the
+            // 🔥 streak pill in the app header.
           '</div>' +
         '</div>' +
         '<div class="sc-divider"></div>' +
@@ -4493,6 +5146,8 @@
       const commit = () => {
         playerName = input.value.trim() || 'Hunter';
         localStorage.setItem('hb_name', playerName);
+        // Re-arm the digest so the new name appears in tomorrow's notification.
+        try { Notif.reapplyDigest(); } catch (_) {}
         renderStatus();
       };
       editBtn.onclick = commit;
@@ -4634,14 +5289,17 @@
     // No Alcohol weekend challenge badge
     const isNoAlcohol   = habit.name === 'No alcohol';
     const naBadge       = isNoAlcohol ? getNoAlcoholBadge() : null;
+    // streakify the badge text so the "Day 2 of 3" variant uses the
+    // custom flame icon. Other badges (🏆 💰 ✅) pass through escaped.
     const naBadgeHTML   = naBadge
-      ? '<div class="na-challenge-badge ' + naBadge.cls + '">' + naBadge.text + '</div>'
+      ? '<div class="na-challenge-badge ' + naBadge.cls + '">' + streakify(naBadge.text, 14) + '</div>'
       : '';
 
-    // XP badge — ⚡+N XP (gold), ⚡+N XP 2× on weekends
+    // XP badge — ⚡+N XP (gold), ⚡+N XP 2× on weekends. The lightning
+    // icon is sized small to sit cleanly next to the +N XP text.
     const xpBadge = wknd
-      ? '<span class="habit-xp weekend">⚡+' + xpVal + ' XP <span class="xp-2x">2×</span></span>'
-      : '<span class="habit-xp">⚡+' + xpVal + ' XP</span>';
+      ? '<span class="habit-xp weekend">' + xpIconHtml({ size: 14 }) + '+' + xpVal + ' XP <span class="xp-2x">2×</span></span>'
+      : '<span class="habit-xp">' + xpIconHtml({ size: 14 }) + '+' + xpVal + ' XP</span>';
 
     const li = document.createElement('li');
     li.className = 'habit-item' + (done ? ' completed' : '');
@@ -4653,15 +5311,20 @@
       // Top row: streak badge (left) + check circle (right)
       '<div class="hg-top">' +
         '<div class="streak-badge' + (count > 0 ? ' active' : '') + '">' +
-          (count > 0 ? '<span class="streak-fire">🔥</span>' + count : '') +
+          (count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '') +
         '</div>' +
         '<div class="habit-cb' + (done ? ' checked' : '') + '">' +
           '<span class="check-mark">✓</span>' +
         '</div>' +
       '</div>' +
-      // Emoji centered
+      // Emoji / habit icon centered. Curated habits with mapped art
+      // render as <img>; everything else (unmapped curated + custom)
+      // falls back to the emoji glyph. The icon is sized larger than
+      // an emoji so the DALL-E detail reads at habit-card scale.
       '<div class="hg-emoji-wrap">' +
-        (habit.emoji ? '<span class="habit-emoji">' + habit.emoji + '</span>' : '') +
+        (getHabitIcon(habit)
+          ? '<span class="habit-emoji">' + habitIconHtml(habit, { size: 72 }) + '</span>'
+          : (habit.emoji ? '<span class="habit-emoji">' + habit.emoji + '</span>' : '')) +
       '</div>' +
       // Name (2-line clamp)
       '<span class="habit-name">' + habitDisplayHTML(habit) + '</span>' +
@@ -4715,18 +5378,24 @@
   //                it dismisses the toast and runs the callback.
   // opts.cta     — optional CTA label appended (default: '→')
   // opts.duration — ms before auto-dismiss (default: 2200; 4000 if tappable)
+  // opts.sticky  — if true, NO auto-dismiss timer. Toast stays until the
+  //                user taps it. Useful for important confirmations the
+  //                user shouldn't miss (e.g., "✓ Reminder set for 9 AM").
   function showHabitToast(msg, opts) {
     opts = opts || {};
     document.querySelectorAll('.habit-toast').forEach(t => t.remove());
     const toast = document.createElement('div');
-    const isTap = typeof opts.onTap === 'function';
-    toast.className = 'habit-toast' + (isTap ? ' habit-toast--tappable' : '');
-    if (isTap) {
+    const isTap   = typeof opts.onTap === 'function';
+    const sticky  = !!opts.sticky;
+    // Sticky toasts are always tap-dismissable, even without an onTap callback.
+    const tappable = isTap || sticky;
+    toast.className = 'habit-toast' + (tappable ? ' habit-toast--tappable' : '');
+    if (tappable) {
       toast.setAttribute('role', 'button');
       toast.setAttribute('tabindex', '0');
       toast.innerHTML =
         '<span class="ht-msg">' + esc(msg) + '</span>' +
-        '<span class="ht-cta">' + esc(opts.cta || '→') + '</span>';
+        '<span class="ht-cta">' + esc(opts.cta || (isTap ? '→' : '✕')) + '</span>';
     } else {
       toast.textContent = msg;
     }
@@ -4737,23 +5406,328 @@
       toast.classList.remove('habit-toast--visible');
       setTimeout(() => toast.remove(), 300);
     };
-    const dismissTimer = setTimeout(dismiss, opts.duration || (isTap ? 4000 : 2200));
+    // Sticky → no timer. Tappable (with onTap) → 4s default. Plain → 2.2s.
+    const dismissTimer = sticky
+      ? null
+      : setTimeout(dismiss, opts.duration || (isTap ? 4000 : 2200));
 
-    if (isTap) {
+    if (tappable) {
       toast.addEventListener('click', () => {
-        clearTimeout(dismissTimer);
+        if (dismissTimer) clearTimeout(dismissTimer);
         dismiss();
-        try { opts.onTap(); } catch (_) {}
+        if (isTap) { try { opts.onTap(); } catch (_) {} }
       });
       toast.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          clearTimeout(dismissTimer);
+          if (dismissTimer) clearTimeout(dismissTimer);
           dismiss();
-          try { opts.onTap(); } catch (_) {}
+          if (isTap) { try { opts.onTap(); } catch (_) {} }
         }
       });
     }
+  }
+
+  // ── REMINDER-CONFIRM TOAST ──────────────────────────────
+  // Sticky toast with an inline-editable time chip. Tapping the time
+  // opens the native iOS time picker; on change, the digest is
+  // rescheduled and the chip updates in place. Tap the ✕ to dismiss.
+  // Used right after the user enables the daily morning reminder so
+  // they can adjust it without navigating to Settings.
+  function showReminderConfirmToast(initialTime) {
+    document.querySelectorAll('.habit-toast').forEach(t => t.remove());
+
+    function fmt(t) {
+      const [hStr, mStr] = (t || '09:00').split(':');
+      const h  = parseInt(hStr, 10);
+      const m  = parseInt(mStr, 10) || 0;
+      const pm = h >= 12;
+      const h12 = ((h % 12) || 12);
+      return h12 + ':' + String(m).padStart(2, '0') + ' ' + (pm ? 'PM' : 'AM');
+    }
+
+    // Parse the initial time into hour (24h) and minute components.
+    let curH = 9, curM = 0;
+    {
+      const parts = (initialTime || '09:00').split(':');
+      curH = parseInt(parts[0], 10) || 0;
+      curM = parseInt(parts[1], 10) || 0;
+      // snap to 15-min grid if upstream value drifted
+      curM = Math.round(curM / 15) * 15;
+      if (curM === 60) { curH = (curH + 1) % 24; curM = 0; }
+    }
+
+    // Build hour column. The list is rotated to start at 5 AM (a sensible
+    // morning anchor for a "morning reminder") and wraps through midnight
+    // back to 4 AM. So the order is: 5 AM, 6 AM, ..., 11 PM, 12 AM, 1 AM,
+    // 2 AM, 3 AM, 4 AM. The default 9 AM still sits a few rows down.
+    // Minute column (4 entries: 00 / 15 / 30 / 45) is independent.
+    const HOUR_START = 5;
+    const hourLabel = (h) => {
+      const pm = h >= 12;
+      const h12 = ((h % 12) || 12);
+      return h12 + (pm ? ' PM' : ' AM');
+    };
+    const hoursHTML = Array.from({ length: 24 }, (_, i) => {
+      const h = (HOUR_START + i) % 24;
+      return '<button type="button" class="ht-rem-slot' +
+        (h === curH ? ' ht-rem-slot--active' : '') +
+        '" data-h="' + h + '">' + esc(hourLabel(h)) + '</button>';
+    }).join('');
+    const minutesHTML = [0, 15, 30, 45].map(m =>
+      '<button type="button" class="ht-rem-slot' +
+        (m === curM ? ' ht-rem-slot--active' : '') +
+      '" data-m="' + m + '">' + String(m).padStart(2, '0') + '</button>'
+    ).join('');
+
+    // Toast is the visible pill. Popup is a SIBLING (also position: fixed)
+    // anchored above the toast — putting them in separate fixed containers
+    // sidesteps any clipping/stacking issues from nested elements.
+    const toast = document.createElement('div');
+    toast.className = 'habit-toast habit-toast--tappable habit-toast--reminder';
+    toast.setAttribute('role', 'button');
+    toast.setAttribute('tabindex', '0');
+    toast.setAttribute('aria-label', 'Change reminder time');
+    toast.innerHTML =
+      '<span class="ht-msg">' +
+        '✓ Reminder set for ' +
+        '<span class="ht-rem-time">' + esc(fmt(initialTime)) + '</span>' +
+      '</span>' +
+      '<span class="ht-cta ht-rem-dismiss" role="button" aria-label="Dismiss">✕</span>';
+
+    const popup = document.createElement('div');
+    popup.className = 'ht-rem-popup hidden';
+    popup.innerHTML =
+      '<div class="ht-rem-col ht-rem-col--hours" data-col="h">' + hoursHTML + '</div>' +
+      '<div class="ht-rem-col-divider"></div>' +
+      '<div class="ht-rem-col ht-rem-col--mins"  data-col="m">' + minutesHTML + '</div>';
+
+    // Append both as siblings to body so they're in the root stacking
+    // context — no risk of being clipped or hidden by intermediate
+    // overlays (e.g. the Beginning reveal screen).
+    document.body.appendChild(toast);
+    document.body.appendChild(popup);
+    requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('habit-toast--visible')));
+
+    const timeChip   = toast.querySelector('.ht-rem-time');
+    const dismissBtn = toast.querySelector('.ht-rem-dismiss');
+
+    const cleanup = () => { toast.remove(); popup.remove(); };
+    const dismiss = () => {
+      toast.classList.remove('habit-toast--visible');
+      popup.classList.add('hidden');
+      setTimeout(cleanup, 300);
+    };
+
+    const openPopup = () => {
+      popup.classList.remove('hidden');
+      // For each column: leave scrollTop at 0 if the active item is
+      // already visible in the first viewport-worth of entries. Only
+      // scroll if the active item is below the visible window. This
+      // matches the spec: opening the picker shows 5 AM → 9 AM (default)
+      // with no scroll needed; if the user has selected a later hour
+      // and reopens, we scroll just enough to bring it into view.
+      popup.querySelectorAll('.ht-rem-col').forEach(col => {
+        const active = col.querySelector('.ht-rem-slot--active');
+        if (!active) { col.scrollTop = 0; return; }
+        const activeBottom = active.offsetTop + active.offsetHeight;
+        if (activeBottom <= col.clientHeight) {
+          col.scrollTop = 0;        // active is in the first viewport
+        } else {
+          // Place the active at the bottom of the visible area so the
+          // user sees the items leading up to it (matches the
+          // "9 AM at the bottom of 5/6/7/8/9" feel from the spec).
+          col.scrollTop = activeBottom - col.clientHeight;
+        }
+      });
+    };
+    const closePopup = () => popup.classList.add('hidden');
+    const isPopupOpen = () => !popup.classList.contains('hidden');
+
+    // Helper: build "HH:MM" 24h string from current state, snapping minutes.
+    const buildT = () => {
+      const m = Math.round(curM / 15) * 15;
+      const h = (m === 60) ? (curH + 1) % 24 : curH;
+      const mm = (m === 60) ? 0 : m;
+      return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    };
+
+    const applyTime = async () => {
+      const newT = buildT();
+      timeChip.textContent = fmt(newT);
+      try { await Notif.setDailyDigest(newT); } catch (_) {}
+      try { if (typeof refreshRemindersPanel === 'function') refreshRemindersPanel(); } catch (_) {}
+    };
+
+    // Column click: pick a value in that column. Other column stays put.
+    popup.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const slot = e.target.closest('.ht-rem-slot');
+      if (!slot) return;
+      const col = slot.closest('.ht-rem-col');
+      if (!col) return;
+      // Update the active highlight within the column
+      col.querySelectorAll('.ht-rem-slot').forEach(s => s.classList.remove('ht-rem-slot--active'));
+      slot.classList.add('ht-rem-slot--active');
+      // Update the corresponding state value
+      if (col.dataset.col === 'h') curH = parseInt(slot.dataset.h, 10);
+      else                          curM = parseInt(slot.dataset.m, 10);
+      await applyTime();
+    });
+
+    // Toast-level click: toggle the popup, except for ✕ which dismisses.
+    // stopPropagation so taps don't bubble to a parent overlay (e.g. the
+    // Beginning reveal listens for taps to advance).
+    toast.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.target.closest('.ht-rem-dismiss')) {
+        dismiss();
+      } else {
+        isPopupOpen() ? closePopup() : openPopup();
+      }
+    });
+    toast.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target.closest('.ht-rem-dismiss')) {
+        e.preventDefault();
+        dismiss();
+      } else if (e.target === toast) {
+        e.preventDefault();
+        isPopupOpen() ? closePopup() : openPopup();
+      }
+    });
+
+    // Tap outside closes the popup (but doesn't dismiss the toast).
+    document.addEventListener('click', (e) => {
+      if (popup.classList.contains('hidden')) return;
+      if (e.target.closest('.habit-toast--reminder')) return;
+      if (e.target.closest('.ht-rem-popup')) return;
+      closePopup();
+    });
+  }
+
+  // ── DIGEST TIME PICKER (centered modal) ─────────────────
+  // Same two-column UI as the post-onboarding toast picker (hour rotated
+  // to 5 AM start, minutes locked to 15-min increments) but presented as
+  // a centered card with a dark backdrop. Used by Settings → Daily
+  // morning reminder so the platform-native time wheel is bypassed
+  // entirely. Calls onPick(newTime) whenever the user picks any slot.
+  function openDigestTimePickerModal(initialTime, onPick) {
+    function fmt(t) {
+      const [hStr, mStr] = (t || '09:00').split(':');
+      const h  = parseInt(hStr, 10);
+      const m  = parseInt(mStr, 10) || 0;
+      const pm = h >= 12;
+      const h12 = ((h % 12) || 12);
+      return h12 + ':' + String(m).padStart(2, '0') + ' ' + (pm ? 'PM' : 'AM');
+    }
+
+    let curH = 9, curM = 0;
+    {
+      const parts = (initialTime || '09:00').split(':');
+      curH = parseInt(parts[0], 10) || 0;
+      curM = parseInt(parts[1], 10) || 0;
+      curM = Math.round(curM / 15) * 15;
+      if (curM === 60) { curH = (curH + 1) % 24; curM = 0; }
+    }
+
+    const HOUR_START = 5;
+    const hourLabel = (h) => {
+      const pm = h >= 12;
+      const h12 = ((h % 12) || 12);
+      return h12 + (pm ? ' PM' : ' AM');
+    };
+    const hoursHTML = Array.from({ length: 24 }, (_, i) => {
+      const h = (HOUR_START + i) % 24;
+      return '<button type="button" class="ht-rem-slot' +
+        (h === curH ? ' ht-rem-slot--active' : '') +
+        '" data-h="' + h + '">' + esc(hourLabel(h)) + '</button>';
+    }).join('');
+    const minutesHTML = [0, 15, 30, 45].map(m =>
+      '<button type="button" class="ht-rem-slot' +
+        (m === curM ? ' ht-rem-slot--active' : '') +
+      '" data-m="' + m + '">' + String(m).padStart(2, '0') + '</button>'
+    ).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'digest-picker-overlay';
+    overlay.innerHTML =
+      '<div class="digest-picker-card" role="dialog" aria-label="Pick reminder time">' +
+        '<div class="digest-picker-title">Daily Morning Reminder</div>' +
+        '<div class="digest-picker-current">' + esc(fmt(initialTime || '09:00')) + '</div>' +
+        '<div class="ht-rem-popup digest-picker-cols">' +
+          '<div class="ht-rem-col ht-rem-col--hours" data-col="h">' + hoursHTML + '</div>' +
+          '<div class="ht-rem-col-divider"></div>' +
+          '<div class="ht-rem-col ht-rem-col--mins"  data-col="m">' + minutesHTML + '</div>' +
+        '</div>' +
+        '<div class="digest-picker-actions">' +
+          '<button class="digest-picker-done" type="button">Done</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('digest-picker-overlay--visible'));
+
+    // Auto-scroll each column the same way the toast picker does:
+    // active item visible at the bottom of the first viewport.
+    overlay.querySelectorAll('.ht-rem-col').forEach(col => {
+      const active = col.querySelector('.ht-rem-slot--active');
+      if (!active) { col.scrollTop = 0; return; }
+      const activeBottom = active.offsetTop + active.offsetHeight;
+      if (activeBottom <= col.clientHeight) {
+        col.scrollTop = 0;
+      } else {
+        col.scrollTop = activeBottom - col.clientHeight;
+      }
+    });
+
+    const close = () => {
+      overlay.classList.remove('digest-picker-overlay--visible');
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    const buildT = () => {
+      const m = Math.round(curM / 15) * 15;
+      const h = (m === 60) ? (curH + 1) % 24 : curH;
+      const mm = (m === 60) ? 0 : m;
+      return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    };
+
+    overlay.querySelector('.digest-picker-cols').addEventListener('click', (e) => {
+      const slot = e.target.closest('.ht-rem-slot');
+      if (!slot) return;
+      const col = slot.closest('.ht-rem-col');
+      if (!col) return;
+      col.querySelectorAll('.ht-rem-slot').forEach(s => s.classList.remove('ht-rem-slot--active'));
+      slot.classList.add('ht-rem-slot--active');
+      if (col.dataset.col === 'h') curH = parseInt(slot.dataset.h, 10);
+      else                          curM = parseInt(slot.dataset.m, 10);
+      // Live update the "current selection" display
+      const cur = overlay.querySelector('.digest-picker-current');
+      if (cur) cur.textContent = fmt(buildT());
+      // Apply immediately so the digest reschedules without waiting for Done.
+      try { onPick && onPick(buildT()); } catch (_) {}
+    });
+
+    // Done commits the current selection AND closes. This ensures that
+    // when the user opens the picker, doesn't change anything (the default
+    // is already what they want), and taps Done — the time still saves.
+    // Without this, opening fresh + tapping Done would never call onPick
+    // and the per-habit reminder would never be created.
+    overlay.querySelector('.digest-picker-done').addEventListener('click', () => {
+      try { onPick && onPick(buildT()); } catch (_) {}
+      close();
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();      // backdrop tap dismisses
+    });
+
+    // ESC dismisses
+    const onKey = (e) => {
+      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
   }
 
   // ── SOUND PREFERENCE ─────────────────────────────────────
@@ -5381,7 +6355,7 @@
       const h = habits.find(x => x.id === id);
       return sum + (h ? diffPts(h.difficulty) : 0);
     }, 0);
-    xpEl.textContent = '+' + todayXP + ' XP earned today ⚡';
+    xpEl.innerHTML = iconify('+' + todayXP + ' XP earned today ⚡', { size: 16 });
 
     // Confetti canvas
     canvas.width  = window.innerWidth;
@@ -5485,7 +6459,7 @@
       const xpAmt = habit ? diffPts(habit.difficulty) : 0;
       const xpFloat = document.createElement('span');
       xpFloat.className = 'xp-float';
-      xpFloat.textContent = '⚡+' + xpAmt + ' XP' + (isWeekend() ? ' 2×' : '');
+      xpFloat.innerHTML = iconify('⚡+' + xpAmt + ' XP' + (isWeekend() ? ' 2×' : ''), { size: 14 });
       li.appendChild(xpFloat);
       xpFloat.addEventListener('animationend', () => xpFloat.remove(), { once: true });
 
@@ -5520,7 +6494,7 @@
     const count = getStreak(id);
     const badge = li.querySelector('.streak-badge');
     badge.className = 'streak-badge' + (count > 0 ? ' active' : '');
-    badge.innerHTML = count > 0 ? '<span class="streak-fire">🔥</span>' + count : '—';
+    badge.innerHTML = count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '—';
     if (!wasDone && count > 0) {
       void badge.offsetWidth;
       badge.classList.add('pop');
@@ -5662,7 +6636,14 @@
       card.classList.remove('mr-card--morning', 'mr-card--lockedin');
       card.classList.add(packId === 'locked-in' ? 'mr-card--lockedin' : 'mr-card--morning');
     }
-    if (iconEl)     iconEl.textContent     = pack.emoji;
+    // Use the custom pack PNG if we have one for this pack id, else
+    // fall back to iconify on the raw pack.emoji.
+    if (iconEl) {
+      const pkPng = packId === 'morning'   ? packIconHtml('morning',  { size: 44 }) :
+                    packId === 'locked-in' ? packIconHtml('lockedin', { size: 44 }) :
+                    null;
+      iconEl.innerHTML = pkPng || iconify(pack.emoji, { size: 32 });
+    }
     if (titleEl)    titleEl.textContent    = 'Add ' + pack.name + '?';
     if (subtitleEl) {
       subtitleEl.textContent = packId === 'locked-in'
@@ -5680,7 +6661,7 @@
       const row  = document.createElement('div');
       row.className = 'mr-row' + (have ? ' mr-row--have' : '');
       row.innerHTML =
-        '<span class="mr-row-emoji">' + def.emoji + '</span>' +
+        '<span class="mr-row-emoji">' + habitIconHtml(def, { size: 20 }) + '</span>' +
         '<span class="mr-row-name">' + esc(def.name) + '</span>' +
         '<span class="mr-row-tag">' + (have ? '✓ Already added' : '+ Will add') + '</span>';
       list.appendChild(row);
@@ -5784,6 +6765,9 @@
     renderHabits();
     renderLibrary();
     closeCustomHabitModal();
+    // Per-habit reminder offers were removed in v1.1.3 — Awakened sends
+    // ONE morning digest by default, no per-habit prompts. Power users
+    // can still set per-habit reminders via Edit Habit.
   }
 
   function setupCustomHabitModal() {
@@ -5821,6 +6805,7 @@
     // Add in canonical pack order, preserving each habit's defaults.
     // Dedup: getMissingPackHabits already filtered to absent names.
     // Existing streaks/progress on existing entries remain untouched.
+    const _justAdded = [];
     missing.forEach(def => {
       const newH = {
         id:          uid(),
@@ -5831,6 +6816,7 @@
         primaryStat: def.primaryStat,
       };
       habits.push(newH);
+      _justAdded.push(newH);
       if (def.note) habitNotes[newH.id] = def.note;
     });
     save();
@@ -5849,6 +6835,21 @@
     updateLockedInButtonVisibility();
     updateLockedInButtonVisibility();
     showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
+
+    // Auto-trigger the notification prompt when a pack is added and the
+    // user hasn't been asked yet. Pack-based paths (Morning Routine,
+    // Locked-In) are committing to a daily routine — a single morning
+    // reminder is the most useful default for them. Fired as a follow-up
+    // to the toast (not blocking the pack-add) so the moment feels
+    // natural: "you committed → here's what we suggest."
+    const isReminderable = (packId === 'morning' || packId === 'locked-in');
+    if (isReminderable) {
+      try {
+        if (Notif && Notif.permAskedBefore && !Notif.permAskedBefore()) {
+          setTimeout(() => runOnboardingNotifPrompt(() => {}), 600);
+        }
+      } catch (_) {}
+    }
   }
 
   // Backward-compat alias for existing wiring
@@ -5886,10 +6887,10 @@
     mrEntry.className = 'lib-pack-entry';
     const mrMissing = getMissingMorningHabits().length;
     mrEntry.innerHTML =
-      '<span class="lib-pack-emoji">🌅</span>' +
+      '<span class="lib-pack-emoji">' + packIconHtml('morning', { size: 44 }) + '</span>' +
       '<span class="lib-pack-text">' +
         '<span class="lib-pack-title">Morning Routine ' +
-          '<span class="lib-pack-bolt" data-bonus-info aria-label="About the Compound Effect Bonus" role="button" tabindex="0">⚡</span>' +
+          '<span class="lib-pack-bolt" data-bonus-info aria-label="About the Compound Effect Bonus" role="button" tabindex="0">' + xpIconHtml({ size: 14 }) + '</span>' +
         '</span>' +
         '<span class="lib-pack-sub">Complete 10-habit starter pack</span>' +
       '</span>' +
@@ -5906,10 +6907,10 @@
     liEntry.className = 'lib-pack-entry lib-pack-entry--lockedin';
     const liMissing = getMissingPackHabits('locked-in').length;
     liEntry.innerHTML =
-      '<span class="lib-pack-emoji">🔒</span>' +
+      '<span class="lib-pack-emoji">' + packIconHtml('lockedin', { size: 44 }) + '</span>' +
       '<span class="lib-pack-text">' +
         '<span class="lib-pack-title">Locked-In ' +
-          '<span class="lib-pack-bolt" aria-label="Locked-In Bonus">⚡</span>' +
+          '<span class="lib-pack-bolt" aria-label="Locked-In Bonus">' + xpIconHtml({ size: 14 }) + '</span>' +
         '</span>' +
         '<span class="lib-pack-sub">Master the full discipline cycle.</span>' +
       '</span>' +
@@ -5928,7 +6929,7 @@
     const customEntry    = document.createElement('div');
     customEntry.className = 'lib-pack-entry lib-pack-entry--custom';
     customEntry.innerHTML =
-      '<span class="lib-pack-emoji">⚡</span>' +
+      '<span class="lib-pack-emoji">' + packIconHtml('custom', { size: 44 }) + '</span>' +
       '<span class="lib-pack-text">' +
         '<span class="lib-pack-title">Create Your Own</span>' +
         '<span class="lib-pack-sub">' +
@@ -6001,7 +7002,7 @@
         const card = document.createElement('div');
         card.className = 'lib-card';
         card.innerHTML =
-          '<span class="ob-card-emoji">' + h.emoji + '</span>' +
+          '<span class="ob-card-emoji">' + habitIconHtml(h, { size: 24 }) + '</span>' +
           '<span class="ob-card-name">' + esc(h.name) + '</span>' +
           '<span class="diff-badge ' + h.difficulty + '">' + DIFFICULTY[h.difficulty].label + '</span>' +
           '<span class="lib-card-add">›</span>';
@@ -6098,7 +7099,7 @@
       hdr.innerHTML =
         '<button class="hd-back-btn" id="hd-back" aria-label="Back">←</button>' +
         '<div class="hd-header-info">' +
-          '<span class="hd-header-emoji">' + h.emoji + '</span>' +
+          '<span class="hd-header-emoji">' + habitIconHtml(h, { size: 28 }) + '</span>' +
           '<span class="hd-header-name">' + esc(h.name) + '</span>' +
         '</div>';
       content.appendChild(hdr);
@@ -6247,7 +7248,7 @@
       badge.textContent = DIFFICULTY[hdDiff].label;
       const xpNote = document.createElement('div');
       xpNote.className = 'hd-xp-note';
-      xpNote.textContent = '⚡ +' + DIFFICULTY[hdDiff].pts + ' XP per completion';
+      xpNote.innerHTML = iconify('⚡ +' + DIFFICULTY[hdDiff].pts + ' XP per completion', { size: 14 });
       diffRow.appendChild(badge);
       diffCard.append(diffRow, xpNote);
       body.appendChild(diffCard);
@@ -6403,8 +7404,34 @@
     schedFormDays = habit?.days ? [...habit.days] : [...ALL_DAYS];
     setActiveDays('sched-days-row', schedFormDays);
     syncSchedPresets();
+    refreshSchedReminderUI();
     document.getElementById('sched-overlay').classList.remove('hidden');
     document.getElementById('sched-sheet').classList.remove('hidden');
+  }
+
+  // Sync the Reminder row in the Schedule sheet to the habit's current
+  // per-habit reminder state. Called on open + after change/clear.
+  function refreshSchedReminderUI() {
+    const btn   = document.getElementById('sched-reminder-btn');
+    const clear = document.getElementById('sched-reminder-clear');
+    if (!btn || !clear || !schedHabitId) return;
+    let time = null;
+    try { time = (Notif.reminderFor && Notif.reminderFor(schedHabitId)) || null; } catch (_) {}
+    if (time) {
+      const [hStr, mStr] = time.split(':');
+      const h  = parseInt(hStr, 10) || 0;
+      const m  = parseInt(mStr, 10) || 0;
+      const pm = h >= 12;
+      const h12 = ((h % 12) || 12);
+      const label = h12 + ':' + String(m).padStart(2, '0') + ' ' + (pm ? 'PM' : 'AM');
+      btn.textContent  = '⏰ ' + label;
+      btn.classList.add('sched-reminder-btn--set');
+      clear.classList.remove('hidden');
+    } else {
+      btn.textContent  = '+ Add reminder';
+      btn.classList.remove('sched-reminder-btn--set');
+      clear.classList.add('hidden');
+    }
   }
 
   function closeSchedulePicker() {
@@ -6462,6 +7489,33 @@
         syncSchedPresets();
       });
     });
+
+    // Per-habit reminder controls. The button opens the same custom
+    // hour + 15-min minute picker used by Settings. The Remove button
+    // clears the reminder and is hidden when none is set.
+    const remBtn   = document.getElementById('sched-reminder-btn');
+    const remClear = document.getElementById('sched-reminder-clear');
+    if (remBtn) {
+      remBtn.addEventListener('click', () => {
+        if (!schedHabitId) return;
+        const habit = habits.find(h => h.id === schedHabitId);
+        const current = (Notif.reminderFor && Notif.reminderFor(schedHabitId))
+          || (typeof defaultReminderTimeFor === 'function' ? defaultReminderTimeFor(habit) : '07:00');
+        openDigestTimePickerModal(current, async (newT) => {
+          try { await Notif.setReminder(schedHabitId, newT); } catch (_) {}
+          refreshSchedReminderUI();
+          if (typeof refreshRemindersPanel === 'function') refreshRemindersPanel();
+        });
+      });
+    }
+    if (remClear) {
+      remClear.addEventListener('click', async () => {
+        if (!schedHabitId) return;
+        try { await Notif.clearReminder(schedHabitId); } catch (_) {}
+        refreshSchedReminderUI();
+        if (typeof refreshRemindersPanel === 'function') refreshRemindersPanel();
+      });
+    }
   }
 
   // ── CONTEXT MENU ─────────────────────────────────────────
@@ -6623,13 +7677,13 @@
 
     // Pack-specific copy
     const labelEl = document.getElementById('cp-label');
-    if (labelEl) labelEl.textContent = pack.bonusLabel || '⚡ COMPOUND EFFECT BONUS';
+    if (labelEl) labelEl.innerHTML = iconify(pack.bonusLabel || '⚡ COMPOUND EFFECT BONUS', { size: 22 });
     document.getElementById('cp-pack-msg').textContent =
       isLockedIn
         ? 'All 16 habits complete. You owned the day.'
         : 'All ' + pack.name + ' habits complete!';
     document.getElementById('cp-xp').textContent     = '+' + xp + ' XP' + (doubled ? ' 2×' : '');
-    document.getElementById('cp-streak').textContent = 'Day ' + streak + ' in a row 🔥';
+    document.getElementById('cp-streak').innerHTML = streakify('Day ' + streak + ' in a row 🔥', 18);
     document.getElementById('cp-motivation').textContent = getCompoundMotivation(streak);
 
     const el = document.getElementById('compound-popup');
@@ -6732,7 +7786,9 @@
         ch2Badge.style.color       = cls.color;
         ch2Badge.style.borderColor = cls.color + '60';
         ch2Badge.style.background  = cls.color + '14';
-        ch2Badge.innerHTML = '<span>' + cls.emoji + '</span><span>' + esc(cls.name) + '</span>';
+        // Class emblem + name — Chapter 2 badge in the Origin sheet.
+        const _ch2Key = (originAwakening && originAwakening.classKey) || null;
+        ch2Badge.innerHTML = classIconHtml(_ch2Key, { size: 18 }) + '<span>' + esc(cls.name) + '</span>';
         ch2Badge.classList.remove('hidden');
       }
       if (ch2Text)  { ch2Text.textContent  = originAwakening.text; ch2Text.classList.remove('hidden'); }
@@ -7261,7 +8317,7 @@
     wrap.classList.remove('hidden');
 
     // ── Compact toggle row (always visible) ────────────────
-    const eyebrow = allComplete ? '✓ DAILY QUEST' : '⚔️ DAILY QUEST';
+    const eyebrow = allComplete ? 'DAILY QUEST · COMPLETE' : 'DAILY QUEST';
     const status  = allComplete ? '✓ Complete' : doneCount + '/' + total;
     const chev    = _dailyMissionExpanded ? '▾' : '▸';
 
@@ -7513,13 +8569,20 @@
       return '<div class="cp-prog-row' + cls + (hasMissing ? ' cp-prog-row--addable' : '') +
                   '" data-pack-add="' + esc(packId) + '" role="button" tabindex="0" ' +
                   'aria-label="' + esc(pack.name) + ' progress' + (hasMissing ? ' — tap to add missing habits' : '') + '">' +
-        '<span class="cp-prog-name">' + esc(pack.emoji + ' ' + pack.name) + '</span>' +
+        // Map pack id → custom pack-icon key. Falls back to iconify on
+        // the raw emoji for any pack id that doesn't have a mapped icon.
+        '<span class="cp-prog-name">' +
+          (packId === 'morning'    ? packIconHtml('morning',  { size: 18 }) :
+           packId === 'locked-in'  ? packIconHtml('lockedin', { size: 18 }) :
+           iconify(pack.emoji, { size: 14 })) +
+          ' ' + esc(pack.name) +
+        '</span>' +
         '<span class="cp-prog-count' + (awarded ? ' cp-prog-done' : '') + '">' +
           (awarded ? '✓ Complete' : done + '/' + canonicalTotal) +
         '</span>' +
         // Tappable bolt → opens the Bonus Info popup explaining the formula + ROI
-        '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">⚡</button>' +
-        (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' 🔥</span>' : '') +
+        '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">' + xpIconHtml({ size: 22 }) + '</button>' +
+        (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' ' + streakIconHtml({ size: 14 }) + '</span>' : '') +
         shieldChip +
         honestChip +
         addPill +
@@ -7572,7 +8635,7 @@
       return '<button class="pr-tile pr-tile--grid" data-pr-id="' + esc(def.id) + '" ' +
                   'style="--pr-accent:' + accent + '" ' +
                   'aria-label="View ' + esc(def.label) + ' record">' +
-        '<span class="pr-tile-icon">' + def.icon + '</span>' +
+        // PR icon dropped — emoji-free pass. Tile reads via accent color + value.
         '<span class="pr-tile-value">' + esc(valStr) + '</span>' +
         '<span class="pr-tile-label">' + esc(def.label) + '</span>' +
       '</button>';
@@ -7586,8 +8649,10 @@
     }).map(packId => {
       const pack = getPackById(packId);
       const s    = compoundStreaks[packId].streak;
-      const icon = packId === 'locked-in' ? '🔒' : '⚡';
-      return '<div class="sc-compound-badge">' + icon + ' ' + esc(pack.name) + ': Day ' + s + '</div>';
+      const iconHTML = packId === 'morning'   ? packIconHtml('morning',  { size: 14 }) :
+                       packId === 'locked-in' ? packIconHtml('lockedin', { size: 14 }) :
+                       iconify(packId === 'locked-in' ? '🔒' : '⚡', { size: 14 });
+      return '<div class="sc-compound-badge">' + iconHTML + ' ' + esc(pack.name) + ': Day ' + s + '</div>';
     }).join('');
   }
 
@@ -7628,6 +8693,29 @@
 
     const total = document.getElementById(prefix + '-total');
     if (total) total.textContent = computeTotalCompletionsForHabit(habit);
+
+    // Reminder state — only the View Note sheet (prefix="vn") has this
+    // section in the markup; History info popup (prefix="hi") doesn't.
+    const remEl = document.getElementById(prefix + '-reminder-display');
+    if (remEl) {
+      let time = null;
+      try { time = (Notif.reminderFor && Notif.reminderFor(habit.id)) || null; } catch (_) {}
+      if (time) {
+        const [hStr, mStr] = time.split(':');
+        const h  = parseInt(hStr, 10) || 0;
+        const m  = parseInt(mStr, 10) || 0;
+        const pm = h >= 12;
+        const h12 = ((h % 12) || 12);
+        const label = h12 + ':' + String(m).padStart(2, '0') + ' ' + (pm ? 'PM' : 'AM');
+        remEl.textContent = label;
+        remEl.classList.add('vn-reminder-display--set');
+        remEl.classList.remove('vn-reminder-display--none');
+      } else {
+        remEl.textContent = 'No reminder set';
+        remEl.classList.add('vn-reminder-display--none');
+        remEl.classList.remove('vn-reminder-display--set');
+      }
+    }
   }
 
   // ── VIEW NOTE — full habit detail bottom-sheet ───────────
@@ -7643,7 +8731,7 @@
     _vnPrevFocus = document.activeElement;
 
     // Header
-    document.getElementById('note-modal-emoji').textContent = habit.emoji || '';
+    setHabitIcon(document.getElementById('note-modal-emoji'), habit, 56);
     document.getElementById('note-modal-name').textContent  = habitDisplayName(habit);
     const diffKey = habit.difficulty || 'easy';
     const diff    = DIFFICULTY[diffKey] || DIFFICULTY.easy;
@@ -8033,16 +9121,204 @@
   }
 
   // Permission explainer modal — shown once before the iOS native prompt.
-  function showNotifExplainer(callback) {
+  function showNotifExplainer(callback, opts) {
+    opts = opts || {};
     const ov = document.getElementById('notif-explain-overlay');
     if (!ov) { callback && callback(true); return; }
+
+    // Allow callers to override copy/labels for context (onboarding A vs.
+    // in-edit prompt). Defaults are the in-edit copy that already shipped.
+    const titleEl = ov.querySelector('.custom-title');
+    const subEl   = ov.querySelector('.custom-sub');
+    const cancelBtn = document.getElementById('notif-explain-cancel');
+    const enableBtn = document.getElementById('notif-explain-enable');
+    const _origTitle  = titleEl ? titleEl.innerHTML  : '';
+    const _origSub    = subEl   ? subEl.innerHTML    : '';
+    const _origCancel = cancelBtn ? cancelBtn.textContent : '';
+    const _origEnable = enableBtn ? enableBtn.textContent : '';
+    if (opts.title  && titleEl) titleEl.innerHTML = opts.title;
+    if (opts.body   && subEl)   subEl.innerHTML   = opts.body;
+    if (opts.cancelLabel && cancelBtn) cancelBtn.textContent = opts.cancelLabel;
+    if (opts.enableLabel && enableBtn) enableBtn.textContent = opts.enableLabel;
+
     ov.classList.remove('hidden');
     const finish = (ok) => {
       ov.classList.add('hidden');
+      // Restore originals so the next caller (e.g., in-edit) gets default copy.
+      if (titleEl)  titleEl.innerHTML  = _origTitle;
+      if (subEl)    subEl.innerHTML    = _origSub;
+      if (cancelBtn) cancelBtn.textContent = _origCancel;
+      if (enableBtn) enableBtn.textContent = _origEnable;
       try { callback && callback(ok); } catch (_) {}
     };
-    document.getElementById('notif-explain-cancel').onclick = () => finish(false);
-    document.getElementById('notif-explain-enable').onclick = () => finish(true);
+    cancelBtn.onclick = () => finish(false);
+    enableBtn.onclick = () => finish(true);
+  }
+
+  // ── Onboarding A: ask for notification permission once, before the
+  //   user starts adding habits. Skipped if we've already asked. Resolves
+  //   when the user taps either button (cb is called, fire-and-forget).
+  async function runOnboardingNotifPrompt(cb) {
+    try {
+      if (Notif.permAskedBefore && Notif.permAskedBefore()) { cb && cb(); return; }
+    } catch (_) {}
+    showNotifExplainer(async (ok) => {
+      if (!ok) {
+        // "Maybe Later" → mark BOTH the deferred flag and the
+        // perm-asked flag so A never fires a second time. The spec
+        // expects A to fire at most once per user.
+        try {
+          localStorage.setItem('hb_notif_perm_deferred', '1');
+          localStorage.setItem('hb_notif_perm_requested', '1');
+        } catch (_) {}
+        cb && cb();
+        return;
+      }
+      try {
+        const granted = await Notif.requestPermission();
+        if (granted === 'granted') {
+          // Schedule the once-a-day digest at 9:00 AM by default. The
+          // confirmation toast lets the user scroll the time chip to
+          // change it inline, no Settings trip required.
+          try { await Notif.setDailyDigest('09:00'); } catch (_) {}
+          if (typeof showReminderConfirmToast === 'function') {
+            showReminderConfirmToast('09:00');
+          }
+        } else {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast('Reminders are off. Enable in iOS Settings → Awakened anytime.', { sticky: true });
+          }
+        }
+      } catch (_) {}
+      cb && cb();
+    }, {
+      title: 'Stay on Track',
+      body:  'One morning reminder.<br>The rest is on you.',
+      cancelLabel: 'Maybe Later',
+      enableLabel: 'Enable Reminder',
+    });
+  }
+
+  // ── Onboarding B: per-session offer counter so we don't spam users
+  //   who keep skipping. Resets on app reload (NOT persisted). After
+  //   3 consecutive skips, B no-ops for the rest of the session.
+  let _reminderOfferSkipCount = 0;
+  const REMINDER_OFFER_SKIP_LIMIT = 3;
+
+  function _shouldOfferReminder() {
+    return _reminderOfferSkipCount < REMINDER_OFFER_SKIP_LIMIT;
+  }
+
+  // Single-habit B: open the offer modal for one habit.
+  function offerHabitReminder(habit) {
+    if (!habit) return;
+    if (!_shouldOfferReminder()) return;
+    if (!_remOfferEls()) return;
+    // If a habit already has a reminder set (e.g., user re-added something),
+    // don't re-prompt.
+    try { if (Notif.reminderFor && Notif.reminderFor(habit.id)) return; } catch (_) {}
+
+    const els = _remOfferEls();
+    els.title.textContent = '📲 Want a reminder for it?';
+    els.sub.innerHTML     = '✅ <strong>' + esc(habit.name) + '</strong> added.<br>Pick a time and we\'ll remind you daily.';
+    els.timeRow.style.display = '';
+    els.timeInput.value = (typeof defaultReminderTimeFor === 'function')
+      ? defaultReminderTimeFor(habit)
+      : '07:00';
+    els.skipBtn.textContent = 'Skip';
+    els.saveBtn.textContent = 'Set Reminder';
+    els.overlay.classList.remove('hidden');
+
+    els.skipBtn.onclick = () => {
+      _reminderOfferSkipCount++;
+      els.overlay.classList.add('hidden');
+    };
+    els.saveBtn.onclick = async () => {
+      _reminderOfferSkipCount = 0;
+      const t = els.timeInput.value || '07:00';
+      els.overlay.classList.add('hidden');
+      try { await Notif.setReminder(habit.id, t); } catch (_) {}
+      // If permission was denied at A, surface that the reminder won't
+      // actually deliver. The reminder is still saved.
+      try {
+        const perm = await Notif.checkPermission();
+        if (perm !== 'granted' && typeof showHabitToast === 'function') {
+          showHabitToast('Reminder saved. Enable notifications in iOS Settings to receive it.');
+        }
+      } catch (_) {}
+    };
+  }
+
+  // Pack B: ONE offer for an entire pack add. Defaults to 7:00 AM
+  //   per the spec; user can adjust each habit later via Edit Habit.
+  function offerPackReminders(addedHabits) {
+    if (!addedHabits || !addedHabits.length) return;
+    if (!_shouldOfferReminder()) return;
+    if (!_remOfferEls()) return;
+
+    const els = _remOfferEls();
+    const n   = addedHabits.length;
+    els.title.textContent = '📲 Set Default Reminders?';
+    els.sub.innerHTML     = 'Set <strong>7:00 AM</strong> reminders for these <strong>' + n +
+                            '</strong> habit' + (n === 1 ? '' : 's') +
+                            '?<br>You can adjust each later in Edit Habit.';
+    // Hide the time input — pack mode uses a fixed default of 07:00.
+    els.timeRow.style.display = 'none';
+    els.skipBtn.textContent = 'No reminders';
+    els.saveBtn.textContent = 'Yes, set defaults';
+    els.overlay.classList.remove('hidden');
+
+    els.skipBtn.onclick = () => {
+      _reminderOfferSkipCount++;
+      els.overlay.classList.add('hidden');
+    };
+    els.saveBtn.onclick = async () => {
+      _reminderOfferSkipCount = 0;
+      els.overlay.classList.add('hidden');
+      try {
+        for (const h of addedHabits) {
+          // defaultReminderTimeFor handles habit-specific defaults (e.g.,
+          // "Sleep before midnight" → 23:00). Pack default 07:00 is used
+          // only when nothing more specific applies.
+          const t = (typeof defaultReminderTimeFor === 'function' ? defaultReminderTimeFor(h) : '07:00') || '07:00';
+          await Notif.setReminder(h.id, t);
+        }
+      } catch (_) {}
+      try {
+        const perm = await Notif.checkPermission();
+        if (perm !== 'granted' && typeof showHabitToast === 'function') {
+          showHabitToast('Reminders saved. Enable notifications in iOS Settings to receive them.');
+        } else if (typeof showHabitToast === 'function') {
+          showHabitToast('✓ ' + n + ' reminder' + (n === 1 ? '' : 's') + ' set');
+        }
+      } catch (_) {}
+    };
+  }
+
+  function _remOfferEls() {
+    const overlay  = document.getElementById('reminder-offer-overlay');
+    if (!overlay) return null;
+    return {
+      overlay,
+      title:    document.getElementById('reminder-offer-title'),
+      sub:      document.getElementById('reminder-offer-sub'),
+      timeRow:  document.getElementById('reminder-offer-time-row'),
+      timeInput:document.getElementById('reminder-offer-time'),
+      skipBtn:  document.getElementById('reminder-offer-skip'),
+      saveBtn:  document.getElementById('reminder-offer-save'),
+    };
+  }
+
+  function setupReminderOfferModal() {
+    const overlay = document.getElementById('reminder-offer-overlay');
+    if (!overlay) return;
+    // Backdrop tap = skip
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        const skip = document.getElementById('reminder-offer-skip');
+        if (skip) skip.click();
+      }
+    });
   }
 
   // ── DELETE ───────────────────────────────────────────────
@@ -8479,8 +9755,12 @@
       const ctrl = have
         ? '<span class="sdh-active" aria-label="Already in your habits">✓ Active</span>'
         : '<button class="sdh-add-btn" data-add-habit="' + esc(name) + '" aria-label="Add ' + esc(name) + ' to your habits">+ Add</button>';
+      // Synthesize a habit-like object for habitIconHtml — _habitMeta
+      // only stores { emoji, difficulty }, but the helper just needs
+      // .name and .emoji to decide between PNG and emoji fallback.
+      const habitLike = { name, emoji: meta.emoji };
       return '<div class="sdh-row' + (have ? ' sdh-row--have' : '') + '">' +
-        '<span class="sdh-emoji">' + (meta.emoji || '') + '</span>' +
+        '<span class="sdh-emoji">' + habitIconHtml(habitLike, { size: 20 }) + '</span>' +
         '<span class="sdh-name">'  + esc(name) + '</span>' +
         '<span class="diff-badge ' + meta.difficulty + '">' + DIFFICULTY[meta.difficulty].label + '</span>' +
         ctrl +
@@ -8766,23 +10046,6 @@
     location.href = location.href.split('?')[0] + '?r=' + Date.now();
   }
 
-  // ── THEME ─────────────────────────────────────────────────
-  function applyTheme(theme, animate) {
-    if (animate) {
-      document.body.classList.add('theme-transitioning');
-      setTimeout(() => document.body.classList.remove('theme-transitioning'), 380);
-    }
-    document.body.classList.toggle('theme-light', theme === 'light');
-    localStorage.setItem('hb_theme', theme);
-    // Update active state on both cards
-    document.querySelectorAll('.settings-theme-card').forEach(btn => {
-      btn.classList.toggle('settings-theme-card--active', btn.dataset.theme === theme);
-    });
-    // Reflect current theme in the collapsed Appearance header.
-    const sum = document.getElementById('settings-appearance-summary');
-    if (sum) sum.textContent = theme === 'light' ? 'Light' : 'Dark';
-  }
-
   // ── CHECK FOR UPDATES ────────────────────────────────────
   // Belt-and-suspenders update detection:
   //   1) Ask the SW to re-check by calling reg.update() and listening for
@@ -8924,16 +10187,9 @@
   }
 
   function setupSettings() {
-    // Apply saved theme + sound state on open
+    // Apply sound state on open
     document.getElementById('settings-btn').addEventListener('click', () => {
-      const saved = localStorage.getItem('hb_theme') || 'dark';
-      document.querySelectorAll('.settings-theme-card').forEach(btn => {
-        btn.classList.toggle('settings-theme-card--active', btn.dataset.theme === saved);
-      });
       document.getElementById('sound-toggle').setAttribute('aria-checked', soundEnabled ? 'true' : 'false');
-      // Reflect current theme in the collapsed Appearance header summary.
-      const apSum = document.getElementById('settings-appearance-summary');
-      if (apSum) apSum.textContent = saved === 'light' ? 'Light' : 'Dark';
       // Refresh the Reminders panel each time Settings opens — the
       // permission state, paused-until timestamp, and active count can
       // all change between opens.
@@ -8959,9 +10215,6 @@
       ssSheet.classList.add('hidden');
       ssOverlay.classList.add('hidden');
     });
-    // Theme toggle
-    document.getElementById('theme-dark-btn').addEventListener('click', () => applyTheme('dark', true));
-    document.getElementById('theme-light-btn').addEventListener('click', () => applyTheme('light', true));
     // Check for updates
     document.getElementById('update-check-btn').addEventListener('click', checkForUpdates);
     // Open reset step 1
@@ -9020,8 +10273,21 @@
       if (!status.isNative) webNote.classList.remove('hidden');
       else                   webNote.classList.add('hidden');
 
-      // Daily limit
-      document.getElementById('settings-rem-limit').value = String(status.dailyLimit);
+      // Daily morning reminder (the digest) — button shows formatted time
+      const digestBtn   = document.getElementById('settings-rem-digest-btn');
+      const digestClear = document.getElementById('settings-rem-digest-clear');
+      if (digestBtn) {
+        const t = status.digestTime || '09:00';
+        const [hStr, mStr] = t.split(':');
+        const h = parseInt(hStr, 10) || 0;
+        const m = parseInt(mStr, 10) || 0;
+        const pm = h >= 12;
+        const h12 = ((h % 12) || 12);
+        digestBtn.textContent = h12 + ':' + String(m).padStart(2, '0') + ' ' + (pm ? 'PM' : 'AM');
+      }
+      if (digestClear) digestClear.classList.toggle('hidden', !status.digestTime);
+
+      // (Daily limit row removed in v1.1.3 — see Notif.dailyLimit comment.)
 
       // Quiet hours
       document.getElementById('settings-rem-quiet-toggle').setAttribute('aria-checked', status.quietOn ? 'true' : 'false');
@@ -9075,8 +10341,14 @@
       if (!habit) return;
       const row = document.createElement('div');
       row.className = 'settings-rem-list-item';
+      // Inline name with either the mapped icon or the habit emoji.
+      // Curated habits with PNG art get a small inline image; everything
+      // else keeps the emoji prefix.
+      const iconHTML = getHabitIcon(habit)
+        ? habitIconHtml(habit, { size: 18 })
+        : esc(habit.emoji || '');
       row.innerHTML =
-        '<span class="settings-rem-list-name">' + esc((habit.emoji || '') + ' ' + habit.name) + '</span>' +
+        '<span class="settings-rem-list-name">' + iconHTML + ' ' + esc(habit.name) + '</span>' +
         '<span class="settings-rem-list-time">' + formatTime12(r[id]) + '</span>' +
         '<button class="settings-rem-list-remove" type="button">Remove</button>';
       row.querySelector('.settings-rem-list-remove').addEventListener('click', async () => {
@@ -9109,7 +10381,7 @@
 
   function setupReminderSettings() {
     const enable     = document.getElementById('settings-rem-enable');
-    const limit      = document.getElementById('settings-rem-limit');
+    // Daily-limit dropdown removed in v1.1.3.
     const quietTog   = document.getElementById('settings-rem-quiet-toggle');
     const quietStart = document.getElementById('settings-rem-quiet-start');
     const quietEnd   = document.getElementById('settings-rem-quiet-end');
@@ -9137,10 +10409,33 @@
       }
     });
 
-    limit.addEventListener('change', async () => {
-      Notif.setDailyLimit(parseInt(limit.value, 10) || 0);
-      await rescheduleNow();
-    });
+    // (Daily-limit change handler removed in v1.1.3.)
+
+    // Daily morning reminder — tap the time button to open a custom
+    // picker (hour + 15-min minute), then save automatically as the
+    // user picks. "Turn off" clears the digest entirely.
+    const digestBtn   = document.getElementById('settings-rem-digest-btn');
+    const digestClear = document.getElementById('settings-rem-digest-clear');
+    if (digestBtn) {
+      digestBtn.addEventListener('click', () => {
+        const current = (Notif.dailyDigestTime && Notif.dailyDigestTime()) || '09:00';
+        openDigestTimePickerModal(current, async (newT) => {
+          try { await Notif.setDailyDigest(newT); } catch (_) {}
+          // Re-render the panel so the button label + clear-button visibility
+          // reflect the new state.
+          refreshRemindersPanel();
+        });
+      });
+    }
+    if (digestClear) {
+      digestClear.addEventListener('click', async () => {
+        try { await Notif.clearDailyDigest(); } catch (_) {}
+        refreshRemindersPanel();
+        if (typeof showHabitToast === 'function') {
+          showHabitToast('Morning reminder turned off', { sticky: true });
+        }
+      });
+    }
 
     quietTog.addEventListener('click', async () => {
       const next = quietTog.getAttribute('aria-checked') !== 'true';
@@ -9371,7 +10666,7 @@
     morningCard.style.setProperty('--pack-color', '#f59e0b');
     morningCard.innerHTML =
       '<div class="path-card-check">✓</div>'                                    +
-      '<div class="path-card-emoji">🌅</div>'                                   +
+      '<div class="path-card-emoji">' + packIconHtml('morning', { size: 56 }) + '</div>'                                   +
       '<div class="path-card-name">Morning Routine</div>'                       +
       '<div class="path-card-tagline">Win the morning. Win the day.</div>'      +
       '<div class="path-card-sub">For the intentional starter</div>'            +
@@ -9383,7 +10678,7 @@
     lockedInCard.style.setProperty('--pack-color', '#7c3aed');
     lockedInCard.innerHTML =
       '<div class="path-card-check">✓</div>'                                    +
-      '<div class="path-card-emoji">🔒</div>'                                   +
+      '<div class="path-card-emoji">' + packIconHtml('lockedin', { size: 56 }) + '</div>'                                   +
       '<div class="path-card-name">Locked-In</div>'                             +
       '<div class="path-card-tagline">Master the day.</div>'                    +
       '<div class="path-card-sub">For full discipline cycles</div>'             +
@@ -9395,7 +10690,7 @@
     customCard.style.setProperty('--pack-color', '#a855f7');
     customCard.innerHTML =
       '<div class="path-card-check">✓</div>'                       +
-      '<div class="path-card-emoji">⚡</div>'                      +
+      '<div class="path-card-emoji">' + packIconHtml('custom', { size: 56 }) + '</div>'                      +
       '<div class="path-card-name">Make Your Own</div>'            +
       '<div class="path-card-tagline">Your path, your rules</div>' +
       '<div class="path-card-count">Build from scratch</div>';
@@ -9546,7 +10841,7 @@
         card.className = 'ob-card';
         card.innerHTML =
           '<div class="ob-card-check"></div>' +
-          '<span class="ob-card-emoji">' + h.emoji + '</span>' +
+          '<span class="ob-card-emoji">' + habitIconHtml(h, { size: 24 }) + '</span>' +
           '<span class="ob-card-name">' + esc(h.name) + '</span>' +
           '<span class="diff-badge ' + h.difficulty + '">' + DIFFICULTY[h.difficulty].label + '</span>';
 
@@ -9613,6 +10908,15 @@
   }
 
   function completeOnboarding() {
+    // Onboarding A: ask for notification permission BEFORE the user lands
+    // on the main app. Skipped automatically if we've already asked.
+    // The handler is fire-and-forget — _completeOnboardingFinish runs
+    // whether the user enabled or deferred. If permission was already
+    // requested in a prior install/session, we go straight to finish.
+    runOnboardingNotifPrompt(() => _completeOnboardingFinish());
+  }
+
+  function _completeOnboardingFinish() {
     const nameInput = document.getElementById('ob-name-input');
     if (nameInput && nameInput.value.trim()) {
       playerName = nameInput.value.trim();
@@ -9862,6 +11166,11 @@
   //   hb_notif_quiet_enabled        '1'/'0'  (default '1')
   //   hb_notif_quiet_start          'HH:MM'  (default '22:00')
   //   hb_notif_quiet_end            'HH:MM'  (default '07:00')
+  //   hb_notif_daily_digest_time    'HH:MM' if user opted into the morning
+  //                                 reminder, otherwise unset. The digest
+  //                                 is the ONE notification a day Awakened
+  //                                 sends by default — a gentle "show up"
+  //                                 ping at the user's chosen morning time.
 
   const Notif = (() => {
     const KEY_REMINDERS    = 'hb_reminders';
@@ -9872,16 +11181,92 @@
     const KEY_QUIET_ON     = 'hb_notif_quiet_enabled';
     const KEY_QUIET_START  = 'hb_notif_quiet_start';
     const KEY_QUIET_END    = 'hb_notif_quiet_end';
+    const KEY_DIGEST_TIME  = 'hb_notif_daily_digest_time';
+    // Stable plugin notification ID for the once-a-day digest. Picked from
+    // a numeric range that won't collide with notifIdFor() habit hashes.
+    const DIGEST_NOTIF_ID  = 1;
 
-    // Voice-coded copy keyed by primary stat.
+    // Voice-coded copy keyed by primary stat. Used as a fallback for
+    // habits that don't have a dedicated entry in HABIT_NOTIF_COPY (and
+    // for user-authored custom habits).
     const COPY = {
-      STR:    { title: '⚔️ Time to train. {n} awaits.',  body: "The path doesn't walk itself." },
-      FOCUS:  { title: '🧠 Stillness now. {n}.',         body: 'Five minutes of focus changes the day.' },
-      INT:    { title: '📚 {n} is ready.',               body: 'The unlearned version of you is no longer enough.' },
-      WILL:   { title: '🥶 {n}. Get in the cold.',       body: 'Comfort is the enemy.' },
-      VIT:    { title: '💧 {n}.',                        body: 'The body keeps the score.' },
-      WLT:    { title: '💰 {n} awaits.',                 body: 'Compound the small wins.' },
-      CUSTOM: { title: '🔥 {n} awaits.',                 body: 'Today, you choose.' },
+      STR:    { title: 'Time to train. {n} awaits.',   body: "The path doesn't walk itself." },
+      FOCUS:  { title: 'Stillness now. {n}.',          body: 'Five minutes of focus changes the day.' },
+      INT:    { title: '{n} is ready.',                body: 'The unlearned version of you is no longer enough.' },
+      WILL:   { title: '{n}. Get in the cold.',        body: 'Comfort is the enemy.' },
+      VIT:    { title: '{n}.',                         body: 'The body keeps the score.' },
+      WLT:    { title: '{n} awaits.',                  body: 'Compound the small wins.' },
+      CUSTOM: { title: '{n} awaits.',                  body: 'Today, you choose.' },
+    };
+
+    // Per-habit unique notification copy. Each curated library habit
+    // gets its own title + body so the user doesn't see "Hydrate." with
+    // identical body text on five different VIT habits. Keyed by the
+    // habit's exact name (the foreign key used everywhere). Custom
+    // user-authored habits fall through to the per-stat COPY above.
+    const HABIT_NOTIF_COPY = {
+      // Physical Performance
+      'Hydrate':                            { title: 'Hydrate.',          body: 'Water the temple.' },
+      'Sleep':                              { title: 'Sleep.',            body: 'Repair begins when you let it.' },
+      'Sleep before midnight':              { title: 'Bed by midnight.',  body: 'Tomorrow is built tonight.' },
+      'Cardio':                             { title: 'Cardio.',           body: 'Move before the day moves you.' },
+      'Strength training':                  { title: 'Train, Hunter.',    body: "The path doesn't walk itself." },
+      'Sprint session':                     { title: 'Sprint.',           body: 'Speed is forged in the burn.' },
+      'Daily walk':                         { title: 'Walk.',             body: 'Movement clears the static.' },
+      'Ice bath or cold plunge':            { title: 'Plunge.',           body: 'Comfort is the enemy.' },
+      'Cold shower':                        { title: 'Cold shower.',      body: 'Choose discomfort once. Win the day.' },
+      'Mobility & Stretching':              { title: 'Stretch.',          body: 'Tight muscles, tight mind.' },
+      'Protein goal':                       { title: 'Protein.',          body: "You can't build with empty hands." },
+
+      // Mental & Focus
+      'Read':                               { title: 'Read.',             body: 'The unlearned version of you is no longer enough.' },
+      'Meditate & Breathwork':              { title: 'Sit. Breathe.',     body: 'Stillness is a skill.' },
+      'Journal':                            { title: 'Journal.',          body: 'What stays in the head stays the same.' },
+      'No phone or social media after waking': { title: 'Phone down.',    body: 'Protect the first 30 minutes.' },
+      'Review daily goals/intentions':      { title: "Set today's intent.", body: 'Direction beats motion.' },
+      'Get morning sunlight':               { title: 'Morning sun.',      body: "Tell your body it's time." },
+      'No social media before noon':        { title: 'No feed before noon.', body: 'Build before you scroll.' },
+      'No screens 1 hour before bed':       { title: 'Screens off.',      body: 'The body remembers blue light.' },
+
+      // Nutrition
+      'Whole foods diet':                   { title: 'Whole foods.',      body: 'Real food. Real body.' },
+      'No sugar/junk food':                 { title: 'No junk.',          body: "Cravings lie. Discipline doesn't." },
+      'No alcohol':                         { title: 'Stay clear.',       body: 'Tomorrow is sharper sober.' },
+      'No caffeine':                        { title: 'No caffeine.',      body: 'Earned energy lasts.' },
+
+      // Discipline & Productivity
+      'Wake up at consistent time':         { title: 'Wake up.',          body: 'Discipline starts before your feet hit the floor.' },
+      'Complete your #1 priority task':     { title: 'Top priority.',     body: 'One thing well beats five things half.' },
+      'Plan tomorrow the night before':     { title: 'Plan tomorrow.',    body: 'The day is won the night before.' },
+      'Tidy/clean space':                   { title: 'Tidy.',             body: 'Outer order, inner calm.' },
+      'Under 1 hour screen time':           { title: 'Cap the scroll.',   body: 'Your attention is the asset.' },
+      'Digital declutter':                  { title: 'Declutter.',        body: "Delete what doesn't serve you." },
+      'No doomscrolling until after 5PM':   { title: 'No doomscroll.',    body: 'Your mind belongs to you until 5.' },
+      'Review your long term goals':        { title: 'Goals check.',      body: 'Aim before you fire.' },
+
+      // Financial & Growth
+      'Track finances & net worth':         { title: 'Track the numbers.', body: 'What you measure, you master.' },
+      'Work on a side project or business': { title: 'Build something.',  body: 'The future is built in stolen hours.' },
+      'Review investments or trading journal': { title: 'Review the trade.', body: 'The market rewards the patient.' },
+      'Generate one new business or content idea': { title: 'One new idea.', body: 'Quantity breeds quality.' },
+
+      // Learning & Skills
+      'Educational podcast':                { title: 'Podcast.',          body: 'Learn while you move.' },
+      'Practice a skill':                   { title: 'Practice.',         body: "Reps over time. There's no other path." },
+      'Flashcard review':                   { title: 'Flashcards.',       body: 'Memory is built brick by brick.' },
+      'Write down lessons learned':         { title: "Capture today's lesson.", body: "What's not written is forgotten." },
+      'Learn something new':                { title: 'Learn.',            body: 'Curiosity is the cheapest edge.' },
+      'Language learning':                  { title: 'Practice the tongue.', body: 'Consistency beats intensity.' },
+
+      // Wellbeing & Relationships
+      'Morning gratitude practice':         { title: 'Three gratitudes.', body: "Notice what's already enough." },
+      'Pray or set intentions':             { title: 'Set intent.',       body: 'Speak it. Mean it. Move.' },
+      'Call or text a family member':       { title: 'Reach out.',        body: 'Bonds rust without touch.' },
+      'Do something kind for someone':      { title: 'Be kind.',          body: 'The smallest gesture compounds.' },
+      'Barefoot grounding outside':         { title: 'Earth the body.',   body: 'Bare feet on real ground.' },
+      'Vitamins and minerals':              { title: 'Vitamins.',         body: "The body can't perform without fuel." },
+      'Visualization practice':             { title: 'Visualize.',        body: 'See it before you live it.' },
+      'Sleep early before 11PM':            { title: 'Bed by 11.',        body: 'Recovery is part of the work.' },
     };
 
     function plugin() {
@@ -9909,7 +11294,11 @@
     function isPaused()      { return Date.now() < pausedUntil(); }
     function setPausedUntil(ts) { ts ? localStorage.setItem(KEY_PAUSED_UNTIL, String(ts)) : localStorage.removeItem(KEY_PAUSED_UNTIL); }
 
-    function dailyLimit()    { const n = parseInt(localStorage.getItem(KEY_DAILY_LIMIT), 10); return isFinite(n) ? n : 3; }
+    // Daily limit removed from the Settings UI in v1.1.3 — the user
+    // self-regulates cadence by choosing whether to add per-habit
+    // reminders. We still honor a stored value if a previous version
+    // wrote one (backward compat), but new users default to 0 (no cap).
+    function dailyLimit()    { const n = parseInt(localStorage.getItem(KEY_DAILY_LIMIT), 10); return isFinite(n) ? n : 0; }
     function setDailyLimit(n){ localStorage.setItem(KEY_DAILY_LIMIT, String(n)); }
 
     function quietOn()       { return (localStorage.getItem(KEY_QUIET_ON) || '1') === '1'; }
@@ -9948,6 +11337,16 @@
     // ── Voice-coded copy ──
     function copyFor(habit) {
       if (!habit) return COPY.CUSTOM;
+      // Per-habit unique copy takes priority for curated library habits.
+      // Each entry in HABIT_NOTIF_COPY is fully formed (no {n} placeholder)
+      // so a user with both Hydrate and Sleep gets distinctly different
+      // notification text instead of the same per-stat fallback.
+      if (!habit.custom && habit.name && HABIT_NOTIF_COPY[habit.name]) {
+        const tpl = HABIT_NOTIF_COPY[habit.name];
+        return { title: tpl.title, body: tpl.body };
+      }
+      // Fallback — per-stat copy for any curated habit not yet in the
+      // per-habit map, plus all user-authored custom habits.
       const key = habit.custom ? 'CUSTOM' : (habit.primaryStat || 'CUSTOM');
       const tpl = COPY[key] || COPY.CUSTOM;
       return {
@@ -10075,6 +11474,9 @@
         if (!hm) continue;
         await scheduleOne(e.habit, hm);
       }
+      // Re-arm the daily 6 PM check-in alongside per-habit reminders so
+      // every caller of rescheduleAll keeps the check-in fresh.
+      try { await scheduleDailyCheckin(); } catch (_) {}
     }
 
     // Called from toggleHabit when a user marks a habit complete TODAY.
@@ -10084,6 +11486,9 @@
       // The simple way: cancel the entire pending notification for this id.
       // It will be re-scheduled by rescheduleAll on next daily reset.
       await cancelOne(habitId);
+      // Progress just changed — re-arm the daily check-in so its body
+      // reflects the new completion state.
+      try { await scheduleDailyCheckin(); } catch (_) {}
     }
 
     function status() {
@@ -10099,7 +11504,229 @@
         quietEnd:        quietEnd(),
         permRequested:   permAskedBefore(),
         isNative:        isNative(),
+        digestTime:      dailyDigestTime(),
       };
+    }
+
+    // ── Daily digest — the once-a-day morning reminder ──
+    // The default notification Awakened sends. One ping. Brief copy.
+    // Repeats daily at the chosen time, persists across reboots via
+    // Capacitor's repeating notification schedule.
+    function dailyDigestTime() { return localStorage.getItem(KEY_DIGEST_TIME) || null; }
+
+    // ── Digest copy composers ──
+    // Title: "Awakened" by default, "Awakened — {Class}" once the user
+    // has earned a class. Civilian users keep the bare title because the
+    // word "Civilian" pairs awkwardly with "Awakened — " (they're literally
+    // not awakened yet).
+    function composeDigestTitle() {
+      let cls = null;
+      try { cls = (typeof currentClass === 'string') ? currentClass : null; } catch (_) {}
+      if (!cls || cls === 'CIVILIAN') return 'Awakened';
+      let name = '';
+      try { name = (typeof CLASSES === 'object' && CLASSES[cls] && CLASSES[cls].name) || ''; } catch (_) {}
+      return name ? ('Awakened — ' + name) : 'Awakened';
+    }
+
+    // Body: combines player name + today's habit count + day-of-week
+    // flavor + class voice + special triggers (perfect day, weekend 2x).
+    // Format always leads with the user's name and a comma:
+    //   "Richie, 6 await today."
+    //   "Marcus, the path doesn't walk itself."
+    const DIGEST_FLAVOR = {
+      CIVILIAN: ['the path begins.', 'show up.', 'discipline is a daily promise.', 'you are forging the next version of you.'],
+      STR:      ['strength is built daily.', "the path doesn't walk itself.", 'the body reflects the work.', "what the strong do, others won't."],
+      INT:      ['the unlearned version grows stale.', 'knowledge compounds daily.', 'the mind is the long game.', 'read. reflect. repeat.'],
+      VIT:      ['movement is medicine.', 'the body keeps score.', 'recovery is part of the work.', 'endurance is earned in mornings.'],
+      FOCUS:    ['sharpen the blade.', 'focus is a discipline.', 'distractions are the enemy.', 'strike before doubt does.'],
+      WILL:     ["what others won't, you will.", 'comfort is the enemy.', 'resolve is forged at dawn.', 'the cold makes the warrior.'],
+      WLT:      ['compound the small wins.', 'wealth is built in routine.', "today's habit is tomorrow's leverage.", 'the market rewards patience.'],
+      SAGE:     ['all paths lead through today.', 'balance is the rarest discipline.', 'show up everywhere.', 'the complete hunter trains all six.'],
+    };
+
+    function composeDigestBody() {
+      // Pull all the signals defensively — composer must never crash the
+      // schedule call even if data is missing.
+      let name = 'Hunter';
+      try { if (typeof playerName === 'string' && playerName.trim()) name = playerName.trim(); } catch (_) {}
+
+      let cls = 'CIVILIAN';
+      try { if (typeof currentClass === 'string' && currentClass) cls = currentClass; } catch (_) {}
+
+      let count = 0;
+      try {
+        if (Array.isArray(habits) && typeof isScheduledToday === 'function') {
+          count = habits.filter(isScheduledToday).length;
+        }
+      } catch (_) {}
+
+      let weekend = false;
+      try { weekend = (typeof isWeekend === 'function') && isWeekend(); } catch (_) {}
+
+      // Day-of-week index in PT (matches the rest of the app's date math).
+      // Mon/Wed/Fri/Sat/Sun = "count" days. Tue/Thu = "flavor" days.
+      // (Civilian + Sage Tuesday/Thursday still get class-flavored lines.)
+      let dow = new Date().getDay(); // 0=Sun
+      try {
+        if (typeof getTodayDayName === 'function') {
+          const map = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+          const n = getTodayDayName();
+          if (n in map) dow = map[n];
+        }
+      } catch (_) {}
+
+      // Edge: zero habits scheduled today → permission to rest.
+      if (count === 0) {
+        return name + ', today is yours. Take a clean rest.';
+      }
+
+      // Special trigger: yesterday was a perfect day. Honors any day-of-week.
+      // Detected by checking the perfect-streak count > 0 (it increments on
+      // perfect-day completion and survives until the next non-perfect day).
+      let perfectStreakCount = 0;
+      try {
+        if (typeof perfectStreak === 'object' && perfectStreak && typeof perfectStreak.count === 'number') {
+          perfectStreakCount = perfectStreak.count;
+        }
+      } catch (_) {}
+      if (perfectStreakCount >= 1 && (dow === 1 || dow === 0)) {
+        // Trigger Sun/Mon morning so the user wakes up to acknowledgment.
+        return name + ', ' + count + ' await. Yesterday was perfect.';
+      }
+
+      // Tuesday + Thursday → flavor line (no count).
+      if (dow === 2 || dow === 4) {
+        const lines = DIGEST_FLAVOR[cls] || DIGEST_FLAVOR.CIVILIAN;
+        const line  = lines[(dow + new Date().getDate()) % lines.length];
+        return name + ', ' + line;
+      }
+
+      // Saturday + Sunday during a double-XP weekend → suffix the count.
+      if (weekend) {
+        return name + ', ' + count + ' await. ⚡ 2x XP.';
+      }
+
+      // Mon/Wed/Fri → straight count, with class label if awakened.
+      if (cls && cls !== 'CIVILIAN') {
+        const cn = (typeof CLASSES === 'object' && CLASSES[cls] && CLASSES[cls].name) || null;
+        if (cn) return name + ', ' + count + ' await, ' + cn + '.';
+      }
+      return name + ', ' + count + ' await today.';
+    }
+
+    async function setDailyDigest(time) {
+      // Persist the choice regardless of platform — web users still see
+      // it reflected in Settings even if the actual schedule is iOS-only.
+      localStorage.setItem(KEY_DIGEST_TIME, time);
+      const hm = parseHM(time);
+      if (!hm) return false;
+      const p = plugin();
+      if (!p || !isNative()) return false;
+      if (isDisabled() || isPaused()) return false;
+      try {
+        await p.cancel({ notifications: [{ id: DIGEST_NOTIF_ID }] });
+        // TIMEZONE: Capacitor's schedule.on.{hour,minute} is interpreted
+        // by iOS as DEVICE-LOCAL time, not UTC and not the app's PT
+        // anchor. That's the right behavior — a user in NYC who picks
+        // 9:00 AM gets the notification at 9 AM Eastern, not 9 AM PT.
+        // (Streak math elsewhere in the app DOES use PT — see getPTDate.
+        //  These two are intentionally different concerns.)
+        await p.schedule({
+          notifications: [{
+            id:    DIGEST_NOTIF_ID,
+            title: composeDigestTitle(),
+            body:  composeDigestBody(),
+            schedule: { on: { hour: hm.h, minute: hm.m }, allowWhileIdle: true },
+            extra: { kind: 'digest' },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('digest schedule failed', e);
+        return false;
+      }
+    }
+
+    async function clearDailyDigest() {
+      localStorage.removeItem(KEY_DIGEST_TIME);
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: DIGEST_NOTIF_ID }] }); } catch (_) {}
+    }
+
+    // ── Daily Check-In (6 PM local) ──
+    // Re-scheduled every time progress changes so the body reflects the
+    // user's actual completion state at fire time. Fires once per
+    // schedule (repeats: false). Re-armed by every relevant event (app
+    // open, habit toggle, add/delete, daily reset, etc.).
+    async function cancelDailyCheckin() {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: CHECKIN_NOTIF_ID }] }); } catch (_) {}
+    }
+    async function scheduleDailyCheckin() {
+      // Always cancel the previous schedule first — if we're allowed to
+      // re-arm, we'll do it below; if not (disabled/paused/etc.), the
+      // cancel ensures no stale ping fires.
+      await cancelDailyCheckin();
+      const p = plugin();
+      if (!p || !isNative()) return false;
+      if (isDisabled() || isPaused()) return false;
+
+      // Day-1 suppression — be quiet on a brand-new user's first day.
+      if (isDayOne()) return false;
+
+      // Compute progress + copy at SCHEDULE time. (We re-schedule on
+      // every meaningful change, so this is always fresh for the next
+      // fire.)
+      const { completed, total } = getTodaysHabitProgress();
+      const state = getCheckinProgressState(completed, total);
+      if (!state) return false;     // no scheduled habits today
+      const body = pickCheckinCopy(state, completed, total);
+      if (!body) return false;
+
+      // Quiet hours — skip if 18:00 falls inside the user's quiet window.
+      // (User can't manually pick the check-in time, so quiet hours
+      // ALWAYS apply to it — unlike per-habit reminders where an
+      // explicitly-chosen time wins.)
+      const checkinHM = parseHM(CHECKIN_TIME);
+      if (checkinHM && isInQuietHours(checkinHM)) return false;
+
+      try {
+        const fireAt = computeNextCheckinDate();
+        await p.schedule({
+          notifications: [{
+            id:       CHECKIN_NOTIF_ID,
+            title:    'Awakened',
+            body:     body,
+            schedule: { at: fireAt, allowWhileIdle: true },
+            extra:    { kind: 'checkin' },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('checkin schedule failed', e);
+        return false;
+      }
+    }
+    async function reapplyCheckin() {
+      // Convenience alias — match the reapplyDigest pattern. Wraps
+      // scheduleDailyCheckin which itself is idempotent.
+      return scheduleDailyCheckin();
+    }
+
+    // Re-arm the digest after pause/disable changes or app restart.
+    async function reapplyDigest() {
+      const t = dailyDigestTime();
+      if (!t) return;
+      if (isDisabled() || isPaused()) {
+        const p = plugin();
+        if (p && isNative()) {
+          try { await p.cancel({ notifications: [{ id: DIGEST_NOTIF_ID }] }); } catch (_) {}
+        }
+        return;
+      }
+      await setDailyDigest(t);
     }
 
     return {
@@ -10112,17 +11739,24 @@
       setReminder, clearReminder, rescheduleAll, onHabitCompleted, cancelAll,
       setDisabled, setPausedUntil, setDailyLimit,
       setQuietOn, setQuietStart, setQuietEnd,
+      // daily digest — the default once-a-day reminder
+      dailyDigestTime, setDailyDigest, clearDailyDigest, reapplyDigest,
+      // daily check-in (6 PM local — progress-aware copy)
+      scheduleDailyCheckin, cancelDailyCheckin, reapplyCheckin,
+      composeDigestTitle, composeDigestBody,
       // internals exposed for the UI
       copyFor, parseHM, isPaused, isDisabled,
     };
   })();
 
+  // Expose Notif on window for dev / testing access (so the in-page
+  // console can fire a sample digest notification, inspect the digest
+  // copy composers, etc.). Production app code uses the closure-scoped
+  // Notif directly — this is purely for inspectability.
+  try { window.Notif = Notif; } catch (_) {}
+
   // ── INIT ─────────────────────────────────────────────────
   function init() {
-    // Apply saved theme immediately so there's no flash
-    const savedTheme = localStorage.getItem('hb_theme') || 'dark';
-    document.body.classList.toggle('theme-light', savedTheme === 'light');
-
     load();
     today = getPTDate();
     histViewYear  = parseInt(today.slice(0, 4), 10);
@@ -10184,6 +11818,10 @@
     migratePRsIfNeeded();
     setupEmojiPicker();
     setupCustomHabitModal();
+    setupReminderOfferModal();
+    setupStreaksSheet();
+    setupClassDetail();
+    setupNotifTapRouting();
     setupStatDetail();
     setupSettings();
     setupStreakDanger();
@@ -10220,6 +11858,12 @@
     // notifications so iOS has them ready while the app is closed.
     setTimeout(() => {
       try { Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
+      // Also re-arm the daily morning digest (the default reminder).
+      try { Notif.reapplyDigest(); } catch (_) {}
+      // Re-arm the 6 PM check-in (rescheduleAll above already does this
+      // internally, but call explicitly for resilience if the per-habit
+      // path is ever short-circuited).
+      try { Notif.reapplyCheckin(); } catch (_) {}
     }, 1200);
 
     if (needsWelcome) {
