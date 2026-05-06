@@ -12635,22 +12635,32 @@
     // show the sheet a second time anyway, but the flag prevents the
     // unnecessary plugin call on every render.
     async function requestSleepPermissionIfNeeded() {
-      if (!isAvailable()) return 'unavailable';
+      // DIAGNOSTIC v1.1.5 — remove once confirmed working on device.
+      try { alert('[SLEEP-AUTH] requestSleepPermissionIfNeeded entered'); } catch (_) {}
+      if (!isAvailable()) {
+        try { alert('[SLEEP-AUTH] not available — returning'); } catch (_) {}
+        return 'unavailable';
+      }
       if (localStorage.getItem('hb_healthkit_sleep_requested') === '1') return 'already-requested';
       const p = plugin();
-      if (!p) return 'unavailable';
+      if (!p) {
+        try { alert('[SLEEP-AUTH] plugin object missing — returning'); } catch (_) {}
+        return 'unavailable';
+      }
       try {
+        try { alert('[SLEEP-AUTH] calling p.requestAuthorization'); } catch (_) {}
         await p.requestAuthorization({
           read: ['steps', 'sleepAnalysis'],
           write: [''],
           all: [''],
         });
+        try { alert('[SLEEP-AUTH] requestAuthorization resolved'); } catch (_) {}
         try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
         console.log('[Health] sleep permission request completed (upgrade path)');
         return 'requested';
       } catch (e) {
+        try { alert('[SLEEP-AUTH] requestAuthorization THREW: ' + ((e && e.message) || JSON.stringify(e) || String(e))); } catch (_) {}
         console.warn('[Health] sleep permission request failed', e);
-        // Flag anyway — don't keep re-prompting a user who declined.
         try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
         return 'failed';
       }
@@ -13295,6 +13305,30 @@
       if (didRename) save();
       localStorage.setItem('hb_cardio_renamed', '1');
     }
+    // ── v1.1.5 sleep auth upgrade-path ───────────────────────
+    // Existing v1.1.5 step-grant users granted Steps before sleep was
+    // added to the auth array. Fire once per cold launch (idempotent
+    // via hb_healthkit_sleep_requested flag inside the helper). Not
+    // gated on having a sleep habit — future-proofs against users
+    // adding Sleep / Sleep before midnight later.
+    //
+    // Slight delay so the WebView is fully ready before iOS draws the
+    // permission sheet — avoids races during app cold launch.
+    try {
+      if (Health.isAvailable() && Health.permissionStatus() === 'granted') {
+        // DIAGNOSTIC v1.1.5 — remove once confirmed working on device.
+        try { alert('[SLEEP-AUTH] init reached upgrade gate'); } catch (_) {}
+        const alreadyAsked = localStorage.getItem('hb_healthkit_sleep_requested') === '1';
+        try { alert('[SLEEP-AUTH] flag already-asked: ' + alreadyAsked); } catch (_) {}
+        if (!alreadyAsked) {
+          setTimeout(async () => {
+            try { alert('[SLEEP-AUTH] about to call plugin'); } catch (_) {}
+            const r = await Health.requestSleepPermissionIfNeeded();
+            try { alert('[SLEEP-AUTH] plugin returned: ' + r); } catch (_) {}
+          }, 1500);
+        }
+      }
+    } catch (_) {}
     setupTabs();
     setupLibrary();
     setupSchedulePicker();
