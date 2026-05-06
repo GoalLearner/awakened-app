@@ -12630,10 +12630,13 @@
     // sheet for ONLY the new category (sleep); the existing Steps
     // grant stays untouched.
     //
-    // Flagged via hb_healthkit_sleep_requested. Set to '1' on success
-    // OR failure (a denied user shouldn't get re-prompted) — iOS won't
-    // show the sheet a second time anyway, but the flag prevents the
-    // unnecessary plugin call on every render.
+    // Flagged via hb_healthkit_sleep_requested. Set to '1' ONLY on
+    // successful resolve of p.requestAuthorization() — never in the
+    // catch block. iOS resolves silently for already-decided categories
+    // (granted OR denied), so a real throw is a real failure and
+    // should be retried on the next launch. Defensive flag-setting in
+    // catch was the bug that landed users in a "flag=1, but iOS sheet
+    // never fired" state.
     async function requestSleepPermissionIfNeeded() {
       // DIAGNOSTIC v1.1.5 — remove once confirmed working on device.
       try { alert('[SLEEP-AUTH] requestSleepPermissionIfNeeded entered'); } catch (_) {}
@@ -12655,13 +12658,16 @@
           all: [''],
         });
         try { alert('[SLEEP-AUTH] requestAuthorization resolved'); } catch (_) {}
+        // ONLY set the flag here — post-resolve. Never in catch.
         try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
         console.log('[Health] sleep permission request completed (upgrade path)');
         return 'requested';
       } catch (e) {
         try { alert('[SLEEP-AUTH] requestAuthorization THREW: ' + ((e && e.message) || JSON.stringify(e) || String(e))); } catch (_) {}
         console.warn('[Health] sleep permission request failed', e);
-        try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
+        // Do NOT set the flag here. A throw is a real failure —
+        // retry next cold launch. (Previously flagged defensively
+        // here, which left users stuck with flag=1 and no sheet.)
         return 'failed';
       }
     }
@@ -13304,6 +13310,19 @@
       });
       if (didRename) save();
       localStorage.setItem('hb_cardio_renamed', '1');
+    }
+    // ── v1.1.5 sleep auth flag recovery ──────────────────────
+    // BUG RECOVERY: an earlier dev build set hb_healthkit_sleep_requested
+    // defensively in the catch block of requestSleepPermissionIfNeeded
+    // (now removed — see Health module). Users who hit that path are
+    // stuck with flag='1' but iOS Settings → Privacy → Health → Awakened
+    // showing only Steps, not Sleep — the sheet never fired.
+    // This one-time migration clears the bad flag so the next init's
+    // upgrade-gate logic re-fires the request cleanly. Idempotent via
+    // hb_sleep_recovery_v1; runs exactly once per device.
+    if (!localStorage.getItem('hb_sleep_recovery_v1')) {
+      localStorage.removeItem('hb_healthkit_sleep_requested');
+      localStorage.setItem('hb_sleep_recovery_v1', '1');
     }
     // ── v1.1.5 sleep auth upgrade-path ───────────────────────
     // Existing v1.1.5 step-grant users granted Steps before sleep was
