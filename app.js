@@ -12580,9 +12580,11 @@
 
     // ── Authorization request ────────────────────────────
     // v1.1.5 requests stepCount + sleepAnalysis in a single call. iOS
-    // bundles them into one permission sheet. Existing v1.1.5 step-only
-    // users will see a fresh sheet showing JUST the new sleep category
-    // on first sleep query — steps stays granted silently.
+    // bundles them into one permission sheet on the FIRST grant. For
+    // existing v1.1.5 step-only users (granted before sleep was added
+    // to the read array), see requestSleepPermissionIfNeeded() — iOS
+    // doesn't auto-prompt for new categories on subsequent queries; we
+    // have to explicitly re-call requestAuthorization with the new type.
     //
     // Permissions are independent: a user can grant steps and deny
     // sleep. Both code paths handle null returns gracefully — if sleep
@@ -12607,6 +12609,9 @@
         // the read path can downgrade us to 'denied'.
         setStatus('granted');
         try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
+        // Sleep was bundled in this request — flag it as already-asked
+        // so the upgrade-path helper below no-ops for fresh installs.
+        try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
         console.log('[Health] permission request completed');
         return 'granted';
       } catch (e) {
@@ -12614,6 +12619,40 @@
         setStatus('denied');
         try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
         return 'denied';
+      }
+    }
+
+    // ── Upgrade-path sleep authorization ─────────────────
+    // Idempotent. Existing v1.1.5 step-grant users granted Steps before
+    // sleep was added to the auth read array. iOS doesn't auto-prompt
+    // on the first sleep query — we have to explicitly re-call
+    // requestAuthorization with the new type. iOS shows the permission
+    // sheet for ONLY the new category (sleep); the existing Steps
+    // grant stays untouched.
+    //
+    // Flagged via hb_healthkit_sleep_requested. Set to '1' on success
+    // OR failure (a denied user shouldn't get re-prompted) — iOS won't
+    // show the sheet a second time anyway, but the flag prevents the
+    // unnecessary plugin call on every render.
+    async function requestSleepPermissionIfNeeded() {
+      if (!isAvailable()) return 'unavailable';
+      if (localStorage.getItem('hb_healthkit_sleep_requested') === '1') return 'already-requested';
+      const p = plugin();
+      if (!p) return 'unavailable';
+      try {
+        await p.requestAuthorization({
+          read: ['steps', 'sleepAnalysis'],
+          write: [''],
+          all: [''],
+        });
+        try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
+        console.log('[Health] sleep permission request completed (upgrade path)');
+        return 'requested';
+      } catch (e) {
+        console.warn('[Health] sleep permission request failed', e);
+        // Flag anyway — don't keep re-prompting a user who declined.
+        try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
+        return 'failed';
       }
     }
 
@@ -12783,6 +12822,7 @@
     return {
       isAvailable,
       requestPermissions,
+      requestSleepPermissionIfNeeded,
       getStepsToday,
       getSleepLastNight,
       permissionStatus,
@@ -13143,6 +13183,14 @@
     // Don't trigger the pre-prompt from the sleep path — autoVerifyWalk
     // already handles that. If status is 'unknown', let walk handle it.
     if (status !== 'granted') return;
+
+    // Upgrade-path: existing v1.1.5 step-grant users granted Steps
+    // before sleep was added to the auth array. iOS doesn't auto-prompt
+    // on the first sleep query — we have to explicitly re-call
+    // requestAuthorization with the new type. Idempotent + flagged in
+    // localStorage so it only fires once per device. Fresh installs
+    // pass through immediately (flag set during the bundled request).
+    await Health.requestSleepPermissionIfNeeded();
 
     const data = await Health.getSleepLastNight();
     if (!data) return;
