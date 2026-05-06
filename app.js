@@ -32,6 +32,63 @@
   // outside this list reveals the inline numeric input.
   const HEALTHKIT_WALK_PRESETS = [1000, 3000, 5000, 8000, 10000];
 
+  // ── HealthKit sleep auto-verification ────────────────────
+  // v1.1.5: canonical 'Sleep' habit auto-verifies via Apple Health
+  // when total asleep hours ≥ habit.sleepGoalHours. The canonical
+  // 'Sleep before midnight' habit auto-verifies binarily when the
+  // earliest qualifying asleep sample.startDate < device-local
+  // midnight today. See Health.getSleepLastNight() for the full
+  // sample-handling caveats. Always read goal via getSleepGoalHours().
+  const HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS = 7;
+  const HEALTHKIT_SLEEP_GOAL_MIN_HOURS = 3;
+  const HEALTHKIT_SLEEP_GOAL_MAX_HOURS = 14;
+  const HEALTHKIT_SLEEP_PRESETS = [6, 7, 8, 9];
+  const HEALTHKIT_SLEEP_NAP_MIN_MINUTES = 30; // sample duration < this = nap
+  const HEALTHKIT_SLEEP_LOOKBACK_HOURS = 18;  // query window backwards from now
+
+  function getSleepGoalHours(habit) {
+    if (!habit) return HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+    const n = parseFloat(habit.sleepGoalHours);
+    if (Number.isFinite(n) && n >= HEALTHKIT_SLEEP_GOAL_MIN_HOURS && n <= HEALTHKIT_SLEEP_GOAL_MAX_HOURS) {
+      return n;
+    }
+    return HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+  }
+  function setSleepGoalHours(habit, hours) {
+    if (!habit) return HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+    const parsed = parseFloat(hours);
+    const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+    const n = Math.max(HEALTHKIT_SLEEP_GOAL_MIN_HOURS, Math.min(HEALTHKIT_SLEEP_GOAL_MAX_HOURS, fallback));
+    habit.sleepGoalHours = n;
+    save();
+    return n;
+  }
+  // Habits whose canonical goal is hours of sleep. Replaces the time
+  // stepper in Edit Habit modal with chips, like Daily walk did for
+  // steps. Custom habits never qualify (foreign-key uniqueness).
+  function isSleepDurationHabit(habit) {
+    if (!habit) return false;
+    if (habit.custom) return false;
+    if (habit.name !== 'Sleep') return false;
+    return true;
+  }
+  // Binary auto-verify habit (no goal control). Identifies the canonical
+  // "Sleep before midnight" habit so its row in the Edit modal stays
+  // goal-less and so meetsMinimum() can short-circuit it.
+  function isSleepBedtimeHabit(habit) {
+    if (!habit) return false;
+    if (habit.custom) return false;
+    if (habit.name !== 'Sleep before midnight') return false;
+    return true;
+  }
+  // Single gate that aggregates all habits with HealthKit auto-verify.
+  // Used by meetsMinimum() to bypass the legacy MEASURABLE_HABITS minimum
+  // check — these habits source their goal (or lack thereof) from new
+  // per-habit fields, not the `habit.goal` shape.
+  function isHealthAutoVerifiableHabit(habit) {
+    return isStepGoalHabit(habit) || isSleepDurationHabit(habit) || isSleepBedtimeHabit(habit);
+  }
+
   function getHabitStepGoal(habit) {
     if (!habit) return HEALTHKIT_WALK_DEFAULT_THRESHOLD;
     const n = parseInt(habit.stepGoal, 10);
@@ -80,6 +137,8 @@
       items: [
         { emoji: '', title: 'Walk Auto-Verifies',      description: 'Daily walk auto-verifies via Apple Health when you reach your step goal. No tap needed.' },
         { emoji: '', title: 'Customizable Step Goal',  description: 'Edit your Daily walk habit to set your step goal — 1,000, 3,000, 5,000, or any amount.' },
+        { emoji: '', title: 'Sleep Auto-Verifies',     description: 'Hit your sleep goal? Apple Health verifies it. Edit your Sleep habit to choose how many hours.' },
+        { emoji: '', title: 'Bedtime Auto-Verifies',   description: 'Asleep before midnight? Sleep before midnight checks itself — completing your Morning Routine streak chain on its own.' },
         { emoji: '', title: 'Apple Health Settings',   description: 'Pause auto-verify or manage your connection from Settings.' },
       ],
     },
@@ -166,7 +225,7 @@
   const MEASURABLE_HABITS = {
     'Hydrate':                            { unit: 'glasses', def: 6,   step: 1,   min: 6  },
     'Sleep':                              { unit: 'hrs',     def: 7,   step: 0.5, min: 7  },
-    'Cardio':                             { unit: 'min',     def: 30,  step: 5,   min: 20 },
+    'Cardio workout':                     { unit: 'min',     def: 30,  step: 5,   min: 20 },
     'Strength training':                  { unit: 'min',     def: 30,  step: 5,   min: 20 },
     'Sprint session':                     { unit: 'min',     def: 15,  step: 5,   min: 10 },
     'Daily walk':                         { unit: 'min',     def: 30,  step: 5,   min: 15 },
@@ -188,16 +247,29 @@
 
   // Returns { base, goal } — goal is null if no goal explicitly set by user.
   //
-  // Step-goal habits (canonical "Daily walk", non-custom) pre-empt the
-  // legacy MEASURABLE_HABITS branch below: their goal text is always
-  // "{N} steps" sourced from getHabitStepGoal(habit). v1.1.4 users may
-  // still have habit.goal = {value: 30, unit: 'min'} stored from the
-  // old time-based stepper — that field is silently ignored from
-  // v1.1.5 onward; no migration. (Their first save in the Edit modal
-  // writes habit.stepGoal; the legacy goal field can stay orphaned.)
+  // HealthKit-auto-verifiable habits pre-empt the legacy MEASURABLE_HABITS
+  // branch below:
+  //   - Daily walk → "{N} steps" from getHabitStepGoal(habit)
+  //   - Sleep      → "{N} hours" / "1 hour" from getSleepGoalHours(habit)
+  //   - Sleep before midnight → no subtitle (binary habit, no goal)
+  //
+  // v1.1.4 users may still have habit.goal = {value: 30, unit: 'min'}
+  // stored from the old time-based stepper — that field is silently
+  // ignored from v1.1.5 onward; no migration. Their first save in the
+  // Edit modal writes habit.stepGoal / habit.sleepGoalHours; the
+  // legacy goal field can stay orphaned.
   function habitDisplayParts(habit) {
     if (isStepGoalHabit(habit)) {
       return { base: habit.name, goal: getHabitStepGoal(habit).toLocaleString() + ' steps' };
+    }
+    if (isSleepDurationHabit(habit)) {
+      const h = getSleepGoalHours(habit);
+      return { base: habit.name, goal: h + (h === 1 ? ' hour' : ' hours') };
+    }
+    if (isSleepBedtimeHabit(habit)) {
+      // Binary auto-verify habit — no goal text. The base name alone
+      // ("Sleep before midnight") already conveys the rule.
+      return { base: habit.name, goal: null };
     }
     const m = MEASURABLE_HABITS[habit.name];
     if (!m) return { base: habit.name, goal: null };
@@ -583,7 +655,7 @@
         { id: 'pushups',  text: '100 pushups',              matchType: 'manual' },
         { id: 'squats',   text: '100 squats',               matchType: 'manual' },
         { id: 'situps',   text: '100 sit-ups',              matchType: 'manual' },
-        { id: 'run',      text: '1-mile run',               matchType: 'habit', habitName: 'Cardio' },
+        { id: 'run',      text: '1-mile run',               matchType: 'habit', habitName: 'Cardio workout' },
       ] },
     { id: 'silence-protocol', name: "Silence Protocol",
       description: "Twelve hours quiet. An hour each: stillness, writing, walking.",
@@ -812,11 +884,11 @@
   const STATS = [
     { id: 'STR',   icon: '⚔️',  iconImg: 'assets/stat-icons/stat-str.png',   label: 'STR',   name: 'Strength',     color: '#ef4444',
       habits: [
-        'Strength training', 'Cardio', 'Sprint session', 'Daily walk', 'Protein goal',
+        'Strength training', 'Cardio workout', 'Sprint session', 'Daily walk', 'Protein goal',
       ] },
     { id: 'VIT',   icon: '❤️',  iconImg: 'assets/stat-icons/stat-vit.png',   label: 'VIT',   name: 'Vitality',     color: '#22c55e',
       habits: [
-        'Hydrate', 'Sleep', 'Sleep before midnight', 'Cardio', 'Daily walk',
+        'Hydrate', 'Sleep', 'Sleep before midnight', 'Cardio workout', 'Daily walk',
         'Ice bath or cold plunge', 'Mobility & Stretching', 'Get morning sunlight',
         'Whole foods diet', 'No sugar/junk food', 'Barefoot grounding outside',
         'Vitamins and minerals', 'Sleep early before 11PM',
@@ -1456,7 +1528,7 @@
     { emoji: '💧', name: 'Hydrate',                                   difficulty: 'easy'                },  // 0
     { emoji: '😴', name: 'Sleep',                                     difficulty: 'medium'              },  // 1
     { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium'              },  // 2
-    { emoji: '🏃', name: 'Cardio',                                    difficulty: 'medium'              },  // 3
+    { emoji: '🏃', name: 'Cardio workout',                            difficulty: 'medium'              },  // 3
     { emoji: '🏋️', name: 'Strength training',                        difficulty: 'hard'                },  // 4
     { emoji: '⚡', name: 'Sprint session',                            difficulty: 'hard'                },  // 5
     { emoji: '🚶', name: 'Daily walk',                                difficulty: 'easy'                },  // 6
@@ -1529,7 +1601,7 @@
   const HABIT_PRIMARY_STAT = {
     // STR (red)
     'Strength training': 'STR', 'Sprint session': 'STR', 'Mobility & Stretching': 'STR',
-    'Cardio': 'STR', 'Cold shower': 'STR', 'Ice bath or cold plunge': 'STR',
+    'Cardio workout': 'STR', 'Cold shower': 'STR', 'Ice bath or cold plunge': 'STR',
     // VIT (pink)
     'Hydrate': 'VIT', 'Sleep': 'VIT', 'Sleep before midnight': 'VIT',
     'Sleep early before 11PM': 'VIT', 'Vitamins and minerals': 'VIT', 'Daily walk': 'VIT',
@@ -1574,7 +1646,7 @@
     'Hydrate':                              'assets/habit-icons/icon-water.png',
     'Sleep':                                'assets/habit-icons/icon-sleep.png',
     'Sleep before midnight':                'assets/habit-icons/icon-sleep.png',
-    'Cardio':                               'assets/habit-icons/icon-cardio.png',
+    'Cardio workout':                       'assets/habit-icons/icon-cardio.png',
     'Strength training':                    'assets/habit-icons/icon-strength.png',
     'Sprint session':                       'assets/habit-icons/icon-sprint.png',
     'Daily walk':                           'assets/habit-icons/icon-walk.png',
@@ -1857,7 +1929,7 @@
     'Hydrate':                  'Water is the most underrated performance tool. Your brain, muscles, and recovery all depend on it.',
     'Sleep':                    'Recovery happens here. Skipping sleep is borrowing energy from tomorrow with high interest.',
     'Sleep before midnight':    'It all starts the night before. Quality sleep before midnight sets the foundation for everything.',
-    'Cardio':                   'Build the engine. Cardiovascular fitness is the base layer everything else stacks on.',
+    'Cardio workout':           'Get your heart rate up. Run, bike, row, swim — sustained effort for 20+ minutes. The dedicated training that builds the engine.',
     'Strength training':        'You build your body like a fortress. Muscle is metabolic armor — protect what you build.',
     'Sprint session':           'Maximum effort, minimum time. Sprints train explosiveness and remind you what 100% feels like.',
     'Daily walk':               'The most underrated practice. Walking solves more problems than most strategies.',
@@ -4816,10 +4888,11 @@
     }
     updateProgress();
 
-    // HealthKit walk auto-verify hook. Fires async; no-ops on web /
-    // when permission isn't granted / when threshold not met. Will
-    // re-trigger renderHabits() if it auto-checks the walk habit.
+    // HealthKit auto-verify hooks. Fire async; both no-op on web /
+    // when permission isn't granted / when threshold not met. Each
+    // re-triggers renderHabits() once after a successful auto-check.
     try { autoVerifyWalk(); } catch (_) {}
+    try { autoVerifySleep(); } catch (_) {}
   }
 
   function renderRank() {
@@ -5465,14 +5538,15 @@
 
   // Returns true if a measurable habit's goal meets the minimum threshold.
   function meetsMinimum(habit) {
-    // Step-goal habits (canonical Daily walk) bypass the legacy
-    // MEASURABLE_HABITS minimum check. Their goal is sourced from
-    // habit.stepGoal (defaulting to 3000 via getHabitStepGoal) and
-    // the Edit modal clamps to [100, 50000] — there's nothing to
-    // block. Without this guard, v1.1.5 users with no habit.goal
-    // field yet would hit the "Set your goal value" toast and be
-    // unable to toggle Daily walk manually.
-    if (isStepGoalHabit(habit)) return true;
+    // HealthKit-auto-verifiable habits (Daily walk step goal, Sleep
+    // duration goal, Sleep before midnight binary) all bypass the
+    // legacy MEASURABLE_HABITS minimum check. Their goals come from
+    // dedicated per-habit fields (or no goal at all, for the binary
+    // bedtime habit) and the Edit modal clamps to safe ranges — there's
+    // nothing to block. Without this guard, v1.1.5 users with no
+    // habit.goal field yet would hit the "Set your goal value" toast
+    // and be unable to toggle these habits manually.
+    if (isHealthAutoVerifiableHabit(habit)) return true;
 
     const m = MEASURABLE_HABITS[habit.name];
     if (!m) return true; // not measurable — always OK
@@ -6543,14 +6617,14 @@
       }
       // If the user un-checks an auto-verified completion, that un-check
       // is permanent for the day — the auto-verifier must NOT re-check
-      // it on later refresh. Recorded specifically for the canonical
-      // Daily walk habit; other auto-verify habits (future) will need
-      // their own per-habit unchecked-dates lists.
+      // it on later refresh. Recorded per-habit-name (Daily walk, Sleep,
+      // Sleep before midnight, future auto-verify habits) under one
+      // generic AUTO_VERIFY.markUnchecked() call.
       try {
         if (typeof AUTO_VERIFY !== 'undefined' && AUTO_VERIFY.isAutoVerifiedToday(id)) {
           const h = habits.find(x => x.id === id);
-          if (h && h.name === 'Daily walk' && !h.custom) {
-            AUTO_VERIFY.markWalkUnchecked();
+          if (h && isHealthAutoVerifiableHabit(h)) {
+            AUTO_VERIFY.markUnchecked(h.name);
           }
           AUTO_VERIFY.clearAutoVerify(id);
         }
@@ -7164,10 +7238,11 @@
           context: 'library',
           onConfirm: cfg => {
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: cfg.difficulty, type: cfg.type || h.type || 'build' };
-            if (cfg.days)               newH.days      = cfg.days;
-            if (typeof cfg.stepGoal === 'number') newH.stepGoal = cfg.stepGoal;
-            else if (cfg.goal)          newH.goal      = cfg.goal;
-            if (cfg.startDate)          newH.startDate = cfg.startDate;
+            if (cfg.days)                                 newH.days           = cfg.days;
+            if (typeof cfg.stepGoal === 'number')         newH.stepGoal       = cfg.stepGoal;
+            else if (typeof cfg.sleepGoalHours === 'number') newH.sleepGoalHours = cfg.sleepGoalHours;
+            else if (cfg.goal)                            newH.goal           = cfg.goal;
+            if (cfg.startDate)                            newH.startDate      = cfg.startDate;
             habits.push(newH);
             // Pre-fill note from DEFAULT_HABITS if present
             if (h.note) habitNotes[newH.id] = h.note;
@@ -7229,6 +7304,13 @@
     let hdStepGoal;
     if (typeof ec.stepGoal === 'number') hdStepGoal = ec.stepGoal;
     else                                  hdStepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+    // Sleep-goal staging (canonical "Sleep" only). Mutually exclusive
+    // with both the step-goal chips above AND the time/count stepper
+    // below — branching is in the render() goal-card section.
+    const hdIsSleepGoal = isSleepDurationHabit(h);
+    let hdSleepGoal;
+    if (typeof ec.sleepGoalHours === 'number') hdSleepGoal = ec.sleepGoalHours;
+    else                                        hdSleepGoal = HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
     let hdDiff  = ec.difficulty || h.difficulty;
     let hdStart = ec.startDate  || today;
 
@@ -7435,6 +7517,97 @@
         goalCard.appendChild(chips);
         goalCard.appendChild(customRow);
         body.appendChild(goalCard);
+      } else if (hdIsSleepGoal) {
+        // Sleep-goal chips — mirrors the step-goal block above with
+        // hours instead of steps. Reuses the same .habit-edit-stepgoal-*
+        // CSS classes so the visual treatment matches.
+        const goalCard = hdSection('Goal Value');
+        const valueRow = document.createElement('div');
+        valueRow.className = 'habit-edit-stepgoal-row';
+        const valueLabel = document.createElement('span');
+        valueLabel.className = 'habit-edit-stepgoal-label';
+        valueLabel.textContent = 'Sleep goal';
+        const valueDisplay = document.createElement('span');
+        valueDisplay.className = 'habit-edit-stepgoal-value';
+        const fmtSleep = (n) => n + (n === 1 ? ' hour' : ' hours');
+        valueDisplay.textContent = fmtSleep(hdSleepGoal);
+        valueRow.append(valueLabel, valueDisplay);
+        goalCard.appendChild(valueRow);
+
+        const chips = document.createElement('div');
+        chips.className = 'habit-edit-stepgoal-chips';
+        const chipDefs = HEALTHKIT_SLEEP_PRESETS.map(n => ({ preset: String(n), label: n + ' hrs' }))
+          .concat([{ preset: 'custom', label: 'Custom' }]);
+        chipDefs.forEach(({ preset, label }) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'habit-edit-stepgoal-chip';
+          btn.dataset.preset = preset;
+          btn.textContent = label;
+          chips.appendChild(btn);
+        });
+        const setActive = () => {
+          const isCustom = !HEALTHKIT_SLEEP_PRESETS.includes(hdSleepGoal);
+          chips.querySelectorAll('.habit-edit-stepgoal-chip').forEach(chip => {
+            const p = chip.dataset.preset;
+            const active = (p === 'custom') ? isCustom : (parseFloat(p) === hdSleepGoal);
+            chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+          });
+        };
+        setActive();
+
+        const customRow = document.createElement('div');
+        customRow.className = 'habit-edit-stepgoal-custom hidden';
+        const customInput = document.createElement('input');
+        customInput.type = 'number';
+        customInput.inputMode = 'decimal';
+        customInput.min = HEALTHKIT_SLEEP_GOAL_MIN_HOURS;
+        customInput.max = HEALTHKIT_SLEEP_GOAL_MAX_HOURS;
+        customInput.step = 0.5;
+        customInput.placeholder = 'Enter hours (3–14, 0.5 step)';
+        customInput.className = 'habit-edit-stepgoal-input';
+        const customSave = document.createElement('button');
+        customSave.type = 'button';
+        customSave.className = 'habit-edit-stepgoal-save';
+        customSave.textContent = 'Save';
+        const customCancel = document.createElement('button');
+        customCancel.type = 'button';
+        customCancel.className = 'habit-edit-stepgoal-cancel';
+        customCancel.textContent = 'Cancel';
+        customRow.append(customInput, customSave, customCancel);
+
+        chips.addEventListener('click', (e) => {
+          const chip = e.target.closest('.habit-edit-stepgoal-chip');
+          if (!chip) return;
+          const p = chip.dataset.preset;
+          if (p === 'custom') {
+            customRow.classList.remove('hidden');
+            customInput.value = String(hdSleepGoal);
+            setTimeout(() => customInput.focus(), 50);
+            return;
+          }
+          const n = parseFloat(p);
+          if (!Number.isFinite(n)) return;
+          hdSleepGoal = n;
+          customRow.classList.add('hidden');
+          valueDisplay.textContent = fmtSleep(hdSleepGoal);
+          setActive();
+        });
+        const commitCustom = () => {
+          const parsed = parseFloat(customInput.value);
+          const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+          hdSleepGoal = Math.max(HEALTHKIT_SLEEP_GOAL_MIN_HOURS, Math.min(HEALTHKIT_SLEEP_GOAL_MAX_HOURS, fallback));
+          customRow.classList.add('hidden');
+          valueDisplay.textContent = fmtSleep(hdSleepGoal);
+          setActive();
+        };
+        customSave.addEventListener('click', commitCustom);
+        customInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitCustom(); });
+        customCancel.addEventListener('click', () => { customRow.classList.add('hidden'); });
+
+        goalCard.appendChild(chips);
+        goalCard.appendChild(customRow);
+        body.appendChild(goalCard);
       } else if (measurable) {
         const goalCard = hdSection('Goal Value');
 
@@ -7528,10 +7701,13 @@
           ndays:      hdNdays,
           difficulty: hdDiff,
           days:       days || undefined,
-          // Goal — mutually exclusive: step-goal habits carry stepGoal,
-          // measurable habits carry the legacy goal{value,unit} shape.
-          goal:       (!hdIsStepGoal && measurable) ? { value: hdGoal, unit: measurable.unit } : undefined,
-          stepGoal:   hdIsStepGoal ? hdStepGoal : undefined,
+          // Goal — mutually exclusive between three branches:
+          //   step-goal habits carry stepGoal (Daily walk)
+          //   sleep-goal habits carry sleepGoalHours (Sleep)
+          //   measurable habits carry the legacy goal{value,unit} shape
+          goal:           (!hdIsStepGoal && !hdIsSleepGoal && measurable) ? { value: hdGoal, unit: measurable.unit } : undefined,
+          stepGoal:       hdIsStepGoal  ? hdStepGoal  : undefined,
+          sleepGoalHours: hdIsSleepGoal ? hdSleepGoal : undefined,
           startDate:  hdStart !== today ? hdStart : undefined,
         };
         if (opts.onConfirm) {
@@ -7539,10 +7715,11 @@
         } else {
           // Default (library) behaviour
           const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
-          if (days)              newH.days      = days;
-          if (hdIsStepGoal)      newH.stepGoal  = hdStepGoal;
-          else if (measurable)   newH.goal      = { value: hdGoal, unit: measurable.unit };
-          if (hdStart !== today) newH.startDate = hdStart;
+          if (days)              newH.days           = days;
+          if (hdIsStepGoal)      newH.stepGoal       = hdStepGoal;
+          else if (hdIsSleepGoal) newH.sleepGoalHours = hdSleepGoal;
+          else if (measurable)   newH.goal           = { value: hdGoal, unit: measurable.unit };
+          if (hdStart !== today) newH.startDate      = hdStart;
           habits.push(newH);
           save();
           renderHabits();
@@ -9181,6 +9358,10 @@
   // so Cancel doesn't need to undo anything.
   let editStepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
   let editStepGoalEnabled = false;
+  // Sleep-goal staging — same pattern, mutually exclusive with both
+  // the step-goal control and the time/count stepper.
+  let editSleepGoal = HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+  let editSleepGoalEnabled = false;
 
   function refreshEditGoalDisplay() {
     const habit = habits.find(h => h.id === editingId);
@@ -9206,6 +9387,26 @@
     });
   }
 
+  // Sleep-goal display refresh — mirrors refreshEditStepGoalDisplay but
+  // for the Sleep habit's chip picker. Hours-formatted ("7 hours" /
+  // "8.5 hours"); pluralization handled by `=== 1` check (3–14 range
+  // never produces "1 hours" since min is 3, but kept defensively).
+  function refreshEditSleepGoalDisplay() {
+    const valueEl = document.getElementById('edit-sleepgoal-value');
+    if (valueEl) {
+      const h = editSleepGoal;
+      valueEl.textContent = h + (h === 1 ? ' hour' : ' hours');
+    }
+    const isCustom = !HEALTHKIT_SLEEP_PRESETS.includes(editSleepGoal);
+    document.querySelectorAll('#edit-sleepgoal .habit-edit-stepgoal-chip').forEach(chip => {
+      const preset = chip.dataset.preset;
+      let active;
+      if (preset === 'custom') active = isCustom;
+      else                     active = parseFloat(preset) === editSleepGoal;
+      chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+    });
+  }
+
   function openEditModal(id) {
     const habit = habits.find(h => h.id === id);
     if (!habit) return;
@@ -9216,24 +9417,35 @@
     setEmojiBtn(document.getElementById('edit-emoji-btn'), editFormEmoji);
     setActiveDiff('edit-diff-row', editFormDiff);
 
-    // Step-goal vs. time/count stepper — mutually exclusive.
-    // Canonical "Daily walk" (non-custom) swaps in the step-goal chips
-    // on every platform; every other habit keeps the existing stepper.
-    // Auto-verify still only fires on iOS — but the goal is a property
-    // of the habit, not contingent on HealthKit availability.
-    const stepGoalEl = document.getElementById('edit-stepgoal');
-    const goalRow    = document.getElementById('edit-goal-row');
-    editStepGoalEnabled = isStepGoalHabit(habit);
+    // Goal control — mutually exclusive between three branches:
+    //   (1) step-goal chips     (canonical "Daily walk")
+    //   (2) sleep-goal chips    (canonical "Sleep")
+    //   (3) time/count stepper  (every other measurable habit)
+    // The bedtime habit ("Sleep before midnight") is binary — none of
+    // the three render for it (it's not in MEASURABLE_HABITS).
+    const stepGoalEl  = document.getElementById('edit-stepgoal');
+    const sleepGoalEl = document.getElementById('edit-sleepgoal');
+    const goalRow     = document.getElementById('edit-goal-row');
+    editStepGoalEnabled  = isStepGoalHabit(habit);
+    editSleepGoalEnabled = isSleepDurationHabit(habit);
 
     if (editStepGoalEnabled) {
       editStepGoal = getHabitStepGoal(habit);
-      stepGoalEl.hidden = false;
+      stepGoalEl.hidden  = false;
+      sleepGoalEl.hidden = true;
       goalRow.classList.add('hidden');
-      // Make sure any open custom-input row from a previous open is hidden.
       document.getElementById('edit-stepgoal-custom').classList.add('hidden');
       refreshEditStepGoalDisplay();
+    } else if (editSleepGoalEnabled) {
+      editSleepGoal = getSleepGoalHours(habit);
+      stepGoalEl.hidden  = true;
+      sleepGoalEl.hidden = false;
+      goalRow.classList.add('hidden');
+      document.getElementById('edit-sleepgoal-custom').classList.add('hidden');
+      refreshEditSleepGoalDisplay();
     } else {
-      stepGoalEl.hidden = true;
+      stepGoalEl.hidden  = true;
+      sleepGoalEl.hidden = true;
       // Existing time/count stepper path.
       const m = MEASURABLE_HABITS[habit.name];
       if (m) {
@@ -9311,19 +9523,23 @@
     const habit = habits.find(h => h.id === editingId);
     if (habit) {
       habit.name = name; habit.emoji = editFormEmoji; habit.difficulty = editFormDiff;
-      // Persist HealthKit step goal if the modal was in step-goal mode.
-      // (editStepGoal is staged inline as user taps chips; we commit it
-      // here so Cancel doesn't accidentally persist a staged value.)
+      // Persist HealthKit goal if the modal was in step-goal OR
+      // sleep-goal mode. Each is staged inline as user taps chips
+      // (editStepGoal / editSleepGoal); we commit here so Cancel
+      // doesn't accidentally persist a staged value.
       if (editStepGoalEnabled) {
         habit.stepGoal = editStepGoal;
         // Threshold change may immediately auto-check today if user's
         // current step count is past the new goal — clear the cache so
         // renderHabits → autoVerifyWalk re-queries fresh.
         try { Health.clearCache && Health.clearCache(); } catch (_) {}
-      }
-      // Persist goal if this is a measurable habit (and we weren't in
-      // step-goal mode). Mutually exclusive with the step-goal branch.
-      if (!editStepGoalEnabled) {
+      } else if (editSleepGoalEnabled) {
+        habit.sleepGoalHours = editSleepGoal;
+        // Same logic for sleep — if last night's sleep already exceeds
+        // the new goal, the next renderHabits will auto-check.
+        try { Health.clearSleepCache && Health.clearSleepCache(); } catch (_) {}
+      } else {
+        // Time/count stepper path (mutually exclusive with both above).
         const m = MEASURABLE_HABITS[habit.name];
         if (m) habit.goal = { value: editGoalValue, unit: m.unit };
       }
@@ -9400,6 +9616,51 @@
     if (stepGoalCancel) {
       stepGoalCancel.addEventListener('click', () => {
         document.getElementById('edit-stepgoal-custom').classList.add('hidden');
+      });
+    }
+
+    // ── HealthKit sleep-goal control (Edit Habit modal) ──────
+    // Same staging/commit pattern as the step-goal control above. Chip
+    // values are HOURS (string-encoded in data-preset for symmetry with
+    // the step picker). Custom input accepts 0.5-step floats.
+    const sleepGoalChips = document.getElementById('edit-sleepgoal');
+    if (sleepGoalChips) {
+      sleepGoalChips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.habit-edit-stepgoal-chip');
+        if (!chip) return;
+        const preset = chip.dataset.preset;
+        if (preset === 'custom') {
+          const customRow = document.getElementById('edit-sleepgoal-custom');
+          customRow.classList.remove('hidden');
+          const input = document.getElementById('edit-sleepgoal-input');
+          input.value = String(editSleepGoal);
+          setTimeout(() => input.focus(), 50);
+          return;
+        }
+        const n = parseFloat(preset);
+        if (!Number.isFinite(n)) return;
+        editSleepGoal = n;
+        document.getElementById('edit-sleepgoal-custom').classList.add('hidden');
+        refreshEditSleepGoalDisplay();
+      });
+    }
+    const sleepGoalSave   = document.getElementById('edit-sleepgoal-save');
+    const sleepGoalCancel = document.getElementById('edit-sleepgoal-cancel');
+    const sleepGoalInput  = document.getElementById('edit-sleepgoal-input');
+    const commitSleepGoal = () => {
+      if (!sleepGoalInput) return;
+      // Same clamping logic as setSleepGoalHours, applied to staging only.
+      const parsed = parseFloat(sleepGoalInput.value);
+      const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+      editSleepGoal = Math.max(HEALTHKIT_SLEEP_GOAL_MIN_HOURS, Math.min(HEALTHKIT_SLEEP_GOAL_MAX_HOURS, fallback));
+      document.getElementById('edit-sleepgoal-custom').classList.add('hidden');
+      refreshEditSleepGoalDisplay();
+    };
+    if (sleepGoalSave)  sleepGoalSave.addEventListener('click', commitSleepGoal);
+    if (sleepGoalInput) sleepGoalInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitSleepGoal(); });
+    if (sleepGoalCancel) {
+      sleepGoalCancel.addEventListener('click', () => {
+        document.getElementById('edit-sleepgoal-custom').classList.add('hidden');
       });
     }
 
@@ -11387,17 +11648,21 @@
       };
       if (cfg.days)      newH.days      = cfg.days;
       if (cfg.startDate) newH.startDate = cfg.startDate;
-      // Goal — mutually exclusive: step-goal habits (canonical Daily
-      // walk) carry stepGoal; everything else uses the legacy
-      // goal{value,unit} shape. v1.1.5+ — see isStepGoalHabit().
+      // Goal — mutually exclusive across four branches: step-goal
+      // habits (canonical Daily walk), sleep-goal habits (canonical
+      // Sleep), legacy measurable habits, and binary auto-verify
+      // habits (Sleep before midnight — no goal at all). v1.1.5+.
       if (typeof cfg.stepGoal === 'number') {
         newH.stepGoal = cfg.stepGoal;
       } else if (isStepGoalHabit(base)) {
-        // User opened the detail sheet but didn't change the goal —
-        // persist the staged default so habit.stepGoal is always set
-        // for canonical Daily walk and getHabitStepGoal returns
-        // consistently without leaning on its fallback.
+        // User didn't open the detail sheet — persist the default so
+        // habit.stepGoal is always set for canonical Daily walk.
         newH.stepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+      } else if (typeof cfg.sleepGoalHours === 'number') {
+        newH.sleepGoalHours = cfg.sleepGoalHours;
+      } else if (isSleepDurationHabit(base)) {
+        // Same default-fill rationale as Daily walk.
+        newH.sleepGoalHours = HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
       } else if (cfg.goal) {
         newH.goal = cfg.goal;
       } else {
@@ -11420,7 +11685,7 @@
         'No phone or social media after waking': 'Protect your mind in the first 30 minutes. What you consume first shapes your entire day.',
         'Get morning sunlight':               'Get outside. Natural light sets your circadian rhythm and signals your body it is time to conquer.',
         'Morning gratitude practice':         'Three things. Every morning. Rewires your brain toward abundance over time.',
-        'Daily walk':                         'Movement is medicine. Hit your step goal each day to clear the mind and activate the body.',
+        'Daily walk':                         'Background movement matters. Hit your step goal — anywhere, any pace. Walks while on calls, errands, anywhere it fits in your day.',
         'Vitamins and minerals':              'Your body cannot perform without the right fuel. Non negotiable.',
         'Meditate & Breathwork':              'Stillness is a skill. 10 minutes of presence builds the focus that trading and life demand.',
         'Strength training':                  'The body you build reflects the discipline you practice. Show up for it daily.',
@@ -11675,7 +11940,7 @@
       'Hydrate':                            { title: 'Hydrate.',          body: 'Water the temple.' },
       'Sleep':                              { title: 'Sleep.',            body: 'Repair begins when you let it.' },
       'Sleep before midnight':              { title: 'Bed by midnight.',  body: 'Tomorrow is built tonight.' },
-      'Cardio':                             { title: 'Cardio.',           body: 'Move before the day moves you.' },
+      'Cardio workout':                     { title: 'Cardio.',           body: 'Move before the day moves you.' },
       'Strength training':                  { title: 'Train, Hunter.',    body: "The path doesn't walk itself." },
       'Sprint session':                     { title: 'Sprint.',           body: 'Speed is forged in the burn.' },
       'Daily walk':                         { title: 'Walk.',             body: 'Movement clears the static.' },
@@ -12270,18 +12535,28 @@
       }
     }
 
-    // ── In-memory cache (5 min TTL) ──────────────────────
-    // We never persist step counts. HealthKit is the source of truth;
-    // we just avoid hammering it on every render.
-    const STEP_CACHE_TTL_MS = 5 * 60 * 1000;
-    let stepCache = null; // { steps, fetchedAt }
+    // ── In-memory caches (5 min TTL) ─────────────────────
+    // We never persist HealthKit data — Apple Health is the source of
+    // truth; these caches just avoid hammering it on every render.
+    // Step + sleep have separate caches with separate clear methods so
+    // each habit's auto-verify can refresh independently.
+    const STEP_CACHE_TTL_MS  = 5 * 60 * 1000;
+    const SLEEP_CACHE_TTL_MS = 5 * 60 * 1000;
+    let stepCache  = null; // { steps, fetchedAt }
+    let sleepCache = null; // { totalAsleepHours, earliestSleepStart, samples, fetchedAt }
 
     function isCacheFresh() {
       return stepCache && (Date.now() - stepCache.fetchedAt) < STEP_CACHE_TTL_MS;
     }
+    function isSleepCacheFresh() {
+      return sleepCache && (Date.now() - sleepCache.fetchedAt) < SLEEP_CACHE_TTL_MS;
+    }
 
     function clearCache() {
       stepCache = null;
+    }
+    function clearSleepCache() {
+      sleepCache = null;
     }
 
     // ── Permission status (locally tracked) ──────────────
@@ -12304,9 +12579,15 @@
     }
 
     // ── Authorization request ────────────────────────────
-    // v1.1.4 only requests stepCount read access. Future versions can
-    // expand `read` to ['steps', 'sleepAnalysis', 'workoutType', ...].
-    // The iOS sheet bundles whatever is in this array into one prompt.
+    // v1.1.5 requests stepCount + sleepAnalysis in a single call. iOS
+    // bundles them into one permission sheet. Existing v1.1.5 step-only
+    // users will see a fresh sheet showing JUST the new sleep category
+    // on first sleep query — steps stays granted silently.
+    //
+    // Permissions are independent: a user can grant steps and deny
+    // sleep. Both code paths handle null returns gracefully — if sleep
+    // is denied, getSleepLastNight returns null and sleep auto-verify
+    // silently no-ops. Steps continue to work.
     async function requestPermissions() {
       if (!isAvailable()) return 'unavailable';
       const p = plugin();
@@ -12316,7 +12597,7 @@
       }
       try {
         await p.requestAuthorization({
-          read: ['steps'],
+          read: ['steps', 'sleepAnalysis'],
           write: [''],
           all: [''],
         });
@@ -12401,13 +12682,112 @@
       }
     }
 
+    // ── Sleep query ──────────────────────────────────────
+    // Returns last night's main sleep block summary, or null. Window:
+    // [now − 18h, now]. Caller decides what to do with the return.
+    //
+    // Shape:
+    //   {
+    //     totalAsleepHours:   <number>,           // sum of 'Asleep' sample durations
+    //     earliestSleepStart: <Date>,             // earliest qualifying asleep sample.startDate
+    //     samples:            [{startDate, endDate, duration, sleepState}, ...]
+    //   }
+    //
+    // Returns null on:
+    //   - non-native platform / missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws OR resultData is empty
+    //
+    // Caveats:
+    //   - The plugin collapses Apple's HKCategoryValueSleepAnalysis enum
+    //     into 2 strings: 'InBed' and 'Asleep'. The 'Asleep' bucket
+    //     incorrectly includes `awake` rawValue=2 samples (not just
+    //     asleepCore/Deep/REM). For total-asleep computation this
+    //     overcounts by however long mid-night awake periods are —
+    //     typically <15 min/night. Acceptable v1 error margin.
+    //   - earliestSleepStart uses the EARLIEST 'Asleep' sample whose
+    //     duration ≥ HEALTHKIT_SLEEP_NAP_MIN_MINUTES. The 30-min filter
+    //     skips brief naps. Edge case: a 1-hour evening nap will produce
+    //     a false-positive "before midnight" verdict. Rare; user can
+    //     manually un-check.
+    //   - Window is 18h backwards from now. Device-local clock — sleep
+    //     crosses midnight, PT-anchoring is wrong (CLAUDE.md notif rule).
+    //   - Sleep data lands in HealthKit on wake (Apple Watch) or backfill
+    //     (iPhone alarm). Auto-verify won't fire AT midnight; it fires
+    //     when user opens app in the morning.
+    //
+    // Never throws.
+    async function getSleepLastNight() {
+      if (!isAvailable()) return null;
+      if (isSleepCacheFresh()) return sleepCache;
+
+      const p = plugin();
+      if (!p) return null;
+
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+
+      try {
+        const now = new Date();
+        const start = new Date(now.getTime() - HEALTHKIT_SLEEP_LOOKBACK_HOURS * 3600 * 1000);
+
+        const result = await p.queryHKitSampleType({
+          sampleName: 'sleepAnalysis',
+          startDate: start.toISOString(),
+          endDate: now.toISOString(),
+          limit: 0,
+        });
+
+        const samples = (result && result.resultData) || [];
+        if (samples.length === 0) {
+          // Empty result = no signal (iPhone-only with no data, or genuinely
+          // no sleep). Return null — auto-verify treats this as silent skip,
+          // not a failed habit.
+          console.log('[Health] sleep: no samples in last', HEALTHKIT_SLEEP_LOOKBACK_HOURS, 'h');
+          return null;
+        }
+
+        // Filter to 'Asleep' samples (excluded: 'InBed' wrappers).
+        const asleepSamples = samples.filter(s => s && s.sleepState === 'Asleep');
+
+        // Total — sum durations (already in hours from plugin).
+        const totalAsleepHours = asleepSamples.reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
+
+        // Earliest qualifying asleep sample = first sample whose duration
+        // exceeds the nap floor. Sort by startDate ascending.
+        const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
+        const qualifying = asleepSamples
+          .filter(s => Number(s.duration) >= napFloorHours)
+          .map(s => ({ ...s, _start: new Date(s.startDate) }))
+          .sort((a, b) => a._start - b._start);
+        const earliestSleepStart = qualifying.length ? qualifying[0]._start : null;
+
+        sleepCache = {
+          totalAsleepHours,
+          earliestSleepStart,
+          samples: asleepSamples,
+          fetchedAt: Date.now(),
+        };
+        setStatus('granted');
+        console.log('[Health] sleep last night:', totalAsleepHours.toFixed(2), 'h asleep,',
+          'earliest:', earliestSleepStart && earliestSleepStart.toISOString(),
+          '(samples:', samples.length, 'asleep:', asleepSamples.length, ')');
+        return sleepCache;
+      } catch (e) {
+        console.warn('[Health] sleep query failed', e);
+        return null;
+      }
+    }
+
     // Public surface
     return {
       isAvailable,
       requestPermissions,
       getStepsToday,
+      getSleepLastNight,
       permissionStatus,
-      clearCache, // exposed for testing / manual refresh
+      clearCache,       // step cache
+      clearSleepCache,  // sleep cache
     };
   })();
 
@@ -12420,8 +12800,13 @@
   // (so we don't re-check them on next refresh).
   //
   // localStorage shape:
-  //   hb_completions_auto    { 'YYYY-MM-DD': { habitId: { source, value } } }
-  //   hb_walk_unchecked_dates ['YYYY-MM-DD', ...]   (auto-pruned to 14 days)
+  //   hb_completions_auto      { 'YYYY-MM-DD': { habitId: { source, value } } }
+  //   hb_av_unchecked_dates    { habitName: ['YYYY-MM-DD', ...] }  (per-habit, auto-pruned to 14 days)
+  //
+  // The unchecked-dates map is keyed by habit NAME (canonical foreign
+  // key, stable across reinstalls — see CLAUDE.md "habit identity is
+  // the name string"). v1.1.5 migrates the old walk-only flat array
+  // (hb_walk_unchecked_dates) into 'Daily walk' under the new key.
   const AUTO_VERIFY = (() => {
     function load() {
       try { return JSON.parse(localStorage.getItem('hb_completions_auto') || '{}'); }
@@ -12430,12 +12815,25 @@
     function persist(map) {
       try { localStorage.setItem('hb_completions_auto', JSON.stringify(map)); } catch (_) {}
     }
-    function loadUnchecked() {
-      try { return JSON.parse(localStorage.getItem('hb_walk_unchecked_dates') || '[]'); }
-      catch (_) { return []; }
+    function loadUncheckedMap() {
+      // One-time migration: fold legacy 'hb_walk_unchecked_dates' (flat
+      // array) into the new per-habit-name map under 'Daily walk'.
+      try {
+        const legacy = localStorage.getItem('hb_walk_unchecked_dates');
+        if (legacy !== null) {
+          const arr = JSON.parse(legacy) || [];
+          const cur = JSON.parse(localStorage.getItem('hb_av_unchecked_dates') || '{}');
+          const merged = Array.from(new Set([...(cur['Daily walk'] || []), ...arr]));
+          cur['Daily walk'] = merged;
+          localStorage.setItem('hb_av_unchecked_dates', JSON.stringify(cur));
+          localStorage.removeItem('hb_walk_unchecked_dates');
+        }
+      } catch (_) {}
+      try { return JSON.parse(localStorage.getItem('hb_av_unchecked_dates') || '{}'); }
+      catch (_) { return {}; }
     }
-    function persistUnchecked(arr) {
-      try { localStorage.setItem('hb_walk_unchecked_dates', JSON.stringify(arr)); } catch (_) {}
+    function persistUncheckedMap(map) {
+      try { localStorage.setItem('hb_av_unchecked_dates', JSON.stringify(map)); } catch (_) {}
     }
     function recordAutoVerify(id, meta) {
       if (!today) return;
@@ -12460,24 +12858,35 @@
       const map = load();
       return !!(map[dateStr] && map[dateStr][id]);
     }
-    function markWalkUnchecked() {
-      let arr = loadUnchecked();
+    // Mark today as "user explicitly un-checked auto-verified completion
+    // of habitName" — auto-verify will not re-check until tomorrow.
+    function markUnchecked(habitName) {
+      if (!habitName || !today) return;
+      const map = loadUncheckedMap();
+      const arr = map[habitName] || [];
       if (!arr.includes(today)) arr.push(today);
-      // Prune entries older than 14 days. Cheap operation; runs on each
-      // write so the array never grows unbounded.
+      // Prune entries older than 14 days per habit. Cheap; runs on
+      // each write so per-habit arrays stay bounded.
       const cutoff = new Date(today + 'T00:00:00');
       cutoff.setDate(cutoff.getDate() - 14);
       const cutoffStr = cutoff.toISOString().slice(0, 10);
-      arr = arr.filter(d => d >= cutoffStr);
-      persistUnchecked(arr);
+      map[habitName] = arr.filter(d => d >= cutoffStr);
+      persistUncheckedMap(map);
     }
-    function wasWalkUncheckedToday() {
-      return loadUnchecked().includes(today);
+    function wasUncheckedToday(habitName) {
+      if (!habitName || !today) return false;
+      const map = loadUncheckedMap();
+      return Array.isArray(map[habitName]) && map[habitName].includes(today);
     }
+    // Backward-compat aliases — referenced by existing toggleHabit code.
+    // Thin wrappers so we don't have to touch the call site immediately.
+    const markWalkUnchecked       = () => markUnchecked('Daily walk');
+    const wasWalkUncheckedToday   = () => wasUncheckedToday('Daily walk');
     return {
       recordAutoVerify, clearAutoVerify,
       isAutoVerifiedToday, isAutoVerifiedOnDate,
-      markWalkUnchecked, wasWalkUncheckedToday,
+      markUnchecked, wasUncheckedToday,
+      markWalkUnchecked, wasWalkUncheckedToday, // legacy
     };
   })();
   try { window.AutoVerify = AUTO_VERIFY; } catch (_) {}
@@ -12507,12 +12916,30 @@
     const walk = (typeof findWalkHabit === 'function') ? findWalkHabit() : null;
     const initialGoal = walk ? getHabitStepGoal(walk) : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
 
+    // v1.1.5 sleep extension: detect if the user also has either sleep
+    // habit. If so, append a sentence acknowledging that sleep
+    // auto-verifies too. Single permission grant covers both data types
+    // — no separate explainer or chip picker for sleep here (configured
+    // via Edit Habit modal).
+    const hasSleepHabit   = !!(typeof findSleepHabit === 'function' && findSleepHabit());
+    const hasBedtimeHabit = !!(typeof findSleepBeforeMidnightHabit === 'function' && findSleepBeforeMidnightHabit());
+    const hasAnySleep     = hasSleepHabit || hasBedtimeHabit;
+    let sleepLine = '';
+    if (hasSleepHabit && hasBedtimeHabit) {
+      sleepLine = 'Your sleep habits — Sleep and Sleep before midnight — auto-verify too, based on last night’s Apple Health data.';
+    } else if (hasSleepHabit) {
+      sleepLine = 'Your Sleep habit auto-verifies too, based on last night’s Apple Health data.';
+    } else if (hasBedtimeHabit) {
+      sleepLine = 'Your Sleep before midnight habit auto-verifies too, based on last night’s Apple Health data.';
+    }
+    const dataLabel = hasAnySleep ? 'Your steps and sleep' : 'Your steps';
+
     const overlay = document.createElement('div');
     overlay.id = 'hk-preprompt-overlay';
     overlay.className = 'modal-overlay';
     overlay.innerHTML =
       '<div class="modal-card hk-preprompt-card">' +
-        '<h2 class="hk-preprompt-title">Auto-verify your Walk</h2>' +
+        '<h2 class="hk-preprompt-title">Auto-verify your ' + (hasAnySleep ? 'Habits' : 'Walk') + '</h2>' +
         '<p class="hk-preprompt-body">' +
           'Awakened can use Apple Health to mark the Daily walk habit complete ' +
           'when you reach <button type="button" id="hk-preprompt-goal-btn" class="hk-preprompt-goal-btn">' +
@@ -12537,8 +12964,9 @@
             '<button id="hk-preprompt-stepgoal-cancel" class="habit-edit-stepgoal-cancel" type="button">Cancel</button>' +
           '</div>' +
         '</div>' +
+        (sleepLine ? '<p class="hk-preprompt-body">' + sleepLine + '</p>' : '') +
         '<p class="hk-preprompt-body hk-preprompt-privacy">' +
-          'Your steps stay on your device. Awakened never sees them leave your phone.' +
+          dataLabel + ' stay on your device. Awakened never sees them leave your phone.' +
         '</p>' +
         '<div class="hk-preprompt-actions">' +
           '<button class="hk-preprompt-secondary" id="hk-preprompt-skip">Not Now</button>' +
@@ -12624,9 +13052,11 @@
       const result = await Health.requestPermissions();
       console.log('[Health] permission result:', result);
       if (result === 'granted') {
-        // Try to verify immediately — if user has already walked today,
-        // they get instant gratification.
+        // Try to verify immediately — if user has already walked today
+        // OR slept past their goal last night, they get instant
+        // gratification on both habits.
         autoVerifyWalk();
+        autoVerifySleep();
       }
     });
   }
@@ -12643,7 +13073,7 @@
     const walk = findWalkHabit();
     if (!walk) return;                           // user doesn't have the habit
     if (isChecked(walk.id)) return;              // already done (manual or auto)
-    if (AUTO_VERIFY.wasWalkUncheckedToday()) return;  // user opted out for today
+    if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) return;  // user opted out for today
 
     const status = Health.permissionStatus();
 
@@ -12685,6 +13115,86 @@
   }
   try { window.autoVerifyWalk = autoVerifyWalk; } catch (_) {}
 
+  // ── Sleep auto-verify orchestration (v1.1.5) ─────────────
+  // Two parallel paths, both feeding from the same Health.getSleepLastNight()
+  // query (single HealthKit roundtrip per render thanks to the sleep cache):
+  //   - Sleep duration habit  → totalAsleepHours ≥ habit.sleepGoalHours
+  //   - Sleep before midnight → earliestSleepStart < device-local midnight
+  //
+  // Triggered from renderHabits() and visibilitychange — same hooks as
+  // autoVerifyWalk. Sleep data lands in HealthKit on user wake (Apple Watch)
+  // or backfill (iPhone alarm), so neither auto-verify fires AT midnight;
+  // they fire when the user opens the app in the morning.
+  function findSleepHabit() {
+    return habits.find(h => h.name === 'Sleep' && !h.custom) || null;
+  }
+  function findSleepBeforeMidnightHabit() {
+    return habits.find(h => h.name === 'Sleep before midnight' && !h.custom) || null;
+  }
+
+  async function autoVerifySleep() {
+    if (!Health.isAvailable()) return;
+    if (isAutoVerifyDisabled()) return;
+    const sleep = findSleepHabit();
+    const bedtime = findSleepBeforeMidnightHabit();
+    if (!sleep && !bedtime) return; // user has neither; skip query entirely
+
+    const status = Health.permissionStatus();
+    // Don't trigger the pre-prompt from the sleep path — autoVerifyWalk
+    // already handles that. If status is 'unknown', let walk handle it.
+    if (status !== 'granted') return;
+
+    const data = await Health.getSleepLastNight();
+    if (!data) return;
+
+    // ── Path A: Sleep duration ──────────────────────────────
+    if (sleep && !isChecked(sleep.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep')) {
+      const goalHours = getSleepGoalHours(sleep);
+      if (data.totalAsleepHours >= goalHours) {
+        // Re-check completion (async race with manual tap).
+        if (!isChecked(sleep.id)) {
+          AUTO_VERIFY.recordAutoVerify(sleep.id, {
+            source: 'healthkit-sleep-duration',
+            value: data.totalAsleepHours,
+            threshold: goalHours,
+          });
+          const li = document.querySelector('.habit-item[data-id="' + sleep.id + '"]');
+          toggleHabit(sleep.id, li, { silent: true });
+          console.log('[Health] auto-verified Sleep:', data.totalAsleepHours.toFixed(2), 'h');
+        }
+      }
+    }
+
+    // ── Path B: Sleep before midnight ────────────────────────
+    if (bedtime && !isChecked(bedtime.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep before midnight')) {
+      const earliest = data.earliestSleepStart;
+      if (earliest) {
+        // Device-local midnight at the START of today. If the user fell
+        // asleep before this timestamp, "before midnight" verifies.
+        // (CLAUDE.md: notifications + sleep windows use device-local time,
+        // not PT — sleep crosses midnight, PT-anchoring is wrong.)
+        const localMidnight = new Date();
+        localMidnight.setHours(0, 0, 0, 0);
+        if (earliest < localMidnight) {
+          if (!isChecked(bedtime.id)) {
+            AUTO_VERIFY.recordAutoVerify(bedtime.id, {
+              source: 'healthkit-sleep-bedtime',
+              value: earliest.toISOString(),
+            });
+            const li = document.querySelector('.habit-item[data-id="' + bedtime.id + '"]');
+            toggleHabit(bedtime.id, li, { silent: true });
+            console.log('[Health] auto-verified Sleep before midnight:', earliest.toISOString());
+          }
+        }
+      }
+    }
+
+    // Single re-render after both paths — buildItem() picks up new pills,
+    // next render's autoVerifySleep() no-ops via isChecked() guards.
+    if (currentTab === 'habits') renderHabits();
+  }
+  try { window.autoVerifySleep = autoVerifySleep; } catch (_) {}
+
   // ── INIT ─────────────────────────────────────────────────
   function init() {
     load();
@@ -12718,6 +13228,24 @@
         localStorage.setItem('hb_awakened_once', '1');
       }
       localStorage.setItem('hb_class_v2_migrated', '1');
+    }
+    // ── v1.1.5 migration: rename canonical 'Cardio' → 'Cardio workout'.
+    // The original name read as redundant with 'Daily walk' in the
+    // habit grid; the rename signals "dedicated training session" to
+    // distinguish it from ambient steps. Habit identity is the name
+    // string (CLAUDE.md), so we rewrite habit.name in-place. Streaks,
+    // completions, and PRs continue to work because they're keyed by
+    // habit.id, not name.
+    if (!localStorage.getItem('hb_cardio_renamed')) {
+      let didRename = false;
+      habits.forEach(h => {
+        if (h && h.name === 'Cardio' && !h.custom) {
+          h.name = 'Cardio workout';
+          didRename = true;
+        }
+      });
+      if (didRename) save();
+      localStorage.setItem('hb_cardio_renamed', '1');
     }
     setupTabs();
     setupLibrary();
@@ -12782,10 +13310,15 @@
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) return;
       checkDayChange();
-      // App resume → invalidate the 5-min step cache and re-attempt
-      // walk auto-verify. User may have walked while we were backgrounded.
-      try { Health.clearCache && Health.clearCache(); } catch (_) {}
-      try { autoVerifyWalk(); } catch (_) {}
+      // App resume → invalidate both HealthKit caches and re-attempt
+      // both auto-verifies. User may have walked or finished sleeping
+      // while we were backgrounded; sleep data in particular only
+      // appears in HealthKit on wake (Apple Watch) or alarm-time
+      // backfill (iPhone), so resume is a high-yield moment.
+      try { Health.clearCache       && Health.clearCache();       } catch (_) {}
+      try { Health.clearSleepCache  && Health.clearSleepCache();  } catch (_) {}
+      try { autoVerifyWalk();  } catch (_) {}
+      try { autoVerifySleep(); } catch (_) {}
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); }, 60_000);
     registerSW();

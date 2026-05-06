@@ -431,6 +431,32 @@
       </div>
     </div>
 
+    <!-- Sleep-goal control. Shown for the canonical "Sleep" habit
+         (non-custom) on every platform — replaces the time-based
+         stepper above when isSleepDurationHabit() is true. Auto-verify
+         fires on iOS only, but the goal is platform-agnostic. Reuses
+         .habit-edit-stepgoal-* CSS for visual consistency.
+         "Sleep before midnight" is binary — neither this nor the
+         time stepper renders for it. -->
+    <div id="edit-sleepgoal" class="habit-edit-stepgoal" hidden>
+      <div class="habit-edit-stepgoal-row">
+        <span class="habit-edit-stepgoal-label">Sleep goal</span>
+        <span id="edit-sleepgoal-value" class="habit-edit-stepgoal-value">7 hours</span>
+      </div>
+      <div class="habit-edit-stepgoal-chips" id="edit-sleepgoal-chips">
+        <button class="habit-edit-stepgoal-chip" data-preset="6"      type="button">6 hrs</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="7"      type="button">7 hrs</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="8"      type="button">8 hrs</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="9"      type="button">9 hrs</button>
+        <button class="habit-edit-stepgoal-chip" data-preset="custom" type="button">Custom</button>
+      </div>
+      <div id="edit-sleepgoal-custom" class="habit-edit-stepgoal-custom hidden">
+        <input id="edit-sleepgoal-input" class="habit-edit-stepgoal-input" type="number" inputmode="decimal" min="3" max="14" step="0.5" placeholder="Enter hours (3–14, 0.5 step)">
+        <button id="edit-sleepgoal-save"   class="habit-edit-stepgoal-save"   type="button">Save</button>
+        <button id="edit-sleepgoal-cancel" class="habit-edit-stepgoal-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+
     <!-- Reminder section — single per-habit notification time -->
     <div class="edit-reminder-row">
       <div class="edit-reminder-label">📅 REMINDER</div>
@@ -916,7 +942,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=203"></script>
+  <script src="app.js?v=205"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
