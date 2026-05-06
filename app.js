@@ -12598,8 +12598,14 @@
         return 'unavailable';
       }
       try {
+        // Plugin uses friendly-alias strings for auth (different namespace
+        // than query). 'steps' maps to stepCount, 'activity' maps to
+        // sleepAnalysis + workoutType. Sleep-only is not supported by this
+        // plugin's auth API; 'activity' is the only path to sleep
+        // authorization. Workout permission is requested as a side effect
+        // — used for v1.2.0+ workout-type habits.
         await p.requestAuthorization({
-          read: ['steps', 'sleepAnalysis'],
+          read: ['steps', 'activity'],
           write: [''],
           all: [''],
         });
@@ -12638,32 +12644,27 @@
     // catch was the bug that landed users in a "flag=1, but iOS sheet
     // never fired" state.
     async function requestSleepPermissionIfNeeded() {
-      // DIAGNOSTIC v1.1.5 — remove once confirmed working on device.
-      try { alert('[SLEEP-AUTH] requestSleepPermissionIfNeeded entered'); } catch (_) {}
-      if (!isAvailable()) {
-        try { alert('[SLEEP-AUTH] not available — returning'); } catch (_) {}
-        return 'unavailable';
-      }
+      if (!isAvailable()) return 'unavailable';
       if (localStorage.getItem('hb_healthkit_sleep_requested') === '1') return 'already-requested';
       const p = plugin();
-      if (!p) {
-        try { alert('[SLEEP-AUTH] plugin object missing — returning'); } catch (_) {}
-        return 'unavailable';
-      }
+      if (!p) return 'unavailable';
       try {
-        try { alert('[SLEEP-AUTH] calling p.requestAuthorization'); } catch (_) {}
+        // 'activity' is the plugin's friendly alias for sleep+workout.
+        // See requestPermissions() above for the full explanation of
+        // why 'sleepAnalysis' alone doesn't work in the auth API.
+        // Re-pass 'steps' so iOS sees a coherent set; the existing Steps
+        // grant stays untouched, and the new sheet shows ONLY the new
+        // categories (sleep + workout).
         await p.requestAuthorization({
-          read: ['steps', 'sleepAnalysis'],
+          read: ['steps', 'activity'],
           write: [''],
           all: [''],
         });
-        try { alert('[SLEEP-AUTH] requestAuthorization resolved'); } catch (_) {}
         // ONLY set the flag here — post-resolve. Never in catch.
         try { localStorage.setItem('hb_healthkit_sleep_requested', '1'); } catch (_) {}
         console.log('[Health] sleep permission request completed (upgrade path)');
         return 'requested';
       } catch (e) {
-        try { alert('[SLEEP-AUTH] requestAuthorization THREW: ' + ((e && e.message) || JSON.stringify(e) || String(e))); } catch (_) {}
         console.warn('[Health] sleep permission request failed', e);
         // Do NOT set the flag here. A throw is a real failure —
         // retry next cold launch. (Previously flagged defensively
@@ -13335,15 +13336,9 @@
     // permission sheet — avoids races during app cold launch.
     try {
       if (Health.isAvailable() && Health.permissionStatus() === 'granted') {
-        // DIAGNOSTIC v1.1.5 — remove once confirmed working on device.
-        try { alert('[SLEEP-AUTH] init reached upgrade gate'); } catch (_) {}
-        const alreadyAsked = localStorage.getItem('hb_healthkit_sleep_requested') === '1';
-        try { alert('[SLEEP-AUTH] flag already-asked: ' + alreadyAsked); } catch (_) {}
-        if (!alreadyAsked) {
-          setTimeout(async () => {
-            try { alert('[SLEEP-AUTH] about to call plugin'); } catch (_) {}
-            const r = await Health.requestSleepPermissionIfNeeded();
-            try { alert('[SLEEP-AUTH] plugin returned: ' + r); } catch (_) {}
+        if (localStorage.getItem('hb_healthkit_sleep_requested') !== '1') {
+          setTimeout(() => {
+            try { Health.requestSleepPermissionIfNeeded(); } catch (_) {}
           }, 1500);
         }
       }
