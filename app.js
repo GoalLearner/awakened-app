@@ -32,6 +32,26 @@
   // outside this list reveals the inline numeric input.
   const HEALTHKIT_WALK_PRESETS = [1000, 3000, 5000, 8000, 10000];
 
+  // ── HealthKit auth version ───────────────────────────────
+  // BUMP THIS NUMBER any time you add a new HealthKit category to the
+  // requestAuthorization() read array. The migration in init() compares
+  // this against hb_healthkit_authversion in localStorage; if the
+  // user's stored version is lower, all per-category "already-asked"
+  // flags are cleared so the upgrade-path helpers will re-fire and
+  // iOS shows a permission sheet for the newly-added categories. The
+  // existing grants for previously-authorized categories stay intact —
+  // iOS dedupes within a single requestAuthorization call.
+  //
+  // Version log:
+  //   1 — v1.1.4: steps only
+  //   2 — v1.1.5: steps + sleep + workouts (via 'activity' alias)
+  //
+  // When you bump, also update HEALTHKIT_AUTH_FLAGS_TO_CLEAR below
+  // with any new per-category flags so the migration knows what to
+  // wipe. (For v1 → v2 there's only one such flag.)
+  const HEALTHKIT_AUTH_VERSION = 2;
+  const HEALTHKIT_AUTH_FLAGS_TO_CLEAR = ['hb_healthkit_sleep_requested'];
+
   // ── HealthKit sleep auto-verification ────────────────────
   // v1.1.5: canonical 'Sleep' habit auto-verifies via Apple Health
   // when total asleep hours ≥ habit.sleepGoalHours. The canonical
@@ -13312,19 +13332,28 @@
       if (didRename) save();
       localStorage.setItem('hb_cardio_renamed', '1');
     }
-    // ── v1.1.5 sleep auth flag recovery ──────────────────────
-    // BUG RECOVERY: an earlier dev build set hb_healthkit_sleep_requested
-    // defensively in the catch block of requestSleepPermissionIfNeeded
-    // (now removed — see Health module). Users who hit that path are
-    // stuck with flag='1' but iOS Settings → Privacy → Health → Awakened
-    // showing only Steps, not Sleep — the sheet never fired.
-    // This one-time migration clears the bad flag so the next init's
-    // upgrade-gate logic re-fires the request cleanly. Idempotent via
-    // hb_sleep_recovery_v1; runs exactly once per device.
-    if (!localStorage.getItem('hb_sleep_recovery_v1')) {
-      localStorage.removeItem('hb_healthkit_sleep_requested');
-      localStorage.setItem('hb_sleep_recovery_v1', '1');
-    }
+    // ── HealthKit auth-version migration ─────────────────────
+    // Whenever HEALTHKIT_AUTH_VERSION is bumped (i.e., a new HealthKit
+    // category was added to the requestAuthorization() read array),
+    // existing users with status='granted' need to re-fire the auth
+    // call so iOS shows a sheet for the newly-added categories. We
+    // can't detect "category not yet authorized" via the plugin API
+    // — Apple intentionally hides denial state for read scopes. So we
+    // version the auth surface and let the upgrade-gate re-fire when
+    // the stored version is older than current.
+    //
+    // This pattern obsoletes the v1.1.5-only hb_sleep_recovery_v1
+    // flag (which only addressed the specific dev-build bug) and
+    // generalizes it for every future category addition.
+    try {
+      const stored = parseInt(localStorage.getItem('hb_healthkit_authversion') || '0', 10);
+      if (!Number.isFinite(stored) || stored < HEALTHKIT_AUTH_VERSION) {
+        HEALTHKIT_AUTH_FLAGS_TO_CLEAR.forEach(k => {
+          try { localStorage.removeItem(k); } catch (_) {}
+        });
+        localStorage.setItem('hb_healthkit_authversion', String(HEALTHKIT_AUTH_VERSION));
+      }
+    } catch (_) {}
     // ── v1.1.5 sleep auth upgrade-path ───────────────────────
     // Existing v1.1.5 step-grant users granted Steps before sleep was
     // added to the auth array. Fire once per cold launch (idempotent
