@@ -10,8 +10,9 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." There is no backend — every byte of state lives in `localStorage`.
 
-- **Current marketing version:** `1.1.3` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`)
-- **Service-worker cache version:** `v5.54` (constant `CACHE_VERSION` in `sw.js`)
+- **Current marketing version:** `1.1.5` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`)
+- **Service-worker cache version:** `v5.70` (constant `CACHE_VERSION` in `sw.js`)
+- **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
 
@@ -45,7 +46,8 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `scripts/generate-ipad-screenshots.ps1` | Embeds iPhone screenshots in a 2048×2732 dark-themed canvas for the iPad slot (12.9" iPad Pro size). Same no-alpha guarantee. |
 | `screenshots/iphone/` | Drop raw iPhone screenshots here before running the resize script. Output goes to `screenshots/iphone-65/`. |
 | `screenshots/ipad/` | iPad-letterboxed output, ready for upload. |
-| `package.json` | Capacitor deps + `@capacitor/local-notifications@^6.1.3` (per-habit reminder system). |
+| `package.json` | Capacitor deps + `@capacitor/local-notifications@^6.1.3` (per-habit reminders) + `@perfood/capacitor-healthkit@^1.3.2` (HealthKit auto-verify). |
+| `.npmrc` | `legacy-peer-deps=true`. **Do not delete** until we migrate off `@perfood/capacitor-healthkit` — the plugin's published peer-dep declares Capacitor 4 while we're on 6, so npm refuses to install without this. See "Common pitfalls". |
 
 ---
 
@@ -308,16 +310,168 @@ The `Notif` module lives at the bottom of `app.js` (just above `init()`). Wraps 
 
 ---
 
+## HealthKit integration (v1.1.5)
+
+Two canonical habits auto-verify from Apple Health on iOS. Web/PWA users get manual completion only — no behavior change.
+
+| Habit | Data type | Threshold | Goal config |
+|---|---|---|---|
+| `Daily walk` | step count | per-habit `habit.stepGoal` (default 3000, range 100–50000) | Edit Habit modal chip picker |
+| `Sleep` | sleep duration | per-habit `habit.sleepGoalHours` (default 7, range 3–14, step 0.5) | Edit Habit modal chip picker |
+| `Sleep before midnight` | bedtime | binary — earliest qualifying asleep sample.startDate < device-local midnight | None (binary habit) |
+
+### Plugin: `@perfood/capacitor-healthkit@^1.3.2` — IMPORTANT GOTCHAS
+
+**Plugin is on a stale Cap-4 peer-dep range.** Awakened uses Capacitor 6. The peer-dep is wrong — the plugin works on Cap 6 in practice (small read-only API surface, stable across Cap versions). The committed `.npmrc` with `legacy-peer-deps=true` lets npm install anyway. Don't delete `.npmrc` until we migrate to `@capgo/capacitor-health` during the eventual Cap 8 upgrade.
+
+**Plugin uses two DIFFERENT string namespaces for auth vs. query.** This caused multiple build cycles of debugging in v1.1.5:
+
+| API | String namespace | Examples |
+|---|---|---|
+| `requestAuthorization({ read: [...] })` | "friendly aliases" | `'steps'` (= stepCount), `'activity'` (= sleepAnalysis + workoutType), `'calories'`, `'distance'` |
+| `queryHKitSampleType({ sampleName })` | Apple-canonical identifiers | `'stepCount'`, `'sleepAnalysis'`, `'workoutType'` |
+
+**The auth function has NO case for `'sleepAnalysis'`** — it falls through to `default: print("no match")` and silently does nothing. To request sleep auth, you MUST use `'activity'`, which iOS treats as both `sleepAnalysis` AND `workoutType` permissions. There is no sleep-only path through this plugin's auth API.
+
+**Current auth call (line ~12602):**
+```js
+await p.requestAuthorization({
+  read: ['steps', 'activity'],   // 'activity' covers sleep + workouts
+  write: [''],
+  all: [''],
+});
+```
+
+If you add a new HealthKit category in the future, verify the auth-side string in the plugin's Swift source: `node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift` → `func getTypes(items:)` (~line 84). Don't trust the README alone.
+
+### `Health` module
+
+Top-level IIFE in `app.js`. Public surface:
+
+| Method | Purpose |
+|---|---|
+| `Health.isAvailable()` | true on iOS native, false on web/PWA |
+| `Health.permissionStatus()` | `'granted'` / `'denied'` / `'unknown'` / `'unavailable'` (locally tracked via `hb_healthkit_status`) |
+| `Health.requestPermissions()` | Fresh-install path: requests steps + activity in one bundled iOS sheet |
+| `Health.requestSleepPermissionIfNeeded()` | Upgrade path: re-fires auth with current categories. Idempotent via `hb_healthkit_sleep_requested`. Used when an existing user upgrades to a build that adds new HealthKit categories |
+| `Health.getStepsToday()` | Sums step samples from PT-anchored start of today. 5-min cache. Returns null on any failure. |
+| `Health.getSleepLastNight()` | 18-hour lookback window in **device-local time** (sleep crosses midnight; CLAUDE.md notif rule applies). Returns `{ totalAsleepHours, earliestSleepStart, samples }` or null. 5-min cache. Plugin caveats below. |
+| `Health.clearCache()` | Wipes step cache. Called on visibilitychange resume + after Edit-modal save. |
+| `Health.clearSleepCache()` | Same for sleep. |
+
+**Plugin sample shape for sleep:**
+```js
+{
+  startDate: '<ISO8601>',
+  endDate: '<ISO8601>',
+  duration: <hours, decimal>,           // already in hours, NOT minutes
+  sleepState: 'InBed' | 'Asleep',       // ONLY two strings — see caveat below
+  uuid, timeZone, source, sourceBundleId, device,
+}
+```
+
+**Sample-state caveat:** the plugin collapses Apple's full `HKCategoryValueSleepAnalysis` enum into 2 strings via `(value == inBed) ? "InBed" : "Asleep"`. This means `awake` (rawValue 2) gets bucketed into `'Asleep'` along with `asleepCore/Deep/REM/Unspecified`. We sum `'Asleep'` durations for total — typically <15 min/night over-count from misclassified awake samples. Acceptable v1 error margin; document if a user reports inflated sleep numbers.
+
+**Bedtime detection:** `getSleepLastNight()` finds the EARLIEST `'Asleep'` sample whose duration ≥ 30 minutes (the nap floor). Edge case: a user who naps 1+ hours in the evening before going to bed at 1 AM will get a false-positive "before midnight" verdict. Rare; user can manually un-check.
+
+### Auto-verify orchestration
+
+`autoVerifyWalk()` and `autoVerifySleep()` are the two entry points. Both fire from:
+- `renderHabits()` (every Habits-tab render)
+- `visibilitychange` (app resume from background, with cache clear)
+- Post-grant `Enable` button on the pre-prompt
+
+Both functions:
+1. Bail if `Health.isAvailable()` is false (web)
+2. Bail if `isAutoVerifyDisabled()` (Settings → Apple Health pause toggle)
+3. Bail if the relevant habit isn't in the user's list
+4. Bail if `isChecked()` already (manual or prior auto)
+5. Bail if `AUTO_VERIFY.wasUncheckedToday(habitName)` (user explicitly opted out today)
+6. Threshold check
+7. `AUTO_VERIFY.recordAutoVerify(id, meta)` + `toggleHabit(id, li, { silent: true })`
+
+`toggleHabit`'s `opts.silent` flag suppresses the per-tap burst (chime, particles, flash, XP float) but still fires milestone popups (rank-up, stat-up, compound bonus) — those are real moments, not per-tap fanfare.
+
+### Goal-classification helpers
+
+```js
+function isStepGoalHabit(habit)              // canonical 'Daily walk', non-custom
+function isSleepDurationHabit(habit)         // canonical 'Sleep', non-custom
+function isSleepBedtimeHabit(habit)          // canonical 'Sleep before midnight', non-custom
+function isHealthAutoVerifiableHabit(habit)  // OR of the three above
+```
+
+Used by:
+- `habitDisplayParts(habit)` — emits step/hour subtitle for cards
+- `meetsMinimum(habit)` — bypasses legacy MEASURABLE_HABITS minimum check (these habits don't use the `habit.goal` shape)
+- `openEditModal(habit)` — branches between three goal-control UIs (step chips / sleep chips / time stepper)
+- `openHabitDetail(habit)` — same branching for onboarding hd-sheet
+
+### `AUTO_VERIFY` module
+
+Tracks which completions were auto-verified (vs manually tapped) and which auto-verifications the user explicitly un-checked.
+
+```
+hb_completions_auto       { 'YYYY-MM-DD': { habitId: { source, value, threshold } } }
+hb_av_unchecked_dates     { habitName: ['YYYY-MM-DD', ...] }   (auto-pruned to 14 days)
+```
+
+**Keyed by habit name** (canonical foreign key, stable across reinstalls per CLAUDE.md "habit identity is the name string"). v1.1.5 migrates the legacy walk-only `hb_walk_unchecked_dates` flat array into the new per-habit-name map under `'Daily walk'`.
+
+Public surface:
+- `recordAutoVerify(id, meta)` / `clearAutoVerify(id)`
+- `isAutoVerifiedToday(id)` / `isAutoVerifiedOnDate(id, dateStr)` — used by `buildItem()` for the AUTO pill and by History weekly cells for the corner dot
+- `markUnchecked(habitName)` / `wasUncheckedToday(habitName)` — generic, supports any auto-verify habit
+- Legacy thin wrappers: `markWalkUnchecked` / `wasWalkUncheckedToday` (toggleHabit references one)
+
+### HealthKit auth versioning (`HEALTHKIT_AUTH_VERSION`)
+
+Defined at the top of `app.js`. Bump this number whenever you add a new category to `Health.requestPermissions`'s read array. Migration in `init()` compares against `hb_healthkit_authversion` in localStorage; if stored < current, all per-category "asked" flags in `HEALTHKIT_AUTH_FLAGS_TO_CLEAR` are wiped so the upgrade-path helpers re-fire and iOS prompts for the new categories.
+
+```
+Version log:
+  1 — v1.1.4: steps only
+  2 — v1.1.5: steps + sleep + workouts (via 'activity' alias)
+```
+
+Why this exists: iOS's `requestAuthorization` only triggers a sheet for categories it has never seen. Apps that want to expand HealthKit usage in subsequent versions MUST explicitly re-call `requestAuthorization` with the new categories — iOS doesn't auto-prompt on the first query of a new type. The version-bump pattern automates this.
+
+### Pre-prompt explainer
+
+`showHealthKitPreprompt()` is a non-blocking modal that fires before the iOS native sheet on first encounter (status='unknown'). Triggered from `autoVerifyWalk()` when the user has the Daily walk habit. Shows a clickable inline step-goal value (chip picker reuses `.habit-edit-stepgoal-*` styles) and adapts copy if the user also has Sleep / Sleep before midnight.
+
+Once the user taps Enable or Not Now, `hb_healthkit_prompted='1'` is set and the modal never re-fires.
+
+### Settings → Apple Health panel
+
+Reads-only the toggle for pause/resume and a deep-link button for iOS Settings. **No step-goal control here** — that lives per-habit in the Edit Habit modal. See "Settings collapsibles" section for state-machine details.
+
+`window.location.href = 'app-settings:'` opens iOS Settings to Awakened's privacy page. Works inside Capacitor's WebView; silent no-op on web.
+
+### codemagic.yaml steps for HealthKit
+
+Two steps run after `Sync web assets into iOS project`:
+
+1. **`Add HealthKit usage description and entitlement`** — uses PlistBuddy to write `NSHealthShareUsageDescription` + `NSHealthUpdateUsageDescription` to `Info.plist` and `com.apple.developer.healthkit = true` to `App.entitlements`. **Important:** do NOT add `com.apple.developer.healthkit.access` (the array key) — that requires Apple-approved Verifiable Health Records capability. Including it makes codesign fail with "Entitlement requires approval from Apple to include in a profile."
+
+2. **`Wire entitlements file into Xcode project`** — uses the Ruby `xcodeproj` gem (preinstalled on Codemagic macOS images) to set `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` in `project.pbxproj` for both Debug and Release configs. **Without this step,** Xcode signs the IPA without consuming our entitlements file, the HealthKit entitlement is silently absent from the signed binary, and iOS rejects all HealthKit calls without error feedback.
+
+**Apple Developer portal prerequisite:** the `com.goallearner.awakened` App ID must have HealthKit capability checked at developer.apple.com → Identifiers → Capabilities. One-time setup; if missing, codesign rejects the build.
+
+---
+
 ## Settings collapsibles
 
 Generic class set: `.settings-collapsible` (wrapper) → `.settings-collapsible-toggle` (header button) → `.settings-collapsible-body` (content). Default `--collapsed` modifier hides via `display: none` (no animation — grid-row collapse breaks with multiple children).
 
 Every toggle has `data-collapsible="<name>"`. `setupCollapsibleSettings()` wires all of them via id pattern: toggle id ends in `-toggle`, body id is the same with `-body`. Drop in a new collapsible by following that pattern — no per-section JS needed.
 
-Currently three collapsibles (all collapsed by default):
-- 🎨 APPEARANCE — theme cards. Header summary updates live ("Dark" / "Light").
-- 📲 REMINDERS — see above. Summary shows count or "Paused" / "Off".
-- 🚀 WHAT'S COMING — the v2.0 teaser cards.
+Currently three collapsibles, in this order, all collapsed by default:
+1. **REMINDERS** — see above. Summary shows count or "Paused" / "Off".
+2. **APPLE HEALTH** *(v1.1.5)* — connection status, auto-verify pause/resume toggle, deep-link to iOS Settings. Summary states: `Connected` / `Paused` / `Not connected` / `iOS only`. Three internal sub-states (`#settings-health-state-{unavailable,connected,disconnected}`) — only one is unhidden at a time, controlled by `refreshHealthPanel()`. **No step-goal control here** — that lives in the Edit Habit modal, per-habit. See "HealthKit integration" section.
+3. **WHAT'S COMING** — v2.0 teaser cards.
+
+The previous `APPEARANCE` collapsible was removed in v1.1.3 when the Light theme was killed.
 
 ---
 
@@ -394,9 +548,27 @@ Every habit definition has, after `app.js` initialization:
 Mapping tables (separate constants applied to defs at startup):
 - `HABIT_PRIMARY_STAT` — habit name → stat
 - `HABIT_DESCRIPTIONS` — habit name → curated 1-paragraph description
-- `MEASURABLE_HABITS` — habit name → `{ unit, def, step, min }` for habits with quantitative goals
+- `MEASURABLE_HABITS` — habit name → `{ unit, def, step, min }` for habits with quantitative goals (legacy time/count stepper). NOT the source for HealthKit auto-verify habits — those use per-habit fields (`habit.stepGoal`, `habit.sleepGoalHours`) and bypass MEASURABLE_HABITS via `isHealthAutoVerifiableHabit()`.
+- `HABIT_NOTIF_COPY` — habit name → `{ title, body }` for per-habit reminder notifications
+- `HABIT_ICONS` — habit name → DALL-E PNG path
 
 **Rule: a habit's identity is its `name` string.** `id` is generated per-user (`uid()`). When checking equivalence anywhere, match by name.
+
+### Renames
+
+When a canonical habit's name changes, BOTH the maps above need updating AND a one-time migration in `init()` to rewrite `habit.name` for existing users (streaks, completions, PRs all keyed by `habit.id`, so they survive the rename). Pattern (v1.1.5 Cardio rename):
+
+```js
+if (!localStorage.getItem('hb_cardio_renamed')) {
+  habits.forEach(h => {
+    if (h && h.name === 'Cardio' && !h.custom) h.name = 'Cardio workout';
+  });
+  save();
+  localStorage.setItem('hb_cardio_renamed', '1');
+}
+```
+
+Renames so far: `Cardio` → `Cardio workout` (v1.1.5 — disambiguates from Daily walk, since both were physical and looked redundant in the habit grid).
 
 ---
 
@@ -450,6 +622,13 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `statIconHtml(st, opts)` | Returns `<img class="stat-icon-img" src="...">` for a stat using the new DALL-E art (`STATS[].iconImg`). `opts.size` (default 32), `opts.eager`. Falls back to emoji if `iconImg` missing. |
 | `setStatIcon(el, st, sizePx)` | For elements that previously held a single emoji glyph via `.textContent` — replaces with the correct `<img>` markup. |
 | `Notif.*` (object) | Push-notification system. See "Per-habit reminders" section. Closure-scoped inside the IIFE; reaches the outer `habits` array directly. |
+| `Health.*` (object) | HealthKit auto-verify system. See "HealthKit integration" section. Public surface: `isAvailable`, `permissionStatus`, `requestPermissions`, `requestSleepPermissionIfNeeded`, `getStepsToday`, `getSleepLastNight`, `clearCache`, `clearSleepCache`. |
+| `AUTO_VERIFY.*` (object) | Auto-verified completion metadata + un-checked tracking. `recordAutoVerify`, `clearAutoVerify`, `isAutoVerifiedToday`, `isAutoVerifiedOnDate`, `markUnchecked(name)`, `wasUncheckedToday(name)`. |
+| `getHabitStepGoal(habit)` / `setHabitStepGoal(habit, n)` | Per-habit step goal accessor. Default 3000, range [100, 50000]. setHabit calls `save()`. |
+| `getSleepGoalHours(habit)` / `setSleepGoalHours(habit, h)` | Per-habit sleep-hours goal accessor. Default 7, range [3, 14], step 0.5. setHabit calls `save()`. |
+| `isStepGoalHabit(habit)` / `isSleepDurationHabit(habit)` / `isSleepBedtimeHabit(habit)` | Habit-classification predicates for HealthKit auto-verify. Used to branch goal-control UIs and bypass legacy MEASURABLE_HABITS minimum check. |
+| `isHealthAutoVerifiableHabit(habit)` | OR of the three above. Use this in `meetsMinimum()` and similar generic gates. |
+| `isAutoVerifyDisabled()` / `setAutoVerifyDisabled(bool)` | Reads/writes the global Settings → Apple Health pause toggle. |
 | `setupCollapsibleSettings()` | Wires every `.settings-collapsible-toggle[data-collapsible]` to its body sibling. Drop-in for new Settings groups. |
 | `playCheckSound()`, `playFanfare()` | Web Audio. Both gated on `soundEnabled`. |
 | `esc(str)`, `colorWithAlpha(hex, alpha)` | HTML-escape + color helpers used in inline `style="..."` building. |
@@ -497,8 +676,16 @@ Prefix `hb_` for almost everything:
 | `hb_class_v2_migrated` | `'1'` | One-time class-system migration |
 | `hb_sw_known_version`  | sw cache version string | Used by `checkForUpdates()` for direct version-string comparison fallback |
 | `hb_bodyweight`        | int string (lbs) | For weight-based goal habits |
+| `hb_cardio_renamed`    | `'1'` | One-time v1.1.5 migration flag (Cardio → Cardio workout) |
+| `hb_healthkit_status`  | `'granted' \| 'denied'` | v1.1.5. Locally-tracked HealthKit permission state. Apple intentionally hides denial state for read scopes; we infer from request resolution. |
+| `hb_healthkit_prompted` | `'1'` | v1.1.5. Pre-prompt explainer shown — never re-fires. |
+| `hb_healthkit_sleep_requested` | `'1'` | v1.1.5. Sleep auth request fired (and resolved). Set ONLY post-resolve, NEVER in catch — defensive flag-set in catch was a bug. Cleared by `HEALTHKIT_AUTH_VERSION` migration when category set expands. |
+| `hb_healthkit_authversion` | int string | v1.1.5. Tracks which HealthKit auth-category set the user has been prompted for. Migration in `init()` clears per-category flags when stored < `HEALTHKIT_AUTH_VERSION`. Currently `2`. |
+| `hb_healthkit_disabled` | `'1'` | v1.1.5. User toggled auto-verify OFF in Settings → Apple Health. |
+| `hb_completions_auto`  | `{ 'YYYY-MM-DD': { habitId: { source, value, threshold } } }` | v1.1.5. Auto-verified completion metadata (vs manually tapped). Drives the `AUTO` pill on cards and the corner dot in History. |
+| `hb_av_unchecked_dates` | `{ habitName: ['YYYY-MM-DD', ...] }` | v1.1.5. Per-habit "user explicitly un-checked an auto-verified completion" tracking. Auto-pruned to 14 days per habit. Migrated from legacy `hb_walk_unchecked_dates` flat array. |
 
-All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule.
+All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule — **EXCEPT for HealthKit sleep windows**, which use device-local time (sleep crosses midnight; same rule as notifications, see CLAUDE.md "Notifications fire in DEVICE-LOCAL time, not PT").
 
 ---
 
@@ -513,7 +700,7 @@ All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone
 1. `git push` to `main`
 2. Codemagic → **Start new build** → workflow `Awakened — iOS App Store`
 3. Codemagic does:
-   - `npm install` (pulls Capacitor + `@capacitor/local-notifications`)
+   - `npm install` (pulls Capacitor + `@capacitor/local-notifications` + `@perfood/capacitor-healthkit`; `.npmrc` enables `legacy-peer-deps`)
    - Copies static files into `www/`:
      - `index.html`, `styles.css`, `app.js`, `sw.js`, `manifest.json`
      - `avatar-*.png` (8 class avatars)
@@ -521,8 +708,10 @@ All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone
      - `assets/tab-icons/*.png` (only the 7 optimized 192×192 — masters excluded)
      - `assets/stat-icons/*.png` (only the 6 optimized — masters excluded)
    - `npx cap add ios` (if missing) + `npx cap sync ios`
-   - Installs custom AppIcon (regenerated by you locally via `scripts/generate-app-icons.ps1`)
    - Runs PlistBuddy: `Add :ITSAppUsesNonExemptEncryption bool false` (skips Apple's compliance question)
+   - **`Add HealthKit usage description and entitlement`** — PlistBuddy writes `NSHealthShareUsageDescription` + `NSHealthUpdateUsageDescription` to `Info.plist` and `com.apple.developer.healthkit = true` to `App.entitlements`. Do NOT also write `com.apple.developer.healthkit.access` — that requires Apple-approved Verifiable Health Records capability. (v1.1.5)
+   - **`Wire entitlements file into Xcode project`** — uses Ruby `xcodeproj` gem (preinstalled on Codemagic macOS images) to set `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` in `project.pbxproj` for both Debug and Release configs. Without this step, Xcode signs the IPA without consuming our entitlements file. (v1.1.5)
+   - Installs custom AppIcon (regenerated by you locally via `scripts/generate-app-icons.ps1`)
    - `xcode-project use-profiles` + `build-ipa`
    - Uploads to App Store Connect → TestFlight beta review
 4. Update on iPhone via TestFlight → manual submit on App Store Connect
@@ -539,7 +728,7 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet).
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=160`, `app.js?v=194`, `sw.js v5.54`, `APP_VERSION = '1.1.3'` (in BOTH `app.js` and `codemagic.yaml`). (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=166`, `app.js?v=210`, `sw.js v5.70`, `APP_VERSION = '1.1.5'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -593,7 +782,15 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 
 ## Common pitfalls
 
-- **Removing `.npmrc` (`legacy-peer-deps=true`).** The project root has a committed `.npmrc` with `legacy-peer-deps=true`. It exists because `@perfood/capacitor-healthkit@1.3.2` (added in v1.1.4 for HealthKit auto-verify) declares `peerDependencies: { "@capacitor/core": "^4.0.0" }` while we're on Capacitor 6. The plugin works fine on Cap 6 in practice — only the published peer-dep range is stale. Without `.npmrc`, every `npm install` (yours, Codemagic's, anyone's) errors with `ERESOLVE unable to resolve dependency tree`. **Do not delete `.npmrc` until we migrate to `@capgo/capacitor-health` during the eventual Capacitor 6→8 upgrade** — at that point the relaxed resolver is no longer needed and `.npmrc` should be removed in the same commit as the plugin swap.
+- **Removing `.npmrc` (`legacy-peer-deps=true`).** The project root has a committed `.npmrc` with `legacy-peer-deps=true`. It exists because `@perfood/capacitor-healthkit@1.3.2` (added in v1.1.5 for HealthKit auto-verify) declares `peerDependencies: { "@capacitor/core": "^4.0.0" }` while we're on Capacitor 6. The plugin works fine on Cap 6 in practice — only the published peer-dep range is stale. Without `.npmrc`, every `npm install` (yours, Codemagic's, anyone's) errors with `ERESOLVE unable to resolve dependency tree`. **Do not delete `.npmrc` until we migrate to `@capgo/capacitor-health` during the eventual Capacitor 6→8 upgrade** — at that point the relaxed resolver is no longer needed and `.npmrc` should be removed in the same commit as the plugin swap.
+- **Trusting the `@perfood/capacitor-healthkit` README on auth strings.** The plugin uses TWO incompatible string namespaces — friendly aliases (`'steps'`, `'activity'`, `'calories'`) for `requestAuthorization`'s read array, and Apple-canonical identifiers (`'stepCount'`, `'sleepAnalysis'`, `'workoutType'`) for `queryHKitSampleType`'s sampleName. The README mixes them. The plugin's auth function has NO case for `'sleepAnalysis'` — passing it falls through to `default: print("no match")` and silently no-ops. Sleep auth requires `'activity'`, which iOS treats as both sleepAnalysis + workoutType. Always verify auth-side strings in `node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift` → `func getTypes(items:)` before adding a category. This cost an entire build cycle in v1.1.5.
+- **Forgetting to bump `HEALTHKIT_AUTH_VERSION` when adding a HealthKit category.** iOS only triggers a permission sheet for categories it has never seen. Apps adding new HealthKit categories in subsequent versions MUST explicitly re-call `requestAuthorization` with the new types. The version-bump pattern in `app.js` (`HEALTHKIT_AUTH_VERSION` constant + migration in `init()`) automates this. **If you add a category and forget to bump:** existing users won't get an iOS sheet, the new category won't appear in iOS Settings → Privacy → Health → Awakened, and your auto-verify will silently no-op forever. Also remember to add the new "asked" flag to `HEALTHKIT_AUTH_FLAGS_TO_CLEAR` so the migration knows what to wipe.
+- **Setting `hb_healthkit_sleep_requested` (or any HealthKit "asked" flag) anywhere except post-`await` resolve.** Defensive flag-set in catch blocks is a TRAP. iOS resolves `requestAuthorization` silently for already-decided categories (granted OR denied), so a real throw is a real failure that should be retried on next launch. Defensive catch-block flag-set landed users in v1.1.5 testing in a "flag=1, but iOS sheet never fired" state requiring a recovery migration. **The flag must ONLY be set after `p.requestAuthorization()` resolves successfully.** Comment in `requestSleepPermissionIfNeeded` documents this rule explicitly.
+- **Including `com.apple.developer.healthkit.access` in App.entitlements.** That key (an array, not a boolean) is for Verifiable Health Records — clinical/medical-record access — and requires Apple-approved capability. Including it without approval makes codesign fail with `Entitlement com.apple.developer.healthkit.access requires approval from Apple to include in a profile.` For step/sleep/workout reads, only `com.apple.developer.healthkit = true` is needed. The codemagic.yaml step writes only the boolean key. Don't re-add `.access`.
+- **Forgetting the `Wire entitlements file into Xcode project` codemagic step.** Capacitor's default Xcode project does NOT have `CODE_SIGN_ENTITLEMENTS` set in build settings. Without that build setting, Xcode signs the IPA without consuming our `App.entitlements` file — the HealthKit entitlement is silently absent from the signed binary, iOS rejects all HealthKit calls, and there's no error feedback (this was the v1.1.4 silent-failure bug). The Ruby `xcodeproj` gem step in codemagic.yaml fixes this; don't remove it.
+- **Forgetting to enable HealthKit on the App ID at developer.apple.com.** One-time setup: Identifiers → `com.goallearner.awakened` → Capabilities → check HealthKit → Save. Without this, codesign rejects the build with "Missing entitlement." Done already; flagging for any future dev who registers a new App ID.
+- **Using PT-anchored time for sleep windows.** Sleep crosses midnight. PT-anchored `getPTDate()` is the rule for streak math, but `Health.getSleepLastNight()` uses **device-local time** for the 18-hour lookback window and the "before midnight" comparison. A user in Tokyo going to bed at 11 PM Tokyo time should get bedtime credit even though their PT-anchored "today" wraps differently. Same rule as notifications. Never "fix" this to use PT.
+- **Treating `'Asleep'` plugin samples as exact sleep stages.** The plugin collapses Apple's full sleep-analysis enum into 2 strings via `(value == inBed) ? "InBed" : "Asleep"`. The `'Asleep'` bucket incorrectly includes `awake` rawValue=2 samples along with the actual asleep stages. Total-asleep computation overcounts by however long mid-night awake periods are — typically <15 min/night. Acceptable v1 error margin; if a user reports inflated sleep numbers we patch upstream or filter via raw HKCategorySample.
 - **Editing `app.js` and forgetting `?v=N`.** Browser will serve the cached old script; you'll think your change is broken when it just hasn't loaded.
 - **Adding a new sheet without `attachSheetDismissGesture`.** Users will report "I can't dismiss it." Always wire it up unless it's intentionally a celebration modal.
 - **Hardcoding the canonical 10 habits.** Use `getMorningHabitDefs()`. Always.
