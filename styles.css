@@ -9173,6 +9173,184 @@ footer {
   filter: grayscale(0.4);
 }
 
+/* ── Daily Insight / Morning Briefing (v1.1.5) ──────────────
+   Once-per-day bottom sheet, tactical morning briefing layout.
+   Reuses .vn-sheet shell + .vn-overlay backdrop + .vn-drag-handle.
+   Sections: header with day count, status line, habit slate
+   grouped by time of day, WHERE YOU STAND, LOCK IN CTA.
+   Information density is the feature — read it like an ops brief. */
+.di-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 18px 20px calc(28px + var(--safe-bottom));
+  max-height: calc(100dvh - 8vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Header: "THU · MAY 7 · DAY 11" + "TODAY'S BRIEFING" ─────── */
+.di-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.di-header-line {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.di-header-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+/* ── Status line: "7 OBJECTIVES. 3 SYSTEM-VERIFIED. 4 ON YOU." ── */
+.di-status-line {
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  padding: 12px 14px;
+  background: var(--accent-glow);
+  border: 1px solid rgba(139, 92, 246, 0.30);
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Habit slate: grouped by time of day ───────────────────── */
+.di-slate {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.di-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.di-group-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--text-tertiary);
+  margin-bottom: 2px;
+}
+
+/* Habit row — [dot] [name · goal + verify tag] [+XP] */
+.di-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.di-row-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--text-tertiary);
+}
+.di-row-dot--easy      { background: #a78bfa; }
+.di-row-dot--medium    { background: #60a5fa; }
+.di-row-dot--hard      { background: #fb923c; }
+.di-row-dot--legendary { background: #fbbf24; }
+.di-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.di-row-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.di-row-verify {
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.di-row-xp {
+  flex: 0 0 auto;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* ── WHERE YOU STAND: inline row (not card grid) ────────────── */
+.di-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.di-stats-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+.di-stat-inline {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.di-stat-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.di-stat-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+.di-stat-sep {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  opacity: 0.5;
+}
+
+/* ── LOCK IN — primary CTA, gold-on-dark (matches
+   .settings-rem-enable-btn style). ─────────────────────────── */
+.di-cta-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px;
+  background: #fbbf24;
+  color: #1a1505;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.di-cta-btn:active { transform: scale(0.98); }
+
 /* "View full details" button on the History info popup */
 .hi-full-details-btn {
   margin-top: 4px;

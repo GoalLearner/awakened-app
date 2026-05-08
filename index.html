@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=167">
+  <link rel="stylesheet" href="styles.css?v=169">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -390,6 +390,55 @@
         <div class="vn-section-label">ABOUT THIS HABIT</div>
         <div id="vn-note-display" class="vn-note-display"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Daily Insight / Morning Briefing — bottom sheet, once per
+       device-local calendar day (after Day 1). Tactical layout: header
+       with day count, status-line summary, full habit slate grouped
+       by time-of-day, three operational stats, single CTA. Reuses
+       .vn-sheet / .vn-overlay shell + gestures from the View Note
+       modal so there's no new sheet pattern to maintain. -->
+  <div id="daily-insight-overlay" class="vn-overlay hidden"></div>
+  <div id="daily-insight-sheet"   class="vn-sheet   hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="di-body">
+
+      <!-- 1. HEADER: "THU · MAY 7 · DAY 11" + "TODAY'S BRIEFING" -->
+      <div class="di-header">
+        <div id="di-header-line" class="di-header-line"></div>
+        <div class="di-header-title">TODAY'S BRIEFING</div>
+      </div>
+
+      <!-- 2. STATUS LINE: tactical objectives summary -->
+      <div id="di-status-line" class="di-status-line"></div>
+
+      <!-- 3. HABIT SLATE: grouped by time of day. Populated by JS. -->
+      <div id="di-slate" class="di-slate"></div>
+
+      <!-- 4. WHERE YOU STAND -->
+      <div class="di-section">
+        <div class="vn-section-label">WHERE YOU STAND</div>
+        <div class="di-stats-row">
+          <div class="di-stat-inline">
+            <span id="di-xp"     class="di-stat-value">0</span>
+            <span class="di-stat-label">Total XP</span>
+          </div>
+          <span class="di-stat-sep" aria-hidden="true">·</span>
+          <div class="di-stat-inline">
+            <span id="di-streak" class="di-stat-value">0</span>
+            <span class="di-stat-label">Perfect Days</span>
+          </div>
+          <span class="di-stat-sep" aria-hidden="true">·</span>
+          <div class="di-stat-inline">
+            <span id="di-days"   class="di-stat-value">0</span>
+            <span class="di-stat-label">Days Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. CTA — drag-down + tap-outside also dismiss. -->
+      <button id="di-enter-btn" class="di-cta-btn" type="button">LOCK IN</button>
     </div>
   </div>
 
@@ -954,7 +1003,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=212"></script>
+  <script src="app.js?v=216"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

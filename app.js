@@ -108,6 +108,20 @@
   function isHealthAutoVerifiableHabit(habit) {
     return isStepGoalHabit(habit) || isSleepDurationHabit(habit) || isSleepBedtimeHabit(habit);
   }
+  // True only when ALL pre-conditions for live auto-verify are met:
+  // the habit qualifies (canonical Daily walk / Sleep / Sleep before
+  // midnight), HealthKit is available, permission granted, and the
+  // user hasn't paused auto-verify in Settings. Used by the Morning
+  // Briefing card to decide whether to show the "Apple Health verifies"
+  // tag on a row — and by the status-line composer to count how many
+  // of today's objectives are system-verified vs. on the user.
+  function canAutoVerify(habit) {
+    if (!isHealthAutoVerifiableHabit(habit)) return false;
+    if (typeof Health === 'undefined' || !Health.isAvailable()) return false;
+    if (Health.permissionStatus() !== 'granted') return false;
+    if (isAutoVerifyDisabled()) return false;
+    return true;
+  }
   // Read-only system-managed habits — Apple Health is the SOLE authority,
   // user cannot manually toggle. Tapping the card opens the Notes modal
   // with a system-message explainer instead of toggling check state.
@@ -165,13 +179,20 @@
   // Version-keyed announcements. The What's New sheet always displays
   // the highest version's content; future releases just add a new key.
   const WHATS_NEW = {
+    // WHATS_NEW items are ordered BY SIGNIFICANCE (most impactful first),
+    // NOT chronologically by when the work shipped during the version's
+    // dev cycle. Net-new behaviors and features the user encounters
+    // every day rank highest; configuration polish and settings-layer
+    // additions rank lowest. Future maintainers: re-sort when you add
+    // items, don't just append.
     '1.1.5': {
       subtitle: 'The system is watching now.',
       items: [
+        { emoji: '', title: 'Morning Briefing',        description: "Open the app each morning to your day's full slate — every habit, every objective, every XP reward. The system tells you what's on you and what it has covered." },
         { emoji: '', title: 'Walk Auto-Verifies',      description: 'Daily walk auto-verifies via Apple Health when you reach your step goal. No tap needed.' },
-        { emoji: '', title: 'Customizable Step Goal',  description: 'Edit your Daily walk habit to set your step goal — 1,000, 3,000, 5,000, or any amount.' },
         { emoji: '', title: 'Sleep Auto-Verifies',     description: 'Hit your sleep goal? Apple Health verifies it. Edit your Sleep habit to choose how many hours.' },
         { emoji: '', title: 'Bedtime Auto-Verifies',   description: 'Asleep before midnight? Sleep before midnight checks itself — completing your Morning Routine streak chain on its own.' },
+        { emoji: '', title: 'Customizable Step Goal',  description: 'Edit your Daily walk habit to set your step goal — 1,000, 3,000, 5,000, or any amount.' },
         { emoji: '', title: 'Apple Health Settings',   description: 'Pause auto-verify or manage your connection from Settings.' },
       ],
     },
@@ -1177,6 +1198,36 @@
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
   }
 
+  // Device-local "YYYY-MM-DD" — used by features whose semantics are
+  // "the user's current calendar day" rather than the PT-anchored
+  // streak day. Notifications, sleep windows, and the Daily Insight
+  // card all use this. Sleep window currently inlines its own
+  // equivalent; that's flagged for cleanup but kept as-is for now to
+  // minimize churn in the v1.1.5 release.
+  function getDeviceLocalDate() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // Calendar-day count from origin → today (device-local). Returns
+  // 1 on the user's first day, 2 the next day, etc. Returns null if
+  // the user has no origin record (very edge-case — onboarding
+  // failed to write hb_origin_beginning, or the user hand-cleared it).
+  // Used by the Daily Insight header ("DAY 11").
+  function getDaysSinceOrigin() {
+    if (!originBeginning || !originBeginning.dateISO) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(originBeginning.dateISO);
+    if (!m) return null;
+    const origin = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffMs = today - origin;
+    if (diffMs < 0) return null;
+    return Math.round(diffMs / 86400000) + 1;
+  }
+
   function prevDay(dateStr) {
     const ms = Date.parse(dateStr + 'T20:00:00Z');
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date(ms - 86_400_000));
@@ -2021,6 +2072,51 @@
     'Visualization practice':      'The mind that has rehearsed the win is faster to execute it. See it before you live it.',
     'Sleep early before 11PM':     'Earlier bedtimes compound. Each hour before midnight is worth more than each hour after.',
   };
+
+  // ── HABIT_TIME_OF_DAY — Daily Insight grouping (v1.1.5) ──────
+  // Classifies each canonical habit into a time-of-day bucket so the
+  // Morning Briefing card can group them as MORNING / DAY / EVENING.
+  // Only habits whose canonical practice has a clear time anchor are
+  // listed; everything else falls through to 'day' via
+  // getHabitTimeOfDay(). Custom habits also default to 'day'.
+  //
+  // Bucket meanings (from the user's perspective):
+  //   morning  — done within the first hours of waking
+  //   day      — done sometime during waking hours; no fixed time
+  //   evening  — done in the wind-down before bed (or at sleep itself)
+  const HABIT_TIME_OF_DAY = {
+    // Morning anchor habits
+    'Sleep before midnight':                      'morning',  // verified at morning open
+    'Wake up at consistent time':                 'morning',
+    'Get morning sunlight':                       'morning',
+    'No phone or social media after waking':      'morning',
+    'Meditate & Breathwork':                      'morning',
+    'Morning gratitude practice':                 'morning',
+    'Pray or set intentions':                     'morning',
+    'Visualization practice':                     'morning',
+    'Cold shower':                                'morning',
+    'Ice bath or cold plunge':                    'morning',
+    'Mobility & Stretching':                      'morning',
+    'Vitamins and minerals':                      'morning',
+    'Review daily goals/intentions':              'morning',
+
+    // Evening / wind-down habits
+    'Sleep':                                      'evening',
+    'Sleep early before 11PM':                    'evening',
+    'Plan tomorrow the night before':             'evening',
+    'No screens 1 hour before bed':               'evening',
+    'Review investments or trading journal':      'evening',
+    'Write down lessons learned':                 'evening',
+
+    // Everything else defaults to 'day' via the accessor below.
+  };
+
+  function getHabitTimeOfDay(habit) {
+    if (!habit) return 'day';
+    if (habit.custom) return 'day';
+    return HABIT_TIME_OF_DAY[habit.name] || 'day';
+  }
+
   // Apply the map onto DEFAULT_HABITS at startup. Each habit definition
   // gets the canonical description text. Habits without an entry are
   // logged so coverage gaps are obvious during development.
@@ -9405,6 +9501,174 @@
     setTimeout(() => openWhatsNewSheet({ manual: false }), 480);
   }
 
+  // ── DAILY INSIGHT (Morning Briefing) — v1.1.5 ─────────────
+  // Once-per-day full-screen bottom sheet with a featured habit, two
+  // lines of context (builds / compounds), three quick stats, and a
+  // single CTA ("ENTER THE DAY"). Fires on:
+  //   - End of init() for fully-onboarded users (after What's New)
+  //   - visibilitychange resume from background
+  // Both paths gate via shouldShowDailyInsight(); persistence in
+  // hb_daily_insight_last_shown ensures it only fires once per
+  // device-local calendar day.
+
+  function shouldShowDailyInsight() {
+    // Welcome / onboarding users skip — they're already in another flow.
+    if (localStorage.getItem('hb_welcomed') !== '1') return false;
+    if (!habits || habits.length === 0) return false;
+
+    // Day 1 grace period — origin date is today's local date. The user
+    // is fresh from onboarding; don't pile another modal on top.
+    const todayLocal = getDeviceLocalDate();
+    const originDate = (originBeginning && originBeginning.dateISO) || null;
+    if (originDate === todayLocal) return false;
+
+    // Already shown today → wait until tomorrow.
+    if (localStorage.getItem('hb_daily_insight_last_shown') === todayLocal) return false;
+
+    // Don't preempt other live modals. If What's New is currently up,
+    // skip this fire — visibilitychange will retry next resume, by
+    // which time the user will have dismissed What's New.
+    const whatsNewSheet = document.getElementById('whats-new-sheet');
+    if (whatsNewSheet && !whatsNewSheet.classList.contains('hidden')) return false;
+    const beginningScreen = document.getElementById('beginning-screen');
+    if (beginningScreen && !beginningScreen.classList.contains('hidden')) return false;
+
+    return true;
+  }
+
+  // Composes the "{N} OBJECTIVES. {M} SYSTEM-VERIFIED. {K} ON YOU."
+  // status line. Pure function of the user's active habits + current
+  // HealthKit availability/grant/pause state.
+  function composeBriefingStatusLine() {
+    const total = (habits && habits.length) || 0;
+    if (total === 0) return '';  // card shouldn't render anyway, defensive
+    const auto = habits.filter(canAutoVerify).length;
+    const manual = total - auto;
+    if (auto === 0)         return total + ' OBJECTIVES. ALL ON YOU.';
+    if (auto === total)     return total + ' OBJECTIVES. ALL SYSTEM-VERIFIED.';
+    return total + ' OBJECTIVES. ' + auto + ' SYSTEM-VERIFIED. ' + manual + ' ON YOU.';
+  }
+
+  // Build a single habit row for the briefing slate. Pure HTML
+  // string — caller injects into the appropriate group container.
+  // Layout: [colored difficulty dot] [name · goal] [verify tag] [+XP]
+  function buildBriefingRow(habit) {
+    const diff = (DIFFICULTY[habit.difficulty] || DIFFICULTY.easy);
+    const parts = (typeof habitDisplayParts === 'function')
+      ? habitDisplayParts(habit) : { base: habit.name, goal: null };
+    const display = parts.goal ? (parts.base + ' · ' + parts.goal) : parts.base;
+    const verifyTag = canAutoVerify(habit)
+      ? '<span class="di-row-verify">Apple Health verifies</span>'
+      : '';
+    return (
+      '<div class="di-row">' +
+        '<span class="di-row-dot di-row-dot--' + (habit.difficulty || 'easy') + '"></span>' +
+        '<div class="di-row-main">' +
+          '<span class="di-row-name">' + esc(display) + '</span>' +
+          verifyTag +
+        '</div>' +
+        '<span class="di-row-xp">+' + diff.pts + '</span>' +
+      '</div>'
+    );
+  }
+
+  function showDailyInsight() {
+    if (!shouldShowDailyInsight()) return;
+
+    const sheet   = document.getElementById('daily-insight-sheet');
+    const overlay = document.getElementById('daily-insight-overlay');
+    if (!sheet || !overlay) return;
+
+    // ── Header: "THU · MAY 7 · DAY 11" + "TODAY'S BRIEFING" ──
+    const headerEl = document.getElementById('di-header-line');
+    if (headerEl) {
+      const d = new Date();
+      const days   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const dayCount = getDaysSinceOrigin();
+      let line = days[d.getDay()] + ' · ' + months[d.getMonth()] + ' ' + d.getDate();
+      if (dayCount != null) line += ' · DAY ' + dayCount;
+      headerEl.textContent = line;
+    }
+
+    // ── Tactical status line ──
+    const statusEl = document.getElementById('di-status-line');
+    if (statusEl) statusEl.textContent = composeBriefingStatusLine();
+
+    // ── Habit slate, grouped by time of day ──
+    // Bucket the user's active habits, then render the three groups
+    // (morning / day / evening) in fixed order. Empty groups skipped.
+    const buckets = { morning: [], day: [], evening: [] };
+    habits.forEach(h => {
+      const bucket = getHabitTimeOfDay(h);
+      (buckets[bucket] || buckets.day).push(h);
+    });
+    const groupConfig = [
+      { id: 'morning', label: 'MORNING' },
+      { id: 'day',     label: 'DAY'     },
+      { id: 'evening', label: 'EVENING' },
+    ];
+    const slateEl = document.getElementById('di-slate');
+    if (slateEl) {
+      const html = groupConfig.map(g => {
+        const list = buckets[g.id];
+        if (!list.length) return '';
+        return (
+          '<div class="di-group">' +
+            '<div class="di-group-label">' + g.label + '</div>' +
+            list.map(buildBriefingRow).join('') +
+          '</div>'
+        );
+      }).join('');
+      slateEl.innerHTML = html;
+    }
+
+    // ── WHERE YOU STAND ──
+    const xpEl     = document.getElementById('di-xp');
+    const streakEl = document.getElementById('di-streak');
+    const daysEl   = document.getElementById('di-days');
+    if (xpEl)     xpEl.textContent     = totalPoints.toLocaleString();
+    if (streakEl) streakEl.textContent = (perfectStreak && perfectStreak.count) || 0;
+    if (daysEl) {
+      const daysActive = Object.keys(completions || {}).filter(d =>
+        Array.isArray(completions[d]) && completions[d].length > 0
+      ).length;
+      daysEl.textContent = daysActive;
+    }
+
+    // ── Show ──
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+
+  function dismissDailyInsight() {
+    const sheet   = document.getElementById('daily-insight-sheet');
+    const overlay = document.getElementById('daily-insight-overlay');
+    if (sheet)   sheet.classList.add('hidden');
+    if (overlay) overlay.classList.add('hidden');
+    // Persist last-shown AFTER dismissal so an interrupted-mid-show
+    // (process kill) still gets retried on next launch.
+    try { localStorage.setItem('hb_daily_insight_last_shown', getDeviceLocalDate()); }
+    catch (_) {}
+  }
+
+  function setupDailyInsight() {
+    const sheet   = document.getElementById('daily-insight-sheet');
+    const overlay = document.getElementById('daily-insight-overlay');
+    const cta     = document.getElementById('di-enter-btn');
+    if (!sheet || !overlay) return;
+
+    if (cta)     cta.addEventListener('click', dismissDailyInsight);
+    if (overlay) overlay.addEventListener('click', dismissDailyInsight);
+
+    // Drag-down dismiss — same pattern as other bottom sheets.
+    if (typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, dismissDailyInsight, {
+        scrollTarget: '.di-body',
+      });
+    }
+  }
+
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;
   // HealthKit step-goal staging for the Edit Habit modal. editStepGoal
@@ -13414,6 +13678,7 @@
     setupCtxMenu();
     setupEditModal();
     setupNoteModal();
+    setupDailyInsight();
     setupCompoundPopup();
     setupBonusInfoPopup();
     setupPRDetailSheet();
@@ -13480,6 +13745,11 @@
       try { Health.clearSleepCache  && Health.clearSleepCache();  } catch (_) {}
       try { autoVerifyWalk();  } catch (_) {}
       try { autoVerifySleep(); } catch (_) {}
+      // Daily Insight retry — if user backgrounded across midnight and
+      // resumed in the morning, this is the natural moment to fire.
+      // shouldShowDailyInsight() handles all gating (Day 1, already
+      // shown today, modal-stack conflict).
+      try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); }, 60_000);
     registerSW();
@@ -13507,6 +13777,14 @@
       // Auto-show What's New for users who already finished onboarding
       // and have either never seen this version or last saw an older one.
       maybeAutoShowWhatsNew();
+      // Daily Insight — fires once per device-local calendar day for
+      // fully-onboarded users. Deferred long enough that What's New
+      // (if eligible) opens first; shouldShowDailyInsight() checks for
+      // a visible What's New sheet and silently defers if so. The
+      // visibilitychange handler picks it up on the next resume.
+      setTimeout(() => {
+        try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
+      }, 900);
     }
   }
 
