@@ -13551,26 +13551,41 @@
     }
 
     // ── Path B: Sleep before midnight ────────────────────────
+    // STRICT WINDOW: sleep onset must be in [20:00, 24:00) device-local
+    // on the prior day. The previous "any sample.startDate < midnight
+    // today" check was too permissive — a Wednesday-night sleep block
+    // (whose startDate is technically before Friday's midnight by ~24
+    // hours) would falsely qualify Friday's bedtime habit when the user
+    // had been awake all of Thursday into Friday morning. Also catches
+    // afternoon naps (start before 8 PM) and "passed out at 6 PM"
+    // exhaustion events as not-credit-worthy — those aren't an
+    // intentional pre-midnight bedtime.
+    //
+    // CLAUDE.md: notifications + sleep windows use device-local time,
+    // not PT — sleep crosses midnight, PT-anchoring is wrong.
     if (bedtime && !isChecked(bedtime.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep before midnight')) {
-      const earliest = data.earliestSleepStart;
-      if (earliest) {
-        // Device-local midnight at the START of today. If the user fell
-        // asleep before this timestamp, "before midnight" verifies.
-        // (CLAUDE.md: notifications + sleep windows use device-local time,
-        // not PT — sleep crosses midnight, PT-anchoring is wrong.)
-        const localMidnight = new Date();
-        localMidnight.setHours(0, 0, 0, 0);
-        if (earliest < localMidnight) {
-          if (!isChecked(bedtime.id)) {
-            AUTO_VERIFY.recordAutoVerify(bedtime.id, {
-              source: 'healthkit-sleep-bedtime',
-              value: earliest.toISOString(),
-            });
-            const li = document.querySelector('.habit-item[data-id="' + bedtime.id + '"]');
-            toggleHabit(bedtime.id, li, { silent: true });
-            console.log('[Health] auto-verified Sleep before midnight:', earliest.toISOString());
-          }
-        }
+      const midnightToday = new Date();
+      midnightToday.setHours(0, 0, 0, 0);
+      const windowStart = new Date(midnightToday.getTime() - 4 * 3600 * 1000); // 20:00 prior day
+
+      const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
+      const qualifying = (data.samples || [])
+        .filter(s => Number(s.duration) >= napFloorHours)
+        .map(s => ({ start: new Date(s.startDate), src: s }))
+        .filter(s => s.start >= windowStart && s.start < midnightToday)
+        .sort((a, b) => a.start - b.start);
+
+      if (qualifying.length > 0) {
+        const earliest = qualifying[0].start;
+        AUTO_VERIFY.recordAutoVerify(bedtime.id, {
+          source: 'healthkit-sleep-bedtime',
+          value: earliest.toISOString(),
+        });
+        const li = document.querySelector('.habit-item[data-id="' + bedtime.id + '"]');
+        toggleHabit(bedtime.id, li, { silent: true });
+        console.log('[Health] auto-verified Sleep before midnight:', earliest.toISOString());
+      } else {
+        console.log('[Health] Sleep before midnight: no qualifying onset in [20:00, 24:00) window');
       }
     }
 
@@ -13631,6 +13646,41 @@
       });
       if (didRename) save();
       localStorage.setItem('hb_cardio_renamed', '1');
+    }
+    // ── v1.1.5 bedtime window-fix recovery ────────────────────
+    // The pre-fix bedtime auto-verify could false-positive when the
+    // user had any prior asleep sample whose startDate fell before
+    // device-local midnight today — including wrong-night carryovers
+    // (Wed-night sleep showing on Fri's check) and afternoon naps.
+    // Now scoped strictly to [20:00, 24:00) device-local on the prior
+    // day. This one-time migration clears today's false-positive on
+    // first launch of the fixed build so the new strict logic gets to
+    // re-evaluate against actual data. Idempotent via flag.
+    if (!localStorage.getItem('hb_bedtime_window_fix_v1')) {
+      try {
+        const bedtimeHabit = habits.find(h => h && h.name === 'Sleep before midnight' && !h.custom);
+        if (bedtimeHabit && AUTO_VERIFY.isAutoVerifiedToday(bedtimeHabit.id)) {
+          // Clear auto-verify metadata FIRST so toggleHabit's path
+          // doesn't see this as an "un-check of an auto-verified
+          // completion" (which would call markUnchecked and block
+          // re-verification today). Direct mutation of completions[today]
+          // + XP reversal mirrors what toggleHabit would do, minus the
+          // markUnchecked side-effect we don't want.
+          AUTO_VERIFY.clearAutoVerify(bedtimeHabit.id);
+          if (Array.isArray(completions[today])) {
+            const idx = completions[today].indexOf(bedtimeHabit.id);
+            if (idx >= 0) {
+              completions[today].splice(idx, 1);
+              const diff = bedtimeHabit.difficulty || 'medium';
+              const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+              totalPoints = Math.max(0, totalPoints - pts);
+              save();
+            }
+          }
+          console.log('[Migration] Cleared bedtime false-positive for', today);
+        }
+      } catch (_) {}
+      localStorage.setItem('hb_bedtime_window_fix_v1', '1');
     }
     // ── HealthKit auth-version migration ─────────────────────
     // Whenever HEALTHKIT_AUTH_VERSION is bumped (i.e., a new HealthKit
