@@ -11,7 +11,7 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." There is no backend — every byte of state lives in `localStorage`.
 
 - **Current marketing version:** `1.1.5` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`)
-- **Service-worker cache version:** `v5.74` (constant `CACHE_VERSION` in `sw.js`)
+- **Service-worker cache version:** `v5.78` (constant `CACHE_VERSION` in `sw.js`)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -318,7 +318,7 @@ Two canonical habits auto-verify from Apple Health on iOS. Web/PWA users get man
 |---|---|---|---|
 | `Daily walk` | step count | per-habit `habit.stepGoal` (default 3000, range 100–50000) | Edit Habit modal chip picker |
 | `Sleep` | sleep duration | per-habit `habit.sleepGoalHours` (default 7, range 3–14, step 0.5) | Edit Habit modal chip picker |
-| `Sleep before midnight` | bedtime | binary — earliest qualifying asleep sample.startDate < device-local midnight | None (binary habit) |
+| `Sleep before midnight` | bedtime | binary — earliest qualifying asleep sample.startDate in `[20:00, 24:00)` device-local on prior day | None (binary habit) |
 
 ### Plugin: `@perfood/capacitor-healthkit@^1.3.2` — IMPORTANT GOTCHAS
 
@@ -372,7 +372,16 @@ Top-level IIFE in `app.js`. Public surface:
 
 **Sample-state caveat:** the plugin collapses Apple's full `HKCategoryValueSleepAnalysis` enum into 2 strings via `(value == inBed) ? "InBed" : "Asleep"`. This means `awake` (rawValue 2) gets bucketed into `'Asleep'` along with `asleepCore/Deep/REM/Unspecified`. We sum `'Asleep'` durations for total — typically <15 min/night over-count from misclassified awake samples. Acceptable v1 error margin; document if a user reports inflated sleep numbers.
 
-**Bedtime detection:** `getSleepLastNight()` finds the EARLIEST `'Asleep'` sample whose duration ≥ 30 minutes (the nap floor). Edge case: a user who naps 1+ hours in the evening before going to bed at 1 AM will get a false-positive "before midnight" verdict. Rare; user can manually un-check.
+**Bedtime detection (`autoVerifySleepBeforeMidnight`):** uses a **strict bedtime window** — sleep onset must be in `[20:00, 24:00)` device-local on the **prior day**. Implementation: filter `data.samples` to qualifying asleep samples (`duration ≥ 30 min`), narrow to those whose startDate is in the 4-hour window, take the earliest. If none qualifies, the habit does NOT auto-check.
+
+**Window justification:**
+- **20:00 (8 PM) lower bound** — rules out afternoon naps (4–6 PM samples) AND "passed out at 6 PM exhausted" cases. The latter is not an intentional pre-midnight bedtime; it's a collapse, and giving credit for it would game the discipline.
+- **24:00 (midnight) upper bound** — the literal "before midnight" cutoff.
+- **Window scoped to prior day, not current day** — defends against wrong-night carryovers. Earlier (pre-fix v1.1.5) logic checked `sample.startDate < midnightToday` without bounding to the prior evening; a user who slept Wed-night-into-Thursday-morning and was awake all of Thursday would get Friday's bedtime habit falsely auto-checked because the Wed-night sample's startDate was technically `< Friday midnight` by ~24 hours. Documented as a real bug we shipped + recovered from in `hb_bedtime_window_fix_v1`.
+
+**Read-only habit, so false positives are corrosive.** Sleep before midnight is system-managed (`isReadOnlyAutoVerifyHabit` returns true) — the user cannot manually un-check. A false positive STAYS for the day, undermining the "system is honest" framing of the read-only design. The strict window is the authoritative defense; further tightening (e.g., requiring contiguous-sleep-block-detection across REM cycles) is out of scope for v1.1.5 but flagged for v2 if real-world data shows the 4-hour window misses cases.
+
+`getSleepLastNight()` itself does NOT apply the bedtime-window filter — it returns ALL qualifying asleep samples in the broader 18-hour lookback, plus a `totalAsleepHours` sum that includes naps (afternoon naps legitimately count toward total sleep duration). The bedtime-window filter is only applied inside `autoVerifySleepBeforeMidnight`.
 
 ### Auto-verify orchestration
 
@@ -792,6 +801,7 @@ Prefix `hb_` for almost everything:
 | `hb_completions_auto`  | `{ 'YYYY-MM-DD': { habitId: { source, value, threshold } } }` | v1.1.5. Auto-verified completion metadata (vs manually tapped). Drives the `AUTO` pill on cards and the corner dot in History. |
 | `hb_av_unchecked_dates` | `{ habitName: ['YYYY-MM-DD', ...] }` | v1.1.5. Per-habit "user explicitly un-checked an auto-verified completion" tracking. Auto-pruned to 14 days per habit. Migrated from legacy `hb_walk_unchecked_dates` flat array. |
 | `hb_daily_insight_last_shown` | `'YYYY-MM-DD'` (device-local) | v1.1.5. Last calendar day the Daily Insight / Morning Briefing card was dismissed. Gates re-show — card fires once per device-local calendar day. Written by `dismissDailyInsight()` AFTER hide so a force-killed mid-show retries on next launch. |
+| `hb_bedtime_window_fix_v1` | `'1'` | v1.1.5. One-time recovery flag for the bedtime false-positive bug. On the first launch of the strict-window build, init() clears today's auto-verified Sleep before midnight check (if present), reverses the +3 XP, and sets this flag. Idempotent. Future bedtime-logic fixes that need similar recovery should use a new flag (`_v2`, etc.) — don't re-purpose this one. |
 
 All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule — **EXCEPT for HealthKit sleep windows + Daily Insight**, which use device-local time (sleep crosses midnight; the morning briefing is meant to mark "the user's morning" wherever they are; same rule as notifications — see CLAUDE.md "Notifications fire in DEVICE-LOCAL time, not PT"). Use `getDeviceLocalDate()` for these features, not `getPTDate()`.
 
@@ -836,7 +846,7 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['1.1.5']` for the canonical example.
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=169`, `app.js?v=214`, `sw.js v5.74`, `APP_VERSION = '1.1.5'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=169`, `app.js?v=217`, `sw.js v5.78`, `APP_VERSION = '1.1.5'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -898,6 +908,7 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Forgetting the `Wire entitlements file into Xcode project` codemagic step.** Capacitor's default Xcode project does NOT have `CODE_SIGN_ENTITLEMENTS` set in build settings. Without that build setting, Xcode signs the IPA without consuming our `App.entitlements` file — the HealthKit entitlement is silently absent from the signed binary, iOS rejects all HealthKit calls, and there's no error feedback (this was the v1.1.4 silent-failure bug). The Ruby `xcodeproj` gem step in codemagic.yaml fixes this; don't remove it.
 - **Forgetting to enable HealthKit on the App ID at developer.apple.com.** One-time setup: Identifiers → `com.goallearner.awakened` → Capabilities → check HealthKit → Save. Without this, codesign rejects the build with "Missing entitlement." Done already; flagging for any future dev who registers a new App ID.
 - **Using PT-anchored time for sleep windows.** Sleep crosses midnight. PT-anchored `getPTDate()` is the rule for streak math, but `Health.getSleepLastNight()` uses **device-local time** for the 18-hour lookback window and the "before midnight" comparison. A user in Tokyo going to bed at 11 PM Tokyo time should get bedtime credit even though their PT-anchored "today" wraps differently. Same rule as notifications. Never "fix" this to use PT.
+- **Loosely scoping the bedtime window for `autoVerifySleepBeforeMidnight`.** The naive check "any qualifying asleep sample.startDate < device-local midnight today" is too permissive — it admits wrong-night carryovers, afternoon naps, and "passed out at 6 PM" exhaustion events. The strict window is `[20:00, 24:00)` device-local on the **prior day** specifically. Sleep before midnight is the read-only system-managed habit; users cannot un-check, so false positives stick and corrode the "system is honest" framing. We shipped the loose version in v1.1.5-pre and had to push the strict-window fix + a recovery migration (`hb_bedtime_window_fix_v1`) before App Store submit. If you ever extend bedtime semantics (e.g., a "Sleep before 11 PM" variant), copy the window-scoping pattern — never the loose comparison.
 - **Treating `'Asleep'` plugin samples as exact sleep stages.** The plugin collapses Apple's full sleep-analysis enum into 2 strings via `(value == inBed) ? "InBed" : "Asleep"`. The `'Asleep'` bucket incorrectly includes `awake` rawValue=2 samples along with the actual asleep stages. Total-asleep computation overcounts by however long mid-night awake periods are — typically <15 min/night. Acceptable v1 error margin; if a user reports inflated sleep numbers we patch upstream or filter via raw HKCategorySample.
 - **Calling `toggleHabit(id, li)` directly on the canonical Sleep before midnight habit.** That habit is read-only — the click handler in `buildItem` routes through `openNoteModal(habit.id)` instead. If you bypass the click handler (e.g., from a custom completion path or a bulk-toggle utility), you'll silently bypass the read-only contract. Always check `isReadOnlyAutoVerifyHabit(habit)` first; if true, do nothing and let auto-verify do its job. Manual completion isn't an option for this one by design.
 - **Daily Insight using `getPTDate()` for its day-change check.** The card uses **device-local** time (`getDeviceLocalDate()`), NOT PT. Same rule as notifications and sleep windows. A user in Tokyo opening the app at 6 AM Tokyo time should see today's briefing even though their PT-anchored "today" is yesterday. Don't "fix" this to use PT. Use of PT for the briefing's day-change would also break the visibilitychange retry path for users who travel timezones.
