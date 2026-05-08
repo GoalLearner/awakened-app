@@ -9128,6 +9128,51 @@ footer {
   font-style: italic;
 }
 
+/* System-managed message section — Notes modal "Sleep before midnight"
+   explainer (read-only auto-verify habit). Visually distinct from the
+   ABOUT THIS HABIT block: gold-edged, denser leading, paragraphs
+   stacked. The user reads "the system, not me" from the styling alone. */
+.vn-system-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.vn-system-section.hidden { display: none; }
+.vn-system-message {
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.vn-system-message p { margin: 0; }
+.vn-system-message p + p { margin-top: 8px; }
+.vn-system-message strong { color: #fbbf24; font-weight: 700; }
+
+/* Read-only check circle (system-managed habit). Subtle visual cue —
+   the card stays clickable, but the circle reads "I'm not yours to tap"
+   via reduced contrast + a small lock glyph in the top-right corner.
+   Coexists with the AUTO pill when auto-verified today. */
+.habit-cb--readonly {
+  opacity: 0.72;
+  border-style: dashed;
+  position: relative;
+}
+.habit-cb-lock {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 0.7rem;
+  background: var(--bg-card);
+  border-radius: 50%;
+  padding: 2px;
+  line-height: 1;
+  filter: grayscale(0.4);
+}
+
 /* "View full details" button on the History info popup */
 .hi-full-details-btn {
   margin-top: 4px;

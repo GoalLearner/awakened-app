@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=166">
+  <link rel="stylesheet" href="styles.css?v=167">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -371,6 +371,18 @@
       <div class="vn-reminder-section">
         <div class="vn-section-label">REMINDER</div>
         <div id="vn-reminder-display" class="vn-reminder-display"></div>
+      </div>
+
+      <!-- System-managed message — shown for read-only auto-verify habits
+           (currently only "Sleep before midnight"). Hidden by default;
+           openNoteModal toggles via .hidden based on isReadOnlyAutoVerifyHabit(). -->
+      <div id="vn-system-section" class="vn-system-section hidden">
+        <div class="vn-section-label">SYSTEM-MANAGED</div>
+        <div class="vn-system-message">
+          <p><strong>This habit is verified by Apple Health.</strong></p>
+          <p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>
+          <p>If Apple Health isn't connected or has no data for last night, the habit stays unchecked. Manual completion isn't available for this one.</p>
+        </div>
       </div>
 
       <!-- Read-only canonical description from the habit definition -->
@@ -942,7 +954,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=210"></script>
+  <script src="app.js?v=211"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

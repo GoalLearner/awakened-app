@@ -108,6 +108,19 @@
   function isHealthAutoVerifiableHabit(habit) {
     return isStepGoalHabit(habit) || isSleepDurationHabit(habit) || isSleepBedtimeHabit(habit);
   }
+  // Read-only system-managed habits — Apple Health is the SOLE authority,
+  // user cannot manually toggle. Tapping the card opens the Notes modal
+  // with a system-message explainer instead of toggling check state.
+  // Auto-verify still fires normally; this just locks out manual override.
+  // v1.1.5 — currently only "Sleep before midnight" qualifies. Daily walk
+  // and Sleep duration still allow manual completion (their auto-verify
+  // is an enhancement, not the sole source of truth).
+  function isReadOnlyAutoVerifyHabit(habit) {
+    if (!habit) return false;
+    if (habit.custom) return false;
+    if (habit.name !== 'Sleep before midnight') return false;
+    return true;
+  }
 
   function getHabitStepGoal(habit) {
     if (!habit) return HEALTHKIT_WALK_DEFAULT_THRESHOLD;
@@ -5503,6 +5516,14 @@
       ? '<span class="auto-verify-pill" title="Auto-verified via Apple Health">AUTO</span>'
       : '';
 
+    // Read-only system-managed habit (currently only "Sleep before
+    // midnight"). Subtle visual cue — the card stays clickable, but
+    // the check circle gets a lock-indicator modifier and the click
+    // routes to the Notes modal instead of toggleHabit. See
+    // isReadOnlyAutoVerifyHabit() for the gate.
+    const isReadOnly = isReadOnlyAutoVerifyHabit(habit);
+    const cbClass = 'habit-cb' + (done ? ' checked' : '') + (isReadOnly ? ' habit-cb--readonly' : '');
+
     li.innerHTML =
       // Top row: streak badge (left) + auto-pill (when set) + check circle (right)
       '<div class="hg-top">' +
@@ -5510,7 +5531,8 @@
           (count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '') +
         '</div>' +
         autoPillHTML +
-        '<div class="habit-cb' + (done ? ' checked' : '') + '">' +
+        '<div class="' + cbClass + '"' + (isReadOnly ? ' title="System-managed by Apple Health"' : '') + '>' +
+          (isReadOnly ? '<span class="habit-cb-lock" aria-hidden="true">🔒</span>' : '') +
           '<span class="check-mark">✓</span>' +
         '</div>' +
       '</div>' +
@@ -5550,6 +5572,13 @@
       if (e.target.closest('[data-drag]') || e.target.closest('[data-more]')) return;
       // Suppress click-through fired right after a long-press drop.
       if (Date.now() < _postDropGuardUntil) return;
+      // Read-only system-managed habits route to the Notes modal
+      // instead of toggling. Apple Health is the sole authority for
+      // these — user can't manually check or uncheck.
+      if (isReadOnlyAutoVerifyHabit(habit)) {
+        openNoteModal(habit.id);
+        return;
+      }
       toggleHabit(habit.id, li);
     });
     li.querySelector('[data-more]').addEventListener('click', e => { e.stopPropagation(); showCtxMenu(habit.id, li); });
@@ -9192,6 +9221,13 @@
 
     // Shared stats block
     populateHabitInfoBlock('vn', habit);
+
+    // System-managed message — only shown for read-only auto-verify
+    // habits (currently just "Sleep before midnight"). Sits above the
+    // ABOUT-THIS-HABIT description so users opening the modal via card
+    // tap (the read-only routing path) see the explainer first.
+    const sysEl = document.getElementById('vn-system-section');
+    if (sysEl) sysEl.classList.toggle('hidden', !isReadOnlyAutoVerifyHabit(habit));
 
     // Read-only canonical description from the habit library.
     // (Any user-typed notes from earlier versions remain in habitNotes
