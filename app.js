@@ -5209,6 +5209,7 @@
     const bar   = document.getElementById('rank-bar');
 
     badge.textContent = rank.id;
+    badge.setAttribute('data-rank', rank.id); // drives per-rank color via CSS vars
     label.textContent = rank.label;
     pts.textContent   = totalPoints + ' pts';
 
@@ -5526,7 +5527,7 @@
         '</div>' +
         // Hero: rank badge + name + rank + class
         '<div class="sc-hero">' +
-          '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '">' + rank.id + '</div>' +
+          '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '" data-rank="' + esc(rank.id) + '">' + rank.id + '</div>' +
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +
               '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + '</span>' +
@@ -6777,7 +6778,9 @@
     const sevenDayXP = calcSevenDayXP();
     const dailyAvg   = Math.round(sevenDayXP / 7);
 
-    document.getElementById('rp-badge').textContent    = rank.id;
+    const rpBadge = document.getElementById('rp-badge');
+    rpBadge.textContent = rank.id;
+    rpBadge.setAttribute('data-rank', rank.id); // per-rank color via CSS vars
     document.getElementById('rp-rank-name').textContent = rank.label || rank.id + ' Rank';
     document.getElementById('rp-xp-line').textContent   = totalPoints.toLocaleString() + ' XP total';
 
@@ -9341,7 +9344,7 @@
         // Region a: Header strip — rank pill (absolute, left) +
         // boss name (centered in the full strip width).
         '<div class="bcard-header">' +
-          '<span class="bcard-rank-pill rank-badge">' + esc(cfg.rank) + '</span>' +
+          '<span class="bcard-rank-pill rank-badge" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + '</span>' +
           '<span class="bcard-name">' + esc(cfg.name) + '</span>' +
         '</div>' +
         // Region b: Art window — bleed-to-edge illustration
@@ -9408,7 +9411,10 @@
 
     // Header — rank pill
     const rankPill = document.getElementById('bfs-rank-pill');
-    if (rankPill) rankPill.textContent = cfg.rank;
+    if (rankPill) {
+      rankPill.textContent = cfg.rank;
+      rankPill.setAttribute('data-rank', cfg.rank); // per-rank color via CSS vars
+    }
 
     // Hero art
     const heroImg = document.getElementById('bfs-hero-img');

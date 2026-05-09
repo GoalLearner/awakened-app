@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=186">
+  <link rel="stylesheet" href="styles.css?v=187">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -130,7 +130,7 @@
       <!-- Rank section -->
       <div class="rank-section">
         <div class="rank-left">
-          <span id="rank-badge" class="rank-badge">E</span>
+          <span id="rank-badge" class="rank-badge" data-rank="E">E</span>
           <span id="rank-label" class="rank-label">E Rank</span>
           <span id="rank-pts" class="rank-pts">0 pts</span>
         </div>
@@ -266,7 +266,7 @@
         <div id="quests-gate-grid" class="gate-grid">
           <button class="gate-cell" type="button" data-gate-rank="E" aria-label="E-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-e-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">E</span>
+            <span class="gate-cell-rank-pill rank-badge" data-rank="E" aria-hidden="true">E</span>
             <div class="gate-cell-lock-overlay" aria-hidden="true">
               <span class="gate-cell-lock-icon">🔒</span>
               <span class="gate-cell-lock-label">Reach E rank</span>
@@ -274,7 +274,7 @@
           </button>
           <button class="gate-cell" type="button" data-gate-rank="D" aria-label="D-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-d-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">D</span>
+            <span class="gate-cell-rank-pill rank-badge" data-rank="D" aria-hidden="true">D</span>
             <div class="gate-cell-lock-overlay" aria-hidden="true">
               <span class="gate-cell-lock-icon">🔒</span>
               <span class="gate-cell-lock-label">Reach D rank</span>
@@ -282,7 +282,7 @@
           </button>
           <button class="gate-cell" type="button" data-gate-rank="C" aria-label="C-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-c-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">C</span>
+            <span class="gate-cell-rank-pill rank-badge" data-rank="C" aria-hidden="true">C</span>
             <div class="gate-cell-lock-overlay" aria-hidden="true">
               <span class="gate-cell-lock-icon">🔒</span>
               <span class="gate-cell-lock-label">Reach C rank</span>
@@ -290,7 +290,7 @@
           </button>
           <button class="gate-cell" type="button" data-gate-rank="B" aria-label="B-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-b-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">B</span>
+            <span class="gate-cell-rank-pill rank-badge" data-rank="B" aria-hidden="true">B</span>
             <div class="gate-cell-lock-overlay" aria-hidden="true">
               <span class="gate-cell-lock-icon">🔒</span>
               <span class="gate-cell-lock-label">Reach B rank</span>
@@ -298,7 +298,7 @@
           </button>
           <button class="gate-cell" type="button" data-gate-rank="A" aria-label="A-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-a-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">A</span>
+            <span class="gate-cell-rank-pill rank-badge" data-rank="A" aria-hidden="true">A</span>
             <div class="gate-cell-lock-overlay" aria-hidden="true">
               <span class="gate-cell-lock-icon">🔒</span>
               <span class="gate-cell-lock-label">Reach A rank</span>
@@ -306,7 +306,7 @@
           </button>
           <button class="gate-cell" type="button" data-gate-rank="S" aria-label="S-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-s-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">S</span>
+            <span class="gate-cell-rank-pill rank-badge" data-rank="S" aria-hidden="true">S</span>
             <div class="gate-cell-lock-overlay" aria-hidden="true">
               <span class="gate-cell-lock-icon">🔒</span>
               <span class="gate-cell-lock-label">Reach S rank</span>
@@ -523,7 +523,7 @@
       <button id="bfs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
         <span class="bfs-back-chev" aria-hidden="true">‹</span> Back
       </button>
-      <span id="bfs-rank-pill" class="bfs-rank-pill rank-badge" aria-hidden="true">E</span>
+      <span id="bfs-rank-pill" class="bfs-rank-pill rank-badge" data-rank="E" aria-hidden="true">E</span>
     </header>
 
     <div class="bfs-hero">
@@ -1144,7 +1144,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=240"></script>
+  <script src="app.js?v=241"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

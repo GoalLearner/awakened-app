@@ -1536,15 +1536,20 @@ footer {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--accent-glow);
-  border: 1.5px solid var(--accent);
+  /* Per-rank colors driven by --rank-color custom props set via the
+     [data-rank="X"] block at the bottom of this file. Fallback is the
+     default purple brand. Same pattern shared by .sc-rank-hero and
+     .rp-badge so all three rank-pill surfaces stay coherent without
+     per-class duplication. */
+  background: var(--rank-color-bg, var(--accent-glow));
+  border: 1.5px solid var(--rank-color, var(--accent));
   font-size: 14px;
   font-weight: 900;
-  color: var(--accent);
+  color: var(--rank-color, var(--accent));
   letter-spacing: 0;
   flex-shrink: 0;
   transition: all 0.4s ease;
-  box-shadow: 0 0 12px rgba(139,92,246,0.25);
+  box-shadow: 0 0 12px var(--rank-color-shadow, rgba(139,92,246,0.25));
 }
 
 .rank-badge.rank-s-plus {
@@ -6203,11 +6208,14 @@ footer {
   width: 58px;
   height: 58px;
   border-radius: 14px;
-  border: 2px solid var(--accent);
-  background: var(--accent-glow);
+  /* Consumes the same --rank-color vars as .rank-badge so the Status
+     panel's large rank pill matches whatever tier the user is at. */
+  border: 2px solid var(--rank-color, var(--accent));
+  background: var(--rank-color-bg, var(--accent-glow));
+  box-shadow: 0 0 14px var(--rank-color-shadow, rgba(139,92,246,0.20));
   font-size: 24px;
   font-weight: 900;
-  color: var(--accent);
+  color: var(--rank-color, var(--accent));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7985,12 +7993,14 @@ footer {
 .rp-badge {
   width: 52px; height: 52px;
   border-radius: 14px;
-  background: var(--accent-glow);
-  border: 2px solid var(--accent);
+  /* Consumes the same --rank-color vars as .rank-badge / .sc-rank-hero. */
+  background: var(--rank-color-bg, var(--accent-glow));
+  border: 2px solid var(--rank-color, var(--accent));
+  box-shadow: 0 0 12px var(--rank-color-shadow, rgba(139,92,246,0.20));
   display: flex; align-items: center; justify-content: center;
   font-size: 1.45rem;
   font-weight: 900;
-  color: var(--accent);
+  color: var(--rank-color, var(--accent));
   flex-shrink: 0;
   font-family: inherit;
 }
@@ -11278,55 +11288,46 @@ footer {
   box-shadow: 0 0 8px rgba(139, 92, 246, 0.30);
 }
 
-/* Per-rank gate-pill colors. Each tier's pill matches its gate art's
-   dominant color so the rank tag reads as part of the gate rather
-   than a stamp on top. Scoped only to gate-grid pills — boss-card
-   header pills and the full-screen modal's #bfs-rank-pill stay on
-   the default purple brand. Pattern for each: bg = color @ 18%,
-   border + text = full color, box-shadow = color @ 40%. */
-.gate-cell[data-gate-rank="E"] .gate-cell-rank-pill {
-  /* Purple — matches existing brand default. Explicit for clarity. */
-  background: rgba(139, 92, 246, 0.18);
-  border-color: #8b5cf6;
-  color: #8b5cf6;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.30);
+/* Per-rank color tokens. Set via `data-rank="X"` on any rank-pill
+   element. Consumed by .rank-badge / .sc-rank-hero / .rp-badge /
+   .gate-cell-rank-pill (any element with --rank-color in scope picks
+   them up automatically). Adding a new rank-pill surface in the
+   future = just give it `data-rank` + a class that uses the vars,
+   no per-surface CSS duplication.
+   Pattern: bg = color @ 18%, border + text = full color, shadow @ 40%. */
+[data-rank="E"] {
+  --rank-color: #8b5cf6;          /* purple — brand default */
+  --rank-color-bg: rgba(139, 92, 246, 0.18);
+  --rank-color-shadow: rgba(139, 92, 246, 0.30);
 }
-.gate-cell[data-gate-rank="D"] .gate-cell-rank-pill {
-  /* Cyan — matches D-rank's blue lightning haze. */
-  background: rgba(34, 211, 238, 0.18);
-  border-color: #22d3ee;
-  color: #22d3ee;
-  box-shadow: 0 0 8px rgba(34, 211, 238, 0.40);
+[data-rank="D"] {
+  --rank-color: #22d3ee;          /* cyan — D-rank lightning haze */
+  --rank-color-bg: rgba(34, 211, 238, 0.18);
+  --rank-color-shadow: rgba(34, 211, 238, 0.40);
 }
-.gate-cell[data-gate-rank="C"] .gate-cell-rank-pill {
-  /* Emerald — matches C-rank's vegetation/forest tones. */
-  background: rgba(52, 211, 153, 0.18);
-  border-color: #34d399;
-  color: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.40);
+[data-rank="C"] {
+  --rank-color: #34d399;          /* emerald — C-rank vegetation */
+  --rank-color-bg: rgba(52, 211, 153, 0.18);
+  --rank-color-shadow: rgba(52, 211, 153, 0.40);
 }
-.gate-cell[data-gate-rank="B"] .gate-cell-rank-pill {
-  /* Amber — matches B-rank's sandstone/warm-stone palette. */
-  background: rgba(251, 191, 36, 0.18);
-  border-color: #fbbf24;
-  color: #fbbf24;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.40);
+[data-rank="B"] {
+  --rank-color: #fbbf24;          /* amber — B-rank sandstone */
+  --rank-color-bg: rgba(251, 191, 36, 0.18);
+  --rank-color-shadow: rgba(251, 191, 36, 0.40);
 }
-.gate-cell[data-gate-rank="A"] .gate-cell-rank-pill {
-  /* Red — matches A-rank's ember/flame tones. */
-  background: rgba(239, 68, 68, 0.18);
-  border-color: #ef4444;
-  color: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.40);
+[data-rank="A"] {
+  --rank-color: #ef4444;          /* red — A-rank ember/flame */
+  --rank-color-bg: rgba(239, 68, 68, 0.18);
+  --rank-color-shadow: rgba(239, 68, 68, 0.40);
 }
-.gate-cell[data-gate-rank="S"] .gate-cell-rank-pill {
-  /* Fuchsia — distinct from E's purple, matches S-rank's cosmic
-     starfield with a "rare apex" feel. */
-  background: rgba(232, 121, 249, 0.18);
-  border-color: #e879f9;
-  color: #e879f9;
-  box-shadow: 0 0 8px rgba(232, 121, 249, 0.40);
+[data-rank="S"] {
+  --rank-color: #e879f9;          /* fuchsia — S-rank cosmic apex */
+  --rank-color-bg: rgba(232, 121, 249, 0.18);
+  --rank-color-shadow: rgba(232, 121, 249, 0.40);
 }
+/* S+ keeps its existing animated gold treatment via .rank-s-plus —
+   no [data-rank="S+"] override needed. The .rank-s-plus class wins
+   on specificity (two classes vs one attribute selector). */
 
 /* All gate cells are buttons (cursor: pointer, focus ring, hover/
    pressed states). Unlocked cells expand to the dungeon view; locked
