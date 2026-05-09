@@ -11278,6 +11278,56 @@ footer {
   box-shadow: 0 0 8px rgba(139, 92, 246, 0.30);
 }
 
+/* Per-rank gate-pill colors. Each tier's pill matches its gate art's
+   dominant color so the rank tag reads as part of the gate rather
+   than a stamp on top. Scoped only to gate-grid pills — boss-card
+   header pills and the full-screen modal's #bfs-rank-pill stay on
+   the default purple brand. Pattern for each: bg = color @ 18%,
+   border + text = full color, box-shadow = color @ 40%. */
+.gate-cell[data-gate-rank="E"] .gate-cell-rank-pill {
+  /* Purple — matches existing brand default. Explicit for clarity. */
+  background: rgba(139, 92, 246, 0.18);
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.30);
+}
+.gate-cell[data-gate-rank="D"] .gate-cell-rank-pill {
+  /* Cyan — matches D-rank's blue lightning haze. */
+  background: rgba(34, 211, 238, 0.18);
+  border-color: #22d3ee;
+  color: #22d3ee;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.40);
+}
+.gate-cell[data-gate-rank="C"] .gate-cell-rank-pill {
+  /* Emerald — matches C-rank's vegetation/forest tones. */
+  background: rgba(52, 211, 153, 0.18);
+  border-color: #34d399;
+  color: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.40);
+}
+.gate-cell[data-gate-rank="B"] .gate-cell-rank-pill {
+  /* Amber — matches B-rank's sandstone/warm-stone palette. */
+  background: rgba(251, 191, 36, 0.18);
+  border-color: #fbbf24;
+  color: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.40);
+}
+.gate-cell[data-gate-rank="A"] .gate-cell-rank-pill {
+  /* Red — matches A-rank's ember/flame tones. */
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #ef4444;
+  color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.40);
+}
+.gate-cell[data-gate-rank="S"] .gate-cell-rank-pill {
+  /* Fuchsia — distinct from E's purple, matches S-rank's cosmic
+     starfield with a "rare apex" feel. */
+  background: rgba(232, 121, 249, 0.18);
+  border-color: #e879f9;
+  color: #e879f9;
+  box-shadow: 0 0 8px rgba(232, 121, 249, 0.40);
+}
+
 /* All gate cells are buttons (cursor: pointer, focus ring, hover/
    pressed states). Unlocked cells expand to the dungeon view; locked
    cells fire a "Reach X rank to unlock" toast. Both interactions
