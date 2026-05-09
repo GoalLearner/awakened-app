@@ -11,7 +11,7 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Starting in v2.0, dungeon bosses run as a parallel passive-progress system fed by the same Apple Health data that auto-verifies habits. v2.0.1 adds the second boss (The Carouser) and silently begins tracking three Apple-Health-verifiable metrics for a future leaderboard layer surfaced on the Social tab. There is no backend — every byte of state lives in `localStorage`.
 
 - **Current marketing version:** `2.0.1` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.0 was a single consolidated release; v2.0.1 is the second consolidated release and the only one in shipped state. Coverage: The Carouser boss, Daily Quest removed, leaderboard data-tracking foundations + Social-tab preview UI, system-verified read-only habits, auto-verify-first sort invariant, canonical-habit name/emoji lock, schedule sheet section split, full gate-based dungeon UX on the Quests tab (3×2 rank-tier grid with E active + D/C/B/A/S in locked state, tap-to-expand → rank-aware dungeon view), CARDS.md-spec **boss cards** (5:7 portrait, art window, stat strip, gradient border) replacing the old text-only cards, and a **full-screen boss detail modal** (`#boss-fs-overlay`) replacing the old `.vn-sheet` bottom-sheet. E-rank bosses recalibrated to 2-night thresholds (Insomniac: any 2 consecutive nights ≥7h; Carouser: Fri+Sat both ≥7h + before-midnight bedtime).
-- **Service-worker cache version:** `v5.103` (constant `CACHE_VERSION` in `sw.js` — bumped many times during the v2.0.1 dev cycle since cache versions are per-deploy, not per-marketing-version)
+- **Service-worker cache version:** `v5.106` (constant `CACHE_VERSION` in `sw.js` — bumped many times during the v2.0.1 dev cycle since cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -588,7 +588,7 @@ Foundation system shipped in v2.0; second boss landed in v2.0.1. Visual + state 
 
 ### Where they live
 
-`#quests-panel` (the Dungeon tab — `tab-quests`, dungeon-portal icon). v2.0.2 introduced gate-based UX:
+`#quests-panel` (the Dungeon tab — `tab-quests`, dungeon-portal icon). v2.0.1 introduced gate-based UX:
 
 **Default state** (`#quests-gate-view` visible):
 1. `.bosses-section-label` — "DUNGEON BOSSES" header
@@ -636,7 +636,7 @@ Background scroll-lock via `body.bfs-locked { overflow: hidden; }` while the mod
 hb_bosses    { bossId: { streak, kill_count, last_eval_date, ...bossSpecificFields } }
 ```
 
-Roster lives in the `BOSSES` constant (top of `app.js`). Each entry has core fields (`id`, `name`, `rank`, `flavorShort`, `flavorLong`, `killCondShort`, `killCondLong`, `streakTarget`, `sleepHours`) plus per-boss extras (`cadence`, `statDomain`, `dayOfWeekScoped`, etc.). v2.0.1 has two entries: `the_insomniac`, `the_carouser`.
+Roster lives in the `BOSSES` constant (top of `app.js`). Each entry has core fields (`id`, `name`, `rank`, `flavorShort`, `flavorLong`, `killCondShort`, `killCondLong`, `streakTarget`) plus eval-threshold field with **semantic-specific naming** (`sleepHours` for sleep bosses, `stepThreshold` for step bosses — NOT a generic `threshold` field; if generalization is wanted later, refactor all bosses together) plus per-boss extras (`cadence`, `statDomain`, `dayOfWeekScoped`, etc.). v2.0.1 has three entries: `the_insomniac` (E), `the_carouser` (E), `the_steel_wolf` (D).
 
 State helpers: `loadBosses()`, `saveBosses(state)`, `getBossState(id)` (defaults to `{ streak: 0, kill_count: 0, last_eval_date: null }` if unset), `setBossState(id, state)`. Per-boss state extensions (Carouser's `current_weekend_id`, `weekend_burned`) are filled in by per-boss getters like `getCarouserState()` so callers always see a fully-populated shape.
 
@@ -654,6 +654,26 @@ State helpers: `loadBosses()`, `saveBosses(state)`, `getBossState(id)` (defaults
 | `nightDate` | `getDeviceLocalDate()` — the morning the user is in (the morning that follows the night being evaluated) |
 | Kill effect | `kill_count += 1`, `streak = 0`, `showHabitToast('The Insomniac defeated.')`, re-render Quests tab if visible |
 | Sub-threshold night | `streak = 0`, record `last_eval_date` to prevent double-processing |
+
+### The Steel Wolf — kill detection (v2.0.1, D-rank)
+
+First non-E-rank boss; validates the multi-rank architecture. Daily-cadence step boss; rides the same HealthKit step-count fetch that powers `autoVerifyWalk` and `lbRecordStepsToday`. No extra HealthKit roundtrip.
+
+| Field | Value |
+|---|---|
+| Rank | D |
+| Stat domain | VIT |
+| Cadence | daily |
+| Kill condition | ≥ 5,000 steps in a day, 2 days in a row |
+| Evaluator | `evaluateSteelWolfForDay(stepCount, dayDate)` — reads `cfg.stepThreshold` |
+| Trigger | Called from `autoVerifyWalk()` alongside `lbRecordStepsToday`, before the habit-auto-verify gates (passive — ignores pause toggle and walk-habit presence) |
+| Idempotency | Short-circuits if `state.last_eval_date === dayDate` |
+| `dayDate` | `getDeviceLocalDate()` — the calendar day being evaluated |
+| Runtime missed-day reset | If `state.last_eval_date < (dayDate - 1)`, streak resets to 0 BEFORE today's eval. A skipped day breaks the streak. |
+| Init-time reset | `checkMissedDayForSteelWolf()` mirrors `checkMissedNightForInsomniac` — covers users who open the app after a multi-day absence even when no walk habit is configured (so the runtime path doesn't fire). |
+| Sub-threshold day | `streak = 0`, record `last_eval_date` to prevent double-processing |
+
+**Gate visibility note:** Steel Wolf sits behind the locked D-rank gate. Users at E rank cannot tap into the D-rank dungeon to see it — they get the "Reach D rank to unlock" toast. Eval still runs in the background (data is data; the rank-locking is a UI affordance, not a data-layer gate). Once the user crosses D rank via existing rank-unlock logic, the gate unlocks automatically and `renderBossesPanel('D')` shows the Steel Wolf card via the existing rank-filter (`Object.keys(BOSSES).filter(id => BOSSES[id].rank === rankFilter)`).
 
 ### The Carouser — kill detection (v2.0.1)
 
@@ -709,6 +729,7 @@ window.Bosses = {
   getBossState,
   evaluateInsomniacForNight, checkMissedNightForInsomniac,
   evaluateCarouserForNight,  checkMissedWeekendForCarouser,
+  evaluateSteelWolfForDay,   checkMissedDayForSteelWolf,
 };
 ```
 
@@ -722,6 +743,10 @@ Bosses.getBossState('the_insomniac');
 // Force-trip the Carouser for Sat morning (Fri night):
 Bosses.evaluateCarouserForNight(7.5, true, '2026-05-09');
 Bosses.getBossState('the_carouser');
+
+// Force-trip the Steel Wolf for today:
+Bosses.evaluateSteelWolfForDay(6500, '2026-05-09');
+Bosses.getBossState('the_steel_wolf');
 ```
 
 ### Adding a new boss (future)
@@ -1060,6 +1085,8 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `evaluateInsomniacForNight(hours, nightDate)` | Boss kill-detection. Idempotent on `nightDate`. Increments streak / triggers kill / persists state via `setBossState`. |
 | `checkMissedNightForInsomniac()` | Init-only missed-night reset. Resets streak if `last_eval_date` is older than yesterday. No-op on first install (null `last_eval_date`). |
 | `evaluateCarouserForNight(hours, bedtimeBeforeMidnight, nightDate)` | v2.0.1 Carouser kill-detection. Weekend-night-only (Sat + Sun mornings; Mon morning dropped in the 2-night recalibration). Idempotent on `nightDate`. Anchors `current_weekend_id` to `getMostRecentFridayDate()`. |
+| `evaluateSteelWolfForDay(stepCount, dayDate)` | v2.0.1 Steel Wolf kill-detection (D-rank). Daily cadence; reads `cfg.stepThreshold` (5000). Called from `autoVerifyWalk` alongside `lbRecordStepsToday`. Idempotent on `dayDate` + runtime missed-day reset. Same independence rules as the other bosses. |
+| `checkMissedDayForSteelWolf()` | Init-only missed-day reset. Mirrors `checkMissedNightForInsomniac`. Resets streak if `last_eval_date` is older than yesterday. No-op on first install. |
 | `buildBossCardHTML(id)` | Renders a single CARDS.md-spec boss card. 5/7 portrait, 6 regions, state classes (`.bcard--active`, `.bcard--defeated`, `.bcard--burned`) composed from `getBossState(id)`. Used by `renderBossesPanel`. |
 | `openBossFullScreen(id)` / `closeBossFullScreen()` | Opens/closes the full-screen `#boss-fs-overlay` with hero art, long flavor, stats grid, kill condition, current progress, drops placeholder. ESC + any tab switch closes. Locks `body` scroll while open via `.bfs-locked`. |
 | `checkMissedWeekendForCarouser()` | Init-only missed-weekend reset. Clears stale streak when stored `current_weekend_id !== getMostRecentFridayDate()`. kill_count preserved. |
@@ -1178,7 +1205,7 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['1.1.5']` for the canonical example.
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=185`, `app.js?v=240`, `sw.js v5.103`, `APP_VERSION = '2.0.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=187`, `app.js?v=242`, `sw.js v5.106`, `APP_VERSION = '2.0.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 

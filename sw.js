@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.105';
+const CACHE_VERSION = 'v5.106';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -108,6 +108,7 @@ const PRECACHE_ASSETS = [
   // portraits, used inside the new boss-card art window.
   '/assets/bosses/the-insomniac.png',
   '/assets/bosses/the-carouser.png',
+  '/assets/bosses/the-steel-wolf.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────

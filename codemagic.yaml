@@ -93,7 +93,7 @@ workflows:
           # Boss illustrations (CARDS.md spec preview). 1254×1254 manhwa
           # portraits ride inside the new card's art window.
           mkdir -p www/assets/bosses
-          for boss in the-insomniac the-carouser; do
+          for boss in the-insomniac the-carouser the-steel-wolf; do
             cp "assets/bosses/$boss.png" "www/assets/bosses/$boss.png"
           done
 

@@ -121,6 +121,19 @@
       cadence:      'daily',
       statDomain:   'VIT',
     },
+    the_steel_wolf: {
+      id:               'the_steel_wolf',
+      name:             'The Steel Wolf',
+      rank:             'D',
+      flavorShort:      'A wolf forged from miles.',
+      flavorLong:       "It paces the borderlands of every distance you've ever walked. Move enough, and you walk beside it. Stop, and you fall behind.",
+      killCondShort:    'Walk 5,000+ steps, 2 days in a row',
+      killCondLong:     'Walk at least 5,000 steps per day for 2 days in a row. A day under 5,000 steps, or a day with no step data, breaks the streak.',
+      streakTarget:     2,
+      stepThreshold:    5000, // semantic-specific, parallel to Insomniac's sleepHours
+      cadence:          'daily',
+      statDomain:       'VIT',
+    },
     the_carouser: {
       id:               'the_carouser',
       name:             'The Carouser',
@@ -363,7 +376,88 @@
     }
   }
 
-  try { window.Bosses = { BOSSES, getBossState, evaluateInsomniacForNight, checkMissedNightForInsomniac, evaluateCarouserForNight, checkMissedWeekendForCarouser }; } catch (_) {}
+  // ── Steel Wolf kill-detection (v2.0.1, D-rank) ───────────────
+  // Daily-cadence boss. Eval fires from autoVerifySleep's sibling
+  // path — autoVerifyWalk — using the same step count fetched for
+  // the Daily walk habit + leaderboard recording. No extra HealthKit
+  // call. Mirrors Insomniac's structure exactly: idempotent on
+  // dayDate, runtime missed-day reset, init-time missed-day reset.
+  //
+  // Field naming: cfg.stepThreshold (5000) — semantic-specific name
+  // parallel to Insomniac's cfg.sleepHours. NOT a generic
+  // `threshold` field; if a future generalization is wanted, refactor
+  // all three bosses together.
+  function evaluateSteelWolfForDay(stepCount, dayDate) {
+    if (typeof stepCount !== 'number' || !dayDate) return;
+    const id = 'the_steel_wolf';
+    const cfg = BOSSES[id];
+    if (!cfg) return;
+    const state = getBossState(id);
+
+    // Idempotent on dayDate — multiple calls in the same day no-op.
+    if (state.last_eval_date === dayDate) return;
+
+    // Runtime missed-day reset: if the user opens the app after
+    // skipping at least one calendar day (last_eval_date older than
+    // yesterday-from-dayDate), the streak is dead before today's
+    // eval. A missing day isn't a successful one. First-install
+    // (null last_eval_date) skips this — fresh start.
+    if (state.last_eval_date) {
+      const d = new Date(dayDate + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      const yesterdayFromDay = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      if (state.last_eval_date < yesterdayFromDay) {
+        state.streak = 0;
+      }
+    }
+
+    if (stepCount >= cfg.stepThreshold) {
+      state.streak += 1;
+      state.last_eval_date = dayDate;
+      if (state.streak >= cfg.streakTarget) {
+        state.kill_count += 1;
+        state.streak = 0;
+        setBossState(id, state);
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast(cfg.name + ' defeated.');
+          }
+        } catch (_) {}
+        try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        return;
+      }
+      setBossState(id, state);
+    } else {
+      // Sub-threshold steps — break the streak. Record the date so
+      // we don't double-process this day.
+      state.streak = 0;
+      state.last_eval_date = dayDate;
+      setBossState(id, state);
+    }
+    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+  }
+
+  // Init-time missed-day check. Mirrors checkMissedNightForInsomniac
+  // — runs once per cold launch, resets streak if last_eval_date is
+  // older than yesterday. Covers the case where a user opens the app
+  // after a multi-day absence and the eval doesn't fire because they
+  // have no walk habit configured (the runtime reset inside the
+  // evaluator only triggers if the eval actually runs).
+  function checkMissedDayForSteelWolf() {
+    const id = 'the_steel_wolf';
+    const state = getBossState(id);
+    if (!state.last_eval_date) return; // first install — leave alone
+    const yesterday = getDeviceLocalYesterday();
+    if (state.last_eval_date < yesterday) {
+      state.streak = 0;
+      state.last_eval_date = yesterday;
+      setBossState(id, state);
+    }
+  }
+
+  try { window.Bosses = { BOSSES, getBossState, evaluateInsomniacForNight, checkMissedNightForInsomniac, evaluateCarouserForNight, checkMissedWeekendForCarouser, evaluateSteelWolfForDay, checkMissedDayForSteelWolf }; } catch (_) {}
 
   // ── LEADERBOARD STATS (v2.0.2) ───────────────────────────────
   // Foundation-only data accumulator. NOT surfaced in any UI yet —
@@ -787,6 +881,7 @@
         { emoji: '', title: 'Boss cards, redesigned',          description: "Every boss is now a portrait card with its own art, stats, kill condition, and live progress. Tap a card to open the full detail view." },
         { emoji: '', title: 'The Insomniac',                   description: "First dungeon boss. Found inside the E-rank dungeon. Sleep 7+ hours, two nights in a row, to defeat it." },
         { emoji: '', title: 'The Carouser',                    description: "Second dungeon boss. Two clean weekend nights — Friday and Saturday — sleep 7+ hours and bed before midnight on both. Miss either, and the streak resets next weekend. Designed for weekend discipline." },
+        { emoji: '', title: 'The Steel Wolf',                  description: "Third dungeon boss. Sits behind the D-rank gate. Walk 5,000+ steps for 2 days in a row to defeat it once D-rank unlocks." },
         { emoji: '', title: 'E-rank bosses recalibrated',      description: "Easier entry. The Insomniac and The Carouser now require 2-night streaks instead of 3 — entry-tier bosses should welcome you in, not gatekeep. Higher ranks will scale up." },
         { emoji: '', title: 'System-verified habits',          description: "Daily walk, Sleep, and Sleep before midnight are now system-managed. Apple Health is the sole authority — no manual override. Either the data shows you did it, or the box stays empty. The discipline is honest." },
         { emoji: '', title: 'Auto-verify on top',              description: "Apple Health-verified habits sort to the top of your list automatically. The system layer reads first; your own discipline list reads after." },
@@ -14065,6 +14160,16 @@
     try { lbRecordStepsToday(steps); }
     catch (e) { console.warn('[Leaderboard] step record failed', e); }
 
+    // ── Boss evaluation (Steel Wolf, D-rank) ───────────────
+    // Same independence rules as the Insomniac/Carouser evaluators
+    // in autoVerifySleep — bosses ignore the pause toggle and habit
+    // presence. Idempotent on the day date so visibility-change
+    // refires don't double-count. Wrapped in try for the same
+    // reason as the leaderboard call.
+    try {
+      evaluateSteelWolfForDay(steps, getDeviceLocalDate());
+    } catch (e) { console.warn('[Bosses] steel wolf eval failed', e); }
+
     // ── Habit auto-verify gates ────────────────────────────
     // User has paused auto-verify in Settings → Apple Health. Manual
     // completion path is unaffected. (v1.1.5)
@@ -14321,6 +14426,7 @@
     // checkMissedNightForInsomniac for first-install handling.
     try { checkMissedNightForInsomniac(); } catch (_) {}
     try { checkMissedWeekendForCarouser(); } catch (_) {}
+    try { checkMissedDayForSteelWolf(); } catch (_) {}
     // ── HealthKit auth-version migration ─────────────────────
     // Whenever HEALTHKIT_AUTH_VERSION is bumped (i.e., a new HealthKit
     // category was added to the requestAuthorization() read array),
