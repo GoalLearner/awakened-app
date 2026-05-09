@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=169">
+  <link rel="stylesheet" href="styles.css?v=185">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -243,18 +243,96 @@
       <div id="history-content" class="history-content"></div>
     </div>
 
-    <!-- Quests panel — Daily Quest at top, "more coming" placeholder below -->
+    <!-- Quests panel — Gate-based dungeon UX (v2.0.2).
+         Default state: "DUNGEON BOSSES" header + tappable E-rank gate.
+         Tapping the gate swaps to the dungeon-view: back button +
+         "E-RANK DUNGEON" header + flavor + boss cards.
+         Tab re-entry resets to gate-view (questsGateExpanded = false).
+         Cards open the full-screen detail modal (#boss-fs-overlay)
+         on tap. See CARDS.md for the card visual spec. -->
     <div id="quests-panel" class="tab-panel hidden" data-panel="quests">
-      <!-- Today's Legendary Mission — moved here from the Habits tab so the
-           main flow stays focused on habits. Renders empty when no quest
-           is active today; the placeholder below still shows. -->
-      <div id="daily-mission-card" class="daily-mission-card hidden"></div>
-      <div class="cs-screen">
-        <img class="cs-icon cs-icon--art cs-icon--dungeon" src="assets/tab-icons/tab-dungeon.png" alt="Dungeon" draggable="false" loading="lazy" decoding="async" onerror="this.style.display='none'">
-        <h2 class="cs-title">MORE QUESTS</h2>
-        <div class="cs-version">Coming in Version 2.0</div>
-        <p class="cs-desc">Enter dungeons. Fight bosses. Earn rare drops. Your rank determines which battles you can enter.</p>
+      <!-- Default state — gate grid visible, dungeon-view hidden.
+           Grid is 3 cols × 2 rows = 6 cells, exactly matching the 6
+           rank tiers (E/D/C/B/A/S). Reads left-to-right top-to-bottom:
+           Row 1: E D C    Row 2: B A S
+           Each cell is a tappable button with data-gate-rank. The
+           gate-locked CSS class is applied at render time by
+           renderQuestsPanel() based on isGateUnlocked() vs the user's
+           current rank. Lock overlay sub-elements are present in
+           markup but hidden by default; revealed only when the parent
+           carries .gate-cell--locked. -->
+      <div id="quests-gate-view" class="bosses-section">
+        <div class="bosses-section-label">DUNGEON BOSSES</div>
+        <div id="quests-gate-grid" class="gate-grid">
+          <button class="gate-cell" type="button" data-gate-rank="E" aria-label="E-rank dungeon">
+            <img class="gate-cell-img" src="assets/gates/gate-e-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">E</span>
+            <div class="gate-cell-lock-overlay" aria-hidden="true">
+              <span class="gate-cell-lock-icon">🔒</span>
+              <span class="gate-cell-lock-label">Reach E rank</span>
+            </div>
+          </button>
+          <button class="gate-cell" type="button" data-gate-rank="D" aria-label="D-rank dungeon">
+            <img class="gate-cell-img" src="assets/gates/gate-d-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">D</span>
+            <div class="gate-cell-lock-overlay" aria-hidden="true">
+              <span class="gate-cell-lock-icon">🔒</span>
+              <span class="gate-cell-lock-label">Reach D rank</span>
+            </div>
+          </button>
+          <button class="gate-cell" type="button" data-gate-rank="C" aria-label="C-rank dungeon">
+            <img class="gate-cell-img" src="assets/gates/gate-c-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">C</span>
+            <div class="gate-cell-lock-overlay" aria-hidden="true">
+              <span class="gate-cell-lock-icon">🔒</span>
+              <span class="gate-cell-lock-label">Reach C rank</span>
+            </div>
+          </button>
+          <button class="gate-cell" type="button" data-gate-rank="B" aria-label="B-rank dungeon">
+            <img class="gate-cell-img" src="assets/gates/gate-b-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">B</span>
+            <div class="gate-cell-lock-overlay" aria-hidden="true">
+              <span class="gate-cell-lock-icon">🔒</span>
+              <span class="gate-cell-lock-label">Reach B rank</span>
+            </div>
+          </button>
+          <button class="gate-cell" type="button" data-gate-rank="A" aria-label="A-rank dungeon">
+            <img class="gate-cell-img" src="assets/gates/gate-a-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">A</span>
+            <div class="gate-cell-lock-overlay" aria-hidden="true">
+              <span class="gate-cell-lock-icon">🔒</span>
+              <span class="gate-cell-lock-label">Reach A rank</span>
+            </div>
+          </button>
+          <button class="gate-cell" type="button" data-gate-rank="S" aria-label="S-rank dungeon">
+            <img class="gate-cell-img" src="assets/gates/gate-s-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span class="gate-cell-rank-pill rank-badge" aria-hidden="true">S</span>
+            <div class="gate-cell-lock-overlay" aria-hidden="true">
+              <span class="gate-cell-lock-icon">🔒</span>
+              <span class="gate-cell-lock-label">Reach S rank</span>
+            </div>
+          </button>
+        </div>
       </div>
+
+      <!-- Expanded state — back button + dungeon header + boss cards.
+           #bosses-list keeps the same id so renderBossesPanel() and
+           the delegated click handler in setupBossesPanel() work
+           unchanged inside the dungeon view. -->
+      <div id="quests-dungeon-view" class="dungeon-view hidden">
+        <button id="quests-dungeon-back"
+                class="dungeon-back"
+                type="button"
+                aria-label="Exit dungeon, return to gate selection">
+          <span class="dungeon-back-chev" aria-hidden="true">‹</span> Exit Dungeon
+        </button>
+        <div class="dungeon-header-block">
+          <h2 id="dungeon-header-text" class="dungeon-header">E-RANK DUNGEON</h2>
+          <p id="dungeon-flavor-text" class="dungeon-flavor">The first threshold. Two bosses linger in the dark.</p>
+        </div>
+        <div id="bosses-list" class="bosses-list"></div>
+      </div>
+
     </div>
 
     <!-- Items panel (coming soon) -->
@@ -287,25 +365,21 @@
       </div>
     </div>
 
-    <!-- Social panel (coming soon) -->
+    <!-- Social panel — Leaderboard preview (v2.0.2)
+         Surfaces the user's own Apple-Health-verified stats now so
+         they accumulate visible history. The competitive leaderboard
+         layer ships in a future version; this tab is the holding
+         space for it. Rendered by renderLeaderboardPreview(). -->
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
-      <div class="cs-screen">
-        <img class="cs-icon cs-icon--art cs-icon--social" src="assets/tab-icons/tab-social.png" alt="Social" draggable="false" loading="lazy" decoding="async" onerror="this.style.display='none'">
-        <h2 class="cs-title">SOCIAL</h2>
-        <div class="cs-version">Coming in Version 2.0</div>
-        <p class="cs-desc">Challenge friends. Climb the global leaderboard. See who is truly Awakened.</p>
-        <div class="cs-leaderboard">
-          <div class="cs-lb-header">
-            <span class="cs-lb-rank">#</span>
-            <span class="cs-lb-name">Hunter</span>
-            <span class="cs-lb-pts">XP</span>
-          </div>
-          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">1</span><span class="cs-lb-name">ShadowMonarch</span><span class="cs-lb-pts">28,450</span></div>
-          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">2</span><span class="cs-lb-name">IronWill_99</span><span class="cs-lb-pts">21,330</span></div>
-          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">3</span><span class="cs-lb-name">AwakenedOne</span><span class="cs-lb-pts">18,720</span></div>
-          <div class="cs-lb-row cs-lb-blur"><span class="cs-lb-rank">4</span><span class="cs-lb-name">DisciplineKing</span><span class="cs-lb-pts">15,100</span></div>
-          <div class="cs-lb-lock">🔒 Locked</div>
+      <div class="lb-preview">
+        <div class="lb-preview-header">
+          <div class="lb-preview-eyebrow">LEADERBOARD · COMING SOON</div>
+          <h2 class="lb-preview-title">YOUR VERIFIED STATS</h2>
+          <p class="lb-preview-sub">Tracked from your Apple Health data, starting now. When the leaderboard goes live, you arrive with history.</p>
         </div>
+        <div id="lb-preview-empty" class="lb-preview-empty hidden"></div>
+        <div id="lb-preview-list" class="lb-preview-list"></div>
+        <div class="lb-preview-footer">Compete with friends. Climb the ranks.<br>Only Apple Health-verifiable stats — the only stats that don't lie.</div>
       </div>
     </div>
 
@@ -323,10 +397,10 @@
   <!-- Context menu -->
   <div id="ctx-overlay" class="ctx-overlay hidden"></div>
   <div id="ctx-menu" class="ctx-menu hidden">
-    <button id="ctx-edit" class="ctx-item">✏️ Edit Habit</button>
-    <button id="ctx-note" class="ctx-item">📝 <span id="ctx-note-label">Add Note</span></button>
-    <button id="ctx-schedule" class="ctx-item">📅 Schedule</button>
-    <button id="ctx-delete" class="ctx-item ctx-danger">🗑️ Delete</button>
+    <button id="ctx-edit" class="ctx-item">Edit Habit</button>
+    <button id="ctx-note" class="ctx-item"><span id="ctx-note-label">Add Note</span></button>
+    <button id="ctx-schedule" class="ctx-item">Schedule</button>
+    <button id="ctx-delete" class="ctx-item ctx-danger">Delete</button>
   </div>
 
   <!-- All Streaks bottom-sheet — opened by tapping the 🔥 streak pill
@@ -374,15 +448,12 @@
       </div>
 
       <!-- System-managed message — shown for read-only auto-verify habits
-           (currently only "Sleep before midnight"). Hidden by default;
-           openNoteModal toggles via .hidden based on isReadOnlyAutoVerifyHabit(). -->
+           (Daily walk, Sleep, Sleep before midnight per v2.0 policy).
+           Body content is filled dynamically by openNoteModal based on
+           the specific habit; section visibility toggled via .hidden. -->
       <div id="vn-system-section" class="vn-system-section hidden">
         <div class="vn-section-label">SYSTEM-MANAGED</div>
-        <div class="vn-system-message">
-          <p><strong>This habit is verified by Apple Health.</strong></p>
-          <p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>
-          <p>If Apple Health isn't connected or has no data for last night, the habit stays unchecked. Manual completion isn't available for this one.</p>
-        </div>
+        <div id="vn-system-message" class="vn-system-message"></div>
       </div>
 
       <!-- Read-only canonical description from the habit definition -->
@@ -439,6 +510,88 @@
 
       <!-- 5. CTA — drag-down + tap-outside also dismiss. -->
       <button id="di-enter-btn" class="di-cta-btn" type="button">LOCK IN</button>
+    </div>
+  </div>
+
+  <!-- Boss full-screen detail modal. Replaces the v1.1.7 bottom-sheet.
+       Opens from any .bcard tap on the dungeon view. Renders larger
+       hero art, long flavor, stats grid, kill condition, current
+       progress, and a deferred DROPS section. Closed via Back button,
+       ESC key, or any tab switch (handled in switchTab). -->
+  <div id="boss-fs-overlay" class="bfs-overlay hidden">
+    <header class="bfs-header">
+      <button id="bfs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
+        <span class="bfs-back-chev" aria-hidden="true">‹</span> Back
+      </button>
+      <span id="bfs-rank-pill" class="bfs-rank-pill rank-badge" aria-hidden="true">E</span>
+    </header>
+
+    <div class="bfs-hero">
+      <img id="bfs-hero-img" src="" alt="" draggable="false" loading="lazy" decoding="async">
+      <div class="bfs-hero-fade" aria-hidden="true"></div>
+    </div>
+
+    <div class="bfs-name-block">
+      <h1 id="bfs-name" class="bfs-name">—</h1>
+      <div id="bfs-rank-label" class="bfs-rank-label">E-RANK BOSS</div>
+    </div>
+
+    <p id="bfs-flavor" class="bfs-flavor">—</p>
+
+    <div class="bfs-stats">
+      <div class="bfs-stat-cell">
+        <div class="bfs-stat-label">RANK</div>
+        <div id="bfs-stat-rank" class="bfs-stat-value">—</div>
+      </div>
+      <div class="bfs-stat-cell">
+        <div class="bfs-stat-label">STAT DOMAIN</div>
+        <div id="bfs-stat-domain" class="bfs-stat-value">—</div>
+      </div>
+      <div class="bfs-stat-cell">
+        <div class="bfs-stat-label">CADENCE</div>
+        <div id="bfs-stat-cadence" class="bfs-stat-value">—</div>
+      </div>
+      <div class="bfs-stat-cell">
+        <div class="bfs-stat-label">DEFEATED</div>
+        <div id="bfs-stat-defeated" class="bfs-stat-value">—</div>
+      </div>
+    </div>
+
+    <section class="bfs-section">
+      <h2 class="bfs-section-label">KILL CONDITION</h2>
+      <p id="bfs-kill-cond" class="bfs-section-body">—</p>
+    </section>
+
+    <section class="bfs-section">
+      <h2 class="bfs-section-label">CURRENT PROGRESS</h2>
+      <div id="bfs-progress" class="bfs-progress"></div>
+      <div id="bfs-burned-banner" class="bfs-burned-banner hidden">Weekend forfeit — opens Friday</div>
+    </section>
+
+    <!-- DROPS / REWARDS — placeholder. Layer ships when drops system
+         lands (BOSSES.md). Empty for now per spec. -->
+    <section class="bfs-section bfs-section--placeholder">
+      <h2 class="bfs-section-label">DROPS</h2>
+      <p class="bfs-section-placeholder-note">Drops will appear here when this system unlocks.</p>
+    </section>
+  </div>
+
+  <!-- Leaderboard ranking sheet — opened from a Social-tab stat card.
+       Rendered by openLeaderboardRanking(metric); top-10 mock entries
+       are blurred placeholders, the user's own row is real. The live
+       ranking layer ships later. -->
+  <div id="lb-rank-overlay" class="vn-overlay hidden"></div>
+  <div id="lb-rank-sheet"   class="vn-sheet   hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">GLOBAL · TOP 50 · COMING SOON</div>
+      <h2 id="lb-rank-title" class="lb-rank-title">—</h2>
+      <button id="lb-rank-close" class="vn-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p id="lb-rank-blurb" class="lb-rank-blurb">—</p>
+      <div id="lb-rank-list" class="lb-rank-list"></div>
+      <div class="lb-rank-footer">🔒 Live rankings open in a future update. Stats tracked now carry over.</div>
     </div>
   </div>
 
@@ -518,18 +671,18 @@
       </div>
     </div>
 
-    <!-- Reminder section — single per-habit notification time -->
-    <div class="edit-reminder-row">
+    <!-- Reminder section — READ-ONLY display (v1.1.6). Shows the
+         current per-habit reminder time if one is set; hidden when
+         no reminder exists. Set / Change / Remove happens on the
+         Schedule sheet (⋯ → Schedule), which uses the working
+         openDigestTimePickerModal. The previous editable version
+         used a hidden <input type="time">.showPicker() that
+         anchored badly on iOS + desktop. -->
+    <div id="edit-reminder-row" class="edit-reminder-row hidden">
       <div class="edit-reminder-label">📅 REMINDER</div>
-      <div id="edit-reminder-empty" class="edit-reminder-empty">
-        <button id="edit-reminder-add" class="edit-reminder-add-btn" type="button">+ Add reminder</button>
-      </div>
-      <div id="edit-reminder-set" class="edit-reminder-set hidden">
+      <div class="edit-reminder-display-row">
         <span class="edit-reminder-time-icon">⏰</span>
         <span id="edit-reminder-time-display" class="edit-reminder-time-display">7:30 AM</span>
-        <input id="edit-reminder-time-input" type="time" class="edit-reminder-time-input">
-        <button id="edit-reminder-change" class="edit-reminder-action-btn" type="button">Change</button>
-        <button id="edit-reminder-remove" class="edit-reminder-action-btn edit-reminder-remove-btn" type="button">Remove</button>
       </div>
     </div>
 
@@ -731,18 +884,6 @@
       <div id="cb-message" class="cb-message"></div>
       <div id="cb-xp" class="cb-xp"></div>
       <div class="cb-hint">Tap anywhere to dismiss</div>
-    </div>
-  </div>
-
-  <!-- Daily Legendary Mission — completion celebration -->
-  <div id="mission-complete-screen" class="mission-complete-screen hidden">
-    <div class="mc-bg"></div>
-    <div class="mc-content">
-      <div class="mc-eyebrow">⚔️ LEGENDARY MISSION COMPLETE</div>
-      <div id="mc-name" class="mc-name"></div>
-      <div id="mc-xp" class="mc-xp"></div>
-      <div class="mc-quote">"Most won't attempt this. Fewer will finish it."</div>
-      <div class="mc-hint">Tap anywhere to dismiss</div>
     </div>
   </div>
 
@@ -1003,7 +1144,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=217"></script>
+  <script src="app.js?v=240"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1012,6 +1153,15 @@
     <div class="sched-header">
       <h2 class="sched-title">Schedule</h2>
     </div>
+    <!-- v1.1.6 — explicit DAYS / REMINDER section labels so the day
+         picker is read as "which days this habit appears in your list"
+         rather than "which days the reminder fires." Pre-v1.1.6 these
+         two controls sat on the same sheet without separation, leading
+         users to scope a habit's schedule to F/S/S thinking they were
+         setting reminder days. The day-picker writes habit.days; the
+         reminder picker writes hb_reminders[habitId]. They are
+         independent. -->
+    <div class="sched-section-label">DAYS</div>
     <div class="sched-presets">
       <button class="sched-preset" data-preset="daily"    type="button">Daily</button>
       <button class="sched-preset" data-preset="weekdays" type="button">Weekdays</button>
@@ -1027,16 +1177,20 @@
       <button class="day-btn" data-day="Sat" type="button">S</button>
       <button class="day-btn" data-day="Sun" type="button">S</button>
     </div>
+    <p class="sched-section-help">Which days this habit appears in your list.</p>
+
+    <div class="sched-divider"></div>
 
     <!-- Per-habit reminder. Tappable button opens the same custom hour
          + 15-min minute picker used by Settings. The Remove button
          appears only when a reminder is set; tapping it clears it. -->
     <div class="sched-reminder-section">
-      <div class="sched-reminder-label">REMINDER</div>
+      <div class="sched-section-label">REMINDER</div>
       <div class="sched-reminder-row">
         <button id="sched-reminder-btn"   class="sched-reminder-btn"   type="button">+ Add reminder</button>
         <button id="sched-reminder-clear" class="sched-reminder-clear hidden" type="button" aria-label="Remove reminder">Remove</button>
       </div>
+      <p class="sched-section-help">A single notification at the time you choose. Fires only on scheduled days.</p>
     </div>
 
     <div class="sched-actions">

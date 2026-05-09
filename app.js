@@ -14,7 +14,7 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '1.1.5';
+  const APP_VERSION = '2.0.1';
 
   // ── HealthKit auto-verification thresholds ───────────────
   // v1.1.5: Daily walk auto-verifies via Apple Health when steps
@@ -66,6 +66,516 @@
   const HEALTHKIT_SLEEP_NAP_MIN_MINUTES = 30; // sample duration < this = nap
   const HEALTHKIT_SLEEP_LOOKBACK_HOURS = 18;  // query window backwards from now
 
+  // Pure helper: filters HealthKit sleep samples to the strict bedtime
+  // window — qualifying asleep samples (≥30 min) whose startDate is in
+  // [20:00, 24:00) device-local on the prior day. Returns array sorted
+  // by startDate ascending; callers use length>0 (boolean: bedtime
+  // before midnight) or [0].start (earliest onset).
+  //
+  // STRICT WINDOW rationale: see autoVerifySleepBeforeMidnight comments
+  // and CLAUDE.md "HealthKit integration → bedtime detection". Both
+  // habit auto-verify (Sleep before midnight) and boss evaluators
+  // (The Carouser) consume this same helper — keeps the rule in ONE
+  // place so a future tightening (e.g., before-11-PM variant) can be
+  // applied consistently without drift between consumers.
+  function getBedtimeSamplesInWindow(samples) {
+    const midnightToday = new Date();
+    midnightToday.setHours(0, 0, 0, 0);
+    const windowStart = new Date(midnightToday.getTime() - 4 * 3600 * 1000); // 20:00 prior day
+    const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
+    return (samples || [])
+      .filter(s => Number(s.duration) >= napFloorHours)
+      .map(s => ({ start: new Date(s.startDate), src: s }))
+      .filter(s => s.start >= windowStart && s.start < midnightToday)
+      .sort((a, b) => a.start - b.start);
+  }
+
+  // ── DUNGEON BOSSES (v1.1.7) ──────────────────────────────────
+  // Foundation-only system: state model + kill detection + minimal UI.
+  // No drops, no cards, no rewards — those layer on top in v1.2+.
+  // Each boss has a name, rank tier, flavor copy, and a kill condition
+  // evaluated against HealthKit data (or other passive signals later).
+  // State lives in `hb_bosses` localStorage key.
+  //
+  // Independence from habit auto-verify: bosses run on a separate
+  // signal — they evaluate from raw Apple Health data, not from any
+  // habit's checked state. They IGNORE the Settings → Apple Health
+  // pause toggle (isAutoVerifyDisabled). That pause is scoped to
+  // habit auto-verify only. Bosses are background passive progress.
+  //
+  // First-install behavior: streak starts at 0 on install regardless
+  // of prior HealthKit history. We do NOT backfill from history. v1.0
+  // limitation; users start fresh. Future versions could optionally
+  // backfill — out of scope for v1.1.7.
+  const BOSSES = {
+    the_insomniac: {
+      id:           'the_insomniac',
+      name:         'The Insomniac',
+      rank:         'E',
+      flavorShort:  'A creature born from restless nights.',
+      flavorLong:   'A creature born from restless nights. It feeds on the hours you should have slept.',
+      killCondShort:'Sleep 7+ hours, 2 nights in a row',
+      killCondLong: 'Sleep at least 7 hours per night for 2 nights in a row. A night under 7 hours, or a night with no sleep data, breaks the streak.',
+      streakTarget: 2,
+      sleepHours:   7,
+      cadence:      'daily',
+      statDomain:   'VIT',
+    },
+    the_carouser: {
+      id:               'the_carouser',
+      name:             'The Carouser',
+      rank:             'E',
+      flavorShort:      'He keeps a long table, and his guests rarely leave.',
+      flavorLong:       'Two nights a week he calls them home — Friday and Saturday — and most answer. Refuse him both nights running, and the door stays closed.',
+      killCondShort:    'Sleep 7+ hours and bed before midnight, both Friday and Saturday',
+      killCondLong:     'Sleep at least 7 hours AND go to bed before midnight on Friday AND Saturday of the same weekend. Miss either night, and the streak resets to start the next weekend.',
+      streakTarget:     2,
+      sleepHours:       7,
+      cadence:          'weekly',
+      statDomain:       'WILL',
+      dayOfWeekScoped:  true, // only Fri + Sat nights count (2-night recalibration)
+    },
+  };
+
+  function loadBosses() {
+    try { return JSON.parse(localStorage.getItem('hb_bosses') || '{}'); }
+    catch (_) { return {}; }
+  }
+  function saveBosses(state) {
+    try { localStorage.setItem('hb_bosses', JSON.stringify(state)); } catch (_) {}
+  }
+  // Returns the per-boss state, defaulting to the initial shape if
+  // unset. Always returns a valid object — callers don't need to
+  // handle missing-key edge cases.
+  function getBossState(id) {
+    const all = loadBosses();
+    return all[id] || { streak: 0, kill_count: 0, last_eval_date: null };
+  }
+  function setBossState(id, state) {
+    const all = loadBosses();
+    all[id] = state;
+    saveBosses(all);
+  }
+
+  // Computes "yesterday" in device-local format. Used by the missed-
+  // night reset (init-time) to set last_eval_date back one day so
+  // tonight's evaluation can still proceed.
+  function getDeviceLocalYesterday() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // Most recent Friday's date in device-local 'YYYY-MM-DD' format.
+  // If today IS Friday, returns today. Used as the "weekendId" anchor
+  // for The Carouser — Fri + Sat nights both map to the same Friday.
+  function getMostRecentFridayDate() {
+    const d = new Date();
+    // Day index: 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+    // Days to subtract to land on the most recent Friday:
+    //   Sun(0) → 2, Mon(1) → 3, Tue(2) → 4, Wed(3) → 5, Thu(4) → 6, Fri(5) → 0, Sat(6) → 1
+    const daysBack = (d.getDay() - 5 + 7) % 7;
+    d.setDate(d.getDate() - daysBack);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // ── Insomniac kill-detection ─────────────────────────────────
+  // Called from autoVerifySleep AFTER HealthKit returns sleep data.
+  // Evaluates the most recent night's hours against the kill condition.
+  // Idempotent on nightDate — a second call with the same date is a
+  // no-op so visibility-change refires don't double-count.
+  //
+  // sleepHours: total asleep hours from Health.getSleepLastNight()
+  // nightDate:  device-local 'YYYY-MM-DD' representing the morning
+  //             the user is in (the morning that follows the night
+  //             being evaluated). See spec.
+  function evaluateInsomniacForNight(sleepHours, nightDate) {
+    if (typeof sleepHours !== 'number' || !nightDate) return;
+    const id = 'the_insomniac';
+    const cfg = BOSSES[id];
+    const state = getBossState(id);
+
+    // Already evaluated this night — idempotent.
+    if (state.last_eval_date === nightDate) return;
+
+    if (sleepHours >= cfg.sleepHours) {
+      state.streak += 1;
+      state.last_eval_date = nightDate;
+      if (state.streak >= cfg.streakTarget) {
+        state.kill_count += 1;
+        state.streak = 0;
+        setBossState(id, state);
+        // Brief, no-flair toast per spec. Drops/visual reveal land
+        // in future versions on top of this kill detection.
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast(cfg.name + ' defeated.');
+          }
+        } catch (_) {}
+        // Re-render the Quests panel so the streak progress + kill
+        // count update if user is currently looking at it.
+        try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        return;
+      }
+      setBossState(id, state);
+    } else {
+      // Sub-threshold sleep — break the streak. Still record the date
+      // so we don't double-process this night.
+      state.streak = 0;
+      state.last_eval_date = nightDate;
+      setBossState(id, state);
+    }
+    // Re-render Quests panel for streak progress visibility.
+    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+  }
+
+  // Init-time missed-night detection. If the user skipped opening the
+  // app for a calendar day or more, we reset the streak — a missing
+  // night isn't a successful one, so the streak shouldn't survive.
+  // last_eval_date is set to yesterday so tonight's evaluation can
+  // still proceed (an eval for "today" remains valid).
+  //
+  // Only fires from init() per spec — visibilitychange would
+  // mis-trigger on multi-foreground days.
+  function checkMissedNightForInsomniac() {
+    const id = 'the_insomniac';
+    const state = getBossState(id);
+    // First install — never been evaluated. Don't treat as missed.
+    if (!state.last_eval_date) return;
+
+    const yesterday = getDeviceLocalYesterday();
+    // last_eval_date strictly older than yesterday = at least one
+    // calendar day was skipped → reset.
+    if (state.last_eval_date < yesterday) {
+      state.streak = 0;
+      state.last_eval_date = yesterday;
+      setBossState(id, state);
+    }
+  }
+
+  // ── Carouser kill-detection ──────────────────────────────────
+  // Weekend-only boss. Evaluates one weekend night per call (Fri, Sat,
+  // or Sun nights — identified by the morning that follows them: Sat,
+  // Sun, or Mon device-local). Streak target = 3, all within the same
+  // weekend (anchored by the most-recent-Friday date). Any single failed
+  // night burns the weekend — `weekend_burned: true` prevents stale
+  // streak progress on subsequent same-weekend nights.
+  //
+  // State shape (extends base):
+  //   { streak, kill_count, last_eval_date, current_weekend_id, weekend_burned }
+  //
+  // Idempotent on nightDate. Pass condition: sleepHours ≥ 7 AND
+  // bedtimeBeforeMidnight === true. The bedtime boolean comes from
+  // getBedtimeSamplesInWindow(samples).length > 0 — same source-of-truth
+  // as the Sleep-before-midnight habit auto-verify.
+  function getCarouserState() {
+    const base = getBossState('the_carouser');
+    if (typeof base.current_weekend_id === 'undefined') base.current_weekend_id = null;
+    if (typeof base.weekend_burned === 'undefined') base.weekend_burned = false;
+    return base;
+  }
+
+  function evaluateCarouserForNight(sleepHours, bedtimeBeforeMidnight, nightDate) {
+    if (typeof sleepHours !== 'number' || !nightDate) return;
+    const id = 'the_carouser';
+    const cfg = BOSSES[id];
+    if (!cfg) return;
+    const state = getCarouserState();
+
+    // Idempotent on nightDate — visibility-change refires no-op.
+    if (state.last_eval_date === nightDate) return;
+
+    // Classify the night by its start day-of-week. nightDate is the
+    // morning the user is in; the night being evaluated STARTED the
+    // prior day. Sat morning → Fri night; Sun morning → Sat night.
+    // Only those two mornings count — Sunday night (Mon morning, dow=1)
+    // is intentionally ignored. The 2-night recalibration dropped Sunday
+    // entirely from the Carouser eval; Sunday sleep data is irrelevant
+    // for this boss now.
+    const todayDate = new Date(nightDate + 'T00:00:00');
+    const todayDow = todayDate.getDay();
+    const isWeekendMorning = (todayDow === 6 || todayDow === 0);
+    if (!isWeekendMorning) return;
+
+    const weekendId = getMostRecentFridayDate();
+
+    // New weekend → fresh slate.
+    if (state.current_weekend_id !== weekendId) {
+      state.current_weekend_id = weekendId;
+      state.streak = 0;
+      state.weekend_burned = false;
+    }
+
+    // Weekend already burned — record the date but skip eval. A failed
+    // night earlier in the weekend means the streak is dead; later
+    // nights this weekend can't revive it.
+    if (state.weekend_burned) {
+      state.last_eval_date = nightDate;
+      setBossState(id, state);
+      return;
+    }
+
+    const passed = (sleepHours >= cfg.sleepHours) && (bedtimeBeforeMidnight === true);
+    if (passed) {
+      state.streak += 1;
+      state.last_eval_date = nightDate;
+      if (state.streak >= cfg.streakTarget) {
+        state.kill_count += 1;
+        state.streak = 0;
+        state.weekend_burned = false;
+        setBossState(id, state);
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast(cfg.name + ' defeated.');
+          }
+        } catch (_) {}
+        try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        return;
+      }
+      setBossState(id, state);
+    } else {
+      state.streak = 0;
+      state.weekend_burned = true;
+      state.last_eval_date = nightDate;
+      setBossState(id, state);
+    }
+    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+  }
+
+  // Init-time: if state references a past weekend, clear stale streak
+  // progress. Without this, a user who hit streak=2 last weekend and
+  // didn't open the app on Sun/Mon morning would see a stale "2/3"
+  // until the next weekend's first eval. kill_count is preserved.
+  function checkMissedWeekendForCarouser() {
+    const id = 'the_carouser';
+    const state = getCarouserState();
+    if (!state.current_weekend_id) return;
+    const todayWeekendId = getMostRecentFridayDate();
+    if (state.current_weekend_id !== todayWeekendId) {
+      state.streak = 0;
+      state.weekend_burned = false;
+      state.current_weekend_id = null;
+      setBossState(id, state);
+    }
+  }
+
+  try { window.Bosses = { BOSSES, getBossState, evaluateInsomniacForNight, checkMissedNightForInsomniac, evaluateCarouserForNight, checkMissedWeekendForCarouser }; } catch (_) {}
+
+  // ── LEADERBOARD STATS (v2.0.2) ───────────────────────────────
+  // Foundation-only data accumulator. NOT surfaced in any UI yet —
+  // we are building historical depth NOW so that when the leaderboard
+  // tab ships in v2.x, returning users already have weeks/months of
+  // tracked metrics rather than starting fresh from launch day.
+  //
+  // Three Apple-Health-verifiable metrics — chosen because they cannot
+  // be self-reported / gamed, which is the only honest basis for a
+  // competitive leaderboard:
+  //   1. Steps totaled in the last 7 days (rolling sum)
+  //   2. Best streak of consecutive nights with sleep ≥ 7 hours
+  //   3. Best streak of consecutive nights with bedtime before midnight
+  //
+  // "Best" = all-time peak, preserved separately from the running
+  // current_* counters so a streak-break doesn't erase the user's
+  // historical record. The current_* counters drive future "live"
+  // leaderboard slots; the best_* counters drive "lifetime" slots.
+  //
+  // Independence: like bosses, this runs on raw HealthKit data and
+  // IGNORES the Settings → Apple Health pause toggle. The pause is
+  // scoped to habit auto-verify only — bosses and leaderboard stats
+  // accumulate passively. A user who pauses habit auto-verify still
+  // gets leaderboard credit. (If we want a privacy-style master kill
+  // switch later, it should be a SEPARATE toggle, not this one.)
+  //
+  // Privacy: every stored field is local-only via localStorage. When
+  // the leaderboard ships, only the explicit-opt-in subset will be
+  // transmitted. No network calls happen here.
+  //
+  // Date semantics: device-local time, same as bosses + sleep windows
+  // (CLAUDE.md: notifications + sleep + leaderboard use device-local;
+  // streak math for habits uses PT). 'YYYY-MM-DD' keys throughout.
+  const LB_DAILY_RETENTION_DAYS = 30;
+  const LB_STORAGE_KEY = 'hb_leaderboard';
+  const LB_SLEEP_HOURS_THRESHOLD = 7; // matches Insomniac's kill condition
+
+  function loadLeaderboardState() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(LB_STORAGE_KEY) || '{}');
+      return {
+        steps_daily:               raw.steps_daily               || {},
+        sleep_hours_daily:         raw.sleep_hours_daily         || {},
+        bedtime_daily:             raw.bedtime_daily             || {},
+        current_sleep_streak:      raw.current_sleep_streak      || 0,
+        best_sleep_streak:         raw.best_sleep_streak         || 0,
+        last_sleep_eval_date:      raw.last_sleep_eval_date      || null,
+        current_bedtime_streak:    raw.current_bedtime_streak    || 0,
+        best_bedtime_streak:       raw.best_bedtime_streak       || 0,
+        last_bedtime_eval_date:    raw.last_bedtime_eval_date    || null,
+        best_7day_step_total:      raw.best_7day_step_total      || 0,
+        best_7day_step_window_end: raw.best_7day_step_window_end || null,
+      };
+    } catch (_) {
+      return {
+        steps_daily: {}, sleep_hours_daily: {}, bedtime_daily: {},
+        current_sleep_streak: 0, best_sleep_streak: 0, last_sleep_eval_date: null,
+        current_bedtime_streak: 0, best_bedtime_streak: 0, last_bedtime_eval_date: null,
+        best_7day_step_total: 0, best_7day_step_window_end: null,
+      };
+    }
+  }
+
+  function saveLeaderboardState(state) {
+    try { localStorage.setItem(LB_STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+  }
+
+  // Returns the device-local date 'YYYY-MM-DD' for (dateStr - 1 day).
+  // Used by gap detection — a streak only continues if today's eval
+  // date follows yesterday's eval date. Skipped nights = gap = reset.
+  function lbPrevDate(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // Drop entries older than retention window from a date-keyed map.
+  // Keeps localStorage lean — the 7-day rolling sum only needs the
+  // last 7 entries, but we keep 30 for future "best week of last
+  // 30 days"-style slots.
+  function lbPruneDailyMap(map, retentionDays) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+    const cutoffStr = cutoff.getFullYear() + '-' +
+      String(cutoff.getMonth() + 1).padStart(2, '0') + '-' +
+      String(cutoff.getDate()).padStart(2, '0');
+    for (const k in map) {
+      if (k < cutoffStr) delete map[k];
+    }
+  }
+
+  // Step recording. Idempotent in the sense that re-calling with a
+  // higher number for the same day overwrites (HealthKit step counts
+  // can backfill upward as the day progresses; we want the latest
+  // figure). 7-day peak is updated whenever today's trailing-7 sum
+  // exceeds the stored best.
+  function lbRecordStepsToday(steps) {
+    if (typeof steps !== 'number' || !Number.isFinite(steps) || steps < 0) return;
+    const state = loadLeaderboardState();
+    const today = getDeviceLocalDate();
+    state.steps_daily[today] = Math.round(steps);
+    lbPruneDailyMap(state.steps_daily, LB_DAILY_RETENTION_DAYS);
+
+    let sum = 0;
+    let dateStr = today;
+    for (let i = 0; i < 7; i++) {
+      sum += (state.steps_daily[dateStr] || 0);
+      dateStr = lbPrevDate(dateStr);
+    }
+    if (sum > state.best_7day_step_total) {
+      state.best_7day_step_total = sum;
+      state.best_7day_step_window_end = today;
+    }
+    saveLeaderboardState(state);
+  }
+
+  // Sleep recording — both metrics (hours + bedtime) in one call,
+  // since they come from the same Health.getSleepLastNight() roundtrip.
+  // Each metric tracks independently and is idempotent on nightDate.
+  //
+  // Streak gap rule: if last_*_eval_date is set AND not equal to
+  // (nightDate - 1 day), the streak is dead before tonight's eval
+  // (a missed night = no qualifying entry = break). Tonight's outcome
+  // then determines whether streak starts fresh at 1 or stays at 0.
+  function lbRecordSleepNight(sleepHours, bedtimeBeforeMidnight, nightDate) {
+    if (!nightDate) return;
+    const state = loadLeaderboardState();
+    let mutated = false;
+
+    // ── Sleep hours ─────────────────────────────────────────
+    if (typeof sleepHours === 'number' && Number.isFinite(sleepHours) && sleepHours >= 0) {
+      state.sleep_hours_daily[nightDate] = Number(sleepHours.toFixed(2));
+      lbPruneDailyMap(state.sleep_hours_daily, LB_DAILY_RETENTION_DAYS);
+      mutated = true;
+
+      if (state.last_sleep_eval_date !== nightDate) {
+        const prev = lbPrevDate(nightDate);
+        if (state.last_sleep_eval_date && state.last_sleep_eval_date !== prev) {
+          state.current_sleep_streak = 0;
+        }
+        if (sleepHours >= LB_SLEEP_HOURS_THRESHOLD) {
+          state.current_sleep_streak += 1;
+          if (state.current_sleep_streak > state.best_sleep_streak) {
+            state.best_sleep_streak = state.current_sleep_streak;
+          }
+        } else {
+          state.current_sleep_streak = 0;
+        }
+        state.last_sleep_eval_date = nightDate;
+      }
+    }
+
+    // ── Bedtime before midnight ─────────────────────────────
+    if (typeof bedtimeBeforeMidnight === 'boolean') {
+      state.bedtime_daily[nightDate] = bedtimeBeforeMidnight;
+      lbPruneDailyMap(state.bedtime_daily, LB_DAILY_RETENTION_DAYS);
+      mutated = true;
+
+      if (state.last_bedtime_eval_date !== nightDate) {
+        const prev = lbPrevDate(nightDate);
+        if (state.last_bedtime_eval_date && state.last_bedtime_eval_date !== prev) {
+          state.current_bedtime_streak = 0;
+        }
+        if (bedtimeBeforeMidnight === true) {
+          state.current_bedtime_streak += 1;
+          if (state.current_bedtime_streak > state.best_bedtime_streak) {
+            state.best_bedtime_streak = state.current_bedtime_streak;
+          }
+        } else {
+          state.current_bedtime_streak = 0;
+        }
+        state.last_bedtime_eval_date = nightDate;
+      }
+    }
+
+    if (mutated) saveLeaderboardState(state);
+  }
+
+  // Read-only snapshot for future UI / console debugging. Computes
+  // the live trailing-7-day step sum on demand (cheap — at most 7
+  // map lookups). All other fields read straight from storage.
+  function lbGetSnapshot() {
+    const state = loadLeaderboardState();
+    let stepsLast7 = 0;
+    let dateStr = getDeviceLocalDate();
+    for (let i = 0; i < 7; i++) {
+      stepsLast7 += (state.steps_daily[dateStr] || 0);
+      dateStr = lbPrevDate(dateStr);
+    }
+    return {
+      steps_last_7_days:         stepsLast7,
+      best_7day_step_total:      state.best_7day_step_total,
+      best_7day_step_window_end: state.best_7day_step_window_end,
+      current_sleep_streak:      state.current_sleep_streak,
+      best_sleep_streak:         state.best_sleep_streak,
+      current_bedtime_streak:    state.current_bedtime_streak,
+      best_bedtime_streak:       state.best_bedtime_streak,
+    };
+  }
+
+  try {
+    window.Leaderboard = {
+      getSnapshot:      lbGetSnapshot,
+      recordStepsToday: lbRecordStepsToday,
+      recordSleepNight: lbRecordSleepNight,
+      _state:           loadLeaderboardState, // dev-only: full raw state
+    };
+  } catch (_) {}
+
   function getSleepGoalHours(habit) {
     if (!habit) return HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
     const n = parseFloat(habit.sleepGoalHours);
@@ -108,6 +618,31 @@
   function isHealthAutoVerifiableHabit(habit) {
     return isStepGoalHabit(habit) || isSleepDurationHabit(habit) || isSleepBedtimeHabit(habit);
   }
+
+  // Stable partition: auto-verifiable habits to the front, everything
+  // else preserves its existing relative order. Mutates the array in
+  // place. v2.0 — keeps Daily walk / Sleep / Sleep before midnight at
+  // the top of the Habits tab so the system-managed layer reads first
+  // and the user's own discipline list reads after.
+  //
+  // Drag-to-reorder consequence: dragging a non-auto-verify habit
+  // above the partition causes a visible "snap back" on the next
+  // render. That's intended — it enforces the invariant visibly.
+  // Drags within the same partition (auto-verify reorder amongst
+  // themselves, custom reorder amongst themselves) work normally.
+  function sortHabitsAutoVerifyFirst(arr) {
+    if (!Array.isArray(arr) || arr.length < 2) return;
+    const auto = [];
+    const rest = [];
+    for (const h of arr) {
+      if (isHealthAutoVerifiableHabit(h)) auto.push(h);
+      else                                 rest.push(h);
+    }
+    // Reassign in place so any external references to `habits` keep
+    // pointing at the same array.
+    arr.length = 0;
+    arr.push(...auto, ...rest);
+  }
   // True only when ALL pre-conditions for live auto-verify are met:
   // the habit qualifies (canonical Daily walk / Sleep / Sleep before
   // midnight), HealthKit is available, permission granted, and the
@@ -122,18 +657,78 @@
     if (isAutoVerifyDisabled()) return false;
     return true;
   }
+  // True for habits whose name + emoji are baked into DEFAULT_HABITS
+  // (the canonical library). The Edit Habit modal locks name + emoji
+  // editing for these because habit.name is the foreign key for
+  // HABIT_ICONS, AUTO_VERIFY mapping, HABIT_TIME_OF_DAY grouping, and
+  // every per-name lookup in the app. Renaming a canonical habit
+  // silently breaks all of those. Custom habits never qualify — their
+  // name + emoji are user-defined by definition. (v1.1.6)
+  function isCanonicalHabit(habit) {
+    if (!habit) return false;
+    if (habit.custom) return false;
+    return DEFAULT_HABITS.some(d => d.name === habit.name);
+  }
+
   // Read-only system-managed habits — Apple Health is the SOLE authority,
   // user cannot manually toggle. Tapping the card opens the Notes modal
   // with a system-message explainer instead of toggling check state.
   // Auto-verify still fires normally; this just locks out manual override.
-  // v1.1.5 — currently only "Sleep before midnight" qualifies. Daily walk
-  // and Sleep duration still allow manual completion (their auto-verify
-  // is an enhancement, not the sole source of truth).
+  //
+  // v2.0 policy shift: ALL three HealthKit-auto-verifiable habits are
+  // now read-only — Daily walk, Sleep, and Sleep before midnight. The
+  // earlier v1.1.5 carve-out where Daily walk and Sleep allowed manual
+  // completion as fallback is gone. Reasoning: the "system is honest"
+  // framing applies uniformly. Mixed manual+auto creates ambiguity:
+  // did the user actually walk 3,000 steps, or just tap the box? With
+  // the lock, the answer is always "the data shows yes, or it stays
+  // unchecked." Cleaner discipline contract, even if it means
+  // streaks become impossible without Apple Health connected.
+  //
+  // Implications for users without HealthKit (web/PWA, denied perm,
+  // paused via Settings): these habits CANNOT be checked off. They
+  // stay unchecked. The Notes modal explainer surfaces this to the
+  // user when they tap the card. Add a habit you can actually
+  // complete is the answer — which is on the user, not the system.
+  //
+  // The AUTO_VERIFY.markUnchecked path (toggleHabit's un-check guard)
+  // becomes vestigial for these habits — there's no manual un-check
+  // route. Keep the code; it's harmless and protects against any
+  // future programmatic toggle path that might be added.
   function isReadOnlyAutoVerifyHabit(habit) {
     if (!habit) return false;
     if (habit.custom) return false;
-    if (habit.name !== 'Sleep before midnight') return false;
-    return true;
+    return habit.name === 'Daily walk'
+        || habit.name === 'Sleep'
+        || habit.name === 'Sleep before midnight';
+  }
+
+  // Per-habit "SYSTEM-MANAGED" body copy shown in the Notes modal
+  // when a read-only auto-verify habit is tapped. Voice: tough-love,
+  // declarative, anchored in the data ("the body keeps the score" /
+  // "the data shows you walked"). The third paragraph is identical
+  // across all three — the "no Apple Health, stays unchecked" rule.
+  // Returns an HTML string with the same structure (3 <p> tags) so
+  // the modal layout stays consistent regardless of which habit
+  // opened it.
+  function systemManagedHtmlFor(habit) {
+    const lead = '<p><strong>This habit is verified by Apple Health.</strong></p>';
+    const tail = "<p>If Apple Health isn't connected or has no data, the habit stays unchecked. Manual completion isn't available for this one.</p>";
+    let middle;
+    switch (habit && habit.name) {
+      case 'Daily walk':
+        middle = "<p>Awakened auto-checks Daily walk when Apple Health shows you've reached your step goal today. There's no manual override — either the steps are there, or the box stays empty. Walk the steps.</p>";
+        break;
+      case 'Sleep':
+        middle = "<p>Awakened auto-checks Sleep when Apple Health shows you've slept your goal hours last night. There's no manual override — either you slept, or you didn't. The body keeps the score.</p>";
+        break;
+      case 'Sleep before midnight':
+        middle = "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>";
+        break;
+      default:
+        middle = '<p>Awakened auto-checks this habit when Apple Health verifies the conditions. Manual completion is not available.</p>';
+    }
+    return lead + middle + tail;
   }
 
   function getHabitStepGoal(habit) {
@@ -185,6 +780,23 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
+    '2.0.1': {
+      subtitle: 'The dungeons open.',
+      items: [
+        { emoji: '', title: 'Six dungeon gates',               description: "The Quests tab is now a 3×2 grid of rank-tier dungeon gates — E, D, C, B, A, S. Tap the E-rank gate to enter and meet your bosses. The other five stay locked until you climb. Each one is its own dungeon waiting for you." },
+        { emoji: '', title: 'Boss cards, redesigned',          description: "Every boss is now a portrait card with its own art, stats, kill condition, and live progress. Tap a card to open the full detail view." },
+        { emoji: '', title: 'The Insomniac',                   description: "First dungeon boss. Found inside the E-rank dungeon. Sleep 7+ hours, two nights in a row, to defeat it." },
+        { emoji: '', title: 'The Carouser',                    description: "Second dungeon boss. Two clean weekend nights — Friday and Saturday — sleep 7+ hours and bed before midnight on both. Miss either, and the streak resets next weekend. Designed for weekend discipline." },
+        { emoji: '', title: 'E-rank bosses recalibrated',      description: "Easier entry. The Insomniac and The Carouser now require 2-night streaks instead of 3 — entry-tier bosses should welcome you in, not gatekeep. Higher ranks will scale up." },
+        { emoji: '', title: 'System-verified habits',          description: "Daily walk, Sleep, and Sleep before midnight are now system-managed. Apple Health is the sole authority — no manual override. Either the data shows you did it, or the box stays empty. The discipline is honest." },
+        { emoji: '', title: 'Auto-verify on top',              description: "Apple Health-verified habits sort to the top of your list automatically. The system layer reads first; your own discipline list reads after." },
+        { emoji: '', title: 'Leaderboard groundwork',          description: "The Social tab now tracks three Apple Health-verifiable stats: 7-day step total, longest 7+ hour sleep streak, and longest before-midnight bedtime streak. Competitive layer ships later — but your history starts building today." },
+        { emoji: '', title: 'Daily Quest retired',             description: "The Daily Legendary Mission card has been removed. The Quests tab is dungeons-only now — focused, passive, system-verified." },
+        { emoji: '', title: 'Schedule, untangled',             description: "Schedule and Reminder are now visibly separate sections on the Schedule sheet. Pick days for when the habit appears in your list; pick a time for when you want a reminder. Independent." },
+        { emoji: '', title: 'Reminder, where it belongs',      description: "Per-habit reminders live on the Schedule sheet (⋯ → Schedule). The Edit Habit modal shows your current reminder time as a read-only display so you always see what's set." },
+        { emoji: '', title: 'Canonical habits stay canonical', description: "The 49 built-in habits now lock their name + emoji in the Edit Habit modal. Customize your own habits; leave the system's intact. (Custom habits remain fully editable.)" },
+      ],
+    },
     '1.1.5': {
       subtitle: 'The system is watching now.',
       items: [
@@ -505,284 +1117,8 @@
       tier: 3,
       motivation: "You've been here before. Don't forget what you're capable of.",
       description: 'Highest rank tier you have ever reached.' },
-    { id: 'total_missions_complete', label: 'missions complete',  accent: '#f59e0b', icon: '⚔️',
-      tier: 1, milestones: [10, 25, 50, 100],
-      motivation: "Most won't attempt them. The days you finish them are the days that count.",
-      description: 'Lifetime count of fully-completed Legendary Missions.' },
   ];
 
-  // ── DAILY LEGENDARY MISSIONS ─────────────────────────────
-  // 30 multi-component daily challenges. Each has 2-6 components.
-  // Component matchType: 'habit' = auto-checks when matching habit completed
-  //                      'manual' = user toggles to confirm
-  //                      'pack'   = derives from full pack completion
-  const LEGENDARY_MISSIONS = [
-    // EASIER (2-3 components)
-    { id: 'athletes-morning', name: "The Athlete's Morning",
-      description: "Cold plunge, sweat, fuel — the body chooses the day's tone.",
-      tags: ['physical'],
-      components: [
-        { id: 'cold',     text: 'Cold shower',          matchType: 'habit', habitName: 'Cold shower' },
-        { id: 'workout',  text: '30-min workout',       matchType: 'habit', habitName: 'Strength training' },
-        { id: 'protein',  text: 'Protein meal goal',    matchType: 'habit', habitName: 'Protein goal' },
-      ] },
-    { id: 'triple-discipline', name: "The Triple Discipline",
-      description: "Body, mind, knowledge — all three sharpened in one day.",
-      tags: ['discipline', 'mental'],
-      components: [
-        { id: 'workout',  text: 'Workout',              matchType: 'habit', habitName: 'Strength training' },
-        { id: 'meditate', text: 'Meditate & Breathwork',matchType: 'habit', habitName: 'Meditate & Breathwork' },
-        { id: 'read',     text: 'Read 30+ pages',       matchType: 'habit', habitName: 'Read' },
-      ] },
-    { id: 'body-reset', name: "Body Reset",
-      description: "Empty stomach, cold water, long miles. The reset.",
-      tags: ['physical', 'recovery'],
-      components: [
-        { id: 'fasted',   text: 'Fasted morning workout', matchType: 'manual' },
-        { id: 'plunge',   text: 'Cold plunge',          matchType: 'habit', habitName: 'Ice bath or cold plunge' },
-        { id: 'walk',     text: '10k+ steps',           matchType: 'habit', habitName: 'Daily walk' },
-      ] },
-    { id: 'mind-over-matter', name: "Mind Over Matter",
-      description: "Quiet the mind. Move the body. Capture the lesson.",
-      tags: ['mental', 'physical'],
-      components: [
-        { id: 'meditate', text: '30-min meditation',    matchType: 'habit', habitName: 'Meditate & Breathwork' },
-        { id: 'journal',  text: 'Journal',              matchType: 'habit', habitName: 'Journal' },
-        { id: 'workout',  text: '30-min workout',       matchType: 'habit', habitName: 'Strength training' },
-      ] },
-    { id: 'discipline-trio', name: "Discipline Trio",
-      description: "Same time. Cold start. Move the body. Three locks, one day.",
-      tags: ['discipline'],
-      components: [
-        { id: 'wake',     text: 'Wake at consistent time', matchType: 'habit', habitName: 'Wake up at consistent time' },
-        { id: 'cold',     text: 'Cold shower',          matchType: 'habit', habitName: 'Cold shower' },
-        { id: 'workout',  text: 'Workout',              matchType: 'habit', habitName: 'Strength training' },
-      ] },
-    { id: 'nutrition-lock', name: "Nutrition Lock",
-      description: "Eat like the body is a temple. Nothing processed crosses the line.",
-      tags: ['nutrition', 'discipline'],
-      components: [
-        { id: 'whole',    text: 'Whole foods only',     matchType: 'habit', habitName: 'Whole foods diet' },
-        { id: 'protein',  text: 'Protein goal',         matchType: 'habit', habitName: 'Protein goal' },
-        { id: 'no-sugar', text: 'No sugar/junk food',   matchType: 'habit', habitName: 'No sugar/junk food' },
-      ] },
-    { id: 'learning-stack', name: "Learning Stack",
-      description: "Input, practice, capture. The full learning loop in one day.",
-      tags: ['mental'],
-      components: [
-        { id: 'read',     text: 'Read 20+ pages',       matchType: 'habit', habitName: 'Read' },
-        { id: 'practice', text: 'Practice a skill 30+ min', matchType: 'habit', habitName: 'Practice a skill' },
-        { id: 'lessons',  text: 'Write what you learned', matchType: 'habit', habitName: 'Write down lessons learned' },
-      ] },
-    { id: 'connection-reflection', name: "Connection + Reflection",
-      description: "Real conversation. Real reflection.",
-      tags: ['wellbeing'],
-      components: [
-        { id: 'connect',  text: 'Real conversation 30+ min', matchType: 'manual' },
-        { id: 'journal',  text: 'Journal what you learned',  matchType: 'habit', habitName: 'Journal' },
-      ] },
-
-    // MEDIUM (4 components)
-    { id: 'deep-work-sprint', name: "Deep Work Sprint",
-      description: "One block. No noise. Output before consumption.",
-      tags: ['discipline', 'mental'],
-      components: [
-        { id: 'block',    text: '90-min single-task block', matchType: 'manual' },
-        { id: 'no-soc',   text: 'No social until done',    matchType: 'habit', habitName: 'No social media before noon' },
-        { id: 'plan',     text: 'Plan tomorrow',           matchType: 'habit', habitName: 'Plan tomorrow the night before' },
-        { id: 'journal',  text: 'Journal',                 matchType: 'habit', habitName: 'Journal' },
-      ] },
-    { id: 'the-operator', name: "The Operator",
-      description: "Before most people are awake, you've already won.",
-      tags: ['discipline'],
-      components: [
-        { id: 'wake',     text: 'Wake before 6 AM',        matchType: 'manual' },
-        { id: 'plunge',   text: 'Cold plunge',             matchType: 'habit', habitName: 'Ice bath or cold plunge' },
-        { id: 'workout',  text: 'Workout',                 matchType: 'habit', habitName: 'Strength training' },
-        { id: 'block',    text: '90-min focus block before 10 AM', matchType: 'manual' },
-      ] },
-    { id: 'output-sprint', name: "Output Sprint",
-      description: "Make. Ship. Reflect. Read.",
-      tags: ['discipline', 'mental'],
-      components: [
-        { id: 'priority', text: 'Complete #1 priority task', matchType: 'habit', habitName: 'Complete your #1 priority task' },
-        { id: 'ship',     text: 'Ship something publicly',  matchType: 'manual' },
-        { id: 'reflect',  text: 'Reflect on it',            matchType: 'habit', habitName: 'Journal' },
-        { id: 'read',     text: 'Read 20+ pages',           matchType: 'habit', habitName: 'Read' },
-      ] },
-    { id: 'triple-threat', name: "The Triple Threat",
-      description: "Body, mind, focus, restraint — held all at once.",
-      tags: ['discipline'],
-      components: [
-        { id: 'workout',  text: 'Workout',              matchType: 'habit', habitName: 'Strength training' },
-        { id: 'meditate', text: 'Meditate',             matchType: 'habit', habitName: 'Meditate & Breathwork' },
-        { id: 'read',     text: 'Read 30+ pages',       matchType: 'habit', habitName: 'Read' },
-        { id: 'no-soc',   text: 'No social until 5 PM', matchType: 'habit', habitName: 'No doomscrolling until after 5PM' },
-      ] },
-    { id: 'no-input-day', name: "No Input Day",
-      description: "Stop consuming. Listen to what surfaces.",
-      tags: ['no-phone', 'mental'],
-      components: [
-        { id: 'no-soc',   text: 'No social media',         matchType: 'habit', habitName: 'No phone or social media after waking' },
-        { id: 'no-pod',   text: 'No podcasts until 5 PM',  matchType: 'manual' },
-        { id: 'no-music', text: 'No music until 5 PM',     matchType: 'manual' },
-        { id: 'journal',  text: 'Journal what surfaced',   matchType: 'habit', habitName: 'Journal' },
-      ] },
-
-    // HARD (5-6 components)
-    { id: 'locked-in-day', name: "The Locked-In Day",
-      description: "All 10 morning habits + a deep work block + tomorrow planned.",
-      tags: ['discipline'],
-      components: [
-        { id: 'mr',       text: 'All 10 Morning Routine habits', matchType: 'pack', packId: 'morning' },
-        { id: 'block',    text: '90-min deep work block',  matchType: 'manual' },
-        { id: 'plan',     text: 'Plan tomorrow',           matchType: 'habit', habitName: 'Plan tomorrow the night before' },
-      ] },
-    { id: 'awakening-day', name: "The Awakening Day",
-      description: "Full Locked-In pack + journal at the end of the day.",
-      tags: ['discipline'],
-      components: [
-        { id: 'li',       text: 'All 16 Locked-In habits', matchType: 'pack', packId: 'locked-in' },
-        { id: 'journal',  text: 'Journal at end of day',   matchType: 'habit', habitName: 'Journal' },
-      ] },
-    { id: 'the-monk', name: "The Monk",
-      description: "No screens, sunrise to sunset. Two hours of stillness. Pages of writing.",
-      tags: ['no-phone', 'mental'],
-      components: [
-        { id: 'detox',    text: 'Full digital detox sunrise to sunset', matchType: 'manual' },
-        { id: 'meditate', text: '2 hours total meditation',    matchType: 'habit', habitName: 'Meditate & Breathwork' },
-        { id: 'journal',  text: 'Extensive journaling',        matchType: 'habit', habitName: 'Journal' },
-      ] },
-    { id: 'compound-day', name: "Compound Day",
-      description: "Earn the bonus. Then earn three more hard habits on top.",
-      tags: ['discipline'],
-      components: [
-        { id: 'compound', text: 'Earn the Compound Effect Bonus', matchType: 'manual' },
-        { id: 'hard3',    text: 'Complete 3 Hard difficulty habits', matchType: 'manual' },
-        { id: 'read',     text: 'Read 30+ pages',           matchType: 'habit', habitName: 'Read' },
-        { id: 'workout',  text: 'Workout',                  matchType: 'habit', habitName: 'Strength training' },
-      ] },
-    { id: 'the-gauntlet', name: "The Gauntlet",
-      description: "Volume. Pure volume. The body learns by repetition.",
-      tags: ['physical'],
-      components: [
-        { id: 'pushups',  text: '100 pushups',              matchType: 'manual' },
-        { id: 'squats',   text: '100 squats',               matchType: 'manual' },
-        { id: 'plank',    text: '5-min plank',              matchType: 'manual' },
-        { id: 'walk5',    text: '5-mile walk',              matchType: 'habit', habitName: 'Daily walk' },
-      ] },
-    { id: 'total-reset', name: "Total Reset",
-      description: "Empty the tank. Refill from the inside.",
-      tags: ['discipline', 'recovery'],
-      components: [
-        { id: 'fast24',   text: '24-hour fast',             matchType: 'manual' },
-        { id: 'workout',  text: '60-min workout',           matchType: 'habit', habitName: 'Strength training' },
-        { id: 'meditate', text: '30-min meditation',        matchType: 'habit', habitName: 'Meditate & Breathwork' },
-        { id: 'read',     text: 'Read 50+ pages',           matchType: 'habit', habitName: 'Read' },
-      ] },
-    { id: 'hunters-trial', name: "The Hunter's Trial",
-      description: "Six denials. One day. The hardest are worth the most.",
-      tags: ['discipline', 'no-phone'],
-      components: [
-        { id: 'plunge',   text: 'Cold plunge',              matchType: 'habit', habitName: 'Ice bath or cold plunge' },
-        { id: 'fasted',   text: 'Fasted workout',           matchType: 'manual' },
-        { id: 'no-caf',   text: 'No caffeine',              matchType: 'habit', habitName: 'No caffeine' },
-        { id: 'no-alc',   text: 'No alcohol',               matchType: 'habit', habitName: 'No alcohol' },
-        { id: 'no-sugar', text: 'No sugar',                 matchType: 'habit', habitName: 'No sugar/junk food' },
-        { id: 'no-soc',   text: 'No social media all day',  matchType: 'habit', habitName: 'No phone or social media after waking' },
-      ] },
-
-    // THEMED
-    { id: 'mental-sharpen', name: "Mental Sharpen",
-      description: "Read deep. Practice hard. Memorize. Reflect.",
-      tags: ['mental'],
-      components: [
-        { id: 'read',     text: 'Read 50+ pages',           matchType: 'habit', habitName: 'Read' },
-        { id: 'practice', text: 'Practice a skill 60 min',  matchType: 'habit', habitName: 'Practice a skill' },
-        { id: 'memorize', text: 'Memorize a quote',         matchType: 'manual' },
-        { id: 'journal',  text: 'Journal',                  matchType: 'habit', habitName: 'Journal' },
-      ] },
-    { id: 'the-centurion', name: "The Centurion",
-      description: "100 + 100 + 100 + a mile.",
-      tags: ['physical'],
-      components: [
-        { id: 'pushups',  text: '100 pushups',              matchType: 'manual' },
-        { id: 'squats',   text: '100 squats',               matchType: 'manual' },
-        { id: 'situps',   text: '100 sit-ups',              matchType: 'manual' },
-        { id: 'run',      text: '1-mile run',               matchType: 'habit', habitName: 'Cardio workout' },
-      ] },
-    { id: 'silence-protocol', name: "Silence Protocol",
-      description: "Twelve hours quiet. An hour each: stillness, writing, walking.",
-      tags: ['no-phone', 'mental'],
-      components: [
-        { id: 'no-phone', text: 'No phone for 12 hours',    matchType: 'manual' },
-        { id: 'meditate', text: 'Meditate 60 min',          matchType: 'habit', habitName: 'Meditate & Breathwork' },
-        { id: 'journal',  text: 'Journal 60 min',           matchType: 'habit', habitName: 'Journal' },
-        { id: 'walk',     text: 'Long outdoor walk',        matchType: 'habit', habitName: 'Daily walk' },
-      ] },
-    { id: 'discipline-test', name: "The Discipline Test",
-      description: "Six locks. From wake to plan. The full chain held.",
-      tags: ['discipline', 'no-phone'],
-      components: [
-        { id: 'wake',     text: 'Wake before 6 AM',         matchType: 'manual' },
-        { id: 'plunge',   text: 'Cold plunge',              matchType: 'habit', habitName: 'Ice bath or cold plunge' },
-        { id: 'fasted',   text: 'Fasted workout',           matchType: 'manual' },
-        { id: 'no-soc',   text: 'No social until evening',  matchType: 'habit', habitName: 'No social media before noon' },
-        { id: 'read',     text: 'Read 30+ pages',           matchType: 'habit', habitName: 'Read' },
-        { id: 'plan',     text: 'Plan tomorrow',            matchType: 'habit', habitName: 'Plan tomorrow the night before' },
-      ] },
-
-    // OUTDOOR / NATURE / NO-PHONE (weekend-weighted)
-    { id: 'forest-reset', name: "Forest Reset",
-      description: "Phone away. Trees in. Notice what you've stopped seeing.",
-      tags: ['outdoor', 'nature', 'no-phone'],
-      components: [
-        { id: 'walk-nat', text: '2-hour outdoor walk in nature', matchType: 'manual' },
-        { id: 'no-phone', text: 'No phone during walk',     matchType: 'manual' },
-        { id: 'journal',  text: 'Journal what you noticed', matchType: 'habit', habitName: 'Journal' },
-      ] },
-    { id: 'sunrise-mission', name: "Sunrise Mission",
-      description: "Outside before the sun. The day starts before everyone else's.",
-      tags: ['outdoor', 'nature', 'no-phone'],
-      components: [
-        { id: 'pre-sun',  text: 'Wake before sunrise',      matchType: 'manual' },
-        { id: 'sunrise',  text: 'Watch the sunrise outside', matchType: 'habit', habitName: 'Get morning sunlight' },
-        { id: 'walk',     text: 'Outdoor walk',             matchType: 'habit', habitName: 'Daily walk' },
-        { id: 'no-phone', text: 'No phone until breakfast', matchType: 'habit', habitName: 'No phone or social media after waking' },
-      ] },
-    { id: 'trail-day', name: "Trail Day",
-      description: "Long path. No screen. Bare feet on earth.",
-      tags: ['outdoor', 'nature', 'no-phone', 'physical'],
-      components: [
-        { id: 'hike',     text: 'Hike or walk 5+ miles',    matchType: 'manual' },
-        { id: 'no-phone', text: 'No phone except emergencies', matchType: 'manual' },
-        { id: 'ground',   text: '10-min barefoot grounding', matchType: 'habit', habitName: 'Barefoot grounding outside' },
-      ] },
-    { id: 'the-naturalist', name: "The Naturalist",
-      description: "Four hours outside. Five new things noticed. All written down.",
-      tags: ['outdoor', 'nature'],
-      components: [
-        { id: 'outside4', text: '4+ hours outside today',   matchType: 'manual' },
-        { id: 'notice5',  text: 'Identify 5 new things in nature', matchType: 'manual' },
-        { id: 'journal',  text: 'Journal what you saw',     matchType: 'habit', habitName: 'Journal' },
-      ] },
-    { id: 'phone-off-world-on', name: "Phone Off, World On",
-      description: "Eight hours airplane mode. Real conversation. The world that isn't on a screen.",
-      tags: ['no-phone', 'outdoor', 'wellbeing'],
-      components: [
-        { id: 'airplane', text: 'Airplane mode 8 daylight hours', matchType: 'manual' },
-        { id: 'walk',     text: '1+ hour outdoor walk',     matchType: 'habit', habitName: 'Daily walk' },
-        { id: 'connect',  text: 'In-person meaningful conversation', matchType: 'habit', habitName: 'Call or text a family member' },
-      ] },
-    { id: 'the-long-walk', name: "The Long Walk",
-      description: "Ten miles. Quiet for most of it. Written reflection at the end.",
-      tags: ['outdoor', 'physical', 'no-phone'],
-      components: [
-        { id: 'walk10',   text: '10+ mile walk outdoors',   matchType: 'manual' },
-        { id: 'no-phone', text: 'Phone limited (max 2hr audio)', matchType: 'manual' },
-        { id: 'reflect',  text: 'Reflect in writing afterward', matchType: 'habit', habitName: 'Journal' },
-      ] },
-  ];
 
   // Achievement categories drive the section grouping in the UI.
   const ACH_CATEGORIES = [
@@ -790,7 +1126,6 @@
     { id: 'rank',     label: 'Rank & Points' },
     { id: 'class',    label: 'Class & Awakening' },
     { id: 'packs',    label: 'Packs' },
-    { id: 'quests',   label: 'Daily Quests' },
     { id: 'habits',   label: 'Habit Mastery' },
     { id: 'lifetime', label: 'Lifetime' },
   ];
@@ -882,20 +1217,6 @@
     { id: 'both_crowns',     category: 'packs', icon: '👑', name: 'Both Crowns',
       desc: 'Earn both Compound + Locked-In bonuses on the same day', target: 1,
       getProgress: c => ({ current: c.bothCrownsToday ? 1 : 0, target: 1 }) },
-
-    // ── ⚔️ DAILY QUESTS ─────────────────────────────────────
-    { id: 'quest_first',  category: 'quests', icon: '⚔️', name: 'Quest Slayer',
-      desc: 'Complete your first daily quest', target: 1,
-      getProgress: c => ({ current: Math.min(c.questsComplete, 1), target: 1 }) },
-    { id: 'quest_10',     category: 'quests', icon: '🎯', name: 'Quest Tier 10',
-      desc: 'Complete 10 daily quests', target: 10,
-      getProgress: c => ({ current: Math.min(c.questsComplete, 10), target: 10 }) },
-    { id: 'quest_50',     category: 'quests', icon: '🏹', name: 'Quest Tier 50',
-      desc: 'Complete 50 daily quests', target: 50,
-      getProgress: c => ({ current: Math.min(c.questsComplete, 50), target: 50 }) },
-    { id: 'quest_100',    category: 'quests', icon: '🏆', name: 'Quest Tier 100',
-      desc: 'Complete 100 daily quests', target: 100,
-      getProgress: c => ({ current: Math.min(c.questsComplete, 100), target: 100 }) },
 
     // ── 🎯 HABIT MASTERY ────────────────────────────────────
     { id: 'legendary_hunter', category: 'habits', icon: '👑', name: 'Legendary Hunter',
@@ -1166,8 +1487,6 @@
   let compoundStreaks  = {}; // packId → { streak, lastDate }
   let compoundAwarded = {}; // packId → date (last award date, prevents double-award)
   let personalRecords  = {}; // prId → { value, meta, lastUpdated }
-  let dailyQuests      = {}; // 'YYYY-MM-DD' → { id, manualDone:[], bonusAwarded }
-  let questHistory     = []; // [{ date, missionId }] — last ~60 entries for repeat avoidance
 
   // ── STREAK FORGIVENESS ─────────────────────────────────
   // Layer 1: Shields earned via 14-day pack streaks, max 3 per pack
@@ -2372,138 +2691,6 @@
     });
   }
 
-  // ── DAILY LEGENDARY MISSION — selection + state ─────────────
-  // Returns today's mission object (selecting one if not yet picked).
-  // Persists selection to localStorage, avoids repeats within 21 days,
-  // and weights toward outdoor/nature/no-phone tags on weekends.
-  function getOrPickTodayMission() {
-    const existing = dailyQuests[today];
-    if (existing && existing.id) {
-      const found = LEGENDARY_MISSIONS.find(m => m.id === existing.id);
-      if (found) return found;
-    }
-    // Avoid repeats within last 21 days
-    const recent = new Set(
-      (questHistory || []).slice(-21).map(h => h.missionId)
-    );
-    let pool = LEGENDARY_MISSIONS.filter(m => !recent.has(m.id));
-    if (pool.length === 0) pool = LEGENDARY_MISSIONS.slice();
-
-    let chosen = null;
-    if (isWeekend() && Math.random() < 0.60) {
-      const weekendTags = new Set(['outdoor', 'nature', 'no-phone']);
-      const subset = pool.filter(m => (m.tags || []).some(t => weekendTags.has(t)));
-      if (subset.length > 0) {
-        chosen = subset[Math.floor(Math.random() * subset.length)];
-      }
-    }
-    if (!chosen) {
-      chosen = pool[Math.floor(Math.random() * pool.length)];
-    }
-
-    dailyQuests[today] = { id: chosen.id, manualDone: [], bonusAwarded: false };
-    questHistory.push({ date: today, missionId: chosen.id });
-    if (questHistory.length > 60) questHistory = questHistory.slice(-60);
-    save();
-    return chosen;
-  }
-
-  // Component completion derivation. Returns true if the component
-  // should display as checked. Auto-derives from completion data
-  // for habit-linked components (no stored flag), reads manualDone[]
-  // for manual or fallback components.
-  function isMissionComponentDone(comp) {
-    const state = dailyQuests[today] || { manualDone: [] };
-    const manualDone = state.manualDone || [];
-
-    if (comp.matchType === 'manual') {
-      return manualDone.includes(comp.id);
-    }
-    if (comp.matchType === 'habit') {
-      const userHabit = habits.find(h => h.name === comp.habitName);
-      if (userHabit) {
-        return (completions[today] || []).includes(userHabit.id);
-      }
-      // User doesn't have the habit → fall back to manual toggle
-      return manualDone.includes(comp.id);
-    }
-    if (comp.matchType === 'pack') {
-      // Whole-pack completion: every canonical pack habit checked today
-      const packId = comp.packId;
-      if (packId === 'morning' && typeof userHasAllCanonicalMorning === 'function') {
-        if (!userHasAllCanonicalMorning()) return manualDone.includes(comp.id);
-        const { done, total } = getPackProgress('morning');
-        return total > 0 && done === total;
-      }
-      if (packId === 'locked-in' && typeof userHasAllCanonicalLockedIn === 'function') {
-        if (!userHasAllCanonicalLockedIn()) return manualDone.includes(comp.id);
-        const { done, total } = getPackProgress('locked-in');
-        return total > 0 && done === total;
-      }
-      return manualDone.includes(comp.id);
-    }
-    return false;
-  }
-
-  // Tappable when manual or when habit-linked but user doesn't have the habit
-  function isMissionComponentTappable(comp) {
-    if (comp.matchType === 'manual') return true;
-    if (comp.matchType === 'pack')   return false; // derived-only
-    if (comp.matchType === 'habit') {
-      return !habits.some(h => h.name === comp.habitName);
-    }
-    return false;
-  }
-
-  // Toggle a manual or fallback-manual component on/off
-  function toggleMissionComponent(componentId) {
-    const state = dailyQuests[today];
-    if (!state) return;
-    const list = state.manualDone || (state.manualDone = []);
-    const idx  = list.indexOf(componentId);
-    if (idx >= 0) list.splice(idx, 1); else list.push(componentId);
-    save();
-    onMissionProgress();
-  }
-
-  function isMissionComplete(mission) {
-    if (!mission) return false;
-    return mission.components.every(c => isMissionComponentDone(c));
-  }
-
-  // Called any time a habit is checked or a manual component is toggled.
-  // Awards the +50 XP bonus and fires the celebration on the transition
-  // from incomplete → complete (idempotent via bonusAwarded flag).
-  function onMissionProgress() {
-    const mission = getOrPickTodayMission();
-    if (!mission) return;
-    const state = dailyQuests[today];
-    if (!state) return;
-    if (state.bonusAwarded) {
-      renderDailyMissionCard();
-      return;
-    }
-    if (isMissionComplete(mission)) {
-      state.bonusAwarded = true;
-      const baseXP  = 50;
-      const finalXP = isWeekend() ? baseXP * 2 : baseXP;
-      totalPoints  += finalXP;
-      // PR hooks
-      if (typeof prUpdate === 'function') {
-        prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + finalXP);
-        prUpdate('total_missions_complete', getPR('total_missions_complete').value + 1);
-        // Refresh today's xp PR (compound day, etc.)
-        prUpdate('most_xp_day', computeTodayXP());
-      }
-      save();
-      renderRank();
-      // Queue celebration via levelUpQueue so it sequences after pack bonuses
-      levelUpQueue.unshift({ type: 'mission', mission, xp: finalXP, doubled: isWeekend() });
-      if (!levelUpActive) drainLevelUpQueue();
-    }
-    renderDailyMissionCard();
-  }
-
   // ── STORAGE ───────────────────────────────────────────────
   function load() {
     try {
@@ -2533,8 +2720,6 @@
       compoundStreaks  = JSON.parse(localStorage.getItem('hb_compound')         || '{}');
       compoundAwarded  = JSON.parse(localStorage.getItem('hb_compound_awarded') || '{}');
       personalRecords  = JSON.parse(localStorage.getItem('hb_prs')               || '{}');
-      dailyQuests      = JSON.parse(localStorage.getItem('hb_daily_quests')      || '{}');
-      questHistory     = JSON.parse(localStorage.getItem('hb_quest_history')     || '[]');
       streakShields    = JSON.parse(localStorage.getItem('hb_shields')           || '{}');
       shieldClaimedAt  = JSON.parse(localStorage.getItem('hb_shield_claimed')    || '{}');
       pendingShieldNotices = JSON.parse(localStorage.getItem('hb_shield_notices') || '[]');
@@ -2577,6 +2762,10 @@
 
   function save() {
     try {
+      // v2.0 — enforce auto-verify-first ordering on every persist
+      // so the invariant always holds in storage. Cheap (O(n) on a
+      // ≤49-habit array) and guarantees post-drag snap-back behavior.
+      sortHabitsAutoVerifyFirst(habits);
       localStorage.setItem('hb_habits',         JSON.stringify(habits));
       localStorage.setItem('hb_completions',     JSON.stringify(completions));
       localStorage.setItem('hb_streaks',         JSON.stringify(streaks));
@@ -2591,8 +2780,6 @@
       localStorage.setItem('hb_compound',          JSON.stringify(compoundStreaks));
       localStorage.setItem('hb_compound_awarded',  JSON.stringify(compoundAwarded));
       localStorage.setItem('hb_prs',               JSON.stringify(personalRecords));
-      localStorage.setItem('hb_daily_quests',      JSON.stringify(dailyQuests));
-      localStorage.setItem('hb_quest_history',     JSON.stringify(questHistory));
       localStorage.setItem('hb_shields',           JSON.stringify(streakShields));
       localStorage.setItem('hb_shield_claimed',    JSON.stringify(shieldClaimedAt));
       localStorage.setItem('hb_shield_notices',    JSON.stringify(pendingShieldNotices));
@@ -2843,10 +3030,6 @@
     if (typeof checkComebackOnActivity === 'function') checkComebackOnActivity();
     lastActiveDate = today;
 
-    // Daily Mission auto-progress: if this habit matches a component
-    // of today's quest, the component flips to "done" automatically and
-    // we check whether the whole quest is now complete.
-    if (typeof onMissionProgress === 'function') onMissionProgress();
     // Per-stat streak — find the stat this habit feeds and check its streak
     if (habit) {
       STATS.forEach(st => {
@@ -2894,8 +3077,6 @@
     const mrStreak   = (compoundStreaks && compoundStreaks['morning']   && compoundStreaks['morning'].streak)   || 0;
     const liStreak   = (compoundStreaks && compoundStreaks['locked-in'] && compoundStreaks['locked-in'].streak) || 0;
     const bothCrownsToday = compoundAwarded['morning'] === today && compoundAwarded['locked-in'] === today;
-    const questsComplete  = (typeof getPR === 'function')
-      ? (getPR('total_missions_complete').value || 0) : 0;
     const perfectStreakNow = (perfectStreak && perfectStreak.count) || 0;
     const anyPRSet = (typeof personalRecords === 'object' &&
                       Object.keys(personalRecords).some(k => (personalRecords[k] || {}).value > 0));
@@ -2922,7 +3103,6 @@
       mrStreak,
       liStreak,
       bothCrownsToday,
-      questsComplete,
       perfectStreak: perfectStreakNow,
       anyPRSet,
       activeDays:    Object.keys(completions).filter(d => (completions[d] || []).length > 0).length,
@@ -3784,8 +3964,7 @@
     }
     const item = levelUpQueue.shift();
     levelUpActive = true;
-    if      (item.type === 'mission')     showMissionCompleteScreen(item);
-    else if (item.type === 'comeback')    showComebackScreen(item);
+    if      (item.type === 'comeback')    showComebackScreen(item);
     else if (item.type === 'rank')        showRankUpScreen(item.rank);
     else if (item.type === 'class')       showClassChangePopup(item.classData);
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
@@ -4979,7 +5158,6 @@
     document.getElementById('main-footer').style.display = currentTab === 'habits' ? '' : 'none';
     renderRank();
     renderHabits();
-    renderDailyMissionCard();
     renderDailyQuote();
     checkStreakDanger();
     checkMorningRoutineNudge();
@@ -4989,10 +5167,6 @@
   }
 
   function renderHabits() {
-    // Mission card piggy-backs every habit re-render so progress stays
-    // in sync with completions even when switchTab/onMissionProgress
-    // didn't fire (e.g., partial state restoration from localStorage).
-    renderDailyMissionCard();
     const list  = document.getElementById('habit-list');
     const empty = document.getElementById('empty-state');
     const todayHabits = habits.filter(isScheduledToday);
@@ -6906,6 +7080,10 @@
   }
 
   function switchTab(tab) {
+    // Close the boss full-screen modal on any tab change. The modal
+    // overlays the Quests tab; leaving the tab (or re-entering it
+    // fresh) should not leave the modal hanging over.
+    if (typeof closeBossFullScreen === 'function') closeBossFullScreen();
     currentTab = tab;
     // Exit reorder mode whenever we leave the habits tab
     document.getElementById('habit-list').classList.remove('reorder-mode');
@@ -6931,9 +7109,19 @@
     if (tab === 'profile')      renderProfile();
     if (tab === 'stats')        renderStats();
     if (tab === 'history')      renderHistory();
-    // Daily Mission card now lives in the Quests tab — render when that
-    // tab is opened (and on initial app load via the existing init path).
-    if (tab === 'quests')       renderDailyMissionCard();
+    // Quests tab: always re-greet the user with the gate. Reset the
+    // expansion flag on every tab activation so re-entering the
+    // dungeon is an intentional act, not a stale-state continuation.
+    // renderQuestsPanel() handles the gate-vs-dungeon visibility
+    // swap and re-renders the boss list lazily when expanded.
+    if (tab === 'quests') {
+      questsGateExpanded = false;
+      renderQuestsPanel();
+    }
+    // Render the Leaderboard preview when the Social tab is opened.
+    if (tab === 'social') {
+      renderLeaderboardPreview();
+    }
     checkStreakDanger();
     checkMorningRoutineNudge();
   }
@@ -8862,146 +9050,579 @@
     });
   }
 
-  // ── DAILY MISSION CARD render ─────────────────────────────
-  // Session-only expand/collapse state. Defaults to COLLAPSED so the
-  // card sits as a single compact row above the pack headers, matching
-  // the visual density of the rest of the Habits tab. Tap to expand.
-  let _dailyMissionExpanded = false;
 
-  function renderDailyMissionCard() {
-    const wrap = document.getElementById('daily-mission-card');
-    if (!wrap) return;
-    // The card now lives on the Quests tab. Skip rendering on any other
-    // tab — there's nothing to update visually if it's not on screen.
-    if (currentTab !== 'quests') { wrap.classList.add('hidden'); return; }
+  // ── DUNGEON BOSSES UI ────────────────────────────────────────
+  // Render path for the boss-card grid inside the dungeon view of
+  // #quests-panel. Each card opens the full-screen detail modal
+  // (#boss-fs-overlay) on tap. Builders + open/close + setup live
+  // below, in that order.
+  // ── LEADERBOARD PREVIEW (Social tab) — v2.0.2 ──────────────
+  // Surfaces the user's three Apple-Health-verified stats from the
+  // Leaderboard module. NOT a competitive leaderboard yet — that
+  // layer ships later. This view's purpose is to show the user that
+  // their data is being tracked NOW, so when the leaderboard goes
+  // live they see continuity instead of a fresh-start zero.
+  //
+  // Three cards, fixed order (matches the metric definitions in the
+  // Leaderboard module):
+  //   1. Steps — last 7 days (current trailing sum + best week peak)
+  //   2. 7+ hour sleep streak (current + best)
+  //   3. Before-midnight bedtime streak (current + best)
+  //
+  // Empty-state handling: web/non-iOS users + iOS users without
+  // HealthKit permission see a single explainer card instead of
+  // zeroed-out stat rows. The competitive framing requires verified
+  // data — showing "0 steps · best 0" would be misleading.
+  function renderLeaderboardPreview() {
+    const list  = document.getElementById('lb-preview-list');
+    const empty = document.getElementById('lb-preview-empty');
+    if (!list || !empty) return;
 
-    const mission = getOrPickTodayMission();
-    if (!mission) { wrap.classList.add('hidden'); return; }
+    // Render the three stat cards always — even on web/no-permission.
+    // On web the data will be zeros (no HealthKit feeding the module),
+    // but the user explicitly asked to see the layout in their browser
+    // for previewing purposes. We surface a small note inside the
+    // empty-state box explaining that real data only flows on iOS,
+    // rather than gating the whole preview behind it.
+    const isAvailable = (typeof Health !== 'undefined') &&
+                         Health.isAvailable && Health.isAvailable();
+    const isGranted   = isAvailable && Health.permissionStatus &&
+                         Health.permissionStatus() === 'granted';
 
-    const allComplete   = isMissionComplete(mission);
-    const tags          = mission.tags || [];
-    const tagBadges     = (tags.includes('outdoor') || tags.includes('nature') ? '<span class="dmc-tag">🌲</span>' : '') +
-                          (tags.includes('no-phone') ? '<span class="dmc-tag">📵</span>' : '');
-    const doneCount = mission.components.filter(c => isMissionComponentDone(c)).length;
-    const total     = mission.components.length;
-    const xpAmt     = isWeekend() ? 100 : 50;
-    const xpStr     = '+' + xpAmt + ' XP';
-
-    if (allComplete) wrap.classList.add('dmc--complete'); else wrap.classList.remove('dmc--complete');
-    if (_dailyMissionExpanded) wrap.classList.add('dmc--expanded'); else wrap.classList.remove('dmc--expanded');
-    wrap.classList.remove('hidden');
-
-    // ── Compact toggle row (always visible) ────────────────
-    const eyebrow = allComplete ? 'DAILY QUEST · COMPLETE' : 'DAILY QUEST';
-    const status  = allComplete ? '✓ Complete' : doneCount + '/' + total;
-    const chev    = _dailyMissionExpanded ? '▾' : '▸';
-
-    let html =
-      '<button class="dmc-toggle" id="dmc-toggle" type="button" aria-expanded="' + _dailyMissionExpanded + '">' +
-        '<span class="dmc-toggle-eyebrow">' + eyebrow + '</span>' +
-        '<span class="dmc-toggle-name">' + esc(mission.name) + '</span>' +
-        tagBadges +
-        '<span class="dmc-toggle-progress">' + status + '</span>' +
-        '<span class="dmc-toggle-xp">' + xpStr + '</span>' +
-        '<span class="dmc-toggle-chev">' + chev + '</span>' +
-      '</button>';
-
-    // ── Expanded body (only when user has tapped to expand) ─
-    if (_dailyMissionExpanded) {
-      const componentsHTML = mission.components.map(c => {
-        const done     = isMissionComponentDone(c);
-        const tappable = isMissionComponentTappable(c);
-        const linkedHabit = c.matchType === 'habit'
-          ? habits.find(h => h.name === c.habitName)
-          : null;
-        const subText = linkedHabit
-          ? '<span class="dmc-comp-sub">linked to <b>' + esc(linkedHabit.name) + '</b></span>'
-          : (c.matchType === 'pack' ? '<span class="dmc-comp-sub">auto from pack progress</span>' : '');
-        return '<div class="dmc-comp' + (done ? ' dmc-comp--done' : '') +
-                    (tappable ? ' dmc-comp--tappable' : '') +
-                    '" ' + (tappable ? 'data-mission-comp="' + esc(c.id) + '" role="button" tabindex="0"' : '') + '>' +
-          '<span class="dmc-comp-check">' + (done ? '✓' : '') + '</span>' +
-          '<span class="dmc-comp-text">' + esc(c.text) + subText + '</span>' +
-        '</div>';
-      }).join('');
-
-      html +=
-        '<div class="dmc-body">' +
-          '<div class="dmc-bonus">' + xpStr + (isWeekend() ? ' <span class="dmc-2x">2×</span>' : '') +
-            '<span class="dmc-difficulty">LEGENDARY</span>' +
-          '</div>' +
-          '<div class="dmc-desc">' + esc(mission.description) + '</div>' +
-          '<div class="dmc-components">' + componentsHTML + '</div>' +
-        '</div>';
+    if (!isAvailable) {
+      // Web / non-iOS: show a soft note above the cards. Cards still
+      // render below (with whatever zeros are in storage) for layout
+      // visibility.
+      empty.classList.remove('hidden');
+      empty.innerHTML =
+        '<div style="font-weight:700; color: var(--text-primary); margin-bottom:4px;">Preview only</div>' +
+        '<div style="font-size:0.82rem;">These stats populate from Apple Health on the iOS app. The cards below show your current values (zero on web).</div>';
+    } else if (!isGranted) {
+      // Native but no permission yet — actionable copy.
+      empty.classList.remove('hidden');
+      empty.innerHTML =
+        '<div style="font-weight:700; color: var(--text-primary); margin-bottom:4px;">Apple Health not connected</div>' +
+        '<div style="font-size:0.82rem;">Grant HealthKit permission to start tracking these stats. Visit the Habits tab to trigger the prompt, or enable it in iOS Settings → Privacy → Health → Awakened.</div>';
+    } else {
+      empty.classList.add('hidden');
     }
 
-    wrap.innerHTML = html;
+    const snap = lbGetSnapshot();
+
+    const fmt = n => (n || 0).toLocaleString('en-US');
+    const nightWord = n => n === 1 ? 'night' : 'nights';
+
+    // Card-builder. Icon-led layout: each card is a button so it
+    // exposes click + keyboard activation natively. data-metric is
+    // read by the click handler to open the right Top-50 view.
+    function buildCard(metric, iconHTML, valueHTML, metaHTML) {
+      return '<button type="button" class="lb-stat-card" data-lb-metric="' + metric + '">' +
+        '<div class="lb-stat-icon-wrap">' + iconHTML + '</div>' +
+        '<div class="lb-stat-body">' +
+          '<div class="lb-stat-value">' + valueHTML + '</div>' +
+          '<div class="lb-stat-meta">' + metaHTML + '</div>' +
+        '</div>' +
+        '<div class="lb-stat-chev">›</div>' +
+      '</button>';
+    }
+
+    const walkIcon  = '<img src="assets/habit-icons/icon-walk.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    const sleepIcon = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    const moonIcon  = '<span class="lb-stat-icon-glyph" aria-hidden="true">🌙</span>';
+
+    // Card 1 — Steps · last 7 days
+    const stepsValue = fmt(snap.steps_last_7_days) + '<span class="lb-stat-value-unit">steps · 7 days</span>';
+    const stepsMeta  = snap.best_7day_step_total > 0
+      ? 'Best: <b>' + fmt(snap.best_7day_step_total) + '</b>'
+      : 'Best: — (build your first 7-day total)';
+
+    // Card 2 — 7+ hour sleep streak
+    const sleepValue = snap.current_sleep_streak +
+      '<span class="lb-stat-value-unit">' + nightWord(snap.current_sleep_streak) + ' · 7+ hr sleep</span>';
+    const sleepMeta  = 'Best: <b>' + snap.best_sleep_streak + ' ' + nightWord(snap.best_sleep_streak) + '</b>';
+
+    // Card 3 — Before-midnight bedtime streak
+    const bedtimeValue = snap.current_bedtime_streak +
+      '<span class="lb-stat-value-unit">' + nightWord(snap.current_bedtime_streak) + ' · before midnight</span>';
+    const bedtimeMeta  = 'Best: <b>' + snap.best_bedtime_streak + ' ' + nightWord(snap.best_bedtime_streak) + '</b>';
+
+    list.innerHTML =
+      buildCard('steps_7d',     walkIcon,  stepsValue,   stepsMeta) +
+      buildCard('sleep_streak', sleepIcon, sleepValue,   sleepMeta) +
+      buildCard('bedtime_streak', moonIcon, bedtimeValue, bedtimeMeta);
+  }
+  try { window.renderLeaderboardPreview = renderLeaderboardPreview; } catch (_) {}
+
+  // ── LEADERBOARD RANKING SHEET (v2.0.2) ──────────────────────
+  // Tap any stat card on the Social tab → opens this bottom sheet
+  // with a Top-50 preview for that metric. NOT live yet — the
+  // network/backend layer ships later. Until then, the list shows
+  // mock entries (blurred) for visual texture and the user's own
+  // row at a placeholder position so they can see where they'd
+  // appear when rankings go live.
+  //
+  // The mock entries are deterministically generated from a fixed
+  // seed list of names so the same names appear across cards within
+  // a session — feels less like obvious filler.
+  const LB_MOCK_NAMES = [
+    'ShadowMonarch_77', 'IronWill_99',  'AwakenedOne',   'DisciplineKing',
+    'QuietHunter',      'SilentTide',   'EmberRoad',     'NightForge',
+    'StoneMind',        'AshenVow',     'PaleHarbinger', 'HollowLamp',
+    'BrassPilgrim',     'TideRunner',   'CinderMonk',    'GranitePath',
+    'FrostKey_42',      'SilverWolf_88','RuneWalker',    'EmberHand',
+  ];
+
+  const LB_METRIC_META = {
+    steps_7d: {
+      title: 'Steps · last 7 days',
+      blurb: 'Total steps in any rolling 7-day window. Apple Health is the only source — no manual logging.',
+      unit: 'steps',
+      formatValue: n => (n || 0).toLocaleString('en-US'),
+      // Mock peak values to seed the blurred list (descending)
+      mockTop: [142000, 128400, 121300, 113800, 108200, 101900, 96400, 91200, 87100, 82400],
+      userValueFn: snap => snap.best_7day_step_total || snap.steps_last_7_days || 0,
+      userValueLabel: snap => snap.best_7day_step_total > 0 ? 'best 7-day total' : 'last 7 days',
+    },
+    sleep_streak: {
+      title: '7+ hour sleep streak',
+      blurb: 'Longest run of consecutive nights with at least 7 hours of sleep. Verified by Apple Health.',
+      unit: 'nights',
+      formatValue: n => (n || 0).toString(),
+      mockTop: [184, 162, 147, 131, 118, 104, 91, 82, 73, 67],
+      userValueFn: snap => snap.best_sleep_streak || 0,
+      userValueLabel: () => 'best streak',
+    },
+    bedtime_streak: {
+      title: 'Before-midnight bedtime streak',
+      blurb: 'Longest run of consecutive nights asleep before midnight. Verified by Apple Health.',
+      unit: 'nights',
+      formatValue: n => (n || 0).toString(),
+      mockTop: [201, 178, 156, 142, 129, 117, 103, 92, 81, 74],
+      userValueFn: snap => snap.best_bedtime_streak || 0,
+      userValueLabel: () => 'best streak',
+    },
+  };
+
+  function openLeaderboardRanking(metric) {
+    const meta = LB_METRIC_META[metric];
+    if (!meta) return;
+    const sheet   = document.getElementById('lb-rank-sheet');
+    const overlay = document.getElementById('lb-rank-overlay');
+    if (!sheet || !overlay) return;
+
+    const snap = lbGetSnapshot();
+    const userValue = meta.userValueFn(snap);
+    const userLabel = meta.userValueLabel(snap);
+
+    document.getElementById('lb-rank-title').textContent = meta.title;
+    document.getElementById('lb-rank-blurb').textContent = meta.blurb;
+
+    // Build top-10 mock rows (blurred) + user row inserted at the
+    // rank position implied by their value. If user has no data,
+    // they sit below the visible top-10 with a "—" value.
+    const topRows = meta.mockTop.map((val, i) => {
+      const rank = i + 1;
+      const name = LB_MOCK_NAMES[i];
+      return '<div class="lb-rank-row lb-rank-row--mock">' +
+        '<span class="lb-rank-pos">#' + rank + '</span>' +
+        '<span class="lb-rank-name">' + esc(name) + '</span>' +
+        '<span class="lb-rank-value">' + meta.formatValue(val) + '</span>' +
+      '</div>';
+    }).join('');
+
+    // User's projected position inside the mock top-10. We don't
+    // claim a real rank — just illustrate where they'd land.
+    const userName = (typeof playerName === 'string' && playerName) ? playerName : 'Hunter';
+    const userValueStr = userValue > 0 ? meta.formatValue(userValue) : '—';
+    const userPosCue = userValue > 0
+      ? 'rank pending'
+      : 'no data yet';
+
+    const userRow =
+      '<div class="lb-rank-row lb-rank-row--user">' +
+        '<span class="lb-rank-pos">YOU</span>' +
+        '<span class="lb-rank-name">' + esc(userName) + ' <em class="lb-rank-name-sub">· ' + esc(userLabel) + '</em></span>' +
+        '<span class="lb-rank-value">' + userValueStr + '</span>' +
+      '</div>' +
+      '<div class="lb-rank-row-note">' + userPosCue + ' — live rankings open in a future update</div>';
+
+    document.getElementById('lb-rank-list').innerHTML = topRows + userRow;
+
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
   }
 
-  function setupDailyMissionCard() {
-    const wrap = document.getElementById('daily-mission-card');
-    if (!wrap) return;
-    // Delegated taps for: expand/collapse toggle + per-component manual checks
-    wrap.addEventListener('click', e => {
-      const t = e.target;
-      if (!t || !t.closest) return;
-      const comp = t.closest('[data-mission-comp]');
-      if (comp) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleMissionComponent(comp.getAttribute('data-mission-comp'));
-        return;
-      }
-      const toggle = t.closest('#dmc-toggle');
-      if (toggle) {
-        e.preventDefault();
-        _dailyMissionExpanded = !_dailyMissionExpanded;
-        renderDailyMissionCard();
-        return;
-      }
-    });
-    wrap.addEventListener('keydown', e => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      const comp = e.target && e.target.closest && e.target.closest('[data-mission-comp]');
-      if (comp) {
-        e.preventDefault();
-        toggleMissionComponent(comp.getAttribute('data-mission-comp'));
-      }
-    });
+  function closeLeaderboardRanking() {
+    const sheet   = document.getElementById('lb-rank-sheet');
+    const overlay = document.getElementById('lb-rank-overlay');
+    if (sheet)   sheet.classList.add('hidden');
+    if (overlay) overlay.classList.add('hidden');
   }
 
-  // ── MISSION COMPLETION CELEBRATION ────────────────────────
-  function playMissionFanfare() {
-    if (!soundEnabled) return;
-    try {
-      const ac = new (window.AudioContext || window.webkitAudioContext)();
-      const t0 = ac.currentTime;
-      // Heroic ascending sequence — bigger than compound fanfare
-      const notes = [
-        { f: 392.00, s: 0.00, d: 0.22, p: 0.20 },  // G4
-        { f: 523.25, s: 0.14, d: 0.22, p: 0.22 },  // C5
-        { f: 659.25, s: 0.28, d: 0.22, p: 0.24 },  // E5
-        { f: 783.99, s: 0.42, d: 0.50, p: 0.26 },  // G5
-        { f: 1046.50, s: 0.70, d: 1.40, p: 0.30 }, // C6 sustained
-        { f: 783.99,  s: 0.70, d: 1.40, p: 0.18 }, // G5 layered for chord
-      ];
-      notes.forEach(n => {
-        ['sine', 'triangle'].forEach(type => {
-          const osc = ac.createOscillator();
-          const gain = ac.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(n.f, t0 + n.s);
-          osc.connect(gain); gain.connect(ac.destination);
-          const peak = type === 'sine' ? n.p : n.p * 0.55;
-          gain.gain.setValueAtTime(0.0001, t0 + n.s);
-          gain.gain.exponentialRampToValueAtTime(peak, t0 + n.s + 0.04);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.s + n.d);
-          osc.start(t0 + n.s);
-          osc.stop(t0 + n.s + n.d + 0.05);
-        });
+  function setupLeaderboardPreview() {
+    const list = document.getElementById('lb-preview-list');
+    if (list) {
+      list.addEventListener('click', e => {
+        const card = e.target.closest('[data-lb-metric]');
+        if (!card) return;
+        openLeaderboardRanking(card.getAttribute('data-lb-metric'));
       });
-    } catch (_) {}
+    }
+    const overlay = document.getElementById('lb-rank-overlay');
+    const sheet   = document.getElementById('lb-rank-sheet');
+    const close   = document.getElementById('lb-rank-close');
+    if (overlay) overlay.addEventListener('click', closeLeaderboardRanking);
+    if (close)   close.addEventListener('click', closeLeaderboardRanking);
+    if (sheet && typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, closeLeaderboardRanking, {
+        scrollTarget: '.lb-rank-list',
+      });
+    }
   }
+  try { window.openLeaderboardRanking = openLeaderboardRanking; } catch (_) {}
+
+  // CARDS.md-spec boss card. 5:7 portrait, 6 stacked regions
+  // (header / art / stat strip / flavor / kill condition / progress).
+  // Tappable — opens the full-screen detail modal via openBossFullScreen.
+  //
+  // State variants composed via classes:
+  //   .bcard--active   — streak > 0, border pulses purple-gold
+  //   .bcard--defeated — kill_count > 0, gold border + corner trophy
+  //   .bcard--burned   — Carouser's weekend_burned === true
+  //
+  // Illustration path derives from id by swapping underscores for
+  // hyphens (the_insomniac → the-insomniac.png) since the source
+  // assets ship with hyphens.
+  function buildBossCardHTML(id) {
+    const cfg = BOSSES[id];
+    const state = getBossState(id);
+    const imgPath = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
+    const dots = Array.from({ length: cfg.streakTarget }, (_, i) =>
+      '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
+    ).join('');
+
+    // Compose state classes. They stack — defeated AND active is valid
+    // (defeated before, currently in another streak run).
+    const stateClasses = [];
+    if (state.streak > 0) stateClasses.push('bcard--active');
+    if (state.kill_count > 0) stateClasses.push('bcard--defeated');
+    // weekend_burned only present on Carouser; default-false elsewhere.
+    if (state.weekend_burned === true) stateClasses.push('bcard--burned');
+    const classAttr = ['bcard'].concat(stateClasses).join(' ');
+
+    // Cadence display: capitalize first letter for the stat strip.
+    const cadenceLabel = (cfg.cadence || 'daily').charAt(0).toUpperCase() +
+                         (cfg.cadence || 'daily').slice(1);
+
+    // Trophy prefix on kill-count line when count > 0 (per CARDS.md
+    // line 153). Defeated state ALSO adds a corner trophy overlay
+    // (line 180-182) — they're separate visual cues.
+    const killText = state.kill_count > 0
+      ? '🏆 Defeated: ' + state.kill_count + ' time' + (state.kill_count === 1 ? '' : 's')
+      : 'Defeated: 0 times';
+
+    // Defeated-state corner trophy. Renders as a span overlay so the
+    // gold-border treatment can do its own thing on .bcard--defeated.
+    const cornerTrophy = state.kill_count > 0
+      ? '<span class="bcard-corner-trophy" aria-hidden="true">🏆</span>'
+      : '';
+
+    // Burned-state overlay text. Per CARDS.md: "Weekend forfeit —
+    // opens Friday." Sits above the rest of the card content via
+    // higher z-index when .bcard--burned is active.
+    const burnedOverlay = state.weekend_burned === true
+      ? '<div class="bcard-burned-overlay" aria-hidden="true">Weekend forfeit — opens Friday</div>'
+      : '';
+
+    return (
+      '<button type="button" class="' + classAttr + '" data-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
+        cornerTrophy +
+        burnedOverlay +
+        // Region a: Header strip — rank pill (absolute, left) +
+        // boss name (centered in the full strip width).
+        '<div class="bcard-header">' +
+          '<span class="bcard-rank-pill rank-badge">' + esc(cfg.rank) + '</span>' +
+          '<span class="bcard-name">' + esc(cfg.name) + '</span>' +
+        '</div>' +
+        // Region b: Art window — bleed-to-edge illustration
+        '<div class="bcard-art">' +
+          '<img src="' + imgPath + '" alt="" draggable="false" loading="lazy" decoding="async">' +
+        '</div>' +
+        // Region c: Stat strip — STAT · CADENCE
+        '<div class="bcard-stats">' +
+          '<span class="bcard-stat-label">STAT</span> ' +
+          '<span class="bcard-stat-value">' + esc(cfg.statDomain || '—') + '</span>' +
+          '<span class="bcard-stat-sep">·</span>' +
+          '<span class="bcard-stat-label">CADENCE</span> ' +
+          '<span class="bcard-stat-value">' + esc(cadenceLabel) + '</span>' +
+        '</div>' +
+        // Region d: Flavor — italic gray-purple
+        '<div class="bcard-flavor">' + esc(cfg.flavorShort) + '</div>' +
+        // Region e: Kill condition
+        '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
+        // Region f: Progress — dots + streak label + kill count
+        '<div class="bcard-progress">' +
+          '<div class="bcard-dots">' + dots + '</div>' +
+          '<div class="bcard-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' nights</div>' +
+          '<div class="bcard-kills">' + killText + '</div>' +
+        '</div>' +
+      '</button>'
+    );
+  }
+
+  // Renders the boss list inside the dungeon view. Optional rankFilter
+  // limits to bosses tagged with that rank (CLAUDE.md → "Where they
+  // live"). Single render path as of the cleanup that removed the old
+  // card style — boss-cards-only-newstyle from here on. Each card
+  // renders into a 2-col grid; tap opens the full-screen detail modal.
+  function renderBossesPanel(rankFilter) {
+    const list = document.getElementById('bosses-list');
+    if (!list) return;
+    const bossIds = Object.keys(BOSSES).filter(id =>
+      !rankFilter || BOSSES[id].rank === rankFilter
+    );
+    if (bossIds.length === 0) {
+      list.innerHTML = '<p class="dungeon-empty">No bosses await yet. Check back as more dungeons fill.</p>';
+      list.classList.remove('bosses-list--cards');
+      return;
+    }
+    list.classList.add('bosses-list--cards');
+    list.innerHTML = bossIds.map(buildBossCardHTML).join('');
+  }
+
+  // ── Full-screen boss detail modal ──────────────────────────
+  // Replaces the v1.1.7 bottom-sheet detail. Tapping any boss card
+  // (.bcard) opens this overlay. Closes via Back button, ESC key,
+  // or any tab switch. Pulls all data from BOSSES[id] + getBossState.
+  // Cadence label capitalizes for display ("daily" → "Daily").
+  function openBossFullScreen(id) {
+    const cfg = BOSSES[id];
+    if (!cfg) return;
+    const state = getBossState(id);
+    const overlay = document.getElementById('boss-fs-overlay');
+    if (!overlay) return;
+
+    const cadenceLabel = (cfg.cadence || 'daily').charAt(0).toUpperCase() +
+                         (cfg.cadence || 'daily').slice(1);
+    const imgPath = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
+
+    // Header — rank pill
+    const rankPill = document.getElementById('bfs-rank-pill');
+    if (rankPill) rankPill.textContent = cfg.rank;
+
+    // Hero art
+    const heroImg = document.getElementById('bfs-hero-img');
+    if (heroImg) {
+      heroImg.src = imgPath;
+      heroImg.alt = cfg.name;
+    }
+
+    // Name + rank label
+    const nameEl = document.getElementById('bfs-name');
+    if (nameEl) nameEl.textContent = cfg.name;
+    const rankLabel = document.getElementById('bfs-rank-label');
+    if (rankLabel) rankLabel.textContent = cfg.rank + '-RANK BOSS';
+
+    // Long flavor (italic, larger)
+    const flavorEl = document.getElementById('bfs-flavor');
+    if (flavorEl) flavorEl.textContent = cfg.flavorLong || cfg.flavorShort || '';
+
+    // Stats grid
+    const setStat = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+    setStat('bfs-stat-rank',     cfg.rank);
+    setStat('bfs-stat-domain',   cfg.statDomain || '—');
+    setStat('bfs-stat-cadence',  cadenceLabel);
+    setStat('bfs-stat-defeated',
+      state.kill_count + ' time' + (state.kill_count === 1 ? '' : 's')
+    );
+
+    // Kill condition (long version)
+    const killCondEl = document.getElementById('bfs-kill-cond');
+    if (killCondEl) killCondEl.textContent = cfg.killCondLong || cfg.killCondShort || '';
+
+    // Progress dots + label (sized larger via CSS for the modal context)
+    const progressEl = document.getElementById('bfs-progress');
+    if (progressEl) {
+      const dots = Array.from({ length: cfg.streakTarget }, (_, i) =>
+        '<span class="bfs-dot' + (i < state.streak ? ' bfs-dot--filled' : '') + '"></span>'
+      ).join('');
+      progressEl.innerHTML =
+        '<div class="bfs-dots">' + dots + '</div>' +
+        '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' nights</div>';
+    }
+
+    // Burned banner (Carouser only when weekend_burned === true)
+    const burnedBanner = document.getElementById('bfs-burned-banner');
+    if (burnedBanner) {
+      if (state.weekend_burned === true) {
+        burnedBanner.classList.remove('hidden');
+      } else {
+        burnedBanner.classList.add('hidden');
+      }
+    }
+
+    overlay.classList.remove('hidden');
+    document.body.classList.add('bfs-locked'); // lock background scroll
+  }
+
+  function closeBossFullScreen() {
+    const overlay = document.getElementById('boss-fs-overlay');
+    if (!overlay) return;
+    if (overlay.classList.contains('hidden')) return;
+    overlay.classList.add('hidden');
+    document.body.classList.remove('bfs-locked');
+    // Reset scroll position so re-opening starts from the top.
+    overlay.scrollTop = 0;
+  }
+  try { window.openBossFullScreen = openBossFullScreen; } catch (_) {}
+  try { window.closeBossFullScreen = closeBossFullScreen; } catch (_) {}
+
+  function setupBossesPanel() {
+    const list = document.getElementById('bosses-list');
+    if (list) {
+      list.addEventListener('click', (e) => {
+        const card = e.target.closest('.bcard[data-boss]');
+        if (!card) return;
+        const id = card.getAttribute('data-boss');
+        if (id) openBossFullScreen(id);
+      });
+    }
+    // Wire the modal's Back button + ESC key.
+    const backBtn = document.getElementById('bfs-back');
+    if (backBtn) backBtn.addEventListener('click', closeBossFullScreen);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const overlay = document.getElementById('boss-fs-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        closeBossFullScreen();
+      }
+    });
+  }
+
+  // ── QUESTS TAB GATE GRID (v2.0.2 → v2.0.5) ─────────────────
+  // 3×2 grid of rank-tier gates (E/D/C/B/A/S). E starts unlocked;
+  // D-S render in locked state and unlock as the user climbs ranks.
+  // Tapping an unlocked gate swaps to the dungeon-view (back button +
+  // dungeon header + flavor + bosses for that tier). Tapping a locked
+  // gate fires a "Reach X rank to unlock" toast — no expansion.
+  //
+  // Tab re-entry resets to gate-view (questsGateExpanded = false).
+  // Per-rank header/flavor copy lives in DUNGEON_FLAVOR. The boss list
+  // filters by rank; if a tier is unlocked but has no bosses defined,
+  // the empty-state copy in renderBossesPanel surfaces.
+  let questsGateExpanded = false;
+  let currentDungeonRank = 'E'; // which rank tier the dungeon-view shows
+
+  // Per-rank copy for the dungeon-view header + flavor line. Edit
+  // these strings here, not in markup — the markup uses dynamic IDs
+  // (#dungeon-header-text, #dungeon-flavor-text) populated at expand
+  // time. Empty dungeons (no bosses yet at that rank) show the empty-
+  // state copy from renderBossesPanel; the flavor line above it stays
+  // as defined here for atmospheric framing.
+  const DUNGEON_FLAVOR = {
+    E: { header: 'E-RANK DUNGEON', flavor: 'The first threshold. Two bosses linger in the dark.' },
+    D: { header: 'D-RANK DUNGEON', flavor: 'A deeper hall awaits its keepers.' },
+    C: { header: 'C-RANK DUNGEON', flavor: 'The middle road. Seasoned ground.' },
+    B: { header: 'B-RANK DUNGEON', flavor: 'Most never reach this gate.' },
+    A: { header: 'A-RANK DUNGEON', flavor: 'Mastery starts here.' },
+    S: { header: 'S-RANK DUNGEON', flavor: 'The apex. The few.' },
+  };
+
+  // Returns true if the user's current rank is at or above the gate's
+  // rank tier. RANKS array is ordered E,D,C,B,A,S,S+ — index comparison
+  // gives "have I climbed at least to this tier?" semantics. S+ users
+  // pass for any gate tier.
+  function isGateUnlocked(gateRankId) {
+    const userRankId = getRank(totalPoints).id;
+    const userIdx = RANKS.findIndex(r => r.id === userRankId);
+    const gateIdx = RANKS.findIndex(r => r.id === gateRankId);
+    if (gateIdx < 0) return false;
+    return userIdx >= gateIdx;
+  }
+  try { window.isGateUnlocked = isGateUnlocked; } catch (_) {}
+
+  function renderQuestsPanel() {
+    const gateView    = document.getElementById('quests-gate-view');
+    const dungeonView = document.getElementById('quests-dungeon-view');
+    if (!gateView || !dungeonView) return;
+
+    if (questsGateExpanded) {
+      gateView.classList.add('hidden');
+      dungeonView.classList.remove('hidden');
+
+      // Populate the rank-aware header + flavor.
+      const rank = currentDungeonRank || 'E';
+      const flavor = DUNGEON_FLAVOR[rank] || DUNGEON_FLAVOR.E;
+      const headerEl = document.getElementById('dungeon-header-text');
+      const flavorEl = document.getElementById('dungeon-flavor-text');
+      if (headerEl) headerEl.textContent = flavor.header;
+      if (flavorEl) flavorEl.textContent = flavor.flavor;
+
+      // Render only this rank's bosses. Empty-state handled inside.
+      renderBossesPanel(rank);
+    } else {
+      gateView.classList.remove('hidden');
+      dungeonView.classList.add('hidden');
+
+      // Apply locked-state to each cell based on user's current rank.
+      // Stamping classes in JS keeps the locked/unlocked decision in
+      // one place — markup stays static, no per-cell duplication.
+      const cells = gateView.querySelectorAll('.gate-cell[data-gate-rank]');
+      cells.forEach(cell => {
+        const r = cell.getAttribute('data-gate-rank');
+        const unlocked = isGateUnlocked(r);
+        cell.classList.toggle('gate-cell--locked', !unlocked);
+        // Aria label reflects state for screen readers.
+        cell.setAttribute('aria-label',
+          unlocked
+            ? 'Enter ' + r + '-rank dungeon'
+            : r + '-rank dungeon, locked. Reach ' + r + ' rank to unlock.'
+        );
+      });
+    }
+  }
+  try { window.renderQuestsPanel = renderQuestsPanel; } catch (_) {}
+
+  function setupQuestsGate() {
+    const grid    = document.getElementById('quests-gate-grid');
+    const backBtn = document.getElementById('quests-dungeon-back');
+
+    // Delegated click handler on the whole grid. Reads data-gate-rank
+    // off the tapped cell, branches on locked-vs-unlocked. Replaces
+    // the v2.0.2/2.0.3 handler that targeted #quests-gate-button by id.
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        const cell = e.target.closest('.gate-cell[data-gate-rank]');
+        if (!cell || !grid.contains(cell)) return;
+        const rank = cell.getAttribute('data-gate-rank');
+        if (!rank) return;
+        if (cell.classList.contains('gate-cell--locked')) {
+          // Locked → toast, no expansion.
+          if (typeof showHabitToast === 'function') {
+            showHabitToast('Reach ' + rank + ' rank to unlock');
+          }
+          return;
+        }
+        // Unlocked → expand into the dungeon view for this rank.
+        currentDungeonRank = rank;
+        questsGateExpanded = true;
+        renderQuestsPanel();
+      });
+      // Keyboard: native <button> already dispatches click on Enter/
+      // Space, so the delegated handler picks those up automatically.
+    }
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        questsGateExpanded = false;
+        renderQuestsPanel();
+      });
+    }
+  }
+
+
 
   // Comeback sound — grounded determination, not triumphant
   function playComebackChime() {
@@ -9060,32 +9681,6 @@
     setTimeout(dismiss, 5500);
   }
 
-  function showMissionCompleteScreen(item) {
-    const overlay = document.getElementById('mission-complete-screen');
-    if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
-    const xpStr = '+' + item.xp + ' XP' + (item.doubled ? '  2×' : '');
-    document.getElementById('mc-name').textContent = item.mission.name;
-    document.getElementById('mc-xp').textContent   = xpStr;
-    overlay.classList.remove('hidden');
-    void overlay.offsetWidth;
-    overlay.classList.add('mc-show');
-    playMissionFanfare();
-    navigator.vibrate && navigator.vibrate([60, 40, 100, 40, 200, 40, 100]);
-
-    const dismiss = () => {
-      overlay.classList.remove('mc-show');
-      overlay.classList.add('mc-hide');
-      overlay.addEventListener('animationend', () => {
-        overlay.classList.remove('mc-hide');
-        overlay.classList.add('hidden');
-        levelUpActive = false;
-        drainLevelUpQueue();
-      }, { once: true });
-      overlay.removeEventListener('click', dismiss);
-    };
-    overlay.addEventListener('click', dismiss);
-    setTimeout(dismiss, 4000);
-  }
 
   function renderCompoundProgress() {
     const wrap = document.getElementById('compound-progress');
@@ -9318,12 +9913,19 @@
     // Shared stats block
     populateHabitInfoBlock('vn', habit);
 
-    // System-managed message — only shown for read-only auto-verify
-    // habits (currently just "Sleep before midnight"). Sits above the
-    // ABOUT-THIS-HABIT description so users opening the modal via card
-    // tap (the read-only routing path) see the explainer first.
+    // System-managed message — shown for read-only auto-verify habits
+    // (Daily walk, Sleep, Sleep before midnight per v2.0 policy). Sits
+    // above the ABOUT-THIS-HABIT description so users opening the modal
+    // via card tap (the read-only routing path) see the explainer
+    // first. Body copy is per-habit so the message reads specifically
+    // about the user's tapped habit, not generically.
     const sysEl = document.getElementById('vn-system-section');
-    if (sysEl) sysEl.classList.toggle('hidden', !isReadOnlyAutoVerifyHabit(habit));
+    const sysBody = document.getElementById('vn-system-message');
+    const isReadOnly = isReadOnlyAutoVerifyHabit(habit);
+    if (sysEl) sysEl.classList.toggle('hidden', !isReadOnly);
+    if (isReadOnly && sysBody) {
+      sysBody.innerHTML = systemManagedHtmlFor(habit);
+    }
 
     // Read-only canonical description from the habit library.
     // (Any user-typed notes from earlier versions remain in habitNotes
@@ -9734,8 +10336,43 @@
     editFormEmoji = habit.emoji || '';
     editFormDiff  = habit.difficulty || 'easy';
     document.getElementById('edit-input').value = habit.name;
-    setEmojiBtn(document.getElementById('edit-emoji-btn'), editFormEmoji);
     setActiveDiff('edit-diff-row', editFormDiff);
+
+    // Canonical habits: lock name + emoji + difficulty because those
+    // are foreign keys for HABIT_ICONS, AUTO_VERIFY, HABIT_TIME_OF_DAY,
+    // etc. Renaming or re-emojifying a canonical habit silently breaks
+    // every per-name lookup. Lock applied via class on the modal +
+    // readOnly on the name input + an early-return in the emoji
+    // button click handler (see setupEditModal). (v1.1.6)
+    const modal = document.getElementById('edit-modal');
+    const canonical = isCanonicalHabit(habit);
+    if (modal) modal.classList.toggle('edit-modal--canonical', canonical);
+    const nameInput = document.getElementById('edit-input');
+    if (nameInput) nameInput.readOnly = canonical;
+    // Hide the "Tap to choose an emoji" hint when locked.
+    const emojiHint = document.querySelector('#edit-modal .emoji-row-hint');
+    if (emojiHint) emojiHint.classList.toggle('hidden', canonical);
+    // The combined help line below the difficulty pill — broaden the
+    // copy when the whole header (name/emoji/difficulty) is locked.
+    const diffHelp = document.querySelector('#edit-modal .edit-diff-help');
+    if (diffHelp) {
+      diffHelp.textContent = canonical
+        ? "Name, emoji, and difficulty are set by the habit type and can't be changed."
+        : "Difficulty is set by the habit type and can't be changed.";
+    }
+    // Render the emoji-button content. For canonical habits, prefer
+    // the DALL-E icon (via setHabitIcon) so the button matches what
+    // the Habits tab card shows. For custom habits, fall back to the
+    // emoji glyph picker pattern. setHabitIcon already falls back to
+    // emoji.textContent if no DALL-E icon is mapped for this name. (v1.1.6)
+    const emojiBtn = document.getElementById('edit-emoji-btn');
+    if (canonical) {
+      setHabitIcon(emojiBtn, habit, 36);
+      if (editFormEmoji || getHabitIcon(habit)) emojiBtn.classList.add('has-emoji');
+      else emojiBtn.classList.remove('has-emoji');
+    } else {
+      setEmojiBtn(emojiBtn, editFormEmoji);
+    }
 
     // Goal control — mutually exclusive between three branches:
     //   (1) step-goal chips     (canonical "Daily walk")
@@ -9778,7 +10415,8 @@
       }
     }
 
-    // Reminder section — render current state for this habit.
+    // Read-only reminder display — shows the time if one is set,
+    // hides the section entirely otherwise.
     refreshEditReminderUI(id);
 
     document.getElementById('edit-modal').classList.remove('hidden');
@@ -9786,24 +10424,23 @@
     setTimeout(() => { const i = document.getElementById('edit-input'); i.focus(); i.select(); }, 80);
   }
 
-  // Renders the empty/set state of the Edit-Habit reminder block based
-  // on whether this habit has a stored reminder time. Called on open
-  // and whenever the user adds/changes/removes a reminder.
+  // Renders the Edit Habit reminder section as a READ-ONLY display
+  // (v1.1.6). Shows the current per-habit reminder time if one is
+  // set; hides the section entirely otherwise. Set / Change / Remove
+  // happens via the Schedule sheet (⋯ → Schedule), which uses the
+  // working openDigestTimePickerModal. The previous editable version
+  // tried to fire <input type="time">.showPicker() on a hidden 0×0
+  // input, which anchored badly cross-platform — see v1.1.6 changelog.
   function refreshEditReminderUI(habitId) {
-    const time = Notif.reminderFor(habitId);
-    const empty = document.getElementById('edit-reminder-empty');
-    const setEl = document.getElementById('edit-reminder-set');
+    const row = document.getElementById('edit-reminder-row');
     const display = document.getElementById('edit-reminder-time-display');
-    if (!empty || !setEl) return;
+    if (!row || !display) return;
+    const time = Notif.reminderFor(habitId);
     if (time) {
-      empty.classList.add('hidden');
-      setEl.classList.remove('hidden');
       display.textContent = formatTime12(time);
-      const inp = document.getElementById('edit-reminder-time-input');
-      if (inp) inp.value = time;
+      row.classList.remove('hidden');
     } else {
-      empty.classList.remove('hidden');
-      setEl.classList.add('hidden');
+      row.classList.add('hidden');
     }
   }
 
@@ -9842,7 +10479,14 @@
     if (!name || !editingId) return;
     const habit = habits.find(h => h.id === editingId);
     if (habit) {
-      habit.name = name; habit.emoji = editFormEmoji; habit.difficulty = editFormDiff;
+      // Canonical habits: ignore name/emoji from the form (the inputs
+      // are visually locked, but defense in depth — never let a
+      // canonical habit's foreign-key fields get rewritten through
+      // this surface). difficulty is already read-only-by-CSS in the
+      // diff-row, but skip the assignment too for parity. (v1.1.6)
+      if (!isCanonicalHabit(habit)) {
+        habit.name = name; habit.emoji = editFormEmoji; habit.difficulty = editFormDiff;
+      }
       // Persist HealthKit goal if the modal was in step-goal OR
       // sleep-goal mode. Each is staged inline as user taps chips
       // (editStepGoal / editSleepGoal); we commit here so Cancel
@@ -9877,6 +10521,9 @@
       if (e.key === 'Escape') closeEditModal();
     });
     document.getElementById('edit-emoji-btn').addEventListener('click', () => {
+      // Canonical habits: emoji is locked. See openEditModal for why.
+      const habit = habits.find(h => h.id === editingId);
+      if (isCanonicalHabit(habit)) return;
       const btn = document.getElementById('edit-emoji-btn');
       openEmojiPicker(btn, editFormEmoji, em => { editFormEmoji = em; setEmojiBtn(btn, em); });
     });
@@ -9984,72 +10631,9 @@
       });
     }
 
-    // ── Reminder picker on the Edit Habit modal ──────────────
-    const addBtn    = document.getElementById('edit-reminder-add');
-    const changeBtn = document.getElementById('edit-reminder-change');
-    const removeBtn = document.getElementById('edit-reminder-remove');
-    const timeInp   = document.getElementById('edit-reminder-time-input');
-
-    async function ensurePermissionThenSet(time) {
-      const habit = habits.find(h => h.id === editingId);
-      if (!habit) return;
-      const perm = await Notif.checkPermission();
-      if (perm === 'granted') {
-        await Notif.setReminder(habit.id, time);
-        refreshEditReminderUI(habit.id);
-        return;
-      }
-      // First time: show explainer, then request iOS permission.
-      if (!Notif.permAskedBefore() || perm === 'prompt' || perm === 'default') {
-        showNotifExplainer(async (ok) => {
-          if (!ok) return;
-          const granted = await Notif.requestPermission();
-          await Notif.setReminder(habit.id, time);
-          refreshEditReminderUI(habit.id);
-          if (granted !== 'granted') {
-            // Reminder saved, but iOS won't deliver it. Surface the limitation.
-            if (typeof showHabitToast === 'function') {
-              showHabitToast('Reminder saved, but notifications are off. Enable in iOS Settings → Awakened.');
-            }
-          }
-        });
-      } else {
-        // Already denied — store the choice anyway, surface the message.
-        await Notif.setReminder(habit.id, time);
-        refreshEditReminderUI(habit.id);
-        if (typeof showHabitToast === 'function') {
-          showHabitToast('Notifications are off. Enable them in iOS Settings → Awakened to receive reminders.');
-        }
-      }
-    }
-
-    function openTimePickerWith(currentTime) {
-      const habit = habits.find(h => h.id === editingId);
-      const fallback = defaultReminderTimeFor(habit);
-      timeInp.value = currentTime || fallback;
-      // The time input is hidden but native pickers open on .showPicker()
-      // (Safari/iOS) or focus + click. Try showPicker first.
-      try {
-        if (typeof timeInp.showPicker === 'function') timeInp.showPicker();
-        else timeInp.click();
-      } catch (_) { timeInp.click(); }
-    }
-
-    if (addBtn) addBtn.addEventListener('click', () => {
-      const habit = habits.find(h => h.id === editingId);
-      openTimePickerWith(Notif.reminderFor(editingId) || defaultReminderTimeFor(habit));
-    });
-    if (changeBtn) changeBtn.addEventListener('click', () => {
-      openTimePickerWith(Notif.reminderFor(editingId));
-    });
-    if (timeInp) timeInp.addEventListener('change', () => {
-      const t = timeInp.value;
-      if (t) ensurePermissionThenSet(t);
-    });
-    if (removeBtn) removeBtn.addEventListener('click', async () => {
-      await Notif.clearReminder(editingId);
-      refreshEditReminderUI(editingId);
-    });
+    // Reminder picker block removed in v1.1.6 — see index.html note.
+    // Per-habit reminders now live exclusively on the Schedule sheet
+    // (⋯ → Schedule), which uses openDigestTimePickerModal.
   }
 
   // Permission explainer modal — shown once before the iOS native prompt.
@@ -13444,33 +14028,46 @@
   // silent enhancement.
   async function autoVerifyWalk() {
     if (!Health.isAvailable()) return;          // web / non-iOS
-    // User has paused auto-verify in Settings → Apple Health. Manual
-    // completion path is unaffected. (v1.1.5)
-    if (isAutoVerifyDisabled()) return;
-    const walk = findWalkHabit();
-    if (!walk) return;                           // user doesn't have the habit
-    if (isChecked(walk.id)) return;              // already done (manual or auto)
-    if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) return;  // user opted out for today
 
+    const walk = findWalkHabit();
     const status = Health.permissionStatus();
 
-    // First-encounter path: show pre-prompt, don't query HealthKit yet.
+    // First-encounter path: show pre-prompt only when the user has the
+    // walk habit (the prompt's whole purpose is to enable auto-verify
+    // for that habit). Don't query HealthKit yet.
     if (status === 'unknown') {
-      if (localStorage.getItem('hb_healthkit_prompted') !== '1') {
+      if (walk && localStorage.getItem('hb_healthkit_prompted') !== '1') {
         showHealthKitPreprompt();
       }
       return;
     }
     if (status !== 'granted') return;
 
+    // Fetch steps once. Used by:
+    //   1. Leaderboard recording — passive, ignores pause toggle and
+    //      habit presence (matches the bosses pattern; we want
+    //      historical depth even for users without the walk habit).
+    //   2. Habit auto-verify — gated on habit presence + pause +
+    //      already-checked + opted-out.
     const steps = await Health.getStepsToday();
     if (steps == null) return;
+
+    // ── Leaderboard recording (v2.0.2) ─────────────────────
+    // Independent of habit presence + pause toggle (see module
+    // docs). Wrapped in try so a leaderboard bug can't break the
+    // habit auto-verify path below.
+    try { lbRecordStepsToday(steps); }
+    catch (e) { console.warn('[Leaderboard] step record failed', e); }
+
+    // ── Habit auto-verify gates ────────────────────────────
+    // User has paused auto-verify in Settings → Apple Health. Manual
+    // completion path is unaffected. (v1.1.5)
+    if (isAutoVerifyDisabled()) return;
+    if (!walk) return;                           // user doesn't have the habit
+    if (isChecked(walk.id)) return;              // already done (manual or auto)
+    if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) return;  // user opted out for today
     const threshold = getHabitStepGoal(walk);
     if (steps < threshold) return;
-
-    // Re-check completion state — Health.getStepsToday is async, the
-    // user may have manually tapped during the await.
-    if (isChecked(walk.id)) return;
 
     AUTO_VERIFY.recordAutoVerify(walk.id, {
       source: 'healthkit-steps',
@@ -13511,10 +14108,6 @@
 
   async function autoVerifySleep() {
     if (!Health.isAvailable()) return;
-    if (isAutoVerifyDisabled()) return;
-    const sleep = findSleepHabit();
-    const bedtime = findSleepBeforeMidnightHabit();
-    if (!sleep && !bedtime) return; // user has neither; skip query entirely
 
     const status = Health.permissionStatus();
     // Don't trigger the pre-prompt from the sleep path — autoVerifyWalk
@@ -13531,6 +14124,38 @@
 
     const data = await Health.getSleepLastNight();
     if (!data) return;
+
+    // ── Boss evaluation (v1.1.7+) ───────────────────────────
+    // Runs independently of habit presence + pause toggle. The
+    // Settings → Apple Health pause is scoped to habit auto-verify
+    // only; bosses are passive background progress and shouldn't be
+    // gated on that. Both evaluators are idempotent on nightDate so
+    // visibility-change refires don't double-count.
+    //
+    // Bedtime boolean is computed once from the shared helper and
+    // reused below by Path B. The Carouser needs both signals (sleep
+    // hours + before-midnight onset) so it gets the boolean here.
+    const bedtimeQualifying = getBedtimeSamplesInWindow(data.samples || []);
+    const bedtimeBeforeMidnight = bedtimeQualifying.length > 0;
+    try {
+      evaluateInsomniacForNight(data.totalAsleepHours, getDeviceLocalDate());
+    } catch (e) { console.warn('[Bosses] insomniac eval failed', e); }
+    try {
+      evaluateCarouserForNight(data.totalAsleepHours, bedtimeBeforeMidnight, getDeviceLocalDate());
+    } catch (e) { console.warn('[Bosses] carouser eval failed', e); }
+
+    // ── Leaderboard recording (v2.0.2) ──────────────────────
+    // Same independence rules as bosses — passive accumulation,
+    // ignores pause toggle. Records both metrics in one call.
+    try {
+      lbRecordSleepNight(data.totalAsleepHours, bedtimeBeforeMidnight, getDeviceLocalDate());
+    } catch (e) { console.warn('[Leaderboard] sleep record failed', e); }
+
+    // ── Habit auto-verify — gated on pause toggle + habit presence ──
+    if (isAutoVerifyDisabled()) return;
+    const sleep = findSleepHabit();
+    const bedtime = findSleepBeforeMidnightHabit();
+    if (!sleep && !bedtime) return;
 
     // ── Path A: Sleep duration ──────────────────────────────
     if (sleep && !isChecked(sleep.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep')) {
@@ -13564,16 +14189,9 @@
     // CLAUDE.md: notifications + sleep windows use device-local time,
     // not PT — sleep crosses midnight, PT-anchoring is wrong.
     if (bedtime && !isChecked(bedtime.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep before midnight')) {
-      const midnightToday = new Date();
-      midnightToday.setHours(0, 0, 0, 0);
-      const windowStart = new Date(midnightToday.getTime() - 4 * 3600 * 1000); // 20:00 prior day
-
-      const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
-      const qualifying = (data.samples || [])
-        .filter(s => Number(s.duration) >= napFloorHours)
-        .map(s => ({ start: new Date(s.startDate), src: s }))
-        .filter(s => s.start >= windowStart && s.start < midnightToday)
-        .sort((a, b) => a.start - b.start);
+      // Reuses the bedtimeQualifying array computed above (boss path).
+      // Single source-of-truth via getBedtimeSamplesInWindow().
+      const qualifying = bedtimeQualifying;
 
       if (qualifying.length > 0) {
         const earliest = qualifying[0].start;
@@ -13682,6 +14300,21 @@
       } catch (_) {}
       localStorage.setItem('hb_bedtime_window_fix_v1', '1');
     }
+    // ── v2.0 habits-order migration ──────────────────────────
+    // Apply the auto-verify-first invariant once on cold launch.
+    // Idempotent — sortHabitsAutoVerifyFirst is a no-op when the
+    // array is already partitioned correctly. Existing v1.x users
+    // get a one-time reorder; newly added habits stay sorted via
+    // save() which calls the same helper.
+    sortHabitsAutoVerifyFirst(habits);
+
+    // ── Insomniac missed-night check (v1.1.7) ───────────────
+    // Detects a calendar-day gap since last evaluation and resets
+    // the streak. Init-only — visibilitychange resumes don't trigger
+    // this (multi-foreground days would mis-reset). See
+    // checkMissedNightForInsomniac for first-install handling.
+    try { checkMissedNightForInsomniac(); } catch (_) {}
+    try { checkMissedWeekendForCarouser(); } catch (_) {}
     // ── HealthKit auth-version migration ─────────────────────
     // Whenever HEALTHKIT_AUTH_VERSION is bumped (i.e., a new HealthKit
     // category was added to the requestAuthorization() read array),
@@ -13732,7 +14365,9 @@
     setupCompoundPopup();
     setupBonusInfoPopup();
     setupPRDetailSheet();
-    setupDailyMissionCard();
+    setupBossesPanel();
+    setupQuestsGate();
+    setupLeaderboardPreview();
     setupHonestDayModal();
     setupShieldInfoModal();
     setupOriginStorySheet();
@@ -13839,4 +14474,4 @@
   }
 
   document.addEventListener('DOMContentLoaded', init);
-})();
+})();

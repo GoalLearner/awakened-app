@@ -38,7 +38,7 @@ workflows:
       # ── Build variables ────────────────────────────────────────
       vars:
         BUNDLE_ID:        "com.goallearner.awakened"
-        APP_VERSION:      "1.1.5"
+        APP_VERSION:      "2.0.1"
         XCODE_WORKSPACE:  "ios/App/App.xcworkspace"
         XCODE_SCHEME:     "App"
         # ↓ Replace with your numeric App ID from App Store Connect
@@ -82,6 +82,19 @@ workflows:
           mkdir -p www/assets/habit-icons
           for icon in icon-water icon-sleep icon-wake icon-walk icon-cardio icon-strength icon-sunlight icon-gratitude icon-vitamins icon-meditate icon-nutrition icon-nophone icon-business icon-cold icon-connection icon-finance icon-grounding icon-journal icon-learning icon-mobility icon-noalcohol icon-nocaffeine icon-nodoomscroll icon-noscreen-bed icon-nosugar icon-protein icon-read icon-target icon-tidy icon-sprint icon-nosocial icon-priority icon-plan-tomorrow icon-screen-cap icon-podcast icon-pray icon-visualize icon-pack-morning icon-pack-lockedin icon-pack-custom icon-streak icon-xp icon-class-civilian icon-class-warrior icon-class-ranger icon-class-mage icon-class-assassin icon-class-paladin icon-class-merchant icon-class-sage; do
             cp "assets/habit-icons/$icon.png" "www/assets/habit-icons/$icon.png"
+          done
+          # Dungeon gate art (v2.0.2). Each rank tier gets one gate
+          # PNG. E-rank exists today; D/C/B/A/S/SS land as bosses fill
+          # those tiers. Add new gate filenames to the loop below.
+          mkdir -p www/assets/gates
+          for gate in gate-e-rank gate-d-rank gate-c-rank gate-b-rank gate-a-rank gate-s-rank; do
+            cp "assets/gates/$gate.png" "www/assets/gates/$gate.png"
+          done
+          # Boss illustrations (CARDS.md spec preview). 1254×1254 manhwa
+          # portraits ride inside the new card's art window.
+          mkdir -p www/assets/bosses
+          for boss in the-insomniac the-carouser; do
+            cp "assets/bosses/$boss.png" "www/assets/bosses/$boss.png"
           done
 
       - name: Add iOS platform (runs on first build only)

@@ -8,10 +8,10 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 **Awakened — Daily Habit Tracker** (`com.goallearner.awakened`, name on App Store: *Awakened: Habit RPG*).
 
-A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." There is no backend — every byte of state lives in `localStorage`.
+A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Starting in v2.0, dungeon bosses run as a parallel passive-progress system fed by the same Apple Health data that auto-verifies habits. v2.0.1 adds the second boss (The Carouser) and silently begins tracking three Apple-Health-verifiable metrics for a future leaderboard layer surfaced on the Social tab. There is no backend — every byte of state lives in `localStorage`.
 
-- **Current marketing version:** `1.1.5` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`)
-- **Service-worker cache version:** `v5.78` (constant `CACHE_VERSION` in `sw.js`)
+- **Current marketing version:** `2.0.1` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.0 was a single consolidated release; v2.0.1 is the second consolidated release and the only one in shipped state. Coverage: The Carouser boss, Daily Quest removed, leaderboard data-tracking foundations + Social-tab preview UI, system-verified read-only habits, auto-verify-first sort invariant, canonical-habit name/emoji lock, schedule sheet section split, full gate-based dungeon UX on the Quests tab (3×2 rank-tier grid with E active + D/C/B/A/S in locked state, tap-to-expand → rank-aware dungeon view), CARDS.md-spec **boss cards** (5:7 portrait, art window, stat strip, gradient border) replacing the old text-only cards, and a **full-screen boss detail modal** (`#boss-fs-overlay`) replacing the old `.vn-sheet` bottom-sheet. E-rank bosses recalibrated to 2-night thresholds (Insomniac: any 2 consecutive nights ≥7h; Carouser: Fri+Sat both ≥7h + before-midnight bedtime).
+- **Service-worker cache version:** `v5.103` (constant `CACHE_VERSION` in `sw.js` — bumped many times during the v2.0.1 dev cycle since cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -469,22 +469,31 @@ Two steps run after `Sync web assets into iOS project`:
 
 ### Read-only auto-verify habits (`isReadOnlyAutoVerifyHabit`)
 
-Currently only **`Sleep before midnight`** qualifies. Tapping the card on the Habits tab does NOT toggle the check state — instead it opens the View Note modal (`#note-modal`) with a `SYSTEM-MANAGED` explainer section (`#vn-system-section`) above the canonical description. The user has no manual override; Apple Health is the sole authority. Auto-verify still fires normally via `autoVerifySleepBeforeMidnight()`.
+**v2.0 policy: ALL three HealthKit-auto-verifiable habits are read-only** — `Daily walk`, `Sleep`, `Sleep before midnight`. The earlier v1.1.5 carve-out where Daily walk and Sleep allowed manual completion as a fallback is gone. Apple Health is the sole authority for these three. Tapping the card on the Habits tab does NOT toggle the check state — instead it opens the View Note modal (`#note-modal`) with a `SYSTEM-MANAGED` explainer section (`#vn-system-section`) above the canonical description.
 
-Why: bedtime is binary and observable. Manual completion would let the user "lie" to the app — which breaks the habit's whole premise ("the system is honest with you, even when you might not want to be honest with yourself"). Daily walk and Sleep duration both keep manual completion (their auto-verify is an enhancement, not the sole source of truth — a user might walk without their phone, or Apple Watch might miss a sleep block).
+Why the policy shifted: the "system is honest" framing applies uniformly. Mixed manual+auto creates ambiguity — did the user actually walk 3,000 steps, or just tap the box? With the lock, the answer is always "the data shows yes, or it stays unchecked." Cleaner discipline contract, even if it means streaks become impossible without Apple Health connected.
+
+**Implications worth knowing:**
+- Web/PWA users have no way to complete these habits. They show the lock and stay unchecked. Notes modal explains.
+- Users with Apple Health permission denied: same.
+- Users who pause auto-verify in Settings → Apple Health: same. The lock surfaces the limitation; the user's recourse is to grant permission / unpause.
+- `AUTO_VERIFY.markUnchecked` / `wasUncheckedToday` becomes vestigial for these three habits — no manual un-check path exists. Code stays for defensive use by future programmatic toggle paths and other auto-verify habits.
+
+**Per-habit system-managed copy:** `systemManagedHtmlFor(habit)` returns three-paragraph HTML keyed on `habit.name` — different middle paragraph per habit (Daily walk, Sleep, Sleep before midnight), shared lead and tail. Voice: tough-love, declarative, anchored in the data ("the body keeps the score" / "the data shows you walked"). Edit copy in this helper, not in `index.html`.
 
 **Visual signal on the card:**
 - `.habit-cb--readonly` modifier on the check circle (dashed border, `opacity: 0.72`)
 - Small 🔒 glyph anchored top-right of the check circle (`.habit-cb-lock`)
+- Habit name dimmed (system-managed treatment)
 - AUTO pill still renders when auto-verified — both coexist
 
-**Implementation pattern (extending to a future binary auto-verify habit):**
-1. Add the habit name to `isReadOnlyAutoVerifyHabit()`'s gate
-2. The buildItem render path already branches on `isReadOnlyAutoVerifyHabit(habit)` — adds the lock + dashed border + system-managed title
-3. The click handler at `buildItem`'s `li.addEventListener('click', ...)` already routes through `openNoteModal(habit.id)` when read-only
-4. The `#vn-system-section` markup in index.html is shown via `refreshHealthPanel`'s sibling logic in `openNoteModal` — `sysEl.classList.toggle('hidden', !isReadOnlyAutoVerifyHabit(habit))`
+**Auto-verify-first sort.** v2.0 also pins these three habits to the top of the Habits tab via `sortHabitsAutoVerifyFirst()` — called inside `save()` so the invariant always holds in storage, plus once at init() for the one-time migration of existing v1.x users. Drag-to-reorder still works within each partition (auto-verify amongst themselves, custom amongst themselves), but a non-auto-verify habit dragged above the partition snaps back on next render. Visible UX feedback that the rule exists.
 
-If a future binary habit needs different system-message copy, swap `#vn-system-section` for a switch on `habit.name` inside `openNoteModal`.
+**Implementation pattern (extending to a future read-only habit):**
+1. Add the habit name to `isReadOnlyAutoVerifyHabit()`'s gate
+2. Add a `case 'Habit Name':` branch in `systemManagedHtmlFor()` with the per-habit message
+3. If the habit is HealthKit-auto-verifiable, add it to `isHealthAutoVerifiableHabit()` chain so `sortHabitsAutoVerifyFirst()` pins it to the top
+4. The buildItem render path + click handler already branch on `isReadOnlyAutoVerifyHabit` — no new wiring needed
 
 ---
 
@@ -568,6 +577,308 @@ Data sources:
 Written by `dismissDailyInsight()` AFTER the sheet hides — if the app is force-killed mid-show, the next launch re-attempts (intentional resilience).
 
 A previous Phase 1 design used `hb_recent_featured_habits` for a featured-habit-of-the-day rotation. That design was cut on the pivot to tactical-briefing layout; the key never persisted to any device.
+
+---
+
+## Dungeon bosses (v2.0+)
+
+Foundation system shipped in v2.0; second boss landed in v2.0.1. Visual + state foundation for the eventual drop / loot / card / inventory layer. Kill-detection plumbing only — no rewards yet. A separate `BOSSES.md` design doc covers the full v2.x roadmap; this section is the implementation surface.
+
+**Design inversion vs habits:** habits run on user agency — user picks them, user maintains them. Bosses run on system agency — they're passive background progress fed by Apple Health data. The user's only interaction is reading the Quests tab to see streak progress + kill count. No tap-to-complete, no goal config, no opt-out. (Settings → Apple Health pause does NOT affect boss progression — see point below.)
+
+### Where they live
+
+`#quests-panel` (the Dungeon tab — `tab-quests`, dungeon-portal icon). v2.0.2 introduced gate-based UX:
+
+**Default state** (`#quests-gate-view` visible):
+1. `.bosses-section-label` — "DUNGEON BOSSES" header
+2. `#quests-gate-grid` — 3-col × 2-row grid of `.gate-cell` buttons (v2.0.1). Six cells, one per rank tier, each with `data-gate-rank` attribute and a lock-overlay sub-element (lock icon + "Reach X rank" label). The **`.gate-cell--locked` class is stamped at render time** by `renderQuestsPanel()` based on `isGateUnlocked(rankId)` — markup stays static, all locking decisions live in one place. Locked cells dim the gate art via `filter: brightness(0.45) saturate(0.7)` and reveal the lock overlay. Tap on locked → toast `"Reach X rank to unlock"`. Tap on unlocked → set `currentDungeonRank` and expand. Per-rank dungeon header/flavor copy lives in `DUNGEON_FLAVOR` (in `app.js`).
+3. `#quests-more-placeholder` — "MORE QUESTS — Coming in Version 2.0" teaser
+
+**Expanded state** (`#quests-dungeon-view` visible, gate hidden):
+1. `#quests-dungeon-back` — "← Exit Dungeon" link (purple text-button)
+2. `.dungeon-header` ("E-RANK DUNGEON" gold serif) + `.dungeon-flavor` (italic)
+3. `#bosses-list` — boss cards rendered by `renderBossesPanel()`
+4. (More-quests placeholder hidden — dungeon view is self-contained)
+
+**State management:** closure-scoped `questsGateExpanded` boolean. Default `false`. Gate tap → `true`. Back tap → `false`. **Tab re-entry resets to `false`** (every Quests-tab activation re-greets the user with the gate — gates should feel like an intentional threshold, not a stale-state continuation). State is NOT persisted across app launches.
+
+**Render flow:** `renderQuestsPanel()` is the single entry point — branches on `questsGateExpanded`, swaps `.hidden` on `#quests-gate-view` / `#quests-dungeon-view` / `#quests-more-placeholder`, and lazily calls `renderBossesPanel()` only when expanded. `setupQuestsGate()` wires the gate-button + back-button click handlers in `init()`.
+
+**Why `#bosses-list` element ID was preserved:** the delegated click handler in `setupBossesPanel` queries by ID and listens for `.bcard[data-boss]` taps. Keeping the ID stable means tap-to-detail wiring stays unchanged inside the dungeon view.
+
+The Daily Legendary Mission card was removed in v2.0.1 along with the entire Daily Quest system — see "Removed systems" section.
+
+### Boss card visual (CARDS.md spec)
+
+Each card in `#bosses-list` is a `<button class="bcard">` with 6 stacked regions per CARDS.md: header (rank pill + name in Cinzel gold) → art window (`assets/bosses/<id>.png` via `object-fit: cover`) → stat strip (STAT · CADENCE) → flavor (italic gray-purple) → kill condition → progress (dots + "X / Y nights" + kill count). Outer border is a 2px linear-gradient (#5b21b6 → #f59e0b at 135°). Aspect ratio is **5/7 portrait**; cards render in a 2-col grid (`.bosses-list--cards`).
+
+Builder: `buildBossCardHTML(id)`. State variants compose:
+- `.bcard--active` — `state.streak > 0`. Soft purple-gold pulse via `@keyframes bcard-active-pulse` (2.4s ease-in-out infinite). Box-shadow is overridden during `:hover` — pulse pauses while hovering, resumes on un-hover (cosmetic; flagged but not fixed).
+- `.bcard--defeated` — `state.kill_count > 0`. Border gradient flips to gold→amber + gold trophy 🏆 corner overlay (`.bcard-corner-trophy`) + trophy prefix on the kill-count line.
+- `.bcard--burned` — Carouser's `state.weekend_burned === true`. Saturate(0.5) brightness(0.85) + horizontal "Weekend forfeit — opens Friday" banner across the card middle.
+
+States stack — defeated AND active both apply.
+
+Header note: glyph (🌙/👑) was removed in late v2.0.1 — rank pill is absolute-anchored top-left of the header strip; boss name centers in the strip's full width with 32px symmetric horizontal padding. The `glyph` field on `BOSSES[id]` is gone.
+
+### Boss detail full-screen modal
+
+`#boss-fs-overlay` (a `position: fixed` full-viewport panel, `z-index: 200`) replaces the v1.1.7 `.vn-sheet` bottom-sheet entirely. Opens via `openBossFullScreen(id)` from any `.bcard` tap. Closes via the back button (`#bfs-back`), ESC keydown, or any tab switch (`switchTab` calls `closeBossFullScreen()` at the top so the modal never lingers across tabs).
+
+Layout top-to-bottom: sticky header (Back link + rank pill) → square hero art (`max-width: 520px`, 1:1 with bottom gradient fade into bg) → boss name (Cinzel 2rem gold) + small `[X]-RANK BOSS` label → long flavor (italic gray-purple) → 4-cell stats grid (RANK / STAT DOMAIN / CADENCE / DEFEATED) → KILL CONDITION section (long version) → CURRENT PROGRESS (14px dots + "X / Y nights" + Carouser's burned banner conditional) → DROPS placeholder section (deferred until drops system ships).
+
+Background scroll-lock via `body.bfs-locked { overflow: hidden; }` while the modal is open. CSS lives in the `.bfs-*` block at the bottom of `styles.css`.
+
+### Data model
+
+```
+hb_bosses    { bossId: { streak, kill_count, last_eval_date, ...bossSpecificFields } }
+```
+
+Roster lives in the `BOSSES` constant (top of `app.js`). Each entry has core fields (`id`, `name`, `rank`, `flavorShort`, `flavorLong`, `killCondShort`, `killCondLong`, `streakTarget`, `sleepHours`) plus per-boss extras (`cadence`, `statDomain`, `dayOfWeekScoped`, etc.). v2.0.1 has two entries: `the_insomniac`, `the_carouser`.
+
+State helpers: `loadBosses()`, `saveBosses(state)`, `getBossState(id)` (defaults to `{ streak: 0, kill_count: 0, last_eval_date: null }` if unset), `setBossState(id, state)`. Per-boss state extensions (Carouser's `current_weekend_id`, `weekend_burned`) are filled in by per-boss getters like `getCarouserState()` so callers always see a fully-populated shape.
+
+### The Insomniac — kill detection
+
+| Field | Value |
+|---|---|
+| Rank | E |
+| Stat domain | VIT |
+| Cadence | daily |
+| Kill condition | Sleep ≥ 7 hours, 2 nights in a row (recalibrated from 3 — E-rank entry-tier should welcome, not gatekeep) |
+| Evaluator | `evaluateInsomniacForNight(sleepHours, nightDate)` |
+| Trigger | Called from `autoVerifySleep()` after `Health.getSleepLastNight()` returns data |
+| Idempotency | Short-circuits if `state.last_eval_date === nightDate` |
+| `nightDate` | `getDeviceLocalDate()` — the morning the user is in (the morning that follows the night being evaluated) |
+| Kill effect | `kill_count += 1`, `streak = 0`, `showHabitToast('The Insomniac defeated.')`, re-render Quests tab if visible |
+| Sub-threshold night | `streak = 0`, record `last_eval_date` to prevent double-processing |
+
+### The Carouser — kill detection (v2.0.1)
+
+Weekend-only boss. Mirrors the Insomniac's plumbing but adds weekend-window scoping.
+
+| Field | Value |
+|---|---|
+| Rank | E |
+| Stat domain | WILL |
+| Cadence | weekly |
+| Day-of-week scoped | true (only Fri + Sat nights count — recalibrated from Fri/Sat/Sun, Sunday-night eval dropped) |
+| Kill condition | Sleep ≥ 7 hours AND bedtime before midnight, on Fri + Sat nights of the same weekend |
+| Evaluator | `evaluateCarouserForNight(sleepHours, bedtimeBeforeMidnight, nightDate)` |
+| Trigger | Same as Insomniac — `autoVerifySleep()` after sleep data |
+| Idempotency | Short-circuits if `state.last_eval_date === nightDate` |
+| Weekend anchor | `state.current_weekend_id = getMostRecentFridayDate()` ('YYYY-MM-DD' Friday). Both qualifying nights (Fri + Sat) map to the same Friday. |
+| Failed night | Sets `state.weekend_burned = true`. Subsequent nights this weekend skip eval — record date but don't increment. The streak is dead until next Friday. |
+| Init-time reset | `checkMissedWeekendForCarouser()` clears stale streak when `current_weekend_id !== getMostRecentFridayDate()` (a new weekend has begun and last weekend's progress is no longer current). kill_count is preserved. |
+
+**Night-classification logic:** the user opens the app on the morning AFTER the night being evaluated. Sat morning → Fri night; Sun morning → Sat night. The evaluator computes `todayDow = new Date(nightDate + 'T00:00:00').getDay()` and only proceeds if `todayDow ∈ {6, 0}`. Other days return early — including Mon morning (dow=1, would have been Sunday-night eval), which was dropped in the 2-night recalibration. Sunday sleep data is irrelevant for the Carouser now.
+
+**Why a separate `weekend_burned` flag instead of just `streak === 0`:** a fail on Fri → streak=0, then Sat passes → streak=1 would be wrong (the kill window is 3 consecutive nights, missing Fri kills the whole weekend). The flag preserves the dead-state across same-weekend re-evals; it's only cleared when a new weekend rolls in.
+
+### Bedtime detection — shared helper
+
+Both the Carouser and the Sleep-before-midnight habit auto-verify use the same `getBedtimeSamplesInWindow(samples)` helper (defined near the sleep constants, ~line 81). It returns asleep samples whose start falls in `[20:00, 24:00)` device-local on the prior day, sorted ascending. Callers use `length > 0` (boolean: bedtime before midnight) or `[0].start` (earliest onset). Single source of truth — a future tightening (e.g., before-11-PM variant) applies to both consumers without drift.
+
+In `autoVerifySleep`, the bedtime boolean is computed ONCE before the pause-toggle gate so both bosses + habit auto-verify + the leaderboard can consume it. Order: bedtime boolean → Insomniac eval → Carouser eval → Leaderboard sleep record → habit-auto-verify gates.
+
+### Independence from habit auto-verify
+
+Boss eval runs in `autoVerifySleep()` BEFORE the `isAutoVerifyDisabled()` and `!sleep && !bedtime` early returns. So:
+
+- A user who has neither Sleep habit in their list still gets boss progression (data is there, eval runs anyway)
+- A user who paused habit auto-verify in Settings → Apple Health still gets boss progression — the pause toggle is scoped to habit auto-verify only; bosses + leaderboard are passive background progress
+
+The single `Health.getSleepLastNight()` call is shared across all consumers. Cached for 5 min to avoid hammering HealthKit.
+
+### Missed-period detection (init only)
+
+- `checkMissedNightForInsomniac()` — if `last_eval_date` is older than yesterday, streak resets and `last_eval_date` is set to yesterday so tonight's eval can still proceed.
+- `checkMissedWeekendForCarouser()` — if `current_weekend_id !== getMostRecentFridayDate()`, last weekend's progress is stale → reset streak/burned/current_weekend_id. kill_count is preserved.
+
+**First-install handling:** `last_eval_date === null` (or `current_weekend_id === null` for Carouser) → no reset. First qualifying eval initializes the streak. No backfill from HealthKit history.
+
+**Why init-only, not visibilitychange:** users foreground the app multiple times per day. Visibility-change firing this would mis-reset on a second foreground after midnight crossed. Init's once-per-launch cadence is the right place.
+
+### Window dev exposure
+
+```js
+window.Bosses = {
+  BOSSES,
+  getBossState,
+  evaluateInsomniacForNight, checkMissedNightForInsomniac,
+  evaluateCarouserForNight,  checkMissedWeekendForCarouser,
+};
+```
+
+Use in browser console for testing:
+
+```js
+// Force-trip the Insomniac eval for today:
+Bosses.evaluateInsomniacForNight(7.5, '2026-05-09');
+Bosses.getBossState('the_insomniac');
+
+// Force-trip the Carouser for Sat morning (Fri night):
+Bosses.evaluateCarouserForNight(7.5, true, '2026-05-09');
+Bosses.getBossState('the_carouser');
+```
+
+### Adding a new boss (future)
+
+1. Add an entry to `BOSSES` constant with id/name/rank/flavor/killCond/threshold fields. Add `cadence` and `statDomain` for consistency with v2.0.1 entries; add `dayOfWeekScoped` if the kill window is restricted.
+2. Write a per-boss evaluator (e.g., `evaluateSteelWolfForDay(...)`)
+3. If the boss has extra state fields beyond `{streak, kill_count, last_eval_date}`, add a `getXxxState()` helper that backfills the new fields with defaults — callers should never see undefined.
+4. Call the evaluator from the appropriate `autoVerifyX` hook (depends on what data drives the kill condition — steps, workout type, etc.)
+5. If the boss has a missed-period reset rule, add it to a `checkMissedXForY` helper called from init()
+6. Update the `window.Bosses` export with the new functions
+7. `renderBossesPanel()` automatically includes the new boss because it iterates `Object.keys(BOSSES)` — no UI wiring needed unless the kill condition shape diverges
+
+The boss-card markup is generic — name, rank, flavor, kill condition, progress dots (count = `streakTarget`), kill count. Detail modal is also generic — same fields.
+
+---
+
+## Leaderboard (v2.0.1+)
+
+Two-layer system: a silent local data accumulator (live) + a Top-50 ranking sheet UI on the Social tab (live, but with mock entries because there's no backend). The competitive "live rankings" layer ships in a future release; the entire purpose of v2.0.1's foundation is to build historical depth NOW so when rankings go live, returning users have weeks/months of stats already tracked.
+
+### Tracked metrics
+
+Three Apple-Health-verifiable stats — chosen because they cannot be self-reported / gamed, the only honest basis for competitive ranking:
+
+| ID | Display | Source |
+|---|---|---|
+| `steps_7d`        | Steps · last 7 days (rolling sum) + best 7-day peak | HealthKit step samples |
+| `sleep_streak`    | Best run of consecutive nights with sleep ≥ 7 hours | `Health.getSleepLastNight().totalAsleepHours` |
+| `bedtime_streak`  | Best run of consecutive nights with bedtime in `[20:00, 24:00)` device-local on prior day | `getBedtimeSamplesInWindow(samples).length > 0` |
+
+The 7-hour threshold matches the Insomniac kill condition (constant `LB_SLEEP_HOURS_THRESHOLD = 7`). The bedtime window matches the Sleep-before-midnight habit auto-verify (same shared helper).
+
+### Storage shape (`hb_leaderboard`)
+
+```
+{
+  steps_daily:               { 'YYYY-MM-DD': stepCount },     // pruned to 30 days
+  sleep_hours_daily:         { 'YYYY-MM-DD': hours },         // pruned to 30 days
+  bedtime_daily:             { 'YYYY-MM-DD': boolean },       // pruned to 30 days
+  current_sleep_streak:      number,
+  best_sleep_streak:         number,    // all-time peak, preserved across breaks
+  last_sleep_eval_date:      'YYYY-MM-DD' | null,
+  current_bedtime_streak:    number,
+  best_bedtime_streak:       number,    // all-time peak
+  last_bedtime_eval_date:    'YYYY-MM-DD' | null,
+  best_7day_step_total:      number,    // all-time peak rolling-7 sum
+  best_7day_step_window_end: 'YYYY-MM-DD' | null,
+}
+```
+
+`current_*` and `best_*` are tracked separately so a streak break doesn't erase the historical peak. Future "live" leaderboard slots will use `current_*`; "lifetime" slots will use `best_*`.
+
+### Module helpers (in `app.js`)
+
+| Function | Purpose |
+|---|---|
+| `lbRecordStepsToday(steps)` | Overwrites today's step count (HealthKit can backfill upward), recomputes trailing-7-day sum, updates `best_7day_step_total` peak. |
+| `lbRecordSleepNight(sleepHours, bedtimeBeforeMidnight, nightDate)` | Both metrics in one call (single HealthKit roundtrip). Idempotent on `nightDate`. Gap detection — skipped night = streak break before tonight's eval. |
+| `lbGetSnapshot()` | Read-only summary for UI/console. Computes the live trailing-7-day step sum on demand. |
+| `lbPrevDate(dateStr)`, `lbPruneDailyMap(map, days)` | Internal date/map utilities. |
+
+### Hook points
+
+- `autoVerifyWalk` — restructured in v2.0.1 so that the steps fetch happens BEFORE habit-auto-verify gates. Order: availability/permission check → fetch steps → `lbRecordStepsToday(steps)` (passive, ignores pause toggle and habit presence) → habit gates → habit auto-verify.
+- `autoVerifySleep` — `lbRecordSleepNight(...)` runs alongside the boss evaluators, after the bedtime boolean is computed and before the habit-auto-verify gate.
+
+Both calls are wrapped in try/catch — a leaderboard bug must not break habit auto-verify.
+
+### Independence rules
+
+Same as bosses. Leaderboard accumulation IGNORES `isAutoVerifyDisabled()` and habit presence. The Settings → Apple Health pause toggle is scoped to habit auto-verify only — bosses and leaderboard are passive background progress. If we want a privacy-style master kill switch later, it should be a SEPARATE toggle, not the existing pause.
+
+### Social tab UI
+
+Lives at `#social-panel`. Entire panel re-rendered by `renderLeaderboardPreview()` when the user switches to the Social tab. Three cards: icon-led, clickable, opening a Top-50 ranking sheet on tap.
+
+**Card layout** (`.lb-stat-card`):
+- 48×48 icon-wrap on left (purple-tinted square): `icon-walk.png` (steps), `icon-sleep.png` (7+h sleep), 🌙 emoji glyph (bedtime — uses `.lb-stat-icon-glyph` since there's no dedicated PNG and visual differentiation matters)
+- Center: large value + small unit suffix + meta line ("Best: N")
+- Chevron `›` on right (signals tappable)
+
+**Empty-state header** (`.lb-preview-empty`, sits ABOVE the cards):
+- Web/non-iOS → "Preview only" note explaining stats populate from Apple Health on the iOS app. Cards still render with zero values for layout visibility (per user request — they want to see the layout in their browser).
+- iOS without permission → "Apple Health not connected" actionable copy.
+- iOS granted → empty state hidden, cards only.
+
+**Ranking sheet** (`#lb-rank-sheet`, `.vn-sheet` shell):
+- Opens via `openLeaderboardRanking(metric)`
+- Top-10 mock entries (`.lb-rank-row--mock`, blurred via `filter: blur(3.5px)`) with deterministic names from `LB_MOCK_NAMES` and seed peak values from `LB_METRIC_META[metric].mockTop`
+- User's own row (`.lb-rank-row--user`, gold-accented) below the mocks with their actual best/current value and "rank pending — live rankings open in a future update" note
+- Footer card: "🔒 Live rankings open in a future update. Stats tracked now carry over."
+- Same dismiss gestures as boss-detail (tap overlay, ✕, swipe down)
+
+**Per-metric content** (`LB_METRIC_META`):
+
+```js
+{
+  steps_7d:       { title, blurb, unit, formatValue, mockTop, userValueFn, userValueLabel },
+  sleep_streak:   { ... },
+  bedtime_streak: { ... },
+}
+```
+
+`userValueFn(snap)` decides whether to show `best_*` (preferred when set) or `current_*`. Mock peak values are believable competitive numbers (e.g., 142,000 steps for the top-7-day, 184 nights for top sleep streak).
+
+### Window dev exposure
+
+```js
+window.Leaderboard = {
+  getSnapshot:      lbGetSnapshot,
+  recordStepsToday: lbRecordStepsToday,
+  recordSleepNight: lbRecordSleepNight,
+  _state:           loadLeaderboardState, // dev-only: full raw state
+};
+```
+
+Console testing on web (where HealthKit doesn't fire):
+
+```js
+Leaderboard.recordStepsToday(8500)
+Leaderboard.recordSleepNight(7.5, true, '2026-05-08')
+// Switch to Social tab to see the cards refresh.
+Leaderboard.getSnapshot()
+```
+
+### When the live ranking layer ships (future)
+
+1. Add a network client that batches `lbGetSnapshot()` output to the backend on app open / visibility change. Privacy: only transmit the explicit-opt-in subset.
+2. Replace `LB_MOCK_NAMES` + `LB_METRIC_META[].mockTop` consumption in `openLeaderboardRanking` with real ranked data fetched from the backend.
+3. Drop the `.lb-rank-row--mock` blur and the "rank pending" note.
+4. Keep the user-row design as-is — it already highlights cleanly.
+
+The data model + UI surface don't change; only the data source flips from mocks to network.
+
+---
+
+## Removed systems
+
+### Daily Quest / Legendary Mission (removed v2.0.1)
+
+The Daily Legendary Mission system was removed in v2.0.1 to simplify the Quests tab around the dungeon-boss focus. Removed in entirety:
+
+- `LEGENDARY_MISSIONS` array (30 multi-component daily challenges)
+- `total_missions_complete` PR card
+- 4 quest-tier achievements (`quest_first/10/50/100`) and the `quests` ACH_CATEGORIES entry
+- `dailyQuests`, `questHistory` state vars
+- `getOrPickTodayMission`, `isMissionComponentDone`, `isMissionComponentTappable`, `toggleMissionComponent`, `isMissionComplete`, `onMissionProgress` functions
+- `renderDailyMissionCard`, `setupDailyMissionCard`, `playMissionFanfare`, `showMissionCompleteScreen` functions
+- `'mission'` branch in `drainLevelUpQueue` (`else if` chain stitched back together)
+- All `renderDailyMissionCard()` call sites and `setupDailyMissionCard()` from init
+- `#daily-mission-card` and `#mission-complete-screen` markup in `index.html`
+
+**Preserved (intentionally NOT deleted):**
+- `hb_daily_quests` and `hb_quest_history` localStorage keys — left in place on existing devices but no longer read/written. Matches the project pattern with `hb_notes` (orphaned but preserved). A future revival is non-destructive.
+- CSS classes `.daily-mission-card`, `.dmc-*`, `.mc-*` in `styles.css` — unused but harmless. Optional follow-up cleanup.
+
+If reviving (don't, per user direction — "I want to get rid of daily quest unfortunately"), the localStorage data would still load but the rendering layer is gone.
 
 ---
 
@@ -693,9 +1004,9 @@ Bottom nav — **symbol-only, custom DALL-E PNG icons**, purple-glow active stat
 | Habits  | `tab-habits.png`                  | `main-scroll`    | The daily list |
 | Stats   | `tab-stats.png`                   | `stats-panel`    | Radar + 6 tile cards + Next Stat Bonus |
 | History | `tab-history.png`                 | `history-panel`  | 7-col grid, no emojis on rows |
-| Quests  | `tab-dungeon.png`                 | `quests-panel`   | **Daily Quest lives here** + "MORE QUESTS — Coming in v2.0" placeholder |
+| Quests  | `tab-dungeon.png`                 | `quests-panel`   | **Dungeon Bosses list (v2.0+)** + "MORE QUESTS — Coming in v2.0" placeholder. The Daily Quest card was removed in v2.0.1 — see "Removed systems". |
 | Items   | `tab-items.png`                   | `items-panel`    | Coming-soon placeholder |
-| Social  | `tab-social.png`                  | `social-panel`   | Coming-soon placeholder |
+| Social  | `tab-social.png`                  | `social-panel`   | **Leaderboard preview (v2.0.1)** — three icon-led stat cards (steps · 7-day, 7+hr sleep streak, before-midnight bedtime streak), each tapping opens the Top-50 ranking sheet. See "Leaderboard" section. |
 
 Tab icons are referenced by file path inside `<img class="tab-icon">` tags. Active state adds a purple drop-shadow + 1.06× scale. Inactive icons sit at 0.55 opacity. **Don't add `<span class="tab-label">`** — symbol-only is the design.
 
@@ -741,7 +1052,25 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `isHealthAutoVerifiableHabit(habit)` | OR of the three above. Use this in `meetsMinimum()` and similar generic gates. |
 | `isAutoVerifyDisabled()` / `setAutoVerifyDisabled(bool)` | Reads/writes the global Settings → Apple Health pause toggle. |
 | `canAutoVerify(habit)` | Composite gate combining `isHealthAutoVerifiableHabit` + `Health.isAvailable()` + `permissionStatus === 'granted'` + `!isAutoVerifyDisabled()`. Returns true only when auto-verify will live-fire for this habit right now. Used by Daily Insight's status line + verify-tag rendering. |
-| `isReadOnlyAutoVerifyHabit(habit)` | True only for the canonical `Sleep before midnight` habit. Tap routes to `openNoteModal` instead of `toggleHabit`; card renders with lock indicator. See HealthKit integration → "Read-only auto-verify habits". |
+| `isReadOnlyAutoVerifyHabit(habit)` | **v2.0:** true for canonical `Daily walk`, `Sleep`, `Sleep before midnight`. Tap routes to `openNoteModal` instead of `toggleHabit`; card renders with lock indicator. See HealthKit integration → "Read-only auto-verify habits". |
+| `systemManagedHtmlFor(habit)` | Returns three-paragraph HTML for the SYSTEM-MANAGED Notes-modal section, keyed on habit name. Edit per-habit copy here, not in `index.html`. |
+| `isCanonicalHabit(habit)` | True if `habit.name` matches a `DEFAULT_HABITS` entry AND `!habit.custom`. Used by the Edit Habit modal to lock name + emoji + difficulty for canonical habits (their names are foreign keys for `HABIT_ICONS`, `AUTO_VERIFY`, `HABIT_TIME_OF_DAY`, etc.). |
+| `sortHabitsAutoVerifyFirst(arr)` | Stable in-place partition: `isHealthAutoVerifiableHabit` habits to front, rest preserves relative order. Called inside `save()` (invariant always holds in storage) + once at init() for the v2.0 migration. Drag-to-reorder snaps back on next render if user drops a non-auto-verify habit above the partition. |
+| `BOSSES` (object) | v2.0+ dungeon boss roster. Keyed by boss id. As of v2.0.1: `the_insomniac`, `the_carouser`. See "Dungeon bosses" section. |
+| `evaluateInsomniacForNight(hours, nightDate)` | Boss kill-detection. Idempotent on `nightDate`. Increments streak / triggers kill / persists state via `setBossState`. |
+| `checkMissedNightForInsomniac()` | Init-only missed-night reset. Resets streak if `last_eval_date` is older than yesterday. No-op on first install (null `last_eval_date`). |
+| `evaluateCarouserForNight(hours, bedtimeBeforeMidnight, nightDate)` | v2.0.1 Carouser kill-detection. Weekend-night-only (Sat + Sun mornings; Mon morning dropped in the 2-night recalibration). Idempotent on `nightDate`. Anchors `current_weekend_id` to `getMostRecentFridayDate()`. |
+| `buildBossCardHTML(id)` | Renders a single CARDS.md-spec boss card. 5/7 portrait, 6 regions, state classes (`.bcard--active`, `.bcard--defeated`, `.bcard--burned`) composed from `getBossState(id)`. Used by `renderBossesPanel`. |
+| `openBossFullScreen(id)` / `closeBossFullScreen()` | Opens/closes the full-screen `#boss-fs-overlay` with hero art, long flavor, stats grid, kill condition, current progress, drops placeholder. ESC + any tab switch closes. Locks `body` scroll while open via `.bfs-locked`. |
+| `checkMissedWeekendForCarouser()` | Init-only missed-weekend reset. Clears stale streak when stored `current_weekend_id !== getMostRecentFridayDate()`. kill_count preserved. |
+| `getMostRecentFridayDate()` | Most-recent Friday's date in device-local 'YYYY-MM-DD'. If today IS Friday, returns today. Used as the Carouser's weekendId anchor — Fri + Sat nights both map to the same Friday. |
+| `getBedtimeSamplesInWindow(samples)` | Single source of truth for the strict bedtime window. Filters HealthKit sleep samples to qualifying asleep entries (≥30 min) whose start falls in `[20:00, 24:00)` device-local on the prior day. Returns sorted-by-start array. Consumed by Path B (Sleep before midnight habit auto-verify), the Carouser evaluator, and the Leaderboard. |
+| `lbRecordStepsToday(steps)` | v2.0.1 Leaderboard accumulator. Stores today's step count, recomputes trailing-7-day sum, updates `best_7day_step_total` peak. Called from `autoVerifyWalk` after the steps fetch — passive, ignores pause toggle and habit presence. |
+| `lbRecordSleepNight(sleepHours, bedtimeBeforeMidnight, nightDate)` | v2.0.1. Records both metrics from a single HealthKit roundtrip. Idempotent on `nightDate`. Gap detection — skipped night = streak break. Called from `autoVerifySleep` alongside boss evals. |
+| `lbGetSnapshot()` | Read-only summary for UI/console: `{ steps_last_7_days, best_7day_step_total, current_sleep_streak, best_sleep_streak, current_bedtime_streak, best_bedtime_streak, ... }`. |
+| `renderLeaderboardPreview()` | Renders the three icon-led cards on the Social tab. Called from `switchTab` when `tab === 'social'`. Empty-state above the cards adapts to web/no-permission/granted. |
+| `openLeaderboardRanking(metric)` | Opens the Top-50 ranking sheet for `'steps_7d' \| 'sleep_streak' \| 'bedtime_streak'`. Renders blurred mock entries from `LB_METRIC_META[metric].mockTop` + the user's actual best/current value highlighted gold. |
+| `getDeviceLocalDate()` / `getDeviceLocalYesterday()` | `'YYYY-MM-DD'` strings in device-local timezone. Used by features whose semantics are "the user's calendar day" — sleep, notifications, Daily Insight, boss state. NOT PT-anchored. |
 | `getDeviceLocalDate()` | `'YYYY-MM-DD'` in the device's local timezone. Used by features whose semantics are "the user's current calendar day" (notifications, sleep windows, Daily Insight) — NOT PT-anchored. Sleep window currently inlines its own equivalent; flagged for future cleanup. |
 | `getDaysSinceOrigin()` | Calendar-day count from `originBeginning.dateISO` to today (device-local). Returns 1 on the user's first day, 2 next day, etc. Returns null if no origin record. Drives the "DAY 11" portion of the Daily Insight header. |
 | `getHabitTimeOfDay(habit)` | Reads `HABIT_TIME_OF_DAY` map; returns `'morning'` / `'day'` / `'evening'`. Custom habits + unmapped canonicals default to `'day'`. Used by Daily Insight slate grouping. |
@@ -776,7 +1105,6 @@ Prefix `hb_` for almost everything:
 | `hb_sound`             | `'on' \| 'off'` | Sound toggle |
 | `hb_whats_new_seen`    | version string (e.g., `'1.1.0'`) | |
 | `hb_friday_banner_<date>` | `'1'` | Per-Friday banner-seen flag |
-| `hb_daily_quests`      | `{ 'YYYY-MM-DD': { id, manualDone[], bonusAwarded } }` | Daily Quest state per day |
 | `hb_reminders`         | `{ habitId: 'HH:MM' }` | Per-habit notification time |
 | `hb_notif_perm_requested` | `'1'` | First-time explainer-shown flag |
 | `hb_notif_disabled`    | `'1'` | Master "Disable all reminders" toggle |
@@ -802,6 +1130,10 @@ Prefix `hb_` for almost everything:
 | `hb_av_unchecked_dates` | `{ habitName: ['YYYY-MM-DD', ...] }` | v1.1.5. Per-habit "user explicitly un-checked an auto-verified completion" tracking. Auto-pruned to 14 days per habit. Migrated from legacy `hb_walk_unchecked_dates` flat array. |
 | `hb_daily_insight_last_shown` | `'YYYY-MM-DD'` (device-local) | v1.1.5. Last calendar day the Daily Insight / Morning Briefing card was dismissed. Gates re-show — card fires once per device-local calendar day. Written by `dismissDailyInsight()` AFTER hide so a force-killed mid-show retries on next launch. |
 | `hb_bedtime_window_fix_v1` | `'1'` | v1.1.5. One-time recovery flag for the bedtime false-positive bug. On the first launch of the strict-window build, init() clears today's auto-verified Sleep before midnight check (if present), reverses the +3 XP, and sets this flag. Idempotent. Future bedtime-logic fixes that need similar recovery should use a new flag (`_v2`, etc.) — don't re-purpose this one. |
+| `hb_bosses`            | `{ bossId: { streak, kill_count, last_eval_date, ...perBossExtras } }` | v2.0+. Dungeon boss state. v2.0.1 ships two bosses (`the_insomniac`, `the_carouser`). The Carouser entry adds `current_weekend_id` ('YYYY-MM-DD' Friday-anchor) + `weekend_burned` (bool). `last_eval_date` is 'YYYY-MM-DD' device-local; it prevents double-counting on visibilitychange refires and powers the missed-period reset in init(). See "Dungeon bosses (v2.0+)" section. |
+| `hb_leaderboard`       | `{ steps_daily, sleep_hours_daily, bedtime_daily, current_*_streak, best_*_streak, last_*_eval_date, best_7day_step_total, best_7day_step_window_end }` | v2.0.1. Local accumulator for the future leaderboard layer. Daily maps pruned to 30 days. `current_*` track running streaks; `best_*` preserve all-time peaks across breaks. Independent of `isAutoVerifyDisabled()`. See "Leaderboard (v2.0.1+)" section. |
+| `hb_daily_quests`      | `{ 'YYYY-MM-DD': { id, manualDone[], bonusAwarded } }` | **DEPRECATED v2.0.1.** Daily Quest system removed; this key is no longer read or written but is preserved on existing devices for non-destructive future revival. See "Removed systems". |
+| `hb_quest_history`     | `[{ date, missionId }]` | **DEPRECATED v2.0.1.** Same status as above. |
 
 All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule — **EXCEPT for HealthKit sleep windows + Daily Insight**, which use device-local time (sleep crosses midnight; the morning briefing is meant to mark "the user's morning" wherever they are; same rule as notifications — see CLAUDE.md "Notifications fire in DEVICE-LOCAL time, not PT"). Use `getDeviceLocalDate()` for these features, not `getPTDate()`.
 
@@ -846,7 +1178,7 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['1.1.5']` for the canonical example.
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=169`, `app.js?v=217`, `sw.js v5.78`, `APP_VERSION = '1.1.5'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=185`, `app.js?v=240`, `sw.js v5.103`, `APP_VERSION = '2.0.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -882,7 +1214,7 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 
 **Banner priority.** When multiple banners could show on the Habits tab, only one shows. Order: streak-danger > double-XP-weekend > morning-routine-nudge.
 
-**Daily Quest lives on the Quests tab, NOT the Habits tab.** It was moved in v1.1.2 to keep the Habits view focused. The card auto-renders when the user switches to `tab-quests`. The `MORE QUESTS — Coming in v2.0` placeholder sits below it so the tab still teases the future.
+**Daily Quest is gone (v2.0.1).** Removed entirely. Don't reintroduce — the Quests tab is now boss-only, and the Social tab hosts the leaderboard preview. See "Removed systems" if you need historical context.
 
 **Stat icons.** Render via `statIconHtml(st, opts)` or `setStatIcon(el, st, sizePx)` — never `el.textContent = st.icon` (that puts the emoji back). The `STATS[].icon` emoji is kept as a fallback for when `iconImg` is unavailable.
 
@@ -910,7 +1242,11 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Using PT-anchored time for sleep windows.** Sleep crosses midnight. PT-anchored `getPTDate()` is the rule for streak math, but `Health.getSleepLastNight()` uses **device-local time** for the 18-hour lookback window and the "before midnight" comparison. A user in Tokyo going to bed at 11 PM Tokyo time should get bedtime credit even though their PT-anchored "today" wraps differently. Same rule as notifications. Never "fix" this to use PT.
 - **Loosely scoping the bedtime window for `autoVerifySleepBeforeMidnight`.** The naive check "any qualifying asleep sample.startDate < device-local midnight today" is too permissive — it admits wrong-night carryovers, afternoon naps, and "passed out at 6 PM" exhaustion events. The strict window is `[20:00, 24:00)` device-local on the **prior day** specifically. Sleep before midnight is the read-only system-managed habit; users cannot un-check, so false positives stick and corrode the "system is honest" framing. We shipped the loose version in v1.1.5-pre and had to push the strict-window fix + a recovery migration (`hb_bedtime_window_fix_v1`) before App Store submit. If you ever extend bedtime semantics (e.g., a "Sleep before 11 PM" variant), copy the window-scoping pattern — never the loose comparison.
 - **Treating `'Asleep'` plugin samples as exact sleep stages.** The plugin collapses Apple's full sleep-analysis enum into 2 strings via `(value == inBed) ? "InBed" : "Asleep"`. The `'Asleep'` bucket incorrectly includes `awake` rawValue=2 samples along with the actual asleep stages. Total-asleep computation overcounts by however long mid-night awake periods are — typically <15 min/night. Acceptable v1 error margin; if a user reports inflated sleep numbers we patch upstream or filter via raw HKCategorySample.
-- **Calling `toggleHabit(id, li)` directly on the canonical Sleep before midnight habit.** That habit is read-only — the click handler in `buildItem` routes through `openNoteModal(habit.id)` instead. If you bypass the click handler (e.g., from a custom completion path or a bulk-toggle utility), you'll silently bypass the read-only contract. Always check `isReadOnlyAutoVerifyHabit(habit)` first; if true, do nothing and let auto-verify do its job. Manual completion isn't an option for this one by design.
+- **Calling `toggleHabit(id, li)` directly on canonical Daily walk / Sleep / Sleep before midnight.** v2.0 made all three read-only. The click handler in `buildItem` routes through `openNoteModal(habit.id)` instead. If you bypass the click handler (e.g., from a custom completion path or a bulk-toggle utility), you'll silently bypass the read-only contract. Always check `isReadOnlyAutoVerifyHabit(habit)` first; if true, do nothing and let auto-verify do its job. Manual completion isn't an option for these three by design.
+- **Adding a new HealthKit-auto-verify habit without updating `isHealthAutoVerifiableHabit`.** The auto-verify-first sort (`sortHabitsAutoVerifyFirst`) is called inside `save()` and uses `isHealthAutoVerifiableHabit(habit)` to decide what pins to top. If you add a new auto-verify habit type but only wire its detection logic without adding it to that helper's OR chain, the habit will auto-verify correctly but won't sort to the top of the Habits tab. Cosmetic bug, easy to miss.
+- **Adding boss progression that respects `isAutoVerifyDisabled()`.** Boss eval is intentionally INDEPENDENT of the Settings → Apple Health pause toggle. The pause is scoped to habit auto-verify only; bosses are passive background progress. If you wire a new boss evaluator and gate it on `isAutoVerifyDisabled()`, you've broken the design. Boss evaluators run in `autoVerifySleep` (or whichever auto-verify hook they belong to) BEFORE the `isAutoVerifyDisabled()` early-return. Mirror that placement for new bosses.
+- **Triggering boss missed-period reset from `visibilitychange` instead of init.** Multi-foreground days would mis-reset on every resume after midnight crossed. Missed-night/missed-day checks belong in init() — once per cold launch. The boss state's idempotency (`last_eval_date`) handles repeated visibilitychange refires within the same calendar day.
+- **Editing the SYSTEM-MANAGED message copy in `index.html` instead of `systemManagedHtmlFor`.** The Notes-modal system-managed body is filled dynamically per-habit by `systemManagedHtmlFor(habit)` (in `app.js`). The HTML in `index.html` is just an empty `#vn-system-message` div. Edit copy in the JS helper; the HTML container is generic.
 - **Daily Insight using `getPTDate()` for its day-change check.** The card uses **device-local** time (`getDeviceLocalDate()`), NOT PT. Same rule as notifications and sleep windows. A user in Tokyo opening the app at 6 AM Tokyo time should see today's briefing even though their PT-anchored "today" is yesterday. Don't "fix" this to use PT. Use of PT for the briefing's day-change would also break the visibilitychange retry path for users who travel timezones.
 - **Adding a habit to `HABIT_TIME_OF_DAY` without testing the slate render.** The map only contains `morning` / `evening` exceptions; everything else falls through to `'day'`. If you add a habit and want it grouped under a specific bucket, double-check the spelling matches `DEFAULT_HABITS[].name` exactly (foreign-key match). A typo silently puts the habit in `'day'` — no error, just unexpected grouping. The fallback is intentional but easy to misuse.
 - **Editing `app.js` and forgetting `?v=N`.** Browser will serve the cached old script; you'll think your change is broken when it just hasn't loaded.
@@ -929,10 +1265,21 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Calling `applyStatPts(habitName, ...)`.** The signature changed in v1.1.2 — it now takes the `habit` object so customs route XP via `primaryStat`. Old call-sites that passed `habit.name` will silently no-op for custom habits.
 - **Setting stat icons via `el.textContent = st.icon`.** That reintroduces the emoji. Use `setStatIcon(el, st, sizePx)` or `statIconHtml(st, opts)`.
 - **Reintroducing the old emoji tab nav or adding text labels to tabs.** Both were intentional v1.1.2 design moves. The icons should sit in their cells alone.
-- **Putting the Daily Quest back on the Habits tab.** The user explicitly moved it because it was distracting. The render function bails when `currentTab !== 'quests'` for that reason.
+- **Reviving the Daily Quest system.** It was deliberately killed in v2.0.1 — see "Removed systems". The localStorage keys (`hb_daily_quests`, `hb_quest_history`) are preserved on existing devices but unread. If a future request asks for "daily challenges," prefer the boss model (passive system-managed) — that's the design direction. Only resurrect Daily Quest with explicit user say-so.
 - **Forgetting to bump the SW for asset-only changes.** New PNGs need `CACHE_VERSION` to bump or PWA users keep serving the cached old asset list (which doesn't include the new path).
 - **Mixing the old `drop-target-above/-below` class names.** They're now `drop-target--before/--after` (BEM modifier). The old names exist nowhere in the CSS anymore.
 - **Adding a Sound section to the middle of Settings.** It lives in the header now. Don't recreate `.settings-sound-section`.
+- **Inlining a copy of the bedtime-window logic instead of using `getBedtimeSamplesInWindow`.** The strict `[20:00, 24:00)` device-local prior-day window is the project's authoritative defense against bedtime false positives — see HealthKit integration → "Window justification". v2.0.1 extracted it into a single helper consumed by Path B (Sleep before midnight habit), the Carouser evaluator, and `lbRecordSleepNight`. Inlining a copy means a future tightening (e.g., a before-11-PM variant) will drift between consumers and silently produce inconsistent bedtime decisions. Always extend the helper if you need a new variant.
+- **Gating the Leaderboard or bosses on `isAutoVerifyDisabled()`.** The Settings → Apple Health pause toggle is scoped to HABIT auto-verify only. Bosses + leaderboard are passive background progress and run before that gate. Wiring them into the pause means a user who pauses habit auto-verify silently loses leaderboard history they'd otherwise have. If we ever want a master kill switch for all HealthKit consumption, it must be a SEPARATE toggle.
+- **Using the original `autoVerifyWalk` early-return order.** Pre-v2.0.1, the function bailed on `isAutoVerifyDisabled() / !walk / isChecked / wasUncheckedToday` BEFORE fetching steps. v2.0.1 restructured it: availability + permission → fetch steps → `lbRecordStepsToday(steps)` → THEN habit-auto-verify gates. Reverting to the old order breaks leaderboard accumulation for paused users and for users without the Daily walk habit (a deliberate design — they should still build leaderboard history).
+- **Treating `getMostRecentFridayDate()` as the night-being-evaluated's start date.** It returns the Friday based on TODAY (the morning the user is in). For Sat/Sun mornings, that Friday IS the weekendId anchor for the night just evaluated — Fri + Sat nights both map to the same Friday. Don't add a "minus 1 day" adjustment thinking you need the night-start date; the helper is already aligned to weekendId semantics. (Sunday-night eval, Mon morning dow=1, was dropped in the v2.0.1 2-night recalibration — no longer in scope for the Carouser.)
+- **Removing `weekend_burned` from Carouser state thinking `streak === 0` is enough.** It isn't. After a failed Friday, `streak === 0`, but a passing Saturday would otherwise increment it to 1 — wrong, the kill window requires 3 consecutive nights starting Friday. The flag preserves the dead-state across same-weekend re-evals; only `current_weekend_id` rolling over (next Friday) clears it.
+- **Adding a new HealthKit-backed metric to the Leaderboard without bumping retention or storage.** The 30-day daily map (`steps_daily`, `sleep_hours_daily`, `bedtime_daily`) is fine for trailing-7 sums and current/best streak math. If you add a metric that needs a longer lookback (e.g., "longest 30-day-active streak"), bump `LB_DAILY_RETENTION_DAYS` and review the prune cadence — don't silently widen one consumer while others assume 30.
+- **Replacing the Social-tab mock entries (`LB_MOCK_NAMES` / `LB_METRIC_META[].mockTop`) before the backend ships.** They're deliberately blurred placeholders for visual texture. Until the live ranking layer (network client + backend) lands, real ranking data doesn't exist. Don't display zeros or "Coming soon" alone — the user explicitly wanted the visual treatment of a leaderboard so the Social tab feels worth visiting.
+- **Forgetting that the Social tab works on web.** Per user request, web/non-iOS users should still see the three cards (with zero values) for layout previewing. The empty-state above the cards adapts copy ("Preview only" on web, "Apple Health not connected" on iOS without permission). Don't gate the entire panel behind `Health.isAvailable()` — that was an early-development decision we explicitly reversed.
+- **Reviving `#boss-detail-sheet` or `openBossDetail/closeBossDetail`.** The v1.1.7 `.vn-sheet` bottom-sheet was retired in v2.0.1 when boss cards became tappable to a full-screen modal. The element IDs, function names, and CSS (`.boss-detail-*`) are all gone. The replacement is `#boss-fs-overlay` + `openBossFullScreen(id)` / `closeBossFullScreen()`. If a future detail-modal pattern is needed elsewhere, copy the `.bfs-*` block, don't try to resurrect the bottom-sheet.
+- **Adding a `glyph` field to `BOSSES` entries.** It existed briefly in v2.0.1 development for the boss-card header (🌙 / 👑) and was removed when emojis got cut from the card aesthetic. The card header is now rank-pill-left + name-centered, no third element. If you re-add a glyph, also rebalance `.bcard-header` (currently flex-centered with absolute-positioned pill, no slot for a third element).
+- **Dropping `cfg.streakTarget` reads in favor of hardcoded "3" or "2".** All UI surfaces (card progress dots, "X / Y nights" labels, detail-modal progress) read `streakTarget` from the BOSSES config. Single source of truth. The 3→2 recalibration in v2.0.1 changed only the constant + copy strings — no render code touched. Keep it that way; future rebalances should be a constant edit.
 
 ---
 

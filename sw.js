@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.79';
+const CACHE_VERSION = 'v5.103';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -94,6 +94,20 @@ const PRECACHE_ASSETS = [
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',
+  // Dungeon gates (v2.0.2 → v2.0.5). One gate per rank tier (E, D, C,
+  // B, A, S). E is unlocked by default; D-S render in locked state and
+  // unlock as the user climbs ranks. Future SS-tier gate added when a
+  // boss populates that tier.
+  '/assets/gates/gate-e-rank.png',
+  '/assets/gates/gate-d-rank.png',
+  '/assets/gates/gate-c-rank.png',
+  '/assets/gates/gate-b-rank.png',
+  '/assets/gates/gate-a-rank.png',
+  '/assets/gates/gate-s-rank.png',
+  // Boss illustrations (CARDS.md spec preview). 1254×1254 manhwa
+  // portraits, used inside the new boss-card art window.
+  '/assets/bosses/the-insomniac.png',
+  '/assets/bosses/the-carouser.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────

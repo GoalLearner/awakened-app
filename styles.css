@@ -1105,29 +1105,15 @@ footer {
   color: rgba(255,255,255,0.55);
   margin-bottom: 8px;
 }
-.edit-reminder-empty,
-.edit-reminder-set {
+/* v1.1.6 — read-only display row. Set / Change / Remove happens on
+   the Schedule sheet, not here. Dashed-add-btn / action-btn / hidden
+   <input type="time"> styling removed alongside the broken picker. */
+.edit-reminder-row.hidden { display: none; }
+.edit-reminder-display-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.edit-reminder-set.hidden,
-.edit-reminder-empty.hidden { display: none; }
-.edit-reminder-add-btn {
-  flex: 1;
-  background: rgba(168,85,247,0.10);
-  border: 1px dashed rgba(168,85,247,0.42);
-  color: #c4b5fd;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  -webkit-appearance: none;
-  transition: background 0.15s ease;
-}
-.edit-reminder-add-btn:active { background: rgba(168,85,247,0.18); }
 .edit-reminder-time-icon { font-size: 1.05rem; }
 .edit-reminder-time-display {
   flex: 1;
@@ -1135,25 +1121,6 @@ footer {
   font-weight: 700;
   color: #fbbf24;
 }
-.edit-reminder-time-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 0; height: 0;
-}
-.edit-reminder-action-btn {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.85);
-  padding: 6px 10px;
-  border-radius: 7px;
-  font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  -webkit-appearance: none;
-}
-.edit-reminder-remove-btn { color: #fca5a5; }
 
 /* ── Settings → Reminders ────────────────────────────────── */
 .settings-reminders { margin-top: 18px; }
@@ -2728,9 +2695,36 @@ footer {
 /* Schedule sheet → per-habit reminder section. Sits between the
    day-buttons row and the Cancel/Save action bar. */
 .sched-reminder-section {
-  margin: 18px 0 4px;
+  margin: 0;
   padding: 0 4px;
 }
+
+/* v1.1.6 — generic section labels for the Schedule sheet so the days
+   row reads as "DAYS" (schedule) and the reminder button reads as its
+   own thing. Replaces .sched-reminder-label which was reminder-only. */
+.sched-section-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 4px 8px;
+}
+.sched-section-help {
+  margin: 8px 4px 0;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+  line-height: 1.4;
+}
+.sched-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 18px 0;
+}
+
+/* Legacy .sched-reminder-label retained for any older surface still
+   referencing it; superseded by .sched-section-label in v1.1.6. */
 .sched-reminder-label {
   font-size: 0.62rem;
   font-weight: 800;
@@ -8267,6 +8261,267 @@ footer {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   LEADERBOARD PREVIEW (Social tab) — v2.0.2
+   Renders the user's own Apple Health-verified stats. The competitive
+   leaderboard layer ships later; until then this is the holding space.
+   ═══════════════════════════════════════════════════════════════ */
+.lb-preview {
+  padding: 24px 18px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.lb-preview-header { text-align: center; }
+.lb-preview-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.lb-preview-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+.lb-preview-sub {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0 auto;
+  max-width: 360px;
+}
+
+.lb-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lb-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+}
+.lb-stat-card:hover  { background: var(--bg-card-active); border-color: var(--border-accent); }
+.lb-stat-card:active { transform: scale(0.99); }
+
+.lb-stat-icon-wrap {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139,92,246,0.12);
+  border-radius: 12px;
+  border: 1px solid rgba(139,92,246,0.22);
+}
+.lb-stat-icon-wrap img {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+.lb-stat-icon-glyph {
+  font-size: 1.7rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.35));
+}
+
+.lb-stat-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lb-stat-value {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lb-stat-value-unit {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+.lb-stat-meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.lb-stat-meta b {
+  color: var(--gold);
+  font-weight: 700;
+}
+.lb-stat-chev {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  color: var(--text-tertiary);
+  font-weight: 700;
+  padding-left: 4px;
+}
+
+/* ── Leaderboard ranking sheet (Top 50 preview) ─────────────── */
+.lb-rank-header {
+  position: relative;
+  padding: 18px 20px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.lb-rank-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.lb-rank-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin: 0;
+  padding-right: 36px; /* room for close button */
+}
+#lb-rank-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+.lb-rank-body {
+  padding: 14px 18px 28px;
+  overflow-y: auto;
+  max-height: calc(85vh - 100px);
+}
+.lb-rank-blurb {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+.lb-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lb-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.92rem;
+}
+.lb-rank-row--mock {
+  filter: blur(3.5px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.92;
+}
+.lb-rank-row--user {
+  background: linear-gradient(135deg, rgba(245,158,11,0.16), rgba(245,158,11,0.06));
+  border-color: rgba(245,158,11,0.55);
+  margin-top: 14px;
+}
+.lb-rank-pos {
+  font-weight: 800;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  width: 36px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.lb-rank-row--user .lb-rank-pos {
+  color: var(--gold);
+}
+.lb-rank-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-rank-name-sub {
+  font-style: normal;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  font-size: 0.78rem;
+  margin-left: 4px;
+}
+.lb-rank-value {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.lb-rank-row--user .lb-rank-value {
+  color: var(--gold);
+}
+.lb-rank-row-note {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+}
+.lb-rank-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 18px;
+  padding: 10px;
+  background: rgba(139,92,246,0.08);
+  border-radius: 10px;
+}
+
+.lb-preview-empty {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-accent);
+  border-radius: 14px;
+  padding: 18px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.lb-preview-empty.hidden { display: none; }
+
+.lb-preview-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  padding: 8px 12px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    MORNING ROUTINE PACK — quick-add button + library entry + modal
    ═══════════════════════════════════════════════════════════════ */
 
@@ -9415,6 +9670,31 @@ footer {
   letter-spacing: 0.01em;
   line-height: 1.4;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   EDIT HABIT — locked name + emoji for canonical habits (v1.1.6)
+   When .edit-modal--canonical is on the modal, the name input and
+   emoji button still render, but lose their interactive affordances.
+   Same visual logic as .diff-row--locked: subtle, readable, clearly
+   not editable. Custom habits don't get the class — name + emoji
+   stay fully editable for them.
+   ═══════════════════════════════════════════════════════════════ */
+.edit-modal--canonical #edit-input {
+  cursor: default;
+  border-color: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.18);
+  color: var(--text-primary);
+}
+.edit-modal--canonical #edit-input:focus {
+  border-color: rgba(255,255,255,0.06);
+  outline: none;
+}
+.edit-modal--canonical #edit-emoji-btn {
+  cursor: default;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.edit-modal--canonical .emoji-row-hint.hidden { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    WHAT'S NEW — bottom-sheet announcement of recent updates
@@ -10913,6 +11193,500 @@ footer {
 }
 .daily-mission-card.hidden { display: none !important; }
 
+/* ═══════════════════════════════════════════════════════════════
+   DUNGEON BOSSES — list of bosses in #quests-panel + full-screen
+   detail modal (#boss-fs-overlay). Card visual lives in the .bcard
+   block below; modal styling lives at the bottom of this file.
+   ═══════════════════════════════════════════════════════════════ */
+.bosses-section {
+  margin: 8px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bosses-section-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--text-tertiary);
+  margin-left: 2px;
+}
+
+/* ── Quests-tab gate grid (v2.0.4) ──────────────────────────────
+   3-column × 2-row grid of rank-tier gates (6 cells total — exactly
+   matches the 6 rank tiers E/D/C/B/A/S). Cell 1 is the active E gate;
+   cells 2-6 are dim dashed placeholders. The grid reads as a roadmap
+   of what's coming.
+
+   Why 3×2 vs the previous 2×3: at 3 columns the whole roadmap fits
+   above the fold on every common phone (grid height ≈ 292px, tiny
+   share of even iPhone SE's 492px content budget). 2×3 spilled over
+   on iPhone SE.
+
+   Cell aspect 4:5 matches gate art exactly — `object-fit: cover` on
+   a 4:5 cell with 4:5 source means no cropping, so the gold sigil
+   at top-center and the runes on the doorframe stay visible at this
+   smaller cell size.
+
+   When SS is added (7th tier), grid extends to 3×3 with 2 trailing
+   empty cells (or shifts to 4×2 — pick at the time). */
+.gate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 96%;
+  max-width: 600px;
+  margin: 14px auto 24px;
+}
+
+.gate-cell {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: 10px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gate-cell-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Rank pill scaled for the 3-col grid cell. At max-width 600px, cells
+   reach ~190px wide on wide viewports / ~120px on iPhone SE. 32×32
+   stays readable at large size without overpowering smaller phones
+   (where it occupies ~27% of cell width — tight but legible). Reuses
+   .rank-badge color tokens; overrides size + position only. */
+.gate-cell-rank-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  pointer-events: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.30);
+}
+
+/* All gate cells are buttons (cursor: pointer, focus ring, hover/
+   pressed states). Unlocked cells expand to the dungeon view; locked
+   cells fire a "Reach X rank to unlock" toast. Both interactions
+   wired in renderQuestsPanel + setupQuestsGate via delegation on
+   #quests-gate-grid. */
+.gate-cell {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.gate-cell:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.32);
+}
+.gate-cell:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.55), 0 0 18px rgba(245, 158, 11, 0.32);
+}
+.gate-cell:active {
+  transform: scale(0.98);
+}
+
+/* Locked-state. Dim the gate art so it reads as "you can see the
+   path ahead but it's not yet open." Conservative filter — modest
+   brightness drop + slight desaturation. If a specific rank's art
+   reads poorly at these values (e.g., S-rank cosmic art going too
+   dark), per-rank overrides can be added via [data-gate-rank="S"]
+   selectors without touching the base. */
+.gate-cell--locked .gate-cell-img {
+  filter: brightness(0.45) saturate(0.7);
+}
+.gate-cell--locked:hover {
+  /* Subtler hover for locked cells — still tappable for the toast,
+     but shouldn't feel as inviting as the unlocked gate. */
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.20);
+}
+.gate-cell--locked .gate-cell-rank-pill {
+  /* Dim the pill alongside the art so the rank letter doesn't
+     scream at full saturation against muted gate art. */
+  opacity: 0.65;
+}
+
+/* Lock overlay — center-bottom of the cell, hidden by default.
+   Revealed only when the parent carries .gate-cell--locked. */
+.gate-cell-lock-overlay {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  z-index: 3;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  text-align: center;
+  padding: 0 6px;
+}
+.gate-cell--locked .gate-cell-lock-overlay {
+  display: flex;
+}
+.gate-cell-lock-icon {
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.85));
+}
+.gate-cell-lock-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  text-transform: uppercase;
+}
+
+/* Empty-state copy inside the dungeon view when an unlocked rank
+   has no bosses defined yet (D/C/B/A/S currently — only E has bosses
+   in v2.0.5). Reachable code path activates when boss content lags
+   behind gate availability. */
+.dungeon-empty {
+  text-align: center;
+  font-style: italic;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 28px 14px;
+  margin: 0;
+}
+
+/* ── Dungeon-view (expanded state) ─────────────────────────────
+   Replaces the gate when the user taps in. Back link, gold-serif
+   dungeon header, italic flavor, then the existing boss cards. */
+.dungeon-view {
+  margin: 8px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dungeon-view.hidden { display: none; }
+
+.dungeon-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 6px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dungeon-back:hover  { background: var(--accent-glow); color: var(--text-primary); }
+.dungeon-back:active { transform: scale(0.97); }
+.dungeon-back-chev {
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: 900;
+  margin-right: 2px;
+}
+
+.dungeon-header-block {
+  text-align: center;
+  margin: 4px 0 6px;
+}
+.dungeon-header {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.30));
+}
+.dungeon-flavor {
+  font-style: italic;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin: 0;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   BOSS CARD — CARDS.md spec
+   5:7 portrait. Six stacked regions, percentages from spec:
+     header ~10% · art ~45% · stats ~7% · flavor ~13% · cond ~8% · progress ~17%
+   Outer border: 2px gradient deep-purple → gold (135deg = clockwise
+   from top-left, per CARDS.md). Inner bg: var(--bg) so card "floats"
+   against the parent screen rather than sitting on a contrasting
+   backdrop (CARDS.md "minimal frame" decision).
+
+   Tappable — opens the full-screen detail modal. Card is rendered as
+   <button> for native keyboard handling; padding 0 + display flex
+   keeps it visually identical to the previous div container.
+   ═══════════════════════════════════════════════════════════════ */
+.bosses-list--cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.bcard {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: 6px;
+  /* 2px gradient border via border-image. 135deg ≈ clockwise from
+     top-left for a single linear gradient (the spec language is
+     vibes-based; this hits the intended look). */
+  border: 2px solid transparent;
+  border-image: linear-gradient(135deg, #5b21b6 0%, #f59e0b 100%) 1;
+  overflow: hidden;
+  isolation: isolate; /* keep state-overlay children scoped */
+  /* Button reset — card is a <button> for native a11y. */
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.bcard:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.32);
+}
+.bcard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.55), 0 0 18px rgba(245, 158, 11, 0.32);
+}
+.bcard:active {
+  transform: scale(0.98);
+}
+
+/* ── Region a: Header strip (~10%) ───────────────────────────── */
+.bcard-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Symmetric horizontal padding so the centered name has room for
+     the absolute-positioned rank pill on the left without colliding.
+     32px ≈ pill width (22) + left inset (6) + breathing room. */
+  padding: 6px 32px;
+  min-height: 30px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.10);
+}
+.bcard-rank-pill {
+  /* Pill is absolute-anchored top-left so the name can center freely
+     in the strip's full width. Reuses .rank-badge color tokens;
+     overrides size + position. */
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 10px;
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.25);
+}
+.bcard-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+  text-align: center;
+  /* Truncate per CARDS.md if name overflows. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── Region b: Art window (~45%) ─────────────────────────────── */
+.bcard-art {
+  flex: 0 0 45%;
+  position: relative;
+  overflow: hidden;
+}
+.bcard-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* Atmospheric edges fade into card bg per CARDS.md "subject
+     framing." Source art generated for 1:1; cell is wider than
+     tall so cover crops slightly top/bottom — acceptable. */
+}
+
+/* ── Region c: Stat strip (~7%) ──────────────────────────────── */
+.bcard-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  border-top: 1px solid rgba(245, 158, 11, 0.10);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.10);
+  background: rgba(0, 0, 0, 0.20);
+}
+.bcard-stat-label {
+  color: rgba(167, 139, 250, 0.85); /* gray-purple */
+  font-weight: 700;
+}
+.bcard-stat-value {
+  color: var(--gold);
+  font-weight: 800;
+}
+.bcard-stat-sep {
+  color: rgba(245, 158, 11, 0.30);
+  margin: 0 2px;
+}
+
+/* ── Region d: Flavor (~13%) ─────────────────────────────────── */
+.bcard-flavor {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: #a8a3c4; /* gray-purple per CARDS.md */
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.10);
+}
+
+/* ── Region e: Kill condition (~8%) ──────────────────────────── */
+.bcard-cond {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 6px 8px;
+  border-left: 2px solid rgba(245, 158, 11, 0.30);
+  margin: 0 8px;
+}
+
+/* ── Region f: Progress (~17%) ───────────────────────────────── */
+.bcard-progress {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 8px 8px;
+}
+.bcard-dots {
+  display: flex;
+  gap: 4px;
+}
+.bcard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.20);
+}
+.bcard-dot--filled {
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+  border-color: var(--gold);
+}
+.bcard-progress-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.bcard-kills {
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+/* ── State variants ──────────────────────────────────────────── */
+/* Active: streak > 0. Soft purple-gold pulse on the outer border
+   shadow. Subtle — meant to be peripheral signal, not loud. */
+@keyframes bcard-active-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.30); }
+  50%      { box-shadow: 0 0 14px rgba(245, 158, 11, 0.45); }
+}
+.bcard--active {
+  animation: bcard-active-pulse 2.4s ease-in-out infinite;
+}
+
+/* Defeated: kill_count > 0. Permanent gold tint replaces the gradient
+   border + corner trophy overlay (rendered via .bcard-corner-trophy
+   element when defeated). */
+.bcard--defeated {
+  border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
+}
+.bcard-corner-trophy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 4;
+  font-size: 14px;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.65));
+  pointer-events: none;
+}
+
+/* Burned: Carouser's weekend_burned === true. Desaturated card +
+   forfeit overlay. Other regions still render (so user sees the
+   structure) but read as inert. */
+.bcard--burned {
+  filter: saturate(0.5) brightness(0.85);
+}
+.bcard-burned-overlay {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  right: 6px;
+  z-index: 5;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.78);
+  padding: 8px 6px;
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  pointer-events: none;
+}
+
+
+
 /* Compact toggle row — visual density matches the pack progress rows */
 .dmc-toggle {
   width: 100%;
@@ -11926,4 +12700,242 @@ footer {
   color: var(--gold);
   text-transform: uppercase;
   vertical-align: middle;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOSS FULL-SCREEN DETAIL MODAL
+   Replaces the v1.1.7 bottom-sheet. Opens from any .bcard tap. Lives
+   above all tabs at z-index 200. Background matches app bg so the
+   modal feels like a takeover-screen, not a floating sheet — no
+   dimming scrim per the "full-screen takeover" spec direction.
+   ═══════════════════════════════════════════════════════════════ */
+.bfs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(40px + var(--safe-bottom));
+}
+.bfs-overlay.hidden { display: none !important; }
+
+/* Lock background scroll while the modal is open. Applied to <body>
+   in openBossFullScreen / removed in closeBossFullScreen. */
+body.bfs-locked { overflow: hidden; }
+
+/* ── Header bar — Back link (left), rank pill (right) ────────── */
+.bfs-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(8px + var(--safe-top)) 14px 8px;
+  background: linear-gradient(180deg, var(--bg) 70%, rgba(19, 19, 42, 0));
+}
+.bfs-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px 8px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.bfs-back:hover  { background: var(--accent-glow); color: var(--text-primary); }
+.bfs-back:active { transform: scale(0.97); }
+.bfs-back-chev {
+  font-size: 1.4rem;
+  line-height: 1;
+  font-weight: 900;
+  margin-right: 2px;
+}
+.bfs-rank-pill {
+  /* Reuses .rank-badge — same letter pill as the boss-card header. */
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+/* ── Hero art — square 1:1, full content width with bottom fade ── */
+.bfs-hero {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 1 / 1;
+  margin: 4px auto 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.bfs-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.bfs-hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30%;
+  background: linear-gradient(180deg, rgba(19, 19, 42, 0) 0%, var(--bg) 100%);
+  pointer-events: none;
+}
+
+/* ── Name + rank label ───────────────────────────────────────── */
+.bfs-name-block {
+  text-align: center;
+  margin: 14px auto 4px;
+  max-width: 520px;
+  padding: 0 14px;
+}
+.bfs-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  margin: 0;
+  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.32));
+  text-transform: uppercase;
+}
+.bfs-rank-label {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: rgba(167, 139, 250, 0.85);
+  text-transform: uppercase;
+}
+
+/* ── Long flavor — italic gray-purple, larger than card ──────── */
+.bfs-flavor {
+  max-width: 520px;
+  margin: 14px auto 18px;
+  padding: 0 22px;
+  font-style: italic;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: #a8a3c4;
+  text-align: center;
+}
+
+/* ── Stats grid — 2-col label/value cells ────────────────────── */
+.bfs-stats {
+  max-width: 520px;
+  margin: 0 auto 22px;
+  padding: 0 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.bfs-stat-cell {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(245, 158, 11, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bfs-stat-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(167, 139, 250, 0.85);
+  text-transform: uppercase;
+}
+.bfs-stat-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* ── Sections — kill condition, progress, drops ──────────────── */
+.bfs-section {
+  max-width: 520px;
+  margin: 0 auto 22px;
+  padding: 18px 18px;
+  border-top: 1px solid rgba(245, 158, 11, 0.12);
+}
+.bfs-section-label {
+  margin: 0 0 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.bfs-section-body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+/* Current progress — larger dots than the card. */
+.bfs-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bfs-dots {
+  display: flex;
+  gap: 8px;
+}
+.bfs-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.20);
+}
+.bfs-dot--filled {
+  background: var(--gold);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.55);
+}
+.bfs-progress-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Burned banner — Carouser only when weekend_burned. */
+.bfs-burned-banner {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.bfs-burned-banner.hidden { display: none; }
+
+/* DROPS section — placeholder until drops system ships. */
+.bfs-section--placeholder { opacity: 0.7; }
+.bfs-section-placeholder-note {
+  margin: 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text-tertiary);
 }
