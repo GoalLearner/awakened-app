@@ -160,15 +160,293 @@
   // Returns the per-boss state, defaulting to the initial shape if
   // unset. Always returns a valid object — callers don't need to
   // handle missing-key edge cases.
+  //
+  // v2.0.1 engagement-pivot: every boss state carries `engaged` +
+  // `engaged_at`. Defaults are not-engaged so freshly-discovered
+  // bosses stay dormant until the user explicitly opts in via the
+  // ENGAGE BOSS button on the detail modal.
   function getBossState(id) {
     const all = loadBosses();
-    return all[id] || { streak: 0, kill_count: 0, last_eval_date: null };
+    const base = all[id] || { streak: 0, kill_count: 0, last_eval_date: null };
+    // Backfill engagement fields for older state rows (defensive —
+    // the init migration also sets these, but we want any callsite
+    // to get a consistent shape regardless of migration timing).
+    if (typeof base.engaged !== 'boolean') base.engaged = false;
+    if (typeof base.engaged_at === 'undefined') base.engaged_at = null;
+    return base;
   }
   function setBossState(id, state) {
     const all = loadBosses();
     all[id] = state;
     saveBosses(all);
   }
+
+  // ── ENGAGEMENT MODEL (v2.0.1) ───────────────────────────────
+  // Bosses no longer progress passively. The user must engage a
+  // boss before successful habits count toward its kill condition.
+  // Cap of 3 simultaneous engagements — pulled from the multi-focus
+  // design principle in BOSSES.md (multi-focus, not exclusivity).
+  // Disengaging mid-streak resets the streak; kill_count is sacred.
+  const MAX_ENGAGED_BOSSES = 3;
+  const ENGAGEMENT_MIGRATION_FLAG = 'hb_bosses_engagement_migrated';
+
+  function countEngagedBosses() {
+    const all = loadBosses();
+    let n = 0;
+    for (const id in all) {
+      if (all[id] && all[id].engaged === true) n += 1;
+    }
+    return n;
+  }
+  function isBossEngaged(id) {
+    return getBossState(id).engaged === true;
+  }
+
+  function engageBoss(bossId) {
+    const cfg = BOSSES[bossId];
+    if (!cfg) return false;
+    const state = getBossState(bossId);
+    if (state.engaged === true) return true; // already engaged, no-op
+    // Defense-in-depth: preview-mode bosses (rank not yet unlocked)
+    // can be viewed but not engaged. The detail modal already swaps
+    // ENGAGE BOSS for a static label in this state, but a stray call
+    // (e.g., console-poke) still hits this guard.
+    if (!isGateUnlocked(cfg.rank)) {
+      try {
+        if (typeof showHabitToast === 'function') {
+          showHabitToast('Reach ' + cfg.rank + ' rank to engage ' + cfg.name + '.');
+        }
+      } catch (_) {}
+      return false;
+    }
+    if (countEngagedBosses() >= MAX_ENGAGED_BOSSES) {
+      try {
+        if (typeof showHabitToast === 'function') {
+          showHabitToast('You can only hunt 3 bosses at once. Disengage one first.');
+        }
+      } catch (_) {}
+      return false;
+    }
+    // v2.0.1 Souls economy — engagement is the wager. Cost is rank-
+    // scaled. Refused if the user can't afford; broke-state toast
+    // tells them the exact gap.
+    const cost = engageCostSouls(cfg.rank);
+    const balance = getSoulsBalance();
+    if (balance < cost) {
+      try {
+        if (typeof showHabitToast === 'function') {
+          showHabitToast('Need ' + cost + ' souls. You have ' + balance + '.');
+        }
+      } catch (_) {}
+      return false;
+    }
+    if (cost > 0) spendSouls(cost, 'engage_' + bossId);
+    state.engaged = true;
+    state.engaged_at = new Date().toISOString();
+    setBossState(bossId, state);
+    try {
+      if (typeof showHabitToast === 'function') {
+        showHabitToast('Now hunting ' + cfg.name + '.' + (cost > 0 ? ' -' + cost + ' souls.' : ''));
+      }
+    } catch (_) {}
+    // Re-render the Quests panel + the detail modal if either is open
+    // so engage button → "Stop Hunting" + card visual treatment swap
+    // happen instantly.
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
+    try { refreshBossFullScreenIfOpen(bossId); } catch (_) {}
+    return true;
+  }
+
+  function disengageBoss(bossId) {
+    const cfg = BOSSES[bossId];
+    if (!cfg) return false;
+    const state = getBossState(bossId);
+    if (state.engaged !== true) return true; // already disengaged
+    state.engaged = false;
+    state.engaged_at = null;
+    // Streak doesn't survive disengagement — re-engaging starts fresh.
+    state.streak = 0;
+    state.last_eval_date = null;
+    // Carouser-specific weekend fields — clear so re-engagement starts
+    // a clean weekend cycle. weekend_burned + current_weekend_id are
+    // orthogonal to engagement but should not carry stale state across
+    // a hunt-resume that may be weeks later.
+    if (bossId === 'the_carouser') {
+      state.weekend_burned = false;
+      state.current_weekend_id = null;
+    }
+    setBossState(bossId, state);
+    try {
+      if (typeof showHabitToast === 'function') {
+        showHabitToast('Stopped hunting ' + cfg.name + '.');
+      }
+    } catch (_) {}
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
+    try { refreshBossFullScreenIfOpen(bossId); } catch (_) {}
+    return true;
+  }
+
+  // One-time migration to opt all existing-state bosses out of the
+  // new model. Earned kill_count is preserved; everything else clears
+  // so users start fresh under the engagement contract. Idempotent
+  // via the localStorage flag — runs once and never again.
+  function migrateBossesToEngagementModel() {
+    if (localStorage.getItem(ENGAGEMENT_MIGRATION_FLAG) === '1') return;
+    try {
+      const all = loadBosses();
+      let mutated = false;
+      for (const id in all) {
+        const b = all[id];
+        if (!b || typeof b !== 'object') continue;
+        // Preserve kill_count — earned history is sacred.
+        b.streak = 0;
+        b.last_eval_date = null;
+        b.engaged = false;
+        b.engaged_at = null;
+        if (id === 'the_carouser') {
+          b.weekend_burned = false;
+          b.current_weekend_id = null;
+        }
+        mutated = true;
+      }
+      if (mutated) saveBosses(all);
+    } catch (_) {}
+    localStorage.setItem(ENGAGEMENT_MIGRATION_FLAG, '1');
+  }
+
+  // ── SOULS CURRENCY (v2.0.1) ─────────────────────────────────
+  // Economic layer alongside XP. Spent on boss engagement, earned via
+  // daily login + boss kills. Tier-scaled (E→S doubles per rank for
+  // both costs and rewards) so a disciplined hunter nets +cost per
+  // kill while a chronic disengager drains.
+  //
+  // Two-tier philosophy preserved: habits stay no-failure-state. The
+  // soul economy lives entirely in the boss layer — completing
+  // habits never touches souls. The wager is only made when the user
+  // actively engages a boss.
+  //
+  // Schema:
+  //   { balance, lastDailyBonusDate, totalEarned, totalSpent }
+  //   totalEarned/Spent are debug-only; not surfaced in UI.
+  //
+  // First-install grants 150 souls so users can engage 6 E-rank
+  // bosses (or 3 D-rank) before the daily bonus kicks in.
+  const SOULS_STORAGE_KEY = 'hb_souls';
+  const SOULS_DAILY_BONUS = 15;
+  const SOULS_FIRST_INSTALL_GRANT = 150;
+  const SOULS_KILL_REWARDS  = { E: 50, D: 100, C: 200, B: 400, A: 800, S: 1600 };
+  const SOULS_ENGAGE_COSTS  = { E: 25, D:  50, C: 100, B: 200, A: 400, S:  800 };
+
+  let _souls = null; // lazy-loaded; loadSouls() initializes
+
+  function loadSouls() {
+    try {
+      const raw = localStorage.getItem(SOULS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Backfill any missing fields defensively.
+        _souls = {
+          balance:            typeof parsed.balance === 'number' ? parsed.balance : 0,
+          lastDailyBonusDate: parsed.lastDailyBonusDate || null,
+          totalEarned:        typeof parsed.totalEarned === 'number' ? parsed.totalEarned : (parsed.balance || 0),
+          totalSpent:         typeof parsed.totalSpent === 'number'  ? parsed.totalSpent  : 0,
+        };
+        return _souls;
+      }
+    } catch (_) {}
+    // First install (or corrupted state) — grant starting balance.
+    _souls = {
+      balance: SOULS_FIRST_INSTALL_GRANT,
+      lastDailyBonusDate: null,
+      totalEarned: SOULS_FIRST_INSTALL_GRANT,
+      totalSpent: 0,
+    };
+    persistSouls();
+    return _souls;
+  }
+  function persistSouls() {
+    try { localStorage.setItem(SOULS_STORAGE_KEY, JSON.stringify(_souls)); } catch (_) {}
+  }
+  function getSoulsBalance() {
+    if (!_souls) loadSouls();
+    return _souls.balance;
+  }
+
+  function refreshSoulsDisplay() {
+    if (!_souls) return;
+    const balanceEl = document.getElementById('souls-balance');
+    if (balanceEl) {
+      balanceEl.textContent = _souls.balance.toLocaleString('en-US');
+    }
+    // Brief pulse animation on the badge to signal a change. Re-trigger
+    // by removing+forcing reflow+re-adding the class.
+    const badge = document.getElementById('souls-badge');
+    if (badge) {
+      badge.classList.remove('souls-badge--flash');
+      void badge.offsetWidth; // force reflow
+      badge.classList.add('souls-badge--flash');
+    }
+  }
+
+  function earnSouls(amount, source) {
+    if (typeof amount !== 'number' || amount <= 0) return;
+    if (!_souls) loadSouls();
+    _souls.balance += amount;
+    _souls.totalEarned += amount;
+    persistSouls();
+    refreshSoulsDisplay();
+    // source param is debug-only; not logged to a transaction history
+    // for MVP. Future: persist a souls_history array if needed.
+  }
+
+  function spendSouls(amount, sink) {
+    if (typeof amount !== 'number' || amount <= 0) return;
+    if (!_souls) loadSouls();
+    _souls.balance -= amount;
+    _souls.totalSpent += amount;
+    persistSouls();
+    refreshSoulsDisplay();
+  }
+
+  function killRewardSouls(rank) {
+    return SOULS_KILL_REWARDS[rank] || 0;
+  }
+  function engageCostSouls(rank) {
+    return SOULS_ENGAGE_COSTS[rank] || 0;
+  }
+
+  // Daily login bonus. Called once per init(), idempotent on the
+  // device-local calendar day. No rollover — skipped days are gone.
+  function tryGrantDailyLoginBonus() {
+    if (!_souls) loadSouls();
+    const today = getDeviceLocalDate();
+    if (_souls.lastDailyBonusDate === today) return false; // already granted
+    earnSouls(SOULS_DAILY_BONUS, 'daily_login');
+    _souls.lastDailyBonusDate = today;
+    persistSouls();
+    try {
+      if (typeof showHabitToast === 'function') {
+        showHabitToast('+' + SOULS_DAILY_BONUS + ' souls (daily bonus)');
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  try {
+    window.Souls = {
+      get balance()      { return getSoulsBalance(); },
+      get state()        { if (!_souls) loadSouls(); return Object.assign({}, _souls); },
+      earn:              earnSouls,
+      spend:             spendSouls,
+      killReward:        killRewardSouls,
+      engageCost:        engageCostSouls,
+      grantDaily:        tryGrantDailyLoginBonus,
+      refresh:           refreshSoulsDisplay,
+      KILL_REWARDS:      SOULS_KILL_REWARDS,
+      ENGAGE_COSTS:      SOULS_ENGAGE_COSTS,
+      DAILY_BONUS:       SOULS_DAILY_BONUS,
+    };
+  } catch (_) {}
 
   // Computes "yesterday" in device-local format. Used by the missed-
   // night reset (init-time) to set last_eval_date back one day so
@@ -215,6 +493,12 @@
     // Already evaluated this night — idempotent.
     if (state.last_eval_date === nightDate) return;
 
+    // v2.0.1 engagement gate — habit data still flows to leaderboard
+    // and habit auto-verify, but boss progress only advances for
+    // engaged bosses. User opts in via the ENGAGE BOSS button on the
+    // detail modal.
+    if (state.engaged !== true) return;
+
     if (sleepHours >= cfg.sleepHours) {
       state.streak += 1;
       state.last_eval_date = nightDate;
@@ -222,11 +506,13 @@
         state.kill_count += 1;
         state.streak = 0;
         setBossState(id, state);
-        // Brief, no-flair toast per spec. Drops/visual reveal land
-        // in future versions on top of this kill detection.
+        // v2.0.1: kill grants tier-scaled souls. Earn happens here so
+        // the toast message can include the actual amount awarded.
+        const reward = killRewardSouls(cfg.rank);
+        if (reward > 0) earnSouls(reward, 'kill_' + id);
         try {
           if (typeof showHabitToast === 'function') {
-            showHabitToast(cfg.name + ' defeated.');
+            showHabitToast(cfg.name + ' defeated.' + (reward > 0 ? ' +' + reward + ' souls.' : ''));
           }
         } catch (_) {}
         // Re-render the Quests panel so the streak progress + kill
@@ -257,6 +543,10 @@
   function checkMissedNightForInsomniac() {
     const id = 'the_insomniac';
     const state = getBossState(id);
+    // Engagement gate — no point resetting streak on a boss the
+    // user isn't hunting. The streak field is already 0 for
+    // disengaged bosses (disengageBoss zeroes it).
+    if (state.engaged !== true) return;
     // First install — never been evaluated. Don't treat as missed.
     if (!state.last_eval_date) return;
 
@@ -302,6 +592,9 @@
     // Idempotent on nightDate — visibility-change refires no-op.
     if (state.last_eval_date === nightDate) return;
 
+    // v2.0.1 engagement gate — same rule as the other bosses.
+    if (state.engaged !== true) return;
+
     // Classify the night by its start day-of-week. nightDate is the
     // morning the user is in; the night being evaluated STARTED the
     // prior day. Sat morning → Fri night; Sun morning → Sat night.
@@ -341,9 +634,11 @@
         state.streak = 0;
         state.weekend_burned = false;
         setBossState(id, state);
+        const reward = killRewardSouls(cfg.rank);
+        if (reward > 0) earnSouls(reward, 'kill_' + id);
         try {
           if (typeof showHabitToast === 'function') {
-            showHabitToast(cfg.name + ' defeated.');
+            showHabitToast(cfg.name + ' defeated.' + (reward > 0 ? ' +' + reward + ' souls.' : ''));
           }
         } catch (_) {}
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
@@ -366,6 +661,9 @@
   function checkMissedWeekendForCarouser() {
     const id = 'the_carouser';
     const state = getCarouserState();
+    // Engagement gate — disengaged bosses already have cleared
+    // weekend state, no work to do.
+    if (state.engaged !== true) return;
     if (!state.current_weekend_id) return;
     const todayWeekendId = getMostRecentFridayDate();
     if (state.current_weekend_id !== todayWeekendId) {
@@ -397,6 +695,9 @@
     // Idempotent on dayDate — multiple calls in the same day no-op.
     if (state.last_eval_date === dayDate) return;
 
+    // v2.0.1 engagement gate — same rule as the other bosses.
+    if (state.engaged !== true) return;
+
     // Runtime missed-day reset: if the user opens the app after
     // skipping at least one calendar day (last_eval_date older than
     // yesterday-from-dayDate), the streak is dead before today's
@@ -420,9 +721,11 @@
         state.kill_count += 1;
         state.streak = 0;
         setBossState(id, state);
+        const reward = killRewardSouls(cfg.rank);
+        if (reward > 0) earnSouls(reward, 'kill_' + id);
         try {
           if (typeof showHabitToast === 'function') {
-            showHabitToast(cfg.name + ' defeated.');
+            showHabitToast(cfg.name + ' defeated.' + (reward > 0 ? ' +' + reward + ' souls.' : ''));
           }
         } catch (_) {}
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
@@ -448,6 +751,8 @@
   function checkMissedDayForSteelWolf() {
     const id = 'the_steel_wolf';
     const state = getBossState(id);
+    // Engagement gate — disengaged bosses are already at streak 0.
+    if (state.engaged !== true) return;
     if (!state.last_eval_date) return; // first install — leave alone
     const yesterday = getDeviceLocalYesterday();
     if (state.last_eval_date < yesterday) {
@@ -457,7 +762,17 @@
     }
   }
 
-  try { window.Bosses = { BOSSES, getBossState, evaluateInsomniacForNight, checkMissedNightForInsomniac, evaluateCarouserForNight, checkMissedWeekendForCarouser, evaluateSteelWolfForDay, checkMissedDayForSteelWolf }; } catch (_) {}
+  try {
+    window.Bosses = {
+      BOSSES, getBossState,
+      evaluateInsomniacForNight, checkMissedNightForInsomniac,
+      evaluateCarouserForNight,  checkMissedWeekendForCarouser,
+      evaluateSteelWolfForDay,   checkMissedDayForSteelWolf,
+      // Engagement model (v2.0.1) — opt-in gate for boss eval.
+      engageBoss, disengageBoss, isBossEngaged, countEngagedBosses,
+      MAX_ENGAGED_BOSSES,
+    };
+  } catch (_) {}
 
   // ── LEADERBOARD STATS (v2.0.2) ───────────────────────────────
   // Foundation-only data accumulator. NOT surfaced in any UI yet —
@@ -877,6 +1192,9 @@
     '2.0.1': {
       subtitle: 'The dungeons open.',
       items: [
+        { emoji: '', title: 'Souls currency introduced',       description: "Earn 15 souls daily plus tier-scaled rewards on every boss kill. Spend souls to engage bosses (E rank costs 25, doubles per tier). Hunt wisely — souls are not refunded on disengage." },
+        { emoji: '', title: 'Bosses now require engagement',   description: "Open a boss to start hunting it — you can hunt up to 3 at once. Habits only progress bosses you've engaged. Stop hunting any time; your streak resets but your kills stay." },
+        { emoji: '', title: 'Preview locked dungeons',         description: "Locked-rank dungeons are now walkable when there's content inside. Preview future bosses, engage them once you reach the rank." },
         { emoji: '', title: 'Six dungeon gates',               description: "The Quests tab is now a 3×2 grid of rank-tier dungeon gates — E, D, C, B, A, S. Tap the E-rank gate to enter and meet your bosses. The other five stay locked until you climb. Each one is its own dungeon waiting for you." },
         { emoji: '', title: 'Boss cards, redesigned',          description: "Every boss is now a portrait card with its own art, stats, kill condition, and live progress. Tap a card to open the full detail view." },
         { emoji: '', title: 'The Insomniac',                   description: "First dungeon boss. Found inside the E-rank dungeon. Sleep 7+ hours, two nights in a row, to defeat it." },
@@ -9399,14 +9717,41 @@
       '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
     ).join('');
 
-    // Compose state classes. They stack — defeated AND active is valid
-    // (defeated before, currently in another streak run).
+    // Compose state classes. They stack — engaged + active + defeated
+    // can all apply at once. v2.0.1 engagement-pivot adds .bcard--engaged
+    // (gold border + HUNTING label), .bcard--dormant (dim, unlocked but
+    // not hunted), and .bcard--preview (locked rank, view-only).
+    //
+    // Preview state takes precedence over dormant/engaged — a boss in
+    // a locked dungeon can't be engaged (the modal renders a "Reach X
+    // rank to engage" label instead of the ENGAGE button), so engaging
+    // semantics don't apply. The card just shows the kit so the user
+    // knows what's coming.
+    const isPreview = !isGateUnlocked(cfg.rank);
     const stateClasses = [];
+    if (isPreview) {
+      stateClasses.push('bcard--preview');
+    } else if (state.engaged === true) {
+      stateClasses.push('bcard--engaged');
+    } else {
+      stateClasses.push('bcard--dormant');
+    }
     if (state.streak > 0) stateClasses.push('bcard--active');
     if (state.kill_count > 0) stateClasses.push('bcard--defeated');
     // weekend_burned only present on Carouser; default-false elsewhere.
     if (state.weekend_burned === true) stateClasses.push('bcard--burned');
     const classAttr = ['bcard'].concat(stateClasses).join(' ');
+
+    // Top-right corner label. Mutually exclusive between HUNTING (engaged
+    // and unlocked) and PREVIEW (locked-walkable). Fills the slot where
+    // the glyph used to live before the emoji-removal pass. Higher
+    // z-index than the rank pill so it visually anchors the state.
+    let cornerLabel = '';
+    if (isPreview) {
+      cornerLabel = '<span class="bcard-preview-label" aria-hidden="true">PREVIEW</span>';
+    } else if (state.engaged === true) {
+      cornerLabel = '<span class="bcard-hunting-label" aria-hidden="true">HUNTING</span>';
+    }
 
     // Cadence display: capitalize first letter for the stat strip.
     const cadenceLabel = (cfg.cadence || 'daily').charAt(0).toUpperCase() +
@@ -9435,6 +9780,7 @@
     return (
       '<button type="button" class="' + classAttr + '" data-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
         cornerTrophy +
+        cornerLabel +
         burnedOverlay +
         // Region a: Header strip — rank pill (absolute, left) +
         // boss name (centered in the full strip width).
@@ -9565,8 +9911,95 @@
       }
     }
 
+    // Engagement section (v2.0.1) — three mutually-exclusive states:
+    // preview (rank locked), engaged, or not-engaged-but-unlockable.
+    // Stamps `data-boss-id` on the buttons so the click handlers
+    // (wired once in setupBossesPanel) can dispatch.
+    const engageState   = document.getElementById('bfs-engage-state');
+    const engageCta     = document.getElementById('bfs-engage-cta');
+    const engagePreview = document.getElementById('bfs-engage-preview');
+    const engageBtn     = document.getElementById('bfs-engage-btn');
+    const disengageBtn  = document.getElementById('bfs-disengage-btn');
+    const engageSince   = document.getElementById('bfs-engage-since');
+    const engagePreviewLabel = document.getElementById('bfs-engage-preview-label');
+    const isPreview = !isGateUnlocked(cfg.rank);
+
+    if (engageState && engageCta && engagePreview) {
+      // Default-hide all three; one branch unhides exactly one.
+      engageState.classList.add('hidden');
+      engageCta.classList.add('hidden');
+      engagePreview.classList.add('hidden');
+
+      if (isPreview) {
+        // Rank locked — static "Reach X rank to engage" label.
+        // ENGAGE button is intentionally absent; engageBoss() also
+        // refuses preview-state bosses defensively (see helper).
+        engagePreview.classList.remove('hidden');
+        if (engagePreviewLabel) {
+          engagePreviewLabel.textContent = 'Reach ' + cfg.rank + ' rank to engage';
+        }
+      } else if (state.engaged === true) {
+        engageState.classList.remove('hidden');
+        if (engageSince) {
+          engageSince.textContent = 'HUNTING SINCE ' + formatEngagedAt(state.engaged_at);
+        }
+        if (disengageBtn) disengageBtn.setAttribute('data-boss-id', id);
+      } else {
+        engageCta.classList.remove('hidden');
+        if (engageBtn) {
+          engageBtn.setAttribute('data-boss-id', id);
+          // v2.0.1: button text shows the souls cost. Always-tappable
+          // — broke-state is handled by engageBoss's balance check
+          // which fires a precise "Need N souls. You have M." toast.
+          const cost = engageCostSouls(cfg.rank);
+          engageBtn.textContent = cost > 0
+            ? 'ENGAGE BOSS — ' + cost + ' SOULS'
+            : 'ENGAGE BOSS';
+        }
+      }
+    }
+
+    // Track which boss the modal is currently showing so engage/
+    // disengage actions from the helper functions can refresh it.
+    bfsCurrentBossId = id;
+
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked'); // lock background scroll
+  }
+
+  // Tracks the boss currently shown in the full-screen modal so
+  // engage/disengage helpers can refresh the visible state without
+  // each helper needing to re-resolve which boss is on screen.
+  let bfsCurrentBossId = null;
+
+  function refreshBossFullScreenIfOpen(bossId) {
+    const overlay = document.getElementById('boss-fs-overlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    if (bfsCurrentBossId !== bossId) return;
+    // Re-run open with the same boss to repopulate fields without
+    // closing the overlay (open() already short-circuits on the
+    // visible-overlay branch — it just rewrites the inner content).
+    openBossFullScreen(bossId);
+  }
+
+  // Friendly date display for engaged_at. ISO 8601 stored, displayed
+  // as "today" / "yesterday" / "N days ago" for recent dates and an
+  // absolute "May 9, 2026" for older. Falls back to "—" if missing.
+  function formatEngagedAt(isoString) {
+    if (!isoString) return '—';
+    const then = new Date(isoString);
+    if (isNaN(then.getTime())) return '—';
+    const now = new Date();
+    // Compare device-local calendar days, not 24-hour windows.
+    const ymdNow  = now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
+    const ymdThen = then.getFullYear() + '-' + (then.getMonth()+1) + '-' + then.getDate();
+    if (ymdNow === ymdThen) return 'today';
+    const ms = now.setHours(0,0,0,0) - new Date(then).setHours(0,0,0,0);
+    const days = Math.round(ms / (1000 * 60 * 60 * 24));
+    if (days === 1) return 'yesterday';
+    if (days > 1 && days < 7) return days + ' days ago';
+    // Older — absolute date, e.g., "May 9, 2026"
+    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   function closeBossFullScreen() {
@@ -9601,6 +10034,30 @@
         closeBossFullScreen();
       }
     });
+
+    // Engagement buttons (v2.0.1). The handlers read data-boss-id
+    // off the button — set by openBossFullScreen at open time so
+    // we don't capture a stale boss id at setup time.
+    const engageBtn = document.getElementById('bfs-engage-btn');
+    if (engageBtn) {
+      engageBtn.addEventListener('click', () => {
+        const id = engageBtn.getAttribute('data-boss-id');
+        if (id) engageBoss(id);
+      });
+    }
+    const disengageBtn = document.getElementById('bfs-disengage-btn');
+    if (disengageBtn) {
+      disengageBtn.addEventListener('click', () => {
+        const id = disengageBtn.getAttribute('data-boss-id');
+        if (!id) return;
+        const cfg = BOSSES[id];
+        const name = (cfg && cfg.name) || 'this boss';
+        // Native confirm — accessible, iOS-WebView-styled. Custom
+        // brand-matched modal would be polish; functional path here.
+        const ok = window.confirm('Stop hunting ' + name + '? Your current streak will reset.');
+        if (ok) disengageBoss(id);
+      });
+    }
   }
 
   // ── QUESTS TAB GATE GRID (v2.0.2 → v2.0.5) ─────────────────
@@ -9645,6 +10102,26 @@
   }
   try { window.isGateUnlocked = isGateUnlocked; } catch (_) {}
 
+  // Returns true if any boss in the BOSSES roster has rank === rankId.
+  // Used to determine if a locked gate should be walkable in preview
+  // mode — locked gates with content become walkable; locked gates
+  // with no content stay hard-locked (no point promising air).
+  function hasBossesAtRank(rankId) {
+    if (!rankId) return false;
+    return Object.keys(BOSSES).some(id => BOSSES[id].rank === rankId);
+  }
+  try { window.hasBossesAtRank = hasBossesAtRank; } catch (_) {}
+
+  // Soft-entry gate. True if the user's rank meets the threshold OR
+  // the rank has at least one boss configured (preview-walkable).
+  // The render path uses `isGateUnlocked` (NOT this) to decide
+  // preview-vs-live state inside the dungeon — entry allowed and
+  // engagement allowed are different concepts.
+  function isGateEntryAllowed(rankId) {
+    return isGateUnlocked(rankId) || hasBossesAtRank(rankId);
+  }
+  try { window.isGateEntryAllowed = isGateEntryAllowed; } catch (_) {}
+
   function renderQuestsPanel() {
     const gateView    = document.getElementById('quests-gate-view');
     const dungeonView = document.getElementById('quests-dungeon-view');
@@ -9668,20 +10145,37 @@
       gateView.classList.remove('hidden');
       dungeonView.classList.add('hidden');
 
-      // Apply locked-state to each cell based on user's current rank.
-      // Stamping classes in JS keeps the locked/unlocked decision in
-      // one place — markup stays static, no per-cell duplication.
+      // Apply locked-state to each cell based on user's current rank
+      // AND whether the rank has bosses (soft-entry rule, v2.0.1).
+      // Three states per cell:
+      //   1. unlocked            → no locked class, no preview class
+      //   2. locked + has-bosses → .gate-cell--preview (walkable, dim
+      //      art, no lock icon, "PREVIEW" affordance)
+      //   3. locked + no-bosses  → .gate-cell--locked (hard-locked,
+      //      lock icon visible, tap fires toast)
+      // Markup stays static — all decisions stamped here.
       const cells = gateView.querySelectorAll('.gate-cell[data-gate-rank]');
       cells.forEach(cell => {
         const r = cell.getAttribute('data-gate-rank');
         const unlocked = isGateUnlocked(r);
-        cell.classList.toggle('gate-cell--locked', !unlocked);
-        // Aria label reflects state for screen readers.
-        cell.setAttribute('aria-label',
-          unlocked
-            ? 'Enter ' + r + '-rank dungeon'
-            : r + '-rank dungeon, locked. Reach ' + r + ' rank to unlock.'
-        );
+        const hasContent = hasBossesAtRank(r);
+        const isPreview = !unlocked && hasContent;
+        const isHardLocked = !unlocked && !hasContent;
+
+        cell.classList.toggle('gate-cell--locked', isHardLocked);
+        cell.classList.toggle('gate-cell--preview', isPreview);
+
+        // Aria label reflects state for screen readers. Preview gates
+        // are walkable but communicate the engagement gate to come.
+        let label;
+        if (unlocked) {
+          label = 'Enter ' + r + '-rank dungeon';
+        } else if (isPreview) {
+          label = 'Preview ' + r + '-rank dungeon. Reach ' + r + ' rank to engage.';
+        } else {
+          label = r + '-rank dungeon, locked. Reach ' + r + ' rank to unlock.';
+        }
+        cell.setAttribute('aria-label', label);
       });
     }
   }
@@ -9700,14 +10194,16 @@
         if (!cell || !grid.contains(cell)) return;
         const rank = cell.getAttribute('data-gate-rank');
         if (!rank) return;
-        if (cell.classList.contains('gate-cell--locked')) {
-          // Locked → toast, no expansion.
+        // Soft-entry rule (v2.0.1): walk in if the rank is unlocked OR
+        // has bosses to preview. Locked-with-no-content stays toast-only.
+        if (!isGateEntryAllowed(rank)) {
           if (typeof showHabitToast === 'function') {
             showHabitToast('Reach ' + rank + ' rank to unlock');
           }
           return;
         }
-        // Unlocked → expand into the dungeon view for this rank.
+        // Entry allowed → expand. The dungeon-view render decides
+        // whether this is preview or live based on isGateUnlocked.
         currentDungeonRank = rank;
         questsGateExpanded = true;
         renderQuestsPanel();
@@ -14424,6 +14920,18 @@
     // the streak. Init-only — visibilitychange resumes don't trigger
     // this (multi-foreground days would mis-reset). See
     // checkMissedNightForInsomniac for first-install handling.
+    // v2.0.1: opt all existing-state bosses out of the new engagement
+    // model on first launch post-deploy. Idempotent — runs once via
+    // localStorage flag, never again. MUST run before the missed-
+    // period checks below so they see the cleared streak/eval state
+    // and short-circuit on the new engagement gate.
+    try { migrateBossesToEngagementModel(); } catch (_) {}
+    // v2.0.1 Souls currency — load (or grant first-install starting
+    // balance), then try the daily login bonus (idempotent on
+    // device-local calendar day). Order matters: load before grant.
+    try { loadSouls(); } catch (_) {}
+    try { tryGrantDailyLoginBonus(); } catch (_) {}
+    try { refreshSoulsDisplay(); } catch (_) {}
     try { checkMissedNightForInsomniac(); } catch (_) {}
     try { checkMissedWeekendForCarouser(); } catch (_) {}
     try { checkMissedDayForSteelWolf(); } catch (_) {}

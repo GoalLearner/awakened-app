@@ -11,7 +11,7 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Starting in v2.0, dungeon bosses run as a parallel passive-progress system fed by the same Apple Health data that auto-verifies habits. v2.0.1 adds the second boss (The Carouser) and silently begins tracking three Apple-Health-verifiable metrics for a future leaderboard layer surfaced on the Social tab. There is no backend — every byte of state lives in `localStorage`.
 
 - **Current marketing version:** `2.0.1` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.0 was a single consolidated release; v2.0.1 is the second consolidated release and the only one in shipped state. Coverage: The Carouser boss, Daily Quest removed, leaderboard data-tracking foundations + Social-tab preview UI, system-verified read-only habits, auto-verify-first sort invariant, canonical-habit name/emoji lock, schedule sheet section split, full gate-based dungeon UX on the Quests tab (3×2 rank-tier grid with E active + D/C/B/A/S in locked state, tap-to-expand → rank-aware dungeon view), CARDS.md-spec **boss cards** (5:7 portrait, art window, stat strip, gradient border) replacing the old text-only cards, and a **full-screen boss detail modal** (`#boss-fs-overlay`) replacing the old `.vn-sheet` bottom-sheet. E-rank bosses recalibrated to 2-night thresholds (Insomniac: any 2 consecutive nights ≥7h; Carouser: Fri+Sat both ≥7h + before-midnight bedtime).
-- **Service-worker cache version:** `v5.106` (constant `CACHE_VERSION` in `sw.js` — bumped many times during the v2.0.1 dev cycle since cache versions are per-deploy, not per-marketing-version)
+- **Service-worker cache version:** `v5.110` (constant `CACHE_VERSION` in `sw.js` — bumped many times during the v2.0.1 dev cycle since cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -712,6 +712,73 @@ Boss eval runs in `autoVerifySleep()` BEFORE the `isAutoVerifyDisabled()` and `!
 
 The single `Health.getSleepLastNight()` call is shared across all consumers. Cached for 5 min to avoid hammering HealthKit.
 
+### Engagement model (v2.0.1 architectural pivot)
+
+**Bosses no longer progress passively.** Each boss state carries an `engaged: boolean` flag and `engaged_at: ISO string | null`. All three evaluators (`evaluateInsomniacForNight`, `evaluateCarouserForNight`, `evaluateSteelWolfForDay`) short-circuit at the top with `if (state.engaged !== true) return;` — habit data continues flowing to the leaderboard and the habit-auto-verify pipeline, but boss progress only advances for bosses the user has explicitly opted into. Same gate on the init-time missed-period checks (no point resetting streak on a boss the user isn't hunting).
+
+**Cap: `MAX_ENGAGED_BOSSES = 3`** simultaneous engagements. Pulled from BOSSES.md's "multi-focus" principle. `countEngagedBosses()` walks `loadBosses()` and counts `engaged === true` rows. `engageBoss(id)` enforces the cap with a "You can only hunt 3 bosses at once" toast on the 4th attempt.
+
+**Disengaging resets streak.** `disengageBoss(id)` zeroes `streak` + `last_eval_date`, AND for the Carouser also clears `weekend_burned` + `current_weekend_id` so re-engagement starts a clean weekend cycle. `kill_count` is sacred — earned history survives. Re-engaging a boss starts the next streak fresh from 0.
+
+**Migration:** `migrateBossesToEngagementModel()` runs once at init, gated on `hb_bosses_engagement_migrated` localStorage flag. Walks every existing boss state, preserves `kill_count`, zeroes everything else, sets `engaged: false`. Forces all existing users to opt in to the new model.
+
+**UI surfaces:**
+- **Boss card** — `.bcard--engaged` (gold border + HUNTING label top-right) or `.bcard--dormant` (desaturated + 0.85 opacity, restores on hover) per state. Stacks with existing variants — `bcard--engaged.bcard--active.bcard--defeated` is valid (currently hunting + in a streak + has prior kills).
+- **Boss detail modal** — new ENGAGEMENT section between KILL CONDITION and CURRENT PROGRESS. Renders one of two variants per `state.engaged`:
+  - Not engaged → big purple-gold gradient ENGAGE BOSS button + "up to 3 at once" blurb
+  - Engaged → "HUNTING SINCE [date]" line + "Stop Hunting" text-button (uses `window.confirm()` to confirm the streak-reset)
+- `formatEngagedAt(iso)` helper: `"today"` / `"yesterday"` / `"N days ago"` for recent, `"May 9, 2026"` for older.
+- `refreshBossFullScreenIfOpen(id)` re-renders the modal in place when engage/disengage fires while the modal is visible — `bfsCurrentBossId` tracks which boss is on screen.
+
+**Console testing:**
+```js
+Bosses.engageBoss('the_insomniac');        // true if accepted, false if at cap
+Bosses.countEngagedBosses();
+Bosses.disengageBoss('the_insomniac');     // resets streak, preserves kill_count
+Bosses.isBossEngaged('the_steel_wolf');
+```
+
+### Souls currency (v2.0.1)
+
+Economic layer alongside XP. Spent on boss engagement, earned via daily login + boss kills. Tier-scaled (E→S doubles per rank for both costs and rewards) so disciplined hunters net `+cost` per kill while chronic disengagers drain. **Habits never touch souls** — the two-tier philosophy is preserved: habits stay no-failure-state; the economy lives in the boss layer.
+
+**Storage:** `hb_souls = { balance, lastDailyBonusDate, totalEarned, totalSpent }`. `totalEarned` / `totalSpent` are debug-only accumulators (not displayed in UI; useful for testing). First-install grants **150 souls** (enough to engage 6 E-rank or 3 D-rank bosses before the daily bonus kicks in).
+
+**Earn paths:**
+- **Daily login bonus**: `tryGrantDailyLoginBonus()` runs once per init, idempotent on `getDeviceLocalDate()`. +15 souls. Skipped days are gone — no rollover.
+- **Boss kills**: tier-scaled rewards via `killRewardSouls(rank)`:
+
+| Rank | Engage cost | Kill reward | Net per cycle |
+|---|---|---|---|
+| E | 25 | 50 | +25 |
+| D | 50 | 100 | +50 |
+| C | 100 | 200 | +100 |
+| B | 200 | 400 | +200 |
+| A | 400 | 800 | +400 |
+| S | 800 | 1600 | +800 |
+
+Net is +1× cost per successful kill cycle. Failure to land the kill (disengage mid-streak) is a pure loss of the engage cost.
+
+**Spend path:** `engageBoss(bossId)` checks balance against `engageCostSouls(cfg.rank)` before allowing engagement. Broke-state shows toast: `"Need N souls. You have M."` — always-tappable, no disabled-button mystery. Refunds **do not** happen on disengage; the cost was the wager. Streak resets per existing engagement logic.
+
+**UI surfaces:**
+- **Header souls badge** — `#souls-badge` lives in the right cluster of `.rank-section`, balanced against the rank tile on the left. Updated by `refreshSoulsDisplay()` on every earn/spend; brief `.souls-badge--flash` pulse signals the change.
+- **Boss detail modal** — ENGAGE button text reads `"ENGAGE BOSS — N SOULS"`. Preview-mode (rank-locked) bosses show the static `"Reach X rank to engage"` label without any cost (engagement isn't possible yet).
+- **Toast text** — kill toast appends `" +N souls."`; engage toast appends `" -N souls."`.
+
+**Console testing:**
+```js
+Souls.balance              // current
+Souls.state                // full snapshot incl. lastDailyBonusDate, totalEarned/Spent
+Souls.earn(100, 'manual')
+Souls.spend(50, 'manual')
+Souls.killReward('D')      // 100
+Souls.engageCost('S')      // 800
+Souls.grantDaily()         // forces daily bonus check (idempotent)
+```
+
+**Migration**: `loadSouls()` is itself the migration — first call after deploy with no `hb_souls` key reads as missing-state and grants the 150-soul first-install balance. Existing users (no prior souls state) automatically get treated as new users.
+
 ### Missed-period detection (init only)
 
 - `checkMissedNightForInsomniac()` — if `last_eval_date` is older than yesterday, streak resets and `last_eval_date` is set to yesterday so tonight's eval can still proceed.
@@ -725,11 +792,13 @@ The single `Health.getSleepLastNight()` call is shared across all consumers. Cac
 
 ```js
 window.Bosses = {
-  BOSSES,
-  getBossState,
+  BOSSES, getBossState,
   evaluateInsomniacForNight, checkMissedNightForInsomniac,
   evaluateCarouserForNight,  checkMissedWeekendForCarouser,
   evaluateSteelWolfForDay,   checkMissedDayForSteelWolf,
+  // Engagement model (v2.0.1)
+  engageBoss, disengageBoss, isBossEngaged, countEngagedBosses,
+  MAX_ENGAGED_BOSSES,
 };
 ```
 
@@ -1205,7 +1274,7 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['1.1.5']` for the canonical example.
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=187`, `app.js?v=242`, `sw.js v5.106`, `APP_VERSION = '2.0.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=190`, `app.js?v=246`, `sw.js v5.110`, `APP_VERSION = '2.0.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 

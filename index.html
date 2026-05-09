@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=187">
+  <link rel="stylesheet" href="styles.css?v=190">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -134,7 +134,17 @@
           <span id="rank-label" class="rank-label">E Rank</span>
           <span id="rank-pts" class="rank-pts">0 pts</span>
         </div>
-        <div id="rank-next" class="rank-next">100 to D</div>
+        <div class="rank-right">
+          <!-- Souls currency badge (v2.0.1). Updated by refreshSoulsDisplay
+               on every earnSouls / spendSouls. Position: balanced against
+               the rank tile on the left; rank-next stays beneath. -->
+          <div id="souls-badge" class="souls-badge" aria-label="Souls balance">
+            <span class="souls-icon" aria-hidden="true">💀</span>
+            <span id="souls-balance" class="souls-balance">0</span>
+            <span class="souls-label">souls</span>
+          </div>
+          <div id="rank-next" class="rank-next">100 to D</div>
+        </div>
       </div>
       <div class="rank-track">
         <div id="rank-bar" class="rank-fill"></div>
@@ -560,6 +570,27 @@
     <section class="bfs-section">
       <h2 class="bfs-section-label">KILL CONDITION</h2>
       <p id="bfs-kill-cond" class="bfs-section-body">—</p>
+    </section>
+
+    <!-- Engagement section (v2.0.1). Renders one of three states:
+         (1) NOT engaged + rank unlocked → big purple-gold ENGAGE BOSS button + blurb
+         (2) Engaged → "HUNTING SINCE [date]" + Stop Hunting button
+         (3) Rank LOCKED (preview mode) → static "Reach X rank to engage" label
+         openBossFullScreen() swaps `.hidden` between the three. -->
+    <section class="bfs-section bfs-section--engagement">
+      <h2 class="bfs-section-label">HUNT</h2>
+      <div id="bfs-engage-state" class="bfs-engage-state hidden">
+        <div id="bfs-engage-since" class="bfs-engage-since">HUNTING SINCE —</div>
+        <button id="bfs-disengage-btn" type="button" class="bfs-disengage-btn">Stop Hunting</button>
+      </div>
+      <div id="bfs-engage-cta" class="bfs-engage-cta hidden">
+        <button id="bfs-engage-btn" type="button" class="bfs-engage-btn">ENGAGE BOSS</button>
+        <p class="bfs-engage-blurb">This boss only counts progress while you're actively hunting it. You can hunt up to 3 bosses at once.</p>
+      </div>
+      <div id="bfs-engage-preview" class="bfs-engage-preview hidden">
+        <div id="bfs-engage-preview-label" class="bfs-engage-preview-label">Reach D rank to engage</div>
+        <p class="bfs-engage-blurb">You can preview this boss now. Engaging unlocks at the rank threshold.</p>
+      </div>
     </section>
 
     <section class="bfs-section">
@@ -1144,7 +1175,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=242"></script>
+  <script src="app.js?v=246"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

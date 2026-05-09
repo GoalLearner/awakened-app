@@ -1590,6 +1590,61 @@ footer {
   font-weight: 600;
 }
 
+/* Right-side cluster of the rank-section. Stacks souls-badge above
+   rank-next, both right-aligned, balanced against .rank-left. */
+.rank-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* Souls currency badge (v2.0.1). Sits in the rank-section right
+   cluster. Updated by refreshSoulsDisplay on every earn/spend. */
+.souls-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(245, 158, 11, 0.14));
+  border: 1px solid rgba(245, 158, 11, 0.40);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.18);
+  user-select: none;
+}
+.souls-icon {
+  font-size: 13px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.40));
+}
+.souls-balance {
+  font-weight: 800;
+  color: var(--gold);
+}
+.souls-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-left: 1px;
+}
+/* Brief pulse animation on balance change — gives visual feedback
+   to earn/spend events without a separate toast burst. */
+@keyframes souls-flash {
+  0%   { transform: scale(1);    box-shadow: 0 0 8px rgba(245, 158, 11, 0.18); }
+  40%  { transform: scale(1.08); box-shadow: 0 0 14px rgba(245, 158, 11, 0.55); }
+  100% { transform: scale(1);    box-shadow: 0 0 8px rgba(245, 158, 11, 0.18); }
+}
+.souls-badge--flash {
+  animation: souls-flash 0.5s ease-out;
+}
+
 .rank-track {
   height: 6px;
   background: var(--bg-card);
@@ -11370,6 +11425,23 @@ footer {
   opacity: 0.65;
 }
 
+/* Preview state (v2.0.1): rank locked, but the dungeon has bosses
+   to view. Walkable — same dim treatment as locked, but no lock
+   overlay (the gate is enterable; the engagement gate happens at
+   the boss-detail level instead). The PREVIEW label sits inside
+   the dungeon's cards, not on the gate cell. */
+.gate-cell--preview .gate-cell-img {
+  filter: brightness(0.55) saturate(0.75);
+}
+.gate-cell--preview:hover {
+  /* Slightly more inviting than locked — the gate IS walkable. */
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.22);
+}
+.gate-cell--preview .gate-cell-rank-pill {
+  /* Lighter dim than locked-rank pill — the gate is reachable. */
+  opacity: 0.85;
+}
+
 /* Lock overlay — center-bottom of the cell, hidden by default.
    Revealed only when the parent carries .gate-cell--locked. */
 .gate-cell-lock-overlay {
@@ -11710,9 +11782,94 @@ footer {
   pointer-events: none;
 }
 
+/* Engaged (v2.0.1): user has actively chosen to hunt this boss.
+   Solid gold border replaces the gradient default + a subtle constant
+   sheen distinguishes from .bcard--active (which signals streak > 0).
+   HUNTING label sits in the top-right slot via .bcard-hunting-label. */
+.bcard--engaged {
+  border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.30);
+}
+.bcard-hunting-label {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.40));
+}
+
+/* HUNTING/PREVIEW label collision fix (v2.0.1). The header strip
+   centers the boss name in its content box. With a 32px symmetric
+   padding, longer names like "THE STEEL WOLF" extended into the
+   absolute-positioned label's territory in the top-right corner.
+   When a label is present (engaged or preview), reserve ~76px on
+   the right so the centered name shifts left and ellipsis-truncates
+   for very long names ("The Forgotten Hour", etc.) without
+   colliding with the corner label. The slight off-center is
+   acceptable — it visually reads as "between rank pill and
+   corner-label" anchors. */
+.bcard--engaged .bcard-header,
+.bcard--preview .bcard-header {
+  padding-right: 76px;
+}
+
+/* Preview state (v2.0.1): rank-locked boss in a walkable dungeon.
+   Visually similar to dormant (dim, non-committal) but with a
+   muted-gold PREVIEW label in the corner where HUNTING would go. */
+.bcard--preview {
+  filter: saturate(0.65);
+  opacity: 0.82;
+}
+.bcard--preview:hover {
+  filter: none;
+  opacity: 1;
+}
+.bcard-preview-label {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  font-size: 0.55rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.16em;
+  color: rgba(167, 139, 250, 0.85); /* muted purple */
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.32);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* Dormant (v2.0.1): unlocked boss the user hasn't engaged. Slight
+   desaturation + dim signals "not currently being hunted." Card stays
+   tappable — opening the detail modal is how the user engages. */
+.bcard--dormant {
+  filter: saturate(0.7);
+  opacity: 0.85;
+}
+.bcard--dormant:hover {
+  /* Restore on hover so the user can read the card cleanly while
+     considering whether to engage. */
+  filter: none;
+  opacity: 1;
+}
+
 /* Burned: Carouser's weekend_burned === true. Desaturated card +
    forfeit overlay. Other regions still render (so user sees the
-   structure) but read as inert. */
+   structure) but read as inert. Burned visual takes priority over
+   engaged/dormant — most informative state wins. */
 .bcard--burned {
   filter: saturate(0.5) brightness(0.85);
 }
@@ -12981,6 +13138,107 @@ body.bfs-locked { overflow: hidden; }
   text-transform: uppercase;
 }
 .bfs-burned-banner.hidden { display: none; }
+
+/* Engagement section in the boss detail modal (v2.0.1). Two states:
+   1. .bfs-engage-cta — not engaged: prominent gradient ENGAGE button
+      + blurb. Gradient mirrors the card border (purple→gold).
+   2. .bfs-engage-state — engaged: HUNTING SINCE date + Stop Hunting
+      text-button. Subdued, since the commitment moment has passed. */
+.bfs-section--engagement { padding-top: 14px; padding-bottom: 14px; }
+.bfs-engage-cta.hidden,
+.bfs-engage-state.hidden,
+.bfs-engage-preview.hidden { display: none; }
+
+.bfs-engage-cta { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.bfs-engage-btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 18px;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #5b21b6 0%, #f59e0b 100%);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.30);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.bfs-engage-btn:hover  { transform: scale(1.02); box-shadow: 0 0 22px rgba(245, 158, 11, 0.45); }
+.bfs-engage-btn:active { transform: scale(0.98); }
+.bfs-engage-blurb {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 360px;
+}
+
+.bfs-engage-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.bfs-engage-since {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  text-transform: uppercase;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.30));
+}
+.bfs-disengage-btn {
+  padding: 6px 12px 6px 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.bfs-disengage-btn:hover {
+  background: rgba(239, 68, 68, 0.10);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.45);
+}
+.bfs-disengage-btn:active { transform: scale(0.97); }
+
+/* Preview-mode (v2.0.1): rank-locked boss in a walkable dungeon.
+   Static "Reach X rank to engage" label in place of the ENGAGE
+   button. Gray-purple muted treatment signals non-interactive — no
+   hover, no cursor:pointer. Same vertical position the button would
+   occupy so the modal layout doesn't shift between states. */
+.bfs-engage-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.bfs-engage-preview-label {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 18px;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  color: rgba(167, 139, 250, 0.85); /* muted purple, parallel to PREVIEW chip */
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.32);
+  border-radius: 10px;
+  text-transform: uppercase;
+  cursor: default;
+  user-select: none;
+}
 
 /* DROPS section — placeholder until drops system ships. */
 .bfs-section--placeholder { opacity: 0.7; }
