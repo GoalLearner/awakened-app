@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=190">
+  <link rel="stylesheet" href="styles.css?v=192">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -136,13 +136,15 @@
         </div>
         <div class="rank-right">
           <!-- Souls currency badge (v2.0.1). Updated by refreshSoulsDisplay
-               on every earnSouls / spendSouls. Position: balanced against
-               the rank tile on the left; rank-next stays beneath. -->
-          <div id="souls-badge" class="souls-badge" aria-label="Souls balance">
-            <span class="souls-icon" aria-hidden="true">💀</span>
+               on every earnSouls / spendSouls. Tappable — opens
+               #souls-info-overlay explaining how souls work. Position:
+               balanced against the rank tile on the left; rank-next
+               stays beneath. -->
+          <button id="souls-badge" class="souls-badge" type="button" aria-label="Souls balance — tap for info">
+            <img class="souls-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
             <span id="souls-balance" class="souls-balance">0</span>
             <span class="souls-label">souls</span>
-          </div>
+          </button>
           <div id="rank-next" class="rank-next">100 to D</div>
         </div>
       </div>
@@ -624,6 +626,56 @@
       <div id="lb-rank-list" class="lb-rank-list"></div>
       <div class="lb-rank-footer">🔒 Live rankings open in a future update. Stats tracked now carry over.</div>
     </div>
+  </div>
+
+  <!-- Souls info modal (v2.0.1). Centered card pattern reusing
+       .modal-overlay + .modal base styles. Opens on souls-badge tap;
+       static info only (earn paths + spend costs). No live stats. -->
+  <div id="souls-info-overlay" class="modal-overlay hidden"></div>
+  <div id="souls-info-modal" class="modal souls-info-modal hidden" role="dialog" aria-labelledby="souls-info-title">
+    <button id="souls-info-close" class="souls-info-close" type="button" aria-label="Close">✕</button>
+    <div class="souls-info-header">
+      <img class="souls-info-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
+      <h2 id="souls-info-title" class="souls-info-title">SOULS</h2>
+      <p class="souls-info-subtitle">The currency of the dungeon.</p>
+    </div>
+
+    <section class="souls-info-section">
+      <p class="souls-info-body">Souls are the essence collected from defeated dungeon bosses. You spend them to engage new bosses — every fight requires a wager. Hunt wisely.</p>
+    </section>
+
+    <section class="souls-info-section">
+      <h3 class="souls-info-section-label">HOW TO EARN</h3>
+      <ul class="souls-info-list">
+        <li><span class="souls-info-list-icon">🌅</span><span class="souls-info-list-text"><b>Daily login</b> — +15 souls every day you open the app</span></li>
+        <li><span class="souls-info-list-icon">⚔️</span><span class="souls-info-list-text"><b>Boss kills</b> — souls awarded based on rank</span></li>
+      </ul>
+      <table class="souls-info-table">
+        <tr><td>E-rank kill</td><td>+50 souls</td></tr>
+        <tr><td>D-rank kill</td><td>+100 souls</td></tr>
+        <tr><td>C-rank kill</td><td>+200 souls</td></tr>
+        <tr><td>B-rank kill</td><td>+400 souls</td></tr>
+        <tr><td>A-rank kill</td><td>+800 souls</td></tr>
+        <tr><td>S-rank kill</td><td>+1,600 souls</td></tr>
+      </table>
+    </section>
+
+    <section class="souls-info-section">
+      <h3 class="souls-info-section-label">HOW TO SPEND</h3>
+      <p class="souls-info-body">Engaging a boss costs souls based on its rank:</p>
+      <table class="souls-info-table">
+        <tr><td>E-rank engage</td><td>25 souls</td></tr>
+        <tr><td>D-rank engage</td><td>50 souls</td></tr>
+        <tr><td>C-rank engage</td><td>100 souls</td></tr>
+        <tr><td>B-rank engage</td><td>200 souls</td></tr>
+        <tr><td>A-rank engage</td><td>400 souls</td></tr>
+        <tr><td>S-rank engage</td><td>800 souls</td></tr>
+      </table>
+    </section>
+
+    <section class="souls-info-section souls-info-warning">
+      <p class="souls-info-body"><b>Souls spent on engagement are non-refundable.</b> If you disengage without a kill, your souls are lost. Hunt only what you intend to defeat.</p>
+    </section>
   </div>
 
   <!-- Edit modal -->
@@ -1175,7 +1227,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=246"></script>
+  <script src="app.js?v=250"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

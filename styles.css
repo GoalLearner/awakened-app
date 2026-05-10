@@ -1602,6 +1602,8 @@ footer {
 /* Souls currency badge (v2.0.1). Sits in the rank-section right
    cluster. Updated by refreshSoulsDisplay on every earn/spend. */
 .souls-badge {
+  /* Tappable button — opens the souls info modal. Button reset +
+     visual restoration so it stays identical to the prior div pill. */
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1609,18 +1611,34 @@ footer {
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(245, 158, 11, 0.14));
   border: 1px solid rgba(245, 158, 11, 0.40);
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   color: var(--gold);
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.18);
+  cursor: pointer;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, box-shadow 0.15s ease;
+}
+.souls-badge:hover  { box-shadow: 0 0 14px rgba(245, 158, 11, 0.36); }
+.souls-badge:active { transform: scale(0.96); }
+.souls-badge:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.60), 0 0 14px rgba(245, 158, 11, 0.36);
 }
 .souls-icon {
-  font-size: 13px;
-  line-height: 1;
-  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.40));
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  vertical-align: middle;
+  /* Subtle emerald glow matching the green crystalline-shard art.
+     Drop-shadow color picks up from the icon itself rather than
+     fighting it with gold. */
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.45));
 }
 .souls-balance {
   font-weight: 800;
@@ -1644,6 +1662,152 @@ footer {
 .souls-badge--flash {
   animation: souls-flash 0.5s ease-out;
 }
+
+/* ── Souls info modal (v2.0.1) ──────────────────────────────
+   Centered card explaining the souls economy. Reuses .modal-overlay
+   + .modal base styles; this block adds souls-specific content
+   styling. No live stats — pure static info per spec. */
+.souls-info-modal {
+  /* Slightly wider than the default .modal (360px) — the rate tables
+     need horizontal room to read cleanly. */
+  max-width: 400px;
+  padding: 22px 22px 18px;
+  /* Allow scrolling if viewport is short — tables are dense. */
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.souls-info-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.souls-info-close:hover  { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+.souls-info-close:active { transform: scale(0.94); }
+
+.souls-info-header {
+  text-align: center;
+  margin: 4px 0 18px;
+}
+.souls-info-icon {
+  width: 40px;
+  height: 40px;
+  display: block;
+  margin: 0 auto 10px;
+  /* Stronger emerald glow at the larger modal-header size. */
+  filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.50));
+}
+.souls-info-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+.souls-info-subtitle {
+  font-style: italic;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.souls-info-section {
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.10);
+}
+.souls-info-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.souls-info-section-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+.souls-info-body {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+.souls-info-body:last-child { margin-bottom: 0; }
+
+.souls-info-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.souls-info-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.souls-info-list-icon {
+  font-size: 1.05rem;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+.souls-info-list-text { flex: 1; }
+.souls-info-list-text b { color: var(--gold); font-weight: 800; }
+
+.souls-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+.souls-info-table td {
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.souls-info-table tr:last-child td { border-bottom: 0; }
+.souls-info-table td:first-child {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.souls-info-table td:last-child {
+  text-align: right;
+  color: var(--gold);
+  font-weight: 800;
+}
+
+/* Stakes-warning section gets a subtle red-orange tint to read as
+   a cautionary callout vs the neutral info above. */
+.souls-info-warning {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 4px;
+}
+.souls-info-warning .souls-info-body { color: var(--text-primary); }
+.souls-info-warning b { color: #ef4444; }
 
 .rank-track {
   height: 6px;

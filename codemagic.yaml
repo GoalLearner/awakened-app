@@ -96,6 +96,14 @@ workflows:
           for boss in the-insomniac the-carouser the-steel-wolf; do
             cp "assets/bosses/$boss.png" "www/assets/bosses/$boss.png"
           done
+          # General-purpose UI icons (v2.0.1). Currently just the souls
+          # currency icon; future utility icons (XP, drops, etc.) can
+          # land here too. Distinct from habit-icons (which is now
+          # de-facto habit-specific again).
+          mkdir -p www/assets/icons
+          for icon in souls-icon; do
+            cp "assets/icons/$icon.png" "www/assets/icons/$icon.png"
+          done
 
       - name: Add iOS platform (runs on first build only)
         script: |

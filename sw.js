@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.110';
+const CACHE_VERSION = 'v5.114';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -91,6 +91,11 @@ const PRECACHE_ASSETS = [
   '/assets/habit-icons/icon-streak.png',
   // XP/lightning icon — replaces ⚡ emoji system-wide in live UI
   '/assets/habit-icons/icon-xp.png',
+  // Souls currency icon (v2.0.1) — replaces 💀 placeholder in the
+  // header souls badge. Also shown in #souls-info-modal header.
+  // Lives under assets/icons/ (new folder for general-purpose UI
+  // iconography, distinct from habit-icons / tab-icons / etc).
+  '/assets/icons/souls-icon.png',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

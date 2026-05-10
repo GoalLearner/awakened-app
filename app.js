@@ -448,6 +448,43 @@
     };
   } catch (_) {}
 
+  // Souls info modal — opens on souls-badge tap. Centered card
+  // explaining earn/spend mechanics. Static info only; no live
+  // stats per design call. Reuses the .modal-overlay + .modal
+  // pattern; closes via backdrop tap, X button, or ESC.
+  function openSoulsInfoModal() {
+    const overlay = document.getElementById('souls-info-overlay');
+    const modal   = document.getElementById('souls-info-modal');
+    if (!overlay || !modal) return;
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+  }
+  function closeSoulsInfoModal() {
+    const overlay = document.getElementById('souls-info-overlay');
+    const modal   = document.getElementById('souls-info-modal');
+    if (!overlay || !modal) return;
+    overlay.classList.add('hidden');
+    modal.classList.add('hidden');
+  }
+  function setupSoulsInfoModal() {
+    const badge   = document.getElementById('souls-badge');
+    const overlay = document.getElementById('souls-info-overlay');
+    const closeBtn = document.getElementById('souls-info-close');
+    if (badge)    badge.addEventListener('click', openSoulsInfoModal);
+    if (overlay)  overlay.addEventListener('click', closeSoulsInfoModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeSoulsInfoModal);
+    // ESC key — only fires when the modal is actually open.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const m = document.getElementById('souls-info-modal');
+      if (m && !m.classList.contains('hidden')) closeSoulsInfoModal();
+    });
+  }
+  try {
+    window.openSoulsInfoModal  = openSoulsInfoModal;
+    window.closeSoulsInfoModal = closeSoulsInfoModal;
+  } catch (_) {}
+
   // Computes "yesterday" in device-local format. Used by the missed-
   // night reset (init-time) to set last_eval_date back one day so
   // tonight's evaluation can still proceed.
@@ -1192,7 +1229,9 @@
     '2.0.1': {
       subtitle: 'The dungeons open.',
       items: [
-        { emoji: '', title: 'Souls currency introduced',       description: "Earn 15 souls daily plus tier-scaled rewards on every boss kill. Spend souls to engage bosses (E rank costs 25, doubles per tier). Hunt wisely — souls are not refunded on disengage." },
+        { emoji: '', title: 'Rank scaling overhauled',         description: "Reach S rank with ~6 months of daily Locked-In pack completion. Boss engagement accelerates the climb but isn't required. Existing XP balances recalibrated to the new curve — your rank is preserved." },
+        { emoji: '', title: 'Sleep duration > bedtime',        description: "Morning Routine and Locked-In packs now require Sleep (7+ hours) instead of Sleep before midnight. Total sleep is what the body actually needs. If your habit list still has Sleep before midnight, add Sleep to keep your compound streak rolling." },
+        { emoji: '', title: 'Souls currency introduced',       description: "Earn 15 souls daily plus tier-scaled rewards on every boss kill. Spend souls to engage bosses (E rank costs 25, doubles per tier). Hunt wisely — souls are not refunded on disengage. Tap the souls badge in the header to see how to earn and spend them." },
         { emoji: '', title: 'Bosses now require engagement',   description: "Open a boss to start hunting it — you can hunt up to 3 at once. Habits only progress bosses you've engaged. Stop hunting any time; your streak resets but your kills stay." },
         { emoji: '', title: 'Preview locked dungeons',         description: "Locked-rank dungeons are now walkable when there's content inside. Preview future bosses, engage them once you reach the rank." },
         { emoji: '', title: 'Six dungeon gates',               description: "The Quests tab is now a 3×2 grid of rank-tier dungeon gates — E, D, C, B, A, S. Tap the E-rank gate to enter and meet your bosses. The other five stay locked until you climb. Each one is its own dungeon waiting for you." },
@@ -1477,14 +1516,21 @@
     { text: 'It does not matter how slowly you go as long as you do not stop.',                            attr: '— Confucius' },
   ];
 
+  // v2.0.1 rank-scaling overhaul: thresholds recalibrated so that
+  // a user completing the Locked-In pack daily reaches S rank in
+  // ~6 months and S+ in ~12-18 months. Old curve (E:500/D:1500/...)
+  // produced S in ~30 days when compound bonuses stacked — way too
+  // fast for a long-arc progression system. Migration in init()
+  // preserves rank-fraction position for existing users; see
+  // migrateXPToNewThresholds().
   const RANKS = [
-    { id: 'E',  label: 'E Rank',  desc: 'Just getting started',                                       min: 0,     max: 499,    next: 500   },
-    { id: 'D',  label: 'D Rank',  desc: 'Building awareness',                                         min: 500,   max: 1499,   next: 1500  },
-    { id: 'C',  label: 'C Rank',  desc: 'Consistency is forming',                                     min: 1500,  max: 3499,   next: 3500  },
-    { id: 'B',  label: 'B Rank',  desc: 'Above average discipline. Most people never get here.',      min: 3500,  max: 6999,   next: 7000  },
-    { id: 'A',  label: 'A Rank',  desc: 'True excellence. This is rare.',                             min: 7000,  max: 13999,  next: 14000 },
-    { id: 'S',  label: 'S Rank',  desc: 'Elite. You have become the habit.',                          min: 14000, max: 27999,  next: 28000 },
-    { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.',  min: 28000, max: Infinity, next: null },
+    { id: 'E',  label: 'E Rank',  desc: 'Just getting started',                                      min: 0,      max: 499,      next: 500    },
+    { id: 'D',  label: 'D Rank',  desc: 'Building awareness',                                        min: 500,    max: 2499,     next: 2500   },
+    { id: 'C',  label: 'C Rank',  desc: 'Consistency is forming',                                    min: 2500,   max: 7499,     next: 7500   },
+    { id: 'B',  label: 'B Rank',  desc: 'Above average discipline. Most people never get here.',     min: 7500,   max: 24999,    next: 25000  },
+    { id: 'A',  label: 'A Rank',  desc: 'True excellence. This is rare.',                            min: 25000,  max: 69999,    next: 70000  },
+    { id: 'S',  label: 'S Rank',  desc: 'Elite. You have become the habit.',                         min: 70000,  max: 149999,   next: 150000 },
+    { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.', min: 150000, max: Infinity, next: null   },
   ];
 
   // ── PERSONAL RECORDS (PRs) ───────────────────────────────
@@ -1576,20 +1622,20 @@
       desc: 'Earn 500 total points', target: 500,
       getProgress: c => ({ current: Math.min(c.totalPoints, 500), target: 500 }) },
     { id: 'the_grind',     category: 'rank', icon: '⚡', name: 'The Grind',
-      desc: 'Earn 2,000 total points', target: 2000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 2000), target: 2000 }) },
+      desc: 'Reach C Rank (2,500 pts)', target: 2500,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 2500), target: 2500 }) },
     { id: 'awakened',      category: 'rank', icon: '💎', name: 'Awakened',
-      desc: 'Reach A Rank (7,000 pts)', target: 7000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 7000), target: 7000 }) },
+      desc: 'Reach A Rank (25,000 pts)', target: 25000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 25000), target: 25000 }) },
     { id: 'shadow_monarch',category: 'rank', icon: '🌑', name: 'Shadow Monarch',
-      desc: 'Reach S Rank (14,000 pts)', target: 14000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 14000), target: 14000 }) },
+      desc: 'Reach S Rank (70,000 pts)', target: 70000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 70000), target: 70000 }) },
     { id: 'the_one',       category: 'rank', icon: '⭐', name: 'The One',
-      desc: 'Reach S+ Rank (28,000 pts)', target: 28000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 28000), target: 28000 }) },
+      desc: 'Reach S+ Rank (150,000 pts)', target: 150000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 150000), target: 150000 }) },
     { id: 'golden_hour',   category: 'rank', icon: '🏆', name: 'Golden Hour',
-      desc: 'Earn 10,000 lifetime XP', target: 10000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 10000), target: 10000 }) },
+      desc: 'Earn 7,500 lifetime XP', target: 7500,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 7500), target: 7500 }) },
 
     // ── 🧍 CLASS & AWAKENING ───────────────────────────────
     { id: 'first_awakening', category: 'class', icon: '✨', name: 'First Awakening',
@@ -2888,7 +2934,16 @@
   // Indices into DEFAULT_HABITS. Locked-In is a SUPERSET of Morning
   // Routine — its habit list is composed from Morning's + 6 extras.
   // Single source of truth: change indices here, every UI surface follows.
-  const _MORNING_HABIT_INDICES = [2, 23, 14, 16, 41, 6, 46, 12, 4, 19];
+  // Canonical 10 Morning Routine habits (indices into DEFAULT_HABITS):
+  //  1=Sleep (7+ hrs),     23=Wake up consistent, 14=No phone after waking,
+  // 16=Morning sunlight,   41=Morning gratitude,  6=Daily walk,
+  // 46=Vitamins,           12=Meditate & Breathwork, 4=Strength training,
+  // 19=Whole foods diet.
+  // v2.0.1: swapped index 2 (Sleep before midnight) → 1 (Sleep) so the
+  // pack rewards 7+ hour sleep duration rather than just bedtime timing.
+  // The bedtime-only habit still exists at index 2 — users who prefer
+  // it can add it from the library; it's just not in the canonical pack.
+  const _MORNING_HABIT_INDICES = [1, 23, 14, 16, 41, 6, 46, 12, 4, 19];
   // Locked-In adds: priority task(24), no social before noon(17),
   // no doomscrolling 5PM(29), plan tomorrow(25), no screens before bed(18), read(11)
   const _LOCKED_IN_EXTRA_INDICES = [24, 17, 29, 25, 18, 11];
@@ -3214,6 +3269,75 @@
     return RANKS[0];
   }
 
+  // ── XP MIGRATION (v2.0.1 rank-scaling overhaul) ─────────────
+  // The new RANKS thresholds are ~5-7× higher than the previous
+  // values. Without migration, an existing user at S rank under the
+  // old curve (14,000 XP) would display as B rank under the new
+  // curve. Rank-preserving fraction-based migration: place each user
+  // at the SAME tier-fraction in the new system as they were in the
+  // old one. A user 50% through old D-tier becomes 50% through new
+  // D-tier. Idempotent via the localStorage flag.
+  //
+  // Important: ONLY totalPoints is migrated. Per-stat XP
+  // (`stats.STR.pts`, etc.) is left alone — multiplying it would
+  // cascade into uncontrolled stat-level milestone bonuses (lv 5/10/
+  // 15/20 awards). This means `totalPoints` will NOT equal
+  // `sum(stats.*.pts)` after migration. Stat thresholds are a
+  // separate progression system; they stay where the user actually
+  // earned them. Inconsistency is benign — the rank UI reads
+  // totalPoints; the Stats panel reads per-stat.
+  const XP_MIGRATION_FLAG = 'hb_xp_migrated_v2';
+  const OLD_RANK_THRESHOLDS = [
+    { id: 'E',  min: 0,     max: 499     },
+    { id: 'D',  min: 500,   max: 1499    },
+    { id: 'C',  min: 1500,  max: 3499    },
+    { id: 'B',  min: 3500,  max: 6999    },
+    { id: 'A',  min: 7000,  max: 13999   },
+    { id: 'S',  min: 14000, max: 27999   },
+    { id: 'S+', min: 28000, max: Infinity },
+  ];
+  function migrateXPToNewThresholds() {
+    if (localStorage.getItem(XP_MIGRATION_FLAG) === '1') return;
+    if (typeof totalPoints !== 'number' || totalPoints <= 0) {
+      // Brand-new user with 0 XP — nothing to migrate. Mark done so
+      // we don't re-check on every launch.
+      localStorage.setItem(XP_MIGRATION_FLAG, '1');
+      return;
+    }
+
+    // Find which old tier this user sits in.
+    let oldIdx = 0;
+    for (let i = OLD_RANK_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (totalPoints >= OLD_RANK_THRESHOLDS[i].min) { oldIdx = i; break; }
+    }
+    const oldTier = OLD_RANK_THRESHOLDS[oldIdx];
+    const newTier = RANKS[oldIdx];
+
+    let migrated;
+    if (oldTier.id === 'S+') {
+      // S+ has no upper bound — fraction is undefined. Scale the
+      // over-floor distance by the ratio of new S→S+ size to old
+      // S→S+ size, preserving "how far past legendary" the user was.
+      const oldSToSPlusSize = OLD_RANK_THRESHOLDS[6].min - OLD_RANK_THRESHOLDS[5].min; // 14000
+      const newSToSPlusSize = RANKS[6].min - RANKS[5].min; // 80000
+      const overFloor = totalPoints - oldTier.min;
+      const scale = newSToSPlusSize / oldSToSPlusSize;
+      migrated = newTier.min + (overFloor * scale);
+    } else {
+      // Within-tier fraction: where the user sits as a 0..1 fraction
+      // through the old tier. Map to the same fraction through the
+      // new tier so rank + within-rank progress feel identical.
+      const oldTierSize = oldTier.max - oldTier.min + 1;
+      const fraction = (totalPoints - oldTier.min) / oldTierSize;
+      const newTierSize = newTier.max - newTier.min + 1;
+      migrated = newTier.min + (fraction * newTierSize);
+    }
+
+    totalPoints = Math.round(migrated);
+    try { localStorage.setItem('hb_points', String(totalPoints)); } catch (_) {}
+    localStorage.setItem(XP_MIGRATION_FLAG, '1');
+  }
+
   // ── PERSONAL RECORDS — helpers ────────────────────────────
   function getPRDef(prId) { return PR_DEFS.find(p => p.id === prId); }
   function getPR(prId) {
@@ -3368,7 +3492,7 @@
         const cs = compoundStreaks[packId];
         const streak = (cs && cs.lastDate === today) ? cs.streak : 0;
         if (streak > 0) {
-          const base = getCompoundXP(streak);
+          const base = getCompoundXP(packId, streak);
           xp += isWeekend() ? base * 2 : base;
         }
       }
@@ -8736,13 +8860,59 @@
   // ── COMPOUND EFFECT BONUS ─────────────────────────────────
   let compoundPopupTimer = null;
 
-  function getCompoundXP(streak) {
-    if (streak >= 366) return 75;
-    if (streak >= 181) return 50;
-    if (streak >= 91)  return 30;
-    if (streak >= 31)  return 20;
-    if (streak >= 8)   return 10;
-    return 5; // days 1-7
+  // v2.0.1 compound bonus rewrite. Per-day curve with milestone
+  // spikes at days 7/14/30/90/180/365. Locked-In is a 1.5× variant
+  // of Morning Routine — same shape, bigger numbers (the Locked-In
+  // pack is 16 habits vs MR's 10, harder to maintain, deserves more).
+  // The new rank thresholds (S = 70,000 XP) are calibrated for THIS
+  // curve — the previous coarse 6-tier function (5/10/20/30/50/75)
+  // was nowhere near enough to support a 6-month-to-S progression.
+  //
+  // Pattern: days 1-6 ramp linearly, then steady-state with milestone
+  // spikes at 7/14/30/90/180/365. After day 90 the steady-state drops
+  // back below the milestone (200<300, 250<500, 300<1000) so milestones
+  // feel like genuine spikes rather than permanent step-ups.
+  function getCompoundXP(packId, streak) {
+    if (typeof streak !== 'number' || streak <= 0) return 0;
+
+    if (packId === 'morning') {
+      // Days 1-6: linear ramp 5 → 30 (5×streakDay)
+      if (streak <= 6) return streak * 5;
+      // Day 7 milestone + steady-state through day 13 (both 50)
+      if (streak <= 13) return 50;
+      // Day 14 milestone + steady-state through day 29 (both 75)
+      if (streak <= 29) return 75;
+      // Day 30 milestone + steady-state through day 89 (both 150)
+      if (streak <= 89) return 150;
+      // Day 90 spike, then drop to higher steady-state
+      if (streak === 90) return 300;
+      if (streak <= 179) return 200;
+      // 6-month spike
+      if (streak === 180) return 500;
+      if (streak <= 364) return 250;
+      // 1-year spike
+      if (streak === 365) return 1000;
+      return 300; // year+ steady-state
+    }
+
+    if (packId === 'locked-in') {
+      // 1.5× Morning Routine values (rounded as spec'd)
+      if (streak <= 6) {
+        const ramp = [0, 8, 15, 23, 30, 38, 45];
+        return ramp[streak];
+      }
+      if (streak <= 13) return 75;
+      if (streak <= 29) return 112;
+      if (streak <= 89) return 225;
+      if (streak === 90) return 450;
+      if (streak <= 179) return 300;
+      if (streak === 180) return 750;
+      if (streak <= 364) return 375;
+      if (streak === 365) return 1500;
+      return 450;
+    }
+
+    return 0;
   }
 
   function getCompoundMotivation(streak) {
@@ -8815,7 +8985,7 @@
     compoundStreaks[packId]  = { streak: newStreak, lastDate: today };
     compoundAwarded[packId]  = today;
 
-    const baseXP  = getCompoundXP(newStreak);
+    const baseXP  = getCompoundXP(packId, newStreak);
     const finalXP = isWeekend() ? baseXP * 2 : baseXP;
     totalPoints  += finalXP;
 
@@ -12850,11 +13020,15 @@
   }
 
   // ── CHOOSE YOUR PATH ─────────────────────────────────────
-  // Morning Routine habit indices (DEFAULT_HABITS order):
-  //   2=Sleep before midnight, 23=Wake up consistent, 14=No phone after waking,
+  // Morning Routine habit indices (DEFAULT_HABITS order). Mirrors the
+  // canonical _MORNING_HABIT_INDICES at top-of-file used by PACKS —
+  // tech-debt: this is a duplicate, candidate for DRY refactor later.
+  // Both copies must stay in sync. v2.0.1 swap: 2 (Sleep before
+  // midnight) → 1 (Sleep, 7+ hours).
+  //   1=Sleep, 23=Wake up consistent, 14=No phone after waking,
   //  16=Morning sunlight, 41=Morning gratitude, 6=Daily walk,
   //  46=Vitamins, 12=Meditate & Breathwork, 4=Strength training, 19=Whole foods
-  var MORNING_HABIT_INDICES = [2, 23, 14, 16, 41, 6, 46, 12, 4, 19];
+  var MORNING_HABIT_INDICES = [1, 23, 14, 16, 41, 6, 46, 12, 4, 19];
 
   function showPathScreen() {
     document.getElementById('app').classList.add('hidden');
@@ -14823,6 +14997,11 @@
   // ── INIT ─────────────────────────────────────────────────
   function init() {
     load();
+    // v2.0.1 rank-scaling overhaul — fraction-based XP migration runs
+    // once per device. Must happen AFTER load() (totalPoints loaded)
+    // and BEFORE any rank-rendering / achievement-checking that
+    // reads totalPoints. See migrateXPToNewThresholds() for rationale.
+    try { migrateXPToNewThresholds(); } catch (_) {}
     today = getPTDate();
     histViewYear  = parseInt(today.slice(0, 4), 10);
     histViewMonth = parseInt(today.slice(5, 7), 10) - 1;
@@ -14988,6 +15167,7 @@
     setupBossesPanel();
     setupQuestsGate();
     setupLeaderboardPreview();
+    setupSoulsInfoModal();
     setupHonestDayModal();
     setupShieldInfoModal();
     setupOriginStorySheet();
