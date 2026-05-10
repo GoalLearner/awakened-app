@@ -329,11 +329,17 @@
   //   { balance, lastDailyBonusDate, totalEarned, totalSpent }
   //   totalEarned/Spent are debug-only; not surfaced in UI.
   //
-  // First-install grants 150 souls so users can engage 6 E-rank
-  // bosses (or 3 D-rank) before the daily bonus kicks in.
+  // First-install grants 35 souls. Combined with the +15 daily
+  // login bonus that fires on the same first session, new users see
+  // 50 souls on their first opening of the app — exactly 2× E-rank
+  // engagement cost (25). Forces commitment to 2 bosses from day
+  // one rather than spreading thin across all six. Tighter than the
+  // original 150 grant (and the brief intermediate 50 grant, which
+  // over-delivered to 65 first-session because the daily bonus
+  // stacked on top); 35 nets to the design intent of "feels like 50."
   const SOULS_STORAGE_KEY = 'hb_souls';
   const SOULS_DAILY_BONUS = 15;
-  const SOULS_FIRST_INSTALL_GRANT = 150;
+  const SOULS_FIRST_INSTALL_GRANT = 35;
   const SOULS_KILL_REWARDS  = { E: 50, D: 100, C: 200, B: 400, A: 800, S: 1600 };
   const SOULS_ENGAGE_COSTS  = { E: 25, D:  50, C: 100, B: 200, A: 400, S:  800 };
 
@@ -415,10 +421,20 @@
     return SOULS_ENGAGE_COSTS[rank] || 0;
   }
 
-  // Daily login bonus. Called once per init(), idempotent on the
-  // device-local calendar day. No rollover — skipped days are gone.
+  // Daily login bonus. Idempotent on the device-local calendar day.
+  // No rollover — skipped days are gone.
+  //
+  // Welcome/onboarding gate (added v2.0.1): deferred until the user
+  // is past the welcome screen + onboarding flow so the toast
+  // doesn't pop up over those takeover screens. First-install users:
+  // the init() call no-ops here (welcome flag not set yet); bonus
+  // fires from the showBeginningReveal callback once the main app
+  // is visible. Existing users: hb_welcomed === '1' and
+  // needsOnboarding === false at init, bonus fires normally.
   function tryGrantDailyLoginBonus() {
     if (!_souls) loadSouls();
+    if (localStorage.getItem('hb_welcomed') !== '1') return false;
+    if (typeof needsOnboarding !== 'undefined' && needsOnboarding === true) return false;
     const today = getDeviceLocalDate();
     if (_souls.lastDailyBonusDate === today) return false; // already granted
     earnSouls(SOULS_DAILY_BONUS, 'daily_login');
@@ -13397,6 +13413,11 @@
     showBeginningReveal(() => {
       document.getElementById('app').classList.remove('hidden');
       render();
+      // First-install daily-login bonus: deferred from init() so the
+      // toast doesn't appear over the welcome/onboarding screens.
+      // Now that the main app is finally visible, fire it here.
+      // Idempotent — no-ops if init's gate had already let it through.
+      try { tryGrantDailyLoginBonus(); } catch (_) {}
     });
   }
 

@@ -1772,6 +1772,21 @@ footer {
   line-height: 1.3;
   flex-shrink: 0;
 }
+
+/* Image bullet for the souls-info list (replaces emoji bullets).
+   24px keeps visual weight matching prior emoji-glyphs at the
+   surrounding ~0.86rem text. Subtle gold drop-shadow ties the warm
+   tones (sunrise + crossed swords) into the rest of the modal's
+   gold-accented styling. Vertical-align: middle pulls the image
+   up to the cap height of the adjacent text. */
+.souls-info-bullet-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 2px; /* tiny extra space; gap on the parent flex row covers most */
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.30));
+}
 .souls-info-list-text { flex: 1; }
 .souls-info-list-text b { color: var(--gold); font-weight: 800; }
 

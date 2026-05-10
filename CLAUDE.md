@@ -742,7 +742,7 @@ Bosses.isBossEngaged('the_steel_wolf');
 
 Economic layer alongside XP. Spent on boss engagement, earned via daily login + boss kills. Tier-scaled (E→S doubles per rank for both costs and rewards) so disciplined hunters net `+cost` per kill while chronic disengagers drain. **Habits never touch souls** — the two-tier philosophy is preserved: habits stay no-failure-state; the economy lives in the boss layer.
 
-**Storage:** `hb_souls = { balance, lastDailyBonusDate, totalEarned, totalSpent }`. `totalEarned` / `totalSpent` are debug-only accumulators (not displayed in UI; useful for testing). First-install grants **150 souls** (enough to engage 6 E-rank or 3 D-rank bosses before the daily bonus kicks in).
+**Storage:** `hb_souls = { balance, lastDailyBonusDate, totalEarned, totalSpent }`. `totalEarned` / `totalSpent` are debug-only accumulators (not displayed in UI; useful for testing). First-install grants **35 souls**; the +15 daily login bonus fires on the same first session, netting **50 souls** on first opening — exactly 2× E-rank engagement cost (25). Forces commitment to 2 bosses from day one rather than spreading thin across all six. Tighter than the original 150 grant (and the brief intermediate 50 grant which over-delivered to 65 first-session because daily bonus stacked); intentional design pressure.
 
 **Earn paths:**
 - **Daily login bonus**: `tryGrantDailyLoginBonus()` runs once per init, idempotent on `getDeviceLocalDate()`. +15 souls. Skipped days are gone — no rollover.
@@ -777,7 +777,7 @@ Souls.engageCost('S')      // 800
 Souls.grantDaily()         // forces daily bonus check (idempotent)
 ```
 
-**Migration**: `loadSouls()` is itself the migration — first call after deploy with no `hb_souls` key reads as missing-state and grants the 150-soul first-install balance. Existing users (no prior souls state) automatically get treated as new users.
+**Migration**: `loadSouls()` is itself the migration — first call after deploy with no `hb_souls` key reads as missing-state and grants the 35-soul first-install balance. Existing users (no prior souls state) automatically get treated as new users. Starting-balance changes (150 → 50 → 35) are forward-looking only; users with existing `hb_souls` are unaffected.
 
 ### Missed-period detection (init only)
 
