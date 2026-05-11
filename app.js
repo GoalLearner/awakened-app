@@ -14,7 +14,7 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.0.1';
+  const APP_VERSION = '2.0.2';
 
   // ── HealthKit auto-verification thresholds ───────────────
   // v1.1.5: Daily walk auto-verifies via Apple Health when steps
@@ -2067,7 +2067,7 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
-    '2.0.1': {
+    '2.0.2': {
       subtitle: 'The dungeons open.',
       items: [
         { emoji: '', title: 'Drops!',                          description: "Defeat dungeon bosses to collect cards. Some kills drop items — rare and ultra-rare pulls trigger a cinematic reveal. Check the Items tab for your collection." },
