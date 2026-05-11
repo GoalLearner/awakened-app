@@ -9928,6 +9928,15 @@ footer {
   border-color: rgba(255,255,255,0.06);
   background: rgba(0,0,0,0.18);
   color: var(--text-primary);
+  /* v2.0.1 polish: kill text-selection on the locked input. readOnly
+     alone still allows users to long-press and select the text on
+     iOS Safari / Capacitor WebView, which gives the impression the
+     field is editable. Belt-and-suspenders: pointer-events: none also
+     prevents caret placement / focus. The input still RENDERS its
+     value (display-only), it just behaves like a static label. */
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 .edit-modal--canonical #edit-input:focus {
   border-color: rgba(255,255,255,0.06);
@@ -13426,4 +13435,578 @@ body.bfs-locked { overflow: hidden; }
   font-size: 0.85rem;
   font-style: italic;
   color: var(--text-tertiary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DROPS Phase 1 — Items tab Pokédex + reveal modal + card detail
+   (v2.0.1). Each card is also an equippable item per EQUIPMENT.md;
+   the v1 UI surfaces them as Pokédex collection only. Equip UI
+   ships in Phase 3.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Items tab Pokédex ───────────────────────────────────────── */
+.pokedex {
+  padding: 22px 14px 40px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.pokedex-header {
+  text-align: center;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.10);
+}
+.pokedex-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.6rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.30));
+}
+.pokedex-count {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.pokedex-count span {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.pokedex-progress-bar {
+  width: 100%;
+  max-width: 280px;
+  height: 6px;
+  margin: 0 auto 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(245, 158, 11, 0.18);
+}
+.pokedex-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.50);
+  transition: width 0.4s ease;
+}
+.pokedex-subtext {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.pokedex-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.pokedex-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pokedex-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 2px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+.pokedex-section-header:hover { background: rgba(255,255,255,0.03); }
+.pokedex-section-header:active { background: rgba(255,255,255,0.05); }
+.pokedex-section-chevron {
+  font-size: 0.85rem;
+  color: var(--gold);
+  line-height: 1;
+  transition: transform 0.18s ease;
+  width: 12px;
+  display: inline-block;
+  text-align: center;
+}
+.pokedex-section--collapsed .pokedex-section-chevron { transform: rotate(-90deg); }
+.pokedex-section-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+  flex: 1;
+}
+.pokedex-section-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+.pokedex-section-body {
+  overflow: hidden;
+  transition: max-height 0.22s ease;
+}
+.pokedex-section--collapsed .pokedex-section-body { display: none; }
+.pokedex-section-empty {
+  padding: 14px 6px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+/* (Common rarity tint is defined below in the rarity-tints block.) */
+
+.pokedex-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.pokedex-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px 8px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pokedex-card:hover  { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); }
+.pokedex-card:active { transform: scale(0.97); }
+.pokedex-card-art {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(0, 0, 0, 0.40));
+  margin-bottom: 6px;
+}
+.pokedex-card-slot-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.30));
+}
+.pokedex-card-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  /* Truncate long names cleanly. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pokedex-card-stack {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--gold);
+  background: rgba(0, 0, 0, 0.72);
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.40);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rarity tints — applied to the discovered card's art background and
+   the section pip colors. Subtle so the card art (when it lands)
+   can carry the visual weight. */
+.pokedex-card--common     { border-color: rgba(167, 139, 250, 0.30); }
+.pokedex-card--common     .pokedex-card-art { background: linear-gradient(135deg, rgba(167, 139, 250, 0.12), rgba(0, 0, 0, 0.40)); }
+.pokedex-card--rare       { border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 0 10px rgba(245, 158, 11, 0.18); }
+.pokedex-card--rare       .pokedex-card-art { background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(0, 0, 0, 0.40)); }
+.pokedex-card--ultra_rare { border-color: rgba(251, 191, 36, 0.55); box-shadow: 0 0 14px rgba(251, 191, 36, 0.28); }
+.pokedex-card--ultra_rare .pokedex-card-art {
+  background: linear-gradient(135deg, rgba(232, 121, 249, 0.20), rgba(251, 191, 36, 0.16), rgba(0, 0, 0, 0.40));
+}
+
+/* Undiscovered placeholder cards. Still tap-able (toast). */
+.pokedex-card--undiscovered {
+  background: rgba(255, 255, 255, 0.02);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: none;
+}
+.pokedex-card--undiscovered:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.40); }
+.pokedex-card-art--undiscovered {
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+.pokedex-card-mystery {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--text-tertiary);
+  font-family: 'Cinzel', serif;
+}
+.pokedex-card-name--mystery {
+  color: var(--text-tertiary);
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+/* ── Reveal modal — cinematic Solo Leveling system-window ────── */
+.reveal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: radial-gradient(circle at center, rgba(20, 10, 40, 0.92) 0%, rgba(0, 0, 0, 0.96) 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+  overflow: hidden;
+}
+.reveal-overlay.hidden { display: none !important; }
+.reveal-overlay--showing {
+  opacity: 1;
+  pointer-events: auto;
+}
+.reveal-overlay--closing { opacity: 0; }
+
+body.reveal-locked { overflow: hidden; }
+
+/* System-window line — draws across the screen as the modal opens.
+   Manhwa-style "system message" framing. */
+.reveal-systemline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.85), transparent);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.65);
+  transform: scaleX(0);
+  transform-origin: center;
+}
+.reveal-systemline--top    { top: 40%; }
+.reveal-systemline--bottom { bottom: 40%; }
+.reveal-overlay--showing .reveal-systemline {
+  animation: reveal-line-draw 0.42s 0.05s ease-out forwards;
+}
+@keyframes reveal-line-draw {
+  0%   { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+/* Drifting particles (ultra-rare only). Three pseudo-elements
+   drifting upward at staggered intervals — built with box-shadow
+   to avoid asset dependencies. */
+.reveal-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+}
+.reveal-overlay--ultra_rare .reveal-particles { display: block; }
+.reveal-overlay--ultra_rare .reveal-particles::before,
+.reveal-overlay--ultra_rare .reveal-particles::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.85);
+  box-shadow:
+    0 0 8px rgba(251, 191, 36, 0.65),
+    -120px 220px 0 rgba(232, 121, 249, 0.65),
+    140px 320px 0 rgba(251, 191, 36, 0.55),
+    -210px 80px 0 rgba(245, 158, 11, 0.55),
+    180px -60px 0 rgba(232, 121, 249, 0.55),
+    -80px -180px 0 rgba(251, 191, 36, 0.55);
+  left: 50%;
+  top: 50%;
+  animation: reveal-particles-drift 4s ease-in-out infinite;
+}
+.reveal-overlay--ultra_rare .reveal-particles::after {
+  animation-delay: -2s;
+  background: rgba(232, 121, 249, 0.75);
+}
+@keyframes reveal-particles-drift {
+  0%, 100% { transform: translate(-50%, -50%); opacity: 0.85; }
+  50%      { transform: translate(-50%, calc(-50% - 30px)); opacity: 1; }
+}
+
+/* The card itself — 5:7 portrait, materializes after the system
+   lines draw in. Border + frame styled per rarity. */
+.reveal-card {
+  position: relative;
+  z-index: 2;
+  width: 76%;
+  max-width: 280px;
+  aspect-ratio: 5 / 7;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 2px solid transparent;
+  border-image: linear-gradient(135deg, #5b21b6 0%, #f59e0b 100%) 1;
+  border-radius: 6px;
+  overflow: hidden;
+  padding: 14px 12px 16px;
+  text-align: center;
+  transform: scale(0);
+  opacity: 0;
+}
+.reveal-overlay--showing .reveal-card {
+  animation: reveal-card-materialize 0.6s 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes reveal-card-materialize {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+/* Rare: gold border + soft pulse. Override the gradient. */
+.reveal-overlay--rare .reveal-card {
+  border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
+}
+.reveal-overlay--showing.reveal-overlay--rare .reveal-card {
+  animation: reveal-card-materialize 0.6s 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             reveal-card-rare-pulse 2.4s 1.0s ease-in-out infinite;
+}
+@keyframes reveal-card-rare-pulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(245, 158, 11, 0.40); }
+  50%      { box-shadow: 0 0 32px rgba(245, 158, 11, 0.70); }
+}
+/* Ultra-rare: animated gold-violet shimmer border. */
+.reveal-overlay--ultra_rare .reveal-card {
+  border-image: linear-gradient(135deg, #e879f9 0%, #f59e0b 50%, #e879f9 100%) 1;
+  box-shadow: 0 0 28px rgba(232, 121, 249, 0.50), 0 0 28px rgba(245, 158, 11, 0.45);
+}
+.reveal-overlay--showing.reveal-overlay--ultra_rare .reveal-card {
+  animation: reveal-card-materialize 0.6s 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             reveal-card-ultra-pulse 2.6s 1.0s ease-in-out infinite;
+}
+@keyframes reveal-card-ultra-pulse {
+  0%, 100% { box-shadow: 0 0 28px rgba(232, 121, 249, 0.40), 0 0 28px rgba(245, 158, 11, 0.40); }
+  50%      { box-shadow: 0 0 42px rgba(232, 121, 249, 0.75), 0 0 42px rgba(245, 158, 11, 0.65); }
+}
+
+.reveal-card-art {
+  flex: 0 0 55%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.20), rgba(245, 158, 11, 0.15), rgba(0, 0, 0, 0.55));
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.reveal-slot-icon {
+  font-size: 4.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.60));
+  /* Stagger reveal so the icon fades in after the card frame. */
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 0.85s ease-out forwards;
+}
+.reveal-card-rarity {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 0.95s ease-out forwards;
+}
+.reveal-overlay--ultra_rare .reveal-card-rarity {
+  background: linear-gradient(90deg, #e879f9, #fbbf24, #e879f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.reveal-card-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 1.05s ease-out forwards;
+}
+.reveal-card-source {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 1.15s ease-out forwards;
+}
+.reveal-card-flavor {
+  font-style: italic;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #a8a3c4;
+  margin: 0;
+  padding: 0 6px;
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 1.25s ease-out forwards;
+}
+@keyframes reveal-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal-continue-hint {
+  position: absolute;
+  bottom: calc(40px + var(--safe-bottom));
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  opacity: 0;
+  animation: reveal-continue-pulse 1.6s 1.6s ease-in-out infinite;
+}
+@keyframes reveal-continue-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
+}
+
+/* ── Card detail modal (static, non-cinematic) ──────────────── */
+.carddetail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.carddetail-overlay.hidden { display: none !important; }
+.carddetail-modal {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg-raised);
+  border: 2px solid transparent;
+  border-image: linear-gradient(135deg, #5b21b6 0%, #f59e0b 100%) 1;
+  border-radius: 8px;
+  padding: 22px 20px 18px;
+  text-align: center;
+}
+.carddetail-overlay--rare .carddetail-modal {
+  border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.35);
+}
+.carddetail-overlay--ultra_rare .carddetail-modal {
+  border-image: linear-gradient(135deg, #e879f9 0%, #f59e0b 50%, #e879f9 100%) 1;
+  box-shadow: 0 0 22px rgba(232, 121, 249, 0.40), 0 0 22px rgba(245, 158, 11, 0.40);
+}
+.carddetail-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.carddetail-close:hover { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+.carddetail-art {
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(245, 158, 11, 0.12), rgba(0, 0, 0, 0.50));
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+.carddetail-slot-icon {
+  font-size: 4rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.50));
+}
+.carddetail-rarity {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.carddetail-overlay--ultra_rare .carddetail-rarity {
+  background: linear-gradient(90deg, #e879f9, #fbbf24, #e879f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.carddetail-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+.carddetail-source {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+.carddetail-flavor {
+  font-style: italic;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #a8a3c4;
+  margin: 0 0 12px;
+}
+.carddetail-acquired {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.carddetail-stack {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold);
 }

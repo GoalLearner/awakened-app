@@ -1,8 +1,21 @@
 # DROPS.md — Awakened Drops / Card Collection System
 
-**Status:** v1 design. Not yet implemented.
-**Last updated:** May 9, 2026
+**Status:** v1.3 — Phase 1 engine shipped (v2.0.1).
+**Last updated:** May 11, 2026
 **Designer:** Richie (with Claude as design partner)
+
+## Version history
+
+- **v1.3 (May 11, 2026)** — Renamed lowest rarity tier `uncommon` → `common`
+  ("uncommon at 1/5 base rate" was misleading; "common" is more accurate).
+  Drop rates tuned: ultra-rare 1/40 → 1/20, rare 1/15 → 1/12, common stays
+  at 1/5. "First-uncommon protection" → "first-common protection" (same
+  mechanic, renamed flag). Storage keys `first_uncommon_*` migrated to
+  `first_common_*` (legacy read fallback preserved for forward-compat).
+- **v1.2** — Drop-table restructure. Each boss has one signature slot;
+  ultra-rares are best-in-slot for that slot at launch.
+- **v1.1** — Bonuses schema expanded from 5 stat keys to 6 (added WLT).
+- **v1 (May 9, 2026)** — Initial design.
 
 Companion docs:
 - `BOSSES.md` — boss system mechanics, framework principles
@@ -78,28 +91,32 @@ roll against that boss's drop table. No rolls on non-kill
 nights. Matches the streak-completion-with-drops model already
 shipped.
 
-### 5. Pure RNG with first-uncommon protection
+### 5. Pure RNG with first-common protection
 
 Drop rates are pure random per kill. **Exception:** until the
-player earns their first uncommon-tier card from any boss, the
-uncommon roll rate is boosted to 2/3. The moment they pull
-their first uncommon, this protection ends and rates revert to
-standard for all future rolls (across all bosses).
+player earns their first common-tier card from any boss, the
+common roll rate is boosted to 2/3. The moment they pull their
+first common, this protection ends and rates revert to standard
+for all future rolls (across all bosses).
 
 > **Rationale:** New players need to discover the system exists
 > via a real card pull early. 2/3 boost means most players hit
-> their first uncommon within 1-2 days. But it's not guaranteed
+> their first common within 1-2 days. But it's not guaranteed
 > — variance preserved.
 
-### 6. No common-tier card slot
+### 6. Most kills produce souls only
 
 Most boss kills produce souls only — no card. This keeps card
-drops *special*. Only ~20% of kills (uncommon rate) actually
-drop a card. The remaining ~80% are still rewarded with souls.
+drops *special*. Only ~30% of kills (combined rate across all
+three tiers) actually drop a card. The remaining ~70% are still
+rewarded with souls.
 
-> **Rationale:** Common cards on every kill would dilute the
-> "I got a card!" moment. Better to have ~80% of kills produce
-> souls only and ~20% produce a card.
+> **Rationale:** Cards on every kill would dilute the "I got a
+> card!" moment. Better to have ~70% of kills produce souls only
+> and ~30% produce a card. The lowest rarity is named "common"
+> within the drop pool, but kills themselves are not common to
+> drop anything at all — the scarcity lives at the kill-event
+> level, not the within-pool tier level.
 
 ### 7. Stack-with-badge for duplicates
 
@@ -121,29 +138,42 @@ not displayed publicly anywhere yet.
 
 ---
 
-## Drop rates — daily-cadence bosses
+## Drop rates — daily-cadence bosses (v1.3)
+
+Rolls happen in order: ultra-rare → rare → common, mutually
+exclusive, one card max per kill. Each roll is independent
+RNG against its tier rate.
 
 | Tier | Rate | Drop content |
 |---|---|---|
-| (No card) | ~80% of kills | Souls only, no card pulled |
-| Uncommon | 1/5 (~20%) | Cosmetic card, uncommon-tier border |
-| Rare | 1/15 (~7%) | Cosmetic card, rare-tier border + glow |
-| Ultra-rare | 1/40 (~2.5%) | Trophy card, ultra-rare animated border |
+| Ultra-rare | 1/20 (5%) | Trophy card, ultra-rare animated border |
+| Rare | 1/12 (~8.3%) | Cosmetic card, rare-tier border + glow |
+| Common | 1/5 (20%) | Cosmetic card, common-tier border |
+| (No card) | ~70% of kills | Souls only, no card pulled |
 
-**First-uncommon protection (new player):** uncommon rate
-is 2/3 instead of 1/5 until first uncommon drop, then snaps
-to standard rate.
+Combined any-drop probability per kill: `1 − (19/20)(11/12)(4/5)
+= ~30.3%`. Per-tier expected hit rates (conditional on prior
+tiers missing):
+- ~5% ultra-rare
+- ~7.9% rare
+- ~17.4% common
+- ~69.7% no drop
+
+**First-common protection (new player):** common rate is 2/3
+instead of 1/5 until first common drop, then snaps to standard
+rate. Pushes combined drop probability up to ~70% during the
+onboarding window so new players reliably see the system fire.
 
 **Expected pull rate at realistic 5/7-days-per-week sleep
 success, streak-completion-of-2 model:**
 - ~65 successful kills/year per daily-cadence boss
-- ~13 uncommons/year per boss
-- ~4 rares/year per boss
-- ~1.5 ultra-rares/year per boss
+- ~11 commons/year per boss
+- ~5 rares/year per boss
+- ~3 ultra-rares/year per boss
 
 **Weekly-cadence bosses (Carouser):** roughly half kill
 frequency of daily bosses, but same drop rates per kill.
-~32 kills/year, ~6 uncommons/year, ~2 rares/year, ~0.8
+~32 kills/year, ~5.5 commons/year, ~2.5 rares/year, ~1.5
 ultra-rares/year.
 
 ---
@@ -187,14 +217,14 @@ Different shape signals different category at a glance.
 **Footer region (~25% of card height):**
 - Card name (top of footer, bold gold serif)
 - Rarity indicator (top right of footer — small dots or pip
-  marks; uncommon=2 silver, rare=3 gold, ultra-rare=4 animated)
+  marks; common=2 silver, rare=3 gold, ultra-rare=4 animated)
 - Source line (small gray text: "From: [Boss Name]" or
   "Reward: [event name]")
 - One-line flavor text (italic, gray-purple)
 
 ### Rarity differentiation
 
-**Uncommon:**
+**Common:**
 - Standard purple border (matches base card frame)
 - No background glow
 - Silver rarity pips
@@ -238,7 +268,7 @@ ITEMS — DISCOVERED 23 / 150
 
 - **Ultra-Rare section** — 8 slots total target, ? discovered
 - **Rare section** — 30 slots total target, ? discovered
-- **Uncommon section** — 112 slots total target, ? discovered
+- **Common section** — 112 slots total target, ? discovered
 
 (Specific counts per tier TBD — these are rough placeholder
 numbers totaling 150)
@@ -269,7 +299,7 @@ Example undiscovered slot:
 
 **Rationale on placeholders:** the "fill the dex" energy
 requires *visible* slots. Empty unrendered slots = users don't
-know what they're missing. Rarity-tier placeholders ("Uncommon
+know what they're missing. Rarity-tier placeholders ("Common
 ???") give anticipation without requiring DALL-E generations
 for undiscovered cards. Real card art only generated for
 discovered cards.
@@ -295,11 +325,11 @@ Tapping an undiscovered card slot:
 
 ## Drop notification UX
 
-### Uncommon drops
+### Common drops
 
 **Single combined toast** appended to kill toast:
 
-> "The Insomniac defeated. +50 souls. Pulled: Dreamer's Fragment (Uncommon)."
+> "The Insomniac defeated. +50 souls. Pulled: Dreamer's Fragment (Common)."
 
 Subtle. No interruption to flow. Card appears in inventory
 immediately. User can investigate when they want.
@@ -340,7 +370,7 @@ Per-boss drop tables. Initial estimate: ~10-12 cards per boss
 across rarities. With 9-boss roster, ~90-108 boss-source cards.
 
 Breakdown per boss (rough):
-- 6-7 uncommon cards
+- 6-7 common cards
 - 3-4 rare cards
 - 1-2 ultra-rare cards
 - Total: ~10-13 cards
@@ -390,9 +420,9 @@ based on app maturity and user behavior.**
 
 If forced to ship the smallest possible version:
 
-### Phase 1 — Core engine (week 1)
-- Drop roll logic on kill (uncommon/rare/ultra-rare per existing rates)
-- First-uncommon protection state
+### Phase 1 — Core engine (week 1) — SHIPPED v2.0.1
+- Drop roll logic on kill (common/rare/ultra-rare per existing rates)
+- First-common protection state
 - Storage schema (`hb_inventory` keyed by card_id, value = `{discovered, count, first_acquired_date}`)
 - Card data structure (`CARDS` constant in code with id, name, rarity, source_boss, flavor)
 - 1-3 cards per boss only (3 bosses × 3 cards = 9 cards launch)
@@ -425,7 +455,7 @@ If forced to ship the smallest possible version:
 ## Open design questions (deferred)
 
 1. **Specific 150-card distribution across rarities.**
-   Locked: ~150 total. Unlocked: how many uncommons, rares,
+   Locked: ~150 total. Unlocked: how many commons, rares,
    ultra-rares.
 
 2. **Card naming convention.** Boss-specific names like
@@ -445,7 +475,7 @@ If forced to ship the smallest possible version:
    public profiles exist, equip slot mechanics need spec.
 
 6. **Combine-to-upgrade (v2.5+).** Stack mechanics deferred
-   but eventually 3 commons → 1 uncommon could be added.
+   but eventually 3 commons → 1 rare could be added.
 
 7. **Card trading/social.** Future feature. Players sharing
    cards with friends. Way out of scope for v1.
@@ -468,15 +498,15 @@ If forced to ship the smallest possible version:
   diversify the engagement and let casual users earn cards
   through non-boss play.
 
-- **No common card slot:** ~80% of kills producing souls only,
-  20% producing cards keeps drops feeling special. Common
-  drops on every kill would train users to ignore drops.
+- **Most kills produce souls only:** ~70% of kills producing
+  souls only, ~30% producing cards keeps drops feeling special.
+  Cards on every kill would train users to ignore drops.
 
-- **Modal reveal for rare/ultra-rare only:** uncommon happens
-  often enough that modal-on-every-uncommon is annoying.
+- **Modal reveal for rare/ultra-rare only:** common happens
+  often enough that modal-on-every-common is annoying.
   Ultra-rare deserves a moment.
 
-- **Rarity-tier placeholders for undiscovered:** "Uncommon ???"
+- **Rarity-tier placeholders for undiscovered:** "Common ???"
   vs full silhouette art. Same anticipation effect, half the
   art generation work.
 

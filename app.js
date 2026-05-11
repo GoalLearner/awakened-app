@@ -25,12 +25,22 @@
   // truth" patterns. The Edit Habit modal hosts the configuration UI.
   // Always read via getHabitStepGoal(habit) — never reference the
   // default directly outside the helper.
-  const HEALTHKIT_WALK_DEFAULT_THRESHOLD = 3000;
+  const HEALTHKIT_WALK_DEFAULT_THRESHOLD = 8000;
+  // Data-layer floor — kept loose so EXISTING users who already saved
+  // sub-8,000 step goals don't have their stored value silently re-
+  // mapped on load. The user-facing edit floor is HEALTHKIT_WALK_EDIT_FLOOR
+  // below, enforced in the Edit Habit modal's commit paths. Existing
+  // sub-floor habits keep working until the user re-edits them, at
+  // which point the modal forces them up to ≥ 8,000.
   const HEALTHKIT_WALK_THRESHOLD_MIN = 100;
   const HEALTHKIT_WALK_THRESHOLD_MAX = 50000;
+  // UI-layer minimum — Edit Habit modal refuses to commit values below
+  // this. Discipline app: 5K is too soft an entry bar; 8K is the
+  // baseline for "you actually walked today."
+  const HEALTHKIT_WALK_EDIT_FLOOR = 8000;
   // Preset chips offered in the Edit Habit step-goal control. "Custom"
   // outside this list reveals the inline numeric input.
-  const HEALTHKIT_WALK_PRESETS = [1000, 3000, 5000, 8000, 10000];
+  const HEALTHKIT_WALK_PRESETS = [8000, 10000];
 
   // ── HealthKit auth version ───────────────────────────────
   // BUMP THIS NUMBER any time you add a new HealthKit category to the
@@ -343,6 +353,176 @@
   const SOULS_KILL_REWARDS  = { E: 50, D: 100, C: 200, B: 400, A: 800, S: 1600 };
   const SOULS_ENGAGE_COSTS  = { E: 25, D:  50, C: 100, B: 200, A: 400, S:  800 };
 
+  // ── EQUIPMENT CARDS (v2.0.1 DROPS Phase 1) ──────────────────
+  // Drops from boss kills. Each card is also an equippable item per
+  // EQUIPMENT.md — stat bonuses, slot, tier all captured from day
+  // one so the eventual equip UI + PvP combat (Phase 3-5) can layer
+  // on without painful data migration. In v1 the UI surfaces these
+  // as Pokédex collection only (no equip slots, no character avatar
+  // yet). The schema is the source of truth — UI builds on top.
+  //
+  // Slot ownership per boss locked in EQUIPMENT.md "Slot Ownership"
+  // section. Stat magnitudes follow the tier-doubling table:
+  // E-tier common=2, rare=6, ultra-rare=12 // D-tier =4/12/24.
+  // Don't improvise values — pull from EQUIPMENT.md verbatim.
+  const CARDS = {
+    // ── The Insomniac (E, VIT) — signature slot: AMULET ─────
+    dream_woven_hood: {
+      id: 'dream_woven_hood',
+      name: 'Dream-Woven Hood',
+      slot: 'helm',
+      source_boss: 'the_insomniac',
+      rarity: 'common',
+      tier: 'E',
+      flavor: 'A hood spun from undisturbed sleep.',
+      art_path: 'assets/items/dream_woven_hood.png',
+      bonuses: { str: 0, vit: 2, int: 0, focus: 0, will: 0, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    sleepwalkers_cloak: {
+      id: 'sleepwalkers_cloak',
+      name: "Sleepwalker's Cloak",
+      slot: 'cape',
+      source_boss: 'the_insomniac',
+      rarity: 'rare',
+      tier: 'E',
+      flavor: 'Worn by those who walk the line between dreams and dawn.',
+      art_path: 'assets/items/sleepwalkers_cloak.png',
+      bonuses: { str: 0, vit: 6, int: 0, focus: 0, will: 0, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    pendant_of_the_wakeful: {
+      id: 'pendant_of_the_wakeful',
+      name: 'Pendant of the Wakeful',
+      slot: 'amulet',
+      source_boss: 'the_insomniac',
+      rarity: 'ultra_rare',
+      tier: 'E',
+      flavor: 'Hangs heavy with the weight of restful nights. Best in slot — until something older breaks.',
+      art_path: 'assets/items/pendant_of_the_wakeful.png',
+      bonuses: { str: 0, vit: 8, int: 0, focus: 0, will: 4, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Carouser (E, WILL) — signature slot: GLOVES ─────
+    vow_ring: {
+      id: 'vow_ring',
+      name: 'Vow Ring',
+      slot: 'ring',
+      source_boss: 'the_carouser',
+      rarity: 'common',
+      tier: 'E',
+      flavor: 'Worn by those who chose to leave before midnight.',
+      art_path: 'assets/items/vow_ring.png',
+      bonuses: { str: 0, vit: 0, int: 0, focus: 0, will: 2, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    vessel_of_refusal: {
+      id: 'vessel_of_refusal',
+      name: 'Vessel of Refusal',
+      slot: 'weapon',
+      source_boss: 'the_carouser',
+      rarity: 'rare',
+      tier: 'E',
+      flavor: 'A chalice carried but never lifted.',
+      art_path: 'assets/items/vessel_of_refusal.png',
+      bonuses: { str: 0, vit: 0, int: 0, focus: 0, will: 6, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    sober_kings_gloves: {
+      id: 'sober_kings_gloves',
+      name: "Sober King's Gloves",
+      slot: 'gloves',
+      source_boss: 'the_carouser',
+      rarity: 'ultra_rare',
+      tier: 'E',
+      flavor: 'Steady hands. Empty cup. Best in slot — discipline made manifest.',
+      art_path: 'assets/items/sober_kings_gloves.png',
+      bonuses: { str: 0, vit: 4, int: 0, focus: 0, will: 8, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Steel Wolf (D, VIT) — signature slot: BOOTS ─────
+    pack_leaders_greaves: {
+      id: 'pack_leaders_greaves',
+      name: "Pack Leader's Greaves",
+      slot: 'legs',
+      source_boss: 'the_steel_wolf',
+      rarity: 'common',
+      tier: 'D',
+      flavor: 'The wolf does not stop.',
+      art_path: 'assets/items/pack_leaders_greaves.png',
+      bonuses: { str: 0, vit: 4, int: 0, focus: 0, will: 0, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    alphas_mantle: {
+      id: 'alphas_mantle',
+      name: "Alpha's Mantle",
+      slot: 'body',
+      source_boss: 'the_steel_wolf',
+      rarity: 'rare',
+      tier: 'D',
+      flavor: 'Mantle of one who leads the hunt.',
+      art_path: 'assets/items/alphas_mantle.png',
+      bonuses: { str: 0, vit: 12, int: 0, focus: 0, will: 0, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    trail_worn_boots: {
+      id: 'trail_worn_boots',
+      name: 'Trail-Worn Boots',
+      slot: 'boots',
+      source_boss: 'the_steel_wolf',
+      rarity: 'ultra_rare',
+      tier: 'D',
+      flavor: 'Every step counts. These have counted thousands. Best in slot — until the trail goes further.',
+      art_path: 'assets/items/trail_worn_boots.png',
+      bonuses: { str: 8, vit: 16, int: 0, focus: 0, will: 0, wlt: 0 },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+  };
+
+  // Slot icons for placeholder rendering (until DALL-E art lands at
+  // each card's art_path). Once real PNGs ship in assets/items/, the
+  // card render path can swap to <img src> with onerror fallback.
+  const SLOT_ICONS = {
+    helm:   '🪖',
+    cape:   '🧥',
+    amulet: '📿',
+    weapon: '⚔️',
+    body:   '🛡️',
+    legs:   '👖',
+    gloves: '🧤',
+    boots:  '👢',
+    ring:   '💍',
+  };
+
+  // Display label for rarity tier (UI surfaces).
+  const RARITY_LABELS = {
+    common:     'Common',
+    rare:       'Rare',
+    ultra_rare: 'Ultra-Rare',
+  };
+
+  // Drop rates per DROPS.md v1.3. Roll order: ultra-rare → rare → common
+  // (mutually exclusive — one card max per kill). ~70% of kills produce
+  // souls only — matches discipline-RPG scarcity. Tuned from v1.2's
+  // 1/40, 1/15, 1/5 to the more generous v1.3 curve below.
+  const DROP_RATE_ULTRA_RARE = 1 / 20;   // 5%
+  const DROP_RATE_RARE       = 1 / 12;   // ~8.3%
+  const DROP_RATE_COMMON     = 1 / 5;    // 20%
+  // First-common protection: 2/3 boost until first common ever
+  // pulled. Resets to standard after the first common lands.
+  const DROP_RATE_COMMON_PROTECTED = 2 / 3;
+
   let _souls = null; // lazy-loaded; loadSouls() initializes
 
   function loadSouls() {
@@ -501,6 +681,496 @@
     window.closeSoulsInfoModal = closeSoulsInfoModal;
   } catch (_) {}
 
+  // ── INVENTORY / DROPS ENGINE (v2.0.1 DROPS Phase 1) ─────────
+  // hb_inventory shape:
+  //   {
+  //     cards: { card_id: { discovered, count, first_acquired_date } },
+  //     first_common_pulled: bool,
+  //     first_common_date: 'YYYY-MM-DD' | null,
+  //     reveal_queue: ['card_id', ...]   // rare/ultra-rare pending reveal
+  //   }
+  //
+  // Storage shape locked here so future systems (equip UI, leaderboard
+  // visible inventory, etc.) can rely on it without migration.
+  //
+  // Migration: v1.3 renamed the bottom rarity tier from "uncommon" to
+  // "common". loadInventory transparently reads either legacy
+  // `first_uncommon_*` or new `first_common_*` keys, prefers new, and
+  // persists in the new shape on next write. Old keys are not actively
+  // deleted (forward-compat safety for any cross-device sync edge cases).
+  const INVENTORY_STORAGE_KEY = 'hb_inventory';
+  let _inventory = null;
+
+  function loadInventory() {
+    try {
+      const raw = localStorage.getItem(INVENTORY_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // v1.3 rename migration — prefer new keys, fall back to legacy.
+        const firstCommonPulled = (parsed.first_common_pulled === true)
+          || (parsed.first_uncommon_pulled === true);
+        const firstCommonDate = parsed.first_common_date
+          || parsed.first_uncommon_date
+          || null;
+        _inventory = {
+          cards:                parsed.cards || {},
+          first_common_pulled:  firstCommonPulled,
+          first_common_date:    firstCommonDate,
+          reveal_queue:         Array.isArray(parsed.reveal_queue) ? parsed.reveal_queue : [],
+        };
+        // Backfill stub entries for any cards in CARDS that aren't in
+        // saved state — happens when new cards are added in a release
+        // post-deploy. Existing card entries are preserved as-is.
+        Object.keys(CARDS).forEach(id => {
+          if (!_inventory.cards[id]) {
+            _inventory.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
+          }
+        });
+        persistInventory();
+        return _inventory;
+      }
+    } catch (_) {}
+    // First install — stub-populate every card as undiscovered.
+    _inventory = {
+      cards: {},
+      first_common_pulled: false,
+      first_common_date: null,
+      reveal_queue: [],
+    };
+    Object.keys(CARDS).forEach(id => {
+      _inventory.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
+    });
+    persistInventory();
+    return _inventory;
+  }
+  function persistInventory() {
+    try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(_inventory)); } catch (_) {}
+  }
+  function getInventory() {
+    if (!_inventory) loadInventory();
+    return _inventory;
+  }
+
+  // Roll a drop for a boss kill. Returns the dropped card object, or
+  // null if no drop. Mutually-exclusive rarity rolls — ultra-rare
+  // first, then rare, then common. Per DROPS.md framework principle
+  // #5: pure RNG, with the one exception of first-common protection.
+  //
+  // Side effects on success: increments card count in inventory, sets
+  // discovered if first acquisition, queues reveal for rare/ultra-rare
+  // first-acquisitions, sets first_common_pulled flag if applicable.
+  function rollBossDrop(bossId) {
+    const inv = getInventory();
+    const cfg = BOSSES[bossId];
+    if (!cfg) return null;
+
+    // Build this boss's drop table — one card per rarity per
+    // EQUIPMENT.md slot ownership.
+    const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
+    const byRarity = {
+      ultra_rare: bossCards.find(c => c.rarity === 'ultra_rare') || null,
+      rare:       bossCards.find(c => c.rarity === 'rare')       || null,
+      common:     bossCards.find(c => c.rarity === 'common')     || null,
+    };
+
+    // Effective common rate — boosted while protection is active.
+    const commonRate = inv.first_common_pulled
+      ? DROP_RATE_COMMON
+      : DROP_RATE_COMMON_PROTECTED;
+
+    // Roll order. Each roll is independent; checks in order;
+    // first hit wins.
+    let dropped = null;
+    if (Math.random() < DROP_RATE_ULTRA_RARE && byRarity.ultra_rare) {
+      dropped = byRarity.ultra_rare;
+    } else if (Math.random() < DROP_RATE_RARE && byRarity.rare) {
+      dropped = byRarity.rare;
+    } else if (Math.random() < commonRate && byRarity.common) {
+      dropped = byRarity.common;
+    }
+
+    if (!dropped) return null;
+
+    // Award to inventory.
+    const entry = inv.cards[dropped.id] || { discovered: false, count: 0, first_acquired_date: null };
+    const wasFirstAcquisition = !entry.discovered;
+    entry.discovered = true;
+    entry.count = (entry.count || 0) + 1;
+    if (wasFirstAcquisition) {
+      entry.first_acquired_date = getDeviceLocalDate();
+    }
+    inv.cards[dropped.id] = entry;
+
+    // First-common protection state.
+    if (dropped.rarity === 'common' && !inv.first_common_pulled) {
+      inv.first_common_pulled = true;
+      inv.first_common_date = getDeviceLocalDate();
+    }
+
+    // Queue reveal modal for first-acquisition rare/ultra-rare drops
+    // only. Dupes don't re-trigger reveals (count just increments
+    // silently). Commons never queue — they fire combined-toast in
+    // the kill handler instead.
+    if (wasFirstAcquisition && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare')) {
+      if (!inv.reveal_queue.includes(dropped.id)) {
+        inv.reveal_queue.push(dropped.id);
+      }
+    }
+
+    persistInventory();
+    return dropped;
+  }
+
+  // Force a specific drop (debug/test path — bypass RNG). Picks the
+  // matching card from CARDS by (bossId, rarity), awards via same
+  // path as rollBossDrop. Useful for QA + replaying the cinematic.
+  function forceDrop(bossId, rarity) {
+    // Backward-compat alias: legacy 'uncommon' arg maps to 'common'.
+    if (rarity === 'uncommon') rarity = 'common';
+    const card = Object.values(CARDS).find(c =>
+      c.source_boss === bossId && c.rarity === rarity
+    );
+    if (!card) return null;
+    const inv = getInventory();
+    const entry = inv.cards[card.id] || { discovered: false, count: 0, first_acquired_date: null };
+    const wasFirstAcquisition = !entry.discovered;
+    entry.discovered = true;
+    entry.count = (entry.count || 0) + 1;
+    if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
+    inv.cards[card.id] = entry;
+    if (card.rarity === 'common' && !inv.first_common_pulled) {
+      inv.first_common_pulled = true;
+      inv.first_common_date = getDeviceLocalDate();
+    }
+    if (wasFirstAcquisition && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
+      if (!inv.reveal_queue.includes(card.id)) inv.reveal_queue.push(card.id);
+    }
+    persistInventory();
+    // Trigger reveal immediately if rare/ultra so console testing is
+    // one-line — no need to open + close the app to see the modal.
+    if (card.rarity === 'rare' || card.rarity === 'ultra_rare') {
+      processRevealQueue();
+    }
+    return card;
+  }
+
+  // Wipe inventory (debug). Re-stubs all cards as undiscovered, clears
+  // protection state + reveal queue. Useful for fresh-install testing.
+  function resetInventory() {
+    _inventory = {
+      cards: {},
+      first_common_pulled: false,
+      first_common_date: null,
+      reveal_queue: [],
+    };
+    Object.keys(CARDS).forEach(id => {
+      _inventory.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
+    });
+    persistInventory();
+  }
+
+  // ── Kill announcement: toast + reveal coordination ──────────
+  // Composes the kill-toast text based on whether a card dropped
+  // (and at what rarity). Common → combined toast (no modal).
+  // Rare/Ultra-Rare → souls toast first, then cinematic reveal
+  // modal opens via the queue (~500ms after toast for breathing room).
+  function announceKillAndDrop(cfg, soulsReward, droppedCard) {
+    const soulsSuffix = soulsReward > 0 ? ' +' + soulsReward + ' souls.' : '';
+    let toastMsg = cfg.name + ' defeated.' + soulsSuffix;
+
+    if (droppedCard && droppedCard.rarity === 'common') {
+      // Common: combined toast, no modal interruption.
+      toastMsg += ' Pulled: ' + droppedCard.name + ' (Common).';
+    }
+    try {
+      if (typeof showHabitToast === 'function') showHabitToast(toastMsg);
+    } catch (_) {}
+
+    // Rare/Ultra-Rare: kick the queue. rollBossDrop already pushed
+    // the card_id; processRevealQueue picks up on a 500ms delay so
+    // the kill toast has its moment first.
+    if (droppedCard && (droppedCard.rarity === 'rare' || droppedCard.rarity === 'ultra_rare')) {
+      setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 500);
+    }
+  }
+
+  // ── Reveal modal: cinematic card-drop ceremony ──────────────
+  // Processes hb_inventory.reveal_queue one-at-a-time. If queue
+  // empty, no-op. If already showing, no-op (the close handler
+  // calls processRevealQueue again to chain).
+  let _revealActive = false;
+
+  function processRevealQueue() {
+    if (_revealActive) return;
+    const inv = getInventory();
+    if (!inv.reveal_queue || inv.reveal_queue.length === 0) return;
+    const nextId = inv.reveal_queue[0];
+    const card = CARDS[nextId];
+    if (!card) {
+      // Stale id (CARDS schema may have changed) — drop from queue
+      // and continue.
+      inv.reveal_queue.shift();
+      persistInventory();
+      processRevealQueue();
+      return;
+    }
+    openCardRevealModal(card);
+  }
+
+  function openCardRevealModal(card) {
+    const overlay = document.getElementById('reveal-overlay');
+    if (!overlay) return;
+    _revealActive = true;
+    document.body.classList.add('reveal-locked');
+
+    // Populate fields.
+    const slotIcon = SLOT_ICONS[card.slot] || '✦';
+    overlay.className = 'reveal-overlay reveal-overlay--' + card.rarity;
+    document.getElementById('reveal-slot-icon').textContent  = slotIcon;
+    document.getElementById('reveal-card-name').textContent  = card.name;
+    document.getElementById('reveal-card-source').textContent = 'From: ' + (BOSSES[card.source_boss] ? BOSSES[card.source_boss].name : '—');
+    document.getElementById('reveal-card-rarity').textContent = RARITY_LABELS[card.rarity] || card.rarity;
+    document.getElementById('reveal-card-flavor').textContent = card.flavor || '';
+
+    overlay.classList.remove('hidden');
+    // Force reflow so the .reveal-overlay--showing class triggers
+    // the keyframe animations rather than instantly snapping.
+    void overlay.offsetWidth;
+    overlay.classList.add('reveal-overlay--showing');
+  }
+
+  function closeCardRevealModal() {
+    const overlay = document.getElementById('reveal-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('reveal-overlay--showing');
+    overlay.classList.add('reveal-overlay--closing');
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('reveal-overlay--closing');
+      document.body.classList.remove('reveal-locked');
+      _revealActive = false;
+      // Pop the head of the queue and chain to the next one if any.
+      const inv = getInventory();
+      if (inv.reveal_queue && inv.reveal_queue.length > 0) {
+        inv.reveal_queue.shift();
+        persistInventory();
+      }
+      // Re-render Pokédex if user is currently looking at Items tab,
+      // so the new discovered card appears immediately.
+      try { if (currentTab === 'items') renderPokedex(); } catch (_) {}
+      // Continue queue.
+      setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 250);
+    }, 320); // matches CSS reveal-overlay--closing duration
+  }
+
+  function setupCardRevealModal() {
+    const overlay = document.getElementById('reveal-overlay');
+    if (!overlay) return;
+    // Tap anywhere on the overlay (including the card) dismisses.
+    overlay.addEventListener('click', () => {
+      if (overlay.classList.contains('reveal-overlay--showing')) {
+        closeCardRevealModal();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (overlay.classList.contains('reveal-overlay--showing')) closeCardRevealModal();
+    });
+  }
+
+  // ── Pokédex (Items tab) ─────────────────────────────────────
+  // Three sections grouped by rarity (Ultra-Rare → Rare → Common)
+  // with discovered + undiscovered slots. Discovered card → tap to
+  // open card detail. Undiscovered → toast "Not yet discovered."
+  function renderPokedex() {
+    const root = document.getElementById('pokedex-sections');
+    const totalEl = document.getElementById('pokedex-total');
+    const discEl = document.getElementById('pokedex-discovered');
+    const fillEl = document.getElementById('pokedex-progress-fill');
+    if (!root) return;
+
+    const inv = getInventory();
+    const allIds = Object.keys(CARDS);
+    const totalCount = allIds.length;
+    const discoveredCount = allIds.filter(id => inv.cards[id] && inv.cards[id].discovered).length;
+
+    if (totalEl) totalEl.textContent = totalCount;
+    if (discEl)  discEl.textContent  = discoveredCount;
+    if (fillEl)  fillEl.style.width  = (totalCount > 0 ? (discoveredCount / totalCount * 100) : 0) + '%';
+
+    const sections = [
+      { key: 'ultra_rare', label: 'ULTRA-RARE' },
+      { key: 'rare',       label: 'RARE' },
+      { key: 'common',     label: 'COMMON' },
+    ];
+
+    const collapsed = loadPokedexCollapsed();
+
+    root.innerHTML = sections.map(s => {
+      const sectionCards = allIds
+        .map(id => CARDS[id])
+        .filter(c => c.rarity === s.key);
+      const sectionDiscovered = sectionCards.filter(c => inv.cards[c.id] && inv.cards[c.id].discovered).length;
+      const sectionTotal = sectionCards.length;
+      const isCollapsed = collapsed.has(s.key);
+      const visibleCards = sectionCards;
+      const cardsHtml = visibleCards.map(c => {
+        const entry = inv.cards[c.id] || { discovered: false, count: 0 };
+        const slotIcon = SLOT_ICONS[c.slot] || '✦';
+        if (entry.discovered) {
+          return (
+            '<button class="pokedex-card pokedex-card--' + c.rarity + '" type="button" data-card-id="' + esc(c.id) + '">' +
+              '<div class="pokedex-card-art">' +
+                '<span class="pokedex-card-slot-icon">' + slotIcon + '</span>' +
+              '</div>' +
+              '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
+              (entry.count > 1 ? '<div class="pokedex-card-stack">×' + entry.count + '</div>' : '') +
+            '</button>'
+          );
+        }
+        return (
+          '<button class="pokedex-card pokedex-card--undiscovered pokedex-card--' + c.rarity + '" type="button" data-card-id="' + esc(c.id) + '">' +
+            '<div class="pokedex-card-art pokedex-card-art--undiscovered">' +
+              '<span class="pokedex-card-mystery">?</span>' +
+            '</div>' +
+            '<div class="pokedex-card-name pokedex-card-name--mystery">???</div>' +
+          '</button>'
+        );
+      }).join('');
+      const bodyHtml = visibleCards.length === 0
+        ? '<div class="pokedex-section-empty">No items in this tier yet.</div>'
+        : '<div class="pokedex-grid">' + cardsHtml + '</div>';
+      return (
+        '<div class="pokedex-section pokedex-section--' + s.key + (isCollapsed ? ' pokedex-section--collapsed' : '') + '" data-section-key="' + s.key + '">' +
+          '<button class="pokedex-section-header" type="button" data-section-toggle="' + s.key + '" aria-expanded="' + (isCollapsed ? 'false' : 'true') + '">' +
+            '<span class="pokedex-section-chevron" aria-hidden="true">▾</span>' +
+            '<span class="pokedex-section-label">' + s.label + '</span>' +
+            '<span class="pokedex-section-count">' + sectionDiscovered + ' / ' + sectionTotal + '</span>' +
+          '</button>' +
+          '<div class="pokedex-section-body">' + bodyHtml + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // Persisted set of collapsed pokedex section keys. Default: ALL collapsed.
+  // First-time visitors see a tidy stacked list of dropdown headers and tap
+  // open whichever tier they want to browse.
+  function loadPokedexCollapsed() {
+    const ALL_KEYS = ['ultra_rare', 'rare', 'common'];
+    try {
+      const raw = localStorage.getItem('hb_pokedex_collapsed');
+      if (!raw) return new Set(ALL_KEYS);
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr : ALL_KEYS);
+    } catch (_) { return new Set(ALL_KEYS); }
+  }
+  function savePokedexCollapsed(set) {
+    try { localStorage.setItem('hb_pokedex_collapsed', JSON.stringify([...set])); } catch (_) {}
+  }
+  function togglePokedexSection(key) {
+    const set = loadPokedexCollapsed();
+    if (set.has(key)) set.delete(key); else set.add(key);
+    savePokedexCollapsed(set);
+  }
+
+  function setupPokedex() {
+    const root = document.getElementById('pokedex-sections');
+    if (!root) return;
+    root.addEventListener('click', (e) => {
+      // Section-header toggle (collapsible). Check first so it short-circuits
+      // before the card-click path.
+      const hdr = e.target.closest('[data-section-toggle]');
+      if (hdr) {
+        const key = hdr.getAttribute('data-section-toggle');
+        togglePokedexSection(key);
+        const section = hdr.closest('.pokedex-section');
+        if (section) {
+          const nowCollapsed = section.classList.toggle('pokedex-section--collapsed');
+          hdr.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+        }
+        return;
+      }
+      const btn = e.target.closest('.pokedex-card[data-card-id]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-card-id');
+      const card = CARDS[id];
+      if (!card) return;
+      const entry = getInventory().cards[id];
+      if (!entry || !entry.discovered) {
+        try { if (typeof showHabitToast === 'function') showHabitToast('Not yet discovered.'); } catch (_) {}
+        return;
+      }
+      openCardDetailModal(card, entry);
+    });
+  }
+
+  // ── Card detail modal (static, non-cinematic) ───────────────
+  // Tap a discovered card in the Pokédex → review its details.
+  // Same data as the reveal modal but without animations.
+  function openCardDetailModal(card, entry) {
+    const overlay = document.getElementById('carddetail-overlay');
+    if (!overlay) return;
+    const slotIcon = SLOT_ICONS[card.slot] || '✦';
+    overlay.className = 'carddetail-overlay carddetail-overlay--' + card.rarity;
+    document.getElementById('carddetail-slot-icon').textContent = slotIcon;
+    document.getElementById('carddetail-name').textContent = card.name;
+    document.getElementById('carddetail-source').textContent =
+      'Dropped from ' + (BOSSES[card.source_boss] ? BOSSES[card.source_boss].name : '—');
+    document.getElementById('carddetail-rarity').textContent = RARITY_LABELS[card.rarity] || card.rarity;
+    document.getElementById('carddetail-flavor').textContent = card.flavor || '';
+    const acqEl = document.getElementById('carddetail-acquired');
+    if (acqEl) acqEl.textContent = entry.first_acquired_date
+      ? 'First found ' + formatAcquiredDate(entry.first_acquired_date)
+      : '';
+    const stackEl = document.getElementById('carddetail-stack');
+    if (stackEl) stackEl.textContent = (entry.count > 1 ? 'You have ' + entry.count : '');
+    overlay.classList.remove('hidden');
+  }
+  function closeCardDetailModal() {
+    const overlay = document.getElementById('carddetail-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
+  function setupCardDetailModal() {
+    const overlay = document.getElementById('carddetail-overlay');
+    const closeBtn = document.getElementById('carddetail-close');
+    if (overlay) overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeCardDetailModal();
+    });
+    if (closeBtn) closeBtn.addEventListener('click', closeCardDetailModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const overlay = document.getElementById('carddetail-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) closeCardDetailModal();
+    });
+  }
+  // Friendly date formatter for the card detail "first found" line.
+  function formatAcquiredDate(iso) {
+    if (!iso) return '';
+    const today = getDeviceLocalDate();
+    if (iso === today) return 'today';
+    const yesterday = getDeviceLocalYesterday();
+    if (iso === yesterday) return 'yesterday';
+    // Calendar-day diff.
+    const a = new Date(iso + 'T00:00:00');
+    const b = new Date(today + 'T00:00:00');
+    const days = Math.round((b - a) / (1000 * 60 * 60 * 24));
+    if (days > 1 && days < 7) return days + ' days ago';
+    return a.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  try {
+    window.Drops = {
+      get state()   { return getInventory(); },
+      CARDS,
+      forceRoll:    forceDrop,
+      forceDrop,
+      resetInventory,
+      rollBossDrop,
+      processRevealQueue,
+    };
+  } catch (_) {}
+
   // Computes "yesterday" in device-local format. Used by the missed-
   // night reset (init-time) to set last_eval_date back one day so
   // tonight's evaluation can still proceed.
@@ -563,11 +1233,10 @@
         // the toast message can include the actual amount awarded.
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
-        try {
-          if (typeof showHabitToast === 'function') {
-            showHabitToast(cfg.name + ' defeated.' + (reward > 0 ? ' +' + reward + ' souls.' : ''));
-          }
-        } catch (_) {}
+        // v2.0.1 DROPS: roll for a card drop. May return null (~70%
+        // standard rate, less during first-common protection).
+        const dropped = rollBossDrop(id);
+        announceKillAndDrop(cfg, reward, dropped);
         // Re-render the Quests panel so the streak progress + kill
         // count update if user is currently looking at it.
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
@@ -689,11 +1358,8 @@
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
-        try {
-          if (typeof showHabitToast === 'function') {
-            showHabitToast(cfg.name + ' defeated.' + (reward > 0 ? ' +' + reward + ' souls.' : ''));
-          }
-        } catch (_) {}
+        const dropped = rollBossDrop(id);
+        announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
         return;
       }
@@ -776,11 +1442,8 @@
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
-        try {
-          if (typeof showHabitToast === 'function') {
-            showHabitToast(cfg.name + ' defeated.' + (reward > 0 ? ' +' + reward + ' souls.' : ''));
-          }
-        } catch (_) {}
+        const dropped = rollBossDrop(id);
+        announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
         return;
       }
@@ -1245,6 +1908,8 @@
     '2.0.1': {
       subtitle: 'The dungeons open.',
       items: [
+        { emoji: '', title: 'Drops!',                          description: "Defeat dungeon bosses to collect cards. Some kills drop items — rare and ultra-rare pulls trigger a cinematic reveal. Check the Items tab for your collection." },
+        { emoji: '', title: 'Drop rates tuned',                description: "The bottom rarity tier is now Common — and what was once uncommon is dropping more often. Rare and Ultra-Rare remain elusive." },
         { emoji: '', title: 'Rank scaling overhauled',         description: "Reach S rank with ~6 months of daily Locked-In pack completion. Boss engagement accelerates the climb but isn't required. Existing XP balances recalibrated to the new curve — your rank is preserved." },
         { emoji: '', title: 'Sleep duration > bedtime',        description: "Morning Routine and Locked-In packs now require Sleep (7+ hours) instead of Sleep before midnight. Total sleep is what the body actually needs. If your habit list still has Sleep before midnight, add Sleep to keep your compound streak rolling." },
         { emoji: '', title: 'Souls currency introduced',       description: "Earn 15 souls daily plus tier-scaled rewards on every boss kill. Spend souls to engage bosses (E rank costs 25, doubles per tier). Hunt wisely — souls are not refunded on disengage. Tap the souls badge in the header to see how to earn and spend them." },
@@ -7678,6 +8343,10 @@
     if (tab === 'social') {
       renderLeaderboardPreview();
     }
+    // Render the Pokédex when the Items tab is opened (v2.0.1 DROPS).
+    if (tab === 'items') {
+      renderPokedex();
+    }
     checkStreakDanger();
     checkMorningRoutineNudge();
   }
@@ -11262,6 +11931,19 @@
     if (!name || !editingId) return;
     const habit = habits.find(h => h.id === editingId);
     if (habit) {
+      // v2.0.1 edit-floor enforcement for step-goal habits. Catches the
+      // case where an existing user's habit already has a sub-8K goal
+      // stored — they open the modal, don't change anything, tap Save.
+      // The custom-input commit path validates only user-typed values;
+      // this catches "no change but stored value is sub-floor."
+      if (editStepGoalEnabled && editStepGoal < HEALTHKIT_WALK_EDIT_FLOOR) {
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast('Minimum 8,000 steps. The discipline starts here.');
+          }
+        } catch (_) {}
+        return; // don't close modal, don't save
+      }
       // Canonical habits: ignore name/emoji from the form (the inputs
       // are visually locked, but defense in depth — never let a
       // canonical habit's foreign-key fields get rewritten through
@@ -11354,10 +12036,21 @@
     const stepGoalInput  = document.getElementById('edit-stepgoal-input');
     const commitStepGoal = () => {
       if (!stepGoalInput) return;
-      // Same clamping as setHabitStepGoal but applied to staging only.
       const parsed = parseInt(stepGoalInput.value, 10);
-      const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
-      editStepGoal = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
+      // Reject sub-8K values explicitly per the v2.0.1 edit-floor.
+      // Silent clamping (the old behavior) was misleading — user typed
+      // 5000 and got 8000 back without explanation. Toast + keep the
+      // custom input open so they can fix it.
+      if (!Number.isFinite(parsed) || parsed < HEALTHKIT_WALK_EDIT_FLOOR) {
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast('Minimum 8,000 steps. The discipline starts here.');
+          }
+        } catch (_) {}
+        return;
+      }
+      // Clamp upper bound silently — 50K is the absolute ceiling.
+      editStepGoal = Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, parsed);
       document.getElementById('edit-stepgoal-custom').classList.add('hidden');
       refreshEditStepGoalDisplay();
     };
@@ -14704,15 +15397,12 @@
         // styles for visual consistency with the Edit Habit modal.
         '<div id="hk-preprompt-stepgoal" class="habit-edit-stepgoal hk-preprompt-stepgoal" hidden>' +
           '<div class="habit-edit-stepgoal-chips">' +
-            '<button class="habit-edit-stepgoal-chip" data-preset="1000"  type="button">1,000</button>' +
-            '<button class="habit-edit-stepgoal-chip" data-preset="3000"  type="button">3,000</button>' +
-            '<button class="habit-edit-stepgoal-chip" data-preset="5000"  type="button">5,000</button>' +
             '<button class="habit-edit-stepgoal-chip" data-preset="8000"  type="button">8,000</button>' +
             '<button class="habit-edit-stepgoal-chip" data-preset="10000" type="button">10,000</button>' +
             '<button class="habit-edit-stepgoal-chip" data-preset="custom" type="button">Custom</button>' +
           '</div>' +
           '<div id="hk-preprompt-stepgoal-custom" class="habit-edit-stepgoal-custom hidden">' +
-            '<input id="hk-preprompt-stepgoal-input" class="habit-edit-stepgoal-input" type="number" inputmode="numeric" min="100" max="50000" placeholder="Enter steps (100–50,000)">' +
+            '<input id="hk-preprompt-stepgoal-input" class="habit-edit-stepgoal-input" type="number" inputmode="numeric" min="8000" max="50000" placeholder="Enter steps (8,000–50,000)">' +
             '<button id="hk-preprompt-stepgoal-save"   class="habit-edit-stepgoal-save"   type="button">Save</button>' +
             '<button id="hk-preprompt-stepgoal-cancel" class="habit-edit-stepgoal-cancel" type="button">Cancel</button>' +
           '</div>' +
@@ -15189,6 +15879,16 @@
     setupQuestsGate();
     setupLeaderboardPreview();
     setupSoulsInfoModal();
+    // v2.0.1 DROPS Phase 1 — inventory + reveal + Pokédex wiring.
+    try { loadInventory(); } catch (_) {}
+    setupCardRevealModal();
+    setupPokedex();
+    setupCardDetailModal();
+    // Process any reveals queued from drops that happened in a prior
+    // session but the modal didn't get a chance to show (e.g., user
+    // closed app mid-reveal). DROPS.md spec: "Show them one at a
+    // time on next app open. Don't drop any."
+    try { setTimeout(() => processRevealQueue(), 800); } catch (_) {}
     setupHonestDayModal();
     setupShieldInfoModal();
     setupOriginStorySheet();
