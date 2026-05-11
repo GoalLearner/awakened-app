@@ -8,10 +8,10 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 **Awakened — Daily Habit Tracker** (`com.goallearner.awakened`, name on App Store: *Awakened: Habit RPG*).
 
-A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Starting in v2.0, dungeon bosses run as a parallel passive-progress system fed by the same Apple Health data that auto-verifies habits. v2.0.1 adds the second boss (The Carouser) and silently begins tracking three Apple-Health-verifiable metrics for a future leaderboard layer surfaced on the Social tab. There is no backend — every byte of state lives in `localStorage`.
+A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Starting in v2.0, dungeon bosses run as a parallel passive-progress system fed by the same Apple Health data that auto-verifies habits. v2.0.1 added the third boss (The Steel Wolf, D-rank), engagement model, souls currency, leaderboard groundwork. **v2.0.2 ships the Drops Phase 1 system**: card collection from boss kills, cinematic reveals for rare/ultra-rare, Pokédex on the Items tab, stat-bonus badges on cards, and cadence-aware drop rates. v2.0.2 also expands the notification system from 2 daily pings to 3 (adds 1 PM mid-day check-in, shifts evening from 6 PM → 7 PM). There is no backend — every byte of state lives in `localStorage`.
 
-- **Current marketing version:** `2.0.1` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.0 was a single consolidated release; v2.0.1 is the second consolidated release and the only one in shipped state. Coverage: The Carouser boss, Daily Quest removed, leaderboard data-tracking foundations + Social-tab preview UI, system-verified read-only habits, auto-verify-first sort invariant, canonical-habit name/emoji lock, schedule sheet section split, full gate-based dungeon UX on the Quests tab (3×2 rank-tier grid with E active + D/C/B/A/S in locked state, tap-to-expand → rank-aware dungeon view), CARDS.md-spec **boss cards** (5:7 portrait, art window, stat strip, gradient border) replacing the old text-only cards, and a **full-screen boss detail modal** (`#boss-fs-overlay`) replacing the old `.vn-sheet` bottom-sheet. E-rank bosses recalibrated to 2-night thresholds (Insomniac: any 2 consecutive nights ≥7h; Carouser: Fri+Sat both ≥7h + before-midnight bedtime).
-- **Service-worker cache version:** `v5.110` (constant `CACHE_VERSION` in `sw.js` — bumped many times during the v2.0.1 dev cycle since cache versions are per-deploy, not per-marketing-version)
+- **Current marketing version:** `2.0.2` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.0.1 was pulled from App Store review when the train locked mid-development; all v2.0.1 development work + Drops Phase 1 ships under v2.0.2. Coverage on top of v2.0.1's content: **Drops Phase 1 fully shipped** — 9-card launch roster with real art across all 3 bosses (Dream-Woven Hood, Sleepwalker's Cloak, Pendant of the Wakeful + Vow Ring, Vessel of Refusal, Sober King's Gloves + Pack Leader's Greaves, Alpha's Mantle, Trail-Worn Boots), cinematic Solo Leveling reveal modal for rare + ultra-rare, Pokédex with collapsible rarity sections + stat-bonus badges, stack caps (common max 1, rare max 3, ultra unlimited) with dupe toasts, cadence-adjusted drop rates (5× ultra / 3× rare / 2× common for weekly bosses), 1:1 aspect-ratio card art with `<img>` + emoji-fallback render pattern. **Notification system expanded** to 3 daily pings (morning configurable + 1 PM mid-day with souls/streak/caught-up conditional + 7 PM evening check-in, shifted from 6 PM). Also covers: Edit Habit modal polish (step goal floor 8,000), canonical habit name/emoji lock, full v2.0.1 carryover.
+- **Service-worker cache version:** `v5.137` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -37,6 +37,14 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `icon-192.png`, `icon-512.png` | PWA app icons. **Real static files** (24-bit RGB, no alpha) — generated from the source above. |
 | `assets/tab-icons/` | Bottom-nav DALL-E art at 192×192 (~83–106 KB each), plus `*-source.png` masters. 7 icons: `tab-status`, `tab-habits`, `tab-stats`, `tab-history`, `tab-dungeon`, `tab-items`, `tab-social`. |
 | `assets/stat-icons/` | Stat icons at 192×192 (~50–80 KB each), plus `*-source.png` masters. 6 icons: `stat-str`, `stat-vit`, `stat-int`, `stat-focus`, `stat-will`, `stat-wlt`. |
+| `assets/bosses/` | Boss illustrations at 1254×1254 manhwa style. 3 entries: `the-insomniac.png`, `the-carouser.png`, `the-steel-wolf.png`. |
+| `assets/gates/` | Dungeon-gate art (6 rank tiers: `gate-e/d/c/b/a/s-rank.png`). |
+| `assets/items/` | **Drops Phase 1 card art (v2.0.2)** — 9 PNGs at 1254×1254 RGB, ~1.1–2.2 MB each. Filenames match `CARDS[id]` exactly: `dream_woven_hood`, `sleepwalkers_cloak`, `pendant_of_the_wakeful`, `vow_ring`, `vessel_of_refusal`, `sober_kings_gloves`, `pack_leaders_greaves`, `alphas_mantle`, `trail_worn_boots`. The render pipeline auto-resolves `card.art_path` → if 404, fallback to emoji + rarity gradient. New cards: drop the PNG, add the path to `PRECACHE_ASSETS` in `sw.js`, bump `CACHE_VERSION`. Codemagic's glob copy step picks up new files automatically. |
+| `assets/icons/` | General-purpose UI icons (v2.0.1). Currently `souls-icon.png`. Distinct from habit-icons / tab-icons. |
+| `BOSSES.md` | Boss-system design doc. Has a stale-rate banner pointing to DROPS.md as the authoritative rate source. |
+| `CARDS.md` | Boss card visual spec (5:7 portrait card layout). |
+| `DROPS.md` | **Drops/cards collection system design — v1.4 authoritative.** Cadence-aware drop rates per boss type, rarity-tier definitions, reveal-modal UX. The engine in `app.js` reads `DROP_RATES_BY_CADENCE` keyed off `BOSSES[id].cadence`. |
+| `EQUIPMENT.md` | Equipment / item schema design (v1.3). Stat-bonus magnitudes, slot ownership per boss, class-affinity model. Phase 3 equip-UI work uses this as the source of truth. |
 | `resources/ios/AppIcon.appiconset/` | 18 iOS icon sizes regenerated from `app-icon-source.png` by `scripts/generate-app-icons.ps1`. Copied into the iOS build by Codemagic. |
 | `scripts/optimize-tab-icons.ps1` | Resizes `assets/tab-icons/*-source.png` → 192×192. Re-run after dropping in new DALL-E sources. |
 | `scripts/optimize-stat-icons.ps1` | Same, for stat icons. |
@@ -271,9 +279,34 @@ CSS hooks: `.lp-pressing` (subtle scale-down during 400ms hold), `.drag-ghost` (
 
 ---
 
-## Per-habit reminders (push notifications)
+## Notifications system (v2.0.2 — 3 daily local pings + per-habit reminders)
 
 The `Notif` module lives at the bottom of `app.js` (just above `init()`). Wraps `@capacitor/local-notifications@^6.1.3` for native iOS, falls back to the Web Notifications API for the PWA build.
+
+### Three daily local notifications
+
+| Notification | Time | ID | Title | Body |
+|---|---|---|---|---|
+| **Morning Digest** | user-configurable (`hb_notif_daily_digest_time`; no hardcoded default) | `1` | `composeDigestTitle()` — class-aware ("Awakened" or "Awakened — {Class}", Civilian gets bare title) | `composeDigestBody()` — name + scheduled-habit count + day-of-week flavor (Tue/Thu) + perfect-streak trigger (Sun/Mon) + weekend 2× XP suffix |
+| **Mid-Day Check-In** *(NEW v2.0.2)* | `13:00` device-local | `99998` | `composeDigestTitle()` (reused) | `computeMidDayBody()` — priority chain: souls bonus unclaimed → at-risk streak → caught-up |
+| **Evening Check-In** | `19:00` device-local *(shifted from 18:00 in v2.0.2)* | `99999` | hardcoded `'Awakened'` (NOT class-aware) | `pickCheckinCopy()` — 5 progress states × 5 variations |
+
+**Mid-day priority chain** (`computeMidDayBody`):
+1. No habits configured at all → return `null` → notification SKIPPED entirely
+2. Daily souls bonus unclaimed (reads `hb_souls.lastDailyBonusDate` against **device-local** date, not PT) → `"+15 souls waiting. Tap to claim today's bonus."`
+3. At-risk streak — longest incomplete-but-streaked habit. Filter to `streak >= 1` AND not completed today, sort by streak DESC then `DIFFICULTY[difficulty].pts` DESC then `name.localeCompare`. Body: `"{habit.name} — Day {N}. Don't break the chain."`
+4. Caught up → `"You're caught up. Keep it going."`
+
+**Re-arm trigger points** for the mid-day check-in (body recomputed at each schedule call):
+- `Notif.rescheduleAll` (app open, daily reset, Settings changes)
+- `Notif.onHabitCompleted` (habit tap — at-risk-streak set just changed)
+- Class change (title uses class name via shared `composeDigestTitle`)
+- Name edit (title may change)
+- `tryGrantDailyLoginBonus` (priority 1 no longer applies after grant)
+
+The evening check-in (`scheduleDailyCheckin`) re-arms on the same triggers plus its own day-1 suppression and quiet-hours respect.
+
+### Per-habit reminders
 
 **Per-habit:** one reminder time at most. Stored in `hb_reminders` as `{ habitId: 'HH:MM' }`. UI lives in the Edit Habit modal:
 
@@ -952,6 +985,153 @@ The data model + UI surface don't change; only the data source flips from mocks 
 
 ---
 
+## Drops & Card Collection (v2.0.2 — Phase 1)
+
+Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Pokédex** with 3 rarity-grouped collapsible sections (Ultra-Rare / Rare / Common, all default-collapsed). Single source of truth for design: `DROPS.md` (v1.4) + `EQUIPMENT.md` (v1.3).
+
+### CARDS constant (`app.js`)
+
+9 launch items, each entry shape:
+
+```js
+{
+  id, name, slot, source_boss, rarity, tier,
+  flavor, art_path,
+  bonuses: { str, vit, int, focus, will, wlt },  // exactly 6 keys, canonical order
+  set_id: null, required_level: null, special_effect: null,
+  on_equip: null, cooldown_seconds: null,         // reserved for Phase 3
+}
+```
+
+| Boss | Common (slot) | Rare (slot) | Ultra-Rare BIS (slot) |
+|---|---|---|---|
+| The Insomniac (E) | Dream-Woven Hood (helm) +2 VIT | Sleepwalker's Cloak (cape) +6 VIT | Pendant of the Wakeful (amulet) +8 VIT / +4 WILL |
+| The Carouser (E) | Vow Ring (ring) +2 WILL | Vessel of Refusal (weapon) +6 WILL | Sober King's Gloves (gloves) +4 VIT / +8 WILL |
+| The Steel Wolf (D) | Pack Leader's Greaves (legs) +4 VIT | Alpha's Mantle (body) +12 VIT | Trail-Worn Boots (boots) +16 VIT / +8 STR |
+
+Each boss has one **signature slot** — its ultra-rare is best-in-slot for that slot at launch. Stat-magnitude per rarity follows tier-doubling: E uncommon=2, rare=6, ultra=12; D uncommon=4, rare=12, ultra=24; doubles per rank up to S.
+
+### Drop rates — cadence-aware (`DROP_RATES_BY_CADENCE`)
+
+```js
+{
+  daily:  { ultra_rare: 1/20, rare: 1/12, common: 1/5,    common_protected: 2/3 },
+  weekly: { ultra_rare: 5/20, rare: 3/12, common: 2/5,    common_protected: 0.6 },
+}
+```
+
+Weekly bosses get multiplier-bumped rates (5× ultra, 3× rare, 2× common) over the daily baseline to keep per-month expected-pull volumes comparable across cadences. Resolved per-boss via `dropRatesFor(bossId)` which reads `BOSSES[id].cadence` (`'daily' | 'weekly'`). Defensive fallback to `'daily'` if cadence missing — errs toward rarity.
+
+**Roll order** in `rollBossDrop(bossId)`: ultra-rare → rare → common, mutually exclusive, one card max per kill. Each tier is an independent RNG roll against its rate; first hit wins. ~70% of daily-cadence kills produce souls only.
+
+**First-common protection** (a single global flag `hb_inventory.first_common_pulled`): until the first common is pulled from ANY boss, the common rate is the boosted `common_protected` value (cadence-specific). After the first common lands, protection ends globally for all subsequent rolls.
+
+### Stack caps (`STACK_CAPS`)
+
+```js
+{ common: 1, rare: 3, ultra_rare: Infinity }
+```
+
+Drops continue rolling at standard rates even when at cap — but the inventory count doesn't increment past the cap. **Every drop event surfaces to the user via toast.** Four cases:
+
+| Scenario | Inventory | Toast | Reveal modal |
+|---|---|---|---|
+| First-acq common | count → 1 | `"X defeated. +50 souls. Pulled: Card (Common)."` | — |
+| Common dupe (at 1) | unchanged | `"…Duplicate Card (Common). Cap reached (1)."` | — |
+| First-acq rare | count → 1 | `"X defeated. +50 souls."` | ✓ cinematic |
+| Rare dupe 2nd/3rd | count → 2 / 3 | `"…Duplicate Card (Rare). You have 2."` | — |
+| Rare dupe at cap | unchanged | `"…Duplicate Card (Rare). Cap reached (3)."` | — |
+| First-acq ultra | count → 1 | `"X defeated. +50 souls."` | ✓ cinematic |
+| Ultra dupe | count → N+1 | `"…Duplicate Card (Ultra-Rare). You have N+1."` | — |
+
+### `rollBossDrop` return shape
+
+```js
+{
+  card:      { ...CARDS entry },
+  wasFirst:  boolean,  // true only if newly discovered AND not capped
+  wasCapped: boolean,
+  count:     number,   // current count AFTER the operation
+  cap:       number,   // STACK_CAPS[rarity] (Infinity for ultra)
+}
+```
+
+Returns `null` if no drop rolled. The 3 boss kill-handlers (`evaluateInsomniacForNight`, `evaluateCarouserForNight`, `evaluateSteelWolfForDay`) pass the result through to `announceKillAndDrop(cfg, soulsReward, dropInfo)` which composes the toast text and kicks the reveal queue.
+
+### Inventory storage (`hb_inventory`)
+
+```
+{
+  cards: { [card_id]: { discovered, count, first_acquired_date } },
+  first_common_pulled: bool,
+  first_common_date:   'YYYY-MM-DD' | null,
+  reveal_queue:        [card_id, ...]   // rare/ultra-rare pending reveal
+}
+```
+
+`loadInventory` transparently reads either new `first_common_*` keys or legacy `first_uncommon_*` keys (v1.3 rename — see "Common pitfalls"), prefers new, persists in new shape. No explicit migration flag — read-side fallback is idempotent.
+
+### Cinematic reveal modal (`#reveal-overlay`)
+
+Solo Leveling system-window styled. Triggered by `processRevealQueue()` ~500ms after the kill toast. Animation sequence:
+
+| t (s) | Event |
+|---|---|
+| 0.30 | System-window lines draw in |
+| 0.55 | Card frame materializes |
+| 0.85 | Slot icon + art fade in |
+| 1.05 | Name appears |
+| 1.15 | Source line appears |
+| 1.25 | Flavor text appears |
+| **1.45** | **Stat-bonus badges fade in** *(v2.0.2)* |
+| 1.60 | "Tap to continue" hint |
+
+Stat-bonus row uses the same `cardStatBadgesHtml(card)` helper as the carddetail modal — single source for badge rendering. Ultra-rare reveals get extra particle drift + gold-violet shimmer pulse.
+
+### Card art render pipeline (real-art-first with fallback)
+
+All 3 surfaces (Pokédex grid tile, reveal modal, carddetail modal) use the same pattern: an `<img class="*-card-art-img">` layered absolute-positioned over the emoji slot icon. Container is `position: relative; overflow: hidden; aspect-ratio: 1 / 1`. If the image 404s, the JS error handler (`img.remove()` for Pokédex; `display:none` for modals) removes the img, revealing the emoji + rarity gradient underneath. Successful loads cover the fallback.
+
+**Adding a new card's art:**
+1. Drop `assets/items/<card_id>.png` (1254×1254 RGB)
+2. Add the path to `PRECACHE_ASSETS` in `sw.js`
+3. Bump `CACHE_VERSION`
+4. Codemagic's glob copy step (`cp assets/items/*.png www/assets/items/`) picks up new files automatically — no pipeline edit required
+
+### Pokédex (Items tab)
+
+- 3 collapsible sections (Ultra-Rare → Rare → Common), all default-collapsed via `loadPokedexCollapsed()` returning a `Set` of all keys when no saved state exists. Persisted to `hb_pokedex_collapsed`.
+- Section headers are `<button>` with `aria-expanded` + chevron rotation (▾ open / ▸ collapsed).
+- Empty-tier guard renders `"No items in this tier yet."` if a section is authored but empty (defensive — current launch has 3 per section).
+- Discovered cards show real art + name. Undiscovered slots show ??? silhouette with rarity-color hint. **No ×N stack badge on grid tiles** (removed v2.0.2; stack count surfaces only inside the detail modal).
+- Tap a discovered card → `openCardDetailModal()` (static, non-cinematic).
+
+### Card detail modal (`#carddetail-overlay`)
+
+Tapping a discovered Pokédex tile opens this. 1:1 art aspect (matches source PNG ratio — was 5:4 which cropped the top of art with `object-fit: cover`). Layout: art → rarity → name → source → flavor → **stat-bonus row** → first-found-date → stack count ("You have N"). Close button is pill-shaped with dark backdrop + `z-index: 2` so it stays legible against dark card art.
+
+### `window.Drops` debug API
+
+```js
+Drops.state                              // current hb_inventory
+Drops.CARDS                              // CARDS constant
+Drops.RATES                              // DROP_RATES_BY_CADENCE
+Drops.getRates(bossId)                   // resolved rates for that boss
+Drops.forceRoll(bossId, rarity)          // bypass RNG; respects stack caps + fires reveal
+Drops.forceDrop                          // alias of forceRoll
+Drops.resetInventory()                   // wipe + re-stub
+Drops.rollBossDrop(bossId)               // execute a real roll
+Drops.processRevealQueue()               // open pending reveal
+```
+
+Backward-compat: `Drops.forceRoll(bossId, 'uncommon')` is aliased to `'common'` (legacy v1.2 rarity name).
+
+### Reveal queue persistence
+
+`hb_inventory.reveal_queue` is a JSON array of card IDs awaiting cinematic. Persists across cold launches — if the user kills a boss and gets a rare drop while the app is backgrounded, then force-quits before opening the reveal, the queue replays on next launch. Stale IDs (cards no longer in `CARDS`) are silently dropped from the head of the queue.
+
+---
+
 ## Removed systems
 
 ### Daily Quest / Legendary Mission (removed v2.0.1)
@@ -1099,7 +1279,7 @@ Bottom nav — **symbol-only, custom DALL-E PNG icons**, purple-glow active stat
 | Stats   | `tab-stats.png`                   | `stats-panel`    | Radar + 6 tile cards + Next Stat Bonus |
 | History | `tab-history.png`                 | `history-panel`  | 7-col grid, no emojis on rows |
 | Quests  | `tab-dungeon.png`                 | `quests-panel`   | **Dungeon Bosses list (v2.0+)** + "MORE QUESTS — Coming in v2.0" placeholder. The Daily Quest card was removed in v2.0.1 — see "Removed systems". |
-| Items   | `tab-items.png`                   | `items-panel`    | Coming-soon placeholder |
+| Items   | `tab-items.png`                   | `items-panel`    | **Pokédex (v2.0.2 Drops Phase 1)** — 3 collapsible sections (Ultra-Rare / Rare / Common) all default-collapsed. Discovered cards render with real art (DALL-E 1254×1254 PNGs in `assets/items/`); undiscovered slots show ??? silhouette. Tap discovered card → carddetail modal with stat-bonus badges + flavor + first-found date + stack count. Reveal modal (cinematic) fires for first-acquisition rare/ultra. See "Drops & Card Collection" section. |
 | Social  | `tab-social.png`                  | `social-panel`   | **Leaderboard preview (v2.0.1)** — three icon-led stat cards (steps · 7-day, 7+hr sleep streak, before-midnight bedtime streak), each tapping opens the Top-50 ranking sheet. See "Leaderboard" section. |
 
 Tab icons are referenced by file path inside `<img class="tab-icon">` tags. Active state adds a purple drop-shadow + 1.06× scale. Inactive icons sit at 0.55 opacity. **Don't add `<span class="tab-label">`** — symbol-only is the design.
@@ -1172,6 +1352,14 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `getHabitTimeOfDay(habit)` | Reads `HABIT_TIME_OF_DAY` map; returns `'morning'` / `'day'` / `'evening'`. Custom habits + unmapped canonicals default to `'day'`. Used by Daily Insight slate grouping. |
 | `setupCollapsibleSettings()` | Wires every `.settings-collapsible-toggle[data-collapsible]` to its body sibling. Drop-in for new Settings groups. |
 | `playCheckSound()`, `playFanfare()` | Web Audio. Both gated on `soundEnabled`. |
+| `rollBossDrop(bossId)` | **v2.0.2 Drops Phase 1.** Rolls the drop table for a kill. Returns `{ card, wasFirst, wasCapped, count, cap }` or `null`. Mutates `hb_inventory`. Respects cadence-aware rates + stack caps + first-common protection. Reveal queue updated for first-acquisition rare/ultra. |
+| `dropRatesFor(bossId)` | v2.0.2. Resolves `DROP_RATES_BY_CADENCE[BOSSES[bossId].cadence]`. Defensive fallback to daily. Exposed as `window.Drops.getRates`. |
+| `forceDrop(bossId, rarity)` | v2.0.2 debug. Bypass RNG; force-spawn the matching card. Respects stack caps. Fires reveal immediately for rare/ultra. Backward-compat aliases legacy `'uncommon'` → `'common'`. |
+| `announceKillAndDrop(cfg, soulsReward, dropInfo)` | v2.0.2. Composes the kill toast based on drop outcome (first-acq / dupe-stacked / dupe-capped / no-drop) and kicks the reveal queue for first-acq rare/ultra ~500ms later. |
+| `cardStatBadgesHtml(card)` | v2.0.2. Returns `<div class="stat-row">` with one `.stat-badge--<id>` per non-zero stat in `card.bonuses`. Empty string if all zero. Single source for the reveal + carddetail badge rows. |
+| `setModalCardArt(imgId, artPath)` | v2.0.2. Sets a card-art `<img>` src with onerror/onload handlers — starts hidden, reveals on successful load, stays hidden on 404. Used by reveal + carddetail modal openers. |
+| `computeMidDayBody()` | v2.0.2. Priority-chain body for the 1 PM mid-day check-in. Returns `null` to signal "skip notification" (priority 4: no habits). |
+| `Notif.reapplyMidDay()` | v2.0.2. Re-arm the mid-day notification with fresh body. Called from rescheduleAll, onHabitCompleted, class change, name edit, daily-bonus grant. |
 | `esc(str)`, `colorWithAlpha(hex, alpha)` | HTML-escape + color helpers used in inline `style="..."` building. |
 
 ---
@@ -1228,6 +1416,8 @@ Prefix `hb_` for almost everything:
 | `hb_bedtime_window_fix_v1` | `'1'` | v1.1.5. One-time recovery flag for the bedtime false-positive bug. On the first launch of the strict-window build, init() clears today's auto-verified Sleep before midnight check (if present), reverses the +3 XP, and sets this flag. Idempotent. Future bedtime-logic fixes that need similar recovery should use a new flag (`_v2`, etc.) — don't re-purpose this one. |
 | `hb_bosses`            | `{ bossId: { streak, kill_count, last_eval_date, ...perBossExtras } }` | v2.0+. Dungeon boss state. v2.0.1 ships two bosses (`the_insomniac`, `the_carouser`). The Carouser entry adds `current_weekend_id` ('YYYY-MM-DD' Friday-anchor) + `weekend_burned` (bool). `last_eval_date` is 'YYYY-MM-DD' device-local; it prevents double-counting on visibilitychange refires and powers the missed-period reset in init(). See "Dungeon bosses (v2.0+)" section. |
 | `hb_leaderboard`       | `{ steps_daily, sleep_hours_daily, bedtime_daily, current_*_streak, best_*_streak, last_*_eval_date, best_7day_step_total, best_7day_step_window_end }` | v2.0.1. Local accumulator for the future leaderboard layer. Daily maps pruned to 30 days. `current_*` track running streaks; `best_*` preserve all-time peaks across breaks. Independent of `isAutoVerifyDisabled()`. See "Leaderboard (v2.0.1+)" section. |
+| `hb_inventory`         | `{ cards: { [card_id]: { discovered, count, first_acquired_date } }, first_common_pulled, first_common_date, reveal_queue: [card_id, ...] }` | **v2.0.2 Drops Phase 1.** Card collection state. `loadInventory` transparently reads legacy `first_uncommon_*` keys with fallback (v1.3 rename). `reveal_queue` persists pending cinematic reveals across cold launches. Stack caps applied in `rollBossDrop` (common 1, rare 3, ultra unlimited). See "Drops & Card Collection" section. |
+| `hb_pokedex_collapsed` | JSON array of rarity keys currently collapsed | v2.0.2. Persists Pokédex section state across launches. Default value when key missing: all 3 keys (`['ultra_rare', 'rare', 'common']`) — first-time visitors see a tidy stacked list of collapsed dropdown headers. |
 | `hb_daily_quests`      | `{ 'YYYY-MM-DD': { id, manualDone[], bonusAwarded } }` | **DEPRECATED v2.0.1.** Daily Quest system removed; this key is no longer read or written but is preserved on existing devices for non-destructive future revival. See "Removed systems". |
 | `hb_quest_history`     | `[{ date, missionId }]` | **DEPRECATED v2.0.1.** Same status as above. |
 
@@ -1253,6 +1443,10 @@ All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone
      - `icon-192.png`, `icon-512.png` (PWA app icons)
      - `assets/tab-icons/*.png` (only the 7 optimized 192×192 — masters excluded)
      - `assets/stat-icons/*.png` (only the 6 optimized — masters excluded)
+     - `assets/bosses/*.png` (3 boss illustrations at 1254×1254)
+     - `assets/gates/*.png` (6 dungeon-gate illustrations)
+     - `assets/icons/*.png` (souls + other UI utility icons)
+     - `assets/items/*.png` — **v2.0.2 Drops Phase 1 card art.** Glob copy step (`if compgen -G "assets/items/*.png"; then cp assets/items/*.png www/assets/items/`) — different pattern from the per-file `for boss in ...` loops elsewhere because card art lands on a per-PNG cadence. New cards auto-included without codemagic.yaml edits.
    - `npx cap add ios` (if missing) + `npx cap sync ios`
    - Runs PlistBuddy: `Add :ITSAppUsesNonExemptEncryption bool false` (skips Apple's compliance question)
    - **`Add HealthKit usage description and entitlement`** — PlistBuddy writes `NSHealthShareUsageDescription` + `NSHealthUpdateUsageDescription` to `Info.plist` and `com.apple.developer.healthkit = true` to `App.entitlements`. Do NOT also write `com.apple.developer.healthkit.access` — that requires Apple-approved Verifiable Health Records capability. (v1.1.5)
@@ -1274,7 +1468,7 @@ Every meaningful change must:
    - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['1.1.5']` for the canonical example.
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
 
-The current state is `styles.css?v=190`, `app.js?v=246`, `sw.js v5.110`, `APP_VERSION = '2.0.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=201`, `app.js?v=266`, `sw.js v5.137`, `APP_VERSION = '2.0.2'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -1328,6 +1522,16 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 
 ## Common pitfalls
 
+- **Forgetting that App Store pre-release trains LOCK once a build is submitted for review.** Once any build (e.g., build 25) is submitted for review under marketing version `X.Y.Z`, App Store Connect refuses additional uploads under that same train with `IRIS-90186: "The train version 'X.Y.Z' is closed for new build submissions"`. The fix is to **bump APP_VERSION to a new train** — even a patch bump (`.Z+1`) opens a fresh train and the publishing step succeeds. **This happened to v2.0.1 → v2.0.2** mid-development; build 39 failed publish, version was bumped, build 40 succeeded under the new 2.0.2 train. Three places to bump: `app.js APP_VERSION`, `codemagic.yaml APP_VERSION env`, `app.js WHATS_NEW key` (the WHATS_NEW key was renamed `'2.0.1'` → `'2.0.2'` rather than duplicated — content was preserved verbatim since today's work was originally targeted at the prior version). `Info.plist` `CFBundleShortVersionString` is auto-rewritten by `agvtool new-marketing-version "$APP_VERSION"` at build time — never edit it manually.
+- **Adding an item PNG to `PRECACHE_ASSETS` before the file exists on disk.** `cache.addAll` rejects the ENTIRE install if any single URL 404s. The drops Phase 1 art pipeline grew the precache list across multiple commits — each new card's path was added only when the PNG landed in `assets/items/`. The render layer falls back to emoji + rarity gradient when art is missing, so untraced cards still render correctly without precaching. **Rule:** only list paths in `PRECACHE_ASSETS` after the file is on disk. (The codemagic glob copy step handles inclusion in `www/` automatically — no per-file edit needed there.)
+- **Treating `card.art_path` as authoritative for image existence.** The schema reserves the path but doesn't guarantee the file exists. All three render surfaces (Pokédex grid, reveal modal, carddetail modal) wire an `onerror` handler to the `<img>` element that hides/removes it on 404 — keeping the emoji + rarity gradient visible as fallback. **Never assume the image loaded successfully** in JS that depends on it. If a future feature needs to know "is the real art present," do a lazy check via `new Image().onload` against `card.art_path`.
+- **Forgetting to set `aspect-ratio: 1/1` on a new card-art container.** The 9 launch PNGs are 1254×1254 square. `object-fit: cover` only crops when source ratio ≠ container ratio. The carddetail modal had `aspect-ratio: 5/4` initially which cropped the top of the Dream-Woven Hood art (visible "hood-point" cutoff bug). Always match container aspect to source aspect for hero card art surfaces. The Pokédex grid tile + reveal modal art container + carddetail-art container all sit at 1:1.
+- **Using the global drop-rate constants (`DROP_RATE_ULTRA_RARE` etc.).** These were removed in v2.0.2's cadence-aware refactor. Use `dropRatesFor(bossId)` to resolve cadence-specific rates from `DROP_RATES_BY_CADENCE`. Daily and weekly bosses now use different rates (weekly: 5× ultra, 3× rare, 2× common multipliers + 0.6 protected-common). Hardcoding any of the old constants would silently use wrong rates for the Carouser.
+- **Adding a new boss without setting `cadence` on the `BOSSES` entry.** `dropRatesFor(bossId)` has a defensive `|| 'daily'` fallback (errs toward rarity, the safer wrong direction), but the boss won't get the cadence-appropriate rate without an explicit field. Required values: `'daily'` or `'weekly'`. SS-tier and beyond may add `'monthly'` or `'event'` — if you add a new cadence, also extend `DROP_RATES_BY_CADENCE` with a matching row, otherwise `dropRatesFor` falls back to daily.
+- **Per-boss first-common protection.** Resist the urge. The `hb_inventory.first_common_pulled` flag is a **single global boolean** — the first common from ANY boss ends the boost for ALL future rolls. Per-boss protection would re-onboard the user on every new boss and dilutes the "this is reliable for new players" framing. The cadence-specific `common_protected` rate already differentiates daily-vs-weekly onboarding behavior; per-boss-flag would be over-engineering.
+- **Treating the reveal queue as a one-shot.** Rare/ultra-rare drops PUSH to `hb_inventory.reveal_queue` and the cinematic plays via `processRevealQueue()`. If the queue has multiple entries (e.g., the user got two ultra-rares back-to-back), they play sequentially as the user dismisses each modal. The queue persists across cold launches via localStorage — if a rare drops while the app is backgrounded and the user force-quits before viewing, the reveal plays on next open. Stale IDs (cards no longer in `CARDS` after a schema change) are silently shifted off the head of the queue.
+- **Updating `WHATS_NEW` item order without re-sorting by significance.** The file has an explicit policy comment: "WHATS_NEW items are ordered BY SIGNIFICANCE (most impactful first), NOT chronologically by when the work shipped during the version's dev cycle." When you add a bullet, INSERT it at the position matching its significance (drops > class system > settings polish). Don't just append.
+- **Forgetting that the mid-day check-in uses DEVICE-LOCAL date for the souls comparison, not PT.** `tryGrantDailyLoginBonus` writes `lastDailyBonusDate = getDeviceLocalDate()` (not PT). `computeMidDayBody`'s priority-1 check must mirror that comparison: `parsed.lastDailyBonusDate !== getDeviceLocalDate()`. Using `getPTDate()` here would cause false "+15 souls waiting" notifications for users east of LA after midnight PT.
 - **Removing `.npmrc` (`legacy-peer-deps=true`).** The project root has a committed `.npmrc` with `legacy-peer-deps=true`. It exists because `@perfood/capacitor-healthkit@1.3.2` (added in v1.1.5 for HealthKit auto-verify) declares `peerDependencies: { "@capacitor/core": "^4.0.0" }` while we're on Capacitor 6. The plugin works fine on Cap 6 in practice — only the published peer-dep range is stale. Without `.npmrc`, every `npm install` (yours, Codemagic's, anyone's) errors with `ERESOLVE unable to resolve dependency tree`. **Do not delete `.npmrc` until we migrate to `@capgo/capacitor-health` during the eventual Capacitor 6→8 upgrade** — at that point the relaxed resolver is no longer needed and `.npmrc` should be removed in the same commit as the plugin swap.
 - **Trusting the `@perfood/capacitor-healthkit` README on auth strings.** The plugin uses TWO incompatible string namespaces — friendly aliases (`'steps'`, `'activity'`, `'calories'`) for `requestAuthorization`'s read array, and Apple-canonical identifiers (`'stepCount'`, `'sleepAnalysis'`, `'workoutType'`) for `queryHKitSampleType`'s sampleName. The README mixes them. The plugin's auth function has NO case for `'sleepAnalysis'` — passing it falls through to `default: print("no match")` and silently no-ops. Sleep auth requires `'activity'`, which iOS treats as both sleepAnalysis + workoutType. Always verify auth-side strings in `node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift` → `func getTypes(items:)` before adding a category. This cost an entire build cycle in v1.1.5.
 - **Forgetting to bump `HEALTHKIT_AUTH_VERSION` when adding a HealthKit category.** iOS only triggers a permission sheet for categories it has never seen. Apps adding new HealthKit categories in subsequent versions MUST explicitly re-call `requestAuthorization` with the new types. The version-bump pattern in `app.js` (`HEALTHKIT_AUTH_VERSION` constant + migration in `init()`) automates this. **If you add a category and forget to bump:** existing users won't get an iOS sheet, the new category won't appear in iOS Settings → Privacy → Health → Awakened, and your auto-verify will silently no-op forever. Also remember to add the new "asked" flag to `HEALTHKIT_AUTH_FLAGS_TO_CLEAR` so the migration knows what to wipe.
