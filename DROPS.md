@@ -1,11 +1,18 @@
 # DROPS.md — Awakened Drops / Card Collection System
 
-**Status:** v1.3 — Phase 1 engine shipped (v2.0.1).
+**Status:** v1.4 — Phase 1 engine shipped (v2.0.1).
 **Last updated:** May 11, 2026
 **Designer:** Richie (with Claude as design partner)
 
 ## Version history
 
+- **v1.4 (May 11, 2026)** — Cadence-aware drop rates. Weekly bosses get
+  multiplier-bumped rates (5× ultra-rare, 3× rare, 2× common) over the
+  daily baseline so per-month expected-pull volume is comparable across
+  cadences. First-common protection now also cadence-scaled (daily 2/3,
+  weekly 0.6). Storage and engine flag unchanged (`first_common_pulled`
+  remains a single global flag — protection ends globally on first
+  common from any boss).
 - **v1.3 (May 11, 2026)** — Renamed lowest rarity tier `uncommon` → `common`
   ("uncommon at 1/5 base rate" was misleading; "common" is more accurate).
   Drop rates tuned: ultra-rare 1/40 → 1/20, rare 1/15 → 1/12, common stays
@@ -138,18 +145,22 @@ not displayed publicly anywhere yet.
 
 ---
 
-## Drop rates — daily-cadence bosses (v1.3)
+## Drop rates — cadence-aware (v1.4)
 
 Rolls happen in order: ultra-rare → rare → common, mutually
 exclusive, one card max per kill. Each roll is independent
-RNG against its tier rate.
+RNG against its tier rate. **Rates depend on the boss's
+`cadence` field** — daily and weekly bosses use different
+tables so per-month pull expectations stay comparable.
+
+### Daily-cadence bosses (Insomniac, Steel Wolf)
 
 | Tier | Rate | Drop content |
 |---|---|---|
 | Ultra-rare | 1/20 (5%) | Trophy card, ultra-rare animated border |
 | Rare | 1/12 (~8.3%) | Cosmetic card, rare-tier border + glow |
 | Common | 1/5 (20%) | Cosmetic card, common-tier border |
-| (No card) | ~70% of kills | Souls only, no card pulled |
+| (No card) | ~69.7% of kills | Souls only, no card pulled |
 
 Combined any-drop probability per kill: `1 − (19/20)(11/12)(4/5)
 = ~30.3%`. Per-tier expected hit rates (conditional on prior
@@ -159,22 +170,73 @@ tiers missing):
 - ~17.4% common
 - ~69.7% no drop
 
-**First-common protection (new player):** common rate is 2/3
-instead of 1/5 until first common drop, then snaps to standard
-rate. Pushes combined drop probability up to ~70% during the
-onboarding window so new players reliably see the system fire.
+**First-common protection (daily):** common rate is 2/3
+(~66.7%) instead of 1/5 until first common drop, then snaps
+to standard rate.
 
-**Expected pull rate at realistic 5/7-days-per-week sleep
-success, streak-completion-of-2 model:**
-- ~65 successful kills/year per daily-cadence boss
-- ~11 commons/year per boss
-- ~5 rares/year per boss
-- ~3 ultra-rares/year per boss
+### Weekly-cadence bosses (Carouser)
 
-**Weekly-cadence bosses (Carouser):** roughly half kill
-frequency of daily bosses, but same drop rates per kill.
-~32 kills/year, ~5.5 commons/year, ~2.5 rares/year, ~1.5
-ultra-rares/year.
+Multipliers vs daily: **5× ultra-rare, 3× rare, 2× common**.
+Compensates for the ~3.5× lower kill volume from a once-per-
+week cadence so engaged players hit similar lifetime drop
+counts as their daily-boss progress.
+
+| Tier | Rate | Drop content |
+|---|---|---|
+| Ultra-rare | 5/20 (25%) | Trophy card |
+| Rare | 3/12 (25%) | Cosmetic card |
+| Common | 2/5 (40%) | Cosmetic card |
+| (No card) | ~33.75% of kills | Souls only |
+
+Combined any-drop probability per kill: `1 − (15/20)(9/12)(3/5)
+= ~66.25%`. Roughly 2× the daily combined rate, balancing the
+~3.5× kill-frequency deficit.
+
+**First-common protection (weekly):** common rate is 0.6
+(60%) until first common drop. Slightly below the 2/3 daily
+boost because weekly's base common rate (40%) is already much
+higher than daily's (20%) — the protection boost only needs
+to lift onboarding-tier reliability, not redo the heavy lift.
+
+### Cadence design rationale
+
+Kill volume is wildly different between cadences:
+
+| Cadence | Kills / month (engaged user) |
+|---|---|
+| Daily (streak of 2) | ~15 |
+| Weekly (streak of 2) | ~4 |
+
+If both used the same rates, weekly players would see ~3.7×
+fewer drops over equal calendar windows. The multipliers
+normalize this — both cadences land roughly **~1 ultra-rare
+per month** for engaged players, with rare and common counts
+also balanced.
+
+### Single-flag first-common protection
+
+`hb_inventory.first_common_pulled` is a SINGLE global boolean.
+The first common from ANY boss (daily or weekly) ends the
+protection for ALL subsequent rolls. Rationale: protection is
+an onboarding mechanic — the player has seen the drop system
+fire once. The variance preserved by tier is intentional;
+keeping the flag per-boss would slow re-discovery of the
+system on the second boss without a clear UX win.
+
+### Expected pull rate — engaged user, full year
+
+Realistic engagement assumption: 5/7 days success per daily
+boss; Carouser hits its 2-night kill condition ~3 of 4 weekends.
+
+| Boss type | Kills/year | Ultra-rare/year | Rare/year | Common/year |
+|---|---|---|---|---|
+| Daily | ~130 | ~6.5 | ~10 | ~22 |
+| Weekly | ~40 | ~10 | ~10 | ~16 |
+
+The weekly numbers being slightly higher than daily on
+ultra-rare reflects the multiplier-tuning bias toward keeping
+weekly bosses meaningfully rewarding per kill (otherwise
+weekly bosses feel like dead weight in the roster).
 
 ---
 

@@ -512,16 +512,50 @@
     ultra_rare: 'Ultra-Rare',
   };
 
-  // Drop rates per DROPS.md v1.3. Roll order: ultra-rare → rare → common
-  // (mutually exclusive — one card max per kill). ~70% of kills produce
-  // souls only — matches discipline-RPG scarcity. Tuned from v1.2's
-  // 1/40, 1/15, 1/5 to the more generous v1.3 curve below.
-  const DROP_RATE_ULTRA_RARE = 1 / 20;   // 5%
-  const DROP_RATE_RARE       = 1 / 12;   // ~8.3%
-  const DROP_RATE_COMMON     = 1 / 5;    // 20%
-  // First-common protection: 2/3 boost until first common ever
-  // pulled. Resets to standard after the first common lands.
-  const DROP_RATE_COMMON_PROTECTED = 2 / 3;
+  // Drop rates per DROPS.md v1.4 — CADENCE-AWARE. Weekly bosses kill
+  // ~once per 7 days (Carouser); daily bosses can kill every 2 days
+  // when on streak. To keep per-month expected-pull volume comparable
+  // across cadences, weekly rates are multiplied (5× ultra-rare,
+  // 3× rare, 2× common) over the daily baseline. Roll order stays
+  // mutually-exclusive: ultra-rare → rare → common.
+  //
+  // First-common protection (2/3 boost on daily, 0.6 on weekly) ends
+  // GLOBALLY after the first common from ANY boss — protection is a
+  // single-flag onboarding mechanic, not per-boss.
+  const DROP_RATES_BY_CADENCE = {
+    daily: {
+      ultra_rare:       1 / 20,   // 5%
+      rare:             1 / 12,   // ~8.3%
+      common:           1 / 5,    // 20%
+      common_protected: 2 / 3,    // ~66.7%
+    },
+    weekly: {
+      ultra_rare:       5 / 20,   // 25%
+      rare:             3 / 12,   // 25%
+      common:           2 / 5,    // 40%
+      common_protected: 0.6,      // 60%
+    },
+  };
+  // Resolve the rate table for a boss. Falls back to daily if a boss
+  // somehow lacks a cadence — defensive default since the kill-volume
+  // assumption (daily ≈ frequent) is the safer error mode (over-tunes
+  // toward rarity rather than under-tunes).
+  function dropRatesFor(bossId) {
+    const cfg = BOSSES[bossId];
+    const cadence = (cfg && cfg.cadence) || 'daily';
+    return DROP_RATES_BY_CADENCE[cadence] || DROP_RATES_BY_CADENCE.daily;
+  }
+
+  // Per-rarity stack caps. Drops continue to roll at standard rates
+  // — but once a card has hit its cap, further pulls of that card
+  // are blocked from incrementing count. The user is toasted on
+  // every dupe (stacked or capped) so the drop event is visible
+  // either way. Ultra-rares stack without limit (trophies).
+  const STACK_CAPS = {
+    common:     1,
+    rare:       3,
+    ultra_rare: Infinity,
+  };
 
   let _souls = null; // lazy-loaded; loadSouls() initializes
 
@@ -625,6 +659,9 @@
         showHabitToast('+' + SOULS_DAILY_BONUS + ' souls (daily bonus)');
       }
     } catch (_) {}
+    // The mid-day check-in's priority-1 condition (unclaimed bonus) no
+    // longer applies — re-arm so it falls through to priority 2 or 3.
+    try { if (typeof Notif !== 'undefined') Notif.reapplyMidDay(); } catch (_) {}
     return true;
   }
 
@@ -773,17 +810,21 @@
       common:     bossCards.find(c => c.rarity === 'common')     || null,
     };
 
-    // Effective common rate — boosted while protection is active.
+    // Cadence-specific rates (DROPS.md v1.4). Weekly bosses get
+    // multiplier-bumped rates so per-month pull expectations are
+    // comparable across cadences. Common rate uses the protected
+    // variant for the same cadence until the first common drops.
+    const rates = dropRatesFor(bossId);
     const commonRate = inv.first_common_pulled
-      ? DROP_RATE_COMMON
-      : DROP_RATE_COMMON_PROTECTED;
+      ? rates.common
+      : rates.common_protected;
 
     // Roll order. Each roll is independent; checks in order;
     // first hit wins.
     let dropped = null;
-    if (Math.random() < DROP_RATE_ULTRA_RARE && byRarity.ultra_rare) {
+    if (Math.random() < rates.ultra_rare && byRarity.ultra_rare) {
       dropped = byRarity.ultra_rare;
-    } else if (Math.random() < DROP_RATE_RARE && byRarity.rare) {
+    } else if (Math.random() < rates.rare && byRarity.rare) {
       dropped = byRarity.rare;
     } else if (Math.random() < commonRate && byRarity.common) {
       dropped = byRarity.common;
@@ -791,34 +832,48 @@
 
     if (!dropped) return null;
 
-    // Award to inventory.
+    // Award (or block) the drop based on stack cap.
     const entry = inv.cards[dropped.id] || { discovered: false, count: 0, first_acquired_date: null };
     const wasFirstAcquisition = !entry.discovered;
-    entry.discovered = true;
-    entry.count = (entry.count || 0) + 1;
-    if (wasFirstAcquisition) {
-      entry.first_acquired_date = getDeviceLocalDate();
-    }
-    inv.cards[dropped.id] = entry;
+    const cap = STACK_CAPS[dropped.rarity] != null ? STACK_CAPS[dropped.rarity] : Infinity;
+    const wasCapped = (entry.count || 0) >= cap;
 
-    // First-common protection state.
+    if (!wasCapped) {
+      entry.discovered = true;
+      entry.count = (entry.count || 0) + 1;
+      if (wasFirstAcquisition) {
+        entry.first_acquired_date = getDeviceLocalDate();
+      }
+      inv.cards[dropped.id] = entry;
+    }
+
+    // First-common protection state — fires on the FIRST common ever
+    // pulled, including the case where it stacks normally. A capped
+    // pull (count already at 1) shouldn't re-trigger first-common
+    // logic since by definition first_common_pulled is already true.
     if (dropped.rarity === 'common' && !inv.first_common_pulled) {
       inv.first_common_pulled = true;
       inv.first_common_date = getDeviceLocalDate();
     }
 
     // Queue reveal modal for first-acquisition rare/ultra-rare drops
-    // only. Dupes don't re-trigger reveals (count just increments
-    // silently). Commons never queue — they fire combined-toast in
-    // the kill handler instead.
-    if (wasFirstAcquisition && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare')) {
+    // only. Dupes (stacked or capped) don't re-trigger reveals — the
+    // toast on the kill handler conveys them instead. Commons never
+    // queue — they fire combined-toast.
+    if (wasFirstAcquisition && !wasCapped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare')) {
       if (!inv.reveal_queue.includes(dropped.id)) {
         inv.reveal_queue.push(dropped.id);
       }
     }
 
     persistInventory();
-    return dropped;
+    return {
+      card:     dropped,
+      wasFirst: wasFirstAcquisition && !wasCapped,
+      wasCapped,
+      count:    entry.count || 0,
+      cap,
+    };
   }
 
   // Force a specific drop (debug/test path — bypass RNG). Picks the
@@ -834,24 +889,35 @@
     const inv = getInventory();
     const entry = inv.cards[card.id] || { discovered: false, count: 0, first_acquired_date: null };
     const wasFirstAcquisition = !entry.discovered;
-    entry.discovered = true;
-    entry.count = (entry.count || 0) + 1;
-    if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
-    inv.cards[card.id] = entry;
+    const cap = STACK_CAPS[card.rarity] != null ? STACK_CAPS[card.rarity] : Infinity;
+    const wasCapped = (entry.count || 0) >= cap;
+
+    if (!wasCapped) {
+      entry.discovered = true;
+      entry.count = (entry.count || 0) + 1;
+      if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
+      inv.cards[card.id] = entry;
+    }
     if (card.rarity === 'common' && !inv.first_common_pulled) {
       inv.first_common_pulled = true;
       inv.first_common_date = getDeviceLocalDate();
     }
-    if (wasFirstAcquisition && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
+    if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
       if (!inv.reveal_queue.includes(card.id)) inv.reveal_queue.push(card.id);
     }
     persistInventory();
-    // Trigger reveal immediately if rare/ultra so console testing is
-    // one-line — no need to open + close the app to see the modal.
-    if (card.rarity === 'rare' || card.rarity === 'ultra_rare') {
+    // Trigger reveal immediately for first-acquisition rare/ultra so
+    // console testing is one-line. Capped/dupe rare-ultra: no reveal.
+    if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
       processRevealQueue();
     }
-    return card;
+    return {
+      card,
+      wasFirst: wasFirstAcquisition && !wasCapped,
+      wasCapped,
+      count:    entry.count || 0,
+      cap,
+    };
   }
 
   // Wipe inventory (debug). Re-stubs all cards as undiscovered, clears
@@ -870,26 +936,49 @@
   }
 
   // ── Kill announcement: toast + reveal coordination ──────────
-  // Composes the kill-toast text based on whether a card dropped
-  // (and at what rarity). Common → combined toast (no modal).
-  // Rare/Ultra-Rare → souls toast first, then cinematic reveal
-  // modal opens via the queue (~500ms after toast for breathing room).
-  function announceKillAndDrop(cfg, soulsReward, droppedCard) {
+  // Composes the kill-toast text based on the drop outcome. Four
+  // cases:
+  //   1. No drop                — souls-only toast.
+  //   2. First-acquisition common — combined toast (no modal).
+  //   3. First-acquisition rare/ultra — souls toast then cinematic
+  //      reveal modal (~500ms gap for breathing room).
+  //   4. Duplicate (stacked or capped) — toast tells the user the
+  //      drop happened and surfaces the new count or cap status.
+  //      No cinematic, regardless of rarity.
+  function announceKillAndDrop(cfg, soulsReward, dropInfo) {
     const soulsSuffix = soulsReward > 0 ? ' +' + soulsReward + ' souls.' : '';
     let toastMsg = cfg.name + ' defeated.' + soulsSuffix;
 
-    if (droppedCard && droppedCard.rarity === 'common') {
-      // Common: combined toast, no modal interruption.
-      toastMsg += ' Pulled: ' + droppedCard.name + ' (Common).';
+    if (dropInfo) {
+      const { card, wasFirst, wasCapped, count, cap } = dropInfo;
+      const rarityLabel = RARITY_LABELS[card.rarity] || card.rarity;
+      if (wasCapped) {
+        // Drop blocked — already at stack cap for this card.
+        toastMsg += ' Duplicate ' + card.name + ' (' + rarityLabel +
+                    '). Cap reached (' + cap + ').';
+      } else if (!wasFirst) {
+        // Stacked dupe (rare 2-3, ultra unlimited).
+        toastMsg += ' Duplicate ' + card.name + ' (' + rarityLabel +
+                    '). You have ' + count + '.';
+      } else if (card.rarity === 'common') {
+        // First-acquisition common — existing combined-toast behavior.
+        toastMsg += ' Pulled: ' + card.name + ' (Common).';
+      }
+      // First-acquisition rare/ultra: no toast extension; the
+      // cinematic reveal fires below.
     }
+
     try {
       if (typeof showHabitToast === 'function') showHabitToast(toastMsg);
     } catch (_) {}
 
-    // Rare/Ultra-Rare: kick the queue. rollBossDrop already pushed
-    // the card_id; processRevealQueue picks up on a 500ms delay so
-    // the kill toast has its moment first.
-    if (droppedCard && (droppedCard.rarity === 'rare' || droppedCard.rarity === 'ultra_rare')) {
+    // Rare/Ultra-Rare first-acquisition: kick the reveal queue.
+    // rollBossDrop already pushed the card_id; processRevealQueue
+    // picks up on a 500ms delay so the kill toast has its moment
+    // first. Dupes (stacked or capped) skip — toast carries the
+    // signal alone.
+    if (dropInfo && dropInfo.wasFirst &&
+        (dropInfo.card.rarity === 'rare' || dropInfo.card.rarity === 'ultra_rare')) {
       setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 500);
     }
   }
@@ -927,10 +1016,13 @@
     const slotIcon = SLOT_ICONS[card.slot] || '✦';
     overlay.className = 'reveal-overlay reveal-overlay--' + card.rarity;
     document.getElementById('reveal-slot-icon').textContent  = slotIcon;
+    setModalCardArt('reveal-card-art-img', card.art_path);
     document.getElementById('reveal-card-name').textContent  = card.name;
     document.getElementById('reveal-card-source').textContent = 'From: ' + (BOSSES[card.source_boss] ? BOSSES[card.source_boss].name : '—');
     document.getElementById('reveal-card-rarity').textContent = RARITY_LABELS[card.rarity] || card.rarity;
     document.getElementById('reveal-card-flavor').textContent = card.flavor || '';
+    const revealStats = document.getElementById('reveal-card-stats');
+    if (revealStats) revealStats.innerHTML = cardStatBadgesHtml(card);
 
     overlay.classList.remove('hidden');
     // Force reflow so the .reveal-overlay--showing class triggers
@@ -1018,13 +1110,21 @@
         const entry = inv.cards[c.id] || { discovered: false, count: 0 };
         const slotIcon = SLOT_ICONS[c.slot] || '✦';
         if (entry.discovered) {
+          // Real art layered ON TOP of the emoji fallback. If art_path
+          // 404s (most cards still placeholder), the post-render
+          // attachCardArtFallback() removes the <img>, leaving the
+          // emoji + rarity gradient visible underneath. Successful
+          // loads cover the fallback with object-fit: cover.
+          const artImg = c.art_path
+            ? '<img class="pokedex-card-art-img" src="' + esc(c.art_path) + '" alt="" data-card-art="1">'
+            : '';
           return (
             '<button class="pokedex-card pokedex-card--' + c.rarity + '" type="button" data-card-id="' + esc(c.id) + '">' +
               '<div class="pokedex-card-art">' +
                 '<span class="pokedex-card-slot-icon">' + slotIcon + '</span>' +
+                artImg +
               '</div>' +
               '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
-              (entry.count > 1 ? '<div class="pokedex-card-stack">×' + entry.count + '</div>' : '') +
             '</button>'
           );
         }
@@ -1051,6 +1151,60 @@
         '</div>'
       );
     }).join('');
+
+    // Attach error handlers to all card-art images so a 404 cleanly
+    // falls back to the emoji + rarity gradient underneath. inline
+    // onerror would work but post-attach keeps the markup CSP-clean.
+    root.querySelectorAll('img[data-card-art="1"]').forEach(img => {
+      img.addEventListener('error', () => { img.remove(); }, { once: true });
+    });
+  }
+
+  // Builds the stat-bonus badge row for a card. Returns an empty
+  // string if all bonuses are zero (defensive — current launch set
+  // always has at least one non-zero, but future items might be
+  // cosmetic-only). One badge per non-zero stat, tinted with the
+  // stat's color (CSS handles tint per .stat-badge--<id> modifier).
+  // Order matches CLAUDE.md canonical: STR, VIT, INT, FOCUS, WILL, WLT.
+  function cardStatBadgesHtml(card) {
+    if (!card || !card.bonuses) return '';
+    const order = ['str', 'vit', 'int', 'focus', 'will', 'wlt'];
+    const labels = { str: 'STR', vit: 'VIT', int: 'INT', focus: 'FOCUS', will: 'WILL', wlt: 'WLT' };
+    const icons  = {
+      str:   'assets/stat-icons/stat-str.png',
+      vit:   'assets/stat-icons/stat-vit.png',
+      int:   'assets/stat-icons/stat-int.png',
+      focus: 'assets/stat-icons/stat-focus.png',
+      will:  'assets/stat-icons/stat-will.png',
+      wlt:   'assets/stat-icons/stat-wlt.png',
+    };
+    const badges = order
+      .filter(k => (card.bonuses[k] || 0) > 0)
+      .map(k => (
+        '<span class="stat-badge stat-badge--' + k + '">' +
+          '<img class="stat-badge-icon" src="' + icons[k] + '" alt="" aria-hidden="true">' +
+          '<span class="stat-badge-value">+' + card.bonuses[k] + '</span>' +
+          '<span class="stat-badge-label">' + labels[k] + '</span>' +
+        '</span>'
+      ));
+    if (badges.length === 0) return '';
+    return '<div class="stat-row">' + badges.join('') + '</div>';
+  }
+
+  // Sets a card-art image src on a fixed-id <img> element used by the
+  // reveal + carddetail modals. Cleanly hides the img on 404 so the
+  // emoji slot icon underneath remains visible.
+  function setModalCardArt(imgId, artPath) {
+    const img = document.getElementById(imgId);
+    if (!img) return;
+    img.onerror = () => { img.style.display = 'none'; };
+    img.onload  = () => { img.style.display = ''; };
+    img.style.display = 'none';   // start hidden; onload reveals
+    if (artPath) {
+      img.src = artPath;
+    } else {
+      img.removeAttribute('src');
+    }
   }
 
   // Persisted set of collapsed pokedex section keys. Default: ALL collapsed.
@@ -1114,11 +1268,14 @@
     const slotIcon = SLOT_ICONS[card.slot] || '✦';
     overlay.className = 'carddetail-overlay carddetail-overlay--' + card.rarity;
     document.getElementById('carddetail-slot-icon').textContent = slotIcon;
+    setModalCardArt('carddetail-card-art-img', card.art_path);
     document.getElementById('carddetail-name').textContent = card.name;
     document.getElementById('carddetail-source').textContent =
       'Dropped from ' + (BOSSES[card.source_boss] ? BOSSES[card.source_boss].name : '—');
     document.getElementById('carddetail-rarity').textContent = RARITY_LABELS[card.rarity] || card.rarity;
     document.getElementById('carddetail-flavor').textContent = card.flavor || '';
+    const cdStats = document.getElementById('carddetail-stats');
+    if (cdStats) cdStats.innerHTML = cardStatBadgesHtml(card);
     const acqEl = document.getElementById('carddetail-acquired');
     if (acqEl) acqEl.textContent = entry.first_acquired_date
       ? 'First found ' + formatAcquiredDate(entry.first_acquired_date)
@@ -1168,6 +1325,11 @@
       resetInventory,
       rollBossDrop,
       processRevealQueue,
+      // Cadence-aware rate inspection (DROPS.md v1.4). Returns the
+      // resolved rate table for a boss without forcing a roll —
+      // useful for verifying daily-vs-weekly rate selection.
+      getRates:     dropRatesFor,
+      RATES:        DROP_RATES_BY_CADENCE,
     };
   } catch (_) {}
 
@@ -1910,6 +2072,8 @@
       items: [
         { emoji: '', title: 'Drops!',                          description: "Defeat dungeon bosses to collect cards. Some kills drop items — rare and ultra-rare pulls trigger a cinematic reveal. Check the Items tab for your collection." },
         { emoji: '', title: 'Drop rates tuned',                description: "The bottom rarity tier is now Common — and what was once uncommon is dropping more often. Rare and Ultra-Rare remain elusive." },
+        { emoji: '', title: 'Weekly bosses drop better',       description: "Weekly bosses now drop better per kill. Cadence-adjusted rates mean fewer attempts shouldn't mean fewer rewards." },
+        { emoji: '', title: 'Mid-day check-in',                description: "A 1 PM nudge if you haven't claimed today's souls or have a streak at risk. Evening reminder shifted from 6 PM to 7 PM." },
         { emoji: '', title: 'Rank scaling overhauled',         description: "Reach S rank with ~6 months of daily Locked-In pack completion. Boss engagement accelerates the climb but isn't required. Existing XP balances recalibrated to the new curve — your rank is preserved." },
         { emoji: '', title: 'Sleep duration > bedtime',        description: "Morning Routine and Locked-In packs now require Sleep (7+ hours) instead of Sleep before midnight. Total sleep is what the body actually needs. If your habit list still has Sleep before midnight, add Sleep to keep your compound streak rolling." },
         { emoji: '', title: 'Souls currency introduced',       description: "Earn 15 souls daily plus tier-scaled rewards on every boss kill. Spend souls to engage bosses (E rank costs 25, doubles per tier). Hunt wisely — souls are not refunded on disengage. Tap the souls badge in the header to see how to earn and spend them." },
@@ -3276,16 +3440,21 @@
   }
 
   // ── DAILY CHECK-IN ───────────────────────────────────────
-  // Single 6 PM local-time notification that acknowledges the user's
-  // progress on today's habits. Five progress states × 5 variations
+  // Single 7 PM local-time notification (shifted from 6 PM in v2.0.1)
+  // that acknowledges the user's progress on today's habits. Five progress states × 5 variations
   // each = 25 unique copy strings. Re-scheduled on every meaningful
   // state change so the body reflects current progress at fire time.
   // (Sits alongside the morning digest and per-habit reminders, but
   // has its own reserved notification ID and bypasses the per-habit
   // daily limit. Subject to: master disable, pause, quiet hours, and
   // a "Day 1" suppression so brand-new users aren't overwhelmed.)
-  const CHECKIN_TIME = '18:00';
+  const CHECKIN_TIME = '19:00';
   const CHECKIN_NOTIF_ID = 99999; // reserved; out of typical djb2 hash range
+  // Mid-day check-in (v2.0.1) — 1 PM nudge surfacing the highest-
+  // priority signal: unclaimed souls bonus → at-risk streak → caught-up.
+  // Skipped entirely if user has zero habits.
+  const MIDDAY_TIME = '13:00';
+  const MIDDAY_NOTIF_ID = 99998; // reserved; out of typical djb2 hash range, distinct from CHECKIN
 
   const CHECKIN_COPY = {
     complete: [
@@ -3372,14 +3541,85 @@
     }
   }
 
-  // Compute next 6 PM in DEVICE-LOCAL time (matches the morning digest's
+  // Compute next 7 PM in DEVICE-LOCAL time (matches the morning digest's
   // timezone behavior — see CLAUDE.md "Notifications fire in device-local").
+  // Shifted from 6 PM in v2.0.1 to give the user the full evening window
+  // before nudging.
   function computeNextCheckinDate() {
     const now    = new Date();
     const target = new Date();
-    target.setHours(18, 0, 0, 0);
+    target.setHours(19, 0, 0, 0);
     if (target <= now) target.setDate(target.getDate() + 1);
     return target;
+  }
+
+  // Compute next 1 PM in DEVICE-LOCAL time. Same timezone semantics as
+  // the digest + check-in. The mid-day notification re-arms whenever
+  // relevant state changes (daily bonus claim, habit completion, class
+  // change, etc.) so the body always reflects current priority.
+  function computeNextMidDayDate() {
+    const now    = new Date();
+    const target = new Date();
+    target.setHours(13, 0, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    return target;
+  }
+
+  // Body for the 1 PM mid-day check-in. Returns null to indicate the
+  // notification should be SKIPPED (priority 4 — user has zero habits).
+  // Priority chain:
+  //   1. Daily souls bonus not yet claimed today
+  //   2. At least one incomplete habit with current streak ≥ 1
+  //      (longest streak wins, ties broken by XP then alpha)
+  //   3. All caught up
+  //   4. No habits → skip (return null)
+  function computeMidDayBody() {
+    // Priority 4 — no habits configured at all.
+    if (!Array.isArray(habits) || habits.length === 0) return null;
+
+    // Priority 1 — daily souls bonus pending.
+    // Souls grant uses DEVICE-LOCAL date (see tryGrantDailyLoginBonus),
+    // so the comparison here must mirror that, not PT.
+    try {
+      const localToday = getDeviceLocalDate();
+      const raw = localStorage.getItem('hb_souls');
+      if (!raw) {
+        // No souls state yet — bonus is implicitly unclaimed.
+        return '+15 souls waiting. Tap to claim today’s bonus.';
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.lastDailyBonusDate !== localToday) {
+        return '+15 souls waiting. Tap to claim today’s bonus.';
+      }
+    } catch (_) {}
+
+    // Priority 2 — longest at-risk streak (incomplete habit, streak ≥ 1).
+    try {
+      const t = (typeof getPTDate === 'function') ? getPTDate() : today;
+      const completedIds = (completions && completions[t]) || [];
+      const candidates = habits
+        .filter(h => (typeof isScheduledToday === 'function') ? isScheduledToday(h) : true)
+        .filter(h => completedIds.indexOf(h.id) === -1)
+        .map(h => ({
+          habit:  h,
+          streak: (streaks[h.id] && streaks[h.id].count) || 0,
+        }))
+        .filter(c => c.streak >= 1);
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => {
+          if (b.streak !== a.streak) return b.streak - a.streak;
+          const xpA = (DIFFICULTY[a.habit.difficulty] && DIFFICULTY[a.habit.difficulty].pts) || 0;
+          const xpB = (DIFFICULTY[b.habit.difficulty] && DIFFICULTY[b.habit.difficulty].pts) || 0;
+          if (xpB !== xpA) return xpB - xpA;
+          return String(a.habit.name).localeCompare(String(b.habit.name));
+        });
+        const top = candidates[0];
+        return top.habit.name + ' — Day ' + top.streak + '. Don’t break the chain.';
+      }
+    } catch (_) {}
+
+    // Priority 3 — all caught up.
+    return 'You’re caught up. Keep it going.';
   }
 
   // ── PACK ICONS ───────────────────────────────────────────
@@ -4541,9 +4781,11 @@
     // Re-arm the morning digest so its title ("Awakened — Warrior") and
     // its body (class-flavored copy) reflect the new class. This is
     // best-effort and silent — it can no-op on web (Notif.reapplyDigest
-    // checks for the native plugin). Same goes for the 6 PM check-in.
+    // checks for the native plugin). Same goes for the 7 PM check-in
+    // and the 1 PM mid-day check-in (which also uses the class title).
     try { Notif.reapplyDigest(); } catch (_) {}
     try { Notif.reapplyCheckin(); } catch (_) {}
+    try { Notif.reapplyMidDay(); } catch (_) {}
 
     if (!silent) {
       // First-time awakening (Civilian → any class) gets a special celebration.
@@ -6835,8 +7077,12 @@
       const commit = () => {
         playerName = input.value.trim() || 'Hunter';
         localStorage.setItem('hb_name', playerName);
-        // Re-arm the digest so the new name appears in tomorrow's notification.
+        // Re-arm the digest so the new name appears in tomorrow's
+        // notification. The mid-day check-in uses the same title, so
+        // re-arm it too — body wording doesn't include name today, but
+        // the class-name title does.
         try { Notif.reapplyDigest(); } catch (_) {}
+        try { Notif.reapplyMidDay(); } catch (_) {}
         renderStatus();
       };
       editBtn.onclick = commit;
@@ -14594,9 +14840,12 @@
         if (!hm) continue;
         await scheduleOne(e.habit, hm);
       }
-      // Re-arm the daily 6 PM check-in alongside per-habit reminders so
-      // every caller of rescheduleAll keeps the check-in fresh.
+      // Re-arm the daily 7 PM check-in alongside per-habit reminders so
+      // every caller of rescheduleAll keeps the check-in fresh. Also
+      // re-arm the 1 PM mid-day check-in so its conditional body reflects
+      // the freshest state at every reschedule.
       try { await scheduleDailyCheckin(); } catch (_) {}
+      try { await scheduleMidDayCheckin(); } catch (_) {}
     }
 
     // Called from toggleHabit when a user marks a habit complete TODAY.
@@ -14607,8 +14856,10 @@
       // It will be re-scheduled by rescheduleAll on next daily reset.
       await cancelOne(habitId);
       // Progress just changed — re-arm the daily check-in so its body
-      // reflects the new completion state.
+      // reflects the new completion state. Same for the mid-day check-in
+      // (the at-risk-streak set changes when habits get completed).
       try { await scheduleDailyCheckin(); } catch (_) {}
+      try { await scheduleMidDayCheckin(); } catch (_) {}
     }
 
     function status() {
@@ -14835,6 +15086,56 @@
       return scheduleDailyCheckin();
     }
 
+    // ── Mid-Day Check-In (1 PM local) ──
+    // Conditional copy: souls-bonus-pending > at-risk-streak > caught-up.
+    // Skipped entirely if user has zero habits (computeMidDayBody returns
+    // null). Same scaffold as the 7 PM check-in: cancel, evaluate, schedule
+    // once, re-arm on every relevant event. Class-aware title via
+    // composeDigestTitle so Civilian still reads "Awakened" alone.
+    async function cancelMidDayCheckin() {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: MIDDAY_NOTIF_ID }] }); } catch (_) {}
+    }
+    async function scheduleMidDayCheckin() {
+      await cancelMidDayCheckin();
+      const p = plugin();
+      if (!p || !isNative()) return false;
+      if (isDisabled() || isPaused()) return false;
+      // Day-1 suppression — mirror the 7 PM check-in's quiet first day.
+      if (isDayOne()) return false;
+
+      // Compute body at schedule time. null = skip (priority 4: no habits).
+      const body = computeMidDayBody();
+      if (!body) return false;
+
+      // Quiet hours — skip if 1 PM falls inside the user's quiet window.
+      // (Unlikely default, but a user with daytime quiet hours might set
+      // this — respect it like the 7 PM check-in does.)
+      const middayHM = parseHM(MIDDAY_TIME);
+      if (middayHM && isInQuietHours(middayHM)) return false;
+
+      try {
+        const fireAt = computeNextMidDayDate();
+        await p.schedule({
+          notifications: [{
+            id:       MIDDAY_NOTIF_ID,
+            title:    composeDigestTitle(),
+            body:     body,
+            schedule: { at: fireAt, allowWhileIdle: true },
+            extra:    { kind: 'midday' },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('midday schedule failed', e);
+        return false;
+      }
+    }
+    async function reapplyMidDay() {
+      return scheduleMidDayCheckin();
+    }
+
     // Re-arm the digest after pause/disable changes or app restart.
     async function reapplyDigest() {
       const t = dailyDigestTime();
@@ -14861,8 +15162,10 @@
       setQuietOn, setQuietStart, setQuietEnd,
       // daily digest — the default once-a-day reminder
       dailyDigestTime, setDailyDigest, clearDailyDigest, reapplyDigest,
-      // daily check-in (6 PM local — progress-aware copy)
+      // daily check-in (7 PM local — progress-aware copy)
       scheduleDailyCheckin, cancelDailyCheckin, reapplyCheckin,
+      // mid-day check-in (1 PM local — souls/streak/caught-up conditional)
+      scheduleMidDayCheckin, cancelMidDayCheckin, reapplyMidDay,
       composeDigestTitle, composeDigestBody,
       // internals exposed for the UI
       copyFor, parseHM, isPaused, isDisabled,
@@ -15967,10 +16270,11 @@
       try { Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
       // Also re-arm the daily morning digest (the default reminder).
       try { Notif.reapplyDigest(); } catch (_) {}
-      // Re-arm the 6 PM check-in (rescheduleAll above already does this
-      // internally, but call explicitly for resilience if the per-habit
-      // path is ever short-circuited).
+      // Re-arm the 7 PM check-in + 1 PM mid-day check-in (rescheduleAll
+      // above already does both internally, but call explicitly for
+      // resilience if the per-habit path is ever short-circuited).
       try { Notif.reapplyCheckin(); } catch (_) {}
+      try { Notif.reapplyMidDay(); } catch (_) {}
     }, 1200);
 
     if (needsWelcome) {

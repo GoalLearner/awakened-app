@@ -104,6 +104,16 @@ workflows:
           for icon in souls-icon; do
             cp "assets/icons/$icon.png" "www/assets/icons/$icon.png"
           done
+          # Item / equipment card art (v2.0.1 DROPS Phase 1). 1254×1254
+          # DALL-E portraits, one per card in the CARDS constant. Copy
+          # every PNG present — files that don't exist yet (8 of 9 at
+          # launch) simply aren't copied and the renderer falls back to
+          # the emoji + rarity gradient placeholder. Add cards to disk
+          # as art lands; no codemagic edit required for the new ones.
+          mkdir -p www/assets/items
+          if compgen -G "assets/items/*.png" > /dev/null; then
+            cp assets/items/*.png www/assets/items/
+          fi
 
       - name: Add iOS platform (runs on first build only)
         script: |

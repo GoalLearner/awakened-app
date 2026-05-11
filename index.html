@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=197">
+  <link rel="stylesheet" href="styles.css?v=201">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1213,7 +1213,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=260"></script>
+  <script src="app.js?v=266"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1667,11 +1667,13 @@
     <div class="reveal-card">
       <div class="reveal-card-art">
         <span id="reveal-slot-icon" class="reveal-slot-icon" aria-hidden="true">✦</span>
+        <img id="reveal-card-art-img" class="reveal-card-art-img" alt="" style="display:none">
       </div>
       <div id="reveal-card-rarity" class="reveal-card-rarity">—</div>
       <h2 id="reveal-card-name" class="reveal-card-name">—</h2>
       <div id="reveal-card-source" class="reveal-card-source">—</div>
       <p id="reveal-card-flavor" class="reveal-card-flavor">—</p>
+      <div id="reveal-card-stats" class="reveal-card-stats"></div>
     </div>
     <div class="reveal-continue-hint">TAP TO CONTINUE</div>
   </div>
@@ -1681,11 +1683,13 @@
       <button id="carddetail-close" class="carddetail-close" type="button" aria-label="Close">✕</button>
       <div class="carddetail-art">
         <span id="carddetail-slot-icon" class="carddetail-slot-icon" aria-hidden="true">✦</span>
+        <img id="carddetail-card-art-img" class="carddetail-card-art-img" alt="" style="display:none">
       </div>
       <div id="carddetail-rarity" class="carddetail-rarity">—</div>
       <h2 id="carddetail-name" class="carddetail-name">—</h2>
       <div id="carddetail-source" class="carddetail-source">—</div>
       <p id="carddetail-flavor" class="carddetail-flavor">—</p>
+      <div id="carddetail-stats" class="carddetail-stats"></div>
       <div id="carddetail-acquired" class="carddetail-acquired"></div>
       <div id="carddetail-stack" class="carddetail-stack"></div>
     </div>

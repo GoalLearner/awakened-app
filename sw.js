@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.125';
+const CACHE_VERSION = 'v5.136';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -114,6 +114,21 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-insomniac.png',
   '/assets/bosses/the-carouser.png',
   '/assets/bosses/the-steel-wolf.png',
+  // Item-card illustrations. Only paths that EXIST on disk get listed
+  // here — cache.addAll rejects the entire install if any entry 404s.
+  // The remaining 8 launch cards fall through to the network (404 in
+  // dev), which the renderer cleanly handles by removing the <img>
+  // and showing the emoji + rarity gradient placeholder. Add each
+  // card's path here as its art lands on disk.
+  '/assets/items/dream_woven_hood.png',
+  '/assets/items/sleepwalkers_cloak.png',
+  '/assets/items/pendant_of_the_wakeful.png',
+  '/assets/items/vow_ring.png',
+  '/assets/items/vessel_of_refusal.png',
+  '/assets/items/sober_kings_gloves.png',
+  '/assets/items/pack_leaders_greaves.png',
+  '/assets/items/alphas_mantle.png',
+  '/assets/items/trail_worn_boots.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────

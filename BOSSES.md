@@ -1,8 +1,17 @@
 # BOSSES.md — Awakened Dungeon Boss System
 
-**Status:** v1 design. Not yet implemented. Targets v2/v3 build.
+**Status:** v1 design. Partially implemented in v2.0.1 (Insomniac, Carouser, Steel Wolf shipped).
 **Last updated:** May 8, 2026
 **Designer:** Richie (with Claude as design partner)
+
+> **Drop-rate references in this document are STALE.**
+> See `DROPS.md` (v1.4+) for the authoritative rate tables.
+> Notably: the bottom rarity tier was renamed `uncommon` → `common`
+> in v1.3, and rates were tuned per-cadence in v1.4 (weekly bosses
+> use multiplier-bumped rates over daily). This doc retains the
+> original framing for design-history continuity but should not be
+> used for engine-side rate decisions. The shipped code reads from
+> `DROP_RATES_BY_CADENCE` in `app.js`.
 
 ---
 

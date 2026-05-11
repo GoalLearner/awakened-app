@@ -13605,10 +13605,26 @@ body.bfs-locked { overflow: hidden; }
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(0, 0, 0, 0.40));
   margin-bottom: 6px;
 }
+.pokedex-card-art {
+  position: relative;
+  overflow: hidden;
+}
 .pokedex-card-slot-icon {
   font-size: 2.2rem;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.30));
+}
+/* Real card art layered over the emoji fallback. Object-fit cover so
+   1:1 source PNGs fill the square art cell cleanly. If 404, JS removes
+   the <img>, leaving the emoji + rarity gradient visible. */
+.pokedex-card-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
 }
 .pokedex-card-name {
   font-size: 0.7rem;
@@ -13814,12 +13830,26 @@ body.reveal-locked { overflow: hidden; }
 
 .reveal-card-art {
   flex: 0 0 55%;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.20), rgba(245, 158, 11, 0.15), rgba(0, 0, 0, 0.55));
   border-radius: 4px;
   margin-bottom: 12px;
+}
+.reveal-card-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  /* Match the slot-icon's staggered fade-in so real art doesn't snap
+     in instantly before the rest of the reveal animation finishes. */
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 0.85s ease-out forwards;
 }
 .reveal-slot-icon {
   font-size: 4.2rem;
@@ -13876,9 +13906,67 @@ body.reveal-locked { overflow: hidden; }
   opacity: 0;
   animation: reveal-fade-in 0.5s 1.25s ease-out forwards;
 }
+/* Stat-bonus row inside the reveal modal — staggered ~200ms after
+   flavor so the bonus reveal feels like the final beat of the
+   sequence (flavor → stats → continue hint at 1.6s). */
+.reveal-card-stats {
+  margin-top: 10px;
+  opacity: 0;
+  animation: reveal-fade-in 0.5s 1.45s ease-out forwards;
+}
 @keyframes reveal-fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Shared stat-badge styling (also used in the carddetail modal).
+   Tint per stat applied via .stat-badge--<id> modifier. Subtle
+   color-tinted background + matching border + same-color text on the
+   value/icon so the badge reads cleanly without going fluorescent. */
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.stat-badge-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.stat-badge-value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.stat-badge-label {
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  opacity: 0.85;
+}
+/* Per-stat color tints — values pulled from STATS[].color in app.js. */
+.stat-badge--str   { background: rgba(239, 68, 68, 0.12);  border-color: rgba(239, 68, 68, 0.40);  color: #fca5a5; }
+.stat-badge--vit   { background: rgba(34, 197, 94, 0.12);  border-color: rgba(34, 197, 94, 0.40);  color: #86efac; }
+.stat-badge--int   { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.40); color: #93c5fd; }
+.stat-badge--focus { background: rgba(234, 179, 8, 0.14);  border-color: rgba(234, 179, 8, 0.42);  color: #fde047; }
+.stat-badge--will  { background: rgba(249, 115, 22, 0.14); border-color: rgba(249, 115, 22, 0.42); color: #fdba74; }
+.stat-badge--wlt   { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; }
+.carddetail-stats {
+  margin: 4px 0 8px;
 }
 
 .reveal-continue-hint {
@@ -13936,19 +14024,33 @@ body.reveal-locked { overflow: hidden; }
   right: 10px;
   width: 32px;
   height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+  /* Sits above the card art image (which has position: absolute
+     inside .carddetail-art). Without this z-index the close button
+     reads as nearly-invisible gray-on-dark-art. */
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
-.carddetail-close:hover { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+.carddetail-close:hover { background: rgba(0, 0, 0, 0.78); border-color: rgba(255, 255, 255, 0.32); }
 .carddetail-art {
   width: 100%;
-  aspect-ratio: 5 / 4;
+  /* 1:1 to match the 1254×1254 source art exactly. Was 5:4, which
+     cropped the top of the artwork (e.g., hood point on Dream-Woven
+     Hood). object-fit: cover still applies but with matching ratios
+     no cropping actually happens. */
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13956,10 +14058,23 @@ body.reveal-locked { overflow: hidden; }
   border-radius: 6px;
   margin-bottom: 14px;
 }
+.carddetail-art {
+  position: relative;
+  overflow: hidden;
+}
 .carddetail-slot-icon {
   font-size: 4rem;
   line-height: 1;
   filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.50));
+}
+.carddetail-card-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
 }
 .carddetail-rarity {
   font-size: 0.7rem;
