@@ -13686,6 +13686,16 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-tertiary);
   letter-spacing: 0.12em;
   font-weight: 800;
+  /* Empty for undiscovered cards (the literal "???" text was removed
+     so the "?" inside the silhouette art carries the placeholder
+     signal alone). Reserve the same vertical space a 2-line
+     discovered name would occupy so mixed-state grid rows stay
+     height-aligned. 0.7rem font * 1.2 line-height * 2 lines = 1.68rem.
+     display:block overrides the inherited -webkit-box from
+     .pokedex-card-name — empty -webkit-box doesn't reliably honor
+     min-height when combined with -webkit-line-clamp. */
+  display: block;
+  min-height: 1.68rem;
 }
 
 /* ── Reveal modal — cinematic Solo Leveling system-window ────── */

@@ -1133,7 +1133,7 @@
             '<div class="pokedex-card-art pokedex-card-art--undiscovered">' +
               '<span class="pokedex-card-mystery">?</span>' +
             '</div>' +
-            '<div class="pokedex-card-name pokedex-card-name--mystery">???</div>' +
+            '<div class="pokedex-card-name pokedex-card-name--mystery"></div>' +
           '</button>'
         );
       }).join('');
