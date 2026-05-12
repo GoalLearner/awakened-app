@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.138';
+const CACHE_VERSION = 'v5.139';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -11,6 +11,7 @@ const PRECACHE_ASSETS = [
   '/index.html',
   '/styles.css',
   '/app.js',
+  '/auth.js',
   '/manifest.json',
   // Class avatar silhouettes
   '/avatar-base.png',

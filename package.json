@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Awakened — Daily Habit Tracker PWA",
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/ios": "^6.0.0",
     "@capacitor/local-notifications": "^6.1.3",

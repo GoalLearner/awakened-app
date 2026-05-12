@@ -58,7 +58,7 @@ workflows:
       - name: Copy PWA files into www/ for Capacitor
         script: |
           mkdir -p www
-          cp index.html styles.css app.js sw.js manifest.json www/
+          cp index.html styles.css app.js auth.js sw.js manifest.json www/
           # Class avatar silhouettes
           cp avatar-*.png www/
           # PWA app-icons (rendered from app-icon-source.png by
@@ -176,6 +176,25 @@ workflows:
           echo "HealthKit Info.plist + entitlement entries set."
           /usr/libexec/PlistBuddy -c "Print :NSHealthShareUsageDescription" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :com.apple.developer.healthkit" "$ENTITLEMENTS"
+
+      - name: Add Sign in with Apple entitlement
+        script: |
+          # v2.1 Phase A — Sign in with Apple capability. Mirrors the
+          # HealthKit entitlement pattern. The Apple Developer Portal
+          # must also have "Sign in with Apple" enabled on the App ID
+          # (com.goallearner.awakened); if codesign rejects the build
+          # with "Missing entitlement," confirm the Portal capability.
+          # See BACKEND.md §4.
+          ENTITLEMENTS="ios/App/App/App.entitlements"
+          # The Sign in with Apple entitlement is an array of strings.
+          # Apple expects either ['Default'] (normal apps) or
+          # ['Default', 'authentication.services'] (services that need
+          # the AS framework specifically). For Awakened we use Default.
+          /usr/libexec/PlistBuddy -c "Add :com.apple.developer.applesignin array" "$ENTITLEMENTS" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :com.apple.developer.applesignin:0 string 'Default'" "$ENTITLEMENTS" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :com.apple.developer.applesignin:0 'Default'" "$ENTITLEMENTS"
+          echo "Sign in with Apple entitlement set."
+          /usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$ENTITLEMENTS"
 
       - name: Wire entitlements file into Xcode project
         script: |

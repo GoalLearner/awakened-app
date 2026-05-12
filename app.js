@@ -2,6 +2,111 @@
 (function () {
   'use strict';
 
+  // ── v2.1 PHASE A: SIGN-IN GATE GUARD ──────────────────────
+  // Hard gate. If no signed-in user (or alias not yet picked), show
+  // the gate and short-circuit the IIFE. The main app does not mount
+  // until hb_user is fully populated. See BACKEND.md §4. auth.js loads
+  // before this script and exposes window.Auth.
+  //
+  // Pattern: a regular function that returns true when the gate took
+  // over (caller returns from the IIFE), false when no gate is needed
+  // (caller continues into the main app setup).
+  function setupSignInGateIfNeeded() {
+    if (typeof window.Auth === 'undefined') return false; // defensive
+    const user = window.Auth.getCurrentUser();
+    if (user && user.alias) return false; // signed in + alias set → mount app
+    const gate = document.getElementById('signin-gate');
+    if (!gate) return false; // gate markup missing — fail open
+    gate.classList.remove('hidden');
+
+    // Determine which step to show:
+    //   no user → step "apple" (sign in)
+    //   user but no alias → step "alias" (alias picker)
+    const stepApple = document.getElementById('signin-step-apple');
+    const stepAlias = document.getElementById('signin-step-alias');
+    if (user && !user.alias) {
+      if (stepApple) stepApple.classList.add('hidden');
+      if (stepAlias) stepAlias.classList.remove('hidden');
+      const aliasInput = document.getElementById('signin-alias-input');
+      if (aliasInput) {
+        try { aliasInput.value = localStorage.getItem('hb_name') || ''; } catch (_) {}
+        setTimeout(() => { try { aliasInput.focus(); } catch (_) {} }, 250);
+      }
+    } else {
+      if (stepApple) stepApple.classList.remove('hidden');
+      if (stepAlias) stepAlias.classList.add('hidden');
+    }
+
+    // Wire Apple-sign-in button.
+    const appleBtn = document.getElementById('signin-apple-btn');
+    const appleErr = document.getElementById('signin-apple-error');
+    if (appleBtn) {
+      appleBtn.addEventListener('click', async () => {
+        if (appleErr) appleErr.textContent = '';
+        appleBtn.disabled = true;
+        try {
+          if (!window.Auth.isNative()) {
+            if (appleErr) appleErr.textContent = 'Sign in with Apple is only available in the iOS app.';
+            return;
+          }
+          const response = await window.Auth.signInWithApple();
+          if (!response) {
+            // user cancelled or no response — stay on the apple step
+            return;
+          }
+          // Transition to alias picker.
+          if (stepApple) stepApple.classList.add('hidden');
+          if (stepAlias) stepAlias.classList.remove('hidden');
+          const aliasInput = document.getElementById('signin-alias-input');
+          if (aliasInput) {
+            try {
+              const suggested = (response.givenName && String(response.givenName).trim()) ||
+                                (localStorage.getItem('hb_name') || '');
+              aliasInput.value = suggested.slice(0, 20);
+            } catch (_) {}
+            setTimeout(() => { try { aliasInput.focus(); } catch (_) {} }, 250);
+          }
+        } catch (e) {
+          if (e && e.message === 'NATIVE_ONLY') {
+            if (appleErr) appleErr.textContent = 'Sign in with Apple is only available in the iOS app.';
+          } else {
+            if (appleErr) appleErr.textContent = 'Sign in failed — please try again.';
+          }
+        } finally {
+          appleBtn.disabled = false;
+        }
+      });
+    }
+
+    // Wire alias-continue button.
+    const aliasBtn = document.getElementById('signin-alias-continue');
+    const aliasErr = document.getElementById('signin-alias-error');
+    const aliasIn  = document.getElementById('signin-alias-input');
+    const submitAlias = () => {
+      if (!aliasIn) return;
+      const value = aliasIn.value;
+      if (!window.Auth.validateAlias(value)) {
+        if (aliasErr) aliasErr.textContent = '3–20 chars, letters/numbers/space/_/- only.';
+        return;
+      }
+      const ok = window.Auth.completeSignIn(value);
+      if (!ok) {
+        if (aliasErr) aliasErr.textContent = 'Could not save — please try again.';
+        return;
+      }
+      // Reload to mount the main app (cleanest way to re-init from the
+      // signed-in state without un-wiring the gate's listeners).
+      window.location.reload();
+    };
+    if (aliasBtn) aliasBtn.addEventListener('click', submitAlias);
+    if (aliasIn) aliasIn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submitAlias(); }
+    });
+
+    return true; // gate took over; caller halts main app setup
+  }
+  if (setupSignInGateIfNeeded()) return;
+
   // ── CONSTANTS ─────────────────────────────────────────────
   const DIFFICULTY = {
     easy:      { label: 'Easy',      pts: 1  },
@@ -13480,8 +13585,50 @@
     setupReminderSettings();
     // ── Settings → Apple Health panel wiring (v1.1.6) ────────
     setupHealthSettings();
-    // ── Generic collapsible setup (Appearance / Reminders / Health / Coming) ──
+    // ── Settings → Account panel wiring (v2.1 Phase A scaffold) ──
+    setupAccountSettings();
+    // ── Generic collapsible setup (Appearance / Reminders / Health / Account / Coming) ──
     setupCollapsibleSettings();
+  }
+
+  // Settings → Account section. Phase A: identity readout + sign-out
+  // + delete-coming-soon. Delete-account wiring lands in Phase B once
+  // the /account/delete endpoint exists. Sign-out is fully functional
+  // — clears hb_user and reloads, which re-runs the gate guard.
+  function setupAccountSettings() {
+    const summary = document.getElementById('settings-account-summary');
+    const aliasEl = document.getElementById('settings-account-alias');
+    const sinceEl = document.getElementById('settings-account-since');
+    const signoutBtn = document.getElementById('settings-account-signout');
+    const deleteBtn  = document.getElementById('settings-account-delete');
+
+    const user = (typeof window.Auth !== 'undefined') ? window.Auth.getCurrentUser() : null;
+    if (user && user.alias) {
+      if (summary) summary.textContent = '@' + user.alias;
+      if (aliasEl) aliasEl.textContent = user.alias;
+      if (sinceEl && user.signed_in_date) sinceEl.textContent = 'Since ' + user.signed_in_date;
+    } else {
+      if (summary) summary.textContent = 'Signed out';
+      if (aliasEl) aliasEl.textContent = '—';
+      if (sinceEl) sinceEl.textContent = '—';
+    }
+
+    if (signoutBtn) {
+      signoutBtn.addEventListener('click', () => {
+        if (typeof window.Auth === 'undefined') return;
+        window.Auth.clearUser();
+        window.location.reload();
+      });
+    }
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast('Account deletion ships in v2.1 Phase B.');
+          }
+        } catch (_) {}
+      });
+    }
   }
 
   // Builds + wires the Settings → Reminders panel. Each control writes
