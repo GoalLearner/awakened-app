@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=204">
+  <link rel="stylesheet" href="styles.css?v=205">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1243,8 +1243,8 @@
     </div>
   </div>
 
-  <script src="auth.js?v=3"></script>
-  <script src="app.js?v=271"></script>
+  <script src="auth.js?v=4"></script>
+  <script src="app.js?v=272"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1437,7 +1437,7 @@
     </div>
     <!-- (Sound moved to the header; toggle now lives next to "Habit RPG".) -->
 
-    <!-- Account (v2.1 Phase A scaffold) — collapsible -->
+    <!-- Account (v2.1.0) — collapsible -->
     <div class="settings-collapsible">
       <button id="settings-account-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="account">
         <span class="settings-collapsible-lbl">ACCOUNT</span>
@@ -1445,23 +1445,32 @@
         <span class="settings-collapsible-chevron">›</span>
       </button>
       <div id="settings-account-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-        <div class="settings-rem-row" id="settings-account-identity">
-          <div class="settings-rem-row-main">
-            <div class="settings-rem-row-title">Signed in as <span id="settings-account-alias">—</span></div>
-            <div class="settings-rem-row-sub" id="settings-account-since">—</div>
+
+        <!-- Identity card: avatar + alias + member-since -->
+        <div class="account-identity-card" id="account-identity-card">
+          <div class="account-identity-avatar" id="account-identity-avatar" aria-hidden="true">—</div>
+          <div class="account-identity-text">
+            <div class="account-identity-alias" id="account-identity-alias">—</div>
+            <div class="account-identity-since" id="account-identity-since">—</div>
           </div>
         </div>
-        <div class="settings-rem-row">
-          <div class="settings-rem-row-main">
-            <button id="settings-account-signout" type="button" class="settings-rem-btn">Sign out</button>
-          </div>
-        </div>
-        <div class="settings-rem-row">
-          <div class="settings-rem-row-main">
-            <button id="settings-account-delete" type="button" class="settings-rem-btn settings-rem-btn--danger">Delete my account</button>
-            <div class="settings-rem-row-sub">Coming in v2.1 Phase B</div>
-          </div>
-        </div>
+
+        <!-- Sign out — secondary, full-width -->
+        <button id="settings-account-signout" type="button" class="account-action-btn account-action-btn--secondary">
+          <span class="account-action-icon" aria-hidden="true">⏻</span>
+          <span class="account-action-label">Sign out</span>
+        </button>
+
+        <!-- Divider — physically separates safe from destructive actions -->
+        <div class="account-section-divider" aria-hidden="true"></div>
+
+        <!-- Delete my account — destructive, full-width -->
+        <button id="settings-account-delete" type="button" class="account-action-btn account-action-btn--danger">
+          <span class="account-action-icon" aria-hidden="true">🗑</span>
+          <span class="account-action-label">Delete my account</span>
+        </button>
+        <div class="account-action-subtitle">Permanently deletes your account and leaderboard data.</div>
+
       </div>
     </div>
 
@@ -1751,6 +1760,35 @@
       <div id="carddetail-stats" class="carddetail-stats"></div>
       <div id="carddetail-acquired" class="carddetail-acquired"></div>
       <div id="carddetail-stack" class="carddetail-stack"></div>
+    </div>
+  </div>
+
+  <!-- Delete-account confirmation modal (v2.1.0 Phase E partial).
+       Hidden by default. Shown when user taps Settings → Account →
+       Delete my account. Requires typing "DELETE" to enable the
+       destructive button — protects against accidental taps + fat-
+       finger errors. Confirm button calls Auth.deleteAccount() which
+       POSTs to /v1/account/delete on the live Cloudflare Worker. -->
+  <div id="delete-account-modal" class="delete-account-overlay hidden" role="dialog" aria-labelledby="da-title" aria-modal="true">
+    <div class="delete-account-modal">
+      <h2 id="da-title" class="delete-account-title">Delete your account?</h2>
+      <p class="delete-account-body">
+        This permanently deletes your account, your leaderboard rank, and your global identity. Your local habits, drops, souls, and stats on this device will stay, but you'll lose your hunter name and rank.
+      </p>
+      <p class="delete-account-body delete-account-body--warning">
+        <strong>This cannot be undone.</strong>
+      </p>
+      <div class="delete-account-confirm-section">
+        <label for="da-confirm-input" class="delete-account-confirm-label">
+          Type <strong>DELETE</strong> below to confirm:
+        </label>
+        <input id="da-confirm-input" type="text" class="delete-account-confirm-input" placeholder="DELETE" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="10">
+      </div>
+      <div id="da-error" class="delete-account-error" role="alert"></div>
+      <div class="delete-account-actions">
+        <button id="da-cancel" type="button" class="delete-account-btn delete-account-btn--cancel">Cancel</button>
+        <button id="da-confirm" type="button" class="delete-account-btn delete-account-btn--confirm" disabled>Delete Forever</button>
+      </div>
     </div>
   </div>
 

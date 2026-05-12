@@ -14343,3 +14343,282 @@ body.reveal-locked { overflow: hidden; }
 .signin-suggestion-chip:active {
   transform: scale(0.96);
 }
+
+/* ───────────────────────────────────────────────────────────────
+   Settings → Account section (v2.1.0 Phase E partial restyle)
+   ─────────────────────────────────────────────────────────────── */
+
+/* Identity card — shows hunter's avatar (first letter), alias, and
+   member-since date. Replaces the prior "Signed in as / Since" lines
+   with a proper visual card. */
+.account-identity-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 14px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.20);
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+.account-identity-avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1a1a1a;
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+  border-radius: 50%;
+  box-shadow: 0 0 14px var(--gold-glow);
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+.account-identity-text {
+  flex: 1;
+  min-width: 0;
+}
+.account-identity-alias {
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-identity-since {
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.03em;
+}
+
+/* Full-width action buttons (Sign out + Delete) — matches the
+   visual weight of Check for Updates / What's New buttons elsewhere
+   in Settings. Two variants: secondary (sign out) + danger (delete). */
+.account-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 46px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.account-action-btn:active { transform: scale(0.985); }
+.account-action-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.account-action-label {
+  line-height: 1;
+}
+
+/* Secondary: muted/outlined — Sign out is not a primary action. */
+.account-action-btn--secondary {
+  color: var(--text-secondary);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.account-action-btn--secondary:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Danger: red border + red text. Visually distinct from primary
+   actions. Pairs with the divider above + subtitle below. */
+.account-action-btn--danger {
+  color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.40);
+  background: rgba(220, 38, 38, 0.04);
+}
+.account-action-btn--danger:hover {
+  color: #fecaca;
+  border-color: rgba(220, 38, 38, 0.60);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* Physical separation between Sign-out (safe) and Delete (destructive).
+   Prevents fat-finger taps after the user has just signed out. */
+.account-section-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 18px 0 14px;
+}
+
+.account-action-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  letter-spacing: 0.02em;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   Delete-account confirmation modal (v2.1.0 Phase E partial)
+   Type-DELETE-to-confirm pattern. Two-button choice with the
+   destructive option deliberately NOT default-highlighted.
+   ─────────────────────────────────────────────────────────────── */
+
+.delete-account-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 24px) 20px calc(var(--safe-bottom) + 24px);
+}
+.delete-account-overlay.hidden { display: none; }
+
+.delete-account-modal {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-raised);
+  border: 1px solid rgba(220, 38, 38, 0.30);
+  border-radius: 14px;
+  padding: 22px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.65), 0 0 28px rgba(220, 38, 38, 0.10);
+  animation: da-modal-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes da-modal-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.delete-account-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fca5a5;
+  margin: 0;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.delete-account-body {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.delete-account-body--warning {
+  text-align: center;
+  color: #fca5a5;
+  font-weight: 700;
+}
+
+.delete-account-confirm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.delete-account-confirm-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.delete-account-confirm-label strong {
+  color: #fca5a5;
+  letter-spacing: 0.08em;
+}
+.delete-account-confirm-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.delete-account-confirm-input:focus {
+  border-color: rgba(220, 38, 38, 0.55);
+  background: var(--bg-card-active);
+}
+
+.delete-account-error {
+  font-size: 0.78rem;
+  color: #fca5a5;
+  text-align: center;
+  min-height: 1.1em;
+  margin: -4px 0 0;
+}
+.delete-account-error:empty { display: none; }
+
+.delete-account-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.delete-account-btn {
+  flex: 1;
+  height: 46px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
+}
+.delete-account-btn:active { transform: scale(0.985); }
+.delete-account-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Cancel: neutral, default-highlighted (focus-ringed) — the safe
+   action. Cancel is the path users should take 99% of the time. */
+.delete-account-btn--cancel {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-accent);
+}
+.delete-account-btn--cancel:hover {
+  background: var(--bg-card-active);
+}
+
+/* Confirm: destructive red. NOT default-highlighted — user must
+   tap it explicitly with intent. Disabled until DELETE is typed. */
+.delete-account-btn--confirm {
+  background: rgba(220, 38, 38, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.60);
+}
+.delete-account-btn--confirm:not(:disabled):hover {
+  background: rgba(220, 38, 38, 0.28);
+  border-color: rgba(220, 38, 38, 0.80);
+}

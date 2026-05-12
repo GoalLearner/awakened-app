@@ -310,6 +310,78 @@
     return _pendingApplePayload;
   }
 
+  // Hard-deletes the current user's backend account by POSTing to
+  // /v1/account/delete with the active session JWT. On success the
+  // backend cascade-deletes the user's row + all leaderboard
+  // snapshots (FK ON DELETE CASCADE in migration 0001).
+  //
+  // Returns a typed result the caller switches on:
+  //   { ok: true }                          — backend deleted; clear local + reload
+  //   { ok: true, code: 'LOCAL_DEV_CLEARED' } — localhost dev path, no backend call
+  //   { ok: false, code: 'NOT_SIGNED_IN' }  — no JWT to send (shouldn't happen if UI flow is correct)
+  //   { ok: false, code: 'EXPIRED' }        — backend returned 401; session expired mid-modal
+  //   { ok: false, code: 'NETWORK' }        — fetch threw (offline, DNS, etc.)
+  //   { ok: false, code: 'BACKEND_ERROR' }  — 5xx or unexpected status
+  //
+  // Side effect on ok+EXPIRED: clears hb_user (the user is effectively
+  // signed out). Side effect on NETWORK / BACKEND_ERROR: NOTHING —
+  // backend may or may not have processed the delete; caller should
+  // surface a retry prompt and preserve local state.
+  async function deleteAccount() {
+    const u = readUser();
+    if (!u || !u.jwt) {
+      return { ok: false, code: 'NOT_SIGNED_IN', detail: 'No active session.' };
+    }
+
+    // Localhost dev path: never call backend. Just clear local state
+    // so the dev gate re-arms on next load.
+    if (u.jwt === LOCALHOST_DEV_STUB) {
+      clearUser();
+      return { ok: true, code: 'LOCAL_DEV_CLEARED' };
+    }
+
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/account/delete', {
+        method:  'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      // Network failure — preserve local state so user can retry.
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+
+    if (res.status === 200) {
+      clearUser();
+      // Defensive: clear leaderboard cache if Phase C lands one later.
+      try { localStorage.removeItem('hb_lb_cache'); } catch (_) {}
+      return { ok: true };
+    }
+
+    if (res.status === 401) {
+      // Session expired between modal-open and Delete-Forever tap.
+      // Clear hb_user since the JWT's worthless either way.
+      clearUser();
+      return {
+        ok: false,
+        code: 'EXPIRED',
+        detail: (data && data.detail) || 'Session expired.',
+      };
+    }
+
+    // 5xx or unexpected. Local state preserved — backend may or may
+    // not have processed; if next sign-in shows the user still exists,
+    // they can retry the delete.
+    return {
+      ok: false,
+      code: 'BACKEND_ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status + '.'),
+    };
+  }
+
   // ── Localhost dev-bypass ─────────────────────────────────────
   // Phase A's mandatory sign-in gate calls SignInWithApple.authorize()
   // which only works under Capacitor's native iOS WebView. On a
@@ -373,6 +445,7 @@
     signInWithApple,
     completeSignIn,
     getPendingApplePayload,
+    deleteAccount,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,

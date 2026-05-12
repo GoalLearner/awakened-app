@@ -13660,26 +13660,33 @@
     setupCollapsibleSettings();
   }
 
-  // Settings → Account section. Phase A: identity readout + sign-out
-  // + delete-coming-soon. Delete-account wiring lands in Phase B once
-  // the /account/delete endpoint exists. Sign-out is fully functional
-  // — clears hb_user and reloads, which re-runs the gate guard.
+  // Settings → Account section. v2.1.0 Phase E (partial):
+  // restyled identity card + sign-out + DELETE actually wires to
+  // the live backend via Auth.deleteAccount() with a type-DELETE
+  // confirmation modal. Sign-out is unchanged from Phase A —
+  // clearUser() + reload re-arms the gate.
   function setupAccountSettings() {
-    const summary = document.getElementById('settings-account-summary');
-    const aliasEl = document.getElementById('settings-account-alias');
-    const sinceEl = document.getElementById('settings-account-since');
+    const summary    = document.getElementById('settings-account-summary');
+    const avatarEl   = document.getElementById('account-identity-avatar');
+    const aliasEl    = document.getElementById('account-identity-alias');
+    const sinceEl    = document.getElementById('account-identity-since');
     const signoutBtn = document.getElementById('settings-account-signout');
     const deleteBtn  = document.getElementById('settings-account-delete');
 
     const user = (typeof window.Auth !== 'undefined') ? window.Auth.getCurrentUser() : null;
     if (user && user.alias) {
-      if (summary) summary.textContent = '@' + user.alias;
-      if (aliasEl) aliasEl.textContent = user.alias;
-      if (sinceEl && user.signed_in_date) sinceEl.textContent = 'Since ' + user.signed_in_date;
+      if (summary)  summary.textContent  = '@' + user.alias;
+      if (aliasEl)  aliasEl.textContent  = user.alias;
+      if (avatarEl) avatarEl.textContent = user.alias.charAt(0).toUpperCase();
+      if (sinceEl) {
+        const memberSince = formatMemberSince(user.signed_in_date);
+        sinceEl.textContent = memberSince ? ('Member since ' + memberSince) : '—';
+      }
     } else {
-      if (summary) summary.textContent = 'Signed out';
-      if (aliasEl) aliasEl.textContent = '—';
-      if (sinceEl) sinceEl.textContent = '—';
+      if (summary)  summary.textContent  = 'Signed out';
+      if (aliasEl)  aliasEl.textContent  = '—';
+      if (avatarEl) avatarEl.textContent = '—';
+      if (sinceEl)  sinceEl.textContent  = '—';
     }
 
     if (signoutBtn) {
@@ -13690,14 +13697,121 @@
       });
     }
     if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
+      deleteBtn.addEventListener('click', openDeleteAccountModal);
+    }
+  }
+
+  // Formats YYYY-MM-DD → "May 12, 2026". Returns null on bad input
+  // so caller can decide fallback. Used for "Member since X" line.
+  function formatMemberSince(dateISO) {
+    if (typeof dateISO !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return null;
+    try {
+      // Parse as UTC and format in device locale's long-month form.
+      // Using midday UTC avoids timezone-rollover edge cases.
+      const d = new Date(dateISO + 'T12:00:00Z');
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Opens the type-DELETE confirmation modal. Cancel = close + reset.
+  // Confirm requires typing "DELETE" (case-insensitive) to enable.
+  // On confirm: calls Auth.deleteAccount(), handles each result code:
+  //   ok / EXPIRED → reload (gate re-appears, user fully signed out)
+  //   LOCAL_DEV_CLEARED → reload (no backend call needed)
+  //   NETWORK / BACKEND_ERROR → show inline error, re-enable button
+  //     so user can retry without dismissing the modal
+  function openDeleteAccountModal() {
+    const overlay   = document.getElementById('delete-account-modal');
+    const input     = document.getElementById('da-confirm-input');
+    const cancelBtn = document.getElementById('da-cancel');
+    const confirmBtn = document.getElementById('da-confirm');
+    const errorEl   = document.getElementById('da-error');
+    if (!overlay || !input || !cancelBtn || !confirmBtn) return;
+
+    // Reset modal state
+    input.value = '';
+    if (errorEl) errorEl.textContent = '';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Delete Forever';
+
+    overlay.classList.remove('hidden');
+    setTimeout(() => { try { input.focus(); } catch (_) {} }, 100);
+
+    const closeModal = () => {
+      overlay.classList.add('hidden');
+      // Re-attach handlers will be re-wired next time the modal opens.
+      input.removeEventListener('input', onInput);
+      cancelBtn.removeEventListener('click', closeModal);
+      confirmBtn.removeEventListener('click', onConfirm);
+      input.removeEventListener('keydown', onKeydown);
+    };
+
+    const onInput = () => {
+      const matches = input.value.trim().toUpperCase() === 'DELETE';
+      confirmBtn.disabled = !matches;
+      if (errorEl) errorEl.textContent = '';
+    };
+
+    const onKeydown = (e) => {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Enter' && !confirmBtn.disabled) onConfirm();
+    };
+
+    const onConfirm = async () => {
+      if (confirmBtn.disabled) return;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting…';
+      cancelBtn.disabled = true;
+      if (errorEl) errorEl.textContent = '';
+
+      let result;
+      try {
+        result = await window.Auth.deleteAccount();
+      } catch (e) {
+        result = { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+      }
+
+      if (result && result.ok) {
+        // Success or local-dev cleared — reload re-arms the gate.
+        window.location.reload();
+        return;
+      }
+
+      if (result && result.code === 'EXPIRED') {
+        // Auth.deleteAccount cleared hb_user already; reload re-arms gate.
         try {
           if (typeof showHabitToast === 'function') {
-            showHabitToast('Account deletion ships in v2.1 Phase B.');
+            showHabitToast('Your session expired. Please sign in again.');
           }
         } catch (_) {}
-      });
-    }
+        window.location.reload();
+        return;
+      }
+
+      // NETWORK / BACKEND_ERROR / NOT_SIGNED_IN: surface inline,
+      // keep local state, allow retry.
+      const detail = (result && result.detail) || 'Could not delete account. Try again.';
+      if (errorEl) errorEl.textContent = detail;
+      confirmBtn.textContent = 'Delete Forever';
+      // Keep confirmBtn disabled — user must re-type DELETE to retry
+      // (defensive: forces a deliberate second confirm after error).
+      input.value = '';
+      cancelBtn.disabled = false;
+      // Re-focus input so retry path is one keystroke
+      setTimeout(() => { try { input.focus(); } catch (_) {} }, 50);
+    };
+
+    input.addEventListener('input', onInput);
+    input.addEventListener('keydown', onKeydown);
+    cancelBtn.addEventListener('click', closeModal);
+    confirmBtn.addEventListener('click', onConfirm);
+    // Tap outside the modal also cancels (matches existing modal pattern).
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal();
+    }, { once: true });
   }
 
   // Builds + wires the Settings → Reminders panel. Each control writes
