@@ -271,30 +271,31 @@ workflows:
           echo "Icon files installed:"
           ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
 
-      - name: Refresh provisioning profile (v2.1 Phase A entitlement parity)
+      - name: Delete stale provisioning profile (v2.1 Phase A entitlement parity)
         script: |
           set -e
-          # Builds 42 and 43 failed at Build IPA with:
-          #   "Provisioning profile 'Awakened App Store' doesn't include
-          #    the com.apple.developer.applesignin entitlement."
+          # Builds 42 and 43 used a stale "Awakened App Store"
+          # provisioning profile that didn't include Sign in with Apple
+          # (added to the App ID in v2.1 Phase A). Build 44 confirmed
+          # the profile is now deleted at Apple's side ("No existing
+          # profiles found"). Build 44 ALSO confirmed that explicit
+          # `app-store-connect fetch-signing-files` calls from custom
+          # scripts FAIL under Codemagic's auto-signing mode — the
+          # certificate private key is only accessible to Codemagic's
+          # implicit pre-build keychain setup, not to custom scripts
+          # ("Cannot save Signing Certificates without certificate
+          # private key").
           #
-          # The cached "Awakened App Store" profile in App Store Connect
-          # predates the Sign in with Apple capability addition on the
-          # App ID (v2.1 Phase A enables this). Codemagic's implicit
-          # automatic-signing fetch reuses the stale profile instead of
-          # regenerating from current capabilities. A manual delete of
-          # the profile at developer.apple.com did NOT fix this (build
-          # 43 hit the same error verbatim) — either Apple re-created
-          # a stale profile or Codemagic served from its own cache.
+          # This step does API-side cleanup ONLY: lists any profiles
+          # bound to the bundle ID and deletes them. Codemagic's
+          # implicit auto-signing flow then regenerates a fresh
+          # profile (with proper cert key context) from the current
+          # App ID capabilities (HealthKit + Sign in with Apple) on
+          # the subsequent `xcode-project use-profiles` step.
           #
-          # This step force-deletes ALL provisioning profiles bound to
-          # the bundle ID via the App Store Connect API, then explicitly
-          # fetches signing files with --create so Apple regenerates a
-          # fresh profile from the current App ID capability set
-          # (HealthKit + Sign in with Apple). Adds ~5-10 seconds per
-          # build for guaranteed entitlement parity. Idempotent — once
-          # capabilities are stable, recreated profiles are functionally
-          # identical, just freshly issued.
+          # Idempotent — a no-op when no profiles exist. Adds ~3
+          # seconds per build for guaranteed entitlement parity
+          # whenever a new capability is added to the App ID.
           echo "Listing existing IOS_APP_STORE profiles for $BUNDLE_ID..."
           PROFILES_JSON=$(app-store-connect list-profiles \
             --bundle-id-identifier "$BUNDLE_ID" \
@@ -308,13 +309,15 @@ workflows:
               app-store-connect provisioning-profiles delete "$id" || true
             done
           else
-            echo "No existing profiles found — fetch will create a fresh one."
+            echo "No existing profiles found — Codemagic's auto-signing flow will create a fresh one."
           fi
-          echo "Fetching fresh signing files (forces App Store Connect to regenerate)..."
-          app-store-connect fetch-signing-files \
-            "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
+          # NOTE: do NOT clear the local provisioning profile cache
+          # at ~/Library/MobileDevice/Provisioning\ Profiles/ — that's
+          # populated by Codemagic's implicit pre-build setup with
+          # full cert key context. Clearing it would leave the
+          # subsequent `xcode-project use-profiles` step with nothing
+          # to use. The API-side delete here is sufficient to ensure
+          # the NEXT build regenerates from current capabilities.
 
       - name: Apply code signing profiles
         script: xcode-project use-profiles
