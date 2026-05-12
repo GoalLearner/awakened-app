@@ -29,11 +29,32 @@ workflows:
 
     environment:
 
-      # ── Automatic code signing ─────────────────────────────────
-      # Codemagic fetches and manages certificates & profiles for you
+      # ── Manual code signing (v2.1 Phase A pivot) ───────────────
+      # Switched from auto-signing (distribution_type: app_store) to
+      # manual signing after 7 build cycles confirmed Codemagic's
+      # auto-fetch produces profiles WITHOUT the
+      # com.apple.developer.applesignin entitlement, even though the
+      # App ID has Sign in with Apple correctly configured as primary.
+      # Build 49's profile-inspection diagnostic proved it directly:
+      # auto-fetched profile contained 8 entitlements, applesignin
+      # was MISSING.
+      #
+      # A manually-created profile at developer.apple.com (verified
+      # via direct .mobileprovision plist inspection) DOES contain
+      # applesignin = ['Default']. The user uploaded that profile +
+      # an Apple Distribution Certificate to Codemagic's Code Signing
+      # Identities tab; we reference both by name here.
+      #
+      # When new App ID capabilities are added in future versions,
+      # regenerate the profile at developer.apple.com and re-upload
+      # to Codemagic under the same reference name — no code change
+      # required here. (Auto-signing would have handled this
+      # automatically but it's broken for our case.)
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.goallearner.awakened
+        provisioning_profiles:
+          - awakened-app-store-manual
+        certificates:
+          - awakened-distribution
 
       # ── Build variables ────────────────────────────────────────
       vars:
@@ -271,136 +292,16 @@ workflows:
           echo "Icon files installed:"
           ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
 
-      # ── v2.1 Phase A signing diagnostics ────────────────────────
-      # Build 48 surfaced that auto-signing's pre-build phase ALREADY
-      # places a .mobileprovision file in ~/Library/MobileDevice/
-      # Provisioning Profiles/ before any custom script runs. Builds
-      # 42-46's archive failures ("profile doesn't include the
-      # com.apple.developer.applesignin entitlement") are the auto-
-      # signing-fetched profile being inspected by xcodebuild. The
-      # question we now need to answer: does THAT profile contain the
-      # entitlement or not?
-      #
-      # Both diagnostic steps below run BEFORE any destructive ops
-      # (delete) so they observe auto-signing's pristine output. The
-      # previous "Force-create fresh signing files" step is REMOVED —
-      # it tried to overwrite the auto-fetched profile but Codemagic's
-      # keychain is sealed against user-script overwrites under auto-
-      # signing mode (no CM_CERTIFICATE_PRIVATE_KEY env var, no usable
-      # auth path). Auto-signing's own profile is what xcode will use;
-      # we must inspect it, not replace it.
-
-      - name: Diagnose Codemagic signing env vars
-        script: |
-          # Enumerates 8 signing-related env vars + lists the local
-          # provisioning profile cache. Mask values — print set/unset
-          # + length only, never contents. Build 48's output revealed
-          # APP_STORE_CONNECT_PRIVATE_KEY is set (length=72) while
-          # CM_CERTIFICATE_PRIVATE_KEY is unset — informs which env
-          # var name to use if we ever need to pass auth explicitly.
-          echo "=== Codemagic signing env vars ==="
-          for v in CM_CERTIFICATE_PRIVATE_KEY \
-                   CM_CERTIFICATE \
-                   CM_CERTIFICATE_PASSWORD \
-                   CM_PROVISIONING_PROFILE \
-                   CM_KEYCHAIN_PATH \
-                   APP_STORE_CONNECT_PRIVATE_KEY \
-                   APP_STORE_CONNECT_KEY_IDENTIFIER \
-                   APP_STORE_CONNECT_ISSUER_ID; do
-            val="${!v}"
-            if [ -n "$val" ]; then
-              echo "$v: set (length=${#val})"
-            else
-              echo "$v: unset"
-            fi
-          done
-          echo "=== Provisioning profile dir ==="
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ \
-            2>/dev/null || echo "Directory does not exist yet"
-
-      - name: Inspect auto-fetched provisioning profile (entitlements)
-        script: |
-          # .mobileprovision is a CMS-signed plist. Decode each one
-          # on disk and print the Entitlements dict so we can directly
-          # observe whether com.apple.developer.applesignin is present.
-          # This is the critical diagnostic for v2.1 Phase A: if the
-          # auto-fetched profile contains the entitlement, builds
-          # 42-46's failure mode is from a different source than we
-          # thought (and likely fixed by removing the force-create
-          # step). If it's MISSING, auto-signing is genuinely broken
-          # for our case and we pivot to manual signing in v2.1B.
-          PROFILE_DIR=~/Library/MobileDevice/Provisioning\ Profiles
-          echo "=== Profiles on disk ==="
-          ls -la "$PROFILE_DIR" 2>/dev/null || { echo "(no profile dir)"; exit 0; }
-          echo ""
-          echo "=== Entitlements in each profile ==="
-          shopt -s nullglob
-          for f in "$PROFILE_DIR"/*.mobileprovision; do
-            echo "--- $f ---"
-            # security cms -D extracts the embedded plist payload.
-            # We then dump just the Entitlements dict via PlistBuddy.
-            TMP_PLIST=$(mktemp /tmp/profile-XXXXXX.plist)
-            security cms -D -i "$f" > "$TMP_PLIST" 2>/dev/null || {
-              echo "  (security cms decode failed)"
-              continue
-            }
-            # Print the full Entitlements dict
-            /usr/libexec/PlistBuddy -c "Print :Entitlements" "$TMP_PLIST" 2>/dev/null || \
-              echo "  (PlistBuddy could not read Entitlements key)"
-            echo ""
-            # Targeted check: does Sign in with Apple appear?
-            if /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.applesignin" "$TMP_PLIST" >/dev/null 2>&1; then
-              echo "  ✓ com.apple.developer.applesignin PRESENT in this profile"
-            else
-              echo "  ✗ com.apple.developer.applesignin MISSING from this profile"
-            fi
-            # Also print the profile's display name + UUID for reference
-            echo ""
-            echo "  Profile metadata:"
-            /usr/libexec/PlistBuddy -c "Print :Name" "$TMP_PLIST" 2>/dev/null | sed 's/^/    Name: /'
-            /usr/libexec/PlistBuddy -c "Print :UUID" "$TMP_PLIST" 2>/dev/null | sed 's/^/    UUID: /'
-            /usr/libexec/PlistBuddy -c "Print :TeamIdentifier" "$TMP_PLIST" 2>/dev/null | sed 's/^/    TeamID: /'
-            rm -f "$TMP_PLIST"
-            echo ""
-          done
-
-      - name: Delete stale provisioning profile (v2.1 Phase A entitlement parity)
-        script: |
-          set -e
-          # Builds 42-46 may have used a stale "Awakened App Store"
-          # provisioning profile that didn't include Sign in with Apple.
-          # This step does API-side cleanup only: lists profiles bound
-          # to the bundle ID and deletes them. The local .mobileprovision
-          # cache is left intact for use-profiles + archive — see the
-          # diagnostic steps above for what auto-signing populated.
-          #
-          # Idempotent — a no-op when no profiles exist. Adds ~3
-          # seconds per build for guaranteed entitlement parity
-          # whenever a new capability is added to the App ID.
-          echo "Listing existing IOS_APP_STORE profiles for $BUNDLE_ID..."
-          PROFILES_JSON=$(app-store-connect list-profiles \
-            --bundle-id-identifier "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --json 2>/dev/null || echo "[]")
-          echo "$PROFILES_JSON" | jq -r '.[] | "  \(.id)  \(.attributes.name)"' 2>/dev/null || echo "  (none or jq parse failed)"
-          PROFILE_IDS=$(echo "$PROFILES_JSON" | jq -r '.[].id' 2>/dev/null || true)
-          if [ -n "$PROFILE_IDS" ]; then
-            for id in $PROFILE_IDS; do
-              echo "Deleting stale profile: $id"
-              app-store-connect provisioning-profiles delete "$id" || true
-            done
-          else
-            echo "No existing profiles found — Codemagic's auto-signing flow will create a fresh one on the next build."
-          fi
-          # NOTE: do NOT clear the local provisioning profile cache
-          # at ~/Library/MobileDevice/Provisioning\ Profiles/ — that's
-          # populated by Codemagic's implicit pre-build setup with
-          # full cert key context. Clearing it would leave the
-          # subsequent `xcode-project use-profiles` step with nothing
-          # to use.
-
       - name: Apply code signing profiles
         script: xcode-project use-profiles
+        # Reads the manually-uploaded provisioning profile
+        # (awakened-app-store-manual, referenced in environment.
+        # ios_signing.provisioning_profiles above) from the standard
+        # ~/Library/MobileDevice/Provisioning Profiles/ location
+        # where Codemagic's pre-build setup placed it, and configures
+        # the Xcode project to use it. With manual signing the
+        # CODE_SIGN_STYLE=Manual is what the Build IPA step expects
+        # (see line ~440).
 
       - name: Set version and auto-increment build number
         script: |
