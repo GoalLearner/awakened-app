@@ -138,43 +138,6 @@ export async function verifyAppleIdentityToken(
 
   const publicKey = await importJWK(jwk, 'RS256');
 
-  // ── DEBUG: temporary aud-claim logging for Phase B validation ──
-  // Real device on TestFlight build 51 hit "unexpected 'aud' claim
-  // value" — root cause unknown (could be: wrong APPLE_BUNDLE_ID
-  // secret, OR Apple's plugin returning a token with aud = some
-  // other identifier like a Services ID). These logs surface the
-  // mismatch so we can pick the right fix path.
-  //
-  // The token payload is decoded UNSIGNED here purely for log-side
-  // visibility — verification still happens via jose's jwtVerify
-  // below, which validates signature + iss + aud + exp atomically.
-  // REMOVE both console.log calls in the follow-up fix commit.
-  try {
-    const parts = token.split('.');
-    if (parts.length === 3) {
-      const claims = JSON.parse(base64UrlDecode(parts[1])) as Record<string, unknown>;
-      console.log(
-        '[apple-jwks] DEBUG token.aud (untrusted):',
-        JSON.stringify(claims.aud),
-        'token.iss:',
-        JSON.stringify(claims.iss),
-      );
-    }
-  } catch (e) {
-    console.log('[apple-jwks] DEBUG could not decode token payload:', e instanceof Error ? e.message : 'unknown');
-  }
-  const bundleId = env.APPLE_BUNDLE_ID || '';
-  const maskedBundleId =
-    bundleId.length > 8
-      ? `${bundleId.slice(0, 4)}...${bundleId.slice(-4)}`
-      : `(len=${bundleId.length}, too short to mask safely)`;
-  console.log(
-    '[apple-jwks] DEBUG expected aud (masked):',
-    maskedBundleId,
-    'expected aud length:',
-    bundleId.length,
-  );
-
   const { payload } = await jwtVerify(token, publicKey, {
     issuer: APPLE_ISSUER,
     audience: env.APPLE_BUNDLE_ID,
