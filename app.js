@@ -16212,6 +16212,34 @@
       if (didRename) save();
       localStorage.setItem('hb_cardio_renamed', '1');
     }
+    // ── v2.0.2 Daily walk step-target migration (v2.1 patch) ────
+    // The legacy default for Daily walk's stepGoal was 3000 (set
+    // during an earlier dev cycle). HEALTHKIT_WALK_DEFAULT_THRESHOLD
+    // was bumped to 8000 mid-v2.0.2, but users seeded before the
+    // bump still carry the stale 3000 value in localStorage.
+    //
+    // Migration targets ONLY the exact stale-default value 3000.
+    // Users who deliberately customized below 8000 (e.g., 5000 for
+    // injury recovery) are left untouched — only the rote 3000
+    // default gets bumped. Habit identity is the name string per
+    // CLAUDE.md convention; we match canonical 'Daily walk' on
+    // non-custom habits.
+    //
+    // Idempotent via hb_walk_target_migrated_v1. Sets the flag
+    // regardless of whether anything was changed, so users without
+    // the habit (or who already customized) don't get re-scanned
+    // on every app open.
+    if (!localStorage.getItem('hb_walk_target_migrated_v1')) {
+      let didBump = false;
+      habits.forEach(h => {
+        if (h && h.name === 'Daily walk' && !h.custom && h.stepGoal === 3000) {
+          h.stepGoal = 8000;
+          didBump = true;
+        }
+      });
+      if (didBump) save();
+      localStorage.setItem('hb_walk_target_migrated_v1', '1');
+    }
     // ── v1.1.5 bedtime window-fix recovery ────────────────────
     // The pre-fix bedtime auto-verify could false-positive when the
     // user had any prior asleep sample whose startDate fell before
