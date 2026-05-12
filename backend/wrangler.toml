@@ -48,3 +48,39 @@ database_id = "b9c67e10-c88c-4b71-b1e0-413d1e84a5fa"
 # Each secret prompts for the value at the CLI. Values are encrypted
 # at rest in Cloudflare's secret store. See BACKEND.md §10 for the
 # canonical secret list and capture instructions.
+
+# ── Rate-limiter bindings ────────────────────────────────────────
+# Cloudflare's Rate Limiting API supports `period` of 10 or 60 seconds
+# only. BACKEND.md §8 spec'd "12/hour" and "3/hour" caps which we
+# approximate with the tightest valid 60s period below (≈ same daily
+# usage cap but allows higher burst). Real abuse > burst still gets
+# caught. Client-side debounce in auth.js / lbSubmitSnapshot() keeps
+# legit usage well under these.
+#
+# namespace_id values 1001-1004 are arbitrary identifiers — they
+# need only be unique within this Worker. The binding `name` is what
+# code accesses as `env.<NAME>`.
+
+[[unsafe.bindings]]
+name = "RL_AUTH_VERIFY"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }  # 10/min per IP
+
+[[unsafe.bindings]]
+name = "RL_LEADERBOARD_SUBMIT"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 2, period = 60 }   # 2/min per user (≈ spec's 12/hour)
+
+[[unsafe.bindings]]
+name = "RL_LEADERBOARD_TOP"
+type = "ratelimit"
+namespace_id = "1003"
+simple = { limit = 30, period = 60 }  # 30/min per user
+
+[[unsafe.bindings]]
+name = "RL_ACCOUNT_DELETE"
+type = "ratelimit"
+namespace_id = "1004"
+simple = { limit = 3, period = 60 }   # 3/min per user (≈ spec's 3/hour)

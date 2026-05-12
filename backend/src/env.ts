@@ -12,6 +12,18 @@
  * updating this interface alongside wrangler.toml + README.md secrets
  * list.
  */
+/**
+ * Cloudflare Workers Rate Limiting API binding shape. The
+ * @cloudflare/workers-types package doesn't always export this type
+ * directly (it's still under the "unsafe" namespace for now), so we
+ * declare it locally to satisfy strict mode. Behaviour is documented
+ * at https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+ */
+export interface RateLimit {
+  /** Returns success: true if the request is within the limit, false if rate-limited. */
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 export interface Env {
   /** D1 database binding. Maps to wrangler.toml's [[d1_databases]] block. */
   DB: D1Database;
@@ -30,4 +42,13 @@ export interface Env {
    * (e.g. account-revocation webhook). Not used by v2.1 endpoints.
    * Value: "LK8FVGBQPL". Set with `wrangler secret put APPLE_TEAM_ID`. */
   APPLE_TEAM_ID: string;
+
+  /** Rate limiters — one per endpoint. Cloudflare's API supports only
+   * 10s or 60s periods, so the "12/hour" submit cap from BACKEND.md §8
+   * is approximated as 2/minute (≈ 120/hour). Client-side debounce at
+   * 5-min intervals keeps legit usage well under both caps. */
+  RL_AUTH_VERIFY: RateLimit;
+  RL_LEADERBOARD_SUBMIT: RateLimit;
+  RL_LEADERBOARD_TOP: RateLimit;
+  RL_ACCOUNT_DELETE: RateLimit;
 }

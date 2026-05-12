@@ -7,11 +7,17 @@ import { SignJWT } from 'jose';
 import { issueSessionJwt, verifySessionJwt } from './session-jwt';
 import type { Env } from './env';
 
+const noopRl = { limit: async () => ({ success: true }) };
+
 const baseEnv: Env = {
   DB: {} as unknown as D1Database,
   JWT_SIGNING_KEY: 'test-signing-key-32-bytes-or-more-for-hs256',
   APPLE_BUNDLE_ID: 'com.goallearner.awakened',
   APPLE_TEAM_ID: 'LK8FVGBQPL',
+  RL_AUTH_VERIFY: noopRl,
+  RL_LEADERBOARD_SUBMIT: noopRl,
+  RL_LEADERBOARD_TOP: noopRl,
+  RL_ACCOUNT_DELETE: noopRl,
 };
 
 describe('issueSessionJwt + verifySessionJwt', () => {

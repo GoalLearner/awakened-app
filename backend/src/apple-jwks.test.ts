@@ -10,11 +10,17 @@ import { describe, expect, it } from 'vitest';
 import { verifyAppleIdentityToken } from './apple-jwks';
 import type { Env } from './env';
 
+const noopRl = { limit: async () => ({ success: true }) };
+
 const mockEnv: Env = {
   DB: {} as unknown as D1Database,
   JWT_SIGNING_KEY: 'test-key-not-used-here',
   APPLE_BUNDLE_ID: 'com.goallearner.awakened',
   APPLE_TEAM_ID: 'LK8FVGBQPL',
+  RL_AUTH_VERIFY: noopRl,
+  RL_LEADERBOARD_SUBMIT: noopRl,
+  RL_LEADERBOARD_TOP: noopRl,
+  RL_ACCOUNT_DELETE: noopRl,
 };
 
 describe('verifyAppleIdentityToken', () => {

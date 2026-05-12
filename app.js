@@ -86,25 +86,77 @@
       });
     }
 
-    // Wire alias-continue button.
+    // Wire alias-continue button. v2.1.0 Phase B: this calls the
+    // real backend at /v1/auth/verify, replacing the Phase A stub.
     const aliasBtn = document.getElementById('signin-alias-continue');
     const aliasErr = document.getElementById('signin-alias-error');
     const aliasIn  = document.getElementById('signin-alias-input');
-    const submitAlias = () => {
-      if (!aliasIn) return;
+    const suggBox  = document.getElementById('signin-alias-suggestions');
+
+    function renderSuggestions(suggested) {
+      if (!suggBox) return;
+      suggBox.innerHTML = '';
+      if (!Array.isArray(suggested) || suggested.length === 0) return;
+      const label = document.createElement('div');
+      label.className = 'signin-suggestions-label';
+      label.textContent = 'Try one of these:';
+      suggBox.appendChild(label);
+      suggested.forEach((s) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'signin-suggestion-chip';
+        chip.textContent = s;
+        chip.addEventListener('click', () => {
+          if (aliasIn) {
+            aliasIn.value = s;
+            aliasIn.focus();
+          }
+          if (aliasErr) aliasErr.textContent = '';
+          suggBox.innerHTML = '';
+        });
+        suggBox.appendChild(chip);
+      });
+    }
+
+    const submitAlias = async () => {
+      if (!aliasIn || !aliasBtn) return;
       const value = aliasIn.value;
+      if (suggBox) suggBox.innerHTML = '';
       if (!window.Auth.validateAlias(value)) {
         if (aliasErr) aliasErr.textContent = '3–20 chars, letters/numbers/space/_/- only.';
         return;
       }
-      const ok = window.Auth.completeSignIn(value);
-      if (!ok) {
-        if (aliasErr) aliasErr.textContent = 'Could not save — please try again.';
+      aliasBtn.disabled = true;
+      if (aliasErr) aliasErr.textContent = 'Signing in…';
+      let result;
+      try {
+        result = await window.Auth.completeSignIn(value);
+      } catch (e) {
+        result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' };
+      }
+      if (result && result.ok) {
+        // Reload to mount the main app from the signed-in state.
+        window.location.reload();
         return;
       }
-      // Reload to mount the main app (cleanest way to re-init from the
-      // signed-in state without un-wiring the gate's listeners).
-      window.location.reload();
+      const code = result && result.code;
+      if (code === 'ALIAS_TAKEN' && result.suggested && result.suggested.length > 0) {
+        if (aliasErr) aliasErr.textContent = result.reason || 'That alias is taken.';
+        renderSuggestions(result.suggested);
+      } else if (code === 'ALIAS_INVALID') {
+        if (aliasErr) aliasErr.textContent = result.reason || 'Alias not allowed.';
+      } else if (code === 'APPLE_TOKEN_INVALID' || code === 'NO_PENDING_TOKEN') {
+        // Reset to the Apple-sign-in step.
+        if (stepAlias) stepAlias.classList.add('hidden');
+        if (stepApple) stepApple.classList.remove('hidden');
+        const appleErr2 = document.getElementById('signin-apple-error');
+        if (appleErr2) appleErr2.textContent = result.reason || 'Sign in expired — please try again.';
+      } else if (code === 'NETWORK') {
+        if (aliasErr) aliasErr.textContent = 'Could not reach server. Check your connection.';
+      } else {
+        if (aliasErr) aliasErr.textContent = (result && result.reason) || 'Sign in failed. Try again.';
+      }
+      aliasBtn.disabled = false;
     };
     if (aliasBtn) aliasBtn.addEventListener('click', submitAlias);
     if (aliasIn) aliasIn.addEventListener('keydown', (e) => {
@@ -127,7 +179,7 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.0.2';
+  const APP_VERSION = '2.1.0';
 
   // ── HealthKit auto-verification thresholds ───────────────
   // v1.1.5: Daily walk auto-verifies via Apple Health when steps
@@ -2180,6 +2232,15 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
+    '2.1.0': {
+      subtitle: 'Sign in & global rankings.',
+      items: [
+        { emoji: '', title: 'Sign in with Apple',         description: "Claim your hunter identity. One-tap sign-in, no passwords. Your alias appears on the global leaderboard." },
+        { emoji: '', title: 'Cloud backend live',         description: "Awakened's backend is online. Your stats sync to the cloud and the leaderboard activates over the coming releases." },
+        { emoji: '', title: 'Account in Settings',        description: "Settings → Account: see your hunter identity, sign out, or delete your account entirely. Local habit data stays on-device when you sign out." },
+        { emoji: '', title: 'Localhost dev bypass',       description: "Developer-only: the mandatory sign-in gate auto-creates a DevUser on localhost so the local dev workflow isn't blocked. iOS users still hit the real gate as designed." },
+      ],
+    },
     '2.0.2': {
       subtitle: 'The dungeons open.',
       items: [

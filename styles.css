@@ -14295,3 +14295,51 @@ body.reveal-locked { overflow: hidden; }
   margin: -2px 0 2px;
 }
 .signin-error:empty { display: none; }
+
+/* ───────────────────────────────────────────────────────────────
+   Sign-in alias-collision suggestion chips (v2.1.0 Phase B)
+   Rendered when /v1/auth/verify returns 409 ALIAS_TAKEN with
+   3 server-generated alternatives. Each chip is a tappable
+   button that pre-fills the alias input on tap.
+   ─────────────────────────────────────────────────────────────── */
+.signin-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.signin-suggestions:empty { display: none; }
+.signin-suggestions-label {
+  width: 100%;
+  font-size: 0.72rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-bottom: 2px;
+}
+.signin-suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--gold);
+  border: 1px solid rgba(245, 158, 11, 0.40);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.12s ease, transform 0.12s ease;
+}
+.signin-suggestion-chip:hover {
+  background: rgba(245, 158, 11, 0.16);
+}
+.signin-suggestion-chip:active {
+  transform: scale(0.96);
+}
