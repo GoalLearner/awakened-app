@@ -118,8 +118,46 @@ workflows:
       - name: Add iOS platform (runs on first build only)
         script: |
           if [ ! -d ios ]; then
-            npx cap add ios
+            # cap add scaffolds the iOS project + runs pod install
+            # internally. Pod install will FAIL with the default
+            # deployment target (iOS 13.0) because
+            # @capacitor-community/apple-sign-in v7.1.0 declares
+            # s.ios.deployment_target = '14.0' in its podspec.
+            # We tolerate the failure here — the NEXT step bumps the
+            # project target to 14.0 and re-runs pod install with
+            # the corrected value.
+            npx cap add ios || true
           fi
+
+      - name: Bump iOS deployment target to 14.0 (v2.1 Phase A)
+        script: |
+          # @capacitor-community/apple-sign-in v7.1.0 requires iOS
+          # 14.0+. Capacitor 6's default for new iOS scaffolds is
+          # 13.0. Without this step CocoaPods rejects the install
+          # with "CapacitorCommunityAppleSignIn required a higher
+          # minimum deployment target." See BACKEND.md §4.
+          #
+          # iOS 14 reached ~95% device adoption by mid-2026. Safe
+          # cutoff. Idempotent — sed is a no-op once the project is
+          # already at 14.0, so this step is safe to run on every
+          # build (including cached-ios incremental builds).
+          if [ -f ios/App/Podfile ]; then
+            sed -i.bak "s/platform :ios, '13.0'/platform :ios, '14.0'/" ios/App/Podfile
+            rm -f ios/App/Podfile.bak
+            echo "Podfile platform line:"
+            grep "platform :ios" ios/App/Podfile
+          fi
+          if [ -f ios/App/App.xcodeproj/project.pbxproj ]; then
+            sed -i.bak "s/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
+            rm -f ios/App/App.xcodeproj/project.pbxproj.bak
+            echo "project.pbxproj deployment target occurrences:"
+            grep -c "IPHONEOS_DEPLOYMENT_TARGET = 14.0" ios/App/App.xcodeproj/project.pbxproj
+          fi
+          # Re-run pod install with the corrected target. Earlier
+          # cap add (above) likely failed at pod install; this is
+          # the recovery. cd into the App subdir because that's
+          # where the Podfile lives.
+          cd ios/App && pod install
 
       - name: Sync web assets into iOS project
         script: npx cap sync ios
