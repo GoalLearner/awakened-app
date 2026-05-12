@@ -1,6 +1,6 @@
 # BACKEND.md — Awakened v2.1 Backend Design
 
-**Status:** v1.0 DESIGN — implementation not started.
+**Status:** v1.1 DESIGN — Phase A iOS-side shipped (TestFlight build 50, commit `630bbe6`); Phase B implementation not started.
 **Last updated:** May 11, 2026
 **Designer:** Richie (with Claude as design partner)
 
@@ -117,11 +117,40 @@ Plugin is iOS-only (no web fallback). On the PWA build, `SignInWithApple.authori
        - alias is sent ONLY on first sign-in (when the gate also shows an alias picker)
        - subsequent sign-ins omit alias; backend looks up existing user by apple_sub
    f. Backend validates identityToken against Apple's public JWKs
-   g. Backend upserts user row (creates on first sign-in, returns existing on subsequent)
-   h. Backend returns { jwt, user: { id, alias, created_at } }
-   i. Client stores in hb_user
+   g. Backend NORMALIZES alias (lowercase for everyone EXCEPT preserved-case subs)
+   h. Backend upserts user row (creates on first sign-in, returns existing on subsequent)
+   i. Backend returns { jwt, user: { id, alias, created_at } }
+       - response's alias is the NORMALIZED value (may differ from request's alias)
+   j. Client stores response.alias in hb_user (NOT what the user typed)
 3. Hide #signin-gate, continue app load
 ```
+
+### Alias normalization (locked decision)
+
+All aliases are forced lowercase server-side **except** for an allowlist of preserved-case Apple subs. v2.1 launch allowlist contains exactly one entry: Richie's. Anyone else who registers `"TopDog"` ends up stored as `"topdog"` and that's what appears on the leaderboard.
+
+**Why:**
+- Distinctive founder signature on every leaderboard surface without needing a verified-badge UI or admin-role visual element
+- The casing IS the signal — OSRS-authentic, no extra rendering complexity
+- Forces a community aesthetic (all-lowercase usernames have a chill late-90s-forum vibe; aligns with Awakened's typography)
+- Reduces visual noise — no `"ALLCAPS_DESTROYER"` shouting on the leaderboard
+- Zero performance cost; one Set lookup + one `.toLowerCase()` call
+
+**Implementation:**
+```typescript
+const PRESERVED_CASE_SUBS = new Set([env.RICHIE_APPLE_SUB]);
+
+function normalizeAlias(alias: string, appleSub: string): string {
+  const trimmed = alias.trim();
+  return PRESERVED_CASE_SUBS.has(appleSub) ? trimmed : trimmed.toLowerCase();
+}
+```
+
+Applied inside `/v1/auth/verify` BEFORE the alias is validated for charset/profanity/uniqueness and BEFORE the DB insert. The response returns the normalized form so the client knows what's actually stored.
+
+**Bootstrapping:** `RICHIE_APPLE_SUB` is captured from his first sign-in to TestFlight (the v2.1 Phase A stub build), then set via `wrangler secret put RICHIE_APPLE_SUB` before Phase B's `/v1/auth/verify` deploys. Hardcoded set is fine for v2.1; an `is_admin` column on `users` can replace the hardcoded set in v2.2+ if the privilege needs to be grantable to additional accounts.
+
+**Side effect on uniqueness:** the `UNIQUE INDEX ON LOWER(alias)` already enforced case-insensitive uniqueness, so normalization doesn't change the collision logic. `"TopDog"` and `"TOPDOG"` and `"topdog"` were always going to collide. The normalization just chooses which case wins in storage.
 
 ### Mandatory-gate decision (locked)
 
@@ -272,9 +301,10 @@ CORS: only the iOS Capacitor origin (`capacitor://localhost`) and Netlify produc
    - If found: skip alias validation, issue JWT for that user, return
    - If not found:
      - If `alias` missing → 422 ALIAS_REQUIRED
-     - Validate alias (length, charset, profanity, uniqueness)
-     - `INSERT INTO users (id, apple_sub, alias, created_at, updated_at) VALUES (?, ?, ?, ?, ?)` with fresh UUID
-     - Issue JWT, return
+     - **Normalize the alias via `normalizeAlias(alias, sub)`** (lowercase for everyone except `PRESERVED_CASE_SUBS` — see "Alias normalization" section)
+     - Validate the normalized alias (length, charset, profanity, uniqueness)
+     - `INSERT INTO users (id, apple_sub, alias, created_at, updated_at) VALUES (?, ?, ?, ?, ?)` with fresh UUID + the normalized alias
+     - Issue JWT, return — response's `user.alias` is the normalized form, NOT what the user typed
 
 ### `POST /v1/leaderboard/submit`
 
@@ -832,6 +862,7 @@ wrangler deploy
 |---|---|---|
 | `JWT_SIGNING_KEY` | HMAC key for signing backend session JWTs (HS256) | `openssl rand -hex 32` |
 | `APPLE_BUNDLE_ID` | Expected audience in Apple identity tokens. Set to `com.goallearner.awakened`. Not secret per se, but cleaner to store in env vars than hardcode. | App Store Connect → App ID |
+| `RICHIE_APPLE_SUB` | Richie's stable Apple `sub` claim. Used by `normalizeAlias()` to allowlist his alias from forced lowercase (see "Alias normalization" section). | Captured from Phase A TestFlight: sign in, then `JSON.parse(localStorage.getItem('hb_user')).sub` in Safari Web Inspector. Set via `wrangler secret put RICHIE_APPLE_SUB`. |
 
 **Deferred to v2.2** (server-to-server Apple notifications, not needed for v2.1):
 - `APPLE_TEAM_ID` — Apple Developer Team ID
@@ -1055,6 +1086,19 @@ Each phase is a separate commit train (multiple commits per phase OK). Phases ar
 
 **Action item:** Phase B includes a static `BLOCKLIST` array in `backend/src/profanity.ts`. Curate before deploy. Acceptable to ship a small list and grow it as misuse is reported.
 
+### 4. Alias case normalization — preserved for whom?
+
+**Recommendation:** lowercase everyone EXCEPT a hardcoded `PRESERVED_CASE_SUBS` set. v2.1 launch: exactly one entry — Richie's Apple `sub`. See the locked design in the "Alias normalization" subsection of the Auth flow section.
+
+**Reasoning:** distinctive founder signature on the leaderboard at zero engineering cost. Forces a cohesive lowercase community aesthetic on everyone else. OSRS-authentic distinguishing mark via casing rather than a separate verified-badge UI.
+
+**Tradeoffs accepted:**
+- Other users lose expressive capitalization (CamelCase, ProperNouns). They retain `_` and `-` as separators.
+- Doesn't scale to multi-admin without code change. Acceptable for v2.1 (solo developer). v2.2 can swap the hardcoded set for an `is_admin` column on `users` if grants need to be revocable/expandable without redeploys.
+- Some users may notice the asymmetry. The casing IS the signal — same model as devs/staff in OSRS leaderboards. No UI work needed to explain it.
+
+**Action item:** Phase B includes `backend/src/aliasNormalize.ts` with the locked `normalizeAlias(alias, appleSub)` function. `RICHIE_APPLE_SUB` secret must be set before `/v1/auth/verify` deploys — captured from Phase A TestFlight build's `hb_user.sub` in Safari Web Inspector against the device.
+
 ---
 
 ## Deferred to v2.2+
@@ -1078,8 +1122,10 @@ Listed here for completeness so Phase A–E implementation doesn't accidentally 
 
 ## Changelog
 
-- **v1.0 (May 11, 2026)** — Initial design doc. Five-phase implementation plan for Sign in with Apple + Cloudflare Workers + D1 + leaderboard endpoints + JSON export/import + privacy posture. Decisions locked: mandatory sign-in gate at first launch, internal-UUID PK with Apple sub as UNIQUE FK, 90-day JWT lifetime with silent-refresh-via-Apple, case-insensitive unique alias with reject-and-suggest collision strategy, server-side hand-rolled profanity blocklist. Cross-device sync explicitly deferred to v2.2; export/import is the v2.1 mitigation.
+- **v1.1 (May 11, 2026, evening)** — Phase A iOS-side shipped to TestFlight (build 50, commit `630bbe6`). Codemagic auto-signing turned out to be broken for our Sign in with Apple capability — provisioning profiles auto-generated by Codemagic's API path omit the `com.apple.developer.applesignin` entitlement even when the App ID is correctly configured. After 8 build cycles diagnosing layers (CocoaPods deployment target → stale profile cache → Apple primary App ID config → cert-key env var availability → direct profile inspection), pivoted to MANUAL signing in codemagic.yaml using uploaded cert (`awakened-distribution`) + uploaded profile (`awakened-app-store-manual`). Manual signing is bulletproof and stays as the project's signing model going forward.
+  - **NEW design decision:** alias case normalization. All usernames forced lowercase server-side EXCEPT for an allowlist of preserved-case Apple subs (`PRESERVED_CASE_SUBS`). v2.1 launch allowlist: exactly one entry, Richie's. New `normalizeAlias(alias, appleSub)` function called inside `/v1/auth/verify` before validation. New `RICHIE_APPLE_SUB` secret added to the v2.1 minimum secrets list. Captured from Phase A TestFlight via `JSON.parse(localStorage.getItem('hb_user')).sub` once Richie signs in to build 50.
+- **v1.0 (May 11, 2026, afternoon)** — Initial design doc. Five-phase implementation plan for Sign in with Apple + Cloudflare Workers + D1 + leaderboard endpoints + JSON export/import + privacy posture. Decisions locked: mandatory sign-in gate at first launch, internal-UUID PK with Apple sub as UNIQUE FK, 90-day JWT lifetime with silent-refresh-via-Apple, case-insensitive unique alias with reject-and-suggest collision strategy, server-side hand-rolled profanity blocklist. Cross-device sync explicitly deferred to v2.2; export/import is the v2.1 mitigation.
 
 ---
 
-*End of v1.0 design. Build sequentially through Phases A→E. The doc is the source of truth — re-read the relevant phase section at kickoff to prevent mid-build drift.*
+*End of v1.1 design. Phase A is on TestFlight. Build Phase B sequentially through E. The doc is the source of truth — re-read the relevant phase section at kickoff to prevent mid-build drift.*
