@@ -271,6 +271,51 @@ workflows:
           echo "Icon files installed:"
           ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
 
+      - name: Refresh provisioning profile (v2.1 Phase A entitlement parity)
+        script: |
+          set -e
+          # Builds 42 and 43 failed at Build IPA with:
+          #   "Provisioning profile 'Awakened App Store' doesn't include
+          #    the com.apple.developer.applesignin entitlement."
+          #
+          # The cached "Awakened App Store" profile in App Store Connect
+          # predates the Sign in with Apple capability addition on the
+          # App ID (v2.1 Phase A enables this). Codemagic's implicit
+          # automatic-signing fetch reuses the stale profile instead of
+          # regenerating from current capabilities. A manual delete of
+          # the profile at developer.apple.com did NOT fix this (build
+          # 43 hit the same error verbatim) — either Apple re-created
+          # a stale profile or Codemagic served from its own cache.
+          #
+          # This step force-deletes ALL provisioning profiles bound to
+          # the bundle ID via the App Store Connect API, then explicitly
+          # fetches signing files with --create so Apple regenerates a
+          # fresh profile from the current App ID capability set
+          # (HealthKit + Sign in with Apple). Adds ~5-10 seconds per
+          # build for guaranteed entitlement parity. Idempotent — once
+          # capabilities are stable, recreated profiles are functionally
+          # identical, just freshly issued.
+          echo "Listing existing IOS_APP_STORE profiles for $BUNDLE_ID..."
+          PROFILES_JSON=$(app-store-connect list-profiles \
+            --bundle-id-identifier "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --json 2>/dev/null || echo "[]")
+          echo "$PROFILES_JSON" | jq -r '.[] | "  \(.id)  \(.attributes.name)"' 2>/dev/null || echo "  (none or jq parse failed)"
+          PROFILE_IDS=$(echo "$PROFILES_JSON" | jq -r '.[].id' 2>/dev/null || true)
+          if [ -n "$PROFILE_IDS" ]; then
+            for id in $PROFILE_IDS; do
+              echo "Deleting stale profile: $id"
+              app-store-connect provisioning-profiles delete "$id" || true
+            done
+          else
+            echo "No existing profiles found — fetch will create a fresh one."
+          fi
+          echo "Fetching fresh signing files (forces App Store Connect to regenerate)..."
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
       - name: Apply code signing profiles
         script: xcode-project use-profiles
 
