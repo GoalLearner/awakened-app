@@ -319,6 +319,35 @@ workflows:
           # to use. The API-side delete here is sufficient to ensure
           # the NEXT build regenerates from current capabilities.
 
+      - name: Diagnose Codemagic signing env vars
+        script: |
+          # Build 47 surfaced that CM_CERTIFICATE_PRIVATE_KEY is NOT
+          # defined in our auto-signing workflow ("Environment variable
+          # 'CM_CERTIFICATE_PRIVATE_KEY' is not defined"). This step
+          # enumerates which signing-related env vars ARE available so
+          # we can pivot to the correct one in a follow-up commit if
+          # the unflagged fetch-signing-files command below fails.
+          # Mask values — print set/unset + length only, never contents.
+          echo "=== Codemagic signing env vars ==="
+          for v in CM_CERTIFICATE_PRIVATE_KEY \
+                   CM_CERTIFICATE \
+                   CM_CERTIFICATE_PASSWORD \
+                   CM_PROVISIONING_PROFILE \
+                   CM_KEYCHAIN_PATH \
+                   APP_STORE_CONNECT_PRIVATE_KEY \
+                   APP_STORE_CONNECT_KEY_IDENTIFIER \
+                   APP_STORE_CONNECT_ISSUER_ID; do
+            val="${!v}"
+            if [ -n "$val" ]; then
+              echo "$v: set (length=${#val})"
+            else
+              echo "$v: unset"
+            fi
+          done
+          echo "=== Provisioning profile dir ==="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ \
+            2>/dev/null || echo "Directory does not exist yet"
+
       - name: Force-create fresh signing files (entitlement refresh)
         script: |
           # Diagnostic complete (2026-05-11): Apple App ID configuration
@@ -337,17 +366,17 @@ workflows:
           #
           # Reference: https://docs.codemagic.io/yaml-code-signing/signing-ios/
           #
-          # --certificate-key flag (added defensively after build 44):
-          # without this, the CLI fails with "Cannot save Signing
-          # Certificates without certificate private key" when called
-          # from a custom script. Codemagic's auto-signing pre-build
-          # exposes the private key path via CM_CERTIFICATE_PRIVATE_KEY
-          # env var; the @env: prefix tells the CLI to dereference it.
+          # --certificate-key flag REMOVED (was in build 47, broke build
+          # with "Environment variable 'CM_CERTIFICATE_PRIVATE_KEY' is
+          # not defined"). The Codemagic CLI inherits credentials from
+          # the auto-signing initialization that ran earlier in the
+          # pipeline, so re-passing them via --certificate-key is
+          # unnecessary in this configuration. The unflagged form is
+          # what Codemagic's auto-signing docs show as canonical.
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create \
-            --certificate-key=@env:CM_CERTIFICATE_PRIVATE_KEY
+            --create
 
       - name: Apply code signing profiles
         script: xcode-project use-profiles
