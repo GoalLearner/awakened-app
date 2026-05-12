@@ -1,0 +1,50 @@
+# wrangler.toml — Cloudflare Worker config for the Awakened backend.
+#
+# Source of truth for backend deploys. Every wrangler command run from
+# the /backend/ subdirectory reads this. See ../BACKEND.md §10 for the
+# full deploy procedure and secrets list.
+#
+# ── Worker identity ──────────────────────────────────────────────
+# name:               Worker name on Cloudflare. URL becomes
+#                     awakened-backend.<workers-subdomain>.workers.dev
+# main:               Entry-point TS file (typescript-to-worker bundling
+#                     handled by Wrangler 4 automatically)
+# compatibility_date: Pins the Workers runtime feature set; date is
+#                     when the Worker code was last validated against
+#                     Cloudflare's runtime. Bump in deliberate steps,
+#                     not every release.
+# account_id:         Cloudflare account identifier
+# workers_dev:        true → publishes to *.workers.dev subdomain
+#                     (no custom domain needed for v2.1)
+name = "awakened-backend"
+main = "src/index.ts"
+compatibility_date = "2026-05-12"
+compatibility_flags = ["nodejs_compat"]
+account_id = "2bfe4268082103ba069c1f65f500ad54"
+workers_dev = true
+
+# ── D1 database binding ──────────────────────────────────────────
+# binding:       In-Worker variable name (accessed as env.DB from
+#                src/index.ts and src/db-related modules).
+# database_name: Cloudflare-side DB name (must match `wrangler d1
+#                create` call). Used by CLI commands like
+#                `wrangler d1 execute awakened-db --remote ...`
+# database_id:   Cloudflare's UUID for the DB. SET BY HUMAN after
+#                running `wrangler d1 create awakened-db` for the
+#                first time. Currently PENDING_PAUSE_1 — Richie
+#                creates the DB during PAUSE 1 of Phase B and pastes
+#                the ID back so it can be filled in here.
+[[d1_databases]]
+binding = "DB"
+database_name = "awakened-db"
+database_id = "b9c67e10-c88c-4b71-b1e0-413d1e84a5fa"
+
+# ── Secrets (set via `wrangler secret put NAME`) ─────────────────
+# Not declared here — secret values never appear in this file.
+# Set via Wrangler CLI prior to first deploy:
+#   wrangler secret put JWT_SIGNING_KEY
+#   wrangler secret put APPLE_BUNDLE_ID
+#   wrangler secret put APPLE_TEAM_ID
+# Each secret prompts for the value at the CLI. Values are encrypted
+# at rest in Cloudflare's secret store. See BACKEND.md §10 for the
+# canonical secret list and capture instructions.
