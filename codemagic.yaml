@@ -319,6 +319,28 @@ workflows:
           # to use. The API-side delete here is sufficient to ensure
           # the NEXT build regenerates from current capabilities.
 
+      - name: Force-create fresh signing files (entitlement refresh)
+        script: |
+          # Diagnostic complete (2026-05-11): Apple App ID configuration
+          # is verified correct — a manually-created test profile
+          # downloaded from developer.apple.com DOES contain the
+          # com.apple.developer.applesignin entitlement. Builds 42-46
+          # failed because Codemagic's automatic signing was reusing a
+          # stale cached profile named "Awakened App Store" generated
+          # before the App ID capability was configured.
+          #
+          # This step explicitly calls fetch-signing-files with --create
+          # so the Codemagic CLI bypasses any cached profile and
+          # requests App Store Connect to generate a fresh one from
+          # current App ID capabilities. The previous step deleted
+          # all Apple-side profiles, so --create has a clean slate.
+          #
+          # Reference: https://docs.codemagic.io/yaml-code-signing/signing-ios/
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
       - name: Apply code signing profiles
         script: xcode-project use-profiles
 
