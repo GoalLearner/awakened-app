@@ -27,6 +27,13 @@
   // expiry from the backend.
   const PHASE_A_STUB_EXPIRY_MS = 1000 * 60 * 60 * 24 * 365; // 1 year
 
+  // Localhost dev-bypass marker — INTENTIONALLY DISTINCT from
+  // PHASE_A_STUB_JWT. Phase B's backend wiring will identify and reject
+  // localhost-stub users so they never reach the real /v1/auth/verify
+  // endpoint (dev state shouldn't pollute the prod user table). Grep
+  // target for future cleanup. See devSignInIfLocalhost() below.
+  const LOCALHOST_DEV_STUB = 'LOCALHOST_DEV_STUB';
+
   // Resolves the Capacitor plugin reference. Returns null on web/PWA
   // (plugin is iOS-only). Tolerant of plugin-not-yet-registered cases.
   function getApplePlugin() {
@@ -185,6 +192,59 @@
     return true;
   }
 
+  // ── Localhost dev-bypass ─────────────────────────────────────
+  // Phase A's mandatory sign-in gate calls SignInWithApple.authorize()
+  // which only works under Capacitor's native iOS WebView. On a
+  // localhost dev server (serve.ps1 → http://localhost:8080) the
+  // Apple button is unreachable, leaving devs locked at the gate
+  // with no way to test changes to the rest of the app.
+  //
+  // isLocalhostDev() detects "web browser AND localhost-shaped host"
+  // AND explicitly excludes Capacitor native — which is critical
+  // because Capacitor's iOS WebView ALSO uses 'localhost' as the
+  // hostname (capacitor://localhost scheme). Without the
+  // isNative() exclusion, this bypass would silently fire on
+  // production iOS too — breaking the entire mandatory-gate
+  // contract for real users.
+  function isLocalhostDev() {
+    try {
+      if (isNative()) return false;
+      const host = window.location.hostname;
+      return host === 'localhost' ||
+             host === '127.0.0.1' ||
+             host === '0.0.0.0' ||
+             host.endsWith('.local');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Writes a stable dev-user entry to localStorage so the sign-in
+  // gate's `(user && user.alias)` check passes immediately on
+  // localhost. No-op outside localhost. No-op if a real user is
+  // already signed in (don't overwrite intentional state — devs
+  // who tested with their own Apple ID keep that identity).
+  //
+  // Stable sub + alias means the dev user persists across reloads
+  // and never hits the alias picker. LOCALHOST_DEV_STUB jwt marker
+  // is intentionally distinct from PHASE_A_STUB so Phase B's
+  // backend can reject dev-stub users at /v1/auth/verify and stop
+  // them from polluting the prod user table.
+  function devSignInIfLocalhost() {
+    if (!isLocalhostDev()) return false;
+    if (readUser()) return false; // respect existing user state
+    writeUser({
+      sub:            'localhost-dev-user',
+      alias:          'DevUser',
+      jwt:            LOCALHOST_DEV_STUB,
+      // ~10-year expiry — well beyond any reasonable dev cycle
+      jwt_expires_at: Date.now() + (1000 * 60 * 60 * 24 * 365 * 10),
+      signed_in_date: deviceLocalDate(),
+    });
+    try { localStorage.setItem('hb_name', 'DevUser'); } catch (_) {}
+    return true;
+  }
+
   // Expose on window for app.js + Settings interactions.
   window.Auth = {
     getCurrentUser,
@@ -194,6 +254,8 @@
     validateAlias,
     signInWithApple,
     completeSignIn,
+    devSignInIfLocalhost,
+    isLocalhostDev,
     // Diagnostic flag — Phase B will set this to false (no stub anymore)
     // and add backend-side health-check helpers.
     PHASE_A: true,

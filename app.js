@@ -13,6 +13,14 @@
   // (caller continues into the main app setup).
   function setupSignInGateIfNeeded() {
     if (typeof window.Auth === 'undefined') return false; // defensive
+    // Localhost dev bypass — auto-creates a DevUser on serve.ps1 so
+    // the gate doesn't block local dev (Apple Sign In plugin only
+    // works under Capacitor native iOS). The function is internally
+    // gated against Capacitor's native WebView (which also uses
+    // 'localhost' as hostname under the capacitor:// scheme), so this
+    // call is a no-op on production iOS — real users still hit the
+    // real gate. Also a no-op if an actual user is already signed in.
+    try { window.Auth.devSignInIfLocalhost(); } catch (_) {}
     const user = window.Auth.getCurrentUser();
     if (user && user.alias) return false; // signed in + alias set → mount app
     const gate = document.getElementById('signin-gate');
