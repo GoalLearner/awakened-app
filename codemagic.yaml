@@ -336,10 +336,18 @@ workflows:
           # all Apple-side profiles, so --create has a clean slate.
           #
           # Reference: https://docs.codemagic.io/yaml-code-signing/signing-ios/
+          #
+          # --certificate-key flag (added defensively after build 44):
+          # without this, the CLI fails with "Cannot save Signing
+          # Certificates without certificate private key" when called
+          # from a custom script. Codemagic's auto-signing pre-build
+          # exposes the private key path via CM_CERTIFICATE_PRIVATE_KEY
+          # env var; the @env: prefix tells the CLI to dereference it.
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --certificate-key=@env:CM_CERTIFICATE_PRIVATE_KEY
 
       - name: Apply code signing profiles
         script: xcode-project use-profiles
