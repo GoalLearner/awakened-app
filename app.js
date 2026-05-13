@@ -2027,10 +2027,33 @@
       String(d.getDate()).padStart(2, '0');
   }
 
+  // Sums the step_daily entries from the most-recent Sunday 00:00
+  // (device-local) through today inclusive — the calendar-week
+  // window for the leaderboard. Resets every Sunday automatically:
+  // on Sunday, the loop runs exactly once and returns Sunday's
+  // count. By Saturday, the loop runs 7 times. This replaced the
+  // earlier "trailing 7 days inclusive of today" rolling window
+  // — leaderboard is now a weekly competition that resets globally
+  // each Sunday at midnight in each user's local time.
+  function lbSumCurrentWeekSteps(stepsDaily) {
+    const today = new Date();
+    const todayDow = today.getDay(); // 0=Sun, 6=Sat
+    let sum = 0;
+    let dateStr = getDeviceLocalDate();
+    // Walk back todayDow + 1 days: today + every day since Sunday.
+    // todayDow=0 (Sunday) → loop once. todayDow=6 (Saturday) → loop
+    // 7 times.
+    for (let i = 0; i <= todayDow; i++) {
+      sum += (stepsDaily[dateStr] || 0);
+      dateStr = lbPrevDate(dateStr);
+    }
+    return sum;
+  }
+
   // Drop entries older than retention window from a date-keyed map.
-  // Keeps localStorage lean — the 7-day rolling sum only needs the
-  // last 7 entries, but we keep 30 for future "best week of last
-  // 30 days"-style slots.
+  // Keeps localStorage lean — the calendar-week step sum only needs
+  // the last 7 entries, but we keep 30 for future "best week of
+  // last 30 days"-style slots.
   function lbPruneDailyMap(map, retentionDays) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - retentionDays);
@@ -2045,8 +2068,10 @@
   // Step recording. Idempotent in the sense that re-calling with a
   // higher number for the same day overwrites (HealthKit step counts
   // can backfill upward as the day progresses; we want the latest
-  // figure). 7-day peak is updated whenever today's trailing-7 sum
-  // exceeds the stored best.
+  // figure). Best peak is updated whenever the current-week running
+  // sum exceeds the stored historical best. The field name is kept
+  // as `best_7day_step_total` to avoid a localStorage migration —
+  // semantics are now "best calendar-week sum (Sun→Sat) ever."
   function lbRecordStepsToday(steps) {
     if (typeof steps !== 'number' || !Number.isFinite(steps) || steps < 0) return;
     const state = loadLeaderboardState();
@@ -2054,14 +2079,9 @@
     state.steps_daily[today] = Math.round(steps);
     lbPruneDailyMap(state.steps_daily, LB_DAILY_RETENTION_DAYS);
 
-    let sum = 0;
-    let dateStr = today;
-    for (let i = 0; i < 7; i++) {
-      sum += (state.steps_daily[dateStr] || 0);
-      dateStr = lbPrevDate(dateStr);
-    }
-    if (sum > state.best_7day_step_total) {
-      state.best_7day_step_total = sum;
+    const weekSum = lbSumCurrentWeekSteps(state.steps_daily);
+    if (weekSum > state.best_7day_step_total) {
+      state.best_7day_step_total = weekSum;
       state.best_7day_step_window_end = today;
     }
     saveLeaderboardState(state);
@@ -2129,19 +2149,15 @@
     if (mutated) saveLeaderboardState(state);
   }
 
-  // Read-only snapshot for future UI / console debugging. Computes
-  // the live trailing-7-day step sum on demand (cheap — at most 7
-  // map lookups). All other fields read straight from storage.
+  // Read-only snapshot for UI + leaderboard submit. Computes the
+  // current-week step sum on demand (Sunday 00:00 → today inclusive,
+  // resets every Sunday at device-local midnight). The field name
+  // `steps_last_7_days` is kept for callsite compatibility — its
+  // semantics are now "current calendar-week step total."
   function lbGetSnapshot() {
     const state = loadLeaderboardState();
-    let stepsLast7 = 0;
-    let dateStr = getDeviceLocalDate();
-    for (let i = 0; i < 7; i++) {
-      stepsLast7 += (state.steps_daily[dateStr] || 0);
-      dateStr = lbPrevDate(dateStr);
-    }
     return {
-      steps_last_7_days:         stepsLast7,
+      steps_last_7_days:         lbSumCurrentWeekSteps(state.steps_daily),
       best_7day_step_total:      state.best_7day_step_total,
       best_7day_step_window_end: state.best_7day_step_window_end,
       current_sleep_streak:      state.current_sleep_streak,
@@ -11014,12 +11030,14 @@
     const sleepIcon = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
     const moonIcon  = '<span class="lb-stat-icon-glyph" aria-hidden="true">🌙</span>';
 
-    // Card 1 — Steps (rolling 7-day window today; phrased as
-    // generic "steps" to drop the misleading "7 days" framing).
-    const stepsValue = fmt(snap.steps_last_7_days) + '<span class="lb-stat-value-unit">steps</span>';
+    // Card 1 — Steps this calendar week (Sunday 00:00 → Saturday
+    // 23:59:59 device-local, resets every Sunday). The
+    // `steps_last_7_days` field name on the snapshot is a legacy
+    // identifier; semantics are now "current calendar week."
+    const stepsValue = fmt(snap.steps_last_7_days) + '<span class="lb-stat-value-unit">steps this week</span>';
     const stepsMeta  = snap.best_7day_step_total > 0
-      ? 'Best: <b>' + fmt(snap.best_7day_step_total) + '</b>'
-      : 'Best: — (start walking to climb the leaderboard)';
+      ? 'Best week: <b>' + fmt(snap.best_7day_step_total) + '</b>'
+      : 'Best week: — (start walking to climb the leaderboard)';
 
     // Card 2 — 7+ hour sleep streak
     const sleepValue = snap.current_sleep_streak +
@@ -11060,8 +11078,8 @@
 
   const LB_METRIC_META = {
     step_total: {
-      title: 'Steps · last 7 days',
-      blurb: 'Total steps in any rolling 7-day window. Apple Health is the only source — no manual logging.',
+      title: 'Steps · this week',
+      blurb: 'Total steps from Sunday 12:00 AM through Saturday 11:59 PM (device-local). Resets every Sunday. Apple Health is the only source — no manual logging.',
       unit:  'steps',
       formatValue: n => (n || 0).toLocaleString('en-US'),
     },
