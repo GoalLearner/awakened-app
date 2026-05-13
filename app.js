@@ -13941,14 +13941,22 @@
     const restoreBtn  = document.getElementById('settings-account-restore');
     const restoreFile = document.getElementById('settings-account-restore-file');
     if (backupBtn) {
-      backupBtn.addEventListener('click', () => {
+      backupBtn.addEventListener('click', async () => {
         if (typeof window.Auth === 'undefined' ||
             typeof window.Auth.exportToFile !== 'function') return;
-        const res = window.Auth.exportToFile();
+        let res;
+        try {
+          res = await window.Auth.exportToFile();
+        } catch (e) {
+          res = { ok: false, error: String(e && e.message || e) };
+        }
         if (res && res.ok) {
-          try { showHabitToast('Backup ready — saving to Files…'); } catch (_) {}
+          const msg = (res.channel === 'native')
+            ? 'Backup created — choose where to save'
+            : 'Backup saved to Downloads';
+          try { showHabitToast(msg); } catch (_) {}
         } else {
-          try { showHabitToast('Backup failed. Try again.'); } catch (_) {}
+          try { showHabitToast('Backup failed — please try again'); } catch (_) {}
         }
       });
     }

@@ -595,11 +595,77 @@
    * browser/WKWebView download. On iOS this opens the share sheet
    * so the user can save to Files / iCloud Drive / AirDrop.
    */
-  function exportToFile() {
-    const payload = _buildBackupPayload();
-    const json    = JSON.stringify(payload, null, 2);
+  /**
+   * Two code paths depending on runtime:
+   *
+   * 1. Capacitor native (iOS app via WKWebView) — the standard
+   *    Blob+anchor-click pattern silently fails on iOS (confirmed
+   *    TestFlight build 54). Use @capacitor/filesystem to write the
+   *    JSON to the app's Documents/ directory, then @capacitor/share
+   *    to open the native share sheet so the user can route the
+   *    file to Files / iCloud Drive / AirDrop / Mail / etc.
+   *
+   * 2. Browser / PWA / localhost — the Blob+anchor-click pattern
+   *    works fine outside Capacitor's WKWebView. Keep the existing
+   *    logic as the fallback path.
+   *
+   * Returns { ok: true, channel: 'native' | 'web', filename }
+   * or     { ok: false, error: '<msg>' }. Caller (app.js) reads
+   * `channel` to pick the right toast copy.
+   */
+  async function exportToFile() {
+    const payload  = _buildBackupPayload();
+    const json     = JSON.stringify(payload, null, 2);
     const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const filename = 'awakened-backup-' + todayIso + '.json';
+
+    // ─── Native iOS path (Capacitor) ───
+    const cap = window.Capacitor;
+    const isNativePlatform = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+    if (isNativePlatform) {
+      try {
+        const Filesystem = cap.Plugins && cap.Plugins.Filesystem;
+        const Share      = cap.Plugins && cap.Plugins.Share;
+        if (Filesystem && typeof Filesystem.writeFile === 'function') {
+          // Directory.Documents is the string 'DOCUMENTS' in the
+          // plugin's enum. Encoding.UTF8 is 'utf8'. We pass the
+          // raw string literals so we don't need to import the
+          // ES module (auth.js is loaded as a plain script).
+          await Filesystem.writeFile({
+            path:      filename,
+            data:      json,
+            directory: 'DOCUMENTS',
+            encoding:  'utf8',
+          });
+          // Get the file:// URI for Share.share. getUri returns
+          // { uri: 'file:///var/mobile/.../awakened-backup-...json' }
+          let fileUri = null;
+          try {
+            const u = await Filesystem.getUri({ path: filename, directory: 'DOCUMENTS' });
+            fileUri = u && u.uri;
+          } catch (_) {}
+          if (Share && typeof Share.share === 'function' && fileUri) {
+            try {
+              await Share.share({
+                title:       'Awakened backup',
+                url:         fileUri,
+                dialogTitle: 'Save Awakened backup',
+              });
+            } catch (_) {
+              // User cancelled the share sheet — that's a normal
+              // flow, not an error. The file still exists in the
+              // app's Documents/ dir.
+            }
+          }
+          return { ok: true, channel: 'native', filename };
+        }
+        // Plugin not available — fall through to web path.
+      } catch (e) {
+        return { ok: false, error: String(e && e.message || e) };
+      }
+    }
+
+    // ─── Web / PWA / localhost fallback ───
     try {
       const blob = new Blob([json], { type: 'application/json' });
       const url  = URL.createObjectURL(blob);
@@ -615,7 +681,7 @@
         try { document.body.removeChild(a); } catch (_) {}
         try { URL.revokeObjectURL(url); }    catch (_) {}
       }, 250);
-      return { ok: true, filename };
+      return { ok: true, channel: 'web', filename };
     } catch (e) {
       return { ok: false, error: String(e && e.message || e) };
     }
