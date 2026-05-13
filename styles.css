@@ -15669,3 +15669,204 @@ body.reveal-locked { overflow: hidden; }
   .today-strip-value, .today-strip-target { font-size: 1.25rem; }
   .today-strip-label { font-size: 0.58rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v2.1 EQUIPMENT PANEL MODAL — preview of v3 PvP armory.
+   Two entry points (avatar tap on Status tab, "VIEW YOUR ARMORY"
+   button on Items tab). Full-screen overlay → centered panel art
+   → 9 invisible tap targets layered over the slot regions.
+   ═══════════════════════════════════════════════════════════════ */
+
+.equipment-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9000;
+  animation: equipment-overlay-fade 0.25s ease-out forwards;
+}
+.equipment-overlay.hidden { display: none; }
+@keyframes equipment-overlay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.equipment-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: equipment-modal-rise 0.35s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
+.equipment-modal.hidden { display: none; }
+@keyframes equipment-modal-rise {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.equipment-close {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border-accent);
+  border-radius: 50%;
+  color: var(--text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 2;
+}
+.equipment-close:hover { background: rgba(0, 0, 0, 0.7); }
+
+.equipment-modal-header {
+  text-align: center;
+  margin-bottom: 14px;
+  padding: 0 20px;
+}
+.equipment-modal-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: var(--gold-bright, var(--gold));
+  letter-spacing: 0.06em;
+  margin: 0 0 4px;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.45));
+}
+.equipment-modal-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.equipment-panel-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 941 / 1672; /* matches the source PNG dims */
+  margin: 0 auto;
+  /* Subtle ambient purple glow around the panel — picks up the
+     same vibe as the panel's rune-channel seams */
+  filter: drop-shadow(0 0 32px rgba(139, 92, 246, 0.35));
+}
+.equipment-panel-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none; /* hit targets handle taps */
+}
+
+/* Slot hit targets — invisible buttons positioned over each of
+   the 9 carved tablets on the panel art. Positions are percentage-
+   based so they scale with the image. Numbers tuned against the
+   941×1672 source: 3 cols × 3 rows, slots sit inside the framed
+   inner region with ~12% gutter on top, ~14% bottom, ~10% sides.
+   Each slot is ~24% wide × ~17% tall. */
+.equipment-slot-hit {
+  position: absolute;
+  width: 24%;
+  height: 17%;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.equipment-slot-hit:hover,
+.equipment-slot-hit:focus-visible {
+  background: rgba(251, 191, 36, 0.10);
+  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.50);
+  outline: none;
+}
+.equipment-slot-hit:active { transform: scale(0.97); }
+
+/* Per-slot positions. The layout is 3×3, tuned to the panel-base.png
+   stone-tablet geometry: ~13% top inset, ~14% bottom inset, ~9%
+   left/right insets; rows + columns gap ~3% each. */
+.equipment-slot-hit[data-slot="helm"]    { top: 14%; left: 10%; }
+.equipment-slot-hit[data-slot="cape"]    { top: 14%; left: 38%; }
+.equipment-slot-hit[data-slot="amulet"]  { top: 14%; left: 66%; }
+.equipment-slot-hit[data-slot="weapon"]  { top: 37%; left: 10%; }
+.equipment-slot-hit[data-slot="body"]    { top: 37%; left: 38%; }
+.equipment-slot-hit[data-slot="legs"]    { top: 37%; left: 66%; }
+.equipment-slot-hit[data-slot="gloves"]  { top: 60%; left: 10%; }
+.equipment-slot-hit[data-slot="boots"]   { top: 60%; left: 38%; }
+.equipment-slot-hit[data-slot="ring"]    { top: 60%; left: 66%; }
+
+.equipment-modal-footer {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin: 14px 16px 0;
+  max-width: 440px;
+  line-height: 1.5;
+}
+
+/* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────
+   Sits between the pokedex count + the rarity sections.
+   Full-width, purple-tinted, sword icon + label + chevron. */
+.armory-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 12px 0 8px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(91, 33, 182, 0.10) 60%);
+  border: 1px solid rgba(139, 92, 246, 0.50);
+  border-radius: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.armory-open-btn:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.26), rgba(91, 33, 182, 0.16) 60%);
+  border-color: rgba(139, 92, 246, 0.75);
+}
+.armory-open-btn:active { transform: scale(0.99); }
+.armory-open-icon {
+  font-size: 1.2rem;
+  color: var(--gold-bright, var(--gold));
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.45));
+}
+.armory-open-label {
+  flex: 1;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--gold-bright, var(--gold));
+  text-transform: uppercase;
+}
+.armory-open-chev {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+}
+
+/* Avatar tap affordance — soft cursor + faint hover hint so users
+   know the silhouette is interactive. */
+.sc-avatar {
+  transition: filter 0.18s ease, transform 0.1s ease;
+}
+.sc-avatar:hover {
+  filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.50));
+}
+.sc-avatar:active { transform: scale(0.97); }

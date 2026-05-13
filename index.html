@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=219">
+  <link rel="stylesheet" href="styles.css?v=220">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -458,6 +458,15 @@
           <div class="pokedex-progress-bar">
             <div id="pokedex-progress-fill" class="pokedex-progress-fill"></div>
           </div>
+          <!-- v2.1 — entry point to the equipment panel modal. Same
+               modal is also opened by tapping the avatar on the
+               Status tab. v3 PvP Phase 1 wires real equip flow into
+               the 9 slot hit targets inside the modal. -->
+          <button id="armory-open-btn" type="button" class="armory-open-btn">
+            <span class="armory-open-icon" aria-hidden="true">⚔</span>
+            <span class="armory-open-label">VIEW YOUR ARMORY</span>
+            <span class="armory-open-chev" aria-hidden="true">›</span>
+          </button>
           <p class="pokedex-subtext">More cards exist beyond what's discovered.</p>
         </div>
         <div id="pokedex-sections" class="pokedex-sections"></div>
@@ -810,6 +819,44 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Equipment Panel modal (v2.1 — prep for v3 PvP Phase 1).
+       Centered full-screen overlay showing the 9-slot armory panel.
+       Opens from two entry points:
+         (1) Tap the avatar silhouette on the Status tab
+         (2) "VIEW YOUR ARMORY" button at the top of the Items tab
+       v2.1 ships the visual layer only — the panel image renders +
+       tap targets are wired with a "Coming in v3" toast on each slot.
+       v3 PvP Phase 1 (per PVP.md §20) replaces those stubs with
+       real equip/unequip handlers + the hb_pvp_equipped persistence
+       layer + stat-aggregation with class affinity. -->
+  <div id="equipment-overlay" class="equipment-overlay hidden"></div>
+  <div id="equipment-modal" class="equipment-modal hidden" role="dialog" aria-labelledby="equipment-modal-title">
+    <button id="equipment-close" class="equipment-close" type="button" aria-label="Close">✕</button>
+    <div class="equipment-modal-header">
+      <h2 id="equipment-modal-title" class="equipment-modal-title">ARMORY</h2>
+      <p class="equipment-modal-sub">Your 9-slot equipment. Drops fill the slots in v3.</p>
+    </div>
+    <div class="equipment-panel-wrap">
+      <img class="equipment-panel-img" src="assets/equipment/panel-base.png"
+           alt="Equipment panel showing nine slots: helm, cape, amulet, weapon, body, legs, gloves, boots, ring."
+           draggable="false" loading="lazy" decoding="async">
+      <!-- Invisible tap targets layered over each slot for v3 wiring.
+           Each carries data-slot so the future stat-aggregation +
+           equip flow knows which slot was tapped. v2.1 stub: tap
+           shows a "Equipment slots arrive in v3" toast. -->
+      <button class="equipment-slot-hit" data-slot="helm"   aria-label="Helm slot"></button>
+      <button class="equipment-slot-hit" data-slot="cape"   aria-label="Cape slot"></button>
+      <button class="equipment-slot-hit" data-slot="amulet" aria-label="Amulet slot"></button>
+      <button class="equipment-slot-hit" data-slot="weapon" aria-label="Weapon slot"></button>
+      <button class="equipment-slot-hit" data-slot="body"   aria-label="Body slot"></button>
+      <button class="equipment-slot-hit" data-slot="legs"   aria-label="Legs slot"></button>
+      <button class="equipment-slot-hit" data-slot="gloves" aria-label="Gloves slot"></button>
+      <button class="equipment-slot-hit" data-slot="boots"  aria-label="Boots slot"></button>
+      <button class="equipment-slot-hit" data-slot="ring"   aria-label="Ring slot"></button>
+    </div>
+    <p class="equipment-modal-footer">Equipment system unlocks in v3 — gear from boss drops will slot in here.</p>
   </div>
 
   <!-- Souls info modal (v2.0.1). Centered card pattern reusing
@@ -1409,7 +1456,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=295"></script>
+  <script src="app.js?v=296"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

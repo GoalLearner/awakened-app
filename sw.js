@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.168';
+const CACHE_VERSION = 'v5.169';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -139,6 +139,11 @@ const PRECACHE_ASSETS = [
   '/assets/items/steady_steps.png',
   '/assets/items/pups_hood.png',
   '/assets/items/trackers_wrap.png',
+  // v2.1 equipment panel — 941×1672 stone-tablet armory art shown
+  // when avatar tapped on Status tab OR ARMORY button on Items tab.
+  // v3 PvP Phase 1 will layer equip/unequip handlers over the 9
+  // invisible slot hit-targets that overlay this image.
+  '/assets/equipment/panel-base.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────

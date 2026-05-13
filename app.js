@@ -7599,8 +7599,11 @@
           _lastAvatarSrc    = src;
           return '<div class="sc-portrait-row">' +
             '<div class="sc-avatar-row">' +
-              '<img class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
-                   'src="' + src + '" alt="' + esc(cls.name) + ' avatar" loading="eager">' +
+              '<img id="sc-avatar-img" class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
+                   'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to view armory" ' +
+                   'loading="eager" ' +
+                   'role="button" tabindex="0" ' +
+                   'style="cursor:pointer">' +
             '</div>' +
             '<div id="sc-radar-wrap" class="sc-radar-wrap"></div>' +
           '</div>';
@@ -9574,6 +9577,72 @@
     if (close)   close.addEventListener('click', closeXpDetail);
     if (sheet && typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(sheet, overlay, closeXpDetail, {});
+    }
+  }
+
+  // ── EQUIPMENT PANEL MODAL (v2.1 — prep for v3 PvP) ────────────
+  // Opens from two entry points:
+  //   1. Avatar img tap on the Status tab (#sc-avatar-img — set per
+  //      render in renderProfile)
+  //   2. "VIEW YOUR ARMORY" button on the Items tab (#armory-open-btn
+  //      — static markup in index.html)
+  // v2.1 stub: tapping any slot inside the panel surfaces a coming-
+  // soon toast. v3 PvP Phase 1 replaces these stubs with actual
+  // equip/unequip flow + hb_pvp_equipped persistence (per PVP.md
+  // §15.1 + §20 Phase 1).
+  function openEquipmentPanel() {
+    const overlay = document.getElementById('equipment-overlay');
+    const modal   = document.getElementById('equipment-modal');
+    if (!overlay || !modal) return;
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+  }
+  function closeEquipmentPanel() {
+    const overlay = document.getElementById('equipment-overlay');
+    const modal   = document.getElementById('equipment-modal');
+    if (overlay) overlay.classList.add('hidden');
+    if (modal)   modal.classList.add('hidden');
+  }
+  function setupEquipmentPanel() {
+    // ── Items-tab button (static markup, wire once) ─────────
+    const armoryBtn = document.getElementById('armory-open-btn');
+    if (armoryBtn) armoryBtn.addEventListener('click', openEquipmentPanel);
+
+    // ── Modal close + overlay dismiss ────────────────────────
+    const overlay = document.getElementById('equipment-overlay');
+    const close   = document.getElementById('equipment-close');
+    if (overlay) overlay.addEventListener('click', closeEquipmentPanel);
+    if (close)   close.addEventListener('click', closeEquipmentPanel);
+
+    // ── Slot hit-targets — v2.1 stub: coming-soon toast ─────
+    // Each .equipment-slot-hit button carries data-slot ∈ {helm,
+    // cape, amulet, weapon, body, legs, gloves, boots, ring}.
+    // v3 PvP Phase 1 will replace this handler with the equip
+    // flow (open inventory filtered to that slot → tap to equip
+    // → write hb_pvp_equipped + refresh stat aggregation).
+    document.querySelectorAll('.equipment-slot-hit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const slot = btn.getAttribute('data-slot') || 'slot';
+        const niceName = slot.charAt(0).toUpperCase() + slot.slice(1);
+        try { showHabitToast(niceName + ' slot — equip system arrives in v3.'); } catch (_) {}
+      });
+    });
+
+    // ── Avatar tap on Status tab — wired AFTER each renderProfile
+    // since the avatar img is rebuilt on every render. We attach
+    // via event delegation on the Status panel root so the handler
+    // survives re-renders. ──────────────────────────────────
+    const statusContent = document.getElementById('status-content');
+    if (statusContent && !statusContent.dataset.armoryWired) {
+      statusContent.addEventListener('click', (e) => {
+        const av = e.target.closest && e.target.closest('#sc-avatar-img');
+        if (av) {
+          e.stopPropagation();
+          openEquipmentPanel();
+        }
+      });
+      statusContent.dataset.armoryWired = '1';
     }
   }
 
@@ -17792,6 +17861,7 @@
     setupWhatsNewSheet();
     setupRankPopup();
     setupXpDetail();
+    setupEquipmentPanel();
 
     // Reflect canonical APP_VERSION in the Settings header
     const verEl = document.getElementById('settings-app-ver');
