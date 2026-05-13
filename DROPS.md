@@ -6,6 +6,7 @@
 
 ## Version history
 
+- **v1.5 (May 12, 2026)** — Content patch: 6 new commons (2 per existing boss) fill previously-empty slots. Each boss's common pool now contains **3 cards** (was 1). Drop rates UNCHANGED — common roll still hits at 20% daily / 40% weekly. On a common-roll hit, engine uniformly picks one of the 3 cards in that boss's common pool (1/3 each within the common roll). Rare and ultra-rare pools remain single-entry per boss. Pool-array shape is future-proof for when those tiers also expand.
 - **v1.4 (May 11, 2026)** — Cadence-aware drop rates. Weekly bosses get
   multiplier-bumped rates (5× ultra-rare, 3× rare, 2× common) over the
   daily baseline so per-month expected-pull volume is comparable across
@@ -212,6 +213,22 @@ fewer drops over equal calendar windows. The multipliers
 normalize this — both cadences land roughly **~1 ultra-rare
 per month** for engaged players, with rare and common counts
 also balanced.
+
+### Per-rarity drop pools (v1.5)
+
+Each boss's drop table is now a per-rarity **pool**, not a single entry per rarity. Pools are arrays:
+
+```js
+pools = {
+  ultra_rare: [card_A],              // 1 entry per boss today
+  rare:       [card_B],              // 1 entry per boss today
+  common:     [card_C, card_D, card_E], // 3 entries per boss as of v1.5
+}
+```
+
+When a rarity rolls (per the tier rates in §Daily/Weekly cadence tables above), the engine **uniformly picks** one card from that rarity's pool. Three commons per boss → 1/3 chance each within the common roll. The per-rarity hit rates against the kill itself stay unchanged from v1.4.
+
+Pool shape is future-proof for rare and ultra-rare tier expansion. When new rares/ultras ship in future content patches, they slot into the same pools[rarity].push(...) pattern with no engine changes.
 
 ### Single-flag first-common protection
 

@@ -1,8 +1,58 @@
 # CARDS.md — Awakened Boss Card Visual Spec v1
 
-**Status:** Design spec. Not yet implemented.
-**Last updated:** May 8, 2026
+**Status:** Design spec. Boss-card visual layer not yet implemented; drop-card collection layer shipped v2.0.2 + content patch v2.1.
+**Last updated:** May 12, 2026
 **Spec lead:** Richie (with Claude as design partner)
+
+---
+
+## v2.1 content patch — common-pool expansion (May 12, 2026)
+
+Each existing boss now drops **3 commons** (was 1). The 6 new commons fill previously-empty slots — every boss now has entry-level options across more of the 9 equipment slots, not just its signature 3.
+
+Drop-rate math is unchanged: rolling for common still hits at the cadence-specific rate (20% daily / 40% weekly per `DROP_RATES_BY_CADENCE`). When a common rolls, the engine uniformly picks 1 of the 3 cards in that boss's common pool — each card has a 1/3 chance within the common roll.
+
+### The Insomniac — additions
+| Card | id | Slot | Tier | Stat range (v3 PvP) | Mid (v2.x fixed) | Art |
+|---|---|---|---|---|---|---|
+| Tossing Bedroll | `tossing_bedroll` | body | E | VIT [1, 3] | VIT 2 | `assets/items/tossing_bedroll.png` (placeholder — art pending) |
+| Drowsy Signet | `drowsy_signet` | ring | E | VIT [1, 3] | VIT 2 | `assets/items/drowsy_signet.png` (placeholder — art pending) |
+
+Lore:
+- **Tossing Bedroll** — "Wrapped tight by those who fear the dark hours. Thin, but it keeps you upright when sleep refuses to come."
+- **Drowsy Signet** — "A simple ring etched with the half-moon. Worn by those still learning when to rest."
+
+### The Carouser — additions
+| Card | id | Slot | Tier | Stat range (v3 PvP) | Mid (v2.x fixed) | Art |
+|---|---|---|---|---|---|---|
+| Sobriety Token | `sobriety_token` | amulet | E | WILL [1, 3] | WILL 2 | `assets/items/sobriety_token.png` (placeholder) |
+| Steady Steps | `steady_steps` | boots | E | WILL [1, 3] | WILL 2 | `assets/items/steady_steps.png` (placeholder) |
+
+Lore:
+- **Sobriety Token** — "A worn medallion passed down through circles of restraint. Marked with the words ONE DAY AT A TIME."
+- **Steady Steps** — "Cracked leather walking boots, the soles softened from a thousand sober nights walking home."
+
+### The Steel Wolf — additions
+| Card | id | Slot | Tier | Stat range (v3 PvP) | Mid (v2.x fixed) | Art |
+|---|---|---|---|---|---|---|
+| Pup's Hood | `pups_hood` | helm | D | VIT [2, 5], STR [1, 2] | VIT 3, STR 1 | `assets/items/pups_hood.png` (placeholder) |
+| Tracker's Wrap | `trackers_wrap` | cape | D | VIT [2, 5] | VIT 3 | `assets/items/trackers_wrap.png` (placeholder) |
+
+Lore:
+- **Pup's Hood** — "A scrappy hood from a young hunter still finding their place in the pack. The fur is patchy but the spirit is fierce."
+- **Tracker's Wrap** — "A weathered cloak earned by those who hunt the trail before joining the alpha's kill."
+
+### Schema additions
+Every new card carries a `bonus_ranges` field alongside `bonuses`:
+- `bonuses` — fixed midpoint of the range, used by v2.x for stat aggregation
+- `bonus_ranges` — `[min, max]` tuple per stat, used by the v3 PvP engine to roll variable stat values per equip
+
+Existing 9 cards retain the `bonuses`-only shape until they're back-filled with ranges during v3 implementation. Both shapes coexist on the schema.
+
+### Roster total
+**15 cards** as of v2.1 content patch (was 9). Long-term Pokédex target stays at 150 per DROPS.md.
+
+---
 
 ---
 

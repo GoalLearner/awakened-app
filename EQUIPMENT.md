@@ -1,12 +1,13 @@
 # EQUIPMENT.md — Awakened Equipment System
 
-**Status:** v1.3 foundational design. Schema patches shipped.
-**Last updated:** May 11, 2026
+**Status:** v1.4 foundational design. Schema patches + v2.1 content expansion shipped.
+**Last updated:** May 12, 2026
 **Version history:**
 - v1.0 (May 11, AM) — initial draft, 5 stat domains, no class system
 - v1.1 (May 11, AM) — added 6th stat domain (WLT), class system integration, Model 2 affinity bonuses
 - v1.2 (May 11, AM) — drop table restructure: each boss now has a "signature" ultra-rare item that is best-in-slot for that slot (until higher-rank bosses release theirs)
 - v1.3 (May 11, PM) — renamed bottom rarity tier `uncommon` → `common` across launch tables; drop rates tuned in DROPS.md v1.3 (ultra-rare 1/40 → 1/20, rare 1/15 → 1/12, common stays 1/5). Schema-only doc patch — slot/bonus assignments unchanged.
+- v1.4 (May 12, 2026) — **v2.1 content patch.** 6 new commons (2 per existing boss) fill previously-empty slots. Each boss now drops in 5 slots (was 3). New `bonus_ranges` schema field carries `[min, max]` tuples per stat for v3 PvP variable rolls; `bonuses` retains the midpoint as the v2.x fixed value. Drop pools became arrays — see DROPS.md v1.5 for engine-side details.
 
 Companion docs:
 - `DROPS.md` — drops/cards collection system
@@ -191,6 +192,8 @@ Best-in-slot depends on class. A Ranger gets max value from this amulet; a Warri
 | Slot | Rarity | Item ID | Name | Base bonuses | Flavor |
 |---|---|---|---|---|---|
 | Helm | Common | `dream_woven_hood` | Dream-Woven Hood | +2 VIT | "A hood spun from undisturbed sleep." |
+| Body | Common | `tossing_bedroll` | Tossing Bedroll | +2 VIT (range [1, 3]) | "Wrapped tight by those who fear the dark hours." |
+| Ring | Common | `drowsy_signet` | Drowsy Signet | +2 VIT (range [1, 3]) | "A simple ring etched with the half-moon." |
 | Cape | Rare | `sleepwalkers_cloak` | Sleepwalker's Cloak | +6 VIT | "Worn by those who walk the line between dreams and dawn." |
 | **Amulet** | **Ultra-rare** | `pendant_of_the_wakeful` | Pendant of the Wakeful | **+8 VIT, +4 WILL** | "Hangs heavy with the weight of restful nights. Best in slot — until something older breaks." |
 
@@ -201,6 +204,8 @@ Best-in-slot depends on class. A Ranger gets max value from this amulet; a Warri
 | Slot | Rarity | Item ID | Name | Base bonuses | Flavor |
 |---|---|---|---|---|---|
 | Ring | Common | `vow_ring` | Vow Ring | +2 WILL | "Worn by those who chose to leave before midnight." |
+| Amulet | Common | `sobriety_token` | Sobriety Token | +2 WILL (range [1, 3]) | "A worn medallion passed down through circles of restraint." |
+| Boots | Common | `steady_steps` | Steady Steps | +2 WILL (range [1, 3]) | "Cracked leather walking boots, softened from a thousand sober nights." |
 | Weapon | Rare | `vessel_of_refusal` | Vessel of Refusal | +6 WILL | "A chalice carried but never lifted." |
 | **Gloves** | **Ultra-rare** | `sober_kings_gloves` | Sober King's Gloves | **+8 WILL, +4 VIT** | "Steady hands. Empty cup. Best in slot — discipline made manifest." |
 
@@ -211,6 +216,8 @@ Best-in-slot depends on class. A Ranger gets max value from this amulet; a Warri
 | Slot | Rarity | Item ID | Name | Base bonuses | Flavor |
 |---|---|---|---|---|---|
 | Legs | Common | `pack_leaders_greaves` | Pack Leader's Greaves | +4 VIT | "The wolf does not stop." |
+| Helm | Common | `pups_hood` | Pup's Hood | +3 VIT, +1 STR (ranges VIT [2, 5], STR [1, 2]) | "A scrappy hood from a young hunter still finding their place in the pack." |
+| Cape | Common | `trackers_wrap` | Tracker's Wrap | +3 VIT (range [2, 5]) | "A weathered cloak earned by those who hunt the trail before joining the alpha's kill." |
 | Body | Rare | `alphas_mantle` | Alpha's Mantle | +12 VIT | "Mantle of one who leads the hunt." |
 | **Boots** | **Ultra-rare** | `trail_worn_boots` | Trail-Worn Boots | **+16 VIT, +8 STR** | "Every step counts. These have counted thousands. Best in slot — until the trail goes further." |
 

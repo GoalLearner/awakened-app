@@ -661,6 +661,106 @@
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
+
+    // ── v2.1 content patch — 6 new commons (2 per boss) ─────
+    // Fills slots each boss didn't previously drop. Existing 3 commons
+    // remain authoritative for their slots; these add entry-level
+    // alternatives across the rest of the loadout. Variable stat-roll
+    // ranges defined per PVP.md v1.0 — `bonus_ranges` is the source
+    // of truth for v3 PvP; `bonuses` is the v2.x fixed midpoint.
+    // Art files not yet on disk — assets/items/<id>.png paths are
+    // placeholders. Render path falls back to emoji + rarity gradient
+    // via the existing 404 handler in setModalCardArt / Pokédex tile.
+
+    // ── The Insomniac (E, VIT) — new commons ────────────────
+    tossing_bedroll: {
+      id: 'tossing_bedroll',
+      name: 'Tossing Bedroll',
+      slot: 'body',
+      source_boss: 'the_insomniac',
+      rarity: 'common',
+      tier: 'E',
+      flavor: 'Wrapped tight by those who fear the dark hours. Thin, but it keeps you upright when sleep refuses to come.',
+      art_path: 'assets/items/tossing_bedroll.png',
+      bonuses:       { str: 0, vit: 2, int: 0, focus: 0, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [1,3], int: [0,0], focus: [0,0], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    drowsy_signet: {
+      id: 'drowsy_signet',
+      name: 'Drowsy Signet',
+      slot: 'ring',
+      source_boss: 'the_insomniac',
+      rarity: 'common',
+      tier: 'E',
+      flavor: 'A simple ring etched with the half-moon. Worn by those still learning when to rest.',
+      art_path: 'assets/items/drowsy_signet.png',
+      bonuses:       { str: 0, vit: 2, int: 0, focus: 0, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [1,3], int: [0,0], focus: [0,0], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Carouser (E, WILL) — new commons ────────────────
+    sobriety_token: {
+      id: 'sobriety_token',
+      name: 'Sobriety Token',
+      slot: 'amulet',
+      source_boss: 'the_carouser',
+      rarity: 'common',
+      tier: 'E',
+      flavor: 'A worn medallion passed down through circles of restraint. Marked with the words ONE DAY AT A TIME.',
+      art_path: 'assets/items/sobriety_token.png',
+      bonuses:       { str: 0, vit: 0, int: 0, focus: 0, will: 2, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [0,0], int: [0,0], focus: [0,0], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    steady_steps: {
+      id: 'steady_steps',
+      name: 'Steady Steps',
+      slot: 'boots',
+      source_boss: 'the_carouser',
+      rarity: 'common',
+      tier: 'E',
+      flavor: 'Cracked leather walking boots, the soles softened from a thousand sober nights walking home.',
+      art_path: 'assets/items/steady_steps.png',
+      bonuses:       { str: 0, vit: 0, int: 0, focus: 0, will: 2, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [0,0], int: [0,0], focus: [0,0], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Steel Wolf (D, VIT) — new commons ───────────────
+    pups_hood: {
+      id: 'pups_hood',
+      name: "Pup's Hood",
+      slot: 'helm',
+      source_boss: 'the_steel_wolf',
+      rarity: 'common',
+      tier: 'D',
+      flavor: 'A scrappy hood from a young hunter still finding their place in the pack. The fur is patchy but the spirit is fierce.',
+      art_path: 'assets/items/pups_hood.png',
+      bonuses:       { str: 1, vit: 3, int: 0, focus: 0, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [1,2], vit: [2,5], int: [0,0], focus: [0,0], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    trackers_wrap: {
+      id: 'trackers_wrap',
+      name: "Tracker's Wrap",
+      slot: 'cape',
+      source_boss: 'the_steel_wolf',
+      rarity: 'common',
+      tier: 'D',
+      flavor: "A weathered cloak earned by those who hunt the trail before joining the alpha's kill.",
+      art_path: 'assets/items/trackers_wrap.png',
+      bonuses:       { str: 0, vit: 3, int: 0, focus: 0, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [2,5], int: [0,0], focus: [0,0], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
   };
 
   // Slot icons for placeholder rendering (until DALL-E art lands at
@@ -974,14 +1074,21 @@
     const cfg = BOSSES[bossId];
     if (!cfg) return null;
 
-    // Build this boss's drop table — one card per rarity per
-    // EQUIPMENT.md slot ownership.
+    // Build this boss's drop table. v2.1+: per-rarity POOLS (not
+    // single entries). When a rarity rolls, uniformly pick one
+    // card from that rarity's pool. Common pools grew to 3 cards
+    // per boss in v2.1 content patch (was 1 each). Rare + ultra-
+    // rare pools remain single-entry today but the array shape is
+    // future-proof for when those tiers also expand.
     const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
-    const byRarity = {
-      ultra_rare: bossCards.find(c => c.rarity === 'ultra_rare') || null,
-      rare:       bossCards.find(c => c.rarity === 'rare')       || null,
-      common:     bossCards.find(c => c.rarity === 'common')     || null,
+    const pools = {
+      ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
+      rare:       bossCards.filter(c => c.rarity === 'rare'),
+      common:     bossCards.filter(c => c.rarity === 'common'),
     };
+    const pickFromPool = (pool) => pool.length === 0
+      ? null
+      : pool[Math.floor(Math.random() * pool.length)];
 
     // Cadence-specific rates (DROPS.md v1.4). Weekly bosses get
     // multiplier-bumped rates so per-month pull expectations are
@@ -993,14 +1100,15 @@
       : rates.common_protected;
 
     // Roll order. Each roll is independent; checks in order;
-    // first hit wins.
+    // first hit wins. On hit, uniformly pick one card from that
+    // rarity's pool.
     let dropped = null;
-    if (Math.random() < rates.ultra_rare && byRarity.ultra_rare) {
-      dropped = byRarity.ultra_rare;
-    } else if (Math.random() < rates.rare && byRarity.rare) {
-      dropped = byRarity.rare;
-    } else if (Math.random() < commonRate && byRarity.common) {
-      dropped = byRarity.common;
+    if (Math.random() < rates.ultra_rare && pools.ultra_rare.length) {
+      dropped = pickFromPool(pools.ultra_rare);
+    } else if (Math.random() < rates.rare && pools.rare.length) {
+      dropped = pickFromPool(pools.rare);
+    } else if (Math.random() < commonRate && pools.common.length) {
+      dropped = pickFromPool(pools.common);
     }
 
     if (!dropped) return null;
@@ -1055,10 +1163,14 @@
   function forceDrop(bossId, rarity) {
     // Backward-compat alias: legacy 'uncommon' arg maps to 'common'.
     if (rarity === 'uncommon') rarity = 'common';
-    const card = Object.values(CARDS).find(c =>
+    // v2.1 content patch — common pools now have >1 entry per boss.
+    // Uniformly pick one from the matching (boss, rarity) pool for
+    // parity with rollBossDrop's behavior.
+    const pool = Object.values(CARDS).filter(c =>
       c.source_boss === bossId && c.rarity === rarity
     );
-    if (!card) return null;
+    if (pool.length === 0) return null;
+    const card = pool[Math.floor(Math.random() * pool.length)];
     const inv = getInventory();
     const entry = inv.cards[card.id] || { discovered: false, count: 0, first_acquired_date: null };
     const wasFirstAcquisition = !entry.discovered;
@@ -16810,6 +16922,35 @@
     // day. This one-time migration clears today's false-positive on
     // first launch of the fixed build so the new strict logic gets to
     // re-evaluate against actual data. Idempotent via flag.
+    // ── v2.1 content patch — inventory backfill for new commons ───
+    // 6 new common cards were added in v2.1 (2 per existing boss
+    // filling previously-empty slots). loadInventory's existing
+    // backfill loop catches new card IDs on next read, but we set
+    // an explicit migration flag so the operation is observable and
+    // testable. Reading hb_inventory triggers the backfill via
+    // Object.keys(CARDS).forEach in loadInventory; the flag merely
+    // marks "we've seen the v3-commons schema."
+    if (!localStorage.getItem('hb_inventory_commons_v3_migrated')) {
+      try {
+        const inv = getInventory(); // forces loadInventory → backfill
+        // Defensive: ensure the 6 new ids are present even if the
+        // backfill loop changed shape in some edge case.
+        const newCommonIds = [
+          'tossing_bedroll', 'drowsy_signet',
+          'sobriety_token',  'steady_steps',
+          'pups_hood',       'trackers_wrap',
+        ];
+        let mutated = false;
+        newCommonIds.forEach(id => {
+          if (!inv.cards[id]) {
+            inv.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
+            mutated = true;
+          }
+        });
+        if (mutated) persistInventory();
+      } catch (_) {}
+      localStorage.setItem('hb_inventory_commons_v3_migrated', '1');
+    }
     if (!localStorage.getItem('hb_bedtime_window_fix_v1')) {
       try {
         const bedtimeHabit = habits.find(h => h && h.name === 'Sleep before midnight' && !h.custom);
