@@ -14668,3 +14668,17 @@ body.reveal-locked { overflow: hidden; }
   background: rgba(220, 38, 38, 0.28);
   border-color: rgba(220, 38, 38, 0.80);
 }
+
+/* Primary purple variant for restore-modal step1 "Choose File" — the
+   user is opting into a flow that COULD be destructive but hasn't
+   committed yet (file pick happens AFTER). Destructive red is reserved
+   for the step2 "Restore now" final commit. */
+.delete-account-btn--primary {
+  background: rgba(139, 92, 246, 0.18);
+  color: #ddd6fe;
+  border: 1px solid rgba(139, 92, 246, 0.60);
+}
+.delete-account-btn--primary:not(:disabled):hover {
+  background: rgba(139, 92, 246, 0.28);
+  border-color: rgba(139, 92, 246, 0.80);
+}

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=206">
+  <link rel="stylesheet" href="styles.css?v=207">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1242,8 +1242,8 @@
     </div>
   </div>
 
-  <script src="auth.js?v=5"></script>
-  <script src="app.js?v=273"></script>
+  <script src="auth.js?v=6"></script>
+  <script src="app.js?v=274"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1453,6 +1453,19 @@
             <div class="account-identity-since" id="account-identity-since">—</div>
           </div>
         </div>
+
+        <!-- Backup my data — safe action, secondary style (v2.1 Phase D) -->
+        <button id="settings-account-backup" type="button" class="account-action-btn account-action-btn--secondary">
+          <span class="account-action-icon" aria-hidden="true">⬇</span>
+          <span class="account-action-label">Backup my data</span>
+        </button>
+
+        <!-- Restore from backup — safe action, secondary style (v2.1 Phase D) -->
+        <button id="settings-account-restore" type="button" class="account-action-btn account-action-btn--secondary">
+          <span class="account-action-icon" aria-hidden="true">⬆</span>
+          <span class="account-action-label">Restore from backup</span>
+        </button>
+        <input id="settings-account-restore-file" type="file" accept=".json,application/json" style="display:none;">
 
         <!-- Sign out — secondary, full-width -->
         <button id="settings-account-signout" type="button" class="account-action-btn account-action-btn--secondary">
@@ -1787,6 +1800,48 @@
       <div class="delete-account-actions">
         <button id="da-cancel" type="button" class="delete-account-btn delete-account-btn--cancel">Cancel</button>
         <button id="da-confirm" type="button" class="delete-account-btn delete-account-btn--confirm" disabled>Delete Forever</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restore-from-backup modal stack (v2.1 Phase D). Two sequential
+       modals share the same overlay shell:
+         #restore-modal-step1 — initial warning before file picker
+         #restore-modal-step2 — backup metadata + final confirmation
+       Plus an error state for invalid-file rejection. Reuses
+       delete-account modal styling for visual consistency. -->
+  <div id="restore-modal-overlay" class="delete-account-overlay hidden" role="dialog" aria-modal="true">
+    <div class="delete-account-modal" id="restore-modal-step1">
+      <h2 class="delete-account-title">Restore from backup?</h2>
+      <p class="delete-account-body">
+        This will <strong>OVERWRITE</strong> all your current data — habits, drops, souls, XP, and progress. You'll need to sign in again after the restore completes.
+      </p>
+      <p class="delete-account-body delete-account-body--warning">
+        Make sure you have a recent backup of your current state before continuing. This cannot be undone.
+      </p>
+      <div class="delete-account-actions">
+        <button id="rm-step1-cancel" type="button" class="delete-account-btn delete-account-btn--cancel">Cancel</button>
+        <button id="rm-step1-choose" type="button" class="delete-account-btn delete-account-btn--primary">Choose File</button>
+      </div>
+    </div>
+    <div class="delete-account-modal hidden" id="restore-modal-step2">
+      <h2 class="delete-account-title">Restore this backup?</h2>
+      <p class="delete-account-body" id="rm-step2-meta">—</p>
+      <p class="delete-account-body delete-account-body--warning">
+        Your current data will be overwritten. You'll be signed out and asked to sign in again.
+      </p>
+      <div class="delete-account-actions">
+        <button id="rm-step2-cancel" type="button" class="delete-account-btn delete-account-btn--cancel">Cancel</button>
+        <button id="rm-step2-confirm" type="button" class="delete-account-btn delete-account-btn--confirm">Restore now</button>
+      </div>
+    </div>
+    <div class="delete-account-modal hidden" id="restore-modal-error">
+      <h2 class="delete-account-title">Invalid backup file</h2>
+      <p class="delete-account-body" id="rm-error-msg">
+        This file isn't a valid Awakened backup. Please pick a different file.
+      </p>
+      <div class="delete-account-actions">
+        <button id="rm-error-close" type="button" class="delete-account-btn delete-account-btn--cancel">OK</button>
       </div>
     </div>
   </div>

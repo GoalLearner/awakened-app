@@ -555,6 +555,141 @@
     return true;
   }
 
+  // ── v2.1 Phase D — JSON export / import data safety net ──
+  // localStorage is the source of truth for game state on iOS
+  // (WKWebView). iOS does NOT preserve WKWebView storage when the
+  // user deletes + reinstalls the app, and there's no iCloud auto-
+  // backup of WKWebView local data. These helpers let the user
+  // manually checkpoint their state to a JSON file (saved via the
+  // iOS share sheet) and restore it later. Backend untouched —
+  // identity + leaderboard remain server-side, game state stays
+  // device-local. v2.2+ may add real cross-device sync.
+
+  const BACKUP_VERSION = 1;
+  const BACKUP_KEY_PREFIX = 'hb_';
+
+  /**
+   * Build the backup payload from the current localStorage state.
+   * Returns the object directly — caller serializes / downloads.
+   */
+  function _buildBackupPayload() {
+    const keys = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(BACKUP_KEY_PREFIX)) {
+          keys[k] = localStorage.getItem(k);
+        }
+      }
+    } catch (_) {}
+    return {
+      _backup_version: BACKUP_VERSION,
+      _generated_at:   new Date().toISOString(),
+      _app_version:    (window.__APP_VERSION || '2.1.0'),
+      keys,
+    };
+  }
+
+  /**
+   * Serialize the current state to a JSON file and trigger the
+   * browser/WKWebView download. On iOS this opens the share sheet
+   * so the user can save to Files / iCloud Drive / AirDrop.
+   */
+  function exportToFile() {
+    const payload = _buildBackupPayload();
+    const json    = JSON.stringify(payload, null, 2);
+    const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const filename = 'awakened-backup-' + todayIso + '.json';
+    try {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      // Small async cleanup — some browsers need the anchor + URL
+      // to live briefly past the click to actually start the
+      // download / share sheet.
+      setTimeout(() => {
+        try { document.body.removeChild(a); } catch (_) {}
+        try { URL.revokeObjectURL(url); }    catch (_) {}
+      }, 250);
+      return { ok: true, filename };
+    } catch (e) {
+      return { ok: false, error: String(e && e.message || e) };
+    }
+  }
+
+  /**
+   * Parse + validate a backup file's text. Returns:
+   *   { ok: true,  data: <parsed payload> }   on success
+   *   { ok: false, error: '<msg>' }           on any failure
+   * Validation rules:
+   *   - Must parse as JSON
+   *   - Must be a plain object
+   *   - _backup_version must === 1 (future migrations live here)
+   *   - keys must be an object (may be empty, but must exist)
+   *   - Every entry in keys must have an hb_ prefix
+   */
+  function parseBackupFile(text) {
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      return { ok: false, error: 'File is not valid JSON.' };
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { ok: false, error: 'File is not an Awakened backup.' };
+    }
+    if (data._backup_version !== BACKUP_VERSION) {
+      return { ok: false, error: 'Backup format version not supported.' };
+    }
+    if (!data.keys || typeof data.keys !== 'object' || Array.isArray(data.keys)) {
+      return { ok: false, error: 'Backup is missing the keys map.' };
+    }
+    for (const k of Object.keys(data.keys)) {
+      if (!k.startsWith(BACKUP_KEY_PREFIX)) {
+        return { ok: false, error: 'Backup contains unexpected keys.' };
+      }
+    }
+    return { ok: true, data };
+  }
+
+  /**
+   * Apply a previously-validated backup. Clears every hb_* key
+   * (including hb_user — see comment below), then writes every key
+   * from the backup. Caller is responsible for reloading the page
+   * after this returns so all in-memory state is rebuilt fresh.
+   *
+   * Why we clear hb_user too: if the backup was taken under a
+   * different signed-in identity, the stored JWT would not match
+   * the apple_sub of the current user. Safer to force re-auth.
+   * The restore modal copy warns the user about this.
+   */
+  function applyBackup(data) {
+    // 1. Collect every hb_* key currently in storage
+    const toDelete = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(BACKUP_KEY_PREFIX)) toDelete.push(k);
+      }
+    } catch (_) {}
+    // 2. Delete them
+    for (const k of toDelete) {
+      try { localStorage.removeItem(k); } catch (_) {}
+    }
+    // 3. Write the backup's keys
+    const keys = (data && data.keys) || {};
+    for (const k of Object.keys(keys)) {
+      const v = keys[k];
+      if (typeof v === 'string') {
+        try { localStorage.setItem(k, v); } catch (_) {}
+      }
+    }
+  }
+
   // Expose on window for app.js + Settings interactions.
   window.Auth = {
     getCurrentUser,
@@ -572,5 +707,9 @@
     isLocalhostDev,
     isNative,
     BACKEND_URL,
+    // v2.1 Phase D — JSON export / import
+    exportToFile,
+    parseBackupFile,
+    applyBackup,
   };
 })();

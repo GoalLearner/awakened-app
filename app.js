@@ -180,6 +180,9 @@
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
   const APP_VERSION = '2.1.0';
+  // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
+  // with the constant above; bump together when shipping a new train.
+  try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
 
   // ── HealthKit auto-verification thresholds ───────────────
   // v1.1.5: Daily walk auto-verifies via Apple Health when steps
@@ -13896,6 +13899,27 @@
     if (deleteBtn) {
       deleteBtn.addEventListener('click', openDeleteAccountModal);
     }
+
+    // v2.1 Phase D — Backup / Restore wiring
+    const backupBtn   = document.getElementById('settings-account-backup');
+    const restoreBtn  = document.getElementById('settings-account-restore');
+    const restoreFile = document.getElementById('settings-account-restore-file');
+    if (backupBtn) {
+      backupBtn.addEventListener('click', () => {
+        if (typeof window.Auth === 'undefined' ||
+            typeof window.Auth.exportToFile !== 'function') return;
+        const res = window.Auth.exportToFile();
+        if (res && res.ok) {
+          try { showHabitToast('Backup ready — saving to Files…'); } catch (_) {}
+        } else {
+          try { showHabitToast('Backup failed. Try again.'); } catch (_) {}
+        }
+      });
+    }
+    if (restoreBtn && restoreFile) {
+      restoreBtn.addEventListener('click', openRestoreModal);
+      restoreFile.addEventListener('change', onRestoreFilePicked);
+    }
   }
 
   // Formats YYYY-MM-DD → "May 12, 2026". Returns null on bad input
@@ -14009,6 +14033,119 @@
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeModal();
     }, { once: true });
+  }
+
+  // ── v2.1 Phase D — Restore-from-backup modal flow ─────────
+  // Three sequential panels share one overlay (#restore-modal-overlay):
+  //   step1 — warning + Choose File trigger
+  //   step2 — backup metadata + final destructive confirmation
+  //   error — invalid backup file rejection
+  // The active panel is whichever lacks .hidden. Validated payload
+  // is parked in _pendingRestoreData until step 2 confirms.
+  let _pendingRestoreData = null;
+
+  function _restoreShowPanel(which) {
+    ['restore-modal-step1', 'restore-modal-step2', 'restore-modal-error'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id === which) el.classList.remove('hidden');
+      else              el.classList.add('hidden');
+    });
+  }
+
+  function _closeRestoreModal() {
+    const overlay = document.getElementById('restore-modal-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    _pendingRestoreData = null;
+    // Reset to step1 so next open starts fresh
+    _restoreShowPanel('restore-modal-step1');
+    // Clear the file input so the same file can be re-picked
+    const fileEl = document.getElementById('settings-account-restore-file');
+    if (fileEl) try { fileEl.value = ''; } catch (_) {}
+  }
+
+  function openRestoreModal() {
+    const overlay = document.getElementById('restore-modal-overlay');
+    if (!overlay) return;
+    _pendingRestoreData = null;
+    _restoreShowPanel('restore-modal-step1');
+    overlay.classList.remove('hidden');
+
+    // Wire step1 buttons (idempotent — uses {once:true} to auto-clean)
+    const cancelBtn = document.getElementById('rm-step1-cancel');
+    const chooseBtn = document.getElementById('rm-step1-choose');
+    if (cancelBtn) cancelBtn.addEventListener('click', _closeRestoreModal, { once: true });
+    if (chooseBtn) chooseBtn.addEventListener('click', () => {
+      const fileEl = document.getElementById('settings-account-restore-file');
+      if (fileEl) fileEl.click();
+    }, { once: true });
+
+    // Tap-outside cancels
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) _closeRestoreModal();
+    }, { once: true });
+  }
+
+  function onRestoreFilePicked(e) {
+    const file = e && e.target && e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '');
+      const res  = (window.Auth && typeof window.Auth.parseBackupFile === 'function')
+        ? window.Auth.parseBackupFile(text)
+        : { ok: false, error: 'Auth module not loaded.' };
+      if (!res.ok) {
+        const msgEl = document.getElementById('rm-error-msg');
+        if (msgEl) msgEl.textContent = res.error || 'This file isn\'t a valid Awakened backup.';
+        _restoreShowPanel('restore-modal-error');
+        const closeBtn = document.getElementById('rm-error-close');
+        if (closeBtn) closeBtn.addEventListener('click', _closeRestoreModal, { once: true });
+        return;
+      }
+      // Valid — park the data and show step 2 with metadata
+      _pendingRestoreData = res.data;
+      const metaEl = document.getElementById('rm-step2-meta');
+      if (metaEl) {
+        const when = _humanizeBackupDate(res.data._generated_at);
+        const ver  = res.data._app_version || 'unknown';
+        metaEl.textContent = 'Backup from ' + when + ' (app version ' + ver + ').';
+      }
+      _restoreShowPanel('restore-modal-step2');
+
+      const cancelBtn  = document.getElementById('rm-step2-cancel');
+      const confirmBtn = document.getElementById('rm-step2-confirm');
+      if (cancelBtn)  cancelBtn.addEventListener('click', _closeRestoreModal, { once: true });
+      if (confirmBtn) confirmBtn.addEventListener('click', _executeRestore, { once: true });
+    };
+    reader.onerror = () => {
+      const msgEl = document.getElementById('rm-error-msg');
+      if (msgEl) msgEl.textContent = 'Could not read that file.';
+      _restoreShowPanel('restore-modal-error');
+      const closeBtn = document.getElementById('rm-error-close');
+      if (closeBtn) closeBtn.addEventListener('click', _closeRestoreModal, { once: true });
+    };
+    reader.readAsText(file);
+  }
+
+  function _humanizeBackupDate(iso) {
+    if (typeof iso !== 'string') return 'unknown date';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return 'unknown date';
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (_) { return 'unknown date'; }
+  }
+
+  function _executeRestore() {
+    if (!_pendingRestoreData) { _closeRestoreModal(); return; }
+    try {
+      window.Auth.applyBackup(_pendingRestoreData);
+    } catch (_) {}
+    // Full reload — rebuilds all in-memory state from the restored
+    // localStorage. hb_user was wiped by applyBackup, so the sign-in
+    // gate re-arms on the next boot.
+    window.location.reload();
   }
 
   // Builds + wires the Settings → Reminders panel. Each control writes
