@@ -15057,12 +15057,20 @@ body.reveal-locked { overflow: hidden; }
   background: var(--accent);
   flex-shrink: 0;
 }
-/* Streak/hunting pill glyph (emoji icon at the left of the pill).
-   Slightly larger than the dot variant so the emoji reads clearly. */
-.status-pill-glyph {
-  font-size: 0.78rem;
-  line-height: 1;
-  margin-right: 1px;
+/* Hunting pill icon image — circular crop on the boss portrait so it
+   reads as a compact avatar at pill size. Idle state uses the dungeon
+   tab icon (square, no circular crop). */
+.status-pill-img {
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  margin-right: 2px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.status-pill--idle .status-pill-img {
+  border-radius: 0;            /* dungeon tab icon already has its own shape */
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.45));
 }
 /* Numeric value inside streak / hunting pills */
 .status-pill-num {

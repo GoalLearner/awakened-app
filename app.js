@@ -9070,29 +9070,17 @@
   // Renders the status pill row: active habit packs (Morning Routine,
   // Locked-In) + class affinity lean. Hides the row entirely when
   // there's nothing to show (e.g., first-launch Civilian with no packs).
-  // v2.1.0 status pill row — ROTATING TICKER between two views:
-  //   View A — STREAKS: three streak pills (perfect day, Locked-In,
-  //            Morning Routine)
-  //   View B — HUNTING: one pill per engaged boss with kill-cond
-  //            progress (e.g., "Insomniac 1/2")
-  // If no bosses engaged, no rotation; the row pins to streaks. With
-  // bosses engaged the row crossfades every 6 seconds.
-  const STATUS_TICKER_ROTATION_MS = 6000;
-  const STATUS_TICKER_FADE_MS     = 350;
-  let _statusTickerTimer = null;
-  let _statusTickerView  = 'streaks';
+  // v2.1.0 status pill row — HUNTING ONLY.
+  // Renders one pill per engaged boss with kill-condition progress
+  // (e.g., "Insomniac 1/2"). Each pill uses the boss's portrait PNG
+  // (assets/bosses/<id>.png) as its leading icon — no emoji glyphs.
+  // Empty state: one idle pill prompting the user to engage a boss.
 
-  function _buildStreakPills() {
-    const pStreak  = (typeof perfectStreak !== 'undefined' && perfectStreak && perfectStreak.count) || 0;
-    const liStreak = (typeof compoundStreaks !== 'undefined' && compoundStreaks &&
-                       compoundStreaks['locked-in'] && compoundStreaks['locked-in'].streak) || 0;
-    const mrStreak = (typeof compoundStreaks !== 'undefined' && compoundStreaks &&
-                       compoundStreaks['morning'] && compoundStreaks['morning'].streak) || 0;
-    return [
-      { key: 'perfect', glyph: '🔥', label: pStreak,  hot: pStreak  > 0 },
-      { key: 'li',      glyph: '🔒', label: liStreak, hot: liStreak > 0 },
-      { key: 'mr',      glyph: '🌅', label: mrStreak, hot: mrStreak > 0 },
-    ];
+  function _statusPillIcon(src, sizePx) {
+    const sz = sizePx || 14;
+    return '<img class="status-pill-img" src="' + src + '" alt="" ' +
+           'style="width:' + sz + 'px;height:' + sz + 'px" ' +
+           'draggable="false" loading="lazy" decoding="async">';
   }
 
   function _buildHuntingPills() {
@@ -9105,10 +9093,13 @@
           const cfg    = BOSSES[id];
           const streak = state.streak || 0;
           const target = cfg.streakTarget || 0;
+          // Drop "The " prefix to save horizontal space on the pill.
           const name = (cfg.name || id).replace(/^The\s+/, '');
+          // Boss portraits map by id — file convention is id-with-hyphens.
+          const iconSrc = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
           pills.push({
             key:   id,
-            glyph: cfg.glyph || '⚔',
+            icon:  iconSrc,
             name:  name,
             sub:   streak + '/' + target,
             hot:   streak > 0,
@@ -9119,82 +9110,36 @@
     return pills;
   }
 
-  function _renderStreakView(listEl) {
-    const pills = _buildStreakPills();
-    listEl.innerHTML = pills.map(p =>
-      '<span class="status-pill status-pill--' + p.key + (p.hot ? ' status-pill--active' : '') + '">' +
-        '<span class="status-pill-glyph" aria-hidden="true">' + p.glyph + '</span>' +
-        '<span class="status-pill-num">' + p.label + '</span>' +
-      '</span>'
-    ).join('');
-  }
+  function updateStatusPills() {
+    const row   = document.getElementById('status-pills');
+    const list  = document.getElementById('status-pills-list');
+    const lbl   = document.querySelector('.status-pill-row-label');
+    if (!row || !list) return;
 
-  function _renderHuntingView(listEl) {
+    // Always show the row, always labeled HUNTING.
+    row.classList.remove('hidden');
+    list.style.opacity = '1';
+    if (lbl) lbl.textContent = 'HUNTING';
+
     const pills = _buildHuntingPills();
     if (pills.length === 0) {
-      listEl.innerHTML =
+      // Catchy idle state — "the hunt is quiet, enter a dungeon."
+      // Uses the dungeon tab icon as the visual cue (same icon that
+      // marks the Quests tab where bosses live).
+      list.innerHTML =
         '<span class="status-pill status-pill--idle">' +
-          '<span class="status-pill-glyph" aria-hidden="true">⚔</span>' +
-          'NO BOSSES ENGAGED' +
+          _statusPillIcon('assets/tab-icons/tab-dungeon.png', 14) +
+          'THE HUNT IS QUIET · ENGAGE A BOSS' +
         '</span>';
       return;
     }
-    listEl.innerHTML = pills.map(p =>
+    list.innerHTML = pills.map(p =>
       '<span class="status-pill status-pill--boss' + (p.hot ? ' status-pill--active' : '') + '">' +
-        '<span class="status-pill-glyph" aria-hidden="true">' + p.glyph + '</span>' +
+        _statusPillIcon(p.icon, 16) +
         esc(p.name) +
         ' <span class="status-pill-num">' + esc(p.sub) + '</span>' +
       '</span>'
     ).join('');
-  }
-
-  function _renderStatusTickerView(view) {
-    const list = document.getElementById('status-pills-list');
-    const lbl  = document.querySelector('.status-pill-row-label');
-    if (!list) return;
-    if (view === 'hunting') {
-      if (lbl) lbl.textContent = 'HUNTING';
-      _renderHuntingView(list);
-    } else {
-      if (lbl) lbl.textContent = 'STREAKS';
-      _renderStreakView(list);
-    }
-  }
-
-  function updateStatusPills() {
-    const row   = document.getElementById('status-pills');
-    const list  = document.getElementById('status-pills-list');
-    if (!row || !list) return;
-
-    row.classList.remove('hidden');
-    list.style.opacity = '1';
-    _renderStatusTickerView(_statusTickerView);
-
-    // Reset any active rotation timer (avoid drift on rapid re-renders).
-    if (_statusTickerTimer) {
-      clearInterval(_statusTickerTimer);
-      _statusTickerTimer = null;
-    }
-
-    // If no bosses engaged, pin to streaks — no rotation.
-    const huntingPills = _buildHuntingPills();
-    if (huntingPills.length === 0) {
-      _statusTickerView = 'streaks';
-      _renderStatusTickerView('streaks');
-      return;
-    }
-
-    // Two-view rotation — crossfade every ROTATION_MS.
-    _statusTickerTimer = setInterval(() => {
-      const target = (_statusTickerView === 'streaks') ? 'hunting' : 'streaks';
-      list.style.transition = 'opacity ' + STATUS_TICKER_FADE_MS + 'ms ease';
-      list.style.opacity = '0';
-      setTimeout(() => {
-        _statusTickerView = target;
-        _renderStatusTickerView(target);
-        list.style.opacity = '1';
-      }, STATUS_TICKER_FADE_MS);
-    }, STATUS_TICKER_ROTATION_MS);
   }
 
   // ── XP·30D detail sheet (v2.1.0) ─────────────────────────────
