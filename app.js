@@ -7566,7 +7566,9 @@
               // badge + 'Civilian' label already convey the state; the
               // emblem reads as redundant clutter pre-Awakening. Other
               // classes keep the emblem since it's a meaningful identity
-              // cue once the user has chosen a path.
+              // cue once the user has chosen a path. Text alignment with
+              // sibling rows is preserved by .sc-hero-class's negative
+              // margin-left offset against its hover-padding.
               (currentClass && currentClass !== 'CIVILIAN'
                 ? ' <span class="sc-class-emblem-btn">' +
                     classIconHtml(currentClass, { size: 36 }) +

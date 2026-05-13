@@ -3235,6 +3235,10 @@ footer {
   align-items: center;
   gap: 4px;
   padding: 2px 4px;
+  /* Negative margin offsets the horizontal padding so the visible
+     text aligns flush-left with sibling rows. Hover background still
+     breathes 4px on each side via the padding. */
+  margin-left: -4px;
   border-radius: 8px;
   transition: background 0.18s ease;
 }
