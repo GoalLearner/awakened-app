@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=213">
+  <link rel="stylesheet" href="styles.css?v=214">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -745,10 +745,28 @@
           <line x1="0" y1="105" x2="400" y2="105" stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
           <path id="xp-detail-area" fill="url(#xp-detail-gradient)" d=""/>
           <path id="xp-detail-line" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d=""/>
+          <!-- Tier-2 light sweep — second path, same geometry as the
+               main line, with a short bright "head" that travels start
+               → end every 5s via animated stroke-dashoffset. JS sets
+               --sweep-end on this element to the path's negative length
+               so the animation knows how far to travel. -->
+          <path id="xp-detail-sweep" fill="none" stroke="#fef3c7" stroke-width="2.6"
+                stroke-linecap="round" stroke-linejoin="round" d=""
+                opacity="0"/>
           <!-- Radar-ping ring — sits behind the main dot. Pulses outward
                on infinite loop, fading as it grows. Tier-1 "alive" cue. -->
           <circle id="xp-detail-dot-ping" cx="0" cy="140" r="3" fill="#fbbf24" opacity="0.5"/>
           <circle id="xp-detail-dot" cx="0" cy="140" r="3" fill="#fbbf24" filter="drop-shadow(0 0 4px #fbbf24)"/>
+          <!-- Tier-2 floating particles — emit from the endpoint dot
+               and drift up + outward, fading. Group's transform is set
+               by JS to track the endpoint. 4 particles with staggered
+               delays so the emission feels continuous. -->
+          <g id="xp-detail-particles" transform="translate(0, 140)">
+            <circle class="xp-particle xp-particle--1" cx="0" cy="0" r="1.2" fill="#fbbf24"/>
+            <circle class="xp-particle xp-particle--2" cx="0" cy="0" r="1.0" fill="#fcd34d"/>
+            <circle class="xp-particle xp-particle--3" cx="0" cy="0" r="1.4" fill="#fbbf24"/>
+            <circle class="xp-particle xp-particle--4" cx="0" cy="0" r="0.9" fill="#fef3c7"/>
+          </g>
         </svg>
         <div class="xp-detail-axis">
           <span id="xp-detail-axis-start">—</span>
@@ -1391,7 +1409,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=287"></script>
+  <script src="app.js?v=288"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

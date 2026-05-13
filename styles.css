@@ -15195,6 +15195,55 @@ body.reveal-locked { overflow: hidden; }
   0%   { transform: scale(1);   opacity: 0.55; }
   100% { transform: scale(4.5); opacity: 0;    }
 }
+
+/* ─── Tier-2: aurora light sweep ─────────────────────────────
+   Second path overlaid on the main line. Uses a short stroke-
+   dash "head" + huge gap so only ~30 user-units of the path are
+   visible at any moment. Animation drives stroke-dashoffset from
+   "head off-left-edge" to "head past right-edge" so the bright
+   sliver travels start → end of the line on a 5s loop.
+
+   JS sets --sweep-len on the element to the path's total length
+   so the animation distance scales correctly with the chart's
+   actual data range. The head length stays a fixed 30 units
+   (~7.5% of the 400-unit viewBox width). */
+#xp-detail-sweep {
+  stroke-dasharray: 30 9999;
+  filter: drop-shadow(0 0 4px #fef3c7) drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+  animation: xp-line-sweep 5s linear infinite;
+  animation-delay: 0.9s; /* wait for the draw-in to finish */
+}
+@keyframes xp-line-sweep {
+  0%   { stroke-dashoffset: calc(var(--sweep-len, 400px) + 30px); opacity: 0; }
+  10%  { opacity: 0.95; }
+  90%  { opacity: 0.95; }
+  100% { stroke-dashoffset: -30px; opacity: 0; }
+}
+
+/* ─── Tier-2: floating particles ─────────────────────────────
+   Four small circles inside the #xp-detail-particles group that's
+   translated by JS to sit at the endpoint dot. Each particle drifts
+   up + outward with a different vector + staggered delay so the
+   emission feels organic. The 2.4s loop is long enough to read each
+   particle's full arc; staggered delays keep one particle visible
+   at any moment. */
+.xp-particle {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: xp-particle-drift 2.4s ease-out infinite;
+  filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.7));
+}
+.xp-particle--1 { animation-delay: 0.0s; --dx: -7;  --dy: -22; }
+.xp-particle--2 { animation-delay: 0.7s; --dx:  6;  --dy: -28; }
+.xp-particle--3 { animation-delay: 1.3s; --dx: -3;  --dy: -32; }
+.xp-particle--4 { animation-delay: 1.9s; --dx:  9;  --dy: -19; }
+@keyframes xp-particle-drift {
+  0%   { transform: translate(0, 0);                                  opacity: 0;   }
+  15%  { opacity: 0.85; }
+  60%  { opacity: 0.55; }
+  100% { transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); opacity: 0; }
+}
 .xp-detail-axis {
   display: flex;
   justify-content: space-between;

@@ -9278,16 +9278,22 @@
     ).join(' ');
     const areaPath = linePath + ' L ' + W + ',' + H + ' L 0,' + H + ' Z';
 
-    const line = document.getElementById('xp-detail-line');
-    const area = document.getElementById('xp-detail-area');
-    const dot  = document.getElementById('xp-detail-dot');
-    const ping = document.getElementById('xp-detail-dot-ping');
-    if (line) line.setAttribute('d', linePath);
-    if (area) area.setAttribute('d', areaPath);
+    const line   = document.getElementById('xp-detail-line');
+    const area   = document.getElementById('xp-detail-area');
+    const sweep  = document.getElementById('xp-detail-sweep');
+    const dot    = document.getElementById('xp-detail-dot');
+    const ping   = document.getElementById('xp-detail-dot-ping');
+    const pgroup = document.getElementById('xp-detail-particles');
+    if (line)  line.setAttribute('d', linePath);
+    if (area)  area.setAttribute('d', areaPath);
+    if (sweep) sweep.setAttribute('d', linePath);  // tier-2 sweep traces the same line
     if (points.length) {
       const last = points[points.length - 1];
-      if (dot)  { dot.setAttribute('cx',  last[0].toFixed(2)); dot.setAttribute('cy',  last[1].toFixed(2)); }
-      if (ping) { ping.setAttribute('cx', last[0].toFixed(2)); ping.setAttribute('cy', last[1].toFixed(2)); }
+      if (dot)    { dot.setAttribute('cx',  last[0].toFixed(2)); dot.setAttribute('cy',  last[1].toFixed(2)); }
+      if (ping)   { ping.setAttribute('cx', last[0].toFixed(2)); ping.setAttribute('cy', last[1].toFixed(2)); }
+      // Tier-2 particles: move the group to the endpoint. Each particle
+      // animates its own translate vector from this origin via CSS.
+      if (pgroup) pgroup.setAttribute('transform', 'translate(' + last[0].toFixed(2) + ',' + last[1].toFixed(2) + ')');
     }
 
     // Tier-1 line draw-in animation. Compute the path's total length,
@@ -9308,6 +9314,21 @@
         line.getBoundingClientRect();
         line.style.transition = 'stroke-dashoffset 0.8s ease-out';
         line.style.strokeDashoffset = '0';
+
+        // Tier-2: scale the sweep animation distance to the actual path
+        // length. The keyframe references --sweep-len for the start
+        // offset (so the bright "head" begins just off the left edge,
+        // travels the full path, and exits past the right edge).
+        if (sweep) {
+          sweep.style.setProperty('--sweep-len', len + 'px');
+          // Restart the sweep animation on each open so it stays in
+          // sync with the draw-in. Quick CSS-animation reset trick:
+          // remove + re-set the animation property.
+          sweep.style.animation = 'none';
+          // eslint-disable-next-line no-unused-expressions
+          sweep.getBoundingClientRect();
+          sweep.style.animation = '';
+        }
       } catch (_) {}
     }
 
