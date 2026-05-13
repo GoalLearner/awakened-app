@@ -404,13 +404,13 @@
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
       <div class="lb-preview">
         <div class="lb-preview-header">
-          <div class="lb-preview-eyebrow">LEADERBOARD · COMING SOON</div>
+          <div class="lb-preview-eyebrow">LEADERBOARD · LIVE</div>
           <h2 class="lb-preview-title">YOUR VERIFIED STATS</h2>
-          <p class="lb-preview-sub">Tracked from your Apple Health data, starting now. When the leaderboard goes live, you arrive with history.</p>
+          <p class="lb-preview-sub">Tracked from your Apple Health data. Real-time rankings against every hunter on the leaderboard.</p>
         </div>
         <div id="lb-preview-empty" class="lb-preview-empty hidden"></div>
         <div id="lb-preview-list" class="lb-preview-list"></div>
-        <div class="lb-preview-footer">Compete with friends. Climb the ranks.<br>Only Apple Health-verifiable stats — the only stats that don't lie.</div>
+        <div class="lb-preview-footer">Only Apple Health-verifiable stats — the only stats that don't lie.</div>
       </div>
     </div>
 
@@ -629,14 +629,14 @@
   </div>
 
   <!-- Leaderboard ranking sheet — opened from a Social-tab stat card.
-       Rendered by openLeaderboardRanking(metric); top-10 mock entries
-       are blurred placeholders, the user's own row is real. The live
-       ranking layer ships later. -->
+       Rendered by openLeaderboardRanking(metric). v2.1 Phase C ships
+       the live ranking layer — real entries from /v1/leaderboard/top,
+       stale-while-revalidate cache, user-row highlight. -->
   <div id="lb-rank-overlay" class="vn-overlay hidden"></div>
   <div id="lb-rank-sheet"   class="vn-sheet   hidden">
     <div class="vn-drag-handle"></div>
     <div class="lb-rank-header">
-      <div class="lb-rank-eyebrow">GLOBAL · TOP 50 · COMING SOON</div>
+      <div class="lb-rank-eyebrow">GLOBAL LEADERBOARD</div>
       <h2 id="lb-rank-title" class="lb-rank-title">—</h2>
       <button id="lb-rank-close" class="vn-close-btn" aria-label="Close">✕</button>
     </div>
@@ -1243,7 +1243,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=277"></script>
+  <script src="app.js?v=278"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

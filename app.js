@@ -1947,11 +1947,13 @@
     };
   } catch (_) {}
 
-  // ── LEADERBOARD STATS (v2.0.2) ───────────────────────────────
-  // Foundation-only data accumulator. NOT surfaced in any UI yet —
-  // we are building historical depth NOW so that when the leaderboard
-  // tab ships in v2.x, returning users already have weeks/months of
-  // tracked metrics rather than starting fresh from launch day.
+  // ── LEADERBOARD STATS (v2.0.2 accumulator, v2.1 live) ────────
+  // Local accumulator for the three Apple-Health-verifiable metrics.
+  // v2.0.2 shipped the silent tracking layer; v2.1 Phase C (commit
+  // 7c5ada9) wired it to the live backend — values flow to
+  // /v1/leaderboard/submit on app open + visibility change, and
+  // ranking sheets fetch /v1/leaderboard/top with stale-while-
+  // revalidate caching.
   //
   // Three Apple-Health-verifiable metrics — chosen because they cannot
   // be self-reported / gamed, which is the only honest basis for a
@@ -10938,12 +10940,10 @@
   // #quests-panel. Each card opens the full-screen detail modal
   // (#boss-fs-overlay) on tap. Builders + open/close + setup live
   // below, in that order.
-  // ── LEADERBOARD PREVIEW (Social tab) — v2.0.2 ──────────────
-  // Surfaces the user's three Apple-Health-verified stats from the
-  // Leaderboard module. NOT a competitive leaderboard yet — that
-  // layer ships later. This view's purpose is to show the user that
-  // their data is being tracked NOW, so when the leaderboard goes
-  // live they see continuity instead of a fresh-start zero.
+  // ── LEADERBOARD (Social tab) — v2.1 Phase C live ──────────
+  // Surfaces the user's three Apple-Health-verified stats with
+  // live competitive rankings via /v1/leaderboard/top fetches.
+  // Tap any card → opens the Top-N ranking sheet for that metric.
   //
   // Three cards, fixed order (matches the metric definitions in the
   // Leaderboard module):
@@ -10974,10 +10974,12 @@
     if (!isAvailable) {
       // Web / non-iOS: show a soft note above the cards. Cards still
       // render below (with whatever zeros are in storage) for layout
-      // visibility.
+      // visibility. The leaderboard ranking itself is live for iOS
+      // users; this note clarifies that the data feeding it requires
+      // the iOS app + Apple Health.
       empty.classList.remove('hidden');
       empty.innerHTML =
-        '<div style="font-weight:700; color: var(--text-primary); margin-bottom:4px;">Preview only</div>' +
+        '<div style="font-weight:700; color: var(--text-primary); margin-bottom:4px;">iOS only</div>' +
         '<div style="font-size:0.82rem;">These stats populate from Apple Health on the iOS app. The cards below show your current values (zero on web).</div>';
     } else if (!isGranted) {
       // Native but no permission yet — actionable copy.
@@ -11012,20 +11014,21 @@
     const sleepIcon = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
     const moonIcon  = '<span class="lb-stat-icon-glyph" aria-hidden="true">🌙</span>';
 
-    // Card 1 — Steps · last 7 days
-    const stepsValue = fmt(snap.steps_last_7_days) + '<span class="lb-stat-value-unit">steps · 7 days</span>';
+    // Card 1 — Steps (rolling 7-day window today; phrased as
+    // generic "steps" to drop the misleading "7 days" framing).
+    const stepsValue = fmt(snap.steps_last_7_days) + '<span class="lb-stat-value-unit">steps</span>';
     const stepsMeta  = snap.best_7day_step_total > 0
       ? 'Best: <b>' + fmt(snap.best_7day_step_total) + '</b>'
-      : 'Best: — (build your first 7-day total)';
+      : 'Best: — (start walking to climb the leaderboard)';
 
     // Card 2 — 7+ hour sleep streak
     const sleepValue = snap.current_sleep_streak +
-      '<span class="lb-stat-value-unit">' + nightWord(snap.current_sleep_streak) + ' · 7+ hr sleep</span>';
+      '<span class="lb-stat-value-unit">sleep streak · 7+ hr</span>';
     const sleepMeta  = 'Best: <b>' + snap.best_sleep_streak + ' ' + nightWord(snap.best_sleep_streak) + '</b>';
 
     // Card 3 — Before-midnight bedtime streak
     const bedtimeValue = snap.current_bedtime_streak +
-      '<span class="lb-stat-value-unit">' + nightWord(snap.current_bedtime_streak) + ' · before midnight</span>';
+      '<span class="lb-stat-value-unit">bedtime streak · before midnight</span>';
     const bedtimeMeta  = 'Best: <b>' + snap.best_bedtime_streak + ' ' + nightWord(snap.best_bedtime_streak) + '</b>';
 
     list.innerHTML =
