@@ -1142,33 +1142,19 @@
 
   // Rank → unlocked-slot-count table. S/S+ do NOT add more slots
   // per the v3 spec; they may add prestige effects later.
-  function getUnlockedBuildSlots(rankId) {
-    switch (rankId) {
-      case 'E':  return 2;
-      case 'D':  return 3;
-      case 'C':  return 4;
-      case 'B':  return 5;
-      case 'A':  return 6;
-      case 'S':  return 6;
-      case 'S+': return 6;
-      default:   return 2;
-    }
+  // All ranks unlock the full 6-slot Hunter Build. (The earlier
+  // rank-gated unlock model — E:2 / D:3 / C:4 / B:5 / A:6 — was
+  // dropped so every player has access to the full build surface
+  // from day one. Discipline pressure stays on the drop-rate side
+  // of the economy; the Armory itself is fully open.)
+  function getUnlockedBuildSlots(/* rankId */) {
+    return HUNTER_BUILD_SLOT_COUNT;
   }
-  // Inverse — which rank is required to unlock the slot at this
-  // zero-based index. Slots 0 & 1 are always unlocked at E.
-  function getRequiredRankForBuildSlot(index) {
-    if (index <= 1) return 'E';
-    if (index === 2) return 'D';
-    if (index === 3) return 'C';
-    if (index === 4) return 'B';
-    if (index === 5) return 'A';
-    return 'A';
+  function getRequiredRankForBuildSlot(/* index */) {
+    return 'E';
   }
   function isBuildSlotUnlocked(index) {
-    const rank = (typeof totalPoints !== 'undefined' && typeof getRank === 'function')
-      ? getRank(totalPoints || 0) : null;
-    const unlockedCount = getUnlockedBuildSlots(rank ? rank.id : 'E');
-    return index < unlockedCount;
+    return index >= 0 && index < HUNTER_BUILD_SLOT_COUNT;
   }
 
   // Ensures the build object has exactly HUNTER_BUILD_SLOT_COUNT
