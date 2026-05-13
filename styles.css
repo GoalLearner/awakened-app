@@ -15954,6 +15954,98 @@ body.reveal-locked { overflow: hidden; }
   line-height: 1.6;
 }
 
+/* v3 Phase 1a — GEAR BONUS column in the BASE STATS table */
+.es-row {
+  grid-template-columns: 28px 44px 1fr auto 48px;
+}
+.es-bonus {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--gold-bright, var(--gold));
+  text-align: right;
+}
+.es-bonus--zero {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  opacity: 0.5;
+}
+
+/* v3 Phase 1a — EQUIP/UNEQUIP button in card detail modal.
+   Full-width, sits below the stack count. Two variants:
+   --primary (purple, equip CTA) and --unequip (destructive red). */
+.carddetail-equip-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 14px 16px 4px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.carddetail-equip-btn.hidden { display: none; }
+.carddetail-equip-btn:active { transform: scale(0.98); }
+.carddetail-equip-btn--primary {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.20), rgba(91, 33, 182, 0.14) 60%);
+  border-color: rgba(139, 92, 246, 0.65);
+  color: #ddd6fe;
+}
+.carddetail-equip-btn--primary:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(91, 33, 182, 0.24) 60%);
+  border-color: rgba(139, 92, 246, 0.90);
+}
+.carddetail-equip-btn--unequip {
+  background: rgba(220, 38, 38, 0.14);
+  border-color: rgba(220, 38, 38, 0.55);
+  color: #fecaca;
+}
+.carddetail-equip-btn--unequip:hover {
+  background: rgba(220, 38, 38, 0.24);
+  border-color: rgba(220, 38, 38, 0.80);
+}
+
+/* v3 Phase 1a — Pokédex tile "EQUIPPED" badge in the corner */
+.pokedex-card-equipped-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(139, 92, 246, 0.85);
+  color: #fff;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.50rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+  z-index: 2;
+  pointer-events: none;
+}
+.pokedex-card--equipped {
+  border-color: rgba(139, 92, 246, 0.85) !important;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35) !important;
+}
+
+/* v3 Phase 1a — equipped card overlay inside the armory panel slot.
+   Image sits inside the painted slot tablet so users see their gear
+   filling the slot visually. Pointer-events disabled — taps still
+   route through the .equipment-slot-hit button. */
+.equipment-slot-overlay {
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.50));
+}
+.equipment-slot-overlay--ultra_rare {
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.65));
+}
+
 /* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────
    Sits between the pokedex count + the rarity sections.
    Full-width, purple-tinted, sword icon + label + chevron. */

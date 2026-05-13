@@ -1018,6 +1018,112 @@
   // `first_uncommon_*` or new `first_common_*` keys, prefers new, and
   // persists in the new shape on next write. Old keys are not actively
   // deleted (forward-compat safety for any cross-device sync edge cases).
+  // ── EQUIPPED LOADOUT (v3 PvP Phase 1a) ─────────────────────
+  // hb_pvp_equipped: { helm, cape, amulet, weapon, body, legs,
+  //                    gloves, boots, ring } → card_id | null
+  // Reads/writes go through getEquipped/saveEquipped so future
+  // listeners (renderPokedex, populateEquipmentStats) refresh.
+  const EQUIPPED_STORAGE_KEY = 'hb_pvp_equipped';
+  const EQUIPMENT_SLOTS = ['helm','cape','amulet','weapon','body','legs','gloves','boots','ring'];
+  let _equipped = null;
+
+  function loadEquipped() {
+    try {
+      const raw = localStorage.getItem(EQUIPPED_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        _equipped = {};
+        EQUIPMENT_SLOTS.forEach(slot => {
+          _equipped[slot] = (parsed && typeof parsed[slot] === 'string') ? parsed[slot] : null;
+        });
+        return _equipped;
+      }
+    } catch (_) {}
+    _equipped = {};
+    EQUIPMENT_SLOTS.forEach(slot => { _equipped[slot] = null; });
+    return _equipped;
+  }
+  function saveEquipped() {
+    try { localStorage.setItem(EQUIPPED_STORAGE_KEY, JSON.stringify(_equipped)); } catch (_) {}
+  }
+  function getEquipped() {
+    if (!_equipped) loadEquipped();
+    return _equipped;
+  }
+  function getEquippedCardId(slot) {
+    return getEquipped()[slot] || null;
+  }
+  function isCardEquipped(cardId) {
+    if (!cardId) return false;
+    const eq = getEquipped();
+    for (const slot of EQUIPMENT_SLOTS) {
+      if (eq[slot] === cardId) return true;
+    }
+    return false;
+  }
+
+  // Equips a card to its slot. If another card is already in that
+  // slot, it gets swapped out (returned by the caller). Returns
+  // { ok, prevCardId } so the caller can compose a toast.
+  function equipCard(cardId) {
+    const card = CARDS[cardId];
+    if (!card || !card.slot) return { ok: false };
+    const eq = getEquipped();
+    const prev = eq[card.slot];
+    eq[card.slot] = cardId;
+    saveEquipped();
+    return { ok: true, prevCardId: prev || null };
+  }
+  function unequipSlot(slot) {
+    const eq = getEquipped();
+    const prev = eq[slot];
+    eq[slot] = null;
+    saveEquipped();
+    return { ok: true, prevCardId: prev || null };
+  }
+  function unequipCard(cardId) {
+    // Find which slot holds this card, if any, and clear it.
+    const card = CARDS[cardId];
+    if (!card) return { ok: false };
+    return unequipSlot(card.slot);
+  }
+
+  // Aggregates the stat bonuses across all currently-equipped cards.
+  // v3 Phase 1a: raw sum, no class affinity multipliers yet. Phase 1b
+  // will multiply each card's bonuses by 1.5× (class-matched), 1.15×
+  // (Sage on all gear), or 0× (Civilian) before summing.
+  // Returns { str, vit, int, focus, will, wlt } — always 6 keys, zeros
+  // when nothing equipped.
+  function aggregateEquippedBonuses() {
+    const sum = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    const eq = getEquipped();
+    EQUIPMENT_SLOTS.forEach(slot => {
+      const cardId = eq[slot];
+      if (!cardId) return;
+      const card = CARDS[cardId];
+      if (!card || !card.bonuses) return;
+      Object.keys(sum).forEach(k => { sum[k] += (card.bonuses[k] || 0); });
+    });
+    return sum;
+  }
+  function countEquippedSlots() {
+    const eq = getEquipped();
+    let n = 0;
+    EQUIPMENT_SLOTS.forEach(slot => { if (eq[slot]) n += 1; });
+    return n;
+  }
+
+  try {
+    window.Equipped = {
+      get:     getEquipped,
+      slots:   EQUIPMENT_SLOTS,
+      equip:   equipCard,
+      unequip: unequipSlot,
+      isEquipped: isCardEquipped,
+      bonuses: aggregateEquippedBonuses,
+    };
+  } catch (_) {}
+
   const INVENTORY_STORAGE_KEY = 'hb_inventory';
   let _inventory = null;
 
@@ -1413,11 +1519,17 @@
           const artImg = c.art_path
             ? '<img class="pokedex-card-art-img" src="' + esc(c.art_path) + '" alt="" data-card-art="1">'
             : '';
+          // v3 Phase 1a — equipped badge corner overlay
+          const isEq = isCardEquipped(c.id);
+          const equippedBadge = isEq
+            ? '<span class="pokedex-card-equipped-badge" aria-label="Equipped">⚔ EQUIPPED</span>'
+            : '';
           return (
-            '<button class="pokedex-card pokedex-card--' + c.rarity + '" type="button" data-card-id="' + esc(c.id) + '">' +
+            '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + '" type="button" data-card-id="' + esc(c.id) + '">' +
               '<div class="pokedex-card-art">' +
                 '<span class="pokedex-card-slot-icon">' + slotIcon + '</span>' +
                 artImg +
+                equippedBadge +
               '</div>' +
               '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
             '</button>'
@@ -1577,8 +1689,37 @@
       : '';
     const stackEl = document.getElementById('carddetail-stack');
     if (stackEl) stackEl.textContent = (entry.count > 1 ? 'You have ' + entry.count : '');
+
+    // v3 PvP Phase 1a — Equip/Unequip button. Shows only when this
+    // card has a slot field (all 15 launch cards qualify). Two
+    // states: EQUIP TO <SLOT> (purple) when not equipped, UNEQUIP
+    // (destructive red) when occupying its slot. Click dispatches
+    // to equipCard/unequipSlot, toasts the result, re-renders the
+    // modal + Pokédex grid so badges refresh.
+    const equipBtn = document.getElementById('carddetail-equip-btn');
+    if (equipBtn && card.slot) {
+      equipBtn.classList.remove('hidden');
+      _carddetailCurrentCardId = card.id; // stash for the click handler
+      const equippedNow = isCardEquipped(card.id);
+      if (equippedNow) {
+        equipBtn.textContent = 'UNEQUIP';
+        equipBtn.classList.remove('carddetail-equip-btn--primary');
+        equipBtn.classList.add('carddetail-equip-btn--unequip');
+      } else {
+        equipBtn.textContent = 'EQUIP TO ' + card.slot.toUpperCase();
+        equipBtn.classList.add('carddetail-equip-btn--primary');
+        equipBtn.classList.remove('carddetail-equip-btn--unequip');
+      }
+    } else if (equipBtn) {
+      equipBtn.classList.add('hidden');
+    }
+
     overlay.classList.remove('hidden');
   }
+  // Stashed by openCardDetailModal so the single static click handler
+  // wired in setupCardDetailModal() knows which card the modal is
+  // currently showing. Set every open; cleared on close.
+  let _carddetailCurrentCardId = null;
   function closeCardDetailModal() {
     const overlay = document.getElementById('carddetail-overlay');
     if (overlay) overlay.classList.add('hidden');
@@ -1595,6 +1736,47 @@
       const overlay = document.getElementById('carddetail-overlay');
       if (overlay && !overlay.classList.contains('hidden')) closeCardDetailModal();
     });
+
+    // v3 Phase 1a — EQUIP/UNEQUIP click handler. Single static
+    // binding (versus per-open) so re-renders don't stack listeners.
+    // Reads _carddetailCurrentCardId stashed by openCardDetailModal.
+    const equipBtn = document.getElementById('carddetail-equip-btn');
+    if (equipBtn) {
+      equipBtn.addEventListener('click', () => {
+        const cardId = _carddetailCurrentCardId;
+        if (!cardId) return;
+        const card = CARDS[cardId];
+        if (!card) return;
+        const wasEquipped = isCardEquipped(cardId);
+        if (wasEquipped) {
+          unequipCard(cardId);
+          try { showHabitToast(card.name + ' unequipped.'); } catch (_) {}
+        } else {
+          const res = equipCard(cardId);
+          if (res.prevCardId && CARDS[res.prevCardId]) {
+            try { showHabitToast(card.name + ' equipped — replaced ' + CARDS[res.prevCardId].name + '.'); } catch (_) {}
+          } else {
+            try { showHabitToast(card.name + ' equipped to ' + card.slot + '.'); } catch (_) {}
+          }
+        }
+        // Re-render the modal in place so the button state updates.
+        const inv = getInventory();
+        openCardDetailModal(card, inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null });
+        // Re-render the Pokédex grid + the armory if it's open so
+        // badges + slot overlays + GEAR BONUSES refresh.
+        try { if (currentTab === 'items') renderPokedex(); } catch (_) {}
+        try { refreshEquipmentModalIfOpen(); } catch (_) {}
+      });
+    }
+  }
+
+  // Re-renders the armory modal's slot overlays + stats block when
+  // the equip state changes. No-op if the modal isn't open.
+  function refreshEquipmentModalIfOpen() {
+    const modal = document.getElementById('equipment-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
+    renderEquippedSlotOverlays();
+    populateEquipmentStats();
   }
   // Friendly date formatter for the card detail "first found" line.
   function formatAcquiredDate(iso) {
@@ -9595,8 +9777,47 @@
     const modal   = document.getElementById('equipment-modal');
     if (!overlay || !modal) return;
     populateEquipmentStats();
+    renderEquippedSlotOverlays();
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
+  }
+
+  // v3 Phase 1a — for each equipped slot, render a small <img>
+  // overlay positioned over the painted slot tablet showing the
+  // equipped card's art. Idempotent — wipes existing overlays
+  // each call so swaps + unequips refresh cleanly.
+  function renderEquippedSlotOverlays() {
+    const wrap = document.querySelector('.equipment-panel-wrap');
+    if (!wrap) return;
+    // Remove prior overlays
+    wrap.querySelectorAll('.equipment-slot-overlay').forEach(n => n.remove());
+    const eq = getEquipped();
+    EQUIPMENT_SLOTS.forEach(slot => {
+      const cardId = eq[slot];
+      if (!cardId) return;
+      const card = CARDS[cardId];
+      if (!card) return;
+      const hit = wrap.querySelector('.equipment-slot-hit[data-slot="' + slot + '"]');
+      if (!hit) return;
+      const overlay = document.createElement('img');
+      overlay.className = 'equipment-slot-overlay equipment-slot-overlay--' + card.rarity;
+      overlay.alt = card.name + ' equipped';
+      overlay.draggable = false;
+      overlay.style.cssText = hit.style.cssText; // copy top/left/width/height absolute positioning
+      // Match hit-target geometry exactly so overlay sits inside the
+      // painted slot tablet alongside (just behind) the tap target.
+      overlay.style.position = 'absolute';
+      overlay.style.top    = hit.style.top    || getComputedStyle(hit).top;
+      overlay.style.left   = hit.style.left   || getComputedStyle(hit).left;
+      overlay.style.width  = getComputedStyle(hit).width;
+      overlay.style.height = getComputedStyle(hit).height;
+      overlay.style.pointerEvents = 'none';
+      overlay.style.objectFit = 'contain';
+      overlay.style.padding = '8%';
+      if (card.art_path) overlay.src = card.art_path;
+      // Insert before the hit target so taps still register
+      wrap.insertBefore(overlay, hit);
+    });
   }
 
   // Renders the v2.1 stat aggregation block: BASE STATS (6 rows
@@ -9609,17 +9830,27 @@
     const powerEl  = document.getElementById('equipment-combat-power');
     if (!baseEl || !powerEl) return;
 
-    // ── BASE STATS table ───────────────────────────────────
+    // ── BASE STATS table — now with GEAR BONUS column ──────
+    // v3 Phase 1a: 5-column row showing icon, ID, level, base XP,
+    // and the +X gear bonus contribution if any gear is equipped.
+    // Gear-bonus column hides when zero so the table stays tight.
+    const bonuses = aggregateEquippedBonuses();
     const rows = STATS.map(st => {
       const pts   = (stats[st.id] && stats[st.id].pts) || 0;
       const lv    = statLevel(pts);
       const isMax = lv >= 20;
+      const key   = st.id.toLowerCase();
+      const bonus = bonuses[key] || 0;
+      const bonusHTML = bonus > 0
+        ? '<span class="es-bonus">+' + bonus + '</span>'
+        : '<span class="es-bonus es-bonus--zero">+0</span>';
       return (
         '<div class="es-row" style="--es-color:' + st.color + '">' +
           '<span class="es-icon">' + statIconHtml(st, { size: 22 }) + '</span>' +
           '<span class="es-id">' + st.id + '</span>' +
           '<span class="es-lv">' + (isMax ? 'MAX' : 'Lv ' + lv) + '</span>' +
           '<span class="es-pts">' + pts + ' XP</span>' +
+          bonusHTML +
         '</div>'
       );
     }).join('');
@@ -9645,10 +9876,11 @@
       affinityLine = 'CIVILIAN — class affinity unlocks at Lv5 in any stat';
     }
 
+    const equippedCount = countEquippedSlots();
     powerEl.innerHTML =
       '<div class="ec-row">' +
         '<span class="ec-label">EQUIPPED</span>' +
-        '<span class="ec-val">0 / 9</span>' +
+        '<span class="ec-val">' + equippedCount + ' / 9</span>' +
       '</div>' +
       '<div class="ec-row ec-row--wrap">' +
         '<span class="ec-label">AFFINITY</span>' +
@@ -9658,8 +9890,10 @@
         '<span class="ec-label">BASE HP</span>' +
         '<span class="ec-val">' + baseHP + '</span>' +
       '</div>' +
-      '<p class="ec-hint">Equip gear from boss kills to amplify these stats. ' +
-        'Class-aligned bonuses multiply when you Awaken.</p>';
+      '<p class="ec-hint">' + (equippedCount === 0
+        ? 'Equip gear from boss kills to amplify these stats. Class-aligned bonuses multiply when you Awaken.'
+        : 'Class affinity multipliers land in v3 Phase 1b — gear bonuses currently sum raw.') +
+      '</p>';
   }
   function closeEquipmentPanel() {
     const overlay = document.getElementById('equipment-overlay');
@@ -9689,7 +9923,25 @@
         e.stopPropagation();
         const slot = btn.getAttribute('data-slot') || 'slot';
         const niceName = slot.charAt(0).toUpperCase() + slot.slice(1);
-        try { showHabitToast(niceName + ' slot — equip system arrives in v3.'); } catch (_) {}
+        // v3 Phase 1a: if a card is equipped to this slot, open the
+        // card detail modal (which has the UNEQUIP button). Otherwise
+        // surface the path-to-equip hint via toast — the actual
+        // equip flow comes from the Pokédex tile tap (open card
+        // detail → EQUIP). Phase 1b will add an inline slot picker
+        // so users can equip directly from this slot tap.
+        const cardId = getEquippedCardId(slot);
+        if (cardId && CARDS[cardId]) {
+          closeEquipmentPanel();
+          // Tiny delay so the closing modal transition completes
+          // before the card detail modal opens on top.
+          setTimeout(() => {
+            const inv = getInventory();
+            const entry = inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null };
+            openCardDetailModal(CARDS[cardId], entry);
+          }, 50);
+        } else {
+          try { showHabitToast(niceName + ' slot empty — find a ' + niceName.toLowerCase() + ' card in your Pokédex and tap EQUIP.'); } catch (_) {}
+        }
       });
     });
 

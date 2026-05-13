@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=223">
+  <link rel="stylesheet" href="styles.css?v=224">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1473,7 +1473,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=297"></script>
+  <script src="app.js?v=298"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2027,6 +2027,13 @@
       <div id="carddetail-stats" class="carddetail-stats"></div>
       <div id="carddetail-acquired" class="carddetail-acquired"></div>
       <div id="carddetail-stack" class="carddetail-stack"></div>
+      <!-- v3 PvP Phase 1a — Equip / Unequip control. Renders only
+           when the card carries a valid `slot` field (all 15 launch
+           cards do). State + label set by openCardDetailModal: when
+           the card occupies its slot in hb_pvp_equipped, button reads
+           'UNEQUIP' with destructive styling; otherwise 'EQUIP TO
+           <SLOT>' with primary purple. -->
+      <button id="carddetail-equip-btn" class="carddetail-equip-btn hidden" type="button">EQUIP</button>
     </div>
   </div>
 
