@@ -6,6 +6,7 @@
 
 ## Version history
 
+- **v1.6 (May 12, 2026)** — Drop rate rebalance. **Daily:** common 20% → **50%**, rare 8.3% → **15%**, ultra-rare unchanged at **5%**. **Weekly:** common 40% → **70%**, rare 25% → **40%**, ultra-rare unchanged at **25%**. Combined any-drop probability per kill rises from ~30% → **~59% daily** and ~66% → **~88% weekly**. Design intent: commons are entry-tier gear; reliable drops should feel earned, not lottery. Weekly cadence (Carouser) gets the bigger relative boost to compensate for ~3.5× fewer kill attempts per month vs daily-cadence bosses. Ultra-rares kept stable — endgame scarcity preserved. **First-common protection mechanic changed** from flat replacement rate (which would have HURT new players under the higher weekly baseline of 70%) to a **multiplier (×1.33, capped at 0.95)**. Protection now always boosts the baseline regardless of cadence.
 - **v1.5 (May 12, 2026)** — Content patch: 6 new commons (2 per existing boss) fill previously-empty slots. Each boss's common pool now contains **3 cards** (was 1). Drop rates UNCHANGED — common roll still hits at 20% daily / 40% weekly. On a common-roll hit, engine uniformly picks one of the 3 cards in that boss's common pool (1/3 each within the common roll). Rare and ultra-rare pools remain single-entry per boss. Pool-array shape is future-proof for when those tiers also expand.
 - **v1.4 (May 11, 2026)** — Cadence-aware drop rates. Weekly bosses get
   multiplier-bumped rates (5× ultra-rare, 3× rare, 2× common) over the
@@ -158,46 +159,47 @@ tables so per-month pull expectations stay comparable.
 
 | Tier | Rate | Drop content |
 |---|---|---|
-| Ultra-rare | 1/20 (5%) | Trophy card, ultra-rare animated border |
-| Rare | 1/12 (~8.3%) | Cosmetic card, rare-tier border + glow |
-| Common | 1/5 (20%) | Cosmetic card, common-tier border |
-| (No card) | ~69.7% of kills | Souls only, no card pulled |
+| Ultra-rare | 5% (0.05) | Trophy card, ultra-rare animated border |
+| Rare | 15% (0.15) | Cosmetic card, rare-tier border + glow |
+| Common | 50% (0.50) | Cosmetic card, common-tier border |
+| (No card) | ~40.4% of kills | Souls only, no card pulled |
 
-Combined any-drop probability per kill: `1 − (19/20)(11/12)(4/5)
-= ~30.3%`. Per-tier expected hit rates (conditional on prior
-tiers missing):
-- ~5% ultra-rare
-- ~7.9% rare
-- ~17.4% common
-- ~69.7% no drop
+Combined any-drop probability per kill: `1 − (1−0.05)(1−0.15)(1−0.50)
+= 1 − 0.95 × 0.85 × 0.50 = ~59.6%`. Per-tier expected hit rates
+(conditional on prior tiers missing):
+- 5.0% ultra-rare
+- 14.25% rare
+- 40.375% common
+- ~40.4% no drop
 
-**First-common protection (daily):** common rate is 2/3
-(~66.7%) instead of 1/5 until first common drop, then snaps
-to standard rate.
+**First-common protection (daily):** common rate is boosted by the
+multiplier `protectedCommonRate(baseline) = min(0.95, baseline × 1.33)`
+until first common drop. Daily baseline 0.50 × 1.33 = **~66.5%**.
+Snaps to standard rate after first common from any boss.
 
 ### Weekly-cadence bosses (Carouser)
 
-Multipliers vs daily: **5× ultra-rare, 3× rare, 2× common**.
-Compensates for the ~3.5× lower kill volume from a once-per-
-week cadence so engaged players hit similar lifetime drop
-counts as their daily-boss progress.
+Higher baselines than daily across all three tiers — compensates
+for the ~3.5× lower kill volume from a once-per-week cadence so
+engaged players hit similar lifetime drop counts as their daily-
+boss progress.
 
 | Tier | Rate | Drop content |
 |---|---|---|
-| Ultra-rare | 5/20 (25%) | Trophy card |
-| Rare | 3/12 (25%) | Cosmetic card |
-| Common | 2/5 (40%) | Cosmetic card |
-| (No card) | ~33.75% of kills | Souls only |
+| Ultra-rare | 25% (0.25) | Trophy card |
+| Rare | 40% (0.40) | Cosmetic card |
+| Common | 70% (0.70) | Cosmetic card |
+| (No card) | ~13.5% of kills | Souls only |
 
-Combined any-drop probability per kill: `1 − (15/20)(9/12)(3/5)
-= ~66.25%`. Roughly 2× the daily combined rate, balancing the
-~3.5× kill-frequency deficit.
+Combined any-drop probability per kill: `1 − (1−0.25)(1−0.40)(1−0.70)
+= 1 − 0.75 × 0.60 × 0.30 = ~86.5%`. Roughly 1.45× the daily combined
+rate, balancing the ~3.5× kill-frequency deficit.
 
-**First-common protection (weekly):** common rate is 0.6
-(60%) until first common drop. Slightly below the 2/3 daily
-boost because weekly's base common rate (40%) is already much
-higher than daily's (20%) — the protection boost only needs
-to lift onboarding-tier reliability, not redo the heavy lift.
+**First-common protection (weekly):** weekly baseline 0.70 × 1.33 =
+0.931, clamped to **0.95** by `COMMON_PROTECTION_CAP`. Same
+multiplier mechanic as daily; the cap keeps the boosted rate from
+crowding out the rare/ultra-rare rolls in the mutually-exclusive
+roll order.
 
 ### Cadence design rationale
 

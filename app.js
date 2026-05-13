@@ -792,23 +792,33 @@
   // 3× rare, 2× common) over the daily baseline. Roll order stays
   // mutually-exclusive: ultra-rare → rare → common.
   //
-  // First-common protection (2/3 boost on daily, 0.6 on weekly) ends
-  // GLOBALLY after the first common from ANY boss — protection is a
-  // single-flag onboarding mechanic, not per-boss.
+  // First-common protection (DROPS.md v1.6): MULTIPLIER form, not a
+  // flat ceiling. Pre-v1.6 was a flat replacement rate — fine when
+  // baseline commons were 20%/40%, broke when baselines climbed past
+  // the protection ceiling (weekly 70% > old 60% ceiling would have
+  // HURT new players). Multiplier form always helps: `commonRate =
+  // baseline × COMMON_PROTECTION_MULTIPLIER`, capped at 0.95 so the
+  // boosted rate never crowds out the rare/ultra-rare roll order.
+  // Protection ends GLOBALLY after the first common from ANY boss.
+  const COMMON_PROTECTION_MULTIPLIER = 1.33;
+  const COMMON_PROTECTION_CAP        = 0.95;
   const DROP_RATES_BY_CADENCE = {
     daily: {
-      ultra_rare:       1 / 20,   // 5%
-      rare:             1 / 12,   // ~8.3%
-      common:           1 / 5,    // 20%
-      common_protected: 2 / 3,    // ~66.7%
+      ultra_rare: 0.05,   // 5%
+      rare:       0.15,   // 15%
+      common:     0.50,   // 50%
     },
     weekly: {
-      ultra_rare:       5 / 20,   // 25%
-      rare:             3 / 12,   // 25%
-      common:           2 / 5,    // 40%
-      common_protected: 0.6,      // 60%
+      ultra_rare: 0.25,   // 25%
+      rare:       0.40,   // 40%
+      common:     0.70,   // 70%
     },
   };
+  // Resolve the protected common rate for the current baseline.
+  // Always returns ≥ baseline so protection never hurts.
+  function protectedCommonRate(baseline) {
+    return Math.min(COMMON_PROTECTION_CAP, baseline * COMMON_PROTECTION_MULTIPLIER);
+  }
   // Resolve the rate table for a boss. Falls back to daily if a boss
   // somehow lacks a cadence — defensive default since the kill-volume
   // assumption (daily ≈ frequent) is the safer error mode (over-tunes
@@ -1090,14 +1100,14 @@
       ? null
       : pool[Math.floor(Math.random() * pool.length)];
 
-    // Cadence-specific rates (DROPS.md v1.4). Weekly bosses get
-    // multiplier-bumped rates so per-month pull expectations are
-    // comparable across cadences. Common rate uses the protected
-    // variant for the same cadence until the first common drops.
+    // Cadence-specific rates (DROPS.md v1.6). Weekly bosses get
+    // higher baselines than daily so per-month pull expectations
+    // stay comparable across cadences. Common rate uses the
+    // multiplier-form protection until the first common drops.
     const rates = dropRatesFor(bossId);
     const commonRate = inv.first_common_pulled
       ? rates.common
-      : rates.common_protected;
+      : protectedCommonRate(rates.common);
 
     // Roll order. Each roll is independent; checks in order;
     // first hit wins. On hit, uniformly pick one card from that

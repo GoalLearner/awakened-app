@@ -13,6 +13,8 @@ Companion docs:
 - `BOSSES.md` — boss-system mechanics (drop-rate sections marked stale)
 - `BACKEND.md` v1.1 — v2.1 backend foundation (PvP extends this in Phase F+)
 
+> **v2.x economy note (May 12, 2026):** drop rates rebalanced to daily 50% common / 15% rare / 5% ultra and weekly 70% / 40% / 25% (`DROPS.md` v1.6). Stat-bonus magnitudes per card unchanged. PvP power-curve math in §4–6 remains accurate; players reach a "full loadout" faster than under pre-v1.6 rates, so v3.0 balance work should assume average users have most slots filled by the time they Awaken.
+
 ---
 
 ## 0. Status
