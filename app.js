@@ -10136,16 +10136,11 @@
     const empty   = document.getElementById('build-picker-empty');
     if (!overlay || !sheet || !grid) return;
 
-    // Update the slot-context line in the header (static markup
-    // shows the generic blurb; this overrides it with the slot #).
+    // Update the slot-context line in the header. (REPLACE was
+    // removed from the build-detail sheet — picker only opens for
+    // empty slots now, so the message is always "Choose a relic".)
     const sub = document.getElementById('build-picker-sub');
-    if (sub) {
-      const build = (typeof getHunterBuild === 'function') ? getHunterBuild() : null;
-      const occupied = build && build.slots && build.slots[slotIndex];
-      sub.textContent = occupied
-        ? 'Replacing Slot ' + (slotIndex + 1) + ' — tap a relic to swap.'
-        : 'Choose a relic for Slot ' + (slotIndex + 1) + '.';
-    }
+    if (sub) sub.textContent = 'Choose a relic for Slot ' + (slotIndex + 1) + '.';
 
     // Build the list of discovered cards. Sort by rarity then name.
     const inv = getInventory();
@@ -10339,23 +10334,18 @@
       });
     }
 
-    // Detail sheet wiring — UNEQUIP / REPLACE buttons
+    // Detail sheet wiring — UNEQUIP only (REPLACE dropped). The
+    // user can re-equip a different relic by tapping the (now
+    // empty) slot, which routes through openBuildPicker the same
+    // way as a first-time equip.
     const detailOverlay = document.getElementById('build-detail-overlay');
     const detailClose   = document.getElementById('build-detail-close');
     const detailSheet   = document.getElementById('build-detail-sheet');
-    const replaceBtn    = document.getElementById('build-detail-replace');
     const unequipBtn    = document.getElementById('build-detail-unequip');
     if (detailOverlay) detailOverlay.addEventListener('click', closeBuildItemDetail);
     if (detailClose)   detailClose.addEventListener('click', closeBuildItemDetail);
     if (detailSheet && typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(detailSheet, detailOverlay, closeBuildItemDetail, {});
-    }
-    if (replaceBtn) {
-      replaceBtn.addEventListener('click', () => {
-        const slotIndex = _buildDetailSlotIndex;
-        closeBuildItemDetail();
-        if (slotIndex >= 0) openBuildPicker(slotIndex);
-      });
     }
     if (unequipBtn) {
       unequipBtn.addEventListener('click', () => {

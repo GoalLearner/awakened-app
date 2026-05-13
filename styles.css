@@ -16516,19 +16516,40 @@ body.reveal-locked { overflow: hidden; }
   transition: transform 0.1s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 .build-detail-btn:active { transform: scale(0.98); }
-.build-detail-btn--primary {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(245, 158, 11, 0.82));
-  color: #fff;
-  border-color: rgba(245, 158, 11, 0.50);
-  box-shadow: 0 0 14px rgba(139, 92, 246, 0.30);
+/* Sole action button on the build-detail sheet (REPLACE was
+   dropped — user can re-equip by tapping the now-empty slot). */
+.build-detail-btn--unequip {
+  color: #e9e6f7;
+  background:
+    linear-gradient(180deg,
+      rgba(36, 36, 72, 0.95) 0%,
+      rgba(23, 23, 48, 0.98) 100%);
+  border-color: rgba(139, 92, 246, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 8px 18px rgba(0, 0, 0, 0.32);
+  min-height: 50px;
+  border-radius: 14px;
 }
-.build-detail-btn--primary:hover { box-shadow: 0 0 18px rgba(245, 158, 11, 0.45); }
-.build-detail-btn--danger {
-  background: rgba(40, 12, 12, 0.85);
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.55);
+.build-detail-btn--unequip:hover,
+.build-detail-btn--unequip:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 10px 22px rgba(0, 0, 0, 0.40),
+    0 0 16px rgba(139, 92, 246, 0.18);
+  outline: none;
 }
-.build-detail-btn--danger:hover { background: rgba(60, 18, 18, 0.92); }
+.build-detail-btn--unequip:active {
+  transform: translateY(0);
+  opacity: 0.95;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.36),
+    0 4px 10px rgba(0, 0, 0, 0.30);
+}
 
 
 /* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────

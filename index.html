@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=233">
+  <link rel="stylesheet" href="styles.css?v=234">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -883,8 +883,7 @@
     <p id="build-detail-flavor" class="build-detail-flavor">—</p>
     <div id="build-detail-stats" class="build-detail-stats"></div>
     <div class="build-detail-actions">
-      <button id="build-detail-replace" class="build-detail-btn build-detail-btn--primary" type="button">REPLACE</button>
-      <button id="build-detail-unequip" class="build-detail-btn build-detail-btn--danger" type="button">UNEQUIP</button>
+      <button id="build-detail-unequip" class="build-detail-btn build-detail-btn--unequip" type="button">UNEQUIP</button>
     </div>
   </div>
 
@@ -1485,7 +1484,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=307"></script>
+  <script src="app.js?v=308"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
