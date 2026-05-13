@@ -10136,6 +10136,17 @@
     const empty   = document.getElementById('build-picker-empty');
     if (!overlay || !sheet || !grid) return;
 
+    // Update the slot-context line in the header (static markup
+    // shows the generic blurb; this overrides it with the slot #).
+    const sub = document.getElementById('build-picker-sub');
+    if (sub) {
+      const build = (typeof getHunterBuild === 'function') ? getHunterBuild() : null;
+      const occupied = build && build.slots && build.slots[slotIndex];
+      sub.textContent = occupied
+        ? 'Replacing Slot ' + (slotIndex + 1) + ' — tap a relic to swap.'
+        : 'Choose a relic for Slot ' + (slotIndex + 1) + '.';
+    }
+
     // Build the list of discovered cards. Sort by rarity then name.
     const inv = getInventory();
     const discovered = Object.keys(CARDS)
@@ -10154,24 +10165,55 @@
       if (empty) empty.classList.remove('hidden');
     } else {
       if (empty) empty.classList.add('hidden');
+      // Map rarity → short class suffix + display badge label.
+      const RARITY_SHORT = { ultra_rare: 'u', rare: 'r', common: 'c' };
+      const RARITY_BADGE = { ultra_rare: 'ULTRA', rare: 'RARE', common: 'COMMON' };
       grid.innerHTML = discovered.map(c => {
         const equippedSlot = getBuildSlotIndexForCard(c.id);
         const equippedElsewhere = equippedSlot >= 0 && equippedSlot !== slotIndex;
         const equippedHere      = equippedSlot === slotIndex;
-        const rarityShort = c.rarity === 'ultra_rare' ? 'ultra' : c.rarity;
+        const rarityShort = RARITY_SHORT[c.rarity] || 'c';
+        const rarityLabel = RARITY_BADGE[c.rarity] || 'COMMON';
         const artImg = c.art_path
           ? '<img class="build-picker-tile-img" src="' + esc(c.art_path) + '" alt="" draggable="false" loading="lazy" decoding="async">'
           : '<div class="build-picker-tile-fallback">' + (SLOT_ICONS[c.slot] || '✦') + '</div>';
+
+        // Compact stat chips (max 2 shown). Filter zero entries; if a
+        // card has >2 stats we ellipsize the rest with a +N chip.
+        const bonusEntries = Object.keys(c.bonuses || {})
+          .filter(k => (c.bonuses[k] | 0) > 0)
+          .map(k => '+' + c.bonuses[k] + ' ' + k.toUpperCase());
+        const shownStats = bonusEntries.slice(0, 2);
+        const extraStats = bonusEntries.length - shownStats.length;
+        let statHtml = '';
+        if (shownStats.length) {
+          statHtml = '<div class="build-picker-tile-meta">' +
+            shownStats.map(s => '<span class="build-picker-tile-chip">' + esc(s) + '</span>').join('') +
+            (extraStats > 0 ? '<span class="build-picker-tile-chip build-picker-tile-chip--more">+' + extraStats + '</span>' : '') +
+            '</div>';
+        }
+
+        // Status badges — top-right corner. EQUIPPED HERE wins over
+        // ELSEWHERE wins over plain rarity tag (top-left). We render
+        // the rarity tag on the LEFT and the equipped tag on the
+        // RIGHT so they never overlap.
+        const equippedBadge =
+          equippedHere      ? '<div class="build-picker-tile-badge">EQUIPPED</div>' :
+          equippedElsewhere ? '<div class="build-picker-tile-badge build-picker-tile-badge--elsewhere">SLOT ' + (equippedSlot + 1) + '</div>' : '';
+
         return '<button class="build-picker-tile build-rarity--' + rarityShort +
                (equippedElsewhere ? ' build-picker-tile--equipped-elsewhere' : '') +
                (equippedHere      ? ' build-picker-tile--equipped-here'      : '') +
                '" type="button" data-card-id="' + esc(c.id) + '"' +
                (equippedElsewhere ? ' aria-label="Already equipped in slot ' + (equippedSlot + 1) + '"' : '') +
                '>' +
-                 artImg +
-                 (equippedHere      ? '<div class="build-picker-tile-badge">EQUIPPED</div>' :
-                  equippedElsewhere ? '<div class="build-picker-tile-badge build-picker-tile-badge--elsewhere">SLOT ' + (equippedSlot + 1) + '</div>' : '') +
+                 '<div class="build-picker-tile-art-wrap">' +
+                   artImg +
+                   '<div class="build-picker-tile-rarity build-picker-tile-rarity--' + rarityShort + '">' + rarityLabel + '</div>' +
+                   equippedBadge +
+                 '</div>' +
                  '<div class="build-picker-tile-name">' + esc(c.name) + '</div>' +
+                 statHtml +
                '</button>';
       }).join('');
     }
