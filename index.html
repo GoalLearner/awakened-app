@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=207">
+  <link rel="stylesheet" href="styles.css?v=208">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1243,7 +1243,7 @@
   </div>
 
   <script src="auth.js?v=6"></script>
-  <script src="app.js?v=274"></script>
+  <script src="app.js?v=275"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1678,6 +1678,31 @@
       <div class="settings-section-lbl">DATA</div>
       <button id="reset-open-btn" class="settings-reset-btn">🗑 Reset All Progress</button>
       <p class="settings-reset-warn">This will permanently delete all habits, streaks, points, stats, and achievements. This cannot be undone.</p>
+    </div>
+
+    <!-- LEGAL — collapsible (v2.1 Phase E). End-of-list per convention. -->
+    <div class="settings-collapsible">
+      <button id="settings-legal-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="legal">
+        <span class="settings-collapsible-lbl">LEGAL</span>
+        <span class="settings-collapsible-summary">Privacy</span>
+        <span class="settings-collapsible-chevron">›</span>
+      </button>
+      <div id="settings-legal-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+        <button id="settings-privacy-policy-link" type="button" class="settings-legal-row">
+          <span class="settings-legal-label">Privacy Policy</span>
+          <span class="settings-legal-chevron" aria-hidden="true">↗</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signing-out overlay (v2.1 Phase E). Brief loading state between
+       Sign-out tap and reload — smooths the otherwise-abrupt transition.
+       Reuses the modal-overlay pattern; dismissable only via the reload. -->
+  <div id="signing-out-overlay" class="signing-out-overlay hidden" role="status" aria-live="polite">
+    <div class="signing-out-modal">
+      <div class="signing-out-spinner" aria-hidden="true"></div>
+      <div class="signing-out-label">Signing out…</div>
     </div>
   </div>
 

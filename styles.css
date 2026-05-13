@@ -14682,3 +14682,75 @@ body.reveal-locked { overflow: hidden; }
   background: rgba(139, 92, 246, 0.28);
   border-color: rgba(139, 92, 246, 0.80);
 }
+
+/* v2.1 Phase E — Settings → LEGAL row (Privacy Policy) */
+.settings-legal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.settings-legal-row:hover {
+  background: var(--bg-card-active);
+  border-color: var(--border-accent);
+}
+.settings-legal-row:active { transform: scale(0.99); }
+.settings-legal-label { letter-spacing: 0.01em; }
+.settings-legal-chevron {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* v2.1 Phase E — Signing-out overlay. Brief loading state shown for
+   ~600ms between Sign-out tap and reload. Reuses delete-account
+   overlay aesthetic (centered dark panel, dim backdrop). */
+.signing-out-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.signing-out-overlay.hidden { display: none; }
+.signing-out-modal {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-accent);
+  border-radius: 14px;
+  padding: 22px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 180px;
+}
+.signing-out-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid rgba(139, 92, 246, 0.25);
+  border-top-color: var(--accent);
+  animation: signing-out-spin 0.9s linear infinite;
+}
+@keyframes signing-out-spin {
+  to { transform: rotate(360deg); }
+}
+.signing-out-label {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}

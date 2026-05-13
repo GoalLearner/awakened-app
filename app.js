@@ -184,6 +184,11 @@
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
 
+  // v2.1 Phase E — single point of update when Richie publishes a new
+  // privacy policy URL. All references in code must go through the
+  // constant so swapping the URL is a one-line change.
+  const AWAKENED_PRIVACY_POLICY_URL = 'https://heartfelt-froyo-54ffa1.netlify.app/';
+
   // ── HealthKit auto-verification thresholds ───────────────
   // v1.1.5: Daily walk auto-verifies via Apple Health when steps
   // reach the user's chosen goal. Default 3,000 ≈ 30 min of
@@ -13856,8 +13861,31 @@
     setupHealthSettings();
     // ── Settings → Account panel wiring (v2.1 Phase A scaffold) ──
     setupAccountSettings();
-    // ── Generic collapsible setup (Appearance / Reminders / Health / Account / Coming) ──
+    // ── Settings → Legal panel wiring (v2.1 Phase E) ─────────
+    setupLegalSettings();
+    // ── Generic collapsible setup (Appearance / Reminders / Health / Account / Coming / Legal) ──
     setupCollapsibleSettings();
+  }
+
+  // v2.1 Phase E — wires the Settings → LEGAL → Privacy Policy row.
+  // Opens the policy in the iOS in-app browser. If Capacitor's Browser
+  // plugin is installed we use it; otherwise window.open falls back to
+  // Safari on iOS and a new tab on web. We deliberately do NOT install
+  // a new Capacitor plugin for this — the fallback is good enough.
+  function setupLegalSettings() {
+    const link = document.getElementById('settings-privacy-policy-link');
+    if (!link) return;
+    link.addEventListener('click', () => {
+      try {
+        const cap = window.Capacitor;
+        const browserPlugin = cap && cap.Plugins && cap.Plugins.Browser;
+        if (browserPlugin && typeof browserPlugin.open === 'function') {
+          browserPlugin.open({ url: AWAKENED_PRIVACY_POLICY_URL });
+          return;
+        }
+      } catch (_) {}
+      try { window.open(AWAKENED_PRIVACY_POLICY_URL, '_blank'); } catch (_) {}
+    });
   }
 
   // Settings → Account section. v2.1.0 Phase E (partial):
@@ -13892,8 +13920,16 @@
     if (signoutBtn) {
       signoutBtn.addEventListener('click', () => {
         if (typeof window.Auth === 'undefined') return;
-        window.Auth.clearUser();
-        window.location.reload();
+        // v2.1 Phase E — show a brief overlay before clearing state so
+        // the user's brain registers the transition. The reload itself
+        // dismisses the overlay; no Cancel path (user committed by
+        // tapping Sign out).
+        const overlay = document.getElementById('signing-out-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+        setTimeout(() => {
+          try { window.Auth.clearUser(); } catch (_) {}
+          window.location.reload();
+        }, 600);
       });
     }
     if (deleteBtn) {
