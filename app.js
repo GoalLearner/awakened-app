@@ -8700,9 +8700,18 @@
   }
 
   function setupRankPopup() {
-    document.querySelector('.rank-track').addEventListener('click', showRankInfoPopup);
-    document.getElementById('rank-popup-close').addEventListener('click', closeRankPopup);
-    document.getElementById('rank-popup-overlay').addEventListener('click', closeRankPopup);
+    // v2.1.0 redesign: the v1.x .rank-track element was replaced by
+    // the rank metric card (.metric-card--rank). Bind the popup-open
+    // handler to the new card. Fall back to .rank-track for legacy
+    // markup safety. All bindings tolerate null so init() never
+    // breaks if any element is missing.
+    const rankCard = document.querySelector('.metric-card--rank') ||
+                     document.querySelector('.rank-track');
+    if (rankCard) rankCard.addEventListener('click', showRankInfoPopup);
+    const closeBtn = document.getElementById('rank-popup-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeRankPopup);
+    const overlay = document.getElementById('rank-popup-overlay');
+    if (overlay) overlay.addEventListener('click', closeRankPopup);
   }
 
   // ── FEATURE 5: PERFECT DAY CELEBRATION ───────────────────
