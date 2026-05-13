@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=230">
+  <link rel="stylesheet" href="styles.css?v=231">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -821,59 +821,71 @@
     </div>
   </div>
 
-  <!-- Equipment Panel modal (v2.1 — prep for v3 PvP Phase 1).
-       Centered full-screen overlay showing the 9-slot armory panel.
-       Opens from two entry points:
-         (1) Tap the avatar silhouette on the Status tab
-         (2) "VIEW YOUR ARMORY" button at the top of the Items tab
-       v2.1 ships the visual layer only — the panel image renders +
-       tap targets are wired with a "Coming in v3" toast on each slot.
-       v3 PvP Phase 1 (per PVP.md §20) replaces those stubs with
-       real equip/unequip handlers + the hb_pvp_equipped persistence
-       layer + stat-aggregation with class affinity. -->
+  <!-- v3 Phase 1d — Hunter Build modal (replaces the v3 Phase 1a-c
+       9-slot equipment panel). MOBA-style 6-slot active build:
+       2 slots unlocked at E rank, +1 per rank up through A.
+       Square item tiles embrace the existing card art instead of
+       fighting it. Two entry points:
+         (1) Tap avatar silhouette on Status tab
+         (2) "VIEW YOUR ARMORY" button on Items tab -->
   <div id="equipment-overlay" class="equipment-overlay hidden"></div>
   <div id="equipment-modal" class="equipment-modal hidden" role="dialog" aria-labelledby="equipment-modal-title">
     <button id="equipment-close" class="equipment-close" type="button" aria-label="Close">✕</button>
     <div class="equipment-modal-header">
       <h2 id="equipment-modal-title" class="equipment-modal-title">ARMORY</h2>
-      <p class="equipment-modal-sub">Your 9-slot equipment. Drops fill the slots in v3.</p>
-    </div>
-    <div class="equipment-panel-wrap">
-      <img class="equipment-panel-img" src="assets/equipment/panel-base.png"
-           alt="Equipment panel showing nine slots: helm, cape, amulet, weapon, body, legs, gloves, boots, ring."
-           draggable="false" loading="lazy" decoding="async">
-      <!-- Invisible tap targets layered over each slot for v3 wiring.
-           Each carries data-slot so the future stat-aggregation +
-           equip flow knows which slot was tapped. v2.1 stub: tap
-           shows a "Equipment slots arrive in v3" toast. -->
-      <button class="equipment-slot-hit" data-slot="helm"   aria-label="Helm slot"></button>
-      <button class="equipment-slot-hit" data-slot="cape"   aria-label="Cape slot"></button>
-      <button class="equipment-slot-hit" data-slot="amulet" aria-label="Amulet slot"></button>
-      <button class="equipment-slot-hit" data-slot="weapon" aria-label="Weapon slot"></button>
-      <button class="equipment-slot-hit" data-slot="body"   aria-label="Body slot"></button>
-      <button class="equipment-slot-hit" data-slot="legs"   aria-label="Legs slot"></button>
-      <button class="equipment-slot-hit" data-slot="gloves" aria-label="Gloves slot"></button>
-      <button class="equipment-slot-hit" data-slot="boots"  aria-label="Boots slot"></button>
-      <button class="equipment-slot-hit" data-slot="ring"   aria-label="Ring slot"></button>
+      <p class="equipment-modal-sub">Equip relics. Shape your hunter build.</p>
     </div>
 
-    <!-- v2.1 — Stat aggregation block below the panel.
-         Two sections: BASE STATS (live from hb_stats) + COMBAT
-         POWER (equip count + class affinity + HP preview). v3 PvP
-         Phase 1 will add a GEAR BONUSES column to the BASE STATS
-         table once the equip system writes hb_pvp_equipped. -->
-    <div class="equipment-stats-wrap">
-      <section class="equipment-stats-section">
-        <h3 class="equipment-stats-label">BASE STATS · FROM HABITS</h3>
-        <div id="equipment-base-stats" class="equipment-stats-grid"></div>
-      </section>
-      <section class="equipment-stats-section">
-        <h3 class="equipment-stats-label">COMBAT POWER</h3>
-        <div id="equipment-combat-power" class="equipment-combat-power"></div>
-      </section>
-    </div>
+    <!-- HUNTER BUILD — 6-slot 3×2 grid. Populated by renderHunterBuild() -->
+    <section class="hunter-build-section">
+      <h3 class="hunter-build-section-label">HUNTER BUILD</h3>
+      <div id="hunter-build-grid" class="hunter-build-grid"></div>
+    </section>
 
-    <p class="equipment-modal-footer">Equipment system unlocks in v3 — gear from boss drops will slot in here.</p>
+    <!-- BUILD SUMMARY — power, dominant path, equipped count -->
+    <section class="hunter-build-section hunter-build-section--summary">
+      <h3 class="hunter-build-section-label">BUILD SUMMARY</h3>
+      <div id="hunter-build-summary" class="hunter-build-summary"></div>
+    </section>
+
+    <p class="equipment-modal-footer">Your build reflects the discipline you have earned.</p>
+  </div>
+
+  <!-- v3 Phase 1d — Item picker modal. Opens when user taps an
+       empty unlocked build slot. Shows discovered items as a grid.
+       Tap an item to equip it into the slot the picker was opened
+       for. Items already equipped in OTHER slots are dimmed +
+       labeled. -->
+  <div id="build-picker-overlay" class="build-picker-overlay hidden"></div>
+  <div id="build-picker-sheet" class="build-picker-sheet hidden" role="dialog" aria-labelledby="build-picker-title">
+    <div class="vn-drag-handle"></div>
+    <div class="build-picker-header">
+      <h2 id="build-picker-title" class="build-picker-title">SELECT RELIC</h2>
+      <button id="build-picker-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <p id="build-picker-sub" class="build-picker-sub">Tap a discovered relic to equip into your build.</p>
+    <div id="build-picker-grid" class="build-picker-grid"></div>
+    <p id="build-picker-empty" class="build-picker-empty hidden">No relics discovered yet. Defeat bosses to drop your first relic.</p>
+  </div>
+
+  <!-- Build slot detail sheet — opens when user taps an EQUIPPED
+       slot. Shows the equipped item's art + name + rarity, with
+       UNEQUIP and REPLACE buttons. -->
+  <div id="build-detail-overlay" class="build-detail-overlay hidden"></div>
+  <div id="build-detail-sheet" class="build-detail-sheet hidden" role="dialog" aria-labelledby="build-detail-name">
+    <div class="vn-drag-handle"></div>
+    <button id="build-detail-close" class="vn-close-btn build-detail-close" type="button" aria-label="Close">✕</button>
+    <div class="build-detail-art">
+      <img id="build-detail-art-img" class="build-detail-art-img" alt="" draggable="false" loading="lazy" decoding="async">
+    </div>
+    <div id="build-detail-rarity" class="build-detail-rarity">—</div>
+    <h2 id="build-detail-name" class="build-detail-name">—</h2>
+    <p id="build-detail-flavor" class="build-detail-flavor">—</p>
+    <div id="build-detail-stats" class="build-detail-stats"></div>
+    <div class="build-detail-actions">
+      <button id="build-detail-replace" class="build-detail-btn build-detail-btn--primary" type="button">REPLACE</button>
+      <button id="build-detail-unequip" class="build-detail-btn build-detail-btn--danger" type="button">UNEQUIP</button>
+    </div>
   </div>
 
   <!-- Souls info modal (v2.0.1). Centered card pattern reusing
@@ -1473,7 +1485,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=304"></script>
+  <script src="app.js?v=305"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

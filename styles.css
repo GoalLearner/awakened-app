@@ -15752,554 +15752,489 @@ body.reveal-locked { overflow: hidden; }
   margin: 0;
 }
 
-.equipment-panel-wrap {
-  position: relative;
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1d HUNTER BUILD — MOBA-style 6-slot armory.
+   Replaces the legacy 9-slot body equipment panel. Embraces the
+   square art at assets/items/*.png as item tiles, no transparent-
+   icon pipeline required. Slots are rank-gated (E:2 / D:3 / C:4 /
+   B:5 / A:6 / S+:6) and visualized as a 3-column grid of carved
+   sockets. Empty slots show a + prompt; locked slots show a 🔒
+   and the required rank to unlock.
+   ═══════════════════════════════════════════════════════════════ */
+
+.hunter-build-section {
   width: 100%;
   max-width: 440px;
-  aspect-ratio: 941 / 1672; /* matches the source PNG dims */
-  margin: 0 auto;
-  /* Subtle ambient purple glow around the panel — picks up the
-     same vibe as the panel's rune-channel seams */
-  filter: drop-shadow(0 0 32px rgba(139, 92, 246, 0.35));
+  margin: 0 auto 18px;
+  padding: 0 4px;
 }
-.equipment-panel-img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-select: none;
-  pointer-events: none; /* hit targets handle taps */
-}
-
-/* Slot hit targets — invisible buttons positioned over each of
-   the 9 carved tablets on the panel art. Positions are percentage-
-   based so they scale with the image. Numbers tuned against the
-   941×1672 source: 3 cols × 3 rows, slots sit inside the framed
-   inner region with ~12% gutter on top, ~14% bottom, ~10% sides.
-   Each slot is ~24% wide × ~17% tall. */
-.equipment-slot-hit {
-  position: absolute;
-  width: 22%;
-  height: 19%;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-  /* v2.1.3 — faint engraved-recess treatment on empty slots so
-     empty + equipped slots feel like one system. Very subtle purple
-     inset shadow that suggests "carved socket awaiting an item."
-     The painted stone slot art on panel-base.png is still the
-     primary visual; this just adds an interactive depth cue. */
-  box-shadow:
-    inset 0 0 8px rgba(0, 0, 0, 0.40),
-    inset 0 0 0 1px rgba(139, 92, 246, 0.12);
-}
-.equipment-slot-hit:hover,
-.equipment-slot-hit:focus-visible {
-  background: rgba(251, 191, 36, 0.10);
-  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.50);
-  outline: none;
-}
-.equipment-slot-hit:active { transform: scale(0.97); }
-
-/* Per-slot positions. The layout is 3×3, tuned to the panel-base.png
-   stone-tablet geometry: ~13% top inset, ~14% bottom inset, ~9%
-   left/right insets; rows + columns gap ~3% each.
-   IMPORTANT: positions follow what's PAINTED on the panel art,
-   which differs from EQUIPMENT.md's canonical declaration order.
-   Painted layout:
-     Row 1: HELM   · AMULET · CAPE
-     Row 2: WEAPON · BODY   · GLOVES
-     Row 3: LEGS   · BOOTS  · RING
-   Future regenerations of panel-base.png that follow canonical
-   order would need this CSS swap reverted. */
-.equipment-slot-hit[data-slot="helm"]    { top: 17%; left: 12%; }
-.equipment-slot-hit[data-slot="amulet"]  { top: 17%; left: 39%; }
-.equipment-slot-hit[data-slot="cape"]    { top: 17%; left: 66%; }
-.equipment-slot-hit[data-slot="weapon"]  { top: 40%; left: 12%; }
-.equipment-slot-hit[data-slot="body"]    { top: 40%; left: 39%; }
-.equipment-slot-hit[data-slot="gloves"]  { top: 40%; left: 66%; }
-.equipment-slot-hit[data-slot="legs"]    { top: 62%; left: 12%; }
-.equipment-slot-hit[data-slot="boots"]   { top: 62%; left: 39%; }
-.equipment-slot-hit[data-slot="ring"]    { top: 62%; left: 66%; }
-
-.equipment-modal-footer {
+.hunter-build-section-label {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  color: var(--text-tertiary);
-  text-align: center;
-  margin: 14px 16px 0;
-  max-width: 440px;
-  line-height: 1.5;
-}
-
-/* ─── Armory stat aggregation block (below the panel art) ───
-   Two-section vertical stack: BASE STATS + COMBAT POWER. Mobile-
-   first layout — full width of the modal at iPhone widths,
-   capped at the same 440px max as the panel art so columns
-   visually align. */
-.equipment-stats-wrap {
-  width: 100%;
-  max-width: 440px;
-  margin: 18px auto 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.equipment-stats-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px 14px;
-}
-.equipment-stats-label {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
   text-transform: uppercase;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  text-align: center;
 }
 
-/* Base stats — 6-row table, monospace columns: icon + ID + Lv + XP */
-.equipment-stats-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.es-row {
+.hunter-build-grid {
   display: grid;
-  grid-template-columns: 28px 44px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
-.es-row:last-child { border-bottom: 0; }
-.es-icon {
-  display: inline-flex;
+.hunter-build-slot {
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at center,
+      rgba(139, 92, 246, 0.18) 0%,
+      rgba(12, 12, 28, 0.95) 80%);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  box-shadow:
+    inset 0 0 14px rgba(0, 0, 0, 0.65),
+    0 0 18px rgba(139, 92, 246, 0.10);
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  color: var(--text-primary);
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
 }
-.es-id {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--es-color, var(--text-primary));
+.hunter-build-slot:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 14px rgba(0, 0, 0, 0.65),
+    0 0 22px rgba(139, 92, 246, 0.30);
 }
-.es-lv {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.70rem;
-  letter-spacing: 0.04em;
-  color: var(--text-primary);
-  text-align: right;
+.hunter-build-slot:active { transform: scale(0.98); }
+
+.hunter-build-slot--empty .hunter-build-slot-plus {
+  font-family: 'Cinzel', serif;
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: rgba(139, 92, 246, 0.65);
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.35));
 }
-.es-pts {
+.hunter-build-slot--empty .hunter-build-slot-empty-label {
+  position: absolute;
+  bottom: 7px;
+  left: 0; right: 0;
+  text-align: center;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  color: var(--text-tertiary);
-  text-align: right;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.35);
 }
 
-/* Combat Power — 3 key/value rows + hint paragraph */
-.equipment-combat-power {
+.hunter-build-slot--locked {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(8, 8, 18, 0.85);
+}
+.hunter-build-slot--locked:hover {
+  transform: none;
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.65);
+}
+.hunter-build-slot-lock {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
+  padding: 6px;
+  text-align: center;
 }
-.ec-row {
+.hunter-build-slot-lock-icon {
+  font-size: 1.4rem;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.6));
+}
+.hunter-build-slot-lock-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.10em;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.hunter-build-slot--equipped { border-color: rgba(245, 158, 11, 0.55); }
+.hunter-build-slot--equipped:hover {
+  box-shadow:
+    inset 0 0 14px rgba(0, 0, 0, 0.55),
+    0 0 22px rgba(245, 158, 11, 0.28);
+}
+.hunter-build-item-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.95) contrast(1.06);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hunter-build-item-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+.hunter-build-slot-name {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  padding: 4px 6px;
+  background: linear-gradient(to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.55) 60%,
+    transparent 100%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* Rarity outlines — applied via build-rarity--{c,r,u} class */
+.build-rarity--c { border-color: rgba(156, 163, 175, 0.55); }
+.build-rarity--r { border-color: rgba(96, 165, 250, 0.70);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 18px rgba(96, 165, 250, 0.22); }
+.build-rarity--u { border-color: rgba(245, 158, 11, 0.85);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 22px rgba(245, 158, 11, 0.35); }
+
+/* ─── Build summary block ───────────────────────────────────── */
+.hunter-build-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  background: rgba(15, 15, 36, 0.85);
+  border: 1px solid var(--border);
+}
+.hbs-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-.ec-row:last-of-type { border-bottom: 0; }
-.ec-row--wrap {
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
-.ec-label {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.10em;
+  font-size: 0.74rem;
+}
+.hbs-label {
   color: var(--text-secondary);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  white-space: nowrap;
+  font-size: 0.62rem;
 }
-.ec-val {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--gold-bright, var(--gold));
-  text-align: right;
-}
-.ec-val--small {
-  font-size: 0.66rem;
-  font-weight: 600;
+.hbs-val {
   color: var(--text-primary);
-  text-align: right;
-  flex: 1;
-  min-width: 0;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
-.ec-hint {
-  margin: 10px 0 0;
+.hbs-val--power {
+  color: var(--gold-bright, var(--gold));
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.45));
+}
+.hbs-val--muted {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-style: italic;
+}
+.hbs-row--power { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.hbs-row--hint  { padding-top: 4px; }
+
+.equipment-modal-footer {
+  text-align: center;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.62rem;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   color: var(--text-tertiary);
-  line-height: 1.6;
+  text-transform: uppercase;
+  margin: 8px auto 0;
+  max-width: 440px;
 }
 
-/* v3 Phase 1a — GEAR BONUS column in the BASE STATS table */
-.es-row {
-  grid-template-columns: 28px 44px 1fr auto 48px;
+/* ─── BUILD PICKER MODAL ────────────────────────────────────── */
+.build-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9100;
 }
-.es-bonus {
+.build-picker-overlay.hidden { display: none; }
+
+.build-picker-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 9101;
+  display: flex;
+  flex-direction: column;
+  padding: max(20px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg);
+  animation: build-picker-rise 0.28s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
+.build-picker-sheet.hidden { display: none; }
+@keyframes build-picker-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.build-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.build-picker-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.25rem;
+  color: var(--gold-bright, var(--gold));
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+.build-picker-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 0 0 14px;
+}
+.build-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.build-picker-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background: rgba(15, 15, 36, 0.92);
+  border: 1px solid rgba(139, 92, 246, 0.30);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  color: var(--text-primary);
+}
+.build-picker-tile:hover { transform: translateY(-1px); }
+.build-picker-tile:active { transform: scale(0.98); }
+.build-picker-tile-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.build-picker-tile-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+.build-picker-tile-name {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  padding: 4px 6px;
+  background: linear-gradient(to top,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.55) 65%,
+    transparent 100%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+.build-picker-tile-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.95);
+  color: #1a0f00;
+  text-transform: uppercase;
+  z-index: 2;
+}
+.build-picker-tile-badge--elsewhere {
+  background: rgba(139, 92, 246, 0.92);
+  color: #fff;
+}
+.build-picker-tile--equipped-here   { border-color: rgba(245, 158, 11, 0.80); }
+.build-picker-tile--equipped-elsewhere { border-color: rgba(139, 92, 246, 0.60); }
+
+.build-picker-empty {
+  margin-top: 24px;
+  text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  padding: 0 24px;
+}
+.build-picker-empty.hidden { display: none; }
+
+/* ─── BUILD DETAIL SHEET ────────────────────────────────────── */
+.build-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9200;
+}
+.build-detail-overlay.hidden { display: none; }
+
+.build-detail-sheet {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9201;
+  width: min(92vw, 380px);
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-accent);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+  animation: build-detail-rise 0.28s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
+.build-detail-sheet.hidden { display: none; }
+@keyframes build-detail-rise {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+}
+.build-detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+.build-detail-art {
+  width: 70%;
+  aspect-ratio: 1 / 1;
+  margin: 4px auto 12px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border);
+}
+.build-detail-art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.build-detail-rarity {
+  text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--gold-bright, var(--gold));
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.build-detail-name {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+.build-detail-flavor {
+  text-align: center;
+  font-family: serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+.build-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  min-height: 4px;
+}
+.build-detail-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.build-detail-btn {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 10px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--gold-bright, var(--gold));
-  text-align: right;
-}
-.es-bonus--zero {
-  color: var(--text-tertiary);
-  font-weight: 500;
-  opacity: 0.5;
-}
-
-/* v3 Phase 1a — EQUIP/UNEQUIP button in card detail modal.
-   Full-width, sits below the stack count. Two variants:
-   --primary (purple, equip CTA) and --unequip (destructive red). */
-.carddetail-equip-btn {
-  display: block;
-  width: calc(100% - 32px);
-  margin: 14px 16px 4px;
-  padding: 12px 14px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  border: 1px solid transparent;
+  transition: transform 0.1s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-.carddetail-equip-btn.hidden { display: none; }
-.carddetail-equip-btn:active { transform: scale(0.98); }
-.carddetail-equip-btn--primary {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.20), rgba(91, 33, 182, 0.14) 60%);
-  border-color: rgba(139, 92, 246, 0.65);
-  color: #ddd6fe;
-}
-.carddetail-equip-btn--primary:hover {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(91, 33, 182, 0.24) 60%);
-  border-color: rgba(139, 92, 246, 0.90);
-}
-.carddetail-equip-btn--unequip {
-  background: rgba(220, 38, 38, 0.14);
-  border-color: rgba(220, 38, 38, 0.55);
-  color: #fecaca;
-}
-.carddetail-equip-btn--unequip:hover {
-  background: rgba(220, 38, 38, 0.24);
-  border-color: rgba(220, 38, 38, 0.80);
-}
-
-/* v3 Phase 1a — Pokédex tile "EQUIPPED" badge in the corner */
-.pokedex-card-equipped-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(139, 92, 246, 0.85);
+.build-detail-btn:active { transform: scale(0.98); }
+.build-detail-btn--primary {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(245, 158, 11, 0.82));
   color: #fff;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.50rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 2px 6px;
-  border-radius: 8px;
-  text-transform: uppercase;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
-  z-index: 2;
-  pointer-events: none;
-}
-.pokedex-card--equipped {
-  border-color: rgba(139, 92, 246, 0.85) !important;
-  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35) !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   v3 Phase 1c ARMORY ICON PIPELINE — FIVE-LAYER ARCHITECTURE
-   Renders equipped items as Diablo-style RPG icons resting inside
-   carved stone sockets. The painted stone tablets on panel-base.png
-   remain the dominant visual frame; this CSS adds the inner socket
-   depth + icon presentation ON TOP of the existing painted slots.
-
-   DOM (z-order, bottom to top):
-     1. .armory-socket-recess  — carved-hollow inset radial
-     2. .armory-icon-aura      — soft blurred glow behind icon
-     3. .armory-equipped-icon  — the <img>, scale via CSS var
-     4. .armory-socket-glass   — outer vignette over the icon
-     5. .armory-socket-bevel   — top highlight + bottom shadow rim
-
-   Fallback class: .armory-slot--fallback-art is added by JS when
-   the renderer falls back to art_path (square card art) because
-   icon_path (transparent icon) isn't available yet. Heavier
-   vignette + blend-mode treatment to suppress the square bg as
-   best CSS can — true fix is generating transparent icons per
-   assets/item-icons/README.md.
-   ═══════════════════════════════════════════════════════════════ */
-
-.equipment-slot-overlay,
-.armory-slot {
-  display: block;
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  border-radius: 8px;
-  background: transparent;
-}
-
-/* ── Layer 1 — socket recess ──────────────────────────────── */
-.armory-socket-recess {
-  position: absolute;
-  inset: 4px;
-  border-radius: 8px;
-  background: radial-gradient(circle at center,
-    rgba(139, 92, 246, 0.14) 0%,
-    rgba(20,  20,  45,  0.18) 38%,
-    rgba(0,   0,   0,   0.42) 100%);
-  box-shadow:
-    inset 0 0 18px rgba(0, 0, 0, 0.70),
-    inset 0 0 8px  rgba(139, 92, 246, 0.18);
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* ── Layer 2 — icon aura ──────────────────────────────────── */
-.armory-icon-aura {
-  position: absolute;
-  inset: 14%;
-  border-radius: 999px;
-  background: radial-gradient(circle,
-    rgba(139, 92, 246, 0.24) 0%,
-    rgba(139, 92, 246, 0.12) 35%,
-    transparent 72%);
-  filter: blur(4px);
-  opacity: 0.75;
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* ── Layer 3 — equipped icon ──────────────────────────────── */
-.armory-equipped-icon {
-  position: relative;
-  z-index: 3;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transform:
-    translate(var(--icon-x, 0px), var(--icon-y, 0px))
-    scale(var(--icon-scale, 0.72));
-  transform-origin: center;
-  filter:
-    drop-shadow(0 8px 8px rgba(0, 0, 0, 0.75))
-    brightness(1.08)
-    contrast(1.08);
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-/* ── Layer 4 — socket glass (outer vignette over icon) ────── */
-.armory-socket-glass {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-  background: radial-gradient(circle at center,
-    transparent 34%,
-    rgba(0, 0, 0, 0.20) 62%,
-    rgba(0, 0, 0, 0.72) 100%);
-  box-shadow:
-    inset 0 0 20px rgba(0, 0, 0, 0.75),
-    inset 0 0 7px  rgba(139, 92, 246, 0.25);
-}
-
-/* ── Layer 5 — socket bevel (top highlight + bottom shadow) ─ */
-.armory-socket-bevel {
-  position: absolute;
-  inset: 2px;
-  z-index: 5;
-  pointer-events: none;
-  border-radius: 8px;
-  box-shadow:
-    inset 0  1px 2px rgba(255, 255, 255, 0.10),
-    inset 0 -2px 6px rgba(0,   0,   0,   0.55);
-}
-
-/* ── MISSING-ICON PLACEHOLDER STATE ────────────────────────
-   Applied by JS when card.icon_path is missing — Armory PROD
-   never renders art_path (square card art creates the thumbnail
-   problem). Instead the slot shows a rune glyph placeholder that
-   reads as 'equipped, awaiting proper icon asset.' Intentional.
-   This is the default state for every equipped slot today until
-   the 9 transparent icons in assets/item-icons/ are generated. */
-
-/* Rarity-aware aura behind the rune. Larger inset + softer
-   gradient than the with-icon aura so the rune feels suspended
-   in atmospheric color, not surrounded by a hard glow ring. */
-.armory-slot--missing-icon .armory-equipped-rarity-aura {
-  position: absolute;
-  inset: 18%;
-  border-radius: 999px;
-  background: radial-gradient(circle,
-    rgba(139, 92, 246, 0.28) 0%,
-    rgba(139, 92, 246, 0.12) 45%,
-    transparent 72%);
-  filter: blur(5px);
-  opacity: 0.80;
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* Geometric rune glyph — purple diagonal stroke + gold center
-   spark over a circular dark base. Reads as a stylized seal /
-   placeholder, not 'missing image.' */
-.armory-missing-icon-rune {
-  position: absolute;
-  inset: 28%;
-  z-index: 3;
-  opacity: 0.48;
-  background:
-    radial-gradient(circle, rgba(245, 158, 11, 0.35), transparent 58%),
-    linear-gradient(135deg,
-      transparent 42%,
-      rgba(139, 92, 246, 0.55) 48%,
-      rgba(139, 92, 246, 0.55) 52%,
-      transparent 58%);
-  border: 1px solid rgba(139, 92, 246, 0.35);
-  border-radius: 999px;
-  box-shadow:
-    0 0 12px rgba(139, 92, 246, 0.25),
-    inset 0 0 10px rgba(0, 0, 0, 0.65);
-  pointer-events: none;
-}
-
-/* Equipped state suppresses the painted slot engravings beneath
-   so the placeholder reads as 'something equipped here,' not
-   'placeholder ON TOP of empty-slot engraving.' Darker radial. */
-.armory-slot--equipped .armory-socket-recess {
-  background: radial-gradient(circle at center,
-    rgba(20, 20, 35, 0.18) 0%,
-    rgba(0,  0,  0,  0.34) 52%,
-    rgba(0,  0,  0,  0.62) 100%);
-}
-
-/* Per-rarity rune tinting — common is purple-only, rare adds
-   a blue cast, ultra_rare uses gold-on-purple. Subtle. */
-.armory-slot--missing-icon.armory-rarity--rare .armory-missing-icon-rune {
-  background:
-    radial-gradient(circle, rgba(96, 165, 250, 0.40), transparent 58%),
-    linear-gradient(135deg,
-      transparent 42%,
-      rgba(96, 165, 250, 0.55) 48%,
-      rgba(96, 165, 250, 0.55) 52%,
-      transparent 58%);
-  border-color: rgba(96, 165, 250, 0.45);
-  box-shadow:
-    0 0 14px rgba(96, 165, 250, 0.30),
-    inset 0 0 10px rgba(0, 0, 0, 0.65);
-}
-.armory-slot--missing-icon.armory-rarity--rare .armory-equipped-rarity-aura {
-  background: radial-gradient(circle,
-    rgba(96, 165, 250, 0.32) 0%,
-    rgba(96, 165, 250, 0.14) 45%,
-    transparent 72%);
-}
-.armory-slot--missing-icon.armory-rarity--ultra .armory-missing-icon-rune {
-  background:
-    radial-gradient(circle, rgba(245, 158, 11, 0.55), transparent 60%),
-    linear-gradient(135deg,
-      transparent 42%,
-      rgba(245, 158, 11, 0.60) 48%,
-      rgba(245, 158, 11, 0.60) 52%,
-      transparent 58%);
   border-color: rgba(245, 158, 11, 0.50);
-  box-shadow:
-    0 0 18px rgba(245, 158, 11, 0.35),
-    inset 0 0 10px rgba(0, 0, 0, 0.65);
-  opacity: 0.60;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.30);
 }
-.armory-slot--missing-icon.armory-rarity--ultra .armory-equipped-rarity-aura {
-  background: radial-gradient(circle,
-    rgba(245, 158, 11, 0.34) 0%,
-    rgba(245, 158, 11, 0.15) 45%,
-    transparent 72%);
-  opacity: 0.85;
+.build-detail-btn--primary:hover { box-shadow: 0 0 18px rgba(245, 158, 11, 0.45); }
+.build-detail-btn--danger {
+  background: rgba(40, 12, 12, 0.85);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.55);
 }
+.build-detail-btn--danger:hover { background: rgba(60, 18, 18, 0.92); }
 
-/* ── PER-RARITY TREATMENT ──────────────────────────────────
-   Outer halo around the slot (does NOT cover the painted stone
-   — breathes outward via the wrapper's overflow:visible). Aura
-   tinted per rarity. Common gets a minimal white edge; rare
-   blue; ultra-rare gold. */
-.armory-slot--rarity-common {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-.armory-slot--rarity-rare {
-  box-shadow:
-    inset 0 0 0 1px rgba(96, 165, 250, 0.32),
-    0 0 12px rgba(96, 165, 250, 0.18);
-}
-.armory-slot--rarity-rare .armory-icon-aura {
-  background: radial-gradient(circle,
-    rgba(96, 165, 250, 0.30) 0%,
-    rgba(96, 165, 250, 0.14) 35%,
-    transparent 72%);
-}
-.armory-slot--rarity-rare .armory-socket-recess {
-  background: radial-gradient(circle at center,
-    rgba(96, 165, 250, 0.16) 0%,
-    rgba(20, 30,  60,  0.20) 38%,
-    rgba(0,  0,   0,   0.42) 100%);
-}
-.armory-slot--rarity-ultra_rare {
-  box-shadow:
-    inset 0 0 0 1px rgba(245, 158, 11, 0.50),
-    0 0 18px rgba(245, 158, 11, 0.28);
-}
-.armory-slot--rarity-ultra_rare .armory-icon-aura {
-  background: radial-gradient(circle,
-    rgba(245, 158, 11, 0.32) 0%,
-    rgba(245, 158, 11, 0.15) 35%,
-    transparent 72%);
-}
-.armory-slot--rarity-ultra_rare .armory-socket-recess {
-  background: radial-gradient(circle at center,
-    rgba(245, 158, 11, 0.18) 0%,
-    rgba(40,  25,  5,   0.22) 38%,
-    rgba(0,   0,   0,   0.42) 100%);
-}
-.armory-slot--rarity-ultra_rare .armory-socket-glass {
-  box-shadow:
-    inset 0 0 22px rgba(0, 0, 0, 0.70),
-    inset 0 0 8px  rgba(245, 158, 11, 0.28);
-}
 
 /* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────
    Sits between the pokedex count + the rarity sections.

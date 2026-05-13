@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.180';
+const CACHE_VERSION = 'v5.181';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -139,11 +139,9 @@ const PRECACHE_ASSETS = [
   '/assets/items/steady_steps.png',
   '/assets/items/pups_hood.png',
   '/assets/items/trackers_wrap.png',
-  // v2.1 equipment panel — 941×1672 stone-tablet armory art shown
-  // when avatar tapped on Status tab OR ARMORY button on Items tab.
-  // v3 PvP Phase 1 will layer equip/unequip handlers over the 9
-  // invisible slot hit-targets that overlay this image.
-  '/assets/equipment/panel-base.png',
+  // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
+  //  Hunter Build replaces the body-slot armory art with a tiled
+  //  6-slot grid. Asset remains on disk for archival.)
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────

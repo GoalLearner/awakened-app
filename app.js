@@ -1124,6 +1124,248 @@
     };
   } catch (_) {}
 
+  // ═══════════════════════════════════════════════════════════════
+  // HUNTER BUILD — v3 Phase 1d pivot from body-slot equipment to
+  // MOBA-style 6-slot active build. Replaces the visible Armory UI;
+  // the legacy hb_pvp_equipped storage above is preserved untouched
+  // for safety. New users only interact with hb_hunter_build.
+  //
+  // Slot model: 6 generic build slots. Unlocked progressively by
+  // rank — E:2, D:3, C:4, B:5, A:6, S:6, S+:6. The 6 maps cleanly
+  // to the 6 core stats (STR/VIT/INT/FOCUS/WILL/WLT) but slot index
+  // is NOT bound to a stat.
+  // ═══════════════════════════════════════════════════════════════
+
+  const HUNTER_BUILD_STORAGE_KEY = 'hb_hunter_build';
+  const HUNTER_BUILD_SLOT_COUNT  = 6;
+  let _hunterBuild = null;
+
+  // Rank → unlocked-slot-count table. S/S+ do NOT add more slots
+  // per the v3 spec; they may add prestige effects later.
+  function getUnlockedBuildSlots(rankId) {
+    switch (rankId) {
+      case 'E':  return 2;
+      case 'D':  return 3;
+      case 'C':  return 4;
+      case 'B':  return 5;
+      case 'A':  return 6;
+      case 'S':  return 6;
+      case 'S+': return 6;
+      default:   return 2;
+    }
+  }
+  // Inverse — which rank is required to unlock the slot at this
+  // zero-based index. Slots 0 & 1 are always unlocked at E.
+  function getRequiredRankForBuildSlot(index) {
+    if (index <= 1) return 'E';
+    if (index === 2) return 'D';
+    if (index === 3) return 'C';
+    if (index === 4) return 'B';
+    if (index === 5) return 'A';
+    return 'A';
+  }
+  function isBuildSlotUnlocked(index) {
+    const rank = (typeof totalPoints !== 'undefined' && typeof getRank === 'function')
+      ? getRank(totalPoints || 0) : null;
+    const unlockedCount = getUnlockedBuildSlots(rank ? rank.id : 'E');
+    return index < unlockedCount;
+  }
+
+  // Ensures the build object has exactly HUNTER_BUILD_SLOT_COUNT
+  // entries, every position either a valid card_id or null. Drops
+  // entries whose card no longer exists in CARDS (safer than
+  // surfacing 'ghost' equipped items after a card was removed).
+  function normalizeHunterBuild(raw) {
+    const slots = new Array(HUNTER_BUILD_SLOT_COUNT).fill(null);
+    if (raw && Array.isArray(raw.slots)) {
+      for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+        const v = raw.slots[i];
+        if (typeof v === 'string' && CARDS[v]) slots[i] = v;
+      }
+    }
+    return {
+      slots: slots,
+      updated_at: (raw && typeof raw.updated_at === 'string') ? raw.updated_at : null,
+    };
+  }
+
+  function loadHunterBuild() {
+    try {
+      const raw = localStorage.getItem(HUNTER_BUILD_STORAGE_KEY);
+      if (raw) {
+        _hunterBuild = normalizeHunterBuild(JSON.parse(raw));
+        return _hunterBuild;
+      }
+    } catch (_) {}
+    _hunterBuild = normalizeHunterBuild(null);
+    return _hunterBuild;
+  }
+  function saveHunterBuild() {
+    if (!_hunterBuild) return;
+    _hunterBuild.updated_at = new Date().toISOString();
+    try { localStorage.setItem(HUNTER_BUILD_STORAGE_KEY, JSON.stringify(_hunterBuild)); } catch (_) {}
+  }
+  function getHunterBuild() {
+    if (!_hunterBuild) loadHunterBuild();
+    return _hunterBuild;
+  }
+
+  // Equip a card into the given slot index. If the slot is locked,
+  // rejected via { ok:false, code:'LOCKED' }. If the card is already
+  // equipped in another slot, blocked via { ok:false, code:'DUPLICATE' }
+  // — MOBA convention is one copy per build.
+  function equipBuildItem(slotIndex, cardId) {
+    if (slotIndex < 0 || slotIndex >= HUNTER_BUILD_SLOT_COUNT) {
+      return { ok: false, code: 'BAD_INDEX' };
+    }
+    if (!isBuildSlotUnlocked(slotIndex)) {
+      return { ok: false, code: 'LOCKED', requiredRank: getRequiredRankForBuildSlot(slotIndex) };
+    }
+    if (!cardId || !CARDS[cardId]) {
+      return { ok: false, code: 'BAD_CARD' };
+    }
+    const build = getHunterBuild();
+    // Block duplicates — if the card is already in another slot,
+    // refuse. Caller surfaces a toast.
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      if (i !== slotIndex && build.slots[i] === cardId) {
+        return { ok: false, code: 'DUPLICATE', existingSlot: i };
+      }
+    }
+    const prev = build.slots[slotIndex];
+    build.slots[slotIndex] = cardId;
+    saveHunterBuild();
+    return { ok: true, prevCardId: prev || null };
+  }
+  function unequipBuildItem(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= HUNTER_BUILD_SLOT_COUNT) {
+      return { ok: false, code: 'BAD_INDEX' };
+    }
+    const build = getHunterBuild();
+    const prev = build.slots[slotIndex];
+    build.slots[slotIndex] = null;
+    saveHunterBuild();
+    return { ok: true, prevCardId: prev || null };
+  }
+  function isItemEquippedInBuild(cardId) {
+    if (!cardId) return false;
+    const build = getHunterBuild();
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      if (build.slots[i] === cardId) return true;
+    }
+    return false;
+  }
+  function getBuildSlotIndexForCard(cardId) {
+    if (!cardId) return -1;
+    const build = getHunterBuild();
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      if (build.slots[i] === cardId) return i;
+    }
+    return -1;
+  }
+
+  // Build Power — simple deterministic sum, per v3 spec.
+  //   common = 1   rare = 3   ultra_rare = 7
+  function getItemBuildPower(card) {
+    if (!card) return 0;
+    if (card.rarity === 'ultra_rare' || card.rarity === 'ultra-rare' || card.rarity === 'ultra') return 7;
+    if (card.rarity === 'rare') return 3;
+    return 1;
+  }
+  function aggregateBuildPower() {
+    const build = getHunterBuild();
+    let total = 0;
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      const cid = build.slots[i];
+      if (cid && CARDS[cid]) total += getItemBuildPower(CARDS[cid]);
+    }
+    return total;
+  }
+  // Dominant path — sum each card's bonuses across the equipped
+  // build, return the stat id with the largest contribution. Returns
+  // null if nothing's equipped or all bonuses sum to zero.
+  function getBuildDominantPath() {
+    const build = getHunterBuild();
+    const sum = { STR: 0, VIT: 0, INT: 0, FOCUS: 0, WILL: 0, WLT: 0 };
+    let any = false;
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      const cid = build.slots[i];
+      const card = cid ? CARDS[cid] : null;
+      if (!card || !card.bonuses) continue;
+      Object.keys(sum).forEach(k => {
+        const v = card.bonuses[k.toLowerCase()] || 0;
+        if (v > 0) any = true;
+        sum[k] += v;
+      });
+    }
+    if (!any) return null;
+    let topId = null, topVal = -1;
+    Object.keys(sum).forEach(k => {
+      if (sum[k] > topVal) { topVal = sum[k]; topId = k; }
+    });
+    return topVal > 0 ? topId : null;
+  }
+  function countEquippedBuildItems() {
+    const build = getHunterBuild();
+    let n = 0;
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      if (build.slots[i]) n += 1;
+    }
+    return n;
+  }
+
+  // One-time migration from the v3 Phase 1a body-slot equipment
+  // (hb_pvp_equipped) to the new 6-slot Hunter Build (hb_hunter_build).
+  //
+  // Priority order for filling the new build with old equipped items:
+  //   weapon, body, helm, gloves, legs, boots, amulet, ring, cape
+  // up to HUNTER_BUILD_SLOT_COUNT entries. Old key is NOT deleted —
+  // leaves a safety copy in case we need to revert.
+  function migrateEquipmentToHunterBuild() {
+    if (localStorage.getItem(HUNTER_BUILD_STORAGE_KEY)) return; // already migrated
+    const PRIORITY = ['weapon', 'body', 'helm', 'gloves', 'legs', 'boots', 'amulet', 'ring', 'cape'];
+    const slots = new Array(HUNTER_BUILD_SLOT_COUNT).fill(null);
+    let oldEq = null;
+    try {
+      const raw = localStorage.getItem('hb_pvp_equipped');
+      if (raw) oldEq = JSON.parse(raw);
+    } catch (_) {}
+    if (oldEq && typeof oldEq === 'object') {
+      let cursor = 0;
+      const seen = new Set();
+      for (const slot of PRIORITY) {
+        if (cursor >= HUNTER_BUILD_SLOT_COUNT) break;
+        const cid = oldEq[slot];
+        if (cid && CARDS[cid] && !seen.has(cid)) {
+          slots[cursor++] = cid;
+          seen.add(cid);
+        }
+      }
+    }
+    _hunterBuild = { slots, updated_at: new Date().toISOString() };
+    saveHunterBuild();
+  }
+
+  try {
+    window.HunterBuild = {
+      load:              loadHunterBuild,
+      get:               getHunterBuild,
+      equip:             equipBuildItem,
+      unequip:           unequipBuildItem,
+      isEquipped:        isItemEquippedInBuild,
+      slotForCard:       getBuildSlotIndexForCard,
+      unlockedSlots:     getUnlockedBuildSlots,
+      requiredRank:      getRequiredRankForBuildSlot,
+      isSlotUnlocked:    isBuildSlotUnlocked,
+      buildPower:        aggregateBuildPower,
+      dominantPath:      getBuildDominantPath,
+      equippedCount:     countEquippedBuildItems,
+      itemPower:         getItemBuildPower,
+      migrate:           migrateEquipmentToHunterBuild,
+      SLOT_COUNT:        HUNTER_BUILD_SLOT_COUNT,
+    };
+  } catch (_) {}
+
   const INVENTORY_STORAGE_KEY = 'hb_inventory';
   let _inventory = null;
 
@@ -1519,8 +1761,8 @@
           const artImg = c.art_path
             ? '<img class="pokedex-card-art-img" src="' + esc(c.art_path) + '" alt="" data-card-art="1">'
             : '';
-          // v3 Phase 1a — equipped badge corner overlay
-          const isEq = isCardEquipped(c.id);
+          // v3 Phase 1d — equipped badge reads Hunter Build state
+          const isEq = (typeof isItemEquippedInBuild === 'function') && isItemEquippedInBuild(c.id);
           const equippedBadge = isEq
             ? '<span class="pokedex-card-equipped-badge" aria-label="Equipped">⚔ EQUIPPED</span>'
             : '';
@@ -1690,23 +1932,21 @@
     const stackEl = document.getElementById('carddetail-stack');
     if (stackEl) stackEl.textContent = (entry.count > 1 ? 'You have ' + entry.count : '');
 
-    // v3 PvP Phase 1a — Equip/Unequip button. Shows only when this
-    // card has a slot field (all 15 launch cards qualify). Two
-    // states: EQUIP TO <SLOT> (purple) when not equipped, UNEQUIP
-    // (destructive red) when occupying its slot. Click dispatches
-    // to equipCard/unequipSlot, toasts the result, re-renders the
-    // modal + Pokédex grid so badges refresh.
+    // v3 Phase 1d — Equip/Unequip button now uses the new Hunter
+    // Build system. EQUIP pushes the card into the first available
+    // unlocked slot. UNEQUIP removes it from whichever slot it
+    // currently occupies. The button hides for cards without a slot.
     const equipBtn = document.getElementById('carddetail-equip-btn');
     if (equipBtn && card.slot) {
       equipBtn.classList.remove('hidden');
-      _carddetailCurrentCardId = card.id; // stash for the click handler
-      const equippedNow = isCardEquipped(card.id);
+      _carddetailCurrentCardId = card.id;
+      const equippedNow = (typeof isItemEquippedInBuild === 'function') && isItemEquippedInBuild(card.id);
       if (equippedNow) {
         equipBtn.textContent = 'UNEQUIP';
         equipBtn.classList.remove('carddetail-equip-btn--primary');
         equipBtn.classList.add('carddetail-equip-btn--unequip');
       } else {
-        equipBtn.textContent = 'EQUIP TO ' + card.slot.toUpperCase();
+        equipBtn.textContent = 'EQUIP TO BUILD';
         equipBtn.classList.add('carddetail-equip-btn--primary');
         equipBtn.classList.remove('carddetail-equip-btn--unequip');
       }
@@ -1747,36 +1987,51 @@
         if (!cardId) return;
         const card = CARDS[cardId];
         if (!card) return;
-        const wasEquipped = isCardEquipped(cardId);
-        if (wasEquipped) {
-          unequipCard(cardId);
+        // v3 Phase 1d — route through Hunter Build. If already in
+        // the build, unequip from whichever slot holds it. Otherwise
+        // find the first empty unlocked slot and place it there.
+        const currentSlot = (typeof getBuildSlotIndexForCard === 'function') ? getBuildSlotIndexForCard(cardId) : -1;
+        if (currentSlot >= 0) {
+          unequipBuildItem(currentSlot);
           try { showHabitToast(card.name + ' unequipped.'); } catch (_) {}
         } else {
-          const res = equipCard(cardId);
-          if (res.prevCardId && CARDS[res.prevCardId]) {
-            try { showHabitToast(card.name + ' equipped — replaced ' + CARDS[res.prevCardId].name + '.'); } catch (_) {}
+          // Find first empty unlocked slot
+          const build = getHunterBuild();
+          let targetIdx = -1;
+          for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+            if (!isBuildSlotUnlocked(i)) continue;
+            if (!build.slots[i]) { targetIdx = i; break; }
+          }
+          if (targetIdx < 0) {
+            // No empty unlocked slot — direct user to manage build manually.
+            try { showHabitToast('Build full. Open the Armory to swap a relic out.'); } catch (_) {}
           } else {
-            try { showHabitToast(card.name + ' equipped to ' + card.slot + '.'); } catch (_) {}
+            const res = equipBuildItem(targetIdx, cardId);
+            if (res.ok) {
+              try { showHabitToast(card.name + ' equipped to build slot ' + (targetIdx + 1) + '.'); } catch (_) {}
+            } else if (res.code === 'DUPLICATE') {
+              try { showHabitToast(card.name + ' is already in your build.'); } catch (_) {}
+            }
           }
         }
         // Re-render the modal in place so the button state updates.
         const inv = getInventory();
         openCardDetailModal(card, inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null });
-        // Re-render the Pokédex grid + the armory if it's open so
-        // badges + slot overlays + GEAR BONUSES refresh.
         try { if (currentTab === 'items') renderPokedex(); } catch (_) {}
         try { refreshEquipmentModalIfOpen(); } catch (_) {}
       });
     }
   }
 
-  // Re-renders the armory modal's slot overlays + stats block when
-  // the equip state changes. No-op if the modal isn't open.
+  // Re-renders the armory modal's hunter build + summary when the
+  // equip state changes. No-op if the modal isn't open. Pivoted to
+  // Hunter Build in v3 Phase 1d (was renderEquippedSlotOverlays +
+  // populateEquipmentStats).
   function refreshEquipmentModalIfOpen() {
     const modal = document.getElementById('equipment-modal');
     if (!modal || modal.classList.contains('hidden')) return;
-    renderEquippedSlotOverlays();
-    populateEquipmentStats();
+    if (typeof renderHunterBuild        === 'function') renderHunterBuild();
+    if (typeof renderHunterBuildSummary === 'function') renderHunterBuildSummary();
   }
   // Friendly date formatter for the card detail "first found" line.
   function formatAcquiredDate(iso) {
@@ -9762,323 +10017,26 @@
     }
   }
 
-  // ── EQUIPMENT PANEL MODAL (v2.1 — prep for v3 PvP) ────────────
-  // Opens from two entry points:
-  //   1. Avatar img tap on the Status tab (#sc-avatar-img — set per
-  //      render in renderProfile)
-  //   2. "VIEW YOUR ARMORY" button on the Items tab (#armory-open-btn
-  //      — static markup in index.html)
-  // v2.1 stub: tapping any slot inside the panel surfaces a coming-
-  // soon toast. v3 PvP Phase 1 replaces these stubs with actual
-  // equip/unequip flow + hb_pvp_equipped persistence (per PVP.md
-  // §15.1 + §20 Phase 1).
+  // ═══════════════════════════════════════════════════════════════
+  // HUNTER BUILD MODAL (v3 Phase 1d — pivot from body-slot armory)
+  // MOBA-style 6-slot active build replaces the v3 Phase 1a-c
+  // 9-slot body equipment. Square item tiles embrace existing card
+  // art instead of fighting for transparency. Opens from:
+  //   1. Avatar img tap on the Status tab
+  //   2. "VIEW YOUR ARMORY" button on the Items tab
+  // ═══════════════════════════════════════════════════════════════
+
+  let _buildPickerSlotIndex = -1;
+  let _buildDetailSlotIndex = -1;
+
   function openEquipmentPanel() {
     const overlay = document.getElementById('equipment-overlay');
     const modal   = document.getElementById('equipment-modal');
     if (!overlay || !modal) return;
-    populateEquipmentStats();
-    renderEquippedSlotOverlays();
+    renderHunterBuild();
+    renderHunterBuildSummary();
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
-  }
-
-  // ── ARMORY ICON PIPELINE (v3 Phase 1c) ───────────────────────
-  // TODO: Armory looks best with transparent PNG icon_path assets.
-  // art_path is full card art and should only be used as fallback.
-  // See assets/item-icons/README.md for the icon generation spec
-  // and the 9 pending filenames. When a transparent icon lands on
-  // disk, add `icon_path: 'assets/item-icons/<id>.png'` to the
-  // matching CARDS entry — getArmoryIconPath picks it up
-  // automatically and the renderer drops the fallback CSS class.
-
-  // Per-slot icon tuning. Different equipment types need different
-  // visual scale + offset so the painted slot tablet stays dominant
-  // and the icon reads as "relic resting in carved socket." Applied
-  // as CSS custom properties (--icon-scale, --icon-x, --icon-y) on
-  // each .armory-slot wrapper so per-slot CSS doesn't need 9 rules.
-  const ARMORY_SLOT_ICON_TUNING = {
-    helm:   { scale: 0.70, x: 0,  y: 0  },
-    amulet: { scale: 0.46, x: 0,  y: -2 },
-    cape:   { scale: 0.72, x: 0,  y: 0  },
-    weapon: { scale: 0.86, x: 0,  y: 0  },
-    body:   { scale: 0.82, x: 0,  y: 1  },
-    gloves: { scale: 0.66, x: 0,  y: 1  },
-    legs:   { scale: 0.86, x: 0,  y: 0  },
-    boots:  { scale: 0.64, x: 0,  y: 2  },
-    ring:   { scale: 0.44, x: 0,  y: 0  },
-  };
-
-  // PRODUCTION rule: Armory NEVER falls back to art_path. Square
-  // card art with a flat-RGB background reads as a thumbnail inside
-  // the stone socket — CSS can't strip it. When a transparent
-  // icon_path isn't available, render the premium missing-icon
-  // placeholder (rune glyph + rarity aura) instead.
-  function getArmoryIconPath(card) {
-    if (!card) return '';
-    return card.icon_path || card.armory_icon_path || '';
-  }
-  // Debug-only escape hatch — surfaces card.art_path so console
-  // testing can compare "what would have rendered as fallback."
-  // NOT called from production rendering paths.
-  function getArmoryDebugFallbackPath(card) {
-    return (card && card.art_path) || '';
-  }
-  function getArmoryTuning(card) {
-    const fallback = { scale: 0.72, x: 0, y: 0 };
-    if (!card || !card.slot) return fallback;
-    const slotDefault = ARMORY_SLOT_ICON_TUNING[card.slot] || fallback;
-    const override = card.armory_tuning || {};
-    return {
-      scale: override.scale != null ? override.scale : slotDefault.scale,
-      x:     override.x     != null ? override.x     : slotDefault.x,
-      y:     override.y     != null ? override.y     : slotDefault.y,
-    };
-  }
-
-  // v3 Phase 1a — for each equipped slot, render a small <img>
-  // overlay positioned over the painted slot tablet showing the
-  // equipped card's art. Idempotent — wipes existing overlays
-  // each call so swaps + unequips refresh cleanly.
-  //
-  // Overlay dimensions are LARGER than the hit-target so the
-  // equipped art fills the painted slot tablet (painted slots are
-  // ~28%×24%; hit-targets are 22%×19% to avoid tap-target overlap
-  // with adjacent slots).
-  const _SLOT_OVERLAY_POS = {
-    helm:   { top: 14.5, left:  9 },
-    amulet: { top: 14.5, left: 36 },
-    cape:   { top: 14.5, left: 63 },
-    weapon: { top: 37.5, left:  9 },
-    body:   { top: 37.5, left: 36 },
-    gloves: { top: 37.5, left: 63 },
-    legs:   { top: 59.5, left:  9 },
-    boots:  { top: 59.5, left: 36 },
-    ring:   { top: 59.5, left: 63 },
-  };
-  function renderEquippedSlotOverlays() {
-    const wrap = document.querySelector('.equipment-panel-wrap');
-    if (!wrap) return;
-    // Remove prior overlays
-    wrap.querySelectorAll('.equipment-slot-overlay').forEach(n => n.remove());
-    const eq = getEquipped();
-    EQUIPMENT_SLOTS.forEach(slot => {
-      const cardId = eq[slot];
-      if (!cardId) return;
-      const card = CARDS[cardId];
-      if (!card) return;
-      const pos = _SLOT_OVERLAY_POS[slot];
-      if (!pos) return;
-      const hit = wrap.querySelector('.equipment-slot-hit[data-slot="' + slot + '"]');
-
-      // v3 Phase 1d — Armory rendering pipeline (no art_path fallback).
-      //
-      // Branches on whether the card has a transparent icon asset:
-      //
-      //   hasArmoryIcon = true:
-      //     5-layer DOM with the <img>:
-      //       1. .armory-socket-recess  — carved hollow
-      //       2. .armory-icon-aura      — soft blurred glow
-      //       3. .armory-equipped-icon  — the transparent <img>
-      //       4. .armory-socket-glass   — outer vignette
-      //       5. .armory-socket-bevel   — top highlight + bottom shadow
-      //
-      //   hasArmoryIcon = false (PRODUCTION DEFAULT TODAY):
-      //     4-layer DOM with rune glyph placeholder:
-      //       1. .armory-socket-recess
-      //       2. .armory-equipped-rarity-aura
-      //       3. .armory-missing-icon-rune  — geometric rune placeholder
-      //       4. .armory-socket-glass
-      //       5. .armory-socket-bevel
-      //     NO <img>. NO art_path. Slot reads as 'equipped, awaiting
-      //     proper icon asset' — intentional, not broken.
-      const hasArmoryIcon = Boolean(card.icon_path || card.armory_icon_path);
-      const iconPath      = getArmoryIconPath(card);
-      const tuning        = getArmoryTuning(card);
-
-      // Short rarity token for the new armory-rarity--<x> class.
-      // Maps CARDS rarity ('common'/'rare'/'ultra_rare') to the
-      // short form Richie's spec uses ('common'/'rare'/'ultra').
-      const rarityShort = card.rarity === 'ultra_rare' ? 'ultra' : card.rarity;
-
-      const overlay = document.createElement('div');
-      overlay.className =
-        'equipment-slot-overlay' +
-        ' equipment-slot-overlay--' + card.rarity +
-        ' armory-slot armory-slot--equipped' +
-        ' armory-slot--' + card.slot +
-        ' armory-slot--rarity-' + card.rarity +
-        ' armory-rarity--' + rarityShort +
-        (hasArmoryIcon ? '' : ' armory-slot--missing-icon');
-      overlay.setAttribute('data-slot',   card.slot);
-      overlay.setAttribute('data-rarity', card.rarity);
-      overlay.style.position = 'absolute';
-      overlay.style.top    = pos.top  + '%';
-      overlay.style.left   = pos.left + '%';
-      overlay.style.width  = '28%';
-      overlay.style.height = '24%';
-      overlay.style.pointerEvents = 'none';
-      // CSS custom props consumed by .armory-equipped-icon's transform.
-      // Only meaningful when hasArmoryIcon === true.
-      overlay.style.setProperty('--icon-scale', String(tuning.scale));
-      overlay.style.setProperty('--icon-x',     tuning.x + 'px');
-      overlay.style.setProperty('--icon-y',     tuning.y + 'px');
-
-      // Layer 1 — recess (both states)
-      const recess = document.createElement('div');
-      recess.className = 'armory-socket-recess';
-      overlay.appendChild(recess);
-
-      if (hasArmoryIcon) {
-        // Layer 2a — icon aura
-        const aura = document.createElement('div');
-        aura.className = 'armory-icon-aura';
-        overlay.appendChild(aura);
-
-        // Layer 3 — icon (transparent PNG). onerror hides the img
-        // entirely so the recess + missing-icon-rune fall back to
-        // the placeholder state if the asset 404s mid-session.
-        const img = document.createElement('img');
-        img.className = 'armory-equipped-icon';
-        img.alt = card.name + ' equipped';
-        img.draggable = false;
-        img.src = iconPath;
-        img.addEventListener('error', function onIconErr() {
-          // Transparent icon failed to load — degrade gracefully to
-          // the missing-icon placeholder. No art_path swap (would
-          // reintroduce the square-thumbnail problem).
-          img.style.display = 'none';
-          overlay.classList.add('armory-slot--missing-icon');
-          // Inject a missing-icon rune so the slot stays populated.
-          if (!overlay.querySelector('.armory-missing-icon-rune')) {
-            const rune = document.createElement('div');
-            rune.className = 'armory-missing-icon-rune';
-            rune.setAttribute('aria-hidden', 'true');
-            // Insert before the glass layer so layering stays correct.
-            const glassEl = overlay.querySelector('.armory-socket-glass');
-            if (glassEl) overlay.insertBefore(rune, glassEl);
-            else         overlay.appendChild(rune);
-          }
-          if (typeof console !== 'undefined' && console.warn) {
-            console.warn(
-              'Armory icon failed to load for ' + card.id +
-              ' (' + iconPath + '). Falling back to missing-icon placeholder. ' +
-              'Verify assets/item-icons/' + card.id + '.png exists and has a transparent background.');
-          }
-        });
-        overlay.appendChild(img);
-      } else {
-        // Missing-icon state — rarity aura + rune placeholder.
-        // No <img>, no art_path. Intentional premium placeholder.
-        const rarityAura = document.createElement('div');
-        rarityAura.className = 'armory-equipped-rarity-aura';
-        overlay.appendChild(rarityAura);
-
-        const rune = document.createElement('div');
-        rune.className = 'armory-missing-icon-rune';
-        rune.setAttribute('aria-hidden', 'true');
-        overlay.appendChild(rune);
-
-        // Dev warning so the missing asset is visible in console.
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn(
-            'Armory icon missing for ' + card.id +
-            '. Add assets/item-icons/' + card.id + '.png and set ' +
-            'icon_path on the CARDS entry. art_path is intentionally ' +
-            'not used in Armory.');
-        }
-      }
-
-      // Layer 4 — glass vignette (both states)
-      const glass = document.createElement('div');
-      glass.className = 'armory-socket-glass';
-      overlay.appendChild(glass);
-
-      // Layer 5 — socket bevel (both states)
-      const bevel = document.createElement('div');
-      bevel.className = 'armory-socket-bevel';
-      overlay.appendChild(bevel);
-
-      // Insert BEFORE the hit target so taps still route to the
-      // button on top.
-      if (hit) wrap.insertBefore(overlay, hit);
-      else     wrap.appendChild(overlay);
-    });
-  }
-
-  // Renders the v2.1 stat aggregation block: BASE STATS (6 rows
-  // showing each stat's level + XP) + COMBAT POWER (equip count
-  // + class affinity context + HP preview). All zeros for now
-  // since equip system arrives in v3 — but stats reflect live
-  // habit-driven data so the panel is informative pre-v3.
-  function populateEquipmentStats() {
-    const baseEl   = document.getElementById('equipment-base-stats');
-    const powerEl  = document.getElementById('equipment-combat-power');
-    if (!baseEl || !powerEl) return;
-
-    // ── BASE STATS table — now with GEAR BONUS column ──────
-    // v3 Phase 1a: 5-column row showing icon, ID, level, base XP,
-    // and the +X gear bonus contribution if any gear is equipped.
-    // Gear-bonus column hides when zero so the table stays tight.
-    const bonuses = aggregateEquippedBonuses();
-    const rows = STATS.map(st => {
-      const pts   = (stats[st.id] && stats[st.id].pts) || 0;
-      const lv    = statLevel(pts);
-      const isMax = lv >= 20;
-      const key   = st.id.toLowerCase();
-      const bonus = bonuses[key] || 0;
-      const bonusHTML = bonus > 0
-        ? '<span class="es-bonus">+' + bonus + '</span>'
-        : '<span class="es-bonus es-bonus--zero">+0</span>';
-      return (
-        '<div class="es-row" style="--es-color:' + st.color + '">' +
-          '<span class="es-icon">' + statIconHtml(st, { size: 22 }) + '</span>' +
-          '<span class="es-id">' + st.id + '</span>' +
-          '<span class="es-lv">' + (isMax ? 'MAX' : 'Lv ' + lv) + '</span>' +
-          '<span class="es-pts">' + pts + ' XP</span>' +
-          bonusHTML +
-        '</div>'
-      );
-    }).join('');
-    baseEl.innerHTML = rows;
-
-    // ── COMBAT POWER section ──────────────────────────────
-    // For v2.1: equip count is always 0/9. Class affinity reads
-    // from currentClass — CIVILIAN if not awakened, otherwise the
-    // class name + 1.5× mention. HP preview uses the PVP.md §4.2
-    // formula: baseHP = 100 + (VIT × 10), capped 300.
-    const vitLv = statLevel((stats.VIT && stats.VIT.pts) || 0);
-    const baseHP = Math.min(300, 100 + (vitLv * 10));
-
-    let affinityLine;
-    if (currentClass && currentClass !== 'CIVILIAN') {
-      const def = CLASSES[currentClass];
-      const cName = (def && def.name) || currentClass;
-      const aff = (currentClass === 'SAGE')
-        ? cName.toUpperCase() + ' — all gear amplified 1.15×'
-        : cName.toUpperCase() + ' — ' + currentClass + ' gear amplified 1.5×';
-      affinityLine = aff;
-    } else {
-      affinityLine = 'CIVILIAN — class affinity unlocks at Lv5 in any stat';
-    }
-
-    const equippedCount = countEquippedSlots();
-    powerEl.innerHTML =
-      '<div class="ec-row">' +
-        '<span class="ec-label">EQUIPPED</span>' +
-        '<span class="ec-val">' + equippedCount + ' / 9</span>' +
-      '</div>' +
-      '<div class="ec-row ec-row--wrap">' +
-        '<span class="ec-label">AFFINITY</span>' +
-        '<span class="ec-val ec-val--small">' + esc(affinityLine) + '</span>' +
-      '</div>' +
-      '<div class="ec-row">' +
-        '<span class="ec-label">BASE HP</span>' +
-        '<span class="ec-val">' + baseHP + '</span>' +
-      '</div>' +
-      '<p class="ec-hint">' + (equippedCount === 0
-        ? 'Equip gear from boss kills to amplify these stats. Class-aligned bonuses multiply when you Awaken.'
-        : 'Class affinity multipliers land in v3 Phase 1b — gear bonuses currently sum raw.') +
-      '</p>';
   }
   function closeEquipmentPanel() {
     const overlay = document.getElementById('equipment-overlay');
@@ -10086,54 +10044,311 @@
     if (overlay) overlay.classList.add('hidden');
     if (modal)   modal.classList.add('hidden');
   }
+  function refreshEquipmentModalIfOpenNew() {
+    const modal = document.getElementById('equipment-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
+    renderHunterBuild();
+    renderHunterBuildSummary();
+  }
+
+  // ─── Build grid renderer ────────────────────────────────────
+  // 6-slot 3×2 grid. Three slot states: equipped / unlocked-empty /
+  // locked. data-slot-index drives the click router.
+  function renderHunterBuild() {
+    const grid = document.getElementById('hunter-build-grid');
+    if (!grid) return;
+    const build = getHunterBuild();
+    const rank  = (typeof getRank === 'function') ? getRank(totalPoints || 0) : { id: 'E' };
+    const unlockedCount = getUnlockedBuildSlots(rank.id);
+
+    let html = '';
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      const unlocked = i < unlockedCount;
+      const cardId   = build.slots[i];
+      const card     = cardId ? CARDS[cardId] : null;
+      const requiredRank = getRequiredRankForBuildSlot(i);
+
+      if (!unlocked) {
+        // Locked slot — rank gate
+        html += '<button class="hunter-build-slot hunter-build-slot--locked" type="button" ' +
+                'data-slot-index="' + i + '" aria-label="Locked slot — reach ' + requiredRank + ' rank">' +
+                  '<div class="hunter-build-slot-lock">' +
+                    '<div class="hunter-build-slot-lock-icon">🔒</div>' +
+                    '<div class="hunter-build-slot-lock-label">REACH<br>' + esc(requiredRank) + ' RANK</div>' +
+                  '</div>' +
+                '</button>';
+      } else if (card) {
+        // Equipped slot — show the card art (square is intentional in MOBA style)
+        const rarityShort = card.rarity === 'ultra_rare' ? 'ultra' : card.rarity;
+        const artImg = card.art_path
+          ? '<img class="hunter-build-item-img" src="' + esc(card.art_path) + '" alt="' + esc(card.name) + '" draggable="false" loading="lazy" decoding="async">'
+          : '<div class="hunter-build-item-fallback"><span>' + (SLOT_ICONS[card.slot] || '✦') + '</span></div>';
+        html += '<button class="hunter-build-slot hunter-build-slot--equipped build-rarity--' + rarityShort + '" type="button" ' +
+                'data-slot-index="' + i + '" aria-label="Equipped: ' + esc(card.name) + '">' +
+                  artImg +
+                  '<div class="hunter-build-slot-name">' + esc(card.name) + '</div>' +
+                '</button>';
+      } else {
+        // Empty unlocked slot — show plus icon prompt
+        html += '<button class="hunter-build-slot hunter-build-slot--empty" type="button" ' +
+                'data-slot-index="' + i + '" aria-label="Empty slot — tap to equip relic">' +
+                  '<div class="hunter-build-slot-plus">+</div>' +
+                  '<div class="hunter-build-slot-empty-label">EMPTY</div>' +
+                '</button>';
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  // ─── Build summary renderer ─────────────────────────────────
+  function renderHunterBuildSummary() {
+    const el = document.getElementById('hunter-build-summary');
+    if (!el) return;
+    const power      = aggregateBuildPower();
+    const dominant   = getBuildDominantPath();
+    const equippedCt = countEquippedBuildItems();
+    const rank  = (typeof getRank === 'function') ? getRank(totalPoints || 0) : { id: 'E' };
+    const unlockedCount = getUnlockedBuildSlots(rank.id);
+    const lockedCount   = HUNTER_BUILD_SLOT_COUNT - unlockedCount;
+
+    const dominantTxt = dominant
+      ? (typeof STAT_TAGLINES !== 'undefined' && STAT_TAGLINES[dominant]
+          ? dominant + ' · ' + STAT_TAGLINES[dominant]
+          : dominant)
+      : 'BALANCED';
+
+    el.innerHTML =
+      '<div class="hbs-row hbs-row--power">' +
+        '<span class="hbs-label">BUILD POWER</span>' +
+        '<span class="hbs-val hbs-val--power">' + power + '</span>' +
+      '</div>' +
+      '<div class="hbs-row">' +
+        '<span class="hbs-label">DOMINANT PATH</span>' +
+        '<span class="hbs-val">' + esc(dominantTxt) + '</span>' +
+      '</div>' +
+      '<div class="hbs-row">' +
+        '<span class="hbs-label">ACTIVE RELICS</span>' +
+        '<span class="hbs-val">' + equippedCt + ' / ' + unlockedCount + '</span>' +
+      '</div>' +
+      (lockedCount > 0
+        ? '<div class="hbs-row hbs-row--hint">' +
+            '<span class="hbs-label">LOCKED SLOTS</span>' +
+            '<span class="hbs-val hbs-val--muted">' + lockedCount + ' awaiting rank-up</span>' +
+          '</div>'
+        : '');
+  }
+
+  // ─── Item picker ────────────────────────────────────────────
+  // Opens when user taps an empty unlocked build slot. Shows
+  // discovered items as a grid; tap any to equip into the slot
+  // that opened the picker.
+  function openBuildPicker(slotIndex) {
+    _buildPickerSlotIndex = slotIndex;
+    const overlay = document.getElementById('build-picker-overlay');
+    const sheet   = document.getElementById('build-picker-sheet');
+    const grid    = document.getElementById('build-picker-grid');
+    const empty   = document.getElementById('build-picker-empty');
+    if (!overlay || !sheet || !grid) return;
+
+    // Build the list of discovered cards. Sort by rarity then name.
+    const inv = getInventory();
+    const discovered = Object.keys(CARDS)
+      .map(id => CARDS[id])
+      .filter(c => inv.cards[c.id] && inv.cards[c.id].discovered)
+      .sort((a, b) => {
+        const order = { ultra_rare: 0, rare: 1, common: 2 };
+        const ra = order[a.rarity] != null ? order[a.rarity] : 9;
+        const rb = order[b.rarity] != null ? order[b.rarity] : 9;
+        if (ra !== rb) return ra - rb;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+    if (discovered.length === 0) {
+      grid.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+    } else {
+      if (empty) empty.classList.add('hidden');
+      grid.innerHTML = discovered.map(c => {
+        const equippedSlot = getBuildSlotIndexForCard(c.id);
+        const equippedElsewhere = equippedSlot >= 0 && equippedSlot !== slotIndex;
+        const equippedHere      = equippedSlot === slotIndex;
+        const rarityShort = c.rarity === 'ultra_rare' ? 'ultra' : c.rarity;
+        const artImg = c.art_path
+          ? '<img class="build-picker-tile-img" src="' + esc(c.art_path) + '" alt="" draggable="false" loading="lazy" decoding="async">'
+          : '<div class="build-picker-tile-fallback">' + (SLOT_ICONS[c.slot] || '✦') + '</div>';
+        return '<button class="build-picker-tile build-rarity--' + rarityShort +
+               (equippedElsewhere ? ' build-picker-tile--equipped-elsewhere' : '') +
+               (equippedHere      ? ' build-picker-tile--equipped-here'      : '') +
+               '" type="button" data-card-id="' + esc(c.id) + '"' +
+               (equippedElsewhere ? ' aria-label="Already equipped in slot ' + (equippedSlot + 1) + '"' : '') +
+               '>' +
+                 artImg +
+                 (equippedHere      ? '<div class="build-picker-tile-badge">EQUIPPED</div>' :
+                  equippedElsewhere ? '<div class="build-picker-tile-badge build-picker-tile-badge--elsewhere">SLOT ' + (equippedSlot + 1) + '</div>' : '') +
+                 '<div class="build-picker-tile-name">' + esc(c.name) + '</div>' +
+               '</button>';
+      }).join('');
+    }
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeBuildPicker() {
+    _buildPickerSlotIndex = -1;
+    const overlay = document.getElementById('build-picker-overlay');
+    const sheet   = document.getElementById('build-picker-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+
+  // ─── Build slot detail sheet ────────────────────────────────
+  // Opens when user taps an EQUIPPED slot. Shows the item's
+  // detail + UNEQUIP and REPLACE actions.
+  function openBuildItemDetail(slotIndex) {
+    _buildDetailSlotIndex = slotIndex;
+    const build  = getHunterBuild();
+    const cardId = build.slots[slotIndex];
+    const card   = cardId ? CARDS[cardId] : null;
+    if (!card) return;
+    const overlay = document.getElementById('build-detail-overlay');
+    const sheet   = document.getElementById('build-detail-sheet');
+    if (!overlay || !sheet) return;
+
+    document.getElementById('build-detail-name').textContent = card.name;
+    document.getElementById('build-detail-rarity').textContent = (RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
+    const flavorEl = document.getElementById('build-detail-flavor');
+    if (flavorEl) flavorEl.textContent = card.flavor || '';
+    const statsEl = document.getElementById('build-detail-stats');
+    if (statsEl)  statsEl.innerHTML = (typeof cardStatBadgesHtml === 'function') ? cardStatBadgesHtml(card) : '';
+    const artImg = document.getElementById('build-detail-art-img');
+    if (artImg) {
+      artImg.src = card.art_path || '';
+      artImg.alt = card.name + ' relic';
+    }
+    sheet.setAttribute('data-rarity', card.rarity || 'common');
+
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeBuildItemDetail() {
+    _buildDetailSlotIndex = -1;
+    const overlay = document.getElementById('build-detail-overlay');
+    const sheet   = document.getElementById('build-detail-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+
+  // ─── Setup — wire all click handlers once at init ───────────
   function setupEquipmentPanel() {
-    // ── Items-tab button (static markup, wire once) ─────────
+    // Items-tab button
     const armoryBtn = document.getElementById('armory-open-btn');
     if (armoryBtn) armoryBtn.addEventListener('click', openEquipmentPanel);
 
-    // ── Modal close + overlay dismiss ────────────────────────
+    // Modal close + overlay dismiss
     const overlay = document.getElementById('equipment-overlay');
     const close   = document.getElementById('equipment-close');
     if (overlay) overlay.addEventListener('click', closeEquipmentPanel);
     if (close)   close.addEventListener('click', closeEquipmentPanel);
 
-    // ── Slot hit-targets — v2.1 stub: coming-soon toast ─────
-    // Each .equipment-slot-hit button carries data-slot ∈ {helm,
-    // cape, amulet, weapon, body, legs, gloves, boots, ring}.
-    // v3 PvP Phase 1 will replace this handler with the equip
-    // flow (open inventory filtered to that slot → tap to equip
-    // → write hb_pvp_equipped + refresh stat aggregation).
-    document.querySelectorAll('.equipment-slot-hit').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const slot = btn.getAttribute('data-slot') || 'slot';
-        const niceName = slot.charAt(0).toUpperCase() + slot.slice(1);
-        // v3 Phase 1a: if a card is equipped to this slot, open the
-        // card detail modal (which has the UNEQUIP button). Otherwise
-        // surface the path-to-equip hint via toast — the actual
-        // equip flow comes from the Pokédex tile tap (open card
-        // detail → EQUIP). Phase 1b will add an inline slot picker
-        // so users can equip directly from this slot tap.
-        const cardId = getEquippedCardId(slot);
+    // Build slot grid — delegated click handler routes to picker
+    // or detail depending on slot state.
+    const grid = document.getElementById('hunter-build-grid');
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('[data-slot-index]');
+        if (!btn) return;
+        const slotIndex = parseInt(btn.getAttribute('data-slot-index'), 10);
+        if (isNaN(slotIndex)) return;
+
+        if (!isBuildSlotUnlocked(slotIndex)) {
+          const req = getRequiredRankForBuildSlot(slotIndex);
+          try { showHabitToast('Reach ' + req + ' Rank to unlock this build slot.'); } catch (_) {}
+          return;
+        }
+        const build  = getHunterBuild();
+        const cardId = build.slots[slotIndex];
         if (cardId && CARDS[cardId]) {
-          closeEquipmentPanel();
-          // Tiny delay so the closing modal transition completes
-          // before the card detail modal opens on top.
-          setTimeout(() => {
-            const inv = getInventory();
-            const entry = inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null };
-            openCardDetailModal(CARDS[cardId], entry);
-          }, 50);
+          openBuildItemDetail(slotIndex);
         } else {
-          try { showHabitToast(niceName + ' slot empty — find a ' + niceName.toLowerCase() + ' card in your Pokédex and tap EQUIP.'); } catch (_) {}
+          openBuildPicker(slotIndex);
         }
       });
-    });
+    }
 
-    // ── Avatar tap on Status tab — wired AFTER each renderProfile
-    // since the avatar img is rebuilt on every render. We attach
-    // via event delegation on the Status panel root so the handler
-    // survives re-renders. ──────────────────────────────────
+    // Picker — overlay/close/grid wiring
+    const pickerOverlay = document.getElementById('build-picker-overlay');
+    const pickerClose   = document.getElementById('build-picker-close');
+    const pickerGrid    = document.getElementById('build-picker-grid');
+    const pickerSheet   = document.getElementById('build-picker-sheet');
+    if (pickerOverlay) pickerOverlay.addEventListener('click', closeBuildPicker);
+    if (pickerClose)   pickerClose.addEventListener('click', closeBuildPicker);
+    if (pickerSheet && typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(pickerSheet, pickerOverlay, closeBuildPicker, {});
+    }
+    if (pickerGrid) {
+      pickerGrid.addEventListener('click', (e) => {
+        const tile = e.target.closest && e.target.closest('[data-card-id]');
+        if (!tile) return;
+        const cardId = tile.getAttribute('data-card-id');
+        if (_buildPickerSlotIndex < 0) return;
+        const card = CARDS[cardId];
+        if (!card) return;
+        const res = equipBuildItem(_buildPickerSlotIndex, cardId);
+        if (res.ok) {
+          if (res.prevCardId && CARDS[res.prevCardId]) {
+            try { showHabitToast(card.name + ' equipped — replaced ' + CARDS[res.prevCardId].name + '.'); } catch (_) {}
+          } else {
+            try { showHabitToast(card.name + ' equipped.'); } catch (_) {}
+          }
+          closeBuildPicker();
+          renderHunterBuild();
+          renderHunterBuildSummary();
+          if (currentTab === 'items') renderPokedex();
+        } else if (res.code === 'DUPLICATE') {
+          try { showHabitToast(card.name + ' is already equipped in slot ' + (res.existingSlot + 1) + '.'); } catch (_) {}
+        } else if (res.code === 'LOCKED') {
+          try { showHabitToast('Slot locked — reach ' + res.requiredRank + ' Rank.'); } catch (_) {}
+        }
+      });
+    }
+
+    // Detail sheet wiring — UNEQUIP / REPLACE buttons
+    const detailOverlay = document.getElementById('build-detail-overlay');
+    const detailClose   = document.getElementById('build-detail-close');
+    const detailSheet   = document.getElementById('build-detail-sheet');
+    const replaceBtn    = document.getElementById('build-detail-replace');
+    const unequipBtn    = document.getElementById('build-detail-unequip');
+    if (detailOverlay) detailOverlay.addEventListener('click', closeBuildItemDetail);
+    if (detailClose)   detailClose.addEventListener('click', closeBuildItemDetail);
+    if (detailSheet && typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(detailSheet, detailOverlay, closeBuildItemDetail, {});
+    }
+    if (replaceBtn) {
+      replaceBtn.addEventListener('click', () => {
+        const slotIndex = _buildDetailSlotIndex;
+        closeBuildItemDetail();
+        if (slotIndex >= 0) openBuildPicker(slotIndex);
+      });
+    }
+    if (unequipBtn) {
+      unequipBtn.addEventListener('click', () => {
+        const slotIndex = _buildDetailSlotIndex;
+        if (slotIndex < 0) return;
+        const build = getHunterBuild();
+        const cardId = build.slots[slotIndex];
+        const card = cardId ? CARDS[cardId] : null;
+        unequipBuildItem(slotIndex);
+        if (card) {
+          try { showHabitToast(card.name + ' unequipped.'); } catch (_) {}
+        }
+        closeBuildItemDetail();
+        renderHunterBuild();
+        renderHunterBuildSummary();
+        if (currentTab === 'items') renderPokedex();
+      });
+    }
+
+    // Avatar tap on Status tab — opens the armory modal. Delegated
+    // on #status-content so the handler survives re-renders.
     const statusContent = document.getElementById('status-content');
     if (statusContent && !statusContent.dataset.armoryWired) {
       statusContent.addEventListener('click', (e) => {
@@ -10146,6 +10361,7 @@
       statusContent.dataset.armoryWired = '1';
     }
   }
+
 
   function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -18211,6 +18427,11 @@
       } catch (_) {}
       localStorage.setItem('hb_inventory_commons_v3_migrated', '1');
     }
+    // v3 Phase 1d — migrate any old body-slot equipment into the
+    // new 6-slot Hunter Build. Idempotent — bails immediately if
+    // hb_hunter_build already exists. Old hb_pvp_equipped is left
+    // untouched as a safety copy.
+    try { migrateEquipmentToHunterBuild(); } catch (_) {}
     if (!localStorage.getItem('hb_bedtime_window_fix_v1')) {
       try {
         const bedtimeHabit = habits.find(h => h && h.name === 'Sleep before midnight' && !h.custom);
@@ -18446,4 +18667,4 @@
   }
 
   document.addEventListener('DOMContentLoaded', init);
-})();
+})();
