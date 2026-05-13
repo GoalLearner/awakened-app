@@ -297,9 +297,9 @@
       rank:         'E',
       flavorShort:  'A creature born from restless nights.',
       flavorLong:   'A creature born from restless nights. It feeds on the hours you should have slept.',
-      killCondShort:'Sleep 7+ hours, 2 nights in a row',
-      killCondLong: 'Sleep at least 7 hours per night for 2 nights in a row. A night under 7 hours, or a night with no sleep data, breaks the streak.',
-      streakTarget: 2,
+      killCondShort:'Sleep 7+ hours in a single night',
+      killCondLong: 'Sleep at least 7 hours in a single night. Any night you hit this threshold defeats the boss for that hunt.',
+      streakTarget: 1,
       sleepHours:   7,
       cadence:      'daily',
       statDomain:   'VIT',
@@ -11869,7 +11869,7 @@
         // Region f: Progress — dots + streak label + kill count
         '<div class="bcard-progress">' +
           '<div class="bcard-dots">' + dots + '</div>' +
-          '<div class="bcard-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' nights</div>' +
+          '<div class="bcard-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + (cfg.streakTarget === 1 ? 'night' : 'nights') + '</div>' +
           '<div class="bcard-kills">' + killText + '</div>' +
         '</div>' +
       '</button>'
@@ -11960,7 +11960,7 @@
       ).join('');
       progressEl.innerHTML =
         '<div class="bfs-dots">' + dots + '</div>' +
-        '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' nights</div>';
+        '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + (cfg.streakTarget === 1 ? 'night' : 'nights') + '</div>';
     }
 
     // Burned banner (Carouser only when weekend_burned === true)
