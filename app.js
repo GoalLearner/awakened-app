@@ -9180,22 +9180,41 @@
 
     // Stats
     const total30 = cumulative[29];
-    const last7   = perDay.slice(23).reduce((a, b) => a + b, 0);
     const totalAllTime = (typeof totalPoints === 'number') ? totalPoints : total30;
     const daysActive = perDay.filter(x => x > 0).length;
-    // Best day
+    // Best day in the 30-day window
     let bestDay = 0, bestIdx = -1;
     perDay.forEach((v, i) => { if (v > bestDay) { bestDay = v; bestIdx = i; } });
 
-    // This-week XP (Sunday → today inclusive)
-    const dow = new Date().getDay();
-    let weekXP = 0;
-    for (let i = dow; i >= 0; i--) {
-      // perDay index for today is 29; walk back dow steps
-      weekXP += perDay[29 - (dow - i)] || 0;
-    }
-    // Simpler equivalent: sum the last (dow + 1) entries of perDay
-    weekXP = perDay.slice(29 - dow).reduce((a, b) => a + b, 0);
+    // Today's XP — the last entry of perDay (most recent day in window)
+    const dailyXP = perDay[29] || 0;
+
+    // This-week XP (Sunday → today inclusive, device-local)
+    const dow = new Date().getDay(); // 0=Sun ... 6=Sat
+    const weekXP = perDay.slice(29 - dow).reduce((a, b) => a + b, 0);
+
+    // This-month XP — sum every day from the 1st of the current month
+    // (device-local) through today. Walks the completions map directly
+    // rather than relying on the 30-day perDay array, since the 30-day
+    // window may not align cleanly with the calendar month boundary.
+    let monthlyXP = 0;
+    try {
+      const nowD = new Date();
+      const year = nowD.getFullYear();
+      const month = nowD.getMonth();
+      const dayOfMonth = nowD.getDate();
+      for (let d = 1; d <= dayOfMonth; d++) {
+        const iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const ids = completions[iso] || [];
+        ids.forEach(id => {
+          const h = habitIndex[id];
+          if (!h) return;
+          const diff = h.difficulty || 'medium';
+          const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+          monthlyXP += pts;
+        });
+      }
+    } catch (_) {}
 
     // Render numeric cells
     const setText = (id, val) => {
@@ -9204,10 +9223,20 @@
     };
     setText('xp-detail-total',        totalAllTime);
     setText('xp-detail-week',         weekXP);
-    setText('xp-detail-7d',           last7);
-    setText('xp-detail-30d',          total30);
+    setText('xp-detail-daily',        dailyXP);
+    setText('xp-detail-monthly',      monthlyXP);
     setText('xp-detail-days-active',  daysActive);
     setText('xp-detail-best-day',     bestDay);
+
+    // Monthly sub-label — show "MAY 1 → today" style for clarity
+    try {
+      const subEl = document.getElementById('xp-detail-monthly-sub');
+      if (subEl) {
+        const nowD = new Date();
+        const monthShort = nowD.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+        subEl.textContent = monthShort + ' 1 → today';
+      }
+    } catch (_) {}
     // Best day sub: format the date (e.g., "MAY 8")
     const bestSubEl = document.getElementById('xp-detail-best-day-sub');
     if (bestSubEl) {

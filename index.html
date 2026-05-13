@@ -754,7 +754,8 @@
         </div>
       </div>
 
-      <!-- Stats grid -->
+      <!-- Stats grid — TOTAL → WEEKLY → DAILY (descending granularity)
+                       MONTHLY → DAYS ACTIVE → BEST DAY (complementary). -->
       <div class="xp-detail-stats">
         <div class="xp-detail-stat">
           <div class="xp-detail-stat-label">TOTAL XP</div>
@@ -762,19 +763,19 @@
           <div class="xp-detail-stat-sub">all-time</div>
         </div>
         <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">THIS WEEK</div>
+          <div class="xp-detail-stat-label">WEEKLY XP</div>
           <div id="xp-detail-week" class="xp-detail-stat-value">0</div>
           <div class="xp-detail-stat-sub">Sun → today</div>
         </div>
         <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">LAST 7 DAYS</div>
-          <div id="xp-detail-7d" class="xp-detail-stat-value">0</div>
-          <div class="xp-detail-stat-sub">rolling</div>
+          <div class="xp-detail-stat-label">DAILY XP</div>
+          <div id="xp-detail-daily" class="xp-detail-stat-value">0</div>
+          <div class="xp-detail-stat-sub">today</div>
         </div>
         <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">LAST 30 DAYS</div>
-          <div id="xp-detail-30d" class="xp-detail-stat-value">0</div>
-          <div class="xp-detail-stat-sub">rolling</div>
+          <div class="xp-detail-stat-label">MONTHLY XP</div>
+          <div id="xp-detail-monthly" class="xp-detail-stat-value">0</div>
+          <div id="xp-detail-monthly-sub" class="xp-detail-stat-sub">this month</div>
         </div>
         <div class="xp-detail-stat">
           <div class="xp-detail-stat-label">DAYS ACTIVE</div>
@@ -1387,7 +1388,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=283"></script>
+  <script src="app.js?v=284"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
