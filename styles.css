@@ -16034,16 +16034,145 @@ body.reveal-locked { overflow: hidden; }
   box-shadow: 0 0 14px rgba(139, 92, 246, 0.35) !important;
 }
 
-/* v3 Phase 1a — equipped card overlay inside the armory panel slot.
-   Image sits inside the painted slot tablet so users see their gear
-   filling the slot visually. Pointer-events disabled — taps still
-   route through the .equipment-slot-hit button. */
+/* ═══════════════════════════════════════════════════════════════
+   v2.1.1 ARMORY EQUIPPED-ITEM TREATMENT
+   The 9 launch card PNGs have wildly different lighting + color
+   temperature + saturation. In the Pokédex this reads as variety;
+   in the armory 3×3 grid it reads as broken. This unified stack
+   pulls them into a single "character sheet" feel via layered CSS
+   effects + per-rarity glow on the wrapper.
+
+   Each treatment is its OWN class so you can disable any single
+   one in DevTools to compare. Default-applied via the
+   armory-fx-* tokens added in renderEquippedSlotOverlays.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Wrapper — handles positioning, rarity glow, tint pseudo. */
 .equipment-slot-overlay {
   display: block;
-  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.50));
+  overflow: hidden;
+  border-radius: 6px;
+  /* Default subtle baseline glow — overridden by rarity class below. */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
-.equipment-slot-overlay--ultra_rare {
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.65));
+
+/* Inner image — handles filter treatment + object-fit. */
+.equipment-slot-overlay-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+  /* Default neutral filter — toggles below add saturate/brightness. */
+  filter: none;
+}
+
+/* ─── TOGGLE A — desaturation ───────────────────────────────
+   Pulls high-saturation art (gloves' red/white) toward the
+   muted purple/gold panel palette. Standalone: filter: saturate(0.85)
+   on the inner img. */
+.armory-fx-desaturate .equipment-slot-overlay-img {
+  filter: saturate(0.85);
+}
+/* Combined with brightness if both classes present (filters
+   collapse to one prop, so we define the combined form explicitly). */
+.armory-fx-desaturate.armory-fx-brighten .equipment-slot-overlay-img {
+  filter: saturate(0.85) brightness(1.04);
+}
+.armory-fx-desaturate.armory-fx-luminosity .equipment-slot-overlay-img {
+  filter: saturate(0.85);
+  mix-blend-mode: luminosity;
+}
+
+/* ─── TOGGLE B — vignette via inset shadow on the WRAPPER ───
+   Pushes the hard rectangular edges into the slot bg so the art
+   feels embedded in the stone rather than pasted on top. */
+.armory-fx-vignette {
+  box-shadow:
+    inset 0 0 12px 3px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* ─── TOGGLE C — purple-tint pseudo overlay ─────────────────
+   Faint vertical gradient layered ON TOP of the image (z-index
+   via the wrapper's stacking context). Subtle — should read as
+   "ambient panel atmosphere," not "purple wash." */
+.armory-fx-tint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+              transparent 0%,
+              rgba(139, 92, 246, 0.08) 60%,
+              rgba(139, 92, 246, 0.14) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ─── TOGGLE D — brightness lift (alternative to luminosity) ─
+   Tiny ~4% brightness up. Helps darker items (sword + greaves)
+   read at parity with brighter ones. Combined with desaturate
+   via the dual-class rule above. */
+.armory-fx-brighten:not(.armory-fx-desaturate) .equipment-slot-overlay-img {
+  filter: brightness(1.04);
+}
+
+/* ─── TOGGLE E — luminosity blend (alternative unification) ─
+   Strips color from the image and blends it with the slot bg's
+   purple tint, creating a stronger "this is one set" feel. More
+   aggressive than desaturate. NOT default-on — toggle in
+   renderEquippedSlotOverlays JS to test. */
+.armory-fx-luminosity:not(.armory-fx-desaturate) .equipment-slot-overlay-img {
+  mix-blend-mode: luminosity;
+}
+
+/* ─── PER-RARITY GLOW on the wrapper ────────────────────────
+   Common: minimal — just a 1px white-ish edge so the slot is
+   visibly occupied. Rare: blue inset border + outer halo.
+   Ultra-rare: gold inset border + brighter outer halo. The
+   inset 1px border layers ON TOP of the .armory-fx-vignette
+   shadow via box-shadow comma-stacking. */
+.equipment-slot-overlay--common.armory-fx-vignette {
+  box-shadow:
+    inset 0 0 12px 3px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.equipment-slot-overlay--rare.armory-fx-vignette {
+  box-shadow:
+    inset 0 0 12px 3px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(96, 165, 250, 0.30),
+    0 0 12px rgba(96, 165, 250, 0.15);
+}
+.equipment-slot-overlay--ultra_rare.armory-fx-vignette {
+  box-shadow:
+    inset 0 0 12px 3px rgba(0, 0, 0, 0.40),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.45),
+    0 0 16px rgba(245, 158, 11, 0.25);
+}
+/* Fallback rarity glow if vignette is toggled OFF — keep the
+   per-rarity edge so equipped tier is still visible. */
+.equipment-slot-overlay--rare:not(.armory-fx-vignette) {
+  box-shadow:
+    inset 0 0 0 1px rgba(96, 165, 250, 0.30),
+    0 0 12px rgba(96, 165, 250, 0.15);
+}
+.equipment-slot-overlay--ultra_rare:not(.armory-fx-vignette) {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.45),
+    0 0 16px rgba(245, 158, 11, 0.25);
+}
+
+/* ─── PER-CARD OVERRIDES ────────────────────────────────────
+   Hook to override the global saturate(0.85) on specific PNGs
+   that need stronger correction. sober_kings_gloves is the
+   loudest red/white in the set — push it harder. */
+.armory-slot-art--sober_kings_gloves.armory-fx-desaturate .equipment-slot-overlay-img {
+  filter: saturate(0.6);
+}
+.armory-slot-art--sober_kings_gloves.armory-fx-desaturate.armory-fx-brighten .equipment-slot-overlay-img {
+  filter: saturate(0.6) brightness(1.04);
 }
 
 /* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────

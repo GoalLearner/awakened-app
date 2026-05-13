@@ -9816,18 +9816,44 @@
       const pos = _SLOT_OVERLAY_POS[slot];
       if (!pos) return;
       const hit = wrap.querySelector('.equipment-slot-hit[data-slot="' + slot + '"]');
-      const overlay = document.createElement('img');
-      overlay.className = 'equipment-slot-overlay equipment-slot-overlay--' + card.rarity;
-      overlay.alt = card.name + ' equipped';
-      overlay.draggable = false;
+
+      // v2.1.1 — refactored to container + inner <img> so the
+      // wrapper can host ::after tint + per-rarity box-shadow glow
+      // (pseudo-elements don't work on replaced <img> elements).
+      const overlay = document.createElement('div');
+      overlay.className =
+        'equipment-slot-overlay' +
+        ' equipment-slot-overlay--' + card.rarity +
+        ' armory-slot-art--equipped' +
+        // Per-card class hook for art-specific overrides — e.g.,
+        // .armory-slot-art--sober_kings_gloves applies extra
+        // desaturation to that one PNG without affecting others.
+        ' armory-slot-art--' + card.id +
+        // A/B toggles — each treatment as its own class so they can
+        // be disabled in DevTools to compare. Default ON for all
+        // five so you see the combined look first. Drop any single
+        // class to isolate its contribution.
+        ' armory-fx-desaturate' +
+        ' armory-fx-vignette' +
+        ' armory-fx-tint' +
+        ' armory-fx-brighten';
+        // NOT included by default — uncomment to test:
+        // ' armory-fx-luminosity'
+      overlay.setAttribute('data-rarity', card.rarity);
       overlay.style.position = 'absolute';
       overlay.style.top    = pos.top  + '%';
       overlay.style.left   = pos.left + '%';
       overlay.style.width  = '28%';
       overlay.style.height = '24%';
       overlay.style.pointerEvents = 'none';
-      overlay.style.objectFit = 'contain';
-      if (card.art_path) overlay.src = card.art_path;
+
+      const img = document.createElement('img');
+      img.className = 'equipment-slot-overlay-img';
+      img.alt = card.name + ' equipped';
+      img.draggable = false;
+      if (card.art_path) img.src = card.art_path;
+      overlay.appendChild(img);
+
       // Insert BEFORE the hit target so taps still route to the
       // button on top.
       if (hit) wrap.insertBefore(overlay, hit);
