@@ -3095,12 +3095,8 @@
       const cName = (def && def.name) ? def.name.toUpperCase() : topStat.id;
       stateLabel  = 'LEANING';
       primaryName = cName + '-LEANING';
-      subtext     = topStat.id + ' DOMINANT · LV ' + topStat.lv;
-      const target = 5;
-      const remaining = Math.max(0, target - topStat.lv);
-      pathText = remaining > 0
-        ? 'Train ' + topStat.id + ' to Lv' + target + ' to Awaken (' + remaining + ' to go)'
-        : 'Eligible to Awaken — tap your top stat';
+      subtext     = topStat.id + ' DOMINANT';
+      pathText    = ''; // Progress bar below conveys the path now.
     } else {
       // First-launch Civilian, no XP anywhere yet.
       displayClassId = null;
@@ -3115,6 +3111,68 @@
     const emoji = (displayClassId && CLASSES[displayClassId] && CLASSES[displayClassId].emoji) || '🧍';
     card.style.setProperty('--alignment-color', color);
 
+    // v2.1 — Next-milestone progress bar inside the alignment card.
+    // Replaces the standalone NEXT STAT BONUS section. For Civilian-
+    // with-progress users, targets the dominant stat's Lv5 Awakening
+    // threshold. For Awakened users, targets the closest stat-bonus
+    // threshold across all stats (same logic the old card used).
+    let progressHTML = '';
+    if (hasProgress) {
+      let targetStat   = topStat;
+      let targetLevel  = 5;
+      let targetReward = 25; // STAT_BONUS_THRESHOLDS[Lv5] = +25 XP
+
+      if (currentClass && currentClass !== 'CIVILIAN') {
+        // Awakened — find the closest stat-bonus threshold not yet
+        // awarded across any stat. Mirrors the prior NEXT STAT BONUS
+        // candidate scan.
+        const candidates = [];
+        STATS.forEach(st => {
+          const curLv = statLevel(stats[st.id]?.pts || 0);
+          STAT_BONUS_THRESHOLDS.forEach(thr => {
+            const key = st.id + '_' + thr.level;
+            if (!statBonuses.has(key)) {
+              candidates.push({
+                stId: st.id, stLv: curLv, stPts: stats[st.id]?.pts || 0,
+                thrLevel: thr.level, thrPts: thr.pts,
+              });
+            }
+          });
+        });
+        candidates.sort((a, b) => (a.thrLevel - a.stLv) - (b.thrLevel - b.stLv));
+        if (candidates.length) {
+          const nx = candidates[0];
+          targetStat   = { id: nx.stId, lv: nx.stLv, pts: nx.stPts };
+          targetLevel  = nx.thrLevel;
+          targetReward = nx.thrPts;
+        }
+      }
+
+      // Pct of progress from baseline (current full level start) to target.
+      // For Civilian: ratio of current level toward Lv5.
+      const pct = Math.min(100, Math.round((targetStat.lv / targetLevel) * 100));
+      const remainingLvs = Math.max(0, targetLevel - targetStat.lv);
+      const goalText = (currentClass && currentClass !== 'CIVILIAN')
+        ? targetStat.id + ' Lv' + targetLevel
+        : 'AWAKEN at ' + targetStat.id + ' Lv' + targetLevel;
+
+      progressHTML =
+        '<div class="alignment-progress">' +
+          '<div class="alignment-progress-head">' +
+            '<span class="alignment-progress-label">' + esc(goalText) + '</span>' +
+            '<span class="alignment-progress-reward">+' + targetReward + ' XP</span>' +
+          '</div>' +
+          '<div class="alignment-progress-track">' +
+            '<div class="alignment-progress-fill" style="width:' + pct + '%"></div>' +
+          '</div>' +
+          '<div class="alignment-progress-axis">' +
+            '<span>Lv.' + targetStat.lv + '</span>' +
+            '<span>' + (remainingLvs === 0 ? 'READY' : remainingLvs + ' lv to go') + '</span>' +
+            '<span>Lv.' + targetLevel + '</span>' +
+          '</div>' +
+        '</div>';
+    }
+
     card.innerHTML =
       '<div class="alignment-card-bg" aria-hidden="true"></div>' +
       '<div class="alignment-card-head">' +
@@ -3123,7 +3181,8 @@
       '</div>' +
       '<div class="alignment-card-name">' + esc(primaryName) + '</div>' +
       (subtext ? '<div class="alignment-card-sub">' + esc(subtext) + '</div>' : '') +
-      (pathText ? '<div class="alignment-card-path">' + esc(pathText) + '</div>' : '');
+      (pathText ? '<div class="alignment-card-path">' + esc(pathText) + '</div>' : '') +
+      progressHTML;
 
     return card;
   }
@@ -7397,49 +7456,23 @@
       + (isAllMaxed ? ' <span class="osrs-total-crown">👑 FULLY AWAKENED</span>' : '');
     el.appendChild(totalEl);
 
-    // ── Next Stat Bonus ────────────────────────────────────
-    const bonusEl = document.createElement('div');
-    bonusEl.className = 'stats-next-bonus-section';
-
-    const candidates = [];
-    STATS.forEach(st => {
-      const curLevel = statLevel(stats[st.id]?.pts || 0);
-      STAT_BONUS_THRESHOLDS.forEach(thr => {
-        const key = st.id + '_' + thr.level;
-        if (!statBonuses.has(key)) {
-          candidates.push({ st, thr, curLevel, levelsNeeded: Math.max(0, thr.level - curLevel) });
-        }
-      });
+    // ── Next Stat Bonus — consolidated into alignment card (v2.1) ──
+    // Previously a standalone section below the stat grid. The progress
+    // bar + reward + Lv current/target labels now live inside the
+    // alignment card at the top so the Stats tab has less visual
+    // weight. The "🏆 All stat bonuses unlocked!" maxed state still
+    // needs surfacing — render only when EVERY threshold is awarded.
+    const allMaxed = STATS.every(st => {
+      return STAT_BONUS_THRESHOLDS.every(thr => statBonuses.has(st.id + '_' + thr.level));
     });
-    candidates.sort((a, b) => a.levelsNeeded - b.levelsNeeded);
-
-    let bonusHTML = '<div class="stats-section-label" style="margin-top:24px">NEXT STAT BONUS</div>';
-    if (candidates.length > 0) {
-      const nx  = candidates[0];
-      const pct = Math.min(100, Math.round((nx.curLevel / nx.thr.level) * 100));
-      bonusHTML +=
-        '<div class="nb-card">' +
-          '<div class="nb-top">' +
-            '<span class="nb-icon">' + statIconHtml(nx.st, { size: 32, eager: true }) + '</span>' +
-            '<div class="nb-info">' +
-              '<span class="nb-label" style="color:' + nx.st.color + '">' + nx.st.label + '</span>' +
-              '<span class="nb-sublabel">Reach Level ' + nx.thr.level + '</span>' +
-            '</div>' +
-            '<span class="nb-reward">+' + nx.thr.pts + ' XP</span>' +
-          '</div>' +
-          '<div class="nb-track">' +
-            '<div class="nb-fill" style="width:' + pct + '%;background:' + nx.st.color + '"></div>' +
-          '</div>' +
-          '<div class="nb-labels">' +
-            '<span class="nb-cur">Lv.' + nx.curLevel + '</span>' +
-            '<span class="nb-goal">Lv.' + nx.thr.level + '</span>' +
-          '</div>' +
-        '</div>';
-    } else {
-      bonusHTML += '<div class="nb-card nb-all-done"><span>🏆 All stat bonuses unlocked!</span></div>';
+    if (allMaxed) {
+      const doneEl = document.createElement('div');
+      doneEl.className = 'stats-next-bonus-section';
+      doneEl.innerHTML =
+        '<div class="stats-section-label" style="margin-top:24px">STAT BONUSES</div>' +
+        '<div class="nb-card nb-all-done"><span>🏆 All stat bonuses unlocked!</span></div>';
+      el.appendChild(doneEl);
     }
-    bonusEl.innerHTML = bonusHTML;
-    el.appendChild(bonusEl);
   }
 
   // ── STATUS ────────────────────────────────────────────────

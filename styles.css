@@ -4095,6 +4095,67 @@ footer {
   position: relative;
 }
 
+/* v2.1 — progress-to-next-milestone block inside the alignment card.
+   Replaces the standalone NEXT STAT BONUS section. Shows goal label,
+   XP reward, progress bar, current/target levels, and a "N lv to go"
+   counter so the user can scan everything at a glance. */
+.alignment-progress {
+  position: relative;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--alignment-color, var(--border)) 22%, var(--border));
+}
+.alignment-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.alignment-progress-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+.alignment-progress-reward {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gold-bright, var(--gold));
+}
+.alignment-progress-track {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.alignment-progress-fill {
+  height: 100%;
+  background: var(--alignment-color, var(--accent));
+  border-radius: 3px;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--alignment-color, var(--accent)) 50%, transparent);
+  transition: width 0.4s ease;
+}
+.alignment-progress-axis {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+.alignment-progress-axis > :nth-child(2) {
+  color: var(--alignment-color, var(--accent));
+  font-weight: 600;
+}
+
 .osrs-panel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
