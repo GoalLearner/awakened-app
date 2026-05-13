@@ -16049,16 +16049,19 @@ body.reveal-locked { overflow: hidden; }
   position: absolute;
   top: 7px;
   left: 7px;
-  z-index: 4;
-  padding: 2px 7px;
+  z-index: 5;
+  padding: 3px 7px;
   border-radius: 999px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.48rem;
+  font-size: 0.50rem;
   font-weight: 900;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.12em;
   color: #f8e7b0;
-  background: rgba(10, 10, 24, 0.78);
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(10, 10, 24, 0.72);
+  border: 1px solid rgba(245, 158, 11, 0.30);
+  box-shadow:
+    0 0 10px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   text-transform: uppercase;
@@ -16066,6 +16069,23 @@ body.reveal-locked { overflow: hidden; }
 }
 .hunter-build-slot--equipped .hunter-build-slot-label {
   border-color: rgba(245, 158, 11, 0.55);
+}
+
+/* Subtle top-strip vignette behind the slot pill on equipped
+   tiles. Keeps the pill legible regardless of how bright the
+   underlying card art is at the top of the canvas. */
+.hunter-build-slot-top-fade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42px;
+  z-index: 4;
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, 0.62) 0%,
+    rgba(0, 0, 0, 0.18) 60%,
+    transparent 100%);
+  pointer-events: none;
 }
 
 /* Item name band — sits below the slot label on equipped tiles.

@@ -10200,15 +10200,19 @@
                   '</div>' +
                 '</button>';
       } else if (card) {
-        // Equipped slot — show the card art (square is intentional in MOBA style)
+        // Equipped slot — show the card art (square is intentional in MOBA style).
+        // .hunter-build-slot-top-fade darkens the top strip so the
+        // slot pill stays legible over bright card art (DALL-E hood/
+        // signet pieces with light backgrounds can drown the pill).
         const rarityShort = card.rarity === 'ultra_rare' ? 'ultra' : card.rarity;
         const artImg = card.art_path
           ? '<img class="hunter-build-item-img" src="' + esc(card.art_path) + '" alt="' + esc(card.name) + '" draggable="false" loading="lazy" decoding="async">'
           : '<div class="hunter-build-item-fallback"><span>' + (SLOT_ICONS[card.slot] || '✦') + '</span></div>';
         html += '<button class="hunter-build-slot hunter-build-slot--equipped build-rarity--' + rarityShort + '" type="button" ' +
                 'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — ' + esc(card.name) + '">' +
-                  slotPill +
                   artImg +
+                  '<div class="hunter-build-slot-top-fade"></div>' +
+                  slotPill +
                   '<div class="hunter-build-item-name">' + esc(card.name) + '</div>' +
                 '</button>';
       } else {
