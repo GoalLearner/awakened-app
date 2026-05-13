@@ -4009,6 +4009,92 @@ footer {
 }
 
 /* ── OSRS SKILLS PANEL ──────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   v2.1 STATS TAB UPGRADE — alignment card + stat subtitles +
+   subtle ambient motion. Three coordinated touches:
+   1. Alignment/class card surfaces dominant lean prominently
+      above the stat grid (retention play)
+   2. Stat subtitles ("BODY", "RECOVERY", etc.) make stat
+      identities legible to casual users (onboarding)
+   3. Ambient breathing glow on stat icons makes the UI feel
+      "alive" without crossing into mobile-ad-chaos territory
+   ═══════════════════════════════════════════════════════════════ */
+
+.alignment-card {
+  position: relative;
+  margin: 4px 0 14px;
+  padding: 14px 16px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--alignment-color, var(--accent)) 35%, var(--border));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--alignment-color, var(--accent)) 14%, transparent);
+}
+/* Soft radial behind the text — uses the alignment color so
+   class-aligned users feel "in their lane" visually. */
+.alignment-card-bg {
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(circle at 100% 50%,
+              color-mix(in srgb, var(--alignment-color, var(--accent)) 28%, transparent),
+              transparent 65%);
+  pointer-events: none;
+  opacity: 0.85;
+  animation: alignment-bg-breathe 6s ease-in-out infinite;
+}
+@keyframes alignment-bg-breathe {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50%      { opacity: 1.0;  transform: scale(1.08); }
+}
+.alignment-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  position: relative;
+}
+.alignment-card-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.alignment-card-emoji {
+  font-size: 1.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px var(--alignment-color, var(--accent)));
+}
+.alignment-card-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.55rem;
+  color: var(--alignment-color, var(--gold-bright));
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 6px;
+  position: relative;
+}
+.alignment-card-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  opacity: 0.85;
+  margin-bottom: 6px;
+  position: relative;
+}
+.alignment-card-path {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  position: relative;
+}
+
 .osrs-panel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -4046,6 +4132,63 @@ footer {
   font-size: 1.4rem;
   line-height: 1;
   margin-top: 2px;
+  position: relative;
+}
+/* v2.1 — ambient breathing glow on each stat icon, color-tinted to
+   the stat's own brand color via --stat-color (set on the cell by
+   JS in renderStats). 3.6s loop. Stays subtle: drop-shadow blur
+   oscillates 3px → 9px, opacity 0.5 → 0.95. Universal across all 6
+   stats so the page feels alive without per-stat custom effects.
+   The 5 different animation-delays (one per stat slot) prevent all
+   icons from pulsing in lockstep — staggered feels organic. */
+.osrs-cell .stat-icon-img {
+  filter: drop-shadow(0 0 4px var(--stat-color, rgba(245,158,11,0.4)));
+  animation: stat-icon-breathe 3.6s ease-in-out infinite;
+}
+.osrs-cell--str   .stat-icon-img { animation-delay: 0s;    }
+.osrs-cell--vit   .stat-icon-img { animation-delay: 0.45s; }
+.osrs-cell--int   .stat-icon-img { animation-delay: 0.9s;  }
+.osrs-cell--focus .stat-icon-img { animation-delay: 1.35s; }
+.osrs-cell--will  .stat-icon-img { animation-delay: 1.8s;  }
+.osrs-cell--wlt   .stat-icon-img { animation-delay: 2.25s; }
+@keyframes stat-icon-breathe {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px var(--stat-color, rgba(245,158,11,0.3)));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 9px var(--stat-color, rgba(245,158,11,0.6)));
+    transform: scale(1.04);
+  }
+}
+/* Dominant stat gets a more pronounced pulse — faster + brighter.
+   Visual signal that "this is your leaning stat" without screaming. */
+.osrs-cell--dominant .stat-icon-img {
+  animation-duration: 2.4s;
+}
+@keyframes stat-icon-breathe-strong {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--stat-color)); transform: scale(1);    }
+  50%      { filter: drop-shadow(0 0 14px var(--stat-color)); transform: scale(1.06); }
+}
+.osrs-cell--dominant .stat-icon-img {
+  animation-name: stat-icon-breathe-strong;
+}
+
+/* v2.1 — Stat subtitle (one-word identity beneath the abbr).
+   Smaller, dimmer, mono — onboarding cue for casual users. */
+.osrs-cell-subtitle {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.10em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  margin-top: -1px;
+  margin-bottom: 1px;
+  opacity: 0.85;
+}
+.osrs-cell--dominant .osrs-cell-subtitle {
+  color: var(--stat-color, var(--text-secondary));
+  opacity: 1;
 }
 /* When the icon container holds the new <img> art instead of an emoji,
    collapse the inherited font-size so vertical rhythm matches and the

@@ -3041,6 +3041,93 @@
     }
   }
 
+  // v2.1 — Stat taglines for the Stats tab onboarding subtitles.
+  // One-word identity that conveys what each stat actually represents
+  // for casual users who haven't memorized the STR/VIT/INT/FOCUS/WILL/WLT
+  // canon. Stays uppercase to match the abbr typography.
+  const STAT_TAGLINES = {
+    STR:   'BODY',
+    VIT:   'RECOVERY',
+    INT:   'MIND',
+    FOCUS: 'PRESENCE',
+    WILL:  'DISCIPLINE',
+    WLT:   'WEALTH',
+  };
+
+  // Builds the dominant-alignment / class card that sits above the
+  // OSRS stat-grid on the Stats tab. Three states:
+  //   1. Awakened (currentClass set + not CIVILIAN): show class name,
+  //      class glyph, class color, class tagline from CLASSES[id].desc
+  //   2. Civilian with progress: show "LEANING: <CLASS>" of top stat,
+  //      "<STAT> DOMINANT" sub, prompt "Reach Lv5 to Awaken"
+  //   3. Civilian with no progress: "CIVILIAN" + onboarding prompt
+  function _buildAlignmentCard() {
+    const card = document.createElement('div');
+    card.className = 'alignment-card';
+
+    // Determine state.
+    const ranked = STATS.map(st => ({
+      id:  st.id,
+      lv:  statLevel(stats[st.id]?.pts || 0),
+      pts: stats[st.id]?.pts || 0,
+    })).sort((a, b) => (b.lv - a.lv) || (b.pts - a.pts));
+    const topStat = ranked[0];
+    const hasProgress = topStat && topStat.pts > 0;
+
+    const statClassMap = { STR:'STR', VIT:'VIT', INT:'INT', FOCUS:'FOCUS', WILL:'WILL', WLT:'WLT' };
+    let displayClassId = null;
+    let stateLabel     = '';
+    let primaryName    = '';
+    let subtext        = '';
+    let pathText       = '';
+
+    if (currentClass && currentClass !== 'CIVILIAN') {
+      displayClassId = currentClass;
+      const def = CLASSES[currentClass];
+      stateLabel  = 'CLASS';
+      primaryName = (def && def.name ? def.name : currentClass).toUpperCase();
+      subtext     = def && def.desc ? def.desc : '';
+      pathText    = '';
+    } else if (hasProgress) {
+      // Civilian with progress — leaning toward the top stat's class.
+      displayClassId = statClassMap[topStat.id] || null;
+      const def = displayClassId ? CLASSES[displayClassId] : null;
+      const cName = (def && def.name) ? def.name.toUpperCase() : topStat.id;
+      stateLabel  = 'LEANING';
+      primaryName = cName + '-LEANING';
+      subtext     = topStat.id + ' DOMINANT · LV ' + topStat.lv;
+      const target = 5;
+      const remaining = Math.max(0, target - topStat.lv);
+      pathText = remaining > 0
+        ? 'Train ' + topStat.id + ' to Lv' + target + ' to Awaken (' + remaining + ' to go)'
+        : 'Eligible to Awaken — tap your top stat';
+    } else {
+      // First-launch Civilian, no XP anywhere yet.
+      displayClassId = null;
+      stateLabel  = 'CLASS';
+      primaryName = 'CIVILIAN';
+      subtext     = 'You have not been Awakened yet.';
+      pathText    = 'Train any stat to Lv5 to find your path.';
+    }
+
+    // Color anchor — use class color when available, else accent purple.
+    const color = (displayClassId && CLASSES[displayClassId] && CLASSES[displayClassId].color) || '#8b5cf6';
+    const emoji = (displayClassId && CLASSES[displayClassId] && CLASSES[displayClassId].emoji) || '🧍';
+    card.style.setProperty('--alignment-color', color);
+
+    card.innerHTML =
+      '<div class="alignment-card-bg" aria-hidden="true"></div>' +
+      '<div class="alignment-card-head">' +
+        '<span class="alignment-card-label">' + esc(stateLabel) + '</span>' +
+        '<span class="alignment-card-emoji" aria-hidden="true">' + emoji + '</span>' +
+      '</div>' +
+      '<div class="alignment-card-name">' + esc(primaryName) + '</div>' +
+      (subtext ? '<div class="alignment-card-sub">' + esc(subtext) + '</div>' : '') +
+      (pathText ? '<div class="alignment-card-path">' + esc(pathText) + '</div>' : '');
+
+    return card;
+  }
+
   const STAT_BONUS_THRESHOLDS = [
     { level:  5, pts:  25 },
     { level: 10, pts:  75 },
@@ -7203,8 +7290,30 @@
     lbl.textContent = 'CHARACTER STATS';
     el.appendChild(lbl);
 
+    // ── DOMINANT ALIGNMENT CARD (v2.1) ──────────────────────
+    // Big retention play — surface the user's current class lean
+    // prominently at the top of the Stats tab. Pre-Awakening users
+    // see "LEANING: WARRIOR (STR DOMINANT)" if any stat has leveled,
+    // otherwise CIVILIAN with a path-to-Awakening prompt. Awakened
+    // users see their actual class name + tagline.
+    el.appendChild(_buildAlignmentCard());
+
     // ── OSRS-style skills panel ────────────────────────────
-    const dominantStatId = currentClass !== 'SAGE' ? currentClass : null;
+    // Compute the dominant stat for visual emphasis:
+    //   - Awakened (currentClass != CIVILIAN/SAGE): dominant = class's stat
+    //   - Civilian with progress: dominant = top stat by level (then XP)
+    //   - Sage / no progress: no dominant
+    let dominantStatId = (currentClass && currentClass !== 'CIVILIAN' && currentClass !== 'SAGE')
+                          ? currentClass : null;
+    if (!dominantStatId) {
+      const ranked = STATS.map(st => ({
+        id: st.id,
+        lv: statLevel(stats[st.id]?.pts || 0),
+        pts: stats[st.id]?.pts || 0,
+      })).sort((a, b) => (b.lv - a.lv) || (b.pts - a.pts));
+      if (ranked[0] && ranked[0].pts > 0) dominantStatId = ranked[0].id;
+    }
+
     const panel = document.createElement('div');
     panel.className = 'osrs-panel';
 
@@ -7219,7 +7328,13 @@
       const isDom   = st.id === dominantStatId;
 
       const cell = document.createElement('div');
-      cell.className = 'osrs-cell' + (isDom ? ' osrs-cell--dominant' : '') + (isMaxed ? ' osrs-cell--maxed' : '');
+      cell.className = 'osrs-cell osrs-cell--' + st.id.toLowerCase() +
+                       (isDom ? ' osrs-cell--dominant' : '') +
+                       (isMaxed ? ' osrs-cell--maxed' : '');
+      // Expose the stat color as a CSS custom property so animations
+      // + per-stat color treatments can reference it without inline
+      // styles bloating every render.
+      cell.style.setProperty('--stat-color', st.color);
       if (isMaxed) {
         cell.style.borderColor = '#f59e0b';
         cell.style.boxShadow   = 'inset 0 0 18px rgba(245,158,11,0.18), 0 0 16px rgba(245,158,11,0.30)';
@@ -7245,6 +7360,13 @@
       abbr.style.color = isMaxed ? '#f59e0b' : st.color;
       abbr.textContent = st.label + (isMaxed ? ' MAX' : isDom ? ' ★' : '');
 
+      // Stat subtitle (v2.1) — one-word identity beneath the abbr.
+      // Onboarding cue for casual users; hardcore users already know
+      // what STR/VIT/INT/FOCUS/WILL/WLT mean.
+      const subtitle = document.createElement('div');
+      subtitle.className = 'osrs-cell-subtitle';
+      subtitle.textContent = STAT_TAGLINES[st.id] || '';
+
       // Level number (shows MAX crown at cap)
       const lvNum = document.createElement('div');
       lvNum.className = 'osrs-cell-level' + (isMaxed ? ' osrs-cell-level--max' : '');
@@ -7259,7 +7381,7 @@
       if (isMaxed) fill.style.boxShadow = '0 0 6px rgba(245,158,11,0.6)';
       track.appendChild(fill);
 
-      cell.append(stripe, icon, abbr, lvNum, track);
+      cell.append(stripe, icon, abbr, subtitle, lvNum, track);
       panel.appendChild(cell);
     });
 
