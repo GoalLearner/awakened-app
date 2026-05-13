@@ -9070,60 +9070,131 @@
   // Renders the status pill row: active habit packs (Morning Routine,
   // Locked-In) + class affinity lean. Hides the row entirely when
   // there's nothing to show (e.g., first-launch Civilian with no packs).
+  // v2.1.0 status pill row — ROTATING TICKER between two views:
+  //   View A — STREAKS: three streak pills (perfect day, Locked-In,
+  //            Morning Routine)
+  //   View B — HUNTING: one pill per engaged boss with kill-cond
+  //            progress (e.g., "Insomniac 1/2")
+  // If no bosses engaged, no rotation; the row pins to streaks. With
+  // bosses engaged the row crossfades every 6 seconds.
+  const STATUS_TICKER_ROTATION_MS = 6000;
+  const STATUS_TICKER_FADE_MS     = 350;
+  let _statusTickerTimer = null;
+  let _statusTickerView  = 'streaks';
+
+  function _buildStreakPills() {
+    const pStreak  = (typeof perfectStreak !== 'undefined' && perfectStreak && perfectStreak.count) || 0;
+    const liStreak = (typeof compoundStreaks !== 'undefined' && compoundStreaks &&
+                       compoundStreaks['locked-in'] && compoundStreaks['locked-in'].streak) || 0;
+    const mrStreak = (typeof compoundStreaks !== 'undefined' && compoundStreaks &&
+                       compoundStreaks['morning'] && compoundStreaks['morning'].streak) || 0;
+    return [
+      { key: 'perfect', glyph: '🔥', label: pStreak,  hot: pStreak  > 0 },
+      { key: 'li',      glyph: '🔒', label: liStreak, hot: liStreak > 0 },
+      { key: 'mr',      glyph: '🌅', label: mrStreak, hot: mrStreak > 0 },
+    ];
+  }
+
+  function _buildHuntingPills() {
+    const pills = [];
+    try {
+      if (typeof BOSSES !== 'undefined') {
+        Object.keys(BOSSES).forEach(id => {
+          const state = (typeof getBossState === 'function') ? getBossState(id) : null;
+          if (!state || state.engaged !== true) return;
+          const cfg    = BOSSES[id];
+          const streak = state.streak || 0;
+          const target = cfg.streakTarget || 0;
+          const name = (cfg.name || id).replace(/^The\s+/, '');
+          pills.push({
+            key:   id,
+            glyph: cfg.glyph || '⚔',
+            name:  name,
+            sub:   streak + '/' + target,
+            hot:   streak > 0,
+          });
+        });
+      }
+    } catch (_) {}
+    return pills;
+  }
+
+  function _renderStreakView(listEl) {
+    const pills = _buildStreakPills();
+    listEl.innerHTML = pills.map(p =>
+      '<span class="status-pill status-pill--' + p.key + (p.hot ? ' status-pill--active' : '') + '">' +
+        '<span class="status-pill-glyph" aria-hidden="true">' + p.glyph + '</span>' +
+        '<span class="status-pill-num">' + p.label + '</span>' +
+      '</span>'
+    ).join('');
+  }
+
+  function _renderHuntingView(listEl) {
+    const pills = _buildHuntingPills();
+    if (pills.length === 0) {
+      listEl.innerHTML =
+        '<span class="status-pill status-pill--idle">' +
+          '<span class="status-pill-glyph" aria-hidden="true">⚔</span>' +
+          'NO BOSSES ENGAGED' +
+        '</span>';
+      return;
+    }
+    listEl.innerHTML = pills.map(p =>
+      '<span class="status-pill status-pill--boss' + (p.hot ? ' status-pill--active' : '') + '">' +
+        '<span class="status-pill-glyph" aria-hidden="true">' + p.glyph + '</span>' +
+        esc(p.name) +
+        ' <span class="status-pill-num">' + esc(p.sub) + '</span>' +
+      '</span>'
+    ).join('');
+  }
+
+  function _renderStatusTickerView(view) {
+    const list = document.getElementById('status-pills-list');
+    const lbl  = document.querySelector('.status-pill-row-label');
+    if (!list) return;
+    if (view === 'hunting') {
+      if (lbl) lbl.textContent = 'HUNTING';
+      _renderHuntingView(list);
+    } else {
+      if (lbl) lbl.textContent = 'STREAKS';
+      _renderStreakView(list);
+    }
+  }
+
   function updateStatusPills() {
     const row   = document.getElementById('status-pills');
     const list  = document.getElementById('status-pills-list');
     if (!row || !list) return;
 
-    const pills = [];
+    row.classList.remove('hidden');
+    list.style.opacity = '1';
+    _renderStatusTickerView(_statusTickerView);
 
-    // ── Active packs ─────────────────────────────────────────
-    // Both packs use the generic userHasAllPackHabits(packId) helper.
-    // Pack IDs come from the PACKS constant: 'morning' + 'locked-in'.
-    try {
-      if (typeof userHasAllPackHabits === 'function') {
-        if (userHasAllPackHabits('morning'))    pills.push({ key: 'mr', label: 'MORNING ROUTINE', active: true });
-        if (userHasAllPackHabits('locked-in'))  pills.push({ key: 'li', label: 'LOCKED-IN',       active: true });
-      }
-    } catch (_) {}
-
-    // ── Class affinity / current class ───────────────────────
-    // Always render a class pill (CIVILIAN if not yet awakened, or the
-    // user's actual class otherwise, or stat-LEAN if currentClass isn't
-    // set but a stat is at Lv1+). Guarantees the status row always has
-    // at least one pill so the visual envelope renders.
-    try {
-      if (typeof currentClass !== 'undefined' && currentClass && currentClass !== 'CIVILIAN') {
-        // User has Awakened — show their actual class pill.
-        const def = (typeof CLASSES !== 'undefined') ? CLASSES[currentClass] : null;
-        const className = (def && def.name) ? def.name.toUpperCase() : currentClass;
-        const classStat = currentClass === 'SAGE' ? '' : currentClass;
-        const key = currentClass.toLowerCase();
-        pills.push({ key: key, label: className, active: false });
-      } else if (typeof _statLevels === 'function') {
-        // Pre-Awakening — show top stat if any leveled, else CIVILIAN.
-        const levels = _statLevels();
-        const top = levels && levels[0];
-        if (top && top.lv > 0) {
-          pills.push({ key: top.id.toLowerCase(), label: top.id + '-LEAN', active: false });
-        } else {
-          pills.push({ key: 'civilian', label: 'CIVILIAN', active: false });
-        }
-      } else {
-        pills.push({ key: 'civilian', label: 'CIVILIAN', active: false });
-      }
-    } catch (_) {
-      pills.push({ key: 'civilian', label: 'CIVILIAN', active: false });
+    // Reset any active rotation timer (avoid drift on rapid re-renders).
+    if (_statusTickerTimer) {
+      clearInterval(_statusTickerTimer);
+      _statusTickerTimer = null;
     }
 
-    // Always show the row now — at minimum it has the class pill.
-    row.classList.remove('hidden');
-    list.innerHTML = pills.map(p =>
-      '<span class="status-pill status-pill--' + p.key + (p.active ? ' status-pill--active' : '') + '">' +
-        '<span class="status-pill-dot" aria-hidden="true"></span>' +
-        esc(p.label) +
-      '</span>'
-    ).join('');
+    // If no bosses engaged, pin to streaks — no rotation.
+    const huntingPills = _buildHuntingPills();
+    if (huntingPills.length === 0) {
+      _statusTickerView = 'streaks';
+      _renderStatusTickerView('streaks');
+      return;
+    }
+
+    // Two-view rotation — crossfade every ROTATION_MS.
+    _statusTickerTimer = setInterval(() => {
+      const target = (_statusTickerView === 'streaks') ? 'hunting' : 'streaks';
+      list.style.transition = 'opacity ' + STATUS_TICKER_FADE_MS + 'ms ease';
+      list.style.opacity = '0';
+      setTimeout(() => {
+        _statusTickerView = target;
+        _renderStatusTickerView(target);
+        list.style.opacity = '1';
+      }, STATUS_TICKER_FADE_MS);
+    }, STATUS_TICKER_ROTATION_MS);
   }
 
   // ── XP·30D detail sheet (v2.1.0) ─────────────────────────────

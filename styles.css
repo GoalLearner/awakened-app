@@ -15057,12 +15057,44 @@ body.reveal-locked { overflow: hidden; }
   background: var(--accent);
   flex-shrink: 0;
 }
+/* Streak/hunting pill glyph (emoji icon at the left of the pill).
+   Slightly larger than the dot variant so the emoji reads clearly. */
+.status-pill-glyph {
+  font-size: 0.78rem;
+  line-height: 1;
+  margin-right: 1px;
+}
+/* Numeric value inside streak / hunting pills */
+.status-pill-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  margin-left: 2px;
+}
 .status-pill--active {
   border-color: rgba(245, 158, 11, 0.45);
 }
 .status-pill--active .status-pill-dot {
   background: var(--gold-bright, var(--gold));
   box-shadow: 0 0 6px var(--gold-bright, var(--gold));
+}
+.status-pill--active .status-pill-num {
+  color: var(--gold-bright, var(--gold));
+}
+/* Hunting view — boss pill is purple-accented; idle = no engaged bosses */
+.status-pill--boss {
+  border-color: rgba(139, 92, 246, 0.45);
+}
+.status-pill--idle {
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+/* Status pill list — smooth opacity transition for the rotating ticker */
+.status-pill-row-list {
+  transition: opacity 350ms ease;
 }
 .status-pill--str   .status-pill-dot { background: #ef4444; }
 .status-pill--vit   .status-pill-dot { background: #22c55e; }
