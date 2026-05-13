@@ -14543,6 +14543,157 @@ body.reveal-locked { overflow: hidden; }
 }
 
 /* ───────────────────────────────────────────────────────────────
+   v3 Phase 1d — Card detail modal action button.
+   Final CTA at the bottom of the carddetail modal. Two states
+   (EQUIP TO BUILD / UNEQUIP) driven by JS class toggle. Replaces
+   the prior unstyled default browser button.
+
+   .carddetail-equip-btn              — shared shell (sizing, type,
+                                        layout, transitions)
+   .carddetail-equip-btn--primary     — EQUIP TO BUILD (purple→deep
+                                        violet gradient, gold rim,
+                                        outer purple glow)
+   .carddetail-equip-btn--unequip     — UNEQUIP (muted navy gradient,
+                                        soft purple border, lower-
+                                        intensity glow, NOT a red
+                                        danger button)
+
+   Both states get hover lift + active press + :disabled treatment.
+   ─────────────────────────────────────────────────────────────── */
+.carddetail-equip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  margin: 18px auto 4px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: transparent;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.16s ease,
+              box-shadow 0.20s ease,
+              border-color 0.20s ease,
+              background 0.20s ease,
+              opacity 0.20s ease;
+}
+.carddetail-equip-btn.hidden { display: none; }
+
+/* ─── EQUIP TO BUILD — primary CTA ─────────────────────────────
+   Deep violet gradient body, gold rim accent, dual-color outer
+   glow (purple ambient + gold halo). White-warm text reads as the
+   "earned, empowered" action. */
+/* Tiny rune glyph before the label on EQUIP (pseudo-element so the
+   JS-controlled textContent isn't disturbed). Unequip omits it for
+   visual hierarchy. */
+.carddetail-equip-btn--primary::before {
+  content: '✦';
+  font-size: 0.95em;
+  color: rgba(245, 158, 11, 0.92);
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.55));
+  margin-right: 2px;
+  line-height: 1;
+}
+.carddetail-equip-btn--primary {
+  color: #fff7e6;
+  background:
+    linear-gradient(180deg,
+      rgba(139, 92, 246, 0.36) 0%,
+      rgba(58, 26, 99, 0.96) 100%);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.10),
+    0 10px 22px rgba(0, 0, 0, 0.42),
+    0 0 18px rgba(139, 92, 246, 0.22);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.carddetail-equip-btn--primary:hover,
+.carddetail-equip-btn--primary:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.18),
+    0 12px 26px rgba(0, 0, 0, 0.50),
+    0 0 22px rgba(245, 158, 11, 0.20),
+    0 0 24px rgba(139, 92, 246, 0.28);
+  outline: none;
+}
+.carddetail-equip-btn--primary:active {
+  transform: translateY(0);
+  opacity: 0.96;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.30),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.20),
+    0 6px 14px rgba(0, 0, 0, 0.40),
+    0 0 14px rgba(139, 92, 246, 0.18);
+}
+
+/* ─── UNEQUIP — secondary CTA ──────────────────────────────────
+   Muted navy gradient, softer purple border, low-intensity glow.
+   Still premium and clearly tappable — but visually says "you've
+   already taken the empowering action, this just rolls it back."
+   Explicitly NOT a destructive-red treatment. */
+.carddetail-equip-btn--unequip {
+  color: #e9e6f7;
+  background:
+    linear-gradient(180deg,
+      rgba(36, 36, 72, 0.95) 0%,
+      rgba(23, 23, 48, 0.98) 100%);
+  border-color: rgba(139, 92, 246, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 8px 18px rgba(0, 0, 0, 0.32);
+}
+.carddetail-equip-btn--unequip:hover,
+.carddetail-equip-btn--unequip:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 10px 22px rgba(0, 0, 0, 0.40),
+    0 0 16px rgba(139, 92, 246, 0.18);
+  outline: none;
+}
+.carddetail-equip-btn--unequip:active {
+  transform: translateY(0);
+  opacity: 0.95;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.36),
+    0 4px 10px rgba(0, 0, 0, 0.30);
+}
+
+/* ─── Disabled — applies to either variant ─────────────────── */
+.carddetail-equip-btn:disabled,
+.carddetail-equip-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  filter: grayscale(0.20);
+  box-shadow: none;
+}
+
+/* Tighter top spacing on very small phones */
+@media (max-width: 360px) {
+  .carddetail-equip-btn { margin-top: 14px; min-height: 46px; font-size: 0.8rem; }
+}
+
+/* ───────────────────────────────────────────────────────────────
    Sign in with Apple gate (v2.1 Phase A)
    Full-viewport mandatory gate. Sits OUTSIDE the tab system and
    renders before app.js mounts. See BACKEND.md §4.
