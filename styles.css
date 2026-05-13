@@ -6652,6 +6652,7 @@ footer {
 }
 
 .sc-rank-hero {
+  position: relative;
   width: 58px;
   height: 58px;
   border-radius: 14px;
@@ -6668,6 +6669,53 @@ footer {
   justify-content: center;
   flex-shrink: 0;
   letter-spacing: -1px;
+  /* v2.1 — animated glow pulse. Rank should feel prestigious, not just
+     functional. The drop-shadow + box-shadow combo breathes 2.6s,
+     intensity oscillating between resting + amplified state. */
+  animation: sc-rank-glow 2.6s ease-in-out infinite;
+  overflow: visible;
+}
+/* Aura backdrop — a radial gradient pseudo-element behind the badge
+   that pulses outward, creating a sense of ambient energy emanating
+   from the rank. Uses --rank-color so each tier feels in-class. */
+.sc-rank-hero::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--rank-color, var(--accent)) 0%,
+    transparent 60%);
+  opacity: 0.18;
+  border-radius: 22px;
+  z-index: -1;
+  animation: sc-rank-aura-breathe 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+/* Inner highlight — a faint inset ring that subtly shifts brightness,
+   suggesting an evolving frame without changing the actual border. */
+.sc-rank-hero::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--rank-color, var(--accent));
+  opacity: 0.35;
+  animation: sc-rank-frame-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sc-rank-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--rank-color-shadow, rgba(139,92,246,0.18)); }
+  50%      { box-shadow: 0 0 22px var(--rank-color-shadow, rgba(139,92,246,0.45)),
+                          0 0 6px  var(--rank-color, var(--accent)); }
+}
+@keyframes sc-rank-aura-breathe {
+  0%, 100% { transform: scale(0.92); opacity: 0.14; }
+  50%      { transform: scale(1.08); opacity: 0.30; }
+}
+@keyframes sc-rank-frame-shimmer {
+  0%, 100% { opacity: 0.22; transform: scale(1);    }
+  50%      { opacity: 0.55; transform: scale(0.97); }
 }
 
 .sc-rank-hero.splus {
@@ -6751,6 +6799,101 @@ footer {
 .sc-radar-fill--animate {
   transform: scale(1);
   opacity: 1;
+}
+
+/* ─── v2.1 radar drama (subtle, "mystical progression interface") ───
+   Five coordinated effects layered on the existing radar:
+   1. Rings breathe in opacity on a staggered loop
+   2. Axis dots pulse (scale + glow) with stat-color drop-shadow
+   3. Dominant stat dot pulses faster + brighter
+   4. Constellation lines slowly rotate around the center
+   5. Energy core at the center (inner solid dot + outer expanding ring)
+
+   All compositor-level CSS animations — no JS RAF loop. Stops when
+   the Status tab isn't visible. */
+
+/* Background rings — slow breathing opacity so the grid feels alive.
+   Each ring gets a different delay so they shimmer in waves. */
+.sc-radar-ring {
+  animation: sc-radar-ring-breathe 4.5s ease-in-out infinite;
+}
+.sc-radar-ring[data-ring="1"] { animation-delay: 0s;    }
+.sc-radar-ring[data-ring="2"] { animation-delay: 0.6s;  }
+.sc-radar-ring[data-ring="3"] { animation-delay: 1.2s;  }
+.sc-radar-ring[data-ring="4"] { animation-delay: 1.8s;  }
+.sc-radar-ring[data-ring="5"] { animation-delay: 2.4s;  }
+@keyframes sc-radar-ring-breathe {
+  0%, 100% { stroke: rgba(255,255,255,0.04); }
+  50%      { stroke: rgba(255,255,255,0.13); }
+}
+
+/* Outer axis dots — pulse scale + drop-shadow tinted to their stat
+   color. The current fill color is set inline on each <circle> via
+   the stat.color, so the drop-shadow inherits it via 'currentColor'
+   — but SVG drop-shadow doesn't actually use color. We instead make
+   the dots GROW + change opacity, color stays as set inline. */
+.sc-radar-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sc-radar-dot-pulse 3.2s ease-in-out infinite;
+}
+.sc-radar-dot[data-stat-idx="0"] { animation-delay: 0s;    }
+.sc-radar-dot[data-stat-idx="1"] { animation-delay: 0.45s; }
+.sc-radar-dot[data-stat-idx="2"] { animation-delay: 0.9s;  }
+.sc-radar-dot[data-stat-idx="3"] { animation-delay: 1.35s; }
+.sc-radar-dot[data-stat-idx="4"] { animation-delay: 1.8s;  }
+.sc-radar-dot[data-stat-idx="5"] { animation-delay: 2.25s; }
+@keyframes sc-radar-dot-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.7; }
+  50%      { transform: scale(1.35); opacity: 1;   }
+}
+.sc-radar-dot--dom {
+  animation-duration: 1.8s;
+}
+@keyframes sc-radar-dot-pulse-dom {
+  0%, 100% { transform: scale(1);   opacity: 0.85; }
+  50%      { transform: scale(1.7); opacity: 1;    }
+}
+.sc-radar-dot--dom { animation-name: sc-radar-dot-pulse-dom; }
+
+/* Constellation lines — very faint hairline diagonals. Slowly rotate
+   the whole group around the center for the "subtle rotating runes"
+   feel. Since SVG <line> elements can't carry transform-origin
+   reliably we rotate via a wrapping CSS animation on each — the
+   center of rotation is the radar's CX/CY (50% / 50% inside the
+   ~280 viewBox; we set transform-origin via CSS percentage). */
+.sc-radar-constellation {
+  transform-origin: center;
+  transform-box: view-box;
+  animation: sc-radar-constellation-rotate 60s linear infinite;
+  /* Each line has the same animation — they rotate together as a set */
+}
+@keyframes sc-radar-constellation-rotate {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* Energy core — small purple node at the radar center. Inner dot
+   pulses scale; outer ring expands + fades repeatedly. Mirrors the
+   XP-chart endpoint pattern for visual consistency across the app. */
+.sc-radar-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sc-radar-core-pulse 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px #8b5cf6);
+}
+.sc-radar-core-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sc-radar-core-ring-expand 2.4s ease-out infinite;
+}
+@keyframes sc-radar-core-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1;    }
+  50%      { transform: scale(1.6); opacity: 0.75; }
+}
+@keyframes sc-radar-core-ring-expand {
+  0%   { transform: scale(0.8); opacity: 0.7; }
+  100% { transform: scale(4);   opacity: 0;   }
 }
 
 .sc-radar-lbl {

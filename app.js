@@ -7567,10 +7567,11 @@
               '</span>' +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
-            // 'Your Origin' — visible whenever we have at least Chapter 1.
+            // 'Awakening Path' — visible whenever we have at least Chapter 1.
             // Counter shows "(2 chapters)" once the user has awakened.
+            // Renamed from 'Your Origin' in v2.1 for stronger worldbuilding.
             ((originBeginning && originBeginning.text)
-              ? '<button class="sc-origin-btn" id="sc-origin-btn" type="button">📜 Your Origin' +
+              ? '<button class="sc-origin-btn" id="sc-origin-btn" type="button">📜 Awakening Path' +
                   ((originAwakening && originAwakening.text) ? ' <span class="sc-origin-chapters">2 chapters</span>' : '') +
                 '</button>'
               : '') +
@@ -7677,19 +7678,34 @@
             + 'xmlns="http://www.w3.org/2000/svg" '
             + 'aria-label="Stat radar chart">';
 
-    // 1. Background rings
+    // 1. Background rings — each ring carries a class + ring-index so
+    // CSS can stagger a subtle breathing pulse across them (mystical
+    // glow grid, per the v2.1 'more sacred' redesign note).
     for (let ring = 1; ring <= RINGS; ring++) {
       const r = (ring / RINGS) * R_MAX;
       const pts = STATS.map((_, i) => pt(r, i).join(',')).join(' ');
-      svg += '<polygon points="' + pts + '" '
+      svg += '<polygon class="sc-radar-ring" data-ring="' + ring + '" points="' + pts + '" '
            + 'fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
     }
 
     // 2. Axis spokes
     STATS.forEach((_, i) => {
       const [x, y] = pt(R_MAX, i);
-      svg += '<line x1="' + CX + '" y1="' + CY + '" x2="' + x + '" y2="' + y + '" '
+      svg += '<line class="sc-radar-spoke" x1="' + CX + '" y1="' + CY + '" '
+           + 'x2="' + x + '" y2="' + y + '" '
            + 'stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    });
+
+    // 2b. Constellation lines — connect each axis tip to the next-but-one
+    // (i, i+2). Creates a six-pointed star pattern overlaying the rings.
+    // Hairline opacity so it whispers, not screams.
+    STATS.forEach((_, i) => {
+      const a = pt(R_MAX, i);
+      const b = pt(R_MAX, (i + 2) % STATS.length);
+      svg += '<line class="sc-radar-constellation" '
+           + 'x1="' + a[0].toFixed(2) + '" y1="' + a[1].toFixed(2) + '" '
+           + 'x2="' + b[0].toFixed(2) + '" y2="' + b[1].toFixed(2) + '" '
+           + 'stroke="rgba(139,92,246,0.10)" stroke-width="0.8" stroke-dasharray="2 4"/>';
     });
 
     // 3. Filled player shape — uses a CSS-animated clip trick via a path
@@ -7710,13 +7726,35 @@
          + 'fill="rgba(139,92,246,0.30)" stroke="#8b5cf6" stroke-width="1.8" '
          + 'stroke-linejoin="round" filter="url(#radar-glow)"/>';
 
-    // 4. Outer axis dots in each stat's unique colour
+    // 4. Outer axis dots in each stat's unique colour. Each gets a class
+    // + data-stat-idx so CSS can pulse them on a staggered loop (one node
+    // per axis breathes at a time, creating a slow constellation-twinkle
+    // effect). The dominant stat's dot pulses faster + larger via a
+    // sc-radar-dot--dom modifier.
+    let dominantIdx = -1;
+    if (currentClass && currentClass !== 'CIVILIAN' && currentClass !== 'SAGE') {
+      dominantIdx = STATS.findIndex(s => s.id === currentClass);
+    } else {
+      const topLv = Math.max.apply(null, levels);
+      if (topLv > 0) dominantIdx = levels.indexOf(topLv);
+    }
     STATS.forEach((st, i) => {
-      const r = R_MAX + 4; // slightly outside the ring
+      const r = R_MAX + 4;
       const [x, y] = pt(r, i);
-      svg += '<circle cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" r="4" '
+      const isDom = i === dominantIdx;
+      svg += '<circle class="sc-radar-dot' + (isDom ? ' sc-radar-dot--dom' : '') + '" '
+           + 'data-stat-idx="' + i + '" '
+           + 'cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" r="4" '
            + 'fill="' + st.color + '" opacity="0.85"/>';
     });
+
+    // 4b. Energy core — small pulsing circle at the radar center.
+    // Two concentric circles: inner solid + outer ring expanding/fading.
+    // Mirrors the XP chart's endpoint-ping pattern. "Mystical center."
+    svg += '<circle class="sc-radar-core-ring" cx="' + CX + '" cy="' + CY + '" '
+         + 'r="5" fill="none" stroke="rgba(139,92,246,0.6)" stroke-width="1"/>';
+    svg += '<circle class="sc-radar-core" cx="' + CX + '" cy="' + CY + '" '
+         + 'r="3" fill="#8b5cf6"/>';
 
     // 5. Tappable hit-zones + labels for each axis
     STATS.forEach((st, i) => {
