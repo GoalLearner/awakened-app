@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.148';
+const CACHE_VERSION = 'v5.149';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -130,6 +130,15 @@ const PRECACHE_ASSETS = [
   '/assets/items/pack_leaders_greaves.png',
   '/assets/items/alphas_mantle.png',
   '/assets/items/trail_worn_boots.png',
+  // v2.1 content patch — 6 new commons (2 per boss). Art landed
+  // on disk this release; PRECACHE entries activate offline + SW
+  // delivery for these paths starting v5.149.
+  '/assets/items/tossing_bedroll.png',
+  '/assets/items/drowsy_signet.png',
+  '/assets/items/sobriety_token.png',
+  '/assets/items/steady_steps.png',
+  '/assets/items/pups_hood.png',
+  '/assets/items/trackers_wrap.png',
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────
