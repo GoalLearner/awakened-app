@@ -9594,8 +9594,72 @@
     const overlay = document.getElementById('equipment-overlay');
     const modal   = document.getElementById('equipment-modal');
     if (!overlay || !modal) return;
+    populateEquipmentStats();
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
+  }
+
+  // Renders the v2.1 stat aggregation block: BASE STATS (6 rows
+  // showing each stat's level + XP) + COMBAT POWER (equip count
+  // + class affinity context + HP preview). All zeros for now
+  // since equip system arrives in v3 — but stats reflect live
+  // habit-driven data so the panel is informative pre-v3.
+  function populateEquipmentStats() {
+    const baseEl   = document.getElementById('equipment-base-stats');
+    const powerEl  = document.getElementById('equipment-combat-power');
+    if (!baseEl || !powerEl) return;
+
+    // ── BASE STATS table ───────────────────────────────────
+    const rows = STATS.map(st => {
+      const pts   = (stats[st.id] && stats[st.id].pts) || 0;
+      const lv    = statLevel(pts);
+      const isMax = lv >= 20;
+      return (
+        '<div class="es-row" style="--es-color:' + st.color + '">' +
+          '<span class="es-icon">' + statIconHtml(st, { size: 22 }) + '</span>' +
+          '<span class="es-id">' + st.id + '</span>' +
+          '<span class="es-lv">' + (isMax ? 'MAX' : 'Lv ' + lv) + '</span>' +
+          '<span class="es-pts">' + pts + ' XP</span>' +
+        '</div>'
+      );
+    }).join('');
+    baseEl.innerHTML = rows;
+
+    // ── COMBAT POWER section ──────────────────────────────
+    // For v2.1: equip count is always 0/9. Class affinity reads
+    // from currentClass — CIVILIAN if not awakened, otherwise the
+    // class name + 1.5× mention. HP preview uses the PVP.md §4.2
+    // formula: baseHP = 100 + (VIT × 10), capped 300.
+    const vitLv = statLevel((stats.VIT && stats.VIT.pts) || 0);
+    const baseHP = Math.min(300, 100 + (vitLv * 10));
+
+    let affinityLine;
+    if (currentClass && currentClass !== 'CIVILIAN') {
+      const def = CLASSES[currentClass];
+      const cName = (def && def.name) || currentClass;
+      const aff = (currentClass === 'SAGE')
+        ? cName.toUpperCase() + ' — all gear amplified 1.15×'
+        : cName.toUpperCase() + ' — ' + currentClass + ' gear amplified 1.5×';
+      affinityLine = aff;
+    } else {
+      affinityLine = 'CIVILIAN — class affinity unlocks at Lv5 in any stat';
+    }
+
+    powerEl.innerHTML =
+      '<div class="ec-row">' +
+        '<span class="ec-label">EQUIPPED</span>' +
+        '<span class="ec-val">0 / 9</span>' +
+      '</div>' +
+      '<div class="ec-row ec-row--wrap">' +
+        '<span class="ec-label">AFFINITY</span>' +
+        '<span class="ec-val ec-val--small">' + esc(affinityLine) + '</span>' +
+      '</div>' +
+      '<div class="ec-row">' +
+        '<span class="ec-label">BASE HP</span>' +
+        '<span class="ec-val">' + baseHP + '</span>' +
+      '</div>' +
+      '<p class="ec-hint">Equip gear from boss kills to amplify these stats. ' +
+        'Class-aligned bonuses multiply when you Awaken.</p>';
   }
   function closeEquipmentPanel() {
     const overlay = document.getElementById('equipment-overlay');

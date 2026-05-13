@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=222">
+  <link rel="stylesheet" href="styles.css?v=223">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -856,6 +856,23 @@
       <button class="equipment-slot-hit" data-slot="boots"  aria-label="Boots slot"></button>
       <button class="equipment-slot-hit" data-slot="ring"   aria-label="Ring slot"></button>
     </div>
+
+    <!-- v2.1 — Stat aggregation block below the panel.
+         Two sections: BASE STATS (live from hb_stats) + COMBAT
+         POWER (equip count + class affinity + HP preview). v3 PvP
+         Phase 1 will add a GEAR BONUSES column to the BASE STATS
+         table once the equip system writes hb_pvp_equipped. -->
+    <div class="equipment-stats-wrap">
+      <section class="equipment-stats-section">
+        <h3 class="equipment-stats-label">BASE STATS · FROM HABITS</h3>
+        <div id="equipment-base-stats" class="equipment-stats-grid"></div>
+      </section>
+      <section class="equipment-stats-section">
+        <h3 class="equipment-stats-label">COMBAT POWER</h3>
+        <div id="equipment-combat-power" class="equipment-combat-power"></div>
+      </section>
+    </div>
+
     <p class="equipment-modal-footer">Equipment system unlocks in v3 — gear from boss drops will slot in here.</p>
   </div>
 
@@ -1456,7 +1473,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=296"></script>
+  <script src="app.js?v=297"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

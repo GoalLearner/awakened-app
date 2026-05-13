@@ -15828,6 +15828,132 @@ body.reveal-locked { overflow: hidden; }
   line-height: 1.5;
 }
 
+/* ─── Armory stat aggregation block (below the panel art) ───
+   Two-section vertical stack: BASE STATS + COMBAT POWER. Mobile-
+   first layout — full width of the modal at iPhone widths,
+   capped at the same 440px max as the panel art so columns
+   visually align. */
+.equipment-stats-wrap {
+  width: 100%;
+  max-width: 440px;
+  margin: 18px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.equipment-stats-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+}
+.equipment-stats-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+/* Base stats — 6-row table, monospace columns: icon + ID + Lv + XP */
+.equipment-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.es-row {
+  display: grid;
+  grid-template-columns: 28px 44px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.es-row:last-child { border-bottom: 0; }
+.es-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+.es-id {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--es-color, var(--text-primary));
+}
+.es-lv {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.70rem;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  text-align: right;
+}
+.es-pts {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  text-align: right;
+}
+
+/* Combat Power — 3 key/value rows + hint paragraph */
+.equipment-combat-power {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.ec-row:last-of-type { border-bottom: 0; }
+.ec-row--wrap {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.ec-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ec-val {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--gold-bright, var(--gold));
+  text-align: right;
+}
+.ec-val--small {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+  flex: 1;
+  min-width: 0;
+}
+.ec-hint {
+  margin: 10px 0 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}
+
 /* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────
    Sits between the pokedex count + the rarity sections.
    Full-width, purple-tinted, sword icon + label + chevron. */
