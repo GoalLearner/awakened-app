@@ -9281,12 +9281,34 @@
     const line = document.getElementById('xp-detail-line');
     const area = document.getElementById('xp-detail-area');
     const dot  = document.getElementById('xp-detail-dot');
+    const ping = document.getElementById('xp-detail-dot-ping');
     if (line) line.setAttribute('d', linePath);
     if (area) area.setAttribute('d', areaPath);
-    if (dot && points.length) {
+    if (points.length) {
       const last = points[points.length - 1];
-      dot.setAttribute('cx', last[0].toFixed(2));
-      dot.setAttribute('cy', last[1].toFixed(2));
+      if (dot)  { dot.setAttribute('cx',  last[0].toFixed(2)); dot.setAttribute('cy',  last[1].toFixed(2)); }
+      if (ping) { ping.setAttribute('cx', last[0].toFixed(2)); ping.setAttribute('cy', last[1].toFixed(2)); }
+    }
+
+    // Tier-1 line draw-in animation. Compute the path's total length,
+    // set stroke-dasharray to that length + stroke-dashoffset to the
+    // same so the line is initially invisible, then transition the
+    // offset to 0 over 0.8s — the line draws itself from start to end.
+    // Re-runs every time the sheet opens (each populateXpDetail call).
+    if (line && typeof line.getTotalLength === 'function') {
+      try {
+        const len = line.getTotalLength();
+        line.style.transition = 'none';
+        line.style.strokeDasharray  = len + ' ' + len;
+        line.style.strokeDashoffset = len;
+        // Force a reflow so the transition starts from the dashed
+        // state — without this, the browser may batch the property
+        // sets and skip the animation entirely.
+        // eslint-disable-next-line no-unused-expressions
+        line.getBoundingClientRect();
+        line.style.transition = 'stroke-dashoffset 0.8s ease-out';
+        line.style.strokeDashoffset = '0';
+      } catch (_) {}
     }
 
     // Axis labels — start, midpoint, end of the 30-day window

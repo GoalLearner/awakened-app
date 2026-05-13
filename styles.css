@@ -15167,6 +15167,34 @@ body.reveal-locked { overflow: hidden; }
   height: 140px;
   display: block;
 }
+/* Tier-1 "alive" treatment for the cumulative-XP chart.
+   - Line gets a soft gold glow via drop-shadow filter
+   - Endpoint dot pulses (radius + opacity oscillation)
+   - Radar-ping ring expands outward from the endpoint on infinite loop
+   - Line draws in from left to right when the sheet opens — handled
+     by JS setting stroke-dasharray + transitioning stroke-dashoffset
+     in openXpDetail() / populateXpDetail() */
+#xp-detail-line {
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.55));
+}
+#xp-detail-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: xp-dot-pulse 1.4s ease-in-out infinite;
+}
+#xp-detail-dot-ping {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: xp-dot-ping 1.8s ease-out infinite;
+}
+@keyframes xp-dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%      { transform: scale(1.4); opacity: 0.75; }
+}
+@keyframes xp-dot-ping {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(4.5); opacity: 0;    }
+}
 .xp-detail-axis {
   display: flex;
   justify-content: space-between;
