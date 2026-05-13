@@ -1,6 +1,6 @@
 # Simple HTTP server for the habit tracker
 $port = if ($env:PORT) { [int]$env:PORT } else { 8080 }
-$root = if ($PSScriptRoot) { $PSScriptRoot } else { "C:\Users\richm\OneDrive\Desktop\habit-tracker" }
+$root = if ($PSScriptRoot) { $PSScriptRoot } else { "C:\Users\richm\Documents\repos\awakened-app" }
 
 $listener = [System.Net.HttpListener]::new()
 $listener.Prefixes.Add("http://localhost:$port/")
