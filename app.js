@@ -7562,9 +7562,16 @@
             // works equivalently.
             '<div class="sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
               '<span class="sc-hero-class-name">' + esc(cls.name) + '</span>' +
-              ' <span class="sc-class-emblem-btn">' +
-                classIconHtml(currentClass, { size: 36 }) +
-              '</span>' +
+              // v2.1 — drop the class emblem next to 'Civilian'. The rank
+              // badge + 'Civilian' label already convey the state; the
+              // emblem reads as redundant clutter pre-Awakening. Other
+              // classes keep the emblem since it's a meaningful identity
+              // cue once the user has chosen a path.
+              (currentClass && currentClass !== 'CIVILIAN'
+                ? ' <span class="sc-class-emblem-btn">' +
+                    classIconHtml(currentClass, { size: 36 }) +
+                  '</span>'
+                : '') +
             '</div>' +
             '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
             // 'Awakening Path' — visible whenever we have at least Chapter 1.
