@@ -8321,10 +8321,17 @@
     // First call this session: show today's deterministic daily quote.
     // Subsequent calls (e.g., after habit toggles re-render the screen) keep
     // whatever quote the rotation has currently displayed.
+    //
+    // Defensive: if _quoteCurrent IS set but the element somehow has empty
+    // innerHTML (e.g., DOM rebuilt mid-session, header redesign re-rendered
+    // header markup, etc.), re-apply the current quote so the box never
+    // shows up blank.
     if (!_quoteCurrent) {
       const d   = new Date();
       const doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
       _quoteApply(el, QUOTES[doy % QUOTES.length]);
+    } else if (!el.innerHTML || el.innerHTML.trim() === '') {
+      _quoteApply(el, _quoteCurrent);
     }
 
     // The quote lives in the shared header, visible on every tab —
@@ -9071,27 +9078,36 @@
       }
     } catch (_) {}
 
-    // ── Class affinity lean ──────────────────────────────────
+    // ── Class affinity / current class ───────────────────────
+    // Always render a class pill (CIVILIAN if not yet awakened, or the
+    // user's actual class otherwise, or stat-LEAN if currentClass isn't
+    // set but a stat is at Lv1+). Guarantees the status row always has
+    // at least one pill so the visual envelope renders.
     try {
-      if (typeof _statLevels === 'function') {
+      if (typeof currentClass !== 'undefined' && currentClass && currentClass !== 'CIVILIAN') {
+        // User has Awakened — show their actual class pill.
+        const def = (typeof CLASSES !== 'undefined') ? CLASSES[currentClass] : null;
+        const className = (def && def.name) ? def.name.toUpperCase() : currentClass;
+        const classStat = currentClass === 'SAGE' ? '' : currentClass;
+        const key = currentClass.toLowerCase();
+        pills.push({ key: key, label: className, active: false });
+      } else if (typeof _statLevels === 'function') {
+        // Pre-Awakening — show top stat if any leveled, else CIVILIAN.
         const levels = _statLevels();
         const top = levels && levels[0];
         if (top && top.lv > 0) {
-          const statClassMap = { STR:'WARRIOR', VIT:'RANGER', INT:'MAGE',
-                                  FOCUS:'ASSASSIN', WILL:'PALADIN', WLT:'MERCHANT' };
-          const className = statClassMap[top.id];
-          if (className) {
-            pills.push({ key: top.id.toLowerCase(), label: top.id + '-LEAN', active: false });
-          }
+          pills.push({ key: top.id.toLowerCase(), label: top.id + '-LEAN', active: false });
+        } else {
+          pills.push({ key: 'civilian', label: 'CIVILIAN', active: false });
         }
+      } else {
+        pills.push({ key: 'civilian', label: 'CIVILIAN', active: false });
       }
-    } catch (_) {}
-
-    if (pills.length === 0) {
-      row.classList.add('hidden');
-      list.innerHTML = '';
-      return;
+    } catch (_) {
+      pills.push({ key: 'civilian', label: 'CIVILIAN', active: false });
     }
+
+    // Always show the row now — at minimum it has the class pill.
     row.classList.remove('hidden');
     list.innerHTML = pills.map(p =>
       '<span class="status-pill status-pill--' + p.key + (p.active ? ' status-pill--active' : '') + '">' +
