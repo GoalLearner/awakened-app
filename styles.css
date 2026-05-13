@@ -15787,6 +15787,14 @@ body.reveal-locked { overflow: hidden; }
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.15s ease, box-shadow 0.15s ease;
+  /* v2.1.3 — faint engraved-recess treatment on empty slots so
+     empty + equipped slots feel like one system. Very subtle purple
+     inset shadow that suggests "carved socket awaiting an item."
+     The painted stone slot art on panel-base.png is still the
+     primary visual; this just adds an interactive depth cue. */
+  box-shadow:
+    inset 0 0 8px rgba(0, 0, 0, 0.40),
+    inset 0 0 0 1px rgba(139, 92, 246, 0.12);
 }
 .equipment-slot-hit:hover,
 .equipment-slot-hit:focus-visible {
@@ -16048,140 +16056,123 @@ body.reveal-locked { overflow: hidden; }
    ═══════════════════════════════════════════════════════════════ */
 
 .equipment-slot-overlay {
-  /* JS sets top/left/width/height inline. Restored to default block
-     so absolute children stack via z-index, not flex. */
+  /* JS sets top/left/width/height inline. Block layout — the painted
+     stone slot on panel-base.png is the visual frame; this wrapper
+     is transparent and just hosts the item icon + aura + vignette. */
   display: block;
-  overflow: visible;       /* outer halo (rarity rim) breathes out */
-  border-radius: 14px;
+  overflow: visible;       /* rarity outer halo can breathe out */
+  border-radius: 8px;
+  background: transparent;
 }
 
-/* Slot background — carved-stone recess. Sits BENEATH the frame
-   so its shadow vignette feels like depth into the slot. */
-.armory-slot-bg {
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(20, 14, 40, 0.55) 0%,
-    rgba(10, 6, 24, 0.85) 75%,
-    rgba(0, 0, 0, 0.95)   100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.45),
-    inset 0 0 18px 2px rgba(0, 0, 0, 0.65);
-  pointer-events: none;
-}
-
-/* Item frame — centering container for the aura + icon. overflow:
-   hidden + border-radius clips any image bleed at the edge. */
+/* Item frame — centering container for the aura + icon. Transparent.
+   No card background. The painted stone slot stays visible behind. */
 .armory-item-frame {
   position: absolute;
-  inset: 6%;
+  inset: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 8px;
   overflow: hidden;
   pointer-events: none;
 }
 
-/* Item aura — radial pool BEHIND the icon. Creates the "item
-   glowing in the recess" effect. Color is tint-overridden per
-   rarity below. */
+/* Item aura — faint radial pool BEHIND the icon. Inset 10% so it
+   doesn't fight the painted slot edges. Lower opacity than the
+   prior dark version — reads as "soft glow," not "dark socket." */
 .armory-item-aura {
   position: absolute;
-  inset: 0;
+  inset: 10%;
   background: radial-gradient(
     circle at center,
-    rgba(139, 92, 246, 0.22) 0%,
-    rgba(0,   0,   0,   0.45) 55%,
-    rgba(0,   0,   0,   0.78) 100%);
+    rgba(139, 92, 246, 0.20) 0%,
+    rgba(0,   0,   0,   0.18) 45%,
+    transparent 75%);
+  opacity: 0.75;
   pointer-events: none;
+  border-radius: 50%;
 }
 
-/* Item icon — the <img>. Default size, overridden per slot below.
-   object-fit: contain preserves square PNGs without crop or stretch.
-   Drop-shadow + brightness + contrast lift the icon off the bg. */
+/* Item icon — the <img>. Per-slot sized below. object-fit: contain
+   preserves square PNGs without crop. Drop-shadow + brightness +
+   contrast lift the icon visually off the painted slot recess. */
 .armory-item-icon {
   position: relative;
   z-index: 2;
   display: block;
-  max-width: 78%;
-  max-height: 78%;
-  width: 78%;
-  height: 78%;
   object-fit: contain;
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
   filter:
-    drop-shadow(0 8px 10px rgba(0, 0, 0, 0.65))
-    brightness(1.05)
+    drop-shadow(0 8px 8px rgba(0, 0, 0, 0.75))
+    brightness(1.08)
     contrast(1.05);
 }
 
 /* Soft inner vignette ON TOP of the icon — kills any hard
-   rectangular bleed at slot edges. Layered above the icon so
-   image edges fade into the recess. */
+   rectangular bleed at icon edges. Inset shadow + faint purple
+   accent layered above so image edges fade into the painted slot. */
 .armory-slot--equipped::after {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 14px;
+  border-radius: inherit;
   box-shadow:
-    inset 0 0 22px rgba(0, 0, 0, 0.85),
-    inset 0 0 10px rgba(139, 92, 246, 0.25);
+    inset 0 0 18px rgba(0, 0, 0, 0.65),
+    inset 0 0 8px rgba(139, 92, 246, 0.25);
   pointer-events: none;
   z-index: 3;
 }
 
 /* ─── Per-slot icon sizing ───────────────────────────────────
-   Different equipment slots need different icon sizes to read
-   right. Accessories (rings, amulets) are small physical items
-   — they should look small in the slot. Armor pieces (helm,
-   body, cape) read medium. Weapons take vertical space. */
-.armory-slot--helm    .armory-item-icon { width: 78%; height: 78%; max-width: 78%; max-height: 78%; }
-.armory-slot--cape    .armory-item-icon { width: 78%; height: 78%; max-width: 78%; max-height: 78%; }
-.armory-slot--body    .armory-item-icon { width: 78%; height: 78%; max-width: 78%; max-height: 78%; }
-.armory-slot--amulet  .armory-item-icon { width: 58%; height: 58%; max-width: 58%; max-height: 58%; }
-.armory-slot--ring    .armory-item-icon { width: 55%; height: 55%; max-width: 55%; max-height: 55%; }
-.armory-slot--weapon  .armory-item-icon { width: 86%; height: 86%; max-width: 86%; max-height: 86%; }
-.armory-slot--legs    .armory-item-icon { width: 82%; height: 82%; max-width: 82%; max-height: 82%; }
-.armory-slot--gloves  .armory-item-icon { width: 82%; height: 82%; max-width: 82%; max-height: 82%; }
-.armory-slot--boots   .armory-item-icon { width: 82%; height: 82%; max-width: 82%; max-height: 82%; }
+   Tighter values per v2.1.3 spec — accessories shrink so they
+   read as small physical items; weapons + legs take more room. */
+.armory-slot--helm    .armory-item-icon { width: 76%; height: 76%; }
+.armory-slot--cape    .armory-item-icon { width: 76%; height: 76%; }
+.armory-slot--body    .armory-item-icon { width: 76%; height: 76%; }
+.armory-slot--amulet  .armory-item-icon { width: 55%; height: 55%; }
+.armory-slot--ring    .armory-item-icon { width: 52%; height: 52%; }
+.armory-slot--weapon  .armory-item-icon { width: 86%; height: 86%; }
+.armory-slot--legs    .armory-item-icon { width: 84%; height: 84%; }
+.armory-slot--gloves  .armory-item-icon { width: 72%; height: 72%; }
+.armory-slot--boots   .armory-item-icon { width: 72%; height: 72%; }
 
 /* ─── Per-rarity treatment ───────────────────────────────────
-   - Aura pool tinted to rarity color.
-   - Rim halo around the entire slot (outer box-shadow).
-   - Brighter/dimmer rim opacity per tier. */
+   Subtle outer halo around the entire slot — does NOT cover the
+   painted stone tablet, just breathes outward via the .equipment-
+   slot-overlay's overflow:visible. Aura behind the icon also
+   tints per rarity so the item looks like it's "glowing in tier." */
 .armory-slot--rarity-common {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 .armory-slot--rarity-rare {
   box-shadow:
-    inset 0 0 0 1px rgba(96, 165, 250, 0.40),
-    0 0 12px rgba(96, 165, 250, 0.20);
+    inset 0 0 0 1px rgba(96, 165, 250, 0.30),
+    0 0 12px rgba(96, 165, 250, 0.15);
 }
 .armory-slot--rarity-rare .armory-item-aura {
   background: radial-gradient(
     circle at center,
-    rgba(96, 165, 250, 0.28) 0%,
-    rgba(0,   0,   0,   0.45) 55%,
-    rgba(0,   0,   0,   0.78) 100%);
+    rgba(96, 165, 250, 0.24) 0%,
+    rgba(0,   0,   0,   0.16) 45%,
+    transparent 75%);
 }
 .armory-slot--rarity-ultra_rare {
   box-shadow:
-    inset 0 0 0 1px rgba(245, 158, 11, 0.55),
-    0 0 20px rgba(245, 158, 11, 0.30);
+    inset 0 0 0 1px rgba(245, 158, 11, 0.45),
+    0 0 16px rgba(245, 158, 11, 0.25);
 }
 .armory-slot--rarity-ultra_rare .armory-item-aura {
   background: radial-gradient(
     circle at center,
-    rgba(245, 158, 11, 0.30) 0%,
-    rgba(40,  20,  0,   0.45) 55%,
-    rgba(0,   0,   0,   0.78) 100%);
+    rgba(245, 158, 11, 0.26) 0%,
+    rgba(40,  20,  0,   0.18) 45%,
+    transparent 75%);
 }
 
 /* ─── Per-card tuning ────────────────────────────────────────

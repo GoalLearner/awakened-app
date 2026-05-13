@@ -9840,9 +9840,11 @@
       overlay.style.height = '24%';
       overlay.style.pointerEvents = 'none';
 
-      const slotBg = document.createElement('div');
-      slotBg.className = 'armory-slot-bg';
-      overlay.appendChild(slotBg);
+      // v2.1.3 — no more .armory-slot-bg element. The painted stone
+      // slots on panel-base.png are the canonical frame; adding a
+      // dark radial card on top of them made the panel art invisible.
+      // Empty + equipped slots now share the painted recess as the
+      // unifying treatment.
 
       const frame = document.createElement('div');
       frame.className = 'armory-item-frame';
