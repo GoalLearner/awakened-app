@@ -34,18 +34,89 @@ Pulled from `git log --since="2026-05-12 00:00" --reverse`. Excludes the morning
 
 ---
 
-## Repo state at session close
+## Repo state at session close (updated 1:39 AM May 13)
 
-- **HEAD:** `3c58fd1` (`leaderboard: steps metric switches from rolling-7 to calendar-week (Sun→Sat)`)
+- **HEAD:** `555483c` (`balance: The Insomniac kill condition reduced from 2 nights → 1 night`)
 - **Branch:** `main`, in sync with `origin/main`
 - **`APP_VERSION`:** `2.1.0` (in both `app.js` and `codemagic.yaml`)
-- **`sw.js` `CACHE_VERSION`:** `v5.152`
-- **`app.js` cache-bust:** `?v=279`
+- **`sw.js` `CACHE_VERSION`:** `v5.162`
+- **`app.js` cache-bust:** `?v=289`
 - **`auth.js` cache-bust:** `?v=7`
-- **`styles.css` cache-bust:** `?v=208`
+- **`styles.css` cache-bust:** `?v=214`
 - **`HEALTHKIT_AUTH_VERSION`:** `2`
 - **Working tree:** clean — no uncommitted changes, no untracked files
 - **Repo location:** `C:\Users\richm\OneDrive\Desktop\habit-tracker` (NOT `Documents\awakened-app\` — that's a phantom path that surfaced briefly mid-session; this OneDrive working tree is the authoritative clone)
+
+## POST-HANDOFF MARATHON — Status header redesign + chart polish
+
+After this handoff was originally authored (commit `2ed653d`), 10 additional commits landed before final session close at 1:39 AM. The Profile/Status tab header got a full AgenticOS-flavored redesign + the XP detail sheet got tier-1 + tier-2 "alive" animations. Build going to Codemagic at 1:39 AM PST May 13.
+
+### Commits (chronological)
+
+| # | Hash | Subject | What it did |
+|---|---|---|---|
+| 18 | `9301950` | ui: status header redesign | Replaced v1.x rank-section + progress-section with 3-card metric strip (RANK / WEEK / XP·30D) + today-strip + status pill row. JetBrains Mono added. Cinzel wordmark preserved. Every existing render-target ID preserved in new structure. |
+| 19 | `2acb0c8` | fix(ui): status pill row + daily quote defensive re-apply | Status pill row always renders ≥1 class pill (CIVILIAN as fallback). renderDailyQuote re-applies to empty innerHTML defensively. |
+| 20 | `06c20ab` | fix(ui): setupRankPopup targeted removed .rank-track | Critical init-chain regression — setupRankPopup querySelector('.rank-track') returned null, threw TypeError, broke render() downstream (no date, no quote, no habits). Retargeted to .metric-card--rank + null-guarded all bindings. |
+| 21 | `aaca093` | feat(ui): XP·30D card opens detail sheet on tap | Tap the sparkline card → bottom-sheet with 400×140 cumulative-XP chart + 6-cell stats grid. Same .vn-sheet pattern as leaderboard ranking sheet. |
+| 22 | `0f09599` | ui(xp-detail): swap LAST 7 DAYS + LAST 30 DAYS for DAILY XP + MONTHLY XP | Restructured grid to TOTAL / WEEKLY / DAILY / MONTHLY / DAYS ACTIVE / BEST DAY per Richie's spec. MONTHLY walks completions directly to handle month-boundary correctly. |
+| 23 | `090c2b3` | feat(ui): status row rotates STREAKS ↔ HUNTING every 6s | First rotating-ticker iteration of the status row. Crossfade between streak pills and engaged-boss pills. |
+| 24 | `7b397dd` | feat(ui): status row HUNTING-only, no emojis, boss portraits as pill icons | Pivoted off rotation. Row is HUNTING-only with real boss portrait PNGs as compact circular avatars. Empty state: "THE HUNT IS QUIET · ENGAGE A BOSS" with dungeon tab icon. ALL emoji glyphs replaced with real assets per Richie's "no emojis" rule. |
+| 25 | `ad22684` | feat(ui): tier-1 'alive' polish for XP chart | Line drop-shadow glow + endpoint dot pulse animation + radar-ping ring + JS-driven stroke-dashoffset draw-in on every sheet open. |
+| 26 | `75e477c` | feat(ui): tier-2 XP chart polish — aurora light sweep + floating particles | Second path overlay with travelling "head" via animated stroke-dashoffset (5s loop). 4 staggered SVG particle circles emit from the endpoint dot. 5 simultaneous CSS animations total, all compositor-level, paused when sheet hidden. |
+| 27 | `555483c` | balance: Insomniac 2 nights → 1 night | streakTarget 2 → 1. Single qualifying night defeats the Insomniac. killCondShort + killCondLong rewritten. Boss card + detail modal labels pluralize correctly (`0 / 1 night` singular). |
+
+### What now lives on the Profile/Status tab header
+
+**Top row:** AWAKENED Cinzel wordmark + `WED · MAY 13` date + ⚙ gear
+
+**3-card metric strip (RANK / WEEK / XP·30D):**
+- RANK card: rank pill + pts + "X to next rank" sub + class affinity in top-right + purple progress bar. Tap → opens rank info popup.
+- WEEK card: XP earned Sun→today / 200 XP target. Day-of-week counter "DAY 4 / 7." Resets every Sunday.
+- XP·30D card: live mini sparkline (gold line + gradient area fill + glowing endpoint dot) + 30-day total XP. **Tappable** → opens XP detail sheet.
+
+**Today strip:** `X / Y HABITS TODAY` on the left, 🔥-style streak flame + souls pill on the right.
+
+**HUNTING row:** one purple-bordered pill per engaged boss with circular portrait + name + kill-cond progress, OR a single idle pill ("THE HUNT IS QUIET · ENGAGE A BOSS") when none engaged.
+
+**Daily quote at the bottom** (preserved evergreen).
+
+### XP detail sheet (opens on XP·30D tap)
+
+**Header:** "XP · CUMULATIVE" eyebrow, Cinzel "YOUR PROGRESS" title, ✕ close.
+
+**Chart (400×140):** full-width cumulative XP line with:
+- Line draws itself in over 0.8s on every open (tier 1)
+- Soft gold drop-shadow glow under the line (tier 1)
+- Endpoint dot pulses + concentric radar-ping ring expands outward (tier 1)
+- Aurora light sweep — bright cream "head" travels start→end every 5s (tier 2)
+- 4 small particles drift up from endpoint with staggered timing (tier 2)
+- Date axis labels: APR 14 / APR 28 / MAY 13 (auto-update)
+
+**6-cell stats grid:**
+- TOTAL XP (all-time) / WEEKLY XP (Sun→today) / DAILY XP (today)
+- MONTHLY XP (MAY 1→today) / DAYS ACTIVE (last 30d) / BEST DAY (max single-day + date)
+
+**Dismiss:** ✕ button, overlay tap, swipe-down gesture (via `attachSheetDismissGesture`).
+
+### Insomniac balance change
+
+streakTarget reduced from 2 → 1. A single ≥7-hour sleep night now defeats the Insomniac for the hunt. Existing in-progress hunts at streak=1 will immediately complete on next eval. No data migration needed.
+
+---
+
+## Build submission status (1:39 AM May 13)
+
+Build going to Codemagic at **1:39 AM PST May 13**. Codemagic dashboard build number is whatever's next in their counter (Codemagic dashboard ≠ iOS CFBundleVersion — see "Common pitfalls" in CLAUDE.md). CFBundleVersion in App Store Connect will be **35** (TestFlight currently has 34). HEAD at submission: `555483c`.
+
+**This build adds, on top of build 34:**
+- Full Profile/Status header redesign (metric strip + today strip + HUNTING row)
+- XP detail sheet (tappable from sparkline card, with tier-1 + tier-2 chart animations)
+- Insomniac 1-night kill condition
+- All the related fix-ups + cache busts
+- Total: 10 commits worth of new content
+
+Build 35 IS the App Store submission candidate, replacing the build-34 plan from the original handoff.
 
 ---
 
@@ -59,8 +130,8 @@ Pulled from `git log --since="2026-05-12 00:00" --reverse`. Excludes the morning
   - `POST /v1/leaderboard/submit`
   - `GET  /v1/leaderboard/top?metric=X&limit=N`
   - `POST /v1/account/delete`
-- **TestFlight current:** build 55 is what's currently on Richie's phone.
-- **Build 56 status:** **TO BE UPDATED — current status: not yet triggered as of session close.** Update this line after Codemagic kicks off.
+- **TestFlight current:** CFBundleVersion 34 is the latest successful TestFlight build. (Note: Codemagic dashboard counter is at 56+, but that includes ~22 failed/abandoned builds — see Common Pitfalls in CLAUDE.md re: Codemagic dashboard ≠ CFBundleVersion.)
+- **Build 35 status:** **Triggered to Codemagic at 1:39 AM PST May 13.** HEAD at submission `555483c`. Includes 10 post-handoff commits — status header redesign + XP detail sheet + tier-1/2 animations + Insomniac 1-night balance. Watch for Apple processing completion (typically 10–60 min), then this is the build to submit to App Store.
 
 ---
 
