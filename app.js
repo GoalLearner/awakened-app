@@ -9786,6 +9786,22 @@
   // overlay positioned over the painted slot tablet showing the
   // equipped card's art. Idempotent — wipes existing overlays
   // each call so swaps + unequips refresh cleanly.
+  //
+  // Overlay dimensions are LARGER than the hit-target so the
+  // equipped art fills the painted slot tablet (painted slots are
+  // ~28%×24%; hit-targets are 22%×19% to avoid tap-target overlap
+  // with adjacent slots).
+  const _SLOT_OVERLAY_POS = {
+    helm:   { top: 14.5, left:  9 },
+    amulet: { top: 14.5, left: 36 },
+    cape:   { top: 14.5, left: 63 },
+    weapon: { top: 37.5, left:  9 },
+    body:   { top: 37.5, left: 36 },
+    gloves: { top: 37.5, left: 63 },
+    legs:   { top: 59.5, left:  9 },
+    boots:  { top: 59.5, left: 36 },
+    ring:   { top: 59.5, left: 63 },
+  };
   function renderEquippedSlotOverlays() {
     const wrap = document.querySelector('.equipment-panel-wrap');
     if (!wrap) return;
@@ -9797,26 +9813,25 @@
       if (!cardId) return;
       const card = CARDS[cardId];
       if (!card) return;
+      const pos = _SLOT_OVERLAY_POS[slot];
+      if (!pos) return;
       const hit = wrap.querySelector('.equipment-slot-hit[data-slot="' + slot + '"]');
-      if (!hit) return;
       const overlay = document.createElement('img');
       overlay.className = 'equipment-slot-overlay equipment-slot-overlay--' + card.rarity;
       overlay.alt = card.name + ' equipped';
       overlay.draggable = false;
-      overlay.style.cssText = hit.style.cssText; // copy top/left/width/height absolute positioning
-      // Match hit-target geometry exactly so overlay sits inside the
-      // painted slot tablet alongside (just behind) the tap target.
       overlay.style.position = 'absolute';
-      overlay.style.top    = hit.style.top    || getComputedStyle(hit).top;
-      overlay.style.left   = hit.style.left   || getComputedStyle(hit).left;
-      overlay.style.width  = getComputedStyle(hit).width;
-      overlay.style.height = getComputedStyle(hit).height;
+      overlay.style.top    = pos.top  + '%';
+      overlay.style.left   = pos.left + '%';
+      overlay.style.width  = '28%';
+      overlay.style.height = '24%';
       overlay.style.pointerEvents = 'none';
       overlay.style.objectFit = 'contain';
-      overlay.style.padding = '8%';
       if (card.art_path) overlay.src = card.art_path;
-      // Insert before the hit target so taps still register
-      wrap.insertBefore(overlay, hit);
+      // Insert BEFORE the hit target so taps still route to the
+      // button on top.
+      if (hit) wrap.insertBefore(overlay, hit);
+      else     wrap.appendChild(overlay);
     });
   }
 
