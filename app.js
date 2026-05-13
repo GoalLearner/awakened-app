@@ -9782,6 +9782,50 @@
     modal.classList.remove('hidden');
   }
 
+  // ── ARMORY ICON PIPELINE (v3 Phase 1c) ───────────────────────
+  // TODO: Armory looks best with transparent PNG icon_path assets.
+  // art_path is full card art and should only be used as fallback.
+  // See assets/item-icons/README.md for the icon generation spec
+  // and the 9 pending filenames. When a transparent icon lands on
+  // disk, add `icon_path: 'assets/item-icons/<id>.png'` to the
+  // matching CARDS entry — getArmoryIconPath picks it up
+  // automatically and the renderer drops the fallback CSS class.
+
+  // Per-slot icon tuning. Different equipment types need different
+  // visual scale + offset so the painted slot tablet stays dominant
+  // and the icon reads as "relic resting in carved socket." Applied
+  // as CSS custom properties (--icon-scale, --icon-x, --icon-y) on
+  // each .armory-slot wrapper so per-slot CSS doesn't need 9 rules.
+  const ARMORY_SLOT_ICON_TUNING = {
+    helm:   { scale: 0.70, x: 0,  y: 0  },
+    amulet: { scale: 0.46, x: 0,  y: -2 },
+    cape:   { scale: 0.72, x: 0,  y: 0  },
+    weapon: { scale: 0.86, x: 0,  y: 0  },
+    body:   { scale: 0.82, x: 0,  y: 1  },
+    gloves: { scale: 0.66, x: 0,  y: 1  },
+    legs:   { scale: 0.86, x: 0,  y: 0  },
+    boots:  { scale: 0.64, x: 0,  y: 2  },
+    ring:   { scale: 0.44, x: 0,  y: 0  },
+  };
+
+  function getArmoryIconPath(card) {
+    if (!card) return '';
+    // Priority: transparent icon_path → legacy armory_icon_path →
+    // full card art_path as fallback.
+    return card.icon_path || card.armory_icon_path || card.art_path || '';
+  }
+  function getArmoryTuning(card) {
+    const fallback = { scale: 0.72, x: 0, y: 0 };
+    if (!card || !card.slot) return fallback;
+    const slotDefault = ARMORY_SLOT_ICON_TUNING[card.slot] || fallback;
+    const override = card.armory_tuning || {};
+    return {
+      scale: override.scale != null ? override.scale : slotDefault.scale,
+      x:     override.x     != null ? override.x     : slotDefault.x,
+      y:     override.y     != null ? override.y     : slotDefault.y,
+    };
+  }
+
   // v3 Phase 1a — for each equipped slot, render a small <img>
   // overlay positioned over the painted slot tablet showing the
   // equipped card's art. Idempotent — wipes existing overlays
@@ -9817,21 +9861,33 @@
       if (!pos) return;
       const hit = wrap.querySelector('.equipment-slot-hit[data-slot="' + slot + '"]');
 
-      // v2.1.2 — armory-slot architecture: 3 layered children
-      // (slot-bg → item-frame[aura, icon]) so the equipped art reads
-      // as an icon resting inside a stone recess, not a rectangular
-      // image pasted over the painted slot.
+      // v3 Phase 1c — Armory icon pipeline. Five-layer DOM per
+      // equipped slot (z-order bottom to top):
+      //   1. .armory-socket-recess — dark inset radial (carved hollow)
+      //   2. .armory-icon-aura     — soft blurred glow behind the icon
+      //   3. .armory-equipped-icon — the actual <img>, scale via CSS var
+      //   4. .armory-socket-glass  — outer vignette over the icon
+      //   5. .armory-socket-bevel  — top highlight + bottom shadow rim
       //
-      // The outer .equipment-slot-overlay handles absolute positioning
-      // + rarity rim glow (preserved from prior commits). The inner
-      // armory-slot architecture handles the embedded-icon treatment.
+      // Image source priority: icon_path (transparent PNG) → art_path
+      // (full square card art) → blank placeholder. When falling back
+      // to art_path, the .armory-slot--fallback-art class kicks in
+      // with heavier vignette + blend-mode treatment to suppress the
+      // square background as best we can without proper transparent
+      // assets.
+      const iconPath    = getArmoryIconPath(card);
+      const usingIconPath = !!card.icon_path; // strict: was transparent icon set?
+      const tuning      = getArmoryTuning(card);
+
       const overlay = document.createElement('div');
       overlay.className =
         'equipment-slot-overlay' +
         ' equipment-slot-overlay--' + card.rarity +
         ' armory-slot armory-slot--equipped' +
-        ' armory-slot--' + card.slot +              // per-slot sizing hook
-        ' armory-slot--rarity-' + card.rarity;      // rarity-tier aura tint
+        ' armory-slot--' + card.slot +
+        ' armory-slot--rarity-' + card.rarity +
+        (usingIconPath ? '' : ' armory-slot--fallback-art');
+      overlay.setAttribute('data-slot',   card.slot);
       overlay.setAttribute('data-rarity', card.rarity);
       overlay.style.position = 'absolute';
       overlay.style.top    = pos.top  + '%';
@@ -9839,28 +9895,49 @@
       overlay.style.width  = '28%';
       overlay.style.height = '24%';
       overlay.style.pointerEvents = 'none';
+      // CSS custom props consumed by .armory-equipped-icon's transform
+      overlay.style.setProperty('--icon-scale', String(tuning.scale));
+      overlay.style.setProperty('--icon-x',     tuning.x + 'px');
+      overlay.style.setProperty('--icon-y',     tuning.y + 'px');
 
-      // v2.1.3 — no more .armory-slot-bg element. The painted stone
-      // slots on panel-base.png are the canonical frame; adding a
-      // dark radial card on top of them made the panel art invisible.
-      // Empty + equipped slots now share the painted recess as the
-      // unifying treatment.
+      // Layer 1 — recess
+      const recess = document.createElement('div');
+      recess.className = 'armory-socket-recess';
+      overlay.appendChild(recess);
 
-      const frame = document.createElement('div');
-      frame.className = 'armory-item-frame';
-
+      // Layer 2 — aura
       const aura = document.createElement('div');
-      aura.className = 'armory-item-aura';
-      frame.appendChild(aura);
+      aura.className = 'armory-icon-aura';
+      overlay.appendChild(aura);
 
+      // Layer 3 — icon (with fallback chain)
       const img = document.createElement('img');
-      img.className = 'armory-item-icon';
+      img.className = 'armory-equipped-icon';
       img.alt = card.name + ' equipped';
       img.draggable = false;
-      if (card.art_path) img.src = card.art_path;
-      frame.appendChild(img);
+      if (iconPath) img.src = iconPath;
+      // Fallback chain: if icon_path fails, swap to art_path + apply
+      // fallback class. If art_path also fails, hide the img so the
+      // recess/aura still render as a "missing icon" safe state.
+      img.addEventListener('error', function onIconErr() {
+        if (card.icon_path && img.src.indexOf(card.icon_path) !== -1 && card.art_path) {
+          overlay.classList.add('armory-slot--fallback-art');
+          img.src = card.art_path;
+        } else {
+          img.style.display = 'none';
+        }
+      });
+      overlay.appendChild(img);
 
-      overlay.appendChild(frame);
+      // Layer 4 — glass vignette
+      const glass = document.createElement('div');
+      glass.className = 'armory-socket-glass';
+      overlay.appendChild(glass);
+
+      // Layer 5 — socket bevel
+      const bevel = document.createElement('div');
+      bevel.className = 'armory-socket-bevel';
+      overlay.appendChild(bevel);
 
       // Insert BEFORE the hit target so taps still route to the
       // button on top.
