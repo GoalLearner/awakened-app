@@ -16152,30 +16152,105 @@ body.reveal-locked { overflow: hidden; }
     inset 0 -2px 6px rgba(0,   0,   0,   0.55);
 }
 
-/* ── FALLBACK CLASS ────────────────────────────────────────
-   Applied by JS when icon_path is missing AND the renderer falls
-   back to art_path. Square card art has a full background that
-   CSS can't transparency-strip — these rules dim it down hard
-   so it reads less as a thumbnail. Will be a no-op for every
-   slot once transparent icons land on disk. */
-.armory-slot--fallback-art .armory-equipped-icon {
-  transform:
-    translate(var(--icon-x, 0px), var(--icon-y, 0px))
-    scale(calc(var(--icon-scale, 0.72) * 0.78));
-  mix-blend-mode: lighten;
-  opacity: 0.92;
+/* ── MISSING-ICON PLACEHOLDER STATE ────────────────────────
+   Applied by JS when card.icon_path is missing — Armory PROD
+   never renders art_path (square card art creates the thumbnail
+   problem). Instead the slot shows a rune glyph placeholder that
+   reads as 'equipped, awaiting proper icon asset.' Intentional.
+   This is the default state for every equipped slot today until
+   the 9 transparent icons in assets/item-icons/ are generated. */
+
+/* Rarity-aware aura behind the rune. Larger inset + softer
+   gradient than the with-icon aura so the rune feels suspended
+   in atmospheric color, not surrounded by a hard glow ring. */
+.armory-slot--missing-icon .armory-equipped-rarity-aura {
+  position: absolute;
+  inset: 18%;
+  border-radius: 999px;
+  background: radial-gradient(circle,
+    rgba(139, 92, 246, 0.28) 0%,
+    rgba(139, 92, 246, 0.12) 45%,
+    transparent 72%);
+  filter: blur(5px);
+  opacity: 0.80;
+  z-index: 2;
+  pointer-events: none;
 }
-.armory-slot--fallback-art .armory-socket-glass {
-  background: radial-gradient(circle at center,
-    transparent 24%,
-    rgba(0, 0, 0, 0.28) 48%,
-    rgba(0, 0, 0, 0.88) 100%);
+
+/* Geometric rune glyph — purple diagonal stroke + gold center
+   spark over a circular dark base. Reads as a stylized seal /
+   placeholder, not 'missing image.' */
+.armory-missing-icon-rune {
+  position: absolute;
+  inset: 28%;
+  z-index: 3;
+  opacity: 0.48;
+  background:
+    radial-gradient(circle, rgba(245, 158, 11, 0.35), transparent 58%),
+    linear-gradient(135deg,
+      transparent 42%,
+      rgba(139, 92, 246, 0.55) 48%,
+      rgba(139, 92, 246, 0.55) 52%,
+      transparent 58%);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 999px;
   box-shadow:
-    inset 0 0 24px rgba(0, 0, 0, 0.85),
-    inset 0 0 8px  rgba(139, 92, 246, 0.30);
+    0 0 12px rgba(139, 92, 246, 0.25),
+    inset 0 0 10px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
 }
-.armory-slot--fallback-art .armory-icon-aura {
-  opacity: 0.55;
+
+/* Equipped state suppresses the painted slot engravings beneath
+   so the placeholder reads as 'something equipped here,' not
+   'placeholder ON TOP of empty-slot engraving.' Darker radial. */
+.armory-slot--equipped .armory-socket-recess {
+  background: radial-gradient(circle at center,
+    rgba(20, 20, 35, 0.18) 0%,
+    rgba(0,  0,  0,  0.34) 52%,
+    rgba(0,  0,  0,  0.62) 100%);
+}
+
+/* Per-rarity rune tinting — common is purple-only, rare adds
+   a blue cast, ultra_rare uses gold-on-purple. Subtle. */
+.armory-slot--missing-icon.armory-rarity--rare .armory-missing-icon-rune {
+  background:
+    radial-gradient(circle, rgba(96, 165, 250, 0.40), transparent 58%),
+    linear-gradient(135deg,
+      transparent 42%,
+      rgba(96, 165, 250, 0.55) 48%,
+      rgba(96, 165, 250, 0.55) 52%,
+      transparent 58%);
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow:
+    0 0 14px rgba(96, 165, 250, 0.30),
+    inset 0 0 10px rgba(0, 0, 0, 0.65);
+}
+.armory-slot--missing-icon.armory-rarity--rare .armory-equipped-rarity-aura {
+  background: radial-gradient(circle,
+    rgba(96, 165, 250, 0.32) 0%,
+    rgba(96, 165, 250, 0.14) 45%,
+    transparent 72%);
+}
+.armory-slot--missing-icon.armory-rarity--ultra .armory-missing-icon-rune {
+  background:
+    radial-gradient(circle, rgba(245, 158, 11, 0.55), transparent 60%),
+    linear-gradient(135deg,
+      transparent 42%,
+      rgba(245, 158, 11, 0.60) 48%,
+      rgba(245, 158, 11, 0.60) 52%,
+      transparent 58%);
+  border-color: rgba(245, 158, 11, 0.50);
+  box-shadow:
+    0 0 18px rgba(245, 158, 11, 0.35),
+    inset 0 0 10px rgba(0, 0, 0, 0.65);
+  opacity: 0.60;
+}
+.armory-slot--missing-icon.armory-rarity--ultra .armory-equipped-rarity-aura {
+  background: radial-gradient(circle,
+    rgba(245, 158, 11, 0.34) 0%,
+    rgba(245, 158, 11, 0.15) 45%,
+    transparent 72%);
+  opacity: 0.85;
 }
 
 /* ── PER-RARITY TREATMENT ──────────────────────────────────

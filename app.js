@@ -9808,11 +9808,20 @@
     ring:   { scale: 0.44, x: 0,  y: 0  },
   };
 
+  // PRODUCTION rule: Armory NEVER falls back to art_path. Square
+  // card art with a flat-RGB background reads as a thumbnail inside
+  // the stone socket — CSS can't strip it. When a transparent
+  // icon_path isn't available, render the premium missing-icon
+  // placeholder (rune glyph + rarity aura) instead.
   function getArmoryIconPath(card) {
     if (!card) return '';
-    // Priority: transparent icon_path → legacy armory_icon_path →
-    // full card art_path as fallback.
-    return card.icon_path || card.armory_icon_path || card.art_path || '';
+    return card.icon_path || card.armory_icon_path || '';
+  }
+  // Debug-only escape hatch — surfaces card.art_path so console
+  // testing can compare "what would have rendered as fallback."
+  // NOT called from production rendering paths.
+  function getArmoryDebugFallbackPath(card) {
+    return (card && card.art_path) || '';
   }
   function getArmoryTuning(card) {
     const fallback = { scale: 0.72, x: 0, y: 0 };
@@ -9861,23 +9870,35 @@
       if (!pos) return;
       const hit = wrap.querySelector('.equipment-slot-hit[data-slot="' + slot + '"]');
 
-      // v3 Phase 1c — Armory icon pipeline. Five-layer DOM per
-      // equipped slot (z-order bottom to top):
-      //   1. .armory-socket-recess — dark inset radial (carved hollow)
-      //   2. .armory-icon-aura     — soft blurred glow behind the icon
-      //   3. .armory-equipped-icon — the actual <img>, scale via CSS var
-      //   4. .armory-socket-glass  — outer vignette over the icon
-      //   5. .armory-socket-bevel  — top highlight + bottom shadow rim
+      // v3 Phase 1d — Armory rendering pipeline (no art_path fallback).
       //
-      // Image source priority: icon_path (transparent PNG) → art_path
-      // (full square card art) → blank placeholder. When falling back
-      // to art_path, the .armory-slot--fallback-art class kicks in
-      // with heavier vignette + blend-mode treatment to suppress the
-      // square background as best we can without proper transparent
-      // assets.
-      const iconPath    = getArmoryIconPath(card);
-      const usingIconPath = !!card.icon_path; // strict: was transparent icon set?
-      const tuning      = getArmoryTuning(card);
+      // Branches on whether the card has a transparent icon asset:
+      //
+      //   hasArmoryIcon = true:
+      //     5-layer DOM with the <img>:
+      //       1. .armory-socket-recess  — carved hollow
+      //       2. .armory-icon-aura      — soft blurred glow
+      //       3. .armory-equipped-icon  — the transparent <img>
+      //       4. .armory-socket-glass   — outer vignette
+      //       5. .armory-socket-bevel   — top highlight + bottom shadow
+      //
+      //   hasArmoryIcon = false (PRODUCTION DEFAULT TODAY):
+      //     4-layer DOM with rune glyph placeholder:
+      //       1. .armory-socket-recess
+      //       2. .armory-equipped-rarity-aura
+      //       3. .armory-missing-icon-rune  — geometric rune placeholder
+      //       4. .armory-socket-glass
+      //       5. .armory-socket-bevel
+      //     NO <img>. NO art_path. Slot reads as 'equipped, awaiting
+      //     proper icon asset' — intentional, not broken.
+      const hasArmoryIcon = Boolean(card.icon_path || card.armory_icon_path);
+      const iconPath      = getArmoryIconPath(card);
+      const tuning        = getArmoryTuning(card);
+
+      // Short rarity token for the new armory-rarity--<x> class.
+      // Maps CARDS rarity ('common'/'rare'/'ultra_rare') to the
+      // short form Richie's spec uses ('common'/'rare'/'ultra').
+      const rarityShort = card.rarity === 'ultra_rare' ? 'ultra' : card.rarity;
 
       const overlay = document.createElement('div');
       overlay.className =
@@ -9886,7 +9907,8 @@
         ' armory-slot armory-slot--equipped' +
         ' armory-slot--' + card.slot +
         ' armory-slot--rarity-' + card.rarity +
-        (usingIconPath ? '' : ' armory-slot--fallback-art');
+        ' armory-rarity--' + rarityShort +
+        (hasArmoryIcon ? '' : ' armory-slot--missing-icon');
       overlay.setAttribute('data-slot',   card.slot);
       overlay.setAttribute('data-rarity', card.rarity);
       overlay.style.position = 'absolute';
@@ -9895,46 +9917,83 @@
       overlay.style.width  = '28%';
       overlay.style.height = '24%';
       overlay.style.pointerEvents = 'none';
-      // CSS custom props consumed by .armory-equipped-icon's transform
+      // CSS custom props consumed by .armory-equipped-icon's transform.
+      // Only meaningful when hasArmoryIcon === true.
       overlay.style.setProperty('--icon-scale', String(tuning.scale));
       overlay.style.setProperty('--icon-x',     tuning.x + 'px');
       overlay.style.setProperty('--icon-y',     tuning.y + 'px');
 
-      // Layer 1 — recess
+      // Layer 1 — recess (both states)
       const recess = document.createElement('div');
       recess.className = 'armory-socket-recess';
       overlay.appendChild(recess);
 
-      // Layer 2 — aura
-      const aura = document.createElement('div');
-      aura.className = 'armory-icon-aura';
-      overlay.appendChild(aura);
+      if (hasArmoryIcon) {
+        // Layer 2a — icon aura
+        const aura = document.createElement('div');
+        aura.className = 'armory-icon-aura';
+        overlay.appendChild(aura);
 
-      // Layer 3 — icon (with fallback chain)
-      const img = document.createElement('img');
-      img.className = 'armory-equipped-icon';
-      img.alt = card.name + ' equipped';
-      img.draggable = false;
-      if (iconPath) img.src = iconPath;
-      // Fallback chain: if icon_path fails, swap to art_path + apply
-      // fallback class. If art_path also fails, hide the img so the
-      // recess/aura still render as a "missing icon" safe state.
-      img.addEventListener('error', function onIconErr() {
-        if (card.icon_path && img.src.indexOf(card.icon_path) !== -1 && card.art_path) {
-          overlay.classList.add('armory-slot--fallback-art');
-          img.src = card.art_path;
-        } else {
+        // Layer 3 — icon (transparent PNG). onerror hides the img
+        // entirely so the recess + missing-icon-rune fall back to
+        // the placeholder state if the asset 404s mid-session.
+        const img = document.createElement('img');
+        img.className = 'armory-equipped-icon';
+        img.alt = card.name + ' equipped';
+        img.draggable = false;
+        img.src = iconPath;
+        img.addEventListener('error', function onIconErr() {
+          // Transparent icon failed to load — degrade gracefully to
+          // the missing-icon placeholder. No art_path swap (would
+          // reintroduce the square-thumbnail problem).
           img.style.display = 'none';
-        }
-      });
-      overlay.appendChild(img);
+          overlay.classList.add('armory-slot--missing-icon');
+          // Inject a missing-icon rune so the slot stays populated.
+          if (!overlay.querySelector('.armory-missing-icon-rune')) {
+            const rune = document.createElement('div');
+            rune.className = 'armory-missing-icon-rune';
+            rune.setAttribute('aria-hidden', 'true');
+            // Insert before the glass layer so layering stays correct.
+            const glassEl = overlay.querySelector('.armory-socket-glass');
+            if (glassEl) overlay.insertBefore(rune, glassEl);
+            else         overlay.appendChild(rune);
+          }
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn(
+              'Armory icon failed to load for ' + card.id +
+              ' (' + iconPath + '). Falling back to missing-icon placeholder. ' +
+              'Verify assets/item-icons/' + card.id + '.png exists and has a transparent background.');
+          }
+        });
+        overlay.appendChild(img);
+      } else {
+        // Missing-icon state — rarity aura + rune placeholder.
+        // No <img>, no art_path. Intentional premium placeholder.
+        const rarityAura = document.createElement('div');
+        rarityAura.className = 'armory-equipped-rarity-aura';
+        overlay.appendChild(rarityAura);
 
-      // Layer 4 — glass vignette
+        const rune = document.createElement('div');
+        rune.className = 'armory-missing-icon-rune';
+        rune.setAttribute('aria-hidden', 'true');
+        overlay.appendChild(rune);
+
+        // Dev warning so the missing asset is visible in console.
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(
+            'Armory icon missing for ' + card.id +
+            '. Add assets/item-icons/' + card.id + '.png and set ' +
+            'icon_path on the CARDS entry. art_path is intentionally ' +
+            'not used in Armory.');
+        }
+      }
+
+      // Layer 4 — glass vignette (both states)
       const glass = document.createElement('div');
       glass.className = 'armory-socket-glass';
       overlay.appendChild(glass);
 
-      // Layer 5 — socket bevel
+      // Layer 5 — socket bevel (both states)
       const bevel = document.createElement('div');
       bevel.className = 'armory-socket-bevel';
       overlay.appendChild(bevel);
