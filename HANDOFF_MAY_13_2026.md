@@ -158,13 +158,24 @@ Once Codemagic build 56 lands on phone:
 ## Next session's natural priorities (rough order)
 
 1. **TRIGGER + VALIDATE BUILD 56** if not done before sleep.
-2. **Phase E externals** — required for public App Store submission, not currently done:
+2. **NEW VERIFIABLE LEADERBOARD METRICS** — design + ship additional HealthKit-verifiable metrics for the live leaderboard. Currently only 3 metrics (`step_total`, `sleep_streak`, `bedtime_streak`). Candidate metrics to evaluate:
+   - `active_minutes_total` (HealthKit Move minutes, lifetime)
+   - `cardio_streak` (consecutive days hitting cardio goal)
+   - `resting_hr_low` (lowest weekly RHR — fitness proxy)
+   - `hrv_high` (peak HRV — recovery proxy)
+   - `strength_streak` (consecutive days/weeks with strength training)
+   - `mindful_minutes_total` (HealthKit mindfulness lifetime)
+   - `sleep_efficiency_avg` (rolling avg sleep efficiency)
+   - `early_riser_streak` (consecutive days waking before X o'clock)
+
+   Design conversation needed: which metrics make the v2.2 cut, what verification surface (which HealthKit categories must be re-requested → `HEALTHKIT_AUTH_VERSION` bump from 2 → 3), naming conventions consistent with existing metric IDs, backend schema additions (likely just new `metric_id` strings — no new D1 tables needed; `leaderboard_snapshots` is metric-agnostic). Each new metric also needs: client-side accumulator in the `lb_*` module, submit wiring, UI card in the Social tab grid, blurb in `LB_METRIC_META`, and `LB_CLIENT_CAPS` entry for sanity ceiling.
+3. **Phase E externals** — required for public App Store submission, not currently done:
    - Privacy policy doc update reflecting v2.1 backend data collection (alias + 3 leaderboard metrics leave device; everything else local-only).
    - App Store Connect privacy nutrition labels.
    - Both are external work (web-form + doc editing), not code.
-3. **Public App Store submission** — after Phase E externals land.
-4. **v3 PvP Phase 1 implementation** — equipment-equip UI per PVP.md §20 Phase 1: persistent `hb_pvp_equipped` state, equip/unequip handlers in Settings → Combat or a new Combat tab, stat-aggregation function applying class affinity multipliers (1.5× / 1.15× / 0×). ~2 weeks of work per the PVP.md estimate.
-5. **New boss design** — pick from the BOSSES.md roadmap:
+4. **Public App Store submission** — after Phase E externals land.
+5. **v3 PvP Phase 1 implementation** — equipment-equip UI per PVP.md §20 Phase 1: persistent `hb_pvp_equipped` state, equip/unequip handlers in Settings → Combat or a new Combat tab, stat-aggregation function applying class affinity multipliers (1.5× / 1.15× / 0×). ~2 weeks of work per the PVP.md estimate.
+6. **New boss design** — pick from the BOSSES.md roadmap:
    - The Liminal (D, VIT, sleep composite)
    - The Iron Will (C, STR, strength training)
    - The Restless Mind (C, FOCUS, mindfulness — requires HealthKit-compatible app)
