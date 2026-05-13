@@ -16040,27 +16040,84 @@ body.reveal-locked { overflow: hidden; }
   font-size: 2.4rem;
   color: rgba(255, 255, 255, 0.55);
 }
-.hunter-build-slot-name {
+/* ─── v3 Phase 1e — typed slot identity ─────────────────────────
+   Every Hunter Build tile (equipped / empty / locked) gets a
+   gold-rimmed pill in the top-left identifying the slot type:
+   HELM / WEAPON / PLATE / GLOVES / BOOTS / RING. This anchors the
+   equipment fantasy without reintroducing the body-socket art. */
+.hunter-build-slot-label {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 4;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  color: #f8e7b0;
+  background: rgba(10, 10, 24, 0.78);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.hunter-build-slot--equipped .hunter-build-slot-label {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+/* Item name band — sits below the slot label on equipped tiles.
+   Replaces the prior centered .hunter-build-slot-name treatment
+   (still kept for safety in case any stale render references it). */
+.hunter-build-item-name {
   position: absolute;
   bottom: 0;
   left: 0; right: 0;
-  padding: 4px 6px;
-  background: linear-gradient(to top,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.55) 60%,
-    transparent 100%);
+  z-index: 3;
+  padding: 18px 6px 6px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.78) 100%);
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.55rem;
-  font-weight: 700;
+  font-weight: 900;
   letter-spacing: 0.04em;
-  color: var(--text-primary);
+  color: #ffffff;
   text-transform: uppercase;
   text-align: center;
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+/* Legacy .hunter-build-slot-name kept as alias for any cached JS
+   that hasn't picked up the new class name. */
+.hunter-build-slot-name {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  z-index: 3;
+  padding: 18px 6px 6px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.78) 100%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
 }
 
 /* Rarity outlines — applied via build-rarity--{c,r,u} class */

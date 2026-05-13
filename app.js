@@ -1024,7 +1024,7 @@
   // Reads/writes go through getEquipped/saveEquipped so future
   // listeners (renderPokedex, populateEquipmentStats) refresh.
   const EQUIPPED_STORAGE_KEY = 'hb_pvp_equipped';
-  const EQUIPMENT_SLOTS = ['helm','cape','amulet','weapon','body','legs','gloves','boots','ring'];
+  const LEGACY_EQUIPMENT_SLOTS = ['helm','cape','amulet','weapon','body','legs','gloves','boots','ring'];
   let _equipped = null;
 
   function loadEquipped() {
@@ -1033,14 +1033,14 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         _equipped = {};
-        EQUIPMENT_SLOTS.forEach(slot => {
+        LEGACY_EQUIPMENT_SLOTS.forEach(slot => {
           _equipped[slot] = (parsed && typeof parsed[slot] === 'string') ? parsed[slot] : null;
         });
         return _equipped;
       }
     } catch (_) {}
     _equipped = {};
-    EQUIPMENT_SLOTS.forEach(slot => { _equipped[slot] = null; });
+    LEGACY_EQUIPMENT_SLOTS.forEach(slot => { _equipped[slot] = null; });
     return _equipped;
   }
   function saveEquipped() {
@@ -1056,7 +1056,7 @@
   function isCardEquipped(cardId) {
     if (!cardId) return false;
     const eq = getEquipped();
-    for (const slot of EQUIPMENT_SLOTS) {
+    for (const slot of LEGACY_EQUIPMENT_SLOTS) {
       if (eq[slot] === cardId) return true;
     }
     return false;
@@ -1097,7 +1097,7 @@
   function aggregateEquippedBonuses() {
     const sum = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
     const eq = getEquipped();
-    EQUIPMENT_SLOTS.forEach(slot => {
+    LEGACY_EQUIPMENT_SLOTS.forEach(slot => {
       const cardId = eq[slot];
       if (!cardId) return;
       const card = CARDS[cardId];
@@ -1109,14 +1109,14 @@
   function countEquippedSlots() {
     const eq = getEquipped();
     let n = 0;
-    EQUIPMENT_SLOTS.forEach(slot => { if (eq[slot]) n += 1; });
+    LEGACY_EQUIPMENT_SLOTS.forEach(slot => { if (eq[slot]) n += 1; });
     return n;
   }
 
   try {
     window.Equipped = {
       get:     getEquipped,
-      slots:   EQUIPMENT_SLOTS,
+      slots:   LEGACY_EQUIPMENT_SLOTS,
       equip:   equipCard,
       unequip: unequipSlot,
       isEquipped: isCardEquipped,
@@ -1140,21 +1140,99 @@
   const HUNTER_BUILD_SLOT_COUNT  = 6;
   let _hunterBuild = null;
 
-  // Rank → unlocked-slot-count table. S/S+ do NOT add more slots
-  // per the v3 spec; they may add prestige effects later.
-  // All ranks unlock the full 6-slot Hunter Build. (The earlier
-  // rank-gated unlock model — E:2 / D:3 / C:4 / B:5 / A:6 — was
-  // dropped so every player has access to the full build surface
-  // from day one. Discipline pressure stays on the drop-rate side
-  // of the economy; the Armory itself is fully open.)
-  function getUnlockedBuildSlots(/* rankId */) {
-    return HUNTER_BUILD_SLOT_COUNT;
+  // ── TYPED EQUIPMENT SLOTS (v3 Phase 1e) ───────────────────────
+  // Each Hunter Build slot is bound to an equipment TYPE. The array
+  // INDEX in hb_hunter_build.slots maps 1:1 to the slot type at the
+  // same index in EQUIPMENT_SLOTS. So index 0 = helm, 1 = weapon,
+  // 2 = plate, 3 = gloves, 4 = boots, 5 = ring. Same storage shape
+  // as before; old hb_hunter_build values get migrated into the new
+  // positions via migrateGenericBuildToEquipmentBuild on first init.
+  //
+  // Why typed slots: the prior generic build allowed any card in
+  // any slot (a Pup's Hood next to another Pup's Hood next to a
+  // ring). Players didn't feel like they were assembling gear, just
+  // collecting random tiles. Typed slots restore the equipment
+  // fantasy (HELM / WEAPON / PLATE / GLOVES / BOOTS / RING) without
+  // reintroducing the body-socket art problem — the grid stays
+  // clean and the square card art still works as-is.
+  //
+  // Future advanced slots (amulet, cape, legs) are deliberately
+  // collapsed into existing 6 for now. See LEGACY_TO_TYPED_SLOT.
+  // TODO Phase 1f+: amulet, cape, legs as dedicated slots.
+  const EQUIPMENT_SLOTS = [
+    { key: 'helm',   label: 'HELM' },
+    { key: 'weapon', label: 'WEAPON' },
+    { key: 'plate',  label: 'PLATE' },
+    { key: 'gloves', label: 'GLOVES' },
+    { key: 'boots',  label: 'BOOTS' },
+    { key: 'ring',   label: 'RING' },
+  ];
+  const EQUIPMENT_SLOT_INDEX = {
+    helm: 0, weapon: 1, plate: 2, gloves: 3, boots: 4, ring: 5,
+  };
+  // Legacy CARDS[id].slot values get folded into the new 6-slot
+  // taxonomy. body+legs+cape collapse into 'plate' (the catch-all
+  // armor slot); amulet collapses into 'ring' (single equipped
+  // jewelry slot for now).
+  const LEGACY_TO_TYPED_SLOT = {
+    helm:   'helm',
+    weapon: 'weapon',
+    body:   'plate',
+    legs:   'plate',
+    cape:   'plate',   // TODO Phase 1f: dedicated 'cape' slot
+    gloves: 'gloves',
+    boots:  'boots',
+    ring:   'ring',
+    amulet: 'ring',    // TODO Phase 1f: dedicated 'amulet' slot
+  };
+  // Returns the typed slot key for a card, or null if the card
+  // can't be equipped. Logs a one-time console.warn for cards with
+  // no slot metadata so we catch authoring gaps early.
+  const _warnedSlotMissingFor = new Set();
+  function getCardEquipmentSlot(card) {
+    if (!card) return null;
+    const raw = card.slot || card.equipment_slot || card.equipmentSlot ||
+                card.slot_type || card.gearSlot || null;
+    if (!raw) {
+      const id = card.id || '(unknown)';
+      if (!_warnedSlotMissingFor.has(id)) {
+        _warnedSlotMissingFor.add(id);
+        try {
+          console.warn("Card missing equipment slot: " + id +
+            ". Add slot: 'helm' | 'weapon' | 'plate' | 'gloves' | 'boots' | 'ring'.");
+        } catch (_) {}
+      }
+      return null;
+    }
+    return LEGACY_TO_TYPED_SLOT[raw] || null;
   }
-  function getRequiredRankForBuildSlot(/* index */) {
-    return 'E';
+
+  // Rank-gated unlocks per spec. E unlocks HELM + WEAPON; each
+  // subsequent rank reveals one more slot in this fixed order so
+  // every player walks the same progression. S+ leaves all 6 open
+  // (no extra slots — prestige hooks live elsewhere).
+  function getUnlockedBuildSlots(rankId) {
+    switch (rankId) {
+      case 'E':  return 2;
+      case 'D':  return 3;
+      case 'C':  return 4;
+      case 'B':  return 5;
+      case 'A':
+      case 'S':
+      case 'S+': return 6;
+      default:   return 2;
+    }
+  }
+  function getRequiredRankForBuildSlot(index) {
+    const required = ['E', 'E', 'D', 'C', 'B', 'A'];
+    return required[index] || 'A';
   }
   function isBuildSlotUnlocked(index) {
-    return index >= 0 && index < HUNTER_BUILD_SLOT_COUNT;
+    if (index < 0 || index >= HUNTER_BUILD_SLOT_COUNT) return false;
+    const rank = (typeof totalPoints !== 'undefined' && typeof getRank === 'function')
+      ? getRank(totalPoints || 0) : null;
+    const unlockedCount = getUnlockedBuildSlots(rank ? rank.id : 'E');
+    return index < unlockedCount;
   }
 
   // Ensures the build object has exactly HUNTER_BUILD_SLOT_COUNT
@@ -1209,6 +1287,14 @@
     }
     if (!cardId || !CARDS[cardId]) {
       return { ok: false, code: 'BAD_CARD' };
+    }
+    // Slot-type enforcement: card's typed slot MUST match the target
+    // slot at this index. Prevents Pup's Hood landing in RING etc.
+    const card = CARDS[cardId];
+    const cardSlot = getCardEquipmentSlot(card);
+    const targetSlot = EQUIPMENT_SLOTS[slotIndex] && EQUIPMENT_SLOTS[slotIndex].key;
+    if (!cardSlot || !targetSlot || cardSlot !== targetSlot) {
+      return { ok: false, code: 'WRONG_SLOT', cardSlot: cardSlot, targetSlot: targetSlot };
     }
     const build = getHunterBuild();
     // Block duplicates — if the card is already in another slot,
@@ -1332,6 +1418,40 @@
     saveHunterBuild();
   }
 
+  // v3 Phase 1e — typed-slot migration. The prior generic-slot
+  // build placed cards into the first available slot regardless of
+  // type. Now each slot is bound to an equipment type, so any card
+  // sitting in the wrong index has to move (or be evicted if its
+  // typed slot is already occupied — the kept copy wins).
+  //
+  // Idempotent via hb_equipment_build_migrated_v1. Does NOT delete
+  // any owned cards; only rearranges hb_hunter_build positions.
+  function migrateGenericBuildToEquipmentBuild() {
+    if (localStorage.getItem('hb_equipment_build_migrated_v1') === '1') return;
+    const build = getHunterBuild();
+    if (!build || !Array.isArray(build.slots)) {
+      try { localStorage.setItem('hb_equipment_build_migrated_v1', '1'); } catch (_) {}
+      return;
+    }
+    const oldSlots = build.slots.slice();
+    const newSlots = new Array(HUNTER_BUILD_SLOT_COUNT).fill(null);
+    // Walk in order — first card claiming a typed slot wins; later
+    // dupes for the same slot stay in inventory but not equipped.
+    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+      const cid = oldSlots[i];
+      if (!cid || !CARDS[cid]) continue;
+      const slotKey = getCardEquipmentSlot(CARDS[cid]);
+      if (!slotKey) continue;
+      const targetIdx = EQUIPMENT_SLOT_INDEX[slotKey];
+      if (typeof targetIdx !== 'number') continue;
+      if (newSlots[targetIdx]) continue; // already filled — keep first
+      newSlots[targetIdx] = cid;
+    }
+    _hunterBuild = { slots: newSlots, updated_at: new Date().toISOString() };
+    saveHunterBuild();
+    try { localStorage.setItem('hb_equipment_build_migrated_v1', '1'); } catch (_) {}
+  }
+
   try {
     window.HunterBuild = {
       load:              loadHunterBuild,
@@ -1348,7 +1468,11 @@
       equippedCount:     countEquippedBuildItems,
       itemPower:         getItemBuildPower,
       migrate:           migrateEquipmentToHunterBuild,
+      migrateTyped:      migrateGenericBuildToEquipmentBuild,
       SLOT_COUNT:        HUNTER_BUILD_SLOT_COUNT,
+      // v3 Phase 1e typed-slot helpers
+      SLOTS:             EQUIPMENT_SLOTS,
+      slotForCardType:   getCardEquipmentSlot,
     };
   } catch (_) {}
 
@@ -1973,30 +2097,35 @@
         if (!cardId) return;
         const card = CARDS[cardId];
         if (!card) return;
-        // v3 Phase 1d — route through Hunter Build. If already in
-        // the build, unequip from whichever slot holds it. Otherwise
-        // find the first empty unlocked slot and place it there.
+        // v3 Phase 1e — typed-slot routing. If already in the
+        // build, unequip from its slot. Otherwise route to the
+        // card's matching typed slot (helm card → HELM slot etc).
         const currentSlot = (typeof getBuildSlotIndexForCard === 'function') ? getBuildSlotIndexForCard(cardId) : -1;
         if (currentSlot >= 0) {
           unequipBuildItem(currentSlot);
           try { showHabitToast(card.name + ' unequipped.'); } catch (_) {}
         } else {
-          // Find first empty unlocked slot
-          const build = getHunterBuild();
-          let targetIdx = -1;
-          for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
-            if (!isBuildSlotUnlocked(i)) continue;
-            if (!build.slots[i]) { targetIdx = i; break; }
-          }
-          if (targetIdx < 0) {
-            // No empty unlocked slot — direct user to manage build manually.
-            try { showHabitToast('Build full. Open the Armory to swap a relic out.'); } catch (_) {}
+          const slotKey = getCardEquipmentSlot(card);
+          const targetIdx = (slotKey != null) ? EQUIPMENT_SLOT_INDEX[slotKey] : -1;
+          if (typeof targetIdx !== 'number' || targetIdx < 0) {
+            try { showHabitToast(card.name + " can't be equipped — missing slot type."); } catch (_) {}
+          } else if (!isBuildSlotUnlocked(targetIdx)) {
+            const req = getRequiredRankForBuildSlot(targetIdx);
+            const slotDef = EQUIPMENT_SLOTS[targetIdx];
+            try { showHabitToast('Reach ' + req + ' Rank to unlock ' + slotDef.label + '.'); } catch (_) {}
           } else {
             const res = equipBuildItem(targetIdx, cardId);
+            const slotDef = EQUIPMENT_SLOTS[targetIdx];
             if (res.ok) {
-              try { showHabitToast(card.name + ' equipped to build slot ' + (targetIdx + 1) + '.'); } catch (_) {}
+              if (res.prevCardId && CARDS[res.prevCardId]) {
+                try { showHabitToast(card.name + ' equipped — replaced ' + CARDS[res.prevCardId].name + '.'); } catch (_) {}
+              } else {
+                try { showHabitToast(card.name + ' equipped to ' + slotDef.label + '.'); } catch (_) {}
+              }
             } else if (res.code === 'DUPLICATE') {
               try { showHabitToast(card.name + ' is already in your build.'); } catch (_) {}
+            } else if (res.code === 'WRONG_SLOT') {
+              try { showHabitToast(card.name + " doesn't fit that slot."); } catch (_) {}
             }
           }
         }
@@ -10049,15 +10178,22 @@
 
     let html = '';
     for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
-      const unlocked = i < unlockedCount;
-      const cardId   = build.slots[i];
-      const card     = cardId ? CARDS[cardId] : null;
+      const unlocked   = i < unlockedCount;
+      const cardId     = build.slots[i];
+      const card       = cardId ? CARDS[cardId] : null;
       const requiredRank = getRequiredRankForBuildSlot(i);
+      const slotDef    = EQUIPMENT_SLOTS[i] || { key: 'slot', label: 'SLOT ' + (i + 1) };
+      const slotLabel  = esc(slotDef.label);
+      // Slot-type pill that anchors every tile (equipped / empty /
+      // locked all carry it). Single source so the user can scan
+      // the build at a glance.
+      const slotPill = '<div class="hunter-build-slot-label">' + slotLabel + '</div>';
 
       if (!unlocked) {
         // Locked slot — rank gate
         html += '<button class="hunter-build-slot hunter-build-slot--locked" type="button" ' +
-                'data-slot-index="' + i + '" aria-label="Locked slot — reach ' + requiredRank + ' rank">' +
+                'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — locked, reach ' + requiredRank + ' rank">' +
+                  slotPill +
                   '<div class="hunter-build-slot-lock">' +
                     '<div class="hunter-build-slot-lock-icon">🔒</div>' +
                     '<div class="hunter-build-slot-lock-label">REACH<br>' + esc(requiredRank) + ' RANK</div>' +
@@ -10070,14 +10206,16 @@
           ? '<img class="hunter-build-item-img" src="' + esc(card.art_path) + '" alt="' + esc(card.name) + '" draggable="false" loading="lazy" decoding="async">'
           : '<div class="hunter-build-item-fallback"><span>' + (SLOT_ICONS[card.slot] || '✦') + '</span></div>';
         html += '<button class="hunter-build-slot hunter-build-slot--equipped build-rarity--' + rarityShort + '" type="button" ' +
-                'data-slot-index="' + i + '" aria-label="Equipped: ' + esc(card.name) + '">' +
+                'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — ' + esc(card.name) + '">' +
+                  slotPill +
                   artImg +
-                  '<div class="hunter-build-slot-name">' + esc(card.name) + '</div>' +
+                  '<div class="hunter-build-item-name">' + esc(card.name) + '</div>' +
                 '</button>';
       } else {
-        // Empty unlocked slot — show plus icon prompt
+        // Empty unlocked slot — show plus icon + slot identity
         html += '<button class="hunter-build-slot hunter-build-slot--empty" type="button" ' +
-                'data-slot-index="' + i + '" aria-label="Empty slot — tap to equip relic">' +
+                'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — empty, tap to equip">' +
+                  slotPill +
                   '<div class="hunter-build-slot-plus">+</div>' +
                   '<div class="hunter-build-slot-empty-label">EMPTY</div>' +
                 '</button>';
@@ -10105,7 +10243,7 @@
 
     el.innerHTML =
       '<div class="hbs-row hbs-row--power">' +
-        '<span class="hbs-label">BUILD POWER</span>' +
+        '<span class="hbs-label">GEAR POWER</span>' +
         '<span class="hbs-val hbs-val--power">' + power + '</span>' +
       '</div>' +
       '<div class="hbs-row">' +
@@ -10113,7 +10251,7 @@
         '<span class="hbs-val">' + esc(dominantTxt) + '</span>' +
       '</div>' +
       '<div class="hbs-row">' +
-        '<span class="hbs-label">ACTIVE RELICS</span>' +
+        '<span class="hbs-label">EQUIPPED</span>' +
         '<span class="hbs-val">' + equippedCt + ' / ' + unlockedCount + '</span>' +
       '</div>' +
       (lockedCount > 0
@@ -10136,17 +10274,22 @@
     const empty   = document.getElementById('build-picker-empty');
     if (!overlay || !sheet || !grid) return;
 
-    // Update the slot-context line in the header. (REPLACE was
-    // removed from the build-detail sheet — picker only opens for
-    // empty slots now, so the message is always "Choose a relic".)
+    // Slot context — title becomes "SELECT HELM" / "SELECT WEAPON"
+    // etc, and the sub line restates the choice. Picker filters to
+    // only show cards whose typed slot matches this slot.
+    const slotDef = EQUIPMENT_SLOTS[slotIndex] || { key: null, label: 'RELIC' };
+    const title = document.getElementById('build-picker-title');
+    if (title) title.textContent = 'SELECT ' + slotDef.label;
     const sub = document.getElementById('build-picker-sub');
-    if (sub) sub.textContent = 'Choose a relic for Slot ' + (slotIndex + 1) + '.';
+    if (sub) sub.textContent = 'Choose a ' + slotDef.label.toLowerCase() + ' from your collection.';
 
-    // Build the list of discovered cards. Sort by rarity then name.
+    // Build the list of discovered cards FOR THIS SLOT TYPE. Sort
+    // by rarity then name.
     const inv = getInventory();
     const discovered = Object.keys(CARDS)
       .map(id => CARDS[id])
       .filter(c => inv.cards[c.id] && inv.cards[c.id].discovered)
+      .filter(c => getCardEquipmentSlot(c) === slotDef.key)
       .sort((a, b) => {
         const order = { ultra_rare: 0, rare: 1, common: 2 };
         const ra = order[a.rarity] != null ? order[a.rarity] : 9;
@@ -10157,7 +10300,10 @@
 
     if (discovered.length === 0) {
       grid.innerHTML = '';
-      if (empty) empty.classList.remove('hidden');
+      if (empty) {
+        empty.textContent = 'No ' + slotDef.label.toLowerCase() + ' relics discovered yet. Defeat bosses to find one.';
+        empty.classList.remove('hidden');
+      }
     } else {
       if (empty) empty.classList.add('hidden');
       // Map rarity → short class suffix + display badge label.
@@ -10284,7 +10430,8 @@
 
         if (!isBuildSlotUnlocked(slotIndex)) {
           const req = getRequiredRankForBuildSlot(slotIndex);
-          try { showHabitToast('Reach ' + req + ' Rank to unlock this build slot.'); } catch (_) {}
+          const slotDef = EQUIPMENT_SLOTS[slotIndex] || { label: 'this slot' };
+          try { showHabitToast('Reach ' + req + ' Rank to unlock ' + slotDef.label + '.'); } catch (_) {}
           return;
         }
         const build  = getHunterBuild();
@@ -10330,6 +10477,9 @@
           try { showHabitToast(card.name + ' is already equipped in slot ' + (res.existingSlot + 1) + '.'); } catch (_) {}
         } else if (res.code === 'LOCKED') {
           try { showHabitToast('Slot locked — reach ' + res.requiredRank + ' Rank.'); } catch (_) {}
+        } else if (res.code === 'WRONG_SLOT') {
+          // Shouldn't happen — picker is slot-filtered — but guard.
+          try { showHabitToast(card.name + " doesn't fit that slot."); } catch (_) {}
         }
       });
     }
@@ -18450,6 +18600,8 @@
     // hb_hunter_build already exists. Old hb_pvp_equipped is left
     // untouched as a safety copy.
     try { migrateEquipmentToHunterBuild(); } catch (_) {}
+    // v3 Phase 1e — re-sort generic build into typed equipment slots
+    try { migrateGenericBuildToEquipmentBuild(); } catch (_) {}
     if (!localStorage.getItem('hb_bedtime_window_fix_v1')) {
       try {
         const bedtimeHabit = habits.find(h => h && h.name === 'Sleep before midnight' && !h.custom);
