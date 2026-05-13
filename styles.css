@@ -15798,14 +15798,22 @@ body.reveal-locked { overflow: hidden; }
 
 /* Per-slot positions. The layout is 3×3, tuned to the panel-base.png
    stone-tablet geometry: ~13% top inset, ~14% bottom inset, ~9%
-   left/right insets; rows + columns gap ~3% each. */
+   left/right insets; rows + columns gap ~3% each.
+   IMPORTANT: positions follow what's PAINTED on the panel art,
+   which differs from EQUIPMENT.md's canonical declaration order.
+   Painted layout:
+     Row 1: HELM   · AMULET · CAPE
+     Row 2: WEAPON · BODY   · GLOVES
+     Row 3: LEGS   · BOOTS  · RING
+   Future regenerations of panel-base.png that follow canonical
+   order would need this CSS swap reverted. */
 .equipment-slot-hit[data-slot="helm"]    { top: 14%; left: 10%; }
-.equipment-slot-hit[data-slot="cape"]    { top: 14%; left: 38%; }
-.equipment-slot-hit[data-slot="amulet"]  { top: 14%; left: 66%; }
+.equipment-slot-hit[data-slot="amulet"]  { top: 14%; left: 38%; }
+.equipment-slot-hit[data-slot="cape"]    { top: 14%; left: 66%; }
 .equipment-slot-hit[data-slot="weapon"]  { top: 37%; left: 10%; }
 .equipment-slot-hit[data-slot="body"]    { top: 37%; left: 38%; }
-.equipment-slot-hit[data-slot="legs"]    { top: 37%; left: 66%; }
-.equipment-slot-hit[data-slot="gloves"]  { top: 60%; left: 10%; }
+.equipment-slot-hit[data-slot="gloves"]  { top: 37%; left: 66%; }
+.equipment-slot-hit[data-slot="legs"]    { top: 60%; left: 10%; }
 .equipment-slot-hit[data-slot="boots"]   { top: 60%; left: 38%; }
 .equipment-slot-hit[data-slot="ring"]    { top: 60%; left: 66%; }
 
