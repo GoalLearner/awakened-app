@@ -16047,53 +16047,72 @@ body.reveal-locked { overflow: hidden; }
    armory-fx-* tokens added in renderEquippedSlotOverlays.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Wrapper — handles positioning, rarity glow, tint pseudo. */
+/* Wrapper — handles positioning, rarity glow, tint pseudo. v2.1.2:
+   now a FLEX centering container so the inner image can shrink to
+   ~84% of the slot and breathe inside the carved recess. The
+   radial ::before sits BEHIND the image as a purple atmospheric
+   pool; the ::after sits ON TOP as the tint gradient. */
 .equipment-slot-overlay {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   border-radius: 6px;
-  /* Default subtle baseline glow — overridden by rarity class below. */
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(139, 92, 246, 0.10) 0%,
+    rgba(139, 92, 246, 0.04) 45%,
+    transparent 75%);
+  /* Recessed-stone effect via TWO inset shadows: a dark inner
+     vignette pushing the edges down, plus a top highlight
+     suggesting the carved tablet's lip catches light from above. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.40),
+    inset 0 0 14px 2px rgba(0, 0, 0, 0.55);
 }
 
-/* Inner image — handles filter treatment + object-fit. */
+/* Inner image — sized so it doesn't fill the slot edge-to-edge.
+   Tucked into the stone recess with 8% breathing room each side.
+   object-fit: contain preserves the square PNGs without crop. */
 .equipment-slot-overlay-img {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 84%;
+  height: 84%;
   object-fit: contain;
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
-  /* Default neutral filter — toggles below add saturate/brightness. */
-  filter: none;
+  /* Default drop-shadow lifts the icon off the slot bg slightly —
+     reads as "item resting in the recess." Toggles below add
+     saturate / brightness on top. */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50));
 }
 
 /* ─── TOGGLE A — desaturation ───────────────────────────────
    Pulls high-saturation art (gloves' red/white) toward the
-   muted purple/gold panel palette. Standalone: filter: saturate(0.85)
-   on the inner img. */
+   muted purple/gold panel palette. Composes with base drop-shadow
+   from the .equipment-slot-overlay-img rule. Filter is a single
+   property — every combined-class form has to redeclare the full
+   filter chain. Base drop-shadow is preserved in every variant. */
 .armory-fx-desaturate .equipment-slot-overlay-img {
-  filter: saturate(0.85);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50)) saturate(0.85);
 }
-/* Combined with brightness if both classes present (filters
-   collapse to one prop, so we define the combined form explicitly). */
 .armory-fx-desaturate.armory-fx-brighten .equipment-slot-overlay-img {
-  filter: saturate(0.85) brightness(1.04);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50)) saturate(0.85) brightness(1.04);
 }
 .armory-fx-desaturate.armory-fx-luminosity .equipment-slot-overlay-img {
-  filter: saturate(0.85);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50)) saturate(0.85);
   mix-blend-mode: luminosity;
 }
 
-/* ─── TOGGLE B — vignette via inset shadow on the WRAPPER ───
-   Pushes the hard rectangular edges into the slot bg so the art
-   feels embedded in the stone rather than pasted on top. */
-.armory-fx-vignette {
-  box-shadow:
-    inset 0 0 12px 3px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
+/* ─── TOGGLE B — vignette — NOW BASELINE in v2.1.2 ─────────
+   The recessed-stone treatment (inset shadows + radial bg) moved
+   into the base .equipment-slot-overlay rule, so this class is
+   effectively redundant. Retained as a no-op for compatibility
+   with the JS class list. Adding here would double-stack shadows
+   and over-darken the slot — better to leave the base rule alone. */
+.armory-fx-vignette { /* no-op, see base rule */ }
 
 /* ─── TOGGLE C — purple-tint pseudo overlay ─────────────────
    Faint vertical gradient layered ON TOP of the image (z-index
@@ -16114,9 +16133,9 @@ body.reveal-locked { overflow: hidden; }
 /* ─── TOGGLE D — brightness lift (alternative to luminosity) ─
    Tiny ~4% brightness up. Helps darker items (sword + greaves)
    read at parity with brighter ones. Combined with desaturate
-   via the dual-class rule above. */
+   via the dual-class rule above. Preserves base drop-shadow. */
 .armory-fx-brighten:not(.armory-fx-desaturate) .equipment-slot-overlay-img {
-  filter: brightness(1.04);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50)) brightness(1.04);
 }
 
 /* ─── TOGGLE E — luminosity blend (alternative unification) ─
@@ -16129,39 +16148,48 @@ body.reveal-locked { overflow: hidden; }
 }
 
 /* ─── PER-RARITY GLOW on the wrapper ────────────────────────
-   Common: minimal — just a 1px white-ish edge so the slot is
-   visibly occupied. Rare: blue inset border + outer halo.
-   Ultra-rare: gold inset border + brighter outer halo. The
-   inset 1px border layers ON TOP of the .armory-fx-vignette
-   shadow via box-shadow comma-stacking. */
-.equipment-slot-overlay--common.armory-fx-vignette {
+   Per-rarity edge + halo layered ON TOP of the recessed-stone
+   shadows from the base .equipment-slot-overlay rule via box-
+   shadow comma-stacking. Common: minimal — just a 1px white-ish
+   edge so the slot is visibly occupied. Rare: blue. Ultra-rare:
+   gold. These overrides replace the base box-shadow entirely
+   so the recessed look is preserved alongside the rarity glow. */
+.equipment-slot-overlay--common {
   box-shadow:
-    inset 0 0 12px 3px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.40),
+    inset 0 0 14px 2px rgba(0, 0, 0, 0.55),
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
-.equipment-slot-overlay--rare.armory-fx-vignette {
+.equipment-slot-overlay--rare {
   box-shadow:
-    inset 0 0 12px 3px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 1px rgba(96, 165, 250, 0.30),
-    0 0 12px rgba(96, 165, 250, 0.15);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.40),
+    inset 0 0 14px 2px rgba(0, 0, 0, 0.50),
+    inset 0 0 0 1px rgba(96, 165, 250, 0.40),
+    0 0 12px rgba(96, 165, 250, 0.18);
 }
-.equipment-slot-overlay--ultra_rare.armory-fx-vignette {
+.equipment-slot-overlay--ultra_rare {
   box-shadow:
-    inset 0 0 12px 3px rgba(0, 0, 0, 0.40),
-    inset 0 0 0 1px rgba(245, 158, 11, 0.45),
-    0 0 16px rgba(245, 158, 11, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.40),
+    inset 0 0 14px 2px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.55),
+    0 0 18px rgba(245, 158, 11, 0.32);
+  /* Ultra-rare also gets a richer atmospheric pool — gold-tinted
+     radial behind the icon (overrides the default purple pool). */
+  background: radial-gradient(
+    ellipse at center,
+    rgba(245, 158, 11, 0.14) 0%,
+    rgba(245, 158, 11, 0.05) 45%,
+    transparent 75%);
 }
-/* Fallback rarity glow if vignette is toggled OFF — keep the
-   per-rarity edge so equipped tier is still visible. */
-.equipment-slot-overlay--rare:not(.armory-fx-vignette) {
-  box-shadow:
-    inset 0 0 0 1px rgba(96, 165, 250, 0.30),
-    0 0 12px rgba(96, 165, 250, 0.15);
-}
-.equipment-slot-overlay--ultra_rare:not(.armory-fx-vignette) {
-  box-shadow:
-    inset 0 0 0 1px rgba(245, 158, 11, 0.45),
-    0 0 16px rgba(245, 158, 11, 0.25);
+.equipment-slot-overlay--rare {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(96, 165, 250, 0.12) 0%,
+    rgba(96, 165, 250, 0.04) 45%,
+    transparent 75%);
 }
 
 /* ─── PER-CARD OVERRIDES ────────────────────────────────────
@@ -16169,10 +16197,10 @@ body.reveal-locked { overflow: hidden; }
    that need stronger correction. sober_kings_gloves is the
    loudest red/white in the set — push it harder. */
 .armory-slot-art--sober_kings_gloves.armory-fx-desaturate .equipment-slot-overlay-img {
-  filter: saturate(0.6);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50)) saturate(0.6);
 }
 .armory-slot-art--sober_kings_gloves.armory-fx-desaturate.armory-fx-brighten .equipment-slot-overlay-img {
-  filter: saturate(0.6) brightness(1.04);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.50)) saturate(0.6) brightness(1.04);
 }
 
 /* ─── Items tab: VIEW YOUR ARMORY button ─────────────────────
