@@ -2028,6 +2028,67 @@
     };
   } catch (_) {}
 
+  // ── v2.1.0 Phase C — submission orchestration ───────────────
+  // Pushes the user's current metric snapshot to the backend so the
+  // leaderboard can rank them. Fires three POSTs in parallel:
+  //   step_total      ← snap.steps_last_7_days
+  //   sleep_streak    ← snap.current_sleep_streak
+  //   bedtime_streak  ← snap.current_bedtime_streak
+  // Each value is validated as a non-negative integer and clamped to
+  // a sane client-side cap (the backend has its own validation; the
+  // cap here just prevents accidental overflow from a corrupt local
+  // state).
+  const LB_CLIENT_CAPS = {
+    step_total:     200000,  // 200k steps in 7 days — far beyond any human
+    sleep_streak:   365,
+    bedtime_streak: 365,
+  };
+  function lbSanitizeValue(metric, raw) {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    const cap = LB_CLIENT_CAPS[metric] || 0;
+    return Math.min(Math.floor(n), cap);
+  }
+  async function lbSubmitAllMetrics() {
+    try {
+      if (typeof window.Auth === 'undefined' ||
+          typeof window.Auth.submitLeaderboardSnapshot !== 'function') {
+        return;
+      }
+      const snap = lbGetSnapshot();
+      const metrics = [
+        ['step_total',     snap.steps_last_7_days],
+        ['sleep_streak',   snap.current_sleep_streak],
+        ['bedtime_streak', snap.current_bedtime_streak],
+      ];
+      await Promise.all(metrics.map(([m, v]) =>
+        window.Auth.submitLeaderboardSnapshot(m, lbSanitizeValue(m, v))
+          .catch(() => null) // never let a single failure poison the others
+      ));
+    } catch (_) {}
+  }
+
+  // 5-minute debounce so backgrounding and re-foregrounding the app
+  // doesn't hammer the backend. The flag is written BEFORE the
+  // submit fires so two near-simultaneous visibility events still
+  // only result in one network roundtrip.
+  const LB_SUBMIT_DEBOUNCE_MS = 5 * 60 * 1000;
+  function lbSubmitAllMetricsDebounced() {
+    try {
+      const lastStr = localStorage.getItem('hb_lb_last_submit');
+      const last    = lastStr ? parseInt(lastStr, 10) : 0;
+      if (Number.isFinite(last) && (Date.now() - last) < LB_SUBMIT_DEBOUNCE_MS) {
+        return;
+      }
+      localStorage.setItem('hb_lb_last_submit', String(Date.now()));
+      lbSubmitAllMetrics();
+    } catch (_) {}
+  }
+  try {
+    window.Leaderboard.submitAllMetrics          = lbSubmitAllMetrics;
+    window.Leaderboard.submitAllMetricsDebounced = lbSubmitAllMetricsDebounced;
+  } catch (_) {}
+
   function getSleepGoalHours(habit) {
     if (!habit) return HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
     const n = parseFloat(habit.sleepGoalHours);
@@ -10838,109 +10899,245 @@
     const bedtimeMeta  = 'Best: <b>' + snap.best_bedtime_streak + ' ' + nightWord(snap.best_bedtime_streak) + '</b>';
 
     list.innerHTML =
-      buildCard('steps_7d',     walkIcon,  stepsValue,   stepsMeta) +
+      buildCard('step_total',   walkIcon,  stepsValue,   stepsMeta) +
       buildCard('sleep_streak', sleepIcon, sleepValue,   sleepMeta) +
       buildCard('bedtime_streak', moonIcon, bedtimeValue, bedtimeMeta);
   }
   try { window.renderLeaderboardPreview = renderLeaderboardPreview; } catch (_) {}
 
-  // ── LEADERBOARD RANKING SHEET (v2.0.2) ──────────────────────
+  // ── LEADERBOARD RANKING SHEET (v2.1.0 Phase C — LIVE) ───────
   // Tap any stat card on the Social tab → opens this bottom sheet
-  // with a Top-50 preview for that metric. NOT live yet — the
-  // network/backend layer ships later. Until then, the list shows
-  // mock entries (blurred) for visual texture and the user's own
-  // row at a placeholder position so they can see where they'd
-  // appear when rankings go live.
+  // with the real Top-N for that metric, fetched from the
+  // Cloudflare Workers backend at /v1/leaderboard/top.
   //
-  // The mock entries are deterministically generated from a fixed
-  // seed list of names so the same names appear across cards within
-  // a session — feels less like obvious filler.
-  const LB_MOCK_NAMES = [
-    'ShadowMonarch_77', 'IronWill_99',  'AwakenedOne',   'DisciplineKing',
-    'QuietHunter',      'SilentTide',   'EmberRoad',     'NightForge',
-    'StoneMind',        'AshenVow',     'PaleHarbinger', 'HollowLamp',
-    'BrassPilgrim',     'TideRunner',   'CinderMonk',    'GranitePath',
-    'FrostKey_42',      'SilverWolf_88','RuneWalker',    'EmberHand',
-  ];
+  // Cache strategy: stale-while-revalidate. On open, render any
+  // cached entries from hb_lb_cache_<metric> instantly, then fire a
+  // background fetch and swap to fresh data when it lands. If the
+  // network fetch fails AND the cache is <24h old, keep showing
+  // cached entries with a "last updated" footer. If both fail, show
+  // an empty state.
+  //
+  // Backend metric IDs (per BACKEND.md §6):
+  //   step_total      — cumulative steps over the rolling 7-day window
+  //   sleep_streak    — current consecutive ≥7h sleep nights
+  //   bedtime_streak  — current consecutive before-midnight nights
+  //
+  // The Social-tab cards use these same IDs as data-lb-metric so
+  // open/fetch don't require any translation.
 
   const LB_METRIC_META = {
-    steps_7d: {
+    step_total: {
       title: 'Steps · last 7 days',
       blurb: 'Total steps in any rolling 7-day window. Apple Health is the only source — no manual logging.',
-      unit: 'steps',
+      unit:  'steps',
       formatValue: n => (n || 0).toLocaleString('en-US'),
-      // Mock peak values to seed the blurred list (descending)
-      mockTop: [142000, 128400, 121300, 113800, 108200, 101900, 96400, 91200, 87100, 82400],
-      userValueFn: snap => snap.best_7day_step_total || snap.steps_last_7_days || 0,
-      userValueLabel: snap => snap.best_7day_step_total > 0 ? 'best 7-day total' : 'last 7 days',
     },
     sleep_streak: {
       title: '7+ hour sleep streak',
-      blurb: 'Longest run of consecutive nights with at least 7 hours of sleep. Verified by Apple Health.',
-      unit: 'nights',
+      blurb: 'Longest current run of consecutive nights with at least 7 hours of sleep. Verified by Apple Health.',
+      unit:  'nights',
       formatValue: n => (n || 0).toString(),
-      mockTop: [184, 162, 147, 131, 118, 104, 91, 82, 73, 67],
-      userValueFn: snap => snap.best_sleep_streak || 0,
-      userValueLabel: () => 'best streak',
     },
     bedtime_streak: {
       title: 'Before-midnight bedtime streak',
-      blurb: 'Longest run of consecutive nights asleep before midnight. Verified by Apple Health.',
-      unit: 'nights',
+      blurb: 'Longest current run of consecutive nights asleep before midnight. Verified by Apple Health.',
+      unit:  'nights',
       formatValue: n => (n || 0).toString(),
-      mockTop: [201, 178, 156, 142, 129, 117, 103, 92, 81, 74],
-      userValueFn: snap => snap.best_bedtime_streak || 0,
-      userValueLabel: () => 'best streak',
     },
   };
 
-  function openLeaderboardRanking(metric) {
+  // localStorage cache key per metric. Object shape:
+  //   { top: [{rank, alias, current_value}], me: { rank, current_value } | null, fetched_at: <epoch_ms> }
+  const LB_CACHE_KEY_PREFIX = 'hb_lb_cache_';
+  const LB_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h — past this, treat as empty
+
+  function lbCacheRead(metric) {
+    try {
+      const raw = localStorage.getItem(LB_CACHE_KEY_PREFIX + metric);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.fetched_at !== 'number') return null;
+      if ((Date.now() - parsed.fetched_at) > LB_CACHE_MAX_AGE_MS) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+  function lbCacheWrite(metric, top, me) {
+    try {
+      localStorage.setItem(LB_CACHE_KEY_PREFIX + metric, JSON.stringify({
+        top:        Array.isArray(top) ? top : [],
+        me:         me || null,
+        fetched_at: Date.now(),
+      }));
+    } catch (_) {}
+  }
+  function lbFormatRelativeTime(epochMs) {
+    const diffMs = Date.now() - epochMs;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + ' hr ago';
+    return 'a while ago';
+  }
+
+  // Renders the rank-list content given a backend response. Splits
+  // the user-row out of the top-N (or surfaces a separate "your rank"
+  // line if me.rank > top.length). Empty top → first-to-rank message.
+  function lbBuildRankList(metric, top, me, stale_footer) {
+    const meta = LB_METRIC_META[metric];
+    if (!meta) return '';
+
+    if (!Array.isArray(top) || top.length === 0) {
+      return (
+        '<div class="lb-rank-empty">' +
+          '<div class="lb-rank-empty-icon" aria-hidden="true">🏆</div>' +
+          '<div class="lb-rank-empty-title">Be the first to rank.</div>' +
+          '<div class="lb-rank-empty-body">Start tracking your ' + esc(meta.unit) + ' to claim the top spot.</div>' +
+        '</div>'
+      );
+    }
+
+    const myAlias = lbGetMyAlias();
+    let yourRankLine = '';
+
+    // If the user is OUTSIDE the top-N (or has not submitted yet),
+    // show a separate "Your rank: #N" line above the top-N list.
+    if (me && typeof me.rank === 'number' && me.rank > 0) {
+      const inTopN = top.some(r => r && r.alias === myAlias);
+      if (!inTopN) {
+        yourRankLine =
+          '<div class="lb-rank-row lb-rank-row--me lb-rank-row--out-of-top">' +
+            '<span class="lb-rank-pos">#' + me.rank + '</span>' +
+            '<span class="lb-rank-name">' + esc(myAlias || 'You') + '</span>' +
+            '<span class="lb-rank-value">' + meta.formatValue(me.current_value) + '</span>' +
+          '</div>' +
+          '<div class="lb-rank-divider" aria-hidden="true"></div>';
+      }
+    } else if (!me) {
+      // me === null → user hasn't submitted this metric yet (or
+      // lbSubmitAllMetrics hasn't fired since sign-in)
+      yourRankLine =
+        '<div class="lb-rank-row lb-rank-row--me lb-rank-row--pending">' +
+          '<span class="lb-rank-pos">—</span>' +
+          '<span class="lb-rank-name">' + esc(myAlias || 'You') + ' <em class="lb-rank-name-sub">· submitting…</em></span>' +
+          '<span class="lb-rank-value">—</span>' +
+        '</div>' +
+        '<div class="lb-rank-divider" aria-hidden="true"></div>';
+    }
+
+    const topRows = top.map(row => {
+      const isMe = myAlias && row.alias === myAlias;
+      const rankClass = isMe ? 'lb-rank-row lb-rank-row--me' : 'lb-rank-row';
+      return '<div class="' + rankClass + '">' +
+        '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
+        '<span class="lb-rank-name">' + esc(row.alias || '—') + '</span>' +
+        '<span class="lb-rank-value">' + meta.formatValue(row.current_value) + '</span>' +
+      '</div>';
+    }).join('');
+
+    const footer = stale_footer
+      ? '<div class="lb-rank-footer">' + esc(stale_footer) + '</div>'
+      : '';
+
+    return yourRankLine + topRows + footer;
+  }
+
+  function lbBuildLoadingSkeleton() {
+    let html = '';
+    for (let i = 0; i < 5; i++) {
+      html +=
+        '<div class="lb-rank-row lb-rank-row--skeleton">' +
+          '<span class="lb-rank-pos lb-skel-block"></span>' +
+          '<span class="lb-rank-name lb-skel-block"></span>' +
+          '<span class="lb-rank-value lb-skel-block"></span>' +
+        '</div>';
+    }
+    return html;
+  }
+
+  function lbBuildErrorState(code) {
+    if (code === 'STUB_USER' || code === 'NOT_SIGNED_IN' || code === 'LOCAL_DEV_SKIP') {
+      return (
+        '<div class="lb-rank-empty">' +
+          '<div class="lb-rank-empty-icon" aria-hidden="true">🔒</div>' +
+          '<div class="lb-rank-empty-title">Sign in to see live rankings.</div>' +
+          '<div class="lb-rank-empty-body">Real leaderboard data requires an Awakened account.</div>' +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="lb-rank-empty">' +
+        '<div class="lb-rank-empty-icon" aria-hidden="true">📡</div>' +
+        '<div class="lb-rank-empty-title">Couldn’t load rankings.</div>' +
+        '<div class="lb-rank-empty-body">Check your connection. The list updates each time you open this tab.</div>' +
+      '</div>'
+    );
+  }
+
+  // Reads the signed-in user's alias (for highlighting their row in
+  // the leaderboard). Returns null if not signed in or on stub.
+  function lbGetMyAlias() {
+    try {
+      if (typeof window.Auth === 'undefined') return null;
+      const u = window.Auth.getCurrentUser();
+      return (u && u.alias) ? u.alias : null;
+    } catch (_) { return null; }
+  }
+
+  // Tracks the open metric so concurrent fetches don't write into
+  // a stale DOM (user switched tabs mid-fetch).
+  let _lbCurrentOpenMetric = null;
+
+  async function openLeaderboardRanking(metric) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
     const sheet   = document.getElementById('lb-rank-sheet');
     const overlay = document.getElementById('lb-rank-overlay');
-    if (!sheet || !overlay) return;
-
-    const snap = lbGetSnapshot();
-    const userValue = meta.userValueFn(snap);
-    const userLabel = meta.userValueLabel(snap);
+    const listEl  = document.getElementById('lb-rank-list');
+    if (!sheet || !overlay || !listEl) return;
 
     document.getElementById('lb-rank-title').textContent = meta.title;
     document.getElementById('lb-rank-blurb').textContent = meta.blurb;
 
-    // Build top-10 mock rows (blurred) + user row inserted at the
-    // rank position implied by their value. If user has no data,
-    // they sit below the visible top-10 with a "—" value.
-    const topRows = meta.mockTop.map((val, i) => {
-      const rank = i + 1;
-      const name = LB_MOCK_NAMES[i];
-      return '<div class="lb-rank-row lb-rank-row--mock">' +
-        '<span class="lb-rank-pos">#' + rank + '</span>' +
-        '<span class="lb-rank-name">' + esc(name) + '</span>' +
-        '<span class="lb-rank-value">' + meta.formatValue(val) + '</span>' +
-      '</div>';
-    }).join('');
+    _lbCurrentOpenMetric = metric;
 
-    // User's projected position inside the mock top-10. We don't
-    // claim a real rank — just illustrate where they'd land.
-    const userName = (typeof playerName === 'string' && playerName) ? playerName : 'Hunter';
-    const userValueStr = userValue > 0 ? meta.formatValue(userValue) : '—';
-    const userPosCue = userValue > 0
-      ? 'rank pending'
-      : 'no data yet';
-
-    const userRow =
-      '<div class="lb-rank-row lb-rank-row--user">' +
-        '<span class="lb-rank-pos">YOU</span>' +
-        '<span class="lb-rank-name">' + esc(userName) + ' <em class="lb-rank-name-sub">· ' + esc(userLabel) + '</em></span>' +
-        '<span class="lb-rank-value">' + userValueStr + '</span>' +
-      '</div>' +
-      '<div class="lb-rank-row-note">' + userPosCue + ' — live rankings open in a future update</div>';
-
-    document.getElementById('lb-rank-list').innerHTML = topRows + userRow;
+    // Phase 1: instant render from cache if we have one, otherwise
+    // show the loading skeleton. This makes repeat opens of the same
+    // metric feel snappy even before the network responds.
+    const cached = lbCacheRead(metric);
+    if (cached) {
+      const staleNote = 'Last updated ' + lbFormatRelativeTime(cached.fetched_at);
+      listEl.innerHTML = lbBuildRankList(metric, cached.top, cached.me, staleNote);
+    } else {
+      listEl.innerHTML = lbBuildLoadingSkeleton();
+    }
 
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
+
+    // Phase 2: background fetch. If the user closed the sheet or
+    // switched metrics by the time it lands, don't write to the DOM.
+    let result;
+    try {
+      result = await window.Auth.fetchLeaderboardTop(metric);
+    } catch (e) {
+      result = { ok: false, code: 'NETWORK' };
+    }
+    if (_lbCurrentOpenMetric !== metric) return; // user moved on
+
+    if (result && result.ok) {
+      lbCacheWrite(metric, result.top, result.me);
+      listEl.innerHTML = lbBuildRankList(metric, result.top, result.me);
+    } else if (result && result.code === 'EXPIRED') {
+      // JWT died mid-view. Auth.fetchLeaderboardTop already cleared
+      // hb_user; reload re-arms the sign-in gate.
+      window.location.reload();
+    } else if (!cached) {
+      // No cache to fall back on — show error or stub state
+      listEl.innerHTML = lbBuildErrorState(result && result.code);
+    }
+    // If we have cached AND fetch failed (not EXPIRED), the cached
+    // render from Phase 1 stays — nothing to do here.
   }
 
   function closeLeaderboardRanking() {
@@ -16612,6 +16809,10 @@
       try { Health.clearSleepCache  && Health.clearSleepCache();  } catch (_) {}
       try { autoVerifyWalk();  } catch (_) {}
       try { autoVerifySleep(); } catch (_) {}
+      // v2.1.0 Phase C — push fresh metric snapshot to backend on
+      // resume. Debounced to 5 min so rapid foreground/background
+      // cycling doesn't hammer the workers.
+      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
@@ -16633,6 +16834,10 @@
       // resilience if the per-habit path is ever short-circuited).
       try { Notif.reapplyCheckin(); } catch (_) {}
       try { Notif.reapplyMidDay(); } catch (_) {}
+      // v2.1.0 Phase C — fire the leaderboard snapshot submission
+      // after main app mounts. Debounced via hb_lb_last_submit so a
+      // hot relaunch within 5 min stays quiet.
+      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
     }, 1200);
 
     if (needsWelcome) {

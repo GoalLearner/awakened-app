@@ -310,6 +310,126 @@
     return _pendingApplePayload;
   }
 
+  // ── Leaderboard helpers (v2.1.0 Phase C) ─────────────────────
+  // submitLeaderboardSnapshot + fetchLeaderboardTop POST/GET against
+  // the live Cloudflare Worker. Both return typed result objects so
+  // callers can switch on result.code without nested response parsing.
+  //
+  // Stub-user gating: PHASE_A_STUB and LOCALHOST_DEV_STUB never hit
+  // the real backend — they'd either crash (stub JWT isn't a valid
+  // JWT) or pollute prod state (dev users on the global leaderboard).
+  // Both return { ok: false, code: 'STUB_USER' } so callers can render
+  // empty state without touching the network.
+
+  function _stubGate(u) {
+    if (!u || !u.jwt) return { ok: false, code: 'NOT_SIGNED_IN' };
+    if (u.jwt === LOCALHOST_DEV_STUB) return { ok: false, code: 'LOCAL_DEV_SKIP' };
+    if (u.jwt === 'PHASE_A_STUB') return { ok: false, code: 'STUB_USER' };
+    return null; // proceed with real call
+  }
+
+  // POST /v1/leaderboard/submit. Upserts the user's (metric, value)
+  // snapshot. Backend computes best_value via MAX preservation.
+  // Returns the backend's response on success so the caller can log
+  // the current/best for diagnostics.
+  async function submitLeaderboardSnapshot(metric, currentValue) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    if (typeof metric !== 'string' || metric.length === 0) {
+      return { ok: false, code: 'INVALID_METRIC', detail: 'metric required' };
+    }
+    if (!Number.isInteger(currentValue) || currentValue < 0) {
+      return { ok: false, code: 'INVALID_VALUE', detail: 'value must be non-neg integer' };
+    }
+
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/leaderboard/submit', {
+        method:  'POST',
+        headers: {
+          'Authorization': 'Bearer ' + u.jwt,
+          'Content-Type':  'application/json',
+        },
+        body: JSON.stringify({ metric: metric, current_value: currentValue }),
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+
+    if (res.status === 200) {
+      return {
+        ok: true,
+        metric: data && data.metric,
+        current_value: data && data.current_value,
+        best_value: data && data.best_value,
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    return {
+      ok: false,
+      code: 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
+  // GET /v1/leaderboard/top?metric=X&limit=N. Returns top + caller's
+  // rank+value (or me === null if caller hasn't submitted this
+  // metric yet).
+  async function fetchLeaderboardTop(metric, limit) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    if (typeof metric !== 'string' || metric.length === 0) {
+      return { ok: false, code: 'INVALID_METRIC' };
+    }
+    const lim = (Number.isInteger(limit) && limit > 0 && limit <= 500) ? limit : 100;
+    const url = BACKEND_URL + '/v1/leaderboard/top?metric=' + encodeURIComponent(metric) + '&limit=' + lim;
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+
+    if (res.status === 200 && data) {
+      return {
+        ok: true,
+        metric: data.metric,
+        top:    Array.isArray(data.top) ? data.top : [],
+        me:     data.me || null,
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    return {
+      ok: false,
+      code: 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
   // Hard-deletes the current user's backend account by POSTing to
   // /v1/account/delete with the active session JWT. On success the
   // backend cascade-deletes the user's row + all leaderboard
@@ -446,6 +566,8 @@
     completeSignIn,
     getPendingApplePayload,
     deleteAccount,
+    submitLeaderboardSnapshot,
+    fetchLeaderboardTop,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,
