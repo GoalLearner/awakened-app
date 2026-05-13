@@ -4062,10 +4062,19 @@ footer {
   color: var(--text-secondary);
   text-transform: uppercase;
 }
-.alignment-card-emoji {
-  font-size: 1.4rem;
-  line-height: 1;
+/* v2.1 — class-emblem PNG (replaces the emoji glyph). Real DALL-E
+   class icons live at assets/habit-icons/icon-class-<role>.png. The
+   drop-shadow takes the alignment color so the icon glows in-class. */
+.alignment-card-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
   filter: drop-shadow(0 0 8px var(--alignment-color, var(--accent)));
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 .alignment-card-name {
   font-family: 'Cinzel', serif;

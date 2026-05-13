@@ -3108,8 +3108,26 @@
 
     // Color anchor — use class color when available, else accent purple.
     const color = (displayClassId && CLASSES[displayClassId] && CLASSES[displayClassId].color) || '#8b5cf6';
-    const emoji = (displayClassId && CLASSES[displayClassId] && CLASSES[displayClassId].emoji) || '🧍';
     card.style.setProperty('--alignment-color', color);
+
+    // v2.1 — use the real class-emblem PNG instead of the emoji glyph.
+    // Map class id → /assets/habit-icons/icon-class-<role>.png.
+    // STR=warrior, VIT=ranger, INT=mage, FOCUS=assassin, WILL=paladin,
+    // WLT=merchant, SAGE=sage, CIVILIAN=civilian.
+    const CLASS_ICON_FILES = {
+      STR:      'icon-class-warrior.png',
+      VIT:      'icon-class-ranger.png',
+      INT:      'icon-class-mage.png',
+      FOCUS:    'icon-class-assassin.png',
+      WILL:     'icon-class-paladin.png',
+      WLT:      'icon-class-merchant.png',
+      SAGE:     'icon-class-sage.png',
+      CIVILIAN: 'icon-class-civilian.png',
+    };
+    const iconFile = (displayClassId && CLASS_ICON_FILES[displayClassId]) || CLASS_ICON_FILES.CIVILIAN;
+    const iconSrc  = 'assets/habit-icons/' + iconFile;
+    const iconHTML = '<img class="alignment-card-icon" src="' + iconSrc + '" alt="" ' +
+                     'draggable="false" loading="lazy" decoding="async">';
 
     // v2.1 — Next-milestone progress bar inside the alignment card.
     // Replaces the standalone NEXT STAT BONUS section. For Civilian-
@@ -3177,7 +3195,7 @@
       '<div class="alignment-card-bg" aria-hidden="true"></div>' +
       '<div class="alignment-card-head">' +
         '<span class="alignment-card-label">' + esc(stateLabel) + '</span>' +
-        '<span class="alignment-card-emoji" aria-hidden="true">' + emoji + '</span>' +
+        iconHTML +
       '</div>' +
       '<div class="alignment-card-name">' + esc(primaryName) + '</div>' +
       (subtext ? '<div class="alignment-card-sub">' + esc(subtext) + '</div>' : '') +
