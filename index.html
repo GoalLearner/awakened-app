@@ -16,8 +16,8 @@
        replaced once Cinzel is ready (no layout-shift flash). -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=208">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=209">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -157,50 +157,118 @@
         </div>
       </div>
 
-      <!-- Rank section -->
-      <div class="rank-section">
-        <div class="rank-left">
-          <span id="rank-badge" class="rank-badge" data-rank="E">E</span>
-          <span id="rank-label" class="rank-label">E Rank</span>
-          <span id="rank-pts" class="rank-pts">0 pts</span>
+      <!-- ════════════════════════════════════════════════════════
+           v2.1.0 STATUS HEADER REDESIGN — AgenticOS-flavored
+           ════════════════════════════════════════════════════════
+           Three-card metric strip (rank / week / 30-day XP) +
+           compact today-strip (habits / streak / souls) + status
+           pill row (active packs + class affinity).
+
+           Every existing render-target ID is preserved so existing
+           JS (renderRank, updateProgress, updatePerfectStreakDisplay,
+           refreshSoulsDisplay) continues to work without
+           modification — elements moved to new homes inside the
+           new structure. -->
+
+      <!-- 3-card metric strip -->
+      <div class="metric-strip">
+        <!-- Card 1: Rank — hosts the existing rank-* IDs -->
+        <div class="metric-card metric-card--rank">
+          <div class="metric-card-head">
+            <span class="metric-card-label">RANK</span>
+            <span id="rank-class-sub" class="metric-card-reset">CIVILIAN</span>
+          </div>
+          <div class="metric-card-bar">
+            <div id="rank-bar" class="rank-fill metric-card-bar-fill"></div>
+          </div>
+          <div class="metric-card-body">
+            <span id="rank-badge" class="rank-badge metric-card-value" data-rank="E">E</span>
+            <span id="rank-pts" class="metric-card-unit">0 pts</span>
+          </div>
+          <div class="metric-card-sub">
+            <span id="rank-next" class="rank-next">500 to D</span>
+          </div>
+          <!-- Hidden compat target — renderRank() writes here -->
+          <span id="rank-label" class="hidden-compat">E Rank</span>
         </div>
-        <div class="rank-right">
-          <!-- Souls currency badge (v2.0.1). Updated by refreshSoulsDisplay
-               on every earnSouls / spendSouls. Tappable — opens
-               #souls-info-overlay explaining how souls work. Position:
-               balanced against the rank tile on the left; rank-next
-               stays beneath. -->
-          <button id="souls-badge" class="souls-badge" type="button" aria-label="Souls balance — tap for info">
-            <img class="souls-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
-            <span id="souls-balance" class="souls-balance">0</span>
-            <span class="souls-label">souls</span>
-          </button>
-          <div id="rank-next" class="rank-next">100 to D</div>
+
+        <!-- Card 2: This calendar week's XP (Sun→Sat, resets Sunday) -->
+        <div class="metric-card metric-card--week">
+          <div class="metric-card-head">
+            <span class="metric-card-label">WEEK</span>
+            <span class="metric-card-reset">RESETS · SUN</span>
+          </div>
+          <div class="metric-card-bar">
+            <div id="week-xp-bar" class="metric-card-bar-fill"></div>
+          </div>
+          <div class="metric-card-body">
+            <span id="week-xp-current" class="metric-card-value">0</span>
+            <span class="metric-card-unit">XP</span>
+          </div>
+          <div class="metric-card-sub">
+            DAY <b id="week-xp-day">1</b> / 7
+          </div>
+        </div>
+
+        <!-- Card 3: 30-day cumulative XP sparkline -->
+        <div class="metric-card metric-card--spark">
+          <div class="metric-card-head">
+            <span class="metric-card-label">XP · 30D</span>
+            <span id="xp-30d-delta" class="metric-card-reset">+0 / 7D</span>
+          </div>
+          <svg id="xp-30d-spark" class="metric-spark" viewBox="0 0 130 22" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="xp-30d-spark-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"  stop-color="#fbbf24" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="xp-30d-spark-area" fill="url(#xp-30d-spark-gradient)" d=""/>
+            <path id="xp-30d-spark-line" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d=""/>
+            <circle id="xp-30d-spark-dot" cx="0" cy="22" r="1.8" fill="#fbbf24" filter="drop-shadow(0 0 3px #fbbf24)"/>
+          </svg>
+          <div class="metric-card-body">
+            <span id="xp-30d-total" class="metric-card-value">0</span>
+            <span class="metric-card-unit">TOTAL XP</span>
+          </div>
         </div>
       </div>
-      <div class="rank-track">
-        <div id="rank-bar" class="rank-fill"></div>
+
+      <!-- Today progress strip — habits count + streak flame + souls pill.
+           Hosts existing #completed-count, #total-count,
+           #perfect-streak-display, #souls-badge so JS render-targets stay
+           valid. The standalone #progress-bar is preserved in a hidden
+           container below since updateProgress() writes to it. -->
+      <div class="today-strip">
+        <div class="today-strip-left">
+          <span id="completed-count" class="today-strip-value">0</span>
+          <span class="today-strip-divider">/</span>
+          <span id="total-count" class="today-strip-target">0</span>
+          <span class="today-strip-label">HABITS TODAY</span>
+        </div>
+        <div class="today-strip-right">
+          <div id="perfect-streak-display" class="perfect-streak-display">
+            <span class="ps-fire"></span><span class="ps-count">0</span>
+          </div>
+          <button id="souls-badge" class="souls-badge souls-badge--pill" type="button" aria-label="Souls balance — tap for info">
+            <img class="souls-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
+            <span id="souls-balance" class="souls-balance">0</span>
+            <span class="souls-label">SOULS</span>
+          </button>
+        </div>
+      </div>
+      <!-- Hidden compat track — updateProgress() still writes #progress-bar.width -->
+      <div class="progress-track hidden-compat"><div id="progress-bar" class="progress-fill"></div></div>
+
+      <!-- Status pill row — populated by updateStatusPills() in JS -->
+      <div id="status-pills" class="status-pill-row hidden">
+        <span class="status-pill-row-label">STATUS</span>
+        <div id="status-pills-list" class="status-pill-row-list"></div>
       </div>
 
       <!-- Double XP weekend banner -->
       <!-- Static fallback text — JS overwrites with iconify'd HTML on render. -->
       <div id="double-xp-banner" class="double-xp-banner hidden" role="button" tabindex="0" aria-label="Weekend Warrior challenge details">DOUBLE XP WEEKEND</div>
-
-      <!-- Daily progress -->
-      <div class="progress-section">
-        <div class="progress-top-row">
-          <div class="progress-text">
-            <span id="completed-count" class="prog-done">0</span><span class="prog-sep">/</span><span id="total-count" class="prog-total">0</span><span class="prog-label">today</span>
-          </div>
-          <div id="perfect-streak-display" class="perfect-streak-display">
-            <!-- Static placeholder — JS replaces with the custom flame icon on render. -->
-            <span class="ps-fire"></span><span class="ps-count">0</span>
-          </div>
-        </div>
-        <div class="progress-track">
-          <div id="progress-bar" class="progress-fill"></div>
-        </div>
-      </div>
 
       <!-- Daily motivational quote -->
       <div id="daily-quote" class="daily-quote hidden"></div>
@@ -1243,7 +1311,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=279"></script>
+  <script src="app.js?v=280"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

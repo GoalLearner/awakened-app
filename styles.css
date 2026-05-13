@@ -14754,3 +14754,332 @@ body.reveal-locked { overflow: hidden; }
   font-size: 0.92rem;
   letter-spacing: 0.02em;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v2.1.0 STATUS HEADER REDESIGN — AgenticOS-flavored metric strip
+   + today-strip + status pill row. Replaces the v1.x rank-section
+   + progress-section. Existing IDs preserved; visual envelope
+   restructured. Operator-console density at iPhone-width.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Hides DOM elements that JS render functions still write to but
+   the new design no longer surfaces visually. Used on #rank-label
+   and the standalone #progress-bar wrapper. */
+.hidden-compat {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Hide the old shipped containers — they're absent from the new
+   markup but the selector survives in case downstream code or
+   migrations leave a stale .rank-section in the DOM. Defensive. */
+.rank-section,
+.progress-section { display: none; }
+
+/* ─── 3-card metric strip ─────────────────────────────────── */
+.metric-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  min-width: 0; /* prevents grid blowout on narrow iPhone widths */
+}
+.metric-card--rank {
+  border-color: rgba(139, 92, 246, 0.40);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), var(--bg-card) 60%);
+}
+.metric-card--spark {
+  border-color: rgba(245, 158, 11, 0.30);
+}
+.metric-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.metric-card-label {
+  font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  font-size: 0.60rem;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.metric-card-reset {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metric-card-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+/* Inherits width from JS-driven .rank-fill etc.; recolors per card */
+.metric-card-bar-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.metric-card--rank .metric-card-bar-fill { background: var(--accent); }
+.metric-card-body {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-height: 18px;
+}
+.metric-card-value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.metric-card--rank .metric-card-value {
+  /* rank-badge is a span styled separately; restyle in this context */
+  background: none !important;
+  border: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  color: var(--accent) !important;
+  font-size: 1.2rem;
+  display: inline-block;
+  box-shadow: none !important;
+}
+.metric-card-unit {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.metric-card-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metric-card-sub b,
+.metric-card--rank .metric-card-sub {
+  color: var(--gold-bright, var(--gold));
+  font-weight: 700;
+}
+.metric-card .rank-next {
+  /* override v1.x rank-next styling inside the new card */
+  background: none;
+  padding: 0;
+  border: none;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.metric-card .rank-next.maxed { color: var(--gold-bright, var(--gold)); }
+.metric-spark {
+  width: 100%;
+  height: 22px;
+  display: block;
+}
+
+/* ─── Today-strip (habits count + streak + souls) ───────────── */
+.today-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.30);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.today-strip-left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.today-strip-value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.today-strip-divider {
+  color: var(--text-tertiary);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.today-strip-target {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.today-strip-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.today-strip-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.today-strip-right .perfect-streak-display {
+  /* compact the streak flame to pill density */
+  margin: 0;
+}
+
+/* Souls-badge as compact pill inside the today-strip.
+   .souls-badge--pill modifier on the existing button repurposes
+   its appearance without breaking the click handler that opens
+   the souls info modal. */
+.souls-badge--pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 6px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  cursor: pointer;
+}
+.souls-badge--pill .souls-icon {
+  width: 14px;
+  height: 14px;
+}
+.souls-badge--pill .souls-balance {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--gold-bright, var(--gold));
+  letter-spacing: 0.02em;
+}
+.souls-badge--pill .souls-label {
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ─── Status pill row (active packs + class affinity) ──────── */
+.status-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.status-pill-row::-webkit-scrollbar { display: none; }
+.status-pill-row.hidden { display: none; }
+.status-pill-row-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  padding-right: 6px;
+  border-right: 1px solid var(--border);
+}
+.status-pill-row-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.status-pill--active {
+  border-color: rgba(245, 158, 11, 0.45);
+}
+.status-pill--active .status-pill-dot {
+  background: var(--gold-bright, var(--gold));
+  box-shadow: 0 0 6px var(--gold-bright, var(--gold));
+}
+.status-pill--str   .status-pill-dot { background: #ef4444; }
+.status-pill--vit   .status-pill-dot { background: #22c55e; }
+.status-pill--int   .status-pill-dot { background: #3b82f6; }
+.status-pill--focus .status-pill-dot { background: #eab308; }
+.status-pill--will  .status-pill-dot { background: #f97316; }
+.status-pill--wlt   .status-pill-dot { background: var(--gold); }
+
+/* ─── Narrow-viewport accommodations (iPhone width < 400px) ── */
+@media (max-width: 400px) {
+  .metric-card { padding: 8px 8px 9px; gap: 5px; }
+  .metric-card-label { font-size: 0.55rem; letter-spacing: 0.08em; }
+  .metric-card-reset { font-size: 0.52rem; }
+  .metric-card-value { font-size: 0.95rem; }
+  .metric-card--rank .metric-card-value { font-size: 1.05rem; }
+  .metric-card-unit { font-size: 0.56rem; }
+  .metric-card-sub { font-size: 0.56rem; }
+  .today-strip-value, .today-strip-target { font-size: 1.25rem; }
+  .today-strip-label { font-size: 0.58rem; }
+}

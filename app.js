@@ -7071,6 +7071,8 @@
       next.textContent = (rank.next - totalPoints) + ' to ' + RANKS[RANKS.indexOf(rank) + 1].id;
       next.className = 'rank-next';
     }
+    // v2.1.0 — refresh the redesigned header's dependent cards.
+    try { updateHeaderMetrics(); } catch (_) {}
   }
 
   function _formatUnlockDate(dateStr) {
@@ -8916,6 +8918,187 @@
     if (listEl) listEl.classList.toggle('all-complete', total > 0 && done === total);
     updatePerfectStreakDisplay();
     renderCompoundProgress();
+    // v2.1.0 status-header redesign — dependent cards
+    try { updateHeaderMetrics(); } catch (_) {}
+    try { updateStatusPills(); }   catch (_) {}
+  }
+
+  // ── v2.1.0 STATUS HEADER REDESIGN ─────────────────────────────
+  // Renders the 3-card metric strip's dynamic data:
+  //  - Rank card's class-affinity sub-label ("CIVILIAN" / "WARRIOR" / etc.)
+  //  - Week card: XP earned Sunday→today, day-of-week counter, bar
+  //  - 30-day sparkline card: cumulative XP path + total + 7-day delta
+  // Called from updateProgress() so it refreshes on every toggle/render.
+  function updateHeaderMetrics() {
+    // ── Rank class-affinity sub (top-right of rank card) ─────
+    try {
+      const subEl = document.getElementById('rank-class-sub');
+      if (subEl) {
+        const cls = (typeof currentClass !== 'undefined' && currentClass) ? currentClass : 'CIVILIAN';
+        const def = (typeof CLASSES !== 'undefined') ? CLASSES[cls] : null;
+        subEl.textContent = (def && def.name ? def.name : 'CIVILIAN').toUpperCase();
+      }
+    } catch (_) {}
+
+    // ── Week card: XP this calendar week (Sun 00:00 → Sat 23:59) ─
+    try {
+      const now = new Date();
+      const dow = now.getDay(); // 0=Sun ... 6=Sat
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - dow);
+      weekStart.setHours(0, 0, 0, 0);
+
+      // Sum XP across each completed habit on each day from Sunday onward.
+      // completions is { 'YYYY-MM-DD': [habitId, ...] }; XP per completion
+      // derives from the habit's difficulty via DIFFICULTY[diff].pts.
+      let weekXP = 0;
+      const habitIndex = {};
+      habits.forEach(h => { habitIndex[h.id] = h; });
+      for (let i = 0; i <= dow; i++) {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        const iso = d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0');
+        const ids = completions[iso] || [];
+        ids.forEach(id => {
+          const h = habitIndex[id];
+          if (!h) return;
+          const diff = h.difficulty || 'medium';
+          const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+          weekXP += pts;
+        });
+      }
+
+      // Weekly target — generous-but-not-trivial scale. Tunable.
+      // 200 XP/week ≈ ~5 medium habits × 6 days at 3pts each, matches an
+      // engaged user's realistic weekly throughput at mid-game.
+      const WEEK_XP_TARGET = 200;
+      const pct = Math.min(100, Math.round((weekXP / WEEK_XP_TARGET) * 100));
+
+      const cur = document.getElementById('week-xp-current');
+      const bar = document.getElementById('week-xp-bar');
+      const day = document.getElementById('week-xp-day');
+      if (cur) cur.textContent = weekXP;
+      if (bar) bar.style.width = pct + '%';
+      if (day) day.textContent = (dow + 1); // Sunday=Day 1, Saturday=Day 7
+    } catch (_) {}
+
+    // ── 30-day cumulative XP sparkline ───────────────────────
+    try {
+      const series = []; // 30 entries — cumulative XP at end of each day
+      let cum = 0;
+      const habitIndex = {};
+      habits.forEach(h => { habitIndex[h.id] = h; });
+      // Walk 30 days ending today (oldest → newest).
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      // First pass: compute XP earned ON each of the past 30 days
+      const perDay = new Array(30).fill(0);
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (29 - i));
+        const iso = d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0');
+        const ids = completions[iso] || [];
+        let dayXP = 0;
+        ids.forEach(id => {
+          const h = habitIndex[id];
+          if (!h) return;
+          const diff = h.difficulty || 'medium';
+          const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+          dayXP += pts;
+        });
+        perDay[i] = dayXP;
+      }
+      for (let i = 0; i < 30; i++) {
+        cum += perDay[i];
+        series.push(cum);
+      }
+      const totalXP = series[29];
+      const last7XP = perDay.slice(23).reduce((a, b) => a + b, 0);
+
+      // Render numbers
+      const totalEl = document.getElementById('xp-30d-total');
+      const deltaEl = document.getElementById('xp-30d-delta');
+      if (totalEl) totalEl.textContent = totalXP;
+      if (deltaEl) deltaEl.textContent = '+' + last7XP + ' / 7D';
+
+      // Render SVG paths. viewBox is 130×22; scale series → coords.
+      const maxY = Math.max(1, totalXP); // floor 1 to avoid div-by-zero
+      const W = 130, H = 22;
+      const points = series.map((v, i) => {
+        const x = (i / 29) * W;
+        const y = H - (v / maxY) * (H - 1); // 1px floor at top
+        return [x, y];
+      });
+      const linePath = points.map((p, i) =>
+        (i === 0 ? 'M ' : 'L ') + p[0].toFixed(2) + ',' + p[1].toFixed(2)
+      ).join(' ');
+      const areaPath = linePath + ' L ' + W + ',' + H + ' L 0,' + H + ' Z';
+
+      const line = document.getElementById('xp-30d-spark-line');
+      const area = document.getElementById('xp-30d-spark-area');
+      const dot  = document.getElementById('xp-30d-spark-dot');
+      if (line) line.setAttribute('d', linePath);
+      if (area) area.setAttribute('d', areaPath);
+      if (dot && points.length) {
+        const last = points[points.length - 1];
+        dot.setAttribute('cx', last[0].toFixed(2));
+        dot.setAttribute('cy', last[1].toFixed(2));
+      }
+    } catch (_) {}
+  }
+
+  // Renders the status pill row: active habit packs (Morning Routine,
+  // Locked-In) + class affinity lean. Hides the row entirely when
+  // there's nothing to show (e.g., first-launch Civilian with no packs).
+  function updateStatusPills() {
+    const row   = document.getElementById('status-pills');
+    const list  = document.getElementById('status-pills-list');
+    if (!row || !list) return;
+
+    const pills = [];
+
+    // ── Active packs ─────────────────────────────────────────
+    // Both packs use the generic userHasAllPackHabits(packId) helper.
+    // Pack IDs come from the PACKS constant: 'morning' + 'locked-in'.
+    try {
+      if (typeof userHasAllPackHabits === 'function') {
+        if (userHasAllPackHabits('morning'))    pills.push({ key: 'mr', label: 'MORNING ROUTINE', active: true });
+        if (userHasAllPackHabits('locked-in'))  pills.push({ key: 'li', label: 'LOCKED-IN',       active: true });
+      }
+    } catch (_) {}
+
+    // ── Class affinity lean ──────────────────────────────────
+    try {
+      if (typeof _statLevels === 'function') {
+        const levels = _statLevels();
+        const top = levels && levels[0];
+        if (top && top.lv > 0) {
+          const statClassMap = { STR:'WARRIOR', VIT:'RANGER', INT:'MAGE',
+                                  FOCUS:'ASSASSIN', WILL:'PALADIN', WLT:'MERCHANT' };
+          const className = statClassMap[top.id];
+          if (className) {
+            pills.push({ key: top.id.toLowerCase(), label: top.id + '-LEAN', active: false });
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (pills.length === 0) {
+      row.classList.add('hidden');
+      list.innerHTML = '';
+      return;
+    }
+    row.classList.remove('hidden');
+    list.innerHTML = pills.map(p =>
+      '<span class="status-pill status-pill--' + p.key + (p.active ? ' status-pill--active' : '') + '">' +
+        '<span class="status-pill-dot" aria-hidden="true"></span>' +
+        esc(p.label) +
+      '</span>'
+    ).join('');
   }
 
   function esc(s) {
