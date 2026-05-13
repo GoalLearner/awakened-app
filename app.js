@@ -9126,6 +9126,149 @@
     ).join('');
   }
 
+  // ── XP·30D detail sheet (v2.1.0) ─────────────────────────────
+  // Opens on tap of the .metric-card--spark in the header. Bottom-
+  // sheet pattern matching the leaderboard ranking sheet. Renders a
+  // larger version of the cumulative XP chart + a 6-cell stats grid.
+  function openXpDetail() {
+    const overlay = document.getElementById('xp-detail-overlay');
+    const sheet   = document.getElementById('xp-detail-sheet');
+    if (!overlay || !sheet) return;
+    populateXpDetail();
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeXpDetail() {
+    const overlay = document.getElementById('xp-detail-overlay');
+    const sheet   = document.getElementById('xp-detail-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+  function populateXpDetail() {
+    // Build the per-day XP array for the last 30 days (oldest → newest)
+    const habitIndex = {};
+    habits.forEach(h => { habitIndex[h.id] = h; });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const perDay = new Array(30).fill(0);
+    const dates  = new Array(30).fill('');
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (29 - i));
+      const iso = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      dates[i] = iso;
+      const ids = completions[iso] || [];
+      let dayXP = 0;
+      ids.forEach(id => {
+        const h = habitIndex[id];
+        if (!h) return;
+        const diff = h.difficulty || 'medium';
+        const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+        dayXP += pts;
+      });
+      perDay[i] = dayXP;
+    }
+    // Cumulative series
+    const cumulative = new Array(30).fill(0);
+    let cum = 0;
+    for (let i = 0; i < 30; i++) {
+      cum += perDay[i];
+      cumulative[i] = cum;
+    }
+
+    // Stats
+    const total30 = cumulative[29];
+    const last7   = perDay.slice(23).reduce((a, b) => a + b, 0);
+    const totalAllTime = (typeof totalPoints === 'number') ? totalPoints : total30;
+    const daysActive = perDay.filter(x => x > 0).length;
+    // Best day
+    let bestDay = 0, bestIdx = -1;
+    perDay.forEach((v, i) => { if (v > bestDay) { bestDay = v; bestIdx = i; } });
+
+    // This-week XP (Sunday → today inclusive)
+    const dow = new Date().getDay();
+    let weekXP = 0;
+    for (let i = dow; i >= 0; i--) {
+      // perDay index for today is 29; walk back dow steps
+      weekXP += perDay[29 - (dow - i)] || 0;
+    }
+    // Simpler equivalent: sum the last (dow + 1) entries of perDay
+    weekXP = perDay.slice(29 - dow).reduce((a, b) => a + b, 0);
+
+    // Render numeric cells
+    const setText = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = (val || 0).toLocaleString('en-US');
+    };
+    setText('xp-detail-total',        totalAllTime);
+    setText('xp-detail-week',         weekXP);
+    setText('xp-detail-7d',           last7);
+    setText('xp-detail-30d',          total30);
+    setText('xp-detail-days-active',  daysActive);
+    setText('xp-detail-best-day',     bestDay);
+    // Best day sub: format the date (e.g., "MAY 8")
+    const bestSubEl = document.getElementById('xp-detail-best-day-sub');
+    if (bestSubEl) {
+      if (bestIdx >= 0 && bestDay > 0) {
+        const bestDate = new Date(dates[bestIdx] + 'T12:00:00');
+        const monthShort = bestDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+        bestSubEl.textContent = 'XP · ' + monthShort + ' ' + bestDate.getDate();
+      } else {
+        bestSubEl.textContent = 'XP · —';
+      }
+    }
+
+    // Big chart paths (viewBox 400×140; reserve 1px floor at top)
+    const W = 400, H = 140;
+    const maxY = Math.max(1, total30);
+    const points = cumulative.map((v, i) => {
+      const x = (i / 29) * W;
+      const y = H - (v / maxY) * (H - 1);
+      return [x, y];
+    });
+    const linePath = points.map((p, i) =>
+      (i === 0 ? 'M ' : 'L ') + p[0].toFixed(2) + ',' + p[1].toFixed(2)
+    ).join(' ');
+    const areaPath = linePath + ' L ' + W + ',' + H + ' L 0,' + H + ' Z';
+
+    const line = document.getElementById('xp-detail-line');
+    const area = document.getElementById('xp-detail-area');
+    const dot  = document.getElementById('xp-detail-dot');
+    if (line) line.setAttribute('d', linePath);
+    if (area) area.setAttribute('d', areaPath);
+    if (dot && points.length) {
+      const last = points[points.length - 1];
+      dot.setAttribute('cx', last[0].toFixed(2));
+      dot.setAttribute('cy', last[1].toFixed(2));
+    }
+
+    // Axis labels — start, midpoint, end of the 30-day window
+    const fmtAxis = (iso) => {
+      const d = new Date(iso + 'T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    };
+    const startEl = document.getElementById('xp-detail-axis-start');
+    const midEl   = document.getElementById('xp-detail-axis-mid');
+    const endEl   = document.getElementById('xp-detail-axis-end');
+    if (startEl) startEl.textContent = fmtAxis(dates[0]);
+    if (midEl)   midEl.textContent   = fmtAxis(dates[14]);
+    if (endEl)   endEl.textContent   = fmtAxis(dates[29]);
+  }
+  function setupXpDetail() {
+    const card    = document.querySelector('.metric-card--spark');
+    const overlay = document.getElementById('xp-detail-overlay');
+    const sheet   = document.getElementById('xp-detail-sheet');
+    const close   = document.getElementById('xp-detail-close');
+    if (card) card.addEventListener('click', openXpDetail);
+    if (overlay) overlay.addEventListener('click', closeXpDetail);
+    if (close)   close.addEventListener('click', closeXpDetail);
+    if (sheet && typeof attachSheetDismissGesture === 'function') {
+      attachSheetDismissGesture(sheet, overlay, closeXpDetail, {});
+    }
+  }
+
   function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
@@ -17340,6 +17483,7 @@
     setupHabitDetailGesture();
     setupWhatsNewSheet();
     setupRankPopup();
+    setupXpDetail();
 
     // Reflect canonical APP_VERSION in the Settings header
     const verEl = document.getElementById('settings-app-ver');

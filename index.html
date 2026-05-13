@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=209">
+  <link rel="stylesheet" href="styles.css?v=210">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -714,6 +714,82 @@
     </div>
   </div>
 
+  <!-- XP·30D detail sheet (v2.1.0 status redesign).
+       Opens on tap of the XP·30D metric card in the header. Bottom-
+       sheet pattern matching the leaderboard ranking sheet (.vn-sheet).
+       Renders a larger version of the cumulative XP chart + a stats
+       grid (total / this week / last 7d / last 30d / days active /
+       best day). populateXpDetail() in app.js fills the dynamic
+       content on every open. -->
+  <div id="xp-detail-overlay" class="vn-overlay hidden"></div>
+  <div id="xp-detail-sheet"   class="vn-sheet   hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="xp-detail-header">
+      <div class="xp-detail-eyebrow">XP · CUMULATIVE</div>
+      <h2 class="xp-detail-title">YOUR PROGRESS</h2>
+      <button id="xp-detail-close" class="vn-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="xp-detail-body">
+      <!-- Big chart -->
+      <div class="xp-detail-chart-wrap">
+        <svg id="xp-detail-chart" class="xp-detail-chart" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="xp-detail-gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"  stop-color="#fbbf24" stop-opacity="0.30"/>
+              <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- Grid lines drawn statically; line + area + dot driven by JS -->
+          <line x1="0" y1="35"  x2="400" y2="35"  stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
+          <line x1="0" y1="70"  x2="400" y2="70"  stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
+          <line x1="0" y1="105" x2="400" y2="105" stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
+          <path id="xp-detail-area" fill="url(#xp-detail-gradient)" d=""/>
+          <path id="xp-detail-line" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d=""/>
+          <circle id="xp-detail-dot" cx="0" cy="140" r="3" fill="#fbbf24" filter="drop-shadow(0 0 4px #fbbf24)"/>
+        </svg>
+        <div class="xp-detail-axis">
+          <span id="xp-detail-axis-start">—</span>
+          <span id="xp-detail-axis-mid">—</span>
+          <span id="xp-detail-axis-end">—</span>
+        </div>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="xp-detail-stats">
+        <div class="xp-detail-stat">
+          <div class="xp-detail-stat-label">TOTAL XP</div>
+          <div id="xp-detail-total" class="xp-detail-stat-value">0</div>
+          <div class="xp-detail-stat-sub">all-time</div>
+        </div>
+        <div class="xp-detail-stat">
+          <div class="xp-detail-stat-label">THIS WEEK</div>
+          <div id="xp-detail-week" class="xp-detail-stat-value">0</div>
+          <div class="xp-detail-stat-sub">Sun → today</div>
+        </div>
+        <div class="xp-detail-stat">
+          <div class="xp-detail-stat-label">LAST 7 DAYS</div>
+          <div id="xp-detail-7d" class="xp-detail-stat-value">0</div>
+          <div class="xp-detail-stat-sub">rolling</div>
+        </div>
+        <div class="xp-detail-stat">
+          <div class="xp-detail-stat-label">LAST 30 DAYS</div>
+          <div id="xp-detail-30d" class="xp-detail-stat-value">0</div>
+          <div class="xp-detail-stat-sub">rolling</div>
+        </div>
+        <div class="xp-detail-stat">
+          <div class="xp-detail-stat-label">DAYS ACTIVE</div>
+          <div id="xp-detail-days-active" class="xp-detail-stat-value">0</div>
+          <div class="xp-detail-stat-sub">last 30d</div>
+        </div>
+        <div class="xp-detail-stat">
+          <div class="xp-detail-stat-label">BEST DAY</div>
+          <div id="xp-detail-best-day" class="xp-detail-stat-value">0</div>
+          <div id="xp-detail-best-day-sub" class="xp-detail-stat-sub">XP · —</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Souls info modal (v2.0.1). Centered card pattern reusing
        .modal-overlay + .modal base styles. Opens on souls-badge tap;
        static info only (earn paths + spend costs). No live stats. -->
@@ -1311,7 +1387,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=282"></script>
+  <script src="app.js?v=283"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
