@@ -5042,41 +5042,44 @@
   const MIDDAY_TIME = '13:00';
   const MIDDAY_NOTIF_ID = 99998; // reserved; out of typical djb2 hash range, distinct from CHECKIN
 
+  // v3 Phase 1n — Evening Closeout 7 PM voice. 5 progress states ×
+  // 5 lines each. Less "Hunter," more system-state framing. Variable
+  // contract unchanged ({N} completed, {M} remaining, {TOTAL} total).
   const CHECKIN_COPY = {
     complete: [
-      'All trials cleared, Hunter. Rest well.',
-      'Day complete. Every trial honored.',
-      'Perfect day in motion. Well done, Hunter.',
-      'All habits cleared. The night is yours.',
-      'Day mastered. Rest, Hunter — you earned it.',
+      'All objectives sealed. Rest like you earned it.',
+      'Perfect day secured. Close the loop.',
+      'Every objective honored. The night is yours.',
+      'Day sealed. Recovery begins now.',
+      'Clean finish. Carry this into tomorrow.',
     ],
     high: [
-      '{N} cleared, {M} remain. Finish strong.',
-      'Almost there, Hunter. {M} trials left.',
-      '{N}/{TOTAL} done. Close the day clean.',
-      '{M} trials between you and a perfect day.',
-      'So close, Hunter. {M} left.',
+      '{N} sealed, {M} remain. Finish clean.',
+      'Almost complete. {M} objectives left.',
+      '{N}/{TOTAL} done. Close the day strong.',
+      '{M} between you and a perfect day.',
+      'You are close. Seal the last {M}.',
     ],
     mid: [
-      '{N} trials honored. {M} await.',
-      'Halfway, Hunter. The day is still yours.',
-      '{N}/{TOTAL} cleared. Keep moving.',
-      'Solid progress. {M} trials remain.',
-      'The path continues. {M} left.',
+      '{N} sealed. {M} still open.',
+      'Solid progress. Finish one more.',
+      '{N}/{TOTAL} complete. Keep the system moving.',
+      'The day is still active. {M} remain.',
+      'Momentum is built one objective at a time.',
     ],
     low: [
-      'The day is still open, Hunter.',
-      'Even one more trial counts.',
-      'Pick one, Hunter. Begin.',
-      'Small steps still count. The path remains.',
-      "The night isn't here yet. One trial, then another.",
+      'The day is still open. Choose one.',
+      'One objective changes the night.',
+      'Small action still counts.',
+      'Do not negotiate with zero.',
+      'Pick one. Seal it.',
     ],
     none: [
-      "The day isn't done. Choose one.",
-      "One trial, Hunter. That's all it takes.",
-      'The path is still here. Begin.',
-      'Even now, you can move forward.',
-      'The day waits, Hunter. Take one step.',
+      'The day is not closed. Begin with one.',
+      'One objective. That is enough to restart.',
+      'The system is still open. Take one step.',
+      'Nothing sealed yet. Change that now.',
+      'Start small. Seal one objective.',
     ],
   };
 
@@ -5171,11 +5174,11 @@
       const raw = localStorage.getItem('hb_souls');
       if (!raw) {
         // No souls state yet — bonus is implicitly unclaimed.
-        return '+15 souls waiting. Tap to claim today’s bonus.';
+        return '+15 souls are waiting. Claim the bonus.';
       }
       const parsed = JSON.parse(raw);
       if (!parsed || parsed.lastDailyBonusDate !== localToday) {
-        return '+15 souls waiting. Tap to claim today’s bonus.';
+        return '+15 souls are waiting. Claim the bonus.';
       }
     } catch (_) {}
 
@@ -5200,12 +5203,12 @@
           return String(a.habit.name).localeCompare(String(b.habit.name));
         });
         const top = candidates[0];
-        return top.habit.name + ' — Day ' + top.streak + '. Don’t break the chain.';
+        return top.habit.name + ' — Day ' + top.streak + '. Protect the chain.';
       }
     } catch (_) {}
 
     // Priority 3 — all caught up.
-    return 'You’re caught up. Keep it going.';
+    return 'You’re caught up. Hold the line.';
   }
 
   // ── PACK ICONS ───────────────────────────────────────────
@@ -17836,14 +17839,18 @@
     // Voice-coded copy keyed by primary stat. Used as a fallback for
     // habits that don't have a dedicated entry in HABIT_NOTIF_COPY (and
     // for user-authored custom habits).
+    // v3 Phase 1n — tactical system-message voice. Each ping answers
+    // one of three jobs: start, protect, seal. Less "Hunter," more
+    // direct. Variable interpolation contract unchanged ({n} = habit
+    // name).
     const COPY = {
-      STR:    { title: 'Time to train. {n} awaits.',   body: "The path doesn't walk itself." },
-      FOCUS:  { title: 'Stillness now. {n}.',          body: 'Five minutes of focus changes the day.' },
-      INT:    { title: '{n} is ready.',                body: 'The unlearned version of you is no longer enough.' },
-      WILL:   { title: '{n}. Get in the cold.',        body: 'Comfort is the enemy.' },
-      VIT:    { title: '{n}.',                         body: 'The body keeps the score.' },
-      WLT:    { title: '{n} awaits.',                  body: 'Compound the small wins.' },
-      CUSTOM: { title: '{n} awaits.',                  body: 'Today, you choose.' },
+      STR:    { title: '{n} is on deck.',     body: 'Build the body. Earn the power.' },
+      VIT:    { title: '{n} is due.',         body: 'Recovery is part of the work.' },
+      INT:    { title: '{n} is ready.',       body: 'Learn it now. Use it later.' },
+      FOCUS:  { title: '{n}. Lock in.',       body: 'Protect the next few minutes.' },
+      WILL:   { title: '{n}. Hold the line.', body: 'Comfort can wait.' },
+      WLT:    { title: '{n} awaits.',         body: 'Small numbers become leverage.' },
+      CUSTOM: { title: '{n} is open.',        body: 'One action keeps the system moving.' },
     };
 
     // Per-habit unique notification copy. Each curated library habit
@@ -17851,69 +17858,72 @@
     // identical body text on five different VIT habits. Keyed by the
     // habit's exact name (the foreign key used everywhere). Custom
     // user-authored habits fall through to the per-stat COPY above.
+    // v3 Phase 1n — curated habit reminder voice. Each entry answers
+    // "what's the action + why does it matter" in two beats. Keys
+    // unchanged (foreign-key contract for HABIT_NOTIF_COPY lookups).
     const HABIT_NOTIF_COPY = {
       // Physical Performance
-      'Hydrate':                            { title: 'Hydrate.',          body: 'Water the temple.' },
-      'Sleep':                              { title: 'Sleep.',            body: 'Repair begins when you let it.' },
-      'Sleep before midnight':              { title: 'Bed by midnight.',  body: 'Tomorrow is built tonight.' },
-      'Cardio workout':                     { title: 'Cardio.',           body: 'Move before the day moves you.' },
-      'Strength training':                  { title: 'Train, Hunter.',    body: "The path doesn't walk itself." },
-      'Sprint session':                     { title: 'Sprint.',           body: 'Speed is forged in the burn.' },
-      'Daily walk':                         { title: 'Walk.',             body: 'Movement clears the static.' },
-      'Ice bath or cold plunge':            { title: 'Plunge.',           body: 'Comfort is the enemy.' },
-      'Cold shower':                        { title: 'Cold shower.',      body: 'Choose discomfort once. Win the day.' },
-      'Mobility & Stretching':              { title: 'Stretch.',          body: 'Tight muscles, tight mind.' },
-      'Protein goal':                       { title: 'Protein.',          body: "You can't build with empty hands." },
+      'Hydrate':                            { title: 'Hydrate.',          body: 'Water first. Everything runs cleaner.' },
+      'Sleep':                              { title: 'Sleep.',            body: 'Recovery is the upgrade.' },
+      'Sleep before midnight':              { title: 'Bed before midnight.', body: 'Tomorrow starts tonight.' },
+      'Cardio workout':                     { title: 'Cardio.',           body: 'Move before the day owns you.' },
+      'Strength training':                  { title: 'Train.',            body: 'Strength is built one session at a time.' },
+      'Sprint session':                     { title: 'Sprint.',           body: 'Speed is earned in the burn.' },
+      'Daily walk':                         { title: 'Walk.',             body: 'Clear the static. Stack the steps.' },
+      'Ice bath or cold plunge':            { title: 'Cold plunge.',      body: 'Step in before the mind negotiates.' },
+      'Cold shower':                        { title: 'Cold shower.',      body: 'Choose discomfort once. Carry it all day.' },
+      'Mobility & Stretching':              { title: 'Mobility.',         body: 'Free the body. Clear the signal.' },
+      'Protein goal':                       { title: 'Protein.',          body: 'You cannot build from empty hands.' },
 
       // Mental & Focus
-      'Read':                               { title: 'Read.',             body: 'The unlearned version of you is no longer enough.' },
-      'Meditate & Breathwork':              { title: 'Sit. Breathe.',     body: 'Stillness is a skill.' },
-      'Journal':                            { title: 'Journal.',          body: 'What stays in the head stays the same.' },
-      'No phone or social media after waking': { title: 'Phone down.',    body: 'Protect the first 30 minutes.' },
-      'Review daily goals/intentions':      { title: "Set today's intent.", body: 'Direction beats motion.' },
-      'Get morning sunlight':               { title: 'Morning sun.',      body: "Tell your body it's time." },
+      'Read':                               { title: 'Read.',             body: 'Upgrade the mind before the day steals it.' },
+      'Meditate & Breathwork':              { title: 'Sit. Breathe.',     body: 'Stillness is trained, not found.' },
+      'Journal':                            { title: 'Journal.',          body: 'Name the pattern. Change the pattern.' },
+      'No phone or social media after waking': { title: 'Phone down.',    body: 'Protect the first window of the day.' },
+      'Review daily goals/intentions':      { title: 'Set the target.',   body: 'Direction beats motion.' },
+      'Get morning sunlight':               { title: 'Morning sun.',      body: 'Tell the body the day has begun.' },
       'No social media before noon':        { title: 'No feed before noon.', body: 'Build before you scroll.' },
-      'No screens 1 hour before bed':       { title: 'Screens off.',      body: 'The body remembers blue light.' },
+      'No screens 1 hour before bed':       { title: 'Screens off.',      body: 'Let the nervous system power down.' },
 
       // Nutrition
-      'Whole foods diet':                   { title: 'Whole foods.',      body: 'Real food. Real body.' },
-      'No sugar/junk food':                 { title: 'No junk.',          body: "Cravings lie. Discipline doesn't." },
+      'Whole foods diet':                   { title: 'Whole foods.',      body: 'Real food. Real signal.' },
+      'No sugar/junk food':                 { title: 'No junk.',          body: 'Cravings pass. Discipline remains.' },
       'No alcohol':                         { title: 'Stay clear.',       body: 'Tomorrow is sharper sober.' },
-      'No caffeine':                        { title: 'No caffeine.',      body: 'Earned energy lasts.' },
+      'No caffeine':                        { title: 'No caffeine.',      body: 'Earn steady energy.' },
 
       // Discipline & Productivity
-      'Wake up at consistent time':         { title: 'Wake up.',          body: 'Discipline starts before your feet hit the floor.' },
-      'Complete your #1 priority task':     { title: 'Top priority.',     body: 'One thing well beats five things half.' },
-      'Plan tomorrow the night before':     { title: 'Plan tomorrow.',    body: 'The day is won the night before.' },
-      'Tidy/clean space':                   { title: 'Tidy.',             body: 'Outer order, inner calm.' },
+      'Wake up at consistent time':         { title: 'Wake up.',          body: 'Discipline starts before negotiation.' },
+      'Complete your #1 priority task':     { title: 'Top priority.',     body: 'One thing done beats five things pending.' },
+      'Plan tomorrow the night before':     { title: 'Plan tomorrow.',    body: 'Win the day before it starts.' },
+      'Tidy/clean space':                   { title: 'Reset the space.',  body: 'Outer order. Inner calm.' },
       'Under 1 hour screen time':           { title: 'Cap the scroll.',   body: 'Your attention is the asset.' },
-      'Digital declutter':                  { title: 'Declutter.',        body: "Delete what doesn't serve you." },
-      'No doomscrolling until after 5PM':   { title: 'No doomscroll.',    body: 'Your mind belongs to you until 5.' },
-      'Review your long term goals':        { title: 'Goals check.',      body: 'Aim before you fire.' },
+      'Digital declutter':                  { title: 'Declutter.',        body: 'Remove what steals signal.' },
+      'No doomscrolling until after 5PM':   { title: 'No doomscroll.',    body: 'Your mind is yours until five.' },
+      'Review your long term goals':        { title: 'Long game check.',  body: 'Aim before you spend the day.' },
 
       // Financial & Growth
-      'Track finances & net worth':         { title: 'Track the numbers.', body: 'What you measure, you master.' },
-      'Work on a side project or business': { title: 'Build something.',  body: 'The future is built in stolen hours.' },
-      'Review investments or trading journal': { title: 'Review the trade.', body: 'The market rewards the patient.' },
-      'Generate one new business or content idea': { title: 'One new idea.', body: 'Quantity breeds quality.' },
+      'Track finances & net worth':         { title: 'Track the numbers.', body: 'What you measure, you command.' },
+      'Work on a side project or business': { title: 'Build the asset.',  body: 'The future is built in stolen hours.' },
+      'Review investments or trading journal': { title: 'Review the trade.', body: 'The edge improves after the session.' },
+      'Generate one new business or content idea': { title: 'One new idea.', body: 'Volume creates the breakthrough.' },
 
       // Learning & Skills
-      'Educational podcast':                { title: 'Podcast.',          body: 'Learn while you move.' },
-      'Practice a skill':                   { title: 'Practice.',         body: "Reps over time. There's no other path." },
+      'Educational podcast':                { title: 'Podcast.',          body: 'Learn while the body moves.' },
+      'Practice a skill':                   { title: 'Practice.',         body: 'Reps are the path.' },
       'Flashcard review':                   { title: 'Flashcards.',       body: 'Memory is built brick by brick.' },
-      'Write down lessons learned':         { title: "Capture today's lesson.", body: "What's not written is forgotten." },
-      'Learn something new':                { title: 'Learn.',            body: 'Curiosity is the cheapest edge.' },
-      'Language learning':                  { title: 'Practice the tongue.', body: 'Consistency beats intensity.' },
+      'Write down lessons learned':         { title: 'Capture the lesson.', body: 'What is not written disappears.' },
+      'Learn something new':                { title: 'Learn.',            body: 'Curiosity is a cheap edge.' },
+      'Language learning':                  { title: 'Practice the language.', body: 'Consistency beats intensity.' },
 
       // Wellbeing & Relationships
-      'Morning gratitude practice':         { title: 'Three gratitudes.', body: "Notice what's already enough." },
+      'Morning gratitude practice':         { title: 'Three gratitudes.', body: 'Notice what is already enough.' },
       'Pray or set intentions':             { title: 'Set intent.',       body: 'Speak it. Mean it. Move.' },
-      'Call or text a family member':       { title: 'Reach out.',        body: 'Bonds rust without touch.' },
-      'Do something kind for someone':      { title: 'Be kind.',          body: 'The smallest gesture compounds.' },
-      'Barefoot grounding outside':         { title: 'Earth the body.',   body: 'Bare feet on real ground.' },
-      'Vitamins and minerals':              { title: 'Vitamins.',         body: "The body can't perform without fuel." },
+      'Call or text a family member':       { title: 'Reach out.',        body: 'Bonds weaken when untouched.' },
+      'Do something kind for someone':      { title: 'Be kind.',          body: 'Small gestures compound.' },
+      'Barefoot grounding outside':         { title: 'Ground.',           body: 'Bare feet. Real ground. Clear signal.' },
+      'Vitamins and minerals':              { title: 'Vitamins.',         body: 'Fuel the system.' },
       'Visualization practice':             { title: 'Visualize.',        body: 'See it before you live it.' },
-      'Sleep early before 11PM':            { title: 'Bed by 11.',        body: 'Recovery is part of the work.' },
+      'Sleep early before 11PM':            { title: 'Bed by 11.',        body: 'Recovery is part of the mission.' },
     };
 
     function plugin() {
@@ -18185,15 +18195,57 @@
     // Format always leads with the user's name and a comma:
     //   "Richie, 6 await today."
     //   "Marcus, the path doesn't walk itself."
+    // v3 Phase 1n — class-specific flavor lines for Tue/Thu morning
+    // digests. Shorter and more declarative; less repetition.
     const DIGEST_FLAVOR = {
-      CIVILIAN: ['the path begins.', 'show up.', 'discipline is a daily promise.', 'you are forging the next version of you.'],
-      STR:      ['strength is built daily.', "the path doesn't walk itself.", 'the body reflects the work.', "what the strong do, others won't."],
-      INT:      ['the unlearned version grows stale.', 'knowledge compounds daily.', 'the mind is the long game.', 'read. reflect. repeat.'],
-      VIT:      ['movement is medicine.', 'the body keeps score.', 'recovery is part of the work.', 'endurance is earned in mornings.'],
-      FOCUS:    ['sharpen the blade.', 'focus is a discipline.', 'distractions are the enemy.', 'strike before doubt does.'],
-      WILL:     ["what others won't, you will.", 'comfort is the enemy.', 'resolve is forged at dawn.', 'the cold makes the warrior.'],
-      WLT:      ['compound the small wins.', 'wealth is built in routine.', "today's habit is tomorrow's leverage.", 'the market rewards patience.'],
-      SAGE:     ['all paths lead through today.', 'balance is the rarest discipline.', 'show up everywhere.', 'the complete hunter trains all six.'],
+      CIVILIAN: [
+        'the path begins with one action.',
+        'show up before the day decides for you.',
+        'discipline is a daily vote.',
+        'the next version is built today.',
+      ],
+      STR: [
+        'strength is built today.',
+        'the body reflects the work.',
+        'train the frame.',
+        'power follows repetition.',
+      ],
+      INT: [
+        'the mind compounds.',
+        'learn before the day gets loud.',
+        'knowledge becomes leverage.',
+        'read. reflect. refine.',
+      ],
+      VIT: [
+        'recovery is part of the work.',
+        'the body keeps score.',
+        'move, recover, repeat.',
+        'energy is earned daily.',
+      ],
+      FOCUS: [
+        'protect your attention.',
+        'sharpen the blade.',
+        'distraction is the enemy.',
+        'focus wins the first hour.',
+      ],
+      WILL: [
+        'hold the line.',
+        'comfort can wait.',
+        'resolve is built in small refusals.',
+        'do what the mood avoids.',
+      ],
+      WLT: [
+        'compound the small wins.',
+        'wealth is built in routine.',
+        'today becomes leverage.',
+        'track, build, repeat.',
+      ],
+      SAGE: [
+        'balance is trained.',
+        'all paths pass through today.',
+        'the complete hunter moves with intent.',
+        'train the whole system.',
+      ],
     };
 
     function composeDigestBody() {
@@ -18229,7 +18281,7 @@
 
       // Edge: zero habits scheduled today → permission to rest.
       if (count === 0) {
-        return name + ', today is yours. Take a clean rest.';
+        return name + ', clean rest day. Recover on purpose.';
       }
 
       // Special trigger: yesterday was a perfect day. Honors any day-of-week.
@@ -18243,27 +18295,28 @@
       } catch (_) {}
       if (perfectStreakCount >= 1 && (dow === 1 || dow === 0)) {
         // Trigger Sun/Mon morning so the user wakes up to acknowledgment.
-        return name + ', ' + count + ' await. Yesterday was perfect.';
+        return name + ', ' + count + ' objectives await. Keep the chain alive.';
       }
 
-      // Tuesday + Thursday → flavor line (no count).
+      // Tuesday + Thursday → flavor line keyed by class. Uses period
+      // separator to avoid awkward em-dash + lowercase flavor combos.
       if (dow === 2 || dow === 4) {
         const lines = DIGEST_FLAVOR[cls] || DIGEST_FLAVOR.CIVILIAN;
         const line  = lines[(dow + new Date().getDate()) % lines.length];
-        return name + ', ' + line;
+        return name + ', ' + count + ' objectives await. ' + line;
       }
 
       // Saturday + Sunday during a double-XP weekend → suffix the count.
       if (weekend) {
-        return name + ', ' + count + ' await. ⚡ 2x XP.';
+        return name + ', ' + count + ' objectives await. ⚡ 2x XP today.';
       }
 
       // Mon/Wed/Fri → straight count, with class label if awakened.
       if (cls && cls !== 'CIVILIAN') {
         const cn = (typeof CLASSES === 'object' && CLASSES[cls] && CLASSES[cls].name) || null;
-        if (cn) return name + ', ' + count + ' await, ' + cn + '.';
+        if (cn) return name + ', ' + count + ' objectives await. Your ' + cn + ' path continues.';
       }
-      return name + ', ' + count + ' await today.';
+      return name + ', ' + count + ' objectives await. Start clean.';
     }
 
     async function setDailyDigest(time) {
