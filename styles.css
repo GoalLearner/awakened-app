@@ -17015,3 +17015,367 @@ body.reveal-locked { overflow: hidden; }
   filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.50));
 }
 .sc-avatar:active { transform: scale(0.97); }
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1i — Premium SPLASH / LOADING screen.
+   Visible by default on every launch (no JS required to appear).
+   Fades out via .is-hidden modifier once the underlying flow is
+   ready. Min visible time ≈ 900ms governed by app.js.
+   ═══════════════════════════════════════════════════════════════ */
+.awakened-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at center, rgba(139, 92, 246, 0.14), transparent 42%),
+    linear-gradient(180deg, #05050c 0%, #0c0c1f 55%, #05050c 100%);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.55s ease, visibility 0.55s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.awakened-splash.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.splash-bg-orb {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 320px;
+  height: 320px;
+  margin: -160px 0 0 -160px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.26), transparent 68%);
+  filter: blur(18px);
+  animation: splash-orb-pulse 4.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.splash-rune {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 240px;
+  height: 240px;
+  margin: -120px 0 0 -120px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  box-shadow:
+    inset 0 0 24px rgba(139, 92, 246, 0.20),
+    0 0 24px rgba(245, 158, 11, 0.10);
+  pointer-events: none;
+}
+.splash-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+.splash-logo {
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 900;
+  font-size: clamp(42px, 11vw, 74px);
+  letter-spacing: 0.10em;
+  color: #f59e0b;
+  text-shadow:
+    0 0 14px rgba(245, 158, 11, 0.28),
+    0 0 34px rgba(139, 92, 246, 0.30);
+  animation: splash-logo-breathe 2.8s ease-in-out infinite;
+}
+.splash-subtitle {
+  margin-top: 14px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.70rem;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(242, 242, 247, 0.72);
+}
+.splash-loading-text {
+  margin-top: 32px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(242, 242, 247, 0.42);
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.awakened-splash.is-loading-long .splash-loading-text { opacity: 1; }
+@keyframes splash-logo-breathe {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.20));  transform: scale(1); }
+  50%      { filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.45)); transform: scale(1.015); }
+}
+@keyframes splash-orb-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.70; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo, .splash-bg-orb { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1i — Educational ONBOARDING overlay.
+   5 cards before the existing welcome flow. Gated by
+   hb_onboarding_seen_v2 (one-shot, never re-shown).
+   ═══════════════════════════════════════════════════════════════ */
+.intro-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at top, rgba(139, 92, 246, 0.20), transparent 38%),
+    linear-gradient(180deg, #080816 0%, #13132a 100%);
+  -webkit-user-select: none;
+  user-select: none;
+  animation: intro-ob-fade-in 0.36s ease both;
+}
+.intro-onboarding.hidden { display: none; }
+@keyframes intro-ob-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.intro-onboarding-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 80% 12%, rgba(245, 158, 11, 0.10), transparent 40%),
+    radial-gradient(circle at 18% 88%, rgba(139, 92, 246, 0.16), transparent 42%);
+}
+.intro-onboarding-skip {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: 18px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(242, 242, 247, 0.55);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  z-index: 3;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.intro-onboarding-skip:hover {
+  color: var(--text-primary);
+  border-color: rgba(139, 92, 246, 0.35);
+  background: rgba(139, 92, 246, 0.10);
+}
+.intro-onboarding-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto 18px;
+  padding: 28px 22px 26px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(30, 30, 63, 0.94), rgba(18, 18, 42, 0.98));
+  border: 1px solid rgba(139, 92, 246, 0.34);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  text-align: center;
+  animation: intro-ob-card-rise 0.42s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+@keyframes intro-ob-card-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.intro-onboarding-card.is-leaving { animation: intro-ob-card-leave 0.22s ease both; }
+@keyframes intro-ob-card-leave {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+.intro-onboarding-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8b5cf6;
+}
+.intro-onboarding-title {
+  margin: 10px 0 0;
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 900;
+  font-size: 1.6rem;
+  line-height: 1.10;
+  color: #f59e0b;
+  text-shadow: 0 0 16px rgba(245, 158, 11, 0.20);
+}
+.intro-onboarding-body {
+  margin: 14px auto 0;
+  max-width: 380px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(242, 242, 247, 0.78);
+}
+.intro-onboarding-visual {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 4px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 900;
+  font-size: 2.2rem;
+  color: #f8e7b0;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.34), rgba(10, 10, 24, 0.92) 70%);
+  border: 1px solid rgba(245, 158, 11, 0.40);
+  box-shadow: 0 0 28px rgba(139, 92, 246, 0.30);
+}
+.intro-onboarding-extra {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+.intro-ob-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 4px auto 0;
+  max-width: 360px;
+}
+.intro-ob-stat-pill {
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.30);
+  background: rgba(15, 15, 36, 0.85);
+  text-align: center;
+}
+.intro-ob-stat-pill-id {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  color: #f59e0b;
+}
+.intro-ob-stat-pill-name {
+  margin-top: 2px;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  color: rgba(242, 242, 247, 0.62);
+  text-transform: uppercase;
+}
+.intro-ob-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 4px auto 0;
+  max-width: 280px;
+}
+.intro-ob-slot-tile {
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.18), rgba(12, 12, 28, 0.95) 80%);
+  border: 1px solid rgba(139, 92, 246, 0.30);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.50rem;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  color: #f8e7b0;
+  text-transform: uppercase;
+}
+.intro-ob-slot-tile--filled {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.16);
+  color: #fff7e6;
+}
+.intro-onboarding-progress {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px auto 16px;
+}
+.intro-ob-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.30);
+  transition: width 0.22s ease, background 0.22s ease;
+}
+.intro-ob-dot.is-active {
+  width: 22px;
+  background: linear-gradient(90deg, #8b5cf6, #f59e0b);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+}
+.intro-onboarding-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+.intro-onboarding-btn {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 14px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+.intro-onboarding-btn:active { transform: scale(0.98); }
+.intro-onboarding-btn:disabled {
+  opacity: 0.40;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.intro-onboarding-btn--primary {
+  color: #fff7e6;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.42), rgba(58, 26, 99, 0.96));
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.12),
+    0 10px 22px rgba(0, 0, 0, 0.35),
+    0 0 18px rgba(139, 92, 246, 0.20);
+}
+.intro-onboarding-btn--primary:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.22),
+    0 12px 26px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(245, 158, 11, 0.20);
+}
+.intro-onboarding-btn--secondary {
+  color: rgba(242, 242, 247, 0.78);
+  background: rgba(30, 30, 63, 0.78);
+  border-color: rgba(139, 92, 246, 0.32);
+}
+.intro-onboarding-btn--secondary:hover {
+  background: rgba(40, 40, 80, 0.85);
+  border-color: rgba(139, 92, 246, 0.50);
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-onboarding, .intro-onboarding-card { animation: none; }
+}
+@media (max-width: 360px) {
+  .intro-onboarding-title { font-size: 1.4rem; }
+  .intro-onboarding-body  { font-size: 0.86rem; }
+  .intro-onboarding-card  { padding: 22px 16px 20px; }
+}

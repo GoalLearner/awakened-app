@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=239">
+  <link rel="stylesheet" href="styles.css?v=240">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -37,6 +37,51 @@
   <link rel="preload" as="image" href="assets/stat-icons/stat-wlt.png">
 </head>
 <body>
+  <!-- v3 Phase 1i — Premium splash / loading screen. Renders on
+       every launch BEFORE the signin gate or main app mounts. The
+       core markup ships inline (no JS required to appear) so the
+       brand impression lands immediately, even on slow networks.
+       hideSplash() in app.js fades it out as soon as the underlying
+       flow is ready. Min visible time ≈ 900ms; if loading exceeds
+       1500ms the "Preparing your system…" line auto-fades in. -->
+  <div id="awakened-splash" class="awakened-splash" role="presentation" aria-hidden="true">
+    <div class="splash-bg-orb" aria-hidden="true"></div>
+    <div class="splash-rune" aria-hidden="true"></div>
+    <div class="splash-content">
+      <div class="splash-logo">AWAKENED</div>
+      <div class="splash-subtitle">Discipline becomes power</div>
+      <div class="splash-loading-text">Preparing your system…</div>
+    </div>
+  </div>
+
+  <!-- v3 Phase 1i — Educational onboarding overlay. 5 cards that
+       teach what Awakened is BEFORE the existing welcome / path /
+       habit-picker flow runs. Gated on hb_onboarding_seen_v2 — once
+       set, never re-shown. Existing users are migrated silently
+       (their hb_welcomed === '1' implies they've already seen
+       prior welcome content, so we mark them seen). -->
+  <div id="intro-onboarding" class="intro-onboarding hidden" role="dialog" aria-labelledby="intro-ob-title" aria-modal="true">
+    <div class="intro-onboarding-bg" aria-hidden="true"></div>
+    <button id="intro-ob-skip" class="intro-onboarding-skip" type="button" aria-label="Skip onboarding">Skip</button>
+
+    <div id="intro-ob-card" class="intro-onboarding-card">
+      <div id="intro-ob-kicker" class="intro-onboarding-kicker">CHAPTER 1 OF 5</div>
+      <div id="intro-ob-visual" class="intro-onboarding-visual" aria-hidden="true"></div>
+      <h2 id="intro-ob-title" class="intro-onboarding-title">Discipline Becomes Power</h2>
+      <p id="intro-ob-body" class="intro-onboarding-body">
+        Awakened turns your real-life habits into hunter progression. Complete the work. Earn XP. Build the person you said you would become.
+      </p>
+      <div id="intro-ob-extra" class="intro-onboarding-extra" aria-hidden="true"></div>
+    </div>
+
+    <div id="intro-ob-progress" class="intro-onboarding-progress" aria-hidden="true"></div>
+
+    <div class="intro-onboarding-actions">
+      <button id="intro-ob-back" class="intro-onboarding-btn intro-onboarding-btn--secondary" type="button">Back</button>
+      <button id="intro-ob-next" class="intro-onboarding-btn intro-onboarding-btn--primary" type="button">Begin</button>
+    </div>
+  </div>
+
   <!-- Sign in with Apple gate (v2.1 Phase A). Sits OUTSIDE the main
        tab system; renders before app.js mounts anything. Two-step
        flow: Apple authorize → alias picker → reload into main app.
@@ -1513,7 +1558,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=317"></script>
+  <script src="app.js?v=318"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

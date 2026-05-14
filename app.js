@@ -26,6 +26,17 @@
     const gate = document.getElementById('signin-gate');
     if (!gate) return false; // gate markup missing — fail open
     gate.classList.remove('hidden');
+    // v3 Phase 1i — fade out the splash so the gate is visible.
+    // Splash hides itself once min-visible-time elapses.
+    try {
+      const splash = document.getElementById('awakened-splash');
+      if (splash) {
+        setTimeout(() => {
+          splash.classList.add('is-hidden');
+          setTimeout(() => { try { splash.remove(); } catch (_) {} }, 600);
+        }, 900);
+      }
+    } catch (_) {}
 
     // Determine which step to show:
     //   no user → step "apple" (sign in)
@@ -19063,6 +19074,235 @@
   try { window.autoVerifySleep = autoVerifySleep; } catch (_) {}
 
   // ── INIT ─────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // v3 Phase 1i — Splash + educational onboarding controllers.
+  // The splash is visible on every launch (markup ships pre-rendered
+  // so the brand impression lands before any JS runs). hideSplash()
+  // fades it out as soon as the underlying flow is ready.
+  // The educational onboarding (5 cards) fires once, only for new
+  // users (no hb_onboarding_seen_v2 AND no hb_welcomed), then sets
+  // its flag and lets the existing welcome-screen flow take over.
+  // ═══════════════════════════════════════════════════════════════
+  const SPLASH_MIN_VISIBLE_MS  = 900;
+  const SPLASH_LONG_LOADING_MS = 1500;
+  let _splashStart       = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  let _splashLongTimer   = null;
+  let _splashHidden      = false;
+  function _splashElapsed() {
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    return now - _splashStart;
+  }
+  function setSplashLongLoading(on) {
+    const el = document.getElementById('awakened-splash');
+    if (!el) return;
+    el.classList.toggle('is-loading-long', !!on);
+  }
+  function hideSplash() {
+    if (_splashHidden) return;
+    _splashHidden = true;
+    if (_splashLongTimer) { clearTimeout(_splashLongTimer); _splashLongTimer = null; }
+    const el = document.getElementById('awakened-splash');
+    if (!el) return;
+    const elapsed = _splashElapsed();
+    const wait = Math.max(0, SPLASH_MIN_VISIBLE_MS - elapsed);
+    setTimeout(() => {
+      el.classList.add('is-hidden');
+      // Remove from the DOM after the CSS transition completes —
+      // 600ms covers the 0.55s fade with a hair of slack. The node
+      // is decorative; nothing reads it once hidden.
+      setTimeout(() => { try { el.remove(); } catch (_) {} }, 600);
+    }, wait);
+  }
+  // Kick the "Preparing your system…" line if loading drags past
+  // the threshold. Set up early so the first long-load on a slow
+  // device gets the feedback.
+  function _armSplashLongTimer() {
+    if (_splashLongTimer || _splashHidden) return;
+    _splashLongTimer = setTimeout(() => setSplashLongLoading(true), SPLASH_LONG_LOADING_MS);
+  }
+  try { _armSplashLongTimer(); } catch (_) {}
+
+  // ── Educational onboarding (5-card intro) ──────────────────
+  // Independent of the existing #welcome-screen / #path-screen
+  // / #onboarding flow. This one is purely teaching content; the
+  // existing flow still handles name + path + habit picker.
+  const INTRO_OB_VERSION_KEY = 'hb_onboarding_seen_v2';
+  const INTRO_OB_STEPS = [
+    {
+      kicker:  'CHAPTER 1 OF 5',
+      title:   'Discipline Becomes Power',
+      body:    'Awakened turns your real-life habits into hunter progression. Complete the work. Earn XP. Build the person you said you would become.',
+      visual:  '⚜',
+      cta:     'Begin',
+    },
+    {
+      kicker:  'CHAPTER 2 OF 5',
+      title:   'Train Your Six Stats',
+      body:    'Every habit strengthens a different part of your character — strength, recovery, learning, focus, willpower, and wealth.',
+      visual:  '',
+      cta:     'Continue',
+      extra:   'stats',
+    },
+    {
+      kicker:  'CHAPTER 3 OF 5',
+      title:   'The System Is Honest',
+      body:    'Steps, sleep, and bedtime can be verified through Apple Health. If the data proves it, your hunter earns it.',
+      visual:  '✦',
+      cta:     'Continue',
+    },
+    {
+      kicker:  'CHAPTER 4 OF 5',
+      title:   'Hunt Bosses. Earn Relics.',
+      body:    'Bosses are defeated through real discipline. Win the hunt to earn souls, discover relics, and unlock rare drops.',
+      visual:  '☠',
+      cta:     'Continue',
+    },
+    {
+      kicker:  'CHAPTER 5 OF 5',
+      title:   'Shape Your Hunter Build',
+      body:    'Equip earned gear in your Armory. Helm, Weapon, Plate, Gloves, Boots, and Ring — your build reflects the path you are building.',
+      visual:  '',
+      cta:     'Enter Awakened',
+      extra:   'slots',
+    },
+  ];
+  let _introObStep = 0;
+  let _introObOnComplete = null;
+
+  function shouldShowIntroOnboarding() {
+    try {
+      if (localStorage.getItem(INTRO_OB_VERSION_KEY) === '1') return false;
+      // Returning users who completed the old welcome flow get
+      // auto-migrated (they don't need to see brand-new content
+      // unless we explicitly bump the version key).
+      if (localStorage.getItem('hb_welcomed') === '1') {
+        try { localStorage.setItem(INTRO_OB_VERSION_KEY, '1'); } catch (_) {}
+        return false;
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  function _renderIntroObExtra(step) {
+    const wrap = document.getElementById('intro-ob-extra');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    if (step.extra === 'stats') {
+      const stats = [
+        { id: 'STR',   name: 'Strength' },
+        { id: 'VIT',   name: 'Recovery' },
+        { id: 'INT',   name: 'Learning' },
+        { id: 'FOCUS', name: 'Discipline' },
+        { id: 'WILL',  name: 'Resilience' },
+        { id: 'WLT',   name: 'Wealth' },
+      ];
+      wrap.innerHTML = '<div class="intro-ob-stat-grid">' +
+        stats.map(s => '<div class="intro-ob-stat-pill">' +
+          '<div class="intro-ob-stat-pill-id">' + s.id + '</div>' +
+          '<div class="intro-ob-stat-pill-name">' + s.name + '</div>' +
+        '</div>').join('') +
+      '</div>';
+    } else if (step.extra === 'slots') {
+      const slots = ['HELM', 'WEAPON', 'PLATE', 'GLOVES', 'BOOTS', 'RING'];
+      // Mark first two "filled" purely visually for the preview.
+      wrap.innerHTML = '<div class="intro-ob-slot-grid">' +
+        slots.map((label, i) => '<div class="intro-ob-slot-tile' +
+          (i < 2 ? ' intro-ob-slot-tile--filled' : '') + '">' + label + '</div>').join('') +
+      '</div>';
+    }
+  }
+
+  function _renderIntroObStep(idx) {
+    _introObStep = idx;
+    const step = INTRO_OB_STEPS[idx];
+    if (!step) return;
+    const kicker = document.getElementById('intro-ob-kicker');
+    const title  = document.getElementById('intro-ob-title');
+    const body   = document.getElementById('intro-ob-body');
+    const visual = document.getElementById('intro-ob-visual');
+    const back   = document.getElementById('intro-ob-back');
+    const next   = document.getElementById('intro-ob-next');
+    if (kicker) kicker.textContent = step.kicker;
+    if (title)  title.textContent  = step.title;
+    if (body)   body.textContent   = step.body;
+    if (visual) {
+      if (step.visual) {
+        visual.style.display = 'flex';
+        visual.textContent = step.visual;
+      } else {
+        visual.style.display = 'none';
+      }
+    }
+    if (back) back.style.visibility = idx === 0 ? 'hidden' : 'visible';
+    if (next) next.textContent = step.cta;
+    _renderIntroObExtra(step);
+    // Re-fire card-rise animation
+    const card = document.getElementById('intro-ob-card');
+    if (card) {
+      card.classList.remove('is-leaving');
+      // Force reflow so the animation restarts
+      // eslint-disable-next-line no-unused-expressions
+      void card.offsetWidth;
+      card.style.animation = '';
+      card.style.animation = 'intro-ob-card-rise 0.42s cubic-bezier(0.34, 1.3, 0.64, 1) both';
+    }
+    // Progress dots
+    const dotsWrap = document.getElementById('intro-ob-progress');
+    if (dotsWrap) {
+      dotsWrap.innerHTML = INTRO_OB_STEPS.map((_, i) =>
+        '<span class="intro-ob-dot' + (i === idx ? ' is-active' : '') + '"></span>'
+      ).join('');
+    }
+  }
+
+  function showIntroOnboarding(onComplete) {
+    _introObOnComplete = (typeof onComplete === 'function') ? onComplete : null;
+    const el = document.getElementById('intro-onboarding');
+    if (!el) { if (_introObOnComplete) _introObOnComplete(); return; }
+    _introObStep = 0;
+    _renderIntroObStep(0);
+    el.classList.remove('hidden');
+  }
+
+  function hideIntroOnboarding() {
+    const el = document.getElementById('intro-onboarding');
+    if (el) el.classList.add('hidden');
+  }
+
+  function completeIntroOnboarding() {
+    try { localStorage.setItem(INTRO_OB_VERSION_KEY, '1'); } catch (_) {}
+    hideIntroOnboarding();
+    const cb = _introObOnComplete; _introObOnComplete = null;
+    if (cb) try { cb(); } catch (_) {}
+  }
+
+  function setupIntroOnboarding() {
+    const back = document.getElementById('intro-ob-back');
+    const next = document.getElementById('intro-ob-next');
+    const skip = document.getElementById('intro-ob-skip');
+    if (back) {
+      back.addEventListener('click', () => {
+        if (_introObStep > 0) _renderIntroObStep(_introObStep - 1);
+      });
+    }
+    if (next) {
+      next.addEventListener('click', () => {
+        if (_introObStep < INTRO_OB_STEPS.length - 1) {
+          _renderIntroObStep(_introObStep + 1);
+        } else {
+          completeIntroOnboarding();
+        }
+      });
+    }
+    if (skip) {
+      skip.addEventListener('click', () => {
+        if (window.confirm('Skip the intro? You can re-read it later in Settings.')) {
+          completeIntroOnboarding();
+        }
+      });
+    }
+  }
+
   function init() {
     load();
     // v2.0.1 rank-scaling overhaul — fraction-based XP migration runs
@@ -19406,24 +19646,36 @@
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
     }, 1200);
 
-    if (needsWelcome) {
-      showWelcomeScreen();
-    } else if (needsOnboarding) {
-      showPathScreen();
+    // v3 Phase 1i — Splash hide + educational onboarding gate.
+    // Splash fades out as soon as we know which flow to run. New
+    // users see the 5-card intro before the existing welcome flow.
+    try { setupIntroOnboarding(); } catch (_) {}
+    const enterFirstRunFlow = () => {
+      if (needsWelcome) {
+        showWelcomeScreen();
+      } else if (needsOnboarding) {
+        showPathScreen();
+      } else {
+        render();
+        setupFridayBanner();
+        maybeAutoShowWhatsNew();
+        setTimeout(() => {
+          try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
+        }, 900);
+      }
+    };
+
+    if (shouldShowIntroOnboarding()) {
+      // Brand-new user: hide splash → show intro → on completion,
+      // resume the existing first-run path (welcome → path → habits).
+      try { hideSplash(); } catch (_) {}
+      showIntroOnboarding(() => {
+        try { enterFirstRunFlow(); } catch (_) {}
+      });
     } else {
-      render();
-      setupFridayBanner();
-      // Auto-show What's New for users who already finished onboarding
-      // and have either never seen this version or last saw an older one.
-      maybeAutoShowWhatsNew();
-      // Daily Insight — fires once per device-local calendar day for
-      // fully-onboarded users. Deferred long enough that What's New
-      // (if eligible) opens first; shouldShowDailyInsight() checks for
-      // a visible What's New sheet and silently defers if so. The
-      // visibilitychange handler picks it up on the next resume.
-      setTimeout(() => {
-        try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
-      }, 900);
+      // Existing user (or intro already seen): straight through.
+      try { hideSplash(); } catch (_) {}
+      enterFirstRunFlow();
     }
   }
 
