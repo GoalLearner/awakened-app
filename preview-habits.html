@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Awakened — Habits Tab Preview (Codex)</title>
+<!-- v3 Phase 1k — Habits redesign PREVIEW.
+     Standalone page so we can iterate on the new card visual without
+     touching the live #main-scroll markup. Once approved, the CSS in
+     this file gets ported to styles.css and the JS renderer in app.js
+     gets updated to emit the new DOM. Until then, the live Habits tab
+     is unchanged. -->
+<link rel="stylesheet" href="styles.css?v=243">
+<style>
+  /* ---- Page chrome ---- */
+  body {
+    background: var(--bg, #08081a);
+    color: var(--text-primary, #f5f5fa);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .preview-frame {
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 24px 0 48px;
+    background: linear-gradient(180deg, #08081a 0%, #0b0b22 100%);
+    min-height: 100vh;
+  }
+  .preview-header {
+    padding: 0 14px 16px;
+    text-align: center;
+    color: rgba(245, 245, 250, 0.42);
+    font-size: 0.62rem;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .preview-toggle-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 8px auto 14px;
+    flex-wrap: wrap;
+    padding: 0 14px;
+  }
+  .preview-toggle {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(139, 92, 246, 0.10);
+    border: 1px solid rgba(139, 92, 246, 0.30);
+    color: rgba(245, 245, 250, 0.78);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .preview-toggle.is-active {
+    background: rgba(245, 184, 66, 0.18);
+    border-color: rgba(245, 184, 66, 0.55);
+    color: #f5b842;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     CODEX HABIT CARD — v3 Phase 1k design (from claudedesign Variation B)
+     Tokens scoped under .codex-* so they don't collide with .habit-* live styles.
+     ═════════════════════════════════════════════════════════════════ */
+
+  :root {
+    --codex-bg:          #08081a;
+    --codex-gold:        #f5b842;
+    --codex-gold-deep:   #c08418;
+    --codex-gold-glow:   rgba(245, 184, 66, 0.32);
+    --codex-purple:      #8b5cf6;
+    --codex-purple-glow: rgba(139, 92, 246, 0.35);
+    --codex-blue:        #79b4ff;
+    --codex-text:        #f5f5fa;
+    --codex-text-2:      #9090a8;
+    --codex-text-3:      #54546e;
+    --codex-border:      rgba(255, 255, 255, 0.05);
+    /* Stat hexes — exact from CLAUDE.md */
+    --codex-stat-str:   #ef4444;
+    --codex-stat-vit:   #ec4899;
+    --codex-stat-int:   #3b82f6;
+    --codex-stat-focus: #eab308;
+    --codex-stat-will:  #f97316;
+    --codex-stat-wlt:   #f59e0b;
+  }
+
+  /* ─── Section header above the grid ─── */
+  .codex-section-header {
+    padding: 4px 14px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  }
+  .codex-section-header-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .codex-section-title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .codex-section-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--codex-gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .codex-section-subtitle {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--codex-text-2);
+    letter-spacing: 0.2px;
+    font-style: italic;
+    font-family: Georgia, "Cormorant Garamond", "Times New Roman", serif;
+  }
+  .codex-section-counter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--codex-text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .codex-section-counter--all { color: var(--codex-gold); text-shadow: 0 0 12px var(--codex-gold-glow); }
+  .codex-section-counter-num { color: var(--codex-gold); }
+  .codex-section-counter-sep { color: var(--codex-text-3); font-size: 14px; font-weight: 600; }
+  .codex-section-progress {
+    margin-top: 8px;
+    height: 1.5px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .codex-section-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--codex-purple) 0%, var(--codex-gold) 100%);
+    box-shadow: 0 0 6px var(--codex-gold-glow);
+    transition: width 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  /* ─── Habit grid ─── */
+  .codex-habit-grid {
+    padding: 6px 12px 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+  }
+
+  /* ─── Habit card ─── */
+  .codex-card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 0.82;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transform: scale(1);
+    transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  }
+  .codex-card:active { transform: scale(0.965); }
+
+  /* Outer stat-color/gold gradient ring */
+  .codex-card-ring {
+    position: absolute;
+    inset: -1px;
+    border-radius: 14px;
+    opacity: 0.65;
+    transition: opacity 0.3s, filter 0.3s;
+  }
+  .codex-card--complete .codex-card-ring {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 8px var(--codex-gold-glow));
+    background: linear-gradient(160deg, var(--codex-gold) 0%, var(--codex-gold-deep) 50%, rgba(var(--stat-rgb), 0.53) 100%);
+  }
+  .codex-card--auto:not(.codex-card--complete) .codex-card-ring {
+    background: linear-gradient(160deg, rgba(59, 130, 246, 0.55) 0%, rgba(59, 130, 246, 0.12) 50%, rgba(59, 130, 246, 0.4) 100%);
+  }
+  .codex-card--manual:not(.codex-card--complete) .codex-card-ring {
+    background: linear-gradient(160deg, rgba(var(--stat-rgb), 0.53) 0%, rgba(var(--stat-rgb), 0.06) 50%, rgba(var(--stat-rgb), 0.33) 100%);
+  }
+
+  /* Card surface */
+  .codex-card-surface {
+    position: absolute;
+    inset: 0;
+    border-radius: 13px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background:
+      radial-gradient(120% 80% at 50% -20%, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
+      linear-gradient(180deg, #1d1d3d 0%, #131227 100%);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .codex-card--complete .codex-card-surface {
+    background:
+      radial-gradient(120% 80% at 50% 110%, rgba(245, 158, 11, 0.20) 0%, transparent 55%),
+      linear-gradient(180deg, #25204a 0%, #1a1532 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -20px 30px -10px var(--codex-gold-glow);
+  }
+  .codex-card--auto:not(.codex-card--complete) .codex-card-surface {
+    background:
+      radial-gradient(120% 80% at 50% -20%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+      linear-gradient(180deg, #161630 0%, #0e0e22 100%);
+  }
+  .codex-card-surface::before {
+    /* Stat-color radial overlay */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 50% at 50% 20%, rgba(var(--stat-rgb), 0.10) 0%, transparent 60%);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+  .codex-card--complete .codex-card-surface::before { opacity: 0.4; }
+  .codex-card-surface::after {
+    /* Dust motes */
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    background:
+      radial-gradient(1px 1px at 25% 35%, rgba(255, 255, 255, 0.5), transparent),
+      radial-gradient(1px 1px at 75% 55%, rgba(255, 255, 255, 0.3), transparent),
+      radial-gradient(1px 1px at 45% 80%, rgba(255, 255, 255, 0.4), transparent);
+    animation: codex-dust 14s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Bottom warm glow when complete */
+  .codex-card--complete .codex-card-surface .codex-bottom-glow {
+    position: absolute;
+    bottom: -12px;
+    left: 15%;
+    right: 15%;
+    height: 36px;
+    background: radial-gradient(closest-side, var(--codex-gold-glow) 0%, transparent 75%);
+    filter: blur(6px);
+    pointer-events: none;
+  }
+
+  /* Rune corners */
+  .codex-rune-corner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    pointer-events: none;
+  }
+  .codex-rune-corner svg { display: block; }
+  .codex-rune-corner--tl { top: 5px; left: 5px; }
+  .codex-rune-corner--bl { bottom: 5px; left: 5px; transform: rotate(270deg); }
+  .codex-rune-corner--br { bottom: 5px; right: 5px; transform: rotate(180deg); }
+
+  /* Streak — floating gold glyph, no chrome */
+  .codex-streak {
+    position: absolute;
+    top: 6px;
+    left: 7px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--codex-gold);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1px;
+    text-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.85),
+      0 0 6px rgba(0, 0, 0, 0.7);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    opacity: 0.95;
+    pointer-events: none;
+  }
+  .codex-card--complete .codex-streak { opacity: 0.85; }
+
+  /* Status indicator (top-right) */
+  .codex-status {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+  }
+  /* Manual incomplete — open colored ring (breathing) */
+  .codex-status-ring {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.6px solid rgb(var(--stat-rgb));
+    opacity: 0.55;
+    animation: codex-pending-breathe 3.5s ease-in-out infinite;
+  }
+  /* Auto incomplete — dashed blue ring + lock */
+  .codex-status-auto {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.4px dashed var(--codex-blue);
+    background: rgba(59, 130, 246, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: codex-auto-breathe 3.2s ease-in-out infinite;
+  }
+  /* Complete — gold disc + check */
+  .codex-status-disc {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffd270 0%, var(--codex-gold) 55%, #8a5a10 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 0 16px var(--codex-gold-glow),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+    animation: codex-disc-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  }
+  .codex-status-disc svg { display: block; }
+  /* Tiny blue lock dot — only on auto+complete */
+  .codex-status-auto-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #0a0a1c;
+    border: 1px solid var(--codex-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Icon */
+  .codex-icon-wrap {
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 58%;
+    aspect-ratio: 1;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .codex-icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: saturate(0.92);
+    transition: filter 0.3s, opacity 0.3s;
+  }
+  .codex-card--complete .codex-icon-wrap img {
+    filter: drop-shadow(0 0 8px var(--codex-gold-glow));
+  }
+  .codex-card--auto:not(.codex-card--complete) .codex-icon-wrap img {
+    opacity: 0.78;
+  }
+
+  /* Text block (bottom) */
+  .codex-text-block {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    padding: 0 6px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5px;
+  }
+  .codex-sealed-banner {
+    font-size: 7.5px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--codex-gold);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-shadow: 0 0 6px var(--codex-gold-glow);
+    margin-bottom: 1px;
+    animation: codex-seal-fade 600ms ease-out 200ms backwards;
+  }
+  .codex-sealed-banner-line {
+    width: 8px;
+    height: 1px;
+  }
+  .codex-sealed-banner-line--l { background: linear-gradient(90deg, transparent, var(--codex-gold)); }
+  .codex-sealed-banner-line--r { background: linear-gradient(270deg, transparent, var(--codex-gold)); }
+  .codex-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--codex-text);
+    text-align: center;
+    line-height: 1.15;
+    text-wrap: balance;
+    letter-spacing: -0.15px;
+    max-height: 28px;
+    overflow: hidden;
+  }
+  .codex-goal {
+    font-size: 9.5px;
+    color: var(--codex-text-2);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+  }
+  .codex-xp-chip {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    border-radius: 7px;
+    background: rgba(245, 184, 66, 0.08);
+    border: 0.5px solid rgba(245, 184, 66, 0.18);
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--codex-gold);
+    font-variant-numeric: tabular-nums;
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+  .codex-card--complete .codex-xp-chip {
+    background: rgba(245, 184, 66, 0.22);
+    border-color: rgba(245, 184, 66, 0.6);
+    box-shadow: 0 0 8px var(--codex-gold-glow);
+  }
+
+  /* Auto card cannot be tapped to toggle — slight shake animation on tap */
+  .codex-card--auto.is-shaking { animation: codex-shake 0.32s ease-in-out; }
+
+  /* ─── Morning Routine bar ─── */
+  .codex-morning-bar {
+    position: relative;
+    margin: 12px 12px 0;
+    padding: 11px 14px;
+    background: linear-gradient(180deg, #1d1d3d 0%, #131227 100%);
+    border: 1px solid var(--codex-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .codex-morning-bar--all {
+    background: linear-gradient(180deg, rgba(245, 184, 66, 0.12), rgba(245, 184, 66, 0.04));
+    border-color: rgba(245, 184, 66, 0.5);
+    box-shadow: 0 0 16px var(--codex-gold-glow);
+  }
+  .codex-morning-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.18) 0%, rgba(245, 184, 66, 0.10) 100%);
+    transition: width 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .codex-morning-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  .codex-morning-sun {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .codex-morning-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--codex-gold);
+    letter-spacing: 0.5px;
+    flex: 1;
+  }
+  .codex-morning-count {
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+  }
+  .codex-morning-count-num { color: var(--codex-text); }
+  .codex-morning-count-sep { color: var(--codex-text-3); }
+  .codex-morning-bar--all .codex-morning-count-num,
+  .codex-morning-bar--all .codex-morning-count-sep { color: var(--codex-gold); }
+
+  /* ─── Add Habits CTA ─── */
+  .codex-add-habits {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 8px 12px 14px;
+    padding: 12px 16px;
+    background: rgba(139, 92, 246, 0.04);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    transition: background 0.2s;
+  }
+  .codex-add-habits:hover { background: rgba(139, 92, 246, 0.10); }
+  .codex-add-habits svg.codex-add-dash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .codex-add-habits-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .codex-add-habits-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--codex-purple);
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── Animations ─── */
+  @keyframes codex-shake {
+    0%, 100% { transform: translateX(0) scale(1); }
+    20% { transform: translateX(-2px) scale(1); }
+    40% { transform: translateX(2px) scale(1); }
+    60% { transform: translateX(-2px) scale(1); }
+    80% { transform: translateX(2px) scale(1); }
+  }
+  @keyframes codex-disc-pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    55% { transform: scale(1.18); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes codex-seal-fade {
+    0% { opacity: 0; transform: translateY(2px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes codex-auto-breathe {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; box-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
+  }
+  @keyframes codex-pending-breathe {
+    0%, 100% { opacity: 0.42; }
+    50% { opacity: 0.65; }
+  }
+  @keyframes codex-dust {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(-2px); opacity: 0.7; }
+  }
+  @keyframes codex-burst-up {
+    0% { transform: scale(0.5) translateY(0); opacity: 0; }
+    25% { transform: scale(1.25) translateY(-2px); opacity: 1; }
+    100% { transform: scale(1) translateY(-40px); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .codex-card-surface::after,
+    .codex-status-ring,
+    .codex-status-auto { animation: none !important; }
+  }
+
+  /* XP burst overlay (rendered on tap) */
+  .codex-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .codex-burst-num {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--codex-gold);
+    text-shadow: 0 0 24px var(--codex-gold), 0 0 4px var(--codex-gold);
+    animation: codex-burst-up 800ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    letter-spacing: -0.5px;
+  }
+</style>
+</head>
+<body>
+<div class="preview-frame">
+  <div class="preview-header">HABITS TAB — REDESIGN PREVIEW (CODEX)</div>
+  <div class="preview-toggle-row">
+    <button class="preview-toggle" id="reset-btn">Reset state</button>
+    <button class="preview-toggle" id="seal-all-btn">Seal all</button>
+  </div>
+
+  <!-- Section header -->
+  <div class="codex-section-header" id="section-header"></div>
+
+  <!-- Habit grid -->
+  <div class="codex-habit-grid" id="habit-grid"></div>
+
+  <!-- Morning Routine bar -->
+  <div id="morning-bar-mount"></div>
+
+  <!-- Add Habits CTA -->
+  <button class="codex-add-habits" id="add-habits-btn">
+    <svg class="codex-add-dash" preserveAspectRatio="none">
+      <rect x="0.75" y="0.75" width="calc(100% - 1.5px)" height="calc(100% - 1.5px)"
+            rx="9" fill="none" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 3" opacity="0.55"/>
+    </svg>
+    <span class="codex-add-habits-inner">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+        <circle cx="7" cy="7" r="6" stroke="#8b5cf6" stroke-width="1" fill="none" opacity="0.5"/>
+        <path d="M7 3.5v7M3.5 7h7" stroke="#8b5cf6" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <span class="codex-add-habits-label">Add Habits</span>
+    </span>
+  </button>
+</div>
+
+<script>
+/* ── Data (mock 6 habits — all four state combinations visible) ── */
+const STAT_RGB = {
+  STR:   '239, 68, 68',
+  VIT:   '236, 72, 153',
+  INT:   '59, 130, 246',
+  FOCUS: '234, 179, 8',
+  WILL:  '249, 115, 22',
+  WLT:   '245, 158, 11',
+};
+const HABITS = [
+  { id: 'sleep',    name: 'Sleep',                  goal: '7 hours',     stat: 'VIT',   xp: 3, auto: true,  streak: 12, icon: 'assets/habit-icons/icon-sleep.png' },
+  { id: 'walk',     name: 'Daily walk',             goal: '8,000 steps', stat: 'VIT',   xp: 1, auto: true,  streak: 8,  icon: 'assets/habit-icons/icon-walk.png' },
+  { id: 'strength', name: 'Strength training',      goal: '30 min',      stat: 'STR',   xp: 5, auto: false, streak: 4,  icon: 'assets/habit-icons/icon-strength.png' },
+  { id: 'meditate', name: 'Meditate & Breathwork',  goal: '10 min',      stat: 'FOCUS', xp: 3, auto: false, streak: 21, icon: 'assets/habit-icons/icon-meditate.png' },
+  { id: 'phone',    name: 'No phone after waking',  goal: 'First hour',  stat: 'WILL',  xp: 3, auto: false, streak: 6,  icon: 'assets/habit-icons/icon-nophone.png' },
+  { id: 'sunlight', name: 'Morning sunlight',       goal: '15 min',      stat: 'INT',   xp: 1, auto: false, streak: 14, icon: 'assets/habit-icons/icon-sunlight.png' },
+];
+const INITIAL = { sleep: true, walk: false, strength: true, meditate: false, phone: false, sunlight: true };
+let state = { ...INITIAL };
+
+/* ── Helpers ── */
+function svgRune(color) {
+  return `
+    <svg viewBox="0 0 9 9" width="9" height="9" aria-hidden="true">
+      <path d="M0 0.5h4M0.5 0v4" stroke="${color}" stroke-width="0.8" stroke-linecap="square" opacity="0.85"/>
+      <circle cx="0.5" cy="0.5" r="0.6" fill="${color}"/>
+    </svg>`;
+}
+function svgFlame() {
+  return `<svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="#f5b842"/></svg>`;
+}
+function svgBolt(size = 5) {
+  return `<svg width="${size}" height="${size * 1.4}" viewBox="0 0 5 7" aria-hidden="true"><path d="M3 0L0 4h2l-0.7 3L5 2.5H3l1-2.5z" fill="#f5b842"/></svg>`;
+}
+function svgCheck() {
+  return `<svg width="13" height="13" viewBox="0 0 11 11" aria-hidden="true"><path d="M2 5.5l2.5 2.5L9 3" stroke="#1a1232" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function svgLockSmall() {
+  return `<svg width="5" height="6" viewBox="0 0 5 6" aria-hidden="true"><path d="M1.4 2.6V1.7a1.1 1.1 0 012.2 0v0.9" stroke="#79b4ff" stroke-width="0.7" fill="none" stroke-linecap="round"/><rect x="0.9" y="2.6" width="3.2" height="2.5" rx="0.4" stroke="#79b4ff" stroke-width="0.7" fill="none"/></svg>`;
+}
+function svgLockMed() {
+  return `<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M2.5 4V2.5a2 2 0 014 0V4" stroke="#79b4ff" stroke-width="1" fill="none" stroke-linecap="round"/><rect x="1.5" y="4" width="6" height="5" rx="0.8" stroke="#79b4ff" stroke-width="1" fill="none"/></svg>`;
+}
+function svgSun() {
+  return `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="#f5b842" opacity="0.85"/><g stroke="#f5b842" stroke-width="1.2" stroke-linecap="round" opacity="0.85"><path d="M10 1.5v2.5M10 16v2.5M1.5 10h2.5M16 10h2.5M3.7 3.7l1.8 1.8M14.5 14.5l1.8 1.8M3.7 16.3l1.8-1.8M14.5 5.5l1.8-1.8"/></g></svg>`;
+}
+
+/* ── Render the section header ── */
+function renderSectionHeader() {
+  const sealed = HABITS.reduce((s, h) => s + (state[h.id] ? 1 : 0), 0);
+  const total = HABITS.length;
+  const pct = (sealed / total) * 100;
+  const all = sealed === total;
+  document.getElementById('section-header').innerHTML = `
+    <div class="codex-section-header-row">
+      <div class="codex-section-title">
+        <span class="codex-section-label">Daily Objectives</span>
+        <span class="codex-section-subtitle">Seal to earn XP</span>
+      </div>
+      <div class="codex-section-counter ${all ? 'codex-section-counter--all' : ''}">
+        <span class="codex-section-counter-num">${sealed}</span><span class="codex-section-counter-sep"> / ${total}</span>
+      </div>
+    </div>
+    <div class="codex-section-progress">
+      <div class="codex-section-progress-fill" style="width: ${pct}%"></div>
+    </div>
+  `;
+}
+
+/* ── Render a single habit card ── */
+function renderCard(h) {
+  const completed = !!state[h.id];
+  const rgb = STAT_RGB[h.stat] || STAT_RGB.VIT;
+  const cls = [
+    'codex-card',
+    completed ? 'codex-card--complete' : '',
+    h.auto    ? 'codex-card--auto'     : 'codex-card--manual',
+  ].filter(Boolean).join(' ');
+
+  let statusHtml;
+  if (completed) {
+    statusHtml = `<div class="codex-status-disc">${svgCheck()}${h.auto
+      ? `<div class="codex-status-auto-dot">${svgLockSmall()}</div>` : ''}</div>`;
+  } else if (h.auto) {
+    statusHtml = `<div class="codex-status-auto">${svgLockMed()}</div>`;
+  } else {
+    statusHtml = `<div class="codex-status-ring"></div>`;
+  }
+
+  return `
+    <button class="${cls}" style="--stat-rgb: ${rgb}" data-id="${h.id}">
+      <div class="codex-card-ring"></div>
+      <div class="codex-card-surface">
+        ${completed ? '<div class="codex-bottom-glow"></div>' : ''}
+        <div class="codex-rune-corner codex-rune-corner--bl">${svgRune(completed ? '#f5b842' : `rgb(${rgb})`)}</div>
+        <div class="codex-rune-corner codex-rune-corner--br">${svgRune(completed ? '#f5b842' : `rgb(${rgb})`)}</div>
+        ${h.streak > 0 ? '' : '<div class="codex-rune-corner codex-rune-corner--tl">' + svgRune(completed ? '#f5b842' : `rgb(${rgb})`) + '</div>'}
+      </div>
+      ${h.streak > 0 ? `<div class="codex-streak">${svgFlame()}${h.streak}</div>` : ''}
+      <div class="codex-status">${statusHtml}</div>
+      <div class="codex-icon-wrap"><img src="${h.icon}" alt="" onerror="this.style.display='none'"></div>
+      <div class="codex-text-block">
+        ${completed ? `<div class="codex-sealed-banner"><span class="codex-sealed-banner-line codex-sealed-banner-line--l"></span>✦ SEALED ✦<span class="codex-sealed-banner-line codex-sealed-banner-line--r"></span></div>` : ''}
+        <div class="codex-name">${h.name}</div>
+        <div class="codex-goal">${h.goal}</div>
+        <div class="codex-xp-chip">${svgBolt()}+${h.xp} XP</div>
+      </div>
+    </button>
+  `;
+}
+
+/* ── Render the morning-routine bar ── */
+function renderMorningBar() {
+  const sealed = HABITS.reduce((s, h) => s + (state[h.id] ? 1 : 0), 0);
+  const total = HABITS.length;
+  const pct = (sealed / total) * 100;
+  const all = sealed === total;
+  document.getElementById('morning-bar-mount').innerHTML = `
+    <div class="codex-morning-bar ${all ? 'codex-morning-bar--all' : ''}">
+      <div class="codex-morning-fill" style="width: ${pct}%"></div>
+      <div class="codex-morning-content">
+        <div class="codex-morning-sun">${svgSun()}</div>
+        <span class="codex-morning-label">Morning Routine</span>
+        <span class="codex-morning-count">
+          <span class="codex-morning-count-num">${sealed}</span><span class="codex-morning-count-sep">/${total}</span>
+        </span>
+        ${svgBolt(9)}
+      </div>
+    </div>`;
+}
+
+/* ── Render full grid + everything that depends on state ── */
+function renderAll() {
+  document.getElementById('habit-grid').innerHTML = HABITS.map(renderCard).join('');
+  renderSectionHeader();
+  renderMorningBar();
+}
+
+/* ── Tap router ── */
+document.getElementById('habit-grid').addEventListener('click', (e) => {
+  const btn = e.target.closest('.codex-card');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const h = HABITS.find(x => x.id === id);
+  if (!h) return;
+  if (h.auto) {
+    // Auto cannot toggle — shake only
+    btn.classList.add('is-shaking');
+    setTimeout(() => btn.classList.remove('is-shaking'), 340);
+    return;
+  }
+  const willBeComplete = !state[id];
+  if (willBeComplete) {
+    // Show XP burst overlay then re-render
+    const burst = document.createElement('div');
+    burst.className = 'codex-burst';
+    burst.innerHTML = `<div class="codex-burst-num">+${h.xp}</div>`;
+    btn.appendChild(burst);
+    setTimeout(() => burst.remove(), 820);
+  }
+  state[id] = willBeComplete;
+  setTimeout(() => renderAll(), 60);
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => { state = { ...INITIAL }; renderAll(); });
+document.getElementById('seal-all-btn').addEventListener('click', () => {
+  state = HABITS.reduce((acc, h) => (acc[h.id] = true, acc), {});
+  renderAll();
+});
+
+renderAll();
+</script>
+</body>
+</html>
