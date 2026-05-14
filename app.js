@@ -10184,26 +10184,26 @@
       const requiredRank = getRequiredRankForBuildSlot(i);
       const slotDef    = EQUIPMENT_SLOTS[i] || { key: 'slot', label: 'SLOT ' + (i + 1) };
       const slotLabel  = esc(slotDef.label);
-      // Slot-type pill that anchors every tile (equipped / empty /
-      // locked all carry it). Single source so the user can scan
-      // the build at a glance.
-      const slotPill = '<div class="hunter-build-slot-label">' + slotLabel + '</div>';
+      // Full-width top BANNER (not a tiny pill). Renders on every
+      // tile — equipped / empty / locked — so the user can scan
+      // the loadout at a glance. Dark gradient + gold underline so
+      // it stays legible over any card art.
+      const slotBanner = '<div class="hunter-build-slot-label">' + slotLabel + '</div>';
 
       if (!unlocked) {
         // Locked slot — rank gate
         html += '<button class="hunter-build-slot hunter-build-slot--locked" type="button" ' +
                 'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — locked, reach ' + requiredRank + ' rank">' +
-                  slotPill +
+                  slotBanner +
                   '<div class="hunter-build-slot-lock">' +
                     '<div class="hunter-build-slot-lock-icon">🔒</div>' +
                     '<div class="hunter-build-slot-lock-label">REACH<br>' + esc(requiredRank) + ' RANK</div>' +
                   '</div>' +
                 '</button>';
       } else if (card) {
-        // Equipped slot — show the card art (square is intentional in MOBA style).
-        // .hunter-build-slot-top-fade darkens the top strip so the
-        // slot pill stays legible over bright card art (DALL-E hood/
-        // signet pieces with light backgrounds can drown the pill).
+        // Equipped slot — banner over full-bleed card art. Item name
+        // band sits along the bottom. No more tiny pill that gets
+        // lost on bright DALL-E backgrounds.
         const rarityShort = card.rarity === 'ultra_rare' ? 'ultra' : card.rarity;
         const artImg = card.art_path
           ? '<img class="hunter-build-item-img" src="' + esc(card.art_path) + '" alt="' + esc(card.name) + '" draggable="false" loading="lazy" decoding="async">'
@@ -10211,17 +10211,17 @@
         html += '<button class="hunter-build-slot hunter-build-slot--equipped build-rarity--' + rarityShort + '" type="button" ' +
                 'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — ' + esc(card.name) + '">' +
                   artImg +
-                  '<div class="hunter-build-slot-top-fade"></div>' +
-                  slotPill +
+                  slotBanner +
                   '<div class="hunter-build-item-name">' + esc(card.name) + '</div>' +
                 '</button>';
       } else {
-        // Empty unlocked slot — show plus icon + slot identity
+        // Empty unlocked slot — show banner + plus icon + helper
         html += '<button class="hunter-build-slot hunter-build-slot--empty" type="button" ' +
                 'data-slot-index="' + i + '" aria-label="' + slotLabel + ' — empty, tap to equip">' +
-                  slotPill +
+                  slotBanner +
                   '<div class="hunter-build-slot-plus">+</div>' +
                   '<div class="hunter-build-slot-empty-label">EMPTY</div>' +
+                  '<div class="hunter-build-slot-empty-hint">Tap to equip</div>' +
                 '</button>';
       }
     }

@@ -15964,6 +15964,14 @@ body.reveal-locked { overflow: hidden; }
 }
 .hunter-build-slot:active { transform: scale(0.98); }
 
+/* Empty + locked tiles stack their centered content vertically
+   under the 24px slot banner. Equipped tiles ignore this (their
+   only flex child is the absolutely-positioned art image). */
+.hunter-build-slot--empty,
+.hunter-build-slot--locked {
+  flex-direction: column;
+  padding-top: 24px;
+}
 .hunter-build-slot--empty .hunter-build-slot-plus {
   font-family: 'Cinzel', serif;
   font-size: 2.4rem;
@@ -15973,14 +15981,14 @@ body.reveal-locked { overflow: hidden; }
   filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.35));
 }
 .hunter-build-slot--empty .hunter-build-slot-empty-label {
-  position: absolute;
-  bottom: 7px;
-  left: 0; right: 0;
   text-align: center;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.35);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 6px;
+  text-transform: uppercase;
 }
 
 .hunter-build-slot--locked {
@@ -16045,47 +16053,51 @@ body.reveal-locked { overflow: hidden; }
    gold-rimmed pill in the top-left identifying the slot type:
    HELM / WEAPON / PLATE / GLOVES / BOOTS / RING. This anchors the
    equipment fantasy without reintroducing the body-socket art. */
+/* Full-width TOP BANNER carrying the slot identity (HELM /
+   WEAPON / PLATE / GLOVES / BOOTS / RING). Renders on every tile
+   regardless of state. Replaces the prior top-left pill, which
+   was too easy to lose on bright card art. The banner sits at
+   z-index 8 — above the item-name bottom band (z-index 3) and
+   the art (default) — so the slot identity is always visible. */
 .hunter-build-slot-label {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  z-index: 5;
-  padding: 3px 7px;
-  border-radius: 999px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.50rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  color: #f8e7b0;
-  background: rgba(10, 10, 24, 0.72);
-  border: 1px solid rgba(245, 158, 11, 0.30);
-  box-shadow:
-    0 0 10px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  text-transform: uppercase;
-  pointer-events: none;
-}
-.hunter-build-slot--equipped .hunter-build-slot-label {
-  border-color: rgba(245, 158, 11, 0.55);
-}
-
-/* Subtle top-strip vignette behind the slot pill on equipped
-   tiles. Keeps the pill legible regardless of how bright the
-   underlying card art is at the top of the canvas. */
-.hunter-build-slot-top-fade {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 42px;
-  z-index: 4;
+  z-index: 8;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #f8e7b0;
   background: linear-gradient(180deg,
-    rgba(0, 0, 0, 0.62) 0%,
-    rgba(0, 0, 0, 0.18) 60%,
-    transparent 100%);
+    rgba(8, 8, 18, 0.94) 0%,
+    rgba(8, 8, 18, 0.72) 100%);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.28);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.90);
   pointer-events: none;
+}
+.hunter-build-slot--equipped .hunter-build-slot-label {
+  border-bottom-color: rgba(245, 158, 11, 0.55);
+}
+.hunter-build-slot--locked .hunter-build-slot-label {
+  color: rgba(248, 231, 176, 0.65);
+  border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Empty-slot "Tap to equip" helper line under the EMPTY label */
+.hunter-build-slot-empty-hint {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.36);
+  margin-top: 2px;
 }
 
 /* Item name band — sits below the slot label on equipped tiles.
