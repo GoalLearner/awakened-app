@@ -6,8 +6,35 @@
 <title>Awakened — Leaderboard Preview (Simulated Hunters)</title>
 <!-- Production CSS so the cards match the live sheet exactly. -->
 <link rel="stylesheet" href="styles.css?v=258">
-<!-- The pure sim module, same one that ships into the app. -->
-<script src="simulated-leaderboard.js?v=2"></script>
+<!-- The pure sim module, same one that ships into the app. The bare
+     `?v=2-fresh` query is a SW-cache buster: the SW uses
+     ignoreSearch:true so any unique query is fine. The inline script
+     block below unregisters any stale SW that might be serving an old
+     copy of this file. -->
+<script>
+  // Preview-only: unregister the service worker on first visit so the
+  // browser fetches simulated-leaderboard.js fresh from the network.
+  // Without this, the SW's cache-first + ignoreSearch handler can
+  // serve the v1 module no matter how we bump the ?v= query.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      if (regs.length === 0) return;
+      var unregistered = sessionStorage.getItem('preview_sw_unregistered');
+      if (unregistered) return;
+      sessionStorage.setItem('preview_sw_unregistered', '1');
+      Promise.all(regs.map(function(r) { return r.unregister(); }))
+        .then(function() {
+          if (window.caches && caches.keys) {
+            return caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            });
+          }
+        })
+        .then(function() { window.location.reload(); });
+    });
+  }
+</script>
+<script src="simulated-leaderboard.js?v=2-fresh"></script>
 <style>
   /* Preview-only chrome — the leaderboard rows themselves use production
      .lb-rank-* classes from styles.css. */
