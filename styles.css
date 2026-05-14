@@ -15759,6 +15759,12 @@ body.reveal-locked { overflow: hidden; }
   border-radius: 10px;
   margin-bottom: 10px;
 }
+/* v3 Phase 1k — DAILY OBJECTIVES section header owns habit progress
+   on the Habits tab. Hide the duplicate counter portion here and
+   reflow so souls + perfect-streak sit clean on the right edge. The
+   strip stays visible on every OTHER tab (Profile, Stats, etc.). */
+body[data-active-tab="habits"] .today-strip-left { display: none; }
+body[data-active-tab="habits"] .today-strip { justify-content: flex-end; }
 .today-strip-left {
   display: flex;
   align-items: baseline;

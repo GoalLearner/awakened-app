@@ -11139,6 +11139,11 @@
     // fresh) should not leave the modal hanging over.
     if (typeof closeBossFullScreen === 'function') closeBossFullScreen();
     currentTab = tab;
+    // v3 Phase 1k — expose active tab on <body> so CSS can hide /
+    // reflow tab-specific chrome (e.g., the duplicate "X / Y HABITS
+    // TODAY" tile on the Habits tab, now that Daily Objectives owns
+    // habit progress on this screen).
+    try { document.body.dataset.activeTab = tab; } catch (_) {}
     // Exit reorder mode whenever we leave the habits tab
     document.getElementById('habit-list').classList.remove('reorder-mode');
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
