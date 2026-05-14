@@ -15759,12 +15759,12 @@ body.reveal-locked { overflow: hidden; }
   border-radius: 10px;
   margin-bottom: 10px;
 }
-/* v3 Phase 1k — DAILY OBJECTIVES section header owns habit progress
-   on the Habits tab. Hide the duplicate counter portion here and
-   reflow so souls + perfect-streak sit clean on the right edge. The
-   strip stays visible on every OTHER tab (Profile, Stats, etc.). */
-body[data-active-tab="habits"] .today-strip-left { display: none; }
-body[data-active-tab="habits"] .today-strip { justify-content: flex-end; }
+/* v3 Phase 1k revert (1l) — the top header's "X / Y HABITS TODAY"
+   tile is the canonical habit-progress summary on every tab. The
+   Daily Objectives section header that briefly lived on the Habits
+   tab was removed; the .today-strip-left counter is no longer
+   hidden. (Body data-active-tab attribute is still set for any
+   future tab-specific styling.) */
 .today-strip-left {
   display: flex;
   align-items: baseline;

@@ -10282,18 +10282,10 @@
     document.getElementById('progress-bar').style.width = pct + '%';
     const listEl = document.getElementById('habit-list');
     if (listEl) listEl.classList.toggle('all-complete', total > 0 && done === total);
-    // v3 Phase 1k — DAILY OBJECTIVES section header live-binds to the
-    // same done/total values. Lives inside #main-scroll above the grid.
-    try {
-      const numEl   = document.getElementById('codex-counter-num');
-      const totalEl = document.getElementById('codex-counter-total');
-      const fillEl  = document.getElementById('codex-section-progress-fill');
-      const counter = document.getElementById('codex-section-counter');
-      if (numEl)   numEl.textContent   = done;
-      if (totalEl) totalEl.textContent = total;
-      if (fillEl)  fillEl.style.width  = pct + '%';
-      if (counter) counter.classList.toggle('codex-section-counter--all', total > 0 && done === total);
-    } catch (_) {}
+    // v3 Phase 1l — Daily Objectives section header was removed; the
+    // top .today-strip tile is now the canonical habit-progress
+    // summary on the Habits tab (already updated above via
+    // #completed-count / #total-count / #progress-bar writes).
     updatePerfectStreakDisplay();
     renderCompoundProgress();
     // v2.1.0 status-header redesign — dependent cards
