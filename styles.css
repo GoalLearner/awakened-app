@@ -17879,3 +17879,454 @@ body.reveal-locked { overflow: hidden; }
   font-weight: 800;
   line-height: 1;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1m — Notifications UI (claudedesign port).
+   Three surfaces:
+     1. #notif-explain-overlay — permission pre-prompt
+     2. #reminder-offer-overlay — per-habit / pack reminder offer sheet
+     3. Settings → REMINDERS section — Daily System Pings rows + voice
+        preview cards
+   IDs preserved; only visual layer + a few new sibling elements.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── 1. Permission pre-prompt ─── */
+.notif-explain.notif-explain--codex .notif-explain-card {
+  width: min(92vw, 380px);
+  padding: 24px 22px 22px;
+  background:
+    radial-gradient(140% 80% at 50% -15%, rgba(139, 92, 246, 0.20) 0%, transparent 55%),
+    radial-gradient(100% 60% at 50% 110%, rgba(99, 71, 165, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #14143a 0%, #0a0a20 100%);
+  border: 1px solid rgba(139, 92, 246, 0.40);
+  border-radius: 18px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 32px rgba(139, 92, 246, 0.28);
+  text-align: center;
+}
+.notif-explain-kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.notif-explain-rune-line {
+  flex: 1;
+  height: 1px;
+  max-width: 80px;
+}
+.notif-explain-rune-line--l { background: linear-gradient(90deg,  transparent, rgba(245, 184, 66, 0.35)); }
+.notif-explain-rune-line--r { background: linear-gradient(270deg, transparent, rgba(245, 184, 66, 0.35)); }
+.notif-explain-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.30em;
+  color: #f5b842;
+  text-transform: uppercase;
+}
+.notif-explain-title {
+  margin: 4px 0 12px;
+  font-family: Georgia, "Cormorant Garamond", serif;
+  font-style: italic;
+  font-size: 1.55rem;
+  line-height: 1.15;
+  color: #f5f5fa;
+  letter-spacing: -0.3px;
+}
+.notif-explain-title em {
+  font-style: italic;
+  color: #f5b842;
+  font-family: inherit;
+}
+.notif-explain-body {
+  margin: 0 0 18px;
+  font-size: 0.85rem;
+  color: #9090a8;
+  line-height: 1.5;
+  padding: 0 6px;
+}
+.notif-explain-types {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.notif-type-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #14143a 0%, #0e0e2a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  text-align: left;
+}
+.notif-type-glyph {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(99, 71, 165, 0.10));
+  border: 1px solid rgba(139, 92, 246, 0.40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.28);
+}
+.notif-type-text { flex: 1; min-width: 0; }
+.notif-type-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f5f5fa;
+  letter-spacing: 0.05px;
+  margin-bottom: 2px;
+}
+.notif-type-desc {
+  font-size: 0.68rem;
+  color: #9090a8;
+  line-height: 1.35;
+}
+.notif-type-time {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: #54546e;
+  flex: 0 0 auto;
+}
+.notif-explain-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.notif-explain-btn {
+  padding: 14px 16px;
+  border-radius: 11px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.20px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid transparent;
+  transition: transform 0.12s, box-shadow 0.18s, background 0.18s;
+}
+.notif-explain-btn:active { transform: scale(0.98); }
+.notif-explain-btn--primary {
+  color: #fff;
+  background: linear-gradient(180deg, #8b5cf6 0%, #6d3acc 100%);
+  border-color: rgba(139, 92, 246, 0.40);
+  box-shadow:
+    0 0 24px rgba(139, 92, 246, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.notif-explain-btn--primary:hover { box-shadow: 0 0 28px rgba(139, 92, 246, 0.50); }
+.notif-explain-btn-rune { color: #f5b842; font-size: 0.80rem; }
+.notif-explain-btn--ghost {
+  background: transparent;
+  border: none;
+  color: #9090a8;
+  font-weight: 600;
+}
+.notif-explain-trust {
+  margin: 0;
+  font-family: Georgia, "Cormorant Garamond", serif;
+  font-style: italic;
+  font-size: 0.70rem;
+  color: #54546e;
+  letter-spacing: 0.15px;
+  text-align: center;
+}
+.notif-explain-trust-icon { margin-right: 5px; vertical-align: -1px; color: #54546e; }
+
+/* ─── 2. Reminder offer sheet ─── */
+.reminder-offer.reminder-offer--codex .reminder-offer-card {
+  width: min(92vw, 380px);
+  padding: 22px 22px 20px;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(139, 92, 246, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #14143a 0%, #0a0a20 100%);
+  border: 1px solid rgba(139, 92, 246, 0.40);
+  border-radius: 18px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 32px rgba(139, 92, 246, 0.25);
+  text-align: center;
+}
+.reminder-offer-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  font-weight: 800;
+  letter-spacing: 0.30em;
+  color: #f5b842;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.reminder-offer-title {
+  margin: 0 0 8px;
+  font-family: Georgia, "Cormorant Garamond", serif;
+  font-style: italic;
+  font-size: 1.45rem;
+  line-height: 1.15;
+  color: #f5f5fa;
+  letter-spacing: -0.3px;
+}
+.reminder-offer-sub {
+  font-size: 0.78rem;
+  color: #9090a8;
+  line-height: 1.45;
+  padding: 0 4px;
+  margin-bottom: 16px;
+}
+.reminder-offer-sub strong { color: #f5f5fa; font-weight: 700; }
+.reminder-offer-time-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.reminder-offer-time-input {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f5b842;
+  background: rgba(245, 184, 66, 0.05);
+  border: 1px solid rgba(245, 184, 66, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  -webkit-appearance: none;
+  appearance: none;
+  color-scheme: dark;
+}
+.reminder-offer-time-hint {
+  font-family: Georgia, "Cormorant Garamond", serif;
+  font-style: italic;
+  font-size: 0.70rem;
+  color: #54546e;
+  letter-spacing: 0.15px;
+}
+.reminder-offer-actions {
+  display: flex;
+  gap: 10px;
+}
+.reminder-offer-btn {
+  padding: 13px 16px;
+  border-radius: 11px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.20px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid transparent;
+  transition: transform 0.12s, box-shadow 0.18s, background 0.18s;
+}
+.reminder-offer-btn:active { transform: scale(0.98); }
+.reminder-offer-btn--ghost {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9090a8;
+}
+.reminder-offer-btn--primary {
+  flex: 1.4;
+  color: #fff;
+  background: linear-gradient(180deg, #8b5cf6 0%, #6d3acc 100%);
+  border-color: rgba(139, 92, 246, 0.40);
+  box-shadow:
+    0 0 16px rgba(139, 92, 246, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.reminder-offer-btn-rune { color: #f5b842; font-size: 0.78rem; }
+
+/* ─── 3. Settings → REMINDERS panel ─── */
+.notif-subsection-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #f5b842;
+  text-transform: uppercase;
+  margin: 18px 0 4px;
+  padding: 0 2px;
+}
+.settings-rem-note--sub {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #54546e;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+.settings-rem-note--hint {
+  font-size: 0.70rem;
+  color: rgba(245, 245, 250, 0.42);
+  margin: 8px 0 4px;
+  text-align: center;
+}
+.settings-rem-note--hint strong { color: #f5b842; font-weight: 700; }
+
+/* Daily System Pings rows */
+.notif-ping-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20, 20, 58, 0.6) 0%, rgba(14, 14, 42, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.notif-ping-row--readonly { opacity: 0.85; }
+.notif-ping-glyph {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.notif-ping-text { flex: 1; min-width: 0; }
+.notif-ping-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f5f5fa;
+  letter-spacing: 0.05px;
+  line-height: 1.2;
+}
+.notif-ping-desc {
+  font-size: 0.66rem;
+  color: #9090a8;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.notif-ping-time-btn,
+.notif-ping-time-static {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.70rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f5b842;
+  background: rgba(245, 184, 66, 0.06);
+  border: 1px solid rgba(245, 184, 66, 0.28);
+  border-radius: 6px;
+  padding: 5px 9px;
+  min-width: 70px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.notif-ping-time-btn { cursor: pointer; transition: background 0.18s, border-color 0.18s; }
+.notif-ping-time-btn:hover {
+  background: rgba(245, 184, 66, 0.12);
+  border-color: rgba(245, 184, 66, 0.45);
+}
+.notif-ping-time-static {
+  color: #9090a8;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Habit-reminders count chip in view-all button */
+.settings-rem-count-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(245, 184, 66, 0.10);
+  border: 0.5px solid rgba(245, 184, 66, 0.35);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: #f5b842;
+  letter-spacing: 0.04em;
+  margin-left: 6px;
+}
+
+/* Voice preview cards */
+.notif-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.notif-preview-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px 12px 14px;
+  background: linear-gradient(180deg, #1a1a3d 0%, #14142c 100%);
+  border: 1px solid rgba(139, 92, 246, 0.40);
+  border-radius: 11px;
+  box-shadow:
+    0 0 16px rgba(139, 92, 246, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+.notif-preview-accent {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #f5b842, transparent);
+  opacity: 0.7;
+}
+.notif-preview-glyph {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: rgba(139, 92, 246, 0.18);
+  border: 0.5px solid rgba(139, 92, 246, 0.40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.notif-preview-content { flex: 1; min-width: 0; }
+.notif-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.notif-preview-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: #f5b842;
+  text-transform: uppercase;
+}
+.notif-preview-time {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #54546e;
+  font-variant-numeric: tabular-nums;
+}
+.notif-preview-body {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #f5f5fa;
+  line-height: 1.35;
+  letter-spacing: 0.05px;
+}

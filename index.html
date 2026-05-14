@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=247">
+  <link rel="stylesheet" href="styles.css?v=248">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1191,33 +1191,107 @@
   </div>
 
   <!-- Notification-permission explainer (shown once before iOS native prompt) -->
-  <div id="notif-explain-overlay" class="custom-overlay hidden">
-    <div class="custom-card">
-      <div class="custom-title">📲 Awakened can remind you</div>
-      <div class="custom-sub" style="text-align:center;line-height:1.5;margin-bottom:24px">
-        Get a single reminder for each habit at the time you choose.<br>
-        We send max 3 per day. Quiet hours respected. You're in control.
+  <!-- v3 Phase 1m — Permission pre-prompt redesign (claudedesign port).
+       Tactical system messages framing replaces the prior generic
+       "we can remind you" copy. Three notification types previewed
+       so the user knows exactly what they're opting into. IDs
+       preserved so existing JS handlers fire unchanged. -->
+  <div id="notif-explain-overlay" class="custom-overlay notif-explain notif-explain--codex hidden">
+    <div class="custom-card notif-explain-card">
+      <div class="notif-explain-kicker-row">
+        <span class="notif-explain-rune-line notif-explain-rune-line--l" aria-hidden="true"></span>
+        <span class="notif-explain-kicker">The System</span>
+        <span class="notif-explain-rune-line notif-explain-rune-line--r" aria-hidden="true"></span>
       </div>
-      <div class="custom-actions">
-        <button id="notif-explain-cancel" class="custom-btn custom-btn-cancel" type="button">Not now</button>
-        <button id="notif-explain-enable" class="custom-btn custom-btn-save"   type="button">Enable reminders</button>
+      <h2 class="notif-explain-title">Let the system <em>call you back</em>.</h2>
+      <p class="notif-explain-body">Awakened sends tactical reminders to help you start the day, protect momentum, and close the loop.</p>
+
+      <div class="notif-explain-types">
+        <div class="notif-type-card">
+          <div class="notif-type-glyph notif-type-glyph--sunrise" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 22 22">
+              <circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/>
+              <g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9">
+                <path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/>
+              </g>
+              <path d="M3 17h16" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+            </svg>
+          </div>
+          <div class="notif-type-text">
+            <div class="notif-type-name">Morning Briefing</div>
+            <div class="notif-type-desc">Review today's objectives.</div>
+          </div>
+          <div class="notif-type-time">AT WAKE</div>
+        </div>
+        <div class="notif-type-card">
+          <div class="notif-type-glyph notif-type-glyph--shield" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 22 22">
+              <path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/>
+              <path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="notif-type-text">
+            <div class="notif-type-name">Momentum Check</div>
+            <div class="notif-type-desc">Protect the chain before the day slips.</div>
+          </div>
+          <div class="notif-type-time">1:00 PM</div>
+        </div>
+        <div class="notif-type-card">
+          <div class="notif-type-glyph notif-type-glyph--moon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 22 22">
+              <path d="M16 12.5A7 7 0 119.5 6a5.5 5.5 0 006.5 6.5z" fill="#f5b842" fill-opacity="0.2" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/>
+              <circle cx="14" cy="6" r="0.9" fill="#f5b842" opacity="0.7"/>
+              <circle cx="17" cy="9" r="0.6" fill="#f5b842" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="notif-type-text">
+            <div class="notif-type-name">Evening Closeout</div>
+            <div class="notif-type-desc">Finish what remains. Seal the day.</div>
+          </div>
+          <div class="notif-type-time">7:00 PM</div>
+        </div>
       </div>
+
+      <div class="notif-explain-actions">
+        <button id="notif-explain-enable" class="notif-explain-btn notif-explain-btn--primary" type="button">
+          <span class="notif-explain-btn-rune" aria-hidden="true">✦</span>
+          Enable Notifications
+        </button>
+        <button id="notif-explain-cancel" class="notif-explain-btn notif-explain-btn--ghost" type="button">Not Now</button>
+      </div>
+
+      <p class="notif-explain-trust">
+        <span class="notif-explain-trust-icon" aria-hidden="true">
+          <svg width="9" height="11" viewBox="0 0 9 11">
+            <path d="M2 4.5V3a2.5 2.5 0 015 0v1.5" stroke="currentColor" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+            <rect x="1" y="4.5" width="7" height="6" rx="1" stroke="currentColor" stroke-width="0.9" fill="none"/>
+          </svg>
+        </span>
+        No spam. You stay in control.
+      </p>
     </div>
   </div>
 
-  <!-- Per-habit reminder offer (B in onboarding spec) — appears after a
-       habit is added or a pack is confirmed. Reuses .custom-overlay /
-       .custom-card. The time-input row is hidden in batch (pack) mode. -->
-  <div id="reminder-offer-overlay" class="custom-overlay hidden">
-    <div class="custom-card">
-      <div id="reminder-offer-title"   class="custom-title">📲 Want a reminder for it?</div>
-      <div id="reminder-offer-sub"     class="custom-sub" style="text-align:center;line-height:1.5;margin-bottom:18px"></div>
-      <div id="reminder-offer-time-row" class="reminder-offer-time-row" style="margin-bottom:18px;text-align:center;display:none">
+  <!-- v3 Phase 1m — Reminder offer (per-habit OR pack) — redesigned
+       as a premium "System Offer" sheet. IDs preserved so existing
+       JS hooks (offerHabitReminder / offerPackReminders) fire
+       unchanged. The time-input row is hidden in batch (pack) mode
+       and JS overrides title + sub copy + button labels there. -->
+  <div id="reminder-offer-overlay" class="custom-overlay reminder-offer reminder-offer--codex hidden">
+    <div class="custom-card reminder-offer-card">
+      <div class="reminder-offer-kicker">System Offer</div>
+      <h2 id="reminder-offer-title" class="reminder-offer-title">Set a reminder?</h2>
+      <div id="reminder-offer-sub" class="reminder-offer-sub"></div>
+      <div id="reminder-offer-time-row" class="reminder-offer-time-row" style="display:none">
         <input id="reminder-offer-time" type="time" value="07:00" class="reminder-offer-time-input">
+        <span class="reminder-offer-time-hint">Choose when the system calls you back</span>
       </div>
-      <div class="custom-actions">
-        <button id="reminder-offer-skip" class="custom-btn custom-btn-cancel" type="button">Skip</button>
-        <button id="reminder-offer-save" class="custom-btn custom-btn-save"   type="button">Set Reminder</button>
+      <div class="reminder-offer-actions">
+        <button id="reminder-offer-skip" class="reminder-offer-btn reminder-offer-btn--ghost" type="button">Skip</button>
+        <button id="reminder-offer-save" class="reminder-offer-btn reminder-offer-btn--primary" type="button">
+          <span class="reminder-offer-btn-rune" aria-hidden="true">✦</span>
+          Set Reminder
+        </button>
       </div>
     </div>
   </div>
@@ -1573,7 +1647,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=326"></script>
+  <script src="app.js?v=327"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1816,10 +1890,10 @@
       </div>
     </div>
 
-    <!-- Reminders — collapsible -->
+    <!-- Reminders — collapsible (v3 Phase 1m redesign) -->
     <div class="settings-collapsible">
       <button id="settings-rem-section-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="reminders">
-        <span class="settings-collapsible-lbl">REMINDERS</span>
+        <span class="settings-collapsible-lbl">NOTIFICATIONS</span>
         <span id="settings-rem-section-summary" class="settings-collapsible-summary">0 active</span>
         <span class="settings-collapsible-chevron">›</span>
       </button>
@@ -1835,33 +1909,77 @@
         Reminders work best in the iOS app. Install from App Store for full functionality.
       </p>
 
-      <!-- Daily morning reminder — the once-a-day digest. Tap the time
-           button to open a custom picker (hour column + 15-min minute
-           column) — identical to the post-onboarding confirmation toast.
-           This avoids the platform-inconsistent native time wheel. -->
-      <div class="settings-rem-row settings-rem-row--digest">
-        <span class="settings-rem-label">Daily morning reminder</span>
-        <button id="settings-rem-digest-btn" class="settings-rem-digest-btn" type="button">9:00 AM</button>
+      <!-- v3 Phase 1m — DAILY SYSTEM PINGS sub-section.
+           Three rows: Morning Briefing (user-configurable time),
+           Momentum Check (fixed 1 PM), Evening Closeout (fixed 7 PM).
+           Only Morning Briefing has a user-editable time today; the
+           other two are governed by the master Disable toggle below. -->
+      <div class="notif-subsection-label">DAILY SYSTEM PINGS</div>
+      <p class="settings-rem-note settings-rem-note--sub">Three tactical messages per day.</p>
+
+      <div class="notif-ping-row">
+        <div class="notif-ping-glyph" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 22 22">
+            <circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/>
+            <g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9">
+              <path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/>
+            </g>
+            <path d="M3 17h16" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+          </svg>
+        </div>
+        <div class="notif-ping-text">
+          <div class="notif-ping-name">Morning Briefing</div>
+          <div class="notif-ping-desc">Review today's objectives.</div>
+        </div>
+        <button id="settings-rem-digest-btn" class="settings-rem-digest-btn notif-ping-time-btn" type="button">9:00 AM</button>
       </div>
-      <button id="settings-rem-digest-clear" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button" style="margin-bottom:14px">Turn off morning reminder</button>
+      <button id="settings-rem-digest-clear" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button" style="margin:0 0 10px">Turn off Morning Briefing</button>
 
-      <!-- Daily limit removed in v1.1.3 — with the morning-digest-first
-           model, the user controls reminder cadence by choosing whether
-           to add per-habit reminders, not via a global cap. -->
+      <div class="notif-ping-row notif-ping-row--readonly">
+        <div class="notif-ping-glyph" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 22 22">
+            <path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/>
+            <path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="notif-ping-text">
+          <div class="notif-ping-name">Momentum Check</div>
+          <div class="notif-ping-desc">Protect the chain before the day slips.</div>
+        </div>
+        <span class="notif-ping-time-static">1:00 PM</span>
+      </div>
 
+      <div class="notif-ping-row notif-ping-row--readonly">
+        <div class="notif-ping-glyph" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 22 22">
+            <path d="M16 12.5A7 7 0 119.5 6a5.5 5.5 0 006.5 6.5z" fill="#f5b842" fill-opacity="0.2" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/>
+            <circle cx="14" cy="6" r="0.9" fill="#f5b842" opacity="0.7"/>
+            <circle cx="17" cy="9" r="0.6" fill="#f5b842" opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="notif-ping-text">
+          <div class="notif-ping-name">Evening Closeout</div>
+          <div class="notif-ping-desc">Finish what remains. Seal the day.</div>
+        </div>
+        <span class="notif-ping-time-static">7:00 PM</span>
+      </div>
+
+      <p class="settings-rem-note settings-rem-note--hint">Use <strong>Disable all reminders</strong> below to silence all three at once.</p>
 
       <!-- Quiet hours -->
+      <div class="notif-subsection-label">QUIET HOURS</div>
+      <p class="settings-rem-note settings-rem-note--sub">Reminders skip this window unless you chose the exact time on a habit.</p>
       <div class="settings-rem-row settings-rem-row--toggle">
-        <span class="settings-rem-label">Quiet hours</span>
+        <span class="settings-rem-label">Enabled</span>
         <button id="settings-rem-quiet-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Quiet hours"></button>
       </div>
       <div id="settings-rem-quiet-times" class="settings-rem-quiet-times">
         <label class="settings-rem-time-lbl">From <input id="settings-rem-quiet-start" type="time" class="settings-rem-time-input"></label>
         <label class="settings-rem-time-lbl">to <input id="settings-rem-quiet-end" type="time" class="settings-rem-time-input"></label>
       </div>
-      <p class="settings-rem-note">Quiet hours don't block reminders you set explicitly during those times.</p>
 
       <!-- Pause -->
+      <div class="notif-subsection-label">PAUSE NOTIFICATIONS</div>
       <div class="settings-rem-pause-row">
         <button id="settings-rem-pause-24" class="settings-rem-pause-btn" type="button">Pause 24h</button>
         <button id="settings-rem-pause-7d" class="settings-rem-pause-btn" type="button">Pause 7 days</button>
@@ -1875,12 +1993,20 @@
         <button id="settings-rem-master-toggle" class="settings-toggle" role="switch" aria-checked="false" aria-label="Disable all reminders"></button>
       </div>
 
-      <!-- Active count + view-all -->
+      <!-- Habit Reminders -->
+      <div class="notif-subsection-label">HABIT REMINDERS</div>
+      <p class="settings-rem-note settings-rem-note--sub">Personal nudges for individual habits.</p>
       <button id="settings-rem-view-all" class="settings-rem-view-all" type="button">
-        Active reminders: <span id="settings-rem-count">0</span>
+        View all habit reminders <span id="settings-rem-count" class="settings-rem-count-chip">0</span>
         <span class="settings-rem-view-arrow">›</span>
       </button>
       <div id="settings-rem-list" class="settings-rem-list hidden"></div>
+
+      <!-- v3 Phase 1m — Notification voice previews -->
+      <div class="notif-subsection-label">VOICE PREVIEW</div>
+      <p class="settings-rem-note settings-rem-note--sub">What the system will say.</p>
+      <div id="notif-preview-list" class="notif-preview-list"></div>
+
       </div><!-- /settings-rem-section-body -->
     </div>
 

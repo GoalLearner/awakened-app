@@ -15870,6 +15870,75 @@
     document.getElementById('settings-overlay').classList.remove('hidden');
     sheet.classList.remove('hidden');
     requestAnimationFrame(() => sheet.classList.add('ss-open'));
+    // v3 Phase 1m — render the notification VOICE PREVIEW with live
+    // copy so the user sees what each system ping would say RIGHT NOW.
+    try { renderNotifPreviewCards(); } catch (_) {}
+  }
+
+  // v3 Phase 1m — Notification voice preview renderer.
+  // Builds three preview cards (Morning Briefing / Momentum Check /
+  // Evening Closeout) using the live composeDigestBody /
+  // computeMidDayBody / pickCheckinCopy functions so the user sees
+  // EXACTLY what each system ping would currently say.
+  function renderNotifPreviewCards() {
+    const root = document.getElementById('notif-preview-list');
+    if (!root) return;
+    // Pull live copy from the Notif module (exposed via window.Notif).
+    let morningBody = '';
+    let midDayBody = '';
+    let eveningBody = '';
+    try {
+      if (typeof window.Notif === 'object' && window.Notif.composeDigestBody) {
+        morningBody = window.Notif.composeDigestBody() || '';
+      }
+    } catch (_) {}
+    try {
+      midDayBody = (typeof computeMidDayBody === 'function' ? computeMidDayBody() : null) || 'Day clear. Nothing pressing.';
+    } catch (_) { midDayBody = 'Day clear. Nothing pressing.'; }
+    try {
+      const prog = (typeof getTodaysHabitProgress === 'function') ? getTodaysHabitProgress() : { completed: 0, total: 0 };
+      const state = (typeof getCheckinProgressState === 'function')
+        ? getCheckinProgressState(prog.completed, prog.total) : 'none';
+      eveningBody = (state && typeof pickCheckinCopy === 'function')
+        ? pickCheckinCopy(state, prog.completed, prog.total) : '';
+    } catch (_) {}
+
+    // Morning time: read user-set or fall back to 9:00 AM
+    let morningTime = '9:00 AM';
+    try {
+      const raw = localStorage.getItem('hb_notif_daily_digest_time') || '';
+      const m = /^(\d{1,2}):(\d{2})$/.exec(raw);
+      if (m) {
+        const h = parseInt(m[1], 10); const min = m[2];
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = ((h + 11) % 12) + 1;
+        morningTime = h12 + ':' + min + ' ' + ampm;
+      }
+    } catch (_) {}
+
+    const cards = [
+      { kicker: 'MORNING BRIEFING', body: morningBody || 'Begin the hunt.', time: morningTime, glyph: 'sunrise' },
+      { kicker: 'MOMENTUM CHECK',   body: midDayBody  || 'Protect the chain.', time: '1:00 PM', glyph: 'shield' },
+      { kicker: 'EVENING CLOSEOUT', body: eveningBody || 'Finish what remains.', time: '7:00 PM', glyph: 'moon' },
+    ];
+    const glyphSvg = {
+      sunrise: '<svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/><g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9"><path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/></g><path d="M3 17h16" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/></svg>',
+      shield:  '<svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/><path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      moon:    '<svg width="18" height="18" viewBox="0 0 22 22"><path d="M16 12.5A7 7 0 119.5 6a5.5 5.5 0 006.5 6.5z" fill="#f5b842" fill-opacity="0.2" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+    };
+    root.innerHTML = cards.map(c =>
+      '<div class="notif-preview-card">' +
+        '<div class="notif-preview-accent" aria-hidden="true"></div>' +
+        '<div class="notif-preview-glyph">' + glyphSvg[c.glyph] + '</div>' +
+        '<div class="notif-preview-content">' +
+          '<div class="notif-preview-head">' +
+            '<span class="notif-preview-kicker">' + c.kicker + '</span>' +
+            '<span class="notif-preview-time">' + c.time + '</span>' +
+          '</div>' +
+          '<div class="notif-preview-body">' + esc(c.body) + '</div>' +
+        '</div>' +
+      '</div>'
+    ).join('');
   }
 
   function closeSettings() {
