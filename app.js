@@ -8881,81 +8881,124 @@
     const xpVal = diffPts(diff);
     const wknd  = isWeekend();
 
-    // No Alcohol weekend challenge badge
+    // No Alcohol weekend challenge badge — preserved verbatim.
     const isNoAlcohol   = habit.name === 'No alcohol';
     const naBadge       = isNoAlcohol ? getNoAlcoholBadge() : null;
-    // streakify the badge text so the "Day 2 of 3" variant uses the
-    // custom flame icon. Other badges (🏆 💰 ✅) pass through escaped.
     const naBadgeHTML   = naBadge
       ? '<div class="na-challenge-badge ' + naBadge.cls + '">' + streakify(naBadge.text, 14) + '</div>'
       : '';
 
-    // XP badge — ⚡+N XP (gold), ⚡+N XP 2× on weekends. The lightning
-    // icon is sized small to sit cleanly next to the +N XP text.
-    const xpBadge = wknd
-      ? '<span class="habit-xp weekend">' + xpIconHtml({ size: 14 }) + '+' + xpVal + ' XP <span class="xp-2x">2×</span></span>'
-      : '<span class="habit-xp">' + xpIconHtml({ size: 14 }) + '+' + xpVal + ' XP</span>';
+    // Auto-verify pill: shown when the habit was auto-verified today
+    // via HealthKit. With the v3 Phase 1k card redesign the "AUTO"
+    // pill is replaced by the dashed-blue-ring status indicator + the
+    // tiny blue lock dot on the gold disc when auto-complete; but we
+    // keep the boolean for any downstream consumer.
+    const isAutoVerified = (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);
+
+    // Read-only HealthKit-managed habits — Sleep, Daily walk, Sleep
+    // before midnight. Cannot be manually toggled; click routes to
+    // the Notes modal explainer instead.
+    const isReadOnly = isReadOnlyAutoVerifyHabit(habit);
+    // For the codex card, "auto" = either a HealthKit-auto-verifiable
+    // habit OR an already-auto-verified one. The dashed-blue-ring
+    // signals "system monitors this; you can't manually toggle".
+    const isAutoCard = isReadOnly || isAutoVerified ||
+      (typeof isHealthAutoVerifiableHabit === 'function' && isHealthAutoVerifiableHabit(habit));
 
     const li = document.createElement('li');
-    li.className = 'habit-item' + (done ? ' completed' : '');
+    li.className = 'habit-item codex' + (done ? ' completed' : '') +
+                   (isAutoCard ? ' codex--auto' : ' codex--manual');
     li.dataset.id = habit.id;
-    // Set difficulty colour variable for left-border glow and checkbox ring
     li.style.setProperty('--diff-color', DIFF_COLORS[diff] || DIFF_COLORS.easy);
 
-    // Auto-verify pill: shown ONLY when the habit was auto-verified
-    // today via HealthKit (currently only the canonical Daily walk).
-    // Subtle by design — a marker, not a celebration. See CLAUDE.md
-    // "Per-habit reminders" + "HealthKit auto-verify" sections.
-    const isAutoVerified = (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);
-    const autoPillHTML = isAutoVerified
-      ? '<span class="auto-verify-pill" title="Auto-verified via Apple Health">AUTO</span>'
+    // v3 Phase 1k — stat color. Read primary stat (curated lookup or
+    // habit.primaryStat for customs), fall back to brand purple.
+    const statId   = (typeof getHabitPrimaryStat === 'function') ? getHabitPrimaryStat(habit) : null;
+    const statDef  = statId && Array.isArray(STATS) ? STATS.find(s => s.id === statId) : null;
+    const statHex  = (statDef && statDef.color) || '#8b5cf6';
+    // Convert hex → rgb tuple for CSS var (used by gradient rings).
+    const _h = statHex.replace('#', '');
+    const _r = parseInt(_h.slice(0, 2), 16);
+    const _g = parseInt(_h.slice(2, 4), 16);
+    const _b = parseInt(_h.slice(4, 6), 16);
+    li.style.setProperty('--stat-rgb', _r + ', ' + _g + ', ' + _b);
+
+    // ── Codex status indicator (top-right) ──
+    let statusHtml;
+    if (done) {
+      statusHtml =
+        '<div class="codex-status-disc">' +
+          '<svg width="13" height="13" viewBox="0 0 11 11" aria-hidden="true">' +
+            '<path d="M2 5.5l2.5 2.5L9 3" stroke="#1a1232" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '</svg>' +
+          (isAutoCard
+            ? '<div class="codex-status-auto-dot" aria-label="System-verified by Apple Health">' +
+                '<svg width="5" height="6" viewBox="0 0 5 6" aria-hidden="true">' +
+                  '<path d="M1.4 2.6V1.7a1.1 1.1 0 012.2 0v0.9" stroke="#79b4ff" stroke-width="0.7" fill="none" stroke-linecap="round"/>' +
+                  '<rect x="0.9" y="2.6" width="3.2" height="2.5" rx="0.4" stroke="#79b4ff" stroke-width="0.7" fill="none"/>' +
+                '</svg>' +
+              '</div>'
+            : '') +
+        '</div>';
+    } else if (isAutoCard) {
+      statusHtml =
+        '<div class="codex-status-auto"' + (isReadOnly ? ' title="System-managed by Apple Health"' : '') + '>' +
+          '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true">' +
+            '<path d="M2.5 4V2.5a2 2 0 014 0V4" stroke="#79b4ff" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+            '<rect x="1.5" y="4" width="6" height="5" rx="0.8" stroke="#79b4ff" stroke-width="1" fill="none"/>' +
+          '</svg>' +
+        '</div>';
+    } else {
+      statusHtml = '<div class="codex-status-ring"></div>';
+    }
+
+    // ── Streak (top-left, floating gold glyph) ──
+    const streakHtml = count > 0
+      ? '<div class="codex-streak"><svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true">' +
+          '<path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/>' +
+        '</svg>' + count + '</div>'
       : '';
 
-    // Read-only system-managed habit (currently only "Sleep before
-    // midnight"). Subtle visual cue — the card stays clickable, but
-    // the check circle gets a lock-indicator modifier and the click
-    // routes to the Notes modal instead of toggleHabit. See
-    // isReadOnlyAutoVerifyHabit() for the gate.
-    const isReadOnly = isReadOnlyAutoVerifyHabit(habit);
-    const cbClass = 'habit-cb' + (done ? ' checked' : '') + (isReadOnly ? ' habit-cb--readonly' : '');
+    // ── Icon centered ──
+    const iconHtml = getHabitIcon(habit)
+      ? '<div class="codex-icon-wrap">' + habitIconHtml(habit, { size: 80 }) + '</div>'
+      : (habit.emoji
+        ? '<div class="codex-icon-wrap codex-icon-wrap--emoji"><span class="habit-emoji">' + habit.emoji + '</span></div>'
+        : '<div class="codex-icon-wrap"></div>');
+
+    // ── XP chip ──
+    const xpChipHtml =
+      '<div class="codex-xp-chip">' +
+        '<svg width="5" height="7" viewBox="0 0 5 7" aria-hidden="true">' +
+          '<path d="M3 0L0 4h2l-0.7 3L5 2.5H3l1-2.5z" fill="currentColor"/>' +
+        '</svg>+' + xpVal + ' XP' +
+        (wknd ? '<span class="codex-xp-chip-2x">2×</span>' : '') +
+      '</div>';
 
     li.innerHTML =
-      // Top row: streak badge (left) + auto-pill (when set) + check circle (right)
-      '<div class="hg-top">' +
-        '<div class="streak-badge' + (count > 0 ? ' active' : '') + '">' +
-          (count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '') +
-        '</div>' +
-        autoPillHTML +
-        '<div class="' + cbClass + '"' + (isReadOnly ? ' title="System-managed by Apple Health"' : '') + '>' +
-          (isReadOnly ? '<span class="habit-cb-lock" aria-hidden="true">🔒</span>' : '') +
-          '<span class="check-mark">✓</span>' +
-        '</div>' +
+      // Outer stat-color/gold gradient ring (decorative)
+      '<div class="codex-card-ring" aria-hidden="true"></div>' +
+      // Card surface — gradient bg, bottom-glow (when complete), dust, rune corners
+      '<div class="codex-card-surface" aria-hidden="true">' +
+        (done ? '<div class="codex-bottom-glow"></div>' : '') +
       '</div>' +
-      // Emoji / habit icon centered. Curated habits with mapped art
-      // render as <img>; everything else (unmapped curated + custom)
-      // falls back to the emoji glyph. The icon is sized larger than
-      // an emoji so the DALL-E detail reads at habit-card scale.
-      '<div class="hg-emoji-wrap">' +
-        (getHabitIcon(habit)
-          ? '<span class="habit-emoji">' + habitIconHtml(habit, { size: 72 }) + '</span>'
-          : (habit.emoji ? '<span class="habit-emoji">' + habit.emoji + '</span>' : '')) +
-      '</div>' +
-      // Name (2-line clamp)
-      '<span class="habit-name">' + habitDisplayHTML(habit) + '</span>' +
-      // Bottom: diff badge + XP
-      '<div class="habit-meta">' +
-        '<span class="diff-badge ' + diff + '">' + DIFFICULTY[diff].label + '</span>' +
-        xpBadge +
+      streakHtml +
+      '<div class="codex-status">' + statusHtml + '</div>' +
+      iconHtml +
+      '<div class="codex-text-block">' +
+        (done ? '<div class="codex-sealed-banner">SEALED</div>' : '') +
+        '<div class="codex-name">' + habitDisplayHTML(habit) + '</div>' +
+        xpChipHtml +
       '</div>' +
       naBadgeHTML +
       buildSchedPills(habit) +
-      // Drag handle (hidden by default, shown in reorder mode)
+      // Drag handle — preserved exact attribute for drag system
       '<div class="drag-handle" data-drag>' +
         '<span class="drag-dot"></span><span class="drag-dot"></span>' +
         '<span class="drag-dot"></span><span class="drag-dot"></span>' +
         '<span class="drag-dot"></span><span class="drag-dot"></span>' +
       '</div>' +
-      // More button (absolute bottom-right)
+      // More button — preserved exact attribute for context menu
       '<button class="habit-more-btn" data-more aria-label="Options">' +
         (habitNotes[habit.id] ? '📝' : '···') +
       '</button>';
@@ -10207,6 +10250,18 @@
     document.getElementById('progress-bar').style.width = pct + '%';
     const listEl = document.getElementById('habit-list');
     if (listEl) listEl.classList.toggle('all-complete', total > 0 && done === total);
+    // v3 Phase 1k — DAILY OBJECTIVES section header live-binds to the
+    // same done/total values. Lives inside #main-scroll above the grid.
+    try {
+      const numEl   = document.getElementById('codex-counter-num');
+      const totalEl = document.getElementById('codex-counter-total');
+      const fillEl  = document.getElementById('codex-section-progress-fill');
+      const counter = document.getElementById('codex-section-counter');
+      if (numEl)   numEl.textContent   = done;
+      if (totalEl) totalEl.textContent = total;
+      if (fillEl)  fillEl.style.width  = pct + '%';
+      if (counter) counter.classList.toggle('codex-section-counter--all', total > 0 && done === total);
+    } catch (_) {}
     updatePerfectStreakDisplay();
     renderCompoundProgress();
     // v2.1.0 status-header redesign — dependent cards

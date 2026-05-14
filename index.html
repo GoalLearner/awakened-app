@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=243">
+  <link rel="stylesheet" href="styles.css?v=244">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -391,7 +391,23 @@
 
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
-      <ul id="habit-list" class="habit-list"></ul>
+      <!-- v3 Phase 1k — Daily Objectives section header.
+           Replaces the prior "0 / 11 HABITS TODAY" tile (still in the
+           page-header area, now visually subordinate). Populated by
+           renderDailyObjectivesHeader() on every updateProgress(). -->
+      <div class="codex-section-header">
+        <div class="codex-section-header-row">
+          <span class="codex-section-label">Daily Objectives</span>
+          <div id="codex-section-counter" class="codex-section-counter">
+            <span id="codex-counter-num" class="codex-section-counter-num">0</span><span class="codex-section-counter-sep"> / <span id="codex-counter-total">0</span></span>
+          </div>
+        </div>
+        <div class="codex-section-subtitle">Seal objectives to earn XP</div>
+        <div class="codex-section-progress">
+          <div id="codex-section-progress-fill" class="codex-section-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+      <ul id="habit-list" class="habit-list habit-list--codex"></ul>
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-icon">✓</div>
         <p>No habits yet.<br>Tap below to add your first.</p>
@@ -1568,7 +1584,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=322"></script>
+  <script src="app.js?v=323"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
