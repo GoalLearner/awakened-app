@@ -320,14 +320,17 @@
     },
     the_steel_wolf: {
       id:               'the_steel_wolf',
+      // Re-tiered E-rank in v3 Phase 1t. Single-day kill at 6,000 steps
+      // — sits comfortably alongside The Insomniac as an entry-rank
+      // boss rather than gating behind the D-rank dungeon.
       name:             'The Steel Wolf',
-      rank:             'D',
+      rank:             'E',
       flavorShort:      'A wolf forged from miles.',
       flavorLong:       "It paces the borderlands of every distance you've ever walked. Move enough, and you walk beside it. Stop, and you fall behind.",
-      killCondShort:    'Walk 5,000+ steps, 2 days in a row',
-      killCondLong:     'Walk at least 5,000 steps per day for 2 days in a row. A day under 5,000 steps, or a day with no step data, breaks the streak.',
-      streakTarget:     2,
-      stepThreshold:    5000, // semantic-specific, parallel to Insomniac's sleepHours
+      killCondShort:    'Walk 6,000+ steps in a single day',
+      killCondLong:     'Walk at least 6,000 steps in a single day. Any day you hit the threshold defeats the boss for that hunt.',
+      streakTarget:     1,
+      stepThreshold:    6000, // semantic-specific, parallel to Insomniac's sleepHours
       cadence:          'daily',
       statDomain:       'VIT',
     },

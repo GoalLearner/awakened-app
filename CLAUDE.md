@@ -24,7 +24,7 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
   - **History tab Discipline Ledger redesign (v3 Phase 1p)** — Weekly view rebuilt as a stat-color "gem" discipline ledger. Completed cells keep their stat-color identity (radial gradient + soft glow, NOT generic gold checks), missed cells render a muted red dot inside a low-contrast outline, today's still-pending cell is a dashed gold pulse, off-days are dashed-quiet, future cells are faint outlines. Each habit row carries a stat-color accent stripe on the left edge; long habit names now wrap to two lines (no more ellipsis on "Strength training" / "Meditate & Breathwork" / "No phone after waking"). Apple-Health auto-verifiable habits get a small AUTO badge in the label column + a framed blue dot on each auto-verified cell. New `TRAINED THIS WEEK` section below the grid renders a 6-stat distribution (STR / VIT / INT / FOCUS / WILL / WLT vertical mini-bars with counts) plus a serif insight line ("You leaned VIT + FOCUS this week."). New `WEEKLY REPORT` card replaces the simple stats bar on Weekly mode only: 34px gold completion %, Best Day / Total Done / Best Streak rows, plus a dominant-stat callout with stat-color border. Monthly + Yearly views keep the legacy stats bar untouched. Date nav refined to compact SVG chevrons + `WEEK N · YYYY` eyebrow above the range. "Achieved" sub-tab relabeled "Milestones" (user-facing only; internal mode key still `'achievements'`).
   - **Habits screen vertical-efficiency pass (v3 Phase 1o)** — persistent bottom Morning Routine / pack-progress strip retired from the Habits screen. The top "X / Y HABITS TODAY" tile (`#today-strip`) is now tappable (subtle hover state + chevron) and opens `#pack-progress-modal` — the new canonical access point for routine/pack progress (Morning Routine, Locked-In, streak/shield/honest/add-missing chips all carry over). Quote block compressed (min-height 76 → 38, font tightened). Tab-bar min-height 50 → 44 (still meets iOS 44pt tap minimum). Habit grid top padding 16 → 8 + row gap 11 → 9. Net effect: ~6 full codex habit cards visible on a standard iPhone viewport.
   - **Notification UI redesign + copy rewrite (v3 Phase 1m → 1n)** — Settings → REMINDERS panel restructured: DAILY SYSTEM PINGS / QUIET HOURS / PAUSE / HABIT REMINDERS / VOICE PREVIEW subsections. Permission pre-prompt redesigned with three-card type preview (Morning Briefing / Momentum Check / Evening Closeout). Per-habit and pack reminder offer sheets re-skinned as "System Offer" sheets with ✦ rune glyph on the primary action. Voice Preview cards read LIVE from `composeDigestBody` / `computeMidDayBody` / `pickCheckinCopy` — never drift from production copy. Full copy bank rewritten to "tactical system message" voice (COPY, HABIT_NOTIF_COPY, DIGEST_FLAVOR, composeDigestBody, computeMidDayBody, CHECKIN_COPY). User-facing labels are now Morning Briefing / Momentum Check / Evening Closeout (internal function names retain `digest`/`checkin` for historical reasons).
-- **Service-worker cache version:** `v5.222` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
+- **Service-worker cache version:** `v5.223` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -769,25 +769,27 @@ State helpers: `loadBosses()`, `saveBosses(state)`, `getBossState(id)` (defaults
 | Kill effect | `kill_count += 1`, `streak = 0`, `showHabitToast('The Insomniac defeated.')`, re-render Quests tab if visible |
 | Sub-threshold night | `streak = 0`, record `last_eval_date` to prevent double-processing |
 
-### The Steel Wolf — kill detection (v2.0.1, D-rank)
+### The Steel Wolf — kill detection (v2.0.1, re-tiered E-rank in v3 Phase 1t)
 
-First non-E-rank boss; validates the multi-rank architecture. Daily-cadence step boss; rides the same HealthKit step-count fetch that powers `autoVerifyWalk` and `lbRecordStepsToday`. No extra HealthKit roundtrip.
+Originally shipped as the first non-E-rank boss to validate the multi-rank architecture. Re-tiered to E-rank in v3 Phase 1t to sit alongside The Insomniac as an entry-rank boss — and the kill condition simplified to a single-day threshold so users can engage and clear without needing a consecutive-day chain. Daily-cadence step boss; rides the same HealthKit step-count fetch that powers `autoVerifyWalk` and `lbRecordStepsToday`. No extra HealthKit roundtrip.
 
 | Field | Value |
 |---|---|
-| Rank | D |
+| Rank | E (was D pre-v3 Phase 1t) |
 | Stat domain | VIT |
 | Cadence | daily |
-| Kill condition | ≥ 5,000 steps in a day, 2 days in a row |
-| Evaluator | `evaluateSteelWolfForDay(stepCount, dayDate)` — reads `cfg.stepThreshold` |
+| Kill condition | ≥ 6,000 steps in a single day (was 5,000 × 2 days pre-v3 Phase 1t) |
+| Evaluator | `evaluateSteelWolfForDay(stepCount, dayDate)` — reads `cfg.stepThreshold` (6000) |
 | Trigger | Called from `autoVerifyWalk()` alongside `lbRecordStepsToday`, before the habit-auto-verify gates (passive — ignores pause toggle and walk-habit presence) |
 | Idempotency | Short-circuits if `state.last_eval_date === dayDate` |
 | `dayDate` | `getDeviceLocalDate()` — the calendar day being evaluated |
-| Runtime missed-day reset | If `state.last_eval_date < (dayDate - 1)`, streak resets to 0 BEFORE today's eval. A skipped day breaks the streak. |
+| Runtime missed-day reset | If `state.last_eval_date < (dayDate - 1)`, streak resets to 0 BEFORE today's eval. (Mostly vestigial now that `streakTarget=1` — every qualifying day clears the boss.) |
 | Init-time reset | `checkMissedDayForSteelWolf()` mirrors `checkMissedNightForInsomniac` — covers users who open the app after a multi-day absence even when no walk habit is configured (so the runtime path doesn't fire). |
 | Sub-threshold day | `streak = 0`, record `last_eval_date` to prevent double-processing |
 
-**Gate visibility note:** Steel Wolf sits behind the locked D-rank gate. Users at E rank cannot tap into the D-rank dungeon to see it — they get the "Reach D rank to unlock" toast. Eval still runs in the background (data is data; the rank-locking is a UI affordance, not a data-layer gate). Once the user crosses D rank via existing rank-unlock logic, the gate unlocks automatically and `renderBossesPanel('D')` shows the Steel Wolf card via the existing rank-filter (`Object.keys(BOSSES).filter(id => BOSSES[id].rank === rankFilter)`).
+**Engagement economy after re-tier:** E-rank means `engageCostSouls = 25` (was 50) and `killRewardSouls = 50` (was 100). State shape (`hb_bosses[the_steel_wolf]`) is unchanged — kill_count, streak, engaged, engaged_at carry forward; only `cfg.rank` / `cfg.stepThreshold` / `cfg.streakTarget` changed.
+
+**Gate visibility after re-tier:** Steel Wolf now appears in the E-rank dungeon view alongside The Insomniac + The Carouser. The D-rank dungeon currently empty-states ("No bosses await yet. Check back as more dungeons fill.") until new content lands at D.
 
 ### The Carouser — kill detection (v2.0.1)
 
@@ -1835,7 +1837,7 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `evaluateInsomniacForNight(hours, nightDate)` | Boss kill-detection. Idempotent on `nightDate`. Increments streak / triggers kill / persists state via `setBossState`. |
 | `checkMissedNightForInsomniac()` | Init-only missed-night reset. Resets streak if `last_eval_date` is older than yesterday. No-op on first install (null `last_eval_date`). |
 | `evaluateCarouserForNight(hours, bedtimeBeforeMidnight, nightDate)` | v2.0.1 Carouser kill-detection. Weekend-night-only (Sat + Sun mornings; Mon morning dropped in the 2-night recalibration). Idempotent on `nightDate`. Anchors `current_weekend_id` to `getMostRecentFridayDate()`. |
-| `evaluateSteelWolfForDay(stepCount, dayDate)` | v2.0.1 Steel Wolf kill-detection (D-rank). Daily cadence; reads `cfg.stepThreshold` (5000). Called from `autoVerifyWalk` alongside `lbRecordStepsToday`. Idempotent on `dayDate` + runtime missed-day reset. Same independence rules as the other bosses. |
+| `evaluateSteelWolfForDay(stepCount, dayDate)` | Steel Wolf kill-detection. Re-tiered to E-rank in v3 Phase 1t with `streakTarget = 1` + `stepThreshold = 6000` (was D-rank, 5000 × 2 days). Daily cadence; reads `cfg.stepThreshold` at runtime. Called from `autoVerifyWalk` alongside `lbRecordStepsToday`. Idempotent on `dayDate`. Same independence rules as the other bosses. |
 | `checkMissedDayForSteelWolf()` | Init-only missed-day reset. Mirrors `checkMissedNightForInsomniac`. Resets streak if `last_eval_date` is older than yesterday. No-op on first install. |
 | `buildBossCardHTML(id)` | Renders a single CARDS.md-spec boss card. 5/7 portrait, 6 regions, state classes (`.bcard--active`, `.bcard--defeated`, `.bcard--burned`) composed from `getBossState(id)`. Used by `renderBossesPanel`. |
 | `openBossFullScreen(id)` / `closeBossFullScreen()` | Opens/closes the full-screen `#boss-fs-overlay` with hero art, long flavor, stats grid, kill condition, current progress, drops placeholder. ESC + any tab switch closes. Locks `body` scroll while open via `.bfs-locked`. |
@@ -2009,7 +2011,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=258`, `app.js?v=339`, `auth.js?v=7`, `simulated-leaderboard.js?v=2`, `sw.js v5.222`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=258`, `app.js?v=340`, `auth.js?v=7`, `simulated-leaderboard.js?v=2`, `sw.js v5.223`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
