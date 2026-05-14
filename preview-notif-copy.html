@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Awakened — Notification Copy Showcase (v3 Phase 1n)</title>
+<!-- Static preview of every notification message variant after the
+     v3 Phase 1n copy rewrite. Imports the live styles.css so visuals
+     match production. All copy is hardcoded here verbatim from the
+     app.js banks (COPY / HABIT_NOTIF_COPY / DIGEST_FLAVOR /
+     composeDigestBody / computeMidDayBody / CHECKIN_COPY). -->
+<link rel="stylesheet" href="styles.css?v=248">
+<style>
+  body {
+    margin: 0;
+    padding: 32px 16px 80px;
+    background: linear-gradient(180deg, #05050c 0%, #0a0a1e 100%);
+    color: #f5f5fa;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .copy-page { max-width: 880px; margin: 0 auto; }
+  .copy-page-title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-weight: 900;
+    font-size: 1.7rem;
+    color: #f5b842;
+    letter-spacing: 0.10em;
+    text-align: center;
+    margin: 0 0 6px;
+    text-shadow: 0 0 16px rgba(245, 184, 66, 0.30);
+  }
+  .copy-page-sub {
+    text-align: center;
+    color: rgba(245, 245, 250, 0.55);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 32px;
+  }
+  .copy-section {
+    margin-top: 36px;
+    background: rgba(15, 15, 36, 0.55);
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    border-radius: 18px;
+    padding: 22px 22px 26px;
+  }
+  .copy-section-kicker {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    color: #f5b842;
+    text-transform: uppercase;
+    margin: 0 0 4px;
+  }
+  .copy-section-title {
+    margin: 0 0 6px;
+    font-family: Georgia, "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 1.35rem;
+    color: #f5f5fa;
+  }
+  .copy-section-blurb {
+    margin: 0 0 18px;
+    color: rgba(245, 245, 250, 0.55);
+    font-size: 0.80rem;
+    line-height: 1.45;
+  }
+  .copy-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  /* Reuse .notif-preview-card from production styles.css for each
+     individual notification sample. */
+
+  /* Branch label for compositional examples (Morning Briefing six
+     variants etc) */
+  .copy-branch-label {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    color: rgba(245, 184, 66, 0.62);
+    text-transform: uppercase;
+    margin: 12px 2px 4px;
+  }
+  .copy-branch-label:first-child { margin-top: 0; }
+
+  /* Class-flavor grid for DIGEST_FLAVOR */
+  .copy-flavor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .copy-flavor-card {
+    background: linear-gradient(180deg, #1a1a3d 0%, #14142c 100%);
+    border: 1px solid rgba(139, 92, 246, 0.30);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .copy-flavor-class {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.20em;
+    color: #f5b842;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .copy-flavor-line {
+    font-size: 0.82rem;
+    color: rgba(245, 245, 250, 0.85);
+    line-height: 1.45;
+    font-style: italic;
+    font-family: Georgia, "Cormorant Garamond", serif;
+    padding: 2px 0;
+  }
+  .copy-flavor-line + .copy-flavor-line {
+    border-top: 1px dashed rgba(255, 255, 255, 0.05);
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+
+  /* Habit reminder list — title left, body right */
+  .copy-habit-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .copy-habit-row {
+    display: grid;
+    grid-template-columns: minmax(160px, 220px) 1fr;
+    gap: 16px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(20, 20, 58, 0.50) 0%, rgba(14, 14, 42, 0.50) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    align-items: baseline;
+  }
+  .copy-habit-row-key {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.66rem;
+    color: rgba(245, 245, 250, 0.45);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .copy-habit-row-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .copy-habit-row-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #f5b842;
+    letter-spacing: 0.02em;
+  }
+  .copy-habit-row-body {
+    font-size: 0.82rem;
+    color: rgba(245, 245, 250, 0.82);
+    line-height: 1.4;
+  }
+  .copy-habit-section-label {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: #8b5cf6;
+    text-transform: uppercase;
+    margin: 14px 0 6px;
+  }
+  .copy-habit-section-label:first-child { margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="copy-page">
+  <h1 class="copy-page-title">Notification Copy Showcase</h1>
+  <p class="copy-page-sub">v3 Phase 1n · 99dc9f7 · live styles.css</p>
+
+  <!-- ── 1. Morning Briefing — 6 composition branches ── -->
+  <section class="copy-section">
+    <div class="copy-section-kicker">Daily System Pings · Morning Briefing</div>
+    <h2 class="copy-section-title">composeDigestBody — 6 branches</h2>
+    <p class="copy-section-blurb">First match wins, in order. Examples use <code>Richie</code> as the hunter name and <code>6</code> scheduled habits.</p>
+
+    <div class="copy-card-list">
+      <div class="copy-branch-label">Branch 1 · Zero scheduled habits (rest day)</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/><g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9"><path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/></g><path d="M3 17h16" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MORNING BRIEFING</span><span class="notif-preview-time">9:00 AM</span></div>
+          <div class="notif-preview-body">Richie, clean rest day. Recover on purpose.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Branch 2 · Perfect day yesterday + today is Sun/Mon</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/><g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9"><path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/></g></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MORNING BRIEFING</span><span class="notif-preview-time">9:00 AM</span></div>
+          <div class="notif-preview-body">Richie, 6 objectives await. Keep the chain alive.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Branch 3 · Tuesday or Thursday (class flavor line)</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/><g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9"><path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/></g></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MORNING BRIEFING — WARRIOR</span><span class="notif-preview-time">9:00 AM</span></div>
+          <div class="notif-preview-body">Richie, 6 objectives await. strength is built today.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Branch 4 · Weekend 2× XP</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/><g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9"><path d="M11 4v3M3 14h2M17 14h2"/></g></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MORNING BRIEFING — WARRIOR</span><span class="notif-preview-time">9:00 AM</span></div>
+          <div class="notif-preview-body">Richie, 6 objectives await. ⚡ 2x XP today.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Branch 5 · Default with class</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MORNING BRIEFING — WARRIOR</span><span class="notif-preview-time">9:00 AM</span></div>
+          <div class="notif-preview-body">Richie, 6 objectives await. Your Warrior path continues.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Branch 6 · Default Civilian / no class</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MORNING BRIEFING</span><span class="notif-preview-time">9:00 AM</span></div>
+          <div class="notif-preview-body">Richie, 6 objectives await. Start clean.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 2. Momentum Check — 3 priority chain branches ── -->
+  <section class="copy-section">
+    <div class="copy-section-kicker">Daily System Pings · Momentum Check</div>
+    <h2 class="copy-section-title">computeMidDayBody — 3 priorities</h2>
+    <p class="copy-section-blurb">Fires at 1 PM. First match wins. Skipped entirely if user has zero habits configured.</p>
+
+    <div class="copy-card-list">
+      <div class="copy-branch-label">Priority 1 · Daily souls bonus unclaimed</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/><path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MOMENTUM CHECK</span><span class="notif-preview-time">1:00 PM</span></div>
+          <div class="notif-preview-body">+15 souls are waiting. Claim the bonus.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Priority 2 · Longest at-risk streak (incomplete + streak ≥ 1)</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/><path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MOMENTUM CHECK</span><span class="notif-preview-time">1:00 PM</span></div>
+          <div class="notif-preview-body">Strength training — Day 4. Protect the chain.</div>
+        </div>
+      </div>
+
+      <div class="copy-branch-label">Priority 3 · All caught up</div>
+      <div class="notif-preview-card">
+        <div class="notif-preview-accent"></div>
+        <div class="notif-preview-glyph">
+          <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/><path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="notif-preview-content">
+          <div class="notif-preview-head"><span class="notif-preview-kicker">MOMENTUM CHECK</span><span class="notif-preview-time">1:00 PM</span></div>
+          <div class="notif-preview-body">You're caught up. Hold the line.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. Evening Closeout — 5 states × 5 lines ── -->
+  <section class="copy-section">
+    <div class="copy-section-kicker">Daily System Pings · Evening Closeout</div>
+    <h2 class="copy-section-title">CHECKIN_COPY — 5 states × 5 lines = 25 variants</h2>
+    <p class="copy-section-blurb">Fires at 7 PM. Picks one line at random from the matching state. <code>{N}</code> = completed, <code>{M}</code> = remaining, <code>{TOTAL}</code> = total. Sample uses 6/11 completed.</p>
+
+    <div class="copy-card-list">
+      <div class="copy-branch-label">complete (100%) — 5 variants</div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">All objectives sealed. Rest like you earned it.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Perfect day secured. Close the loop.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Every objective honored. The night is yours.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Day sealed. Recovery begins now.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Clean finish. Carry this into tomorrow.</div></div></div>
+
+      <div class="copy-branch-label">high (70–99%) — 5 variants · sample: 9 done / 2 left of 11</div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">9 sealed, 2 remain. Finish clean.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Almost complete. 2 objectives left.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">9/11 done. Close the day strong.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">2 between you and a perfect day.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">You are close. Seal the last 2.</div></div></div>
+
+      <div class="copy-branch-label">mid (30–69%) — 5 variants · sample: 5 done / 6 left of 11</div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">5 sealed. 6 still open.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Solid progress. Finish one more.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">5/11 complete. Keep the system moving.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">The day is still active. 6 remain.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Momentum is built one objective at a time.</div></div></div>
+
+      <div class="copy-branch-label">low (1–29%) — 5 variants</div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">The day is still open. Choose one.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">One objective changes the night.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Small action still counts.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Do not negotiate with zero.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Pick one. Seal it.</div></div></div>
+
+      <div class="copy-branch-label">none (0%) — 5 variants</div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">The day is not closed. Begin with one.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">One objective. That is enough to restart.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">The system is still open. Take one step.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Nothing sealed yet. Change that now.</div></div></div>
+      <div class="notif-preview-card"><div class="notif-preview-accent"></div><div class="notif-preview-glyph">🌙</div><div class="notif-preview-content"><div class="notif-preview-head"><span class="notif-preview-kicker">EVENING CLOSEOUT</span><span class="notif-preview-time">7:00 PM</span></div><div class="notif-preview-body">Start small. Seal one objective.</div></div></div>
+    </div>
+  </section>
+
+  <!-- ── 4. Per-stat fallback COPY ── -->
+  <section class="copy-section">
+    <div class="copy-section-kicker">Habit Reminders · Per-Stat Fallback</div>
+    <h2 class="copy-section-title">COPY — 7 entries</h2>
+    <p class="copy-section-blurb">Used for custom user-authored habits AND any curated habit not in HABIT_NOTIF_COPY. <code>{n}</code> = habit name. Sample habit: <code>Train hard</code> (custom).</p>
+
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">STR</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard is on deck.</div>
+          <div class="copy-habit-row-body">Build the body. Earn the power.</div>
+        </div>
+      </div>
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">VIT</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard is due.</div>
+          <div class="copy-habit-row-body">Recovery is part of the work.</div>
+        </div>
+      </div>
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">INT</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard is ready.</div>
+          <div class="copy-habit-row-body">Learn it now. Use it later.</div>
+        </div>
+      </div>
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">FOCUS</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard. Lock in.</div>
+          <div class="copy-habit-row-body">Protect the next few minutes.</div>
+        </div>
+      </div>
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">WILL</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard. Hold the line.</div>
+          <div class="copy-habit-row-body">Comfort can wait.</div>
+        </div>
+      </div>
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">WLT</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard awaits.</div>
+          <div class="copy-habit-row-body">Small numbers become leverage.</div>
+        </div>
+      </div>
+      <div class="copy-habit-row">
+        <span class="copy-habit-row-key">CUSTOM</span>
+        <div class="copy-habit-row-content">
+          <div class="copy-habit-row-title">Train hard is open.</div>
+          <div class="copy-habit-row-body">One action keeps the system moving.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 5. HABIT_NOTIF_COPY — all 49 curated entries ── -->
+  <section class="copy-section">
+    <div class="copy-section-kicker">Habit Reminders · Curated Library</div>
+    <h2 class="copy-section-title">HABIT_NOTIF_COPY — 49 entries</h2>
+    <p class="copy-section-blurb">Per-habit unique copy for the canonical library. Falls back to per-stat COPY (above) when a habit key isn't in this map.</p>
+
+    <div class="copy-habit-section-label">Physical Performance · 11 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Hydrate</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Hydrate.</div><div class="copy-habit-row-body">Water first. Everything runs cleaner.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Sleep</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Sleep.</div><div class="copy-habit-row-body">Recovery is the upgrade.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Sleep before midnight</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Bed before midnight.</div><div class="copy-habit-row-body">Tomorrow starts tonight.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Cardio workout</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Cardio.</div><div class="copy-habit-row-body">Move before the day owns you.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Strength training</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Train.</div><div class="copy-habit-row-body">Strength is built one session at a time.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Sprint session</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Sprint.</div><div class="copy-habit-row-body">Speed is earned in the burn.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Daily walk</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Walk.</div><div class="copy-habit-row-body">Clear the static. Stack the steps.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Ice bath or cold plunge</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Cold plunge.</div><div class="copy-habit-row-body">Step in before the mind negotiates.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Cold shower</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Cold shower.</div><div class="copy-habit-row-body">Choose discomfort once. Carry it all day.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Mobility & Stretching</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Mobility.</div><div class="copy-habit-row-body">Free the body. Clear the signal.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Protein goal</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Protein.</div><div class="copy-habit-row-body">You cannot build from empty hands.</div></div></div>
+    </div>
+
+    <div class="copy-habit-section-label">Mental & Focus · 8 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Read</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Read.</div><div class="copy-habit-row-body">Upgrade the mind before the day steals it.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Meditate &amp; Breathwork</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Sit. Breathe.</div><div class="copy-habit-row-body">Stillness is trained, not found.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Journal</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Journal.</div><div class="copy-habit-row-body">Name the pattern. Change the pattern.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No phone after waking</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Phone down.</div><div class="copy-habit-row-body">Protect the first window of the day.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Review daily goals</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Set the target.</div><div class="copy-habit-row-body">Direction beats motion.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Get morning sunlight</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Morning sun.</div><div class="copy-habit-row-body">Tell the body the day has begun.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No social media before noon</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">No feed before noon.</div><div class="copy-habit-row-body">Build before you scroll.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No screens 1h before bed</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Screens off.</div><div class="copy-habit-row-body">Let the nervous system power down.</div></div></div>
+    </div>
+
+    <div class="copy-habit-section-label">Nutrition · 4 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Whole foods diet</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Whole foods.</div><div class="copy-habit-row-body">Real food. Real signal.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No sugar/junk food</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">No junk.</div><div class="copy-habit-row-body">Cravings pass. Discipline remains.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No alcohol</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Stay clear.</div><div class="copy-habit-row-body">Tomorrow is sharper sober.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No caffeine</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">No caffeine.</div><div class="copy-habit-row-body">Earn steady energy.</div></div></div>
+    </div>
+
+    <div class="copy-habit-section-label">Discipline & Productivity · 8 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Wake up consistent time</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Wake up.</div><div class="copy-habit-row-body">Discipline starts before negotiation.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Top priority task</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Top priority.</div><div class="copy-habit-row-body">One thing done beats five things pending.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Plan tomorrow</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Plan tomorrow.</div><div class="copy-habit-row-body">Win the day before it starts.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Tidy/clean space</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Reset the space.</div><div class="copy-habit-row-body">Outer order. Inner calm.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Under 1h screen time</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Cap the scroll.</div><div class="copy-habit-row-body">Your attention is the asset.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Digital declutter</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Declutter.</div><div class="copy-habit-row-body">Remove what steals signal.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">No doomscrolling</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">No doomscroll.</div><div class="copy-habit-row-body">Your mind is yours until five.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Review long-term goals</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Long game check.</div><div class="copy-habit-row-body">Aim before you spend the day.</div></div></div>
+    </div>
+
+    <div class="copy-habit-section-label">Financial & Growth · 4 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Track finances</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Track the numbers.</div><div class="copy-habit-row-body">What you measure, you command.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Side project / business</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Build the asset.</div><div class="copy-habit-row-body">The future is built in stolen hours.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Review investments</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Review the trade.</div><div class="copy-habit-row-body">The edge improves after the session.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">One new idea</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">One new idea.</div><div class="copy-habit-row-body">Volume creates the breakthrough.</div></div></div>
+    </div>
+
+    <div class="copy-habit-section-label">Learning & Skills · 6 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Educational podcast</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Podcast.</div><div class="copy-habit-row-body">Learn while the body moves.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Practice a skill</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Practice.</div><div class="copy-habit-row-body">Reps are the path.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Flashcard review</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Flashcards.</div><div class="copy-habit-row-body">Memory is built brick by brick.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Lessons learned</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Capture the lesson.</div><div class="copy-habit-row-body">What is not written disappears.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Learn something new</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Learn.</div><div class="copy-habit-row-body">Curiosity is a cheap edge.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Language learning</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Practice the language.</div><div class="copy-habit-row-body">Consistency beats intensity.</div></div></div>
+    </div>
+
+    <div class="copy-habit-section-label">Wellbeing & Relationships · 8 habits</div>
+    <div class="copy-habit-grid">
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Morning gratitude</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Three gratitudes.</div><div class="copy-habit-row-body">Notice what is already enough.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Pray / set intentions</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Set intent.</div><div class="copy-habit-row-body">Speak it. Mean it. Move.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Call/text family</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Reach out.</div><div class="copy-habit-row-body">Bonds weaken when untouched.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Do something kind</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Be kind.</div><div class="copy-habit-row-body">Small gestures compound.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Barefoot grounding</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Ground.</div><div class="copy-habit-row-body">Bare feet. Real ground. Clear signal.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Vitamins and minerals</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Vitamins.</div><div class="copy-habit-row-body">Fuel the system.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Visualization practice</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Visualize.</div><div class="copy-habit-row-body">See it before you live it.</div></div></div>
+      <div class="copy-habit-row"><span class="copy-habit-row-key">Sleep early before 11PM</span><div class="copy-habit-row-content"><div class="copy-habit-row-title">Bed by 11.</div><div class="copy-habit-row-body">Recovery is part of the mission.</div></div></div>
+    </div>
+  </section>
+
+  <!-- ── 6. DIGEST_FLAVOR — class flavor pool ── -->
+  <section class="copy-section">
+    <div class="copy-section-kicker">Morning Briefing · Tue/Thu Flavor</div>
+    <h2 class="copy-section-title">DIGEST_FLAVOR — 8 classes × 4 lines</h2>
+    <p class="copy-section-blurb">Rotates by <code>(dow + date) % lines.length</code> on Tuesday and Thursday mornings, appended after <code>{name}, {count} objectives await.</code></p>
+
+    <div class="copy-flavor-grid">
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Civilian</div>
+        <div class="copy-flavor-line">the path begins with one action.</div>
+        <div class="copy-flavor-line">show up before the day decides for you.</div>
+        <div class="copy-flavor-line">discipline is a daily vote.</div>
+        <div class="copy-flavor-line">the next version is built today.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Warrior · STR</div>
+        <div class="copy-flavor-line">strength is built today.</div>
+        <div class="copy-flavor-line">the body reflects the work.</div>
+        <div class="copy-flavor-line">train the frame.</div>
+        <div class="copy-flavor-line">power follows repetition.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Mage · INT</div>
+        <div class="copy-flavor-line">the mind compounds.</div>
+        <div class="copy-flavor-line">learn before the day gets loud.</div>
+        <div class="copy-flavor-line">knowledge becomes leverage.</div>
+        <div class="copy-flavor-line">read. reflect. refine.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Ranger · VIT</div>
+        <div class="copy-flavor-line">recovery is part of the work.</div>
+        <div class="copy-flavor-line">the body keeps score.</div>
+        <div class="copy-flavor-line">move, recover, repeat.</div>
+        <div class="copy-flavor-line">energy is earned daily.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Assassin · FOCUS</div>
+        <div class="copy-flavor-line">protect your attention.</div>
+        <div class="copy-flavor-line">sharpen the blade.</div>
+        <div class="copy-flavor-line">distraction is the enemy.</div>
+        <div class="copy-flavor-line">focus wins the first hour.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Paladin · WILL</div>
+        <div class="copy-flavor-line">hold the line.</div>
+        <div class="copy-flavor-line">comfort can wait.</div>
+        <div class="copy-flavor-line">resolve is built in small refusals.</div>
+        <div class="copy-flavor-line">do what the mood avoids.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Merchant · WLT</div>
+        <div class="copy-flavor-line">compound the small wins.</div>
+        <div class="copy-flavor-line">wealth is built in routine.</div>
+        <div class="copy-flavor-line">today becomes leverage.</div>
+        <div class="copy-flavor-line">track, build, repeat.</div>
+      </div>
+      <div class="copy-flavor-card">
+        <div class="copy-flavor-class">Sage</div>
+        <div class="copy-flavor-line">balance is trained.</div>
+        <div class="copy-flavor-line">all paths pass through today.</div>
+        <div class="copy-flavor-line">the complete hunter moves with intent.</div>
+        <div class="copy-flavor-line">train the whole system.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
