@@ -1667,7 +1667,11 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=337"></script>
+  <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
+       Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
+       openLeaderboardRanking renders. Backend is never touched. -->
+  <script src="simulated-leaderboard.js?v=1"></script>
+  <script src="app.js?v=338"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

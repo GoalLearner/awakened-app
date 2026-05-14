@@ -79,7 +79,7 @@ workflows:
       - name: Copy PWA files into www/ for Capacitor
         script: |
           mkdir -p www
-          cp index.html styles.css app.js auth.js sw.js manifest.json www/
+          cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
           # Class avatar silhouettes
           cp avatar-*.png www/
           # PWA app-icons (rendered from app-icon-source.png by

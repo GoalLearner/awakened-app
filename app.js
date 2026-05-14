@@ -13771,6 +13771,43 @@
   // a stale DOM (user switched tabs mid-fetch).
   let _lbCurrentOpenMetric = null;
 
+  // v3 Phase 1s — wrap the leaderboard `top` / `me` view-model with
+  // client-side simulated hunters so the Steps board doesn't feel
+  // empty. Pure render-layer enrichment: the cache + the backend
+  // response stay untouched (caching path writes the REAL response
+  // before this runs). Only fires for the `step_total` metric. Flip
+  // SIMULATE_USERS in simulated-leaderboard.js to disable.
+  function _lbMaybeSimulate(metric, top, me) {
+    if (metric !== 'step_total') return { top: top, me: me };
+    if (typeof window.SimulatedLeaderboard === 'undefined') return { top: top, me: me };
+    if (!window.SimulatedLeaderboard.SIMULATE_USERS) return { top: top, me: me };
+    const myAlias = lbGetMyAlias();
+    if (!myAlias) return { top: top, me: me };
+    // Real user's current value — prefer the server's `me.current_value`
+    // (already canonical), fall back to the local snapshot if the user
+    // is mid-submit / has no server rank yet.
+    let myValue = (me && typeof me.current_value === 'number') ? me.current_value : 0;
+    if (!myValue) {
+      try {
+        const snap = lbGetSnapshot();
+        myValue = (snap && snap.steps_last_7_days) || 0;
+      } catch (_) {}
+    }
+    const dateKey = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
+    const merged = window.SimulatedLeaderboard.merge(top || [], myAlias, myValue, dateKey);
+    // Recompute the `me` view-model from the merged list so the
+    // "out-of-top-N" row in lbBuildRankList correctly suppresses
+    // when the user is now visible inside the merged board.
+    let newMe = null;
+    const myIdx = merged.findIndex(r => r && r.alias === myAlias);
+    if (myIdx >= 0) {
+      newMe = { rank: myIdx + 1, current_value: merged[myIdx].current_value };
+    } else if (me) {
+      newMe = me;
+    }
+    return { top: merged, me: newMe };
+  }
+
   async function openLeaderboardRanking(metric) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
@@ -13790,7 +13827,8 @@
     const cached = lbCacheRead(metric);
     if (cached) {
       const staleNote = 'Last updated ' + lbFormatRelativeTime(cached.fetched_at);
-      listEl.innerHTML = lbBuildRankList(metric, cached.top, cached.me, staleNote);
+      const sim1 = _lbMaybeSimulate(metric, cached.top, cached.me);
+      listEl.innerHTML = lbBuildRankList(metric, sim1.top, sim1.me, staleNote);
     } else {
       listEl.innerHTML = lbBuildLoadingSkeleton();
     }
@@ -13809,8 +13847,11 @@
     if (_lbCurrentOpenMetric !== metric) return; // user moved on
 
     if (result && result.ok) {
+      // Cache the REAL response only — simulated entries are never
+      // persisted to localStorage or anywhere else.
       lbCacheWrite(metric, result.top, result.me);
-      listEl.innerHTML = lbBuildRankList(metric, result.top, result.me);
+      const sim2 = _lbMaybeSimulate(metric, result.top, result.me);
+      listEl.innerHTML = lbBuildRankList(metric, sim2.top, sim2.me);
     } else if (result && result.code === 'EXPIRED') {
       // JWT died mid-view. Auth.fetchLeaderboardTop already cleared
       // hb_user; reload re-arms the sign-in gate.
