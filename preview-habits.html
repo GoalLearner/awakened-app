@@ -93,40 +93,28 @@
 
   /* ─── Section header above the grid ─── */
   .codex-section-header {
-    padding: 4px 14px 0;
+    padding: 10px 14px 0;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
   }
+  /* Top row — title on the left, big count on the right.
+     Subtitle and progress bar live BELOW with breathing room. */
   .codex-section-header-row {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
-    gap: 8px;
-  }
-  .codex-section-title {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    gap: 12px;
   }
   .codex-section-label {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 800;
     color: var(--codex-gold);
     letter-spacing: 2px;
     text-transform: uppercase;
     line-height: 1;
   }
-  .codex-section-subtitle {
-    font-size: 10.5px;
-    font-weight: 500;
-    color: var(--codex-text-2);
-    letter-spacing: 0.2px;
-    font-style: italic;
-    font-family: Georgia, "Cormorant Garamond", "Times New Roman", serif;
-  }
   .codex-section-counter {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    align-items: baseline;
     font-size: 19px;
     font-weight: 800;
     color: var(--codex-text);
@@ -137,8 +125,18 @@
   .codex-section-counter--all { color: var(--codex-gold); text-shadow: 0 0 12px var(--codex-gold-glow); }
   .codex-section-counter-num { color: var(--codex-gold); }
   .codex-section-counter-sep { color: var(--codex-text-3); font-size: 14px; font-weight: 600; }
+  .codex-section-subtitle {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--codex-text-2);
+    letter-spacing: 0.2px;
+    font-style: italic;
+    font-family: Georgia, "Cormorant Garamond", "Times New Roman", serif;
+    line-height: 1;
+  }
   .codex-section-progress {
-    margin-top: 8px;
+    margin-top: 12px;
     height: 1.5px;
     background: rgba(255, 255, 255, 0.06);
     border-radius: 1px;
@@ -153,10 +151,10 @@
 
   /* ─── Habit grid ─── */
   .codex-habit-grid {
-    padding: 6px 12px 0;
+    padding: 16px 12px 0;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 9px;
+    gap: 11px;
   }
 
   /* ─── Habit card ─── */
@@ -243,14 +241,15 @@
     pointer-events: none;
   }
 
-  /* Bottom warm glow when complete */
+  /* Bottom warm glow when complete — toned down so it reads as a
+     warm hint, not a stage light. */
   .codex-card--complete .codex-card-surface .codex-bottom-glow {
     position: absolute;
-    bottom: -12px;
-    left: 15%;
-    right: 15%;
-    height: 36px;
-    background: radial-gradient(closest-side, var(--codex-gold-glow) 0%, transparent 75%);
+    bottom: -10px;
+    left: 22%;
+    right: 22%;
+    height: 28px;
+    background: radial-gradient(closest-side, rgba(245, 184, 66, 0.22) 0%, transparent 75%);
     filter: blur(6px);
     pointer-events: none;
   }
@@ -267,28 +266,30 @@
   .codex-rune-corner--bl { bottom: 5px; left: 5px; transform: rotate(270deg); }
   .codex-rune-corner--br { bottom: 5px; right: 5px; transform: rotate(180deg); }
 
-  /* Streak — floating gold glyph, no chrome */
+  /* Streak — minimal floating glyph. Dimmer and smaller than v1 so
+     it doesn't compete with the completion disc on the opposite
+     corner. */
   .codex-streak {
     position: absolute;
-    top: 6px;
-    left: 7px;
+    top: 7px;
+    left: 8px;
     z-index: 2;
     display: flex;
     align-items: center;
     gap: 2px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--codex-gold);
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(245, 184, 66, 0.62);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.1px;
     text-shadow:
       0 1px 3px rgba(0, 0, 0, 0.85),
-      0 0 6px rgba(0, 0, 0, 0.7);
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
-    opacity: 0.95;
+      0 0 6px rgba(0, 0, 0, 0.6);
+    opacity: 0.9;
     pointer-events: none;
   }
-  .codex-card--complete .codex-streak { opacity: 0.85; }
+  .codex-streak svg { opacity: 0.65; }
+  .codex-card--complete .codex-streak { opacity: 0.55; }
 
   /* Status indicator (top-right) */
   .codex-status {
@@ -389,24 +390,16 @@
     align-items: center;
     gap: 2.5px;
   }
+  /* SEALED — quiet flavor label. No flanking ornaments; lower
+     opacity; clearly secondary to the disc + gold rim + +XP chip. */
   .codex-sealed-banner {
-    font-size: 7.5px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    color: var(--codex-gold);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    text-shadow: 0 0 6px var(--codex-gold-glow);
-    margin-bottom: 1px;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    color: rgba(245, 184, 66, 0.72);
+    margin-bottom: 0;
     animation: codex-seal-fade 600ms ease-out 200ms backwards;
   }
-  .codex-sealed-banner-line {
-    width: 8px;
-    height: 1px;
-  }
-  .codex-sealed-banner-line--l { background: linear-gradient(90deg, transparent, var(--codex-gold)); }
-  .codex-sealed-banner-line--r { background: linear-gradient(270deg, transparent, var(--codex-gold)); }
   .codex-name {
     font-size: 11.5px;
     font-weight: 600;
@@ -451,7 +444,7 @@
   /* ─── Morning Routine bar ─── */
   .codex-morning-bar {
     position: relative;
-    margin: 12px 12px 0;
+    margin: 18px 12px 0;
     padding: 11px 14px;
     background: linear-gradient(180deg, #1d1d3d 0%, #131227 100%);
     border: 1px solid var(--codex-border);
@@ -504,39 +497,37 @@
   .codex-morning-bar--all .codex-morning-count-num,
   .codex-morning-bar--all .codex-morning-count-sep { color: var(--codex-gold); }
 
-  /* ─── Add Habits CTA ─── */
+  /* ─── Add Habits CTA — compact dashed pill ───
+     The v1 used an SVG <rect> with calc() in width/height attributes;
+     calc() isn't valid inside SVG attributes, so the SVG fell back to
+     its 300×150 intrinsic size and stretched the button. Fixed: use
+     a plain CSS dashed border, no SVG required. Capped at ~52px tall. */
   .codex-add-habits {
-    display: block;
-    width: calc(100% - 24px);
-    margin: 8px 12px 14px;
-    padding: 12px 16px;
-    background: rgba(139, 92, 246, 0.04);
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    position: relative;
-    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    transition: background 0.2s;
-  }
-  .codex-add-habits:hover { background: rgba(139, 92, 246, 0.10); }
-  .codex-add-habits svg.codex-add-dash {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-  .codex-add-habits-inner {
-    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-  }
-  .codex-add-habits-label {
+    width: calc(100% - 24px);
+    height: 52px;
+    margin: 14px 12px 18px;
+    padding: 0 16px;
+    background: rgba(139, 92, 246, 0.05);
+    border: 1.4px dashed rgba(139, 92, 246, 0.55);
+    border-radius: 12px;
+    color: var(--codex-purple);
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-size: 13px;
     font-weight: 700;
-    color: var(--codex-purple);
     letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
   }
+  .codex-add-habits:hover {
+    background: rgba(139, 92, 246, 0.10);
+    border-color: rgba(139, 92, 246, 0.78);
+  }
+  .codex-add-habits:active { transform: scale(0.98); }
+  .codex-add-habits svg { flex: none; }
 
   /* ─── Animations ─── */
   @keyframes codex-shake {
@@ -615,19 +606,13 @@
   <!-- Morning Routine bar -->
   <div id="morning-bar-mount"></div>
 
-  <!-- Add Habits CTA -->
+  <!-- Add Habits CTA — compact dashed pill -->
   <button class="codex-add-habits" id="add-habits-btn">
-    <svg class="codex-add-dash" preserveAspectRatio="none">
-      <rect x="0.75" y="0.75" width="calc(100% - 1.5px)" height="calc(100% - 1.5px)"
-            rx="9" fill="none" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 3" opacity="0.55"/>
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <circle cx="7" cy="7" r="6" stroke="#8b5cf6" stroke-width="1" fill="none" opacity="0.5"/>
+      <path d="M7 3.5v7M3.5 7h7" stroke="#8b5cf6" stroke-width="1.4" stroke-linecap="round"/>
     </svg>
-    <span class="codex-add-habits-inner">
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-        <circle cx="7" cy="7" r="6" stroke="#8b5cf6" stroke-width="1" fill="none" opacity="0.5"/>
-        <path d="M7 3.5v7M3.5 7h7" stroke="#8b5cf6" stroke-width="1.4" stroke-linecap="round"/>
-      </svg>
-      <span class="codex-add-habits-label">Add Habits</span>
-    </span>
+    <span>Add Habits</span>
   </button>
 </div>
 
@@ -687,14 +672,12 @@ function renderSectionHeader() {
   const all = sealed === total;
   document.getElementById('section-header').innerHTML = `
     <div class="codex-section-header-row">
-      <div class="codex-section-title">
-        <span class="codex-section-label">Daily Objectives</span>
-        <span class="codex-section-subtitle">Seal to earn XP</span>
-      </div>
+      <span class="codex-section-label">Daily Objectives</span>
       <div class="codex-section-counter ${all ? 'codex-section-counter--all' : ''}">
         <span class="codex-section-counter-num">${sealed}</span><span class="codex-section-counter-sep"> / ${total}</span>
       </div>
     </div>
+    <div class="codex-section-subtitle">Seal objectives to earn XP</div>
     <div class="codex-section-progress">
       <div class="codex-section-progress-fill" style="width: ${pct}%"></div>
     </div>
@@ -734,7 +717,7 @@ function renderCard(h) {
       <div class="codex-status">${statusHtml}</div>
       <div class="codex-icon-wrap"><img src="${h.icon}" alt="" onerror="this.style.display='none'"></div>
       <div class="codex-text-block">
-        ${completed ? `<div class="codex-sealed-banner"><span class="codex-sealed-banner-line codex-sealed-banner-line--l"></span>✦ SEALED ✦<span class="codex-sealed-banner-line codex-sealed-banner-line--r"></span></div>` : ''}
+        ${completed ? `<div class="codex-sealed-banner">SEALED</div>` : ''}
         <div class="codex-name">${h.name}</div>
         <div class="codex-goal">${h.goal}</div>
         <div class="codex-xp-chip">${svgBolt()}+${h.xp} XP</div>
