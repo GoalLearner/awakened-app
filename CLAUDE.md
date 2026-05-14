@@ -20,7 +20,9 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
   - **Compact MOBA-style Select Relic picker** — slot-filtered, `auto-fill minmax(112px, 1fr)` grid with stat-chip rows. Replaces the prior gallery-sized cards.
   - **Premium EQUIP TO BUILD / UNEQUIP button** — purple→violet primary with gold rim + ✦ rune glyph; muted-navy unequip variant.
   - **Leaderboard alias normalization** — display-only lowercase + space-stripping; allowlist exception for `Richie`. Storage and isMe matching untouched.
-- **Service-worker cache version:** `v5.199` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
+  - **Habits tab Codex/card redesign (v3 Phase 1k)** — live Habits tab now uses premium 3-column RPG objective cards with existing habit icons preserved, gold sealed/completed state, colored incomplete rings, system/auto lock rings, compact dashed Add Habits pill, and Morning Routine progress bar. Top "X / Y Habits Today" header remains the single progress summary; the redundant Daily Objectives section header was removed. Markup uses `.habit-item.codex` modifier with legacy class aliases (`.codex-status habit-cb`, `.codex-streak streak-badge`) so existing event handlers stay untouched.
+  - **Notification UI redesign + copy rewrite (v3 Phase 1m → 1n)** — Settings → REMINDERS panel restructured: DAILY SYSTEM PINGS / QUIET HOURS / PAUSE / HABIT REMINDERS / VOICE PREVIEW subsections. Permission pre-prompt redesigned with three-card type preview (Morning Briefing / Momentum Check / Evening Closeout). Per-habit and pack reminder offer sheets re-skinned as "System Offer" sheets with ✦ rune glyph on the primary action. Voice Preview cards read LIVE from `composeDigestBody` / `computeMidDayBody` / `pickCheckinCopy` — never drift from production copy. Full copy bank rewritten to "tactical system message" voice (COPY, HABIT_NOTIF_COPY, DIGEST_FLAVOR, composeDigestBody, computeMidDayBody, CHECKIN_COPY). User-facing labels are now Morning Briefing / Momentum Check / Evening Closeout (internal function names retain `digest`/`checkin` for historical reasons).
+- **Service-worker cache version:** `v5.208` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -69,6 +71,9 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `screenshots/ipad/` | iPad-letterboxed output, ready for upload. |
 | `package.json` | Capacitor deps + `@capacitor/local-notifications@^6.1.3` (per-habit reminders) + `@perfood/capacitor-healthkit@^1.3.2` (HealthKit auto-verify). |
 | `.npmrc` | `legacy-peer-deps=true`. **Do not delete** until we migrate off `@perfood/capacitor-healthkit` — the plugin's published peer-dep declares Capacitor 4 while we're on 6, so npm refuses to install without this. See "Common pitfalls". |
+| `preview-habits.html` | **QA/design-preview file (NOT a production app surface).** Standalone Habits tab redesign preview used before porting the codex card layout live. Imports production `styles.css` so visuals match. Not in `PRECACHE_ASSETS`, not in the iOS bundle. |
+| `preview-notifications.html` | **QA/design-preview file (NOT a production app surface).** Standalone notification UI preview showing the permission pre-prompt, Settings → Notifications panel, per-habit reminder offer, and pack reminder offer. Used before porting the v3 Phase 1m notification UI live. |
+| `preview-notif-copy.html` | **QA/design-preview file (NOT a production app surface).** Notification copy showcase showing every variant in one scrollable page: Morning Briefing (6 branches), Momentum Check (3 priorities), Evening Closeout (5 states × 5 lines), per-stat fallback (7 entries), HABIT_NOTIF_COPY (49 entries), DIGEST_FLAVOR (8 classes × 4 lines). Hand-authored examples; not wired to live JS. |
 
 ---
 
@@ -319,34 +324,42 @@ CSS hooks: `.lp-pressing` (subtle scale-down during 400ms hold), `.drag-ghost` (
 
 ---
 
-## Notifications system (v2.0.2 — 3 daily local pings + per-habit reminders)
+## Notifications system (v2.0.2 plumbing · v3 Phase 1m UI · v3 Phase 1n copy)
 
 The `Notif` module lives at the bottom of `app.js` (just above `init()`). Wraps `@capacitor/local-notifications@^6.1.3` for native iOS, falls back to the Web Notifications API for the PWA build.
+
+**User-facing labels** (v3 Phase 1m+):
+- **Morning Briefing** — the once-a-day morning push
+- **Momentum Check** — the 1 PM push
+- **Evening Closeout** — the 7 PM push
+- Settings groups: **Daily System Pings** / **Habit Reminders** / **Quiet Hours** / **Pause Notifications** / **Voice Preview**
+
+**Internal function names retain the original `digest` / `checkin` vocabulary** (`composeDigestBody`, `computeMidDayBody`, `pickCheckinCopy`, `scheduleDailyDigest`, `scheduleMidDayCheckin`, `scheduleDailyCheckin`, `tab` ID `hb_notif_daily_digest_time`). This is historical — do NOT rename the functions or storage keys just to match the new labels. Update user-facing strings only.
 
 ### Three daily local notifications
 
 | Notification | Time | ID | Title | Body |
 |---|---|---|---|---|
-| **Morning Digest** | user-configurable (`hb_notif_daily_digest_time`; no hardcoded default) | `1` | `composeDigestTitle()` — class-aware ("Awakened" or "Awakened — {Class}", Civilian gets bare title) | `composeDigestBody()` — name + scheduled-habit count + day-of-week flavor (Tue/Thu) + perfect-streak trigger (Sun/Mon) + weekend 2× XP suffix |
-| **Mid-Day Check-In** *(NEW v2.0.2)* | `13:00` device-local | `99998` | `composeDigestTitle()` (reused) | `computeMidDayBody()` — priority chain: souls bonus unclaimed → at-risk streak → caught-up |
-| **Evening Check-In** | `19:00` device-local *(shifted from 18:00 in v2.0.2)* | `99999` | hardcoded `'Awakened'` (NOT class-aware) | `pickCheckinCopy()` — 5 progress states × 5 variations |
+| **Morning Briefing** | user-configurable (`hb_notif_daily_digest_time`; no hardcoded default) | `1` | `composeDigestTitle()` — class-aware ("Awakened" or "Awakened — {Class}", Civilian gets bare title) | `composeDigestBody()` — name + scheduled-habit count + day-of-week flavor (Tue/Thu, em-dash separator) + perfect-streak trigger (Sun/Mon) + weekend 2× XP suffix |
+| **Momentum Check** | `13:00` device-local | `99998` | `composeDigestTitle()` (reused) | `computeMidDayBody()` — priority chain: souls bonus unclaimed → at-risk streak → caught-up |
+| **Evening Closeout** | `19:00` device-local | `99999` | hardcoded `'Awakened'` (NOT class-aware) | `pickCheckinCopy()` — 5 progress states × 5 variations |
 
-**Mid-day priority chain** (`computeMidDayBody`):
+**Momentum Check priority chain** (`computeMidDayBody`):
 1. No habits configured at all → return `null` → notification SKIPPED entirely
-2. Daily souls bonus unclaimed (reads `hb_souls.lastDailyBonusDate` against **device-local** date, not PT) → `"+15 souls waiting. Tap to claim today's bonus."`
-3. At-risk streak — longest incomplete-but-streaked habit. Filter to `streak >= 1` AND not completed today, sort by streak DESC then `DIFFICULTY[difficulty].pts` DESC then `name.localeCompare`. Body: `"{habit.name} — Day {N}. Don't break the chain."`
-4. Caught up → `"You're caught up. Keep it going."`
+2. Daily souls bonus unclaimed (reads `hb_souls.lastDailyBonusDate` against **device-local** date, not PT) → `"+15 souls are waiting. Claim the bonus."`
+3. At-risk streak — longest incomplete-but-streaked habit. Filter to `streak >= 1` AND not completed today, sort by streak DESC then `DIFFICULTY[difficulty].pts` DESC then `name.localeCompare`. Body: `"{habit.name} — Day {N}. Protect the chain."`
+4. Caught up → `"You're caught up. Hold the line."`
 
-**Re-arm trigger points** for the mid-day check-in (body recomputed at each schedule call):
+**Re-arm trigger points** for the Momentum Check (body recomputed at each schedule call):
 - `Notif.rescheduleAll` (app open, daily reset, Settings changes)
 - `Notif.onHabitCompleted` (habit tap — at-risk-streak set just changed)
 - Class change (title uses class name via shared `composeDigestTitle`)
 - Name edit (title may change)
 - `tryGrantDailyLoginBonus` (priority 1 no longer applies after grant)
 
-The evening check-in (`scheduleDailyCheckin`) re-arms on the same triggers plus its own day-1 suppression and quiet-hours respect.
+The Evening Closeout (`scheduleDailyCheckin`) re-arms on the same triggers plus its own day-1 suppression and quiet-hours respect.
 
-### Per-habit reminders
+### Habit Reminders
 
 **Per-habit:** one reminder time at most. Stored in `hb_reminders` as `{ habitId: 'HH:MM' }`. UI lives in the Edit Habit modal:
 
@@ -356,30 +369,55 @@ The evening check-in (`scheduleDailyCheckin`) re-arms on the same triggers plus 
 ⏰ 7:30 AM   [Change] [Remove]   ← if set
 ```
 
-**Voice-coded copy** keyed off `habit.primaryStat`:
-- STR → "⚔️ Time to train. {n} awaits." / "The path doesn't walk itself."
-- FOCUS → "🧠 Stillness now. {n}." / "Five minutes of focus changes the day."
-- INT → "📚 {n} is ready." / "The unlearned version of you is no longer enough."
-- WILL → "🥶 {n}. Get in the cold." / "Comfort is the enemy."
-- VIT → "💧 {n}." / "The body keeps the score."
-- WLT → "💰 {n} awaits." / "Compound the small wins."
-- Custom → "🔥 {n} awaits." / "Today, you choose."
+**Per-stat fallback copy** (v3 Phase 1n) keyed off `habit.primaryStat` — used when no curated `HABIT_NOTIF_COPY` entry exists. Voice is "tactical system message," no emojis:
 
-**Settings → 📲 REMINDERS** (collapsible) controls:
-- Permission status + Enable button (native only)
-- Daily limit: 3 (default) / 5 / 8 / Unlimited — keeps the **earliest** N when over the cap
-- Quiet hours toggle + start/end (default 22:00 → 07:00). Skips auto-fired reminders within the window **unless** the user explicitly chose that exact time on a habit
-- Pause for 24h / 7 days, or cancel pause
-- Master "Disable all reminders" toggle
-- View All — inline list of every habit + its time + Remove
+| Stat | Title | Body |
+|---|---|---|
+| STR    | `{n} is on deck.`     | `Build the body. Earn the power.` |
+| VIT    | `{n} is waiting.`     | `Recovery is part of the work.` |
+| INT    | `{n} is ready.`       | `Learn it now. Use it later.` |
+| FOCUS  | `{n}. Lock in.`       | `Protect the next few minutes.` |
+| WILL   | `{n}. Hold the line.` | `Comfort can wait.` |
+| WLT    | `{n} awaits.`         | `Small numbers become leverage.` |
+| Custom | `{n} is open.`        | `One action keeps the system moving.` |
+
+**Curated habit reminder copy:** 49 entries in `HABIT_NOTIF_COPY` (one per canonical habit). Same tactical voice. See `preview-notif-copy.html` for the full bank rendered against production CSS.
+
+### Settings → Notifications
+
+Top-level **Notifications** group (still backed by the `notif-*` ids/classes for historical reasons). Subsections in order:
+
+- **DAILY SYSTEM PINGS** — permission status row + the three system pings:
+  - Morning Briefing (time picker — only this row is user-configurable today)
+  - Momentum Check (display-only static row; no per-ping toggle yet)
+  - Evening Closeout (display-only static row; no per-ping toggle yet)
+- **QUIET HOURS** — toggle + start/end (default `22:00` → `07:00`). Auto-fired Habit Reminders inside the window are skipped UNLESS the user explicitly chose that exact time on a habit.
+- **PAUSE** — Pause for 24h / 7 days, or cancel pause.
+- **HABIT REMINDERS** — daily limit picker (3 default / 5 / 8 / Unlimited; keeps the **earliest** N over cap), View All inline list of every habit + its time + Remove.
+- **VOICE PREVIEW** — three preview cards rendered by `renderNotifPreviewCards()`. Each card reads LIVE from `composeDigestBody()` / `computeMidDayBody()` / `pickCheckinCopy()` so the preview can never drift from production output.
+- **Master Disable all reminders** toggle — silences ALL three system pings AND habit reminders.
+
+**Permission pre-prompt** (`#notif-explain-overlay`, v3 Phase 1m): headline reads **"Let the system call you back."** Body shows three preview cards (Morning Briefing / Momentum Check / Evening Closeout) so the user understands what they're authorizing before iOS sheets. Helper text: `"Just the Morning Briefing. The rest is on you."`
+
+**Per-habit reminder offer sheet** (`#reminder-offer-overlay`): "System Offer" sheet that appears after a habit is added. Title: `"Set a reminder?"`. Sub: `"{habit.name} was added. Choose when the system should call you back."`. Primary action: `"✦ Set Reminder"` (with rune glyph). Secondary: skip.
+
+**Pack reminder offer**: same "System Offer" treatment for Morning Routine / Locked-In packs after install.
 
 **Hooks:**
 - `toggleHabit` (when checking) → `Notif.onHabitCompleted(id)` cancels today's pending fire so it doesn't nag after completion
 - `deleteHabit` → `Notif.clearReminder(id)` permanently cancels
 - `checkDayChange` → `Notif.rescheduleAll(...)` rebuilds the schedule with current daily-limit + quiet-hours rules
 - App init → same reschedule (rehydrates pause-expirations and any cross-device adds)
+- `openSettings` → `renderNotifPreviewCards()` refreshes the Voice Preview cards each time the Settings sheet opens
 
 **Web fallback:** non-iOS users see "Reminders work best in the iOS app. Install from App Store for full functionality." in Settings. The reminder UI still saves the time — it just can't deliver.
+
+### Voice Preview implementation note
+
+The three Voice Preview cards in Settings are NOT hardcoded strings. `renderNotifPreviewCards()` calls the live compose functions and injects their output into the preview card DOM. This means:
+- Any tweak to copy in `composeDigestBody` / `computeMidDayBody` / `pickCheckinCopy` automatically reflects in the Voice Preview without HTML edits.
+- The preview is class-aware, name-aware, day-of-week-aware — whatever the user would actually see at notification time.
+- `preview-notif-copy.html` is the static design-time reference; the live Voice Preview is the user-facing equivalent.
 
 ---
 
@@ -1598,7 +1636,7 @@ Generic class set: `.settings-collapsible` (wrapper) → `.settings-collapsible-
 Every toggle has `data-collapsible="<name>"`. `setupCollapsibleSettings()` wires all of them via id pattern: toggle id ends in `-toggle`, body id is the same with `-body`. Drop in a new collapsible by following that pattern — no per-section JS needed.
 
 Currently three collapsibles, in this order, all collapsed by default:
-1. **REMINDERS** — see above. Summary shows count or "Paused" / "Off".
+1. **NOTIFICATIONS** *(v3 Phase 1m+ — user-facing label)* — Daily System Pings (Morning Briefing time picker + static Momentum Check / Evening Closeout rows) / Quiet Hours / Pause / Habit Reminders / Voice Preview. Summary shows count or "Paused" / "Off". Internal toggle/body ids still use the historical `notif-*` / `reminders-*` naming.
 2. **APPLE HEALTH** *(v1.1.5)* — connection status, auto-verify pause/resume toggle, deep-link to iOS Settings. Summary states: `Connected` / `Paused` / `Not connected` / `iOS only`. Three internal sub-states (`#settings-health-state-{unavailable,connected,disconnected}`) — only one is unhidden at a time, controlled by `refreshHealthPanel()`. **No step-goal control here** — that lives in the Edit Habit modal, per-habit. See "HealthKit integration" section.
 3. **WHAT'S COMING** — v2.0 teaser cards.
 
@@ -1710,7 +1748,7 @@ Bottom nav — **symbol-only, custom DALL-E PNG icons**, purple-glow active stat
 | Tab     | Icon file (in `assets/tab-icons/`) | Panel id        | Notes |
 |---------|-----------------------------------|------------------|-------|
 | Profile | `tab-status.png`                  | `profile-panel`  | Status / Origin Story / PRs |
-| Habits  | `tab-habits.png`                  | `main-scroll`    | The daily list |
+| Habits  | `tab-habits.png`                  | `main-scroll`    | **Codex/card redesign (v3 Phase 1k)** — premium 3-column RPG objective cards with existing habit icons, gold sealed/completed state, colored incomplete rings, system/auto lock rings, compact dashed Add Habits pill, Morning Routine progress bar. Top **"X / Y Habits Today"** header is the single progress summary (the redundant Daily Objectives section header was removed). Markup uses `.habit-item.codex` modifier; legacy class aliases (`.codex-status habit-cb`, `.codex-streak streak-badge`) preserve existing event handlers. |
 | Stats   | `tab-stats.png`                   | `stats-panel`    | Radar + 6 tile cards + Next Stat Bonus |
 | History | `tab-history.png`                 | `history-panel`  | 7-col grid, no emojis on rows |
 | Quests  | `tab-dungeon.png`                 | `quests-panel`   | **Dungeon Bosses list (v2.0+)** + "MORE QUESTS — Coming in v2.0" placeholder. The Daily Quest card was removed in v2.0.1 — see "Removed systems". |
@@ -1721,7 +1759,7 @@ Tab icons are referenced by file path inside `<img class="tab-icon">` tags. Acti
 
 Bottom sheets (all use `attachSheetDismissGesture()` for swipe-down dismiss):
 
-- `#settings-sheet` — collapsibles (REMINDERS / APPLE HEALTH / WHAT'S COMING / ACCOUNT) + What's New + reset
+- `#settings-sheet` — top-level **Notifications** group (Daily System Pings / Quiet Hours / Pause / Habit Reminders / Voice Preview), plus APPLE HEALTH / WHAT'S COMING / ACCOUNT collapsibles + What's New + reset. Internal markup still uses `notif-*` ids/classes for historical reasons.
 - `#lib-sheet` — Add Habits browser (Morning Routine, Locked-In, Create Your Own, categories)
 - `#hd-sheet` — habit detail / config (slides over lib-sheet)
 - `#sched-sheet` — schedule picker
