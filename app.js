@@ -8924,40 +8924,56 @@
     li.style.setProperty('--stat-rgb', _r + ', ' + _g + ', ' + _b);
 
     // ── Codex status indicator (top-right) ──
-    let statusHtml;
-    if (done) {
-      statusHtml =
-        '<div class="codex-status-disc">' +
-          '<svg width="13" height="13" viewBox="0 0 11 11" aria-hidden="true">' +
-            '<path d="M2 5.5l2.5 2.5L9 3" stroke="#1a1232" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-          '</svg>' +
-          (isAutoCard
-            ? '<div class="codex-status-auto-dot" aria-label="System-verified by Apple Health">' +
-                '<svg width="5" height="6" viewBox="0 0 5 6" aria-hidden="true">' +
-                  '<path d="M1.4 2.6V1.7a1.1 1.1 0 012.2 0v0.9" stroke="#79b4ff" stroke-width="0.7" fill="none" stroke-linecap="round"/>' +
-                  '<rect x="0.9" y="2.6" width="3.2" height="2.5" rx="0.4" stroke="#79b4ff" stroke-width="0.7" fill="none"/>' +
-                '</svg>' +
-              '</div>'
-            : '') +
-        '</div>';
-    } else if (isAutoCard) {
-      statusHtml =
-        '<div class="codex-status-auto"' + (isReadOnly ? ' title="System-managed by Apple Health"' : '') + '>' +
+    // Render BOTH the pending state (ring or auto-ring) AND the sealed
+    // state (gold disc with check) — CSS controls which one is visible
+    // based on `.habit-item.codex.completed`. This way toggleHabit's
+    // in-place `li.classList.add('completed')` + `cb.classList.add('checked')`
+    // produces the correct visual without needing a full card rebuild.
+    //
+    // `.habit-cb` lives on the outer wrapper so existing
+    // `li.querySelector('.habit-cb')` hooks (toggleHabit, spawnXpParticles,
+    // long-press skip-check) all find it.
+    const pendingHtml = isAutoCard
+      ? '<div class="codex-status-auto"' + (isReadOnly ? ' title="System-managed by Apple Health"' : '') + '>' +
           '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true">' +
             '<path d="M2.5 4V2.5a2 2 0 014 0V4" stroke="#79b4ff" stroke-width="1" fill="none" stroke-linecap="round"/>' +
             '<rect x="1.5" y="4" width="6" height="5" rx="0.8" stroke="#79b4ff" stroke-width="1" fill="none"/>' +
           '</svg>' +
-        '</div>';
-    } else {
-      statusHtml = '<div class="codex-status-ring"></div>';
-    }
+        '</div>'
+      : '<div class="codex-status-ring"></div>';
+    const sealedHtml =
+      '<div class="codex-status-disc">' +
+        '<svg width="13" height="13" viewBox="0 0 11 11" aria-hidden="true">' +
+          '<path d="M2 5.5l2.5 2.5L9 3" stroke="#1a1232" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>' +
+        (isAutoCard
+          ? '<div class="codex-status-auto-dot" aria-label="System-verified by Apple Health">' +
+              '<svg width="5" height="6" viewBox="0 0 5 6" aria-hidden="true">' +
+                '<path d="M1.4 2.6V1.7a1.1 1.1 0 012.2 0v0.9" stroke="#79b4ff" stroke-width="0.7" fill="none" stroke-linecap="round"/>' +
+                '<rect x="0.9" y="2.6" width="3.2" height="2.5" rx="0.4" stroke="#79b4ff" stroke-width="0.7" fill="none"/>' +
+              '</svg>' +
+            '</div>'
+          : '') +
+      '</div>';
+    // Outer wrapper carries the legacy `.habit-cb` alias so existing
+    // toggleHabit query hooks still find the right node.
+    const statusHtml =
+      '<div class="codex-status habit-cb' + (done ? ' checked' : '') +
+      (isReadOnly ? ' habit-cb--readonly' : '') + '">' +
+        pendingHtml + sealedHtml +
+      '</div>';
 
     // ── Streak (top-left, floating gold glyph) ──
-    const streakHtml = count > 0
-      ? '<div class="codex-streak"><svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true">' +
+    // ALWAYS render the wrapper (even when count === 0) so existing
+    // toggleHabit code (`li.querySelector('.streak-badge')`) finds it.
+    // When count is 0 we render an empty wrapper; CSS hides it via
+    // :empty so visually nothing shows up — but the DOM hook exists.
+    const streakInner = count > 0
+      ? '<svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true">' +
           '<path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/>' +
-        '</svg>' + count + '</div>'
+        '</svg>' + count
       : '';
+    const streakHtml = '<div class="codex-streak streak-badge' + (count > 0 ? ' active' : '') + '">' + streakInner + '</div>';
 
     // ── Icon centered ──
     const iconHtml = getHabitIcon(habit)
@@ -8983,10 +8999,13 @@
         (done ? '<div class="codex-bottom-glow"></div>' : '') +
       '</div>' +
       streakHtml +
-      '<div class="codex-status">' + statusHtml + '</div>' +
+      statusHtml +
       iconHtml +
       '<div class="codex-text-block">' +
-        (done ? '<div class="codex-sealed-banner">SEALED</div>' : '') +
+        // SEALED banner always rendered; CSS toggles visibility based on
+        // `.habit-item.codex.completed` so the in-place class toggle in
+        // toggleHabit produces the correct visual without a card rebuild.
+        '<div class="codex-sealed-banner">SEALED</div>' +
         '<div class="codex-name">' + habitDisplayHTML(habit) + '</div>' +
         xpChipHtml +
       '</div>' +
@@ -10118,7 +10137,8 @@
       uncheck(id);
       if (li) {
         li.classList.remove('completed');
-        li.querySelector('.habit-cb').classList.remove('checked');
+        const cb = li.querySelector('.habit-cb');
+        if (cb) cb.classList.remove('checked');
       }
       // If the user un-checks an auto-verified completion, that un-check
       // is permanent for the day — the auto-verifier must NOT re-check
@@ -10160,11 +10180,13 @@
       if (li) {
         li.classList.add('completed');
         const cb = li.querySelector('.habit-cb');
-        cb.classList.add('checked');
-        const r = document.createElement('span');
-        r.className = 'cb-ripple';
-        cb.appendChild(r);
-        r.addEventListener('animationend', () => r.remove(), { once: true });
+        if (cb) {
+          cb.classList.add('checked');
+          const r = document.createElement('span');
+          r.className = 'cb-ripple';
+          cb.appendChild(r);
+          r.addEventListener('animationend', () => r.remove(), { once: true });
+        }
       }
 
       // Feature 1: sound + particles + card flash + floating XP — the
@@ -10224,12 +10246,22 @@
     if (li) {
       const count = getStreak(id);
       const badge = li.querySelector('.streak-badge');
-      badge.className = 'streak-badge' + (count > 0 ? ' active' : '');
-      badge.innerHTML = count > 0 ? '<span class="streak-fire">' + streakIconHtml({ size: 14 }) + '</span>' + count : '—';
-      if (!wasDone && count > 0) {
-        void badge.offsetWidth;
-        badge.classList.add('pop');
-        badge.addEventListener('animationend', () => badge.classList.remove('pop'), { once: true });
+      if (badge) {
+        // Codex card markup also aliases this element with `.codex-streak`
+        // — preserve that class while toggling the legacy state classes.
+        const isCodex = badge.classList.contains('codex-streak');
+        badge.className = (isCodex ? 'codex-streak streak-badge' : 'streak-badge') + (count > 0 ? ' active' : '');
+        // Codex renders just the streak number + flame; legacy renders
+        // a span.streak-fire wrapper. Empty state: codex hides via
+        // :empty CSS; legacy shows an em-dash placeholder.
+        badge.innerHTML = count > 0
+          ? '<svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count
+          : (isCodex ? '' : '—');
+        if (!wasDone && count > 0) {
+          void badge.offsetWidth;
+          badge.classList.add('pop');
+          badge.addEventListener('animationend', () => badge.classList.remove('pop'), { once: true });
+        }
       }
     }
 

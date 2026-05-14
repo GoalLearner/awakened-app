@@ -17583,7 +17583,10 @@ body.reveal-locked { overflow: hidden; }
   pointer-events: none;
 }
 
-/* Streak — dim floating gold glyph */
+/* Streak — dim floating gold glyph.
+   The wrapper is ALWAYS rendered (so existing toggleHabit hooks find
+   `.streak-badge`). When count is 0 the wrapper is empty; we hide
+   it visually via :empty so it doesn't render an empty box. */
 .habit-item.codex .codex-streak {
   position: absolute;
   top: 7px;
@@ -17603,15 +17606,26 @@ body.reveal-locked { overflow: hidden; }
   opacity: 0.9;
   pointer-events: none;
 }
+.habit-item.codex .codex-streak:empty { display: none; }
 .habit-item.codex .codex-streak svg { opacity: 0.65; color: #f5b842; }
 .habit-item.codex.completed .codex-streak { opacity: 0.55; }
 
-/* Status indicator (top-right) */
+/* Status indicator (top-right).
+   The .codex-status wrapper carries the legacy `habit-cb` alias and
+   contains BOTH pending + sealed children. CSS toggles which shows
+   based on `.habit-item.codex.completed`. This makes toggleHabit's
+   in-place `.completed` class toggle produce the right visual without
+   needing a card rebuild. */
 .habit-item.codex .codex-status {
   position: absolute;
   top: 6px;
   right: 6px;
   z-index: 2;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .habit-item.codex .codex-status-ring {
   width: 22px;
@@ -17659,6 +17673,14 @@ body.reveal-locked { overflow: hidden; }
   align-items: center;
   justify-content: center;
 }
+/* Pending state — show ring/auto, hide disc */
+.habit-item.codex:not(.completed) .codex-status-disc { display: none; }
+.habit-item.codex .codex-status-ring,
+.habit-item.codex .codex-status-auto { display: block; }
+/* Completed state — show disc, hide ring/auto */
+.habit-item.codex.completed .codex-status-ring,
+.habit-item.codex.completed .codex-status-auto { display: none; }
+.habit-item.codex.completed .codex-status-disc { display: flex; }
 
 /* Icon — centered, larger than legacy emoji */
 .habit-item.codex .codex-icon-wrap {
@@ -17714,7 +17736,10 @@ body.reveal-locked { overflow: hidden; }
   color: rgba(245, 184, 66, 0.72);
   text-transform: uppercase;
   animation: codex-seal-fade 600ms ease-out 200ms backwards;
+  /* Hidden by default; revealed when .habit-item.codex.completed */
+  display: none;
 }
+.habit-item.codex.completed .codex-sealed-banner { display: block; }
 .habit-item.codex .codex-name {
   font-size: 11.5px;
   font-weight: 600;
