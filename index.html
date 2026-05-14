@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=237">
+  <link rel="stylesheet" href="styles.css?v=238">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -453,21 +453,24 @@
     <div id="items-panel" class="tab-panel hidden" data-panel="items">
       <div class="pokedex">
         <div class="pokedex-header">
-          <div class="pokedex-title">ITEMS</div>
+          <div class="pokedex-title">RELIC ARCHIVE</div>
           <div class="pokedex-count">DISCOVERED <span id="pokedex-discovered">0</span> / <span id="pokedex-total">9</span></div>
           <div class="pokedex-progress-bar">
             <div id="pokedex-progress-fill" class="pokedex-progress-fill"></div>
           </div>
+          <p class="archive-flavor">Every relic was earned through discipline.</p>
           <!-- v2.1 — entry point to the equipment panel modal. Same
                modal is also opened by tapping the avatar on the
-               Status tab. v3 PvP Phase 1 wires real equip flow into
-               the 9 slot hit targets inside the modal. -->
-          <button id="armory-open-btn" type="button" class="armory-open-btn">
+               Status tab. v3 Phase 1g — secondary status line shows
+               current Gear Power + equipped count. -->
+          <button id="armory-open-btn" type="button" class="armory-open-btn archive-armory-cta">
             <span class="armory-open-icon" aria-hidden="true">⚔</span>
-            <span class="armory-open-label">VIEW YOUR ARMORY</span>
+            <span class="archive-armory-cta-text">
+              <span class="armory-open-label archive-armory-cta-main">VIEW YOUR ARMORY</span>
+              <span id="archive-armory-cta-sub" class="archive-armory-cta-sub">Open your build</span>
+            </span>
             <span class="armory-open-chev" aria-hidden="true">›</span>
           </button>
-          <p class="pokedex-subtext">More cards exist beyond what's discovered.</p>
         </div>
         <div id="pokedex-sections" class="pokedex-sections"></div>
       </div>
@@ -886,6 +889,26 @@
     <div id="build-detail-stats" class="build-detail-stats"></div>
     <div class="build-detail-actions">
       <button id="build-detail-unequip" class="build-detail-btn build-detail-btn--unequip" type="button">UNEQUIP</button>
+    </div>
+  </div>
+
+  <!-- Relic Archive — mystery (undiscovered) card info modal. Opens
+       when the user taps a "?" placeholder in the archive grid.
+       Reveals just enough to motivate a hunt: rarity + source boss
+       teaser. NEVER reveals the item name. -->
+  <div id="mystery-card-overlay" class="mystery-card-overlay hidden"></div>
+  <div id="mystery-card-modal" class="mystery-card-modal hidden" role="dialog" aria-labelledby="mystery-card-title">
+    <button id="mystery-card-close" class="vn-close-btn mystery-card-close" type="button" aria-label="Close">✕</button>
+    <div class="mystery-card-mark" aria-hidden="true">?</div>
+    <h2 id="mystery-card-title" class="mystery-card-title">UNKNOWN RELIC</h2>
+    <dl class="mystery-card-meta">
+      <div class="mystery-card-row"><dt>Rarity</dt><dd id="mystery-card-rarity">—</dd></div>
+      <div class="mystery-card-row"><dt>Source</dt><dd id="mystery-card-source">—</dd></div>
+    </dl>
+    <p id="mystery-card-howto" class="mystery-card-howto">Defeat this boss for a chance to reveal this relic.</p>
+    <div class="mystery-card-actions">
+      <button id="mystery-card-hunt" class="mystery-card-btn mystery-card-btn--primary" type="button">HUNT BOSS</button>
+      <button id="mystery-card-cancel" class="mystery-card-btn mystery-card-btn--cancel" type="button">CLOSE</button>
     </div>
   </div>
 
@@ -1486,7 +1509,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=314"></script>
+  <script src="app.js?v=315"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

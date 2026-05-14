@@ -14104,6 +14104,293 @@ body.bfs-locked { overflow: hidden; }
   min-height: 1.68rem;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1g — Relic Archive polish (Items tab).
+   Adds equipment-slot identity + equipped state + drop source to
+   every card, plus a richer "mystery" treatment for undiscovered
+   slots. Layered on top of the existing .pokedex-card primitives;
+   no markup re-architecture.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Header flavor line beneath the progress bar */
+.archive-flavor {
+  margin: 4px auto 12px;
+  font-style: italic;
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+/* Armory CTA — secondary status line. .archive-armory-cta-text is
+   the wrapper that stacks main + sub vertically so the existing
+   icon + chevron still flank a single label slot. */
+.archive-armory-cta .archive-armory-cta-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1;
+}
+.archive-armory-cta-main {
+  flex: initial;
+}
+.archive-armory-cta-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+/* Slot badge — top-left pill on every card (discovered + mystery) */
+.archive-slot-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 5;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.46rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f8e7b0;
+  background: rgba(10, 10, 24, 0.76);
+  border: 1px solid rgba(245, 158, 11, 0.30);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+/* Equipped badge — top-right pill. Replaces the old crossed-swords
+   prefix with a clean gold pill that mirrors the slot-badge shape
+   on the opposite corner. */
+.pokedex-card-equipped-badge.archive-equipped-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  left: auto;
+  bottom: auto;
+  z-index: 5;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.46rem;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #fff7e6;
+  background: rgba(245, 158, 11, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 12px rgba(245, 158, 11, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+/* Drop source line under each card's name */
+.archive-item-source {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(242, 242, 247, 0.52);
+  text-align: center;
+  margin-top: 2px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+/* Mystery (undiscovered) card — richer than the old "?" placeholder.
+   Adds a rarity teaser line + source hint beneath. Subtle dashed
+   purple border + center glow. Slot badge stays in top-left so the
+   user can still see which body part the relic fills. */
+.archive-mystery-card {
+  border-style: dashed !important;
+  border-color: rgba(139, 92, 246, 0.28) !important;
+}
+.archive-mystery-card .pokedex-card-art--undiscovered {
+  background:
+    radial-gradient(circle at center, rgba(139, 92, 246, 0.16), rgba(12, 12, 28, 0.92)) !important;
+}
+.archive-mystery-mark {
+  color: rgba(242, 242, 247, 0.40) !important;
+  text-shadow: 0 0 14px rgba(139, 92, 246, 0.22);
+}
+.archive-mystery-rarity {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(248, 231, 176, 0.62);
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 4px;
+}
+.archive-mystery-hint {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.50rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(242, 242, 247, 0.45);
+  text-align: center;
+  padding: 0 4px 4px;
+  margin-top: 2px;
+  line-height: 1.25;
+}
+
+/* Rarity header polish — ULTRA-RARE RELICS gets a faint glow */
+.archive-rarity-header--ultra .pokedex-section-label {
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.20);
+}
+
+/* ─── Mystery (undiscovered) info modal ────────────────────── */
+.mystery-card-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9300;
+}
+.mystery-card-overlay.hidden { display: none; }
+.mystery-card-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9301;
+  width: min(90vw, 360px);
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(circle at top, rgba(58, 26, 99, 0.55), rgba(15, 15, 36, 0.98) 70%);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 18px;
+  padding: 22px 22px 18px;
+  text-align: center;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 28px rgba(139, 92, 246, 0.25);
+  animation: mystery-rise 0.28s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
+.mystery-card-modal.hidden { display: none; }
+@keyframes mystery-rise {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+}
+.mystery-card-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+.mystery-card-mark {
+  font-family: 'Cinzel', serif;
+  font-size: 3.4rem;
+  font-weight: 900;
+  color: rgba(248, 231, 176, 0.62);
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.40);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.mystery-card-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.14em;
+  color: var(--gold-bright, var(--gold));
+  margin: 0 0 14px;
+  text-transform: uppercase;
+}
+.mystery-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 auto 14px;
+  padding: 12px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  max-width: 280px;
+}
+.mystery-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.mystery-card-row dt {
+  font-size: 0.60rem;
+  letter-spacing: 0.10em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 0;
+}
+.mystery-card-row dd {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+.mystery-card-howto {
+  font-size: 0.78rem;
+  color: rgba(242, 242, 247, 0.74);
+  line-height: 1.45;
+  margin: 0 0 16px;
+  padding: 0 4px;
+}
+.mystery-card-actions {
+  display: flex;
+  gap: 10px;
+}
+.mystery-card-btn {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.mystery-card-btn:active { transform: scale(0.98); }
+.mystery-card-btn--primary {
+  color: #fff7e6;
+  background:
+    linear-gradient(180deg, rgba(139, 92, 246, 0.40), rgba(58, 26, 99, 0.96));
+  border-color: rgba(245, 158, 11, 0.50);
+  box-shadow:
+    0 0 14px rgba(139, 92, 246, 0.30),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+.mystery-card-btn--primary:hover {
+  box-shadow:
+    0 0 18px rgba(245, 158, 11, 0.36),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.20);
+}
+.mystery-card-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.mystery-card-btn--cancel {
+  color: #d8d4ea;
+  background: rgba(36, 36, 72, 0.92);
+  border-color: rgba(139, 92, 246, 0.30);
+}
+.mystery-card-btn--cancel:hover {
+  background: rgba(48, 48, 96, 0.95);
+  border-color: rgba(139, 92, 246, 0.50);
+}
+
 /* ── Reveal modal — cinematic Solo Leveling system-window ────── */
 .reveal-overlay {
   position: fixed;

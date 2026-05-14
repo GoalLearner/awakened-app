@@ -1810,10 +1810,46 @@
     });
   }
 
+  // ── v3 Phase 1g — Relic Archive helpers ───────────────────
+  // Single source for "where did this drop?" copy. Used by the
+  // archive grid and the mystery info modal. Returns a clean boss
+  // display name or '' if the card has no source metadata. Never
+  // returns the raw boss id (e.g. 'the_carouser') — we want
+  // "The Carouser" everywhere user-facing.
+  function getCardDropSourceLabel(card) {
+    if (!card) return '';
+    const raw = card.source_boss || card.sourceBoss || card.boss ||
+                card.boss_id    || card.drop_source || card.source || null;
+    if (!raw) return '';
+    if (typeof BOSSES !== 'undefined' && BOSSES[raw] && BOSSES[raw].name) {
+      return BOSSES[raw].name;
+    }
+    // Fallback: prettify a snake_case id.
+    return String(raw).split('_').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+  }
+
+  // Refreshes the "VIEW YOUR ARMORY" secondary line on the Items
+  // tab with current Gear Power + equipped count. Called from
+  // renderPokedex (every items-tab render) and after any equip /
+  // unequip action so the CTA stays live. Safe no-op if the
+  // helpers aren't loaded yet.
+  function refreshArmoryCTAStatus() {
+    const sub = document.getElementById('archive-armory-cta-sub');
+    if (!sub) return;
+    let power = 0;
+    let equipped = 0;
+    let total = (typeof HUNTER_BUILD_SLOT_COUNT === 'number') ? HUNTER_BUILD_SLOT_COUNT : 6;
+    try {
+      if (typeof aggregateBuildPower === 'function') power = aggregateBuildPower();
+      if (typeof countEquippedBuildItems === 'function') equipped = countEquippedBuildItems();
+    } catch (_) {}
+    sub.textContent = 'Gear Power ' + power + ' · ' + equipped + ' / ' + total + ' Equipped';
+  }
+
   // ── Pokédex (Items tab) ─────────────────────────────────────
   // Three sections grouped by rarity (Ultra-Rare → Rare → Common)
   // with discovered + undiscovered slots. Discovered card → tap to
-  // open card detail. Undiscovered → toast "Not yet discovered."
+  // open card detail. Undiscovered → open mystery info modal.
   function renderPokedex() {
     const root = document.getElementById('pokedex-sections');
     const totalEl = document.getElementById('pokedex-total');
@@ -1831,9 +1867,9 @@
     if (fillEl)  fillEl.style.width  = (totalCount > 0 ? (discoveredCount / totalCount * 100) : 0) + '%';
 
     const sections = [
-      { key: 'ultra_rare', label: 'ULTRA-RARE' },
-      { key: 'rare',       label: 'RARE' },
-      { key: 'common',     label: 'COMMON' },
+      { key: 'ultra_rare', label: 'ULTRA-RARE RELICS' },
+      { key: 'rare',       label: 'RARE RELICS' },
+      { key: 'common',     label: 'COMMON RELICS' },
     ];
 
     const collapsed = loadPokedexCollapsed();
@@ -1849,6 +1885,21 @@
       const cardsHtml = visibleCards.map(c => {
         const entry = inv.cards[c.id] || { discovered: false, count: 0 };
         const slotIcon = SLOT_ICONS[c.slot] || '✦';
+        // v3 Phase 1g — slot + source helpers, scoped here so the
+        // archive grid renders the same identity surface every card
+        // shows in the detail modal.
+        const slotKey = (typeof getCardEquipmentSlot === 'function') ? getCardEquipmentSlot(c) : (c.slot || null);
+        const slotDef = (slotKey != null && typeof EQUIPMENT_SLOT_INDEX !== 'undefined' && typeof EQUIPMENT_SLOTS !== 'undefined')
+          ? EQUIPMENT_SLOTS[EQUIPMENT_SLOT_INDEX[slotKey]] : null;
+        const slotLabel = slotDef ? slotDef.label : (slotKey ? slotKey.toUpperCase() : '');
+        const slotBadge = slotLabel
+          ? '<span class="archive-slot-badge">' + esc(slotLabel) + '</span>'
+          : '';
+        const sourceLabel = (typeof getCardDropSourceLabel === 'function') ? getCardDropSourceLabel(c) : '';
+        const sourceLine = sourceLabel
+          ? '<div class="archive-item-source">' + esc(sourceLabel) + '</div>'
+          : '';
+
         if (entry.discovered) {
           // Real art layered ON TOP of the emoji fallback. If art_path
           // 404s (most cards still placeholder), the post-render
@@ -1861,34 +1912,46 @@
           // v3 Phase 1d — equipped badge reads Hunter Build state
           const isEq = (typeof isItemEquippedInBuild === 'function') && isItemEquippedInBuild(c.id);
           const equippedBadge = isEq
-            ? '<span class="pokedex-card-equipped-badge" aria-label="Equipped">⚔ EQUIPPED</span>'
+            ? '<span class="pokedex-card-equipped-badge archive-equipped-badge" aria-label="Equipped">EQUIPPED</span>'
             : '';
           return (
             '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + '" type="button" data-card-id="' + esc(c.id) + '">' +
               '<div class="pokedex-card-art">' +
                 '<span class="pokedex-card-slot-icon">' + slotIcon + '</span>' +
                 artImg +
+                slotBadge +
                 equippedBadge +
               '</div>' +
               '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
+              sourceLine +
             '</button>'
           );
         }
+        // Undiscovered mystery card — show "?" + rarity teaser +
+        // source hint so the user knows where to hunt. Item name
+        // stays hidden until discovered.
+        const rarityTeaser = RARITY_LABELS[c.rarity] || c.rarity;
+        const mysteryHint = sourceLabel
+          ? 'Drops from ' + sourceLabel
+          : 'Defeat dungeon bosses to discover';
         return (
-          '<button class="pokedex-card pokedex-card--undiscovered pokedex-card--' + c.rarity + '" type="button" data-card-id="' + esc(c.id) + '">' +
+          '<button class="pokedex-card pokedex-card--undiscovered pokedex-card--' + c.rarity + ' archive-mystery-card" type="button" data-card-id="' + esc(c.id) + '">' +
             '<div class="pokedex-card-art pokedex-card-art--undiscovered">' +
-              '<span class="pokedex-card-mystery">?</span>' +
+              '<span class="pokedex-card-mystery archive-mystery-mark">?</span>' +
+              slotBadge +
             '</div>' +
-            '<div class="pokedex-card-name pokedex-card-name--mystery"></div>' +
+            '<div class="archive-mystery-rarity">' + esc(rarityTeaser) + '</div>' +
+            '<div class="archive-mystery-hint">' + esc(mysteryHint) + '</div>' +
           '</button>'
         );
       }).join('');
       const bodyHtml = visibleCards.length === 0
         ? '<div class="pokedex-section-empty">No items in this tier yet.</div>'
         : '<div class="pokedex-grid">' + cardsHtml + '</div>';
+      const headerExtra = s.key === 'ultra_rare' ? ' archive-rarity-header--ultra' : '';
       return (
         '<div class="pokedex-section pokedex-section--' + s.key + (isCollapsed ? ' pokedex-section--collapsed' : '') + '" data-section-key="' + s.key + '">' +
-          '<button class="pokedex-section-header" type="button" data-section-toggle="' + s.key + '" aria-expanded="' + (isCollapsed ? 'false' : 'true') + '">' +
+          '<button class="pokedex-section-header archive-rarity-header' + headerExtra + '" type="button" data-section-toggle="' + s.key + '" aria-expanded="' + (isCollapsed ? 'false' : 'true') + '">' +
             '<span class="pokedex-section-chevron" aria-hidden="true">▾</span>' +
             '<span class="pokedex-section-label">' + s.label + '</span>' +
             '<span class="pokedex-section-count">' + sectionDiscovered + ' / ' + sectionTotal + '</span>' +
@@ -1904,6 +1967,11 @@
     root.querySelectorAll('img[data-card-art="1"]').forEach(img => {
       img.addEventListener('error', () => { img.remove(); }, { once: true });
     });
+
+    // v3 Phase 1g — refresh the Armory CTA secondary status line so
+    // it reflects current Gear Power + equipped count whenever the
+    // archive re-renders (which fires after every equip/unequip).
+    try { refreshArmoryCTAStatus(); } catch (_) {}
   }
 
   // Builds the stat-bonus badge row for a card. Returns an empty
@@ -1998,10 +2066,59 @@
       if (!card) return;
       const entry = getInventory().cards[id];
       if (!entry || !entry.discovered) {
-        try { if (typeof showHabitToast === 'function') showHabitToast('Not yet discovered.'); } catch (_) {}
+        // v3 Phase 1g — undiscovered tap opens the mystery info
+        // modal (rarity + source teaser + "Hunt Boss" CTA). Never
+        // reveals the item name.
+        openMysteryCardModal(card);
         return;
       }
       openCardDetailModal(card, entry);
+    });
+  }
+
+  // ── v3 Phase 1g — Mystery (undiscovered) info modal ─────────
+  function openMysteryCardModal(card) {
+    const overlay = document.getElementById('mystery-card-overlay');
+    const modal   = document.getElementById('mystery-card-modal');
+    if (!overlay || !modal || !card) return;
+    const rarityEl = document.getElementById('mystery-card-rarity');
+    const sourceEl = document.getElementById('mystery-card-source');
+    const howEl    = document.getElementById('mystery-card-howto');
+    const huntBtn  = document.getElementById('mystery-card-hunt');
+    if (rarityEl) rarityEl.textContent = (RARITY_LABELS && RARITY_LABELS[card.rarity]) || card.rarity || '—';
+    const sourceLabel = getCardDropSourceLabel(card);
+    if (sourceEl) sourceEl.textContent = sourceLabel || 'Unknown';
+    if (howEl) howEl.textContent = sourceLabel
+      ? 'Defeat this boss for a chance to reveal this relic.'
+      : 'Defeat dungeon bosses to discover this relic.';
+    if (huntBtn) huntBtn.disabled = !sourceLabel; // No boss known → can't navigate
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+  }
+  function closeMysteryCardModal() {
+    const overlay = document.getElementById('mystery-card-overlay');
+    const modal   = document.getElementById('mystery-card-modal');
+    if (overlay) overlay.classList.add('hidden');
+    if (modal)   modal.classList.add('hidden');
+  }
+  function setupMysteryCardModal() {
+    const overlay = document.getElementById('mystery-card-overlay');
+    const closeBtn = document.getElementById('mystery-card-close');
+    const cancelBtn = document.getElementById('mystery-card-cancel');
+    const huntBtn = document.getElementById('mystery-card-hunt');
+    if (overlay)   overlay.addEventListener('click', closeMysteryCardModal);
+    if (closeBtn)  closeBtn.addEventListener('click', closeMysteryCardModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeMysteryCardModal);
+    if (huntBtn) {
+      huntBtn.addEventListener('click', () => {
+        closeMysteryCardModal();
+        try { if (typeof switchTab === 'function') switchTab('quests'); } catch (_) {}
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const m = document.getElementById('mystery-card-modal');
+      if (m && !m.classList.contains('hidden')) closeMysteryCardModal();
     });
   }
 
@@ -18825,6 +18942,7 @@
     setupCardRevealModal();
     setupPokedex();
     setupCardDetailModal();
+    setupMysteryCardModal();
     // Process any reveals queued from drops that happened in a prior
     // session but the modal didn't get a chance to show (e.g., user
     // closed app mid-reveal). DROPS.md spec: "Show them one at a
