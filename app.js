@@ -1881,7 +1881,29 @@
       const sectionDiscovered = sectionCards.filter(c => inv.cards[c.id] && inv.cards[c.id].discovered).length;
       const sectionTotal = sectionCards.length;
       const isCollapsed = collapsed.has(s.key);
-      const visibleCards = sectionCards;
+      // v3 Phase 1g — display order is now ACQUISITION CHRONOLOGY,
+      // not CARDS-definition order. Discovered cards sort by
+      // first_acquired_date ASC (earliest first) so the archive
+      // reads like a discovery log. Undiscovered silhouettes get
+      // appended after — EXCEPT in the COMMON section, where they
+      // clutter (the user expects commons to roll in passively;
+      // teasing them adds noise, not motivation). Rare + ultra
+      // sections still show mystery slots to motivate hunting.
+      const discoveredCards = sectionCards
+        .filter(c => inv.cards[c.id] && inv.cards[c.id].discovered)
+        .sort((a, b) => {
+          const da = (inv.cards[a.id] && inv.cards[a.id].first_acquired_date) || '';
+          const db = (inv.cards[b.id] && inv.cards[b.id].first_acquired_date) || '';
+          // ISO strings sort lexically. Cards w/o date fall to top.
+          if (da === db) return (a.name || '').localeCompare(b.name || '');
+          if (!da) return -1;
+          if (!db) return  1;
+          return da.localeCompare(db);
+        });
+      const undiscoveredCards = (s.key === 'common')
+        ? []
+        : sectionCards.filter(c => !(inv.cards[c.id] && inv.cards[c.id].discovered));
+      const visibleCards = discoveredCards.concat(undiscoveredCards);
       const cardsHtml = visibleCards.map(c => {
         const entry = inv.cards[c.id] || { discovered: false, count: 0 };
         const slotIcon = SLOT_ICONS[c.slot] || '✦';
