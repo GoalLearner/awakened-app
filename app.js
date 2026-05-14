@@ -13772,29 +13772,37 @@
   let _lbCurrentOpenMetric = null;
 
   // v3 Phase 1s — wrap the leaderboard `top` / `me` view-model with
-  // client-side simulated hunters so the Steps board doesn't feel
+  // client-side simulated hunters so a sparse board doesn't feel
   // empty. Pure render-layer enrichment: the cache + the backend
   // response stay untouched (caching path writes the REAL response
-  // before this runs). Only fires for the `step_total` metric. Flip
-  // SIMULATE_USERS in simulated-leaderboard.js to disable.
+  // before this runs). Fires for all three metrics; the sim module
+  // shapes values per-metric (continuous for steps, integer streak
+  // for sleep / bedtime). Flip SIMULATE_USERS in
+  // simulated-leaderboard.js to disable.
+  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, bedtime_streak: 1 };
   function _lbMaybeSimulate(metric, top, me) {
-    if (metric !== 'step_total') return { top: top, me: me };
+    if (!_LB_SIM_METRICS[metric]) return { top: top, me: me };
     if (typeof window.SimulatedLeaderboard === 'undefined') return { top: top, me: me };
     if (!window.SimulatedLeaderboard.SIMULATE_USERS) return { top: top, me: me };
     const myAlias = lbGetMyAlias();
     if (!myAlias) return { top: top, me: me };
     // Real user's current value — prefer the server's `me.current_value`
     // (already canonical), fall back to the local snapshot if the user
-    // is mid-submit / has no server rank yet.
+    // is mid-submit / has no server rank yet. Snapshot field varies by
+    // metric.
     let myValue = (me && typeof me.current_value === 'number') ? me.current_value : 0;
     if (!myValue) {
       try {
         const snap = lbGetSnapshot();
-        myValue = (snap && snap.steps_last_7_days) || 0;
+        if (snap) {
+          if (metric === 'step_total')          myValue = snap.steps_last_7_days  || 0;
+          else if (metric === 'sleep_streak')   myValue = snap.current_sleep_streak   || 0;
+          else if (metric === 'bedtime_streak') myValue = snap.current_bedtime_streak || 0;
+        }
       } catch (_) {}
     }
     const dateKey = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
-    const merged = window.SimulatedLeaderboard.merge(top || [], myAlias, myValue, dateKey);
+    const merged = window.SimulatedLeaderboard.merge(top || [], myAlias, myValue, dateKey, metric);
     // Recompute the `me` view-model from the merged list so the
     // "out-of-top-N" row in lbBuildRankList correctly suppresses
     // when the user is now visible inside the merged board.
