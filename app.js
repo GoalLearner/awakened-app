@@ -4316,7 +4316,7 @@
   };
 
   const CLASSES = {
-    CIVILIAN: { emoji: '🧍', name: 'Civilian', color: '#6b7280', desc: "You haven't been awakened yet. Train any stat to Lv5 to find your path." },
+    CIVILIAN: { emoji: '🧍', name: 'Civilian', color: '#6b7280', desc: 'Train any stat to Lv5 to awaken your path.' },
     STR:   { emoji: '⚔️',  name: 'Warrior',  color: '#ef4444', desc: 'You build your body like a fortress. Discipline is your weapon.' },
     VIT:   { emoji: '🏹',  name: 'Ranger',   color: '#22c55e', desc: 'Your body is your temple. Recovery and endurance are your edge.' },
     INT:   { emoji: '🧙',  name: 'Mage',     color: '#3b82f6', desc: 'Your mind is your greatest asset. Knowledge compounds like interest.' },
@@ -8968,6 +8968,19 @@
     let svg = '<svg class="sc-radar-svg" viewBox="0 0 ' + SIZE + ' ' + SIZE + '" '
             + 'xmlns="http://www.w3.org/2000/svg" '
             + 'aria-label="Stat radar chart">';
+
+    // 0. Defs + center halo — paint a soft purple radial gradient at the
+    // radar's heart so the core feels lit from within (v3 Phase 1q
+    // polish). Drawn FIRST so subsequent rings/spokes/fill stack on top.
+    svg += '<defs>'
+         + '<radialGradient id="sc-radar-center-halo" cx="50%" cy="50%" r="50%">'
+         +   '<stop offset="0%"   stop-color="#8b5cf6" stop-opacity="0.55"/>'
+         +   '<stop offset="40%"  stop-color="#8b5cf6" stop-opacity="0.18"/>'
+         +   '<stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>'
+         + '</radialGradient>'
+         + '</defs>';
+    svg += '<circle cx="' + CX + '" cy="' + CY + '" r="' + (R_MAX * 0.85).toFixed(2) +
+           '" fill="url(#sc-radar-center-halo)"/>';
 
     // 1. Background rings — each ring carries a class + ring-index so
     // CSS can stagger a subtle breathing pulse across them (mystical

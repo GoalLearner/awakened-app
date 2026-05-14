@@ -6837,8 +6837,10 @@ footer {
 .sc-radar-ring[data-ring="4"] { animation-delay: 1.8s;  }
 .sc-radar-ring[data-ring="5"] { animation-delay: 2.4s;  }
 @keyframes sc-radar-ring-breathe {
-  0%, 100% { stroke: rgba(255,255,255,0.04); }
-  50%      { stroke: rgba(255,255,255,0.13); }
+  /* v3 Phase 1q — softer grid lines so the radar reads as atmospheric
+     light rather than a technical mesh. Peak dropped 0.13 → 0.10. */
+  0%, 100% { stroke: rgba(255,255,255,0.035); }
+  50%      { stroke: rgba(255,255,255,0.10); }
 }
 
 /* Outer axis dots — pulse scale + drop-shadow tinted to their stat
@@ -6928,38 +6930,47 @@ footer {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
 }
 
-/* Bottom metrics strip */
+/* Bottom metrics strip — v3 Phase 1q polish */
 .sc-metrics {
-  display: flex;
-  border-top: 1px solid rgba(245, 158, 11, 0.13);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: rgba(0,0,0,0.18);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .sc-metric {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 4px;
+  justify-content: center;
+  padding: 12px 4px 14px;
   border-right: 1px solid rgba(255,255,255,0.05);
+  text-align: center;
+  position: relative;
 }
 
 .sc-metric:last-child { border-right: none; }
 
 .sc-metric-val {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  letter-spacing: -0.01em;
 }
-
-.sc-metric-lbl {
-  font-size: 0.54rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+/* First metric (Total XP) reads as the hero number — gold + soft glow. */
+.sc-metric:first-child .sc-metric-val {
   color: var(--gold);
+  text-shadow: 0 0 12px rgba(245,158,11,0.28);
+}
+.sc-metric-lbl {
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--text-tertiary);
   text-transform: uppercase;
-  margin-top: 3px;
+  margin-top: 5px;
 }
 
 /* Shifting class warning */
@@ -11563,31 +11574,39 @@ footer {
    PERSONAL RECORDS — compact chip on the name row
    ═══════════════════════════════════════════════════════════════ */
 .pr-open-chip {
+  /* v3 Phase 1q — secondary placement. Less gradient, smaller border, no
+     glow. The name + rank line up the visual hierarchy on the left; the
+     PR chip lives off to the right as an unobtrusive secondary affordance. */
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px 5px 8px;
-  background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(245,158,11,0.06));
-  border: 1px solid rgba(245,158,11,0.40);
-  border-radius: 8px;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  background: rgba(255,255,255,0.03);
+  border: 0.5px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   font-family: inherit;
   -webkit-appearance: none;
   flex-shrink: 0;
-  transition: transform 0.1s ease, border-color 0.18s ease, background 0.22s ease;
-  height: 26px;
+  transition: border-color 0.18s ease, background 0.22s ease, transform 0.1s ease;
+  height: 22px;
   line-height: 1;
 }
-.pr-open-chip:hover  { border-color: rgba(245,158,11,0.65); background: rgba(245,158,11,0.14); }
+.pr-open-chip:hover  { border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.06); }
 .pr-open-chip:active { transform: scale(0.95); }
-.pr-open-chip .pr-open-icon  { font-size: 0.95rem; line-height: 1; }
+.pr-open-chip .pr-open-icon  {
+  font-size: 0.78rem;
+  line-height: 1;
+  opacity: 0.85;
+}
 .pr-open-chip .pr-open-label {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
   color: var(--gold);
+  opacity: 0.85;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -13234,26 +13253,33 @@ footer {
    STATUS — 'Your Origin' link
    ═══════════════════════════════════════════════════════════════ */
 .sc-origin-btn {
+  /* v3 Phase 1q — compact + restrained. Inline-flex, gold gradient
+     fill, subtle gold ring + glow. Important, not dominant. */
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  padding: 4px 10px;
-  background: rgba(245, 158, 11, 0.10);
-  border: 1px solid rgba(245, 158, 11, 0.40);
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px 6px 10px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.14), rgba(245,184,66,0.04));
+  border: 1px solid rgba(245,184,66,0.32);
   color: var(--gold);
-  border-radius: 100px;
+  border-radius: 14px;
   font-family: inherit;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   cursor: pointer;
   -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
   align-self: flex-start;
+  box-shadow: 0 0 10px rgba(245,184,66,0.18), inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.sc-origin-btn:hover  { background: rgba(245,158,11,0.18); border-color: rgba(245,158,11,0.65); }
+.sc-origin-btn:hover  {
+  background: linear-gradient(180deg, rgba(245,184,66,0.18), rgba(245,184,66,0.06));
+  border-color: rgba(245,184,66,0.55);
+  box-shadow: 0 0 12px rgba(245,184,66,0.30), inset 0 1px 0 rgba(255,255,255,0.06);
+}
 .sc-origin-btn:active { transform: scale(0.96); }
 
 /* ═══════════════════════════════════════════════════════════════
