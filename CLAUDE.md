@@ -13,7 +13,7 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
 - **Current marketing version:** `2.2.0` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.1.0 (build 35) was submitted for review May 13 1:39 AM PST then the train locked mid-development; the v2.2.0 train opened cleanly on commit `e744a08` and shipped to TestFlight as **build 58** on May 14. Coverage on top of v2.1.0:
   - **New launch experience (v3 Phase 1i)** — pre-rendered AWAKENED splash with small gold hunter-rune emblem stacked over the wordmark, 1800ms min dwell. 5-card educational onboarding fires once for new users (Discipline Becomes Power → Train Your Six Stats → The System Is Honest → Hunt Bosses. Earn Relics. → Shape Your Hunter Build). Gated by `hb_onboarding_seen_v2`; returning users auto-migrated.
   - **Typed equipment Armory (v3 Phase 1d → 1e)** — 9-slot body-equipment panel (the old `panel-base.png` art with carved sockets) RETIRED. New 6-slot 3×2 typed grid: HELM / WEAPON / PLATE / GLOVES / BOOTS / RING. Square card art is intentional. All slots unlocked at every rank (no rank-gating). Slot-type enforcement: cards can only equip into their matching typed slot. Legacy `body`/`legs`/`cape` collapse → `plate`; `amulet` → `ring`. Migration via `hb_equipment_build_migrated_v1`.
-  - **Drops v1.7 (v3 Phase 1h)** — three cadence tiers (daily / triweekly / weekly) with cadence-specific rates AND pity. Per-boss first-common protection (replaces the prior global flag). Soft ultra pity boosts the rate past a threshold; hard ultra pity guarantees ultra at the ceiling (daily 40 kills / weekly 8 kills). Any-drop pity prevents repeated empty kills (daily 4 / triweekly 3 / weekly 2). RELIC MERCY readout in boss detail modal shows progress toward both guarantees.
+  - **Drops v1.7 → v1.8 (v3 Phase 1h → 1r)** — three cadence tiers (daily / triweekly / weekly) with cadence-specific rates AND a 3-layer mercy system: **Guaranteed relic** (no-drop guarantee, daily 4 / triweekly 3 / weekly 2), **Rare Mercy** (rare-or-better floor, daily 12 / triweekly 6 / weekly 4 — reset by Rare or Ultra; NOT by Common), and **Ultra Mercy** (soft + hard ultra pity ceiling, daily 40 / triweekly 20 / weekly 8). Per-boss first-common protection (replaces the prior global flag). RELIC MERCY readout in boss detail modal shows all three rows with tooltip rules.
   - **Relic Archive (v3 Phase 1g)** — Items tab renamed; cards show slot badge (top-left), equipped badge (top-right, gold pill), drop-source line below name. Mystery cards reveal rarity + source teaser without naming the item; tap opens a small mystery info modal with HUNT BOSS button. COMMON tier hides silhouettes (commons roll passively); RARE + ULTRA still tease. Cards sort by acquisition date.
   - **Single hunter-name claim + lock (v3 Phase 1j)** — name is claimed once via signin alias, locked everywhere afterward. Status-tab pencil hides; legacy welcome screen + habit-picker name input bypass when already claimed. Flag: `hb_hunter_name_claimed`.
   - **Silent auto-update SW** — `reg.update()` fires on every page load + tab focus. New SW silently `SKIP_WAITING`s without banner click. Version-string compare runs 2s after register as safety net. Manual opt-in via `hb_sw_manual_update`.
@@ -24,7 +24,7 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
   - **History tab Discipline Ledger redesign (v3 Phase 1p)** — Weekly view rebuilt as a stat-color "gem" discipline ledger. Completed cells keep their stat-color identity (radial gradient + soft glow, NOT generic gold checks), missed cells render a muted red dot inside a low-contrast outline, today's still-pending cell is a dashed gold pulse, off-days are dashed-quiet, future cells are faint outlines. Each habit row carries a stat-color accent stripe on the left edge; long habit names now wrap to two lines (no more ellipsis on "Strength training" / "Meditate & Breathwork" / "No phone after waking"). Apple-Health auto-verifiable habits get a small AUTO badge in the label column + a framed blue dot on each auto-verified cell. New `TRAINED THIS WEEK` section below the grid renders a 6-stat distribution (STR / VIT / INT / FOCUS / WILL / WLT vertical mini-bars with counts) plus a serif insight line ("You leaned VIT + FOCUS this week."). New `WEEKLY REPORT` card replaces the simple stats bar on Weekly mode only: 34px gold completion %, Best Day / Total Done / Best Streak rows, plus a dominant-stat callout with stat-color border. Monthly + Yearly views keep the legacy stats bar untouched. Date nav refined to compact SVG chevrons + `WEEK N · YYYY` eyebrow above the range. "Achieved" sub-tab relabeled "Milestones" (user-facing only; internal mode key still `'achievements'`).
   - **Habits screen vertical-efficiency pass (v3 Phase 1o)** — persistent bottom Morning Routine / pack-progress strip retired from the Habits screen. The top "X / Y HABITS TODAY" tile (`#today-strip`) is now tappable (subtle hover state + chevron) and opens `#pack-progress-modal` — the new canonical access point for routine/pack progress (Morning Routine, Locked-In, streak/shield/honest/add-missing chips all carry over). Quote block compressed (min-height 76 → 38, font tightened). Tab-bar min-height 50 → 44 (still meets iOS 44pt tap minimum). Habit grid top padding 16 → 8 + row gap 11 → 9. Net effect: ~6 full codex habit cards visible on a standard iPhone viewport.
   - **Notification UI redesign + copy rewrite (v3 Phase 1m → 1n)** — Settings → REMINDERS panel restructured: DAILY SYSTEM PINGS / QUIET HOURS / PAUSE / HABIT REMINDERS / VOICE PREVIEW subsections. Permission pre-prompt redesigned with three-card type preview (Morning Briefing / Momentum Check / Evening Closeout). Per-habit and pack reminder offer sheets re-skinned as "System Offer" sheets with ✦ rune glyph on the primary action. Voice Preview cards read LIVE from `composeDigestBody` / `computeMidDayBody` / `pickCheckinCopy` — never drift from production copy. Full copy bank rewritten to "tactical system message" voice (COPY, HABIT_NOTIF_COPY, DIGEST_FLAVOR, composeDigestBody, computeMidDayBody, CHECKIN_COPY). User-facing labels are now Morning Briefing / Momentum Check / Evening Closeout (internal function names retain `digest`/`checkin` for historical reasons).
-- **Service-worker cache version:** `v5.218` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
+- **Service-worker cache version:** `v5.219` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -1117,21 +1117,35 @@ Three cadence tiers: `daily` (many attempts; modest rates), `triweekly` (~2–3 
 
 **Per-boss first-common protection (v3 Phase 1h).** Replaces the prior global flag (`first_common_pulled`). Each boss tracks its own `first_common_by_boss[bossId]: boolean`. Until the user gets their first common from THIS boss, the common rate is the cadence-specific `common_protected` value. Once that boss's first common drops, protection ends for that boss only. Helpers: `hasPulledFirstCommonForBoss(bossId)`, `markFirstCommonPulledForBoss(bossId)`. Migration on `loadInventory`: any boss whose common is already owned (count > 0) is marked protection-ended automatically.
 
-### Bad-luck protection (`DROP_PITY_BY_CADENCE`) — v3 Phase 1h
+### Bad-luck protection (`DROP_PITY_BY_CADENCE`) — v3 Phase 1h → 1r (3-layer mercy)
 
 ```js
 {
-  daily:     { any_drop_guarantee_after: 4,  ultra_soft_pity_after: 20, ultra_soft_pity_add: 0.02, ultra_soft_pity_max: 0.20, ultra_hard_pity_after: 40 },
-  triweekly: { any_drop_guarantee_after: 3,  ultra_soft_pity_after: 10, ultra_soft_pity_add: 0.03, ultra_soft_pity_max: 0.25, ultra_hard_pity_after: 20 },
-  weekly:    { any_drop_guarantee_after: 2,  ultra_soft_pity_after: 5,  ultra_soft_pity_add: 0.05, ultra_soft_pity_max: 0.35, ultra_hard_pity_after: 8  },
+  daily:     { any_drop_guarantee_after: 4,  rare_mercy_after: 12, ultra_soft_pity_after: 20, ultra_soft_pity_add: 0.02, ultra_soft_pity_max: 0.20, ultra_hard_pity_after: 40 },
+  triweekly: { any_drop_guarantee_after: 3,  rare_mercy_after:  6, ultra_soft_pity_after: 10, ultra_soft_pity_add: 0.03, ultra_soft_pity_max: 0.25, ultra_hard_pity_after: 20 },
+  weekly:    { any_drop_guarantee_after: 2,  rare_mercy_after:  4, ultra_soft_pity_after: 5,  ultra_soft_pity_add: 0.05, ultra_soft_pity_max: 0.35, ultra_hard_pity_after: 8  },
 }
 ```
 
-- **Any-drop guarantee:** Nth consecutive no-drop forces a drop. `forcePityDrop(bossId)` picks the most respectful rarity that has cap room: common (if not capped) → rare (if rare count < 3) → ultra-rare (cap is `Infinity`, always valid). Returns a card object the caller hands to the existing inventory-mutation path — same persist + reveal-queue + counter-update logic, no shortcuts.
-- **Soft ultra pity:** When `kills_since_ultra >= ultra_soft_pity_after`, effective ultra rate = `min(baseRate + N×add, max)`. Boost grows with every extra ultra-less kill.
-- **Hard ultra pity:** At `kills_since_ultra >= ultra_hard_pity_after`, effective ultra rate = `1` (guaranteed).
+Three guarantee layers, evaluated independently. Order in `rollBossDrop`: normal rarity rolls (ultra → rare → common, with ultra hard pity already baked into the ultra rate) → **Rare Mercy floor** → **Any-drop guarantee** fallback.
 
-`getEffectiveUltraRate(bossId, baseRate)` computes per-roll; the base table is never mutated.
+- **Guaranteed relic (any-drop guarantee):** Nth consecutive no-drop forces a drop. `forcePityDrop(bossId)` picks the most respectful rarity that has cap room: common (if not capped) → rare (if rare count < 3) → ultra-rare (cap is `Infinity`, always valid). Reset by any relic.
+- **Rare Mercy (v3 Phase 1r):** Nth consecutive kill without a rare-or-better promotes the current outcome to a rare. Triggers when the current outcome is `null` (no drop) OR `common`; **never downgrades an ultra**. If the rare pool is empty (e.g. a boss with no rare cards defined yet), Rare Mercy silently falls through and the Any-drop guarantee may still fire. Reset by Rare or Ultra; NOT reset by Common.
+- **Soft ultra pity:** When `kills_since_ultra >= ultra_soft_pity_after`, effective ultra rate = `min(baseRate + N×add, max)`. Boost grows with every extra ultra-less kill.
+- **Hard ultra pity (Ultra Mercy ceiling):** At `kills_since_ultra >= ultra_hard_pity_after`, effective ultra rate = `1` (guaranteed). Reset by Ultra only.
+
+`getEffectiveUltraRate(bossId, baseRate)` computes per-roll; the base table is never mutated. Rare Mercy is checked AFTER the normal roll so an ultra outcome from the ultra roll (or ultra hard pity) is preserved — Rare Mercy is a **floor**, never a ceiling.
+
+**Result-table summary:**
+
+| Outcome     | Guaranteed Relic | Rare Mercy | Ultra Mercy |
+|-------------|------------------|------------|-------------|
+| No drop     | +1               | +1         | +1          |
+| Common      | reset            | +1         | +1          |
+| Rare        | reset            | reset      | +1          |
+| Ultra       | reset            | reset      | reset       |
+
+Migration: the `kills_since_rare_or_better` counter already existed in `_freshPityState()` from Phase 1h, so existing users carry their pre-1r progress forward. No backfill, no schema bump.
 
 ### Pity counters per boss (`hb_inventory.drop_pity_by_boss[bossId]`)
 
@@ -1994,7 +2008,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=258`, `app.js?v=336`, `auth.js?v=7`, `sw.js v5.218`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=258`, `app.js?v=337`, `auth.js?v=7`, `sw.js v5.219`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 

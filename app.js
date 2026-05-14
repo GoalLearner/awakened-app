@@ -851,6 +851,10 @@
   const DROP_PITY_BY_CADENCE = {
     daily: {
       any_drop_guarantee_after: 4,
+      // v3 Phase 1r — Rare Mercy: floor that guarantees rare-or-better
+      // when the user has gone N kills without a rare or ultra. Reset
+      // by Rare or Ultra; NOT reset by Common.
+      rare_mercy_after:         12,
       ultra_soft_pity_after:    20,
       ultra_soft_pity_add:      0.02,
       ultra_soft_pity_max:      0.20,
@@ -858,6 +862,7 @@
     },
     triweekly: {
       any_drop_guarantee_after: 3,
+      rare_mercy_after:         6,
       ultra_soft_pity_after:    10,
       ultra_soft_pity_add:      0.03,
       ultra_soft_pity_max:      0.25,
@@ -865,6 +870,7 @@
     },
     weekly: {
       any_drop_guarantee_after: 2,
+      rare_mercy_after:         4,
       ultra_soft_pity_after:    5,
       ultra_soft_pity_add:      0.05,
       ultra_soft_pity_max:      0.35,
@@ -1756,6 +1762,9 @@
       cadence:         getBossCadence(bossId),
       anyDropCurrent:  pity.kills_since_any_drop,
       anyDropTarget:   cfg.any_drop_guarantee_after,
+      // v3 Phase 1r — Rare Mercy.
+      rareCurrent:     pity.kills_since_rare_or_better,
+      rareTarget:      cfg.rare_mercy_after,
       ultraCurrent:    pity.kills_since_ultra,
       ultraSoftTarget: cfg.ultra_soft_pity_after,
       ultraHardTarget: cfg.ultra_hard_pity_after,
@@ -1812,11 +1821,28 @@
       dropped = pickFromPool(pools.common);
     }
 
-    // Any-drop pity. If all normal rolls failed but the user is one
+    const pityCfg = dropPityCfgFor(bossId);
+    const pityState = getDropPityState(bossId);
+
+    // v3 Phase 1r — Rare Mercy floor. If the user is one kill shy of
+    // the rare-mercy threshold AND the current outcome is weaker than
+    // rare-or-better (i.e. no drop, or only a common), upgrade to a
+    // rare. Ultra hard pity already ran above, so an ultra outcome
+    // here is never downgraded. Rare floor; not a ceiling.
+    if (pools.rare.length &&
+        (pityState.kills_since_rare_or_better + 1) >= pityCfg.rare_mercy_after) {
+      const isRareOrBetter = dropped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare');
+      if (!isRareOrBetter) {
+        dropped = pickFromPool(pools.rare);
+        fromPity = true;
+        pityType = 'rare_mercy';
+      }
+    }
+
+    // Any-drop pity. If all normal rolls failed AND rare-mercy didn't
+    // promote anything (e.g. rare pool empty), but the user is one
     // kill shy of the cadence's no-drop ceiling, force a drop now.
     if (!dropped) {
-      const pityCfg = dropPityCfgFor(bossId);
-      const pityState = getDropPityState(bossId);
       if (pityState.kills_since_any_drop + 1 >= pityCfg.any_drop_guarantee_after) {
         dropped = forcePityDrop(bossId);
         if (dropped) { fromPity = true; pityType = 'any_drop'; }
@@ -2595,6 +2621,14 @@
       if (Math.random() < effU)        outcome = 'ultra_rare';
       else if (Math.random() < rates.rare) outcome = 'rare';
       else if (Math.random() < commonRate) outcome = 'common';
+      // v3 Phase 1r — Rare Mercy floor. Upgrade null / common → rare
+      // when the rare-mercy threshold is one kill away. Ultra outcome
+      // is never downgraded.
+      if ((outcome === null || outcome === 'common') &&
+          (pity.kills_since_rare_or_better + 1) >= pityCfg.rare_mercy_after) {
+        outcome = 'rare';
+        tally.pity_drops += 1;
+      }
       if (!outcome && pity.kills_since_any_drop + 1 >= pityCfg.any_drop_guarantee_after) {
         outcome = 'common'; // pity prefers common per forcePityDrop ordering
         tally.pity_drops += 1;
@@ -14080,22 +14114,29 @@
       }
     }
 
-    // v3 Phase 1h — RELIC MERCY readout. Shows progress toward
-    // any-drop guarantee + ultra hard-pity guarantee for this boss.
+    // v3 Phase 1h → 1r — RELIC MERCY readout. Three-layer protection:
+    //   Guaranteed relic — any drop resets this counter.
+    //   Rare mercy        — Rare or Ultra resets this counter.
+    //   Ultra mercy       — only Ultra resets this counter.
     const mercyEl = document.getElementById('bfs-mercy');
     if (mercyEl) {
       try {
         const m = getDropPityDisplay(id);
         const cur1 = Math.min(m.anyDropCurrent, m.anyDropTarget);
-        const cur2 = Math.min(m.ultraCurrent,   m.ultraHardTarget);
+        const cur2 = Math.min(m.rareCurrent,    m.rareTarget);
+        const cur3 = Math.min(m.ultraCurrent,   m.ultraHardTarget);
         mercyEl.innerHTML =
-          '<div class="bfs-mercy-row">' +
+          '<div class="bfs-mercy-row" title="Any relic resets this.">' +
             '<span class="bfs-mercy-label">Guaranteed relic</span>' +
             '<span class="bfs-mercy-val">' + cur1 + ' / ' + m.anyDropTarget + '</span>' +
           '</div>' +
-          '<div class="bfs-mercy-row">' +
+          '<div class="bfs-mercy-row" title="Rare or Ultra resets this.">' +
+            '<span class="bfs-mercy-label">Rare mercy</span>' +
+            '<span class="bfs-mercy-val">' + cur2 + ' / ' + m.rareTarget + '</span>' +
+          '</div>' +
+          '<div class="bfs-mercy-row" title="Only Ultra resets this.">' +
             '<span class="bfs-mercy-label">Ultra mercy</span>' +
-            '<span class="bfs-mercy-val">' + cur2 + ' / ' + m.ultraHardTarget + '</span>' +
+            '<span class="bfs-mercy-val">' + cur3 + ' / ' + m.ultraHardTarget + '</span>' +
           '</div>';
       } catch (_) {
         mercyEl.innerHTML = '';
