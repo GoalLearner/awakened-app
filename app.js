@@ -797,36 +797,88 @@
   // baseline commons were 20%/40%, broke when baselines climbed past
   // the protection ceiling (weekly 70% > old 60% ceiling would have
   // HURT new players). Multiplier form always helps: `commonRate =
-  // baseline × COMMON_PROTECTION_MULTIPLIER`, capped at 0.95 so the
-  // boosted rate never crowds out the rare/ultra-rare roll order.
-  // Protection ends GLOBALLY after the first common from ANY boss.
-  const COMMON_PROTECTION_MULTIPLIER = 1.33;
-  const COMMON_PROTECTION_CAP        = 0.95;
+  // v3 Phase 1h — three-tier cadence drop rates. The fewer attempts
+  // a boss gives, the less often a kill should feel empty.
+  //
+  //   daily       — many attempts; rates can stay modest
+  //   triweekly   — boss with roughly 2–3 attempts/week
+  //   weekly      — very few attempts; rates feel rewarding but
+  //                 the cap (ultra at 20%) keeps things scarce
+  //
+  // Each tier carries its own `common_protected` rate that applies
+  // until the user's first common from THIS boss (per-boss now,
+  // not global — see first_common_by_boss in hb_inventory).
   const DROP_RATES_BY_CADENCE = {
     daily: {
-      ultra_rare: 0.05,   // 5%
-      rare:       0.15,   // 15%
-      common:     0.50,   // 50%
+      ultra_rare:        1 / 20,        // 5%
+      rare:              1 / 12,        // 8.33%
+      common:            1 / 5,         // 20%
+      common_protected:  2 / 3,         // 66.67% until first common from this boss
+    },
+    triweekly: {
+      ultra_rare:        0.10,          // 10%
+      rare:              0.15,          // 15%
+      common:            0.30,          // 30%
+      common_protected:  0.65,          // 65% until first common from this boss
     },
     weekly: {
-      ultra_rare: 0.25,   // 25%
-      rare:       0.40,   // 40%
-      common:     0.70,   // 70%
+      ultra_rare:        0.20,          // 20%
+      rare:              0.25,          // 25%
+      common:            0.40,          // 40%
+      common_protected:  0.70,          // 70% until first common from this boss
     },
   };
-  // Resolve the protected common rate for the current baseline.
-  // Always returns ≥ baseline so protection never hurts.
-  function protectedCommonRate(baseline) {
-    return Math.min(COMMON_PROTECTION_CAP, baseline * COMMON_PROTECTION_MULTIPLIER);
-  }
-  // Resolve the rate table for a boss. Falls back to daily if a boss
-  // somehow lacks a cadence — defensive default since the kill-volume
-  // assumption (daily ≈ frequent) is the safer error mode (over-tunes
-  // toward rarity rather than under-tunes).
-  function dropRatesFor(bossId) {
+  // Bad-luck protection thresholds per cadence. See DROPS.md notes.
+  //   any_drop_guarantee_after  — Nth consecutive no-drop forces a drop
+  //   ultra_soft_pity_after     — kills-since-ultra at which soft pity begins
+  //   ultra_soft_pity_add       — added to ultra rate per extra kill past soft floor
+  //   ultra_soft_pity_max       — ceiling for the soft-boosted ultra rate
+  //   ultra_hard_pity_after     — kills-since-ultra at which ultra is guaranteed
+  const DROP_PITY_BY_CADENCE = {
+    daily: {
+      any_drop_guarantee_after: 4,
+      ultra_soft_pity_after:    20,
+      ultra_soft_pity_add:      0.02,
+      ultra_soft_pity_max:      0.20,
+      ultra_hard_pity_after:    40,
+    },
+    triweekly: {
+      any_drop_guarantee_after: 3,
+      ultra_soft_pity_after:    10,
+      ultra_soft_pity_add:      0.03,
+      ultra_soft_pity_max:      0.25,
+      ultra_hard_pity_after:    20,
+    },
+    weekly: {
+      any_drop_guarantee_after: 2,
+      ultra_soft_pity_after:    5,
+      ultra_soft_pity_add:      0.05,
+      ultra_soft_pity_max:      0.35,
+      ultra_hard_pity_after:    8,
+    },
+  };
+  const VALID_CADENCES = new Set(Object.keys(DROP_RATES_BY_CADENCE));
+  // Resolve a boss's cadence with validation. Logs once per
+  // misconfigured boss in dev so missing/invalid metadata can't
+  // slip through silently.
+  const _warnedCadenceFor = new Set();
+  function getBossCadence(bossId) {
     const cfg = BOSSES[bossId];
-    const cadence = (cfg && cfg.cadence) || 'daily';
-    return DROP_RATES_BY_CADENCE[cadence] || DROP_RATES_BY_CADENCE.daily;
+    const cadence = cfg && cfg.cadence;
+    if (cadence && VALID_CADENCES.has(cadence)) return cadence;
+    if (!_warnedCadenceFor.has(bossId)) {
+      _warnedCadenceFor.add(bossId);
+      try {
+        console.warn('Boss ' + bossId + ' has missing/invalid cadence. Falling back to daily drop rates.');
+      } catch (_) {}
+    }
+    return 'daily';
+  }
+  function dropRatesFor(bossId) {
+    return DROP_RATES_BY_CADENCE[getBossCadence(bossId)];
+  }
+  function dropPityCfgFor(bossId) {
+    return DROP_PITY_BY_CADENCE[getBossCadence(bossId)];
   }
 
   // Per-rarity stack caps. Drops continue to roll at standard rates
@@ -1466,6 +1518,19 @@
   const INVENTORY_STORAGE_KEY = 'hb_inventory';
   let _inventory = null;
 
+  // v3 Phase 1h — fresh-pity stub for a never-killed boss.
+  function _freshPityState() {
+    return {
+      kills_since_any_drop: 0,
+      kills_since_ultra: 0,
+      kills_since_rare_or_better: 0,
+      last_drop_at: null,
+    };
+  }
+  function _stubCard() {
+    return { discovered: false, count: 0, first_acquired_date: null };
+  }
+
   function loadInventory() {
     try {
       const raw = localStorage.getItem(INVENTORY_STORAGE_KEY);
@@ -1479,18 +1544,53 @@
           || null;
         _inventory = {
           cards:                parsed.cards || {},
+          // LEGACY (preserved): global first-common flag. Still
+          // surfaced for any code that hasn't been migrated to the
+          // per-boss form yet.
           first_common_pulled:  firstCommonPulled,
           first_common_date:    firstCommonDate,
+          // v3 Phase 1h: per-boss first-common protection. Boolean
+          // map keyed by boss id; `true` = protection has ended for
+          // that boss (the first common has dropped).
+          first_common_by_boss: (parsed.first_common_by_boss && typeof parsed.first_common_by_boss === 'object')
+            ? Object.assign({}, parsed.first_common_by_boss)
+            : {},
+          // v3 Phase 1h: bad-luck protection counters per boss.
+          drop_pity_by_boss:    (parsed.drop_pity_by_boss && typeof parsed.drop_pity_by_boss === 'object')
+            ? Object.assign({}, parsed.drop_pity_by_boss)
+            : {},
           reveal_queue:         Array.isArray(parsed.reveal_queue) ? parsed.reveal_queue : [],
         };
         // Backfill stub entries for any cards in CARDS that aren't in
         // saved state — happens when new cards are added in a release
         // post-deploy. Existing card entries are preserved as-is.
         Object.keys(CARDS).forEach(id => {
-          if (!_inventory.cards[id]) {
-            _inventory.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
-          }
+          if (!_inventory.cards[id]) _inventory.cards[id] = _stubCard();
         });
+        // v3 Phase 1h migration. If first_common_by_boss is missing
+        // but the user already owns any common card, infer that the
+        // protection has ended for those source bosses. Bosses with
+        // no common in inventory keep protection active (so a new
+        // boss content drop still triggers its high "first-common"
+        // rate for everyone).
+        if (Object.keys(_inventory.first_common_by_boss).length === 0) {
+          Object.values(CARDS).forEach(card => {
+            if (card.rarity !== 'common') return;
+            const entry = _inventory.cards[card.id];
+            if (entry && entry.count > 0 && card.source_boss) {
+              _inventory.first_common_by_boss[card.source_boss] = true;
+            }
+          });
+        }
+        // Backfill pity state for each known boss the user could
+        // theoretically hunt. Existing pity entries are preserved.
+        if (typeof BOSSES !== 'undefined') {
+          Object.keys(BOSSES).forEach(bid => {
+            if (!_inventory.drop_pity_by_boss[bid]) {
+              _inventory.drop_pity_by_boss[bid] = _freshPityState();
+            }
+          });
+        }
         persistInventory();
         return _inventory;
       }
@@ -1500,11 +1600,16 @@
       cards: {},
       first_common_pulled: false,
       first_common_date: null,
+      first_common_by_boss: {},
+      drop_pity_by_boss: {},
       reveal_queue: [],
     };
-    Object.keys(CARDS).forEach(id => {
-      _inventory.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
-    });
+    Object.keys(CARDS).forEach(id => { _inventory.cards[id] = _stubCard(); });
+    if (typeof BOSSES !== 'undefined') {
+      Object.keys(BOSSES).forEach(bid => {
+        _inventory.drop_pity_by_boss[bid] = _freshPityState();
+      });
+    }
     persistInventory();
     return _inventory;
   }
@@ -1514,6 +1619,119 @@
   function getInventory() {
     if (!_inventory) loadInventory();
     return _inventory;
+  }
+
+  // ── v3 Phase 1h — first-common (per boss) ──────────────────
+  function hasPulledFirstCommonForBoss(bossId) {
+    const inv = getInventory();
+    return inv.first_common_by_boss && inv.first_common_by_boss[bossId] === true;
+  }
+  function markFirstCommonPulledForBoss(bossId) {
+    const inv = getInventory();
+    if (!inv.first_common_by_boss) inv.first_common_by_boss = {};
+    inv.first_common_by_boss[bossId] = true;
+  }
+
+  // ── v3 Phase 1h — pity tracking (per boss) ─────────────────
+  function getDropPityState(bossId) {
+    const inv = getInventory();
+    if (!inv.drop_pity_by_boss) inv.drop_pity_by_boss = {};
+    if (!inv.drop_pity_by_boss[bossId]) {
+      inv.drop_pity_by_boss[bossId] = _freshPityState();
+    }
+    return inv.drop_pity_by_boss[bossId];
+  }
+  function setDropPityState(bossId, state) {
+    const inv = getInventory();
+    if (!inv.drop_pity_by_boss) inv.drop_pity_by_boss = {};
+    inv.drop_pity_by_boss[bossId] = state;
+  }
+  function incrementDropPityAfterNoDrop(bossId) {
+    const p = getDropPityState(bossId);
+    p.kills_since_any_drop      += 1;
+    p.kills_since_ultra         += 1;
+    p.kills_since_rare_or_better += 1;
+  }
+  function resetDropPityAfterDrop(bossId, rarity) {
+    const p = getDropPityState(bossId);
+    // Any drop resets the "kills_since_any_drop" counter. Rare+
+    // ultra also reset "kills_since_rare_or_better". Ultra also
+    // resets "kills_since_ultra".
+    if (rarity === 'common') {
+      p.kills_since_any_drop = 0;
+      p.kills_since_ultra         += 1;
+      p.kills_since_rare_or_better += 1;
+    } else if (rarity === 'rare') {
+      p.kills_since_any_drop = 0;
+      p.kills_since_rare_or_better = 0;
+      p.kills_since_ultra += 1;
+    } else if (rarity === 'ultra_rare') {
+      p.kills_since_any_drop = 0;
+      p.kills_since_rare_or_better = 0;
+      p.kills_since_ultra = 0;
+    }
+    p.last_drop_at = new Date().toISOString();
+  }
+
+  // Compute the EFFECTIVE ultra rate for this kill given how long
+  // it's been since this boss last dropped an ultra. Hard pity →
+  // guaranteed (1.0). Soft pity → baseRate + N×add capped at max.
+  function getEffectiveUltraRate(bossId, baseRate) {
+    const cfg = dropPityCfgFor(bossId);
+    const pity = getDropPityState(bossId);
+    if (pity.kills_since_ultra >= cfg.ultra_hard_pity_after) return 1;
+    if (pity.kills_since_ultra >= cfg.ultra_soft_pity_after) {
+      const extra = pity.kills_since_ultra - cfg.ultra_soft_pity_after + 1;
+      return Math.min(baseRate + extra * cfg.ultra_soft_pity_add, cfg.ultra_soft_pity_max);
+    }
+    return baseRate;
+  }
+
+  // Force a drop when any-drop pity triggers. Picks the most
+  // user-respectful rarity that hasn't capped this card type for
+  // this boss: common (if not owned / not capped) → rare (if cap
+  // not reached) → ultra (always valid, cap is Infinity). Returns
+  // the card object the caller can hand back to rollBossDrop's
+  // award path. Never throws.
+  function forcePityDrop(bossId) {
+    const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
+    const pools = {
+      common:     bossCards.filter(c => c.rarity === 'common'),
+      rare:       bossCards.filter(c => c.rarity === 'rare'),
+      ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
+    };
+    const inv = getInventory();
+    // Helper: from a pool, prefer entries with room left under cap.
+    function pickWithCapHeadroom(pool) {
+      if (!pool.length) return null;
+      const cap = STACK_CAPS[pool[0].rarity] != null ? STACK_CAPS[pool[0].rarity] : Infinity;
+      // Filter to cards with room (cap == Infinity means always room).
+      const open = pool.filter(c => {
+        const e = inv.cards[c.id];
+        return cap === Infinity || (e ? e.count < cap : true);
+      });
+      const arr = open.length ? open : pool; // if all capped, fall through
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+    return pickWithCapHeadroom(pools.common)
+        || pickWithCapHeadroom(pools.rare)
+        || pickWithCapHeadroom(pools.ultra_rare)
+        || null;
+  }
+
+  // Read-model for UI surfaces (boss detail "Relic Mercy" section).
+  function getDropPityDisplay(bossId) {
+    const cfg = dropPityCfgFor(bossId);
+    const pity = getDropPityState(bossId);
+    return {
+      cadence:         getBossCadence(bossId),
+      anyDropCurrent:  pity.kills_since_any_drop,
+      anyDropTarget:   cfg.any_drop_guarantee_after,
+      ultraCurrent:    pity.kills_since_ultra,
+      ultraSoftTarget: cfg.ultra_soft_pity_after,
+      ultraHardTarget: cfg.ultra_hard_pity_after,
+      lastDropAt:      pity.last_drop_at,
+    };
   }
 
   // Roll a drop for a boss kill. Returns the dropped card object, or
@@ -1529,12 +1747,6 @@
     const cfg = BOSSES[bossId];
     if (!cfg) return null;
 
-    // Build this boss's drop table. v2.1+: per-rarity POOLS (not
-    // single entries). When a rarity rolls, uniformly pick one
-    // card from that rarity's pool. Common pools grew to 3 cards
-    // per boss in v2.1 content patch (was 1 each). Rare + ultra-
-    // rare pools remain single-entry today but the array shape is
-    // future-proof for when those tiers also expand.
     const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
     const pools = {
       ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
@@ -1545,31 +1757,52 @@
       ? null
       : pool[Math.floor(Math.random() * pool.length)];
 
-    // Cadence-specific rates (DROPS.md v1.6). Weekly bosses get
-    // higher baselines than daily so per-month pull expectations
-    // stay comparable across cadences. Common rate uses the
-    // multiplier-form protection until the first common drops.
     const rates = dropRatesFor(bossId);
-    const commonRate = inv.first_common_pulled
+    // Per-boss first-common protection (v3 Phase 1h). Falls back to
+    // the legacy global flag only when no per-boss entry exists.
+    const commonRate = hasPulledFirstCommonForBoss(bossId)
       ? rates.common
-      : protectedCommonRate(rates.common);
+      : rates.common_protected;
+    // Soft/hard ultra pity — compute per-roll without mutating the
+    // base rate table.
+    const effectiveUltraRate = getEffectiveUltraRate(bossId, rates.ultra_rare);
+    const ultraHardForced    = effectiveUltraRate >= 1 && pools.ultra_rare.length > 0;
 
-    // Roll order. Each roll is independent; checks in order;
-    // first hit wins. On hit, uniformly pick one card from that
-    // rarity's pool.
+    // Roll order: ultra → rare → common. Mutually exclusive; first
+    // hit wins.
     let dropped = null;
-    if (Math.random() < rates.ultra_rare && pools.ultra_rare.length) {
+    let fromPity = false;
+    let pityType = null;
+    if (Math.random() < effectiveUltraRate && pools.ultra_rare.length) {
       dropped = pickFromPool(pools.ultra_rare);
+      if (ultraHardForced) { fromPity = true; pityType = 'ultra_hard'; }
+      else if (effectiveUltraRate > rates.ultra_rare) { fromPity = true; pityType = 'ultra_soft'; }
     } else if (Math.random() < rates.rare && pools.rare.length) {
       dropped = pickFromPool(pools.rare);
     } else if (Math.random() < commonRate && pools.common.length) {
       dropped = pickFromPool(pools.common);
     }
 
-    if (!dropped) return null;
+    // Any-drop pity. If all normal rolls failed but the user is one
+    // kill shy of the cadence's no-drop ceiling, force a drop now.
+    if (!dropped) {
+      const pityCfg = dropPityCfgFor(bossId);
+      const pityState = getDropPityState(bossId);
+      if (pityState.kills_since_any_drop + 1 >= pityCfg.any_drop_guarantee_after) {
+        dropped = forcePityDrop(bossId);
+        if (dropped) { fromPity = true; pityType = 'any_drop'; }
+      }
+    }
+
+    // No drop AND no pity → record the empty kill and bail.
+    if (!dropped) {
+      incrementDropPityAfterNoDrop(bossId);
+      persistInventory();
+      return null;
+    }
 
     // Award (or block) the drop based on stack cap.
-    const entry = inv.cards[dropped.id] || { discovered: false, count: 0, first_acquired_date: null };
+    const entry = inv.cards[dropped.id] || _stubCard();
     const wasFirstAcquisition = !entry.discovered;
     const cap = STACK_CAPS[dropped.rarity] != null ? STACK_CAPS[dropped.rarity] : Infinity;
     const wasCapped = (entry.count || 0) >= cap;
@@ -1577,30 +1810,28 @@
     if (!wasCapped) {
       entry.discovered = true;
       entry.count = (entry.count || 0) + 1;
-      if (wasFirstAcquisition) {
-        entry.first_acquired_date = getDeviceLocalDate();
-      }
+      if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
       inv.cards[dropped.id] = entry;
     }
 
-    // First-common protection state — fires on the FIRST common ever
-    // pulled, including the case where it stacks normally. A capped
-    // pull (count already at 1) shouldn't re-trigger first-common
-    // logic since by definition first_common_pulled is already true.
-    if (dropped.rarity === 'common' && !inv.first_common_pulled) {
-      inv.first_common_pulled = true;
-      inv.first_common_date = getDeviceLocalDate();
-    }
-
-    // Queue reveal modal for first-acquisition rare/ultra-rare drops
-    // only. Dupes (stacked or capped) don't re-trigger reveals — the
-    // toast on the kill handler conveys them instead. Commons never
-    // queue — they fire combined-toast.
-    if (wasFirstAcquisition && !wasCapped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare')) {
-      if (!inv.reveal_queue.includes(dropped.id)) {
-        inv.reveal_queue.push(dropped.id);
+    // Mark first-common protection for THIS boss (per-boss now),
+    // and keep the legacy global flag in sync for any downstream
+    // code we haven't migrated yet.
+    if (dropped.rarity === 'common' && !hasPulledFirstCommonForBoss(bossId)) {
+      markFirstCommonPulledForBoss(bossId);
+      if (!inv.first_common_pulled) {
+        inv.first_common_pulled = true;
+        inv.first_common_date = getDeviceLocalDate();
       }
     }
+
+    // Queue reveal modal for first-acquisition rare/ultra-rare drops.
+    if (wasFirstAcquisition && !wasCapped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare')) {
+      if (!inv.reveal_queue.includes(dropped.id)) inv.reveal_queue.push(dropped.id);
+    }
+
+    // Update pity counters for the realized outcome.
+    resetDropPityAfterDrop(bossId, dropped.rarity);
 
     persistInventory();
     return {
@@ -1609,6 +1840,8 @@
       wasCapped,
       count:    entry.count || 0,
       cap,
+      fromPity,
+      pityType,
     };
   }
 
@@ -1638,13 +1871,19 @@
       if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
       inv.cards[card.id] = entry;
     }
-    if (card.rarity === 'common' && !inv.first_common_pulled) {
-      inv.first_common_pulled = true;
-      inv.first_common_date = getDeviceLocalDate();
+    if (card.rarity === 'common' && !hasPulledFirstCommonForBoss(bossId)) {
+      markFirstCommonPulledForBoss(bossId);
+      if (!inv.first_common_pulled) {
+        inv.first_common_pulled = true;
+        inv.first_common_date = getDeviceLocalDate();
+      }
     }
     if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
       if (!inv.reveal_queue.includes(card.id)) inv.reveal_queue.push(card.id);
     }
+    // Pity counters update too on a forced drop so debug paths stay
+    // consistent with the real RNG path.
+    resetDropPityAfterDrop(bossId, card.rarity);
     persistInventory();
     // Trigger reveal immediately for first-acquisition rare/ultra so
     // console testing is one-line. Capped/dupe rare-ultra: no reveal.
@@ -1667,11 +1906,16 @@
       cards: {},
       first_common_pulled: false,
       first_common_date: null,
+      first_common_by_boss: {},
+      drop_pity_by_boss: {},
       reveal_queue: [],
     };
-    Object.keys(CARDS).forEach(id => {
-      _inventory.cards[id] = { discovered: false, count: 0, first_acquired_date: null };
-    });
+    Object.keys(CARDS).forEach(id => { _inventory.cards[id] = _stubCard(); });
+    if (typeof BOSSES !== 'undefined') {
+      Object.keys(BOSSES).forEach(bid => {
+        _inventory.drop_pity_by_boss[bid] = _freshPityState();
+      });
+    }
     persistInventory();
   }
 
@@ -1690,22 +1934,30 @@
     let toastMsg = cfg.name + ' defeated.' + soulsSuffix;
 
     if (dropInfo) {
-      const { card, wasFirst, wasCapped, count, cap } = dropInfo;
+      const { card, wasFirst, wasCapped, count, cap, fromPity, pityType } = dropInfo;
       const rarityLabel = RARITY_LABELS[card.rarity] || card.rarity;
+      // v3 Phase 1h — pity-flavored verbs for the combined toast.
+      // "Mercy awakened:" for any-drop pity. "Fate answered:" for
+      // ultra hard pity. Soft-pity ultras read as normal pulls
+      // (the boost was probabilistic, not deterministic).
+      const verb = fromPity && pityType === 'any_drop'
+        ? 'Mercy awakened: '
+        : fromPity && pityType === 'ultra_hard'
+          ? 'Fate answered: '
+          : 'Pulled: ';
       if (wasCapped) {
-        // Drop blocked — already at stack cap for this card.
         toastMsg += ' Duplicate ' + card.name + ' (' + rarityLabel +
                     '). Cap reached (' + cap + ').';
       } else if (!wasFirst) {
-        // Stacked dupe (rare 2-3, ultra unlimited).
         toastMsg += ' Duplicate ' + card.name + ' (' + rarityLabel +
                     '). You have ' + count + '.';
       } else if (card.rarity === 'common') {
-        // First-acquisition common — existing combined-toast behavior.
-        toastMsg += ' Pulled: ' + card.name + ' (Common).';
+        toastMsg += ' ' + verb + card.name + ' (Common).';
+      } else if (fromPity && pityType === 'ultra_hard') {
+        // Hard-pity ultra still triggers the cinematic reveal below
+        // but we surface the pity verb in the kill toast first.
+        toastMsg += ' Fate answered.';
       }
-      // First-acquisition rare/ultra: no toast extension; the
-      // cinematic reveal fires below.
     }
 
     try {
@@ -2289,6 +2541,65 @@
     return a.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  // v3 Phase 1h — console-only dry-run simulator. Runs N kills
+  // through a clone of pity state, returns aggregate counts. Does
+  // NOT mutate the real inventory.
+  function simulateDrops(bossId, count) {
+    const n = Math.max(1, Math.min(100000, count | 0));
+    const cfg = BOSSES[bossId];
+    if (!cfg) return null;
+    const pityCfg = dropPityCfgFor(bossId);
+    const rates = dropRatesFor(bossId);
+    const realPity = getDropPityState(bossId);
+    const realFirstCommon = hasPulledFirstCommonForBoss(bossId);
+    // Snapshot — sim runs against a copy.
+    const pity = Object.assign({}, realPity);
+    let firstCommon = realFirstCommon;
+    const tally = { common: 0, rare: 0, ultra_rare: 0, no_drop: 0, pity_drops: 0 };
+    for (let i = 0; i < n; i++) {
+      const effU = (pity.kills_since_ultra >= pityCfg.ultra_hard_pity_after) ? 1
+        : (pity.kills_since_ultra >= pityCfg.ultra_soft_pity_after
+            ? Math.min(rates.ultra_rare + (pity.kills_since_ultra - pityCfg.ultra_soft_pity_after + 1) * pityCfg.ultra_soft_pity_add, pityCfg.ultra_soft_pity_max)
+            : rates.ultra_rare);
+      const commonRate = firstCommon ? rates.common : rates.common_protected;
+      let outcome = null;
+      if (Math.random() < effU)        outcome = 'ultra_rare';
+      else if (Math.random() < rates.rare) outcome = 'rare';
+      else if (Math.random() < commonRate) outcome = 'common';
+      if (!outcome && pity.kills_since_any_drop + 1 >= pityCfg.any_drop_guarantee_after) {
+        outcome = 'common'; // pity prefers common per forcePityDrop ordering
+        tally.pity_drops += 1;
+      }
+      if (!outcome) {
+        tally.no_drop += 1;
+        pity.kills_since_any_drop      += 1;
+        pity.kills_since_ultra         += 1;
+        pity.kills_since_rare_or_better += 1;
+      } else {
+        tally[outcome] += 1;
+        if (outcome === 'common') {
+          pity.kills_since_any_drop = 0;
+          pity.kills_since_ultra         += 1;
+          pity.kills_since_rare_or_better += 1;
+          firstCommon = true;
+        } else if (outcome === 'rare') {
+          pity.kills_since_any_drop = 0;
+          pity.kills_since_rare_or_better = 0;
+          pity.kills_since_ultra += 1;
+        } else {
+          pity.kills_since_any_drop = 0;
+          pity.kills_since_rare_or_better = 0;
+          pity.kills_since_ultra = 0;
+        }
+      }
+    }
+    return tally;
+  }
+  function resetPity(bossId) {
+    setDropPityState(bossId, _freshPityState());
+    persistInventory();
+  }
+
   try {
     window.Drops = {
       get state()   { return getInventory(); },
@@ -2298,11 +2609,19 @@
       resetInventory,
       rollBossDrop,
       processRevealQueue,
-      // Cadence-aware rate inspection (DROPS.md v1.4). Returns the
-      // resolved rate table for a boss without forcing a roll —
-      // useful for verifying daily-vs-weekly rate selection.
+      // Rate + cadence inspection
       getRates:     dropRatesFor,
       RATES:        DROP_RATES_BY_CADENCE,
+      PITY:         DROP_PITY_BY_CADENCE,
+      getCadence:   getBossCadence,
+      // v3 Phase 1h — pity helpers
+      getPity:      getDropPityState,
+      getPityDisplay: getDropPityDisplay,
+      resetPity,
+      forcePityDrop,
+      simulateDrops,
+      // Per-boss first-common
+      hasFirstCommon: hasPulledFirstCommonForBoss,
     };
   } catch (_) {}
 
@@ -13366,6 +13685,28 @@
             ? 'ENGAGE BOSS — ' + cost + ' SOULS'
             : 'ENGAGE BOSS';
         }
+      }
+    }
+
+    // v3 Phase 1h — RELIC MERCY readout. Shows progress toward
+    // any-drop guarantee + ultra hard-pity guarantee for this boss.
+    const mercyEl = document.getElementById('bfs-mercy');
+    if (mercyEl) {
+      try {
+        const m = getDropPityDisplay(id);
+        const cur1 = Math.min(m.anyDropCurrent, m.anyDropTarget);
+        const cur2 = Math.min(m.ultraCurrent,   m.ultraHardTarget);
+        mercyEl.innerHTML =
+          '<div class="bfs-mercy-row">' +
+            '<span class="bfs-mercy-label">Guaranteed relic</span>' +
+            '<span class="bfs-mercy-val">' + cur1 + ' / ' + m.anyDropTarget + '</span>' +
+          '</div>' +
+          '<div class="bfs-mercy-row">' +
+            '<span class="bfs-mercy-label">Ultra mercy</span>' +
+            '<span class="bfs-mercy-val">' + cur2 + ' / ' + m.ultraHardTarget + '</span>' +
+          '</div>';
+      } catch (_) {
+        mercyEl.innerHTML = '';
       }
     }
 

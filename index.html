@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=238">
+  <link rel="stylesheet" href="styles.css?v=239">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -700,11 +700,15 @@
       <div id="bfs-burned-banner" class="bfs-burned-banner hidden">Weekend forfeit — opens Friday</div>
     </section>
 
-    <!-- DROPS / REWARDS — placeholder. Layer ships when drops system
-         lands (BOSSES.md). Empty for now per spec. -->
-    <section class="bfs-section bfs-section--placeholder">
-      <h2 class="bfs-section-label">DROPS</h2>
-      <p class="bfs-section-placeholder-note">Drops will appear here when this system unlocks.</p>
+    <!-- RELIC MERCY (v3 Phase 1h) — bad-luck protection display.
+         Surfaces "guaranteed relic in N kills" + "ultra mercy in N
+         kills" so the user always sees progress toward a forced
+         drop. Populated by renderBossRelicMercy(). Pure read-out;
+         no inputs. -->
+    <section class="bfs-section bfs-section--mercy">
+      <h2 class="bfs-section-label">RELIC MERCY</h2>
+      <div id="bfs-mercy" class="bfs-mercy"></div>
+      <p class="bfs-mercy-note">Bad-luck protection only increases when this boss is defeated.</p>
     </section>
   </div>
 
@@ -1509,7 +1513,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=316"></script>
+  <script src="app.js?v=317"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

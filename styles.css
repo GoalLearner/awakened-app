@@ -13843,6 +13843,43 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-tertiary);
 }
 
+/* v3 Phase 1h — RELIC MERCY readout inside the boss-fs modal */
+.bfs-mercy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 15, 36, 0.85);
+  border: 1px solid var(--border);
+}
+.bfs-mercy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.bfs-mercy-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.bfs-mercy-val {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--gold-bright, var(--gold));
+  font-variant-numeric: tabular-nums;
+}
+.bfs-mercy-note {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    DROPS Phase 1 — Items tab Pokédex + reveal modal + card detail
    (v2.0.1). Each card is also an equippable item per EQUIPMENT.md;
