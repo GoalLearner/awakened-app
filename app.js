@@ -1203,7 +1203,7 @@
   // ═══════════════════════════════════════════════════════════════
 
   const HUNTER_BUILD_STORAGE_KEY = 'hb_hunter_build';
-  const HUNTER_BUILD_SLOT_COUNT  = 6;
+  const HUNTER_BUILD_SLOT_COUNT  = 8;
   let _hunterBuild = null;
 
   // ── TYPED EQUIPMENT SLOTS (v3 Phase 1e) ───────────────────────
@@ -1222,34 +1222,40 @@
   // reintroducing the body-socket art problem — the grid stays
   // clean and the square card art still works as-is.
   //
-  // Future advanced slots (amulet, cape, legs) are deliberately
-  // collapsed into existing 6 for now. See LEGACY_TO_TYPED_SLOT.
-  // TODO Phase 1f+: amulet, cape, legs as dedicated slots.
+  // v3 Phase 1f — CAPE and AMULET broken out into dedicated slots.
+  // The Armory is now an 8-slot 4×2 grid, ordered anatomically:
+  //   Row 1 (upper body):  HELM | AMULET | CAPE | WEAPON
+  //   Row 2 (lower body):  PLATE | GLOVES | BOOTS | RING
+  // Future: dedicated 'legs' slot if/when more content makes a
+  // dedicated greaves slot meaningful (currently leg cards
+  // collapse into PLATE — see LEGACY_TO_TYPED_SLOT).
   const EQUIPMENT_SLOTS = [
-    { key: 'helm',   label: 'HELM' },
+    { key: 'helm',   label: 'HELM'   },
+    { key: 'amulet', label: 'AMULET' },
+    { key: 'cape',   label: 'CAPE'   },
     { key: 'weapon', label: 'WEAPON' },
-    { key: 'plate',  label: 'PLATE' },
+    { key: 'plate',  label: 'PLATE'  },
     { key: 'gloves', label: 'GLOVES' },
-    { key: 'boots',  label: 'BOOTS' },
-    { key: 'ring',   label: 'RING' },
+    { key: 'boots',  label: 'BOOTS'  },
+    { key: 'ring',   label: 'RING'   },
   ];
   const EQUIPMENT_SLOT_INDEX = {
-    helm: 0, weapon: 1, plate: 2, gloves: 3, boots: 4, ring: 5,
+    helm: 0, amulet: 1, cape: 2, weapon: 3,
+    plate: 4, gloves: 5, boots: 6, ring: 7,
   };
-  // Legacy CARDS[id].slot values get folded into the new 6-slot
-  // taxonomy. body+legs+cape collapse into 'plate' (the catch-all
-  // armor slot); amulet collapses into 'ring' (single equipped
-  // jewelry slot for now).
+  // Legacy CARDS[id].slot values map into the typed taxonomy.
+  // `body` and `legs` still collapse into 'plate'; `cape` and
+  // `amulet` are now dedicated slots (v3 Phase 1f).
   const LEGACY_TO_TYPED_SLOT = {
     helm:   'helm',
     weapon: 'weapon',
     body:   'plate',
     legs:   'plate',
-    cape:   'plate',   // TODO Phase 1f: dedicated 'cape' slot
+    cape:   'cape',     // v3 Phase 1f — dedicated slot
     gloves: 'gloves',
     boots:  'boots',
     ring:   'ring',
-    amulet: 'ring',    // TODO Phase 1f: dedicated 'amulet' slot
+    amulet: 'amulet',   // v3 Phase 1f — dedicated slot
   };
   // Returns the typed slot key for a card, or null if the card
   // can't be equipped. Logs a one-time console.warn for cards with
@@ -1471,26 +1477,35 @@
     saveHunterBuild();
   }
 
-  // v3 Phase 1e — typed-slot migration. The prior generic-slot
-  // build placed cards into the first available slot regardless of
-  // type. Now each slot is bound to an equipment type, so any card
-  // sitting in the wrong index has to move (or be evicted if its
-  // typed slot is already occupied — the kept copy wins).
+  // v3 Phase 1e → 1f — typed-slot migration. Walks every equipped
+  // card, looks up its typed slot via getCardEquipmentSlot, and
+  // places it at the matching index in the NEW EQUIPMENT_SLOTS
+  // schema. Re-runs on every schema bump (v1 → v2) so users who
+  // had CAPE relics sitting in the legacy PLATE slot move into the
+  // new dedicated CAPE slot, AMULET relics out of RING, etc.
+  // Idempotent within a schema version. Does NOT delete any owned
+  // cards — only rearranges hb_hunter_build positions.
   //
-  // Idempotent via hb_equipment_build_migrated_v1. Does NOT delete
-  // any owned cards; only rearranges hb_hunter_build positions.
+  // Schema version history:
+  //   v1 (v3 Phase 1e): 6 slots, cape/amulet collapsed into plate/ring
+  //   v2 (v3 Phase 1f): 8 slots, cape + amulet dedicated
+  const EQUIPMENT_BUILD_SCHEMA_VERSION = '2';
   function migrateGenericBuildToEquipmentBuild() {
-    if (localStorage.getItem('hb_equipment_build_migrated_v1') === '1') return;
+    const stored = localStorage.getItem('hb_equipment_build_migrated_v1');
+    // v1 → v2 path: any user who completed the v1 migration needs
+    // to re-run under the new 8-slot schema to break out cape +
+    // amulet cards from their legacy slot collapses.
+    if (stored === EQUIPMENT_BUILD_SCHEMA_VERSION) return;
     const build = getHunterBuild();
     if (!build || !Array.isArray(build.slots)) {
-      try { localStorage.setItem('hb_equipment_build_migrated_v1', '1'); } catch (_) {}
+      try { localStorage.setItem('hb_equipment_build_migrated_v1', EQUIPMENT_BUILD_SCHEMA_VERSION); } catch (_) {}
       return;
     }
     const oldSlots = build.slots.slice();
     const newSlots = new Array(HUNTER_BUILD_SLOT_COUNT).fill(null);
     // Walk in order — first card claiming a typed slot wins; later
     // dupes for the same slot stay in inventory but not equipped.
-    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+    for (let i = 0; i < oldSlots.length; i++) {
       const cid = oldSlots[i];
       if (!cid || !CARDS[cid]) continue;
       const slotKey = getCardEquipmentSlot(CARDS[cid]);
@@ -1502,7 +1517,7 @@
     }
     _hunterBuild = { slots: newSlots, updated_at: new Date().toISOString() };
     saveHunterBuild();
-    try { localStorage.setItem('hb_equipment_build_migrated_v1', '1'); } catch (_) {}
+    try { localStorage.setItem('hb_equipment_build_migrated_v1', EQUIPMENT_BUILD_SCHEMA_VERSION); } catch (_) {}
   }
 
   try {

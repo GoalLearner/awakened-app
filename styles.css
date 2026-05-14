@@ -16255,9 +16255,21 @@ body.reveal-locked { overflow: hidden; }
 }
 
 .hunter-build-grid {
+  /* v3 Phase 1f — 4×2 grid for the 8-slot typed loadout
+     (HELM / AMULET / CAPE / WEAPON on row 1, PLATE / GLOVES /
+     BOOTS / RING on row 2). Slightly tighter gap so 4 tiles fit
+     comfortably across an iPhone Pro Max viewport.
+     Narrow phones (≤380px) fall back to 2×4 so each tile keeps
+     enough room for the slot-identity banner. */
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+@media (max-width: 380px) {
+  .hunter-build-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 }
 .hunter-build-slot {
   aspect-ratio: 1 / 1;
