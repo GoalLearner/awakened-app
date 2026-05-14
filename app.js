@@ -12683,7 +12683,7 @@
   const LB_METRIC_META = {
     step_total: {
       title: 'Steps · this week',
-      blurb: 'Total steps from Sunday 12:00 AM through Saturday 11:59 PM (device-local). Resets every Sunday. Apple Health is the only source — no manual logging.',
+      blurb: 'Total steps from Sunday 12:00 AM through Saturday 11:59 PM (device-local). Your weekly count starts over each Sunday — the leaderboard keeps the best totals. Apple Health is the only source — no manual logging.',
       unit:  'steps',
       formatValue: n => (n || 0).toLocaleString('en-US'),
     },
@@ -12735,6 +12735,46 @@
     return 'a while ago';
   }
 
+  // ── Display-side alias normalization ────────────────────────
+  // The backend returns whatever alias each user typed at signup.
+  // For the public leaderboard we want a clean, uniform feed:
+  //   • lowercase + no spaces (web-handle aesthetic)
+  //   • single allowlist exception: "richie" displays as "Richie"
+  //     (the product owner's handle keeps its capital R)
+  //   • dedupe collisions within the rendered list by appending a
+  //     numeric suffix (_2, _3, …). This is cosmetic-only — the
+  //     underlying user row is unchanged and "isMe" matching still
+  //     uses the raw alias field returned by the API.
+  const LB_ALIAS_ALLOWLIST_LOWER = new Set(['richie']);
+  const LB_ALIAS_DISPLAY_OVERRIDES = { richie: 'Richie' };
+
+  function lbNormalizeAliasForDisplay(raw) {
+    if (!raw) return '—';
+    const stripped = String(raw).replace(/\s+/g, '');
+    const lower = stripped.toLowerCase();
+    if (LB_ALIAS_DISPLAY_OVERRIDES[lower]) return LB_ALIAS_DISPLAY_OVERRIDES[lower];
+    return lower;
+  }
+
+  // Walks a list of {alias, ...} rows, applies normalization, and
+  // disambiguates collisions in-place. Returns an array of the
+  // normalized display strings, parallel to the input rows.
+  function lbBuildDisplayAliases(rows) {
+    const seen = Object.create(null);
+    return rows.map(row => {
+      const norm = lbNormalizeAliasForDisplay(row && row.alias);
+      // Allowlist names skip the dedup suffix — "Richie" is unique.
+      const lowerRaw = (row && row.alias) ? String(row.alias).toLowerCase().replace(/\s+/g, '') : '';
+      if (LB_ALIAS_ALLOWLIST_LOWER.has(lowerRaw)) {
+        seen[norm] = (seen[norm] || 0) + 1;
+        return norm;
+      }
+      const count = seen[norm] || 0;
+      seen[norm] = count + 1;
+      return count === 0 ? norm : (norm + '_' + (count + 1));
+    });
+  }
+
   // Renders the rank-list content given a backend response. Splits
   // the user-row out of the top-N (or surfaces a separate "your rank"
   // line if me.rank > top.length). Empty top → first-to-rank message.
@@ -12753,6 +12793,7 @@
     }
 
     const myAlias = lbGetMyAlias();
+    const myAliasDisplay = lbNormalizeAliasForDisplay(myAlias);
     let yourRankLine = '';
 
     // If the user is OUTSIDE the top-N (or has not submitted yet),
@@ -12763,7 +12804,7 @@
         yourRankLine =
           '<div class="lb-rank-row lb-rank-row--me lb-rank-row--out-of-top">' +
             '<span class="lb-rank-pos">#' + me.rank + '</span>' +
-            '<span class="lb-rank-name">' + esc(myAlias || 'You') + '</span>' +
+            '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + '</span>' +
             '<span class="lb-rank-value">' + meta.formatValue(me.current_value) + '</span>' +
           '</div>' +
           '<div class="lb-rank-divider" aria-hidden="true"></div>';
@@ -12774,18 +12815,21 @@
       yourRankLine =
         '<div class="lb-rank-row lb-rank-row--me lb-rank-row--pending">' +
           '<span class="lb-rank-pos">—</span>' +
-          '<span class="lb-rank-name">' + esc(myAlias || 'You') + ' <em class="lb-rank-name-sub">· submitting…</em></span>' +
+          '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + ' <em class="lb-rank-name-sub">· submitting…</em></span>' +
           '<span class="lb-rank-value">—</span>' +
         '</div>' +
         '<div class="lb-rank-divider" aria-hidden="true"></div>';
     }
 
-    const topRows = top.map(row => {
+    // Build display aliases for the top-N list — lowercase + no
+    // spaces, dedup suffixes on collisions, allowlist for "Richie".
+    const displayAliases = lbBuildDisplayAliases(top);
+    const topRows = top.map((row, i) => {
       const isMe = myAlias && row.alias === myAlias;
       const rankClass = isMe ? 'lb-rank-row lb-rank-row--me' : 'lb-rank-row';
       return '<div class="' + rankClass + '">' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
-        '<span class="lb-rank-name">' + esc(row.alias || '—') + '</span>' +
+        '<span class="lb-rank-name">' + esc(displayAliases[i] || '—') + '</span>' +
         '<span class="lb-rank-value">' + meta.formatValue(row.current_value) + '</span>' +
       '</div>';
     }).join('');
