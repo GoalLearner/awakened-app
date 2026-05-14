@@ -7255,18 +7255,23 @@
       const row = document.createElement('div');
       row.className = 'hg-row hg-row--ledger';
 
-      // Label column — stat-color accent stripe + two-line name + AUTO badge + info
+      // Label column — stat-color accent stripe + two-line name + tiny
+      // AUTO dot. v3 Phase 1p polish: the inline ⓘ button is gone; the
+      // entire label becomes the tap target (data-habit-info + role +
+      // tabindex). Event delegation in setupHistoryInfoBtn already
+      // matches both .hg-info-btn AND .hg-label--ledger selectors.
       const label = document.createElement('div');
       label.className = 'hg-label hg-label--ledger';
+      label.setAttribute('role', 'button');
+      label.setAttribute('tabindex', '0');
+      label.setAttribute('data-habit-info', habit.id);
+      label.setAttribute('aria-label', 'More info about ' + habitBaseName(habit));
       label.innerHTML =
         '<span class="hg-label-accent" style="background:' + statColor + ';' +
           'box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.45) + ';"></span>' +
         '<span class="hg-label-name hg-label-name--wrap">' + esc(habitBaseName(habit)) + '</span>' +
-        // Auto-verified habits get a tiny blue dot beside the name (v3
-        // Phase 1p polish — replaces the prior AUTO text pill).
-        (isAutoHabit ? '<span class="hg-label-auto" role="img" aria-label="Auto-verified via Apple Health" title="Auto-verified via Apple Health">AUTO</span>' : '') +
-        '<button class="hg-info-btn" aria-label="More info about ' + esc(habitBaseName(habit)) +
-          '" data-habit-info="' + esc(habit.id) + '">ⓘ</button>';
+        // Auto-verified habits keep their single tiny blue indicator dot.
+        (isAutoHabit ? '<span class="hg-label-auto" role="img" aria-label="Auto-verified via Apple Health" title="Auto-verified via Apple Health">AUTO</span>' : '');
       row.appendChild(label);
 
       // 7 cells
@@ -10138,11 +10143,24 @@
     // for the corresponding habit. Stops propagation so it doesn't trigger
     // any parent click handler (e.g., card tap).
     document.addEventListener('click', e => {
-      const btn = e.target.closest('.hg-info-btn[data-habit-info]');
+      // v3 Phase 1p polish — Weekly ledger rows no longer carry an inline
+      // ⓘ button; the entire label is the tap target. Monthly + Yearly
+      // still use the explicit button. Match either path.
+      const btn = e.target.closest('.hg-info-btn[data-habit-info], .hg-label--ledger[data-habit-info]');
       if (!btn) return;
       e.stopPropagation();
       e.preventDefault();
       const habitId = btn.getAttribute('data-habit-info');
+      const habit   = habits.find(h => h.id === habitId);
+      if (habit) openHabitInfoSheet(habit);
+    });
+    // Keyboard equivalent for the Weekly row labels.
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const t = e.target;
+      if (!t || !t.matches || !t.matches('.hg-label--ledger[data-habit-info]')) return;
+      e.preventDefault();
+      const habitId = t.getAttribute('data-habit-info');
       const habit   = habits.find(h => h.id === habitId);
       if (habit) openHabitInfoSheet(habit);
     });

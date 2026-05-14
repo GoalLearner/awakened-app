@@ -5598,6 +5598,9 @@ footer {
    badge column shrinks because the badge is rare in practice. */
 .hg-ledger .hg-row {
   grid-template-columns: 144px repeat(7, minmax(22px, 1fr)) 38px;
+  /* v3 Phase 1p final — softer divider so the ledger reads as a
+     premium ledger card, not a technical spreadsheet table. */
+  border-bottom-color: rgba(255,255,255,0.025);
 }
 .hg-row:last-child { border-bottom: none; }
 
@@ -18639,20 +18642,20 @@ body.reveal-locked { overflow: hidden; }
   text-indent: -9999px;
   overflow: hidden;
 }
-/* Weekly info button: nearly invisible by default; full opacity on
-   hover/focus so it stays accessible but never visually competes
-   with the habit name. */
-.hg-ledger .hg-label--ledger .hg-info-btn {
-  font-size: 9.5px;
-  padding: 1px 2px;
-  flex: 0 0 auto;
-  margin-left: 0;
-  opacity: 0.28;
-  line-height: 1;
-  transition: opacity 0.15s ease;
+/* Weekly ledger label is the tap target — entire row label opens the
+   habit info sheet. Subtle hover/focus state communicates the
+   interactivity without crowding the label with chrome. */
+.hg-ledger .hg-label--ledger {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
 }
-.hg-ledger .hg-label--ledger .hg-info-btn:hover,
-.hg-ledger .hg-label--ledger .hg-info-btn:focus-visible { opacity: 1; }
+.hg-ledger .hg-label--ledger:hover { background: rgba(255,255,255,0.025); }
+.hg-ledger .hg-label--ledger:focus-visible {
+  outline: 1px solid rgba(245,184,66,0.45);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
 
 /* ── Cell states ── */
 .hg-cell--done { border-radius: 5px; position: relative; }
@@ -18706,11 +18709,11 @@ body.reveal-locked { overflow: hidden; }
 
 .hg-cell--future {
   background: transparent;
-  border: 0.5px solid rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.035);
 }
 .hg-cell--off {
   background: transparent;
-  border: 0.5px dashed rgba(255,255,255,0.07);
+  border: 0.5px dashed rgba(255,255,255,0.05);
 }
 
 /* Slightly larger day cells (22 → 24px) for completed-cell legibility
