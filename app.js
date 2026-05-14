@@ -146,6 +146,9 @@
         result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' };
       }
       if (result && result.ok) {
+        // v3 Phase 1j — alias is now the canonical hunter-name claim.
+        // Lock it so no downstream UI exposes a rename path.
+        try { localStorage.setItem('hb_hunter_name_claimed', '1'); } catch (_) {}
         // Reload to mount the main app from the signed-in state.
         window.location.reload();
         return;
@@ -8570,7 +8573,12 @@
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +
               '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + '</span>' +
-              '<button class="sc-edit-btn" id="sc-name-edit" aria-label="Edit name">✎</button>' +
+              // v3 Phase 1j — hunter name is claim-once. Render the
+              // edit pencil only for users who haven't claimed yet
+              // (legacy path; new users go through signin alias).
+              (localStorage.getItem('hb_hunter_name_claimed') === '1'
+                ? ''
+                : '<button class="sc-edit-btn" id="sc-name-edit" aria-label="Edit name">✎</button>') +
               // Compact Personal Records chip — taps open the All-PRs sheet
               buildPRStripHTML() +
             '</div>' +
@@ -8654,7 +8662,15 @@
       buildRadarChart();
     });
 
-    document.getElementById('sc-name-edit').addEventListener('click', () => {
+    // v3 Phase 1j — edit button only renders when name is not yet
+    // claimed. The element may not exist; guard the listener wiring
+    // accordingly and defensively reject runtime edits if claimed.
+    const nameEditBtn = document.getElementById('sc-name-edit');
+    if (nameEditBtn) nameEditBtn.addEventListener('click', () => {
+      if (localStorage.getItem('hb_hunter_name_claimed') === '1') {
+        try { if (typeof showHabitToast === 'function') showHabitToast('Hunter name already claimed.'); } catch (_) {}
+        return;
+      }
       const nameVal = document.getElementById('sc-name-val');
       const editBtn = document.getElementById('sc-name-edit');
       const input = document.createElement('input');
@@ -16956,10 +16972,12 @@
       const name = nameInput.value.trim();
       if (!name) return;
 
-      // Save name & mark as welcomed
+      // Save name & mark as welcomed. v3 Phase 1j — also lock the
+      // name so the Status-tab pencil never re-renders.
       playerName = name;
-      localStorage.setItem('hb_name',     playerName);
-      localStorage.setItem('hb_welcomed', '1');
+      localStorage.setItem('hb_name',                playerName);
+      localStorage.setItem('hb_welcomed',            '1');
+      localStorage.setItem('hb_hunter_name_claimed', '1');
 
       // Stop particle loop
       cancelAnimationFrame(rafId);
@@ -17108,10 +17126,21 @@
     const screen = document.getElementById('onboarding');
     screen.classList.remove('hidden');
 
-    // Pre-fill name if captured from welcome screen
+    // Pre-fill name if captured from welcome screen / signin alias.
+    // v3 Phase 1j — the hunter name is claimed once via signin and
+    // never editable. If we already have a real name, hide the
+    // name-input row entirely so the user isn't asked again.
     const obNameInput = document.getElementById('ob-name-input');
-    if (obNameInput && playerName && playerName !== 'Hunter') {
-      obNameInput.value = playerName;
+    const claimedName = (localStorage.getItem('hb_name') || '').trim();
+    const nameAlreadyClaimed = claimedName && claimedName !== 'Hunter';
+    if (obNameInput) {
+      if (nameAlreadyClaimed) {
+        obNameInput.value = claimedName;
+        const row = obNameInput.closest('.ob-name-row');
+        if (row) row.style.display = 'none';
+      } else if (playerName && playerName !== 'Hunter') {
+        obNameInput.value = playerName;
+      }
     }
 
     obSelected.clear();
@@ -17266,6 +17295,8 @@
       playerName = nameInput.value.trim();
       localStorage.setItem('hb_name', playerName);
     }
+    // v3 Phase 1j — lock the hunter name once full onboarding ends.
+    try { localStorage.setItem('hb_hunter_name_claimed', '1'); } catch (_) {}
     if (selectedPackId) localStorage.setItem('hb_path', selectedPackId);
 
     // Build habits using per-habit configs stored in obConfig, falling back to defaults
@@ -19445,6 +19476,17 @@
     try { migrateEquipmentToHunterBuild(); } catch (_) {}
     // v3 Phase 1e — re-sort generic build into typed equipment slots
     try { migrateGenericBuildToEquipmentBuild(); } catch (_) {}
+    // v3 Phase 1j — hunter-name claim migration. Any existing user
+    // who already has a non-default hb_name on disk is implicitly
+    // claimed (they chose the name in a prior session). Idempotent.
+    try {
+      if (localStorage.getItem('hb_hunter_name_claimed') !== '1') {
+        const existing = (localStorage.getItem('hb_name') || '').trim();
+        if (existing && existing !== 'Hunter') {
+          localStorage.setItem('hb_hunter_name_claimed', '1');
+        }
+      }
+    } catch (_) {}
     if (!localStorage.getItem('hb_bedtime_window_fix_v1')) {
       try {
         const bedtimeHabit = habits.find(h => h && h.name === 'Sleep before midnight' && !h.custom);
@@ -19664,7 +19706,34 @@
     // users see the 5-card intro before the existing welcome flow.
     try { setupIntroOnboarding(); } catch (_) {}
     const enterFirstRunFlow = () => {
+      // v3 Phase 1j — single hunter-name claim. The signin-alias
+      // step is the canonical name claim now. If we've already got
+      // a real name on disk (set by Auth on alias commit OR by a
+      // prior session), bypass the older "A new hunter awakens"
+      // welcome screen — it would just ask for the name again.
+      const claimedName = (localStorage.getItem('hb_name') || '').trim();
+      const alreadyClaimed = claimedName && claimedName !== 'Hunter';
+      if (alreadyClaimed) {
+        try { localStorage.setItem('hb_hunter_name_claimed', '1'); } catch (_) {}
+      }
       if (needsWelcome) {
+        if (alreadyClaimed) {
+          // Skip the welcome ceremony entirely — name is already
+          // claimed via signin. Mark welcomed + route to path picker.
+          try { localStorage.setItem('hb_welcomed', '1'); } catch (_) {}
+          needsWelcome = false;
+          if (needsOnboarding) {
+            showPathScreen();
+          } else {
+            render();
+            setupFridayBanner();
+            maybeAutoShowWhatsNew();
+            setTimeout(() => {
+              try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
+            }, 900);
+          }
+          return;
+        }
         showWelcomeScreen();
       } else if (needsOnboarding) {
         showPathScreen();
