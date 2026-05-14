@@ -8,10 +8,19 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 **Awakened — Daily Habit Tracker** (`com.goallearner.awakened`, name on App Store: *Awakened: Habit RPG*).
 
-A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Starting in v2.0, dungeon bosses run as a parallel passive-progress system fed by the same Apple Health data that auto-verifies habits. v2.0.1 added the third boss (The Steel Wolf, D-rank), engagement model, souls currency, leaderboard groundwork. **v2.0.2 ships the Drops Phase 1 system**: card collection from boss kills, cinematic reveals for rare/ultra-rare, Pokédex on the Items tab, stat-bonus badges on cards, and cadence-aware drop rates. v2.0.2 also expands the notification system from 2 daily pings to 3 (adds 1 PM mid-day check-in, shifts evening from 6 PM → 7 PM). There is no backend — every byte of state lives in `localStorage`.
+A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The app is a Solo-Leveling-flavored habit tracker: each completion grants XP, ranks the user from E → S+, and develops 6 stats that determine a "class." Dungeon bosses run as a parallel passive-progress system fed by Apple Health data that also auto-verifies habits. Boss kills drop cards/relics that the hunter equips into a 6-slot typed Armory loadout (HELM / WEAPON / PLATE / GLOVES / BOOTS / RING). **v2.1.0** added Sign in with Apple + a real cloud backend with a live global leaderboard. **v2.2.0** rebuilt the launch experience (premium Tonal-style splash + 5-card educational onboarding), pivoted the Armory from a 9-slot body-equipment panel to typed 6-slot loadout, rebalanced drops with a 3-tier cadence (daily / triweekly / weekly) and bad-luck protection (soft + hard pity), reframed the Items tab as the Relic Archive, and added a silent SW auto-update so users never have to clear cache to receive an update. Local habit/stat state lives in `localStorage`; the cloud backend handles auth + leaderboard only.
 
-- **Current marketing version:** `2.0.2` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.0.1 was pulled from App Store review when the train locked mid-development; all v2.0.1 development work + Drops Phase 1 ships under v2.0.2. Coverage on top of v2.0.1's content: **Drops Phase 1 fully shipped** — 9-card launch roster with real art across all 3 bosses (Dream-Woven Hood, Sleepwalker's Cloak, Pendant of the Wakeful + Vow Ring, Vessel of Refusal, Sober King's Gloves + Pack Leader's Greaves, Alpha's Mantle, Trail-Worn Boots), cinematic Solo Leveling reveal modal for rare + ultra-rare, Pokédex with collapsible rarity sections + stat-bonus badges, stack caps (common max 1, rare max 3, ultra unlimited) with dupe toasts, cadence-adjusted drop rates (5× ultra / 3× rare / 2× common for weekly bosses), 1:1 aspect-ratio card art with `<img>` + emoji-fallback render pattern. **Notification system expanded** to 3 daily pings (morning configurable + 1 PM mid-day with souls/streak/caught-up conditional + 7 PM evening check-in, shifted from 6 PM). Also covers: Edit Habit modal polish (step goal floor 8,000), canonical habit name/emoji lock, full v2.0.1 carryover.
-- **Service-worker cache version:** `v5.137` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
+- **Current marketing version:** `2.2.0` (constant `APP_VERSION` in `app.js` AND `codemagic.yaml`). v2.1.0 (build 35) was submitted for review May 13 1:39 AM PST then the train locked mid-development; the v2.2.0 train opened cleanly on commit `e744a08` and shipped to TestFlight as **build 58** on May 14. Coverage on top of v2.1.0:
+  - **New launch experience (v3 Phase 1i)** — pre-rendered AWAKENED splash with small gold hunter-rune emblem stacked over the wordmark, 1800ms min dwell. 5-card educational onboarding fires once for new users (Discipline Becomes Power → Train Your Six Stats → The System Is Honest → Hunt Bosses. Earn Relics. → Shape Your Hunter Build). Gated by `hb_onboarding_seen_v2`; returning users auto-migrated.
+  - **Typed equipment Armory (v3 Phase 1d → 1e)** — 9-slot body-equipment panel (the old `panel-base.png` art with carved sockets) RETIRED. New 6-slot 3×2 typed grid: HELM / WEAPON / PLATE / GLOVES / BOOTS / RING. Square card art is intentional. All slots unlocked at every rank (no rank-gating). Slot-type enforcement: cards can only equip into their matching typed slot. Legacy `body`/`legs`/`cape` collapse → `plate`; `amulet` → `ring`. Migration via `hb_equipment_build_migrated_v1`.
+  - **Drops v1.7 (v3 Phase 1h)** — three cadence tiers (daily / triweekly / weekly) with cadence-specific rates AND pity. Per-boss first-common protection (replaces the prior global flag). Soft ultra pity boosts the rate past a threshold; hard ultra pity guarantees ultra at the ceiling (daily 40 kills / weekly 8 kills). Any-drop pity prevents repeated empty kills (daily 4 / triweekly 3 / weekly 2). RELIC MERCY readout in boss detail modal shows progress toward both guarantees.
+  - **Relic Archive (v3 Phase 1g)** — Items tab renamed; cards show slot badge (top-left), equipped badge (top-right, gold pill), drop-source line below name. Mystery cards reveal rarity + source teaser without naming the item; tap opens a small mystery info modal with HUNT BOSS button. COMMON tier hides silhouettes (commons roll passively); RARE + ULTRA still tease. Cards sort by acquisition date.
+  - **Single hunter-name claim + lock (v3 Phase 1j)** — name is claimed once via signin alias, locked everywhere afterward. Status-tab pencil hides; legacy welcome screen + habit-picker name input bypass when already claimed. Flag: `hb_hunter_name_claimed`.
+  - **Silent auto-update SW** — `reg.update()` fires on every page load + tab focus. New SW silently `SKIP_WAITING`s without banner click. Version-string compare runs 2s after register as safety net. Manual opt-in via `hb_sw_manual_update`.
+  - **Compact MOBA-style Select Relic picker** — slot-filtered, `auto-fill minmax(112px, 1fr)` grid with stat-chip rows. Replaces the prior gallery-sized cards.
+  - **Premium EQUIP TO BUILD / UNEQUIP button** — purple→violet primary with gold rim + ✦ rune glyph; muted-navy unequip variant.
+  - **Leaderboard alias normalization** — display-only lowercase + space-stripping; allowlist exception for `Richie`. Storage and isMe matching untouched.
+- **Service-worker cache version:** `v5.199` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -22,12 +31,15 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
 
 Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacitor wrapping the static files into an iOS bundle.
 
+**Canonical working tree:** `C:\Users\richm\Documents\repos\awakened-app` (moved out of OneDrive May 13). The older `C:\Users\richm\OneDrive\Desktop\habit-tracker` checkout still exists as backup but should NOT be the working copy — OneDrive sync vs `.git/objects` creates "delete these 1000+ items?" dialogs after every `git pull`. `serve.ps1`'s fallback path was updated to point at the new repo (commit `70240d8`); just `cd C:\Users\richm\Documents\repos\awakened-app && .\serve.ps1`. At session start: `git pull` in whichever copy you're using to avoid drift.
+
 | File | Purpose |
 |------|---------|
-| `index.html` | All markup. Tabs, panels, sheets, modals, banners. |
-| `app.js` | All logic. Single file IIFE — every runtime constant, every render function, every event wiring. |
+| `index.html` | All markup. Tabs, panels, sheets, modals, banners. The pre-rendered splash + intro onboarding overlay sit at the very top of `<body>` so the brand impression lands before any JS executes. |
+| `auth.js` | Sign-in-with-Apple + alias claim + JWT/token plumbing. Loaded BEFORE `app.js` via `<script>` so `window.Auth` is available at IIFE start. Exposes `getCurrentUser`, `signInWithApple`, `completeSignIn`, `validateAlias`, `setAlias`, `devSignInIfLocalhost`. Sets `localStorage.hb_name` on alias commit so the rest of the app sees a populated name from first launch. (v2.1.0 Phase A → B) |
+| `app.js` | All logic. Single file IIFE — every runtime constant, every render function, every event wiring. Top of file: `setupSignInGateIfNeeded()` short-circuits the IIFE when there's no signed-in user. |
 | `styles.css` | All styling. Defines a `:root` token set. Dark-mode only — Light theme was removed in v1.1.3. |
-| `sw.js` | Service worker. Precaches app shell, avatar PNGs, tab/stat icon PNGs, and app icons (icon-192/512). The dynamic OffscreenCanvas icon generator was removed once real icons shipped. |
+| `sw.js` | Service worker. Precaches app shell, avatar PNGs, tab/stat icon PNGs, and app icons (icon-192/512). The dynamic OffscreenCanvas icon generator was removed once real icons shipped. v2.2.0: install handler does NOT call `skipWaiting()` — the new auto-update path in `app.js` posts `SKIP_WAITING` silently on update. |
 | `manifest.json` | PWA manifest. Theme `#0a0a0a`. Standalone portrait. References static `icon-192.png` / `icon-512.png`. |
 | `capacitor.config.json` | Capacitor config. `webDir: www`. |
 | `codemagic.yaml` | iOS build pipeline. Copies static files → `www/`, runs `npx cap sync ios`, sets `ITSAppUsesNonExemptEncryption=false`, builds & uploads to TestFlight. **Has its own `APP_VERSION` env var that must move with the one in `app.js`.** |
@@ -39,7 +51,8 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `assets/stat-icons/` | Stat icons at 192×192 (~50–80 KB each), plus `*-source.png` masters. 6 icons: `stat-str`, `stat-vit`, `stat-int`, `stat-focus`, `stat-will`, `stat-wlt`. |
 | `assets/bosses/` | Boss illustrations at 1254×1254 manhwa style. 3 entries: `the-insomniac.png`, `the-carouser.png`, `the-steel-wolf.png`. |
 | `assets/gates/` | Dungeon-gate art (6 rank tiers: `gate-e/d/c/b/a/s-rank.png`). |
-| `assets/items/` | **Drops Phase 1 card art (v2.0.2)** — 9 PNGs at 1254×1254 RGB, ~1.1–2.2 MB each. Filenames match `CARDS[id]` exactly: `dream_woven_hood`, `sleepwalkers_cloak`, `pendant_of_the_wakeful`, `vow_ring`, `vessel_of_refusal`, `sober_kings_gloves`, `pack_leaders_greaves`, `alphas_mantle`, `trail_worn_boots`. The render pipeline auto-resolves `card.art_path` → if 404, fallback to emoji + rarity gradient. New cards: drop the PNG, add the path to `PRECACHE_ASSETS` in `sw.js`, bump `CACHE_VERSION`. Codemagic's glob copy step picks up new files automatically. |
+| `assets/items/` | **Drops Phase 1 card art** — 15 PNGs at 1254×1254 RGB, ~1.1–2.2 MB each. Filenames match `CARDS[id]` exactly. v2.0.2 launch roster (9): `dream_woven_hood`, `sleepwalkers_cloak`, `pendant_of_the_wakeful`, `vow_ring`, `vessel_of_refusal`, `sober_kings_gloves`, `pack_leaders_greaves`, `alphas_mantle`, `trail_worn_boots`. v2.1 content patch (6 commons): `tossing_bedroll`, `drowsy_signet`, `sobriety_token`, `steady_steps`, `pups_hood`, `trackers_wrap`. The render pipeline auto-resolves `card.art_path` → if 404, fallback to emoji + rarity gradient. New cards: drop the PNG, add the path to `PRECACHE_ASSETS` in `sw.js`, bump `CACHE_VERSION`. Codemagic's glob copy step (`assets/items/*.png`) picks up new files automatically. |
+| `assets/equipment/panel-base.png` | **RETIRED v3 Phase 1d.** The old 941×1672 carved-stone Armory panel art. Lives on disk for archival only — no longer referenced by markup or precache. Replaced by the typed 6-slot tile grid. Do NOT reintroduce. |
 | `assets/icons/` | General-purpose UI icons (v2.0.1). Currently `souls-icon.png`. Distinct from habit-icons / tab-icons. |
 | `BOSSES.md` | Boss-system design doc. Has a stale-rate banner pointing to DROPS.md as the authoritative rate source. |
 | `CARDS.md` | Boss card visual spec (5:7 portrait card layout). |
@@ -56,6 +69,33 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `screenshots/ipad/` | iPad-letterboxed output, ready for upload. |
 | `package.json` | Capacitor deps + `@capacitor/local-notifications@^6.1.3` (per-habit reminders) + `@perfood/capacitor-healthkit@^1.3.2` (HealthKit auto-verify). |
 | `.npmrc` | `legacy-peer-deps=true`. **Do not delete** until we migrate off `@perfood/capacitor-healthkit` — the plugin's published peer-dep declares Capacitor 4 while we're on 6, so npm refuses to install without this. See "Common pitfalls". |
+
+---
+
+## Sign in with Apple gate + auth (v2.1.0)
+
+Hard gate at the very top of the IIFE in `app.js`. `auth.js` loads first and exposes `window.Auth`. If no signed-in user (or alias not yet picked), the gate intercepts; the rest of `app.js` short-circuits and the main app never mounts.
+
+**Two-step flow:**
+1. `#signin-step-apple` — "Sign in to begin" + Apple authorize button. Calls `Auth.signInWithApple()` which exchanges the Apple identity token with the backend at `/v1/auth/apple`. Returns either `{ ok: true, user }` (alias already set, mount app) or `{ ok: true, needsAlias: true }` (continue to step 2).
+2. `#signin-step-alias` — "**Claim Your Hunter Name**" + input + Continue. Calls `Auth.completeSignIn(alias)` → backend `/v1/auth/verify`. Validates alias (3–20 chars, letters/numbers/spaces/_/- only), checks for collision with suggested alternatives. On success: `localStorage.setItem('hb_name', alias)` + `localStorage.setItem('hb_hunter_name_claimed', '1')` then `window.location.reload()` to mount the main app from signed-in state.
+
+**Validation rules** (`Auth.validateAlias`): regex `^[A-Za-z0-9 _-]{3,20}$`. Empty, too short, too long, or special chars → reject. Backend ALSO validates — server-side is authoritative.
+
+**Localhost dev bypass** — `Auth.devSignInIfLocalhost()` auto-creates a DevUser with alias `DevUser` on hostnames that look like `localhost`. Gated against Capacitor's native WebView (which also reports `localhost` under the `capacitor://` scheme), so this is a no-op on production iOS. Lets `serve.ps1` boot the app without hitting the gate.
+
+**Storage** (legacy `hb_user`-style; canonical access via `Auth.getCurrentUser()`):
+```
+hb_user (managed by Auth):
+  { id, alias, jwt, apple_sub, created_at }
+hb_name        — mirrored from user.alias for the rest of the app
+hb_hunter_name_claimed — set to '1' once alias commits (v3 Phase 1j)
+hb_pending_apple_token — short-lived staging between steps 1 and 2
+```
+
+**Alias is the canonical hunter name claim (v3 Phase 1j).** Once set, no UI in the app exposes a rename path. The Status-tab pencil icon only renders when `hb_hunter_name_claimed !== '1'`. The legacy `#welcome-screen` "A new hunter awakens / Start My Quest" name input and the `#onboarding` habit-picker name input both detect the claim and either bypass entirely (welcome screen) or hide the input row (habit picker). See "Hunter name claim & lock" section.
+
+**Display-side leaderboard alias normalization** is a separate display layer (see "Leaderboard" section). Raw stored aliases keep capitalization + spaces.
 
 ---
 
@@ -867,7 +907,7 @@ The boss-card markup is generic — name, rank, flavor, kill condition, progress
 
 ## Leaderboard (v2.0.1+)
 
-Two-layer system: a silent local data accumulator (live) + a Top-50 ranking sheet UI on the Social tab (live, but with mock entries because there's no backend). The competitive "live rankings" layer ships in a future release; the entire purpose of v2.0.1's foundation is to build historical depth NOW so when rankings go live, returning users have weeks/months of stats already tracked.
+Two-layer system: a silent local data accumulator (since v2.0.1) + a Top-50 ranking sheet UI on the Social tab. **v2.1.0 Phase C shipped the live ranking layer** — real entries fetched from the cloud backend at `/v1/leaderboard/top`, submitted via `/v1/users/me/metrics` (debounced behind `hb_lb_last_submit` — 5-min hot-relaunch quiet). Mock entries + blur are GONE. The local accumulator continues to drive the user-row + the snapshot that gets submitted.
 
 ### Tracked metrics
 
@@ -936,23 +976,36 @@ Lives at `#social-panel`. Entire panel re-rendered by `renderLeaderboardPreview(
 - iOS granted → empty state hidden, cards only.
 
 **Ranking sheet** (`#lb-rank-sheet`, `.vn-sheet` shell):
-- Opens via `openLeaderboardRanking(metric)`
-- Top-10 mock entries (`.lb-rank-row--mock`, blurred via `filter: blur(3.5px)`) with deterministic names from `LB_MOCK_NAMES` and seed peak values from `LB_METRIC_META[metric].mockTop`
-- User's own row (`.lb-rank-row--user`, gold-accented) below the mocks with their actual best/current value and "rank pending — live rankings open in a future update" note
-- Footer card: "🔒 Live rankings open in a future update. Stats tracked now carry over."
-- Same dismiss gestures as boss-detail (tap overlay, ✕, swipe down)
+- Opens via `openLeaderboardRanking(metric)` → fetches real Top-N entries from the backend with stale-while-revalidate caching (`lbCacheRead`/`lbCacheWrite`, 24h TTL via `LB_CACHE_KEY_PREFIX`).
+- User's own row (`.lb-rank-row--me`, gold-accented). Three render variants: pending (`--pending`, "submitting…" sub-line), out-of-top (`--out-of-top`, shows actual rank above the top-N divider), or inline with the rest when in top-N.
+- Same dismiss gestures as boss-detail (tap overlay, ✕, swipe down).
 
 **Per-metric content** (`LB_METRIC_META`):
 
 ```js
 {
-  steps_7d:       { title, blurb, unit, formatValue, mockTop, userValueFn, userValueLabel },
+  step_total:     { title, blurb, unit, formatValue },
   sleep_streak:   { ... },
   bedtime_streak: { ... },
 }
 ```
 
-`userValueFn(snap)` decides whether to show `best_*` (preferred when set) or `current_*`. Mock peak values are believable competitive numbers (e.g., 142,000 steps for the top-7-day, 184 nights for top sleep streak).
+**Backend metric IDs** (per BACKEND.md §6 — these are also the `data-lb-metric` values on the Social cards):
+- `step_total` — cumulative steps over the rolling 7-day window
+- `sleep_streak` — current consecutive ≥7h sleep nights
+- `bedtime_streak` — current consecutive before-midnight nights
+
+### Display-side alias normalization (v2.2.0)
+
+Backend stores raw aliases verbatim (whatever the user typed at signup — `Big Bear`, `JinWoo`, etc). The PUBLIC leaderboard normalizes for display:
+- Strip whitespace
+- Lowercase
+- Allowlist exception: `richie` → `Richie` (product owner's handle keeps its capital R)
+- Dedupe collisions within the rendered list via numeric suffix (`_2`, `_3`, …)
+
+Helpers: `lbNormalizeAliasForDisplay(raw)` + `lbBuildDisplayAliases(rows)`. Cosmetic-only — the underlying user row + isMe matching still use the raw API field. Storage and submission contract untouched. If we ever want signup-time enforcement, that lives in `auth.js` + the backend `users.alias` validator, NOT in this display layer.
+
+**Blurb copy:** the "Steps · this week" detail sheet copy was clarified — the user's WEEKLY COUNT starts over each Sunday, but the LEADERBOARD keeps the best totals on display. Earlier wording ("Resets every Sunday") implied the leaderboard wiped weekly; it never did.
 
 ### Window dev exposure
 
@@ -974,20 +1027,17 @@ Leaderboard.recordSleepNight(7.5, true, '2026-05-08')
 Leaderboard.getSnapshot()
 ```
 
-### When the live ranking layer ships (future)
+### Submission path (v2.1.0 Phase C — live)
 
-1. Add a network client that batches `lbGetSnapshot()` output to the backend on app open / visibility change. Privacy: only transmit the explicit-opt-in subset.
-2. Replace `LB_MOCK_NAMES` + `LB_METRIC_META[].mockTop` consumption in `openLeaderboardRanking` with real ranked data fetched from the backend.
-3. Drop the `.lb-rank-row--mock` blur and the "rank pending" note.
-4. Keep the user-row design as-is — it already highlights cleanly.
-
-The data model + UI surface don't change; only the data source flips from mocks to network.
+`lbSubmitAllMetrics()` POSTs the current snapshot to `/v1/users/me/metrics`. Wrapped in a debounce (`lbSubmitAllMetricsDebounced`) that reads `hb_lb_last_submit` (epoch ms) and short-circuits if the last submit was <5 min ago. Fired from `init()` after the main app mounts + on every visibilitychange. Auth header carries the JWT from `Auth.getCurrentUser().jwt`.
 
 ---
 
-## Drops & Card Collection (v2.0.2 — Phase 1)
+## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
 
-Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Pokédex** with 3 rarity-grouped collapsible sections (Ultra-Rare / Rare / Common, all default-collapsed). Single source of truth for design: `DROPS.md` (v1.4) + `EQUIPMENT.md` (v1.3).
+Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Relic Archive** (renamed from "Pokédex" in v2.2.0 — see "Relic Archive" section). Single source of truth for design: `DROPS.md` (v1.7) + `EQUIPMENT.md` (v1.3).
+
+**v2.2.0 rebalance (Phase 1h)** shifts the rate model: 3-tier cadence (daily / triweekly / weekly), per-boss first-common protection (replaces the global flag), AND bad-luck protection — soft + hard ultra pity + any-drop pity. The goal: low-volume bosses (weekly especially) never feel like unrewarding coin flips.
 
 ### CARDS constant (`app.js`)
 
@@ -1011,20 +1061,63 @@ Card-drop system layered on top of boss kills. Each kill rolls against the boss'
 
 Each boss has one **signature slot** — its ultra-rare is best-in-slot for that slot at launch. Stat-magnitude per rarity follows tier-doubling: E uncommon=2, rare=6, ultra=12; D uncommon=4, rare=12, ultra=24; doubles per rank up to S.
 
-### Drop rates — cadence-aware (`DROP_RATES_BY_CADENCE`)
+### Drop rates — cadence-aware (`DROP_RATES_BY_CADENCE`) — v1.7
 
 ```js
 {
-  daily:  { ultra_rare: 1/20, rare: 1/12, common: 1/5,    common_protected: 2/3 },
-  weekly: { ultra_rare: 5/20, rare: 3/12, common: 2/5,    common_protected: 0.6 },
+  daily:     { ultra_rare: 1/20,  rare: 1/12,  common: 1/5,   common_protected: 2/3  },
+  triweekly: { ultra_rare: 0.10,  rare: 0.15,  common: 0.30,  common_protected: 0.65 },
+  weekly:    { ultra_rare: 0.20,  rare: 0.25,  common: 0.40,  common_protected: 0.70 },
 }
 ```
 
-Weekly bosses get multiplier-bumped rates (5× ultra, 3× rare, 2× common) over the daily baseline to keep per-month expected-pull volumes comparable across cadences. Resolved per-boss via `dropRatesFor(bossId)` which reads `BOSSES[id].cadence` (`'daily' | 'weekly'`). Defensive fallback to `'daily'` if cadence missing — errs toward rarity.
+Three cadence tiers: `daily` (many attempts; modest rates), `triweekly` (~2–3 attempts/week), `weekly` (very few attempts, rewarding rates but ultra capped at 20% to keep scarcity). Resolved per-boss via `dropRatesFor(bossId)` which reads `BOSSES[id].cadence`. Cadence is validated against `VALID_CADENCES = {daily, triweekly, weekly}`; missing/invalid value falls back to `daily` AND fires `console.warn` once per offending boss (single-fire via `_warnedCadenceFor` Set).
 
-**Roll order** in `rollBossDrop(bossId)`: ultra-rare → rare → common, mutually exclusive, one card max per kill. Each tier is an independent RNG roll against its rate; first hit wins. ~70% of daily-cadence kills produce souls only.
+**Roll order** in `rollBossDrop(bossId)`: ultra-rare → rare → common, mutually exclusive, one card max per kill. Each tier is an independent RNG roll; first hit wins.
 
-**First-common protection** (a single global flag `hb_inventory.first_common_pulled`): until the first common is pulled from ANY boss, the common rate is the boosted `common_protected` value (cadence-specific). After the first common lands, protection ends globally for all subsequent rolls.
+**Per-boss first-common protection (v3 Phase 1h).** Replaces the prior global flag (`first_common_pulled`). Each boss tracks its own `first_common_by_boss[bossId]: boolean`. Until the user gets their first common from THIS boss, the common rate is the cadence-specific `common_protected` value. Once that boss's first common drops, protection ends for that boss only. Helpers: `hasPulledFirstCommonForBoss(bossId)`, `markFirstCommonPulledForBoss(bossId)`. Migration on `loadInventory`: any boss whose common is already owned (count > 0) is marked protection-ended automatically.
+
+### Bad-luck protection (`DROP_PITY_BY_CADENCE`) — v3 Phase 1h
+
+```js
+{
+  daily:     { any_drop_guarantee_after: 4,  ultra_soft_pity_after: 20, ultra_soft_pity_add: 0.02, ultra_soft_pity_max: 0.20, ultra_hard_pity_after: 40 },
+  triweekly: { any_drop_guarantee_after: 3,  ultra_soft_pity_after: 10, ultra_soft_pity_add: 0.03, ultra_soft_pity_max: 0.25, ultra_hard_pity_after: 20 },
+  weekly:    { any_drop_guarantee_after: 2,  ultra_soft_pity_after: 5,  ultra_soft_pity_add: 0.05, ultra_soft_pity_max: 0.35, ultra_hard_pity_after: 8  },
+}
+```
+
+- **Any-drop guarantee:** Nth consecutive no-drop forces a drop. `forcePityDrop(bossId)` picks the most respectful rarity that has cap room: common (if not capped) → rare (if rare count < 3) → ultra-rare (cap is `Infinity`, always valid). Returns a card object the caller hands to the existing inventory-mutation path — same persist + reveal-queue + counter-update logic, no shortcuts.
+- **Soft ultra pity:** When `kills_since_ultra >= ultra_soft_pity_after`, effective ultra rate = `min(baseRate + N×add, max)`. Boost grows with every extra ultra-less kill.
+- **Hard ultra pity:** At `kills_since_ultra >= ultra_hard_pity_after`, effective ultra rate = `1` (guaranteed).
+
+`getEffectiveUltraRate(bossId, baseRate)` computes per-roll; the base table is never mutated.
+
+### Pity counters per boss (`hb_inventory.drop_pity_by_boss[bossId]`)
+
+```js
+{
+  kills_since_any_drop:       0,
+  kills_since_ultra:          0,
+  kills_since_rare_or_better: 0,
+  last_drop_at:               'ISO string' | null,
+}
+```
+
+Updated after every kill in `rollBossDrop`:
+- **No drop:** all three counters += 1.
+- **Common drop:** `kills_since_any_drop = 0`, ultra/rare-or-better counters += 1.
+- **Rare drop:** `kills_since_any_drop = 0`, `kills_since_rare_or_better = 0`, `kills_since_ultra += 1`.
+- **Ultra drop:** all three counters = 0.
+
+`last_drop_at` is set on any drop. Counters are boss-specific; one boss's empty streak does NOT advance another's pity. Helpers: `getDropPityState`, `setDropPityState`, `incrementDropPityAfterNoDrop`, `resetDropPityAfterDrop(bossId, rarity)`. `_freshPityState()` builds the zero-state stub.
+
+### Toast phrasing for pity outcomes
+
+- No pity (regular pull): `"<Boss> defeated. +50 souls. Pulled: <Card> (Common)."`
+- Any-drop pity: `"… Mercy awakened: <Card> (Common)."`
+- Hard ultra pity: `"… Fate answered."` (cinematic reveal still fires for the ultra)
+- Soft-pity ultras read as normal pulls — the boost was probabilistic, not deterministic.
 
 ### Stack caps (`STACK_CAPS`)
 
@@ -1044,7 +1137,7 @@ Drops continue rolling at standard rates even when at cap — but the inventory 
 | First-acq ultra | count → 1 | `"X defeated. +50 souls."` | ✓ cinematic |
 | Ultra dupe | count → N+1 | `"…Duplicate Card (Ultra-Rare). You have N+1."` | — |
 
-### `rollBossDrop` return shape
+### `rollBossDrop` return shape (v3 Phase 1h adds `fromPity` + `pityType`)
 
 ```js
 {
@@ -1053,23 +1146,37 @@ Drops continue rolling at standard rates even when at cap — but the inventory 
   wasCapped: boolean,
   count:     number,   // current count AFTER the operation
   cap:       number,   // STACK_CAPS[rarity] (Infinity for ultra)
+  fromPity:  boolean,  // true if this drop came from pity (not RNG)
+  pityType:  'any_drop' | 'ultra_soft' | 'ultra_hard' | null,
 }
 ```
 
-Returns `null` if no drop rolled. The 3 boss kill-handlers (`evaluateInsomniacForNight`, `evaluateCarouserForNight`, `evaluateSteelWolfForDay`) pass the result through to `announceKillAndDrop(cfg, soulsReward, dropInfo)` which composes the toast text and kicks the reveal queue.
+Returns `null` if no drop rolled (and no pity fired). The 3 boss kill-handlers (`evaluateInsomniacForNight`, `evaluateCarouserForNight`, `evaluateSteelWolfForDay`) pass the result through to `announceKillAndDrop(cfg, soulsReward, dropInfo)` which composes the toast text and kicks the reveal queue.
 
-### Inventory storage (`hb_inventory`)
+### Inventory storage (`hb_inventory`) — v3 Phase 1h shape
 
-```
+```js
 {
   cards: { [card_id]: { discovered, count, first_acquired_date } },
+  // Legacy global flag — preserved + kept in sync for any unmigrated downstream code.
   first_common_pulled: bool,
   first_common_date:   'YYYY-MM-DD' | null,
-  reveal_queue:        [card_id, ...]   // rare/ultra-rare pending reveal
+  // v3 Phase 1h — per-boss first-common protection.
+  first_common_by_boss: { [bossId]: true },        // bossId present + true means protection ended
+  // v3 Phase 1h — per-boss pity counters.
+  drop_pity_by_boss: { [bossId]: {
+    kills_since_any_drop, kills_since_ultra, kills_since_rare_or_better, last_drop_at
+  }},
+  reveal_queue: [card_id, ...]                     // rare/ultra-rare pending reveal
 }
 ```
 
-`loadInventory` transparently reads either new `first_common_*` keys or legacy `first_uncommon_*` keys (v1.3 rename — see "Common pitfalls"), prefers new, persists in new shape. No explicit migration flag — read-side fallback is idempotent.
+`loadInventory` runs three migrations:
+1. **Legacy `first_uncommon_*` rename** (v1.3) — read either, prefer new, persist new.
+2. **Per-boss first-common backfill** (v3 Phase 1h) — if `first_common_by_boss` missing, walk CARDS and mark protection-ended for any boss whose common is already owned (count > 0). Other bosses keep protection active.
+3. **Pity state backfill** — every known boss in `BOSSES` gets a fresh `_freshPityState()` if its entry is missing.
+
+All migrations are idempotent; no explicit flag needed.
 
 ### Cinematic reveal modal (`#reveal-overlay`)
 
@@ -1098,25 +1205,57 @@ All 3 surfaces (Pokédex grid tile, reveal modal, carddetail modal) use the same
 3. Bump `CACHE_VERSION`
 4. Codemagic's glob copy step (`cp assets/items/*.png www/assets/items/`) picks up new files automatically — no pipeline edit required
 
-### Pokédex (Items tab)
+### Relic Archive (Items tab) — v3 Phase 1g
 
-- 3 collapsible sections (Ultra-Rare → Rare → Common), all default-collapsed via `loadPokedexCollapsed()` returning a `Set` of all keys when no saved state exists. Persisted to `hb_pokedex_collapsed`.
-- Section headers are `<button>` with `aria-expanded` + chevron rotation (▾ open / ▸ collapsed).
-- Empty-tier guard renders `"No items in this tier yet."` if a section is authored but empty (defensive — current launch has 3 per section).
-- Discovered cards show real art + name. Undiscovered slots show ??? silhouette with rarity-color hint. **No ×N stack badge on grid tiles** (removed v2.0.2; stack count surfaces only inside the detail modal).
-- Tap a discovered card → `openCardDetailModal()` (static, non-cinematic).
+Renamed from "Pokédex"/"Items" in v2.2.0 to frame the tab as a collectible loot archive rather than a storage drawer. Header reads **RELIC ARCHIVE** + flavor line "Every relic was earned through discipline." Section IDs in markup still say `pokedex-*` for backward compat; CSS adds `.archive-*` classes on top.
+
+- 3 collapsible sections — `ULTRA-RARE RELICS` / `RARE RELICS` / `COMMON RELICS` (renamed in v2.2.0). All default-collapsed via `loadPokedexCollapsed()`; persisted to `hb_pokedex_collapsed`.
+- Section headers are `<button>` with `aria-expanded` + chevron rotation (▾ open / ▸ collapsed). Ultra-rare header gets a faint gold text-shadow via `.archive-rarity-header--ultra`.
+- **Discovered cards** now show:
+  - **Slot badge** (`.archive-slot-badge`, top-left): `HELM` / `WEAPON` / `PLATE` / `GLOVES` / `BOOTS` / `RING`. Resolved via `getCardEquipmentSlot(card)` → typed slot.
+  - **Equipped badge** (`.pokedex-card-equipped-badge.archive-equipped-badge`, top-right gold pill) when the card sits in the Hunter Build.
+  - **Drop-source line** under the name (`.archive-item-source`, e.g., "THE CAROUSER") resolved via new `getCardDropSourceLabel(card)` helper.
+- **Mystery (undiscovered) cards** show the `?` mark + rarity teaser (`ULTRA-RARE` / `RARE` / `COMMON`) + source hint (`Drops from The Carouser` or `Defeat dungeon bosses to discover`). Item name stays hidden.
+- **Acquisition-order display** — discovered cards within each rarity section sort by `first_acquired_date` ASC (chronological discovery log). Ties break alphabetically.
+- **COMMON tier hides silhouettes** — commons roll passively, the empty slots were noise. RARE + ULTRA still tease mystery cards.
+- Tap discovered card → `openCardDetailModal()`. Tap mystery card → `openMysteryCardModal()` (NOT the prior "Not yet discovered." toast).
+
+### Mystery card info modal (`#mystery-card-modal`) — v3 Phase 1g
+
+Opens when the user taps a `?` placeholder. Shows:
+- Big `?` mark in Cinzel gold
+- "UNKNOWN RELIC" title
+- Rarity (e.g., `Ultra-Rare`)
+- Source boss (e.g., `The Carouser`) or `Unknown` if no metadata
+- "Defeat this boss for a chance to reveal this relic." (or `Defeat dungeon bosses to discover this relic.` when source unknown)
+- **HUNT BOSS** button (primary) — closes modal + switches to Quests tab. Disabled when no source boss is known.
+- **CLOSE** (secondary)
+
+Never reveals the item name. Helpers: `openMysteryCardModal(card)`, `closeMysteryCardModal()`, `setupMysteryCardModal()` (wired once in `init()`).
+
+### Armory CTA on the Items tab — v3 Phase 1g
+
+Single "VIEW YOUR ARMORY" button (`.archive-armory-cta`) carries a primary label + a live secondary status line: `Gear Power N · K / 6 Equipped`. Refreshed by `refreshArmoryCTAStatus()` on every `renderPokedex()` call so the count is always current after equip/unequip. Reuses `aggregateBuildPower()` + `countEquippedBuildItems()` from the Hunter Build module — no duplicate calc.
 
 ### Card detail modal (`#carddetail-overlay`)
 
-Tapping a discovered Pokédex tile opens this. 1:1 art aspect (matches source PNG ratio — was 5:4 which cropped the top of art with `object-fit: cover`). Layout: art → rarity → name → source → flavor → **stat-bonus row** → first-found-date → stack count ("You have N"). Close button is pill-shaped with dark backdrop + `z-index: 2` so it stays legible against dark card art.
+Tapping a discovered archive tile opens this. 1:1 art aspect. Layout: art → rarity → name → source → flavor → **stat-bonus row** → first-found-date → stack count ("You have N") → **EQUIP TO BUILD / UNEQUIP button** (`.carddetail-equip-btn`, v3 Phase 1d). Button is purple→deep-violet gradient when EQUIP TO BUILD (primary), muted-navy when UNEQUIP. `::before` pseudo-element renders a gold `✦` glyph on the primary variant so the JS `textContent` swap doesn't disturb it. Click routes through `equipBuildItem(targetIdx, cardId)` where `targetIdx = EQUIPMENT_SLOT_INDEX[getCardEquipmentSlot(card)]` — strictly typed. If the matching slot is rank-locked (legacy support; all 6 unlocked at every rank in current build), surfaces a rank-lock toast. If `WRONG_SLOT`, surfaces "doesn't fit that slot" — defensive since the picker is slot-filtered.
 
-### `window.Drops` debug API
+### `window.Drops` debug API — v3 Phase 1h
 
 ```js
 Drops.state                              // current hb_inventory
 Drops.CARDS                              // CARDS constant
 Drops.RATES                              // DROP_RATES_BY_CADENCE
+Drops.PITY                               // DROP_PITY_BY_CADENCE
+Drops.getCadence(bossId)                 // 'daily' | 'triweekly' | 'weekly' (validated)
 Drops.getRates(bossId)                   // resolved rates for that boss
+Drops.getPity(bossId)                    // raw pity counters
+Drops.getPityDisplay(bossId)             // read-model for UI: { anyDropCurrent, anyDropTarget, ultraCurrent, ultraSoftTarget, ultraHardTarget, lastDropAt, cadence }
+Drops.resetPity(bossId)                  // zero counters for that boss
+Drops.forcePityDrop(bossId)              // returns the card the pity system WOULD pick (no mutation)
+Drops.simulateDrops(bossId, n)           // dry-run N kills, return aggregate counts. NEVER mutates real state.
+Drops.hasFirstCommon(bossId)             // true if this boss's common has dropped
 Drops.forceRoll(bossId, rarity)          // bypass RNG; respects stack caps + fires reveal
 Drops.forceDrop                          // alias of forceRoll
 Drops.resetInventory()                   // wipe + re-stub
@@ -1126,9 +1265,283 @@ Drops.processRevealQueue()               // open pending reveal
 
 Backward-compat: `Drops.forceRoll(bossId, 'uncommon')` is aliased to `'common'` (legacy v1.2 rarity name).
 
+**Console-only `simulateDrops`** is for balance tuning. Runs N kills through a clone of pity state, returns `{ common, rare, ultra_rare, no_drop, pity_drops }`. Stack caps are NOT modeled in the sim (it pretends caps are infinite for simplicity) — real outcomes can convert some pulls to "capped" depending on inventory. Useful for verifying cadence balance, NOT for predicting per-user variance.
+
 ### Reveal queue persistence
 
 `hb_inventory.reveal_queue` is a JSON array of card IDs awaiting cinematic. Persists across cold launches — if the user kills a boss and gets a rare drop while the app is backgrounded, then force-quits before opening the reveal, the queue replays on next launch. Stale IDs (cards no longer in `CARDS`) are silently dropped from the head of the queue.
+
+---
+
+## Hunter Build — typed equipment Armory (v3 Phase 1d → 1e)
+
+Replaces the v2.1/v3-Phase-1a/b/c **9-slot body-equipment panel** (`panel-base.png` carved-stone art with `.equipment-slot-hit` invisible hit targets, `.armory-socket-*` 5-layer DOM, etc) — all RETIRED. The new system is a clean 6-slot 3×2 tile grid in the same `#equipment-modal` shell. Avatar tap (Status tab) or "VIEW YOUR ARMORY" (Items tab) opens it.
+
+**Why the pivot:** card art at `assets/items/*.png` is flattened RGB with backgrounds. CSS cannot remove flattened backgrounds. The 9-slot panel needed transparent icons to read cleanly inside carved sockets, and authoring that pipeline kept producing "square thumbnails inside black UI." The MOBA-style square tile grid embraces the card art intentionally — no transparency requirement, no body-socket art problem.
+
+### Typed slots
+
+```js
+const EQUIPMENT_SLOTS = [
+  { key: 'helm',   label: 'HELM' },
+  { key: 'weapon', label: 'WEAPON' },
+  { key: 'plate',  label: 'PLATE' },
+  { key: 'gloves', label: 'GLOVES' },
+  { key: 'boots',  label: 'BOOTS' },
+  { key: 'ring',   label: 'RING' },
+];
+const EQUIPMENT_SLOT_INDEX = { helm: 0, weapon: 1, plate: 2, gloves: 3, boots: 4, ring: 5 };
+```
+
+**Legacy slot collapse** (`LEGACY_TO_TYPED_SLOT`):
+- `helm`, `weapon`, `gloves`, `boots`, `ring` — direct pass-through
+- `body`, `legs`, `cape` → `plate` (catch-all armor)
+- `amulet` → `ring` (single jewelry slot for now)
+
+TODO Phase 1f+: dedicated `cape`, `amulet`, `legs` slots if/when content warrants 9 slots.
+
+`getCardEquipmentSlot(card)` reads `card.slot || card.equipment_slot || card.equipmentSlot || card.slot_type || card.gearSlot`, maps through `LEGACY_TO_TYPED_SLOT`. Returns `null` for cards with no slot — emits a single `console.warn` per offending card via `_warnedSlotMissingFor` Set.
+
+### Slot unlocks
+
+All 6 slots unlocked at every rank. `getUnlockedBuildSlots()` returns the constant `HUNTER_BUILD_SLOT_COUNT = 6`; `isBuildSlotUnlocked(i)` returns `true` for `i ∈ [0, 6)`. The rank-gated render path (locked tiles with `REACH X RANK` label) is kept in the renderer in case a future product call reintroduces gating — currently dead code.
+
+> **Product call (May 13):** all 6 slots are open from day one. Discipline pressure stays on the drop-rate side of the economy; the Armory itself is fully open. DO NOT reintroduce rank-gating without explicit ask.
+
+### Storage (`hb_hunter_build`)
+
+```js
+{
+  slots: [card_id|null, card_id|null, ..., card_id|null],  // length 6, index = typed slot
+  updated_at: 'ISO string',
+}
+```
+
+Index 0 = helm, 1 = weapon, 2 = plate, 3 = gloves, 4 = boots, 5 = ring. Same shape as the v3 Phase 1d generic 6-slot, just indices are now typed. Migration via `migrateGenericBuildToEquipmentBuild()` (one-shot, idempotent via `hb_equipment_build_migrated_v1`): walks the old generic build, places each card at its typed slot index, evicts dupes for the same slot (first one wins, evicted card stays in inventory but unequipped). Owned cards are never deleted.
+
+A second one-shot migration `migrateEquipmentToHunterBuild()` (idempotent via the presence of `hb_hunter_build`) walks the prior v3 Phase 1a `hb_pvp_equipped` body-slot storage and seeds the new generic build with up to 6 entries in priority order (weapon, body, helm, gloves, legs, boots, amulet, ring, cape). `hb_pvp_equipped` is NEVER deleted — kept on disk as a safety copy.
+
+### Slot-type enforcement
+
+`equipBuildItem(slotIndex, cardId)` validates the card's typed slot matches the target index. Return codes:
+- `{ ok: true, prevCardId }` — equipped, optional prev card to surface in toast
+- `{ ok: false, code: 'BAD_INDEX' }`
+- `{ ok: false, code: 'LOCKED', requiredRank }` — dead path under current "all unlocked" policy
+- `{ ok: false, code: 'BAD_CARD' }`
+- `{ ok: false, code: 'WRONG_SLOT', cardSlot, targetSlot }` — Pup's Hood cannot equip into RING
+- `{ ok: false, code: 'DUPLICATE', existingSlot }` — one copy of a card can only sit in one slot
+
+### Renderers
+
+| Function | Purpose |
+|---|---|
+| `renderHunterBuild()` | 3×2 grid. Each tile carries a **full-width top banner** (`.hunter-build-slot-label`, z-index 8, 24px height, gold-bordered) showing the slot identity on every state. Equipped tiles: art + name band at bottom. Empty tiles: `+` icon + EMPTY + "Tap to equip" hint. Locked tiles: 🔒 + "REACH X RANK". |
+| `renderHunterBuildSummary()` | 3 rows: `GEAR POWER N` (gold, Cinzel; renamed from BUILD POWER), `DOMINANT PATH STAT · TAGLINE`, `EQUIPPED K / N`. Plus a `LOCKED SLOTS K awaiting rank-up` hint when relevant (dead under current policy). |
+| `aggregateBuildPower()` | Sum of `getItemBuildPower(card)` across equipped slots. Common = 1, rare = 3, ultra_rare = 7. |
+| `getBuildDominantPath()` | Sums each card's bonuses, returns top stat id (`STR`/`VIT`/etc) or `null` if nothing equipped. |
+| `countEquippedBuildItems()` | Number of filled slots. |
+
+### Select Relic picker (`#build-picker-sheet`) — v3 Phase 1d / 1e
+
+Compact MOBA-style inventory grid. Slot-FILTERED: opens with title `SELECT HELM` (or WEAPON/PLATE/etc) and shows only cards whose typed slot matches the tapped slot. Empty state: "No helm relics discovered yet. Defeat bosses to find one."
+
+- Grid: `repeat(auto-fill, minmax(112px, 1fr))` mobile, `minmax(128px, 150px)` + `justify-content: center` on ≥760px. Container capped at 720px (mobile) / 920px (wide) so desktop reads as a centered shelf, not a stretched gallery.
+- Tile: square art-wrap → rarity chip top-left (`COMMON`/`RARE`/`ULTRA`, color-coded) + equipped-status badge top-right (`EQUIPPED` gold pill, `SLOT N` purple pill for equipped-elsewhere). Below art: 2-line clamped name + stat-chip row (max 2 chips + `+N` overflow).
+
+### Build detail sheet (`#build-detail-sheet`) — v3 Phase 1d (REPLACE removed)
+
+Opens when user taps an EQUIPPED slot. Shows art + name + rarity + flavor + stat-bonus row + **UNEQUIP button only**. The REPLACE button (which opened the picker pre-filled) was removed v3 Phase 1d follow-up — the unequip-then-tap-empty-slot flow is one fewer concept to teach, and it leaves the build-detail sheet clean. UNEQUIP uses the muted-navy `.build-detail-btn--unequip` styling.
+
+### `window.HunterBuild` debug API
+
+```js
+HunterBuild.load                  // loadHunterBuild()
+HunterBuild.get                   // getHunterBuild()
+HunterBuild.equip                 // equipBuildItem(slotIndex, cardId)
+HunterBuild.unequip               // unequipBuildItem(slotIndex)
+HunterBuild.isEquipped            // isItemEquippedInBuild(cardId)
+HunterBuild.slotForCard           // getBuildSlotIndexForCard(cardId)
+HunterBuild.unlockedSlots         // getUnlockedBuildSlots(rankId) — currently constant 6
+HunterBuild.requiredRank          // getRequiredRankForBuildSlot(index) — currently constant 'E'
+HunterBuild.isSlotUnlocked        // isBuildSlotUnlocked(index)
+HunterBuild.buildPower            // aggregateBuildPower()
+HunterBuild.dominantPath          // getBuildDominantPath()
+HunterBuild.equippedCount         // countEquippedBuildItems()
+HunterBuild.itemPower             // getItemBuildPower(card)
+HunterBuild.migrate               // migrateEquipmentToHunterBuild — legacy → generic
+HunterBuild.migrateTyped          // migrateGenericBuildToEquipmentBuild — generic → typed
+HunterBuild.SLOT_COUNT            // 6
+HunterBuild.SLOTS                 // EQUIPMENT_SLOTS
+HunterBuild.slotForCardType       // getCardEquipmentSlot(card)
+```
+
+The legacy `window.Equipped` module (v3 Phase 1a body-slot system) is kept exposed on `window` but no live UI consumes it. Its internal `EQUIPMENT_SLOTS` constant was renamed to `LEGACY_EQUIPMENT_SLOTS` to free the name for the new typed-slot constant.
+
+---
+
+## Splash + educational onboarding (v2.2.0 / v3 Phase 1i)
+
+The launch experience frames Awakened as a system to enter, not a checklist to open.
+
+### Splash (`#awakened-splash`) — every launch
+
+Pre-rendered markup in `<body>` so the brand impression lands before any JS executes. Tonal-style restraint:
+
+- Pure `#050510` background. One very-subtle 540px purple radial breathing behind the wordmark (`.splash-bg-orb`, `splash-orb-breathe 6s ease-in-out infinite`). **No rune ring, no decorative particles.**
+- Small gold hunter-rune SVG mark (peak triangle + flame) stacked ABOVE the wordmark. 38px (`.splash-emblem`). Glow-only loop.
+- `AWAKENED` wordmark in Cinzel 900 gold. Font-size `clamp(36px, 9vw, 56px)`. Letter-spacing `.14em`. Glow-only breathe (no transform bounce).
+- Subtitle: `Discipline becomes power` in JetBrains Mono caps, `.36em` letter-spacing, `.58` opacity.
+- `Preparing your system…` loading line anchored to bottom safe-area, fades in only if loading exceeds `SPLASH_LONG_LOADING_MS = 2400ms`.
+- `.splash-content` capped at 460px max-width with 18px horizontal padding — never crowds the viewport edge on iPhone SE.
+
+### Splash hide behavior
+
+- `SPLASH_MIN_VISIBLE_MS = 1800ms` — splash dwells at least this long even if init is instant. Lands the brand.
+- `hideSplash()` is the canonical hide call. Adds `.is-hidden` (.65s fade) then removes node after 600ms.
+- Called from two paths:
+  1. `init()` (signed-in user, main app mounts) — fires inside `enterFirstRunFlow()`.
+  2. `setupSignInGateIfNeeded()` (no signed-in user) — fires inline on a 1800ms delay so the gate becomes visible underneath.
+- `prefers-reduced-motion` strips all three animation loops.
+
+### Educational onboarding (`#intro-onboarding`) — first-time users only
+
+5-card overlay fires AFTER splash + BEFORE the existing welcome / signin flow. Gated by `hb_onboarding_seen_v2`.
+
+| # | Title | Visual touches |
+|---|---|---|
+| 1 | Discipline Becomes Power | ⚜ emblem |
+| 2 | Train Your Six Stats | 6-pill stat grid (STR / VIT / INT / FOCUS / WILL / WLT) |
+| 3 | The System Is Honest | ✦ emblem (Apple Health framing) |
+| 4 | Hunt Bosses. Earn Relics. | ☠ emblem |
+| 5 | Shape Your Hunter Build | 6-slot mini-grid (HELM / WEAPON / PLATE / GLOVES / BOOTS / RING, first two highlighted) |
+
+- Premium dark-card visual: Cinzel gold title, purple kicker (`CHAPTER N OF 5`), full-width primary CTA with purple→violet gradient + gold rim.
+- Skip button confirms via `window.confirm('Skip the intro? You can re-read it later in Settings.')` before completing.
+- Back button hidden on card 1.
+- CTA on card 5 reads "Enter Awakened" — completion fires `enterFirstRunFlow()` which routes through the existing welcome → path → habit-picker chain.
+- Card-rise animation on every step transition; reduced-motion strips it.
+- Real `<button>` elements with focus-visible styles, safe-area padding, 360px-and-under tightening.
+
+### Gating logic
+
+```js
+function shouldShowIntroOnboarding() {
+  if (hb_onboarding_seen_v2 === '1') return false;
+  if (hb_welcomed === '1') {
+    // Returning users with the legacy welcome flag get auto-migrated.
+    hb_onboarding_seen_v2 = '1';
+    return false;
+  }
+  return true;
+}
+```
+
+Brand-new users see the intro once. Existing users (who completed the older welcome flow) auto-set the v2 flag and never see the intro. There's no signup-time forcing of the educational content for returning users.
+
+### Modal priority order (full launch sequence)
+
+1. Splash (every launch, transient)
+2. Sign-in gate (if no signed-in user) — Apple → alias claim
+3. Educational onboarding (if first-time AND past signin)
+4. Existing welcome screen ("A new hunter awakens…") — BYPASSED when name already claimed via signin (see Hunter name claim section)
+5. Path screen (Choose Your Path)
+6. Habit-picker onboarding
+7. Beginning reveal (Origin Chapter 1)
+8. What's New sheet (post-onboarding, on version bump)
+9. Awakening / Class change (celebration queue)
+10. Daily Insight (once per device-local calendar day, after Day 1)
+
+---
+
+## Hunter name claim & lock (v3 Phase 1j)
+
+The hunter name is an identity claim, not a casual profile field. Claimed once → locked forever. The pre-v2.2.0 app exposed THREE name-entry surfaces (signin alias, welcome screen, habit-picker). All three collapsed to ONE canonical claim: the signin alias.
+
+### Claim path (single source of truth)
+
+1. User signs in via Apple → `#signin-step-alias` ("**Claim Your Hunter Name**")
+2. `Auth.completeSignIn(alias)` succeeds → sets `hb_name = alias` + `hb_hunter_name_claimed = '1'` + `window.location.reload()`
+3. On reload, signin-gate short-circuits (user has alias), `init()` runs
+
+### Bypass logic
+
+**Welcome screen** (`#welcome-screen`, "A new hunter awakens / Start My Quest" cinematic) — BYPASSED entirely when `hb_name` is set + ≠ `'Hunter'`. `enterFirstRunFlow()` in `init()`:
+- If name already claimed AND `needsWelcome === true`: set `hb_welcomed='1'`, call `showPathScreen()` directly (or `render()` if onboarding also complete).
+- Otherwise fall through to `showWelcomeScreen()` as before. (Legacy support — only triggers if `Auth.devSignInIfLocalhost()` somehow didn't seed `hb_name='DevUser'`.)
+- Legacy `launchQuest()` inside the welcome screen ALSO sets `hb_hunter_name_claimed='1'` on completion as a fallback.
+
+**Habit-picker onboarding** (`#onboarding`, "Choose Your Habits" with name input) — the name input row (`.ob-name-row`) is HIDDEN via inline `style.display = 'none'` when a claimed name exists. The picker UX still works; just no name field surfaced. `_completeOnboardingFinish()` ALSO sets the claim flag as a fallback.
+
+### Lock UI
+
+**Status tab pencil edit button** (`#sc-name-edit`) — renders ONLY when `hb_hunter_name_claimed !== '1'`. Conditional template literal in `renderStatus()`. The click handler is defensively guarded too: if the button somehow exists at runtime and gets tapped, it short-circuits with toast `"Hunter name already claimed."` before opening the inline input.
+
+### Migration (one-shot in `init()`)
+
+```js
+if (hb_hunter_name_claimed !== '1') {
+  const existing = (localStorage.hb_name || '').trim();
+  if (existing && existing !== 'Hunter') {
+    localStorage.setItem('hb_hunter_name_claimed', '1');
+  }
+}
+```
+
+Idempotent. Any existing user with a real name (anything except the default `'Hunter'`) gets the lock applied automatically — they don't see UI flip on them.
+
+### Storage
+
+- `hb_hunter_name_claimed = '1'` — single boolean flag. Set on: signin alias commit, welcome screen launch, habit-picker onboarding finish, init migration. Never cleared.
+- `hb_name` — canonical name string. Still the field every renderer reads.
+
+### Anti-pattern (DO NOT reintroduce)
+
+- Pencil/✎ icon next to the name on Status tab when claimed
+- Inline name-edit input
+- Settings → Account → "Change name" path (don't add one)
+- Re-prompting for name on app restart / signin re-auth
+
+If a user genuinely needs to change their name (lost device, etc), it's a backend-side operation handled out-of-band. Don't add a self-service rename in the app.
+
+---
+
+## Service worker auto-update (v2.2.0)
+
+The prior flow forced users to wait for the SW's ~24h freshness check, then click an in-app "⬆ Update available — Refresh" banner. When the banner didn't fire (race conditions, Safari quirks, byte-compare false-negatives), users had to manually unregister the SW via DevTools. Brutal UX. v2.2.0 makes updates silent.
+
+### New behavior
+
+`registerSW()` in `app.js`:
+
+1. **Immediate `reg.update()` on page load.** Forces a network fetch of `/sw.js` — the browser otherwise won't re-check within a session (default ~24h).
+2. **Re-check on `visibilitychange` to visible + `focus`.** Catches tabs left open across deploys.
+3. **Silent auto-skip-waiting.** When a new SW reaches `'installed'` state AND a controller exists (= this is an UPDATE, not first install), the page silently `postMessage({ type: 'SKIP_WAITING' })`. No banner click required.
+4. **`controllerchange` handler reloads once.** Single silent reload per deploy.
+5. **Version-string compare safety net.** 2s after register, fetches `sw.js` with `cache: 'no-store'`, parses `CACHE_VERSION`, compares with `hb_sw_last_active_version`. On drift: wipe caches + `reg.unregister()` + `location.reload()`. Catches races where the SW reports itself as fresh but disk has a newer version.
+
+### Manual mode opt-in
+
+```js
+localStorage.setItem('hb_sw_manual_update', '1')
+```
+
+If set, `applyUpdate(worker)` shows the banner instead of auto-applying. Lets power users / devs control the timing. Banner click then posts SKIP_WAITING.
+
+### Storage
+
+- `hb_sw_known_version` — written background-async on register; used by the manual "Check for Updates" button in Settings.
+- `hb_sw_last_active_version` — written by the version-compare safety net.
+- `hb_sw_manual_update` — opt-in flag for banner mode.
+
+### Trade-off
+
+One silent reload per deploy. Awakened state lives in `localStorage`, so the reload preserves everything — habits, streaks, inventory, build, etc. Acceptable.
+
+### What NOT to revert
+
+- Don't add `self.skipWaiting()` to `sw.js`'s install handler. The auto-skip happens client-side via postMessage; doing it server-side would skip waiting for first-install too (where there's no existing controller, which would change reload semantics).
+- Don't remove the version-string safety net — it's caught real drift cases in production.
+- Don't reintroduce the banner as the default flow.
 
 ---
 
@@ -1153,6 +1566,28 @@ The Daily Legendary Mission system was removed in v2.0.1 to simplify the Quests 
 - CSS classes `.daily-mission-card`, `.dmc-*`, `.mc-*` in `styles.css` — unused but harmless. Optional follow-up cleanup.
 
 If reviving (don't, per user direction — "I want to get rid of daily quest unfortunately"), the localStorage data would still load but the rendering layer is gone.
+
+### 9-slot body-equipment Armory (removed v3 Phase 1d)
+
+The v2.1 / v3 Phase 1a-c Armory used `assets/equipment/panel-base.png` (941×1672 carved-stone tablet art) with 9 invisible `.equipment-slot-hit` buttons positioned over the painted slot regions (helm / amulet / cape / weapon / body / gloves / legs / boots / ring). v3 Phase 1c added a 5-layer carved-socket DOM (`.armory-socket-recess` / `.armory-icon-aura` / `.armory-equipped-icon` / `.armory-socket-glass` / `.armory-socket-bevel`) and a transparent-icon pipeline (`assets/item-icons/*.png`) to make equipped items read inside the carved sockets.
+
+This whole tree was retired in v3 Phase 1d. The card art at `assets/items/*.png` is flattened RGB; CSS can't strip backgrounds. After 5+ iterations of polishing the socket pipeline, the structural fix was a different shape entirely (MOBA-style typed grid).
+
+**What's gone:**
+- `.equipment-slot-hit[data-slot="…"]` markup + percentage-positioned CSS
+- `.armory-socket-*` 5-layer DOM
+- `.armory-equipped-icon`, `.armory-icon-aura`, `.armory-rarity--*`, `.armory-slot--rarity-*` rules
+- `.armory-slot--missing-icon` + rune-glyph placeholder
+- `panel-base.png` reference in `PRECACHE_ASSETS` (the file is still on disk, archival only)
+- `assets/item-icons/` transparent-icon authoring spec (README still exists; pipeline is dead)
+
+**Preserved:** `hb_pvp_equipped` localStorage key with the body-slot loadout. `window.Equipped` module + `aggregateEquippedBonuses()` etc. are vestigial but stay in source for safety. Internal `EQUIPMENT_SLOTS` constant renamed to `LEGACY_EQUIPMENT_SLOTS` to free the name for the typed-slot constant.
+
+### REPLACE button on build-detail sheet (removed v3 Phase 1d follow-up)
+
+The first cut of the typed-Armory build-detail sheet had two actions: UNEQUIP (red-destructive) and REPLACE (purple-gold gradient that opened the picker pre-filled). REPLACE was removed because unequip-then-tap-empty-slot was one fewer concept to teach, and the destructive-red UNEQUIP became muted-navy (`.build-detail-btn--unequip`) in the same pass.
+
+**Anti-pattern:** don't re-add REPLACE. If a user wants to swap a slot's relic, they unequip → tap empty slot → pick a new one. The picker is slot-filtered, so swapping is two taps.
 
 ---
 
@@ -1279,14 +1714,14 @@ Bottom nav — **symbol-only, custom DALL-E PNG icons**, purple-glow active stat
 | Stats   | `tab-stats.png`                   | `stats-panel`    | Radar + 6 tile cards + Next Stat Bonus |
 | History | `tab-history.png`                 | `history-panel`  | 7-col grid, no emojis on rows |
 | Quests  | `tab-dungeon.png`                 | `quests-panel`   | **Dungeon Bosses list (v2.0+)** + "MORE QUESTS — Coming in v2.0" placeholder. The Daily Quest card was removed in v2.0.1 — see "Removed systems". |
-| Items   | `tab-items.png`                   | `items-panel`    | **Pokédex (v2.0.2 Drops Phase 1)** — 3 collapsible sections (Ultra-Rare / Rare / Common) all default-collapsed. Discovered cards render with real art (DALL-E 1254×1254 PNGs in `assets/items/`); undiscovered slots show ??? silhouette. Tap discovered card → carddetail modal with stat-bonus badges + flavor + first-found date + stack count. Reveal modal (cinematic) fires for first-acquisition rare/ultra. See "Drops & Card Collection" section. |
-| Social  | `tab-social.png`                  | `social-panel`   | **Leaderboard preview (v2.0.1)** — three icon-led stat cards (steps · 7-day, 7+hr sleep streak, before-midnight bedtime streak), each tapping opens the Top-50 ranking sheet. See "Leaderboard" section. |
+| Items   | `tab-items.png`                   | `items-panel`    | **RELIC ARCHIVE (v3 Phase 1g)** — 3 collapsible sections: ULTRA-RARE RELICS / RARE RELICS / COMMON RELICS, all default-collapsed. Discovered cards show real art + slot badge (top-left) + equipped badge (top-right, when in Hunter Build) + drop-source line. Mystery cards (rare + ultra only — commons hide silhouettes) show `?` + rarity teaser + source hint. Tap discovered → carddetail modal with EQUIP TO BUILD / UNEQUIP button. Tap mystery → mystery info modal with HUNT BOSS CTA. Reveal modal (cinematic) fires for first-acquisition rare/ultra. Sort order: acquisition date ascending (chronological discovery log). Header carries the live Armory CTA with `Gear Power N · K / 6 Equipped` sub-line. See "Relic Archive" + "Hunter Build" sections. |
+| Social  | `tab-social.png`                  | `social-panel`   | **Live global leaderboard (v2.1.0 Phase C)** — three icon-led stat cards (steps · 7-day, 7+hr sleep streak, before-midnight bedtime streak), each tapping opens the Top-50 ranking sheet with real backend data. See "Leaderboard" section. |
 
 Tab icons are referenced by file path inside `<img class="tab-icon">` tags. Active state adds a purple drop-shadow + 1.06× scale. Inactive icons sit at 0.55 opacity. **Don't add `<span class="tab-label">`** — symbol-only is the design.
 
 Bottom sheets (all use `attachSheetDismissGesture()` for swipe-down dismiss):
 
-- `#settings-sheet` — collapsibles (APPEARANCE / REMINDERS / WHAT'S COMING) + What's New + reset
+- `#settings-sheet` — collapsibles (REMINDERS / APPLE HEALTH / WHAT'S COMING / ACCOUNT) + What's New + reset
 - `#lib-sheet` — Add Habits browser (Morning Routine, Locked-In, Create Your Own, categories)
 - `#hd-sheet` — habit detail / config (slides over lib-sheet)
 - `#sched-sheet` — schedule picker
@@ -1297,6 +1732,17 @@ Bottom sheets (all use `attachSheetDismissGesture()` for swipe-down dismiss):
 - `#mr-overlay` — Add Morning Routine / Locked-In pack confirmation (center modal, NOT a bottom sheet)
 - `#custom-overlay` — Create Your Own habit modal (emoji + name + stat picker)
 - `#notif-explain-overlay` — first-time notification permission explainer
+- `#equipment-modal` — Armory (avatar tap / VIEW YOUR ARMORY) — Hunter Build typed 6-slot grid + summary
+- `#build-picker-sheet` — Select Relic — compact MOBA picker, slot-filtered
+- `#build-detail-sheet` — equipped slot detail with UNEQUIP only
+- `#mystery-card-modal` — undiscovered card info (rarity + source + HUNT BOSS)
+- `#carddetail-overlay` — discovered card detail with EQUIP TO BUILD / UNEQUIP
+- `#boss-fs-overlay` — full-screen boss detail (Quests tab) with RELIC MERCY readout
+- `#lb-rank-sheet` — Top-50 leaderboard ranking sheet
+- `#xp-detail-sheet` — Stats tab → XP graph card tap → detail view
+- `#awakened-splash` — pre-rendered launch screen (every cold launch)
+- `#intro-onboarding` — 5-card educational onboarding (first-time only)
+- `#signin-gate` — Sign in with Apple → alias claim (when no user)
 
 Center / celebration modals (do NOT add swipe dismiss):
 - Compound Effect Bonus, Rank Up, Stat Level Up, Class Change, Class Choice, Awakening, Perfect Day, Achievement Unlock, Friday Challenge
@@ -1361,6 +1807,31 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `computeMidDayBody()` | v2.0.2. Priority-chain body for the 1 PM mid-day check-in. Returns `null` to signal "skip notification" (priority 4: no habits). |
 | `Notif.reapplyMidDay()` | v2.0.2. Re-arm the mid-day notification with fresh body. Called from rescheduleAll, onHabitCompleted, class change, name edit, daily-bonus grant. |
 | `esc(str)`, `colorWithAlpha(hex, alpha)` | HTML-escape + color helpers used in inline `style="..."` building. |
+| **v3 Phase 1d–1j (v2.2.0)** | |
+| `getCardEquipmentSlot(card)` | Returns the card's TYPED slot ('helm' / 'weapon' / 'plate' / 'gloves' / 'boots' / 'ring') with legacy collapse (body/legs/cape → plate, amulet → ring). Returns `null` + console.warn for cards with no slot. Single source — every Armory/Picker/Archive surface reads this. |
+| `EQUIPMENT_SLOTS` / `EQUIPMENT_SLOT_INDEX` / `LEGACY_TO_TYPED_SLOT` | The typed-slot constants. Index ↔ slot key ↔ legacy slot map. |
+| `equipBuildItem(slotIndex, cardId)` / `unequipBuildItem(slotIndex)` | Hunter Build mutators. Return `{ ok, prevCardId }` or `{ ok: false, code: 'WRONG_SLOT'/'DUPLICATE'/'BAD_INDEX'/'BAD_CARD'/'LOCKED' }`. Persist via `saveHunterBuild`. |
+| `isItemEquippedInBuild(cardId)` / `getBuildSlotIndexForCard(cardId)` | Read-side build queries. |
+| `aggregateBuildPower()` / `getBuildDominantPath()` / `countEquippedBuildItems()` | Summary readouts. |
+| `getItemBuildPower(card)` | Per-card power: common=1, rare=3, ultra_rare=7. |
+| `migrateGenericBuildToEquipmentBuild()` | One-shot migration (idempotent via `hb_equipment_build_migrated_v1`) — re-shuffles existing generic build into typed slot positions. |
+| `migrateEquipmentToHunterBuild()` | One-shot migration — seeds `hb_hunter_build` from legacy `hb_pvp_equipped` body slots. Idempotent via presence of `hb_hunter_build`. |
+| `renderHunterBuild()` / `renderHunterBuildSummary()` | Armory grid + summary block renderers. |
+| `openBuildPicker(slotIndex)` / `closeBuildPicker()` | Slot-filtered Select Relic picker. Picker title becomes `SELECT HELM` / `SELECT WEAPON` etc. |
+| `openBuildItemDetail(slotIndex)` / `closeBuildItemDetail()` | Build detail sheet with UNEQUIP-only action. |
+| `dropRatesFor(bossId)` / `dropPityCfgFor(bossId)` / `getBossCadence(bossId)` | v1.7 cadence-aware rate + pity resolution with validation + once-per-misbehaving-boss warn. |
+| `hasPulledFirstCommonForBoss(bossId)` / `markFirstCommonPulledForBoss(bossId)` | Per-boss first-common protection state. |
+| `getDropPityState(bossId)` / `setDropPityState(bossId, state)` / `incrementDropPityAfterNoDrop(bossId)` / `resetDropPityAfterDrop(bossId, rarity)` | Pity counter mutation. |
+| `getEffectiveUltraRate(bossId, baseRate)` | Computes per-roll soft/hard ultra rate without mutating `DROP_RATES_BY_CADENCE`. |
+| `forcePityDrop(bossId)` | Any-drop pity card-pick — respects stack caps + prefers common→rare→ultra. |
+| `getDropPityDisplay(bossId)` | Read-model for the RELIC MERCY UI in boss detail modal. |
+| `getCardDropSourceLabel(card)` | "The Carouser" — used by Relic Archive + mystery info modal. Single source. |
+| `refreshArmoryCTAStatus()` | Updates the Items-tab Armory CTA secondary line with live Gear Power + equipped count. |
+| `openMysteryCardModal(card)` / `closeMysteryCardModal()` / `setupMysteryCardModal()` | Mystery (undiscovered) card info modal. Never reveals item name. |
+| `lbNormalizeAliasForDisplay(raw)` / `lbBuildDisplayAliases(rows)` | Display-only leaderboard alias normalization. Strip whitespace + lowercase + allowlist (`richie` → `Richie`) + dedupe collisions with numeric suffix. |
+| `hideSplash()` / `setSplashLongLoading(on)` | Splash control. `hideSplash` honors min-visible-time (1800ms) before fading. `setSplashLongLoading(true)` reveals the "Preparing your system…" line. |
+| `showIntroOnboarding(onComplete)` / `hideIntroOnboarding()` / `completeIntroOnboarding()` / `setupIntroOnboarding()` | 5-card educational onboarding controller. Gated by `shouldShowIntroOnboarding()`. |
+| `Auth.signInWithApple()` / `Auth.completeSignIn(alias)` / `Auth.validateAlias(alias)` / `Auth.getCurrentUser()` / `Auth.isNative()` / `Auth.devSignInIfLocalhost()` | Exposed by `auth.js`. Used by the sign-in gate. |
 
 ---
 
@@ -1416,10 +1887,23 @@ Prefix `hb_` for almost everything:
 | `hb_bedtime_window_fix_v1` | `'1'` | v1.1.5. One-time recovery flag for the bedtime false-positive bug. On the first launch of the strict-window build, init() clears today's auto-verified Sleep before midnight check (if present), reverses the +3 XP, and sets this flag. Idempotent. Future bedtime-logic fixes that need similar recovery should use a new flag (`_v2`, etc.) — don't re-purpose this one. |
 | `hb_bosses`            | `{ bossId: { streak, kill_count, last_eval_date, ...perBossExtras } }` | v2.0+. Dungeon boss state. v2.0.1 ships two bosses (`the_insomniac`, `the_carouser`). The Carouser entry adds `current_weekend_id` ('YYYY-MM-DD' Friday-anchor) + `weekend_burned` (bool). `last_eval_date` is 'YYYY-MM-DD' device-local; it prevents double-counting on visibilitychange refires and powers the missed-period reset in init(). See "Dungeon bosses (v2.0+)" section. |
 | `hb_leaderboard`       | `{ steps_daily, sleep_hours_daily, bedtime_daily, current_*_streak, best_*_streak, last_*_eval_date, best_7day_step_total, best_7day_step_window_end }` | v2.0.1. Local accumulator for the future leaderboard layer. Daily maps pruned to 30 days. `current_*` track running streaks; `best_*` preserve all-time peaks across breaks. Independent of `isAutoVerifyDisabled()`. See "Leaderboard (v2.0.1+)" section. |
-| `hb_inventory`         | `{ cards: { [card_id]: { discovered, count, first_acquired_date } }, first_common_pulled, first_common_date, reveal_queue: [card_id, ...] }` | **v2.0.2 Drops Phase 1.** Card collection state. `loadInventory` transparently reads legacy `first_uncommon_*` keys with fallback (v1.3 rename). `reveal_queue` persists pending cinematic reveals across cold launches. Stack caps applied in `rollBossDrop` (common 1, rare 3, ultra unlimited). See "Drops & Card Collection" section. |
+| `hb_inventory`         | `{ cards: { [card_id]: { discovered, count, first_acquired_date } }, first_common_pulled, first_common_date, first_common_by_boss: { [bossId]: true }, drop_pity_by_boss: { [bossId]: { kills_since_any_drop, kills_since_ultra, kills_since_rare_or_better, last_drop_at } }, reveal_queue: [card_id, ...] }` | **v2.0.2 Drops Phase 1 → v3 Phase 1h.** Card collection state. `loadInventory` runs 3 idempotent migrations: legacy `first_uncommon_*` rename (v1.3), per-boss first-common backfill from existing common ownership (v3 Phase 1h), and pity-state stub for any known boss missing an entry. `reveal_queue` persists across cold launches. Stack caps applied in `rollBossDrop` (common 1, rare 3, ultra unlimited). See "Drops & Card Collection" section. |
 | `hb_pokedex_collapsed` | JSON array of rarity keys currently collapsed | v2.0.2. Persists Pokédex section state across launches. Default value when key missing: all 3 keys (`['ultra_rare', 'rare', 'common']`) — first-time visitors see a tidy stacked list of collapsed dropdown headers. |
 | `hb_daily_quests`      | `{ 'YYYY-MM-DD': { id, manualDone[], bonusAwarded } }` | **DEPRECATED v2.0.1.** Daily Quest system removed; this key is no longer read or written but is preserved on existing devices for non-destructive future revival. See "Removed systems". |
 | `hb_quest_history`     | `[{ date, missionId }]` | **DEPRECATED v2.0.1.** Same status as above. |
+| **v2.1.0 + v2.2.0 additions** | | |
+| `hb_user`              | Managed by `auth.js`: `{ id, alias, jwt, apple_sub, created_at }` | v2.1.0 Phase A. Apple Sign In + alias state. The IIFE in `app.js` short-circuits on missing `user.alias`. Access via `Auth.getCurrentUser()`. |
+| `hb_pending_apple_token` | Short-lived staging string | v2.1.0. Lives between Apple sign-in step and alias commit. Cleared on `Auth.completeSignIn` success. |
+| `hb_lb_last_submit`    | int (epoch ms) | v2.1.0 Phase C. Debounces `lbSubmitAllMetrics` to ≥5 min between leaderboard submissions. Prevents hot-relaunch spam. |
+| `hb_lb_cache_<metric>` | `{ top, me, fetched_at }` | v2.1.0 Phase C. Stale-while-revalidate cache for leaderboard ranking fetches (24h TTL via `LB_CACHE_MAX_AGE_MS`). One entry per metric (`step_total`, `sleep_streak`, `bedtime_streak`). |
+| `hb_hunter_build`      | `{ slots: [card_id|null × 6], updated_at: ISO }` | **v3 Phase 1d → 1e.** Hunter Build typed loadout. Index → typed slot (0 helm, 1 weapon, 2 plate, 3 gloves, 4 boots, 5 ring). Replaces `hb_pvp_equipped` UI layer; legacy key preserved on disk for safety. |
+| `hb_pvp_equipped`      | `{ helm, cape, amulet, weapon, body, legs, gloves, boots, ring }` | **v3 Phase 1a (vestigial).** Body-slot equipped state. No live UI reads this anymore — Hunter Build replaced the surface. Preserved as a safety copy of pre-pivot equipped data. |
+| `hb_equipment_build_migrated_v1` | `'1'` | v3 Phase 1e. One-shot flag — once set, `migrateGenericBuildToEquipmentBuild()` doesn't re-shuffle the build. |
+| `hb_onboarding_seen_v2` | `'1'` | v3 Phase 1i. Educational 5-card onboarding seen flag. Set on completion OR confirmed skip. Returning users with `hb_welcomed === '1'` get this auto-set so they don't see the new content. |
+| `hb_hunter_name_claimed` | `'1'` | v3 Phase 1j. Hunter name claim lock. Set on signin alias commit, welcome screen launch, habit-picker onboarding finish, and init migration (any user with non-default `hb_name`). Drives the Status-tab pencil hide + welcome-screen bypass + habit-picker name-input hide. |
+| `hb_sw_known_version`  | sw cache version string | v2.2.0 (existed earlier in different form). Written background-async on register. Used by the manual "Check for Updates" Settings button's fallback comparison. |
+| `hb_sw_last_active_version` | sw cache version string | v2.2.0 (auto-update safety net). Written by the version-drift detector 2s after register. Compared against live sw.js fetch — drift triggers unregister + cache wipe + reload. |
+| `hb_sw_manual_update`  | `'1'` (opt-in) | v2.2.0. Opt back into the banner-driven update flow. Default behavior is silent auto-apply. |
 
 All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule — **EXCEPT for HealthKit sleep windows + Daily Insight**, which use device-local time (sleep crosses midnight; the morning briefing is meant to mark "the user's morning" wherever they are; same rule as notifications — see CLAUDE.md "Notifications fire in DEVICE-LOCAL time, not PT"). Use `getDeviceLocalDate()` for these features, not `getPTDate()`.
 
@@ -1463,10 +1947,12 @@ The `ios/`, `android/`, `www/`, and `node_modules/` directories are gitignored �
 Every meaningful change must:
 
 1. Edit `index.html`: bump `?v=N` on the `<link>` for `styles.css` and `<script>` for `app.js`
-2. Edit `sw.js`: bump `CACHE_VERSION = 'v4.NN'`
+2. Edit `sw.js`: bump `CACHE_VERSION = 'v5.NN'`
 3. (For iOS releases only) **Two `APP_VERSION`s must move together:**
-   - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['1.1.5']` for the canonical example.
+   - Edit `app.js`: bump the `APP_VERSION` constant and add a matching `WHATS_NEW` entry (drives the in-app What's New sheet). **Order items within the entry by significance, not chronologically** — net-new daily-visibility features at the top, configuration polish and settings-layer additions at the bottom. The user reads this top-down on every version-update launch; the most impactful change should anchor first impression. See `WHATS_NEW['2.2.0']` for the canonical example (8 items, significance-ordered: new launch experience → typed equipment → mercy protection → Relic Archive → cadence-aware rates → compact picker → silent auto-update → leaderboard polish).
    - Edit `codemagic.yaml`: bump the `APP_VERSION` env var (drives `agvtool new-marketing-version` → `CFBundleShortVersionString` in `Info.plist`). Forgetting this one causes App Store Connect to reject the upload with "must contain a higher version than ... previously approved version."
+
+**v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
 The current state is `styles.css?v=242`, `app.js?v=321`, `auth.js?v=7`, `sw.js v5.199`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
@@ -1517,6 +2003,16 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 **App icon must have NO alpha channel.** Apple rejects builds otherwise. The generation script outputs 24-bit RGB. Always run `scripts/verify-app-icons.ps1` before committing icon changes.
 
 **Custom habits get fixed Medium XP.** Don't surface a difficulty picker — the rank economy is sacred. If a user complains their custom habit "should be Legendary," tell them to use the curated equivalent or accept it as a tracking-only entry.
+
+**Hunter name is claim-once.** Once `hb_hunter_name_claimed === '1'`, no UI in the app exposes a rename path. The signin alias is the canonical claim. Don't reintroduce the Status-tab pencil, don't add a Settings → Account → "Change name" affordance, don't re-prompt on signin re-auth. See "Hunter name claim & lock" section.
+
+**SW auto-update is silent by default.** Don't put `self.skipWaiting()` in `sw.js`'s install handler — the auto-skip happens client-side via `postMessage` so first-install vs update can be distinguished. Don't reintroduce the in-app banner as the default flow. Manual mode is available via `localStorage.setItem('hb_sw_manual_update', '1')` for users who want explicit control. See "Service worker auto-update" section.
+
+**Armory is fully open.** All 6 typed equipment slots unlock at every rank. The rank-gated render path (locked tiles with `REACH X RANK`) is dead code retained for safety. Don't reintroduce rank-gating without explicit product ask.
+
+**Card slots are TYPED.** Cards can only equip into their matching typed slot. `equipBuildItem` returns `WRONG_SLOT` if a Pup's Hood tries to land in RING. The picker is slot-filtered so this code path is defensive — but it MUST stay defensive (don't loosen it). Legacy card slots map via `LEGACY_TO_TYPED_SLOT` (body/legs/cape → plate, amulet → ring).
+
+**Boss cadence is required.** `dropRatesFor(bossId)` validates `BOSSES[id].cadence` against `{daily, triweekly, weekly}` and warns once per misbehaving boss in the console. New bosses MUST carry an explicit cadence field. Missing/invalid silently falls back to `daily` but emits the warn.
 
 ---
 
@@ -1580,13 +2076,36 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Reviving `#boss-detail-sheet` or `openBossDetail/closeBossDetail`.** The v1.1.7 `.vn-sheet` bottom-sheet was retired in v2.0.1 when boss cards became tappable to a full-screen modal. The element IDs, function names, and CSS (`.boss-detail-*`) are all gone. The replacement is `#boss-fs-overlay` + `openBossFullScreen(id)` / `closeBossFullScreen()`. If a future detail-modal pattern is needed elsewhere, copy the `.bfs-*` block, don't try to resurrect the bottom-sheet.
 - **Adding a `glyph` field to `BOSSES` entries.** It existed briefly in v2.0.1 development for the boss-card header (🌙 / 👑) and was removed when emojis got cut from the card aesthetic. The card header is now rank-pill-left + name-centered, no third element. If you re-add a glyph, also rebalance `.bcard-header` (currently flex-centered with absolute-positioned pill, no slot for a third element).
 - **Dropping `cfg.streakTarget` reads in favor of hardcoded "3" or "2".** All UI surfaces (card progress dots, "X / Y nights" labels, detail-modal progress) read `streakTarget` from the BOSSES config. Single source of truth. The 3→2 recalibration in v2.0.1 changed only the constant + copy strings — no render code touched. Keep it that way; future rebalances should be a constant edit.
+- **Working in the OneDrive copy.** The repo was moved to `C:\Users\richm\Documents\repos\awakened-app` on May 13 because OneDrive sync vs `.git/objects` produces "Delete these 1000+ items?" dialogs every time git does internal housekeeping (gc, pack, prune). The OneDrive copy at `C:\Users\richm\OneDrive\Desktop\habit-tracker` STILL exists as backup. Pick one as canonical and `git pull` at session start. `serve.ps1`'s fallback was updated to point at the new location (commit `70240d8`); always `cd` into the new repo before launching. Yesterday's drift bit us THREE times — same fix each time: cd to the new repo, restart `serve.ps1`, hard-refresh the browser, paste the SW unregister one-liner.
+- **Running git commands from the wrong shell when both repos exist.** Commits to one repo don't propagate to the other automatically. `git status` says "nothing to commit" because the shell is in the OneDrive copy while my edits went to the new repo. Always check `pwd` if `git status` reports unexpected emptiness. Fix: `cd /c/Users/richm/Documents/repos/awakened-app` then re-run.
+- **Reintroducing the body-socket Armory.** The 9-slot `panel-base.png` carved-stone panel was killed in v3 Phase 1d after 5+ structural iterations failed. CSS can't strip flattened RGB backgrounds; the Tonal-style typed grid is the structural fix. Don't bring it back. See "Removed systems" → "9-slot body-equipment Armory".
+- **Reintroducing REPLACE on the build-detail sheet.** Removed v3 Phase 1d follow-up. The unequip-then-tap-empty-slot flow is cleaner; the picker is slot-filtered so swaps are two taps. Don't re-add REPLACE.
+- **Forgetting `card.cadence` on a new boss.** `dropRatesFor` falls back to daily + warns. New content MUST set `cadence: 'daily' | 'triweekly' | 'weekly'` explicitly.
+- **Hardcoding pity thresholds.** Read from `DROP_PITY_BY_CADENCE[cadence]` via `dropPityCfgFor(bossId)`. Future rebalances should be constant edits.
+- **Computing ultra rate by mutating `DROP_RATES_BY_CADENCE`.** Use `getEffectiveUltraRate(bossId, baseRate)` per-roll instead. The base table is immutable; pity is per-roll.
+- **Mutating `hb_inventory` outside the rollBossDrop / forceDrop / forcePityDrop / equip-build path.** All inventory writes flow through one of those. Don't add a parallel write path that bypasses stack caps, reveal queue, or pity counter updates.
+- **Adding a name input anywhere in the app.** The hunter name is claimed once via the signin alias step. Don't add a fourth name surface (we deleted three). If you need to capture a name for some other feature, derive it from `localStorage.getItem('hb_name')` — never prompt again.
+- **Trusting that a backend alias is web-friendly.** The leaderboard normalizes display (`lowercase`, strip spaces, `richie` → `Richie` allowlist). Raw stored aliases CAN have capitals + spaces (e.g., `Big Bear`). isMe matching uses the raw API field. If you need a "clean" alias for display, call `lbNormalizeAliasForDisplay(raw)`.
+- **Skipping `Drops.simulateDrops(bossId, N)` for balance work.** Console-only dry-run that doesn't mutate state. Faster than waiting for real rolls. Useful for sanity-checking new cadences or pity thresholds.
+- **Auto-update SW edge cases.** If a user is stuck on a stale SW version (e.g., one shipped before the v2.2.0 auto-update logic), the auto-update logic isn't running yet on their device — they need ONE manual unregister + reload to escape. After that, all future updates land silently. There's no shortcut around the bootstrapping cost.
 
 ---
 
 ## Quick references
 
-- **Local dev:** `cd habit-tracker && $env:PORT=8081; .\serve.ps1` → `http://localhost:8081`
-- **Hard refresh:** `Ctrl + Shift + R` after CSS/JS changes
-- **DevTools service worker:** Application tab → Service Workers → Unregister, then refresh, if updates feel stuck
-- **Install Capacitor deps:** `& "C:\Program Files\nodejs\npm.cmd" install` (PATH may need full path on Windows)
-- **Git status:** Repo is `github.com/GoalLearner/awakened-app`, branch `main`. Net new uncommitted files often get reported by the system reminder; check `git status` before commits.
+- **Canonical working tree:** `C:\Users\richm\Documents\repos\awakened-app` (NOT the OneDrive copy)
+- **Local dev:** `cd C:\Users\richm\Documents\repos\awakened-app && .\serve.ps1` → `http://localhost:8080`. Override port with `$env:PORT=NNNN`. Auto-update SW means manual cache-clear is rarely needed after the FIRST v2.2.0+ load.
+- **Hard refresh:** `Ctrl + Shift + R` after CSS/JS changes (or just wait for the silent auto-update on the next page load).
+- **DevTools service worker unstick (if needed):** Console one-liner —
+  ```js
+  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).then(() => caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k))))).then(() => location.reload())
+  ```
+- **Install Capacitor deps:** `& "C:\Program Files\nodejs\npm.cmd" install` (PATH may need full path on Windows). `.npmrc`'s `legacy-peer-deps=true` MUST stay until we migrate off `@perfood/capacitor-healthkit`.
+- **Sync state across both clones at session start:** `cd <whichever> && git pull --ff-only origin main`
+- **Console debug entry points:**
+  - `window.Drops` — drops/pity/simulate
+  - `window.HunterBuild` — equip/unequip/build power/migrations
+  - `window.Bosses` — boss state + engagement helpers
+  - `window.Leaderboard` — snapshot + record helpers
+  - `window.Auth` — current user + alias validation
+- **Git status:** Repo is `github.com/GoalLearner/awakened-app`, branch `main`. Both clones track `origin/main`. Net new uncommitted files often get reported by the system reminder; check `git status` before commits.
