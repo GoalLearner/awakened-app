@@ -18564,12 +18564,14 @@ body.reveal-locked { overflow: hidden; }
 }
 
 .hg-row.hg-row--ledger {
-  /* Two-line habit names need genuine vertical room. 52px = 7px top
-     padding + 2 lines × ~14px + 7px bottom padding. */
-  min-height: 52px;
+  /* v3 Phase 1p polish — tightened back from 52 → 44px. Two-line habit
+     names still fit cleanly with line-height 1.14 + reduced label
+     padding; the ledger reads as a dense discipline log rather than a
+     spaced-out table. */
+  min-height: 44px;
 }
 /* Header row stays compact — no two-line label there. */
-.hg-ledger .hg-row.hg-header-row { min-height: 30px; }
+.hg-ledger .hg-row.hg-header-row { min-height: 28px; }
 
 /* Eyebrow header inside label column. Stacked vertically; subtitle is
    subtle by design so day letters stay the visual anchor. */
@@ -18621,7 +18623,7 @@ body.reveal-locked { overflow: hidden; }
 /* Label column — stat-color accent stripe + two-line name + AUTO badge */
 .hg-label--ledger {
   position: relative;
-  padding: 6px 4px 6px 11px;
+  padding: 4px 4px 4px 11px;
   gap: 4px;
   align-items: center;
   overflow: hidden;
@@ -18629,16 +18631,16 @@ body.reveal-locked { overflow: hidden; }
 .hg-label-accent {
   position: absolute;
   left: 0;
-  top: 7px;
-  bottom: 7px;
+  top: 5px;
+  bottom: 5px;
   width: 2px;
   border-radius: 0 1px 1px 0;
   opacity: 0.85;
 }
 .hg-label-name--wrap {
-  /* v3 Phase 1p+ — allow two lines, drop the ellipsis. Long names like
-     "Strength training" / "Meditate & Breathwork" / "No phone after
-     waking" wrap cleanly with 1.18 line-height inside the 52px row. */
+  /* v3 Phase 1p polish — two-line clamp with a tight 1.14 line-height
+     so long names ("Strength training", "Meditate & Breathwork", "No
+     phone after waking") wrap cleanly inside the 44px row. */
   white-space: normal !important;
   overflow: hidden !important;
   text-overflow: clip !important;
@@ -18646,7 +18648,7 @@ body.reveal-locked { overflow: hidden; }
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   font-size: 11.5px;
-  line-height: 1.18;
+  line-height: 1.14;
   word-break: break-word;
   font-weight: 600;
   flex: 1 1 auto;
@@ -18748,13 +18750,13 @@ body.reveal-locked { overflow: hidden; }
   border: 0.5px dashed rgba(255,255,255,0.05);
 }
 
-/* Slightly larger day cells (22 → 24px) for completed-cell legibility
-   without forcing horizontal overflow. Day-track minmax in .hg-row
-   already accommodates this. */
+/* v3 Phase 1p polish — day cells tightened back to 22px so the
+   ledger reads as a compact discipline log. The gem gradient + outer
+   glow still carry legibility at this size. */
 .hg-ledger .hg-cell {
-  height: 24px;
-  width: 24px;
-  border-radius: 6px;
+  height: 22px;
+  width: 22px;
+  border-radius: 5px;
 }
 
 /* ── Legend strip ── */
