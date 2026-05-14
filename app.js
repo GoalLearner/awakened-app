@@ -33,8 +33,8 @@
       if (splash) {
         setTimeout(() => {
           splash.classList.add('is-hidden');
-          setTimeout(() => { try { splash.remove(); } catch (_) {} }, 600);
-        }, 900);
+          setTimeout(() => { try { splash.remove(); } catch (_) {} }, 700);
+        }, 1800);
       }
     } catch (_) {}
 
@@ -19096,8 +19096,8 @@
   // users (no hb_onboarding_seen_v2 AND no hb_welcomed), then sets
   // its flag and lets the existing welcome-screen flow take over.
   // ═══════════════════════════════════════════════════════════════
-  const SPLASH_MIN_VISIBLE_MS  = 900;
-  const SPLASH_LONG_LOADING_MS = 1500;
+  const SPLASH_MIN_VISIBLE_MS  = 1800;   // dwell long enough to land the brand
+  const SPLASH_LONG_LOADING_MS = 2400;   // only show "Preparing your system…" if load drags past this
   let _splashStart       = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   let _splashLongTimer   = null;
   let _splashHidden      = false;

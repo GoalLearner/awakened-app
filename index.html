@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=240">
+  <link rel="stylesheet" href="styles.css?v=241">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -46,8 +46,18 @@
        1500ms the "Preparing your system…" line auto-fades in. -->
   <div id="awakened-splash" class="awakened-splash" role="presentation" aria-hidden="true">
     <div class="splash-bg-orb" aria-hidden="true"></div>
-    <div class="splash-rune" aria-hidden="true"></div>
     <div class="splash-content">
+      <!-- v3 Phase 1i.1 — Tonal-style restrained branding: small
+           emblem stacked above the wordmark, no decorative ring.
+           Emblem is an SVG so it's crisp at any density. -->
+      <div class="splash-emblem" aria-hidden="true">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
+          <!-- Hunter rune: triangle peak + flame inside, gold stroke -->
+          <path d="M32 6 L58 56 H6 Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" />
+          <circle cx="32" cy="38" r="6" fill="currentColor" opacity="0.85" />
+          <path d="M32 28 L36 38 L32 36 L28 38 Z" fill="currentColor" />
+        </svg>
+      </div>
       <div class="splash-logo">AWAKENED</div>
       <div class="splash-subtitle">Discipline becomes power</div>
       <div class="splash-loading-text">Preparing your system…</div>
@@ -1558,7 +1568,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=319"></script>
+  <script src="app.js?v=320"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
