@@ -8488,21 +8488,22 @@ footer {
    ═══════════════════════════════════════════════════════════════ */
 
 .daily-quote {
-  /* v3 Phase 1o → 1q polish — small breathing-room bump on top of the
-     vertical-efficiency pass. Padding +~10px total so the quote no
-     longer feels squeezed against the tab bar, but stays well below
-     the old 76px min-height that crowded out a full card row. */
-  padding: 7px 14px 6px;
+  /* v3 Phase 1q refinement — second small breathing-room bump on top
+     of the vertical-efficiency pass. ~6px more padding + 10px more
+     min-height so the quote feels intentionally centered, not pinned
+     against the tab bar. Still well below the pre-Phase-1o 76px
+     min-height that crowded out a full card row. */
+  padding: 10px 16px 9px;
   font-size: 0.66rem;
   font-style: italic;
   color: var(--text-secondary);
   text-align: center;
   letter-spacing: 0.01em;
-  line-height: 1.42;
+  line-height: 1.45;
   border-top: 1px solid var(--border);
-  opacity: 0.82;
+  opacity: 0.85;
   transition: opacity 0.5s ease-in-out;
-  min-height: 48px;
+  min-height: 58px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8514,7 +8515,10 @@ footer {
   font-style: normal;
   font-size: 0.58rem;
   color: var(--text-tertiary);
-  margin-top: 1px;
+  /* Small gap between quote and attribution so the two lines read as
+     a paired block rather than a single run. */
+  margin-top: 4px;
+  letter-spacing: 0.04em;
 }
 
 /* ═══════════════════════════════════════════════════════════════
