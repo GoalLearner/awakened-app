@@ -1207,32 +1207,19 @@
     return LEGACY_TO_TYPED_SLOT[raw] || null;
   }
 
-  // Rank-gated unlocks per spec. E unlocks HELM + WEAPON; each
-  // subsequent rank reveals one more slot in this fixed order so
-  // every player walks the same progression. S+ leaves all 6 open
-  // (no extra slots — prestige hooks live elsewhere).
-  function getUnlockedBuildSlots(rankId) {
-    switch (rankId) {
-      case 'E':  return 2;
-      case 'D':  return 3;
-      case 'C':  return 4;
-      case 'B':  return 5;
-      case 'A':
-      case 'S':
-      case 'S+': return 6;
-      default:   return 2;
-    }
+  // All 6 typed slots unlock at every rank. (The earlier rank-gated
+  // model — E:2 / D:3 / C:4 / B:5 / A:6 — was dropped per product
+  // direction: discipline pressure stays on drop rates; the Armory
+  // is fully open. Helpers stay in place as constants in case a
+  // future rank-gated variant returns.)
+  function getUnlockedBuildSlots(/* rankId */) {
+    return HUNTER_BUILD_SLOT_COUNT;
   }
-  function getRequiredRankForBuildSlot(index) {
-    const required = ['E', 'E', 'D', 'C', 'B', 'A'];
-    return required[index] || 'A';
+  function getRequiredRankForBuildSlot(/* index */) {
+    return 'E';
   }
   function isBuildSlotUnlocked(index) {
-    if (index < 0 || index >= HUNTER_BUILD_SLOT_COUNT) return false;
-    const rank = (typeof totalPoints !== 'undefined' && typeof getRank === 'function')
-      ? getRank(totalPoints || 0) : null;
-    const unlockedCount = getUnlockedBuildSlots(rank ? rank.id : 'E');
-    return index < unlockedCount;
+    return index >= 0 && index < HUNTER_BUILD_SLOT_COUNT;
   }
 
   // Ensures the build object has exactly HUNTER_BUILD_SLOT_COUNT
