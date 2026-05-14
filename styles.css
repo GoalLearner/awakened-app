@@ -18461,3 +18461,468 @@ body.reveal-locked { overflow: hidden; }
   font-size: 0.74rem;
   color: var(--text-tertiary);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1p — History tab: Discipline Ledger redesign
+   - Weekly grid becomes a stat-color "gem" ledger with legend.
+   - New TrainedThisWeek section + premium WeeklyReport card.
+   - Monthly / Yearly / Milestones layouts left untouched.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Refined date nav ── */
+.hg-nav--ledger {
+  padding: 4px 4px 10px;
+  gap: 6px;
+}
+.hg-nav--ledger .hg-nav-center {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hg-nav-eyebrow {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.hg-nav--ledger .hg-nav-range {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.hist-nav-btn--chev {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.hist-nav-btn--chev:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.hist-nav-btn--chev:active { transform: scale(0.95); }
+.hist-nav-btn--chev:disabled { opacity: 0.3; cursor: default; }
+
+/* ── Ledger card ── */
+.hg-grid-wrap.hg-ledger {
+  background: linear-gradient(180deg, #14143a 0%, #0e0e2a 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.hg-row.hg-row--ledger {
+  /* Slightly taller — two-line habit names need vertical room. */
+  min-height: 44px;
+}
+
+/* Eyebrow header inside label column */
+.hg-ledger-eyebrow {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.hg-ledger-sub {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Day header today marker — subtle gold underline glow */
+.hg-day-hdr--today {
+  color: var(--gold) !important;
+  text-shadow: 0 0 8px rgba(245,184,66,0.40);
+  position: relative;
+}
+.hg-day-hdr-mark {
+  position: absolute;
+  bottom: 1px;
+  left: 30%;
+  right: 30%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  box-shadow: 0 0 6px rgba(245,184,66,0.4);
+  border-radius: 1px;
+}
+
+/* Label column — stat-color accent stripe + two-line name + AUTO badge */
+.hg-label--ledger {
+  position: relative;
+  padding: 6px 6px 6px 12px;
+  gap: 6px;
+}
+.hg-label-accent {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 0 1px 1px 0;
+  opacity: 0.85;
+}
+.hg-label-name--wrap {
+  /* v3 Phase 1p — allow two lines, drop the ellipsis. Long names like
+     "Strength training" / "Meditate & Breathwork" / "No phone after
+     waking" are now readable without the info popup. */
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.2;
+  word-break: break-word;
+  font-weight: 600;
+}
+.hg-label-auto {
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #79b4ff;
+  padding: 1px 3.5px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(121,180,255,0.45);
+  background: rgba(59,130,246,0.08);
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* ── Cell states ── */
+.hg-cell--done { border-radius: 5px; position: relative; }
+.hg-cell--done-today {
+  outline: 1px solid var(--gold);
+  outline-offset: 1px;
+  box-shadow: 0 0 8px rgba(245,184,66,0.32);
+}
+.hg-cell--done.hg-cell--auto::after {
+  /* Override the legacy AUTO indicator with a smaller, framed dot in
+     the bottom-right corner so it reads as "system-verified" without
+     fighting the gem gradient. */
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0a0a1c;
+  border: 0.8px solid #79b4ff;
+  box-shadow: 0 0 4px rgba(121,180,255,0.45);
+}
+
+.hg-cell--pending {
+  background: rgba(245,184,66,0.04);
+  border: 1.4px dashed var(--gold);
+  animation: hg-today-pulse 2.5s ease-in-out infinite;
+}
+@keyframes hg-today-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 0.95; }
+}
+
+.hg-cell--missed {
+  background: rgba(239,68,68,0.04);
+  border: 0.5px solid rgba(239,68,68,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hg-cell-miss-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(239,68,68,0.55);
+  box-shadow: 0 0 3px rgba(239,68,68,0.30);
+}
+
+.hg-cell--future {
+  background: transparent;
+  border: 0.5px solid rgba(255,255,255,0.05);
+}
+.hg-cell--off {
+  background: transparent;
+  border: 0.5px dashed rgba(255,255,255,0.07);
+}
+
+/* ── Legend strip ── */
+.hg-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 12px 10px;
+  background: rgba(0,0,0,0.18);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  flex-wrap: wrap;
+}
+.hg-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+}
+.hg-legend-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.hg-legend-cell--done {
+  background: radial-gradient(circle at 35% 30%, #ec4899 0%, #be1a6e 100%);
+  box-shadow: 0 0 5px rgba(236,72,153,0.40), inset 0 0 0 0.5px rgba(255,255,255,0.18);
+}
+.hg-legend-cell--missed {
+  background: rgba(239,68,68,0.06);
+  border: 0.5px solid rgba(239,68,68,0.28);
+}
+.hg-legend-cell--missed .hg-cell-miss-dot {
+  width: 2.5px;
+  height: 2.5px;
+}
+.hg-legend-cell--pending {
+  border: 1px dashed var(--gold);
+  background: rgba(245,184,66,0.04);
+}
+.hg-legend-cell--off {
+  border: 0.5px dashed rgba(255,255,255,0.10);
+}
+
+/* ── Trained This Week ── */
+.hg-trained {
+  margin-top: 12px;
+  padding: 12px 14px 14px;
+  background: linear-gradient(180deg, #14143a 0%, #0e0e2a 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.hg-trained-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.hg-trained-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.hg-trained-meta {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+.hg-trained-bars {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.hg-trained-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.hg-trained-bar {
+  position: relative;
+  height: 38px;
+  width: 100%;
+  max-width: 24px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  border: 0.5px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.hg-trained-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  transition: height 0.3s ease;
+}
+.hg-trained-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.hg-trained-col--empty .hg-trained-label { color: var(--text-tertiary); }
+.hg-trained-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.hg-trained-insight {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 11.5px;
+  font-style: italic;
+  font-family: Georgia, "Cormorant Garamond", serif;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+}
+.hg-trained-tag {
+  font-style: normal;
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+}
+
+/* ── Weekly Report ── */
+.hg-report {
+  margin-top: 12px;
+  margin-bottom: 12px;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(245,184,66,0.10) 0%, transparent 60%),
+    linear-gradient(180deg, #1a1a3d 0%, #14142c 100%);
+  border: 1px solid rgba(245,184,66,0.35);
+  border-radius: 12px;
+  box-shadow: 0 0 16px rgba(245,184,66,0.20), inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+.hg-report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.hg-report-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hg-report-star { color: var(--gold); opacity: 0.95; }
+.hg-report-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.hg-report-range {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+.hg-report-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px 10px;
+}
+.hg-report-hero { flex: 0 0 auto; }
+.hg-report-pct {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(245,184,66,0.30);
+}
+.hg-report-pct-sym {
+  font-size: 19px;
+  font-weight: 700;
+}
+.hg-report-pct-lbl {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.hg-report-rows {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hg-report-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hg-report-row-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hg-report-row-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.hg-report-row-val--gold {
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(245,184,66,0.30);
+}
+.hg-report-dom {
+  margin: 4px 14px 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hg-report-dom-lbl {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  min-width: 64px;
+}
+.hg-report-dom-stat {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.hg-report-dom-count {
+  flex: 1;
+  text-align: right;
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--text-secondary);
+  font-family: Georgia, "Cormorant Garamond", serif;
+}

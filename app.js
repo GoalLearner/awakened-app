@@ -7081,7 +7081,10 @@
     ['weekly','monthly','yearly','achievements'].forEach(mode => {
       const btn = document.createElement('button');
       btn.className = 'hg-view-tab' + (histViewMode === mode ? ' hg-view-tab--active' : '');
-      btn.textContent = mode === 'achievements' ? 'Achieved' : mode.charAt(0).toUpperCase() + mode.slice(1);
+      // v3 Phase 1p — "Achieved" relabeled "Milestones" (user-facing only;
+      // internal mode key stays 'achievements' so storage / hg-ach-* CSS /
+      // delegated handlers don't have to follow).
+      btn.textContent = mode === 'achievements' ? 'Milestones' : mode.charAt(0).toUpperCase() + mode.slice(1);
       btn.addEventListener('click', () => { histViewMode = mode; renderHistory(); });
       tabs.appendChild(btn);
     });
@@ -7093,8 +7096,10 @@
     else if (histViewMode === 'yearly')       hgBuildYearly(el);
     else                                      hgBuildAchievements(el);
 
-    // ── Bottom stats bar (not shown in achievements view) ─
-    if (histViewMode !== 'achievements') hgBuildStatsBar(el);
+    // ── Bottom stats bar (Monthly / Yearly only — Weekly now ships the
+    //    richer Weekly Report card via hgBuildWeeklyReport which lives
+    //    inside hgBuildWeekly itself). ─
+    if (histViewMode === 'monthly' || histViewMode === 'yearly') hgBuildStatsBar(el);
   }
 
   // ── HABIT INFO POPUP STATS ───────────────────────────────
@@ -7141,21 +7146,47 @@
     return n;
   }
 
-  // ── WEEKLY VIEW ───────────────────────────────────────────
+  // ── WEEKLY VIEW (v3 Phase 1p — Discipline Ledger) ─────────
+  // Renders the week-at-a-glance grid with stat-color "gem" cells preserved.
+  // The cell's color = the habit's primary stat (STR/VIT/INT/FOCUS/WILL/WLT)
+  // so the user reads the week as "what did I train, not just how much."
   function hgBuildWeekly(el) {
-    const DAY_ABBR = ['M','T','W','T','F','S','S'];
-    const dates    = getWeekDates(histWeekOffset);
-    const isCurr   = histWeekOffset === 0;
+    const DAY_ABBR  = ['M','T','W','T','F','S','S'];
+    const DAY_FULL  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const dates     = getWeekDates(histWeekOffset);
+    const isCurr    = histWeekOffset === 0;
+    const todayIdx  = dates.indexOf(today); // -1 if viewing a past week
 
-    function fmtD(ds) { return ds.slice(5,7) + '/' + ds.slice(8,10); }
+    function fmtD(ds) {
+      const d = new Date(ds + 'T12:00:00');
+      const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+      return mo + ' ' + d.getDate();
+    }
+    function weekNumFor(ds) {
+      // ISO-ish week number — good enough for the "WEEK N · YEAR" eyebrow.
+      const d = new Date(ds + 'T12:00:00');
+      const start = new Date(d.getFullYear(), 0, 1);
+      const dayOfYear = Math.floor((d - start) / 86400000) + 1;
+      return Math.ceil((dayOfYear + ((start.getDay() + 6) % 7)) / 7);
+    }
+    const range = fmtD(dates[0]) + ' — ' + fmtD(dates[6]);
+    const yearN = dates[0].slice(0, 4);
+    const wkN   = weekNumFor(dates[0]);
 
-    // Nav row
+    // Refined date nav — compact chevrons + centered range with eyebrow.
     const nav = document.createElement('div');
-    nav.className = 'hg-nav';
+    nav.className = 'hg-nav hg-nav--ledger';
     nav.innerHTML =
-      '<button class="hist-nav-btn" id="hg-prev">&#8249;</button>' +
-      '<span class="hg-nav-range">' + fmtD(dates[0]) + ' → ' + fmtD(dates[6]) + '</span>' +
-      '<button class="hist-nav-btn" id="hg-next"' + (isCurr ? ' disabled' : '') + '>&#8250;</button>';
+      '<button class="hist-nav-btn hist-nav-btn--chev" id="hg-prev" aria-label="Previous week">' +
+        '<svg width="10" height="14" viewBox="0 0 10 14"><path d="M7 1L1 7l6 6" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</button>' +
+      '<div class="hg-nav-center">' +
+        '<div class="hg-nav-eyebrow">Week ' + wkN + ' · ' + yearN + '</div>' +
+        '<div class="hg-nav-range">' + range + '</div>' +
+      '</div>' +
+      '<button class="hist-nav-btn hist-nav-btn--chev" id="hg-next"' + (isCurr ? ' disabled' : '') + ' aria-label="Next week">' +
+        '<svg width="10" height="14" viewBox="0 0 10 14"><path d="M3 1l6 6-6 6" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</button>';
     el.appendChild(nav);
     document.getElementById('hg-prev').addEventListener('click', () => { histWeekOffset--; renderHistory(); });
     document.getElementById('hg-next').addEventListener('click', () => { if (!isCurr) { histWeekOffset++; renderHistory(); } });
@@ -7173,25 +7204,37 @@
       return;
     }
 
+    // ── Ledger card ───────────────────────────────────────
     const wrap = document.createElement('div');
-    wrap.className = 'hg-grid-wrap';
+    wrap.className = 'hg-grid-wrap hg-ledger';
 
-    // Header row: label + 7 day abbrs + badge placeholder
+    // Header row: "THE LEDGER" label + day abbrs (today gets gold underline)
     const hdrRow = document.createElement('div');
     hdrRow.className = 'hg-row hg-header-row';
-    hdrRow.appendChild(Object.assign(document.createElement('div'), { className: 'hg-label hg-label-hdr' }));
+    const hdrLabel = document.createElement('div');
+    hdrLabel.className = 'hg-label hg-label-hdr';
+    hdrLabel.innerHTML =
+      '<span class="hg-ledger-eyebrow">The Ledger</span>' +
+      '<span class="hg-ledger-sub">' + activeHabits.length + ' habits · 7 days</span>';
+    hdrRow.appendChild(hdrLabel);
     dates.forEach((ds, i) => {
       const c = document.createElement('div');
       c.className = 'hg-day-hdr' + (ds === today ? ' hg-day-hdr--today' : '');
-      c.textContent = DAY_ABBR[i];
+      c.innerHTML = DAY_ABBR[i] + (ds === today ? '<span class="hg-day-hdr-mark" aria-hidden="true"></span>' : '');
       hdrRow.appendChild(c);
     });
     hdrRow.appendChild(Object.assign(document.createElement('div'), { className: 'hg-badge-col' }));
     wrap.appendChild(hdrRow);
 
-    // One row per habit
+    // ── One row per habit ─────────────────────────────────
+    // Tally stat sessions while we walk the rows — feeds TrainedThisWeek.
+    const byStat = {};
+    const byDay  = [0,0,0,0,0,0,0];
+    let totalDone = 0, totalSched = 0;
+
     activeHabits.forEach(habit => {
       const diff       = habit.difficulty || 'easy';
+      const statId     = getHabitPrimaryStat(habit);
       const statColor  = getHabitStatColor(habit);
       const opacity    = DIFF_OPACITY[diff] || 0.6;
       const cellBg     = colorWithAlpha(statColor, opacity);
@@ -7201,42 +7244,62 @@
       const isPerfect = schedPast.length > 0 &&
         schedPast.every(ds => (completions[ds] || []).includes(habit.id));
 
-      const row = document.createElement('div');
-      row.className = 'hg-row';
+      // Is this an Apple-Health auto-verifiable habit? Drives the small
+      // AUTO badge in the label column and the auto-source dot on done cells.
+      const isAutoHabit = typeof isHealthAutoVerifiableHabit === 'function' &&
+                          isHealthAutoVerifiableHabit(habit);
 
-      // Label — clean base name (no duration suffix), bold, no emoji on the History tab
+      const row = document.createElement('div');
+      row.className = 'hg-row hg-row--ledger';
+
+      // Label column — stat-color accent stripe + two-line name + AUTO badge + info
       const label = document.createElement('div');
-      label.className = 'hg-label';
+      label.className = 'hg-label hg-label--ledger';
       label.innerHTML =
-        '<span class="hg-label-name">' + esc(habitBaseName(habit)) + '</span>' +
+        '<span class="hg-label-accent" style="background:' + statColor + ';' +
+          'box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.45) + ';"></span>' +
+        '<span class="hg-label-name hg-label-name--wrap">' + esc(habitBaseName(habit)) + '</span>' +
+        (isAutoHabit ? '<span class="hg-label-auto" aria-label="Auto-verified via Apple Health">AUTO</span>' : '') +
         '<button class="hg-info-btn" aria-label="More info about ' + esc(habitBaseName(habit)) +
           '" data-habit-info="' + esc(habit.id) + '">ⓘ</button>';
       row.appendChild(label);
 
       // 7 cells
-      dates.forEach(ds => {
-        const cell    = document.createElement('div');
-        const isFuture   = ds > today;
-        const isSchedDay = isScheduledOn(habit.days, ds);
-        const isDone     = (completions[ds] || []).includes(habit.id);
+      dates.forEach((ds, i) => {
+        const cell      = document.createElement('div');
+        const isFuture  = ds > today;
+        const isTodayC  = ds === today;
+        const isSched   = isScheduledOn(habit.days, ds);
+        const isDone    = (completions[ds] || []).includes(habit.id);
+        const isAutoVer = isDone && typeof AUTO_VERIFY !== 'undefined' &&
+                          AUTO_VERIFY.isAutoVerifiedOnDate(habit.id, ds);
+
+        if (isSched && !isFuture) totalSched++;
+        if (isDone && !isFuture)  totalDone++;
 
         if (isDone) {
           cell.className = 'hg-cell hg-cell--done' + (diff === 'legendary' ? ' hg-cell--legendary' : '');
-          // Stat color with difficulty-based opacity. Legendary gets a soft outer glow.
-          cell.style.cssText = 'background:' + cellBg
-            + ';box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.35)
-            + (diff === 'legendary' ? ',0 0 0 1px ' + colorWithAlpha(statColor, 0.9) : '');
-          // Tiny corner dot when this completion was auto-verified via
-          // HealthKit. v1.1.4 scope: only Daily walk; design intentionally
-          // does NOT recolor the cell (stat color stays the source-of-truth
-          // signal). See AUTO_VERIFY module.
-          if (typeof AUTO_VERIFY !== 'undefined' && AUTO_VERIFY.isAutoVerifiedOnDate(habit.id, ds)) {
-            cell.classList.add('hg-cell--auto');
-          }
+          // Stat-color gem: radial gradient inside, soft glow outside.
+          const lit = colorWithAlpha('#ffffff', 0.32); // gloss top
+          const drk = colorWithAlpha(statColor, 0.30); // deep base
+          cell.style.cssText =
+            'background:radial-gradient(circle at 35% 30%,' + lit + ' 0%,' + cellBg + ' 60%,' + drk + ' 100%);' +
+            'box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.38) +
+              ',inset 0 0 0 0.5px rgba(255,255,255,0.20)' +
+              ',inset 0 -1px 0 rgba(0,0,0,0.22)' +
+              (diff === 'legendary' ? ',0 0 0 1px ' + colorWithAlpha(statColor, 0.9) : '') + ';';
+          if (isTodayC) cell.classList.add('hg-cell--done-today');
+          if (isAutoVer) cell.classList.add('hg-cell--auto');
+          // Tally — completed counts toward the stat distribution.
+          byStat[statId] = (byStat[statId] || 0) + 1;
+          byDay[i] += 1;
         } else if (isFuture) {
           cell.className = 'hg-cell hg-cell--future';
-        } else if (isSchedDay) {
+        } else if (isTodayC && isSched) {
+          cell.className = 'hg-cell hg-cell--pending';
+        } else if (isSched) {
           cell.className = 'hg-cell hg-cell--missed';
+          cell.innerHTML = '<span class="hg-cell-miss-dot" aria-hidden="true"></span>';
         } else {
           cell.className = 'hg-cell hg-cell--off';
         }
@@ -7256,7 +7319,158 @@
       wrap.appendChild(row);
     });
 
+    // ── Legend strip ──────────────────────────────────────
+    const legend = document.createElement('div');
+    legend.className = 'hg-legend';
+    legend.innerHTML =
+      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--done"></span>Trained</span>' +
+      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--missed"><span class="hg-cell-miss-dot"></span></span>Missed</span>' +
+      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--pending"></span>Today</span>' +
+      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--off"></span>Off-day</span>';
+    wrap.appendChild(legend);
+
     el.appendChild(wrap);
+
+    // ── Trained This Week + Weekly Report — feed real numbers ──
+    const stats = {
+      byStat,
+      byDay,
+      totalDone,
+      totalSched,
+      completionPct: totalSched > 0 ? Math.round((totalDone / totalSched) * 100) : 0,
+      bestDayFull: (() => {
+        let bi = 0;
+        for (let i = 1; i < 7; i++) if (byDay[i] > byDay[bi]) bi = i;
+        return byDay[bi] > 0 ? DAY_FULL[bi] : '—';
+      })(),
+      bestStreak: (() => {
+        let cur = 0, best = 0;
+        for (let i = 0; i < 7; i++) {
+          if (byDay[i] > 0) { cur++; if (cur > best) best = cur; }
+          else cur = 0;
+        }
+        return best;
+      })(),
+      range,
+    };
+    const sorted = Object.entries(byStat).sort((a, b) => b[1] - a[1]);
+    stats.dominant = sorted[0] || null;
+    stats.second   = sorted[1] || null;
+
+    hgBuildTrainedThisWeek(el, stats);
+    hgBuildWeeklyReport(el, stats);
+  }
+
+  // ── TRAINED THIS WEEK — stat-distribution strip ─────────
+  function hgBuildTrainedThisWeek(parent, stats) {
+    const STAT_ORDER = ['STR','VIT','INT','FOCUS','WILL','WLT'];
+    const maxCount = STAT_ORDER.reduce((m, s) => Math.max(m, stats.byStat[s] || 0), 0);
+
+    const card = document.createElement('div');
+    card.className = 'hg-trained';
+
+    const head = document.createElement('div');
+    head.className = 'hg-trained-head';
+    head.innerHTML =
+      '<span class="hg-trained-title">Trained This Week</span>' +
+      '<span class="hg-trained-meta">' + stats.totalDone + ' session' + (stats.totalDone === 1 ? '' : 's') + '</span>';
+    card.appendChild(head);
+
+    const bars = document.createElement('div');
+    bars.className = 'hg-trained-bars';
+    STAT_ORDER.forEach(sid => {
+      const st = STATS.find(s => s.id === sid);
+      const color = st ? st.color : '#8b5cf6';
+      const count = stats.byStat[sid] || 0;
+      const ratio = maxCount ? count / maxCount : 0;
+      const heightPct = count > 0 ? Math.max(10, Math.round(ratio * 100)) : 0;
+      const fillStyle = count > 0
+        ? 'height:' + heightPct + '%;background:linear-gradient(180deg,' +
+            colorWithAlpha(color, 0.95) + ' 0%,' + color + ' 60%,' +
+            colorWithAlpha(color, 0.7) + ' 100%);' +
+          'box-shadow:0 0 6px ' + colorWithAlpha(color, 0.4) + ';opacity:1;'
+        : 'height:0;opacity:0.25;';
+      const col = document.createElement('div');
+      col.className = 'hg-trained-col' + (count > 0 ? '' : ' hg-trained-col--empty');
+      col.innerHTML =
+        '<div class="hg-trained-bar"><div class="hg-trained-fill" style="' + fillStyle + '"></div></div>' +
+        '<div class="hg-trained-label">' + sid + '</div>' +
+        '<div class="hg-trained-count" style="' + (count > 0 ? 'color:' + color + ';' : '') + '">' + count + '</div>';
+      bars.appendChild(col);
+    });
+    card.appendChild(bars);
+
+    // Insight line — only show if we actually have data to talk about.
+    if (stats.dominant && stats.dominant[1] > 0) {
+      const insight = document.createElement('div');
+      insight.className = 'hg-trained-insight';
+      const d  = stats.dominant;
+      const dc = (STATS.find(s => s.id === d[0]) || {}).color || '#f59e0b';
+      let html = 'You leaned <span class="hg-trained-tag" style="color:' + dc +
+                 ';text-shadow:0 0 8px ' + colorWithAlpha(dc, 0.45) + ';">' + d[0] + '</span>';
+      if (stats.second && stats.second[1] > 0) {
+        const sc2 = (STATS.find(s => s.id === stats.second[0]) || {}).color || '#f59e0b';
+        html += ' + <span class="hg-trained-tag" style="color:' + sc2 +
+                ';text-shadow:0 0 8px ' + colorWithAlpha(sc2, 0.45) + ';">' + stats.second[0] + '</span>';
+      }
+      html += ' this week.';
+      insight.innerHTML = html;
+      card.appendChild(insight);
+    }
+
+    parent.appendChild(card);
+  }
+
+  // ── WEEKLY REPORT — premium summary card ─────────────────
+  function hgBuildWeeklyReport(parent, stats) {
+    const card = document.createElement('div');
+    card.className = 'hg-report';
+
+    const head = document.createElement('div');
+    head.className = 'hg-report-head';
+    head.innerHTML =
+      '<span class="hg-report-title-row">' +
+        '<svg class="hg-report-star" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">' +
+          '<path d="M7 0L8.5 5.5L14 7L8.5 8.5L7 14L5.5 8.5L0 7L5.5 5.5z" fill="currentColor"/>' +
+        '</svg>' +
+        '<span class="hg-report-title">Weekly Report</span>' +
+      '</span>' +
+      '<span class="hg-report-range">' + esc(stats.range) + '</span>';
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'hg-report-body';
+    body.innerHTML =
+      '<div class="hg-report-hero">' +
+        '<div class="hg-report-pct">' + stats.completionPct + '<span class="hg-report-pct-sym">%</span></div>' +
+        '<div class="hg-report-pct-lbl">Completion</div>' +
+      '</div>' +
+      '<div class="hg-report-rows">' +
+        '<div class="hg-report-row"><span class="hg-report-row-lbl">Best Day</span><span class="hg-report-row-val hg-report-row-val--gold">' + esc(stats.bestDayFull) + '</span></div>' +
+        '<div class="hg-report-row"><span class="hg-report-row-lbl">Total Done</span><span class="hg-report-row-val">' + stats.totalDone + '</span></div>' +
+        '<div class="hg-report-row"><span class="hg-report-row-lbl">Best Streak</span><span class="hg-report-row-val">' + stats.bestStreak + 'd</span></div>' +
+      '</div>';
+    card.appendChild(body);
+
+    // Dominant-stat callout — only render when there's a real winner.
+    if (stats.dominant && stats.dominant[1] > 0) {
+      const d  = stats.dominant;
+      const dc = (STATS.find(s => s.id === d[0]) || {}).color || '#f59e0b';
+      const callout = document.createElement('div');
+      callout.className = 'hg-report-dom';
+      callout.style.cssText =
+        'background:linear-gradient(90deg,' + colorWithAlpha(dc, 0.12) + ' 0%,transparent 100%);' +
+        'border:0.5px solid ' + colorWithAlpha(dc, 0.35) + ';' +
+        'border-left:2px solid ' + dc + ';';
+      callout.innerHTML =
+        '<span class="hg-report-dom-lbl">Dominant</span>' +
+        '<span class="hg-report-dom-stat" style="color:' + dc +
+          ';text-shadow:0 0 10px ' + colorWithAlpha(dc, 0.45) + ';">' + d[0] + '</span>' +
+        '<span class="hg-report-dom-count">' + d[1] + ' session' + (d[1] === 1 ? '' : 's') + '</span>';
+      card.appendChild(callout);
+    }
+
+    parent.appendChild(card);
   }
 
   // ── MONTHLY VIEW — per-habit mini calendar cards ─────────
