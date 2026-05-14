@@ -18564,14 +18564,14 @@ body.reveal-locked { overflow: hidden; }
 }
 
 .hg-row.hg-row--ledger {
-  /* v3 Phase 1p polish — tightened back from 52 → 44px. Two-line habit
-     names still fit cleanly with line-height 1.14 + reduced label
-     padding; the ledger reads as a dense discipline log rather than a
-     spaced-out table. */
-  min-height: 44px;
+  /* v3 Phase 1p final tighten — 44 → 38px. Two-line habit names still
+     fit (line-height 1.08 × 11.5px ≈ 12.4px per line × 2 ≈ 25px,
+     centered inside 38px with ~6px breathing each side). Reads as a
+     compact training log, not a spaced-out table. */
+  min-height: 38px;
 }
 /* Header row stays compact — no two-line label there. */
-.hg-ledger .hg-row.hg-header-row { min-height: 28px; }
+.hg-ledger .hg-row.hg-header-row { min-height: 26px; }
 
 /* Eyebrow header inside label column. Stacked vertically; subtitle is
    subtle by design so day letters stay the visual anchor. */
@@ -18623,7 +18623,7 @@ body.reveal-locked { overflow: hidden; }
 /* Label column — stat-color accent stripe + two-line name + AUTO badge */
 .hg-label--ledger {
   position: relative;
-  padding: 4px 4px 4px 11px;
+  padding: 2px 4px 2px 10px;
   gap: 4px;
   align-items: center;
   overflow: hidden;
@@ -18631,16 +18631,16 @@ body.reveal-locked { overflow: hidden; }
 .hg-label-accent {
   position: absolute;
   left: 0;
-  top: 5px;
-  bottom: 5px;
+  top: 4px;
+  bottom: 4px;
   width: 2px;
   border-radius: 0 1px 1px 0;
   opacity: 0.85;
 }
 .hg-label-name--wrap {
-  /* v3 Phase 1p polish — two-line clamp with a tight 1.14 line-height
+  /* v3 Phase 1p final tighten — two-line clamp with line-height 1.08
      so long names ("Strength training", "Meditate & Breathwork", "No
-     phone after waking") wrap cleanly inside the 44px row. */
+     phone after waking") still wrap cleanly inside the 38px row. */
   white-space: normal !important;
   overflow: hidden !important;
   text-overflow: clip !important;
@@ -18648,7 +18648,7 @@ body.reveal-locked { overflow: hidden; }
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   font-size: 11.5px;
-  line-height: 1.14;
+  line-height: 1.08;
   word-break: break-word;
   font-weight: 600;
   flex: 1 1 auto;
