@@ -8488,19 +8488,21 @@ footer {
    ═══════════════════════════════════════════════════════════════ */
 
 .daily-quote {
-  /* v3 Phase 1o — compressed for vertical efficiency on the Habits screen. */
-  padding: 3px 14px 2px;
+  /* v3 Phase 1o → 1q polish — small breathing-room bump on top of the
+     vertical-efficiency pass. Padding +~10px total so the quote no
+     longer feels squeezed against the tab bar, but stays well below
+     the old 76px min-height that crowded out a full card row. */
+  padding: 7px 14px 6px;
   font-size: 0.66rem;
   font-style: italic;
   color: var(--text-secondary);
   text-align: center;
   letter-spacing: 0.01em;
-  line-height: 1.35;
+  line-height: 1.42;
   border-top: 1px solid var(--border);
   opacity: 0.82;
   transition: opacity 0.5s ease-in-out;
-  /* Min-height halved; rotating quotes still don't reflow neighbors. */
-  min-height: 38px;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
