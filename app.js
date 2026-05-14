@@ -16891,14 +16891,58 @@
     overlay.addEventListener('click', onTap);
   }
 
-  // ── SERVICE WORKER ────────────────────────────────────────
+  // ── SERVICE WORKER (auto-update — v3 Phase 1f) ────────────
+  // The prior flow required users to: (a) wait for the SW's own
+  // ~24h freshness check, (b) tap an in-app banner when it fired,
+  // (c) sometimes manually unregister via DevTools when the banner
+  // didn't fire. Awful UX.
+  //
+  // The new flow:
+  //   1. On register, immediately call reg.update() to force a
+  //      network fetch of /sw.js (cache-busted by the SW spec
+  //      automatically). New byte-different sw.js → new SW installs.
+  //   2. When a new SW reaches 'installed' state AND a controller
+  //      already exists (= this is an UPDATE, not first install),
+  //      we silently postMessage SKIP_WAITING. No banner click.
+  //   3. Once the new SW activates, the 'controllerchange' handler
+  //      reloads the page exactly once — user sees fresh assets.
+  //   4. Same active-check fires on visibilitychange when the tab
+  //      is re-shown, catching users who left the tab idle across
+  //      a deploy.
+  //   5. Version-string compare runs as a safety net: if sw.js on
+  //      disk has a newer CACHE_VERSION than the registered SW
+  //      reports, force-unregister + reload.
+  //
+  // Trade-off: one silent reload after each deploy when the user
+  // is on the page. Acceptable — Awakened state is in localStorage
+  // and the user is usually idle when a deploy happens.
   function registerSW() {
     if (!('serviceWorker' in navigator)) return;
 
-    navigator.serviceWorker.register('sw.js').then(reg => {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
 
-      // Record the live sw.js CACHE_VERSION so checkForUpdates() can compare
-      // against it later. Done in the background — don't block registration.
+    // Silently activate a waiting SW, OR show the banner if the
+    // user explicitly opted into manual mode via hb_sw_manual_update.
+    function applyUpdate(worker) {
+      const manual = (() => {
+        try { return localStorage.getItem('hb_sw_manual_update') === '1'; } catch (_) { return false; }
+      })();
+      if (manual) {
+        showUpdateBanner(() => worker.postMessage({ type: 'SKIP_WAITING' }));
+      } else {
+        // Auto-apply. controllerchange handler reloads the page.
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      }
+    }
+
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Background-record the live CACHE_VERSION for the manual
+      // "Check for Updates" Settings button's fallback comparison.
       fetch('sw.js?_=' + Date.now(), { cache: 'no-store' })
         .then(r => r.ok ? r.text() : '')
         .then(text => {
@@ -16907,38 +16951,69 @@
         })
         .catch(() => {});
 
-      // Helper: show the banner for a given waiting worker
-      function offerUpdate(worker) {
-        showUpdateBanner(() => {
-          worker.postMessage({ type: 'SKIP_WAITING' });
-        });
+      // Immediate update check on page load — the heart of the
+      // auto-update behaviour. Without this the browser only
+      // re-checks sw.js when its built-in heuristic decides (often
+      // ~24h, sometimes never within a session).
+      try { reg.update(); } catch (_) {}
+
+      // Case 1: a new SW is already waiting (downloaded earlier
+      // by another tab) — apply it now.
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        applyUpdate(reg.waiting);
       }
 
-      // Case 1: a new SW is already waiting on page load (e.g. user
-      //         opened a new tab after an update downloaded in another tab)
-      if (reg.waiting) {
-        offerUpdate(reg.waiting);
-      }
-
-      // Case 2: a new SW finishes installing while the page is open
+      // Case 2: a new SW finishes installing while we're on the page
       reg.addEventListener('updatefound', () => {
         const incoming = reg.installing;
+        if (!incoming) return;
         incoming.addEventListener('statechange', () => {
-          // 'installed' + existing controller = update waiting to take over
           if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
-            offerUpdate(incoming);
+            applyUpdate(incoming);
           }
         });
       });
 
-    }).catch(() => {});
+      // Re-check whenever the tab regains focus. Covers the user
+      // who leaves Awakened open in a background tab across a deploy.
+      const recheck = () => { try { reg.update(); } catch (_) {} };
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') recheck();
+      });
+      window.addEventListener('focus', recheck);
 
-    // When the SW controller actually changes (after skipWaiting), reload
-    // so the page is served fresh by the new service worker.
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) { refreshing = true; window.location.reload(); }
-    });
+      // ── Safety net: version-string compare ──
+      // Some deploys land where the SW reports itself as fresh but
+      // sw.js on disk has a newer CACHE_VERSION (race with the
+      // browser's internal byte-diff). Compare strings directly and
+      // force-unregister if they differ.
+      setTimeout(() => {
+        fetch('sw.js?_=' + Date.now(), { cache: 'no-store' })
+          .then(r => r.ok ? r.text() : '')
+          .then(text => {
+            const m = text && text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+            const live = m ? m[1] : null;
+            const known = (() => {
+              try { return localStorage.getItem('hb_sw_last_active_version'); } catch (_) { return null; }
+            })();
+            if (live && known && live !== known) {
+              // Drift detected. Wipe caches, unregister, reload.
+              try { localStorage.setItem('hb_sw_last_active_version', live); } catch (_) {}
+              if (window.caches) {
+                caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+                  .then(() => reg.unregister())
+                  .then(() => location.reload());
+              } else {
+                reg.unregister().then(() => location.reload());
+              }
+            } else if (live && !known) {
+              try { localStorage.setItem('hb_sw_last_active_version', live); } catch (_) {}
+            }
+          })
+          .catch(() => {});
+      }, 2000);
+
+    }).catch(() => {});
   }
 
   function showUpdateBanner(onConfirm) {
