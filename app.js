@@ -7213,9 +7213,12 @@
     hdrRow.className = 'hg-row hg-header-row';
     const hdrLabel = document.createElement('div');
     hdrLabel.className = 'hg-label hg-label-hdr';
+    // Subtitle is intentionally terse — "{N} habits" only — so it stays on
+    // one line inside the narrow label column instead of wrapping into the
+    // day-letter row.
     hdrLabel.innerHTML =
       '<span class="hg-ledger-eyebrow">The Ledger</span>' +
-      '<span class="hg-ledger-sub">' + activeHabits.length + ' habits · 7 days</span>';
+      '<span class="hg-ledger-sub">' + activeHabits.length + ' habit' + (activeHabits.length === 1 ? '' : 's') + '</span>';
     hdrRow.appendChild(hdrLabel);
     dates.forEach((ds, i) => {
       const c = document.createElement('div');

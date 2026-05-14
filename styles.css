@@ -5593,6 +5593,12 @@ footer {
   border-bottom: 1px solid rgba(255,255,255,0.04);
   min-height: 36px;
 }
+/* v3 Phase 1p+ — Weekly ledger gets wider label column + tighter day
+   cells. Two-line habit names need real room; the trailing PERFECT
+   badge column shrinks because the badge is rare in practice. */
+.hg-ledger .hg-row {
+  grid-template-columns: 144px repeat(7, minmax(22px, 1fr)) 38px;
+}
 .hg-row:last-child { border-bottom: none; }
 
 .hg-header-row {
@@ -18523,27 +18529,41 @@ body.reveal-locked { overflow: hidden; }
 }
 
 .hg-row.hg-row--ledger {
-  /* Slightly taller — two-line habit names need vertical room. */
-  min-height: 44px;
+  /* Two-line habit names need genuine vertical room. 52px = 7px top
+     padding + 2 lines × ~14px + 7px bottom padding. */
+  min-height: 52px;
 }
+/* Header row stays compact — no two-line label there. */
+.hg-ledger .hg-row.hg-header-row { min-height: 30px; }
 
-/* Eyebrow header inside label column */
+/* Eyebrow header inside label column. Stacked vertically; subtitle is
+   subtle by design so day letters stay the visual anchor. */
+.hg-ledger .hg-label.hg-label-hdr {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 6px 5px 11px;
+}
 .hg-ledger-eyebrow {
   display: block;
   font-size: 9.5px;
   font-weight: 800;
   color: var(--gold);
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1;
+  white-space: nowrap;
 }
 .hg-ledger-sub {
   display: block;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 600;
   color: var(--text-tertiary);
-  margin-top: 2px;
   letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* Day header today marker — subtle gold underline glow */
@@ -18566,44 +18586,60 @@ body.reveal-locked { overflow: hidden; }
 /* Label column — stat-color accent stripe + two-line name + AUTO badge */
 .hg-label--ledger {
   position: relative;
-  padding: 6px 6px 6px 12px;
-  gap: 6px;
+  padding: 6px 4px 6px 11px;
+  gap: 4px;
+  align-items: center;
+  overflow: hidden;
 }
 .hg-label-accent {
   position: absolute;
   left: 0;
-  top: 6px;
-  bottom: 6px;
+  top: 7px;
+  bottom: 7px;
   width: 2px;
   border-radius: 0 1px 1px 0;
   opacity: 0.85;
 }
 .hg-label-name--wrap {
-  /* v3 Phase 1p — allow two lines, drop the ellipsis. Long names like
+  /* v3 Phase 1p+ — allow two lines, drop the ellipsis. Long names like
      "Strength training" / "Meditate & Breathwork" / "No phone after
-     waking" are now readable without the info popup. */
+     waking" wrap cleanly with 1.18 line-height inside the 52px row. */
   white-space: normal !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   text-overflow: clip !important;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.2;
+  font-size: 11.5px;
+  line-height: 1.18;
   word-break: break-word;
   font-weight: 600;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .hg-label-auto {
-  font-size: 7.5px;
+  font-size: 7px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: #79b4ff;
-  padding: 1px 3.5px;
+  padding: 1px 3px;
   border-radius: 3px;
   border: 0.5px solid rgba(121,180,255,0.45);
   background: rgba(59,130,246,0.08);
   flex: 0 0 auto;
   align-self: center;
+  line-height: 1.1;
 }
+/* Weekly info button shrinks so it doesn't steal label width. */
+.hg-ledger .hg-label--ledger .hg-info-btn {
+  font-size: 9.5px;
+  padding: 1px 2px;
+  flex: 0 0 auto;
+  margin-left: 0;
+  opacity: 0.55;
+  line-height: 1;
+}
+.hg-ledger .hg-label--ledger .hg-info-btn:hover { opacity: 1; }
 
 /* ── Cell states ── */
 .hg-cell--done { border-radius: 5px; position: relative; }
@@ -18663,16 +18699,23 @@ body.reveal-locked { overflow: hidden; }
   border: 0.5px dashed rgba(255,255,255,0.07);
 }
 
+/* Slimmer day cells inside the ledger to give the label column more room. */
+.hg-ledger .hg-cell {
+  height: 22px;
+  width: 22px;
+}
+
 /* ── Legend strip ── */
 .hg-legend {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 8px 12px 10px;
-  background: rgba(0,0,0,0.18);
+  gap: 14px;
+  padding: 10px 12px 12px;
+  background: rgba(0,0,0,0.20);
   border-top: 1px solid rgba(255,255,255,0.05);
   flex-wrap: wrap;
+  border-radius: 0 0 12px 12px;
 }
 .hg-legend-item {
   display: inline-flex;
@@ -18779,21 +18822,25 @@ body.reveal-locked { overflow: hidden; }
 }
 .hg-trained-col--empty .hg-trained-label { color: var(--text-tertiary); }
 .hg-trained-count {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  margin-top: 1px;
 }
 .hg-trained-insight {
   margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
   text-align: center;
-  font-size: 11.5px;
+  font-size: 12px;
   font-style: italic;
   font-family: Georgia, "Cormorant Garamond", serif;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   line-height: 1.35;
   letter-spacing: 0.02em;
+  opacity: 0.85;
 }
 .hg-trained-tag {
   font-style: normal;
@@ -18843,8 +18890,8 @@ body.reveal-locked { overflow: hidden; }
 .hg-report-body {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px 10px;
+  gap: 22px;
+  padding: 14px 18px 12px;
 }
 .hg-report-hero { flex: 0 0 auto; }
 .hg-report-pct {
@@ -18882,9 +18929,9 @@ body.reveal-locked { overflow: hidden; }
 }
 .hg-report-row-lbl {
   font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
 .hg-report-row-val {
