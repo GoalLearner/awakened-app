@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Awakened — Leaderboard Preview (Simulated Hunters)</title>
+<!-- Production CSS so the cards match the live sheet exactly. -->
+<link rel="stylesheet" href="styles.css?v=258">
+<!-- The pure sim module, same one that ships into the app. -->
+<script src="simulated-leaderboard.js?v=2"></script>
+<style>
+  /* Preview-only chrome — the leaderboard rows themselves use production
+     .lb-rank-* classes from styles.css. */
+  body {
+    margin: 0;
+    background: var(--bg, #0a0a0a);
+    color: var(--text-primary, #f2f2f7);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    padding: 24px 0 80px;
+  }
+  .preview-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  .preview-header {
+    margin-bottom: 28px;
+    text-align: center;
+  }
+  .preview-header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    color: var(--gold, #f59e0b);
+    letter-spacing: 0.12em;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+  }
+  .preview-header p {
+    color: var(--text-secondary, #8e8e93);
+    font-size: 0.85rem;
+    margin: 0;
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  .preview-controls {
+    background: rgba(139, 92, 246, 0.06);
+    border: 1px solid rgba(139, 92, 246, 0.30);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 26px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    align-items: end;
+  }
+  .preview-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-tertiary, #54546e);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .preview-controls input {
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 8px;
+    padding: 9px 11px;
+    color: var(--text-primary, #f2f2f7);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .preview-controls input:focus {
+    outline: 2px solid rgba(245,184,66,0.45);
+    outline-offset: 1px;
+  }
+  .preview-controls .preview-action {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .preview-controls button {
+    background: linear-gradient(180deg, rgba(245,184,66,0.18), rgba(245,184,66,0.06));
+    border: 1px solid rgba(245,184,66,0.45);
+    border-radius: 10px;
+    padding: 9px 16px;
+    color: var(--gold, #f59e0b);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.18s ease;
+  }
+  .preview-controls button:hover {
+    background: linear-gradient(180deg, rgba(245,184,66,0.26), rgba(245,184,66,0.10));
+  }
+  .preview-meta {
+    color: var(--text-tertiary, #54546e);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+  }
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 1000px) {
+    .preview-grid { grid-template-columns: 1fr; }
+  }
+  .preview-board {
+    background: linear-gradient(180deg, #15153a 0%, #0f0f28 100%);
+    border: 1px solid rgba(139, 92, 246, 0.30);
+    border-radius: 16px;
+    padding: 18px 14px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  .preview-board-kicker {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: var(--accent, #8b5cf6);
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .preview-board h2 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary, #f2f2f7);
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .preview-board-blurb {
+    font-size: 0.74rem;
+    color: var(--text-secondary, #8e8e93);
+    line-height: 1.45;
+    margin: 0 0 14px;
+  }
+  .preview-board .lb-rank-list {
+    padding: 0;
+    background: transparent;
+  }
+  .preview-board .lb-rank-row {
+    background: rgba(255,255,255,0.025);
+    margin-bottom: 5px;
+  }
+  .preview-board .lb-rank-row--me {
+    background: linear-gradient(90deg, rgba(245,184,66,0.18), rgba(245,184,66,0.06));
+    border: 1px solid rgba(245,184,66,0.45);
+  }
+  .preview-board-footer {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    color: var(--text-tertiary, #54546e);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .preview-board-footer b { color: var(--gold, #f59e0b); }
+</style>
+</head>
+<body>
+
+<div class="preview-wrap">
+  <div class="preview-header">
+    <h1>Leaderboard Preview</h1>
+    <p>Live preview of the three simulated leaderboards rendered against the production
+       <code>simulated-leaderboard.js</code> module. Change the user alias / values below
+       to see how the boards reshape. Refresh after midnight to see the daily rotation.</p>
+  </div>
+
+  <div class="preview-controls">
+    <label>Date key (YYYY-MM-DD)
+      <input type="text" id="ctl-date" />
+    </label>
+    <label>Your alias
+      <input type="text" id="ctl-alias" value="Richie" />
+    </label>
+    <label>Your steps (this week)
+      <input type="number" id="ctl-steps" value="28000" min="0" />
+    </label>
+    <label>Your sleep streak
+      <input type="number" id="ctl-sleep" value="5" min="0" max="60" />
+    </label>
+    <label>Your bedtime streak
+      <input type="number" id="ctl-bedtime" value="2" min="0" max="60" />
+    </label>
+    <div class="preview-action">
+      <button id="btn-render">Render</button>
+      <button id="btn-tomorrow">Next day</button>
+      <button id="btn-prevday">Previous day</button>
+      <button id="btn-reset">Reset to today</button>
+      <span class="preview-meta" id="meta-status"></span>
+    </div>
+  </div>
+
+  <div class="preview-grid">
+    <div class="preview-board">
+      <div class="preview-board-kicker">Global Leaderboard</div>
+      <h2>Steps · this week</h2>
+      <div class="preview-board-blurb">Total steps from Sunday 12:00 AM through Saturday
+        11:59 PM (device-local). Apple Health is the only source — no manual logging.</div>
+      <div class="lb-rank-list" id="board-steps"></div>
+      <div class="preview-board-footer">Your rank · <b id="rank-steps">—</b></div>
+    </div>
+
+    <div class="preview-board">
+      <div class="preview-board-kicker">Global Leaderboard</div>
+      <h2>7+ hour sleep streak</h2>
+      <div class="preview-board-blurb">Longest current run of consecutive nights with at
+        least 7 hours of sleep. Verified by Apple Health.</div>
+      <div class="lb-rank-list" id="board-sleep"></div>
+      <div class="preview-board-footer">Your rank · <b id="rank-sleep">—</b></div>
+    </div>
+
+    <div class="preview-board">
+      <div class="preview-board-kicker">Global Leaderboard</div>
+      <h2>Before-midnight bedtime streak</h2>
+      <div class="preview-board-blurb">Longest current run of consecutive nights asleep
+        before midnight. Verified by Apple Health.</div>
+      <div class="lb-rank-list" id="board-bedtime"></div>
+      <div class="preview-board-footer">Your rank · <b id="rank-bedtime">—</b></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+
+  function todayKey() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+  function shiftDate(key, deltaDays) {
+    const d = new Date(key + 'T12:00:00');
+    d.setDate(d.getDate() + deltaDays);
+    const yyyy = d.getFullYear();
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  function fmtSteps(n)   { return Number(n).toLocaleString(); }
+  function fmtStreak(n)  { return n + (n === 1 ? ' night' : ' nights'); }
+  const formatters = {
+    step_total: fmtSteps,
+    sleep_streak: fmtStreak,
+    bedtime_streak: fmtStreak,
+  };
+
+  function renderBoard(elId, rows, myAlias, formatter) {
+    let html = '';
+    rows.forEach((row) => {
+      const isMe = row.alias === myAlias;
+      html += '<div class="lb-rank-row' + (isMe ? ' lb-rank-row--me' : '') + '">' +
+                '<span class="lb-rank-pos">#' + row.rank + '</span>' +
+                '<span class="lb-rank-name">' + escapeHtml(row.alias) + '</span>' +
+                '<span class="lb-rank-value">' + formatter(row.current_value) + '</span>' +
+              '</div>';
+    });
+    $(elId).innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function render() {
+    const dateKey = $('ctl-date').value || todayKey();
+    const alias   = $('ctl-alias').value || 'Richie';
+    const steps   = parseInt($('ctl-steps').value, 10)   || 0;
+    const sleep   = parseInt($('ctl-sleep').value, 10)   || 0;
+    const bedtime = parseInt($('ctl-bedtime').value, 10) || 0;
+
+    const merge = window.SimulatedLeaderboard.merge;
+    const stepRows    = merge([], alias, steps,   dateKey, 'step_total');
+    const sleepRows   = merge([], alias, sleep,   dateKey, 'sleep_streak');
+    const bedtimeRows = merge([], alias, bedtime, dateKey, 'bedtime_streak');
+
+    renderBoard('board-steps',   stepRows,    alias, formatters.step_total);
+    renderBoard('board-sleep',   sleepRows,   alias, formatters.sleep_streak);
+    renderBoard('board-bedtime', bedtimeRows, alias, formatters.bedtime_streak);
+
+    const findMe = (rows) => {
+      const r = rows.find((x) => x.alias === alias);
+      return r ? '#' + r.rank + ' / ' + rows.length : '—';
+    };
+    $('rank-steps').textContent   = findMe(stepRows);
+    $('rank-sleep').textContent   = findMe(sleepRows);
+    $('rank-bedtime').textContent = findMe(bedtimeRows);
+
+    const killSwitch = window.SimulatedLeaderboard.SIMULATE_USERS;
+    $('meta-status').textContent =
+      'Date · ' + dateKey + '  ·  Sim ' + (killSwitch ? 'ON' : 'OFF') +
+      '  ·  Pool ' + window.SimulatedLeaderboard.NAME_POOL.length + ' names';
+  }
+
+  // Wire controls
+  $('ctl-date').value = todayKey();
+  $('btn-render').addEventListener('click', render);
+  $('btn-tomorrow').addEventListener('click', () => {
+    $('ctl-date').value = shiftDate($('ctl-date').value || todayKey(), +1);
+    render();
+  });
+  $('btn-prevday').addEventListener('click', () => {
+    $('ctl-date').value = shiftDate($('ctl-date').value || todayKey(), -1);
+    render();
+  });
+  $('btn-reset').addEventListener('click', () => {
+    $('ctl-date').value = todayKey();
+    render();
+  });
+  ['ctl-alias','ctl-steps','ctl-sleep','ctl-bedtime','ctl-date'].forEach((id) => {
+    $(id).addEventListener('change', render);
+    $(id).addEventListener('keyup', (e) => { if (e.key === 'Enter') render(); });
+  });
+
+  // Initial render
+  render();
+})();
+</script>
+
+</body>
+</html>
