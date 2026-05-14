@@ -9346,7 +9346,7 @@
     overlay.className = 'digest-picker-overlay';
     overlay.innerHTML =
       '<div class="digest-picker-card" role="dialog" aria-label="Pick reminder time">' +
-        '<div class="digest-picker-title">Daily Morning Reminder</div>' +
+        '<div class="digest-picker-title">Morning Briefing</div>' +
         '<div class="digest-picker-current">' + esc(fmt(initialTime || '09:00')) + '</div>' +
         '<div class="ht-rem-popup digest-picker-cols">' +
           '<div class="ht-rem-col ht-rem-col--hours" data-col="h">' + hoursHTML + '</div>' +
@@ -15220,7 +15220,7 @@
       cb && cb();
     }, {
       title: 'Stay on Track',
-      body:  'One morning reminder.<br>The rest is on you.',
+      body:  'Just the Morning Briefing.<br>The rest is on you.',
       cancelLabel: 'Maybe Later',
       enableLabel: 'Enable Reminder',
     });
@@ -15246,14 +15246,17 @@
     try { if (Notif.reminderFor && Notif.reminderFor(habit.id)) return; } catch (_) {}
 
     const els = _remOfferEls();
-    els.title.textContent = '📲 Want a reminder for it?';
-    els.sub.innerHTML     = '✅ <strong>' + esc(habit.name) + '</strong> added.<br>Pick a time and we\'ll remind you daily.';
-    els.timeRow.style.display = '';
+    // v3 Phase 1m — tactical "System Offer" framing replaces the
+    // emoji-prefixed legacy copy. Save button preserves the ✦ rune
+    // by using innerHTML.
+    els.title.textContent = 'Set a reminder?';
+    els.sub.innerHTML     = '<strong>' + esc(habit.name) + '</strong> was added.<br>Choose when the system should call you back.';
+    els.timeRow.style.display = 'flex';
     els.timeInput.value = (typeof defaultReminderTimeFor === 'function')
       ? defaultReminderTimeFor(habit)
       : '07:00';
     els.skipBtn.textContent = 'Skip';
-    els.saveBtn.textContent = 'Set Reminder';
+    els.saveBtn.innerHTML   = '<span class="reminder-offer-btn-rune" aria-hidden="true">✦</span>Set Reminder';
     els.overlay.classList.remove('hidden');
 
     els.skipBtn.onclick = () => {
@@ -15285,14 +15288,15 @@
 
     const els = _remOfferEls();
     const n   = addedHabits.length;
-    els.title.textContent = '📲 Set Default Reminders?';
-    els.sub.innerHTML     = 'Set <strong>7:00 AM</strong> reminders for these <strong>' + n +
-                            '</strong> habit' + (n === 1 ? '' : 's') +
-                            '?<br>You can adjust each later in Edit Habit.';
+    // v3 Phase 1m — pack mode uses the "Routine Reminders" framing.
+    els.title.textContent = 'Set routine reminders?';
+    els.sub.innerHTML     = 'Add <strong>7:00 AM</strong> reminders for ' +
+                            (n === 1 ? 'this habit' : ('these <strong>' + n + '</strong> habits')) +
+                            '.<br>You can adjust each later in Edit Habit.';
     // Hide the time input — pack mode uses a fixed default of 07:00.
     els.timeRow.style.display = 'none';
     els.skipBtn.textContent = 'No reminders';
-    els.saveBtn.textContent = 'Yes, set defaults';
+    els.saveBtn.innerHTML   = '<span class="reminder-offer-btn-rune" aria-hidden="true">✦</span>Set Defaults';
     els.overlay.classList.remove('hidden');
 
     els.skipBtn.onclick = () => {
