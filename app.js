@@ -190,7 +190,7 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.1.0';
+  const APP_VERSION = '2.2.0';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3449,6 +3449,19 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
+    '2.2.0': {
+      subtitle: 'The system awakens.',
+      items: [
+        { emoji: '', title: 'New launch experience',         description: "Awakened opens with a premium splash and a five-chapter intro that frames habits → XP → bosses → relics → build. Returning hunters skip it automatically." },
+        { emoji: '', title: 'Typed equipment slots',         description: "The Armory is now a six-slot loadout: HELM, WEAPON, PLATE, GLOVES, BOOTS, RING. Every slot reads at a glance. Cards only fit their matching slot — no more random tiles." },
+        { emoji: '', title: 'Mercy protection on drops',     description: "Low-volume bosses no longer feel like empty coin flips. Soft + hard pity timers guarantee a drop after a streak of misses, with stronger protection on weekly bosses. Boss detail shows your mercy progress." },
+        { emoji: '', title: 'Relic Archive',                 description: "Items tab is now a discovery log. Each relic shows its slot, source boss, equipped state. Mystery cards reveal rarity + source hints without spoiling the name." },
+        { emoji: '', title: 'Cadence-aware drop rates',      description: "Three drop tiers — daily, triweekly, weekly — replace the old two-tier table. Weekly bosses pull faster, but ultras stay scarce. Per-boss first-drop protection keeps new boss content rewarding." },
+        { emoji: '', title: 'Compact Select Relic picker',   description: "Equip flow now opens a fast, MOBA-style inventory grid filtered to the slot you tapped. No more gallery-sized cards." },
+        { emoji: '', title: 'Silent auto-update',            description: "Future deploys land on your device without any cache-clearing dance. The service worker checks for updates on every page load and tab focus, then refreshes once silently." },
+        { emoji: '', title: 'Leaderboard polish',            description: "Aliases now display lowercase with no spaces (your handle stays \"Richie\"). \"Steps · this week\" copy clarified — your weekly count restarts each Sunday, the leaderboard keeps the best totals." },
+      ],
+    },
     '2.1.0': {
       subtitle: 'Sign in & global rankings.',
       items: [
