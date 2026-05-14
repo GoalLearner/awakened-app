@@ -5057,8 +5057,8 @@
       '{N} sealed, {M} remain. Finish clean.',
       'Almost complete. {M} objectives left.',
       '{N}/{TOTAL} done. Close the day strong.',
-      '{M} between you and a perfect day.',
-      'You are close. Seal the last {M}.',
+      '{M} objectives between you and a perfect day.',
+      'You are close. Seal the final {M}.',
     ],
     mid: [
       '{N} sealed. {M} still open.',
@@ -17845,7 +17845,7 @@
     // name).
     const COPY = {
       STR:    { title: '{n} is on deck.',     body: 'Build the body. Earn the power.' },
-      VIT:    { title: '{n} is due.',         body: 'Recovery is part of the work.' },
+      VIT:    { title: '{n} is waiting.',     body: 'Recovery is part of the work.' },
       INT:    { title: '{n} is ready.',       body: 'Learn it now. Use it later.' },
       FOCUS:  { title: '{n}. Lock in.',       body: 'Protect the next few minutes.' },
       WILL:   { title: '{n}. Hold the line.', body: 'Comfort can wait.' },
@@ -18298,12 +18298,12 @@
         return name + ', ' + count + ' objectives await. Keep the chain alive.';
       }
 
-      // Tuesday + Thursday → flavor line keyed by class. Uses period
-      // separator to avoid awkward em-dash + lowercase flavor combos.
+      // Tuesday + Thursday → flavor line keyed by class. Em-dash separator
+      // avoids the "lowercase after period" look DIGEST_FLAVOR lines have.
       if (dow === 2 || dow === 4) {
         const lines = DIGEST_FLAVOR[cls] || DIGEST_FLAVOR.CIVILIAN;
         const line  = lines[(dow + new Date().getDate()) % lines.length];
-        return name + ', ' + count + ' objectives await. ' + line;
+        return name + ', ' + count + ' objectives await — ' + line;
       }
 
       // Saturday + Sunday during a double-XP weekend → suffix the count.
