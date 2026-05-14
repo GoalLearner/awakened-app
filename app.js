@@ -14254,6 +14254,73 @@
     } else {
       wrap.classList.add('hidden');
     }
+    // v3 Phase 1o — keep the pack-progress modal body in sync if open.
+    // The footer strip is hidden via CSS; the modal is now the user-facing
+    // surface. Mirroring here means every state-change site that already
+    // calls renderCompoundProgress (init, tab switch, habit toggle) keeps
+    // the modal fresh without new wiring.
+    syncPackProgressModalBody(rows);
+  }
+
+  // v3 Phase 1o — pack-progress modal (the new home for routine progress).
+  // The top "X / Y HABITS TODAY" tile opens this; the persistent footer
+  // strip is hidden via CSS. Body re-uses the cp-prog-row rows built by
+  // renderCompoundProgress so streak / shield / honest / add-missing chips
+  // continue to use the existing delegated handlers.
+  function syncPackProgressModalBody(rowsHtml) {
+    const body  = document.getElementById('pp-body');
+    const empty = document.getElementById('pp-empty');
+    if (!body || !empty) return;
+    if (rowsHtml) {
+      body.innerHTML = rowsHtml;
+      empty.classList.add('hidden');
+    } else {
+      body.innerHTML = '';
+      empty.classList.remove('hidden');
+    }
+  }
+  function openPackProgressModal() {
+    // Force a render so the body is up-to-date even if the user hadn't
+    // visited the Habits tab yet this session.
+    try { renderCompoundProgress(); } catch (_) {}
+    const overlay = document.getElementById('pack-progress-overlay');
+    const modal   = document.getElementById('pack-progress-modal');
+    if (!overlay || !modal) return;
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+  }
+  function closePackProgressModal() {
+    const overlay = document.getElementById('pack-progress-overlay');
+    const modal   = document.getElementById('pack-progress-modal');
+    if (overlay) overlay.classList.add('hidden');
+    if (modal)   modal.classList.add('hidden');
+  }
+  function setupPackProgressModal() {
+    const tile    = document.getElementById('today-strip');
+    const overlay = document.getElementById('pack-progress-overlay');
+    const closeBtn= document.getElementById('pp-close-btn');
+    if (tile) {
+      tile.addEventListener('click', e => {
+        // The souls badge + any other tappable child should keep their own
+        // behavior. Anything that bubbles up from inside a <button> is a
+        // child action, not a tile tap.
+        const t = e.target;
+        if (t && t.closest && t.closest('button')) return;
+        openPackProgressModal();
+      });
+      tile.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        openPackProgressModal();
+      });
+    }
+    if (overlay)  overlay.addEventListener('click', closePackProgressModal);
+    if (closeBtn) closeBtn.addEventListener('click', closePackProgressModal);
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const modal = document.getElementById('pack-progress-modal');
+      if (modal && !modal.classList.contains('hidden')) closePackProgressModal();
+    });
   }
 
   // ── PR STRIP RENDERING ───────────────────────────────────
@@ -19815,6 +19882,7 @@
     setupDailyInsight();
     setupCompoundPopup();
     setupBonusInfoPopup();
+    setupPackProgressModal();
     setupPRDetailSheet();
     setupBossesPanel();
     setupQuestsGate();

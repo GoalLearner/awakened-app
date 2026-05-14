@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=248">
+  <link rel="stylesheet" href="styles.css?v=249">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -294,12 +294,13 @@
            #perfect-streak-display, #souls-badge so JS render-targets stay
            valid. The standalone #progress-bar is preserved in a hidden
            container below since updateProgress() writes to it. -->
-      <div class="today-strip">
+      <div id="today-strip" class="today-strip" role="button" tabindex="0" aria-label="Habits progress — tap for routine breakdown">
         <div class="today-strip-left">
           <span id="completed-count" class="today-strip-value">0</span>
           <span class="today-strip-divider">/</span>
           <span id="total-count" class="today-strip-target">0</span>
           <span class="today-strip-label">HABITS TODAY</span>
+          <span class="today-strip-chevron" aria-hidden="true">›</span>
         </div>
         <div class="today-strip-right">
           <div id="perfect-streak-display" class="perfect-streak-display">
@@ -1508,6 +1509,25 @@
     </div>
   </div>
 
+  <!-- Pack/Routine progress modal — v3 Phase 1o. The bottom Morning Routine
+       strip was retired; the top "X / Y HABITS TODAY" tile is now tappable
+       and opens this modal. Body is populated by renderPackProgressIntoTarget
+       (same builder that fed the retired footer strip), so streak / shield /
+       honest-day / add-missing chips all keep working. -->
+  <div id="pack-progress-overlay" class="pack-progress-overlay hidden"></div>
+  <div id="pack-progress-modal" class="pack-progress-modal hidden" role="dialog" aria-labelledby="pp-title" aria-modal="true">
+    <div class="pp-card">
+      <button id="pp-close-btn" class="pp-close-btn" aria-label="Close">✕</button>
+      <div id="pp-title" class="pp-title">Routine Progress</div>
+      <div class="pp-subtitle">Today's pack completion + active bonuses.</div>
+      <div id="pp-body" class="pp-body"></div>
+      <div id="pp-empty" class="pp-empty hidden">
+        No active routines yet.<br>
+        <span class="pp-empty-sub">Add the Morning Routine or Locked-In pack from <b>Add Habits</b>.</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Bonus Info popup — explains Compound Effect + Locked-In bonus mechanics + ROI -->
   <div id="bonus-info-overlay" class="bonus-info-overlay hidden"></div>
   <div id="bonus-info-modal" class="bonus-info-modal hidden">
@@ -1647,7 +1667,7 @@
   </div>
 
   <script src="auth.js?v=7"></script>
-  <script src="app.js?v=330"></script>
+  <script src="app.js?v=331"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

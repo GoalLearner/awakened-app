@@ -1864,10 +1864,11 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 50px keeps every button comfortably above the 44×44 iOS accessibility
-     tap-target minimum while staying compact for symbol-only nav. */
-  min-height: 50px;
-  padding: 6px 4px;
+  /* v3 Phase 1o — tightened to 44px (still meets the iOS 44×44 tap-target
+     minimum, with the icon's intrinsic 32px providing extra hit area).
+     Reclaims 6px of vertical real estate above the habit grid. */
+  min-height: 44px;
+  padding: 4px 4px;
   background: transparent !important;
   background-color: transparent !important;
   border: none;
@@ -8232,6 +8233,14 @@ footer {
   gap: 6px;
 }
 .compound-progress.hidden { display: none !important; }
+
+/* v3 Phase 1o — the persistent bottom pack-progress strip is retired
+   on the Habits screen. Pack progress is now reached via tapping the
+   top "X / Y HABITS TODAY" tile, which opens #pack-progress-modal.
+   The renderCompoundProgress path still writes to #compound-progress
+   so the same builder + chip event delegation feeds the modal too —
+   we just hide the footer surface. */
+#compound-progress.compound-progress--footer { display: none !important; }
 /* Footer variant — sits inside #main-footer above the Add Habits button */
 .compound-progress--footer {
   padding: 0;
@@ -8459,19 +8468,19 @@ footer {
    ═══════════════════════════════════════════════════════════════ */
 
 .daily-quote {
-  padding: 6px 16px 4px;
-  font-size: 0.72rem;
+  /* v3 Phase 1o — compressed for vertical efficiency on the Habits screen. */
+  padding: 3px 14px 2px;
+  font-size: 0.66rem;
   font-style: italic;
   color: var(--text-secondary);
   text-align: center;
   letter-spacing: 0.01em;
-  line-height: 1.4;
+  line-height: 1.35;
   border-top: 1px solid var(--border);
-  opacity: 0.85;
+  opacity: 0.82;
   transition: opacity 0.5s ease-in-out;
-  /* Reserve consistent height so rotating quotes of varying length don't
-     shift the rest of the screen. Centered vertically inside the box. */
-  min-height: 76px;
+  /* Min-height halved; rotating quotes still don't reflow neighbors. */
+  min-height: 38px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8481,9 +8490,9 @@ footer {
 .daily-quote .dq-attr {
   display: block;
   font-style: normal;
-  font-size: 0.66rem;
+  font-size: 0.58rem;
   color: var(--text-tertiary);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -15758,6 +15767,35 @@ body.reveal-locked { overflow: hidden; }
   border: 1px solid rgba(139, 92, 246, 0.30);
   border-radius: 10px;
   margin-bottom: 10px;
+  /* v3 Phase 1o — the tile is now the canonical access point for pack /
+     routine progress (replaces the retired footer strip). Tappable. */
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+.today-strip:hover {
+  background: rgba(139, 92, 246, 0.10);
+  border-color: rgba(139, 92, 246, 0.45);
+}
+.today-strip:active { transform: scale(0.997); }
+.today-strip:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.65);
+  outline-offset: 2px;
+}
+/* Tiny chevron sits inline after the HABITS TODAY label — restrained
+   affordance, doesn't crowd the existing left-counter / right-pills
+   layout. Purple-on-purple so it reads as "more info available." */
+.today-strip-chevron {
+  font-size: 0.95rem;
+  line-height: 1;
+  color: rgba(139, 92, 246, 0.7);
+  margin-left: 2px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.today-strip:hover .today-strip-chevron {
+  color: rgba(139, 92, 246, 0.95);
+  transform: translateX(1px);
 }
 /* v3 Phase 1k revert (1l) — the top header's "X / Y HABITS TODAY"
    tile is the canonical habit-progress summary on every tab. The
@@ -17483,8 +17521,11 @@ body.reveal-locked { overflow: hidden; }
 
 /* Codex-mode grid — tightened gap, extra breathing room above */
 .habit-list.habit-list--codex {
-  padding: 16px 12px 0;
-  gap: 11px;
+  /* v3 Phase 1o — top padding trimmed (16 → 8) and row gap tightened
+     (11 → 9) so 6 full codex cards are visible on a standard iPhone
+     viewport without the cards feeling cramped. */
+  padding: 8px 12px 0;
+  gap: 9px;
 }
 
 /* ── Habit-item CODEX modifier — overrides base .habit-item visuals ── */
@@ -18329,4 +18370,94 @@ body.reveal-locked { overflow: hidden; }
   color: #f5f5fa;
   line-height: 1.35;
   letter-spacing: 0.05px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1o — Pack/Routine Progress Modal
+   Reached by tapping the top "X / Y HABITS TODAY" tile on the
+   Habits screen. Replaces the retired persistent footer strip.
+   Reuses the .cp-prog-row markup inside .pp-body so all existing
+   chip styles (streak / shield / honest / add-missing) carry over.
+   ═══════════════════════════════════════════════════════════════ */
+.pack-progress-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 20, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 160;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+.pack-progress-overlay.hidden { display: none !important; }
+.pack-progress-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 161;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  pointer-events: none;
+}
+.pack-progress-modal.hidden { display: none !important; }
+.pack-progress-modal .pp-card {
+  pointer-events: auto;
+  position: relative;
+  background: linear-gradient(180deg, #1a1a36 0%, #131329 100%);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(245, 184, 66, 0.06) inset;
+  padding: 18px 16px 14px;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pp-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pp-close-btn:hover { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+.pp-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  margin: 0 28px 4px 0;
+}
+.pp-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+  letter-spacing: 0.01em;
+}
+.pp-body { display: flex; flex-direction: column; gap: 8px; }
+/* Inside the modal, the cp-prog-row rows render the same way as the old
+   footer surface — no override needed. The rows are flex containers and
+   already self-style. */
+.pp-empty {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 18px 8px 6px;
+  line-height: 1.5;
+}
+.pp-empty.hidden { display: none; }
+.pp-empty-sub {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
 }
