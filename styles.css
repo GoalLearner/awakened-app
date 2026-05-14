@@ -18617,29 +18617,42 @@ body.reveal-locked { overflow: hidden; }
   flex: 1 1 auto;
   min-width: 0;
 }
+/* v3 Phase 1p polish — AUTO marker collapsed from a text pill to a
+   tiny blue dot. Same semantic meaning (system-verified habit), zero
+   label-column real estate stolen. The auto-source corner dot on the
+   individual done-cells already carries the data signal per-day. */
 .hg-label-auto {
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #79b4ff;
-  padding: 1px 3px;
-  border-radius: 3px;
-  border: 0.5px solid rgba(121,180,255,0.45);
-  background: rgba(59,130,246,0.08);
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #79b4ff;
+  box-shadow: 0 0 4px rgba(121,180,255,0.55);
   flex: 0 0 auto;
   align-self: center;
-  line-height: 1.1;
+  /* Strip the old pill chrome */
+  font-size: 0;
+  letter-spacing: 0;
+  padding: 0;
+  border: none;
+  color: transparent;
+  text-indent: -9999px;
+  overflow: hidden;
 }
-/* Weekly info button shrinks so it doesn't steal label width. */
+/* Weekly info button: nearly invisible by default; full opacity on
+   hover/focus so it stays accessible but never visually competes
+   with the habit name. */
 .hg-ledger .hg-label--ledger .hg-info-btn {
   font-size: 9.5px;
   padding: 1px 2px;
   flex: 0 0 auto;
   margin-left: 0;
-  opacity: 0.55;
+  opacity: 0.28;
   line-height: 1;
+  transition: opacity 0.15s ease;
 }
-.hg-ledger .hg-label--ledger .hg-info-btn:hover { opacity: 1; }
+.hg-ledger .hg-label--ledger .hg-info-btn:hover,
+.hg-ledger .hg-label--ledger .hg-info-btn:focus-visible { opacity: 1; }
 
 /* ── Cell states ── */
 .hg-cell--done { border-radius: 5px; position: relative; }
@@ -18675,19 +18688,20 @@ body.reveal-locked { overflow: hidden; }
 }
 
 .hg-cell--missed {
-  background: rgba(239,68,68,0.04);
-  border: 0.5px solid rgba(239,68,68,0.18);
+  /* v3 Phase 1p polish — quieter missed state so a week with several
+     misses doesn't read as a hostile red wall. */
+  background: rgba(239,68,68,0.025);
+  border: 0.5px solid rgba(239,68,68,0.10);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .hg-cell-miss-dot {
   display: inline-block;
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  background: rgba(239,68,68,0.55);
-  box-shadow: 0 0 3px rgba(239,68,68,0.30);
+  background: rgba(220,38,38,0.42);
 }
 
 .hg-cell--future {
@@ -18699,10 +18713,13 @@ body.reveal-locked { overflow: hidden; }
   border: 0.5px dashed rgba(255,255,255,0.07);
 }
 
-/* Slimmer day cells inside the ledger to give the label column more room. */
+/* Slightly larger day cells (22 → 24px) for completed-cell legibility
+   without forcing horizontal overflow. Day-track minmax in .hg-row
+   already accommodates this. */
 .hg-ledger .hg-cell {
-  height: 22px;
-  width: 22px;
+  height: 24px;
+  width: 24px;
+  border-radius: 6px;
 }
 
 /* ── Legend strip ── */
@@ -18740,8 +18757,8 @@ body.reveal-locked { overflow: hidden; }
   box-shadow: 0 0 5px rgba(236,72,153,0.40), inset 0 0 0 0.5px rgba(255,255,255,0.18);
 }
 .hg-legend-cell--missed {
-  background: rgba(239,68,68,0.06);
-  border: 0.5px solid rgba(239,68,68,0.28);
+  background: rgba(239,68,68,0.04);
+  border: 0.5px solid rgba(239,68,68,0.16);
 }
 .hg-legend-cell--missed .hg-cell-miss-dot {
   width: 2.5px;

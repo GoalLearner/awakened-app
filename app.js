@@ -7262,7 +7262,9 @@
         '<span class="hg-label-accent" style="background:' + statColor + ';' +
           'box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.45) + ';"></span>' +
         '<span class="hg-label-name hg-label-name--wrap">' + esc(habitBaseName(habit)) + '</span>' +
-        (isAutoHabit ? '<span class="hg-label-auto" aria-label="Auto-verified via Apple Health">AUTO</span>' : '') +
+        // Auto-verified habits get a tiny blue dot beside the name (v3
+        // Phase 1p polish — replaces the prior AUTO text pill).
+        (isAutoHabit ? '<span class="hg-label-auto" role="img" aria-label="Auto-verified via Apple Health" title="Auto-verified via Apple Health">AUTO</span>' : '') +
         '<button class="hg-info-btn" aria-label="More info about ' + esc(habitBaseName(habit)) +
           '" data-habit-info="' + esc(habit.id) + '">ⓘ</button>';
       row.appendChild(label);
