@@ -16027,6 +16027,24 @@ body.reveal-locked { overflow: hidden; }
   border-color: rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
 }
+/* v3 Phase 1x.5 — Duel pill in the header strip. Distinct from
+   the boss pill (purple) and active-streak pill (gold) — uses a
+   purple→gold gradient border to signal "competitive duel" and
+   reads as tappable (cursor:pointer + focus ring). */
+.status-pill--duel {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.12), rgba(245, 158, 11, 0.05));
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.status-pill--duel:hover { filter: brightness(1.1); }
+.status-pill--duel:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
+}
+.status-pill--duel .status-pill-num {
+  color: var(--gold);
+}
 
 /* Status pill list — smooth opacity transition for the rotating ticker */
 .status-pill-row-list {

@@ -1171,6 +1171,8 @@ Leaderboard.getSnapshot()
 
 3-Day Discipline Duel — 1v1 coordination layer between friends. **v1 scope: friends + duel agreement only. No scoring, no APNs, no real-time, no ghost battles, no matchmaking, no server-side combat resolution.** "Build the rails before the train." Two hunters being able to connect + agree to compete is the entire v1 win.
 
+**Header strip duel pill (v3 Phase 1x.5).** The top `.status-pill-row` (labeled HUNTING) now surfaces the user's active Discipline Duel alongside engaged-boss pills. Render order: engaged-boss pills first (existing `_buildHuntingPills()`), then a single duel pill (`status-pill--duel`) reading `VS <ALIAS>` + `<N>D LEFT` if the user has an active duel. Empty state (no boss + no duel) keeps the existing "THE HUNT IS QUIET · ENGAGE A BOSS" idle pill. The duel pill is tappable — it navigates to the Duels tab. Backend fetch flows through `refreshHeaderDuelState()` with a 2-minute in-memory cache (`HEADER_DUEL_CACHE_MS`); fires once at init (`{ force: true }`) and on every `visibilitychange` to `visible` (debounced). The duel pill icon reuses `assets/tab-icons/tab-social.png` (the same icon as the Duels tab nav button). **No fake duel scores anywhere on the pill** — scoring is still deferred to a future pass.
+
 ### Product rules (v1)
 
 - **Duel type:** 3-Day Discipline Duel (configurable `duration_days` 1–14; default 3).

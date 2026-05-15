@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w7';
+  const APP_BUILD_TAG = '2.2.1-w8';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11212,6 +11212,7 @@
           // Boss portraits map by id — file convention is id-with-hyphens.
           const iconSrc = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
           pills.push({
+            kind:  'boss',
             key:   id,
             icon:  iconSrc,
             name:  name,
@@ -11222,6 +11223,84 @@
       }
     } catch (_) {}
     return pills;
+  }
+
+  // ── Header active-duel pill (v3 Phase 1x.5) ──────────────────
+  // Surfaces the user's active Discipline Duel inside the same
+  // .status-pill-row that already shows engaged bosses. The pill
+  // is rendered everywhere the header strip shows (every tab), so
+  // duel status reaches the user without them opening Duels tab.
+  // Cache the fetched state for HEADER_DUEL_CACHE_MS so we don't
+  // hammer the backend on every render. Refresh fires from init()
+  // and visibilitychange.
+  const HEADER_DUEL_CACHE_MS = 120 * 1000; // 2 minutes
+  let _headerDuelState = {
+    fetchedAt: 0,
+    active:    null,  // { id, opponent_alias, ends_at }
+  };
+
+  function _formatDuelTimeLeft(endsAtIso) {
+    if (!endsAtIso) return null;
+    const end = Date.parse(endsAtIso);
+    if (!isFinite(end)) return null;
+    const ms = end - Date.now();
+    if (ms <= 0) return 'ENDING';
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return mins + 'M LEFT';
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + 'H LEFT';
+    const days = Math.floor(hours / 24);
+    return days + 'D LEFT';
+  }
+
+  async function refreshHeaderDuelState(opts) {
+    const force = !!(opts && opts.force);
+    if (!force) {
+      const age = Date.now() - (_headerDuelState.fetchedAt || 0);
+      if (age < HEADER_DUEL_CACHE_MS) return _headerDuelState;
+    }
+    // Bail silently if not signed in / Auth not ready. The header
+    // stays in its current boss-only state — never block render.
+    if (!window.Auth || typeof Auth.fetchDuels !== 'function') return _headerDuelState;
+    try {
+      const res = await Auth.fetchDuels();
+      _headerDuelState.fetchedAt = Date.now();
+      if (res && res.ok) {
+        const active = Array.isArray(res.active) ? res.active.slice() : [];
+        // Most recently started first
+        active.sort((a, b) => {
+          const ta = Date.parse(a && a.starts_at || 0) || 0;
+          const tb = Date.parse(b && b.starts_at || 0) || 0;
+          return tb - ta;
+        });
+        _headerDuelState.active = active[0] || null;
+      } else {
+        _headerDuelState.active = null;
+      }
+    } catch (_) {
+      // Network or auth error — leave previous state (best effort).
+    }
+    // Repaint the pill row so the new state shows up immediately.
+    try { updateStatusPills(); } catch (_) {}
+    return _headerDuelState;
+  }
+
+  function _buildDuelHeaderPill() {
+    const d = _headerDuelState && _headerDuelState.active;
+    if (!d) return null;
+    const rawAlias = d.opponent_alias || d.opponent || '—';
+    let alias;
+    try { alias = lbNormalizeAliasForDisplay(rawAlias); }
+    catch (_) { alias = String(rawAlias); }
+    const timeLeft = _formatDuelTimeLeft(d.ends_at);
+    return {
+      kind:  'duel',
+      key:   'duel-' + (d.id || 'active'),
+      icon:  'assets/tab-icons/tab-social.png',
+      name:  'VS ' + alias.toUpperCase(),
+      sub:   timeLeft || null,
+      hot:   true,
+    };
   }
 
   function updateStatusPills() {
@@ -11235,8 +11314,10 @@
     list.style.opacity = '1';
     if (lbl) lbl.textContent = 'HUNTING';
 
-    const pills = _buildHuntingPills();
-    if (pills.length === 0) {
+    const bossPills = _buildHuntingPills();
+    const duelPill  = _buildDuelHeaderPill();
+
+    if (bossPills.length === 0 && !duelPill) {
       // Catchy idle state — "the hunt is quiet, enter a dungeon."
       // Uses the dungeon tab icon as the visual cue (same icon that
       // marks the Quests tab where bosses live).
@@ -11247,13 +11328,47 @@
         '</span>';
       return;
     }
-    list.innerHTML = pills.map(p =>
-      '<span class="status-pill status-pill--boss' + (p.hot ? ' status-pill--active' : '') + '">' +
+    // Render boss pills first (existing behavior), then duel pill if
+    // active. Both are scrollable horizontally on narrow viewports
+    // via the existing .status-pill-row overflow-x: auto rule.
+    const allPills = duelPill ? bossPills.concat([duelPill]) : bossPills;
+    list.innerHTML = allPills.map(p => {
+      const isDuel = p.kind === 'duel';
+      const cls = isDuel
+        ? 'status-pill status-pill--duel status-pill--active'
+        : 'status-pill status-pill--boss' + (p.hot ? ' status-pill--active' : '');
+      const attrs = isDuel
+        ? ' role="button" tabindex="0" data-pill-kind="duel"'
+        : '';
+      const sub = p.sub
+        ? ' <span class="status-pill-num">' + esc(p.sub) + '</span>'
+        : '';
+      return '<span class="' + cls + '"' + attrs + '>' +
         _statusPillIcon(p.icon, 16) +
         esc(p.name) +
-        ' <span class="status-pill-num">' + esc(p.sub) + '</span>' +
-      '</span>'
-    ).join('');
+        sub +
+      '</span>';
+    }).join('');
+  }
+
+  // Delegated click handler on the status-pill-row so the duel pill
+  // navigates to the Duels tab when tapped. Wired once at init.
+  function _setupHeaderPillDuelClick() {
+    const row = document.getElementById('status-pills');
+    if (!row || row._duelClickWired) return;
+    row._duelClickWired = true;
+    const open = () => {
+      try { switchTab('social'); } catch (_) {}
+    };
+    row.addEventListener('click', (e) => {
+      const pill = e.target.closest && e.target.closest('.status-pill--duel');
+      if (pill) open();
+    });
+    row.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const pill = e.target.closest && e.target.closest('.status-pill--duel');
+      if (pill) { e.preventDefault(); open(); }
+    });
   }
 
   // ── XP·30D detail sheet (v2.1.0) ─────────────────────────────
@@ -22267,6 +22382,10 @@
       // resume. Debounced to 5 min so rapid foreground/background
       // cycling doesn't hammer the workers.
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      // v3 Phase 1x.5 — refresh the active-duel pill on the header
+      // strip when the app comes back to foreground. 2-min cache
+      // inside refreshHeaderDuelState protects against thrashing.
+      try { refreshHeaderDuelState(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
@@ -22292,6 +22411,10 @@
       // after main app mounts. Debounced via hb_lb_last_submit so a
       // hot relaunch within 5 min stays quiet.
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      // v3 Phase 1x.5 — fetch active-duel state for the header
+      // pill on init. Wire the pill click handler exactly once.
+      try { _setupHeaderPillDuelClick(); } catch (_) {}
+      try { refreshHeaderDuelState({ force: true }); } catch (_) {}
       // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
       // fresh installs with a cloud backup; otherwise schedules a
       // baseline upload). Visibility-hidden flush keeps cloud
