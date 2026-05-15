@@ -860,6 +860,76 @@
     };
   }
 
+  // ─────────────────────────────────────────────────────────
+  // Discipline Duels v1 (v3 Phase 1x) — friends + duels helpers.
+  //
+  // Same error shape as the leaderboard/cloud helpers above:
+  //   { ok: true, ...payload } on success
+  //   { ok: false, code, detail } on failure
+  // Callers must wrap try/catch around UI rendering anyway; these
+  // helpers themselves don't throw — network errors map to
+  // { ok: false, code: 'NETWORK' }.
+  // ─────────────────────────────────────────────────────────
+  async function _authedFetch(method, path, jsonBody) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    const init = {
+      method:  method,
+      headers: { 'Authorization': 'Bearer ' + u.jwt },
+    };
+    if (jsonBody !== undefined && jsonBody !== null) {
+      init.headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(jsonBody);
+    }
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + path, init);
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status >= 200 && res.status < 300) {
+      // Trust the server payload; merge `ok: true` defensively.
+      return Object.assign({ ok: true }, data || {});
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    if (res.status === 404) {
+      return { ok: false, code: (data && data.error) || 'NOT_FOUND', detail: (data && data.detail) || 'Not found.' };
+    }
+    return {
+      ok:     false,
+      code:   (data && data.error)  || 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
+  function fetchFriends()                       { return _authedFetch('GET',  '/v1/friends'); }
+  function sendFriendRequest(alias)             { return _authedFetch('POST', '/v1/friends/request', { alias: alias }); }
+  function acceptFriendRequest(friendshipId)    { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/accept'); }
+  function declineFriendRequest(friendshipId)   { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/decline'); }
+  function removeFriend(friendshipId)           { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/remove'); }
+
+  function fetchDuels()                         { return _authedFetch('GET',  '/v1/duels'); }
+  function createDuel(opponentAlias, options) {
+    const body = { opponent_alias: opponentAlias };
+    if (options && typeof options === 'object') {
+      if (Number.isInteger(options.duration_days)) body.duration_days = options.duration_days;
+      if (Number.isInteger(options.stake_souls))   body.stake_souls   = options.stake_souls;
+    }
+    return _authedFetch('POST', '/v1/duels', body);
+  }
+  function acceptDuel(duelId)                   { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/accept'); }
+  function declineDuel(duelId)                  { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/decline'); }
+  function fetchDuel(duelId)                    { return _authedFetch('GET',  '/v1/duels/' + encodeURIComponent(duelId)); }
+
   // Expose on window for app.js + Settings interactions.
   window.Auth = {
     getCurrentUser,
@@ -876,6 +946,17 @@
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,
     uploadCloudState,
+    // Discipline Duels v1 (v3 Phase 1x)
+    fetchFriends,
+    sendFriendRequest,
+    acceptFriendRequest,
+    declineFriendRequest,
+    removeFriend,
+    fetchDuels,
+    createDuel,
+    acceptDuel,
+    declineDuel,
+    fetchDuel,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,
