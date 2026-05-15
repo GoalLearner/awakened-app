@@ -193,7 +193,7 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.2.0';
+  const APP_VERSION = '2.2.1';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3957,6 +3957,13 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
+    '2.2.1': {
+      subtitle: 'Leaderboard feels alive.',
+      items: [
+        { emoji: '', title: 'A populated leaderboard from day one', description: "The board now seeds a steady cast of hunters across every rank, so even a brand-new hunter sees a real-feeling field to climb. Top performers, mid-pack, and just-starting names all sit alongside real players." },
+        { emoji: '', title: 'Step totals that grow with the week',  description: "Every hunter's weekly step total accumulates day-by-day, Sunday through Saturday. No more values jumping around between sessions." },
+      ],
+    },
     '2.2.0': {
       subtitle: 'The system awakens.',
       items: [
