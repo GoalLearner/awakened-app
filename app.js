@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w9';
+  const APP_BUILD_TAG = '2.2.1-w10';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14366,31 +14366,16 @@
     if (!mount) return;
     const duel = _pickActiveHeroDuel(active);
     if (!duel) {
-      // Empty state — dashed purple border, "Find Hunter" CTA.
+      // Empty state — compact status card (v3 Phase 1x.8). No CTA;
+      // the Friends section directly below is the canonical entry
+      // point for adding hunters. Tighter padding + smaller icon
+      // than the prior CTA-driven card.
       mount.innerHTML =
-        '<div class="duels-hero duels-hero--empty">' +
+        '<div class="duels-hero duels-hero--empty duels-hero--compact">' +
           '<div class="duels-hero-icon">' + _DUEL_CREST_SVG + '</div>' +
           '<div class="duels-hero-title">No active duel</div>' +
-          '<div class="duels-hero-body">Add a hunter and begin a verified 3-day challenge. Data decides the winner.</div>' +
-          '<div class="duels-hero-actions">' +
-            '<button id="duels-find-hunter" class="duels-btn duels-btn--primary" type="button">' +
-              '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">' +
-                '<circle cx="5" cy="5" r="3.5" stroke="#fff" stroke-width="1.2" fill="none"/>' +
-                '<path d="M8 8l3 3" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>' +
-              '</svg>' +
-              '<span>Find Hunter</span>' +
-            '</button>' +
-          '</div>' +
+          '<div class="duels-hero-body">Add a hunter below to begin a verified 3-day challenge. Data decides the winner.</div>' +
         '</div>';
-      const findBtn = document.getElementById('duels-find-hunter');
-      if (findBtn) {
-        findBtn.addEventListener('click', () => {
-          const input = document.getElementById('social-friend-input');
-          if (!input) return;
-          try { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
-          setTimeout(() => { try { input.focus(); } catch (_) {} }, 200);
-        });
-      }
       return;
     }
     // Active state — gold-glow border, opponent + countdown + stake/reward.

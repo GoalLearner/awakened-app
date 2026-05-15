@@ -19166,6 +19166,32 @@ body.reveal-locked { overflow: hidden; }
   border: 1px dashed var(--duels-border-purple);
   text-align: center;
 }
+/* v3 Phase 1x.8 — compact empty hero. The CTA button was removed
+   (Friends section directly below is the canonical hunter-add entry
+   point), so the card no longer needs to feel like a primary CTA.
+   Tighter padding + smaller icon + smaller title gives it a
+   status-card feel while keeping the dashed purple identity. */
+.duels-hero--compact {
+  padding: 12px 16px 12px;
+}
+.duels-hero--compact .duels-hero-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 6px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px var(--duels-glow-purple), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.duels-hero--compact .duels-hero-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.duels-hero--compact .duels-hero-title {
+  font-size: 0.98rem;
+}
+.duels-hero--compact .duels-hero-body {
+  margin-top: 3px;
+  font-size: 0.78rem;
+}
 .duels-hero--active {
   background:
     radial-gradient(120% 80% at 50% 0%, rgba(245,184,66,0.12) 0%, transparent 60%),
