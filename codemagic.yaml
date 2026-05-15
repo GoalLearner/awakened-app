@@ -190,7 +190,7 @@ workflows:
           # Stable markers checked:
           #   - "social-friends-body"  → Discipline Duels v1 markup landed
           #   - "social-duels-body"    → Duels section markup landed
-          #   - "Friends + Duels foundation" → build marker (Phase 1x debug)
+          #   - "duels-page-header"    → v3 Phase 1x.1 Duels-tab redesign landed
           #
           # Version markers checked against the index.html currently in
           # the repo root — if those drift, www/ is stale.
@@ -206,6 +206,13 @@ workflows:
             echo "FAIL: www/index.html missing #social-duels-body markup"
             exit 1
           fi
+          # v3 Phase 1x.1 — Duels tab redesign. The page header is the
+          # marker that proves the new layout shipped (vs the old
+          # leaderboard-on-top Social tab).
+          if ! grep -q "duels-page-header" www/index.html; then
+            echo "FAIL: www/index.html missing .duels-page-header (Duels tab redesign)"
+            exit 1
+          fi
           # Verify app.js itself has the new render functions. If
           # index.html is fresh but app.js is stale, the static markup
           # would render but the live data hooks wouldn't fire. We've
@@ -218,6 +225,10 @@ workflows:
           fi
           if ! grep -q "renderDuelsSection" www/app.js; then
             echo "FAIL: www/app.js missing renderDuelsSection function"
+            exit 1
+          fi
+          if ! grep -q "renderActiveDuelHero" www/app.js; then
+            echo "FAIL: www/app.js missing renderActiveDuelHero (v3 Phase 1x.1)"
             exit 1
           fi
           if ! grep -q "fetchFriends" www/auth.js; then
@@ -286,11 +297,18 @@ workflows:
             head -20 "$PUB/index.html"
             exit 1
           fi
-          # Marker for the visible debug check the user verifies in TestFlight
+          # v3 Phase 1x.1 — Duels tab redesign marker. Proves the
+          # dedicated Duels-tab layout shipped (vs the prior Social
+          # tab with leaderboard cards on top).
+          if ! grep -q "duels-page-header" "$PUB/index.html"; then
+            echo "FAIL: $PUB/index.html missing .duels-page-header after sync"
+            exit 1
+          fi
+          # The temporary "Friends + Duels foundation" build band must
+          # NOT ship in production — was removed in v3 Phase 1x.1.
           if grep -q "Friends + Duels foundation" "$PUB/index.html"; then
-            echo "✓ Visible build marker present in iOS bundle"
-          else
-            echo "NOTE: visible build marker absent (expected only on debug builds)"
+            echo "FAIL: legacy build marker still present in iOS bundle"
+            exit 1
           fi
           # sw.js cache version cross-check
           ios_cv=$(grep -oE "CACHE_VERSION = '[^']+'" "$PUB/sw.js" | head -1)
