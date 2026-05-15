@@ -14337,6 +14337,103 @@
       '<circle cx="16" cy="16" r="1.6" fill="var(--gold)"/>' +
     '</svg>';
 
+  // ───────────────────────────────────────────────────────────
+  // Steps Duel Scoring v1 (v3 Phase 1y).
+  //
+  // Client submits Apple Health-derived step totals for the duel's
+  // [starts_at, min(now, ends_at)] window. Backend resolves the
+  // winner — client NEVER decides. v1 trusts the client value
+  // (Apple Health is source of truth; future hardening = on-device
+  // signed snapshots).
+  //
+  // Only `steps` duel type is scored. Other types are silently
+  // skipped here and the backend rejects them anyway.
+  // ───────────────────────────────────────────────────────────
+  const _DUEL_PROGRESS_MIN_MS = 5 * 60 * 1000; // 5min between submits
+  let _lastDuelProgressSubmitAt = 0;
+
+  async function submitActiveStepsDuelProgress(opts) {
+    const force = !!(opts && opts.force);
+    if (!force && Date.now() - _lastDuelProgressSubmitAt < _DUEL_PROGRESS_MIN_MS) return;
+    if (!window.Auth || typeof Auth.submitDuelProgress !== 'function') return;
+    if (!window.Health || typeof Health.isAvailable !== 'function') return;
+    if (!Health.isAvailable()) return;
+    if (typeof Health.permissionStatus === 'function' && Health.permissionStatus() !== 'granted') return;
+    if (typeof Health.getStepsBetween !== 'function') return;
+    if (typeof Auth.fetchDuels !== 'function') return;
+
+    let res;
+    try { res = await Auth.fetchDuels(); }
+    catch (_) { return; }
+    if (!res || !res.ok || !Array.isArray(res.active)) return;
+
+    for (const duel of res.active) {
+      try {
+        if (!duel || duel.duel_type !== 'steps') continue;
+        if (!duel.starts_at || !duel.ends_at) continue;
+        const startMs = Date.parse(duel.starts_at);
+        const endMs   = Math.min(Date.now(), Date.parse(duel.ends_at));
+        if (!isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) continue;
+        const startISO = new Date(startMs).toISOString();
+        const endISO   = new Date(endMs).toISOString();
+        let steps;
+        try { steps = await Health.getStepsBetween(startISO, endISO); }
+        catch (_) { continue; }
+        if (steps == null || steps < 0) continue;
+        try {
+          await Auth.submitDuelProgress(duel.id, {
+            duel_type: 'steps',
+            metric: 'steps',
+            value: Math.round(steps),
+            window_start: duel.starts_at,
+            window_end: duel.ends_at,
+            client_updated_at: new Date().toISOString(),
+          });
+        } catch (_) { /* network noise — try again next trigger */ }
+      } catch (_) { /* per-duel isolation — never let one bad duel kill the loop */ }
+    }
+    _lastDuelProgressSubmitAt = Date.now();
+  }
+  try { window.submitActiveStepsDuelProgress = submitActiveStepsDuelProgress; } catch (_) {}
+
+  // Steps Duel Scoring v1 — server-authoritative resolution. Called
+  // when the Duels tab loads and there's an active duel past its
+  // ends_at, OR when the user opens a specific past-ends_at duel.
+  // Backend is idempotent on already-completed duels.
+  async function maybeResolveDuelIfEnded(duel) {
+    if (!duel || duel.status !== 'active') return null;
+    if (!duel.ends_at) return null;
+    const endsMs = Date.parse(duel.ends_at);
+    if (!isFinite(endsMs) || Date.now() < endsMs) return null;
+    if (!window.Auth || typeof Auth.resolveDuel !== 'function') return null;
+    try {
+      const res = await Auth.resolveDuel(duel.id);
+      if (res && res.ok && res.duel) return res.duel;
+    } catch (_) {}
+    return null;
+  }
+
+  // One-shot per-duel result toast. Keyed by localStorage so it never
+  // replays on subsequent loads.
+  function _maybeFireDuelResultToast(duel) {
+    if (!duel || duel.status !== 'completed') return;
+    const key = 'hb_duel_result_seen_' + duel.id;
+    try { if (localStorage.getItem(key)) return; } catch (_) { return; }
+    const me = (window.Auth && Auth.getCurrentUser && Auth.getCurrentUser()) || null;
+    const meId = (me && me.id) || null;
+    if (!meId) return;
+    const iWon  = duel.winner_user_id === meId;
+    const iLost = duel.winner_user_id && !iWon;
+    const draw  = !duel.winner_user_id;
+    let msg;
+    if (draw)      msg = 'Duel ended in a draw.';
+    else if (iWon) msg = 'Duel won — verified steps decided it.';
+    else if (iLost) msg = 'Duel lost — your rival logged more verified steps.';
+    else            return;
+    try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
+    try { localStorage.setItem(key, '1'); } catch (_) {}
+  }
+
   // Pick the most-recently-accepted active duel from the duels list.
   // Sort by starts_at desc — falls back to id-string compare if a
   // server response is missing starts_at for any reason.
@@ -14561,9 +14658,34 @@
     }
     _duelsCache = res;
 
+    // Steps Duel Scoring v1 (v3 Phase 1y). Auto-resolve any active
+    // duels past their ends_at. If any resolved, re-fetch so the
+    // freshly-completed ones flow into the `recent` bucket.
+    const activeRaw = Array.isArray(res.active) ? res.active : [];
+    let didResolveAny = false;
+    for (const d of activeRaw) {
+      const resolved = await maybeResolveDuelIfEnded(d);
+      if (resolved) didResolveAny = true;
+    }
+    if (didResolveAny) {
+      let res2;
+      try { res2 = await Auth.fetchDuels(); }
+      catch (_) { res2 = null; }
+      if (res2 && res2.ok) { res = res2; _duelsCache = res2; }
+    }
+
     const incoming = Array.isArray(res.incoming) ? res.incoming : [];
     const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
     const active   = Array.isArray(res.active)   ? res.active   : [];
+
+    // Fire one-shot result toast on first-view of any completed duel.
+    const recentList = Array.isArray(res.recent) ? res.recent : [];
+    for (const d of recentList) {
+      if (d && d.status === 'completed') _maybeFireDuelResultToast(d);
+    }
+
+    // Best-effort submit current steps for active steps duels (debounced).
+    try { submitActiveStepsDuelProgress(); } catch (_) {}
     // Note: res.recent intentionally NOT rendered in v1. Completed-duel
     // outcomes don't have real data until server-side scoring ships.
 
@@ -15021,6 +15143,12 @@
           return;
         }
         showHabitToast(action === 'accept' ? 'Duel accepted. Timer started.' : 'Duel declined.');
+        if (action === 'accept') {
+          // Steps Duel Scoring v1 (v3 Phase 1y) — force a submission
+          // immediately on accept so the rival sees fresh data the
+          // moment they look at the duel.
+          try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
+        }
         renderDuelsSection();
       });
     }
@@ -15051,6 +15179,10 @@
           return;
         }
         showHabitToast(action === 'accept' ? 'Duel accepted. Timer started.' : 'Duel declined.');
+        if (action === 'accept') {
+          // Steps Duel Scoring v1 (v3 Phase 1y) — force submit on accept.
+          try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
+        }
         const duelId = _ddoCurrentDuelId;
         closeDuelDetail();
         renderDuelsSection();
@@ -20700,41 +20832,70 @@
         return null;
       }
 
-      try {
-        // PT-anchored "start of today." getPTDate() returns "YYYY-MM-DD"
-        // in America/Los_Angeles. Construct an ISO at midnight PT, which
-        // HealthKit interprets as a wall-clock timestamp.
-        const todayPT = (typeof getPTDate === 'function') ? getPTDate() : new Date().toISOString().slice(0, 10);
-        const start = new Date(todayPT + 'T00:00:00');
-        const end = new Date();
+      // PT-anchored "start of today." getPTDate() returns "YYYY-MM-DD"
+      // in America/Los_Angeles. Construct an ISO at midnight PT, which
+      // HealthKit interprets as a wall-clock timestamp.
+      const todayPT = (typeof getPTDate === 'function') ? getPTDate() : new Date().toISOString().slice(0, 10);
+      const start = new Date(todayPT + 'T00:00:00');
+      const end = new Date();
 
-        // sampleName MUST be 'stepCount' (camelCase, maps to
-        // HKQuantityTypeIdentifierStepCount). The @perfood README
-        // ambiguously suggests 'steps' as an alternative — that string
-        // is accepted only by requestAuthorization, not by the query
-        // API. Passing 'steps' here throws "Error in sample name."
+      // Share the core query path with getStepsBetween — single point of
+      // truth for the plugin's quirky sampleName='stepCount' contract
+      // (the @perfood README ambiguously suggests 'steps' as an
+      // alternative; that string is accepted only by requestAuthorization,
+      // not by the query API, and throws "Error in sample name." here).
+      const total = await _queryStepsInRange(start.toISOString(), end.toISOString());
+      if (total == null) return null;
+
+      stepCache = { steps: total, fetchedAt: Date.now() };
+      console.log('[Health] steps today:', total);
+      return total;
+    }
+
+    // Steps Duel Scoring v1 (v3 Phase 1y). Generic version of
+    // getStepsToday that accepts an arbitrary [start, end] ISO window.
+    // Used by the duel-progress submitter to fetch the user's steps
+    // since the duel started. Intentionally NOT cached — different
+    // windows return different answers; caching by window would
+    // balloon. getStepsToday keeps its 5-min today-cache untouched.
+    //
+    // Returns the integer step count or null on any failure
+    // (unavailable, permission denied, plugin throws). Never throws.
+    async function getStepsBetween(startISO, endISO) {
+      if (!isAvailable()) return null;
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+      if (typeof startISO !== 'string' || typeof endISO !== 'string') return null;
+      return _queryStepsInRange(startISO, endISO);
+    }
+
+    // Internal — performs the actual HealthKit step query against a
+    // [start, end] window. Returns null on any failure; otherwise an
+    // integer total (rounded).
+    async function _queryStepsInRange(startISO, endISO) {
+      const p = plugin();
+      if (!p) return null;
+      try {
         const result = await p.queryHKitSampleType({
           sampleName: 'stepCount',
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
+          startDate: startISO,
+          endDate: endISO,
           limit: 0, // 0 = unlimited per @perfood README
         });
-
         // result shape: { countReturn, resultData: [{ value, ...}, ...] }
         const samples = (result && result.resultData) || [];
-        const total = samples.reduce((sum, s) => sum + (Number(s.value) || 0), 0);
-
-        stepCache = { steps: total, fetchedAt: Date.now() };
+        let total = 0;
+        for (const s of samples) {
+          const v = Number(s && s.value);
+          if (isFinite(v) && v > 0) total += v;
+        }
         // First successful read confirms 'granted' — if iOS had silently
-        // denied, the query would have thrown or returned empty. We
-        // accept zero-step days as legitimate (user just hasn't moved).
+        // denied, the query would have thrown or returned empty.
         setStatus('granted');
-        console.log('[Health] steps today:', total, '(samples:', samples.length, ')');
-        return total;
+        return Math.round(total);
       } catch (e) {
         console.warn('[Health] step query failed', e);
         // Don't flip to 'denied' on a single failure — could be transient.
-        // Only requestPermissions explicitly setting 'denied' on throw.
         return null;
       }
     }
@@ -20950,6 +21111,7 @@
       requestPermissions,
       requestSleepPermissionIfNeeded,
       getStepsToday,
+      getStepsBetween,       // Steps Duel Scoring v1 (v3 Phase 1y)
       getSleepLastNight,
       getStrengthWorkoutsToday,
       permissionStatus,
@@ -22575,6 +22737,9 @@
       // strip when the app comes back to foreground. 2-min cache
       // inside refreshHeaderDuelState protects against thrashing.
       try { refreshHeaderDuelState(); } catch (_) {}
+      // Steps Duel Scoring v1 (v3 Phase 1y) — push fresh step total
+      // for any active steps duels (debounced to 5 min).
+      try { submitActiveStepsDuelProgress(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
@@ -22604,6 +22769,9 @@
       // pill on init. Wire the pill click handler exactly once.
       try { _setupHeaderPillDuelClick(); } catch (_) {}
       try { refreshHeaderDuelState({ force: true }); } catch (_) {}
+      // Steps Duel Scoring v1 (v3 Phase 1y) — force one submit on
+      // cold launch so any active steps duels pick up overnight steps.
+      try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
       // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
       // fresh installs with a cloud backup; otherwise schedules a
       // baseline upload). Visibility-hidden flush keeps cloud

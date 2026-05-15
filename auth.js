@@ -936,6 +936,16 @@
   function declineDuel(duelId)                  { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/decline'); }
   function fetchDuel(duelId)                    { return _authedFetch('GET',  '/v1/duels/' + encodeURIComponent(duelId)); }
 
+  // Steps Duel Scoring v1 (v3 Phase 1y). Submit a per-participant
+  // Apple Health snapshot to the backend; the resolver picks the
+  // winner.
+  function submitDuelProgress(duelId, payload) {
+    return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/progress', payload);
+  }
+  function resolveDuel(duelId) {
+    return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/resolve');
+  }
+
   // Expose on window for app.js + Settings interactions.
   window.Auth = {
     getCurrentUser,
@@ -963,6 +973,9 @@
     acceptDuel,
     declineDuel,
     fetchDuel,
+    // Steps Duel Scoring v1 (v3 Phase 1y)
+    submitDuelProgress,
+    resolveDuel,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,
