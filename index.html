@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=259">
+  <link rel="stylesheet" href="styles.css?v=260">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -552,6 +552,78 @@
         <div id="lb-preview-empty" class="lb-preview-empty hidden"></div>
         <div id="lb-preview-list" class="lb-preview-list"></div>
         <div class="lb-preview-footer">Only Apple Health-verifiable stats — the only stats that don't lie.</div>
+      </div>
+
+      <!-- Discipline Duels v1 — friends section (v3 Phase 1x) -->
+      <section class="social-section social-section--friends">
+        <div class="social-section-header">FRIENDS</div>
+        <div class="social-friend-add">
+          <input id="social-friend-input" class="social-friend-input" type="text"
+                 placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>
+        </div>
+        <div id="social-friends-body" class="social-section-body">
+          <div class="social-empty">Loading friends…</div>
+        </div>
+      </section>
+
+      <!-- Discipline Duels v1 — duels section -->
+      <section class="social-section social-section--duels">
+        <div class="social-section-header">DISCIPLINE DUELS</div>
+        <div class="social-section-sub">3-day 1v1. 25 souls staked each (metadata only — scoring activates in the next pass).</div>
+        <div id="social-duels-body" class="social-section-body">
+          <div class="social-empty">Loading duels…</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Duel detail full-screen overlay (v3 Phase 1x) — mirrors the
+         boss-fs-overlay pattern: sticky header, body content, ESC + tab
+         switch close, body.bfs-locked-style scroll lock via .ddo-locked. -->
+    <div id="duel-detail-overlay" class="bfs-overlay ddo-overlay hidden" aria-hidden="true">
+      <div class="bfs-header">
+        <button id="ddo-back" class="bfs-back" type="button" aria-label="Close duel">← Back</button>
+        <span id="ddo-status-pill" class="bfs-rank-pill" data-status="pending">PENDING</span>
+      </div>
+      <div class="bfs-body">
+        <h2 id="ddo-title" class="bfs-name">DISCIPLINE DUEL</h2>
+        <div class="bfs-rank-label">3-DAY DUEL</div>
+        <div id="ddo-opponent" class="bfs-flavor">vs —</div>
+        <div class="bfs-stats-grid">
+          <div class="bfs-stat-cell">
+            <div class="bfs-stat-label">STAKE</div>
+            <div id="ddo-stake" class="bfs-stat-value">25 souls</div>
+          </div>
+          <div class="bfs-stat-cell">
+            <div class="bfs-stat-label">REWARD</div>
+            <div id="ddo-reward" class="bfs-stat-value">40 souls</div>
+          </div>
+          <div class="bfs-stat-cell">
+            <div class="bfs-stat-label">DURATION</div>
+            <div id="ddo-duration" class="bfs-stat-value">3 days</div>
+          </div>
+          <div class="bfs-stat-cell">
+            <div class="bfs-stat-label">STATUS</div>
+            <div id="ddo-status-cell" class="bfs-stat-value">Pending</div>
+          </div>
+        </div>
+        <div class="bfs-section">
+          <div class="bfs-section-label">SCHEDULE</div>
+          <div id="ddo-starts" class="bfs-section-text">Starts: —</div>
+          <div id="ddo-ends"   class="bfs-section-text">Ends: —</div>
+          <div id="ddo-remaining" class="bfs-section-text"></div>
+        </div>
+        <div class="bfs-section">
+          <div class="bfs-section-label">WIN CONDITION</div>
+          <div class="bfs-section-text">Most sealed objectives during the duel window.</div>
+          <div class="bfs-section-text" style="margin-top:6px;">Tie breaker: most verified objectives, then most XP earned.</div>
+        </div>
+        <div class="bfs-section">
+          <div class="bfs-section-label">SCORE</div>
+          <div id="ddo-score" class="bfs-section-text" style="font-weight:600;">You: 0 · Opponent: 0</div>
+          <div class="bfs-section-text" style="margin-top:6px; opacity:0.7;">Scoring activates in the next duel pass. Stake and reward are metadata only in v1.</div>
+        </div>
+        <div id="ddo-actions" class="ddo-actions"></div>
       </div>
     </div>
 
@@ -1666,12 +1738,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=8"></script>
+  <script src="auth.js?v=9"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=350"></script>
+  <script src="app.js?v=351"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

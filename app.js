@@ -11885,6 +11885,7 @@
     // overlays the Quests tab; leaving the tab (or re-entering it
     // fresh) should not leave the modal hanging over.
     if (typeof closeBossFullScreen === 'function') closeBossFullScreen();
+    if (typeof closeDuelDetail === 'function') closeDuelDetail();
     currentTab = tab;
     // v3 Phase 1k — expose active tab on <body> so CSS can hide /
     // reflow tab-specific chrome (e.g., the duplicate "X / Y HABITS
@@ -11927,6 +11928,10 @@
     // Render the Leaderboard preview when the Social tab is opened.
     if (tab === 'social') {
       renderLeaderboardPreview();
+      // Discipline Duels v1 (v3 Phase 1x) — friends + duels stacked
+      // below the leaderboard. Each fetches lazily.
+      if (typeof renderFriendsSection === 'function') renderFriendsSection();
+      if (typeof renderDuelsSection === 'function')   renderDuelsSection();
     }
     // Render the Pokédex when the Items tab is opened (v2.0.1 DROPS).
     if (tab === 'items') {
@@ -14011,6 +14016,451 @@
       buildCard('bedtime_streak', moonIcon, bedtimeValue, bedtimeMeta);
   }
   try { window.renderLeaderboardPreview = renderLeaderboardPreview; } catch (_) {}
+
+  // ── DISCIPLINE DUELS v1 (v3 Phase 1x) ───────────────────────
+  // Friends + duels sections on the Social tab + duel-detail
+  // overlay. Coordination only — no scoring, no soul movement.
+  // All backend calls wrapped in try/catch; failures render an
+  // inline error chip rather than breaking the tab.
+
+  // In-memory caches refreshed each Social-tab activation.
+  let _friendsCache = null;
+  let _duelsCache   = null;
+  // The duel id currently shown in the detail overlay so reload
+  // calls know what to re-fetch.
+  let _ddoCurrentDuelId = null;
+
+  function _socialDisplayAlias(raw) {
+    try { return lbNormalizeAliasForDisplay(raw); }
+    catch (_) { return String(raw || '—'); }
+  }
+
+  async function renderFriendsSection() {
+    const body = document.getElementById('social-friends-body');
+    if (!body) return;
+    if (!window.Auth || typeof Auth.fetchFriends !== 'function') {
+      body.innerHTML = '<div class="social-empty">Sign in to add friends.</div>';
+      return;
+    }
+    body.innerHTML = '<div class="social-empty">Loading friends…</div>';
+    let res;
+    try { res = await Auth.fetchFriends(); }
+    catch (_) { res = { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
+    if (!res || !res.ok) {
+      if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'STUB_USER' || res.code === 'LOCAL_DEV_SKIP')) {
+        body.innerHTML = '<div class="social-empty">Sign in with Apple to add friends.</div>';
+        return;
+      }
+      body.innerHTML = '<div class="social-error">Could not load friends: ' + esc((res && res.detail) || 'unknown error') + '</div>';
+      return;
+    }
+    _friendsCache = res;
+
+    const friends  = Array.isArray(res.friends)  ? res.friends  : [];
+    const incoming = Array.isArray(res.incoming) ? res.incoming : [];
+    const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
+
+    const parts = [];
+    if (incoming.length) {
+      parts.push('<div class="social-section-subhead">Incoming requests</div>');
+      for (const f of incoming) {
+        parts.push(
+          '<div class="social-row" data-friendship-id="' + esc(f.id) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(_socialDisplayAlias(f.alias)) + '</div>' +
+              '<div class="social-row-meta">wants to be friends</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<button class="social-btn social-btn--primary" data-friend-action="accept">Accept</button>' +
+              '<button class="social-btn" data-friend-action="decline">Decline</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (outgoing.length) {
+      parts.push('<div class="social-section-subhead">Outgoing</div>');
+      for (const f of outgoing) {
+        parts.push(
+          '<div class="social-row" data-friendship-id="' + esc(f.id) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(_socialDisplayAlias(f.alias)) + '</div>' +
+              '<div class="social-row-meta">awaiting response</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<span class="social-row-status" data-status="pending">pending</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (friends.length) {
+      parts.push('<div class="social-section-subhead">Friends</div>');
+      for (const f of friends) {
+        const aliasDisp = _socialDisplayAlias(f.alias);
+        parts.push(
+          '<div class="social-row" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
+              '<div class="social-row-meta">friend</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<button class="social-btn social-btn--primary" data-friend-action="challenge">Challenge</button>' +
+              '<button class="social-btn social-btn--danger"  data-friend-action="remove">Remove</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (parts.length === 0) {
+      parts.push('<div class="social-empty">No friends yet. Add a hunter by their handle to challenge them.</div>');
+    }
+    body.innerHTML = parts.join('');
+  }
+
+  async function renderDuelsSection() {
+    const body = document.getElementById('social-duels-body');
+    if (!body) return;
+    if (!window.Auth || typeof Auth.fetchDuels !== 'function') {
+      body.innerHTML = '<div class="social-empty">Sign in to duel.</div>';
+      return;
+    }
+    body.innerHTML = '<div class="social-empty">Loading duels…</div>';
+    let res;
+    try { res = await Auth.fetchDuels(); }
+    catch (_) { res = { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
+    if (!res || !res.ok) {
+      if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'STUB_USER' || res.code === 'LOCAL_DEV_SKIP')) {
+        body.innerHTML = '<div class="social-empty">Sign in with Apple to duel.</div>';
+        return;
+      }
+      body.innerHTML = '<div class="social-error">Could not load duels: ' + esc((res && res.detail) || 'unknown error') + '</div>';
+      return;
+    }
+    _duelsCache = res;
+
+    const incoming = Array.isArray(res.incoming) ? res.incoming : [];
+    const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
+    const active   = Array.isArray(res.active)   ? res.active   : [];
+    const recent   = Array.isArray(res.recent)   ? res.recent   : [];
+
+    const fmtRemaining = ms => {
+      if (typeof ms !== 'number' || ms <= 0) return 'ending soon';
+      const hrs = Math.floor(ms / 3600000);
+      if (hrs >= 24) return Math.floor(hrs / 24) + 'd ' + (hrs % 24) + 'h left';
+      if (hrs >= 1)  return hrs + 'h left';
+      const mins = Math.max(1, Math.floor(ms / 60000));
+      return mins + 'm left';
+    };
+
+    const parts = [];
+    if (incoming.length) {
+      parts.push('<div class="social-section-subhead">Incoming challenges</div>');
+      for (const d of incoming) {
+        const opp = _socialDisplayAlias(d.opponent_alias || (d.challenger && d.challenger.alias) || '—');
+        parts.push(
+          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(opp) + '</div>' +
+              '<div class="social-row-meta">' + esc(d.stake_souls + ' souls · ' + d.duration_days + '-day') + '</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<button class="social-btn social-btn--primary" data-duel-action="accept">Accept</button>' +
+              '<button class="social-btn" data-duel-action="decline">Decline</button>' +
+              '<button class="social-btn" data-duel-action="view">View</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (outgoing.length) {
+      parts.push('<div class="social-section-subhead">Outgoing</div>');
+      for (const d of outgoing) {
+        const opp = _socialDisplayAlias(d.opponent_alias || '—');
+        parts.push(
+          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(opp) + '</div>' +
+              '<div class="social-row-meta">' + esc(d.stake_souls + ' souls · ' + d.duration_days + '-day · awaiting') + '</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<span class="social-row-status" data-status="pending">pending</span>' +
+              '<button class="social-btn" data-duel-action="view">View</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (active.length) {
+      parts.push('<div class="social-section-subhead">Active</div>');
+      for (const d of active) {
+        const opp = _socialDisplayAlias(d.opponent_alias || '—');
+        parts.push(
+          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(opp) + '</div>' +
+              '<div class="social-row-meta">' + esc(fmtRemaining(d.time_remaining_ms)) + '</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<span class="social-row-status" data-status="active">active</span>' +
+              '<button class="social-btn social-btn--primary" data-duel-action="view">View</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (recent.length) {
+      parts.push('<div class="social-section-subhead">Recent</div>');
+      for (const d of recent) {
+        const opp = _socialDisplayAlias(d.opponent_alias || '—');
+        parts.push(
+          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
+            '<div class="social-row-main">' +
+              '<div class="social-row-alias">' + esc(opp) + '</div>' +
+              '<div class="social-row-meta">' + esc(d.status) + '</div>' +
+            '</div>' +
+            '<div class="social-row-actions">' +
+              '<button class="social-btn" data-duel-action="view">View</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    }
+    if (parts.length === 0) {
+      parts.push('<div class="social-empty">No duels yet. Challenge a friend to start one.</div>');
+    }
+    body.innerHTML = parts.join('');
+  }
+
+  // ── Duel detail overlay ──
+  function openDuelDetail(duelId) {
+    const overlay = document.getElementById('duel-detail-overlay');
+    if (!overlay) return;
+    _ddoCurrentDuelId = duelId;
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('ddo-locked');
+    _ddoPopulate(duelId);
+  }
+
+  function closeDuelDetail() {
+    const overlay = document.getElementById('duel-detail-overlay');
+    if (!overlay) return;
+    if (overlay.classList.contains('hidden')) return;
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('ddo-locked');
+    overlay.scrollTop = 0;
+    _ddoCurrentDuelId = null;
+  }
+  try { window.openDuelDetail  = openDuelDetail;  } catch (_) {}
+  try { window.closeDuelDetail = closeDuelDetail; } catch (_) {}
+
+  async function _ddoPopulate(duelId) {
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    setText('ddo-opponent', 'Loading…');
+    setText('ddo-stake',    '—');
+    setText('ddo-reward',   '—');
+    setText('ddo-duration', '—');
+    setText('ddo-status-cell', '—');
+    setText('ddo-starts',   'Starts: —');
+    setText('ddo-ends',     'Ends: —');
+    setText('ddo-remaining','');
+    setText('ddo-score',    'You: 0 · Opponent: 0');
+    const actionsEl = document.getElementById('ddo-actions');
+    if (actionsEl) actionsEl.innerHTML = '';
+
+    if (!window.Auth || typeof Auth.fetchDuel !== 'function') return;
+    let res;
+    try { res = await Auth.fetchDuel(duelId); }
+    catch (_) { res = { ok: false, detail: 'Network error' }; }
+    if (!res || !res.ok || !res.duel) {
+      setText('ddo-opponent', 'Could not load duel: ' + ((res && res.detail) || 'unknown'));
+      return;
+    }
+    const d = res.duel;
+    const opp = _socialDisplayAlias(d.opponent_alias || '—');
+    setText('ddo-opponent', 'vs ' + opp);
+    setText('ddo-stake',  d.stake_souls + ' souls');
+    setText('ddo-reward', d.reward_souls + ' souls');
+    setText('ddo-duration', d.duration_days + ' days');
+    setText('ddo-status-cell', d.status.charAt(0).toUpperCase() + d.status.slice(1));
+    const pill = document.getElementById('ddo-status-pill');
+    if (pill) {
+      pill.textContent = d.status.toUpperCase();
+      pill.setAttribute('data-status', d.status);
+    }
+    setText('ddo-starts', 'Starts: ' + (d.starts_at ? new Date(d.starts_at).toLocaleString() : '—'));
+    setText('ddo-ends',   'Ends: '   + (d.ends_at   ? new Date(d.ends_at).toLocaleString()   : '—'));
+    if (d.status === 'active' && typeof d.time_remaining_ms === 'number') {
+      const hrs = Math.floor(d.time_remaining_ms / 3600000);
+      const daysLeft = Math.floor(hrs / 24);
+      setText('ddo-remaining', 'Time remaining: ' + (daysLeft > 0 ? daysLeft + 'd ' + (hrs % 24) + 'h' : hrs + 'h'));
+    }
+    // Score block — server scores are 0 in v1 (scoring deferred).
+    const myRole = d.role === 'challenger' ? 'challenger' : 'opponent';
+    const myScore  = myRole === 'challenger' ? d.challenger_score : d.opponent_score;
+    const oppScore = myRole === 'challenger' ? d.opponent_score   : d.challenger_score;
+    setText('ddo-score', 'You: ' + (myScore || 0) + ' · Opponent: ' + (oppScore || 0));
+
+    // Actions per role + status.
+    if (actionsEl) {
+      const isOpponent = d.role === 'opponent';
+      if (d.status === 'pending' && isOpponent) {
+        actionsEl.innerHTML =
+          '<button class="social-btn social-btn--primary" data-ddo-action="accept">Accept Duel</button>' +
+          '<button class="social-btn" data-ddo-action="decline">Decline</button>';
+      } else if (d.status === 'pending' && !isOpponent) {
+        actionsEl.innerHTML = '<div class="social-empty" style="flex:1;">Awaiting opponent response.</div>';
+      } else {
+        actionsEl.innerHTML = '';
+      }
+    }
+  }
+
+  // ── Event wiring (delegated; runs once at init via setupSocialDuels) ──
+  function setupSocialDuels() {
+    // Friend add
+    const sendBtn = document.getElementById('social-friend-send');
+    const input   = document.getElementById('social-friend-input');
+    if (sendBtn && input) {
+      const submitRequest = async () => {
+        const raw = (input.value || '').trim();
+        if (!raw) { showHabitToast('Enter a hunter alias.'); return; }
+        sendBtn.disabled = true;
+        let res;
+        try { res = await Auth.sendFriendRequest(raw); }
+        catch (_) { res = { ok: false, detail: 'Network error' }; }
+        sendBtn.disabled = false;
+        if (!res || !res.ok) {
+          showHabitToast((res && res.detail) || 'Could not send request.');
+          return;
+        }
+        input.value = '';
+        if (res.autoAccepted)        showHabitToast('Friend request accepted — they had already requested you.');
+        else if (res.alreadyFriends) showHabitToast('Already friends.');
+        else if (res.alreadyPending) showHabitToast('Request already pending.');
+        else                          showHabitToast('Friend request sent.');
+        renderFriendsSection();
+      };
+      sendBtn.addEventListener('click', submitRequest);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); submitRequest(); }
+      });
+    }
+
+    // Delegated handler for friend rows.
+    const friendsBody = document.getElementById('social-friends-body');
+    if (friendsBody) {
+      friendsBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-friend-action]');
+        if (!btn) return;
+        const row = btn.closest('.social-row');
+        if (!row) return;
+        const action = btn.getAttribute('data-friend-action');
+        const fid    = row.getAttribute('data-friendship-id');
+        if (!fid) return;
+        btn.disabled = true;
+        let res;
+        try {
+          if (action === 'accept')        res = await Auth.acceptFriendRequest(fid);
+          else if (action === 'decline')  res = await Auth.declineFriendRequest(fid);
+          else if (action === 'remove') {
+            if (!window.confirm('Remove this friend?')) { btn.disabled = false; return; }
+            res = await Auth.removeFriend(fid);
+          } else if (action === 'challenge') {
+            const alias = row.getAttribute('data-alias') || '';
+            if (!alias) { btn.disabled = false; return; }
+            res = await Auth.createDuel(alias, { duration_days: 3, stake_souls: 25 });
+            if (res && res.ok) {
+              showHabitToast('Duel challenge sent.');
+              renderDuelsSection();
+            }
+          }
+        } catch (_) { res = { ok: false, detail: 'Network error' }; }
+        btn.disabled = false;
+        if (!res || !res.ok) {
+          showHabitToast((res && res.detail) || 'Action failed.');
+          return;
+        }
+        if (action !== 'challenge') {
+          showHabitToast(action === 'accept' ? 'Friend added.' : action === 'decline' ? 'Request declined.' : 'Friend removed.');
+          renderFriendsSection();
+        }
+      });
+    }
+
+    // Delegated handler for duel rows.
+    const duelsBody = document.getElementById('social-duels-body');
+    if (duelsBody) {
+      duelsBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-duel-action]');
+        if (!btn) return;
+        const row = btn.closest('.social-row');
+        if (!row) return;
+        const action = btn.getAttribute('data-duel-action');
+        const did    = row.getAttribute('data-duel-id');
+        if (!did) return;
+        if (action === 'view') {
+          openDuelDetail(did);
+          return;
+        }
+        btn.disabled = true;
+        let res;
+        try {
+          if (action === 'accept')      res = await Auth.acceptDuel(did);
+          else if (action === 'decline') res = await Auth.declineDuel(did);
+        } catch (_) { res = { ok: false, detail: 'Network error' }; }
+        btn.disabled = false;
+        if (!res || !res.ok) {
+          showHabitToast((res && res.detail) || 'Action failed.');
+          return;
+        }
+        showHabitToast(action === 'accept' ? 'Duel accepted. Timer started.' : 'Duel declined.');
+        renderDuelsSection();
+      });
+    }
+
+    // Duel detail overlay back + ESC + action buttons.
+    const ddoBack = document.getElementById('ddo-back');
+    if (ddoBack) ddoBack.addEventListener('click', closeDuelDetail);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const overlay = document.getElementById('duel-detail-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) closeDuelDetail();
+    });
+    const ddoActions = document.getElementById('ddo-actions');
+    if (ddoActions) {
+      ddoActions.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-ddo-action]');
+        if (!btn || !_ddoCurrentDuelId) return;
+        const action = btn.getAttribute('data-ddo-action');
+        btn.disabled = true;
+        let res;
+        try {
+          if (action === 'accept')       res = await Auth.acceptDuel(_ddoCurrentDuelId);
+          else if (action === 'decline') res = await Auth.declineDuel(_ddoCurrentDuelId);
+        } catch (_) { res = { ok: false, detail: 'Network error' }; }
+        btn.disabled = false;
+        if (!res || !res.ok) {
+          showHabitToast((res && res.detail) || 'Action failed.');
+          return;
+        }
+        showHabitToast(action === 'accept' ? 'Duel accepted. Timer started.' : 'Duel declined.');
+        const duelId = _ddoCurrentDuelId;
+        closeDuelDetail();
+        renderDuelsSection();
+        // Re-open with refreshed state if the user wants to keep looking
+        if (action === 'accept') openDuelDetail(duelId);
+      });
+    }
+  }
+  try { window.renderFriendsSection = renderFriendsSection; } catch (_) {}
+  try { window.renderDuelsSection   = renderDuelsSection;   } catch (_) {}
+  try { window.setupSocialDuels     = setupSocialDuels;     } catch (_) {}
 
   // ── LEADERBOARD RANKING SHEET (v2.1.0 Phase C — LIVE) ───────
   // Tap any stat card on the Social tab → opens this bottom sheet
@@ -21444,6 +21894,7 @@
     setupPokedex();
     setupCardDetailModal();
     setupMysteryCardModal();
+    if (typeof setupSocialDuels === 'function') setupSocialDuels();
     // Process any reveals queued from drops that happened in a prior
     // session but the modal didn't get a chance to show (e.g., user
     // closed app mid-reveal). DROPS.md spec: "Show them one at a
