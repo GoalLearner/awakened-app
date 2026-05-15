@@ -756,6 +756,110 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────
+  // Cloud Sync v1 (v3 Phase 1w) — backend endpoint helpers.
+  //
+  // GET  /v1/users/me/state — fetchCloudState
+  // POST /v1/users/me/state — uploadCloudState
+  //
+  // Both share the same error-handling shape as the leaderboard
+  // helpers above: { ok: true, ... } on success; { ok: false,
+  // code: 'NETWORK' | 'EXPIRED' | 'RATE_LIMITED' | 'ERROR', detail }
+  // on failure. Callers in app.js' CloudSync module degrade
+  // gracefully on any failure — local state remains authoritative.
+  // ─────────────────────────────────────────────────────────
+  async function fetchCloudState() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/users/me/state', {
+        method:  'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200) {
+      // Backend returns { exists, state_version?, state?, ... }.
+      return {
+        ok:               true,
+        exists:           !!(data && data.exists),
+        state_version:    (data && data.state_version) || null,
+        app_version:      (data && data.app_version)   || null,
+        client_updated_at:(data && data.client_updated_at) || null,
+        server_updated_at:(data && data.server_updated_at) || null,
+        device_id:        (data && data.device_id)     || null,
+        checksum:         (data && data.checksum)      || null,
+        state:            (data && data.state)         || null,
+        reason:           (data && data.reason)        || null,
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    return {
+      ok: false,
+      code: 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
+  async function uploadCloudState(payload) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    if (!payload || typeof payload !== 'object') {
+      return { ok: false, code: 'INVALID_PAYLOAD', detail: 'payload must be an object.' };
+    }
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/users/me/state', {
+        method:  'POST',
+        headers: {
+          'Authorization': 'Bearer ' + u.jwt,
+          'Content-Type':  'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200) {
+      return {
+        ok:                true,
+        state_version:     (data && data.state_version) || null,
+        client_updated_at: (data && data.client_updated_at) || null,
+        server_updated_at: (data && data.server_updated_at) || null,
+        bytes:             (data && data.bytes) || null,
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 413) {
+      return { ok: false, code: 'PAYLOAD_TOO_LARGE', detail: (data && data.detail) || 'Snapshot too large.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    return {
+      ok: false,
+      code: 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
   // Expose on window for app.js + Settings interactions.
   window.Auth = {
     getCurrentUser,
@@ -769,6 +873,9 @@
     deleteAccount,
     submitLeaderboardSnapshot,
     fetchLeaderboardTop,
+    // Cloud Sync v1 (v3 Phase 1w)
+    fetchCloudState,
+    uploadCloudState,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,

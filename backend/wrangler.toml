@@ -84,3 +84,19 @@ name = "RL_ACCOUNT_DELETE"
 type = "ratelimit"
 namespace_id = "1004"
 simple = { limit = 3, period = 60 }   # 3/min per user (≈ spec's 3/hour)
+
+# Cloud Sync v1 (v3 Phase 1w) — two new endpoints share the budget
+# with the leaderboard submitter. State GETs are read-only and cheap;
+# allow more. POSTs are larger payloads and client debounces to
+# 30-60s already; keep tight to defend against pathological clients.
+[[unsafe.bindings]]
+name = "RL_USER_STATE_GET"
+type = "ratelimit"
+namespace_id = "1005"
+simple = { limit = 12, period = 60 }  # 12/min per user
+
+[[unsafe.bindings]]
+name = "RL_USER_STATE_POST"
+type = "ratelimit"
+namespace_id = "1006"
+simple = { limit = 4, period = 60 }   # 4/min per user — debounced client

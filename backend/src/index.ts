@@ -27,6 +27,7 @@ import { handleAuthVerify } from './handlers/auth-verify';
 import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
 import { handleLeaderboardTop } from './handlers/leaderboard-top';
 import { handleAccountDelete } from './handlers/account-delete';
+import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handlePreflight, withCors } from './lib/cors';
 import { jsonError } from './lib/responses';
 
@@ -87,6 +88,12 @@ export default {
             response = await handleLeaderboardTop(request, env, session);
           } else if (path === '/v1/account/delete' && method === 'POST') {
             response = await handleAccountDelete(request, env, session);
+          } else if (path === '/v1/users/me/state' && method === 'GET') {
+            // Cloud Sync v1 (v3 Phase 1w) — backup fetch.
+            response = await handleUserStateGet(request, env, session);
+          } else if (path === '/v1/users/me/state' && method === 'POST') {
+            // Cloud Sync v1 (v3 Phase 1w) — backup upsert.
+            response = await handleUserStatePost(request, env, session);
           } else {
             response = jsonError(404, 'NOT_FOUND', `No route for ${method} ${path}.`);
           }

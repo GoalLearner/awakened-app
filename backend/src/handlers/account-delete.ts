@@ -15,6 +15,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { deleteUserStateSnapshot } from './user-state';
 
 export async function handleAccountDelete(
   _request: Request,
@@ -29,6 +30,11 @@ export async function handleAccountDelete(
       'Too many account-deletion attempts. Try again in a minute.',
     );
   }
+
+  // Cloud Sync v1 (v3 Phase 1w) — wipe the state snapshot first.
+  // user_state_snapshots has no FK on users.id (kept independent so
+  // schema can evolve without coupling), so the cascade is manual.
+  await deleteUserStateSnapshot(env, session.userId);
 
   // DELETE cascades to leaderboard_snapshots via FK. No need to clean
   // up other tables manually.

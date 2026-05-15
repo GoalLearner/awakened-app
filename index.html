@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=258">
+  <link rel="stylesheet" href="styles.css?v=259">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1666,12 +1666,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=7"></script>
+  <script src="auth.js?v=8"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=2"></script>
-  <script src="app.js?v=346"></script>
+  <script src="app.js?v=347"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -1894,6 +1894,22 @@
           <span class="account-action-label">Restore from backup</span>
         </button>
         <input id="settings-account-restore-file" type="file" accept=".json,application/json" style="display:none;">
+
+        <!-- Cloud Backup (v3 Phase 1w) — server-side backup of full
+             local state. Distinct from the JSON file backup above.
+             Status line shows last sync timestamps. -->
+        <div class="account-cloud-section" id="settings-cloud-section">
+          <div class="account-cloud-label">CLOUD BACKUP</div>
+          <div class="account-cloud-status" id="settings-cloud-status">Checking…</div>
+          <button id="settings-cloud-backup-now" type="button" class="account-action-btn account-action-btn--secondary">
+            <span class="account-action-icon" aria-hidden="true">☁</span>
+            <span class="account-action-label">Back up now</span>
+          </button>
+          <button id="settings-cloud-restore-now" type="button" class="account-action-btn account-action-btn--secondary">
+            <span class="account-action-icon" aria-hidden="true">⟳</span>
+            <span class="account-action-label">Restore from cloud</span>
+          </button>
+        </div>
 
         <!-- Sign out — secondary, full-width -->
         <button id="settings-account-signout" type="button" class="account-action-btn account-action-btn--secondary">

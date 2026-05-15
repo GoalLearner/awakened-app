@@ -406,6 +406,7 @@
   }
   function saveBosses(state) {
     try { localStorage.setItem('hb_bosses', JSON.stringify(state)); } catch (_) {}
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('bosses'); } catch (_) {}
   }
   // Returns the per-boss state, defaulting to the initial shape if
   // unset. Always returns a valid object — callers don't need to
@@ -1238,6 +1239,7 @@
   }
   function persistSouls() {
     try { localStorage.setItem(SOULS_STORAGE_KEY, JSON.stringify(_souls)); } catch (_) {}
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('souls'); } catch (_) {}
   }
   function getSoulsBalance() {
     if (!_souls) loadSouls();
@@ -1630,6 +1632,7 @@
     if (!_hunterBuild) return;
     _hunterBuild.updated_at = new Date().toISOString();
     try { localStorage.setItem(HUNTER_BUILD_STORAGE_KEY, JSON.stringify(_hunterBuild)); } catch (_) {}
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('hunter_build'); } catch (_) {}
   }
   function getHunterBuild() {
     if (!_hunterBuild) loadHunterBuild();
@@ -1947,6 +1950,7 @@
   }
   function persistInventory() {
     try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(_inventory)); } catch (_) {}
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('inventory'); } catch (_) {}
   }
   function getInventory() {
     if (!_inventory) loadInventory();
@@ -6242,6 +6246,10 @@
       localStorage.setItem('hb_origin_beginning',  JSON.stringify(originBeginning));
       localStorage.setItem('hb_origin_awakening',  JSON.stringify(originAwakening));
     } catch (_) {}
+    // v3 Phase 1w — Cloud Sync. Mark dirty so the debounced backup
+    // path picks this up. No-op if CloudSync isn't initialized yet
+    // (early calls during boot) or if the user isn't signed in.
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('save'); } catch (_) {}
   }
 
   // ── RANK HELPERS ──────────────────────────────────────────
@@ -17297,6 +17305,47 @@
       restoreBtn.addEventListener('click', openRestoreModal);
       restoreFile.addEventListener('change', onRestoreFilePicked);
     }
+
+    // v3 Phase 1w — Cloud Backup wiring
+    const cloudStatusEl  = document.getElementById('settings-cloud-status');
+    const cloudBackupBtn = document.getElementById('settings-cloud-backup-now');
+    const cloudRestoreBtn= document.getElementById('settings-cloud-restore-now');
+    function refreshCloudStatus() {
+      if (!cloudStatusEl) return;
+      if (typeof CloudSync === 'undefined' || !CloudSync.isAvailable()) {
+        cloudStatusEl.innerHTML = 'Sign in to enable cloud backup.';
+        if (cloudBackupBtn)  cloudBackupBtn.disabled  = true;
+        if (cloudRestoreBtn) cloudRestoreBtn.disabled = true;
+        return;
+      }
+      const lastBackup  = CloudSync.getLastBackupAt();
+      const lastRestore = CloudSync.getLastRestoreAt();
+      const fmt = (iso) => iso ? new Date(iso).toLocaleString() : 'Never';
+      cloudStatusEl.innerHTML =
+        'Last backup · <b>' + esc(fmt(lastBackup)) + '</b><br>' +
+        'Last restore · <b>' + esc(fmt(lastRestore)) + '</b>';
+      if (cloudBackupBtn)  cloudBackupBtn.disabled  = false;
+      if (cloudRestoreBtn) cloudRestoreBtn.disabled = false;
+    }
+    refreshCloudStatus();
+    if (cloudBackupBtn) {
+      cloudBackupBtn.addEventListener('click', async () => {
+        cloudBackupBtn.disabled = true;
+        cloudStatusEl.innerHTML = 'Backing up…';
+        const res = await CloudSync.pushNow('manual');
+        if (res && res.ok) {
+          try { showHabitToast('Cloud backup complete'); } catch (_) {}
+        } else {
+          try { showHabitToast('Backup failed: ' + ((res && res.detail) || (res && res.code) || 'unknown')); } catch (_) {}
+        }
+        refreshCloudStatus();
+      });
+    }
+    if (cloudRestoreBtn) {
+      cloudRestoreBtn.addEventListener('click', () => {
+        CloudSync.restoreFromCloudWithConfirm();
+      });
+    }
   }
 
   // Formats YYYY-MM-DD → "May 12, 2026". Returns null on bad input
@@ -20608,6 +20657,404 @@
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // Cloud Sync v1 (v3 Phase 1w)
+  //
+  // Backup-and-restore layer for the full client localStorage state.
+  // LocalStorage remains the runtime source of truth; this module is
+  // a snapshot uploader + restorer keyed off the signed-in user.
+  //
+  // Lifecycle:
+  //   - init() calls CloudSync.maybeSyncOnInit() after auth + state load.
+  //     Fresh install + cloud backup exists → prompt restore.
+  //     Existing local state → kick off a debounced push.
+  //   - Persist sites (save / saveBosses / persistInventory /
+  //     persistSouls / saveHunterBuild) call markLocalStateChanged.
+  //     Cloud upload is debounced 30s after the last change.
+  //   - visibilitychange → hidden → one final flush if dirty.
+  //
+  // Conflict policy (v1, deliberately simple):
+  //   1. Fresh install (no meaningful local state) + cloud exists →
+  //      auto-prompt restore.
+  //   2. Local state exists + no cloud → upload local.
+  //   3. Local state exists + cloud exists →  do not silently
+  //      overwrite local. User can manually restore from Settings.
+  //   4. Network fail → keep local, retry next tick.
+  //
+  // Sensitive data: JWT / Apple identity tokens / hb_user are NEVER
+  // included in the snapshot. The allowlist below is explicit.
+  // ═══════════════════════════════════════════════════════════════
+  const CloudSync = (() => {
+    const CLOUD_STATE_VERSION = 1;
+    const DEBOUNCE_MS         = 30 * 1000; // 30s after last local change
+    const LS_KEY_LAST_BACKUP  = 'hb_cloud_last_backup_at';
+    const LS_KEY_LAST_RESTORE = 'hb_cloud_last_restore_at';
+    const LS_KEY_LAST_CHANGE  = 'hb_cloud_last_local_change_at';
+    const LS_KEY_DEVICE_ID    = 'hb_cloud_device_id';
+
+    // Allowlist of localStorage keys that get included in the cloud
+    // snapshot. Add new keys as new persistent state surfaces ship.
+    // CRITICAL: do NOT include hb_user / hb_pending_apple_token /
+    // anything carrying JWTs or Apple identity tokens.
+    const SNAPSHOT_KEYS = [
+      // Core progression
+      'hb_habits',
+      'hb_completions',
+      'hb_streaks',
+      'hb_points',
+      'hb_achievements',
+      'hb_ach_dates',
+      'hb_stats',
+      'hb_stat_bonuses',
+      'hb_perfect_streak',
+      'hb_ps_awarded',
+      'hb_compound',
+      'hb_compound_awarded',
+      'hb_prs',
+      'hb_shields',
+      'hb_shield_claimed',
+      'hb_shield_notices',
+      'hb_honest_days',
+      'hb_pending_comeback',
+      'hb_last_active',
+      'hb_total_comebacks',
+      'hb_streak_breaks',
+      // Notes (legacy, preserved)
+      'hb_notes',
+      // Identity / claim
+      'hb_name',
+      'hb_hunter_name_claimed',
+      // Origin story
+      'hb_origin_beginning',
+      'hb_origin_awakening',
+      'hb_origin_v3_migrated',
+      'hb_origin_v4_migrated',
+      'hb_awakened_once',
+      'hb_class_v2_migrated',
+      // Onboarding / welcome
+      'hb_welcomed',
+      'hb_onboarding_seen_v2',
+      'hb_path',
+      'hb_class',
+      // Auto-verify metadata
+      'hb_completions_auto',
+      'hb_av_unchecked_dates',
+      'hb_walk_unchecked_dates',
+      // Bosses + dungeon
+      'hb_bosses',
+      'hb_bosses_engagement_migrated',
+      'hb_drank_id_rename_v1',
+      // Inventory + drops
+      'hb_inventory',
+      'hb_pokedex_collapsed',
+      // Souls
+      'hb_souls',
+      // Hunter Build
+      'hb_hunter_build',
+      'hb_equipment_build_migrated_v1',
+      'hb_pvp_equipped',
+      // Settings / preferences (notification + reminders)
+      'hb_reminders',
+      'hb_notif_daily_digest_time',
+      'hb_notif_perm_requested',
+      'hb_notif_disabled',
+      'hb_notif_paused_until',
+      'hb_notif_daily_limit',
+      'hb_notif_quiet_enabled',
+      'hb_notif_quiet_start',
+      'hb_notif_quiet_end',
+      // HealthKit settings (not auth tokens — just user toggles)
+      'hb_healthkit_status',
+      'hb_healthkit_prompted',
+      'hb_healthkit_sleep_requested',
+      'hb_healthkit_authversion',
+      'hb_healthkit_disabled',
+      'hb_bedtime_window_fix_v1',
+      'hb_strength_readonly_migration_v1',
+      // Misc UI / app-state
+      'hb_sound',
+      'hb_whats_new_seen',
+      'hb_daily_insight_last_shown',
+      'hb_bodyweight',
+      'hb_cardio_renamed',
+      // Cloud-sync metadata itself (so the destination device knows
+      // when the snapshot was authored / when it last synced)
+      LS_KEY_LAST_BACKUP,
+      LS_KEY_LAST_RESTORE,
+      LS_KEY_LAST_CHANGE,
+      LS_KEY_DEVICE_ID,
+    ];
+
+    // ── State ──
+    let _debounceTimer = null;
+    let _inFlight = false;
+    let _initialized = false;
+
+    function isAvailable() {
+      try {
+        if (typeof window === 'undefined' || !window.Auth) return false;
+        const u = window.Auth.getCurrentUser();
+        return !!(u && u.jwt);
+      } catch (_) { return false; }
+    }
+
+    function getDeviceId() {
+      let id = '';
+      try { id = localStorage.getItem(LS_KEY_DEVICE_ID) || ''; } catch (_) {}
+      if (!id) {
+        // Tiny random ID — diagnostic only. Not used for auth.
+        id = 'dev_' + Math.random().toString(36).slice(2, 12);
+        try { localStorage.setItem(LS_KEY_DEVICE_ID, id); } catch (_) {}
+      }
+      return id;
+    }
+
+    function collectState() {
+      const keys = {};
+      SNAPSHOT_KEYS.forEach(k => {
+        try {
+          const v = localStorage.getItem(k);
+          if (v !== null) keys[k] = v;
+        } catch (_) {}
+      });
+      return {
+        version:    CLOUD_STATE_VERSION,
+        appVersion: (typeof APP_VERSION !== 'undefined') ? APP_VERSION : null,
+        createdAt:  new Date().toISOString(),
+        localDate:  (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : null,
+        keys:       keys,
+      };
+    }
+
+    // Restore writes the snapshot's keys to localStorage and reloads.
+    // Caller must confirm with the user before invoking — this WILL
+    // overwrite local state for any key in the allowlist that the
+    // snapshot contains.
+    function restoreState(snapshot) {
+      if (!snapshot || !snapshot.keys || typeof snapshot.keys !== 'object') {
+        return { ok: false, code: 'INVALID_SNAPSHOT' };
+      }
+      try {
+        SNAPSHOT_KEYS.forEach(k => {
+          if (Object.prototype.hasOwnProperty.call(snapshot.keys, k)) {
+            const v = snapshot.keys[k];
+            if (typeof v === 'string') {
+              localStorage.setItem(k, v);
+            } else if (v === null) {
+              localStorage.removeItem(k);
+            }
+          }
+        });
+        localStorage.setItem(LS_KEY_LAST_RESTORE, new Date().toISOString());
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, code: 'WRITE_FAILED', detail: String(e && e.message) };
+      }
+    }
+
+    // Heuristic: does the user have meaningful local progress?
+    // Used to gate the auto-restore prompt — we only prompt to
+    // restore if local looks like a fresh install / empty slate.
+    function hasMeaningfulLocalState() {
+      try {
+        const habitsRaw = localStorage.getItem('hb_habits');
+        if (habitsRaw) {
+          const arr = JSON.parse(habitsRaw);
+          if (Array.isArray(arr) && arr.length > 0) return true;
+        }
+        const pts = parseInt(localStorage.getItem('hb_points') || '0', 10);
+        if (pts > 0) return true;
+        const compl = localStorage.getItem('hb_completions');
+        if (compl) {
+          const obj = JSON.parse(compl);
+          if (obj && Object.keys(obj).length > 0) return true;
+        }
+        const bosses = localStorage.getItem('hb_bosses');
+        if (bosses) {
+          const b = JSON.parse(bosses);
+          if (b && typeof b === 'object') {
+            for (const k in b) {
+              if ((b[k].kill_count || 0) > 0) return true;
+            }
+          }
+        }
+        const inv = localStorage.getItem('hb_inventory');
+        if (inv) {
+          const i = JSON.parse(inv);
+          if (i && i.cards) {
+            for (const k in i.cards) {
+              if (i.cards[k].discovered) return true;
+            }
+          }
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    function markLocalStateChanged(reason) {
+      if (!_initialized) return;
+      try { localStorage.setItem(LS_KEY_LAST_CHANGE, new Date().toISOString()); } catch (_) {}
+      scheduleDebouncedPush(reason || 'unknown');
+    }
+
+    function scheduleDebouncedPush(reason) {
+      if (!isAvailable()) return;
+      if (_debounceTimer) clearTimeout(_debounceTimer);
+      _debounceTimer = setTimeout(() => {
+        _debounceTimer = null;
+        pushNow(reason);
+      }, DEBOUNCE_MS);
+    }
+
+    async function pushNow(reason) {
+      if (!isAvailable()) return { ok: false, code: 'NOT_SIGNED_IN' };
+      if (_inFlight) return { ok: false, code: 'IN_FLIGHT' };
+      _inFlight = true;
+      try {
+        const snap = collectState();
+        const payload = {
+          state_version:     snap.version,
+          app_version:       snap.appVersion,
+          client_updated_at: snap.createdAt,
+          device_id:         getDeviceId(),
+          state:             snap,
+        };
+        const res = await window.Auth.uploadCloudState(payload);
+        if (res && res.ok) {
+          try { localStorage.setItem(LS_KEY_LAST_BACKUP, new Date().toISOString()); } catch (_) {}
+          console.log('[CloudSync] push ok (' + (reason || '?') + '):',
+                      res.bytes ? res.bytes + ' bytes' : '');
+        } else {
+          console.warn('[CloudSync] push failed:', res && res.code, res && res.detail);
+        }
+        return res;
+      } finally {
+        _inFlight = false;
+      }
+    }
+
+    async function pullNow() {
+      if (!isAvailable()) return { ok: false, code: 'NOT_SIGNED_IN' };
+      return await window.Auth.fetchCloudState();
+    }
+
+    // ── First-run sync orchestration ──
+    // Called from init() once auth + load() have completed.
+    async function maybeSyncOnInit() {
+      _initialized = true;
+      if (!isAvailable()) return;
+      const haveLocal = hasMeaningfulLocalState();
+      let cloud;
+      try {
+        cloud = await pullNow();
+      } catch (_) { return; }
+      if (!cloud || !cloud.ok) return;
+      if (cloud.exists && !haveLocal) {
+        // Fresh install (or signed-out-and-back-in on a wiped device)
+        // + cloud backup exists. Prompt the user to restore.
+        showRestorePrompt(cloud);
+        return;
+      }
+      if (cloud.exists && haveLocal) {
+        // Both present. Do NOT auto-overwrite. User can restore from
+        // Settings if they really want to (v2 will add smarter merge).
+        // Schedule an upload to keep cloud fresh with local changes.
+        scheduleDebouncedPush('init_local_exists');
+        return;
+      }
+      // No cloud, but we have local → upload baseline.
+      if (haveLocal) {
+        scheduleDebouncedPush('init_baseline_upload');
+      }
+    }
+
+    // ── Restore prompt ──
+    // Lightweight inline confirm — no full modal in v1. If the user
+    // explicitly wants to restore from Settings later, the Settings
+    // button calls restoreFromCloudWithConfirm() which uses window.confirm.
+    function showRestorePrompt(cloud) {
+      try {
+        const fmt = cloud.client_updated_at
+          ? new Date(cloud.client_updated_at).toLocaleString()
+          : 'previously';
+        const ok = window.confirm(
+          'Restore your hunter?\n\n' +
+          'A cloud backup was found for this Apple account (saved ' + fmt + ').\n' +
+          'Restore your habits, stats, bosses, relics, and progress to this device?'
+        );
+        if (ok && cloud.state) {
+          const r = restoreState(cloud.state);
+          if (r.ok) {
+            window.location.reload();
+          }
+        }
+      } catch (_) {}
+    }
+
+    async function restoreFromCloudWithConfirm() {
+      if (!isAvailable()) return { ok: false, code: 'NOT_SIGNED_IN' };
+      const cloud = await pullNow();
+      if (!cloud || !cloud.ok || !cloud.exists) {
+        try { window.alert('No cloud backup found for this account.'); } catch (_) {}
+        return { ok: false, code: 'NO_BACKUP' };
+      }
+      const fmt = cloud.client_updated_at
+        ? new Date(cloud.client_updated_at).toLocaleString()
+        : 'previously';
+      const ok = window.confirm(
+        'Replace this device\'s state with the cloud backup from ' + fmt + '?\n\n' +
+        'Your current local progress will be overwritten.'
+      );
+      if (!ok) return { ok: false, code: 'CANCELLED' };
+      const r = restoreState(cloud.state);
+      if (r.ok) window.location.reload();
+      return r;
+    }
+
+    // ── Background flush on hide ──
+    function setupVisibilityFlush() {
+      try {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            // Force-flush any pending debounce.
+            if (_debounceTimer) {
+              clearTimeout(_debounceTimer);
+              _debounceTimer = null;
+              pushNow('visibility_hidden');
+            }
+          }
+        });
+      } catch (_) {}
+    }
+
+    // ── Last-backup display helper (Settings) ──
+    function getLastBackupAt() {
+      try { return localStorage.getItem(LS_KEY_LAST_BACKUP); } catch (_) { return null; }
+    }
+    function getLastRestoreAt() {
+      try { return localStorage.getItem(LS_KEY_LAST_RESTORE); } catch (_) { return null; }
+    }
+
+    return {
+      isAvailable,
+      collectState,
+      restoreState,
+      markLocalStateChanged,
+      scheduleDebouncedPush,
+      pushNow,
+      pullNow,
+      maybeSyncOnInit,
+      setupVisibilityFlush,
+      restoreFromCloudWithConfirm,
+      getLastBackupAt,
+      getLastRestoreAt,
+      hasMeaningfulLocalState,
+      SNAPSHOT_KEYS,
+      CLOUD_STATE_VERSION,
+    };
+  })();
+  try { window.CloudSync = CloudSync; } catch (_) {}
+
   function init() {
     load();
     // v2.0.1 rank-scaling overhaul — fraction-based XP migration runs
@@ -21035,6 +21482,12 @@
       // after main app mounts. Debounced via hb_lb_last_submit so a
       // hot relaunch within 5 min stays quiet.
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
+      // fresh installs with a cloud backup; otherwise schedules a
+      // baseline upload). Visibility-hidden flush keeps cloud
+      // current when the user backgrounds the app.
+      try { CloudSync.setupVisibilityFlush(); } catch (_) {}
+      try { CloudSync.maybeSyncOnInit(); } catch (_) {}
     }, 1200);
 
     // v3 Phase 1i — Splash hide + educational onboarding gate.
