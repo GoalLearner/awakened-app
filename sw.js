@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.228';
+const CACHE_VERSION = 'v5.229';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -144,6 +144,24 @@ const PRECACHE_ASSETS = [
   '/assets/items/steady_steps.png',
   '/assets/items/pups_hood.png',
   '/assets/items/trackers_wrap.png',
+  // v3 Phase 1v.3 — D-rank drops for the three new daily bosses
+  // (Iron Warden, Glass Strider, Dream Tyrant). Filenames use
+  // hyphens to match the production art deliveries.
+  '/assets/items/iron-grip-wraps.png',
+  '/assets/items/wardens-chain-belt.png',
+  '/assets/items/rusted-training-blade.png',
+  '/assets/items/wardens-plate.png',
+  '/assets/items/titan-oathblade.png',
+  '/assets/items/striders-laces.png',
+  '/assets/items/glassstep-band.png',
+  '/assets/items/shardwalker-wrap.png',
+  '/assets/items/glass-path-boots.png',
+  '/assets/items/horizon-step-ring.png',
+  '/assets/items/quiet-thread.png',
+  '/assets/items/moonlit-lens.png',
+  '/assets/items/hushed-night-cloak.png',
+  '/assets/items/tyrants-sleep-mask.png',
+  '/assets/items/crown-of-deep-rest.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)
