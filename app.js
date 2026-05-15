@@ -20776,14 +20776,19 @@
       'hb_notif_quiet_enabled',
       'hb_notif_quiet_start',
       'hb_notif_quiet_end',
-      // HealthKit settings (not auth tokens — just user toggles)
-      'hb_healthkit_status',
-      'hb_healthkit_prompted',
-      'hb_healthkit_sleep_requested',
-      'hb_healthkit_authversion',
+      // HealthKit USER PREFERENCES only. Status flags are DEVICE
+      // state and must NOT sync across reinstalls (iOS revokes
+      // HealthKit grants on app delete, but the cache flags would
+      // tell us we'd already prompted → suppressing the re-prompt →
+      // app stuck with `status: granted` flag but no actual iOS
+      // permission. v3 Phase 1w.2 bugfix: removed `hb_healthkit_status`,
+      // `hb_healthkit_prompted`, `hb_healthkit_sleep_requested`, and
+      // `hb_healthkit_authversion` from this allowlist. They re-derive
+      // from iOS on fresh install via the natural pre-prompt path.
       'hb_healthkit_disabled',
       'hb_bedtime_window_fix_v1',
       'hb_strength_readonly_migration_v1',
+      'hb_hk_status_reset_v1',
       // Leaderboard accumulator + cache (v3 Phase 1w.1 fix — these
       // were missed in v1.0 and a restore caused server-side current
       // values to overwrite to 0 because the local snapshot was empty
@@ -21309,6 +21314,33 @@
         }
       } catch (_) {}
       localStorage.setItem('hb_strength_readonly_migration_v1', '1');
+    }
+    // ── v3 Phase 1w.2 — HealthKit status cache reset for restored installs ──
+    // Cloud Sync v1.0 mistakenly included device-state flags
+    // (hb_healthkit_status / hb_healthkit_prompted / hb_healthkit_sleep_requested
+    // / hb_healthkit_authversion) in SNAPSHOT_KEYS. After a fresh-install
+    // restore, these flags reported "already granted, already prompted"
+    // even though iOS had revoked the actual permission grant on app
+    // delete. App stayed stuck — no HealthKit data, no re-prompt.
+    //
+    // One-shot recovery: if a cloud restore landed AND HealthKit thinks
+    // it's granted but iOS app delete plausibly reset things, clear the
+    // status cache so the pre-prompt re-fires. Idempotent via the flag.
+    if (!localStorage.getItem('hb_hk_status_reset_v1')) {
+      try {
+        const restored = localStorage.getItem('hb_cloud_last_restore_at');
+        if (restored) {
+          // The restore happened; iOS-level permission grant did NOT
+          // come with it. Clear the local cache so the pre-prompt path
+          // can re-engage and iOS can re-establish the grant.
+          localStorage.removeItem('hb_healthkit_status');
+          localStorage.removeItem('hb_healthkit_prompted');
+          localStorage.removeItem('hb_healthkit_sleep_requested');
+          localStorage.removeItem('hb_healthkit_authversion');
+          console.log('[Migration] Cleared HealthKit status cache post-cloud-restore');
+        }
+      } catch (_) {}
+      localStorage.setItem('hb_hk_status_reset_v1', '1');
     }
     // ── v2.0 habits-order migration ──────────────────────────
     // Apply the auto-verify-first invariant once on cold launch.
