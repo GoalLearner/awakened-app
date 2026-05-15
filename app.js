@@ -3694,6 +3694,19 @@
         ['sleep_streak',   snap.current_sleep_streak],
         ['bedtime_streak', snap.current_bedtime_streak],
       ];
+      // v3 Phase 1w.1 defensive guard — refuse to submit if ALL three
+      // metrics are zero. A wipe-zero submit overwrites the backend's
+      // current_value (preserved best_value). Genuinely-zero users
+      // lose nothing by skipping; they'll submit naturally on the
+      // first non-zero render (autoVerifyWalk → lbRecordStepsToday).
+      // Bug landed because Cloud Sync v1 missed hb_leaderboard in the
+      // allowlist; the keys are added in v1w.1 but this guard remains
+      // as defense-in-depth for any future state-restore path.
+      const allZero = metrics.every(([, v]) => !v || v === 0);
+      if (allZero) {
+        try { console.log('[Leaderboard] submit skipped — all metrics zero'); } catch (_) {}
+        return;
+      }
       await Promise.all(metrics.map(([m, v]) =>
         window.Auth.submitLeaderboardSnapshot(m, lbSanitizeValue(m, v))
           .catch(() => null) // never let a single failure poison the others
@@ -20771,8 +20784,18 @@
       'hb_healthkit_disabled',
       'hb_bedtime_window_fix_v1',
       'hb_strength_readonly_migration_v1',
+      // Leaderboard accumulator + cache (v3 Phase 1w.1 fix — these
+      // were missed in v1.0 and a restore caused server-side current
+      // values to overwrite to 0 because the local snapshot was empty
+      // at lbSubmitAllMetricsDebounced time).
+      'hb_leaderboard',
+      'hb_lb_last_submit',
+      'hb_lb_cache_step_total',
+      'hb_lb_cache_sleep_streak',
+      'hb_lb_cache_bedtime_streak',
       // Misc UI / app-state
       'hb_sound',
+      'hb_sw_manual_update',
       'hb_whats_new_seen',
       'hb_daily_insight_last_shown',
       'hb_bodyweight',

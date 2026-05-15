@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "jose": "^5.9.6"
+    "jose": "^5.10.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240909.0",
