@@ -115,7 +115,7 @@ hb_pending_apple_token — short-lived staging between steps 1 and 2
 
 ## Backend at a glance
 
-Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: `https://awakened-backend.richmondcampano93.workers.dev`. Three feature surfaces:
+Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: `https://awakened-backend.richmondcampano93.workers.dev`. Four feature surfaces:
 
 **1. Auth (v2.1.0 Phase B)**
 - `POST /v1/auth/verify` — exchanges Apple identity token + alias for a session JWT (HS256, 90-day TTL).
@@ -135,6 +135,20 @@ Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: 
 - Client module: `CloudSync` in `app.js`. SNAPSHOT_KEYS allowlist (~55 keys) covers all persistent user state. Sensitive keys (JWT, Apple identity token, `hb_user`, `hb_pending_apple_token`) are explicitly excluded.
 - Conflict policy v1: fresh install + cloud exists → confirm-restore prompt; local exists + no cloud → upload baseline; both exist → preserve local, schedule debounced push to keep cloud current. No field-level merge in v1.
 - Two rate-limit bindings: `RL_USER_STATE_GET` (12/min), `RL_USER_STATE_POST` (4/min).
+
+**4. Friends + Discipline Duels foundation (v3 Phase 1x)**
+- `GET /v1/friends` — lists `{ friends, incoming, outgoing }` from the caller's perspective.
+- `POST /v1/friends/request` body `{ alias }` — sends a pending request. Inverse-pending (B→A pending while A sends A→B) AUTO-ACCEPTS the existing row instead of creating a duplicate inverse.
+- `POST /v1/friends/:id/accept | /decline | /remove` — recipient-only accept/decline; either party can remove an accepted friendship.
+- `GET /v1/duels` — `{ incoming, outgoing, active, recent }` (recent = last ~20 completed/declined/expired/cancelled).
+- `POST /v1/duels` body `{ opponent_alias, duration_days?, stake_souls? }` — both users must be accepted friends; rejects self-duels + pre-existing pending/active duel between the pair.
+- `POST /v1/duels/:id/accept | /decline` — opponent only. Accept sets `starts_at = now`, `ends_at = now + duration_days`.
+- `GET /v1/duels/:id` — full record + alias map + `time_remaining_ms` when active. Participants only.
+- D1 tables: `friends` (id, requester_user_id, recipient_user_id, status, created_at, updated_at; UNIQUE(requester,recipient)) and `duels` (id, challenger_user_id, opponent_user_id, status, stake_souls, reward_souls, burn_souls, duration_days, starts_at, ends_at, winner_user_id, six per-side score columns, timestamps). Migration: `0003_friends_and_duels.sql`.
+- **Souls fields (`stake_souls`/`reward_souls`/`burn_souls`) are METADATA ONLY in v1.** No backend spend/award logic runs against them. localStorage souls remain client-side authoritative until scoring lands in a later pass.
+- Four rate-limit bindings: `RL_FRIENDS_READ` (30/min), `RL_FRIENDS_WRITE` (10/min), `RL_DUELS_READ` (30/min), `RL_DUELS_WRITE` (6/min) via wrangler `namespace_id`s 1007–1010.
+- Auth: every endpoint requires JWT; current user is always derived from `verifySessionJwt`, never from request body. Aliases looked up case- and space-insensitive (`LOWER(REPLACE(alias, ' ', '')) = ?`) to match the client display normalizer.
+- **Deferred to a later pass:** scoring (server-side `habit_events` log preferred long-term), APNs / push notifications, real-time updates, ghost battles, matchmaking, server-side combat resolution. v1 is coordination only.
 
 **Auth + rate-limit middleware** — every authenticated route in `src/index.ts` parses `Bearer <jwt>` from the Authorization header, calls `verifySessionJwt(token, env)`, and passes the resulting `{ userId, alias }` to the handler. All write endpoints have per-user rate-limit bindings via Cloudflare's Rate Limiting API.
 
@@ -1153,6 +1167,65 @@ Leaderboard.getSnapshot()
 
 ---
 
+## Discipline Duels foundation (v3 Phase 1x)
+
+3-Day Discipline Duel — 1v1 coordination layer between friends. **v1 scope: friends + duel agreement only. No scoring, no APNs, no real-time, no ghost battles, no matchmaking, no server-side combat resolution.** "Build the rails before the train." Two hunters being able to connect + agree to compete is the entire v1 win.
+
+### Product rules (v1)
+
+- **Duel type:** 3-Day Discipline Duel (configurable `duration_days` 1–14; default 3).
+- **Players:** 1v1 only.
+- **Who can duel:** accepted friends only (server rejects non-friends with `NOT_FRIENDS`).
+- **Duration:** 3 calendar days after both players accept. `starts_at` set when the opponent accepts; `ends_at = starts_at + duration_days`.
+- **Stake:** 25 souls each (metadata only this pass — see below).
+- **Reward (future):** 40 souls to winner; 10 souls burned as sink.
+- **Win condition (future):** most sealed objectives during the duel window. Tie breakers: most HealthKit/system-verified objectives → most XP earned → draw.
+
+### Backend tables
+
+- `friends` — `id`, `requester_user_id`, `recipient_user_id`, `status` (pending/accepted/declined/blocked), `created_at`, `updated_at`. `UNIQUE(requester, recipient)`.
+- `duels` — `id`, `challenger_user_id`, `opponent_user_id`, `status` (pending/active/declined/cancelled/completed/expired), `stake_souls`/`reward_souls`/`burn_souls`, `duration_days`, `starts_at`, `ends_at`, `winner_user_id`, six per-side score columns (challenger/opponent × total/verified/xp), timestamps.
+
+Migration: `backend/migrations/0003_friends_and_duels.sql`. **Never edit after applying** — same migration discipline as 0001/0002.
+
+### Endpoints (all auth-required, user_id from JWT only)
+
+- `GET /v1/friends` — `{ ok, friends, incoming, outgoing }`. Each entry: `{ id, user_id, alias, status, direction, created_at, updated_at }`.
+- `POST /v1/friends/request` — body `{ alias }`. Looks up target via case- + space-insensitive normalization (`LOWER(REPLACE(alias, ' ', ''))`). Self-friend rejected. **Inverse-pending → auto-accept** (decision rule below).
+- `POST /v1/friends/:id/accept` — recipient only. pending → accepted.
+- `POST /v1/friends/:id/decline` — recipient only.
+- `POST /v1/friends/:id/remove` — either accepted friend.
+- `GET /v1/duels` — `{ ok, incoming, outgoing, active, recent }`. `recent` = last 20 completed/declined/expired/cancelled.
+- `POST /v1/duels` — body `{ opponent_alias, duration_days?, stake_souls? }`. Both must be accepted friends. Rejects pre-existing pending/active duel between the pair.
+- `POST /v1/duels/:id/accept` — opponent only. Sets `starts_at`/`ends_at`. status → 'active'.
+- `POST /v1/duels/:id/decline` — opponent only.
+- `GET /v1/duels/:id` — participants only. Returns full record + alias map + `time_remaining_ms` when active.
+
+### Inverse-pending → auto-accept
+
+If A has a pending request to B and B tries to send one to A, B's attempt does NOT create a duplicate inverse row. Instead the original A→B row is flipped to `accepted` and returned with `autoAccepted: true`. The friendship preserves the original requester. Avoids the awkward "you both have to wait for each other" deadlock and gives an instant social win on the second move.
+
+### Souls are metadata only in v1
+
+`stake_souls` / `reward_souls` / `burn_souls` live on the `duels` row purely for display in the UI. **No backend logic spends or awards souls.** The localStorage `hb_souls` accumulator (boss-kill rewards + daily login + boss-engage costs) remains client-side authoritative. When scoring lands in a later pass, the server will own the win-state computation — that's the natural moment to make souls server-authoritative.
+
+### Frontend wiring
+
+- **`auth.js` helpers** (v9): `Auth.fetchFriends`, `Auth.sendFriendRequest(alias)`, `Auth.acceptFriendRequest(id)`, `Auth.declineFriendRequest(id)`, `Auth.removeFriend(id)`, `Auth.fetchDuels`, `Auth.createDuel(alias, { duration_days?, stake_souls? })`, `Auth.acceptDuel(id)`, `Auth.declineDuel(id)`, `Auth.fetchDuel(id)`. All share the `{ ok, code, detail }`-on-failure envelope via an internal `_authedFetch` helper.
+- **Social tab UI** (`#social-panel`): three stacked sections in fixed order — Leaderboards (existing, untouched) → Friends → Duels. No nested navigation. Each backend fetch wrapped in try/catch; failures render an inline `.social-error` chip rather than breaking the tab. Stub users (NOT_SIGNED_IN / STUB_USER / LOCAL_DEV_SKIP) get a "Sign in" empty state.
+- **Duel detail overlay** (`#duel-detail-overlay`): reuses the `.bfs-*` boss-fullscreen pattern with its own `body.ddo-locked` scroll lock. Shows opponent (display-normalized alias), status pill, schedule (starts/ends/time-remaining), stake/reward/duration metadata, "scoring activates in the next pass" footnote, and Accept/Decline buttons for pending duels in the opponent role. Closes on Back button, ESC, or any tab switch (wired into `switchTab`'s top-level closer).
+
+### Deferred to a later pass
+
+- **Scoring.** v2 will likely introduce a server-side `habit_events` log (one row per habit completion with `user_id`, `habit_id`, `completed_at`, `verified` boolean, `xp_value`). The duel-resolution endpoint then computes scores by joining `habit_events` against the duel's `starts_at`/`ends_at` window. Client-state-as-truth scoring (localStorage habit completions submitted by the client at resolution time) is the obvious shortcut but isn't trustworthy — see "do not treat localStorage stats as server-authoritative for PvP outcomes" in Common pitfalls.
+- **APNs / push notifications.** No notification fires today when a friend request, challenge, or duel-completion happens. Users discover state changes by opening the Social tab. v2 will add APNs once Cloudflare's APNs flow ships.
+- **Real-time updates.** No WebSocket / Server-Sent Events layer. Each Social-tab activation re-fetches both endpoints. Acceptable at v1 scale.
+- **Ghost battles.** v3+. A "simulated opponent" duel for users without friends. Out of scope now.
+- **Matchmaking.** Friends-only is the v1 constraint. Open queue / skill-matching is a much later concern.
+- **Server-side combat / animations.** No combat resolution logic. The duel modal is informational.
+
+---
+
 ## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
 
 Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Relic Archive** (renamed from "Pokédex" in v2.2.0 — see "Relic Archive" section). Single source of truth for design: `DROPS.md` (v1.8 code state — file header still reads v1.4) + `EQUIPMENT.md` (v1.3).
@@ -2105,7 +2178,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=259`, `app.js?v=350`, `auth.js?v=8`, `simulated-leaderboard.js?v=4`, `sw.js v5.235`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=260`, `app.js?v=351`, `auth.js?v=9`, `simulated-leaderboard.js?v=4`, `sw.js v5.236`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2241,6 +2314,8 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Trusting that a backend alias is web-friendly.** The leaderboard normalizes display (`lowercase`, strip spaces, `richie` → `Richie` allowlist). Raw stored aliases CAN have capitals + spaces (e.g., `Big Bear`). isMe matching uses the raw API field. If you need a "clean" alias for display, call `lbNormalizeAliasForDisplay(raw)`.
 - **Skipping `Drops.simulateDrops(bossId, N)` for balance work.** Console-only dry-run that doesn't mutate state. Faster than waiting for real rolls. Useful for sanity-checking new cadences or pity thresholds.
 - **Auto-update SW edge cases.** If a user is stuck on a stale SW version (e.g., one shipped before the v2.2.0 auto-update logic), the auto-update logic isn't running yet on their device — they need ONE manual unregister + reload to escape. After that, all future updates land silently. There's no shortcut around the bootstrapping cost.
+- **Treating localStorage-only stats or souls as server-authoritative for PvP outcomes.** The Discipline Duels v1 foundation is COORDINATION ONLY — friends + duel agreement + status. Scoring is deferred. Do not award real souls or XP based on duel state in v1, and do not let a future scoring path read raw localStorage submitted by the client at resolution time (a savvy user can edit it). The trust path for scoring lives server-side (likely a `habit_events` log per BACKEND.md when that lands). Until then, the localStorage `hb_souls` accumulator stays client-side authoritative; the duel's `stake_souls`/`reward_souls`/`burn_souls` are display metadata.
+- **Trusting `user_id` from a request body in friend/duel handlers.** All friends + duels endpoints derive the current user from `verifySessionJwt(token, env)` only. Never read `user_id` from the request body — clients are untrusted and the JWT is the only authoritative identity claim. The handler-level `session.userId` from `index.ts` is the right value to pass into queries. If you ever extend these handlers, mirror the existing pattern: every recipient-only / participant-only check (accept, decline, remove, detail) compares the row's stored `*_user_id` against `session.userId`, never against anything from the body.
 
 ---
 
