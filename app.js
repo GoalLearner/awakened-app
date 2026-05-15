@@ -14414,24 +14414,41 @@
   }
 
   // One-shot per-duel result toast. Keyed by localStorage so it never
-  // replays on subsequent loads.
+  // replays on subsequent loads. Derives win/lose via the serialized
+  // duel's `role` + `result` fields (set by the backend) — these are
+  // already viewer-relative, so we don't need the backend user_id.
   function _maybeFireDuelResultToast(duel) {
     if (!duel || duel.status !== 'completed') return;
+    if (duel.duel_type !== 'steps') return; // only steps duels score in v1
     const key = 'hb_duel_result_seen_' + duel.id;
     try { if (localStorage.getItem(key)) return; } catch (_) { return; }
-    const me = (window.Auth && Auth.getCurrentUser && Auth.getCurrentUser()) || null;
-    const meId = (me && me.id) || null;
-    if (!meId) return;
-    const iWon  = duel.winner_user_id === meId;
-    const iLost = duel.winner_user_id && !iWon;
-    const draw  = !duel.winner_user_id;
+    const result = duel.result;
+    const role   = duel.role;
     let msg;
-    if (draw)      msg = 'Duel ended in a draw.';
-    else if (iWon) msg = 'Duel won — verified steps decided it.';
-    else if (iLost) msg = 'Duel lost — your rival logged more verified steps.';
-    else            return;
+    if (result === 'draw')                                          msg = 'Duel ended in a draw.';
+    else if (result === 'challenger_win' && role === 'challenger')  msg = 'Duel won — verified steps decided it.';
+    else if (result === 'opponent_win'   && role === 'opponent')    msg = 'Duel won — verified steps decided it.';
+    else if (result === 'challenger_win' && role === 'opponent')    msg = 'Duel lost — your rival logged more verified steps.';
+    else if (result === 'opponent_win'   && role === 'challenger')  msg = 'Duel lost — your rival logged more verified steps.';
+    else return;
     try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
     try { localStorage.setItem(key, '1'); } catch (_) {}
+  }
+
+  // Derive (yourValue, rivalValue) from a serialized duel object based
+  // on `role`. Returns numbers/null — null if the participant hasn't
+  // submitted a snapshot yet.
+  function _duelStepsForViewer(duel) {
+    if (!duel) return { you: null, rival: null };
+    const isChall = duel.role === 'challenger';
+    const you   = isChall ? duel.challenger_progress_value : duel.opponent_progress_value;
+    const rival = isChall ? duel.opponent_progress_value   : duel.challenger_progress_value;
+    return { you: (you == null ? null : Number(you)), rival: (rival == null ? null : Number(rival)) };
+  }
+
+  function _fmtSteps(n) {
+    if (n == null) return null;
+    try { return Number(n).toLocaleString(); } catch (_) { return String(n); }
   }
 
   // Pick the most-recently-accepted active duel from the duels list.
@@ -14482,6 +14499,20 @@
     const stake  = (duel.stake_souls  != null) ? duel.stake_souls  : 25;
     const reward = (duel.reward_souls != null) ? duel.reward_souls : 40;
     const typeMeta = getDuelTypeMeta(duel.duel_type);
+    // Steps Duel Scoring v1 (v3 Phase 1y) — verified score row for
+    // steps duels; placeholder footnote for other types.
+    let scoreHtml = '<div class="duels-hero-footnote">Scoring activates in the next duel pass.</div>';
+    if (duel.duel_type === 'steps') {
+      const { you, rival } = _duelStepsForViewer(duel);
+      const youDisp   = (you   == null) ? '—' : _fmtSteps(you);
+      const rivalDisp = (rival == null) ? 'awaiting data' : _fmtSteps(rival);
+      scoreHtml =
+        '<div class="duels-hero-score-row">' +
+          '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">You</span><span class="duels-hero-score-value">' + esc(youDisp) + '</span></span>' +
+          '<span class="duels-hero-score-sep">·</span>' +
+          '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">Rival</span><span class="duels-hero-score-value">' + esc(rivalDisp) + '</span></span>' +
+        '</div>';
+    }
     mount.innerHTML =
       '<div class="duels-hero duels-hero--active" data-duel-id="' + esc(duel.id) + '">' +
         '<div class="duels-hero-topbar">' +
@@ -14501,7 +14532,7 @@
           '<div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">' + esc(stake) + ' souls</div></div>' +
           '<div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">' + esc(reward) + ' souls</div></div>' +
         '</div>' +
-        '<div class="duels-hero-footnote">Scoring activates in the next duel pass.</div>' +
+        scoreHtml +
         '<div class="duels-hero-actions">' +
           '<button id="duels-hero-view" class="duels-btn duels-btn--gold" type="button" data-duel-id="' + esc(duel.id) + '">View Duel</button>' +
         '</div>' +
@@ -14761,6 +14792,17 @@
       for (const d of active) {
         const opp = _socialDisplayAlias(d.opponent_alias || '—');
         const typeLabel = formatDuelTypeLabel(d.duel_type);
+        // Steps Duel Scoring v1 (v3 Phase 1y) — score row only for
+        // steps duels. Other types show no row (kept tidy).
+        let scoreRow = '';
+        if (d.duel_type === 'steps') {
+          const { you, rival } = _duelStepsForViewer(d);
+          const youDisp   = (you   == null) ? '—' : _fmtSteps(you);
+          const rivalDisp = (rival == null) ? 'awaiting data' : _fmtSteps(rival);
+          scoreRow =
+            '<div class="duel-card-scores">You: <span class="duel-card-scores-you">' + esc(youDisp) +
+            '</span> · Rival: <span class="duel-card-scores-rival">' + esc(rivalDisp) + '</span></div>';
+        }
         parts.push(
           '<div class="duel-card duel-card--active" data-duel-id="' + esc(d.id) + '" data-duel-action="view" role="button" tabindex="0">' +
             '<div class="duel-card-head">' +
@@ -14771,6 +14813,7 @@
                   '<span class="duels-pill duels-pill--live"><span class="duels-pill-dot"></span>Live</span>' +
                 '</div>' +
                 '<div class="duel-card-sub">' + esc(typeLabel) + ' · ' + esc(fmtRemaining(d.time_remaining_ms)) + '</div>' +
+                scoreRow +
               '</div>' +
               '<svg class="duel-card-chevron" width="9" height="13" viewBox="0 0 7 9" aria-hidden="true"><path d="M1 1l5 3.5L1 8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
             '</div>' +
@@ -14965,7 +15008,22 @@
       setText('ddo-opponent', 'Could not load duel: ' + ((res && res.detail) || 'unknown'));
       return;
     }
-    const d = res.duel;
+    let d = res.duel;
+    // Steps Duel Scoring v1 (v3 Phase 1y) — auto-resolve if active +
+    // past ends_at. Idempotent on backend.
+    if (d.status === 'active' && d.duel_type === 'steps' && d.ends_at) {
+      const endsMs = Date.parse(d.ends_at);
+      if (isFinite(endsMs) && Date.now() >= endsMs && typeof Auth.resolveDuel === 'function') {
+        try {
+          const rr = await Auth.resolveDuel(duelId);
+          if (rr && rr.ok && rr.duel) d = rr.duel;
+        } catch (_) {}
+      }
+    }
+    // Fire one-shot result toast on completed duels seen here too.
+    if (d.status === 'completed') {
+      try { _maybeFireDuelResultToast(d); } catch (_) {}
+    }
     const opp = _socialDisplayAlias(d.opponent_alias || '—');
     setText('ddo-opponent', 'vs ' + opp);
     setText('ddo-stake',  d.stake_souls + ' souls');
@@ -14989,10 +15047,62 @@
       const daysLeft = Math.floor(hrs / 24);
       setText('ddo-remaining', 'Time remaining: ' + (daysLeft > 0 ? daysLeft + 'd ' + (hrs % 24) + 'h' : hrs + 'h'));
     }
-    // Score block — scoring is deferred. Never inject "You: X · Opp: Y"
-    // numbers here, even when the backend returns zeroes; the user
-    // sees a single italic footnote instead.
-    setText('ddo-score', 'Scoring activates in the next duel pass.');
+    // Steps Duel Scoring v1 (v3 Phase 1y) — verified score + result.
+    // Non-steps types keep the legacy footnote.
+    const scoreEl = document.getElementById('ddo-score');
+    if (scoreEl) {
+      if (d.duel_type !== 'steps') {
+        scoreEl.innerHTML = '<span style="font-style:italic; opacity:0.75;">Scoring activates in the next duel pass.</span>';
+      } else if (d.status === 'completed') {
+        const { you, rival } = _duelStepsForViewer(d);
+        const youDisp   = (you   == null) ? '0' : _fmtSteps(you);
+        const rivalDisp = (rival == null) ? '0' : _fmtSteps(rival);
+        const oppDisp   = esc(_socialDisplayAlias(d.opponent_alias || '—'));
+        const result    = d.result;
+        const role      = d.role;
+        let headline = '';
+        let outcome  = '';
+        if (result === 'draw') {
+          outcome = 'draw';
+          headline = 'Draw — both hunters matched pace.';
+        } else if ((result === 'challenger_win' && role === 'challenger') ||
+                   (result === 'opponent_win'   && role === 'opponent')) {
+          outcome = 'win';
+          headline = 'Victory — you outstepped ' + oppDisp + '.';
+        } else if ((result === 'challenger_win' && role === 'opponent') ||
+                   (result === 'opponent_win'   && role === 'challenger')) {
+          outcome = 'loss';
+          headline = 'Defeat — ' + oppDisp + ' outstepped you.';
+        }
+        scoreEl.innerHTML =
+          '<div class="ddo-result-row ddo-result-row--' + esc(outcome || 'draw') + '">' +
+            '<div class="ddo-result-headline">' + headline + '</div>' +
+            '<div class="ddo-score-row ddo-score-row--final">' +
+              '<span><span class="ddo-score-label">Your verified steps:</span> <span class="ddo-score-value">' + esc(youDisp) + '</span></span>' +
+              '<span><span class="ddo-score-label">Rival verified steps:</span> <span class="ddo-score-value">' + esc(rivalDisp) + '</span></span>' +
+            '</div>' +
+            '<div class="ddo-rewards-note" style="font-style:italic; opacity:0.65; margin-top:8px;">Rewards activate in a future economy pass.</div>' +
+          '</div>';
+      } else {
+        // active steps duel (or pending — pending shouldn't have data, render placeholder)
+        const { you, rival } = _duelStepsForViewer(d);
+        const youDisp   = (you   == null) ? '—' : _fmtSteps(you);
+        const rivalDisp = (rival == null) ? 'Awaiting data' : _fmtSteps(rival);
+        // Health gating tip — if user is on iOS with no perm, surface it.
+        let tip = '';
+        try {
+          if (window.Health && Health.isAvailable && Health.isAvailable() &&
+              Health.permissionStatus && Health.permissionStatus() !== 'granted') {
+            tip = '<div class="ddo-score-tip">Connect Apple Health to submit verified steps.</div>';
+          }
+        } catch (_) {}
+        scoreEl.innerHTML =
+          '<div class="ddo-score-row">' +
+            '<div><span class="ddo-score-label">Your verified steps:</span> <span class="ddo-score-value">' + esc(youDisp) + '</span></div>' +
+            '<div><span class="ddo-score-label">Rival verified steps:</span> <span class="ddo-score-value">' + esc(rivalDisp) + '</span></div>' +
+          '</div>' + tip;
+      }
+    }
 
     // Actions per role + status.
     if (actionsEl) {
