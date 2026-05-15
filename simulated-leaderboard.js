@@ -1,25 +1,28 @@
 // ─────────────────────────────────────────────────────────────
-// simulated-leaderboard.js (v3 Phase 1s, v3 — weekly stable)
+// simulated-leaderboard.js (v3 Phase 1s — rev v4: 10 fixed bots)
 //
-// Client-side ONLY. Injects ~9 simulated hunters into the live
+// Client-side ONLY. Injects 10 simulated hunters into the live
 // leaderboard render so sparse boards still feel populated.
 // NEVER sent to the backend, NEVER persisted to localStorage.
-// Fresh each render; deterministic per-week per-metric.
 //
-// v3 change (vs v2): seed is now WEEK + metric, not DAY + metric.
-// Roster + per-fake parameters stay stable for a whole leaderboard
-// week (Sunday → Saturday device-local). Reseeds at week boundary.
-//
-// For step_total:
-//   - Stable roster + per-fake factor + per-fake profile per week
-//   - Display = userProjectedFinal × factor × profile[dayOfWeek]
-//   - Values grow monotonically through the week as the user's
-//     own step total accumulates
-//
-// For sleep_streak / bedtime_streak:
-//   - Stable roster + stable values per week
-//   - Streaks are inherently small integers that change slowly;
-//     reseeding once per week is more realistic than daily.
+// Design (rev v4):
+//   - FIXED cast of 10 bots. Same 10 names every week, every
+//     metric. Each bot has a personality (archetype) that shapes
+//     all three of their metrics.
+//   - Each bot "moves like a real user":
+//       step_total      — accumulates day-by-day through the week.
+//                         Each bot has an avgDailySteps + variance;
+//                         each day we deterministically roll their
+//                         step count, then sum across the days
+//                         elapsed so far this week. Monotonic
+//                         non-decreasing within the week.
+//       sleep_streak    — small integer that nudges by ±1 per
+//                         night around the bot's tendency, stable
+//                         WITHIN the week (rolled at week start).
+//       bedtime_streak  — same shape as sleep_streak.
+//   - New week → new daily samples (week boundary = Sunday,
+//     device-local). Names + archetypes stay constant across
+//     weeks; only the rolled values change.
 //
 // Kill switch: flip SIMULATE_USERS below to `false`.
 //
@@ -41,62 +44,43 @@
   // ─── KILL SWITCH ──────────────────────────────────────────
   const SIMULATE_USERS = true;
 
-  // ─── NAME POOL ────────────────────────────────────────────
-  // 25 entries, three styles. The displayed 9 per WEEK are picked
-  // deterministically from this pool. Different weeks rotate.
-  const NAME_POOL = [
-    // Style A — gamer / handle (9)
-    'immortalshadow', 'voidwalker_88', 'nightowl', 'xX_ronin_Xx',
-    'kaiser_void', 'phantom_eclipse', 'ghostlift', 'drift_protocol',
-    'silent_strider',
-    // Style B — realistic first-name-ish (9)
-    'Marcus T.', 'Sienna K.', 'Diego R.', 'Priya N.', 'Tomás L.',
-    'Aisha B.', 'Caleb W.', 'Mei H.', 'Jordan F.',
-    // Style C — Solo Leveling / RPG flavored (7)
-    'ShadowMonarch_K', 'IronWillVII', 'AwakenedRen', 'S-Rank_Yusuf',
-    'SungJoonClone', 'AscendantNova', 'BladeOfDawn',
+  // ─── THE CAST OF 10 ───────────────────────────────────────
+  // Each bot has an archetype that drives ALL three metrics so
+  // they feel like a real person, not three independent rolls.
+  //
+  //   avgDailySteps  — center of the daily step distribution
+  //   stepStdDev     — daily variance around that center
+  //   sleepBase      — tendency for the sleep ≥7h streak
+  //   bedtimeBase    — tendency for the before-midnight streak
+  //   sleepJitter    — how much sleep can vary week to week
+  //   bedtimeJitter  — same for bedtime
+  //
+  // Spread across the leaderboard so the board has top performers,
+  // a middle band, and a long tail with realistic-feeling streaks.
+  const BOTS = [
+    // Top tier — high-volume disciplined hunters
+    { name: 'ShadowMonarch_K', avgDailySteps: 14200, stepStdDev: 2800, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4 },
+    { name: 'AscendantNova',   avgDailySteps: 12500, stepStdDev: 2400, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3 },
+
+    // Strong mid-pack
+    { name: 'ghostlift',       avgDailySteps: 10800, stepStdDev: 2200, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2 },
+    { name: 'Marcus T.',       avgDailySteps:  9600, stepStdDev: 1900, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2 },
+    { name: 'Sienna K.',       avgDailySteps:  8800, stepStdDev: 1700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2 },
+
+    // Average users
+    { name: 'voidwalker_88',   avgDailySteps:  7400, stepStdDev: 1800, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2 },
+    { name: 'Jordan F.',       avgDailySteps:  6200, stepStdDev: 1600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1 },
+
+    // Light / inconsistent
+    { name: 'AwakenedRen',     avgDailySteps:  4800, stepStdDev: 1500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1 },
+    { name: 'Priya N.',        avgDailySteps:  3700, stepStdDev: 1300, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1 },
+
+    // Just-starting
+    { name: 'nightowl',        avgDailySteps:  2400, stepStdDev: 1100, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1 },
   ];
 
-  const FAKES_PER_WEEK = 9;
-
-  // Per-metric tuning. step_total uses anchor-relative projection;
-  // streak metrics use small integers because real users live
-  // mostly in the 0–14 range with rare outliers.
-  const METRIC_CONFIG = {
-    step_total: {
-      kind: 'continuous',
-      fallbackAnchor: 28000, // when real user has 0 steps yet this week
-    },
-    sleep_streak: {
-      kind: 'streak',
-      fallbackAnchor: 3,
-      typicalMax: 21,
-    },
-    bedtime_streak: {
-      kind: 'streak',
-      fallbackAnchor: 3,
-      typicalMax: 21,
-    },
-  };
-
-  // ─── Step distribution model ──────────────────────────────
-  // Each fake's display follows: display = anchor × factor, where
-  // factor is per-fake and stable per week. This makes display
-  // grow proportionally with the user's accumulating step total
-  // and guarantees no fake's value EVER decreases within the week
-  // (anchor is monotonic non-decreasing as the user walks).
-  //
-  // We tried per-fake activity profiles (even / weekend-warrior /
-  // early-week) in early iteration but it introduced ~5-10% dips
-  // for some fakes mid-week — the projected-final-target math
-  // doesn't stay monotonic across all profile shapes when the
-  // user's pace shifts. Spec says "values must never decrease",
-  // so we drop the profile layer. Realism comes from factor
-  // spread alone (0.40-1.30 range = 90 percentage points), which
-  // gives plenty of natural variation between fakes.
-
   // ─── PRNG ─────────────────────────────────────────────────
-  function hashDateKey(str) {
+  function hashKey(str) {
     let h = 2166136261 >>> 0;
     const s = String(str || 'unknown');
     for (let i = 0; i < s.length; i++) {
@@ -115,17 +99,17 @@
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
-  function shuffleInPlace(arr, rng) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-    }
+
+  // Standard normal via Box-Muller. Gives us realistic-looking
+  // daily step variance (tails fall off naturally).
+  function gaussian(rng) {
+    const u1 = Math.max(rng(), 1e-9);
+    const u2 = rng();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   }
 
   // ─── Date helpers ─────────────────────────────────────────
-  // YYYY-MM-DD of the most recent Sunday (device-local). Aligns
-  // with the backend's leaderboard week boundary per CLAUDE.md
-  // ("Total steps from Sunday 12:00 AM through Saturday 11:59 PM").
+  // YYYY-MM-DD of the most recent Sunday (device-local).
   function getWeekStartKey(dateKey) {
     if (!dateKey || typeof dateKey !== 'string') return null;
     const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -140,7 +124,7 @@
     return yyyy + '-' + mm + '-' + dd;
   }
 
-  // 0 (Sun) through 6 (Sat). Day index within the leaderboard week.
+  // 0 (Sun) through 6 (Sat). Day index within the current week.
   function dayOfWeekIndex(dateKey, weekStartKey) {
     if (!dateKey || !weekStartKey) return 0;
     const md = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -152,154 +136,94 @@
     return Math.max(0, Math.min(6, diff));
   }
 
-  // ─── Humanize numeric output ──────────────────────────────
-  function humanize(rng, base) {
-    let v = Math.round(base);
-    if (v < 100) return v;
-    if (v % 1000 === 0)      v += Math.floor(rng() * 900) + 31;
-    else if (v % 100 === 0)  v += Math.floor(rng() * 90)  + 7;
+  // ─── Per-bot daily step roll ──────────────────────────────
+  // Deterministic on (weekStartKey, bot.name, dayIdx). Returns
+  // a non-negative integer step count for that day.
+  function rollBotDayStep(weekStartKey, bot, dayIdx) {
+    const seed = hashKey(weekStartKey + '|' + bot.name + '|d' + dayIdx);
+    const rng = mulberry32(seed);
+    const z = gaussian(rng); // ~N(0,1), typically -3..+3
+    let v = bot.avgDailySteps + z * bot.stepStdDev;
+    // Most people have a rest day or two — collapse the very-low
+    // tail toward 0 so the curve looks human.
+    if (v < 1500) v = Math.max(0, v * 0.5);
+    if (v < 0) v = 0;
+    return Math.round(v);
+  }
+
+  // Bot's cumulative step total from Sunday through `dayIdx`
+  // inclusive. This is what shows on the leaderboard for the
+  // current calendar week. Monotonic non-decreasing as dayIdx
+  // grows since each day's roll is ≥ 0.
+  function botStepsThroughDay(weekStartKey, bot, dayIdx) {
+    let sum = 0;
+    for (let d = 0; d <= dayIdx; d++) {
+      sum += rollBotDayStep(weekStartKey, bot, d);
+    }
+    return sum;
+  }
+
+  // ─── Per-bot streak roll (week-stable) ────────────────────
+  // Streaks barely change day-to-day in real life, so we roll
+  // once per week per (bot, metric) and hold steady.
+  function rollBotStreak(weekStartKey, bot, metricKey) {
+    const base = metricKey === 'sleep_streak' ? bot.sleepBase    : bot.bedtimeBase;
+    const jit  = metricKey === 'sleep_streak' ? bot.sleepJitter  : bot.bedtimeJitter;
+    const seed = hashKey(weekStartKey + '|' + bot.name + '|' + metricKey);
+    const rng = mulberry32(seed);
+    // Symmetric jitter: ±jit, with extra mass at 0 (people often
+    // sit on the same streak count for many days).
+    const r = rng();
+    let delta;
+    if      (r < 0.40) delta = 0;
+    else if (r < 0.70) delta = 1 + Math.floor(rng() * Math.max(1, jit));
+    else if (r < 0.92) delta = -(1 + Math.floor(rng() * Math.max(1, jit)));
+    else               delta = (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * (jit + 1)));
+    let v = base + delta;
+    if (v < 0) v = 0;
+    // Cap at a realistic ceiling so no bot reads as superhuman.
+    if (v > 30) v = 30;
     return v;
-  }
-
-  // ─── Streak helpers (unchanged from v2) ───────────────────
-  function streakAbove(rng, anchor, typicalMax) {
-    if (anchor < 3) {
-      const r = rng();
-      if (r < 0.30) return 1 + Math.floor(rng() * 2);
-      if (r < 0.65) return 3 + Math.floor(rng() * 3);
-      if (r < 0.88) return 6 + Math.floor(rng() * 5);
-      if (r < 0.97) return 11 + Math.floor(rng() * 5);
-      return 16 + Math.floor(rng() * Math.max(1, typicalMax - 15));
-    }
-    const bump = 1 + Math.floor(rng() * 5);
-    let val = anchor + bump;
-    const ceiling = Math.max(typicalMax, anchor + 6);
-    if (val > ceiling) val = ceiling;
-    if (val === anchor) val = anchor + 1;
-    return val;
-  }
-  function streakBelow(rng, anchor) {
-    if (anchor < 2) return 0;
-    const drop = 1 + Math.floor(rng() * anchor);
-    let val = anchor - drop;
-    if (val < 0) val = 0;
-    if (val === anchor) val = Math.max(0, anchor - 1);
-    return val;
-  }
-
-  // ─── Above/Below split (unchanged) ────────────────────────
-  function pickSplit(rng, metric, anchor) {
-    const cfg = METRIC_CONFIG[metric];
-    if (cfg.kind === 'continuous') {
-      let nAbove;
-      if (anchor > 60000)      nAbove = 0;
-      else if (anchor > 35000) nAbove = Math.floor(rng() * 2);
-      else                     nAbove = 2 + Math.floor(rng() * 2);
-      return { nAbove: nAbove, nBelow: FAKES_PER_WEEK - nAbove };
-    }
-    if (anchor < 3) {
-      const nAbove = 7 + Math.floor(rng() * 2);
-      return { nAbove: nAbove, nBelow: FAKES_PER_WEEK - nAbove };
-    }
-    let nAbove;
-    if (anchor > 30)      nAbove = 0;
-    else if (anchor > 18) nAbove = Math.floor(rng() * 2);
-    else                  nAbove = 2 + Math.floor(rng() * 2);
-    return { nAbove: nAbove, nBelow: FAKES_PER_WEEK - nAbove };
   }
 
   // ─── Main merge ───────────────────────────────────────────
   function mergeWithSimulated(realTop, realUserAlias, realUserValue, dateKey, metric) {
     metric = metric || 'step_total';
-    const cfg = METRIC_CONFIG[metric];
-    if (!cfg) {
-      const out = (realTop || []).slice();
-      out.forEach((r, i) => { r.rank = i + 1; });
-      return out;
-    }
     if (!SIMULATE_USERS) {
       const out = (realTop || []).slice();
       out.forEach((r, i) => { r.rank = i + 1; });
       return out;
     }
 
-    // Week boundary alignment — Sunday start, device-local.
     const weekStartKey = getWeekStartKey(dateKey) || dateKey;
     const dow = dayOfWeekIndex(dateKey || weekStartKey, weekStartKey);
 
-    // ROSTER seed — stable for the entire week + metric. This
-    // pins names for the whole week so the cast doesn't churn.
-    const rosterRng = mulberry32(hashDateKey(weekStartKey + '|' + metric + '|roster'));
-    const pool = NAME_POOL.slice();
-    shuffleInPlace(pool, rosterRng);
-    const picked = pool.slice(0, FAKES_PER_WEEK);
-
-    // VALUE seed — also stable per week per metric. Factor +
-    // profile choices are the same on Mon as on Sat for a given
-    // fake. Display value moves through the week because:
-    //   1. The user's anchor accumulates (more steps each day)
-    //   2. The profile's cumulative fraction grows from Sun→Sat
-    const valueRng = mulberry32(hashDateKey(weekStartKey + '|' + metric + '|values'));
-
-    // Two distinct concepts:
-    //   - realValue: what the user actually has (may be 0). Shown.
-    //   - anchor: what we use to shape the fakes. Falls back to
-    //     the metric baseline when the user has no progress so
-    //     surrounding fakes feel like a real population.
     const realValue = (typeof realUserValue === 'number' && realUserValue >= 0)
       ? realUserValue
       : 0;
-    const anchor = realValue > 0 ? realValue : cfg.fallbackAnchor;
 
-    const { nAbove, nBelow } = pickSplit(valueRng, metric, anchor);
     const fakes = [];
-
-    if (cfg.kind === 'continuous') {
-      // ── Step total — accumulating display through the week ──
-      // Each fake's display = anchor × factor (factor per-fake,
-      // stable per week). Anchor accumulates daily as the user
-      // walks → fake displays grow proportionally. Guaranteed
-      // monotonic per-fake: if anchor[today] ≥ anchor[yesterday],
-      // then display[today] ≥ display[yesterday].
-
-      for (let i = 0; i < nAbove; i++) {
-        const factor = 1.05 + valueRng() * 0.25; // 1.05–1.30
-        let val = humanize(valueRng, anchor * factor);
-        // Goggins guard — cap absolute size when anchor is in the
-        // typical human range so fakes don't read as cartoonish.
-        if (anchor < 18000 && val > 19500) {
-          val = 19500 - Math.floor(valueRng() * 1500);
-        }
-        if (val === realValue) val += 137;
-        fakes.push({ alias: picked[i], current_value: val, _sim: true });
+    for (let i = 0; i < BOTS.length; i++) {
+      const bot = BOTS[i];
+      let val;
+      if (metric === 'step_total') {
+        val = botStepsThroughDay(weekStartKey, bot, dow);
+      } else if (metric === 'sleep_streak' || metric === 'bedtime_streak') {
+        val = rollBotStreak(weekStartKey, bot, metric);
+      } else {
+        // Unknown metric — skip simulation, return real only.
+        const passthrough = (realTop || []).slice();
+        passthrough.forEach((r, idx) => { r.rank = idx + 1; });
+        return passthrough;
       }
-
-      for (let i = 0; i < nBelow; i++) {
-        const factor = 0.40 + valueRng() * 0.50; // 0.40–0.90
-        let val = humanize(valueRng, anchor * factor);
-        // Floor early-week values so the board doesn't drown in
-        // very-small numbers on Sunday morning (when anchor is small).
-        if (val < 200) val = 200 + Math.floor(valueRng() * 1500);
-        if (val === realValue) val -= 211;
-        fakes.push({ alias: picked[nAbove + i], current_value: val, _sim: true });
-      }
-    } else {
-      // ── Streak — stable values for the entire week ──
-      // Streaks are small integers that change slowly. We reseed
-      // at week boundary; values stay the same all week. This is
-      // more realistic than daily reshuffling for a metric where
-      // real users' values change by 0 or 1 per night.
-      for (let i = 0; i < nAbove; i++) {
-        const val = streakAbove(valueRng, anchor, cfg.typicalMax);
-        fakes.push({ alias: picked[i], current_value: val, _sim: true });
-      }
-      for (let i = 0; i < nBelow; i++) {
-        const val = streakBelow(valueRng, anchor);
-        fakes.push({ alias: picked[nAbove + i], current_value: val, _sim: true });
-      }
+      // Avoid an exact tie with the real user (cosmetic — the
+      // gold "ME" row should still feel distinct).
+      if (val === realValue) val = metric === 'step_total' ? val + 137 : val + 1;
+      fakes.push({ alias: bot.name, current_value: val, _sim: true });
     }
 
-    // Dedupe vs. real entries to avoid double-rendering an alias.
+    // Dedupe vs. real entries (real user could share a name with
+    // a bot in theory — unlikely but defensive).
     const realAliases = new Set((realTop || []).map(r => r && r.alias).filter(Boolean));
     const dedupedFakes = fakes.filter(f => !realAliases.has(f.alias));
 
@@ -328,12 +252,15 @@
     window.SimulatedLeaderboard = {
       SIMULATE_USERS:    SIMULATE_USERS,
       merge:             mergeWithSimulated,
-      NAME_POOL:         NAME_POOL,
+      BOTS:              BOTS,
       // Exposed for dev / debug / preview QA
-      _hashDateKey:      hashDateKey,
+      _hashKey:          hashKey,
       _mulberry32:       mulberry32,
       _getWeekStartKey:  getWeekStartKey,
       _dayOfWeekIndex:   dayOfWeekIndex,
+      _rollBotDayStep:   rollBotDayStep,
+      _botStepsThroughDay: botStepsThroughDay,
+      _rollBotStreak:    rollBotStreak,
     };
   }
 })();
