@@ -61,6 +61,26 @@ interface DuelRow {
   opponent_xp_score: number;
   created_at: string;
   updated_at: string;
+  // Steps Duel Scoring v1 (v3 Phase 1y).
+  resolved_at?: string | null;
+  result?: string | null;
+}
+
+async function getDuelProgress(
+  env: Env,
+  duelId: string,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const rows = await env.DB.prepare(
+    `SELECT user_id, value FROM duel_progress_snapshots
+       WHERE duel_id = ? AND metric = 'steps'`,
+  )
+    .bind(duelId)
+    .all<{ user_id: string; value: number }>();
+  for (const r of rows.results ?? []) {
+    out.set(r.user_id, Number(r.value) || 0);
+  }
+  return out;
 }
 
 async function getAliasMap(
@@ -85,6 +105,7 @@ function serializeDuel(
   row: DuelRow,
   aliasMap: Map<string, string>,
   viewerUserId: string,
+  progressByUserId?: Map<string, number>,
 ): Record<string, unknown> {
   const isChallenger = row.challenger_user_id === viewerUserId;
   const opponentId = isChallenger ? row.opponent_user_id : row.challenger_user_id;
@@ -97,6 +118,15 @@ function serializeDuel(
       timeRemainingMs = Math.max(0, endsMs - Date.now());
     }
   }
+
+  // Steps Duel Scoring v1 (v3 Phase 1y). Latest snapshot values per
+  // participant. null when the participant hasn't submitted yet.
+  const challengerProgress = progressByUserId && progressByUserId.has(row.challenger_user_id)
+    ? progressByUserId.get(row.challenger_user_id) ?? null
+    : null;
+  const opponentProgress = progressByUserId && progressByUserId.has(row.opponent_user_id)
+    ? progressByUserId.get(row.opponent_user_id) ?? null
+    : null;
 
   return {
     id: row.id,
@@ -126,6 +156,11 @@ function serializeDuel(
     opponent_verified_score: row.opponent_verified_score,
     challenger_xp_score: row.challenger_xp_score,
     opponent_xp_score: row.opponent_xp_score,
+    // Steps Duel Scoring v1 (v3 Phase 1y).
+    challenger_progress_value: challengerProgress,
+    opponent_progress_value: opponentProgress,
+    resolved_at: row.resolved_at ?? null,
+    result: row.result ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -160,13 +195,33 @@ export async function handleDuelsList(
   }
   const aliasMap = await getAliasMap(env, Array.from(userIds));
 
+  // Steps Duel Scoring v1 (v3 Phase 1y). Pull progress snapshots for
+  // every duel returned. Single query joined client-side — keeps the
+  // shape consumer-friendly even with multiple duels per user.
+  const duelIds = allRows.map(r => r.id);
+  const progressByDuelId = new Map<string, Map<string, number>>();
+  if (duelIds.length > 0) {
+    const placeholders = duelIds.map(() => '?').join(',');
+    const progressRows = await env.DB.prepare(
+      `SELECT duel_id, user_id, value FROM duel_progress_snapshots
+        WHERE metric = 'steps' AND duel_id IN (${placeholders})`,
+    )
+      .bind(...duelIds)
+      .all<{ duel_id: string; user_id: string; value: number }>();
+    for (const p of progressRows.results ?? []) {
+      let m = progressByDuelId.get(p.duel_id);
+      if (!m) { m = new Map<string, number>(); progressByDuelId.set(p.duel_id, m); }
+      m.set(p.user_id, Number(p.value) || 0);
+    }
+  }
+
   const incoming: Record<string, unknown>[] = [];
   const outgoing: Record<string, unknown>[] = [];
   const active: Record<string, unknown>[] = [];
   const recent: Record<string, unknown>[] = [];
 
   for (const row of allRows) {
-    const serialized = serializeDuel(row, aliasMap, session.userId);
+    const serialized = serializeDuel(row, aliasMap, session.userId, progressByDuelId.get(row.id));
     if (row.status === 'pending') {
       if (row.opponent_user_id === session.userId) incoming.push(serialized);
       else outgoing.push(serialized);
@@ -440,5 +495,259 @@ export async function handleDuelsDetail(
     row.challenger_user_id,
     row.opponent_user_id,
   ]);
-  return jsonOk({ ok: true, duel: serializeDuel(row, aliasMap, session.userId) });
+  const progress = await getDuelProgress(env, duelId);
+  return jsonOk({ ok: true, duel: serializeDuel(row, aliasMap, session.userId, progress) });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /v1/duels/:id/progress   body: { duel_type, metric, value,
+//   window_start, window_end, client_updated_at }
+//
+// Steps Duel Scoring v1 (v3 Phase 1y). Client (Apple Health) submits
+// the current step total for the duel window. Server upserts via the
+// UNIQUE(duel_id, user_id, metric) index — re-submits overwrite the
+// same row. v1 trusts the client value; future hardening (signed
+// device snapshots) is out of scope.
+//
+// Rejects:
+//   - non-participant                    → 403 FORBIDDEN
+//   - duel.duel_type !== 'steps'         → 400 DUEL_TYPE_NOT_SCORED_YET
+//   - duel.status !== 'active'           → 400 DUEL_NOT_ACTIVE
+//   - metric !== 'steps'                 → 400 INVALID_METRIC
+//   - non-integer / negative value       → 400 INVALID_VALUE
+// ─────────────────────────────────────────────────────────────
+export async function handleDuelsSubmitProgress(
+  request: Request,
+  env: Env,
+  session: SessionPayload,
+  duelId: string,
+): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) {
+    return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  }
+
+  let body: {
+    duel_type?: unknown;
+    metric?: unknown;
+    value?: unknown;
+    window_start?: unknown;
+    window_end?: unknown;
+    client_updated_at?: unknown;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
+  }
+
+  const row = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
+  if (!row) {
+    return jsonError(404, 'NOT_FOUND', 'Duel not found.');
+  }
+  if (
+    row.challenger_user_id !== session.userId &&
+    row.opponent_user_id !== session.userId
+  ) {
+    return jsonError(403, 'FORBIDDEN', 'You are not a participant in this duel.');
+  }
+  if (row.duel_type !== 'steps') {
+    return jsonError(
+      400,
+      'DUEL_TYPE_NOT_SCORED_YET',
+      'Only steps duels are scored in this version.',
+    );
+  }
+  if (row.status !== 'active') {
+    return jsonError(400, 'DUEL_NOT_ACTIVE', `Cannot submit progress to a ${row.status} duel.`);
+  }
+
+  const metric = typeof body?.metric === 'string' ? body.metric : '';
+  if (metric !== 'steps') {
+    return jsonError(400, 'INVALID_METRIC', 'metric must be "steps" for v1.');
+  }
+  const rawValue = body?.value;
+  if (typeof rawValue !== 'number' || !Number.isFinite(rawValue) || rawValue < 0) {
+    return jsonError(400, 'INVALID_VALUE', 'value must be a non-negative number.');
+  }
+  const value = Math.round(rawValue);
+
+  const windowStart = typeof body?.window_start === 'string' ? body.window_start : null;
+  const windowEnd = typeof body?.window_end === 'string' ? body.window_end : null;
+  if (!windowStart || !windowEnd) {
+    return jsonError(400, 'INVALID_WINDOW', 'window_start and window_end are required.');
+  }
+  const clientUpdatedAt = typeof body?.client_updated_at === 'string'
+    ? body.client_updated_at
+    : new Date().toISOString();
+
+  // Deterministic id so re-submits update the same row via PRIMARY KEY
+  // collision (and the UNIQUE constraint is belt-and-suspenders).
+  const snapshotId = `${duelId}_${session.userId}_${metric}`;
+
+  // source is server-set — ignore anything in the body.
+  await env.DB.prepare(
+    `INSERT INTO duel_progress_snapshots (
+       id, duel_id, user_id, duel_type, metric, value, source,
+       window_start, window_end, client_updated_at, server_updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, 'apple_health', ?, ?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(duel_id, user_id, metric) DO UPDATE SET
+       value = excluded.value,
+       window_start = excluded.window_start,
+       window_end = excluded.window_end,
+       client_updated_at = excluded.client_updated_at,
+       server_updated_at = CURRENT_TIMESTAMP`,
+  )
+    .bind(
+      snapshotId,
+      duelId,
+      session.userId,
+      row.duel_type,
+      metric,
+      value,
+      windowStart,
+      windowEnd,
+      clientUpdatedAt,
+    )
+    .run();
+
+  const progress = await getDuelProgress(env, duelId);
+  const isChallenger = row.challenger_user_id === session.userId;
+  const myUserId = session.userId;
+  const rivalUserId = isChallenger ? row.opponent_user_id : row.challenger_user_id;
+  const youValue = progress.has(myUserId) ? (progress.get(myUserId) ?? 0) : 0;
+  const rivalValue = progress.has(rivalUserId) ? (progress.get(rivalUserId) ?? null) : null;
+  return jsonOk({ ok: true, you: youValue, rival: rivalValue });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /v1/duels/:id/resolve
+//
+// Steps Duel Scoring v1 (v3 Phase 1y). Server-authoritative
+// resolution. Reads both participants' latest steps snapshots
+// (missing = 0), compares, writes the winner / result, marks the
+// duel completed. Idempotent — re-calling after completion returns
+// the existing result row.
+//
+// Rejects:
+//   - non-participant   → 403 FORBIDDEN
+//   - now < ends_at     → 400 DUEL_NOT_ENDED
+//   - non-steps duel    → 400 DUEL_TYPE_NOT_SCORED_YET
+// ─────────────────────────────────────────────────────────────
+export async function handleDuelsResolve(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  duelId: string,
+): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) {
+    return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  }
+
+  const row = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
+  if (!row) {
+    return jsonError(404, 'NOT_FOUND', 'Duel not found.');
+  }
+  if (
+    row.challenger_user_id !== session.userId &&
+    row.opponent_user_id !== session.userId
+  ) {
+    return jsonError(403, 'FORBIDDEN', 'You are not a participant in this duel.');
+  }
+
+  // Idempotent return path.
+  if (row.status === 'completed') {
+    const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.opponent_user_id]);
+    const progress = await getDuelProgress(env, duelId);
+    return jsonOk({
+      ok: true,
+      duel: serializeDuel(row, aliasMap, session.userId, progress),
+      already_resolved: true,
+    });
+  }
+
+  if (row.duel_type !== 'steps') {
+    return jsonError(
+      400,
+      'DUEL_TYPE_NOT_SCORED_YET',
+      'Only steps duels are scored in this version.',
+    );
+  }
+  if (row.status !== 'active') {
+    return jsonError(400, 'BAD_STATE', `Cannot resolve from status "${row.status}".`);
+  }
+  if (!row.ends_at) {
+    return jsonError(400, 'BAD_STATE', 'Duel has no ends_at timestamp.');
+  }
+  const endsMs = Date.parse(row.ends_at);
+  if (Number.isFinite(endsMs) && Date.now() < endsMs) {
+    return jsonError(400, 'DUEL_NOT_ENDED', 'Duel has not yet ended.');
+  }
+
+  // Resolve. Missing snapshot = 0.
+  const progress = await getDuelProgress(env, duelId);
+  const challengerScore = progress.has(row.challenger_user_id)
+    ? (progress.get(row.challenger_user_id) ?? 0)
+    : 0;
+  const opponentScore = progress.has(row.opponent_user_id)
+    ? (progress.get(row.opponent_user_id) ?? 0)
+    : 0;
+
+  let winnerUserId: string | null;
+  let result: 'challenger_win' | 'opponent_win' | 'draw';
+  if (challengerScore > opponentScore) {
+    winnerUserId = row.challenger_user_id;
+    result = 'challenger_win';
+  } else if (opponentScore > challengerScore) {
+    winnerUserId = row.opponent_user_id;
+    result = 'opponent_win';
+  } else {
+    winnerUserId = null;
+    result = 'draw';
+  }
+
+  await env.DB.prepare(
+    `UPDATE duels
+        SET status = 'completed',
+            winner_user_id = ?,
+            result = ?,
+            challenger_score = ?,
+            opponent_score = ?,
+            challenger_verified_score = ?,
+            opponent_verified_score = ?,
+            resolved_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+  )
+    .bind(
+      winnerUserId,
+      result,
+      challengerScore,
+      opponentScore,
+      challengerScore,
+      opponentScore,
+      duelId,
+    )
+    .run();
+
+  const refreshed = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
+  if (!refreshed) {
+    return jsonError(500, 'INTERNAL', 'Failed to read back resolved duel.');
+  }
+  const aliasMap = await getAliasMap(env, [
+    refreshed.challenger_user_id,
+    refreshed.opponent_user_id,
+  ]);
+  return jsonOk({
+    ok: true,
+    duel: serializeDuel(refreshed, aliasMap, session.userId, progress),
+    resolved: true,
+  });
 }

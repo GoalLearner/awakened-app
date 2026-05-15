@@ -41,6 +41,8 @@ import {
   handleDuelsAccept,
   handleDuelsDecline,
   handleDuelsDetail,
+  handleDuelsSubmitProgress,
+  handleDuelsResolve,
 } from './handlers/duels';
 import { handlePreflight, withCors } from './lib/cors';
 import { jsonError } from './lib/responses';
@@ -50,6 +52,8 @@ import { jsonError } from './lib/responses';
 // charset (hex + dashes) — anything else 404s implicitly.
 const FRIENDS_ID_RE = /^\/v1\/friends\/([0-9a-fA-F-]{8,})\/(accept|decline|remove)$/;
 const DUELS_ID_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(accept|decline)$/;
+// Steps Duel Scoring v1 (v3 Phase 1y) — POST progress + resolve.
+const DUELS_SCORING_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(progress|resolve)$/;
 const DUELS_DETAIL_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})$/;
 
 export default {
@@ -144,6 +148,16 @@ export default {
               response = await handleDuelsAccept(request, env, session, duelId);
             } else {
               response = await handleDuelsDecline(request, env, session, duelId);
+            }
+          } else if (DUELS_SCORING_RE.test(path) && method === 'POST') {
+            // Steps Duel Scoring v1 (v3 Phase 1y).
+            const match = path.match(DUELS_SCORING_RE)!;
+            const duelId = match[1];
+            const action = match[2];
+            if (action === 'progress') {
+              response = await handleDuelsSubmitProgress(request, env, session, duelId);
+            } else {
+              response = await handleDuelsResolve(request, env, session, duelId);
             }
           } else if (DUELS_DETAIL_RE.test(path) && method === 'GET') {
             const match = path.match(DUELS_DETAIL_RE)!;
