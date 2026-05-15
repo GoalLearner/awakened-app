@@ -359,8 +359,8 @@
     // bosses (one defeat per qualifying day/night, no weekly cap). Souls
     // economy is 35/35 per the rebalance — net 0 per kill cycle, so
     // these become the relic farm; E-rank stays the souls farm.
-    iron_warden: {
-      id:               'iron_warden',
+    the_iron_warden: {
+      id:               'the_iron_warden',
       name:             'The Iron Warden',
       rank:             'D',
       flavorShort:      'Steel remembers what flesh forgets.',
@@ -372,8 +372,8 @@
       cadence:          'daily',
       statDomain:       'STR',
     },
-    glass_strider: {
-      id:               'glass_strider',
+    the_glass_strider: {
+      id:               'the_glass_strider',
       name:             'The Glass Strider',
       rank:             'D',
       flavorShort:      'Each step it takes, it asks for one more from you.',
@@ -385,8 +385,8 @@
       cadence:          'daily',
       statDomain:       'VIT',
     },
-    dream_tyrant: {
-      id:               'dream_tyrant',
+    the_dream_tyrant: {
+      id:               'the_dream_tyrant',
       name:             'The Dream Tyrant',
       rank:             'D',
       flavorShort:      'He rules the hours you give him. Give him fewer and he rules less.',
@@ -3093,7 +3093,7 @@
   // the Insomniac/Carouser ↔ Sleep auto-verify shared-data pattern.
   function evaluateIronWardenForDay(strengthData, dayDate) {
     if (!dayDate) return;
-    const id = 'iron_warden';
+    const id = 'the_iron_warden';
     const cfg = BOSSES[id];
     if (!cfg) return;
     const state = getBossState(id);
@@ -3112,7 +3112,7 @@
     }
   }
   function checkMissedDayForIronWarden() {
-    const id = 'iron_warden';
+    const id = 'the_iron_warden';
     const state = getBossState(id);
     if (state.engaged !== true) return;
     // streakTarget=1 daily means there's no streak to preserve —
@@ -3125,7 +3125,7 @@
   // leaderboard step recording. No extra HealthKit roundtrip.
   function evaluateGlassStriderForDay(stepCount, dayDate) {
     if (typeof stepCount !== 'number' || !dayDate) return;
-    const id = 'glass_strider';
+    const id = 'the_glass_strider';
     const cfg = BOSSES[id];
     if (!cfg) return;
     const state = getBossState(id);
@@ -3139,7 +3139,7 @@
     // later eval after more walking can still credit the kill.
   }
   function checkMissedDayForGlassStrider() {
-    const id = 'glass_strider';
+    const id = 'the_glass_strider';
     const state = getBossState(id);
     if (state.engaged !== true) return;
     // Same as Iron Warden: no streak to preserve.
@@ -3151,7 +3151,7 @@
   // Insomniac + Carouser evals, and leaderboard sleep recording.
   function evaluateDreamTyrantForNight(sleepHours, nightDate) {
     if (typeof sleepHours !== 'number' || !nightDate) return;
-    const id = 'dream_tyrant';
+    const id = 'the_dream_tyrant';
     const cfg = BOSSES[id];
     if (!cfg) return;
     const state = getBossState(id);
@@ -3169,7 +3169,7 @@
     }
   }
   function checkMissedNightForDreamTyrant() {
-    const id = 'dream_tyrant';
+    const id = 'the_dream_tyrant';
     const state = getBossState(id);
     if (state.engaged !== true) return;
     // Same as Iron Warden / Glass Strider: streakTarget=1, no streak
@@ -20537,6 +20537,41 @@
         }
       } catch (_) {}
       localStorage.setItem('hb_bedtime_window_fix_v1', '1');
+    }
+    // ── v3 Phase 1v.1 — D-rank boss id rename migration ──────
+    // The three new D-rank bosses initially shipped with ids
+    // `iron_warden` / `glass_strider` / `dream_tyrant`. Renamed
+    // to `the_iron_warden` / `the_glass_strider` / `the_dream_tyrant`
+    // in the same release window so the auto-derived art path
+    // (id.replace(/_/g, '-')) matches the `the-X.png` filenames on
+    // disk. If a user engaged the boss under the OLD id before the
+    // rename landed, move their state forward. Idempotent via flag.
+    if (!localStorage.getItem('hb_drank_id_rename_v1')) {
+      try {
+        const RENAME_MAP = {
+          iron_warden:    'the_iron_warden',
+          glass_strider:  'the_glass_strider',
+          dream_tyrant:   'the_dream_tyrant',
+        };
+        const raw = localStorage.getItem('hb_bosses');
+        if (raw) {
+          const bossState = JSON.parse(raw);
+          let changed = false;
+          Object.keys(RENAME_MAP).forEach(oldId => {
+            const newId = RENAME_MAP[oldId];
+            if (bossState[oldId] && !bossState[newId]) {
+              bossState[newId] = bossState[oldId];
+              delete bossState[oldId];
+              changed = true;
+              console.log('[Migration] Renamed boss state', oldId, '→', newId);
+            }
+          });
+          if (changed) {
+            localStorage.setItem('hb_bosses', JSON.stringify(bossState));
+          }
+        }
+      } catch (_) {}
+      localStorage.setItem('hb_drank_id_rename_v1', '1');
     }
     // ── v3 Phase 1u — Strength training read-only migration ──
     // Strength training transitioned to read-only / auto-verified in

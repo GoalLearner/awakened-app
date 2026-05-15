@@ -114,7 +114,7 @@ workflows:
           # Boss illustrations (CARDS.md spec preview). 1254×1254 manhwa
           # portraits ride inside the new card's art window.
           mkdir -p www/assets/bosses
-          for boss in the-insomniac the-carouser the-steel-wolf; do
+          for boss in the-insomniac the-carouser the-steel-wolf the-iron-warden the-glass-strider the-dream-tyrant; do
             cp "assets/bosses/$boss.png" "www/assets/bosses/$boss.png"
           done
           # General-purpose UI icons (v2.0.1). Currently just the souls

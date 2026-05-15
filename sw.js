@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.226';
+const CACHE_VERSION = 'v5.227';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -116,6 +116,10 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-insomniac.png',
   '/assets/bosses/the-carouser.png',
   '/assets/bosses/the-steel-wolf.png',
+  // v3 Phase 1v — D-rank daily bosses
+  '/assets/bosses/the-iron-warden.png',
+  '/assets/bosses/the-glass-strider.png',
+  '/assets/bosses/the-dream-tyrant.png',
   // Item-card illustrations. Only paths that EXIST on disk get listed
   // here — cache.addAll rejects the entire install if any entry 404s.
   // The remaining 8 launch cards fall through to the network (404 in
