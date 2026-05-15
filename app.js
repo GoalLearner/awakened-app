@@ -20342,6 +20342,37 @@
       } catch (_) {}
       localStorage.setItem('hb_bedtime_window_fix_v1', '1');
     }
+    // ── v3 Phase 1u — Strength training read-only migration ──
+    // Strength training transitioned to read-only / auto-verified in
+    // v3 Phase 1u. Users who had it MANUALLY checked off today before
+    // the update landed are now stuck — the new tap behavior opens
+    // the system-managed modal instead of toggling, so they can't
+    // un-check.
+    //
+    // One-shot recovery: if Strength training is checked today AND
+    // there's no AUTO_VERIFY record for it (= the check came from a
+    // manual tap, not the new HealthKit path), un-check it and
+    // reverse the XP. The auto-verify path will re-check legitimately
+    // on next render if a qualifying workout exists in Apple Health.
+    // Idempotent via the flag.
+    if (!localStorage.getItem('hb_strength_readonly_migration_v1')) {
+      try {
+        const strengthHabit = habits.find(h => h && h.name === 'Strength training' && !h.custom);
+        if (strengthHabit &&
+            Array.isArray(completions[today]) &&
+            completions[today].indexOf(strengthHabit.id) >= 0 &&
+            !AUTO_VERIFY.isAutoVerifiedToday(strengthHabit.id)) {
+          const idx = completions[today].indexOf(strengthHabit.id);
+          completions[today].splice(idx, 1);
+          const diff = strengthHabit.difficulty || 'medium';
+          const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+          totalPoints = Math.max(0, totalPoints - pts);
+          save();
+          console.log('[Migration] Cleared stale manual Strength training completion for', today);
+        }
+      } catch (_) {}
+      localStorage.setItem('hb_strength_readonly_migration_v1', '1');
+    }
     // ── v2.0 habits-order migration ──────────────────────────
     // Apply the auto-verify-first invariant once on cold launch.
     // Idempotent — sortHabitsAutoVerifyFirst is a no-op when the
