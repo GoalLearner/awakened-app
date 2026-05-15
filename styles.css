@@ -19060,6 +19060,32 @@ body.reveal-locked { overflow: hidden; }
    Discipline Duels v1 — Social tab Friends + Duels sections
    (v3 Phase 1x)
    ────────────────────────────────────────────────────────────────── */
+
+/* Ensure the Social tab panel can scroll past the safe-area inset on
+   iPhone home-indicator devices. Without this the bottom 34pt of the
+   tab-panel scroll region overlaps the indicator and the friends/duels
+   sections feel "unreachable" even though they exist in the DOM. */
+#social-panel {
+  padding-bottom: calc(48px + var(--safe-bottom, 0px));
+}
+
+/* Build-verification marker — removed once iOS bundle propagation is
+   confirmed. Lives directly between .lb-preview and the FRIENDS section
+   so a successful render of this band proves the new index.html shipped. */
+.social-build-marker {
+  margin: 18px 16px 0;
+  padding: 10px 14px;
+  border: 1px dashed rgba(245, 158, 11, 0.55);
+  border-radius: 10px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  background: rgba(245, 158, 11, 0.06);
+  text-transform: uppercase;
+}
+
 .social-section {
   margin: 22px 16px 0;
   padding: 14px 0 4px;
