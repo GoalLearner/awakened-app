@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Awakened — Duels Tab Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=262">
+  <style>
+    body {
+      background: var(--bg);
+      min-height: 100dvh;
+      margin: 0;
+      padding: 24px 0 64px;
+      font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+      color: var(--text-primary);
+    }
+    .preview-shell {
+      max-width: 430px;
+      margin: 0 auto 40px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .preview-banner {
+      background: linear-gradient(90deg, #1a1a36, #14142b);
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- State 1 — Empty -->
+  <div class="preview-shell">
+    <div class="preview-banner">State 1 · Empty · Find Hunter CTA</div>
+    <div class="tab-panel" data-panel="social" style="padding-bottom:32px;">
+
+      <div class="duels-page-header">
+        <div class="duels-rune-divider" aria-hidden="true">
+          <span class="duels-rune-line"></span>
+          <svg class="duels-rune-spark" width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4z" fill="currentColor" opacity="0.85"/></svg>
+          <span class="duels-rune-line"></span>
+        </div>
+        <h2 class="duels-page-title">DISCIPLINE DUELS</h2>
+        <p class="duels-page-sub">Challenge a hunter. Seal more objectives. Outlast your rival.</p>
+      </div>
+
+      <div class="duels-hero-mount">
+        <div class="duels-hero duels-hero--empty">
+          <div class="duels-hero-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <g stroke="var(--accent)" stroke-width="1.4" fill="var(--accent)" stroke-linejoin="round">
+                <path d="M4 6l11 12 1.8-1.5L5.8 4.4z"/>
+                <path d="M28 6l-11 12-1.8-1.5L26.2 4.4z"/>
+                <path d="M16 18l-1.2 6h2.4z" fill="var(--gold)" stroke="none"/>
+              </g>
+              <circle cx="16" cy="16" r="1.6" fill="var(--gold)"/>
+            </svg>
+          </div>
+          <div class="duels-hero-title">No active duel</div>
+          <div class="duels-hero-body">Add a hunter and begin a 3-day discipline challenge. Most sealed objectives wins.</div>
+          <div class="duels-hero-actions">
+            <button class="duels-btn duels-btn--primary" type="button">
+              <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
+                <circle cx="5" cy="5" r="3.5" stroke="#fff" stroke-width="1.2" fill="none"/>
+                <path d="M8 8l3 3" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              <span>Find Hunter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="social-section social-section--friends">
+        <div class="social-section-header-row">
+          <div class="social-section-header">FRIENDS</div>
+          <div class="social-section-count"></div>
+        </div>
+        <div class="social-friend-add">
+          <input class="social-friend-input" type="text" placeholder="hunter alias" maxlength="20">
+          <button class="social-btn social-btn--primary" type="button">Send Request</button>
+        </div>
+        <div class="social-section-body">
+          <div class="social-empty social-empty--rich">
+            <div class="social-empty-title">No hunters added yet.</div>
+            <div class="social-empty-sub">Add a hunter by name to start a duel.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="social-section social-section--duels">
+        <div class="social-section-header">DISCIPLINE DUELS</div>
+        <div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>
+        <div class="social-section-body">
+          <div class="social-empty social-empty--rich">
+            <div class="social-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+                <g stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round">
+                  <path d="M4 6l11 12 1.8-1.5L5.8 4.4z"/>
+                  <path d="M28 6l-11 12-1.8-1.5L26.2 4.4z"/>
+                </g>
+              </svg>
+            </div>
+            <div class="social-empty-title">No duels yet.</div>
+            <div class="social-empty-sub">Challenge a friend to begin your first discipline duel.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- State 2 — Populated -->
+  <div class="preview-shell">
+    <div class="preview-banner">State 2 · Populated · Active hero + cards</div>
+    <div class="tab-panel" data-panel="social" style="padding-bottom:32px;">
+
+      <div class="duels-page-header">
+        <div class="duels-rune-divider" aria-hidden="true">
+          <span class="duels-rune-line"></span>
+          <svg class="duels-rune-spark" width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4z" fill="currentColor" opacity="0.85"/></svg>
+          <span class="duels-rune-line"></span>
+        </div>
+        <h2 class="duels-page-title">DISCIPLINE DUELS</h2>
+        <p class="duels-page-sub">Challenge a hunter. Seal more objectives. Outlast your rival.</p>
+      </div>
+
+      <div class="duels-hero-mount">
+        <div class="duels-hero duels-hero--active">
+          <div class="duels-hero-topbar">
+            <span class="duels-pill duels-pill--live"><span class="duels-pill-dot"></span>Active Duel</span>
+            <span class="duels-hero-countdown">1d 14h left</span>
+          </div>
+          <div class="duels-hero-matchup">
+            <div class="duels-hero-opponent">
+              <div class="duels-hero-avatar duels-hero-avatar--rival">K</div>
+              <div class="duels-hero-opponent-name">Kazuto</div>
+              <div class="duels-hero-opponent-sub">Rival</div>
+            </div>
+          </div>
+          <div class="duels-hero-meta-strip duels-meta-strip">
+            <div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">3 days</div></div>
+            <div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">25 souls</div></div>
+            <div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">40 souls</div></div>
+          </div>
+          <div class="duels-hero-footnote">Scoring activates in the next duel pass.</div>
+          <div class="duels-hero-actions">
+            <button class="duels-btn duels-btn--gold" type="button">View Duel</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="social-section social-section--friends">
+        <div class="social-section-header-row">
+          <div class="social-section-header">FRIENDS</div>
+          <div class="social-section-count">3 hunters</div>
+        </div>
+        <div class="social-friend-add">
+          <input class="social-friend-input" type="text" placeholder="hunter alias" maxlength="20">
+          <button class="social-btn social-btn--primary" type="button">Send Request</button>
+        </div>
+        <div class="social-section-body">
+          <div class="social-section-subhead">Incoming requests</div>
+          <div class="social-row friend-row friend-row--incoming">
+            <div class="friend-avatar friend-avatar--gold">N</div>
+            <div class="social-row-main">
+              <div class="social-row-alias">NightWolf</div>
+              <div class="social-row-meta friend-row-meta--gold">wants to be friends</div>
+            </div>
+            <div class="social-row-actions">
+              <button class="social-btn social-btn--primary">Accept</button>
+              <button class="social-btn">Decline</button>
+            </div>
+          </div>
+          <div class="social-section-subhead">Outgoing</div>
+          <div class="social-row friend-row friend-row--outgoing">
+            <div class="friend-avatar friend-avatar--muted">I</div>
+            <div class="social-row-main">
+              <div class="social-row-alias">IronOath</div>
+              <div class="social-row-meta">awaiting response</div>
+            </div>
+            <div class="social-row-actions">
+              <span class="duels-pill duels-pill--pending">Pending</span>
+            </div>
+          </div>
+          <div class="social-section-subhead">Friends</div>
+          <div class="social-row friend-row friend-row--accepted">
+            <div class="friend-avatar friend-avatar--accent">K</div>
+            <div class="social-row-main">
+              <div class="social-row-alias">Kazuto</div>
+              <div class="social-row-meta">ready to duel</div>
+            </div>
+            <div class="social-row-actions">
+              <button class="social-btn social-btn--gold">Challenge</button>
+              <button class="social-btn social-btn--danger">Remove</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="social-section social-section--duels">
+        <div class="social-section-header">DISCIPLINE DUELS</div>
+        <div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>
+        <div class="social-section-body">
+          <div class="social-section-subhead">Incoming</div>
+          <div class="duel-card duel-card--incoming">
+            <div class="duel-card-head">
+              <div class="friend-avatar friend-avatar--rival">V</div>
+              <div class="duel-card-main">
+                <div class="duel-card-opp">Vael</div>
+                <div class="duel-card-sub duel-card-sub--gold">challenged you · 3-day duel</div>
+              </div>
+              <span class="duels-pill duels-pill--incoming">Incoming</span>
+            </div>
+            <div class="duels-meta-strip">
+              <div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">3 days</div></div>
+              <div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">25 souls</div></div>
+              <div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">40 souls</div></div>
+            </div>
+            <div class="duel-card-actions">
+              <button class="social-btn social-btn--primary">Accept</button>
+              <button class="social-btn">Decline</button>
+              <button class="social-btn duel-card-view-btn">View</button>
+            </div>
+          </div>
+          <div class="social-section-subhead">Outgoing</div>
+          <div class="duel-card duel-card--outgoing">
+            <div class="duel-card-head">
+              <div class="friend-avatar friend-avatar--muted">C</div>
+              <div class="duel-card-main">
+                <div class="duel-card-opp">Caelum</div>
+                <div class="duel-card-sub">waiting for response</div>
+              </div>
+              <span class="duels-pill duels-pill--pending">Pending</span>
+            </div>
+            <div class="duels-meta-strip">
+              <div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">3 days</div></div>
+              <div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">25 souls</div></div>
+              <div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">40 souls</div></div>
+            </div>
+            <div class="duel-card-actions">
+              <button class="social-btn duel-card-view-btn">View</button>
+            </div>
+          </div>
+          <div class="social-section-subhead">Active</div>
+          <div class="duel-card duel-card--active">
+            <div class="duel-card-head">
+              <div class="friend-avatar friend-avatar--rival">K</div>
+              <div class="duel-card-main">
+                <div class="duel-card-opp duel-card-opp--row">
+                  <span>Kazuto</span>
+                  <span class="duels-pill duels-pill--live"><span class="duels-pill-dot"></span>Live</span>
+                </div>
+                <div class="duel-card-sub">1d 14h left</div>
+              </div>
+              <svg class="duel-card-chevron" width="9" height="13" viewBox="0 0 7 9" aria-hidden="true"><path d="M1 1l5 3.5L1 8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+</body>
+</html>

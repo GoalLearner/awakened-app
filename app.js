@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w3';
+  const APP_BUILD_TAG = '2.2.1-w4';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11928,11 +11928,11 @@
       questsGateExpanded = false;
       renderQuestsPanel();
     }
-    // Render the Leaderboard preview when the Social tab is opened.
+    // Duels tab (v3 Phase 1x.1) — dedicated to friends + Discipline
+    // Duels. Leaderboard preview was retired from this tab; the
+    // renderLeaderboardPreview function is preserved because the
+    // ranking sheet (#lb-rank-sheet) modal still uses it from elsewhere.
     if (tab === 'social') {
-      renderLeaderboardPreview();
-      // Discipline Duels v1 (v3 Phase 1x) — friends + duels stacked
-      // below the leaderboard. Each fetches lazily.
       if (typeof renderFriendsSection === 'function') renderFriendsSection();
       if (typeof renderDuelsSection === 'function')   renderDuelsSection();
     }
@@ -14038,38 +14038,57 @@
     catch (_) { return String(raw || '—'); }
   }
 
-  // Defensive: if the static index.html that shipped in the IPA is
-  // stale (missing the v3 Phase 1x markup), inject the friends + duels
-  // sections at runtime. This way the sections appear as long as app.js
-  // itself is fresh — protects against bundle-drift between
-  // index.html / app.js / auth.js.
+  // Defensive: if the static index.html shipped in the IPA is stale
+  // (missing the v3 Phase 1x.1 Duels-tab markup), inject the page
+  // header + hero mount + friends + duels sections at runtime so the
+  // tab works as long as app.js itself is fresh. The static markup is
+  // still the source of truth — this is just defense-in-depth.
   function _ensureSocialMarkup() {
     const panel = document.getElementById('social-panel');
     if (!panel) return;
-    let friendsBody = document.getElementById('social-friends-body');
-    let duelsBody   = document.getElementById('social-duels-body');
-    if (friendsBody && duelsBody) return; // static markup present, nothing to do
-    // Build the missing pieces. Use the same class names + ids the
-    // static markup uses, so the CSS already in styles.css applies.
-    const lbPreview = panel.querySelector('.lb-preview');
-    const anchor    = lbPreview ? lbPreview.nextSibling : null;
     function makeNode(html) {
       const wrap = document.createElement('div');
       wrap.innerHTML = html.trim();
       return wrap.firstChild;
     }
-    if (!document.querySelector('.social-build-marker')) {
-      const marker = makeNode(
-        '<div class="social-build-marker">' +
-          'BUILD 2.2.1 · Friends + Duels foundation (runtime-injected)' +
+    // Remove any legacy leaderboard preview / build marker that may
+    // linger from older static index.html. These shouldn't render on
+    // the Duels tab anymore.
+    const legacyLb = panel.querySelector('.lb-preview');
+    if (legacyLb) legacyLb.remove();
+    const legacyMarker = panel.querySelector('.social-build-marker');
+    if (legacyMarker) legacyMarker.remove();
+
+    // Page header
+    if (!panel.querySelector('.duels-page-header')) {
+      const header = makeNode(
+        '<div class="duels-page-header">' +
+          '<div class="duels-rune-divider" aria-hidden="true">' +
+            '<span class="duels-rune-line"></span>' +
+            '<svg class="duels-rune-spark" width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4z" fill="currentColor" opacity="0.85"/></svg>' +
+            '<span class="duels-rune-line"></span>' +
+          '</div>' +
+          '<h2 class="duels-page-title">DISCIPLINE DUELS</h2>' +
+          '<p class="duels-page-sub">Challenge a hunter. Seal more objectives. Outlast your rival.</p>' +
         '</div>'
       );
-      panel.insertBefore(marker, anchor);
+      panel.insertBefore(header, panel.firstChild);
     }
-    if (!friendsBody) {
+    // Hero mount (renderActiveDuelHero fills this)
+    if (!document.getElementById('duels-hero')) {
+      const hero = makeNode('<div id="duels-hero" class="duels-hero-mount"></div>');
+      const header = panel.querySelector('.duels-page-header');
+      if (header && header.nextSibling) panel.insertBefore(hero, header.nextSibling);
+      else panel.appendChild(hero);
+    }
+    // Friends section
+    if (!document.getElementById('social-friends-body')) {
       const section = makeNode(
         '<section class="social-section social-section--friends">' +
-          '<div class="social-section-header">FRIENDS</div>' +
+          '<div class="social-section-header-row">' +
+            '<div class="social-section-header">FRIENDS</div>' +
+            '<div id="social-friends-count" class="social-section-count"></div>' +
+          '</div>' +
           '<div class="social-friend-add">' +
             '<input id="social-friend-input" class="social-friend-input" type="text" ' +
               'placeholder="hunter alias" maxlength="20" autocomplete="off" ' +
@@ -14081,26 +14100,141 @@
           '</div>' +
         '</section>'
       );
-      panel.insertBefore(section, anchor);
+      panel.appendChild(section);
     }
-    if (!duelsBody) {
+    // Duels section
+    if (!document.getElementById('social-duels-body')) {
       const section = makeNode(
         '<section class="social-section social-section--duels">' +
           '<div class="social-section-header">DISCIPLINE DUELS</div>' +
-          '<div class="social-section-sub">3-day 1v1. 25 souls staked each (metadata only — scoring activates in the next pass).</div>' +
+          '<div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>' +
           '<div id="social-duels-body" class="social-section-body">' +
             '<div class="social-empty">Loading duels…</div>' +
           '</div>' +
         '</section>'
       );
-      panel.insertBefore(section, anchor);
+      panel.appendChild(section);
     }
+  }
+
+  // Crossed-daggers crest used in the empty hero. Inline so the icon
+  // ships without a new asset round-trip.
+  const _DUEL_CREST_SVG =
+    '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">' +
+      '<g stroke="var(--accent)" stroke-width="1.4" fill="var(--accent)" stroke-linejoin="round">' +
+        '<path d="M4 6l11 12 1.8-1.5L5.8 4.4z"/>' +
+        '<path d="M28 6l-11 12-1.8-1.5L26.2 4.4z"/>' +
+        '<path d="M16 18l-1.2 6h2.4z" fill="var(--gold)" stroke="none"/>' +
+      '</g>' +
+      '<circle cx="16" cy="16" r="1.6" fill="var(--gold)"/>' +
+    '</svg>';
+
+  // Pick the most-recently-accepted active duel from the duels list.
+  // Sort by starts_at desc — falls back to id-string compare if a
+  // server response is missing starts_at for any reason.
+  function _pickActiveHeroDuel(active) {
+    if (!Array.isArray(active) || active.length === 0) return null;
+    const sorted = active.slice().sort((a, b) => {
+      const at = a && a.starts_at ? Date.parse(a.starts_at) : 0;
+      const bt = b && b.starts_at ? Date.parse(b.starts_at) : 0;
+      if (bt !== at) return bt - at;
+      return String(b && b.id || '').localeCompare(String(a && a.id || ''));
+    });
+    return sorted[0] || null;
+  }
+
+  function _fmtDuelHeroCountdown(ms) {
+    if (typeof ms !== 'number' || ms <= 0) return 'ending soon';
+    const hrs = Math.floor(ms / 3600000);
+    const days = Math.floor(hrs / 24);
+    if (days >= 1) return days + 'd ' + (hrs % 24) + 'h left';
+    if (hrs >= 1)  return hrs + 'h left';
+    const mins = Math.max(1, Math.floor(ms / 60000));
+    return mins + 'm left';
+  }
+
+  function renderActiveDuelHero(active) {
+    const mount = document.getElementById('duels-hero');
+    if (!mount) return;
+    const duel = _pickActiveHeroDuel(active);
+    if (!duel) {
+      // Empty state — dashed purple border, "Find Hunter" CTA.
+      mount.innerHTML =
+        '<div class="duels-hero duels-hero--empty">' +
+          '<div class="duels-hero-icon">' + _DUEL_CREST_SVG + '</div>' +
+          '<div class="duels-hero-title">No active duel</div>' +
+          '<div class="duels-hero-body">Add a hunter and begin a 3-day discipline challenge. Most sealed objectives wins.</div>' +
+          '<div class="duels-hero-actions">' +
+            '<button id="duels-find-hunter" class="duels-btn duels-btn--primary" type="button">' +
+              '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">' +
+                '<circle cx="5" cy="5" r="3.5" stroke="#fff" stroke-width="1.2" fill="none"/>' +
+                '<path d="M8 8l3 3" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>' +
+              '</svg>' +
+              '<span>Find Hunter</span>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      const findBtn = document.getElementById('duels-find-hunter');
+      if (findBtn) {
+        findBtn.addEventListener('click', () => {
+          const input = document.getElementById('social-friend-input');
+          if (!input) return;
+          try { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+          setTimeout(() => { try { input.focus(); } catch (_) {} }, 200);
+        });
+      }
+      return;
+    }
+    // Active state — gold-glow border, opponent + countdown + stake/reward.
+    const opp = _socialDisplayAlias(duel.opponent_alias || '—');
+    const initial = (opp && opp[0]) ? opp[0].toUpperCase() : '—';
+    const countdown = _fmtDuelHeroCountdown(duel.time_remaining_ms);
+    const stake  = (duel.stake_souls  != null) ? duel.stake_souls  : 25;
+    const reward = (duel.reward_souls != null) ? duel.reward_souls : 40;
+    mount.innerHTML =
+      '<div class="duels-hero duels-hero--active" data-duel-id="' + esc(duel.id) + '">' +
+        '<div class="duels-hero-topbar">' +
+          '<span class="duels-pill duels-pill--live"><span class="duels-pill-dot"></span>Active Duel</span>' +
+          '<span class="duels-hero-countdown">' + esc(countdown) + '</span>' +
+        '</div>' +
+        '<div class="duels-hero-matchup">' +
+          '<div class="duels-hero-opponent">' +
+            '<div class="duels-hero-avatar duels-hero-avatar--rival">' + esc(initial) + '</div>' +
+            '<div class="duels-hero-opponent-name">' + esc(opp) + '</div>' +
+            '<div class="duels-hero-opponent-sub">Rival</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="duels-hero-meta-strip">' +
+          '<div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">3 days</div></div>' +
+          '<div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">' + esc(stake) + ' souls</div></div>' +
+          '<div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">' + esc(reward) + ' souls</div></div>' +
+        '</div>' +
+        '<div class="duels-hero-footnote">Scoring activates in the next duel pass.</div>' +
+        '<div class="duels-hero-actions">' +
+          '<button id="duels-hero-view" class="duels-btn duels-btn--gold" type="button" data-duel-id="' + esc(duel.id) + '">View Duel</button>' +
+        '</div>' +
+      '</div>';
+    const viewBtn = document.getElementById('duels-hero-view');
+    if (viewBtn) {
+      viewBtn.addEventListener('click', () => {
+        openDuelDetail(duel.id);
+      });
+    }
+  }
+  try { window.renderActiveDuelHero = renderActiveDuelHero; } catch (_) {}
+
+  function _friendAvatarHtml(alias, variant) {
+    const initial = (alias && alias[0]) ? alias[0].toUpperCase() : '—';
+    const cls = 'friend-avatar' + (variant ? ' friend-avatar--' + variant : '');
+    return '<div class="' + cls + '">' + esc(initial) + '</div>';
   }
 
   async function renderFriendsSection() {
     _ensureSocialMarkup();
     const body = document.getElementById('social-friends-body');
+    const countEl = document.getElementById('social-friends-count');
     if (!body) return;
+    if (countEl) countEl.textContent = '';
     if (!window.Auth || typeof Auth.fetchFriends !== 'function') {
       body.innerHTML = '<div class="social-empty">Sign in to add friends.</div>';
       return;
@@ -14123,15 +14257,22 @@
     const incoming = Array.isArray(res.incoming) ? res.incoming : [];
     const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
 
+    if (countEl) {
+      const n = friends.length;
+      countEl.textContent = n === 0 ? '' : n + (n === 1 ? ' hunter' : ' hunters');
+    }
+
     const parts = [];
     if (incoming.length) {
       parts.push('<div class="social-section-subhead">Incoming requests</div>');
       for (const f of incoming) {
+        const alias = _socialDisplayAlias(f.alias);
         parts.push(
-          '<div class="social-row" data-friendship-id="' + esc(f.id) + '">' +
+          '<div class="social-row friend-row friend-row--incoming" data-friendship-id="' + esc(f.id) + '">' +
+            _friendAvatarHtml(alias, 'gold') +
             '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(_socialDisplayAlias(f.alias)) + '</div>' +
-              '<div class="social-row-meta">wants to be friends</div>' +
+              '<div class="social-row-alias">' + esc(alias) + '</div>' +
+              '<div class="social-row-meta friend-row-meta--gold">wants to be friends</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
               '<button class="social-btn social-btn--primary" data-friend-action="accept">Accept</button>' +
@@ -14144,14 +14285,16 @@
     if (outgoing.length) {
       parts.push('<div class="social-section-subhead">Outgoing</div>');
       for (const f of outgoing) {
+        const alias = _socialDisplayAlias(f.alias);
         parts.push(
-          '<div class="social-row" data-friendship-id="' + esc(f.id) + '">' +
+          '<div class="social-row friend-row friend-row--outgoing" data-friendship-id="' + esc(f.id) + '">' +
+            _friendAvatarHtml(alias, 'muted') +
             '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(_socialDisplayAlias(f.alias)) + '</div>' +
+              '<div class="social-row-alias">' + esc(alias) + '</div>' +
               '<div class="social-row-meta">awaiting response</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
-              '<span class="social-row-status" data-status="pending">pending</span>' +
+              '<span class="duels-pill duels-pill--pending">Pending</span>' +
             '</div>' +
           '</div>'
         );
@@ -14162,13 +14305,14 @@
       for (const f of friends) {
         const aliasDisp = _socialDisplayAlias(f.alias);
         parts.push(
-          '<div class="social-row" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
+          '<div class="social-row friend-row friend-row--accepted" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
+            _friendAvatarHtml(aliasDisp, 'accent') +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
-              '<div class="social-row-meta">friend</div>' +
+              '<div class="social-row-meta">ready to duel</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
-              '<button class="social-btn social-btn--primary" data-friend-action="challenge">Challenge</button>' +
+              '<button class="social-btn social-btn--gold" data-friend-action="challenge">Challenge</button>' +
               '<button class="social-btn social-btn--danger"  data-friend-action="remove">Remove</button>' +
             '</div>' +
           '</div>'
@@ -14176,9 +14320,24 @@
       }
     }
     if (parts.length === 0) {
-      parts.push('<div class="social-empty">No friends yet. Add a hunter by their handle to challenge them.</div>');
+      parts.push(
+        '<div class="social-empty social-empty--rich">' +
+          '<div class="social-empty-title">No hunters added yet.</div>' +
+          '<div class="social-empty-sub">Add a hunter by name to start a duel.</div>' +
+        '</div>'
+      );
     }
     body.innerHTML = parts.join('');
+  }
+
+  function _duelMetaStripHtml(stake, reward, duration) {
+    return (
+      '<div class="duels-meta-strip">' +
+        '<div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">' + esc(duration) + '</div></div>' +
+        '<div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">' + esc(stake) + ' souls</div></div>' +
+        '<div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">' + esc(reward) + ' souls</div></div>' +
+      '</div>'
+    );
   }
 
   async function renderDuelsSection() {
@@ -14187,6 +14346,8 @@
     if (!body) return;
     if (!window.Auth || typeof Auth.fetchDuels !== 'function') {
       body.innerHTML = '<div class="social-empty">Sign in to duel.</div>';
+      // Render an empty hero so the page header doesn't sit on nothing.
+      renderActiveDuelHero([]);
       return;
     }
     body.innerHTML = '<div class="social-empty">Loading duels…</div>';
@@ -14196,9 +14357,11 @@
     if (!res || !res.ok) {
       if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'STUB_USER' || res.code === 'LOCAL_DEV_SKIP')) {
         body.innerHTML = '<div class="social-empty">Sign in with Apple to duel.</div>';
+        renderActiveDuelHero([]);
         return;
       }
       body.innerHTML = '<div class="social-error">Could not load duels: ' + esc((res && res.detail) || 'unknown error') + '</div>';
+      renderActiveDuelHero([]);
       return;
     }
     _duelsCache = res;
@@ -14206,7 +14369,11 @@
     const incoming = Array.isArray(res.incoming) ? res.incoming : [];
     const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
     const active   = Array.isArray(res.active)   ? res.active   : [];
-    const recent   = Array.isArray(res.recent)   ? res.recent   : [];
+    // Note: res.recent intentionally NOT rendered in v1. Completed-duel
+    // outcomes don't have real data until server-side scoring ships.
+
+    // Drive the hero with the most-recently-accepted active duel.
+    renderActiveDuelHero(active);
 
     const fmtRemaining = ms => {
       if (typeof ms !== 'number' || ms <= 0) return 'ending soon';
@@ -14219,19 +14386,27 @@
 
     const parts = [];
     if (incoming.length) {
-      parts.push('<div class="social-section-subhead">Incoming challenges</div>');
+      parts.push('<div class="social-section-subhead">Incoming</div>');
       for (const d of incoming) {
         const opp = _socialDisplayAlias(d.opponent_alias || (d.challenger && d.challenger.alias) || '—');
+        const stake  = (d.stake_souls  != null) ? d.stake_souls  : 25;
+        const reward = (d.reward_souls != null) ? d.reward_souls : 40;
+        const duration = (d.duration_days || 3) + ' days';
         parts.push(
-          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
-            '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(opp) + '</div>' +
-              '<div class="social-row-meta">' + esc(d.stake_souls + ' souls · ' + d.duration_days + '-day') + '</div>' +
+          '<div class="duel-card duel-card--incoming" data-duel-id="' + esc(d.id) + '">' +
+            '<div class="duel-card-head">' +
+              _friendAvatarHtml(opp, 'rival') +
+              '<div class="duel-card-main">' +
+                '<div class="duel-card-opp">' + esc(opp) + '</div>' +
+                '<div class="duel-card-sub duel-card-sub--gold">challenged you · 3-day duel</div>' +
+              '</div>' +
+              '<span class="duels-pill duels-pill--incoming">Incoming</span>' +
             '</div>' +
-            '<div class="social-row-actions">' +
+            _duelMetaStripHtml(stake, reward, duration) +
+            '<div class="duel-card-actions">' +
               '<button class="social-btn social-btn--primary" data-duel-action="accept">Accept</button>' +
               '<button class="social-btn" data-duel-action="decline">Decline</button>' +
-              '<button class="social-btn" data-duel-action="view">View</button>' +
+              '<button class="social-btn duel-card-view-btn" data-duel-action="view">View</button>' +
             '</div>' +
           '</div>'
         );
@@ -14241,15 +14416,22 @@
       parts.push('<div class="social-section-subhead">Outgoing</div>');
       for (const d of outgoing) {
         const opp = _socialDisplayAlias(d.opponent_alias || '—');
+        const stake  = (d.stake_souls  != null) ? d.stake_souls  : 25;
+        const reward = (d.reward_souls != null) ? d.reward_souls : 40;
+        const duration = (d.duration_days || 3) + ' days';
         parts.push(
-          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
-            '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(opp) + '</div>' +
-              '<div class="social-row-meta">' + esc(d.stake_souls + ' souls · ' + d.duration_days + '-day · awaiting') + '</div>' +
+          '<div class="duel-card duel-card--outgoing" data-duel-id="' + esc(d.id) + '">' +
+            '<div class="duel-card-head">' +
+              _friendAvatarHtml(opp, 'muted') +
+              '<div class="duel-card-main">' +
+                '<div class="duel-card-opp">' + esc(opp) + '</div>' +
+                '<div class="duel-card-sub">waiting for response</div>' +
+              '</div>' +
+              '<span class="duels-pill duels-pill--pending">Pending</span>' +
             '</div>' +
-            '<div class="social-row-actions">' +
-              '<span class="social-row-status" data-status="pending">pending</span>' +
-              '<button class="social-btn" data-duel-action="view">View</button>' +
+            _duelMetaStripHtml(stake, reward, duration) +
+            '<div class="duel-card-actions">' +
+              '<button class="social-btn duel-card-view-btn" data-duel-action="view">View</button>' +
             '</div>' +
           '</div>'
         );
@@ -14260,38 +14442,37 @@
       for (const d of active) {
         const opp = _socialDisplayAlias(d.opponent_alias || '—');
         parts.push(
-          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
-            '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(opp) + '</div>' +
-              '<div class="social-row-meta">' + esc(fmtRemaining(d.time_remaining_ms)) + '</div>' +
-            '</div>' +
-            '<div class="social-row-actions">' +
-              '<span class="social-row-status" data-status="active">active</span>' +
-              '<button class="social-btn social-btn--primary" data-duel-action="view">View</button>' +
-            '</div>' +
-          '</div>'
-        );
-      }
-    }
-    if (recent.length) {
-      parts.push('<div class="social-section-subhead">Recent</div>');
-      for (const d of recent) {
-        const opp = _socialDisplayAlias(d.opponent_alias || '—');
-        parts.push(
-          '<div class="social-row" data-duel-id="' + esc(d.id) + '">' +
-            '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(opp) + '</div>' +
-              '<div class="social-row-meta">' + esc(d.status) + '</div>' +
-            '</div>' +
-            '<div class="social-row-actions">' +
-              '<button class="social-btn" data-duel-action="view">View</button>' +
+          '<div class="duel-card duel-card--active" data-duel-id="' + esc(d.id) + '" data-duel-action="view" role="button" tabindex="0">' +
+            '<div class="duel-card-head">' +
+              _friendAvatarHtml(opp, 'rival') +
+              '<div class="duel-card-main">' +
+                '<div class="duel-card-opp duel-card-opp--row">' +
+                  '<span>' + esc(opp) + '</span>' +
+                  '<span class="duels-pill duels-pill--live"><span class="duels-pill-dot"></span>Live</span>' +
+                '</div>' +
+                '<div class="duel-card-sub">' + esc(fmtRemaining(d.time_remaining_ms)) + '</div>' +
+              '</div>' +
+              '<svg class="duel-card-chevron" width="9" height="13" viewBox="0 0 7 9" aria-hidden="true"><path d="M1 1l5 3.5L1 8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
             '</div>' +
           '</div>'
         );
       }
     }
     if (parts.length === 0) {
-      parts.push('<div class="social-empty">No duels yet. Challenge a friend to start one.</div>');
+      parts.push(
+        '<div class="social-empty social-empty--rich">' +
+          '<div class="social-empty-icon">' +
+            '<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">' +
+              '<g stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round">' +
+                '<path d="M4 6l11 12 1.8-1.5L5.8 4.4z"/>' +
+                '<path d="M28 6l-11 12-1.8-1.5L26.2 4.4z"/>' +
+              '</g>' +
+            '</svg>' +
+          '</div>' +
+          '<div class="social-empty-title">No duels yet.</div>' +
+          '<div class="social-empty-sub">Challenge a friend to begin your first discipline duel.</div>' +
+        '</div>'
+      );
     }
     body.innerHTML = parts.join('');
   }
@@ -14333,7 +14514,7 @@
     setText('ddo-starts',   'Starts: —');
     setText('ddo-ends',     'Ends: —');
     setText('ddo-remaining','');
-    setText('ddo-score',    'You: 0 · Opponent: 0');
+    setText('ddo-score',    'Scoring activates in the next duel pass.');
     const actionsEl = document.getElementById('ddo-actions');
     if (actionsEl) actionsEl.innerHTML = '';
 
@@ -14364,11 +14545,10 @@
       const daysLeft = Math.floor(hrs / 24);
       setText('ddo-remaining', 'Time remaining: ' + (daysLeft > 0 ? daysLeft + 'd ' + (hrs % 24) + 'h' : hrs + 'h'));
     }
-    // Score block — server scores are 0 in v1 (scoring deferred).
-    const myRole = d.role === 'challenger' ? 'challenger' : 'opponent';
-    const myScore  = myRole === 'challenger' ? d.challenger_score : d.opponent_score;
-    const oppScore = myRole === 'challenger' ? d.opponent_score   : d.challenger_score;
-    setText('ddo-score', 'You: ' + (myScore || 0) + ' · Opponent: ' + (oppScore || 0));
+    // Score block — scoring is deferred. Never inject "You: X · Opp: Y"
+    // numbers here, even when the backend returns zeroes; the user
+    // sees a single italic footnote instead.
+    setText('ddo-score', 'Scoring activates in the next duel pass.');
 
     // Actions per role + status.
     if (actionsEl) {
@@ -14438,6 +14618,9 @@
           } else if (action === 'challenge') {
             const alias = row.getAttribute('data-alias') || '';
             if (!alias) { btn.disabled = false; return; }
+            const aliasDisp = _socialDisplayAlias(alias);
+            const confirmed = window.confirm('Challenge ' + aliasDisp + ' to a 3-day Discipline Duel? Stake: 25 souls. Reward: 40 souls.');
+            if (!confirmed) { btn.disabled = false; return; }
             res = await Auth.createDuel(alias, { duration_days: 3, stake_souls: 25 });
             if (res && res.ok) {
               showHabitToast('Duel challenge sent.');
@@ -14457,16 +14640,29 @@
       });
     }
 
-    // Delegated handler for duel rows.
+    // Delegated handler for duel rows / cards.
+    // Buttons inside a card carry data-duel-action. The whole active
+    // duel card also carries data-duel-action="view" so tapping the
+    // card body (not just the chevron) opens the detail.
     const duelsBody = document.getElementById('social-duels-body');
     if (duelsBody) {
       duelsBody.addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-duel-action]');
-        if (!btn) return;
-        const row = btn.closest('.social-row');
-        if (!row) return;
-        const action = btn.getAttribute('data-duel-action');
-        const did    = row.getAttribute('data-duel-id');
+        let action, did;
+        let row;
+        if (btn) {
+          action = btn.getAttribute('data-duel-action');
+          row = btn.closest('.duel-card, .social-row');
+          if (!row) return;
+          did = row.getAttribute('data-duel-id');
+        } else {
+          // Whole-card tap (.duel-card--active).
+          const card = e.target.closest('.duel-card[data-duel-action="view"]');
+          if (!card) return;
+          action = 'view';
+          did = card.getAttribute('data-duel-id');
+          row = card;
+        }
         if (!did) return;
         if (action === 'view') {
           openDuelDetail(did);

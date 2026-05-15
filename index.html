@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=261">
+  <link rel="stylesheet" href="styles.css?v=262">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -375,7 +375,7 @@
       <button id="tab-items"    class="tab-btn"        data-tab="items"    aria-label="Items">
         <img class="tab-icon" src="assets/tab-icons/tab-items.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
       </button>
-      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Social">
+      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Duels">
         <img class="tab-icon" src="assets/tab-icons/tab-social.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
       </button>
     </nav>
@@ -537,31 +537,36 @@
       </div>
     </div>
 
-    <!-- Social panel — Leaderboard preview (v2.0.2)
-         Surfaces the user's own Apple-Health-verified stats now so
-         they accumulate visible history. The competitive leaderboard
-         layer ships in a future version; this tab is the holding
-         space for it. Rendered by renderLeaderboardPreview(). -->
+    <!-- Duels panel (v3 Phase 1x.1) — dedicated Duels tab.
+         Internal id stays `social` (data-tab="social", #social-panel) to
+         avoid a risky cross-codebase rename; user-facing label is "Duels".
+         Layout: page header → active-duel hero → Friends section →
+         Discipline Duels section. Leaderboard cards no longer render
+         here (renderLeaderboardPreview is still used by #lb-rank-sheet
+         elsewhere; just not invoked from the social-tab branch). -->
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
-      <div class="lb-preview">
-        <div class="lb-preview-header">
-          <div class="lb-preview-eyebrow">LEADERBOARD · LIVE</div>
-          <h2 class="lb-preview-title">YOUR VERIFIED STATS</h2>
-          <p class="lb-preview-sub">Tracked from your Apple Health data. Real-time rankings against every hunter on the leaderboard.</p>
+
+      <!-- Page header — rune divider + gold title + italic subtitle -->
+      <div class="duels-page-header">
+        <div class="duels-rune-divider" aria-hidden="true">
+          <span class="duels-rune-line"></span>
+          <svg class="duels-rune-spark" width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4z" fill="currentColor" opacity="0.85"/></svg>
+          <span class="duels-rune-line"></span>
         </div>
-        <div id="lb-preview-empty" class="lb-preview-empty hidden"></div>
-        <div id="lb-preview-list" class="lb-preview-list"></div>
-        <div class="lb-preview-footer">Only Apple Health-verifiable stats — the only stats that don't lie.</div>
+        <h2 class="duels-page-title">DISCIPLINE DUELS</h2>
+        <p class="duels-page-sub">Challenge a hunter. Seal more objectives. Outlast your rival.</p>
       </div>
 
-      <!-- Build-verification marker (v3 Phase 1x debug — REMOVE in next pass) -->
-      <div class="social-build-marker">
-        BUILD 2.2.1 · Friends + Duels foundation ↓
-      </div>
+      <!-- Active duel hero — empty by default, rendered/swapped by
+           renderActiveDuelHero() during renderDuelsSection(). -->
+      <div id="duels-hero" class="duels-hero-mount"></div>
 
-      <!-- Discipline Duels v1 — friends section (v3 Phase 1x) -->
+      <!-- FRIENDS section -->
       <section class="social-section social-section--friends">
-        <div class="social-section-header">FRIENDS</div>
+        <div class="social-section-header-row">
+          <div class="social-section-header">FRIENDS</div>
+          <div id="social-friends-count" class="social-section-count"></div>
+        </div>
         <div class="social-friend-add">
           <input id="social-friend-input" class="social-friend-input" type="text"
                  placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -572,10 +577,10 @@
         </div>
       </section>
 
-      <!-- Discipline Duels v1 — duels section -->
+      <!-- DISCIPLINE DUELS section -->
       <section class="social-section social-section--duels">
         <div class="social-section-header">DISCIPLINE DUELS</div>
-        <div class="social-section-sub">3-day 1v1. 25 souls staked each (metadata only — scoring activates in the next pass).</div>
+        <div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>
         <div id="social-duels-body" class="social-section-body">
           <div class="social-empty">Loading duels…</div>
         </div>
@@ -625,8 +630,7 @@
         </div>
         <div class="bfs-section">
           <div class="bfs-section-label">SCORE</div>
-          <div id="ddo-score" class="bfs-section-text" style="font-weight:600;">You: 0 · Opponent: 0</div>
-          <div class="bfs-section-text" style="margin-top:6px; opacity:0.7;">Scoring activates in the next duel pass. Stake and reward are metadata only in v1.</div>
+          <div id="ddo-score" class="bfs-section-text" style="font-style:italic; opacity:0.75;">Scoring activates in the next duel pass.</div>
         </div>
         <div id="ddo-actions" class="ddo-actions"></div>
       </div>
@@ -1748,7 +1752,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=353"></script>
+  <script src="app.js?v=354"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
