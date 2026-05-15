@@ -144,11 +144,17 @@ Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: 
 - `POST /v1/duels` body `{ opponent_alias, duration_days?, stake_souls? }` — both users must be accepted friends; rejects self-duels + pre-existing pending/active duel between the pair.
 - `POST /v1/duels/:id/accept | /decline` — opponent only. Accept sets `starts_at = now`, `ends_at = now + duration_days`.
 - `GET /v1/duels/:id` — full record + alias map + `time_remaining_ms` when active. Participants only.
-- D1 tables: `friends` (id, requester_user_id, recipient_user_id, status, created_at, updated_at; UNIQUE(requester,recipient)) and `duels` (id, challenger_user_id, opponent_user_id, status, stake_souls, reward_souls, burn_souls, duration_days, **duel_type**, starts_at, ends_at, winner_user_id, six per-side score columns, timestamps). Migrations: `0003_friends_and_duels.sql` + `0004_verified_duel_types.sql` (adds `duel_type` column — v3 Phase 1x.6 verified-only duel type picker).
+- D1 tables: `friends` (id, requester_user_id, recipient_user_id, status, created_at, updated_at; UNIQUE(requester,recipient)) and `duels` (id, challenger_user_id, opponent_user_id, status, stake_souls, reward_souls, burn_souls, duration_days, **duel_type**, starts_at, ends_at, winner_user_id, six per-side score columns, timestamps, **+ `resolved_at` + `result` from v3 Phase 1y**). Migrations: `0003_friends_and_duels.sql` + `0004_verified_duel_types.sql` (adds `duel_type` column — v3 Phase 1x.6 verified-only duel type picker) + `0005_duel_progress_snapshots.sql` (Steps Duel Scoring v1 — see below).
 - **Souls fields (`stake_souls`/`reward_souls`/`burn_souls`) are METADATA ONLY in v1.** No backend spend/award logic runs against them. localStorage souls remain client-side authoritative until scoring lands in a later pass.
-- Four rate-limit bindings: `RL_FRIENDS_READ` (30/min), `RL_FRIENDS_WRITE` (10/min), `RL_DUELS_READ` (30/min), `RL_DUELS_WRITE` (6/min) via wrangler `namespace_id`s 1007–1010.
+- Four rate-limit bindings: `RL_FRIENDS_READ` (30/min), `RL_FRIENDS_WRITE` (10/min), `RL_DUELS_READ` (30/min), `RL_DUELS_WRITE` (6/min) via wrangler `namespace_id`s 1007–1010. `RL_DUELS_WRITE` is shared with the v3 Phase 1y scoring endpoints below.
 - Auth: every endpoint requires JWT; current user is always derived from `verifySessionJwt`, never from request body. Aliases looked up case- and space-insensitive (`LOWER(REPLACE(alias, ' ', '')) = ?`) to match the client display normalizer.
-- **Deferred to a later pass:** scoring (server-side `habit_events` log preferred long-term), APNs / push notifications, real-time updates, ghost battles, matchmaking, server-side combat resolution. v1 is coordination only.
+
+**5. Steps Duel Scoring v1 (v3 Phase 1y)**
+- `POST /v1/duels/:id/progress` — body `{ duel_type, metric, value, window_start, window_end, client_updated_at }`. Upserts a row into `duel_progress_snapshots` (UNIQUE on `duel_id, user_id, metric` so re-submits overwrite). Server enforces `metric === 'steps'` and `duel.duel_type === 'steps'`; non-steps types reject with `DUEL_TYPE_NOT_SCORED_YET`. Returns `{ ok, you, rival }`. `source` is server-set to `'apple_health'`.
+- `POST /v1/duels/:id/resolve` — idempotent winner resolution. Reads both snapshots (missing = 0), compares, writes `winner_user_id`, `result`, scores, `resolved_at`, marks `completed`. Rejects with `DUEL_NOT_ENDED` if `now < ends_at`. Re-call on already-completed returns the existing row.
+- D1 table: `duel_progress_snapshots (id, duel_id, user_id, duel_type, metric, value, source, window_start, window_end, client_updated_at, server_updated_at)`.
+- Reuses `RL_DUELS_WRITE` (no new wrangler binding); client debounces submits to 5 min.
+- **Deferred to a later pass:** scoring for non-steps duel types (sleep/bedtime/strength/verified_objectives/boss_race), APNs / push notifications, on-device signed snapshots (current v1 trusts client values), souls movement, real-time multi-device merge, ghost battles, matchmaking.
 
 **Auth + rate-limit middleware** — every authenticated route in `src/index.ts` parses `Bearer <jwt>` from the Authorization header, calls `verifySessionJwt(token, env)`, and passes the resulting `{ userId, alias }` to the handler. All write endpoints have per-user rate-limit bindings via Cloudflare's Rate Limiting API.
 
@@ -1255,9 +1261,45 @@ Default = `verified_objectives` — first-time challengers don't have to think; 
 
 **Stake / duration / reward stay fixed at 25 / 3 / 40** — user can't edit them. Only the type picker is interactive.
 
-**Scoring is still deferred.** The Active Duel hero and Detail overlay both still surface `"Scoring activates in the next duel pass."` — do NOT inject numeric scores anywhere even when the backend returns zeroes. The type rails are being laid; the train runs in a later pass.
+**Scoring is partially live as of v3 Phase 1y — only `steps` duels score.** Other duel types still surface `"Scoring activates in the next duel pass."` in the Active Duel hero + Detail overlay; the backend rejects progress submissions for non-steps types with `DUEL_TYPE_NOT_SCORED_YET`. See "Steps Duel Scoring v1" subsection below.
 
 **Manual habit-based duel types are explicitly NOT supported** — Most Sealed Objectives via manual habits, Most XP including manual habits, Streak Duels including manual streaks, Perfect Day duels. The "system is honest" promise requires data-backed verification. Reversing this decision needs explicit product ask.
+
+### Steps Duel Scoring v1 (v3 Phase 1y)
+
+First real competitive scoring loop in Awakened. Conservative scope: only `steps` duel type is scored. No APNs. No souls movement.
+
+**Backend authority.** Client never decides the winner. Two new endpoints on the Cloudflare Worker:
+
+- `POST /v1/duels/:id/progress` — body `{ duel_type, metric, value, window_start, window_end, client_updated_at }`. Upserts a row into `duel_progress_snapshots` keyed on `(duel_id, user_id, metric)`. Server enforces `metric === 'steps'` and `duel.duel_type === 'steps'` (else `DUEL_TYPE_NOT_SCORED_YET`). Returns `{ ok, you, rival }` — `rival` is `null` if the rival hasn't submitted yet. `source` is server-set to `'apple_health'`.
+- `POST /v1/duels/:id/resolve` — idempotent winner resolution. Reads both participants' latest snapshots (missing = 0), compares, writes the winner / result, marks the duel `completed`. Reject if `now < ends_at` with `DUEL_NOT_ENDED`. Re-calling on a completed duel returns the existing row without re-comparison. Tie → `result = 'draw'`, `winner_user_id = NULL`.
+
+**New table:** `duel_progress_snapshots (id, duel_id, user_id, duel_type, metric, value, source, window_start, window_end, client_updated_at, server_updated_at)`. `UNIQUE(duel_id, user_id, metric)` so re-submits overwrite. Migration: `0002_user_state_snapshots.sql` → `0003_friends_and_duels.sql` → `0004_verified_duel_types.sql` → `0005_duel_progress_snapshots.sql` (also adds `resolved_at` + `result` columns on `duels`).
+
+**Client (Apple Health → backend).**
+
+- `Health.getStepsBetween(startISO, endISO)` — generic uncached step query. `getStepsToday()` was refactored to share the inner `_queryStepsInRange` path. Cache discipline: only today is cached (5-min), arbitrary windows are not.
+- `submitActiveStepsDuelProgress(opts)` — self-debounced (`_DUEL_PROGRESS_MIN_MS = 5 * 60 * 1000`). Walks `Auth.fetchDuels().active`, filters to `duel_type === 'steps'`, queries `Health.getStepsBetween(starts_at, min(now, ends_at))`, POSTs each via `Auth.submitDuelProgress`. Each per-duel call is try/wrapped — a duel-progress failure must NEVER break leaderboard / habit / boss paths.
+- Triggers: `init()` cold launch (force = true), `visibilitychange` to visible (debounced), `renderDuelsSection` (debounced), `Auth.acceptDuel` completion (force).
+- `maybeResolveDuelIfEnded(duel)` — called from `renderDuelsSection` (auto-resolves every active duel past `ends_at`) and `_ddoPopulate` (same check when user opens a detail view). Backend is idempotent.
+
+**UI surfaces.** Active steps duel card + hero card both render a verified-steps score row (`You: 12,420 · Rival: 9,800`; rival shows `awaiting data` if no snapshot). Duel detail overlay renders the same in-flight scores; when `status === 'completed'`, replaces with a result row:
+
+- challenger_win + role=challenger → "Victory — you outstepped &lt;alias&gt;." (gold celebration variant)
+- opponent_win + role=opponent → same
+- challenger_win + role=opponent → "Defeat — &lt;alias&gt; outstepped you." (muted/desaturated)
+- opponent_win + role=challenger → same
+- draw → "Draw — both hunters matched pace."
+
+Non-steps duel types keep the "Scoring activates in the next duel pass." italic footnote.
+
+**One-shot result toast.** Keyed by `hb_duel_result_seen_<duelId>` localStorage flag — fires the first time the user sees a completed duel, never replays. Three variants: `Duel won — verified steps decided it.`, `Duel lost — your rival logged more verified steps.`, `Duel ended in a draw.`
+
+**Rate-limit reuse.** `RL_DUELS_WRITE` (6/min) gates both new endpoints. Client debounce at 5 min keeps legit usage well below the cap. No new `wrangler.toml` binding for v1.
+
+**v1 integrity disclosure.** Client-submitted values are trusted (not full server-side authority). Apple Health is the source of truth but the value reaches the backend through the client. Future hardening = on-device signed snapshots or a server-side HealthKit-via-watch-companion. Not for now — v1 prioritizes shipping the first real outcome over the harder integrity story.
+
+**No souls movement.** Engagement stake / kill reward visualized in the UI but NEVER moved. Souls remain client-side localStorage authoritative. The detail overlay completed state shows "Rewards activate in a future economy pass." Don't wire a soul-debit on accept or soul-award on resolve — that's a separate pass with its own design + tests.
 
 ---
 
@@ -2213,7 +2255,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=266`, `app.js?v=359`, `auth.js?v=10`, `simulated-leaderboard.js?v=4`, `sw.js v5.244`, `APP_BUILD_TAG = '2.2.1-w9'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=268`, `app.js?v=361`, `auth.js?v=11`, `simulated-leaderboard.js?v=4`, `sw.js v5.247`, `APP_BUILD_TAG = '2.2.1-w11'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2337,6 +2379,11 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Reviving `#boss-detail-sheet` or `openBossDetail/closeBossDetail`.** The v1.1.7 `.vn-sheet` bottom-sheet was retired in v2.0.1 when boss cards became tappable to a full-screen modal. The element IDs, function names, and CSS (`.boss-detail-*`) are all gone. The replacement is `#boss-fs-overlay` + `openBossFullScreen(id)` / `closeBossFullScreen()`. If a future detail-modal pattern is needed elsewhere, copy the `.bfs-*` block, don't try to resurrect the bottom-sheet.
 - **Adding a `glyph` field to `BOSSES` entries.** It existed briefly in v2.0.1 development for the boss-card header (🌙 / 👑) and was removed when emojis got cut from the card aesthetic. The card header is now rank-pill-left + name-centered, no third element. If you re-add a glyph, also rebalance `.bcard-header` (currently flex-centered with absolute-positioned pill, no slot for a third element).
 - **Dropping `cfg.streakTarget` reads in favor of hardcoded "3" or "2".** All UI surfaces (card progress dots, "X / Y nights" labels, detail-modal progress) read `streakTarget` from the BOSSES config. Single source of truth. The 3→2 recalibration in v2.0.1 changed only the constant + copy strings — no render code touched. Keep it that way; future rebalances should be a constant edit.
+- **Letting the client decide a duel's winner.** Backend `POST /v1/duels/:id/resolve` is the only authority. Client submits progress snapshots (Apple Health-derived) via `POST /v1/duels/:id/progress`; the resolve endpoint compares both participants' latest values (missing = 0) and writes `winner_user_id` + `result`. The client renders the outcome — it never decides it. Tie → `result = 'draw'`, `winner_user_id = null`. (v3 Phase 1y)
+- **Moving souls on duel completion in v1.** Souls remain localStorage-only client-side authoritative; the `stake_souls` / `reward_souls` / `burn_souls` columns on `duels` are metadata for display. Don't wire a soul-debit on `accept` or a soul-award on `resolve`. The detail-overlay completed state already surfaces "Rewards activate in a future economy pass." Adding economy movement without the matched server-side ledger would let any client mint souls. (v3 Phase 1y)
+- **Scoring non-steps duel types.** `POST /v1/duels/:id/progress` rejects anything but `duel_type='steps'` in v1 with `DUEL_TYPE_NOT_SCORED_YET`. Sleep / bedtime / strength / verified_objectives / boss_race remain metadata-only and continue showing the "Scoring activates in the next duel pass." footnote in the UI. Adding a new scored type requires: (a) a backend handler branch that knows what metric to read, (b) a client `submitActive<Type>DuelProgress()` equivalent driven by the right HealthKit query, (c) a UI score row, (d) result-toast wording. (v3 Phase 1y)
+- **Replaying the duel result toast.** `_maybeFireDuelResultToast(duel)` uses `hb_duel_result_seen_<duelId>` as a one-shot flag — once set, the toast never replays. Don't bypass the flag for a re-render path; the toast is the cinematic, not a status indicator. If a future feature needs an at-a-glance "has the user seen this result yet" badge, add a separate UI surface that reads the same flag but doesn't toast on tick. (v3 Phase 1y)
+- **Caching `Health.getStepsBetween` results.** Don't. Different windows return different answers; caching by window key would balloon the cache and introduce hard-to-debug stale-step bugs. The 5-min today-cache lives on `getStepsToday()` only — `getStepsBetween` is uncached by design. If you need to share a single steps query across multiple consumers (boss + leaderboard + duel), call it once at the call site and pass the value down — that's what `autoVerifyWalk` already does for boss eval + `lbRecordStepsToday`. (v3 Phase 1y)
 - **Working in the OneDrive copy.** The repo was moved to `C:\Users\richm\Documents\repos\awakened-app` on May 13 because OneDrive sync vs `.git/objects` produces "Delete these 1000+ items?" dialogs every time git does internal housekeeping (gc, pack, prune). The OneDrive copy at `C:\Users\richm\OneDrive\Desktop\habit-tracker` STILL exists as backup. Pick one as canonical and `git pull` at session start. `serve.ps1`'s fallback was updated to point at the new location (commit `70240d8`); always `cd` into the new repo before launching. Yesterday's drift bit us THREE times — same fix each time: cd to the new repo, restart `serve.ps1`, hard-refresh the browser, paste the SW unregister one-liner.
 - **Running git commands from the wrong shell when both repos exist.** Commits to one repo don't propagate to the other automatically. `git status` says "nothing to commit" because the shell is in the OneDrive copy while my edits went to the new repo. Always check `pwd` if `git status` reports unexpected emptiness. Fix: `cd /c/Users/richm/Documents/repos/awakened-app` then re-run.
 - **Reintroducing the body-socket Armory.** The 9-slot `panel-base.png` carved-stone panel was killed in v3 Phase 1d after 5+ structural iterations failed. CSS can't strip flattened RGB backgrounds; the Tonal-style typed grid is the structural fix. Don't bring it back. See "Removed systems" → "9-slot body-equipment Armory".

@@ -245,6 +245,19 @@ workflows:
             echo "      (auth.js is stale relative to index.html)"
             exit 1
           fi
+          # v3 Phase 1y — Steps Duel Scoring v1 must be present.
+          if ! grep -q "submitActiveStepsDuelProgress" www/app.js; then
+            echo "FAIL: www/app.js missing submitActiveStepsDuelProgress (Phase 1y scoring)"
+            exit 1
+          fi
+          if ! grep -q "getStepsBetween" www/app.js; then
+            echo "FAIL: www/app.js missing Health.getStepsBetween (Phase 1y scoring)"
+            exit 1
+          fi
+          if ! grep -q "submitDuelProgress" www/auth.js; then
+            echo "FAIL: www/auth.js missing submitDuelProgress (Phase 1y scoring)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.
@@ -326,6 +339,19 @@ workflows:
           fi
           if ! grep -q "duel-type-overlay" "$PUB/index.html"; then
             echo "FAIL: $PUB/index.html missing #duel-type-overlay markup"
+            exit 1
+          fi
+          # v3 Phase 1y — Steps Duel Scoring v1 must reach iOS bundle.
+          if ! grep -q "submitActiveStepsDuelProgress" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing submitActiveStepsDuelProgress (Phase 1y scoring)"
+            exit 1
+          fi
+          if ! grep -q "getStepsBetween" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing Health.getStepsBetween (Phase 1y scoring)"
+            exit 1
+          fi
+          if ! grep -q "submitDuelProgress" "$PUB/auth.js"; then
+            echo "FAIL: $PUB/auth.js missing submitDuelProgress (Phase 1y scoring)"
             exit 1
           fi
           # sw.js cache version cross-check
