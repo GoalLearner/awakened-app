@@ -144,7 +144,7 @@ Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: 
 - `POST /v1/duels` body `{ opponent_alias, duration_days?, stake_souls? }` — both users must be accepted friends; rejects self-duels + pre-existing pending/active duel between the pair.
 - `POST /v1/duels/:id/accept | /decline` — opponent only. Accept sets `starts_at = now`, `ends_at = now + duration_days`.
 - `GET /v1/duels/:id` — full record + alias map + `time_remaining_ms` when active. Participants only.
-- D1 tables: `friends` (id, requester_user_id, recipient_user_id, status, created_at, updated_at; UNIQUE(requester,recipient)) and `duels` (id, challenger_user_id, opponent_user_id, status, stake_souls, reward_souls, burn_souls, duration_days, starts_at, ends_at, winner_user_id, six per-side score columns, timestamps). Migration: `0003_friends_and_duels.sql`.
+- D1 tables: `friends` (id, requester_user_id, recipient_user_id, status, created_at, updated_at; UNIQUE(requester,recipient)) and `duels` (id, challenger_user_id, opponent_user_id, status, stake_souls, reward_souls, burn_souls, duration_days, **duel_type**, starts_at, ends_at, winner_user_id, six per-side score columns, timestamps). Migrations: `0003_friends_and_duels.sql` + `0004_verified_duel_types.sql` (adds `duel_type` column — v3 Phase 1x.6 verified-only duel type picker).
 - **Souls fields (`stake_souls`/`reward_souls`/`burn_souls`) are METADATA ONLY in v1.** No backend spend/award logic runs against them. localStorage souls remain client-side authoritative until scoring lands in a later pass.
 - Four rate-limit bindings: `RL_FRIENDS_READ` (30/min), `RL_FRIENDS_WRITE` (10/min), `RL_DUELS_READ` (30/min), `RL_DUELS_WRITE` (6/min) via wrangler `namespace_id`s 1007–1010.
 - Auth: every endpoint requires JWT; current user is always derived from `verifySessionJwt`, never from request body. Aliases looked up case- and space-insensitive (`LOWER(REPLACE(alias, ' ', '')) = ?`) to match the client display normalizer.
@@ -1230,6 +1230,35 @@ If A has a pending request to B and B tries to send one to A, B's attempt does N
 - **Matchmaking.** Friends-only is the v1 constraint. Open queue / skill-matching is a much later concern.
 - **Server-side combat / animations.** No combat resolution logic. The duel modal is informational.
 
+### Discipline Duel Types — Verified Only (v3 Phase 1x.6)
+
+Pre-duel type-pick layer on top of the v3 Phase 1x foundation. **Metadata + UI only — no scoring engine, no fake scores, no souls movement.** Goal: capture the user's choice now so when the scoring engine ships, `duel.duel_type` decides what query runs against each participant's verified data.
+
+**6 supported types** (canonical ids — must match `DUEL_TYPES` in `app.js` AND `ALLOWED_DUEL_TYPES` in `backend/src/handlers/duels.ts`):
+
+| id | Label | Verified source | Win condition (future scoring) |
+|---|---|---|---|
+| `steps` | Steps Duel | Apple Health steps | Most verified steps during the duel window |
+| `sleep` | Sleep Duel | Apple Health sleep | Most verified nights with ≥7h sleep |
+| `bedtime` | Bedtime Duel | Apple Health sleep | Most verified before-midnight bedtimes |
+| `strength` | Strength Duel | Apple Health workouts | Most verified strength workouts |
+| `verified_objectives` | Verified Discipline Duel | System-verified objectives | Most verified objectives during the window |
+| `boss_race` | Boss Race | Verified boss progress | First hunter to defeat the selected HealthKit-backed boss |
+
+Default = `verified_objectives` — first-time challengers don't have to think; they can override per-duel. Boss Race is **metadata only** in this pass; no boss-selection UI yet, no special handling beyond storing the type.
+
+**Backend:** new column `duel_type TEXT NOT NULL DEFAULT 'verified_objectives'` on the `duels` table (migration `0004_verified_duel_types.sql`). `handleDuelsCreate` validates `body.duel_type` against `ALLOWED_DUEL_TYPES`; absent → default; invalid → `400 INVALID_DUEL_TYPE`. `serializeDuel` includes `duel_type` (with fallback to default) so every list / detail response surfaces it.
+
+**Frontend:** `DUEL_TYPES` constant + helpers (`getDuelTypeMeta`, `formatDuelTypeLabel`, `formatDuelWinCondition`, `formatDuelTypeShort`, `formatDuelTypeSource`, `getDuelTypeShortCode`) live in `app.js`. `#duel-type-overlay` (in `index.html`) is a bottom-sheet that opens on Challenge tap. User picks (default pre-selected) → Challenge Hunter → `Auth.createDuel(alias, { duration_days: 3, stake_souls: 25, duel_type })`. The prior `window.confirm("Challenge ...")` flow is GONE.
+
+**Display propagation:** type label appears on every duel surface — Incoming card sub (`Steps Duel · challenged you · 3-day duel`), Outgoing card sub (`Steps Duel · awaiting response`), Active card sub (`Steps Duel · 1d 14h left`), Active hero opponent sub (label + short copy line), Duel Detail overlay (DUEL TYPE / Verified Source / WIN CONDITION rows replace the old generic copy), HUNTING strip duel pill (prefix `STEPS · VS <ALIAS> · 2D LEFT`). Every read of `duel.duel_type` is defensive — `getDuelTypeMeta` falls back to the default if the field is missing (pre-migration rows).
+
+**Stake / duration / reward stay fixed at 25 / 3 / 40** — user can't edit them. Only the type picker is interactive.
+
+**Scoring is still deferred.** The Active Duel hero and Detail overlay both still surface `"Scoring activates in the next duel pass."` — do NOT inject numeric scores anywhere even when the backend returns zeroes. The type rails are being laid; the train runs in a later pass.
+
+**Manual habit-based duel types are explicitly NOT supported** — Most Sealed Objectives via manual habits, Most XP including manual habits, Streak Duels including manual streaks, Perfect Day duels. The "system is honest" promise requires data-backed verification. Reversing this decision needs explicit product ask.
+
 ---
 
 ## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
@@ -2184,7 +2213,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=262`, `app.js?v=354`, `auth.js?v=9`, `simulated-leaderboard.js?v=4`, `sw.js v5.239`, `APP_BUILD_TAG = '2.2.1-w4'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=266`, `app.js?v=359`, `auth.js?v=10`, `simulated-leaderboard.js?v=4`, `sw.js v5.244`, `APP_BUILD_TAG = '2.2.1-w9'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2325,6 +2354,10 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Reintroducing Recent Duels on the Duels tab.** `res.recent` is intentionally ignored by `renderDuelsSection` in v1. Completed-duel rows shouldn't render until the win-state computation has real data behind it. Hide them; don't surface "Declined" / "Cancelled" / "Expired" historical rows either — those add visual noise without yet conveying outcome trustworthy enough to display.
 - **Renaming the internal `social` tab id to `duels`.** The user-facing label/aria/icon is "Duels" (v3 Phase 1x.1), but `data-tab="social"`, `#social-panel`, `switchTab('social')`, and every `tab === 'social'` branch stays put. Renaming would touch hundreds of references across app.js / index.html / styles.css for zero functional benefit. The naming asymmetry is intentional.
 - **Trusting `user_id` from a request body in friend/duel handlers.** All friends + duels endpoints derive the current user from `verifySessionJwt(token, env)` only. Never read `user_id` from the request body — clients are untrusted and the JWT is the only authoritative identity claim. The handler-level `session.userId` from `index.ts` is the right value to pass into queries. If you ever extend these handlers, mirror the existing pattern: every recipient-only / participant-only check (accept, decline, remove, detail) compares the row's stored `*_user_id` against `session.userId`, never against anything from the body.
+- **Adding unverified / honor-system duel types.** Most Sealed Objectives via manual habits, Most XP including manual habits, Streak Duels including manual streaks, Perfect Day duels — all explicitly rejected. The "system is honest" promise requires data-backed verification. If you find yourself wanting to add a type that doesn't have an Apple Health / boss / system-verified source, stop. The 6 types in `DUEL_TYPES` (steps / sleep / bedtime / strength / verified_objectives / boss_race) are the supported set. Adding a 7th requires both a verifiable data source AND an explicit product call.
+- **Implying scoring works before the scoring engine exists.** The Active Duel hero and Duel Detail overlay both MUST show `"Scoring activates in the next duel pass."` — never a numeric score, never "You: 0 · Opp: 0", never even a placeholder zero bar. Backend rows have score columns that always return 0 today; rendering those would lie to the user. The footnote is the only correct UX until real scoring lands.
+- **Forgetting to add a new duel type to BOTH `ALLOWED_DUEL_TYPES` (backend) and `DUEL_TYPES` (frontend).** Backend rejects unknown types with `400 INVALID_DUEL_TYPE`. Frontend `getDuelTypeMeta` falls back to the default if the id isn't in the map. Both sources must stay in sync — when you add a 7th type, edit `backend/src/handlers/duels.ts` AND `app.js` together (also update `DUEL_TYPE_SHORT_CODES` so the HUNTING strip pill renders the new code, and the docs subsection here).
+- **Forgetting to update Codemagic gates after touching duel-type markup.** The pre-sync and post-sync gates check for `DUEL_TYPES` in `www/app.js` + `ios/App/App/public/app.js`, and `duel-type-overlay` in both `index.html`s. If you rename the constant or the overlay id, you must also update `codemagic.yaml`.
 
 ---
 

@@ -231,6 +231,15 @@ workflows:
             echo "FAIL: www/app.js missing renderActiveDuelHero (v3 Phase 1x.1)"
             exit 1
           fi
+          # v3 Phase 1x.6 — Verified-Only Duel Types must be present.
+          if ! grep -q "DUEL_TYPES" www/app.js; then
+            echo "FAIL: www/app.js missing DUEL_TYPES constant (verified duel types pass)"
+            exit 1
+          fi
+          if ! grep -q "duel-type-overlay" www/index.html; then
+            echo "FAIL: www/index.html missing #duel-type-overlay markup"
+            exit 1
+          fi
           if ! grep -q "fetchFriends" www/auth.js; then
             echo "FAIL: www/auth.js missing fetchFriends helper"
             echo "      (auth.js is stale relative to index.html)"
@@ -308,6 +317,15 @@ workflows:
           # NOT ship in production — was removed in v3 Phase 1x.1.
           if grep -q "Friends + Duels foundation" "$PUB/index.html"; then
             echo "FAIL: legacy build marker still present in iOS bundle"
+            exit 1
+          fi
+          # v3 Phase 1x.6 — Verified-Only Duel Types must reach iOS bundle.
+          if ! grep -q "DUEL_TYPES" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing DUEL_TYPES (verified duel types pass)"
+            exit 1
+          fi
+          if ! grep -q "duel-type-overlay" "$PUB/index.html"; then
+            echo "FAIL: $PUB/index.html missing #duel-type-overlay markup"
             exit 1
           fi
           # sw.js cache version cross-check
