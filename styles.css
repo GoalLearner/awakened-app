@@ -8912,6 +8912,14 @@ footer {
   max-width: 520px;
   margin: 0 auto;
 }
+
+/* v3 Phase 1x.2 — Global Rankings relocated under Stats tab.
+   Visual separator from the character-stats content above. */
+.stats-rankings {
+  margin-top: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
 .lb-preview-header { text-align: center; }
 .lb-preview-eyebrow {
   font-size: 0.72rem;

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w4';
+  const APP_BUILD_TAG = '2.2.1-w5';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11917,7 +11917,7 @@
     footer.style.display = tab === 'habits' ? '' : 'none';
 
     if (tab === 'profile')      renderProfile();
-    if (tab === 'stats')        renderStats();
+    if (tab === 'stats')      { renderStats(); renderLeaderboardPreview(); }
     if (tab === 'history')      renderHistory();
     // Quests tab: always re-greet the user with the gate. Reset the
     // expansion flag on every tab activation so re-entering the
