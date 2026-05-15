@@ -355,6 +355,49 @@
       statDomain:       'WILL',
       dayOfWeekScoped:  true, // only Fri + Sat nights count (2-night recalibration)
     },
+    // v3 Phase 1v — D-rank boss roster. All three are TRUE daily-cadence
+    // bosses (one defeat per qualifying day/night, no weekly cap). Souls
+    // economy is 35/35 per the rebalance — net 0 per kill cycle, so
+    // these become the relic farm; E-rank stays the souls farm.
+    iron_warden: {
+      id:               'iron_warden',
+      name:             'The Iron Warden',
+      rank:             'D',
+      flavorShort:      'Steel remembers what flesh forgets.',
+      flavorLong:       'He stands at the threshold of the forge, and the price of passage is iron lifted. Skip the work and the gate seals. Earn the work, and the way opens — for today.',
+      killCondShort:    'Verified strength workout (10+ min) today',
+      killCondLong:     'Complete one Apple Health–verified strength workout of at least 10 minutes today. Any qualifying workout defeats the boss for that day.',
+      streakTarget:     1,
+      workoutMinutes:   10,
+      cadence:          'daily',
+      statDomain:       'STR',
+    },
+    glass_strider: {
+      id:               'glass_strider',
+      name:             'The Glass Strider',
+      rank:             'D',
+      flavorShort:      'Each step it takes, it asks for one more from you.',
+      flavorLong:       'A long-legged thing of pale glass that walks the road ahead of you. Match its pace today and it lets you pass. Fall short and it walks on without you.',
+      killCondShort:    '7,500+ steps today',
+      killCondLong:     'Reach at least 7,500 steps today (Apple Health verified). Any day you hit the threshold defeats the boss for that day.',
+      streakTarget:     1,
+      stepThreshold:    7500,
+      cadence:          'daily',
+      statDomain:       'VIT',
+    },
+    dream_tyrant: {
+      id:               'dream_tyrant',
+      name:             'The Dream Tyrant',
+      rank:             'D',
+      flavorShort:      'He rules the hours you give him. Give him fewer and he rules less.',
+      flavorLong:       'A crowned figure who collects every night the user surrenders. The price of his retreat is the deep rest you owed yourself — at least seven and a half hours of it.',
+      killCondShort:    '7.5+ hours of sleep last night',
+      killCondLong:     'Sleep at least 7.5 hours in a single night (Apple Health verified). Any night you cross the threshold defeats the boss for that night.',
+      streakTarget:     1,
+      sleepHours:       7.5,
+      cadence:          'daily',
+      statDomain:       'VIT',
+    },
   };
 
   function loadBosses() {
@@ -547,8 +590,16 @@
   const SOULS_STORAGE_KEY = 'hb_souls';
   const SOULS_DAILY_BONUS = 15;
   const SOULS_FIRST_INSTALL_GRANT = 35;
-  const SOULS_KILL_REWARDS  = { E: 50, D: 100, C: 200, B: 400, A: 800, S: 1600 };
-  const SOULS_ENGAGE_COSTS  = { E: 25, D:  50, C: 100, B: 200, A: 400, S:  800 };
+  // v3 Phase 1v — D-rank rebalance. Three new D-rank bosses (Iron Warden,
+  // Glass Strider, Dream Tyrant) are daily-cadence, so the tier-doubling
+  // economy from E (25/50, net +25) → D (50/100, net +50) would inflate
+  // soul earnings too aggressively when MAX_ENGAGED_BOSSES = 3 spans both
+  // tiers. Re-tuned D to 35/35: net 0 per kill cycle. D bosses become a
+  // "self-funding" relic farm — engage them when you'll clear them, lose
+  // the wager when you won't. E bosses remain the soul-accumulation path.
+  // C and beyond keep the doubling pattern.
+  const SOULS_KILL_REWARDS  = { E: 50, D: 35, C: 200, B: 400, A: 800, S: 1600 };
+  const SOULS_ENGAGE_COSTS  = { E: 25, D: 35, C: 100, B: 200, A: 400, S:  800 };
 
   // ── EQUIPMENT CARDS (v2.0.1 DROPS Phase 1) ──────────────────
   // Drops from boss kills. Each card is also an equippable item per
@@ -3005,12 +3056,136 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // v3 Phase 1v — D-rank evaluators (Iron Warden, Glass Strider,
+  // Dream Tyrant). All three are TRUE daily-cadence bosses:
+  //   - streakTarget = 1 (one qualifying day/night defeats them)
+  //   - cadence = 'daily' (uses daily mercy + rate thresholds)
+  //   - no weekly cap, no consecutive-day requirement
+  //   - max 1 defeat per qualifying calendar day/night
+  // Idempotency is enforced via state.last_eval_date — repeated
+  // app opens on the same day/night don't re-kill the boss.
+  // Engagement gate is the standard `state.engaged !== true` check.
+  // ─────────────────────────────────────────────────────────────
+
+  // Generic single-shot kill helper for daily-cadence streakTarget=1
+  // bosses. Avoids duplicating the kill flow (soul reward + drop roll
+  // + toast + UI refresh) across three evaluators. Caller is
+  // responsible for the qualifying-condition check + idempotency
+  // guard before invoking.
+  function _awardSingleShotKill(id, cfg, dayDate, state) {
+    state.kill_count = (state.kill_count || 0) + 1;
+    state.streak = 0;
+    state.last_eval_date = dayDate;
+    setBossState(id, state);
+    const reward = killRewardSouls(cfg.rank);
+    if (reward > 0) earnSouls(reward, 'kill_' + id);
+    const dropped = rollBossDrop(id);
+    announceKillAndDrop(cfg, reward, dropped);
+    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
+  }
+
+  // ── Iron Warden — verified strength workout ──────────────────
+  // Fed by Health.getStrengthWorkoutsToday() in autoVerifyStrengthTraining.
+  // Shares the same data source as the Strength training habit's
+  // auto-verify — a single qualifying workout drives both, matching
+  // the Insomniac/Carouser ↔ Sleep auto-verify shared-data pattern.
+  function evaluateIronWardenForDay(strengthData, dayDate) {
+    if (!dayDate) return;
+    const id = 'iron_warden';
+    const cfg = BOSSES[id];
+    if (!cfg) return;
+    const state = getBossState(id);
+    if (state.last_eval_date === dayDate) return;   // idempotent
+    if (state.engaged !== true) return;             // engagement gate
+
+    const qualifyingCount = (strengthData && typeof strengthData.count === 'number')
+      ? strengthData.count : 0;
+
+    if (qualifyingCount >= 1) {
+      _awardSingleShotKill(id, cfg, dayDate, state);
+    } else {
+      // No qualifying workout YET today — don't write a "no-kill"
+      // last_eval_date because that would block a later check after
+      // the user finishes a workout. Stay silent until the day rolls.
+    }
+  }
+  function checkMissedDayForIronWarden() {
+    const id = 'iron_warden';
+    const state = getBossState(id);
+    if (state.engaged !== true) return;
+    // streakTarget=1 daily means there's no streak to preserve —
+    // last_eval_date alone gates idempotency. Nothing to reset.
+  }
+
+  // ── Glass Strider — 7,500 steps ──────────────────────────────
+  // Fed by autoVerifyWalk's existing step-count fetch. Same data
+  // path that powers the Daily walk habit, Steel Wolf eval, and the
+  // leaderboard step recording. No extra HealthKit roundtrip.
+  function evaluateGlassStriderForDay(stepCount, dayDate) {
+    if (typeof stepCount !== 'number' || !dayDate) return;
+    const id = 'glass_strider';
+    const cfg = BOSSES[id];
+    if (!cfg) return;
+    const state = getBossState(id);
+    if (state.last_eval_date === dayDate) return;
+    if (state.engaged !== true) return;
+
+    if (stepCount >= cfg.stepThreshold) {
+      _awardSingleShotKill(id, cfg, dayDate, state);
+    }
+    // Sub-threshold: stay silent (no last_eval_date write) so a
+    // later eval after more walking can still credit the kill.
+  }
+  function checkMissedDayForGlassStrider() {
+    const id = 'glass_strider';
+    const state = getBossState(id);
+    if (state.engaged !== true) return;
+    // Same as Iron Warden: no streak to preserve.
+  }
+
+  // ── Dream Tyrant — 7.5 hours of sleep ────────────────────────
+  // Fed by autoVerifySleep's existing sleep-data fetch. Same data
+  // path that powers Sleep / Sleep before midnight habit auto-verify,
+  // Insomniac + Carouser evals, and leaderboard sleep recording.
+  function evaluateDreamTyrantForNight(sleepHours, nightDate) {
+    if (typeof sleepHours !== 'number' || !nightDate) return;
+    const id = 'dream_tyrant';
+    const cfg = BOSSES[id];
+    if (!cfg) return;
+    const state = getBossState(id);
+    if (state.last_eval_date === nightDate) return;
+    if (state.engaged !== true) return;
+
+    if (sleepHours >= cfg.sleepHours) {
+      _awardSingleShotKill(id, cfg, nightDate, state);
+    } else {
+      // Sub-threshold sleep — for sleep, the data is finalized once
+      // it lands in HealthKit (no "I'll sleep more later today" path).
+      // Record the date so we don't re-eval on every visibilitychange.
+      state.last_eval_date = nightDate;
+      setBossState(id, state);
+    }
+  }
+  function checkMissedNightForDreamTyrant() {
+    const id = 'dream_tyrant';
+    const state = getBossState(id);
+    if (state.engaged !== true) return;
+    // Same as Iron Warden / Glass Strider: streakTarget=1, no streak
+    // to preserve across days.
+  }
+
   try {
     window.Bosses = {
       BOSSES, getBossState,
-      evaluateInsomniacForNight, checkMissedNightForInsomniac,
-      evaluateCarouserForNight,  checkMissedWeekendForCarouser,
-      evaluateSteelWolfForDay,   checkMissedDayForSteelWolf,
+      evaluateInsomniacForNight,    checkMissedNightForInsomniac,
+      evaluateCarouserForNight,     checkMissedWeekendForCarouser,
+      evaluateSteelWolfForDay,      checkMissedDayForSteelWolf,
+      // v3 Phase 1v D-rank
+      evaluateIronWardenForDay,     checkMissedDayForIronWarden,
+      evaluateGlassStriderForDay,   checkMissedDayForGlassStrider,
+      evaluateDreamTyrantForNight,  checkMissedNightForDreamTyrant,
       // Engagement model (v2.0.1) — opt-in gate for boss eval.
       engageBoss, disengageBoss, isBossEngaged, countEngagedBosses,
       MAX_ENGAGED_BOSSES,
@@ -19733,7 +19908,7 @@
     try { lbRecordStepsToday(steps); }
     catch (e) { console.warn('[Leaderboard] step record failed', e); }
 
-    // ── Boss evaluation (Steel Wolf, D-rank) ───────────────
+    // ── Boss evaluation (Steel Wolf E-rank + Glass Strider D-rank) ─
     // Same independence rules as the Insomniac/Carouser evaluators
     // in autoVerifySleep — bosses ignore the pause toggle and habit
     // presence. Idempotent on the day date so visibility-change
@@ -19742,6 +19917,9 @@
     try {
       evaluateSteelWolfForDay(steps, getDeviceLocalDate());
     } catch (e) { console.warn('[Bosses] steel wolf eval failed', e); }
+    try {
+      evaluateGlassStriderForDay(steps, getDeviceLocalDate());
+    } catch (e) { console.warn('[Bosses] glass strider eval failed', e); }
 
     // ── Habit auto-verify gates ────────────────────────────
     // User has paused auto-verify in Settings → Apple Health. Manual
@@ -19827,6 +20005,11 @@
     try {
       evaluateCarouserForNight(data.totalAsleepHours, bedtimeBeforeMidnight, getDeviceLocalDate());
     } catch (e) { console.warn('[Bosses] carouser eval failed', e); }
+    // v3 Phase 1v — Dream Tyrant (D-rank, 7.5 h threshold). Same
+    // sleep data, different bar. Independent of habit presence.
+    try {
+      evaluateDreamTyrantForNight(data.totalAsleepHours, getDeviceLocalDate());
+    } catch (e) { console.warn('[Bosses] dream tyrant eval failed', e); }
 
     // ── Leaderboard recording (v2.0.2) ──────────────────────
     // Same independence rules as bosses — passive accumulation,
@@ -19919,15 +20102,28 @@
     // bail here without prompting.
     if (status !== 'granted') return;
 
-    if (isAutoVerifyDisabled()) return;
+    // Fetch workout data ONCE — used by both the Iron Warden
+    // evaluator (passive, ignores habit presence + pause toggle)
+    // AND the Strength training habit auto-verify below (gated).
+    // Single roundtrip via the 5-min workout cache.
+    const data = await Health.getStrengthWorkoutsToday();
+    if (!data) return;
 
+    // ── Boss evaluation (Iron Warden, D-rank) ──────────────
+    // Mirrors the Insomniac/Carouser/Steel Wolf pattern: bosses
+    // ignore the pause toggle + habit presence. The shared-data
+    // principle from CLAUDE.md applies — a single ≥10 min strength
+    // workout drives BOTH the boss kill AND the habit auto-check.
+    try {
+      evaluateIronWardenForDay(data, getDeviceLocalDate());
+    } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
+
+    // ── Habit auto-verify — gated on pause toggle + habit presence ──
+    if (isAutoVerifyDisabled()) return;
     const strength = findStrengthHabit();
     if (!strength) return;                                       // habit not in user's active list
     if (isChecked(strength.id)) return;                          // already done (manual or auto)
     if (AUTO_VERIFY.wasUncheckedToday('Strength training')) return; // user opted out for today
-
-    const data = await Health.getStrengthWorkoutsToday();
-    if (!data) return;
     if (data.count < 1) return;                                  // no qualifying workout today
 
     AUTO_VERIFY.recordAutoVerify(strength.id, {
@@ -20401,6 +20597,12 @@
     try { checkMissedNightForInsomniac(); } catch (_) {}
     try { checkMissedWeekendForCarouser(); } catch (_) {}
     try { checkMissedDayForSteelWolf(); } catch (_) {}
+    // v3 Phase 1v D-rank — all three are streakTarget=1 daily, so
+    // these helpers are mostly no-ops today, but kept for parity +
+    // future engagement-state recovery work.
+    try { checkMissedDayForIronWarden(); } catch (_) {}
+    try { checkMissedDayForGlassStrider(); } catch (_) {}
+    try { checkMissedNightForDreamTyrant(); } catch (_) {}
     // ── HealthKit auth-version migration ─────────────────────
     // Whenever HEALTHKIT_AUTH_VERSION is bumped (i.e., a new HealthKit
     // category was added to the requestAuthorization() read array),

@@ -20,12 +20,13 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
   - **Compact MOBA-style Select Relic picker** — slot-filtered, `auto-fill minmax(112px, 1fr)` grid with stat-chip rows. Replaces the prior gallery-sized cards.
   - **Premium EQUIP TO BUILD / UNEQUIP button** — purple→violet primary with gold rim + ✦ rune glyph; muted-navy unequip variant.
   - **Leaderboard alias normalization** — display-only lowercase + space-stripping; allowlist exception for `Richie`. Storage and isMe matching untouched.
+  - **D-rank daily-boss roster (v3 Phase 1v)** — three new bosses joined the D-rank dungeon: **The Iron Warden** (STR · verified strength workout ≥10 min · daily), **The Glass Strider** (VIT · 7,500 steps · daily), **The Dream Tyrant** (VIT · 7.5h sleep · daily). All three are TRUE daily-cadence with `streakTarget = 1` — one qualifying day/night defeats them, repeat next day if re-engaged. **No weekly cap.** Shared-data principle: Iron Warden uses the same workout sample that drives Strength training auto-verify; Glass Strider uses the same step count that drives Daily walk + Steel Wolf + leaderboard; Dream Tyrant uses the same sleep data that drives Insomniac + Carouser + Sleep habit. Souls economy rebalanced: D-tier dropped from 50/100 (net +50) to **35/35 (net 0)** — D bosses are the relic farm, E bosses remain the souls farm. `MAX_ENGAGED_BOSSES = 3` stays — forces strategic choice between E (souls) and D (drops). Boss cards display single-dot progress (no weekly progress wording).
   - **Strength training auto-verify (v3 Phase 1u)** — Apple Health workout samples now drive Strength training. New `Health.getStrengthWorkoutsToday()` queries `workoutType` samples, filters to strength-category activity types (traditional / functional / generic strength / weight / resistance training) with duration ≥ 10 min. New `autoVerifyStrengthTraining()` wires into all three trigger sites (renderHabits, visibilitychange, post-grant). Strength training joins Daily walk / Sleep / Sleep before midnight in `isReadOnlyAutoVerifyHabit` — tap opens the system-managed Notes modal instead of toggling. `systemManagedHtmlFor` gets a fourth case with tough-love copy. No `HEALTHKIT_AUTH_VERSION` bump — the existing `'activity'` friendly alias in `requestAuthorization` already covers `workoutType` per the plugin's auth API.
   - **Habits tab Codex/card redesign (v3 Phase 1k)** — live Habits tab now uses premium 3-column RPG objective cards with existing habit icons preserved, gold sealed/completed state, colored incomplete rings, system/auto lock rings, compact dashed Add Habits pill, and Morning Routine progress bar. Top "X / Y Habits Today" header remains the single progress summary; the redundant Daily Objectives section header was removed. Markup uses `.habit-item.codex` modifier with legacy class aliases (`.codex-status habit-cb`, `.codex-streak streak-badge`) so existing event handlers stay untouched.
   - **History tab Discipline Ledger redesign (v3 Phase 1p)** — Weekly view rebuilt as a stat-color "gem" discipline ledger. Completed cells keep their stat-color identity (radial gradient + soft glow, NOT generic gold checks), missed cells render a muted red dot inside a low-contrast outline, today's still-pending cell is a dashed gold pulse, off-days are dashed-quiet, future cells are faint outlines. Each habit row carries a stat-color accent stripe on the left edge; long habit names now wrap to two lines (no more ellipsis on "Strength training" / "Meditate & Breathwork" / "No phone after waking"). Apple-Health auto-verifiable habits get a small AUTO badge in the label column + a framed blue dot on each auto-verified cell. New `TRAINED THIS WEEK` section below the grid renders a 6-stat distribution (STR / VIT / INT / FOCUS / WILL / WLT vertical mini-bars with counts) plus a serif insight line ("You leaned VIT + FOCUS this week."). New `WEEKLY REPORT` card replaces the simple stats bar on Weekly mode only: 34px gold completion %, Best Day / Total Done / Best Streak rows, plus a dominant-stat callout with stat-color border. Monthly + Yearly views keep the legacy stats bar untouched. Date nav refined to compact SVG chevrons + `WEEK N · YYYY` eyebrow above the range. "Achieved" sub-tab relabeled "Milestones" (user-facing only; internal mode key still `'achievements'`).
   - **Habits screen vertical-efficiency pass (v3 Phase 1o)** — persistent bottom Morning Routine / pack-progress strip retired from the Habits screen. The top "X / Y HABITS TODAY" tile (`#today-strip`) is now tappable (subtle hover state + chevron) and opens `#pack-progress-modal` — the new canonical access point for routine/pack progress (Morning Routine, Locked-In, streak/shield/honest/add-missing chips all carry over). Quote block compressed (min-height 76 → 38, font tightened). Tab-bar min-height 50 → 44 (still meets iOS 44pt tap minimum). Habit grid top padding 16 → 8 + row gap 11 → 9. Net effect: ~6 full codex habit cards visible on a standard iPhone viewport.
   - **Notification UI redesign + copy rewrite (v3 Phase 1m → 1n)** — Settings → REMINDERS panel restructured: DAILY SYSTEM PINGS / QUIET HOURS / PAUSE / HABIT REMINDERS / VOICE PREVIEW subsections. Permission pre-prompt redesigned with three-card type preview (Morning Briefing / Momentum Check / Evening Closeout). Per-habit and pack reminder offer sheets re-skinned as "System Offer" sheets with ✦ rune glyph on the primary action. Voice Preview cards read LIVE from `composeDigestBody` / `computeMidDayBody` / `pickCheckinCopy` — never drift from production copy. Full copy bank rewritten to "tactical system message" voice (COPY, HABIT_NOTIF_COPY, DIGEST_FLAVOR, composeDigestBody, computeMidDayBody, CHECKIN_COPY). User-facing labels are now Morning Briefing / Momentum Check / Evening Closeout (internal function names retain `digest`/`checkin` for historical reasons).
-- **Service-worker cache version:** `v5.225` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
+- **Service-worker cache version:** `v5.226` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -756,7 +757,11 @@ Background scroll-lock via `body.bfs-locked { overflow: hidden; }` while the mod
 hb_bosses    { bossId: { streak, kill_count, last_eval_date, ...bossSpecificFields } }
 ```
 
-Roster lives in the `BOSSES` constant (top of `app.js`). Each entry has core fields (`id`, `name`, `rank`, `flavorShort`, `flavorLong`, `killCondShort`, `killCondLong`, `streakTarget`) plus eval-threshold field with **semantic-specific naming** (`sleepHours` for sleep bosses, `stepThreshold` for step bosses — NOT a generic `threshold` field; if generalization is wanted later, refactor all bosses together) plus per-boss extras (`cadence`, `statDomain`, `dayOfWeekScoped`, etc.). v2.0.1 has three entries: `the_insomniac` (E), `the_carouser` (E), `the_steel_wolf` (D).
+Roster lives in the `BOSSES` constant (top of `app.js`). Each entry has core fields (`id`, `name`, `rank`, `flavorShort`, `flavorLong`, `killCondShort`, `killCondLong`, `streakTarget`) plus eval-threshold field with **semantic-specific naming** (`sleepHours` for sleep bosses, `stepThreshold` for step bosses, `workoutMinutes` for workout bosses — NOT a generic `threshold` field; if generalization is wanted later, refactor all bosses together) plus per-boss extras (`cadence`, `statDomain`, `dayOfWeekScoped`, etc.).
+
+Current roster (v3 Phase 1v):
+- **E-rank (3):** `the_insomniac` (VIT · sleep 7h · daily), `the_carouser` (WILL · sleep 7h + bedtime · weekly Fri+Sat), `the_steel_wolf` (VIT · 6000 steps · daily, re-tiered from D in v3 Phase 1t).
+- **D-rank (3, v3 Phase 1v):** `iron_warden` (STR · verified strength workout ≥10 min · daily), `glass_strider` (VIT · 7500 steps · daily), `dream_tyrant` (VIT · sleep 7.5h · daily). All three are TRUE daily-cadence — one defeat per qualifying day/night, no weekly cap, no consecutive-day requirement. Streak target = 1 across the D tier.
 
 State helpers: `loadBosses()`, `saveBosses(state)`, `getBossState(id)` (defaults to `{ streak: 0, kill_count: 0, last_eval_date: null }` if unset), `setBossState(id, state)`. Per-boss state extensions (Carouser's `current_weekend_id`, `weekend_burned`) are filled in by per-boss getters like `getCarouserState()` so callers always see a fully-populated shape.
 
@@ -796,6 +801,28 @@ Originally shipped as the first non-E-rank boss to validate the multi-rank archi
 **Engagement economy after re-tier:** E-rank means `engageCostSouls = 25` (was 50) and `killRewardSouls = 50` (was 100). State shape (`hb_bosses[the_steel_wolf]`) is unchanged — kill_count, streak, engaged, engaged_at carry forward; only `cfg.rank` / `cfg.stepThreshold` / `cfg.streakTarget` changed.
 
 **Gate visibility after re-tier:** Steel Wolf now appears in the E-rank dungeon view alongside The Insomniac + The Carouser. The D-rank dungeon currently empty-states ("No bosses await yet. Check back as more dungeons fill.") until new content lands at D.
+
+### D-rank roster — kill detection (v3 Phase 1v)
+
+Three new daily-cadence bosses joining the dungeon at D-tier. All three share the same shape:
+- `streakTarget: 1` (one qualifying day/night = kill)
+- `cadence: 'daily'` (uses daily mercy + rate thresholds)
+- **No weekly cap, no consecutive-day requirement** — engaged + qualified = defeated for THAT day. Repeat the next day if you re-engage and re-qualify.
+- Standard engagement gate (`state.engaged !== true` short-circuits eval)
+- Idempotent via `state.last_eval_date` — repeat app opens on the same day no-op.
+- Shared kill flow via `_awardSingleShotKill(id, cfg, dayDate, state)` — single helper handles kill_count increment, soul reward, drop roll, toast, and UI refresh.
+
+| Boss | Stat | Threshold | Data source | Eval entry |
+|---|---|---|---|---|
+| `iron_warden` | STR | ≥1 verified strength workout ≥10 min today | `Health.getStrengthWorkoutsToday()` (shared with Strength training habit auto-verify) | `evaluateIronWardenForDay(strengthData, dayDate)` called from `autoVerifyStrengthTraining` BEFORE the habit gates |
+| `glass_strider` | VIT | ≥7,500 steps today | `Health.getStepsToday()` (shared with Daily walk auto-verify + Steel Wolf eval + leaderboard) | `evaluateGlassStriderForDay(stepCount, dayDate)` called from `autoVerifyWalk` alongside Steel Wolf |
+| `dream_tyrant` | VIT | ≥7.5 hours of sleep last night | `Health.getSleepLastNight().totalAsleepHours` (shared with Insomniac + Carouser evals + Sleep habit auto-verify) | `evaluateDreamTyrantForNight(sleepHours, nightDate)` called from `autoVerifySleep` alongside Insomniac + Carouser |
+
+**Shared-data principle:** Iron Warden + Strength training habit are driven by the SAME ≥10 min workout sample. One qualifying workout clears both — matches the Sleep → Insomniac pattern. Same applies to Glass Strider + Daily walk (same step count drives both) and Dream Tyrant + Sleep habit (same sleep data).
+
+**Progress display:** Since these are daily streakTarget=1 bosses, the boss-card progress dots show a single dot — filled if the qualifying condition was met today, empty otherwise. No "0/2 this week" or weekly progress wording anywhere. Detail modal shows `last_eval_date === today && state.kill_count > 0` as "Defeated today"; otherwise it shows the threshold pending.
+
+**Missed-day helpers** (`checkMissedDayForIronWarden`, `checkMissedDayForGlassStrider`, `checkMissedNightForDreamTyrant`) are wired into init() for parity with the existing boss roster but are largely no-ops today — there's no streak to preserve across days when `streakTarget=1`. Kept as scaffolding for future engagement-state recovery work.
 
 ### The Carouser — kill detection (v2.0.1)
 
@@ -873,13 +900,15 @@ Economic layer alongside XP. Spent on boss engagement, earned via daily login + 
 | Rank | Engage cost | Kill reward | Net per cycle |
 |---|---|---|---|
 | E | 25 | 50 | +25 |
-| D | 50 | 100 | +50 |
+| D | 35 | 35 | 0 (v3 Phase 1v rebalance) |
 | C | 100 | 200 | +100 |
 | B | 200 | 400 | +200 |
 | A | 400 | 800 | +400 |
 | S | 800 | 1600 | +800 |
 
-Net is +1× cost per successful kill cycle. Failure to land the kill (disengage mid-streak) is a pure loss of the engage cost.
+**v3 Phase 1v D-rank rebalance.** Pre-1v D was 50/100 (net +50) following the tier-doubling pattern from E. With three new daily-cadence D bosses (Iron Warden / Glass Strider / Dream Tyrant) joining the existing roster and `MAX_ENGAGED_BOSSES = 3` spanning both tiers, that economy would inflate soul earnings too aggressively. D is now 35/35 — **net 0 per kill cycle**. D bosses become the **relic farm** (better drop rates per cadence-aware tables); E bosses stay the **souls farm**. The strategic friction is: engage D only when you'll actually clear it, otherwise you lose the 35-soul wager. C and beyond keep the tier-doubling pattern.
+
+Net is +1× cost per successful kill cycle from C upward. D net 0. E net +25. Failure to land the kill (disengage mid-streak) is a pure loss of the engage cost on every tier.
 
 **Spend path:** `engageBoss(bossId)` checks balance against `engageCostSouls(cfg.rank)` before allowing engagement. Broke-state shows toast: `"Need N souls. You have M."` — always-tappable, no disabled-button mystery. Refunds **do not** happen on disengage; the cost was the wager. Streak resets per existing engagement logic.
 
@@ -915,9 +944,13 @@ Souls.grantDaily()         // forces daily bonus check (idempotent)
 ```js
 window.Bosses = {
   BOSSES, getBossState,
-  evaluateInsomniacForNight, checkMissedNightForInsomniac,
-  evaluateCarouserForNight,  checkMissedWeekendForCarouser,
-  evaluateSteelWolfForDay,   checkMissedDayForSteelWolf,
+  evaluateInsomniacForNight,    checkMissedNightForInsomniac,
+  evaluateCarouserForNight,     checkMissedWeekendForCarouser,
+  evaluateSteelWolfForDay,      checkMissedDayForSteelWolf,
+  // v3 Phase 1v D-rank
+  evaluateIronWardenForDay,     checkMissedDayForIronWarden,
+  evaluateGlassStriderForDay,   checkMissedDayForGlassStrider,
+  evaluateDreamTyrantForNight,  checkMissedNightForDreamTyrant,
   // Engagement model (v2.0.1)
   engageBoss, disengageBoss, isBossEngaged, countEngagedBosses,
   MAX_ENGAGED_BOSSES,
@@ -2018,7 +2051,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=258`, `app.js?v=342`, `auth.js?v=7`, `simulated-leaderboard.js?v=2`, `sw.js v5.225`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=258`, `app.js?v=343`, `auth.js?v=7`, `simulated-leaderboard.js?v=2`, `sw.js v5.226`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
