@@ -180,8 +180,109 @@ workflows:
           # where the Podfile lives.
           cd ios/App && pod install
 
+      - name: Verify www/ bundle freshness (pre-sync gate)
+        script: |
+          # Fail the build LOUDLY if the www/ snapshot doesn't contain
+          # the markers we expect. Protects against (a) the copy step
+          # silently skipping a file, (b) codemagic running on a stale
+          # checkout, (c) a typo in the copy command pattern.
+          #
+          # Stable markers checked:
+          #   - "social-friends-body"  → Discipline Duels v1 markup landed
+          #   - "social-duels-body"    → Duels section markup landed
+          #   - "Friends + Duels foundation" → build marker (Phase 1x debug)
+          #
+          # Version markers checked against the index.html currently in
+          # the repo root — if those drift, www/ is stale.
+          set -e
+          echo "── www/ freshness check ──"
+          if ! grep -q "social-friends-body" www/index.html; then
+            echo "FAIL: www/index.html missing #social-friends-body markup"
+            echo "      (Discipline Duels v1 markup NOT in bundle)"
+            head -20 www/index.html
+            exit 1
+          fi
+          if ! grep -q "social-duels-body" www/index.html; then
+            echo "FAIL: www/index.html missing #social-duels-body markup"
+            exit 1
+          fi
+          # Compare app.js / styles.css / auth.js / sw.js version
+          # strings between repo-root index.html and www/index.html.
+          # Any mismatch means www/ is stale.
+          for asset in app.js styles.css auth.js sw.js simulated-leaderboard.js; do
+            repo_ver=$(grep -oE "${asset}\?v=[0-9]+" index.html | head -1 || true)
+            www_ver=$(grep -oE "${asset}\?v=[0-9]+" www/index.html | head -1 || true)
+            if [ "$repo_ver" != "$www_ver" ]; then
+              echo "FAIL: $asset query string drift (repo='$repo_ver' www='$www_ver')"
+              exit 1
+            fi
+          done
+          # sw.js cache version sanity
+          repo_cv=$(grep -oE "CACHE_VERSION = '[^']+'" sw.js | head -1)
+          www_cv=$(grep -oE "CACHE_VERSION = '[^']+'" www/sw.js | head -1)
+          if [ "$repo_cv" != "$www_cv" ]; then
+            echo "FAIL: sw.js CACHE_VERSION drift (repo=$repo_cv www=$www_cv)"
+            exit 1
+          fi
+          echo "✓ www/ bundle verified fresh"
+          echo "  index.html size:    $(wc -c < www/index.html) bytes"
+          echo "  app.js size:        $(wc -c < www/app.js) bytes"
+          echo "  auth.js size:       $(wc -c < www/auth.js) bytes"
+          echo "  styles.css size:    $(wc -c < www/styles.css) bytes"
+          echo "  sw.js CACHE_VERSION: $www_cv"
+
+      - name: Force-clean Capacitor iOS public dir before sync
+        script: |
+          # Capacitor 'cap copy' overwrites files but does NOT remove
+          # files that have been deleted from www/. More importantly,
+          # if a previous build cached ios/App/App/public/ with a stale
+          # bundle, cap sync's incremental copy could fail to replace
+          # certain entries on some platforms. Wipe explicitly so the
+          # sync lands on a guaranteed-clean slate every build.
+          if [ -d ios/App/App/public ]; then
+            echo "Wiping ios/App/App/public/* before cap sync…"
+            rm -rf ios/App/App/public/*
+          else
+            echo "ios/App/App/public/ does not exist yet — cap sync will create it"
+          fi
+
       - name: Sync web assets into iOS project
         script: npx cap sync ios
+
+      - name: Verify iOS public bundle freshness (post-sync gate)
+        script: |
+          # Cross-check that cap sync actually propagated www/ →
+          # ios/App/App/public/. If this step fails, the IPA would
+          # bundle stale assets and TestFlight users see old UI.
+          set -e
+          PUB="ios/App/App/public"
+          if [ ! -f "$PUB/index.html" ]; then
+            echo "FAIL: $PUB/index.html missing after cap sync"
+            ls -la "$PUB" || true
+            exit 1
+          fi
+          if ! grep -q "social-friends-body" "$PUB/index.html"; then
+            echo "FAIL: $PUB/index.html missing #social-friends-body after sync"
+            echo "      cap sync did not propagate the new index.html"
+            head -20 "$PUB/index.html"
+            exit 1
+          fi
+          # Marker for the visible debug check the user verifies in TestFlight
+          if grep -q "Friends + Duels foundation" "$PUB/index.html"; then
+            echo "✓ Visible build marker present in iOS bundle"
+          else
+            echo "NOTE: visible build marker absent (expected only on debug builds)"
+          fi
+          # sw.js cache version cross-check
+          ios_cv=$(grep -oE "CACHE_VERSION = '[^']+'" "$PUB/sw.js" | head -1)
+          repo_cv=$(grep -oE "CACHE_VERSION = '[^']+'" sw.js | head -1)
+          if [ "$ios_cv" != "$repo_cv" ]; then
+            echo "FAIL: $PUB/sw.js CACHE_VERSION drift (ios=$ios_cv repo=$repo_cv)"
+            exit 1
+          fi
+          echo "✓ iOS public bundle verified fresh"
+          echo "  $PUB/index.html size: $(wc -c < $PUB/index.html) bytes"
+          echo "  $PUB/sw.js CACHE_VERSION: $ios_cv"
 
       - name: Declare export compliance (no custom encryption)
         script: |
