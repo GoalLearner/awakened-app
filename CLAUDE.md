@@ -20,11 +20,12 @@ A vanilla-JS PWA wrapped into a native iOS app via Capacitor + Codemagic. The ap
   - **Compact MOBA-style Select Relic picker** — slot-filtered, `auto-fill minmax(112px, 1fr)` grid with stat-chip rows. Replaces the prior gallery-sized cards.
   - **Premium EQUIP TO BUILD / UNEQUIP button** — purple→violet primary with gold rim + ✦ rune glyph; muted-navy unequip variant.
   - **Leaderboard alias normalization** — display-only lowercase + space-stripping; allowlist exception for `Richie`. Storage and isMe matching untouched.
+  - **Strength training auto-verify (v3 Phase 1u)** — Apple Health workout samples now drive Strength training. New `Health.getStrengthWorkoutsToday()` queries `workoutType` samples, filters to strength-category activity types (traditional / functional / generic strength / weight / resistance training) with duration ≥ 10 min. New `autoVerifyStrengthTraining()` wires into all three trigger sites (renderHabits, visibilitychange, post-grant). Strength training joins Daily walk / Sleep / Sleep before midnight in `isReadOnlyAutoVerifyHabit` — tap opens the system-managed Notes modal instead of toggling. `systemManagedHtmlFor` gets a fourth case with tough-love copy. No `HEALTHKIT_AUTH_VERSION` bump — the existing `'activity'` friendly alias in `requestAuthorization` already covers `workoutType` per the plugin's auth API.
   - **Habits tab Codex/card redesign (v3 Phase 1k)** — live Habits tab now uses premium 3-column RPG objective cards with existing habit icons preserved, gold sealed/completed state, colored incomplete rings, system/auto lock rings, compact dashed Add Habits pill, and Morning Routine progress bar. Top "X / Y Habits Today" header remains the single progress summary; the redundant Daily Objectives section header was removed. Markup uses `.habit-item.codex` modifier with legacy class aliases (`.codex-status habit-cb`, `.codex-streak streak-badge`) so existing event handlers stay untouched.
   - **History tab Discipline Ledger redesign (v3 Phase 1p)** — Weekly view rebuilt as a stat-color "gem" discipline ledger. Completed cells keep their stat-color identity (radial gradient + soft glow, NOT generic gold checks), missed cells render a muted red dot inside a low-contrast outline, today's still-pending cell is a dashed gold pulse, off-days are dashed-quiet, future cells are faint outlines. Each habit row carries a stat-color accent stripe on the left edge; long habit names now wrap to two lines (no more ellipsis on "Strength training" / "Meditate & Breathwork" / "No phone after waking"). Apple-Health auto-verifiable habits get a small AUTO badge in the label column + a framed blue dot on each auto-verified cell. New `TRAINED THIS WEEK` section below the grid renders a 6-stat distribution (STR / VIT / INT / FOCUS / WILL / WLT vertical mini-bars with counts) plus a serif insight line ("You leaned VIT + FOCUS this week."). New `WEEKLY REPORT` card replaces the simple stats bar on Weekly mode only: 34px gold completion %, Best Day / Total Done / Best Streak rows, plus a dominant-stat callout with stat-color border. Monthly + Yearly views keep the legacy stats bar untouched. Date nav refined to compact SVG chevrons + `WEEK N · YYYY` eyebrow above the range. "Achieved" sub-tab relabeled "Milestones" (user-facing only; internal mode key still `'achievements'`).
   - **Habits screen vertical-efficiency pass (v3 Phase 1o)** — persistent bottom Morning Routine / pack-progress strip retired from the Habits screen. The top "X / Y HABITS TODAY" tile (`#today-strip`) is now tappable (subtle hover state + chevron) and opens `#pack-progress-modal` — the new canonical access point for routine/pack progress (Morning Routine, Locked-In, streak/shield/honest/add-missing chips all carry over). Quote block compressed (min-height 76 → 38, font tightened). Tab-bar min-height 50 → 44 (still meets iOS 44pt tap minimum). Habit grid top padding 16 → 8 + row gap 11 → 9. Net effect: ~6 full codex habit cards visible on a standard iPhone viewport.
   - **Notification UI redesign + copy rewrite (v3 Phase 1m → 1n)** — Settings → REMINDERS panel restructured: DAILY SYSTEM PINGS / QUIET HOURS / PAUSE / HABIT REMINDERS / VOICE PREVIEW subsections. Permission pre-prompt redesigned with three-card type preview (Morning Briefing / Momentum Check / Evening Closeout). Per-habit and pack reminder offer sheets re-skinned as "System Offer" sheets with ✦ rune glyph on the primary action. Voice Preview cards read LIVE from `composeDigestBody` / `computeMidDayBody` / `pickCheckinCopy` — never drift from production copy. Full copy bank rewritten to "tactical system message" voice (COPY, HABIT_NOTIF_COPY, DIGEST_FLAVOR, composeDigestBody, computeMidDayBody, CHECKIN_COPY). User-facing labels are now Morning Briefing / Momentum Check / Evening Closeout (internal function names retain `digest`/`checkin` for historical reasons).
-- **Service-worker cache version:** `v5.223` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
+- **Service-worker cache version:** `v5.224` (constant `CACHE_VERSION` in `sw.js` — bumped on every deploy; cache versions are per-deploy, not per-marketing-version)
 - **HealthKit auth version:** `2` (constant `HEALTHKIT_AUTH_VERSION` in `app.js` — bump on any new HealthKit category added to the auth call; see "HealthKit integration" section below)
 - **GitHub:** `github.com/GoalLearner/awakened-app` (private)
 - **iOS App ID:** `6764727990`
@@ -424,15 +425,16 @@ The three Voice Preview cards in Settings are NOT hardcoded strings. `renderNoti
 
 ---
 
-## HealthKit integration (v1.1.5)
+## HealthKit integration (v1.1.5, v3 Phase 1u — added Strength training)
 
-Two canonical habits auto-verify from Apple Health on iOS. Web/PWA users get manual completion only — no behavior change.
+Four canonical habits auto-verify from Apple Health on iOS. Web/PWA users get manual completion only — no behavior change.
 
 | Habit | Data type | Threshold | Goal config |
 |---|---|---|---|
-| `Daily walk` | step count | per-habit `habit.stepGoal` (default 3000, range 100–50000) | Edit Habit modal chip picker |
-| `Sleep` | sleep duration | per-habit `habit.sleepGoalHours` (default 7, range 3–14, step 0.5) | Edit Habit modal chip picker |
-| `Sleep before midnight` | bedtime | binary — earliest qualifying asleep sample.startDate in `[20:00, 24:00)` device-local on prior day | None (binary habit) |
+| `Daily walk` | step count (`stepCount`) | per-habit `habit.stepGoal` (default 3000, range 100–50000) | Edit Habit modal chip picker |
+| `Sleep` | sleep duration (`sleepAnalysis`) | per-habit `habit.sleepGoalHours` (default 7, range 3–14, step 0.5) | Edit Habit modal chip picker |
+| `Sleep before midnight` | bedtime (`sleepAnalysis`) | binary — earliest qualifying asleep sample.startDate in `[20:00, 24:00)` device-local on prior day | None (binary habit) |
+| `Strength training` | workout type (`workoutType`) | binary — ≥1 qualifying strength workout today, duration ≥ `HEALTHKIT_STRENGTH_MIN_MINUTES` (10 min). Accepted activity types: traditional / functional / generic strength / weight / resistance training. | None (binary habit) |
 
 ### Plugin: `@perfood/capacitor-healthkit@^1.3.2` — IMPORTANT GOTCHAS
 
@@ -470,8 +472,10 @@ Top-level IIFE in `app.js`. Public surface:
 | `Health.requestSleepPermissionIfNeeded()` | Upgrade path: re-fires auth with current categories. Idempotent via `hb_healthkit_sleep_requested`. Used when an existing user upgrades to a build that adds new HealthKit categories |
 | `Health.getStepsToday()` | Sums step samples from PT-anchored start of today. 5-min cache. Returns null on any failure. |
 | `Health.getSleepLastNight()` | 18-hour lookback window in **device-local time** (sleep crosses midnight; CLAUDE.md notif rule applies). Returns `{ totalAsleepHours, earliestSleepStart, samples }` or null. 5-min cache. Plugin caveats below. |
+| `Health.getStrengthWorkoutsToday()` | **v3 Phase 1u.** Queries `workoutType` samples from device-local start of today. Filters to strength activity types (traditional / functional / generic strength / weight / resistance training) with duration ≥ `HEALTHKIT_STRENGTH_MIN_MINUTES` (10 min). Returns `{ count, totalMinutes, workouts, fetchedAt }` or null. 5-min cache. Permission piggybacks on the existing `'activity'` friendly-alias (already in the auth read array — covers `sleepAnalysis` + `workoutType`), so no auth bump. |
 | `Health.clearCache()` | Wipes step cache. Called on visibilitychange resume + after Edit-modal save. |
 | `Health.clearSleepCache()` | Same for sleep. |
+| `Health.clearWorkoutCache()` | Same for strength workouts. Called on visibilitychange resume. |
 
 **Plugin sample shape for sleep:**
 ```js
@@ -559,6 +563,8 @@ Version log:
 
 Why this exists: iOS's `requestAuthorization` only triggers a sheet for categories it has never seen. Apps that want to expand HealthKit usage in subsequent versions MUST explicitly re-call `requestAuthorization` with the new categories — iOS doesn't auto-prompt on the first query of a new type. The version-bump pattern automates this.
 
+**v3 Phase 1u — no bump needed for Strength training.** The `'activity'` friendly alias in `Health.requestPermissions`'s read array maps to BOTH `sleepAnalysis` AND `workoutType` in the plugin's auth API. Sleep auth was added in v1.1.5 (auth version 2) and tapped this same alias; strength training piggybacks on the existing grant. No new category is being added to `requestAuthorization`, so no migration / flag-clear is needed. The strength workout query uses `sampleName: 'workoutType'` (canonical identifier) — which is the correct query-side string regardless of how `'activity'` is interpreted on the auth side.
+
 ### Pre-prompt explainer
 
 `showHealthKitPreprompt()` is a non-blocking modal that fires before the iOS native sheet on first encounter (status='unknown'). Triggered from `autoVerifyWalk()` when the user has the Daily walk habit. Shows a clickable inline step-goal value (chip picker reuses `.habit-edit-stepgoal-*` styles) and adapts copy if the user also has Sleep / Sleep before midnight.
@@ -583,7 +589,7 @@ Two steps run after `Sync web assets into iOS project`:
 
 ### Read-only auto-verify habits (`isReadOnlyAutoVerifyHabit`)
 
-**v2.0 policy: ALL three HealthKit-auto-verifiable habits are read-only** — `Daily walk`, `Sleep`, `Sleep before midnight`. The earlier v1.1.5 carve-out where Daily walk and Sleep allowed manual completion as a fallback is gone. Apple Health is the sole authority for these three. Tapping the card on the Habits tab does NOT toggle the check state — instead it opens the View Note modal (`#note-modal`) with a `SYSTEM-MANAGED` explainer section (`#vn-system-section`) above the canonical description.
+**v2.0 / v3 Phase 1u policy: ALL FOUR HealthKit-auto-verifiable habits are read-only** — `Daily walk`, `Sleep`, `Sleep before midnight`, `Strength training`. The earlier v1.1.5 carve-out where Daily walk and Sleep allowed manual completion as a fallback is gone. Apple Health is the sole authority for these four. Tapping the card on the Habits tab does NOT toggle the check state — instead it opens the View Note modal (`#note-modal`) with a `SYSTEM-MANAGED` explainer section (`#vn-system-section`) above the canonical description.
 
 Why the policy shifted: the "system is honest" framing applies uniformly. Mixed manual+auto creates ambiguity — did the user actually walk 3,000 steps, or just tap the box? With the lock, the answer is always "the data shows yes, or it stays unchecked." Cleaner discipline contract, even if it means streaks become impossible without Apple Health connected.
 
@@ -591,9 +597,9 @@ Why the policy shifted: the "system is honest" framing applies uniformly. Mixed 
 - Web/PWA users have no way to complete these habits. They show the lock and stay unchecked. Notes modal explains.
 - Users with Apple Health permission denied: same.
 - Users who pause auto-verify in Settings → Apple Health: same. The lock surfaces the limitation; the user's recourse is to grant permission / unpause.
-- `AUTO_VERIFY.markUnchecked` / `wasUncheckedToday` becomes vestigial for these three habits — no manual un-check path exists. Code stays for defensive use by future programmatic toggle paths and other auto-verify habits.
+- `AUTO_VERIFY.markUnchecked` / `wasUncheckedToday` becomes vestigial for these habits — no manual un-check path exists. Code stays for defensive use by future programmatic toggle paths and other auto-verify habits.
 
-**Per-habit system-managed copy:** `systemManagedHtmlFor(habit)` returns three-paragraph HTML keyed on `habit.name` — different middle paragraph per habit (Daily walk, Sleep, Sleep before midnight), shared lead and tail. Voice: tough-love, declarative, anchored in the data ("the body keeps the score" / "the data shows you walked"). Edit copy in this helper, not in `index.html`.
+**Per-habit system-managed copy:** `systemManagedHtmlFor(habit)` returns three-paragraph HTML keyed on `habit.name` — different middle paragraph per habit (Daily walk, Sleep, Sleep before midnight, Strength training), shared lead and tail. Voice: tough-love, declarative, anchored in the data ("the body keeps the score" / "the data shows you walked"). Edit copy in this helper, not in `index.html`.
 
 **Visual signal on the card:**
 - `.habit-cb--readonly` modifier on the check circle (dashed border, `opacity: 0.72`)
@@ -1821,7 +1827,7 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `statIconHtml(st, opts)` | Returns `<img class="stat-icon-img" src="...">` for a stat using the new DALL-E art (`STATS[].iconImg`). `opts.size` (default 32), `opts.eager`. Falls back to emoji if `iconImg` missing. |
 | `setStatIcon(el, st, sizePx)` | For elements that previously held a single emoji glyph via `.textContent` — replaces with the correct `<img>` markup. |
 | `Notif.*` (object) | Push-notification system. See "Per-habit reminders" section. Closure-scoped inside the IIFE; reaches the outer `habits` array directly. |
-| `Health.*` (object) | HealthKit auto-verify system. See "HealthKit integration" section. Public surface: `isAvailable`, `permissionStatus`, `requestPermissions`, `requestSleepPermissionIfNeeded`, `getStepsToday`, `getSleepLastNight`, `clearCache`, `clearSleepCache`. |
+| `Health.*` (object) | HealthKit auto-verify system. See "HealthKit integration" section. Public surface: `isAvailable`, `permissionStatus`, `requestPermissions`, `requestSleepPermissionIfNeeded`, `getStepsToday`, `getSleepLastNight`, `getStrengthWorkoutsToday`, `clearCache`, `clearSleepCache`, `clearWorkoutCache`. |
 | `AUTO_VERIFY.*` (object) | Auto-verified completion metadata + un-checked tracking. `recordAutoVerify`, `clearAutoVerify`, `isAutoVerifiedToday`, `isAutoVerifiedOnDate`, `markUnchecked(name)`, `wasUncheckedToday(name)`. |
 | `getHabitStepGoal(habit)` / `setHabitStepGoal(habit, n)` | Per-habit step goal accessor. Default 3000, range [100, 50000]. setHabit calls `save()`. |
 | `getSleepGoalHours(habit)` / `setSleepGoalHours(habit, h)` | Per-habit sleep-hours goal accessor. Default 7, range [3, 14], step 0.5. setHabit calls `save()`. |
@@ -1829,7 +1835,7 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `isHealthAutoVerifiableHabit(habit)` | OR of the three above. Use this in `meetsMinimum()` and similar generic gates. |
 | `isAutoVerifyDisabled()` / `setAutoVerifyDisabled(bool)` | Reads/writes the global Settings → Apple Health pause toggle. |
 | `canAutoVerify(habit)` | Composite gate combining `isHealthAutoVerifiableHabit` + `Health.isAvailable()` + `permissionStatus === 'granted'` + `!isAutoVerifyDisabled()`. Returns true only when auto-verify will live-fire for this habit right now. Used by Daily Insight's status line + verify-tag rendering. |
-| `isReadOnlyAutoVerifyHabit(habit)` | **v2.0:** true for canonical `Daily walk`, `Sleep`, `Sleep before midnight`. Tap routes to `openNoteModal` instead of `toggleHabit`; card renders with lock indicator. See HealthKit integration → "Read-only auto-verify habits". |
+| `isReadOnlyAutoVerifyHabit(habit)` | **v2.0 / v3 Phase 1u:** true for canonical `Daily walk`, `Sleep`, `Sleep before midnight`, `Strength training`. Tap routes to `openNoteModal` instead of `toggleHabit`; card renders with lock indicator. See HealthKit integration → "Read-only auto-verify habits". |
 | `systemManagedHtmlFor(habit)` | Returns three-paragraph HTML for the SYSTEM-MANAGED Notes-modal section, keyed on habit name. Edit per-habit copy here, not in `index.html`. |
 | `isCanonicalHabit(habit)` | True if `habit.name` matches a `DEFAULT_HABITS` entry AND `!habit.custom`. Used by the Edit Habit modal to lock name + emoji + difficulty for canonical habits (their names are foreign keys for `HABIT_ICONS`, `AUTO_VERIFY`, `HABIT_TIME_OF_DAY`, etc.). |
 | `sortHabitsAutoVerifyFirst(arr)` | Stable in-place partition: `isHealthAutoVerifiableHabit` habits to front, rest preserves relative order. Called inside `save()` (invariant always holds in storage) + once at init() for the v2.0 migration. Drag-to-reorder snaps back on next render if user drops a non-auto-verify habit above the partition. |
@@ -2011,7 +2017,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=258`, `app.js?v=340`, `auth.js?v=7`, `simulated-leaderboard.js?v=2`, `sw.js v5.223`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=258`, `app.js?v=341`, `auth.js?v=7`, `simulated-leaderboard.js?v=2`, `sw.js v5.224`, `APP_VERSION = '2.2.0'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 

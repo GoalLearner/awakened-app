@@ -263,6 +263,13 @@
   const HEALTHKIT_SLEEP_NAP_MIN_MINUTES = 30; // sample duration < this = nap
   const HEALTHKIT_SLEEP_LOOKBACK_HOURS = 18;  // query window backwards from now
 
+  // v3 Phase 1u — Strength training auto-verify. A workout sample
+  // qualifies if (a) its activity type matches a strength-training
+  // identifier (see _isStrengthWorkoutSample) AND (b) its duration
+  // is at least this many minutes. 10 minutes filters out accidental
+  // / failed workouts without locking out genuinely short sessions.
+  const HEALTHKIT_STRENGTH_MIN_MINUTES = 10;
+
   // Pure helper: filters HealthKit sleep samples to the strict bedtime
   // window — qualifying asleep samples (≥30 min) whose startDate is in
   // [20:00, 24:00) device-local on the prior day. Returns array sorted
@@ -3335,12 +3342,26 @@
     if (habit.name !== 'Sleep before midnight') return false;
     return true;
   }
+  // v3 Phase 1u — canonical "Strength training" habit. Verified by
+  // HealthKit workout samples (HKWorkoutType, strength-category
+  // identifiers, ≥ 10 min duration). Binary auto-verify habit (no
+  // goal control) — meetsMinimum() short-circuits via the
+  // isHealthAutoVerifiableHabit gate below.
+  function isStrengthWorkoutHabit(habit) {
+    if (!habit) return false;
+    if (habit.custom) return false;
+    if (habit.name !== 'Strength training') return false;
+    return true;
+  }
   // Single gate that aggregates all habits with HealthKit auto-verify.
   // Used by meetsMinimum() to bypass the legacy MEASURABLE_HABITS minimum
   // check — these habits source their goal (or lack thereof) from new
   // per-habit fields, not the `habit.goal` shape.
   function isHealthAutoVerifiableHabit(habit) {
-    return isStepGoalHabit(habit) || isSleepDurationHabit(habit) || isSleepBedtimeHabit(habit);
+    return isStepGoalHabit(habit)
+        || isSleepDurationHabit(habit)
+        || isSleepBedtimeHabit(habit)
+        || isStrengthWorkoutHabit(habit);
   }
 
   // Stable partition: auto-verifiable habits to the front, everything
@@ -3424,7 +3445,8 @@
     if (habit.custom) return false;
     return habit.name === 'Daily walk'
         || habit.name === 'Sleep'
-        || habit.name === 'Sleep before midnight';
+        || habit.name === 'Sleep before midnight'
+        || habit.name === 'Strength training';
   }
 
   // Per-habit "SYSTEM-MANAGED" body copy shown in the Notes modal
@@ -3448,6 +3470,9 @@
         break;
       case 'Sleep before midnight':
         middle = "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>";
+        break;
+      case 'Strength training':
+        middle = "<p>Strength training is sealed only when Apple Health records a qualifying strength workout (10+ minutes) for today. The system is checking for real training data, not a manual tap. Connect Apple Health and put in the work. If the data shows it, your hunter earns it.</p>";
         break;
       default:
         middle = '<p>Awakened auto-checks this habit when Apple Health verifies the conditions. Manual completion is not available.</p>';
@@ -8506,6 +8531,7 @@
     // re-triggers renderHabits() once after a successful auto-check.
     try { autoVerifyWalk(); } catch (_) {}
     try { autoVerifySleep(); } catch (_) {}
+    try { autoVerifyStrengthTraining(); } catch (_) {}
   }
 
   function renderRank() {
@@ -18976,10 +19002,12 @@
     // truth; these caches just avoid hammering it on every render.
     // Step + sleep have separate caches with separate clear methods so
     // each habit's auto-verify can refresh independently.
-    const STEP_CACHE_TTL_MS  = 5 * 60 * 1000;
-    const SLEEP_CACHE_TTL_MS = 5 * 60 * 1000;
-    let stepCache  = null; // { steps, fetchedAt }
-    let sleepCache = null; // { totalAsleepHours, earliestSleepStart, samples, fetchedAt }
+    const STEP_CACHE_TTL_MS    = 5 * 60 * 1000;
+    const SLEEP_CACHE_TTL_MS   = 5 * 60 * 1000;
+    const WORKOUT_CACHE_TTL_MS = 5 * 60 * 1000;
+    let stepCache    = null; // { steps, fetchedAt }
+    let sleepCache   = null; // { totalAsleepHours, earliestSleepStart, samples, fetchedAt }
+    let workoutCache = null; // { count, totalMinutes, workouts, fetchedAt }
 
     function isCacheFresh() {
       return stepCache && (Date.now() - stepCache.fetchedAt) < STEP_CACHE_TTL_MS;
@@ -18987,12 +19015,18 @@
     function isSleepCacheFresh() {
       return sleepCache && (Date.now() - sleepCache.fetchedAt) < SLEEP_CACHE_TTL_MS;
     }
+    function isWorkoutCacheFresh() {
+      return workoutCache && (Date.now() - workoutCache.fetchedAt) < WORKOUT_CACHE_TTL_MS;
+    }
 
     function clearCache() {
       stepCache = null;
     }
     function clearSleepCache() {
       sleepCache = null;
+    }
+    function clearWorkoutCache() {
+      workoutCache = null;
     }
 
     // ── Permission status (locally tracked) ──────────────
@@ -19271,6 +19305,114 @@
       }
     }
 
+    // ── Workout query ───────────────────────────────────
+    // Returns a summary of qualifying STRENGTH workouts logged today
+    // (device-local calendar day). The plugin's 'activity' friendly
+    // alias used in requestAuthorization already covers HKWorkoutType,
+    // so no new auth category is needed.
+    //
+    // Qualifying = workoutActivityType matches one of the strength
+    // training identifiers AND duration ≥ HEALTHKIT_STRENGTH_MIN_MINUTES
+    // (default 10). Non-strength workouts (running, walking, cycling,
+    // yoga, etc.) are filtered out — Strength training the habit
+    // shouldn't auto-complete from a 30-minute walk.
+    //
+    // Returns: { count, totalMinutes, workouts: [...], fetchedAt } or null.
+    //   - count        : number of qualifying samples
+    //   - totalMinutes : summed duration in minutes
+    //   - workouts     : the qualifying samples (kept for debugging)
+    //
+    // Returns null on:
+    //   - non-native platform / missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws
+    //
+    // Never throws.
+    async function getStrengthWorkoutsToday() {
+      if (!isAvailable()) return null;
+      if (isWorkoutCacheFresh()) return workoutCache;
+
+      const p = plugin();
+      if (!p) return null;
+
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+
+      try {
+        const todayLocal = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate()
+          : new Date().toISOString().slice(0, 10);
+        const start = new Date(todayLocal + 'T00:00:00');
+        const end = new Date();
+
+        // Query workout samples. sampleName='workoutType' is the
+        // canonical identifier used by the plugin's query API.
+        const result = await p.queryHKitSampleType({
+          sampleName: 'workoutType',
+          startDate:  start.toISOString(),
+          endDate:    end.toISOString(),
+          limit:      0,
+        });
+
+        const samples = (result && result.resultData) || [];
+        const qualifying = samples.filter(_isStrengthWorkoutSample);
+        const totalMinutes = qualifying.reduce((sum, s) => sum + _workoutDurationMinutes(s), 0);
+
+        workoutCache = {
+          count:        qualifying.length,
+          totalMinutes: totalMinutes,
+          workouts:     qualifying,
+          fetchedAt:    Date.now(),
+        };
+        setStatus('granted');
+        console.log('[Health] strength workouts today:', qualifying.length,
+                    '(' + totalMinutes.toFixed(0) + ' min, samples scanned:', samples.length + ')');
+        return workoutCache;
+      } catch (e) {
+        console.warn('[Health] workout query failed', e);
+        return null;
+      }
+    }
+
+    // Strength-workout filter. Apple's HKWorkoutActivityType enum is
+    // surfaced by the plugin as a string — naming varies across
+    // plugin versions / iOS versions, so match defensively against a
+    // case-insensitive keyword set. The keywords are conservative —
+    // we'd rather miss an obscure label than count a non-strength
+    // workout as strength.
+    function _isStrengthWorkoutSample(s) {
+      if (!s) return false;
+      const typeStr = String(
+        s.workoutActivityType || s.activityType || s.workoutType || s.type || ''
+      ).toLowerCase();
+      // Accepted: traditionalStrengthTraining, functionalStrengthTraining,
+      // strengthTraining, weightTraining, resistanceTraining. Reject
+      // everything else (running, walking, cycling, yoga, etc.).
+      const STRENGTH_KEYWORDS = ['strengthtraining', 'weighttraining', 'resistancetraining',
+                                 'strength training', 'weight training', 'resistance training'];
+      const matchesStrength = STRENGTH_KEYWORDS.some(k => typeStr.includes(k.replace(/\s+/g, '')));
+      if (!matchesStrength) return false;
+      const minutes = _workoutDurationMinutes(s);
+      return minutes >= HEALTHKIT_STRENGTH_MIN_MINUTES;
+    }
+
+    // Normalize workout duration to minutes. Prefer endDate-startDate
+    // (most reliable across plugin versions). Fall back to the
+    // duration field with a unit-detection heuristic — different
+    // plugin versions return hours/minutes/seconds.
+    function _workoutDurationMinutes(sample) {
+      try {
+        const s = sample.startDate ? new Date(sample.startDate).getTime() : null;
+        const e = sample.endDate   ? new Date(sample.endDate).getTime()   : null;
+        if (s && e && e > s) return (e - s) / 60000;
+      } catch (_) {}
+      const d = Number(sample.duration);
+      if (!Number.isFinite(d) || d <= 0) return 0;
+      if (d < 24)   return d * 60;   // hours (rare strength workout > 24h)
+      if (d < 1440) return d;        // minutes (24min – 24h)
+      return d / 60;                 // seconds
+    }
+
     // Public surface
     return {
       isAvailable,
@@ -19278,9 +19420,11 @@
       requestSleepPermissionIfNeeded,
       getStepsToday,
       getSleepLastNight,
+      getStrengthWorkoutsToday,
       permissionStatus,
-      clearCache,       // step cache
-      clearSleepCache,  // sleep cache
+      clearCache,            // step cache
+      clearSleepCache,       // sleep cache
+      clearWorkoutCache,     // workout cache
     };
   })();
 
@@ -19543,10 +19687,11 @@
       console.log('[Health] permission result:', result);
       if (result === 'granted') {
         // Try to verify immediately — if user has already walked today
-        // OR slept past their goal last night, they get instant
-        // gratification on both habits.
+        // OR slept past their goal last night OR completed a strength
+        // workout, they get instant gratification on those habits.
         autoVerifyWalk();
         autoVerifySleep();
+        autoVerifyStrengthTraining();
       }
     });
   }
@@ -19751,6 +19896,55 @@
     if (currentTab === 'habits') renderHabits();
   }
   try { window.autoVerifySleep = autoVerifySleep; } catch (_) {}
+
+  // ── Strength training auto-verify (v3 Phase 1u) ──────────
+  // Read-only system-managed habit. Auto-completes when Apple Health
+  // shows a qualifying strength workout today (HKWorkoutActivityType
+  // in the strength-category set, duration ≥ HEALTHKIT_STRENGTH_MIN_MINUTES).
+  // Same gating pattern as autoVerifyWalk: Health available + permission
+  // granted + auto-verify not paused + habit present + not already checked
+  // + not user-opted-out today.
+  //
+  // No new HealthKit auth category — 'activity' in requestAuthorization
+  // already covers HKWorkoutType per the plugin's friendly-alias mapping.
+  function findStrengthHabit() {
+    return habits.find(h => h.name === 'Strength training' && !h.custom) || null;
+  }
+  async function autoVerifyStrengthTraining() {
+    if (!Health.isAvailable()) return;
+
+    const status = Health.permissionStatus();
+    // The walk auto-verify path already drives the first-time
+    // pre-prompt. If status is 'unknown', let walk handle it and
+    // bail here without prompting.
+    if (status !== 'granted') return;
+
+    if (isAutoVerifyDisabled()) return;
+
+    const strength = findStrengthHabit();
+    if (!strength) return;                                       // habit not in user's active list
+    if (isChecked(strength.id)) return;                          // already done (manual or auto)
+    if (AUTO_VERIFY.wasUncheckedToday('Strength training')) return; // user opted out for today
+
+    const data = await Health.getStrengthWorkoutsToday();
+    if (!data) return;
+    if (data.count < 1) return;                                  // no qualifying workout today
+
+    AUTO_VERIFY.recordAutoVerify(strength.id, {
+      source:        'healthkit-strength-workout',
+      value:         data.totalMinutes,
+      threshold:     HEALTHKIT_STRENGTH_MIN_MINUTES,
+      workoutCount:  data.count,
+    });
+
+    const li = document.querySelector('.habit-item[data-id="' + strength.id + '"]');
+    toggleHabit(strength.id, li, { silent: true });
+    console.log('[Health] auto-verified Strength training:',
+                data.count, 'workout(s),', data.totalMinutes.toFixed(0), 'min');
+
+    if (currentTab === 'habits') renderHabits();
+  }
+  try { window.autoVerifyStrengthTraining = autoVerifyStrengthTraining; } catch (_) {}
 
   // ── INIT ─────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════
@@ -20302,10 +20496,12 @@
       // while we were backgrounded; sleep data in particular only
       // appears in HealthKit on wake (Apple Watch) or alarm-time
       // backfill (iPhone), so resume is a high-yield moment.
-      try { Health.clearCache       && Health.clearCache();       } catch (_) {}
-      try { Health.clearSleepCache  && Health.clearSleepCache();  } catch (_) {}
-      try { autoVerifyWalk();  } catch (_) {}
-      try { autoVerifySleep(); } catch (_) {}
+      try { Health.clearCache         && Health.clearCache();         } catch (_) {}
+      try { Health.clearSleepCache    && Health.clearSleepCache();    } catch (_) {}
+      try { Health.clearWorkoutCache  && Health.clearWorkoutCache();  } catch (_) {}
+      try { autoVerifyWalk();              } catch (_) {}
+      try { autoVerifySleep();             } catch (_) {}
+      try { autoVerifyStrengthTraining();  } catch (_) {}
       // v2.1.0 Phase C — push fresh metric snapshot to backend on
       // resume. Debounced to 5 min so rapid foreground/background
       // cycling doesn't hammer the workers.
