@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=263">
+  <link rel="stylesheet" href="styles.css?v=264">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -579,28 +579,44 @@
            renderActiveDuelHero() during renderDuelsSection(). -->
       <div id="duels-hero" class="duels-hero-mount"></div>
 
-      <!-- FRIENDS section -->
-      <section class="social-section social-section--friends">
-        <div class="social-section-header-row">
-          <div class="social-section-header">FRIENDS</div>
-          <div id="social-friends-count" class="social-section-count"></div>
-        </div>
-        <div class="social-friend-add">
-          <input id="social-friend-input" class="social-friend-input" type="text"
-                 placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>
-        </div>
-        <div id="social-friends-body" class="social-section-body">
-          <div class="social-empty">Loading friends…</div>
+      <!-- FRIENDS section (collapsible — closed by default, v3 Phase 1x.4) -->
+      <section class="social-section social-section--friends social-section--collapsible social-section--collapsed">
+        <button class="social-section-toggle" type="button" aria-expanded="false" data-collapsible-target="friends">
+          <div class="social-section-header-row">
+            <div class="social-section-header">FRIENDS</div>
+            <div class="social-section-header-right">
+              <span id="social-friends-count" class="social-section-count"></span>
+              <span class="social-section-chevron" aria-hidden="true">▾</span>
+            </div>
+          </div>
+        </button>
+        <div class="social-section-collapsible-body">
+          <div class="social-friend-add">
+            <input id="social-friend-input" class="social-friend-input" type="text"
+                   placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>
+          </div>
+          <div id="social-friends-body" class="social-section-body">
+            <div class="social-empty">Loading friends…</div>
+          </div>
         </div>
       </section>
 
-      <!-- DISCIPLINE DUELS section -->
-      <section class="social-section social-section--duels">
-        <div class="social-section-header">DISCIPLINE DUELS</div>
-        <div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>
-        <div id="social-duels-body" class="social-section-body">
-          <div class="social-empty">Loading duels…</div>
+      <!-- DISCIPLINE DUELS section (collapsible — closed by default, v3 Phase 1x.4) -->
+      <section class="social-section social-section--duels social-section--collapsible social-section--collapsed">
+        <button class="social-section-toggle" type="button" aria-expanded="false" data-collapsible-target="duels">
+          <div class="social-section-header-row">
+            <div class="social-section-header">DISCIPLINE DUELS</div>
+            <div class="social-section-header-right">
+              <span class="social-section-chevron" aria-hidden="true">▾</span>
+            </div>
+          </div>
+        </button>
+        <div class="social-section-collapsible-body">
+          <div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>
+          <div id="social-duels-body" class="social-section-body">
+            <div class="social-empty">Loading duels…</div>
+          </div>
         </div>
       </section>
     </div>
@@ -1770,7 +1786,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=356"></script>
+  <script src="app.js?v=357"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

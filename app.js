@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w6';
+  const APP_BUILD_TAG = '2.2.1-w7';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14083,35 +14083,51 @@
       if (header && header.nextSibling) panel.insertBefore(hero, header.nextSibling);
       else panel.appendChild(hero);
     }
-    // Friends section
+    // Friends section (collapsible — closed by default, v3 Phase 1x.4)
     if (!document.getElementById('social-friends-body')) {
       const section = makeNode(
-        '<section class="social-section social-section--friends">' +
-          '<div class="social-section-header-row">' +
-            '<div class="social-section-header">FRIENDS</div>' +
-            '<div id="social-friends-count" class="social-section-count"></div>' +
-          '</div>' +
-          '<div class="social-friend-add">' +
-            '<input id="social-friend-input" class="social-friend-input" type="text" ' +
-              'placeholder="hunter alias" maxlength="20" autocomplete="off" ' +
-              'autocorrect="off" autocapitalize="off" spellcheck="false">' +
-            '<button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>' +
-          '</div>' +
-          '<div id="social-friends-body" class="social-section-body">' +
-            '<div class="social-empty">Loading friends…</div>' +
+        '<section class="social-section social-section--friends social-section--collapsible social-section--collapsed">' +
+          '<button class="social-section-toggle" type="button" aria-expanded="false" data-collapsible-target="friends">' +
+            '<div class="social-section-header-row">' +
+              '<div class="social-section-header">FRIENDS</div>' +
+              '<div class="social-section-header-right">' +
+                '<span id="social-friends-count" class="social-section-count"></span>' +
+                '<span class="social-section-chevron" aria-hidden="true">▾</span>' +
+              '</div>' +
+            '</div>' +
+          '</button>' +
+          '<div class="social-section-collapsible-body">' +
+            '<div class="social-friend-add">' +
+              '<input id="social-friend-input" class="social-friend-input" type="text" ' +
+                'placeholder="hunter alias" maxlength="20" autocomplete="off" ' +
+                'autocorrect="off" autocapitalize="off" spellcheck="false">' +
+              '<button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>' +
+            '</div>' +
+            '<div id="social-friends-body" class="social-section-body">' +
+              '<div class="social-empty">Loading friends…</div>' +
+            '</div>' +
           '</div>' +
         '</section>'
       );
       panel.appendChild(section);
     }
-    // Duels section
+    // Duels section (collapsible — closed by default, v3 Phase 1x.4)
     if (!document.getElementById('social-duels-body')) {
       const section = makeNode(
-        '<section class="social-section social-section--duels">' +
-          '<div class="social-section-header">DISCIPLINE DUELS</div>' +
-          '<div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>' +
-          '<div id="social-duels-body" class="social-section-body">' +
-            '<div class="social-empty">Loading duels…</div>' +
+        '<section class="social-section social-section--duels social-section--collapsible social-section--collapsed">' +
+          '<button class="social-section-toggle" type="button" aria-expanded="false" data-collapsible-target="duels">' +
+            '<div class="social-section-header-row">' +
+              '<div class="social-section-header">DISCIPLINE DUELS</div>' +
+              '<div class="social-section-header-right">' +
+                '<span class="social-section-chevron" aria-hidden="true">▾</span>' +
+              '</div>' +
+            '</div>' +
+          '</button>' +
+          '<div class="social-section-collapsible-body">' +
+            '<div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>' +
+            '<div id="social-duels-body" class="social-section-body">' +
+              '<div class="social-empty">Loading duels…</div>' +
+            '</div>' +
           '</div>' +
         '</section>'
       );
@@ -14569,6 +14585,25 @@
 
   // ── Event wiring (delegated; runs once at init via setupSocialDuels) ──
   function setupSocialDuels() {
+    // v3 Phase 1x.4 — collapsible Friends + Duels sections.
+    // Delegated click handler so re-renders (which can replace
+    // sub-content but not the section wrapper) don't break the
+    // toggle. Default state is closed (the .social-section--collapsed
+    // class is on the markup); clicking flips it.
+    const socialPanel = document.getElementById('social-panel');
+    if (socialPanel && !socialPanel._collapseWired) {
+      socialPanel.addEventListener('click', (e) => {
+        const toggle = e.target.closest && e.target.closest('.social-section-toggle');
+        if (!toggle) return;
+        const section = toggle.closest('.social-section--collapsible');
+        if (!section) return;
+        const wasCollapsed = section.classList.contains('social-section--collapsed');
+        section.classList.toggle('social-section--collapsed');
+        toggle.setAttribute('aria-expanded', wasCollapsed ? 'true' : 'false');
+      });
+      socialPanel._collapseWired = true;
+    }
+
     // Friend add
     const sendBtn = document.getElementById('social-friend-send');
     const input   = document.getElementById('social-friend-input');

@@ -19543,6 +19543,58 @@ body.reveal-locked { overflow: hidden; }
   padding: 14px 0 4px;
   border-top: 1px solid var(--border);
 }
+
+/* v3 Phase 1x.4 — Friends + Duels sections are collapsible.
+   Default closed (.social-section--collapsed). Clicking the header
+   toggles. Body is hidden via display:none while collapsed; chevron
+   rotates 180deg when expanded for visual feedback. */
+.social-section--collapsible {
+  padding-top: 0;
+  padding-bottom: 4px;
+}
+.social-section-toggle {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 14px 0 4px;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.social-section-toggle:focus-visible {
+  outline: 1px solid var(--border-accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.social-section-toggle .social-section-header {
+  margin-bottom: 0;
+}
+.social-section-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.social-section-chevron {
+  display: inline-block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  transition: transform 180ms ease, color 180ms ease;
+  transform: rotate(0deg);
+}
+.social-section--collapsible:not(.social-section--collapsed) .social-section-chevron {
+  transform: rotate(-180deg);
+  color: var(--gold);
+}
+.social-section-collapsible-body {
+  padding-top: 12px;
+}
+.social-section--collapsed .social-section-collapsible-body {
+  display: none;
+}
 .social-section-header {
   font-family: 'Cinzel', serif;
   font-weight: 700;
