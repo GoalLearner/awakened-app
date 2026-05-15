@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w5';
+  const APP_BUILD_TAG = '2.2.1-w6';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9138,13 +9138,15 @@
     lbl.textContent = 'CHARACTER STATS';
     el.appendChild(lbl);
 
-    // ── DOMINANT ALIGNMENT CARD (v2.1) ──────────────────────
-    // Big retention play — surface the user's current class lean
-    // prominently at the top of the Stats tab. Pre-Awakening users
-    // see "LEANING: WARRIOR (STR DOMINANT)" if any stat has leveled,
-    // otherwise CIVILIAN with a path-to-Awakening prompt. Awakened
-    // users see their actual class name + tagline.
-    el.appendChild(_buildAlignmentCard());
+    // ── DOMINANT ALIGNMENT CARD (v2.1, removed v3 Phase 1x.3) ─
+    // Big retention play originally — surface the user's current
+    // class lean at the top of the Stats tab. Removed at user
+    // request: the CIVILIAN placeholder dominates pre-Awakened
+    // users' Stats view without earning the real-estate. Class
+    // identity still surfaces in the Status tab header + on
+    // Awakening / class-change celebration modals. The helper
+    // _buildAlignmentCard() stays defined for future surfaces.
+    // el.appendChild(_buildAlignmentCard());
 
     // ── OSRS-style skills panel ────────────────────────────
     // Compute the dominant stat for visual emphasis:
