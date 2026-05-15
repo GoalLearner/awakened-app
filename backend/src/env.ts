@@ -55,4 +55,13 @@ export interface Env {
   RL_USER_STATE_GET: RateLimit;
   /** Cloud Sync v1 (v3 Phase 1w) — guards POST /v1/users/me/state. */
   RL_USER_STATE_POST: RateLimit;
+
+  /** Discipline Duels v1 (v3 Phase 1x) — friend/duel reads. */
+  RL_FRIENDS_READ: RateLimit;
+  /** Discipline Duels v1 — friend writes (request/accept/decline/remove). */
+  RL_FRIENDS_WRITE: RateLimit;
+  /** Discipline Duels v1 — duel reads (list + detail). */
+  RL_DUELS_READ: RateLimit;
+  /** Discipline Duels v1 — duel writes (create/accept/decline). */
+  RL_DUELS_WRITE: RateLimit;
 }

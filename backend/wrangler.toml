@@ -100,3 +100,29 @@ name = "RL_USER_STATE_POST"
 type = "ratelimit"
 namespace_id = "1006"
 simple = { limit = 4, period = 60 }   # 4/min per user — debounced client
+
+# Discipline Duels v1 (v3 Phase 1x). Friends + duels coordination layer.
+# Reads are cheap; writes are infrequent (1-2/day legit usage).
+[[unsafe.bindings]]
+name = "RL_FRIENDS_READ"
+type = "ratelimit"
+namespace_id = "1007"
+simple = { limit = 30, period = 60 }  # 30/min per user
+
+[[unsafe.bindings]]
+name = "RL_FRIENDS_WRITE"
+type = "ratelimit"
+namespace_id = "1008"
+simple = { limit = 10, period = 60 }  # 10/min per user
+
+[[unsafe.bindings]]
+name = "RL_DUELS_READ"
+type = "ratelimit"
+namespace_id = "1009"
+simple = { limit = 30, period = 60 }  # 30/min per user
+
+[[unsafe.bindings]]
+name = "RL_DUELS_WRITE"
+type = "ratelimit"
+namespace_id = "1010"
+simple = { limit = 6, period = 60 }   # 6/min per user

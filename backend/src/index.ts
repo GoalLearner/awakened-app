@@ -28,8 +28,29 @@ import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
 import { handleLeaderboardTop } from './handlers/leaderboard-top';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
+import {
+  handleFriendsList,
+  handleFriendsRequest,
+  handleFriendsAccept,
+  handleFriendsDecline,
+  handleFriendsRemove,
+} from './handlers/friends';
+import {
+  handleDuelsList,
+  handleDuelsCreate,
+  handleDuelsAccept,
+  handleDuelsDecline,
+  handleDuelsDetail,
+} from './handlers/duels';
 import { handlePreflight, withCors } from './lib/cors';
 import { jsonError } from './lib/responses';
+
+// Regex matchers for parameterized routes (Discipline Duels v1 / v3 Phase 1x).
+// Capture group #1 is the row UUID. We accept the standard randomUUID()
+// charset (hex + dashes) — anything else 404s implicitly.
+const FRIENDS_ID_RE = /^\/v1\/friends\/([0-9a-fA-F-]{8,})\/(accept|decline|remove)$/;
+const DUELS_ID_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(accept|decline)$/;
+const DUELS_DETAIL_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})$/;
 
 export default {
   async fetch(
@@ -94,6 +115,39 @@ export default {
           } else if (path === '/v1/users/me/state' && method === 'POST') {
             // Cloud Sync v1 (v3 Phase 1w) — backup upsert.
             response = await handleUserStatePost(request, env, session);
+          }
+          // ── Discipline Duels v1 (v3 Phase 1x) ──
+          else if (path === '/v1/friends' && method === 'GET') {
+            response = await handleFriendsList(request, env, session);
+          } else if (path === '/v1/friends/request' && method === 'POST') {
+            response = await handleFriendsRequest(request, env, session);
+          } else if (path === '/v1/duels' && method === 'GET') {
+            response = await handleDuelsList(request, env, session);
+          } else if (path === '/v1/duels' && method === 'POST') {
+            response = await handleDuelsCreate(request, env, session);
+          } else if (FRIENDS_ID_RE.test(path) && method === 'POST') {
+            const match = path.match(FRIENDS_ID_RE)!;
+            const friendshipId = match[1];
+            const action = match[2];
+            if (action === 'accept') {
+              response = await handleFriendsAccept(request, env, session, friendshipId);
+            } else if (action === 'decline') {
+              response = await handleFriendsDecline(request, env, session, friendshipId);
+            } else {
+              response = await handleFriendsRemove(request, env, session, friendshipId);
+            }
+          } else if (DUELS_ID_RE.test(path) && method === 'POST') {
+            const match = path.match(DUELS_ID_RE)!;
+            const duelId = match[1];
+            const action = match[2];
+            if (action === 'accept') {
+              response = await handleDuelsAccept(request, env, session, duelId);
+            } else {
+              response = await handleDuelsDecline(request, env, session, duelId);
+            }
+          } else if (DUELS_DETAIL_RE.test(path) && method === 'GET') {
+            const match = path.match(DUELS_DETAIL_RE)!;
+            response = await handleDuelsDetail(request, env, session, match[1]);
           } else {
             response = jsonError(404, 'NOT_FOUND', `No route for ${method} ${path}.`);
           }
