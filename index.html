@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=265">
+  <link rel="stylesheet" href="styles.css?v=266">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -658,15 +658,39 @@
           <div id="ddo-remaining" class="bfs-section-text"></div>
         </div>
         <div class="bfs-section">
+          <div class="bfs-section-label">DUEL TYPE</div>
+          <div id="ddo-type" class="bfs-section-text">—</div>
+          <div class="bfs-section-text" style="margin-top:6px; opacity:0.75;">Verified Source: <span id="ddo-source">—</span></div>
+        </div>
+        <div class="bfs-section">
           <div class="bfs-section-label">WIN CONDITION</div>
-          <div class="bfs-section-text">Most sealed objectives during the duel window.</div>
-          <div class="bfs-section-text" style="margin-top:6px;">Tie breaker: most verified objectives, then most XP earned.</div>
+          <div id="ddo-wincond" class="bfs-section-text">—</div>
         </div>
         <div class="bfs-section">
           <div class="bfs-section-label">SCORE</div>
           <div id="ddo-score" class="bfs-section-text" style="font-style:italic; opacity:0.75;">Scoring activates in the next duel pass.</div>
         </div>
         <div id="ddo-actions" class="ddo-actions"></div>
+      </div>
+    </div>
+
+    <!-- Choose Verified Duel sheet (v3 Phase 1x.6). Bottom-sheet pattern.
+         Opens via openDuelTypePicker(alias) when a friend's Challenge
+         button is tapped. Metadata + UI only — no scoring/souls. -->
+    <div id="duel-type-overlay" class="duel-type-overlay hidden" aria-hidden="true">
+      <div id="duel-type-sheet" class="duel-type-sheet hidden" role="dialog" aria-labelledby="duel-type-title">
+        <div class="duel-type-drag-handle" aria-hidden="true"></div>
+        <div class="duel-type-header">
+          <h2 id="duel-type-title" class="duel-type-title">Choose Verified Duel</h2>
+          <p class="duel-type-sub">Every duel is decided by data, not manual check-ins.</p>
+          <div id="duel-type-opp" class="duel-type-opp">vs —</div>
+        </div>
+        <div id="duel-type-grid" class="duel-type-grid"></div>
+        <div class="duel-type-footnote">3-day duel · 25 souls stake · 40 souls reward</div>
+        <div class="duel-type-actions">
+          <button id="duel-type-cancel" class="social-btn" type="button">Cancel</button>
+          <button id="duel-type-submit" class="social-btn social-btn--primary" type="button">Challenge Hunter</button>
+        </div>
       </div>
     </div>
 
@@ -1781,12 +1805,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=9"></script>
+  <script src="auth.js?v=10"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=358"></script>
+  <script src="app.js?v=359"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

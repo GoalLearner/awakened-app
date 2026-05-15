@@ -923,6 +923,12 @@
     if (options && typeof options === 'object') {
       if (Number.isInteger(options.duration_days)) body.duration_days = options.duration_days;
       if (Number.isInteger(options.stake_souls))   body.stake_souls   = options.stake_souls;
+      // Verified-Only Duel Types (v3 Phase 1x.6). Default applied at the
+      // backend (`verified_objectives`) — only forward when explicitly
+      // chosen so older callers keep working.
+      if (typeof options.duel_type === 'string' && options.duel_type) {
+        body.duel_type = options.duel_type;
+      }
     }
     return _authedFetch('POST', '/v1/duels', body);
   }

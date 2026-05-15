@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w8';
+  const APP_BUILD_TAG = '2.2.1-w9';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11293,11 +11293,18 @@
     try { alias = lbNormalizeAliasForDisplay(rawAlias); }
     catch (_) { alias = String(rawAlias); }
     const timeLeft = _formatDuelTimeLeft(d.ends_at);
+    // Verified duel type prefix (v3 Phase 1x.6) — defensive: tolerate
+    // missing duel_type on pre-migration rows.
+    let typeCode = '';
+    try {
+      if (d.duel_type) typeCode = getDuelTypeShortCode(d.duel_type);
+    } catch (_) { typeCode = ''; }
+    const namePrefix = typeCode ? (typeCode + ' · ') : '';
     return {
       kind:  'duel',
       key:   'duel-' + (d.id || 'active'),
       icon:  'assets/tab-icons/tab-social.png',
-      name:  'VS ' + alias.toUpperCase(),
+      name:  namePrefix + 'VS ' + alias.toUpperCase(),
       sub:   timeLeft || null,
       hot:   true,
     };
@@ -14155,6 +14162,74 @@
     catch (_) { return String(raw || '—'); }
   }
 
+  // ── Verified-Only Duel Types (v3 Phase 1x.6) ──
+  // Metadata + UI only. No scoring engine, no souls movement. When the
+  // scoring engine ships, `duel.duel_type` decides which verified
+  // query runs against each participant's data.
+  const DUEL_TYPES = {
+    steps: {
+      id: 'steps', label: 'Steps Duel',
+      short: 'Most Apple Health steps wins.',
+      win:   'Most verified steps during the duel window wins.',
+      source:'Apple Health steps',
+    },
+    sleep: {
+      id: 'sleep', label: 'Sleep Duel',
+      short: 'Most 7+ hour sleep nights wins.',
+      win:   'Most verified nights with at least 7 hours of sleep wins.',
+      source:'Apple Health sleep',
+    },
+    bedtime: {
+      id: 'bedtime', label: 'Bedtime Duel',
+      short: 'Most nights asleep before midnight wins.',
+      win:   'Most verified before-midnight bedtimes wins.',
+      source:'Apple Health sleep',
+    },
+    strength: {
+      id: 'strength', label: 'Strength Duel',
+      short: 'Most verified strength workouts wins.',
+      win:   'Most Apple Health strength workouts during the duel window wins.',
+      source:'Apple Health workouts',
+    },
+    verified_objectives: {
+      id: 'verified_objectives', label: 'Verified Discipline Duel',
+      short: 'Only system-verified objectives count.',
+      win:   'Most verified objectives during the duel window wins.',
+      source:'System-verified objectives',
+    },
+    boss_race: {
+      id: 'boss_race', label: 'Boss Race',
+      short: 'Race to defeat a verified boss.',
+      win:   'First hunter to defeat the selected HealthKit-backed boss wins.',
+      source:'Verified boss progress',
+    },
+  };
+  const DEFAULT_DUEL_TYPE = 'verified_objectives';
+  const DUEL_TYPE_SHORT_CODES = {
+    steps: 'STEPS',
+    sleep: 'SLEEP',
+    bedtime: 'BEDTIME',
+    strength: 'STRENGTH',
+    verified_objectives: 'VERIFIED',
+    boss_race: 'BOSS RACE',
+  };
+
+  function getDuelTypeMeta(type) {
+    return DUEL_TYPES[type] || DUEL_TYPES[DEFAULT_DUEL_TYPE];
+  }
+  function formatDuelTypeLabel(type) { return getDuelTypeMeta(type).label; }
+  function formatDuelWinCondition(type) { return getDuelTypeMeta(type).win; }
+  function formatDuelTypeShort(type) { return getDuelTypeMeta(type).short; }
+  function formatDuelTypeSource(type) { return getDuelTypeMeta(type).source; }
+  function getDuelTypeShortCode(type) {
+    return DUEL_TYPE_SHORT_CODES[type] || DUEL_TYPE_SHORT_CODES[DEFAULT_DUEL_TYPE];
+  }
+
+  // Selection state for the Choose Verified Duel sheet. opponentAlias
+  // is captured when the user taps Challenge; selectedType is the
+  // pre-selected default (verified_objectives) overridable by the user.
+  const _duelTypeChoice = { opponentAlias: null, selectedType: DEFAULT_DUEL_TYPE };
+
   // Defensive: if the static index.html shipped in the IPA is stale
   // (missing the v3 Phase 1x.1 Duels-tab markup), inject the page
   // header + hero mount + friends + duels sections at runtime so the
@@ -14239,7 +14314,7 @@
             '</div>' +
           '</button>' +
           '<div class="social-section-collapsible-body">' +
-            '<div class="social-section-sub">3-day 1v1 challenges. Most sealed objectives wins.</div>' +
+            '<div class="social-section-sub">Verified 1v1 challenges. Apple Health decides the winner.</div>' +
             '<div id="social-duels-body" class="social-section-body">' +
               '<div class="social-empty">Loading duels…</div>' +
             '</div>' +
@@ -14296,7 +14371,7 @@
         '<div class="duels-hero duels-hero--empty">' +
           '<div class="duels-hero-icon">' + _DUEL_CREST_SVG + '</div>' +
           '<div class="duels-hero-title">No active duel</div>' +
-          '<div class="duels-hero-body">Add a hunter and begin a 3-day discipline challenge. Most sealed objectives wins.</div>' +
+          '<div class="duels-hero-body">Add a hunter and begin a verified 3-day challenge. Data decides the winner.</div>' +
           '<div class="duels-hero-actions">' +
             '<button id="duels-find-hunter" class="duels-btn duels-btn--primary" type="button">' +
               '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">' +
@@ -14324,6 +14399,7 @@
     const countdown = _fmtDuelHeroCountdown(duel.time_remaining_ms);
     const stake  = (duel.stake_souls  != null) ? duel.stake_souls  : 25;
     const reward = (duel.reward_souls != null) ? duel.reward_souls : 40;
+    const typeMeta = getDuelTypeMeta(duel.duel_type);
     mount.innerHTML =
       '<div class="duels-hero duels-hero--active" data-duel-id="' + esc(duel.id) + '">' +
         '<div class="duels-hero-topbar">' +
@@ -14334,7 +14410,8 @@
           '<div class="duels-hero-opponent">' +
             '<div class="duels-hero-avatar duels-hero-avatar--rival">' + esc(initial) + '</div>' +
             '<div class="duels-hero-opponent-name">' + esc(opp) + '</div>' +
-            '<div class="duels-hero-opponent-sub">Rival</div>' +
+            '<div class="duels-hero-opponent-sub">' + esc(typeMeta.label) + '</div>' +
+            '<div class="duels-hero-opponent-typecopy">' + esc(typeMeta.short) + '</div>' +
           '</div>' +
         '</div>' +
         '<div class="duels-hero-meta-strip">' +
@@ -14525,13 +14602,14 @@
         const stake  = (d.stake_souls  != null) ? d.stake_souls  : 25;
         const reward = (d.reward_souls != null) ? d.reward_souls : 40;
         const duration = (d.duration_days || 3) + ' days';
+        const typeLabel = formatDuelTypeLabel(d.duel_type);
         parts.push(
           '<div class="duel-card duel-card--incoming" data-duel-id="' + esc(d.id) + '">' +
             '<div class="duel-card-head">' +
               _friendAvatarHtml(opp, 'rival') +
               '<div class="duel-card-main">' +
                 '<div class="duel-card-opp">' + esc(opp) + '</div>' +
-                '<div class="duel-card-sub duel-card-sub--gold">challenged you · 3-day duel</div>' +
+                '<div class="duel-card-sub duel-card-sub--gold">' + esc(typeLabel) + ' · challenged you · 3-day duel</div>' +
               '</div>' +
               '<span class="duels-pill duels-pill--incoming">Incoming</span>' +
             '</div>' +
@@ -14552,13 +14630,14 @@
         const stake  = (d.stake_souls  != null) ? d.stake_souls  : 25;
         const reward = (d.reward_souls != null) ? d.reward_souls : 40;
         const duration = (d.duration_days || 3) + ' days';
+        const typeLabel = formatDuelTypeLabel(d.duel_type);
         parts.push(
           '<div class="duel-card duel-card--outgoing" data-duel-id="' + esc(d.id) + '">' +
             '<div class="duel-card-head">' +
               _friendAvatarHtml(opp, 'muted') +
               '<div class="duel-card-main">' +
                 '<div class="duel-card-opp">' + esc(opp) + '</div>' +
-                '<div class="duel-card-sub">waiting for response</div>' +
+                '<div class="duel-card-sub">' + esc(typeLabel) + ' · awaiting response</div>' +
               '</div>' +
               '<span class="duels-pill duels-pill--pending">Pending</span>' +
             '</div>' +
@@ -14574,6 +14653,7 @@
       parts.push('<div class="social-section-subhead">Active</div>');
       for (const d of active) {
         const opp = _socialDisplayAlias(d.opponent_alias || '—');
+        const typeLabel = formatDuelTypeLabel(d.duel_type);
         parts.push(
           '<div class="duel-card duel-card--active" data-duel-id="' + esc(d.id) + '" data-duel-action="view" role="button" tabindex="0">' +
             '<div class="duel-card-head">' +
@@ -14583,7 +14663,7 @@
                   '<span>' + esc(opp) + '</span>' +
                   '<span class="duels-pill duels-pill--live"><span class="duels-pill-dot"></span>Live</span>' +
                 '</div>' +
-                '<div class="duel-card-sub">' + esc(fmtRemaining(d.time_remaining_ms)) + '</div>' +
+                '<div class="duel-card-sub">' + esc(typeLabel) + ' · ' + esc(fmtRemaining(d.time_remaining_ms)) + '</div>' +
               '</div>' +
               '<svg class="duel-card-chevron" width="9" height="13" viewBox="0 0 7 9" aria-hidden="true"><path d="M1 1l5 3.5L1 8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
             '</div>' +
@@ -14603,7 +14683,7 @@
             '</svg>' +
           '</div>' +
           '<div class="social-empty-title">No duels yet.</div>' +
-          '<div class="social-empty-sub">Challenge a friend to begin your first discipline duel.</div>' +
+          '<div class="social-empty-sub">Challenge a friend to a verified discipline duel.</div>' +
         '</div>'
       );
     }
@@ -14634,6 +14714,122 @@
   try { window.openDuelDetail  = openDuelDetail;  } catch (_) {}
   try { window.closeDuelDetail = closeDuelDetail; } catch (_) {}
 
+  // ── Choose Verified Duel sheet (v3 Phase 1x.6) ──
+  function _renderDuelTypeCards() {
+    const grid = document.getElementById('duel-type-grid');
+    if (!grid) return;
+    const selected = _duelTypeChoice.selectedType || DEFAULT_DUEL_TYPE;
+    const order = ['verified_objectives', 'steps', 'sleep', 'bedtime', 'strength', 'boss_race'];
+    const parts = [];
+    for (const id of order) {
+      const meta = DUEL_TYPES[id];
+      if (!meta) continue;
+      const isSel = (id === selected);
+      parts.push(
+        '<button type="button" class="duel-type-card' + (isSel ? ' duel-type-card--selected' : '') + '" ' +
+          'data-duel-type="' + esc(id) + '" aria-pressed="' + (isSel ? 'true' : 'false') + '">' +
+          '<div class="duel-type-card-label">' + esc(meta.label) + '</div>' +
+          '<div class="duel-type-card-short">' + esc(meta.short) + '</div>' +
+          (isSel ? '<span class="duel-type-check" aria-hidden="true">✓</span>' : '') +
+        '</button>'
+      );
+    }
+    grid.innerHTML = parts.join('');
+  }
+
+  function openDuelTypePicker(opponentAlias) {
+    const overlay = document.getElementById('duel-type-overlay');
+    const sheet   = document.getElementById('duel-type-sheet');
+    if (!overlay || !sheet) {
+      // Defensive: if markup is somehow missing, fall back to immediate
+      // create with the default type so the user isn't stuck.
+      _submitDuelChallenge(opponentAlias, DEFAULT_DUEL_TYPE);
+      return;
+    }
+    _duelTypeChoice.opponentAlias = opponentAlias;
+    _duelTypeChoice.selectedType  = DEFAULT_DUEL_TYPE;
+    const oppDisp = _socialDisplayAlias(opponentAlias);
+    const oppEl = document.getElementById('duel-type-opp');
+    if (oppEl) oppEl.textContent = 'vs ' + oppDisp;
+    _renderDuelTypeCards();
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('duel-type-locked');
+  }
+
+  function closeDuelTypePicker() {
+    const overlay = document.getElementById('duel-type-overlay');
+    const sheet   = document.getElementById('duel-type-sheet');
+    if (overlay) { overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden', 'true'); }
+    if (sheet)   { sheet.classList.add('hidden'); }
+    document.body.classList.remove('duel-type-locked');
+    _duelTypeChoice.opponentAlias = null;
+  }
+
+  async function _submitDuelChallenge(alias, duelType) {
+    let res;
+    try {
+      res = await Auth.createDuel(alias, {
+        duration_days: 3,
+        stake_souls: 25,
+        duel_type: duelType || DEFAULT_DUEL_TYPE,
+      });
+    } catch (_) { res = { ok: false, detail: 'Network error' }; }
+    if (!res || !res.ok) {
+      showHabitToast((res && res.detail) || 'Could not send duel.');
+      return false;
+    }
+    showHabitToast('Duel challenge sent.');
+    try { renderDuelsSection(); } catch (_) {}
+    return true;
+  }
+
+  function setupDuelTypePicker() {
+    const overlay = document.getElementById('duel-type-overlay');
+    const sheet   = document.getElementById('duel-type-sheet');
+    if (!overlay || !sheet) return;
+    const grid = document.getElementById('duel-type-grid');
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        const card = e.target.closest('.duel-type-card');
+        if (!card) return;
+        const id = card.getAttribute('data-duel-type');
+        if (!id || !DUEL_TYPES[id]) return;
+        _duelTypeChoice.selectedType = id;
+        _renderDuelTypeCards();
+      });
+    }
+    const submitBtn = document.getElementById('duel-type-submit');
+    if (submitBtn) {
+      submitBtn.addEventListener('click', async () => {
+        const alias = _duelTypeChoice.opponentAlias;
+        const type  = _duelTypeChoice.selectedType || DEFAULT_DUEL_TYPE;
+        if (!alias) { closeDuelTypePicker(); return; }
+        submitBtn.disabled = true;
+        await _submitDuelChallenge(alias, type);
+        submitBtn.disabled = false;
+        closeDuelTypePicker();
+      });
+    }
+    const cancelBtn = document.getElementById('duel-type-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => closeDuelTypePicker());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeDuelTypePicker();
+    });
+    if (typeof attachSheetDismissGesture === 'function') {
+      try { attachSheetDismissGesture(sheet, overlay, closeDuelTypePicker, {}); }
+      catch (_) {}
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (overlay.classList.contains('hidden')) return;
+      closeDuelTypePicker();
+    });
+  }
+  try { window.openDuelTypePicker = openDuelTypePicker; } catch (_) {}
+  try { window.closeDuelTypePicker = closeDuelTypePicker; } catch (_) {}
+
   async function _ddoPopulate(duelId) {
     const setText = (id, text) => {
       const el = document.getElementById(id);
@@ -14648,6 +14844,9 @@
     setText('ddo-ends',     'Ends: —');
     setText('ddo-remaining','');
     setText('ddo-score',    'Scoring activates in the next duel pass.');
+    setText('ddo-type',     '—');
+    setText('ddo-source',   '—');
+    setText('ddo-wincond',  '—');
     const actionsEl = document.getElementById('ddo-actions');
     if (actionsEl) actionsEl.innerHTML = '';
 
@@ -14666,6 +14865,11 @@
     setText('ddo-reward', d.reward_souls + ' souls');
     setText('ddo-duration', d.duration_days + ' days');
     setText('ddo-status-cell', d.status.charAt(0).toUpperCase() + d.status.slice(1));
+    // Verified duel type readout (v3 Phase 1x.6).
+    const typeMeta = getDuelTypeMeta(d.duel_type);
+    setText('ddo-type',    typeMeta.label);
+    setText('ddo-source',  typeMeta.source);
+    setText('ddo-wincond', typeMeta.win);
     const pill = document.getElementById('ddo-status-pill');
     if (pill) {
       pill.textContent = d.status.toUpperCase();
@@ -14700,6 +14904,8 @@
 
   // ── Event wiring (delegated; runs once at init via setupSocialDuels) ──
   function setupSocialDuels() {
+    // v3 Phase 1x.6 — Choose Verified Duel sheet wiring (idempotent).
+    try { setupDuelTypePicker(); } catch (_) {}
     // v3 Phase 1x.4 — collapsible Friends + Duels sections.
     // Delegated click handler so re-renders (which can replace
     // sub-content but not the section wrapper) don't break the
@@ -14770,14 +14976,12 @@
           } else if (action === 'challenge') {
             const alias = row.getAttribute('data-alias') || '';
             if (!alias) { btn.disabled = false; return; }
-            const aliasDisp = _socialDisplayAlias(alias);
-            const confirmed = window.confirm('Challenge ' + aliasDisp + ' to a 3-day Discipline Duel? Stake: 25 souls. Reward: 40 souls.');
-            if (!confirmed) { btn.disabled = false; return; }
-            res = await Auth.createDuel(alias, { duration_days: 3, stake_souls: 25 });
-            if (res && res.ok) {
-              showHabitToast('Duel challenge sent.');
-              renderDuelsSection();
-            }
+            // v3 Phase 1x.6 — open the Choose Verified Duel sheet
+            // instead of confirm-prompting. _submitDuelChallenge fires
+            // on the sheet's primary button.
+            btn.disabled = false;
+            openDuelTypePicker(alias);
+            return;
           }
         } catch (_) { res = { ok: false, detail: 'Network error' }; }
         btn.disabled = false;
