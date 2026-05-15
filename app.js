@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w2';
+  const APP_BUILD_TAG = '2.2.1-w3';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14038,7 +14038,67 @@
     catch (_) { return String(raw || '—'); }
   }
 
+  // Defensive: if the static index.html that shipped in the IPA is
+  // stale (missing the v3 Phase 1x markup), inject the friends + duels
+  // sections at runtime. This way the sections appear as long as app.js
+  // itself is fresh — protects against bundle-drift between
+  // index.html / app.js / auth.js.
+  function _ensureSocialMarkup() {
+    const panel = document.getElementById('social-panel');
+    if (!panel) return;
+    let friendsBody = document.getElementById('social-friends-body');
+    let duelsBody   = document.getElementById('social-duels-body');
+    if (friendsBody && duelsBody) return; // static markup present, nothing to do
+    // Build the missing pieces. Use the same class names + ids the
+    // static markup uses, so the CSS already in styles.css applies.
+    const lbPreview = panel.querySelector('.lb-preview');
+    const anchor    = lbPreview ? lbPreview.nextSibling : null;
+    function makeNode(html) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html.trim();
+      return wrap.firstChild;
+    }
+    if (!document.querySelector('.social-build-marker')) {
+      const marker = makeNode(
+        '<div class="social-build-marker">' +
+          'BUILD 2.2.1 · Friends + Duels foundation (runtime-injected)' +
+        '</div>'
+      );
+      panel.insertBefore(marker, anchor);
+    }
+    if (!friendsBody) {
+      const section = makeNode(
+        '<section class="social-section social-section--friends">' +
+          '<div class="social-section-header">FRIENDS</div>' +
+          '<div class="social-friend-add">' +
+            '<input id="social-friend-input" class="social-friend-input" type="text" ' +
+              'placeholder="hunter alias" maxlength="20" autocomplete="off" ' +
+              'autocorrect="off" autocapitalize="off" spellcheck="false">' +
+            '<button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>' +
+          '</div>' +
+          '<div id="social-friends-body" class="social-section-body">' +
+            '<div class="social-empty">Loading friends…</div>' +
+          '</div>' +
+        '</section>'
+      );
+      panel.insertBefore(section, anchor);
+    }
+    if (!duelsBody) {
+      const section = makeNode(
+        '<section class="social-section social-section--duels">' +
+          '<div class="social-section-header">DISCIPLINE DUELS</div>' +
+          '<div class="social-section-sub">3-day 1v1. 25 souls staked each (metadata only — scoring activates in the next pass).</div>' +
+          '<div id="social-duels-body" class="social-section-body">' +
+            '<div class="social-empty">Loading duels…</div>' +
+          '</div>' +
+        '</section>'
+      );
+      panel.insertBefore(section, anchor);
+    }
+  }
+
   async function renderFriendsSection() {
+    _ensureSocialMarkup();
     const body = document.getElementById('social-friends-body');
     if (!body) return;
     if (!window.Auth || typeof Auth.fetchFriends !== 'function') {
@@ -14122,6 +14182,7 @@
   }
 
   async function renderDuelsSection() {
+    _ensureSocialMarkup();
     const body = document.getElementById('social-duels-body');
     if (!body) return;
     if (!window.Auth || typeof Auth.fetchDuels !== 'function') {

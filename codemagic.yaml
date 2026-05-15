@@ -206,6 +206,25 @@ workflows:
             echo "FAIL: www/index.html missing #social-duels-body markup"
             exit 1
           fi
+          # Verify app.js itself has the new render functions. If
+          # index.html is fresh but app.js is stale, the static markup
+          # would render but the live data hooks wouldn't fire. We've
+          # also seen builds where the copy step writes a fresh
+          # index.html alongside an older app.js (filesystem race?).
+          if ! grep -q "renderFriendsSection" www/app.js; then
+            echo "FAIL: www/app.js missing renderFriendsSection function"
+            echo "      (app.js is stale relative to index.html)"
+            exit 1
+          fi
+          if ! grep -q "renderDuelsSection" www/app.js; then
+            echo "FAIL: www/app.js missing renderDuelsSection function"
+            exit 1
+          fi
+          if ! grep -q "fetchFriends" www/auth.js; then
+            echo "FAIL: www/auth.js missing fetchFriends helper"
+            echo "      (auth.js is stale relative to index.html)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.

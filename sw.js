@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.237';
+const CACHE_VERSION = 'v5.238';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -168,11 +168,20 @@ const PRECACHE_ASSETS = [
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────
-// Do NOT call skipWaiting() here — the update banner handles it.
-// The new SW waits until the user taps "Refresh" or closes all tabs.
+// v3 Phase 1x debug: skipWaiting() is now called in install. Earlier
+// guidance said don't (in case the client-side update banner wanted
+// to control the timing), but on iOS Capacitor WebView every IPA
+// update ships a new sw.js that needs to take over immediately —
+// otherwise the OLD SW from the previous IPA keeps serving stale
+// /index.html from its precache and new static markup never reaches
+// the user. The web auto-update path in app.js still posts SKIP_WAITING
+// for redundancy; this just shortens the window during which the old
+// SW can intercept fetches with stale cached responses.
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE_ASSETS))
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll(PRECACHE_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
