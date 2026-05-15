@@ -26,6 +26,20 @@ const MAX_DURATION_DAYS = 14;
 const MIN_DURATION_DAYS = 1;
 const MAX_STAKE = 500;
 
+// Verified-Only Duel Types (v3 Phase 1x.6). Metadata only in this pass —
+// scoring engine ships in a later pass and will branch on this value to
+// pick the verified data source. Add new types here AND in the
+// DUEL_TYPES constant in app.js together.
+const ALLOWED_DUEL_TYPES = new Set([
+  'steps',
+  'sleep',
+  'bedtime',
+  'strength',
+  'verified_objectives',
+  'boss_race',
+]);
+const DEFAULT_DUEL_TYPE = 'verified_objectives';
+
 interface DuelRow {
   id: string;
   challenger_user_id: string;
@@ -35,6 +49,7 @@ interface DuelRow {
   reward_souls: number;
   burn_souls: number;
   duration_days: number;
+  duel_type: string;
   starts_at: string | null;
   ends_at: string | null;
   winner_user_id: string | null;
@@ -100,6 +115,7 @@ function serializeDuel(
     reward_souls: row.reward_souls,
     burn_souls: row.burn_souls,
     duration_days: row.duration_days,
+    duel_type: row.duel_type || DEFAULT_DUEL_TYPE,
     starts_at: row.starts_at,
     ends_at: row.ends_at,
     time_remaining_ms: timeRemainingMs,
@@ -178,7 +194,12 @@ export async function handleDuelsCreate(
     return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   }
 
-  let body: { opponent_alias?: unknown; duration_days?: unknown; stake_souls?: unknown };
+  let body: {
+    opponent_alias?: unknown;
+    duration_days?: unknown;
+    stake_souls?: unknown;
+    duel_type?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -218,6 +239,19 @@ export async function handleDuelsCreate(
       return jsonError(400, 'INVALID_STAKE', `stake_souls must be 0–${MAX_STAKE}.`);
     }
     stakeSouls = s;
+  }
+
+  // Optional duel_type. Default 'verified_objectives'.
+  let duelType = DEFAULT_DUEL_TYPE;
+  if (body?.duel_type !== undefined && body?.duel_type !== null) {
+    if (typeof body.duel_type !== 'string' || !ALLOWED_DUEL_TYPES.has(body.duel_type)) {
+      return jsonError(
+        400,
+        'INVALID_DUEL_TYPE',
+        `duel_type must be one of: ${Array.from(ALLOWED_DUEL_TYPES).join(', ')}.`,
+      );
+    }
+    duelType = body.duel_type;
   }
 
   const opponent = await findUserByAlias(env, aliasCheck.trimmed);
@@ -261,10 +295,19 @@ export async function handleDuelsCreate(
   await env.DB.prepare(
     `INSERT INTO duels (
        id, challenger_user_id, opponent_user_id, status,
-       stake_souls, reward_souls, burn_souls, duration_days
-     ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?)`,
+       stake_souls, reward_souls, burn_souls, duration_days, duel_type
+     ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
   )
-    .bind(id, session.userId, opponent.id, stakeSouls, DEFAULT_REWARD, DEFAULT_BURN, durationDays)
+    .bind(
+      id,
+      session.userId,
+      opponent.id,
+      stakeSouls,
+      DEFAULT_REWARD,
+      DEFAULT_BURN,
+      durationDays,
+      duelType,
+    )
     .run();
 
   const created = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
