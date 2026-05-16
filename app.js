@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w13';
+  const APP_BUILD_TAG = '2.2.1-w14';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11300,6 +11300,8 @@
       if (d.duel_type) typeCode = getDuelTypeShortCode(d.duel_type);
     } catch (_) { typeCode = ''; }
     const namePrefix = typeCode ? (typeCode + ' · ') : '';
+    // v3 Phase 1z.2 — capture duel type so the renderer can inject the
+    // type glyph between alias and countdown (locked decision #3).
     return {
       kind:  'duel',
       key:   'duel-' + (d.id || 'active'),
@@ -11307,6 +11309,7 @@
       name:  namePrefix + 'VS ' + alias.toUpperCase(),
       sub:   timeLeft || null,
       hot:   true,
+      duelType: d.duel_type || null,
     };
   }
 
@@ -11350,6 +11353,20 @@
       const sub = p.sub
         ? ' <span class="status-pill-num">' + esc(p.sub) + '</span>'
         : '';
+      // v3 Phase 1z.2 — duel pill carries gold pulse dot + type glyph.
+      if (isDuel) {
+        let glyphHtml = '';
+        try {
+          if (p.duelType) glyphHtml = '<span class="duel-hpill-glyph">' + getDuelTypeGlyphSvg(p.duelType) + '</span>';
+        } catch (_) {}
+        return '<span class="' + cls + '"' + attrs + '>' +
+          '<span class="duel-hpill-pulse" aria-hidden="true"></span>' +
+          _statusPillIcon(p.icon, 16) +
+          esc(p.name) +
+          glyphHtml +
+          sub +
+        '</span>';
+      }
       return '<span class="' + cls + '"' + attrs + '>' +
         _statusPillIcon(p.icon, 16) +
         esc(p.name) +
@@ -12059,6 +12076,11 @@
     if (tab === 'social') {
       if (typeof renderFriendsSection === 'function') renderFriendsSection();
       if (typeof renderDuelsSection === 'function')   renderDuelsSection();
+      // v3 Phase 1z.2 — live 60s tick for active duel hero + countdown.
+      try { if (typeof startDuelsLiveTick === 'function') startDuelsLiveTick(); } catch (_) {}
+    } else {
+      // Stop ticking when not on the Duels tab — avoids needless renders.
+      try { if (typeof stopDuelsLiveTick === 'function') stopDuelsLiveTick(); } catch (_) {}
     }
     // Render the Pokédex when the Items tab is opened (v2.0.1 DROPS).
     if (tab === 'items') {
@@ -14204,6 +14226,59 @@
       source:'Verified boss progress',
     },
   };
+  // v3 Phase 1z.2 — inline SVG type glyphs (one per duel type).
+  // Single source of truth; reused by the HUNTING pill + future
+  // detail / picker / global-rankings surfaces.
+  const DUEL_TYPE_GLYPH_SVG = {
+    steps:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<ellipse cx="5" cy="6" rx="2.4" ry="3.4" fill="currentColor" opacity="0.9"/>' +
+        '<circle cx="3.6" cy="2.4" r="0.9" fill="currentColor" opacity="0.7"/>' +
+        '<circle cx="5.2" cy="1.7" r="0.7" fill="currentColor" opacity="0.6"/>' +
+        '<circle cx="6.5" cy="2.0" r="0.6" fill="currentColor" opacity="0.55"/>' +
+        '<ellipse cx="11" cy="10" rx="2.2" ry="3.2" fill="currentColor" opacity="0.7"/>' +
+        '<circle cx="9.7" cy="6.6" r="0.8" fill="currentColor" opacity="0.55"/>' +
+        '<circle cx="11.2" cy="6.0" r="0.6" fill="currentColor" opacity="0.5"/>' +
+        '<circle cx="12.5" cy="6.3" r="0.5" fill="currentColor" opacity="0.45"/>' +
+      '</svg>',
+    sleep:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<path d="M12 10A6 6 0 117 4a4.5 4.5 0 005 6z" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>' +
+        '<circle cx="11" cy="4" r="0.7" fill="currentColor" opacity="0.8"/>' +
+        '<circle cx="13" cy="6" r="0.5" fill="currentColor" opacity="0.6"/>' +
+      '</svg>',
+    bedtime:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<circle cx="8" cy="8" r="6.2" fill="currentColor" fill-opacity="0.10" stroke="currentColor" stroke-width="1.2"/>' +
+        '<path d="M8 8V3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<path d="M8 8L10.5 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+        '<circle cx="8" cy="8" r="1.1" fill="currentColor"/>' +
+        '<path d="M13 2L13.6 3.4L15 4L13.6 4.6L13 6L12.4 4.6L11 4L12.4 3.4z" fill="currentColor" opacity="0.85"/>' +
+      '</svg>',
+    strength:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<rect x="1" y="6" width="2.4" height="4" rx="0.6" fill="currentColor" opacity="0.9"/>' +
+        '<rect x="3.4" y="5" width="1.6" height="6" rx="0.5" fill="currentColor" opacity="0.9"/>' +
+        '<rect x="5" y="7.2" width="6" height="1.6" rx="0.5" fill="currentColor" opacity="0.95"/>' +
+        '<rect x="11" y="5" width="1.6" height="6" rx="0.5" fill="currentColor" opacity="0.9"/>' +
+        '<rect x="12.6" y="6" width="2.4" height="4" rx="0.6" fill="currentColor" opacity="0.9"/>' +
+      '</svg>',
+    verified_objectives:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<path d="M8 1.2L13.4 3v4.6c0 3.5-2.4 6.2-5.4 7.2-3-1-5.4-3.7-5.4-7.2V3z" fill="currentColor" fill-opacity="0.15" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>' +
+        '<path d="M5.2 8.2l1.9 1.9 3.7-3.9" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>',
+    boss_race:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<path d="M8 1.5C4.9 1.5 2.7 3.6 2.7 6.6c0 1.8.8 3.1 1.8 4l.2 2.6h1.7l.3-1.4h2.6l.3 1.4h1.7l.2-2.6c1-.9 1.8-2.2 1.8-4 0-3-2.2-5.1-5.3-5.1z" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>' +
+        '<circle cx="6.1" cy="7.3" r="0.9" fill="currentColor"/>' +
+        '<circle cx="9.9" cy="7.3" r="0.9" fill="currentColor"/>' +
+        '<path d="M3.5 4.5L4.5 3 5.5 4.2 6.7 2.4 8 4 9.3 2.4 10.5 4.2 11.5 3 12.5 4.5" stroke="currentColor" stroke-width="0.7" fill="none" stroke-linejoin="round"/>' +
+      '</svg>',
+  };
+  function getDuelTypeGlyphSvg(type) {
+    return DUEL_TYPE_GLYPH_SVG[type] || DUEL_TYPE_GLYPH_SVG.verified_objectives;
+  }
   const DEFAULT_DUEL_TYPE = 'verified_objectives';
   const DUEL_TYPE_SHORT_CODES = {
     steps: 'STEPS',
@@ -14713,14 +14788,52 @@
   // Verified Duel Scoring Engine v1 (v3 Phase 1z). Per-type display
   // helpers — mirror the backend's formatScoreLabel so UI renders
   // consistent score strings without an extra fetch.
+  // v3 Phase 1z.2 — brand-locked verbs (do NOT change without product
+  // reversal). One unique verb per duel type carries the type identity
+  // in every toast / detail-overlay outcome string.
   const _DUEL_VERB_BY_TYPE = {
     steps:               { win: 'outstepped',     loss: 'outstepped',     prefix: 'verified steps' },
-    sleep:               { win: 'outslept',       loss: 'outslept',       prefix: 'qualified sleep nights' },
-    bedtime:             { win: 'outrested',      loss: 'outrested',      prefix: 'before-midnight bedtimes' },
+    sleep:               { win: 'outrested',      loss: 'outrested',      prefix: 'qualified sleep nights' },
+    bedtime:             { win: 'outanchored',    loss: 'outanchored',    prefix: 'before-midnight bedtimes' },
     strength:            { win: 'outlifted',      loss: 'outlifted',      prefix: 'strength workouts' },
     verified_objectives: { win: 'outdisciplined', loss: 'outdisciplined', prefix: 'verified objectives' },
-    boss_race:           { win: 'out-hunted',     loss: 'out-hunted',     prefix: 'boss kills' },
+    boss_race:           { win: 'outhunted',      loss: 'outhunted',      prefix: 'boss kills' },
   };
+  // Convenience map for the verb-only lookup used by toast/copy banks.
+  const DUEL_VERB_BY_TYPE = {
+    steps:               'outstepped',
+    sleep:               'outrested',
+    bedtime:             'outanchored',
+    strength:            'outlifted',
+    verified_objectives: 'outdisciplined',
+    boss_race:           'outhunted',
+  };
+  // v3 Phase 1z.2 — draw bodies rotate by index (per-user mod 3).
+  const DUEL_DRAW_BODIES = [
+    'Even ground with {opponent}.',
+    'Stalemate. Neither hunter blinked.',
+    'Both held the line. Duel ends sealed.',
+  ];
+  function getDuelVictoryBody(type, opponent) {
+    const v = DUEL_VERB_BY_TYPE[type] || 'outdisciplined';
+    return 'You ' + v + ' ' + opponent + '.';
+  }
+  function getDuelDefeatBody(type, opponent) {
+    const v = DUEL_VERB_BY_TYPE[type] || 'outdisciplined';
+    return opponent + ' ' + v + ' you. Train. Rematch.';
+  }
+  function getDuelDrawBody(opponent, rotationIndex) {
+    const i = ((rotationIndex || 0) % DUEL_DRAW_BODIES.length + DUEL_DRAW_BODIES.length) % DUEL_DRAW_BODIES.length;
+    return DUEL_DRAW_BODIES[i].replace('{opponent}', opponent);
+  }
+  // Per-user rotation index for draw bodies (persists across launches).
+  function _nextDuelDrawRotationIndex() {
+    let n = 0;
+    try { n = parseInt(localStorage.getItem('hb_duel_draw_rot_idx') || '0', 10) || 0; } catch (_) {}
+    const next = (n + 1) % 1000;
+    try { localStorage.setItem('hb_duel_draw_rot_idx', String(next)); } catch (_) {}
+    return n;
+  }
   function _duelVerb(type) {
     return _DUEL_VERB_BY_TYPE[type] || _DUEL_VERB_BY_TYPE.verified_objectives;
   }
@@ -14750,14 +14863,21 @@
     try { if (localStorage.getItem(key)) return; } catch (_) { return; }
     const result = duel.result;
     const role   = duel.role;
-    const verb   = _duelVerb(duel.duel_type);
+    const oppRaw = duel.opponent_alias || '—';
+    let opp;
+    try { opp = (typeof _socialDisplayAlias === 'function') ? _socialDisplayAlias(oppRaw) : String(oppRaw); }
+    catch (_) { opp = String(oppRaw); }
     let msg;
-    if (result === 'draw')                                          msg = 'Duel ended in a draw.';
-    else if ((result === 'challenger_win' && role === 'challenger') ||
-             (result === 'opponent_win'   && role === 'opponent'))  msg = 'Duel won — your ' + verb.prefix + ' decided it.';
-    else if ((result === 'challenger_win' && role === 'opponent') ||
-             (result === 'opponent_win'   && role === 'challenger'))msg = 'Duel lost — your rival ' + verb.loss + ' you.';
-    else return;
+    if (result === 'draw') {
+      const idx = _nextDuelDrawRotationIndex();
+      msg = 'Duel sealed — ' + getDuelDrawBody(opp, idx);
+    } else if ((result === 'challenger_win' && role === 'challenger') ||
+               (result === 'opponent_win'   && role === 'opponent')) {
+      msg = 'Duel won. ' + getDuelVictoryBody(duel.duel_type, opp);
+    } else if ((result === 'challenger_win' && role === 'opponent') ||
+               (result === 'opponent_win'   && role === 'challenger')) {
+      msg = 'Duel lost. ' + getDuelDefeatBody(duel.duel_type, opp);
+    } else return;
     try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
     try { localStorage.setItem(key, '1'); } catch (_) {}
   }
@@ -14781,6 +14901,83 @@
   // Pick the most-recently-accepted active duel from the duels list.
   // Sort by starts_at desc — falls back to id-string compare if a
   // server response is missing starts_at for any reason.
+  // v3 Phase 1z.2 — accordion state restore + auto-expand.
+  // Called from the social-panel collapse-wire init. Reads the
+  // persisted expanded state, then auto-expands sections whose
+  // first-of-the-day open coincides with non-empty incoming buckets.
+  function _restoreDuelsAccordionState() {
+    const setExpanded = (key, expanded) => {
+      const toggle = document.querySelector('.social-section-toggle[data-collapsible-target="' + key + '"]');
+      if (!toggle) return;
+      const section = toggle.closest('.social-section--collapsible');
+      if (!section) return;
+      if (expanded) {
+        section.classList.remove('social-section--collapsed');
+        toggle.setAttribute('aria-expanded', 'true');
+      } else {
+        section.classList.add('social-section--collapsed');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    };
+    let friendsExp = false, duelsExp = false;
+    try { friendsExp = localStorage.getItem('hb_duels_friends_expanded') === '1'; } catch (_) {}
+    try { duelsExp   = localStorage.getItem('hb_duels_duels_expanded')   === '1'; } catch (_) {}
+    // Auto-expand on first daily open if incoming bucket non-empty.
+    let today;
+    try { today = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : (new Date().toISOString().slice(0,10)); }
+    catch (_) { today = new Date().toISOString().slice(0,10); }
+    const friendsAutoKey = 'hb_duels_friends_auto_expanded_' + today;
+    const duelsAutoKey   = 'hb_duels_duels_auto_expanded_'   + today;
+    try {
+      const fc = (window._friendsCache && Array.isArray(window._friendsCache.incoming)) ? window._friendsCache.incoming.length
+                : (_friendsCache && Array.isArray(_friendsCache.incoming)) ? _friendsCache.incoming.length : 0;
+      if (fc > 0 && !localStorage.getItem(friendsAutoKey)) {
+        friendsExp = true;
+        localStorage.setItem(friendsAutoKey, '1');
+      }
+    } catch (_) {}
+    try {
+      const dc = (_duelsCache && Array.isArray(_duelsCache.incoming)) ? _duelsCache.incoming.length : 0;
+      if (dc > 0 && !localStorage.getItem(duelsAutoKey)) {
+        duelsExp = true;
+        localStorage.setItem(duelsAutoKey, '1');
+      }
+    } catch (_) {}
+    setExpanded('friends', friendsExp);
+    setExpanded('duels',   duelsExp);
+  }
+
+  // v3 Phase 1z.2 — 60s live re-render for the active duel hero +
+  // HUNTING strip duel pill. Read-only — works off local state, no
+  // backend polling. Cleared on tab switch / app close / new fetch.
+  let _duelsLiveTickHandle = null;
+  function startDuelsLiveTick() {
+    stopDuelsLiveTick();
+    _duelsLiveTickHandle = setInterval(() => {
+      try {
+        // Tick the active duel hero from cached state. The
+        // time_remaining_ms on cached active duels is stale by 60s
+        // worth; subtract before re-rendering so countdown drifts down.
+        if (_duelsCache && Array.isArray(_duelsCache.active) && _duelsCache.active.length > 0) {
+          const ticked = _duelsCache.active.map(d => {
+            if (!d || typeof d.time_remaining_ms !== 'number') return d;
+            const next = Math.max(0, d.time_remaining_ms - 60000);
+            return Object.assign({}, d, { time_remaining_ms: next });
+          });
+          _duelsCache.active = ticked;
+          if (typeof renderActiveDuelHero === 'function') renderActiveDuelHero(ticked);
+        }
+        // Tick the HUNTING strip pill — _headerDuelState carries the
+        // active duel; just re-render the pill row.
+        if (typeof updateStatusPills === 'function') updateStatusPills();
+      } catch (_) {}
+    }, 60 * 1000);
+  }
+  function stopDuelsLiveTick() {
+    if (_duelsLiveTickHandle) { try { clearInterval(_duelsLiveTickHandle); } catch (_) {} _duelsLiveTickHandle = null; }
+  }
+  try { window.startDuelsLiveTick = startDuelsLiveTick; window.stopDuelsLiveTick = stopDuelsLiveTick; } catch (_) {}
+
   function _pickActiveHeroDuel(active) {
     if (!Array.isArray(active) || active.length === 0) return null;
     const sorted = active.slice().sort((a, b) => {
@@ -15409,15 +15606,21 @@
         let outcome  = '';
         if (result === 'draw') {
           outcome = 'draw';
-          headline = 'Draw — both hunters matched pace.';
+          // Draw rotates; use the SAME index the toast captured to keep
+          // the body stable within the session. Fallback to 0 if unset.
+          let dIdx = 0;
+          try { dIdx = parseInt(localStorage.getItem('hb_duel_draw_rot_idx') || '0', 10) || 0; } catch (_) {}
+          // The toast advanced the counter; read the prior value (n-1).
+          const showIdx = ((dIdx - 1) % DUEL_DRAW_BODIES.length + DUEL_DRAW_BODIES.length) % DUEL_DRAW_BODIES.length;
+          headline = 'Draw — ' + getDuelDrawBody(_socialDisplayAlias(d.opponent_alias || '—'), showIdx);
         } else if ((result === 'challenger_win' && role === 'challenger') ||
                    (result === 'opponent_win'   && role === 'opponent')) {
           outcome = 'win';
-          headline = 'Victory — you ' + verb.win + ' ' + oppDisp + '.';
+          headline = 'Victory — ' + getDuelVictoryBody(d.duel_type, _socialDisplayAlias(d.opponent_alias || '—'));
         } else if ((result === 'challenger_win' && role === 'opponent') ||
                    (result === 'opponent_win'   && role === 'challenger')) {
           outcome = 'loss';
-          headline = 'Defeat — ' + oppDisp + ' ' + verb.loss + ' you.';
+          headline = 'Defeat — ' + getDuelDefeatBody(d.duel_type, _socialDisplayAlias(d.opponent_alias || '—'));
         }
         // Reward readout (v3 Phase 1z) — backend ledger has already
         // settled (UNIQUE-protected). Local hb_souls remains
@@ -15504,9 +15707,19 @@
         const wasCollapsed = section.classList.contains('social-section--collapsed');
         section.classList.toggle('social-section--collapsed');
         toggle.setAttribute('aria-expanded', wasCollapsed ? 'true' : 'false');
+        // v3 Phase 1z.2 — persist per-section expanded state across launches.
+        try {
+          const key = toggle.getAttribute('data-collapsible-target');
+          if (key === 'friends') localStorage.setItem('hb_duels_friends_expanded', wasCollapsed ? '1' : '0');
+          if (key === 'duels')   localStorage.setItem('hb_duels_duels_expanded',   wasCollapsed ? '1' : '0');
+        } catch (_) {}
       });
       socialPanel._collapseWired = true;
     }
+    // v3 Phase 1z.2 — restore + auto-expand pass.
+    // Auto-expand wins on the first daily open if there are incoming
+    // requests / duels. Otherwise honor the user's persisted choice.
+    try { _restoreDuelsAccordionState(); } catch (_) {}
 
     // Friend add
     const sendBtn = document.getElementById('social-friend-send');
