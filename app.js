@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w18';
+  const APP_BUILD_TAG = '2.2.1-w19';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2385,7 +2385,7 @@
   }
 
   // ─────────────────────────────────────────────────────────────
-  // v3 Phase 1z.6 — Boss-defeat result modal (#boss-result-overlay)
+  // v3 Phase 1z.6 → 1z.7 — Boss-defeat result modal (#boss-result-overlay)
   // ─────────────────────────────────────────────────────────────
   //
   // Fired by announceKillAndDrop for common drops + no-drop defeats.
@@ -2397,6 +2397,12 @@
   // CloudSync.SNAPSHOT_KEYS. Re-installs and re-renders never re-fire
   // a previously acknowledged result.
   //
+  // v3 Phase 1z.7 also writes `hb_boss_result_pending` (single slot,
+  // acknowledgment-driven; 24h auto-ack) so the HUNTING strip can
+  // surface a gold "{BOSS} DEFEATED" pill until the user closes the
+  // overlay. The modal-one-shot flag and the pill-state flag are
+  // intentionally separate concerns.
+  //
   // Multiple defeats in one tick (rare D-rank simultaneous evals)
   // stack in _bossResultQueue and drain one-at-a-time, each waiting
   // for the prior modal to close before the next opens.
@@ -2404,9 +2410,70 @@
   let _bossResultBusy  = false;
   let _bossResultCurrent = null;
 
+  // v3 Phase 1z.7 — short per-boss defeat-condition copy for the
+  // overlay's gold-bordered VERIFIED row. Falls back to cfg.killCondShort
+  // when no map entry exists.
+  const BOSS_DEFEAT_CONDITIONS = {
+    the_insomniac:     'Sleep goal achieved: 7+ hours',
+    the_carouser:      'Sober streak protected',
+    the_steel_wolf:    'Strength session sealed',
+    the_iron_warden:   'Strength workout verified',
+    the_glass_strider: '7,500 verified steps',
+    the_dream_tyrant:  '7.5 hours of sleep',
+  };
+
   function _bossResultSeenKey(bossId, killCount) {
     return 'hb_boss_result_seen_' + bossId + '_' + killCount;
   }
+
+  // v3 Phase 1z.7 — single-slot pending-result key. Drives the
+  // HUNTING strip gold pill until the user acknowledges (closes the
+  // overlay) OR 24h pass. Intentionally device-local; NEVER in
+  // CloudSync.SNAPSHOT_KEYS (a restore onto a different device would
+  // surface a phantom "you defeated X" pill for an event the user
+  // never saw).
+  const BOSS_RESULT_PENDING_KEY = 'hb_boss_result_pending';
+  const BOSS_RESULT_AUTO_ACK_MS = 24 * 60 * 60 * 1000;
+
+  function _writeBossResultPending(evt) {
+    try {
+      localStorage.setItem(BOSS_RESULT_PENDING_KEY, JSON.stringify({
+        bossId:      evt.bossId,
+        bossName:    evt.bossName,
+        defeatedAt:  new Date().toISOString(),
+        acknowledged: false,
+        dropCardId:  evt.drop && evt.drop.cardId  || null,
+        dropRarity:  evt.drop && evt.drop.rarity  || null,
+        kill_count:  evt.kill_count || 1,
+      }));
+    } catch (_) {}
+    try { if (typeof updateStatusPills === 'function') updateStatusPills(); } catch (_) {}
+  }
+
+  function _readBossResultPending() {
+    try {
+      const raw = localStorage.getItem(BOSS_RESULT_PENDING_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.bossId || !parsed.defeatedAt) return null;
+      const age = Date.now() - Date.parse(parsed.defeatedAt);
+      if (!isFinite(age) || age > BOSS_RESULT_AUTO_ACK_MS) {
+        localStorage.removeItem(BOSS_RESULT_PENDING_KEY);
+        return null;
+      }
+      if (parsed.acknowledged) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+
+  function _clearBossResultPending() {
+    try { localStorage.removeItem(BOSS_RESULT_PENDING_KEY); } catch (_) {}
+    try { if (typeof updateStatusPills === 'function') updateStatusPills(); } catch (_) {}
+  }
+  try {
+    window._readBossResultPending  = _readBossResultPending;
+    window._clearBossResultPending = _clearBossResultPending;
+  } catch (_) {}
 
   function _queueBossResult(evt) {
     if (!evt || !evt.bossId) return;
@@ -2414,6 +2481,10 @@
       const key = _bossResultSeenKey(evt.bossId, evt.kill_count);
       if (localStorage.getItem(key) === '1') return;
     } catch (_) {}
+    // v3 Phase 1z.7 — write the pending-result envelope so the
+    // HUNTING strip pill surfaces immediately, even before the
+    // modal opens (kill-toast → 600ms → modal).
+    try { _writeBossResultPending(evt); } catch (_) {}
     _bossResultQueue.push(evt);
     _drainBossResultQueue();
   }
@@ -2436,18 +2507,37 @@
 
     _bossResultCurrent = evt;
 
+    // Boss card — name, rank pill, condition row, portrait
     const nameEl = document.getElementById('bro-boss-name');
     if (nameEl) nameEl.textContent = evt.bossName || '—';
+
+    const rankPill = document.getElementById('bro-rank-pill');
+    if (rankPill) {
+      const rank = (evt.rank || 'E').toUpperCase();
+      rankPill.textContent = rank + '-RANK BOSS';
+      rankPill.setAttribute('data-rank', rank);
+    }
+
+    const portraitImg = document.getElementById('bro-boss-portrait');
+    if (portraitImg) {
+      portraitImg.removeAttribute('data-art');
+      portraitImg.onerror = () => { portraitImg.setAttribute('data-art', 'missing'); };
+      portraitImg.onload  = () => { portraitImg.removeAttribute('data-art'); };
+      const path = 'assets/bosses/' + String(evt.bossId || '').replace(/_/g, '-') + '.png';
+      portraitImg.src = path;
+      portraitImg.alt = evt.bossName || '';
+    }
+
     const condEl = document.getElementById('bro-condition');
     if (condEl) {
-      condEl.textContent = evt.conditionLabel
-        ? evt.conditionLabel + ' · cleared.'
-        : 'Kill condition cleared.';
+      const short = (BOSS_DEFEAT_CONDITIONS && BOSS_DEFEAT_CONDITIONS[evt.bossId]) || null;
+      condEl.textContent = short || evt.conditionLabel || 'Kill condition cleared';
     }
 
     const relicCard  = document.getElementById('bro-relic-card');
     const nodropCard = document.getElementById('bro-nodrop-card');
     const viewBtn    = document.getElementById('bro-view-relic');
+    const viewMercy  = document.getElementById('bro-view-mercy');
 
     if (evt.drop) {
       // Relic acquired — even commons fall here.
@@ -2457,12 +2547,22 @@
         viewBtn.classList.remove('hidden');
         viewBtn.setAttribute('data-card-id', evt.drop.cardId);
       }
+      if (viewMercy) viewMercy.classList.add('hidden');
+
+      // Rarity pill + outer card border tint
+      const rarityPill = document.getElementById('bro-relic-rarity-pill');
+      if (rarityPill) {
+        const rarityLabel = (RARITY_LABELS && RARITY_LABELS[evt.drop.rarity]) || evt.drop.rarity || '';
+        rarityPill.textContent = String(rarityLabel).toUpperCase();
+        rarityPill.setAttribute('data-rarity', evt.drop.rarity || 'common');
+      }
+      if (relicCard) relicCard.setAttribute('data-rarity', evt.drop.rarity || 'common');
+
       const eyebrowEl = document.getElementById('bro-relic-eyebrow');
       if (eyebrowEl) {
-        const rarityLabel = (RARITY_LABELS && RARITY_LABELS[evt.drop.rarity]) || evt.drop.rarity || '';
         eyebrowEl.textContent = evt.drop.fromPity
-          ? (evt.drop.pityType === 'ultra_hard' ? 'FATE ANSWERED · ' : 'MERCY AWAKENED · ') + rarityLabel.toUpperCase()
-          : 'RELIC ACQUIRED · ' + rarityLabel.toUpperCase();
+          ? (evt.drop.pityType === 'ultra_hard' ? 'FATE ANSWERED' : 'MERCY AWAKENED')
+          : 'RELIC ACQUIRED';
       }
       const artImg = document.getElementById('bro-relic-art');
       if (artImg) {
@@ -2478,8 +2578,12 @@
       const metaEl = document.getElementById('bro-relic-meta');
       if (metaEl) {
         const slotLabel = (evt.drop.slot || '').toUpperCase();
+        const sourceLabel = evt.bossName ? ('From ' + evt.bossName.toUpperCase()) : '';
         const newPill = evt.drop.wasFirst ? '<span class="bro-relic-new">NEW</span>' : '';
-        metaEl.innerHTML = (slotLabel ? '<span class="bro-relic-slot">' + slotLabel + '</span>' : '') + newPill;
+        metaEl.innerHTML =
+          (slotLabel  ? '<span class="bro-relic-slot">' + slotLabel + '</span>' : '') +
+          (sourceLabel ? '<span class="bro-relic-source">· ' + sourceLabel + '</span>' : '') +
+          newPill;
       }
       const statsEl = document.getElementById('bro-relic-stats');
       if (statsEl) {
@@ -2487,23 +2591,42 @@
         statsEl.innerHTML = card ? cardStatBadgesHtml(card) : '';
       }
     } else {
-      // No drop — mercy increased.
+      // No drop — mercy increased. Render 3-row mercy block with bar fills.
       if (relicCard)  relicCard.classList.add('hidden');
       if (nodropCard) nodropCard.classList.remove('hidden');
       if (viewBtn)    viewBtn.classList.add('hidden');
+      if (viewMercy) {
+        viewMercy.classList.remove('hidden');
+        viewMercy.setAttribute('data-boss-id', evt.bossId);
+      }
       const mercyBlock = document.getElementById('bro-mercy-block');
       if (mercyBlock && evt.mercy) {
         const m = evt.mercy;
-        const cur1 = Math.min(m.anyDropCurrent || 0, m.anyDropTarget || 0);
-        const cur2 = Math.min(m.rareCurrent    || 0, m.rareTarget    || 0);
-        const cur3 = Math.min(m.ultraCurrent   || 0, m.ultraHardTarget || 0);
+        const cur1 = Math.min(m.anyDropCurrent || 0, m.anyDropTarget    || 0);
+        const cur2 = Math.min(m.rareCurrent    || 0, m.rareTarget       || 0);
+        const cur3 = Math.min(m.ultraCurrent   || 0, m.ultraHardTarget  || 0);
+        const t1 = m.anyDropTarget    || 1;
+        const t2 = m.rareTarget       || 1;
+        const t3 = m.ultraHardTarget  || 1;
+        const p1 = Math.min(100, (cur1 / t1) * 100);
+        const p2 = Math.min(100, (cur2 / t2) * 100);
+        const p3 = Math.min(100, (cur3 / t3) * 100);
         mercyBlock.innerHTML =
-          '<div class="bro-mercy-row"><span class="bro-mercy-label">Guaranteed relic</span>' +
-            '<span class="bro-mercy-val">' + cur1 + ' / ' + (m.anyDropTarget || 0) + '</span></div>' +
-          '<div class="bro-mercy-row"><span class="bro-mercy-label">Rare mercy</span>' +
-            '<span class="bro-mercy-val">' + cur2 + ' / ' + (m.rareTarget || 0) + '</span></div>' +
-          '<div class="bro-mercy-row"><span class="bro-mercy-label">Ultra mercy</span>' +
-            '<span class="bro-mercy-val">' + cur3 + ' / ' + (m.ultraHardTarget || 0) + '</span></div>';
+          '<div class="bro-mercy-row" data-tier="any">' +
+            '<div class="bro-mercy-row-head"><span class="bro-mercy-label">Guaranteed Relic</span>' +
+              '<span class="bro-mercy-val">' + cur1 + ' / ' + (m.anyDropTarget || 0) + '</span></div>' +
+            '<div class="bro-mercy-bar"><div class="bro-mercy-bar-fill" style="width:' + p1 + '%"></div></div>' +
+          '</div>' +
+          '<div class="bro-mercy-row" data-tier="rare">' +
+            '<div class="bro-mercy-row-head"><span class="bro-mercy-label">Rare Mercy</span>' +
+              '<span class="bro-mercy-val">' + cur2 + ' / ' + (m.rareTarget || 0) + '</span></div>' +
+            '<div class="bro-mercy-bar"><div class="bro-mercy-bar-fill" style="width:' + p2 + '%"></div></div>' +
+          '</div>' +
+          '<div class="bro-mercy-row" data-tier="ultra">' +
+            '<div class="bro-mercy-row-head"><span class="bro-mercy-label">Ultra Mercy</span>' +
+              '<span class="bro-mercy-val">' + cur3 + ' / ' + (m.ultraHardTarget || 0) + '</span></div>' +
+            '<div class="bro-mercy-bar"><div class="bro-mercy-bar-fill" style="width:' + p3 + '%"></div></div>' +
+          '</div>';
       } else if (mercyBlock) {
         mercyBlock.innerHTML = '';
       }
@@ -2527,17 +2650,73 @@
     document.body.classList.remove('bro-locked');
     _bossResultCurrent = null;
     _bossResultBusy = false;
+    // v3 Phase 1z.7 — clear pending-result envelope. The user opened
+    // (and is now closing) the overlay; the gold HUNTING strip pill
+    // has done its job and should retract.
+    try { _clearBossResultPending(); } catch (_) {}
     // Drain the next queued result, if any.
     if (!(opts && opts.suppressDrain)) {
       _drainBossResultQueue();
     }
   }
 
+  // v3 Phase 1z.7 — re-open the overlay when the HUNTING strip pill
+  // is tapped. Rebuilds the evt envelope from the pending-result
+  // localStorage payload + live BOSSES/CARDS lookups so the visuals
+  // stay current even after a tab switch / cold launch.
+  function openBossResultFromPending() {
+    const pending = _readBossResultPending();
+    if (!pending) return;
+    const cfg = (typeof BOSSES !== 'undefined') ? BOSSES[pending.bossId] : null;
+    let mercy = null;
+    try {
+      if (typeof getDropPityDisplay === 'function') {
+        const m = getDropPityDisplay(pending.bossId);
+        mercy = m ? {
+          anyDropCurrent:   m.anyDropCurrent,
+          anyDropTarget:    m.anyDropTarget,
+          rareCurrent:      m.rareCurrent,
+          rareTarget:       m.rareTarget,
+          ultraCurrent:     m.ultraCurrent,
+          ultraSoftTarget:  m.ultraSoftTarget,
+          ultraHardTarget:  m.ultraHardTarget,
+        } : null;
+      }
+    } catch (_) {}
+    let drop = null;
+    if (pending.dropCardId && typeof CARDS !== 'undefined' && CARDS[pending.dropCardId]) {
+      const c = CARDS[pending.dropCardId];
+      drop = {
+        cardId:   c.id,
+        name:     c.name,
+        rarity:   c.rarity,
+        slot:     c.slot,
+        artPath:  c.art_path,
+        wasFirst: false,  // re-open path; first-acq state already surfaced
+      };
+    }
+    const evt = {
+      bossId:        pending.bossId,
+      bossName:      (cfg && cfg.name) || pending.bossName || '—',
+      rank:          (cfg && cfg.rank) || 'E',
+      kill_count:    pending.kill_count || 1,
+      conditionLabel: (cfg && (cfg.killCondShort || cfg.killCondLong)) || '',
+      drop:          drop,
+      mercy:         mercy,
+    };
+    // Bypass the seen-flag dedupe — the user explicitly asked to re-open.
+    _bossResultBusy = true;
+    setTimeout(() => { try { _showBossResult(evt); } catch (_) { _bossResultBusy = false; } }, 60);
+  }
+  try { window.openBossResultFromPending = openBossResultFromPending; } catch (_) {}
+
   function setupBossResultModal() {
     const overlay = document.getElementById('boss-result-overlay');
     if (!overlay) return;
     const closeBtn = document.getElementById('bro-close');
     if (closeBtn) closeBtn.addEventListener('click', () => closeBossResult());
+    const closeX = document.getElementById('bro-close-x');
+    if (closeX) closeX.addEventListener('click', () => closeBossResult());
     const huntAgainBtn = document.getElementById('bro-hunt-again');
     if (huntAgainBtn) {
       huntAgainBtn.addEventListener('click', () => {
@@ -2558,6 +2737,8 @@
         const cardId = viewBtn.getAttribute('data-card-id');
         closeBossResult({ suppressDrain: true });
         try {
+          // v3 Phase 1z.7 — viewing the relic clears its NEW chip.
+          if (cardId) _markRelicSeen(cardId);
           const card = CARDS && CARDS[cardId];
           const inv = (typeof getInventory === 'function') ? getInventory() : null;
           const entry = inv && inv.cards && inv.cards[cardId];
@@ -2565,6 +2746,15 @@
             openCardDetailModal(card, entry);
           }
         } catch (_) {}
+        _drainBossResultQueue();
+      });
+    }
+    const viewMercy = document.getElementById('bro-view-mercy');
+    if (viewMercy) {
+      viewMercy.addEventListener('click', () => {
+        const id = viewMercy.getAttribute('data-boss-id');
+        closeBossResult({ suppressDrain: true });
+        try { if (id && typeof openBossFullScreen === 'function') openBossFullScreen(id); } catch (_) {}
         _drainBossResultQueue();
       });
     }
@@ -2671,6 +2861,45 @@
   // display name or '' if the card has no source metadata. Never
   // returns the raw boss id (e.g. 'the_carouser') — we want
   // "The Carouser" everywhere user-facing.
+  // v3 Phase 1z.7 — Relic Archive NEW state helpers.
+  //
+  // A relic enters NEW state the moment it lands in inventory (i.e.
+  // `discovered: true` + `first_acquired_date` is set). NEW state
+  // persists until the user explicitly views the relic — either by
+  // tapping the discovered card in the archive (which opens the
+  // detail modal) OR via the View Relic action on the Boss Defeated
+  // overlay. We track per-relic via `hb_relic_seen_<cardId>` so the
+  // chip flips cleanly without bookkeeping the entire inventory.
+  //
+  // NEW state intentionally does NOT live in CloudSync.SNAPSHOT_KEYS
+  // (these are device-local "have I seen this on this device" flags;
+  // restoring on a new device should re-surface every owned relic as
+  // NEW until the user has actually seen it on that device).
+  function _isRelicNew(cardId) {
+    if (!cardId) return false;
+    try {
+      if (localStorage.getItem('hb_relic_seen_' + cardId) === '1') return false;
+      const inv = (typeof getInventory === 'function') ? getInventory() : null;
+      const entry = inv && inv.cards && inv.cards[cardId];
+      return !!(entry && entry.discovered && entry.first_acquired_date);
+    } catch (_) { return false; }
+  }
+  function _markRelicSeen(cardId) {
+    if (!cardId) return;
+    try { localStorage.setItem('hb_relic_seen_' + cardId, '1'); } catch (_) {}
+  }
+  function _countNewRelics() {
+    try {
+      if (typeof CARDS === 'undefined') return 0;
+      return Object.keys(CARDS).filter(_isRelicNew).length;
+    } catch (_) { return 0; }
+  }
+  try {
+    window._isRelicNew = _isRelicNew;
+    window._markRelicSeen = _markRelicSeen;
+    window._countNewRelics = _countNewRelics;
+  } catch (_) {}
+
   function getCardDropSourceLabel(card) {
     if (!card) return '';
     const raw = card.source_boss || card.sourceBoss || card.boss ||
@@ -2720,6 +2949,21 @@
     if (totalEl) totalEl.textContent = totalCount;
     if (discEl)  discEl.textContent  = discoveredCount;
     if (fillEl)  fillEl.style.width  = (totalCount > 0 ? (discoveredCount / totalCount * 100) : 0) + '%';
+
+    // v3 Phase 1z.7 — "1 NEW" header counter (gold pulse pill).
+    // Hidden when no relics carry NEW state.
+    try {
+      const newCountEl = document.getElementById('archive-new-count');
+      if (newCountEl) {
+        const n = _countNewRelics();
+        if (n > 0) {
+          newCountEl.textContent = n + ' NEW';
+          newCountEl.classList.remove('hidden');
+        } else {
+          newCountEl.classList.add('hidden');
+        }
+      }
+    } catch (_) {}
 
     const sections = [
       { key: 'ultra_rare', label: 'ULTRA-RARE RELICS' },
@@ -2788,16 +3032,23 @@
             : '';
           // v3 Phase 1d — equipped badge reads Hunter Build state
           const isEq = (typeof isItemEquippedInBuild === 'function') && isItemEquippedInBuild(c.id);
-          const equippedBadge = isEq
-            ? '<span class="pokedex-card-equipped-badge archive-equipped-badge" aria-label="Equipped">EQUIPPED</span>'
-            : '';
+          // v3 Phase 1z.7 — NEW chip supersedes EQUIPPED until user
+          // taps the card. Sparkle glyph + gold gradient + shimmer.
+          const isNew = _isRelicNew(c.id);
+          let chip = '';
+          if (isNew) {
+            chip = '<span class="archive-card-new-chip" aria-label="Newly acquired"><span class="archive-card-new-spark" aria-hidden="true">✦</span>NEW</span>';
+          } else if (isEq) {
+            chip = '<span class="pokedex-card-equipped-badge archive-equipped-badge" aria-label="Equipped">EQUIPPED</span>';
+          }
+          const newCls = isNew ? ' archive-card--new archive-card--new-' + c.rarity : '';
           return (
-            '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + '" type="button" data-card-id="' + esc(c.id) + '">' +
+            '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + newCls + '" type="button" data-card-id="' + esc(c.id) + '">' +
               '<div class="pokedex-card-art">' +
                 '<span class="pokedex-card-slot-icon">' + slotIcon + '</span>' +
                 artImg +
                 slotBadge +
-                equippedBadge +
+                chip +
               '</div>' +
               '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
               sourceLine +
@@ -2949,6 +3200,11 @@
         openMysteryCardModal(card);
         return;
       }
+      // v3 Phase 1z.7 — clear NEW state for this card. Re-render the
+      // archive so the chip + header counter flip immediately, then
+      // open the detail modal.
+      try { _markRelicSeen(id); } catch (_) {}
+      try { renderPokedex(); } catch (_) {}
       openCardDetailModal(card, entry);
     });
   }
@@ -11598,8 +11854,28 @@
 
     const bossPills = _buildHuntingPills();
     const duelPill  = _buildDuelHeaderPill();
+    // v3 Phase 1z.7 — boss-defeat result pill (gold, pulse dot,
+    // tappable to re-open the overlay). Prepended ahead of engaged
+    // bosses + duel — defeat acknowledgment is the freshest signal.
+    let resultPillHtml = '';
+    let resultPill = null;
+    try {
+      resultPill = _readBossResultPending();
+    } catch (_) {}
+    if (resultPill) {
+      const bossLabel = String(resultPill.bossName || 'Boss')
+        .replace(/^The\s+/i, '').toUpperCase();
+      const hasRelic = !!resultPill.dropCardId;
+      const tail = hasRelic ? ' · RELIC FOUND' : '';
+      resultPillHtml =
+        '<span class="status-pill status-pill--result" role="button" tabindex="0" data-pill-kind="result">' +
+          '<span class="status-pill-result-check" aria-hidden="true">✓</span>' +
+          esc(bossLabel) + ' DEFEATED' + tail +
+          '<span class="status-pill-result-dot" aria-hidden="true"></span>' +
+        '</span>';
+    }
 
-    if (bossPills.length === 0 && !duelPill) {
+    if (bossPills.length === 0 && !duelPill && !resultPill) {
       // Catchy idle state — "the hunt is quiet, enter a dungeon."
       // Uses the dungeon tab icon as the visual cue (same icon that
       // marks the Quests tab where bosses live).
@@ -11645,6 +11921,11 @@
         sub +
       '</span>';
     }).join('');
+    // v3 Phase 1z.7 — prepend the boss-defeat result pill (if pending).
+    // Goes first so the gold/pulse signal is the leftmost element.
+    if (resultPillHtml) {
+      list.innerHTML = resultPillHtml + list.innerHTML;
+    }
   }
 
   // Delegated click handler on the status-pill-row so the duel pill
@@ -11656,12 +11937,21 @@
     const open = () => {
       try { switchTab('social'); } catch (_) {}
     };
+    const reopenResult = () => {
+      try { if (typeof openBossResultFromPending === 'function') openBossResultFromPending(); } catch (_) {}
+    };
     row.addEventListener('click', (e) => {
+      // v3 Phase 1z.7 — result pill takes precedence; tapping it
+      // re-opens the Boss Defeated overlay populated from pending.
+      const resultPill = e.target.closest && e.target.closest('.status-pill--result');
+      if (resultPill) { reopenResult(); return; }
       const pill = e.target.closest && e.target.closest('.status-pill--duel');
       if (pill) open();
     });
     row.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
+      const resultPill = e.target.closest && e.target.closest('.status-pill--result');
+      if (resultPill) { e.preventDefault(); reopenResult(); return; }
       const pill = e.target.closest && e.target.closest('.status-pill--duel');
       if (pill) { e.preventDefault(); open(); }
     });
@@ -16899,12 +17189,190 @@
       }
     }
 
+    // v3 Phase 1z.7 — DEFEATED state surfaces. When the boss has at
+    // least one kill AND is not currently engaged, swap the overlay
+    // into its `bfs-overlay--defeated` skin and populate the new
+    // hero card, last-drop callout, and hunt history mini-ledger.
+    const isDefeatedState = !isPreview && state.engaged !== true && (state.kill_count || 0) > 0;
+    if (isDefeatedState) {
+      overlay.classList.add('bfs-overlay--defeated');
+      _populateBfsDefeatedState(id, cfg, state);
+    } else {
+      overlay.classList.remove('bfs-overlay--defeated');
+      const heroEl    = document.getElementById('bfs-defeated-hero');
+      const lastDrop  = document.getElementById('bfs-last-drop');
+      const histEl    = document.getElementById('bfs-hunt-history');
+      const ctaEl     = document.getElementById('bfs-defeated-cta');
+      if (heroEl)   heroEl.classList.add('hidden');
+      if (lastDrop) lastDrop.classList.add('hidden');
+      if (histEl)   histEl.classList.add('hidden');
+      if (ctaEl)    ctaEl.classList.add('hidden');
+    }
+
     // Track which boss the modal is currently showing so engage/
     // disengage actions from the helper functions can refresh it.
     bfsCurrentBossId = id;
 
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked'); // lock background scroll
+  }
+
+  // v3 Phase 1z.7 — friendly time-ago for last_defeated_at.
+  // Returns "2h ago" / "yesterday" / "May 14" — never empty.
+  function _formatTimeAgo(iso) {
+    if (!iso) return 'recently';
+    const then = Date.parse(iso);
+    if (!isFinite(then)) return 'recently';
+    const ms = Date.now() - then;
+    if (ms < 60 * 60 * 1000)        return Math.max(1, Math.floor(ms / (60 * 1000))) + 'm ago';
+    if (ms < 24 * 60 * 60 * 1000)   return Math.floor(ms / (60 * 60 * 1000)) + 'h ago';
+    if (ms < 48 * 60 * 60 * 1000)   return 'yesterday';
+    const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+    if (days < 7) return days + ' days ago';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // v3 Phase 1z.7 — find the most-recent inventory entries whose
+  // source_boss matches this boss. Returns up to N { id, card, entry }
+  // tuples sorted by first_acquired_date DESC.
+  function _bossHuntHistory(bossId, limit) {
+    const out = [];
+    try {
+      if (typeof CARDS === 'undefined' || typeof getInventory !== 'function') return out;
+      const inv = getInventory();
+      if (!inv || !inv.cards) return out;
+      Object.keys(CARDS).forEach(cardId => {
+        const card = CARDS[cardId];
+        const src = card && (card.source_boss || card.sourceBoss || card.boss || card.boss_id || null);
+        if (src !== bossId) return;
+        const entry = inv.cards[cardId];
+        if (!entry || !entry.discovered || !entry.first_acquired_date) return;
+        out.push({ id: cardId, card: card, entry: entry });
+      });
+      out.sort((a, b) => {
+        const da = a.entry.first_acquired_date || '';
+        const db = b.entry.first_acquired_date || '';
+        return db.localeCompare(da);
+      });
+    } catch (_) {}
+    return out.slice(0, limit || 3);
+  }
+
+  function _populateBfsDefeatedState(id, cfg, state) {
+    // Hero card
+    const heroEl = document.getElementById('bfs-defeated-hero');
+    if (heroEl) heroEl.classList.remove('hidden');
+
+    const portraitImg = document.getElementById('bfs-defeated-portrait-img');
+    if (portraitImg) {
+      portraitImg.removeAttribute('data-art');
+      portraitImg.onerror = () => { portraitImg.setAttribute('data-art', 'missing'); };
+      portraitImg.onload  = () => { portraitImg.removeAttribute('data-art'); };
+      portraitImg.src = 'assets/bosses/' + String(id).replace(/_/g, '-') + '.png';
+    }
+
+    const rankPill = document.getElementById('bfs-defeated-rank-pill');
+    if (rankPill) {
+      const rank = (cfg.rank || 'E').toUpperCase();
+      rankPill.textContent = rank + '-Rank · Defeated';
+      rankPill.setAttribute('data-rank', rank);
+    }
+
+    const nameEl = document.getElementById('bfs-defeated-name');
+    if (nameEl) nameEl.textContent = cfg.name || '—';
+
+    const subline = document.getElementById('bfs-defeated-subline');
+    if (subline) {
+      const when = _formatTimeAgo(state.last_defeated_at);
+      subline.textContent = 'Was defeated ' + when + '. Engage again to begin a new hunt.';
+    }
+
+    // Last drop callout — top entry from hunt history (if any).
+    const history = _bossHuntHistory(id, 3);
+    const lastDrop = document.getElementById('bfs-last-drop');
+    if (lastDrop) {
+      if (history.length > 0) {
+        const top = history[0];
+        lastDrop.classList.remove('hidden');
+        lastDrop.setAttribute('data-card-id', top.id);
+        lastDrop.setAttribute('data-rarity', top.card.rarity || 'common');
+        const nameOut = document.getElementById('bfs-last-drop-name');
+        if (nameOut) nameOut.textContent = top.card.name || '';
+        const metaOut = document.getElementById('bfs-last-drop-meta');
+        if (metaOut) {
+          const rarityLabel = (RARITY_LABELS && RARITY_LABELS[top.card.rarity]) || top.card.rarity || '';
+          const slotLabel = (top.card.slot || '').toUpperCase();
+          metaOut.textContent = String(rarityLabel).toUpperCase() + (slotLabel ? ' · ' + slotLabel : '');
+        }
+        const slotIcon = document.getElementById('bfs-last-drop-slot-icon');
+        if (slotIcon) slotIcon.textContent = (SLOT_ICONS && SLOT_ICONS[top.card.slot]) || '✦';
+        const imgOut = document.getElementById('bfs-last-drop-img');
+        if (imgOut) {
+          imgOut.removeAttribute('data-art');
+          imgOut.onerror = () => { imgOut.setAttribute('data-art', 'missing'); };
+          imgOut.onload  = () => { imgOut.removeAttribute('data-art'); };
+          if (top.card.art_path) {
+            imgOut.src = top.card.art_path;
+          } else {
+            imgOut.removeAttribute('src');
+            imgOut.setAttribute('data-art', 'missing');
+          }
+        }
+      } else {
+        lastDrop.classList.add('hidden');
+      }
+    }
+
+    // Hunt history — up to 3 most recent (already the same array
+    // we used for last-drop, but render all rows here including #1).
+    const histSection = document.getElementById('bfs-hunt-history');
+    const histList    = document.getElementById('bfs-hunt-history-list');
+    if (histSection && histList) {
+      if (history.length === 0) {
+        histSection.classList.add('hidden');
+        histList.innerHTML = '';
+      } else {
+        histSection.classList.remove('hidden');
+        histList.innerHTML = history.map(h => {
+          const when = _formatTimeAgo(h.entry.first_acquired_date);
+          const rarityLabel = (RARITY_LABELS && RARITY_LABELS[h.card.rarity]) || h.card.rarity || '';
+          return (
+            '<div class="bfs-hunt-history-row">' +
+              '<span class="bfs-hunt-history-row-dot" aria-hidden="true"></span>' +
+              '<span class="bfs-hunt-history-row-when">' + esc(when) + '</span>' +
+              '<span class="bfs-hunt-history-row-name">' + esc(h.card.name || '') + '</span>' +
+              '<span class="bfs-hunt-history-row-rarity" data-rarity="' + esc(h.card.rarity || 'common') + '">' + esc(String(rarityLabel).toUpperCase()) + '</span>' +
+            '</div>'
+          );
+        }).join('');
+      }
+    }
+
+    // Primary CTA — hunt again with souls cost surfaced in button
+    // text. Footnote framed per cadence (night / day).
+    const ctaSection = document.getElementById('bfs-defeated-cta');
+    const ctaBtn     = document.getElementById('bfs-defeated-hunt-again');
+    const ctaFoot    = document.getElementById('bfs-defeated-cta-foot');
+    if (ctaSection) ctaSection.classList.remove('hidden');
+    if (ctaBtn) {
+      ctaBtn.setAttribute('data-boss-id', id);
+      const cost = (typeof engageCostSouls === 'function') ? engageCostSouls(cfg.rank) : 0;
+      ctaBtn.textContent = cost > 0 ? ('HUNT AGAIN — ' + cost + ' SOULS') : 'HUNT AGAIN';
+    }
+    if (ctaFoot) {
+      const cadence = cfg.cadence || 'daily';
+      // Pick a friendly "unit" — sleep/bedtime → "night"; everything else → "day".
+      let unit = 'day';
+      const cond = (cfg.killCondShort || cfg.killCondLong || '').toLowerCase();
+      if (cond.indexOf('sleep') >= 0 || cond.indexOf('night') >= 0 || cond.indexOf('bedtime') >= 0) {
+        unit = 'night';
+      }
+      const cadenceNote = cadence === 'weekly' ? "next weekend's hunt"
+                        : cadence === 'triweekly' ? 'the next qualifying ' + unit
+                        : 'next ' + unit;
+      ctaFoot.textContent = 'Engages the ' + (cfg.name || 'boss') + ' · ' + cadenceNote + ' counts toward this hunt.';
+    }
   }
 
   // Tracks the boss currently shown in the full-screen modal so
@@ -16996,6 +17464,33 @@
         // brand-matched modal would be polish; functional path here.
         const ok = window.confirm('Stop hunting ' + name + '? Your current streak will reset.');
         if (ok) disengageBoss(id);
+      });
+    }
+    // v3 Phase 1z.7 — defeated-state Hunt Again CTA + last-drop tap.
+    const defeatedCta = document.getElementById('bfs-defeated-hunt-again');
+    if (defeatedCta) {
+      defeatedCta.addEventListener('click', () => {
+        const id = defeatedCta.getAttribute('data-boss-id');
+        if (id) { try { engageBoss(id); } catch (_) {} }
+      });
+    }
+    const lastDropBtn = document.getElementById('bfs-last-drop');
+    if (lastDropBtn) {
+      lastDropBtn.addEventListener('click', () => {
+        const cardId = lastDropBtn.getAttribute('data-card-id');
+        if (!cardId || typeof CARDS === 'undefined') return;
+        try {
+          const card = CARDS[cardId];
+          const inv = (typeof getInventory === 'function') ? getInventory() : null;
+          const entry = inv && inv.cards && inv.cards[cardId];
+          if (card && entry && typeof openCardDetailModal === 'function') {
+            // Close the boss detail first so the relic detail isn't
+            // stacked behind it — opening the card modal from inside a
+            // visible bfs is otherwise hard to dismiss back to dungeon.
+            try { closeBossFullScreen(); } catch (_) {}
+            openCardDetailModal(card, entry);
+          }
+        } catch (_) {}
       });
     }
   }

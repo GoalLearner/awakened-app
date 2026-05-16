@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=272">
+  <link rel="stylesheet" href="styles.css?v=273">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -532,7 +532,10 @@
     <div id="items-panel" class="tab-panel hidden" data-panel="items">
       <div class="pokedex">
         <div class="pokedex-header">
-          <div class="pokedex-title">RELIC ARCHIVE</div>
+          <div class="pokedex-title-row">
+            <div class="pokedex-title">RELIC ARCHIVE</div>
+            <span id="archive-new-count" class="archive-new-count hidden" aria-live="polite">0 NEW</span>
+          </div>
           <div class="pokedex-count">DISCOVERED <span id="pokedex-discovered">0</span> / <span id="pokedex-total">9</span></div>
           <div class="pokedex-progress-bar">
             <div id="pokedex-progress-fill" class="pokedex-progress-fill"></div>
@@ -834,8 +837,62 @@
       <button id="bfs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
         <span class="bfs-back-chev" aria-hidden="true">‹</span> Back
       </button>
+      <!-- v3 Phase 1z.7 — HUNT COMPLETE gold pill, visible only when
+           the bfs-overlay carries the `bfs-overlay--defeated` modifier
+           (kill_count > 0 AND !engaged). The existing rank pill sits
+           beside it and remains visible in all states. -->
+      <span id="bfs-hunt-complete-pill" class="bfs-hunt-complete-pill" aria-hidden="true">HUNT COMPLETE</span>
       <span id="bfs-rank-pill" class="bfs-rank-pill rank-badge" data-rank="E" aria-hidden="true">E</span>
     </header>
+
+    <!-- v3 Phase 1z.7 — DEFEATED hero card. Shown when kill_count > 0
+         and the user is not currently engaged. Replaces the legacy
+         hunt-pending hero visuals with a "boss is on the ground"
+         treatment: dimmed portrait, gold diagonal slash, fallen
+         subline + time-ago line. -->
+    <section id="bfs-defeated-hero" class="bfs-defeated-hero hidden" aria-hidden="true">
+      <div class="bfs-defeated-portrait">
+        <img id="bfs-defeated-portrait-img" class="bfs-defeated-portrait-img" src="" alt="" loading="lazy">
+        <span class="bfs-defeated-portrait-slash" aria-hidden="true"></span>
+      </div>
+      <div class="bfs-defeated-meta">
+        <span id="bfs-defeated-rank-pill" class="bfs-defeated-rank-pill" data-rank="E">E-Rank · Defeated</span>
+        <h2 id="bfs-defeated-name" class="bfs-defeated-name">—</h2>
+        <div id="bfs-defeated-subline" class="bfs-defeated-subline">—</div>
+      </div>
+    </section>
+
+    <!-- v3 Phase 1z.7 — LAST DROP callout. Tap → opens Relic Archive
+         card-detail modal for that relic. Shown only when defeated
+         AND a relic dropped on the most recent kill. -->
+    <button id="bfs-last-drop" type="button" class="bfs-last-drop hidden" aria-hidden="true" data-card-id="">
+      <span class="bfs-last-drop-art">
+        <img id="bfs-last-drop-img" class="bfs-last-drop-img" src="" alt="" loading="lazy">
+        <span id="bfs-last-drop-slot-icon" class="bfs-last-drop-slot-icon" aria-hidden="true">✦</span>
+      </span>
+      <span class="bfs-last-drop-info">
+        <span class="bfs-last-drop-kicker">LAST DROP</span>
+        <span id="bfs-last-drop-name" class="bfs-last-drop-name">—</span>
+        <span id="bfs-last-drop-meta" class="bfs-last-drop-meta">—</span>
+      </span>
+      <span class="bfs-last-drop-chev" aria-hidden="true">›</span>
+    </button>
+
+    <!-- v3 Phase 1z.7 — Hunt History mini-ledger. Top 3 most-recent
+         drops sourced from this boss. Shown only when defeated. -->
+    <section id="bfs-hunt-history" class="bfs-hunt-history hidden" aria-hidden="true">
+      <h3 class="bfs-hunt-history-label">HUNT HISTORY</h3>
+      <div id="bfs-hunt-history-list" class="bfs-hunt-history-list"></div>
+    </section>
+
+    <!-- v3 Phase 1z.7 — Hunt Again primary CTA + footnote. Shown only
+         when defeated. The legacy ENGAGE-CTA section still ships its
+         own button for the kill_count === 0 case; this is the
+         post-defeat replacement. -->
+    <section id="bfs-defeated-cta" class="bfs-defeated-cta hidden" aria-hidden="true">
+      <button id="bfs-defeated-hunt-again" type="button" class="bfs-defeated-hunt-again">HUNT AGAIN</button>
+      <p id="bfs-defeated-cta-foot" class="bfs-defeated-cta-foot">—</p>
+    </section>
 
     <div class="bfs-hero">
       <img id="bfs-hero-img" src="" alt="" draggable="false" loading="lazy" decoding="async">
@@ -915,33 +972,79 @@
   <!-- Boss defeat result modal (v3 Phase 1z.6) — fires for common
        drops + no-drop defeats. Rare/ultra continue to use the
        existing cinematic reveal in #reveal-overlay. -->
-  <div id="boss-result-overlay" class="bro-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="bro-boss-name">
+  <!-- Boss Defeated overlay (v3 Phase 1z.7 redesign on the 1z.6 controller).
+       Markup id and per-element ids preserved so the existing _showBossResult /
+       closeBossResult flow continues to populate without rewiring. The hero
+       header gains a rune divider + Cinzel BOSS DEFEATED title with glow, the
+       boss card gains a portrait+slash visual and a verified defeat-condition
+       row, and the actions stack reorders (purple primary → gold secondary →
+       ghost tertiary). -->
+  <div id="boss-result-overlay" class="bro-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="bro-overlay-title">
+    <div class="bro-gold-dust" aria-hidden="true"></div>
+    <button id="bro-close-x" type="button" class="bro-close-x" aria-label="Close">✕</button>
     <div class="bro-shell">
-      <div class="bro-eyebrow">SYSTEM RESULT · BOSS DEFEATED</div>
-      <h2 id="bro-boss-name" class="bro-boss-name">—</h2>
-      <div id="bro-condition" class="bro-condition"></div>
-
-      <div id="bro-relic-card" class="bro-relic-card hidden">
-        <div id="bro-relic-eyebrow" class="bro-relic-eyebrow">RELIC ACQUIRED</div>
-        <div class="bro-relic-art-wrap">
-          <span id="bro-relic-slot-icon" class="bro-relic-slot-icon" aria-hidden="true">✦</span>
-          <img id="bro-relic-art" class="bro-relic-art" alt="" loading="lazy">
+      <header class="bro-hero">
+        <div class="bro-rune-divider" aria-hidden="true">
+          <span class="bro-rune-line"></span>
+          <span class="bro-rune-sparkle">✦</span>
+          <span class="bro-rune-line"></span>
         </div>
-        <div id="bro-relic-name" class="bro-relic-name"></div>
-        <div id="bro-relic-meta" class="bro-relic-meta"></div>
-        <div id="bro-relic-stats" class="bro-relic-stats"></div>
-      </div>
+        <div class="bro-kicker">SYSTEM RESULT</div>
+        <h2 id="bro-overlay-title" class="bro-overlay-title">BOSS DEFEATED</h2>
+        <div class="bro-subline">Your discipline broke the hunt.</div>
+      </header>
 
-      <div id="bro-nodrop-card" class="bro-nodrop-card hidden">
-        <div class="bro-nodrop-title">NO RELIC DROPPED</div>
-        <div class="bro-nodrop-body">Mercy increased. Next hunt is closer to a guaranteed relic.</div>
+      <!-- Boss card — portrait with diagonal slash, rank pill, fallen subline,
+           defeat-condition VERIFIED row -->
+      <section class="bro-boss-card">
+        <div class="bro-boss-card-body">
+          <div class="bro-boss-portrait">
+            <img id="bro-boss-portrait" class="bro-boss-portrait-img" src="" alt="" loading="lazy">
+            <span class="bro-boss-portrait-slash" aria-hidden="true"></span>
+          </div>
+          <div class="bro-boss-meta">
+            <span id="bro-rank-pill" class="bro-rank-pill" data-rank="E">E-RANK BOSS</span>
+            <h3 id="bro-boss-name" class="bro-boss-name">—</h3>
+            <span class="bro-fallen">Has Fallen</span>
+          </div>
+        </div>
+        <div class="bro-defeat-row">
+          <span class="bro-defeat-check" aria-hidden="true">✓</span>
+          <span id="bro-condition" class="bro-defeat-text">—</span>
+          <span class="bro-verified-chip">VERIFIED</span>
+        </div>
+      </section>
+
+      <!-- Reward — relic acquired variant -->
+      <section id="bro-relic-card" class="bro-reward bro-reward--relic hidden">
+        <div id="bro-relic-eyebrow" class="bro-reward-kicker">RELIC ACQUIRED</div>
+        <div class="bro-relic-row">
+          <div class="bro-relic-art-wrap">
+            <span id="bro-relic-slot-icon" class="bro-relic-slot-icon" aria-hidden="true">✦</span>
+            <img id="bro-relic-art" class="bro-relic-art" alt="" loading="lazy">
+          </div>
+          <div class="bro-relic-info">
+            <div id="bro-relic-rarity-pill" class="bro-relic-rarity-pill" data-rarity="common">COMMON</div>
+            <div id="bro-relic-name" class="bro-relic-name"></div>
+            <div id="bro-relic-meta" class="bro-relic-meta"></div>
+            <div id="bro-relic-stats" class="bro-relic-stats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reward — no-drop variant (mercy progress) -->
+      <section id="bro-nodrop-card" class="bro-reward bro-reward--none hidden">
+        <div class="bro-reward-kicker bro-reward-kicker--muted">NO RELIC DROPPED</div>
+        <div class="bro-nodrop-body">Mercy increased. Closer to the next guaranteed drop.</div>
         <div id="bro-mercy-block" class="bro-mercy-block"></div>
-      </div>
+      </section>
 
+      <!-- Action stack: primary purple → gold secondary → ghost tertiary -->
       <div class="bro-actions">
-        <button id="bro-view-relic" type="button" class="bro-btn bro-btn--gold hidden">View Relic</button>
-        <button id="bro-hunt-again" type="button" class="bro-btn bro-btn--primary">Hunt Again</button>
-        <button id="bro-close" type="button" class="bro-btn">Close</button>
+        <button id="bro-view-relic" type="button" class="bro-btn bro-btn--primary hidden">View Relic</button>
+        <button id="bro-view-mercy" type="button" class="bro-btn bro-btn--primary hidden">View Mercy Progress</button>
+        <button id="bro-hunt-again" type="button" class="bro-btn bro-btn--gold">Hunt Again</button>
+        <button id="bro-close" type="button" class="bro-btn bro-btn--ghost">Close</button>
       </div>
     </div>
   </div>
@@ -1844,7 +1947,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=368"></script>
+  <script src="app.js?v=369"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
