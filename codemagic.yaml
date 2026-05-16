@@ -310,6 +310,19 @@ workflows:
             echo "FAIL: www/app.js missing _queueBossResult (Phase 1z.6)"
             exit 1
           fi
+          # v3 Phase 1z.7 — Boss Defeated design pass surfaces.
+          if ! grep -q "hb_boss_result_pending" www/app.js; then
+            echo "FAIL: www/app.js missing hb_boss_result_pending (Phase 1z.7)"
+            exit 1
+          fi
+          if ! grep -q "_isRelicNew" www/app.js; then
+            echo "FAIL: www/app.js missing _isRelicNew (Phase 1z.7)"
+            exit 1
+          fi
+          if ! grep -q "bro-overlay-title" www/styles.css; then
+            echo "FAIL: www/styles.css missing .bro-overlay-title (Phase 1z.7)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.
@@ -456,6 +469,19 @@ workflows:
           fi
           if ! grep -q "_queueBossResult" "$PUB/app.js"; then
             echo "FAIL: $PUB/app.js missing _queueBossResult (Phase 1z.6)"
+            exit 1
+          fi
+          # v3 Phase 1z.7 — Boss Defeated design pass must reach iOS bundle.
+          if ! grep -q "hb_boss_result_pending" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing hb_boss_result_pending (Phase 1z.7)"
+            exit 1
+          fi
+          if ! grep -q "_isRelicNew" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing _isRelicNew (Phase 1z.7)"
+            exit 1
+          fi
+          if ! grep -q "bro-overlay-title" "$PUB/styles.css"; then
+            echo "FAIL: $PUB/styles.css missing .bro-overlay-title (Phase 1z.7)"
             exit 1
           fi
           # sw.js cache version cross-check

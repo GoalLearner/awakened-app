@@ -2475,7 +2475,33 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=272`, `app.js?v=368`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.254`, `APP_BUILD_TAG = '2.2.1-w18'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=273`, `app.js?v=369`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.255`, `APP_BUILD_TAG = '2.2.1-w19'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Boss Defeated design pass (v3 Phase 1z.7)
+
+Visual restyle layered on top of the v3 Phase 1z.6 controller — same `#boss-result-overlay` markup id, same `_queueBossResult` / `_drainBossResultQueue` / `_showBossResult` / `closeBossResult` flow. The rare/ultra cinematic (`#reveal-overlay`, `processRevealQueue`) is **NOT touched** — common drops + no-drop defeats keep flowing through the boss-result overlay; rare/ultra still get the existing dramatic reveal.
+
+**4 surfaces redesigned:**
+
+1. **#boss-result-overlay** — rune-divider hero with Cinzel `BOSS DEFEATED` (gold + 0 0 18px glow), boss card with dimmed portrait + gold diagonal slash + rank pill + `Has Fallen` strike-through + `VERIFIED` defeat-condition row, rarity-tinted relic card OR 3-row mercy progress (bar fills per tier, color-coded gold/blue/purple), action stack: purple primary (`View Relic` / `View Mercy Progress`) → gold secondary (`Hunt Again`) → ghost tertiary (`Close`). Backdrop carries pure-CSS radial-gradient gold dust + purple/gold ambient bloom. Close (✕) anchored top-right.
+2. **Boss detail defeated state** (`.bfs-overlay--defeated` modifier on `#boss-fs-overlay`) — visible when `kill_count > 0 && !engaged && !isPreview`. Adds `HUNT COMPLETE` gold pill to the header, a defeated hero card (dimmed portrait + slash, time-ago subline via `_formatTimeAgo`), tappable `LAST DROP` callout (closes detail + opens card-detail modal), `HUNT HISTORY` mini-ledger (top 3 most-recent drops for this boss from `loadInventory` via `_bossHuntHistory`), and a purple `HUNT AGAIN — N SOULS` CTA with footnote ("Engages the X · next night/day counts toward this hunt."). The legacy engage-cta / engage-state / engage-preview sections hide via CSS when the defeated modifier is set.
+3. **HUNTING strip result pill** — prepended to the `.status-pill-row` when `hb_boss_result_pending` is set. Gold pill with leading ✓ chip, copy `{BOSS} DEFEATED · RELIC FOUND` (or just `... DEFEATED` for no-drop). Gold pulse dot top-right via `@keyframes bro-result-dot-pulse`. Tap → `openBossResultFromPending()` re-builds the overlay envelope from `hb_boss_result_pending` + live BOSSES/CARDS lookups and re-shows it. Closes the overlay (Close, Hunt Again, View Relic, View Mercy, ESC) → `_clearBossResultPending` removes the key and the pill retracts.
+4. **Relic Archive NEW state** — `_isRelicNew(cardId)` returns true when the inventory carries `discovered + first_acquired_date` AND `hb_relic_seen_<cardId>` is unset. Per-card chip top-right (gold gradient + sparkle ✦ + `@keyframes archive-card-new-shimmer`) supersedes the `EQUIPPED` chip on first view. Header counter `archive-new-count` shows `N NEW` gold pulse pill; hidden when `_countNewRelics()` is 0. NEW state clears on any of: tap the discovered card in the archive (markSeen + re-render), tap `View Relic` in the Boss Defeated overlay.
+
+**Defeat-condition copy** lives in `BOSS_DEFEAT_CONDITIONS` map (keyed by bossId). Used by the overlay's VERIFIED row; falls back to `cfg.killCondShort` when missing. Current entries cover all 6 shipping bosses: Insomniac / Carouser / Steel Wolf / Iron Warden / Glass Strider / Dream Tyrant.
+
+**New localStorage keys (NOT in `CloudSync.SNAPSHOT_KEYS`):**
+- `hb_boss_result_pending` — single-slot envelope `{ bossId, bossName, defeatedAt, acknowledged, dropCardId, dropRarity, kill_count }`. 24h auto-acknowledge (`BOSS_RESULT_AUTO_ACK_MS`); read via `_readBossResultPending`, written by `_queueBossResult`, cleared by `_clearBossResultPending` (called from `closeBossResult`). Replaced when a newer defeat fires.
+- `hb_relic_seen_<cardId>` — one-shot per-relic flag. Set by `_markRelicSeen` on archive-card tap OR on overlay `View Relic` tap. Never cleared. NEW state for a relic is the inverse of this flag (modulo "the relic is actually owned").
+
+The existing `hb_boss_result_seen_<bossId>_<kill_count>` from Phase 1z.6 is preserved — that's the **modal one-shot** (prevents the overlay from re-firing across reloads). `hb_boss_result_pending` is the **pill state** (HUNTING strip ack). Two different concerns, two keys.
+
+**Time-ago helper** — `_formatTimeAgo(iso)` returns "Xm ago" / "Xh ago" / "yesterday" / "N days ago" / "May 14". Drives the defeated hero subline; defensively returns "recently" on bad input.
+
+**Anti-patterns (DO NOT do):**
+- Don't add `hb_boss_result_pending` or `hb_relic_seen_*` to `CloudSync.SNAPSHOT_KEYS`. They're device-local UI acknowledgments — restoring on a new device should re-surface every owned relic as NEW until the user has actually seen it on that device, and a phantom "you defeated X" pill should not appear on a fresh install for an event the user never witnessed.
+- Don't re-fire the HUNTING strip result pill after the user has acknowledged (closed the overlay). The pill represents "unread defeat", not "active hunt." `_clearBossResultPending` runs from every overlay-close path including ESC, Hunt Again, View Relic, and View Mercy.
+- Don't bypass `openBossResultFromPending()` when a surface other than the kill-fire path wants to surface the overlay (HUNTING strip pill tap). Reconstructing the envelope manually drifts from the live BOSSES / CARDS / mercy lookups.
 
 ---
 
