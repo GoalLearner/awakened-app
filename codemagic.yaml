@@ -275,6 +275,19 @@ workflows:
             echo "FAIL: www/auth.js missing submitVerifiedEvents (Phase 1z engine)"
             exit 1
           fi
+          # v3 Phase 1z.1 — Tier 1 launch readiness (cancel + outbox).
+          if ! grep -q "_drainVerifiedEventOutbox" www/app.js; then
+            echo "FAIL: www/app.js missing _drainVerifiedEventOutbox (Phase 1z.1 outbox)"
+            exit 1
+          fi
+          if ! grep -q "hb_verified_event_outbox" www/app.js; then
+            echo "FAIL: www/app.js missing hb_verified_event_outbox key (Phase 1z.1 outbox)"
+            exit 1
+          fi
+          if ! grep -q "cancelDuel" www/auth.js; then
+            echo "FAIL: www/auth.js missing cancelDuel (Phase 1z.1 outgoing cancel)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.
@@ -386,6 +399,19 @@ workflows:
           fi
           if ! grep -q "submitVerifiedEvents" "$PUB/auth.js"; then
             echo "FAIL: $PUB/auth.js missing submitVerifiedEvents (Phase 1z engine)"
+            exit 1
+          fi
+          # v3 Phase 1z.1 — Tier 1 launch readiness must reach iOS bundle.
+          if ! grep -q "_drainVerifiedEventOutbox" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing _drainVerifiedEventOutbox (Phase 1z.1 outbox)"
+            exit 1
+          fi
+          if ! grep -q "hb_verified_event_outbox" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing hb_verified_event_outbox key (Phase 1z.1 outbox)"
+            exit 1
+          fi
+          if ! grep -q "cancelDuel" "$PUB/auth.js"; then
+            echo "FAIL: $PUB/auth.js missing cancelDuel (Phase 1z.1 outgoing cancel)"
             exit 1
           fi
           # sw.js cache version cross-check

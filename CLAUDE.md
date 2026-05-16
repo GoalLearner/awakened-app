@@ -1415,6 +1415,41 @@ duels.reward_settled_at TEXT — set by settleDuelReward
 
 ---
 
+## Tier 1 launch-readiness (v3 Phase 1z.1)
+
+Two small but high-value additions on top of the Phase 1z engine: an outgoing-duel **cancel** path, and a **verified-event outbox** for offline resilience. Both ship in `2.2.1-w13`.
+
+### Outgoing duel cancel
+
+`POST /v1/duels/:id/cancel` — challenger-only, pending-only. Status `'pending'` → `'cancelled'`. Backend handler `handleDuelsCancel` in `backend/src/handlers/duels.ts`, route added under the existing `DUELS_ID_RE` regex (`(accept|decline|cancel)`). Reuses `RL_DUELS_WRITE` binding.
+
+- **Idempotent.** A second call against an already-cancelled duel returns `{ ok: true, alreadyCancelled: true, duel }` rather than an error — the UI can re-issue without surfacing scary text.
+- **Status guard.** Active / completed / declined / expired duels return `400 DUEL_NOT_CANCELLABLE`. Non-participant returns `403 FORBIDDEN`. Opponent's path stays the existing `decline` — opponents can never cancel.
+- **No souls movement.** Cancel doesn't touch `user_souls_ledger`, doesn't set `winner_user_id`, doesn't set `reward_settled_at`. Pending duels never debited the stake; there is nothing to refund.
+- **UI:** small ghost-style `Cancel` button (`.social-btn--ghost.duel-card-cancel-btn`) on the outgoing duel card next to `View`. Click handler in `setupSocialDuels` confirms via `window.confirm()` then calls `Auth.cancelDuel(duelId)`. On `DUEL_NOT_CANCELLABLE` the toast reads "Duel already started — cannot cancel." Auth helper: `Auth.cancelDuel`.
+
+### Verified event outbox
+
+`hb_verified_event_outbox` localStorage key. **Device-local transport queue** — explicitly NOT in `CloudSync.SNAPSHOT_KEYS`. Replaces the prior fire-and-forget submission path in `submitVerifiedEventsForDuels`.
+
+- **Cap:** 250 events. Over-cap → FIFO drop (oldest entries leave the head of the array).
+- **Dedup key:** `client_event_id`. For `event_type === 'steps_total'`, re-queueing prefers the **higher** value — steps over a window are cumulative and should never decrease across submissions. For other types, the newer entry replaces the older (keeps the original `queued_at`).
+- **Drain triggers:** `init()` (after auth ready), `renderDuelsSection()` (Duels tab open), `visibilitychange` → visible. No periodic timer in v1 — the existing triggers cover real-world cadence.
+- **Failure handling:**
+  - Network/null response → keep batch in queue, retry next trigger.
+  - 401 / `EXPIRED` / `UNAUTHORIZED` → keep batch + set `_outboxLast401At`; drain refuses to retry within 60 s of the last 401 (auth-recovery backoff).
+  - Other non-ok (rate limit, 5xx) → keep batch, retry next trigger.
+  - 200 ok → drop batch from queue. Backend's `UNIQUE(user_id, client_event_id)` constraint silently dedupes re-submissions, so retries are always safe.
+- **Submission path now goes:** `_buildEventsForActiveDuel` → `_enqueueVerifiedEvents(all)` → `_drainVerifiedEventOutbox()`. The fire-and-forget chunk loop is gone.
+- **Helpers in `app.js`:** `_loadVerifiedEventOutbox`, `_saveVerifiedEventOutbox`, `_enqueueVerifiedEvents`, `_drainVerifiedEventOutbox`. `_drainVerifiedEventOutbox` is also exposed on `window` for the console-debug surface, and logs a one-line `[outbox] drained=X kept=Y` on every drain attempt.
+- **No UI surface in v1.** The console log is the only diagnostic. Adding a Settings/debug view is deliberately out of scope until real usage flags a need.
+
+### Why the outbox is excluded from Cloud Sync
+
+Cloud Sync's SNAPSHOT_KEYS is an **allowlist for USER STATE**, not device state. The outbox is transport state: queued events carry `duel_id` references that are valid on this device's view of the world at this moment. Restoring an outbox onto a different device — perhaps after `localStorage.clear()` and a fresh install — would replay events with stale `metric_date`s and `duel_id`s that may belong to duels the user has since seen resolve. The backend's UNIQUE constraint would catch most duplicates, but the principle is the same as the Phase 1w.2 HealthKit reset: device-sovereign state stays device-local.
+
+---
+
 ## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
 
 Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Relic Archive** (renamed from "Pokédex" in v2.2.0 — see "Relic Archive" section). Single source of truth for design: `DROPS.md` (v1.8 code state — file header still reads v1.4) + `EQUIPMENT.md` (v1.3).
@@ -2237,7 +2272,7 @@ Settings header — `<div class="settings-app-name-row">` houses the app name on
 | `lbNormalizeAliasForDisplay(raw)` / `lbBuildDisplayAliases(rows)` | Display-only leaderboard alias normalization. Strip whitespace + lowercase + allowlist (`richie` → `Richie`) + dedupe collisions with numeric suffix. |
 | `hideSplash()` / `setSplashLongLoading(on)` | Splash control. `hideSplash` honors min-visible-time (1800ms) before fading. `setSplashLongLoading(true)` reveals the "Preparing your system…" line. |
 | `showIntroOnboarding(onComplete)` / `hideIntroOnboarding()` / `completeIntroOnboarding()` / `setupIntroOnboarding()` | 5-card educational onboarding controller. Gated by `shouldShowIntroOnboarding()`. |
-| `Auth.*` (full surface, exposed by `auth.js`) | Sign-in: `signInWithApple`, `completeSignIn`, `validateAlias`, `getCurrentUser`, `isNative`, `devSignInIfLocalhost`. Cloud Sync (Phase 1w): `fetchCloudState`, `uploadCloudState`. Friends (Phase 1x): `fetchFriends`, `sendFriendRequest`, `acceptFriendRequest`, `declineFriendRequest`, `removeFriend`. Duels (Phase 1x): `fetchDuels`, `createDuel`, `acceptDuel`, `declineDuel`, `fetchDuel`. Steps Duel Scoring (Phase 1y): `submitDuelProgress`, `resolveDuel`. Verified Duel Scoring Engine (Phase 1z): `submitVerifiedEvents`, `fetchDuelScore`. All authed helpers share the `{ ok, code, detail }`-on-failure envelope. |
+| `Auth.*` (full surface, exposed by `auth.js`) | Sign-in: `signInWithApple`, `completeSignIn`, `validateAlias`, `getCurrentUser`, `isNative`, `devSignInIfLocalhost`. Cloud Sync (Phase 1w): `fetchCloudState`, `uploadCloudState`. Friends (Phase 1x): `fetchFriends`, `sendFriendRequest`, `acceptFriendRequest`, `declineFriendRequest`, `removeFriend`. Duels (Phase 1x): `fetchDuels`, `createDuel`, `acceptDuel`, `declineDuel`, `fetchDuel`. Tier 1 launch readiness (Phase 1z.1): `cancelDuel`. Steps Duel Scoring (Phase 1y): `submitDuelProgress`, `resolveDuel`. Verified Duel Scoring Engine (Phase 1z): `submitVerifiedEvents`, `fetchDuelScore`. All authed helpers share the `{ ok, code, detail }`-on-failure envelope. |
 
 ---
 
@@ -2317,6 +2352,7 @@ Prefix `hb_` for almost everything:
 | `hb_sw_known_version`  | sw cache version string | v2.2.0 (existed earlier in different form). Written background-async on register. Used by the manual "Check for Updates" Settings button's fallback comparison. |
 | `hb_sw_last_active_version` | sw cache version string | v2.2.0 (auto-update safety net). Written by the version-drift detector 2s after register. Compared against live sw.js fetch — drift triggers unregister + cache wipe + reload. |
 | `hb_sw_manual_update`  | `'1'` (opt-in) | v2.2.0. Opt back into the banner-driven update flow. Default behavior is silent auto-apply. |
+| `hb_verified_event_outbox` | JSON array of queued verified events | **v3 Phase 1z.1.** Device-local transport queue for `Auth.submitVerifiedEvents`. 250-event cap with FIFO drop; dedup by `client_event_id` (steps_total prefers the higher value when re-queued). Drained on init, Duels-tab open, and visibilitychange→visible. 60 s backoff after a 401. **Explicitly NOT in `CloudSync.SNAPSHOT_KEYS`** — restoring an outbox onto a different device would replay events with stale `duel_id` / `metric_date` references. Backend's `UNIQUE(user_id, client_event_id)` constraint silently dedupes any retry-driven duplicates server-side. |
 
 All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule — **EXCEPT for HealthKit sleep windows + Daily Insight**, which use device-local time (sleep crosses midnight; the morning briefing is meant to mark "the user's morning" wherever they are; same rule as notifications — see CLAUDE.md "Notifications fire in DEVICE-LOCAL time, not PT"). Use `getDeviceLocalDate()` for these features, not `getPTDate()`.
 
@@ -2367,7 +2403,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=269`, `app.js?v=362`, `auth.js?v=12`, `simulated-leaderboard.js?v=4`, `sw.js v5.248`, `APP_BUILD_TAG = '2.2.1-w12'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=270`, `app.js?v=363`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.249`, `APP_BUILD_TAG = '2.2.1-w13'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2519,6 +2555,11 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Forgetting to update Codemagic gates after touching duel-type markup.** The pre-sync and post-sync gates check for `DUEL_TYPES` in `www/app.js` + `ios/App/App/public/app.js`, and `duel-type-overlay` in both `index.html`s. If you rename the constant or the overlay id, you must also update `codemagic.yaml`.
 - **Scoring manual habits in a duel.** The five scorable types in v3 Phase 1z (`steps` / `sleep` / `bedtime` / `strength` / `verified_objectives`) are ALL Apple Health / system-verified. Manual habit completions never enter `verified_events`. If you want a future "manual XP duel," add it under a separate `unverified_*` namespace — DO NOT inject manual habit data into the verified-events stream. The integrity story rests on the source field never lying.
 - **Mutating `localStorage hb_souls` from duel resolution.** Backend ledger ONLY in v1. The completed-duel UI surfaces "Reward recorded: +40 souls" sourced from `duel.reward_settled_at` / `duel.reward_souls`. Don't add `Souls.earn(40)` on resolve, don't decrement on accept. Soul reconciliation between `user_souls_ledger` ↔ local `hb_souls` is a future pass.
+- **Dropping verified events on transient network failure.** v3 Phase 1z.1's outbox is the resilience layer. The previous fire-and-forget chunk loop in `submitVerifiedEventsForDuels` silently swallowed failures; replacing it with an outbox + drain means a user on flaky Wi-Fi or in Airplane Mode no longer loses progress on a verified duel. If you add a new submission path that emits verified events, route it through `_enqueueVerifiedEvents` + `_drainVerifiedEventOutbox`, not directly through `Auth.submitVerifiedEvents`.
+- **Syncing `hb_verified_event_outbox` through Cloud Sync.** This key is transport state, not user progress. Restoring an outbox from another device would replay events with stale `duel_id` references and `metric_date` values that belong to whatever the user's other device was doing — possibly duels they've already seen resolve. The backend `UNIQUE(user_id, client_event_id)` constraint would catch most duplicates, but the principle is the same as the Phase 1w.2 HealthKit reset: device-sovereign state stays device-local. Never add this key to `SNAPSHOT_KEYS`.
+- **Letting opponents cancel a challenger's invite.** v3 Phase 1z.1 introduces cancel — but it is **challenger-only**. Opponents see Accept / Decline; they never see Cancel. The server enforces this with `403 FORBIDDEN` when `challenger_user_id !== session.userId`. Don't add an "opponent decline → cancel" shortcut; the two flows have distinct meanings (cancel removes the invite outright; decline records that the opponent said no).
+- **Allowing cancel on accepted duels.** Cancel only works on `status='pending'`. Active / completed / declined / expired duels return `400 DUEL_NOT_CANCELLABLE`. Don't surface a Cancel button on active-duel cards, and don't loosen the server's pending-only guard to handle "post-accept regret" — by the time the duel is accepted, the opponent is invested and the scoring engine has started consuming events. If a future product call wants a "mutual abandon" path, build it as a separate endpoint with both-party confirmation, not by relaxing cancel.
+- **Double-counting queued duplicates.** The outbox dedups by `client_event_id` client-side (newer steps_total wins; same-id events get refreshed in place); the backend dedups via UNIQUE(user_id, client_event_id) server-side. Both layers exist because both are cheap, and the cost of getting it wrong is the user's competitive score moving in a direction it shouldn't. Don't remove either layer thinking the other will catch it.
 - **Computing steps duel score with SUM(value).** v3 Phase 1z uses MAX(value). Multiple `steps_total` snapshots overwrite — the latest fetched total IS the running total over the duel window (Apple Health is cumulative within the window). SUM would multi-count overlapping snapshots. Sleep/bedtime use COUNT DISTINCT metric_date instead; strength uses COUNT(*) with uuid-based client_event_id dedupe; verified_objectives uses COUNT DISTINCT (event_type, metric_date).
 - **Double-paying a duel reward.** UNIQUE(user_id, ref_type, ref_id, reason) on `user_souls_ledger` protects against this — `settleDuelReward` uses `INSERT OR IGNORE` so concurrent resolve retries are safe. Don't add a parallel ledger-write path that bypasses this constraint. If you ever need to award a NON-duel soul reward, pick a `ref_type` + (`ref_id`, `reason`) combination that uniquely identifies the logical event so the UNIQUE constraint still meaningfully blocks duplicates.
 - **Claiming full anti-cheat for v1.** The integrity model trusts client-submitted Apple Health values. A user can submit fake step totals or fake workout uuids. v1 ships this gap deliberately — the alternative (HealthKit-via-watch attestation, signed device events) is a large, separate pass. Don't market the v1 engine as cheat-proof; the UI copy and CLAUDE.md both explicitly disclose the trust gap. Future hardening lands in a separate phase.
