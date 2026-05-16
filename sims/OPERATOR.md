@@ -135,22 +135,96 @@ find which checkpoint missed. Common causes:
 
 ## 3 · Run the full matrix
 
+### Pre-flight (important — do NOT skip)
+
+Before running `run-all.ps1`, make sure the backend has NO active
+sim duels left over from prior solo runs. Each sim opens a new duel
+between sim_alpha and sim_bravo; if a previous run left one in
+`active` state, the next sim's create-duel call returns **409
+DUEL_ALREADY_EXISTS_BETWEEN_PAIR** and the rest of `run-all`
+cascades into false failures.
+
+The cheapest pre-flight is a teardown + re-seed:
+
+```powershell
+# Terminal A (seed worker running on :8788)
+Invoke-WebRequest -Method POST -Uri http://localhost:8788/teardown -UseBasicParsing | Select-Object -ExpandProperty Content
+Invoke-WebRequest -Uri http://localhost:8788/verify -UseBasicParsing | Select-Object -ExpandProperty Content
+# Confirm /verify says "CLEAN: zero sim artifacts present."
+
+# Re-mint JWTs
+$resp = (Invoke-WebRequest -Method POST -Uri http://localhost:8788/seed -UseBasicParsing).Content | ConvertFrom-Json
+Set-Content sims/.secrets/alpha.jwt    $resp.alpha.jwt    -NoNewline
+Set-Content sims/.secrets/alpha.userid $resp.alpha.id     -NoNewline
+Set-Content sims/.secrets/bravo.jwt    $resp.bravo.jwt    -NoNewline
+Set-Content sims/.secrets/bravo.userid $resp.bravo.id     -NoNewline
+```
+
+**Do not run `run-all.ps1` immediately after a solo sim run unless
+you teardown + reseed first.** Solo sims leave the duel they opened
+in `completed` state, but if any solo sim aborted mid-flight, an
+`active` duel survives and triggers the 409 cascade above.
+
+### Invocation
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\sims\scripts\run-all.ps1
 ```
 
-Runs all 6 sims sequentially (01 → 06). Per-run output lands in
-`sims/runs/<timestamp>-<label>/`. Final summary printed to console:
+Runs the 6 sims sequentially (01 → 06). Per-run output lands in
+`sims/runs/<timestamp>-<label>/`.
+
+### Stop-on-first-failure behavior
+
+`run-all.ps1` **halts on the first failed sim**. A single failing
+sim typically leaves the duel it opened in `active` state, and
+running subsequent sims would produce a 409 cascade that masks the
+real root cause. So instead of plowing ahead, `run-all` prints:
 
 ```
-PASS  01-steps-duel   (12 checks · 4.2s)
-PASS  02-sleep-duel   (11 checks · 3.8s)
-PASS  03-bedtime-duel (11 checks · 3.9s)
-PASS  04-strength     (11 checks · 4.1s)
-PASS  05-verified-obj (12 checks · 4.4s)
-PASS  06-boss-race    ( 3 checks · 1.1s)
+===================================================
+  STOP ON FIRST FAILURE
+===================================================
+  02-sleep-duel.ps1 FAILED (exit=1)
+  Failed run folder:  C:\...\sims\runs\20260516-160538-02-sleep
+  Inspect:            C:\...\sims\runs\20260516-160538-02-sleep\summary.md
 
-6/6 PASS
+  Next steps:
+    1. Open the run's summary.md to see which checkpoint failed.
+    2. Inspect responses/ in the run folder for the backend reply.
+    3. Decide whether the failure is harness vs backend.
+    4. Before re-invoking run-all.ps1, POST /teardown then POST /seed
+       so leftover active duels do not produce 409 cascades on the
+       next attempt.
+
+  Remaining scripts NOT executed (would likely cascade):
+    - 03-bedtime-duel.ps1
+    - 04-strength-duel.ps1
+    - 05-verified-objectives-duel.ps1
+    - 06-boss-race-deferred.ps1
+```
+
+Final summary shows `SKIPPED` for the scripts that didn't run:
+
+```
+PASS  01-steps-duel.ps1                  4.2s
+FAIL  02-sleep-duel.ps1                  3.8s
+SKIP                                    -- (4 script(s) not run after first failure)
+
+1/6 PASS - 1 FAIL - 4 SKIPPED - total 13.1s
+```
+
+### Successful matrix output
+
+```
+PASS  01-steps-duel.ps1                  4.2s
+PASS  02-sleep-duel.ps1                  3.8s
+PASS  03-bedtime-duel.ps1                3.9s
+PASS  04-strength-duel.ps1               4.1s
+PASS  05-verified-objectives-duel.ps1    4.4s
+PASS  06-boss-race-deferred.ps1          1.1s
+
+6/6 PASS - 0 FAIL - 0 SKIPPED - total 24.7s
 ```
 
 ---
@@ -329,7 +403,11 @@ First two scripts pass, rest fail in a cascade:
 | 06-boss-race | FAIL (create 409) | same active-duel collision |
 
 Fixes shipped 2026-05-16: pacing bumped to 75 s + 3 s, bravo array
-bug fixed in `04-strength-duel.ps1`. To recover from this state,
+bug fixed in `04-strength-duel.ps1`, **`run-all.ps1` now stops on
+the first failure** so a single defect cannot produce a 5-line
+cascade of false-FAIL noise. The failed run folder + inspection
+hint print at the bottom of the abort summary. To recover from
+this state,
 run `POST /teardown` then `POST /seed` again, then `run-all.ps1`.
 
 **JWT expired** (after 90 days) → re-run `/seed`; JWTs are minted fresh.
