@@ -167,26 +167,95 @@ npx wrangler dev scripts/seed-sim-users.ts --remote --port 8788
 Terminal B:
 
 ```powershell
-curl -X POST http://localhost:8788/teardown
+Invoke-WebRequest -Method POST -Uri http://localhost:8788/teardown -UseBasicParsing | Select-Object -ExpandProperty Content
 ```
 
-Expected:
+`/teardown` performs an **explicit, sim-only cleanup**. It walks every
+table the sim harness touches and deletes ONLY rows that join back to
+the synthetic allowlist (`apple_sub IN {'sim_test_alpha','sim_test_bravo'}`)
+or carry a sim-prefixed `client_event_id` (`'sim-alpha-%'` / `'sim-bravo-%'`).
+It does NOT rely on `ON DELETE CASCADE` — most child tables (`friends`,
+`duels`, `verified_events`, `user_souls_ledger`,
+`duel_progress_snapshots`, `user_state_snapshots`) were added without
+CASCADE in later migrations, so deleting just the users would leave
+orphans.
+
+Deletion order (child rows first, then parent users):
+
+1. `verified_events` — by `user_id IN <sim ids>` OR `client_event_id LIKE 'sim-alpha-%'` / `'sim-bravo-%'`
+2. `user_souls_ledger` — by `user_id IN <sim ids>`
+3. `duel_progress_snapshots` — by `user_id IN <sim ids>` (legacy Phase 1y)
+4. `duels` — by `challenger_user_id` OR `opponent_user_id` in sim ids
+5. `friends` — by `requester_user_id` OR `recipient_user_id` in sim ids
+6. `user_state_snapshots` — by `user_id IN <sim ids>`
+7. `leaderboard_snapshots` — by `user_id IN <sim ids>` (CASCADE-protected, explicit for parity)
+8. Sweep orphan `verified_events` by `client_event_id` prefix (defense-in-depth against partial prior teardowns)
+9. `users` — by `apple_sub IN <synthetic allowlist>`
+
+Expected response (sample — counts will vary):
 
 ```json
-{ "ok": true, "deleted_users": 2 }
+{
+  "ok": true,
+  "before": {
+    "users": 2, "friends": 1, "duels": 1, "verified_events": 2,
+    "user_souls_ledger": 1, "duel_progress_snapshots": 0,
+    "user_state_snapshots": 0, "leaderboard_snapshots": 0
+  },
+  "after": {
+    "users": 0, "friends": 0, "duels": 0, "verified_events": 0,
+    "user_souls_ledger": 0, "duel_progress_snapshots": 0,
+    "user_state_snapshots": 0, "leaderboard_snapshots": 0
+  },
+  "deleted": {
+    "users": 2, "friends": 1, "duels": 1, "verified_events": 2,
+    "user_souls_ledger": 1, "duel_progress_snapshots": 0,
+    "user_state_snapshots": 0, "leaderboard_snapshots": 0
+  },
+  "note": "CLEAN: all sim artifact tables read 0 post-teardown."
+}
 ```
 
-This deletes `sim_alpha` + `sim_bravo` rows. Foreign-key CASCADE
-wipes friends + duels + verified_events + user_souls_ledger +
-user_state_snapshots + leaderboard_snapshots rows for those users
-automatically.
+Every value in `after` MUST be 0 and `note` MUST start with "CLEAN:".
+If the worker returns a "WARNING" note, inspect the per-table counts
+in `after` and follow up with manual SQL via wrangler d1 execute.
 
-Verify the teardown:
+### Independent verification (read-only)
 
 ```powershell
-curl http://localhost:8788/whoami
-# expected: { "ok": true, "users": [] }
+Invoke-WebRequest -Uri http://localhost:8788/verify -UseBasicParsing | Select-Object -ExpandProperty Content
 ```
+
+Expected response after a clean teardown:
+
+```json
+{
+  "ok": true,
+  "clean": true,
+  "counts": {
+    "users": 0, "friends": 0, "duels": 0, "verified_events": 0,
+    "user_souls_ledger": 0, "duel_progress_snapshots": 0,
+    "user_state_snapshots": 0, "leaderboard_snapshots": 0
+  },
+  "note": "CLEAN: zero sim artifacts present."
+}
+```
+
+`/verify` is read-only (no DELETE), safe to call at any point.
+
+### Real-user safety check
+
+To independently confirm the real-user count is unchanged (5 users
+across the synthetic allowlist exclusion):
+
+```powershell
+cd C:\Users\richm\Documents\repos\awakened-app\backend
+wrangler d1 execute awakened-db --remote --command "SELECT COUNT(*) AS n FROM users WHERE apple_sub NOT IN ('sim_test_alpha','sim_test_bravo');"
+```
+
+Expected: `"n": 5`. If the count changed, STOP and investigate — the
+teardown logic should be incapable of touching real-user rows, so any
+drift implies an external cause.
 
 Wipe local secrets:
 

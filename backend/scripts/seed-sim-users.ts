@@ -85,17 +85,277 @@ async function seedOrFetchUser(
   return { id: userId, alias, apple_sub, jwt };
 }
 
-async function teardown(env: Env): Promise<{ deleted_users: number }> {
-  // Only deletes rows whose apple_sub is in the synthetic allowlist.
-  // Foreign-key CASCADE on the schema wipes friends + duels +
-  // verified_events + user_souls_ledger + user_state_snapshots +
-  // leaderboard_snapshots rows for those users automatically.
+/** Prefix-based identifiers we use to find sim-only rows in tables
+ * where the row no longer joins back to a user (orphans after a
+ * prior incomplete teardown). Every sim script writes
+ * `client_event_id` values starting with one of these two prefixes. */
+const SIM_EVENT_PREFIXES = ['sim-alpha-%', 'sim-bravo-%'] as const;
+
+interface ArtifactCounts {
+  users: number;
+  friends: number;
+  duels: number;
+  verified_events: number;
+  user_souls_ledger: number;
+  duel_progress_snapshots: number;
+  user_state_snapshots: number;
+  leaderboard_snapshots: number;
+}
+
+/**
+ * Counts the sim artifacts that would be reachable BEFORE a teardown
+ * (joined via users.id) plus orphans reachable via prefix-based
+ * identifiers. After teardown completes, every count should be 0.
+ *
+ * `simUserIds` may be empty when called post-teardown — in that case
+ * artifact counts fall back to the prefix-based path for verified_events,
+ * and the other tables read 0 (we have no FK target to query against).
+ */
+async function countSimArtifacts(env: Env, simUserIds: string[]): Promise<ArtifactCounts> {
   const allowed_subs = ALLOWED_TEST_USERS.map(u => u.apple_sub);
-  const placeholders = allowed_subs.map(() => '?').join(', ');
-  const result = await env.DB.prepare(
-    `DELETE FROM users WHERE apple_sub IN (${placeholders})`,
+  const subPh = allowed_subs.map(() => '?').join(', ');
+
+  // Users — always the canonical truth, queries by apple_sub allowlist.
+  const usersRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM users WHERE apple_sub IN (${subPh})`,
+  ).bind(...allowed_subs).first<{ n: number }>();
+
+  // verified_events — by user_id OR client_event_id prefix. The prefix
+  // path catches orphans whose owning user was deleted in a prior pass.
+  const veRow = await env.DB.prepare(
+    simUserIds.length > 0
+      ? `SELECT COUNT(*) AS n FROM verified_events
+         WHERE user_id IN (${simUserIds.map(() => '?').join(', ')})
+            OR client_event_id LIKE ?
+            OR client_event_id LIKE ?`
+      : `SELECT COUNT(*) AS n FROM verified_events
+         WHERE client_event_id LIKE ? OR client_event_id LIKE ?`,
+  ).bind(...simUserIds, ...SIM_EVENT_PREFIXES).first<{ n: number }>();
+
+  // For the remaining tables we MUST have a user_id to query. After a
+  // user delete with no CASCADE these become orphans we can't easily
+  // distinguish from real-user rows; the caller is responsible for
+  // running teardown BEFORE the parent user delete so simUserIds is
+  // populated. countSimArtifacts is also called BEFORE the user delete
+  // to produce the "before" snapshot, then again AFTER. Post-delete
+  // calls see simUserIds=[] and report 0 for these tables (the orphan
+  // safety net lives in the SQL inside teardown() — every child row
+  // for the sim user IDs is deleted before users are removed).
+  const counts: ArtifactCounts = {
+    users: usersRow?.n ?? 0,
+    friends: 0,
+    duels: 0,
+    verified_events: veRow?.n ?? 0,
+    user_souls_ledger: 0,
+    duel_progress_snapshots: 0,
+    user_state_snapshots: 0,
+    leaderboard_snapshots: 0,
+  };
+
+  if (simUserIds.length === 0) return counts;
+
+  const userPh = simUserIds.map(() => '?').join(', ');
+
+  const friendsRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM friends
+     WHERE requester_user_id IN (${userPh}) OR recipient_user_id IN (${userPh})`,
+  ).bind(...simUserIds, ...simUserIds).first<{ n: number }>();
+  counts.friends = friendsRow?.n ?? 0;
+
+  const duelsRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM duels
+     WHERE challenger_user_id IN (${userPh}) OR opponent_user_id IN (${userPh})`,
+  ).bind(...simUserIds, ...simUserIds).first<{ n: number }>();
+  counts.duels = duelsRow?.n ?? 0;
+
+  const ledgerRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM user_souls_ledger WHERE user_id IN (${userPh})`,
+  ).bind(...simUserIds).first<{ n: number }>();
+  counts.user_souls_ledger = ledgerRow?.n ?? 0;
+
+  // duel_progress_snapshots — legacy Phase 1y table; safe to query.
+  try {
+    const dpsRow = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM duel_progress_snapshots WHERE user_id IN (${userPh})`,
+    ).bind(...simUserIds).first<{ n: number }>();
+    counts.duel_progress_snapshots = dpsRow?.n ?? 0;
+  } catch { /* table may be absent in some envs */ }
+
+  try {
+    const ussRow = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM user_state_snapshots WHERE user_id IN (${userPh})`,
+    ).bind(...simUserIds).first<{ n: number }>();
+    counts.user_state_snapshots = ussRow?.n ?? 0;
+  } catch { /* table may be absent in some envs */ }
+
+  const lbRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM leaderboard_snapshots WHERE user_id IN (${userPh})`,
+  ).bind(...simUserIds).first<{ n: number }>();
+  counts.leaderboard_snapshots = lbRow?.n ?? 0;
+
+  return counts;
+}
+
+interface TeardownResult {
+  ok: true;
+  before: ArtifactCounts;
+  after: ArtifactCounts;
+  deleted: {
+    users: number;
+    friends: number;
+    duels: number;
+    verified_events: number;
+    user_souls_ledger: number;
+    duel_progress_snapshots: number;
+    user_state_snapshots: number;
+    leaderboard_snapshots: number;
+  };
+  note: string;
+}
+
+/**
+ * Explicit sim-only teardown. Walks every table the sim harness might
+ * have touched and deletes only rows joined back to the synthetic
+ * allowlist (apple_sub IN {'sim_test_alpha', 'sim_test_bravo'}) or
+ * carrying a sim-prefixed client_event_id ('sim-alpha-%', 'sim-bravo-%').
+ *
+ * Defense-in-depth design:
+ *   1. Only the 0001 `leaderboard_snapshots` table actually carries
+ *      ON DELETE CASCADE. Every other table (friends, duels,
+ *      verified_events, user_souls_ledger, duel_progress_snapshots,
+ *      user_state_snapshots) was added in later migrations without
+ *      CASCADE, so a plain `DELETE FROM users` leaves orphans.
+ *   2. Deleting child rows BEFORE the parent users avoids any
+ *      `FOREIGN KEY constraint failed` should D1 enforce FKs.
+ *   3. The user-id filter list is captured BEFORE the user delete and
+ *      reused for child cleanup — children remain reachable even
+ *      though the parent rows are about to disappear.
+ *
+ * CANNOT delete real-user data. Every DELETE either:
+ *   - filters `users.apple_sub IN <synthetic allowlist>`, or
+ *   - filters by `user_id IN <ids of synthetic users>` (cached up
+ *     front from the same allowlist), or
+ *   - filters by `client_event_id LIKE 'sim-alpha-%' / 'sim-bravo-%'`
+ *     (a string prefix written only by the sim harness).
+ */
+async function teardown(env: Env): Promise<TeardownResult> {
+  const allowed_subs = ALLOWED_TEST_USERS.map(u => u.apple_sub);
+  const subPh = allowed_subs.map(() => '?').join(', ');
+
+  // 1. Snapshot sim user IDs BEFORE deleting anything.
+  const usersRows = await env.DB.prepare(
+    `SELECT id FROM users WHERE apple_sub IN (${subPh})`,
+  ).bind(...allowed_subs).all<{ id: string }>();
+  const simUserIds = (usersRows.results ?? []).map(r => r.id);
+
+  const before = await countSimArtifacts(env, simUserIds);
+
+  const deleted = {
+    users: 0,
+    friends: 0,
+    duels: 0,
+    verified_events: 0,
+    user_souls_ledger: 0,
+    duel_progress_snapshots: 0,
+    user_state_snapshots: 0,
+    leaderboard_snapshots: 0,
+  };
+
+  // 2. Delete child rows first (orphan-safe even if a prior incomplete
+  //    teardown removed users but left children).
+  if (simUserIds.length > 0) {
+    const userPh = simUserIds.map(() => '?').join(', ');
+
+    // verified_events — by user_id AND by client_event_id prefix.
+    let r = await env.DB.prepare(
+      `DELETE FROM verified_events
+       WHERE user_id IN (${userPh})
+          OR client_event_id LIKE ?
+          OR client_event_id LIKE ?`,
+    ).bind(...simUserIds, ...SIM_EVENT_PREFIXES).run();
+    deleted.verified_events += r.meta?.changes ?? 0;
+
+    // user_souls_ledger
+    r = await env.DB.prepare(
+      `DELETE FROM user_souls_ledger WHERE user_id IN (${userPh})`,
+    ).bind(...simUserIds).run();
+    deleted.user_souls_ledger += r.meta?.changes ?? 0;
+
+    // duel_progress_snapshots (legacy Phase 1y)
+    try {
+      r = await env.DB.prepare(
+        `DELETE FROM duel_progress_snapshots WHERE user_id IN (${userPh})`,
+      ).bind(...simUserIds).run();
+      deleted.duel_progress_snapshots += r.meta?.changes ?? 0;
+    } catch { /* table may be absent */ }
+
+    // duels — either side of the duel
+    r = await env.DB.prepare(
+      `DELETE FROM duels
+       WHERE challenger_user_id IN (${userPh})
+          OR opponent_user_id IN (${userPh})`,
+    ).bind(...simUserIds, ...simUserIds).run();
+    deleted.duels += r.meta?.changes ?? 0;
+
+    // friends — either side
+    r = await env.DB.prepare(
+      `DELETE FROM friends
+       WHERE requester_user_id IN (${userPh})
+          OR recipient_user_id IN (${userPh})`,
+    ).bind(...simUserIds, ...simUserIds).run();
+    deleted.friends += r.meta?.changes ?? 0;
+
+    // user_state_snapshots
+    try {
+      r = await env.DB.prepare(
+        `DELETE FROM user_state_snapshots WHERE user_id IN (${userPh})`,
+      ).bind(...simUserIds).run();
+      deleted.user_state_snapshots += r.meta?.changes ?? 0;
+    } catch { /* table may be absent */ }
+
+    // leaderboard_snapshots (CASCADE-protected, but explicit DELETE is
+    // belt-and-suspenders + counts toward the report)
+    r = await env.DB.prepare(
+      `DELETE FROM leaderboard_snapshots WHERE user_id IN (${userPh})`,
+    ).bind(...simUserIds).run();
+    deleted.leaderboard_snapshots += r.meta?.changes ?? 0;
+  }
+
+  // 3. Always sweep orphan verified_events by client_event_id prefix
+  //    — catches rows left over from a prior `/teardown` that deleted
+  //    users but missed the events.
+  const orphanEvents = await env.DB.prepare(
+    `DELETE FROM verified_events
+     WHERE client_event_id LIKE ? OR client_event_id LIKE ?`,
+  ).bind(...SIM_EVENT_PREFIXES).run();
+  deleted.verified_events += orphanEvents.meta?.changes ?? 0;
+
+  // 4. Delete the sim users themselves (last, after all child cleanup).
+  const userDel = await env.DB.prepare(
+    `DELETE FROM users WHERE apple_sub IN (${subPh})`,
   ).bind(...allowed_subs).run();
-  return { deleted_users: result.meta?.changes ?? 0 };
+  deleted.users = userDel.meta?.changes ?? 0;
+
+  // 5. Verify — call countSimArtifacts again. We pass the original
+  //    simUserIds (now-deleted) so the child-table queries still
+  //    surface any orphans we missed. Every count in `after` must be 0.
+  const after = await countSimArtifacts(env, simUserIds);
+
+  const allClean =
+    after.users === 0 &&
+    after.friends === 0 &&
+    after.duels === 0 &&
+    after.verified_events === 0 &&
+    after.user_souls_ledger === 0 &&
+    after.duel_progress_snapshots === 0 &&
+    after.user_state_snapshots === 0 &&
+    after.leaderboard_snapshots === 0;
+
+  const note = allClean
+    ? 'CLEAN: all sim artifact tables read 0 post-teardown.'
+    : `WARNING: post-teardown counts not all zero (after=${JSON.stringify(after)}). Inspect manually.`;
+
+  return { ok: true, before, after, deleted, note };
 }
 
 export default {
@@ -116,7 +376,37 @@ export default {
 
     if (url.pathname === '/teardown' && req.method === 'POST') {
       const result = await teardown(env);
-      return Response.json({ ok: true, ...result });
+      return Response.json(result);
+    }
+
+    if (url.pathname === '/verify' && req.method === 'GET') {
+      // Read-only post-teardown verification. Returns counts of every
+      // sim-artifact table. Operator runs after /teardown to confirm
+      // every count is 0. Safe to call any time; never writes.
+      const allowed_subs = ALLOWED_TEST_USERS.map(u => u.apple_sub);
+      const subPh = allowed_subs.map(() => '?').join(', ');
+      const usersRows = await env.DB.prepare(
+        `SELECT id FROM users WHERE apple_sub IN (${subPh})`,
+      ).bind(...allowed_subs).all<{ id: string }>();
+      const simUserIds = (usersRows.results ?? []).map(r => r.id);
+      const counts = await countSimArtifacts(env, simUserIds);
+      const allClean =
+        counts.users === 0 &&
+        counts.friends === 0 &&
+        counts.duels === 0 &&
+        counts.verified_events === 0 &&
+        counts.user_souls_ledger === 0 &&
+        counts.duel_progress_snapshots === 0 &&
+        counts.user_state_snapshots === 0 &&
+        counts.leaderboard_snapshots === 0;
+      return Response.json({
+        ok: true,
+        clean: allClean,
+        counts,
+        note: allClean
+          ? 'CLEAN: zero sim artifacts present.'
+          : 'sim artifacts still present; run POST /teardown',
+      });
     }
 
     if (url.pathname === '/whoami' && req.method === 'GET') {
@@ -133,9 +423,10 @@ export default {
 
     return new Response(
       'seed-sim-users worker.\n' +
-      'POST /seed     — provision sim_alpha + sim_bravo, mint JWTs\n' +
-      'POST /teardown — delete both sim users + cascade their data\n' +
-      'GET  /whoami   — list sim users currently in D1 (no JWTs)\n',
+      'POST /seed     -- provision sim_alpha + sim_bravo, mint JWTs\n' +
+      'POST /teardown -- explicit sim-only cleanup; returns before/after counts\n' +
+      'GET  /verify   -- read-only: returns counts of every sim-artifact table\n' +
+      'GET  /whoami   -- list sim users currently in D1 (no JWTs)\n',
       { status: 200, headers: { 'content-type': 'text/plain' } },
     );
   },

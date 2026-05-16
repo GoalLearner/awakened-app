@@ -35,9 +35,15 @@ Their JWTs are saved to `sims/.secrets/alpha.jwt` and `.../bravo.jwt`
 after the seed script runs. JWTs are HS256, 90-day TTL — re-seed after
 they expire.
 
-**Cleanup:** `sims/sql/teardown.sql` deletes both users; CASCADE / manual
-deletes wipe friends + duels + verified_events + ledger rows. Run after
-sims complete.
+**Cleanup:** `POST http://localhost:8788/teardown` against the seed
+worker performs an explicit, sim-only cleanup of every table the
+harness touches (friends, duels, verified_events, user_souls_ledger,
+duel_progress_snapshots, user_state_snapshots, leaderboard_snapshots,
+users). Most child tables were added in later migrations without
+`ON DELETE CASCADE`, so the teardown does NOT rely on cascade — child
+rows are deleted explicitly BEFORE the parent users. Response carries
+before/after artifact counts; every `after` count MUST be 0. See
+`OPERATOR.md` §4 for the full deletion order and verification flow.
 
 ## Smoke test matrix
 
@@ -102,7 +108,7 @@ if you have it installed.
 - **Never run sims against Richie's real account.** Test users only.
 - **Never commit `sims/.secrets/` or `sims/runs/`.** Both gitignored.
 - **Never log JWTs in stdout.** Scripts read from `.secrets/` and pass as headers; verify the request capture scrubs Authorization.
-- **Tear down test users + all their data when sims are done.** Run `sims/sql/teardown.sql` via `wrangler d1 execute awakened-db --remote --file=sims/sql/teardown.sql`.
+- **Tear down test users + all their data when sims are done.** Call `POST http://localhost:8788/teardown` against the seed worker (it must be running via `wrangler dev --remote`). The worker performs the full explicit cleanup and returns before/after counts. Follow up with `GET /verify` for a read-only confirmation.
 
 ## Future
 
