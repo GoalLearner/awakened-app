@@ -216,3 +216,55 @@ Check ALL of the following before declaring v1 Duels launch-ready:
 - [ ] No crashes, no UI orphans, no silently-failing actions across the full 2-device run.
 
 When this list is fully checked, the Tier 1 launch-readiness pass is complete.
+
+---
+
+## 🏋️ Appendix — Strength Training auto-verify QA (v3 Phase 1z.4)
+
+Standalone Strength-training auto-verify test. Runs on a single device.
+
+**Setup**
+1. Open Settings → Apple Health → confirm "Connected" + auto-verify NOT paused.
+2. In DevTools / Safari Inspector (or via the in-app Notes modal of Strength training to confirm copy), confirm the habit is in the user's active list.
+
+**Happy path**
+1. Open Apple Fitness, Apple Watch, or any iOS app that records workouts (Peloton, Seven, etc).
+2. Start a **Traditional Strength Training** or **Functional Strength Training** workout.
+3. Train for **at least 10 minutes** (`HEALTHKIT_STRENGTH_MIN_MINUTES`).
+4. End + save the workout.
+5. Confirm the workout appears in Apple Health → Workouts under today's date.
+6. Open Awakened → Habits tab.
+7. **Expected:** Strength training card shows SEALED state (gold check + AUTO badge).
+
+**If it doesn't seal — debug path**
+
+Enable verbose HealthKit logging:
+```js
+localStorage.setItem('hb_debug_healthkit', '1'); location.reload();
+```
+
+Then re-open Habits tab and check DevTools / Safari Web Inspector console for `[HK]` and `[HK/autoVerifyStrength]` lines. The logs reveal:
+- Whether the HealthKit query window matched today
+- Raw sample count returned by the plugin
+- The shape of the first sample (especially `workoutActivityType` — is it a string like `'traditionalStrengthTraining'`, a prefixed string like `'HKWorkoutActivityTypeFunctionalStrengthTraining'`, or a NUMBER like `50`?)
+- Per-sample filter decisions (`ACCEPT` / `REJECT-DURATION` / `REJECT` with reason)
+- The final autoVerifyStrengthTraining gating step that bailed
+
+Common causes (in order of likelihood):
+1. **Workout logged as non-strength category** (e.g. "Other", "HIIT", "Core Training"). Re-save in Apple Health under Traditional or Functional Strength Training.
+2. **Workout < 10 minutes duration.** `HEALTHKIT_STRENGTH_MIN_MINUTES` is the floor.
+3. **Workout not yet synced from Watch.** Open Apple Health app first to force sync; then return to Awakened.
+4. **HealthKit permission revoked at iOS level.** Settings → Privacy → Health → Awakened → confirm Workouts permission.
+5. **Plugin returns numeric `workoutActivityType` enum value not in the allowlist.** Currently allowlisted numerics: 20 (functional), 50 (traditional). If the debug log shows a different number for what's clearly a strength workout, add it to `STRENGTH_NUMERIC_TYPES` in the Health module.
+
+Turn debug off when done:
+```js
+localStorage.removeItem('hb_debug_healthkit'); location.reload();
+```
+
+**Accepted strength workout types**
+
+The filter (`_isStrengthWorkoutSample`) accepts both string and numeric `workoutActivityType` values:
+- Strings (case-insensitive, includes match): `strengthTraining`, `traditionalStrengthTraining`, `functionalStrengthTraining`, `weightTraining`, `resistanceTraining`, prefixed variants like `HKWorkoutActivityTypeFunctionalStrengthTraining`.
+- Numerics: 20 (functional), 50 (traditional). HIIT (30), Core Training (21), and other strength-adjacent activities are deliberately excluded — they're not pure strength.
+

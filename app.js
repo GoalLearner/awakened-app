@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w15';
+  const APP_BUILD_TAG = '2.2.1-w16';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3903,7 +3903,9 @@
         middle = "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>";
         break;
       case 'Strength training':
-        middle = "<p>Strength training is sealed only when Apple Health records a qualifying strength workout (10+ minutes) for today. The system is checking for real training data, not a manual tap. Connect Apple Health and put in the work. If the data shows it, your hunter earns it.</p>";
+        middle =
+          "<p>Strength training is sealed only when Apple Health records a qualifying strength workout (10+ minutes) for today. The system is checking for real training data, not a manual tap. Connect Apple Health and put in the work. If the data shows it, your hunter earns it.</p>" +
+          "<p><strong>Workout type matters.</strong> Awakened looks for Traditional Strength Training, Functional Strength Training, Weight Training, or Resistance Training. Cardio sessions, HIIT, and yoga don't count — log those in their own habit. If your gym session didn't seal, open Apple Health → Workouts and confirm today's workout is saved under one of those categories.</p>";
         break;
       default:
         middle = '<p>Awakened auto-checks this habit when Apple Health verifies the conditions. Manual completion is not available.</p>';
@@ -21397,6 +21399,26 @@
   //   below. Swap cost = rewrite this module. Don't import the plugin elsewhere.
   // ─────────────────────────────────────────────────────────
   const Health = (() => {
+    // ── Debug logging (v3 Phase 1z.4) ─────────────────────
+    // Gate verbose Health logging behind localStorage.hb_debug_healthkit.
+    // No-op (zero overhead) when disabled. Turn on from DevTools:
+    //   localStorage.setItem('hb_debug_healthkit', '1'); location.reload();
+    // Captures: HealthKit availability, permission status, query windows,
+    // raw sample counts, per-sample type + duration filter decisions,
+    // final returned counts, and autoVerifyStrengthTraining gating.
+    function _hkDebugEnabled() {
+      try { return localStorage.getItem('hb_debug_healthkit') === '1'; }
+      catch (_) { return false; }
+    }
+    function _hkDebug() {
+      if (!_hkDebugEnabled()) return;
+      try {
+        const args = Array.prototype.slice.call(arguments);
+        // eslint-disable-next-line no-console
+        console.log.apply(console, ['[HK]'].concat(args));
+      } catch (_) {}
+    }
+
     // ── Capabilities ─────────────────────────────────────
     function isAvailable() {
       // Capacitor only injects window.Capacitor on native iOS / Android.
@@ -21787,21 +21809,34 @@
     //
     // Never throws.
     async function getStrengthWorkoutsToday() {
-      if (!isAvailable()) return null;
-      if (isWorkoutCacheFresh()) return workoutCache;
+      if (!isAvailable()) { _hkDebug('strength query: HealthKit not available (web/non-iOS)'); return null; }
+      if (isWorkoutCacheFresh()) {
+        _hkDebug('strength query: returning cache (' + (workoutCache && workoutCache.count) + ' qualifying, age <' +
+                 (HEALTHKIT_WORKOUT_CACHE_MS / 1000) + 's)');
+        return workoutCache;
+      }
 
       const p = plugin();
-      if (!p) return null;
+      if (!p) { _hkDebug('strength query: plugin handle missing'); return null; }
 
       const status = permissionStatus();
-      if (status === 'denied' || status === 'unknown') return null;
+      if (status === 'denied' || status === 'unknown') {
+        _hkDebug('strength query: permission status =', status, '— short-circuit');
+        return null;
+      }
 
       try {
+        // Device-local "start of today". HealthKit interprets ISO as
+        // a wall-clock moment, so this matches the user's perceived
+        // calendar day (NOT PT-anchored — Strength is device-local).
         const todayLocal = (typeof getDeviceLocalDate === 'function')
           ? getDeviceLocalDate()
           : new Date().toISOString().slice(0, 10);
         const start = new Date(todayLocal + 'T00:00:00');
         const end = new Date();
+
+        _hkDebug('strength query window:', start.toISOString(), '→', end.toISOString(),
+                 '(device-local today =', todayLocal + ')');
 
         // Query workout samples. sampleName='workoutType' is the
         // canonical identifier used by the plugin's query API.
@@ -21813,6 +21848,13 @@
         });
 
         const samples = (result && result.resultData) || [];
+        _hkDebug('strength query result: ' + samples.length + ' raw workout sample(s) for today');
+        if (_hkDebugEnabled() && samples.length > 0) {
+          // Dump shape of first sample so we can confirm activity-type
+          // field name + duration-field shape in the plugin output.
+          try { _hkDebug('strength raw sample[0] shape:', JSON.stringify(samples[0])); }
+          catch (_) { _hkDebug('strength raw sample[0]:', samples[0]); }
+        }
         const qualifying = samples.filter(_isStrengthWorkoutSample);
         const totalMinutes = qualifying.reduce((sum, s) => sum + _workoutDurationMinutes(s), 0);
 
@@ -21828,6 +21870,7 @@
         return workoutCache;
       } catch (e) {
         console.warn('[Health] workout query failed', e);
+        _hkDebug('strength query EXCEPTION:', e && e.message);
         return null;
       }
     }
@@ -21970,38 +22013,82 @@
       }
     }
 
-    // Strength-workout filter. Apple's HKWorkoutActivityType enum is
-    // surfaced by the plugin as a string — naming varies across
-    // plugin versions / iOS versions, so match defensively against a
-    // case-insensitive keyword set. The keywords are conservative —
-    // we'd rather miss an obscure label than count a non-strength
-    // workout as strength.
+    // Strength-workout filter. Apple's HKWorkoutActivityType comes
+    // through the plugin in one of three shapes across versions:
+    //  (a) lowerCamelCase string like 'traditionalStrengthTraining'
+    //  (b) prefixed string like 'HKWorkoutActivityTypeFunctionalStrengthTraining'
+    //  (c) numeric enum rawValue (20 = functionalStrengthTraining,
+    //      50 = traditionalStrengthTraining — Apple's canonical mapping)
+    //
+    // Match defensively against all three. The numeric path is the
+    // most likely culprit when a gym-recorded workout fails to seal
+    // the Strength training habit; some plugin builds drop the string
+    // name silently and pass only the rawValue.
+    //
+    // Conservative on cardio: this filter is allowlist-only. New
+    // strength variants need an explicit addition here.
+    const STRENGTH_NUMERIC_TYPES = new Set([
+      20,  // functionalStrengthTraining
+      50,  // traditionalStrengthTraining
+      // 30 = highIntensityIntervalTraining — DELIBERATELY excluded
+      //      (HIIT is cardio-adjacent; users record it for cardio days)
+      // 21 = coreTraining — excluded; counted only via explicit core->strength
+      //      naming on the next deploy if user reports it
+    ]);
+    const STRENGTH_KEYWORDS = [
+      'strengthtraining', 'weighttraining', 'resistancetraining',
+      'strength training', 'weight training', 'resistance training',
+      'traditional strength', 'functional strength',
+    ];
     function _isStrengthWorkoutSample(s) {
-      if (!s) return false;
-      const typeStr = String(
-        s.workoutActivityType || s.activityType || s.workoutType || s.type || ''
-      ).toLowerCase();
-      // Accepted: traditionalStrengthTraining, functionalStrengthTraining,
-      // strengthTraining, weightTraining, resistanceTraining. Reject
-      // everything else (running, walking, cycling, yoga, etc.).
-      const STRENGTH_KEYWORDS = ['strengthtraining', 'weighttraining', 'resistancetraining',
-                                 'strength training', 'weight training', 'resistance training'];
-      const matchesStrength = STRENGTH_KEYWORDS.some(k => typeStr.includes(k.replace(/\s+/g, '')));
-      if (!matchesStrength) return false;
+      if (!s) { _hkDebug('strength filter: null sample'); return false; }
+      const rawType = (s.workoutActivityType !== undefined) ? s.workoutActivityType
+                    : (s.activityType !== undefined) ? s.activityType
+                    : (s.workoutType !== undefined) ? s.workoutType
+                    : s.type;
+      let matchesStrength = false;
+      let reason;
+      // Numeric path
+      if (typeof rawType === 'number' && Number.isFinite(rawType)) {
+        matchesStrength = STRENGTH_NUMERIC_TYPES.has(rawType);
+        reason = matchesStrength ? ('numeric:' + rawType + '✓') : ('numeric:' + rawType + '✗');
+      } else {
+        const typeStr = String(rawType || '').toLowerCase();
+        matchesStrength = STRENGTH_KEYWORDS.some(k => typeStr.includes(k.replace(/\s+/g, '')));
+        reason = matchesStrength ? ('string:"' + typeStr + '"✓') : ('string:"' + typeStr + '"✗');
+      }
+      if (!matchesStrength) {
+        _hkDebug('strength filter REJECT (' + reason + ')', s);
+        return false;
+      }
       const minutes = _workoutDurationMinutes(s);
-      return minutes >= HEALTHKIT_STRENGTH_MIN_MINUTES;
+      const meetsDuration = minutes >= HEALTHKIT_STRENGTH_MIN_MINUTES;
+      _hkDebug('strength filter ' + (meetsDuration ? 'ACCEPT' : 'REJECT-DURATION') +
+               ' (' + reason + ', ' + minutes.toFixed(1) + ' min)', s);
+      return meetsDuration;
     }
 
-    // Normalize workout duration to minutes. Prefer endDate-startDate
-    // (most reliable across plugin versions). Fall back to the
-    // duration field with a unit-detection heuristic — different
-    // plugin versions return hours/minutes/seconds.
+    // Normalize workout duration to minutes. Defensive ladder across
+    // plugin versions that may emit duration in seconds / minutes /
+    // hours OR as a pre-normalized duration_min field OR only as
+    // startDate / endDate. Returns 0 if nothing usable found.
     function _workoutDurationMinutes(sample) {
+      if (!sample) return 0;
+      // 1. Pre-normalized minute field (some plugins / our own getStrengthWorkoutsBetween wrapper)
+      const dm = Number(sample.duration_min);
+      if (Number.isFinite(dm) && dm > 0) return dm;
+      // 2. Compute from start/end timestamps (most reliable when present)
       try {
         const s = sample.startDate ? new Date(sample.startDate).getTime() : null;
         const e = sample.endDate   ? new Date(sample.endDate).getTime()   : null;
         if (s && e && e > s) return (e - s) / 60000;
       } catch (_) {}
+      // 3. Explicit duration_seconds field (some plugin versions)
+      const ds = Number(sample.duration_seconds);
+      if (Number.isFinite(ds) && ds > 0) return ds / 60;
+      // 4. `duration` with unit-detection heuristic. Apple's plugin
+      //    output is inconsistent across versions: some return hours
+      //    (decimal), some minutes (int 1–1439), some seconds (int ≥1440).
       const d = Number(sample.duration);
       if (!Number.isFinite(d) || d <= 0) return 0;
       if (d < 24)   return d * 60;   // hours (rare strength workout > 24h)
@@ -22518,20 +22605,27 @@
     return habits.find(h => h.name === 'Strength training' && !h.custom) || null;
   }
   async function autoVerifyStrengthTraining() {
-    if (!Health.isAvailable()) return;
+    const _dbg = (() => {
+      try { return localStorage.getItem('hb_debug_healthkit') === '1'; }
+      catch (_) { return false; }
+    })();
+    const log = (...args) => { if (_dbg) { try { console.log('[HK/autoVerifyStrength]', ...args); } catch (_) {} } };
+
+    if (!Health.isAvailable()) { log('bail: HealthKit not available'); return; }
 
     const status = Health.permissionStatus();
     // The walk auto-verify path already drives the first-time
     // pre-prompt. If status is 'unknown', let walk handle it and
     // bail here without prompting.
-    if (status !== 'granted') return;
+    if (status !== 'granted') { log('bail: permission status =', status); return; }
 
     // Fetch workout data ONCE — used by both the Iron Warden
     // evaluator (passive, ignores habit presence + pause toggle)
     // AND the Strength training habit auto-verify below (gated).
     // Single roundtrip via the 5-min workout cache.
     const data = await Health.getStrengthWorkoutsToday();
-    if (!data) return;
+    if (!data) { log('bail: getStrengthWorkoutsToday returned null'); return; }
+    log('data:', data.count, 'qualifying workout(s),', (data.totalMinutes || 0).toFixed(1), 'min');
 
     // ── Boss evaluation (Iron Warden, D-rank) ──────────────
     // Mirrors the Insomniac/Carouser/Steel Wolf pattern: bosses
@@ -22543,12 +22637,12 @@
     } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
 
     // ── Habit auto-verify — gated on pause toggle + habit presence ──
-    if (isAutoVerifyDisabled()) return;
+    if (isAutoVerifyDisabled()) { log('bail: auto-verify paused in Settings'); return; }
     const strength = findStrengthHabit();
-    if (!strength) return;                                       // habit not in user's active list
-    if (isChecked(strength.id)) return;                          // already done (manual or auto)
-    if (AUTO_VERIFY.wasUncheckedToday('Strength training')) return; // user opted out for today
-    if (data.count < 1) return;                                  // no qualifying workout today
+    if (!strength) { log('bail: Strength training habit not in user list'); return; }
+    if (isChecked(strength.id)) { log('bail: already checked today'); return; }
+    if (AUTO_VERIFY.wasUncheckedToday('Strength training')) { log('bail: user un-checked today'); return; }
+    if (data.count < 1) { log('bail: 0 qualifying workouts today'); return; }
 
     AUTO_VERIFY.recordAutoVerify(strength.id, {
       source:        'healthkit-strength-workout',
@@ -22559,6 +22653,7 @@
 
     const li = document.querySelector('.habit-item[data-id="' + strength.id + '"]');
     toggleHabit(strength.id, li, { silent: true });
+    log('SEALED Strength training:', data.count, 'workout(s),', (data.totalMinutes || 0).toFixed(0), 'min');
     console.log('[Health] auto-verified Strength training:',
                 data.count, 'workout(s),', data.totalMinutes.toFixed(0), 'min');
 
