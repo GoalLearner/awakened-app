@@ -40,6 +40,204 @@ const ALLOWED_DUEL_TYPES = new Set([
 ]);
 const DEFAULT_DUEL_TYPE = 'verified_objectives';
 
+// ─────────────────────────────────────────────────────────────
+// Verified Duel Scoring Engine v1 (v3 Phase 1z).
+//
+// 5 scorable duel types + boss_race deferred. The aggregator branches
+// on duel_type to pick the matching event_type set and aggregation
+// strategy:
+//
+//   steps                 → MAX(value) over 'steps_total' events.
+//   sleep                 → COUNT DISTINCT metric_date over
+//                           'sleep_7h_night' events.
+//   bedtime               → COUNT DISTINCT metric_date over
+//                           'bedtime_before_midnight' events.
+//   strength              → COUNT(*) over 'strength_workout' events
+//                           (one row per workout; client uses uuid in
+//                           client_event_id to dedupe).
+//   verified_objectives   → COUNT DISTINCT (event_type, metric_date)
+//                           pairs across the 4 verified_objective_*
+//                           event types. So a daily-walk + sleep on
+//                           the same day = 2 objectives.
+//   boss_race             → NOT SCORED in v1. resolve returns winner=
+//                           null + result='draw' (no reward settle).
+// ─────────────────────────────────────────────────────────────
+const ALLOWED_EVENT_TYPES = new Set([
+  'steps_total',
+  'sleep_7h_night',
+  'bedtime_before_midnight',
+  'strength_workout',
+  'verified_objective_daily_walk',
+  'verified_objective_sleep',
+  'verified_objective_bedtime',
+  'verified_objective_strength',
+  'boss_defeat_verified', // accepted for future, never scored in v1
+]);
+const ALLOWED_EVENT_SOURCES = new Set([
+  'apple_health',
+  'system_verified',
+  'verified_boss',
+]);
+const MAX_EVENTS_PER_BATCH = 25;
+const DUEL_REWARD_REASON = 'duel_win';
+
+type Aggregate =
+  | 'max'
+  | 'count_distinct_date'
+  | 'count_events'
+  | 'count_distinct_type_date'
+  | 'unsupported';
+
+const DUEL_SCORING_CFG: Record<string, { eventTypes: string[]; aggregate: Aggregate }> = {
+  steps: {
+    eventTypes: ['steps_total'],
+    aggregate: 'max',
+  },
+  sleep: {
+    eventTypes: ['sleep_7h_night'],
+    aggregate: 'count_distinct_date',
+  },
+  bedtime: {
+    eventTypes: ['bedtime_before_midnight'],
+    aggregate: 'count_distinct_date',
+  },
+  strength: {
+    eventTypes: ['strength_workout'],
+    aggregate: 'count_events',
+  },
+  verified_objectives: {
+    eventTypes: [
+      'verified_objective_daily_walk',
+      'verified_objective_sleep',
+      'verified_objective_bedtime',
+      'verified_objective_strength',
+    ],
+    aggregate: 'count_distinct_type_date',
+  },
+  boss_race: {
+    eventTypes: [],
+    aggregate: 'unsupported',
+  },
+};
+
+async function computeUserScoreForDuel(
+  env: Env,
+  duel: DuelRow,
+  userId: string,
+): Promise<number> {
+  const cfg = DUEL_SCORING_CFG[duel.duel_type];
+  if (!cfg || cfg.aggregate === 'unsupported' || cfg.eventTypes.length === 0) return 0;
+  const placeholders = cfg.eventTypes.map(() => '?').join(',');
+  if (cfg.aggregate === 'max') {
+    const row = await env.DB.prepare(
+      `SELECT COALESCE(MAX(value), 0) AS s FROM verified_events
+        WHERE duel_id = ? AND user_id = ? AND event_type IN (${placeholders})`,
+    )
+      .bind(duel.id, userId, ...cfg.eventTypes)
+      .first<{ s: number }>();
+    return Number(row?.s ?? 0);
+  }
+  if (cfg.aggregate === 'count_distinct_date') {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(DISTINCT metric_date) AS s FROM verified_events
+        WHERE duel_id = ? AND user_id = ? AND event_type IN (${placeholders})
+          AND metric_date IS NOT NULL`,
+    )
+      .bind(duel.id, userId, ...cfg.eventTypes)
+      .first<{ s: number }>();
+    return Number(row?.s ?? 0);
+  }
+  if (cfg.aggregate === 'count_events') {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(*) AS s FROM verified_events
+        WHERE duel_id = ? AND user_id = ? AND event_type IN (${placeholders})`,
+    )
+      .bind(duel.id, userId, ...cfg.eventTypes)
+      .first<{ s: number }>();
+    return Number(row?.s ?? 0);
+  }
+  if (cfg.aggregate === 'count_distinct_type_date') {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(DISTINCT event_type || ':' || COALESCE(metric_date, client_event_id, id)) AS s
+         FROM verified_events
+        WHERE duel_id = ? AND user_id = ? AND event_type IN (${placeholders})`,
+    )
+      .bind(duel.id, userId, ...cfg.eventTypes)
+      .first<{ s: number }>();
+    return Number(row?.s ?? 0);
+  }
+  return 0;
+}
+
+/**
+ * Pull verified scores for both participants of a duel. Returns a
+ * Map<userId, score>. For boss_race (unsupported), returns zeros so
+ * resolve always renders a draw without throwing.
+ */
+async function getDuelVerifiedScores(
+  env: Env,
+  duel: DuelRow,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const cfg = DUEL_SCORING_CFG[duel.duel_type];
+  if (!cfg || cfg.aggregate === 'unsupported') {
+    out.set(duel.challenger_user_id, 0);
+    out.set(duel.opponent_user_id, 0);
+    return out;
+  }
+  const [c, o] = await Promise.all([
+    computeUserScoreForDuel(env, duel, duel.challenger_user_id),
+    computeUserScoreForDuel(env, duel, duel.opponent_user_id),
+  ]);
+  out.set(duel.challenger_user_id, c);
+  out.set(duel.opponent_user_id, o);
+  return out;
+}
+
+/**
+ * Fall back to legacy duel_progress_snapshots when no verified_events
+ * have been recorded for the duel (back-compat for steps duels that
+ * were already active when 1z shipped).
+ */
+async function hasAnyVerifiedEventForDuel(env: Env, duelId: string): Promise<boolean> {
+  const row = await env.DB.prepare(
+    `SELECT 1 AS exists_flag FROM verified_events WHERE duel_id = ? LIMIT 1`,
+  )
+    .bind(duelId)
+    .first<{ exists_flag: number }>();
+  return !!row;
+}
+
+/**
+ * Insert the duel-win reward into user_souls_ledger. Idempotent via the
+ * UNIQUE(user_id, ref_type, ref_id, reason) index — re-calls are no-ops.
+ * Local hb_souls is NOT modified by v1; the ledger is the eventual
+ * reconciliation target.
+ */
+async function settleDuelReward(env: Env, duel: DuelRow): Promise<void> {
+  if (!duel.winner_user_id) return;
+  const reward = Number(duel.reward_souls) || 0;
+  if (reward <= 0) return;
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO user_souls_ledger (id, user_id, delta, reason, ref_type, ref_id, metadata_json)
+     VALUES (?, ?, ?, ?, 'duel', ?, ?)`,
+  )
+    .bind(
+      crypto.randomUUID(),
+      duel.winner_user_id,
+      reward,
+      DUEL_REWARD_REASON,
+      duel.id,
+      JSON.stringify({ duel_type: duel.duel_type, result: duel.result }),
+    )
+    .run();
+  await env.DB.prepare(
+    `UPDATE duels SET reward_settled_at = CURRENT_TIMESTAMP WHERE id = ? AND reward_settled_at IS NULL`,
+  )
+    .bind(duel.id)
+    .run();
+}
+
 interface DuelRow {
   id: string;
   challenger_user_id: string;
@@ -64,6 +262,8 @@ interface DuelRow {
   // Steps Duel Scoring v1 (v3 Phase 1y).
   resolved_at?: string | null;
   result?: string | null;
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z).
+  reward_settled_at?: string | null;
 }
 
 async function getDuelProgress(
@@ -79,6 +279,41 @@ async function getDuelProgress(
     .all<{ user_id: string; value: number }>();
   for (const r of rows.results ?? []) {
     out.set(r.user_id, Number(r.value) || 0);
+  }
+  return out;
+}
+
+/**
+ * Verified Duel Scoring Engine v1 (v3 Phase 1z). Resolve the
+ * authoritative score map for a duel:
+ *   1. If any verified_events rows exist for this duel, aggregate per
+ *      the duel_type's strategy and return those.
+ *   2. Otherwise fall back to legacy duel_progress_snapshots (covers
+ *      duels that were already active when 1z shipped).
+ *
+ * Always returns a Map with both participant ids — missing = 0. Never
+ * throws.
+ */
+async function getDuelEffectiveScores(
+  env: Env,
+  duel: DuelRow,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  out.set(duel.challenger_user_id, 0);
+  out.set(duel.opponent_user_id, 0);
+  const cfg = DUEL_SCORING_CFG[duel.duel_type];
+  if (cfg && cfg.aggregate !== 'unsupported') {
+    const hasEvents = await hasAnyVerifiedEventForDuel(env, duel.id);
+    if (hasEvents) {
+      const m = await getDuelVerifiedScores(env, duel);
+      m.forEach((v, k) => out.set(k, v));
+      return out;
+    }
+  }
+  // Fallback: legacy steps snapshot (only useful for steps duels).
+  if (duel.duel_type === 'steps') {
+    const legacy = await getDuelProgress(env, duel.id);
+    legacy.forEach((v, k) => out.set(k, v));
   }
   return out;
 }
@@ -161,6 +396,8 @@ function serializeDuel(
     opponent_progress_value: opponentProgress,
     resolved_at: row.resolved_at ?? null,
     result: row.result ?? null,
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z).
+    reward_settled_at: row.reward_settled_at ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -195,23 +432,19 @@ export async function handleDuelsList(
   }
   const aliasMap = await getAliasMap(env, Array.from(userIds));
 
-  // Steps Duel Scoring v1 (v3 Phase 1y). Pull progress snapshots for
-  // every duel returned. Single query joined client-side — keeps the
-  // shape consumer-friendly even with multiple duels per user.
-  const duelIds = allRows.map(r => r.id);
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z). For each duel that
+  // needs a live score readout (active or completed), pull the
+  // effective per-user score map (verified_events first, legacy
+  // snapshots fallback). Per-duel queries — v1 acceptable load, can
+  // batch later via a single JOIN if it ever matters.
   const progressByDuelId = new Map<string, Map<string, number>>();
-  if (duelIds.length > 0) {
-    const placeholders = duelIds.map(() => '?').join(',');
-    const progressRows = await env.DB.prepare(
-      `SELECT duel_id, user_id, value FROM duel_progress_snapshots
-        WHERE metric = 'steps' AND duel_id IN (${placeholders})`,
-    )
-      .bind(...duelIds)
-      .all<{ duel_id: string; user_id: string; value: number }>();
-    for (const p of progressRows.results ?? []) {
-      let m = progressByDuelId.get(p.duel_id);
-      if (!m) { m = new Map<string, number>(); progressByDuelId.set(p.duel_id, m); }
-      m.set(p.user_id, Number(p.value) || 0);
+  for (const r of allRows) {
+    if (r.status !== 'active' && r.status !== 'completed') continue;
+    try {
+      const m = await getDuelEffectiveScores(env, r);
+      progressByDuelId.set(r.id, m);
+    } catch (_) {
+      // Defensive — one bad row shouldn't kill the list.
     }
   }
 
@@ -495,7 +728,7 @@ export async function handleDuelsDetail(
     row.challenger_user_id,
     row.opponent_user_id,
   ]);
-  const progress = await getDuelProgress(env, duelId);
+  const progress = await getDuelEffectiveScores(env, row);
   return jsonOk({ ok: true, duel: serializeDuel(row, aliasMap, session.userId, progress) });
 }
 
@@ -663,7 +896,7 @@ export async function handleDuelsResolve(
   // Idempotent return path.
   if (row.status === 'completed') {
     const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.opponent_user_id]);
-    const progress = await getDuelProgress(env, duelId);
+    const progress = await getDuelEffectiveScores(env, row);
     return jsonOk({
       ok: true,
       duel: serializeDuel(row, aliasMap, session.userId, progress),
@@ -671,11 +904,21 @@ export async function handleDuelsResolve(
     });
   }
 
-  if (row.duel_type !== 'steps') {
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z). boss_race is the
+  // only duel type still deferred — accepted for create + accept, but
+  // resolve fails until the verified boss-event logging path ships.
+  if (row.duel_type === 'boss_race') {
+    return jsonError(
+      400,
+      'BOSS_RACE_SCORING_DEFERRED',
+      'Boss Race scoring activates after verified boss-event logging.',
+    );
+  }
+  if (!DUEL_SCORING_CFG[row.duel_type] || DUEL_SCORING_CFG[row.duel_type].aggregate === 'unsupported') {
     return jsonError(
       400,
       'DUEL_TYPE_NOT_SCORED_YET',
-      'Only steps duels are scored in this version.',
+      `Duel type "${row.duel_type}" is not scored in this version.`,
     );
   }
   if (row.status !== 'active') {
@@ -689,14 +932,12 @@ export async function handleDuelsResolve(
     return jsonError(400, 'DUEL_NOT_ENDED', 'Duel has not yet ended.');
   }
 
-  // Resolve. Missing snapshot = 0.
-  const progress = await getDuelProgress(env, duelId);
-  const challengerScore = progress.has(row.challenger_user_id)
-    ? (progress.get(row.challenger_user_id) ?? 0)
-    : 0;
-  const opponentScore = progress.has(row.opponent_user_id)
-    ? (progress.get(row.opponent_user_id) ?? 0)
-    : 0;
+  // Resolve. verified_events first (new engine), fall back to legacy
+  // duel_progress_snapshots if a steps duel was active before 1z
+  // shipped and never re-submitted.
+  const progress = await getDuelEffectiveScores(env, row);
+  const challengerScore = progress.get(row.challenger_user_id) ?? 0;
+  const opponentScore   = progress.get(row.opponent_user_id) ?? 0;
 
   let winnerUserId: string | null;
   let result: 'challenger_win' | 'opponent_win' | 'draw';
@@ -741,13 +982,227 @@ export async function handleDuelsResolve(
   if (!refreshed) {
     return jsonError(500, 'INTERNAL', 'Failed to read back resolved duel.');
   }
+
+  // Auto-settle the reward into user_souls_ledger. UNIQUE constraint
+  // prevents double-pay if resolve fires twice (network retry, etc).
+  // Draws skip — winner_user_id is null.
+  try { await settleDuelReward(env, refreshed); } catch (_) { /* don't block resolve on settle failure */ }
+
+  // Re-read so the response carries reward_settled_at.
+  const finalRow = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
   const aliasMap = await getAliasMap(env, [
     refreshed.challenger_user_id,
     refreshed.opponent_user_id,
   ]);
   return jsonOk({
     ok: true,
-    duel: serializeDuel(refreshed, aliasMap, session.userId, progress),
+    duel: serializeDuel(finalRow || refreshed, aliasMap, session.userId, progress),
     resolved: true,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /v1/verified-events
+//
+// Verified Duel Scoring Engine v1 (v3 Phase 1z). Batch ingestion of
+// Apple Health / system-verified events. Up to 25 events per call.
+// Body: { events: [{ client_event_id, event_type, metric, value?,
+//                    source, occurred_at, duel_id?, metric_date?,
+//                    window_start?, window_end?, client_created_at?,
+//                    metadata_json? }, ...] }
+//
+// UNIQUE(user_id, client_event_id) deduplicates retries. Inserts use
+// INSERT OR IGNORE so re-submits are no-ops. Counts inserted vs
+// duplicates and returns both.
+//
+// v1 trusts client-submitted values. Not full anti-cheat — future
+// hardening = signed device attestations.
+// ─────────────────────────────────────────────────────────────
+export async function handleVerifiedEventsSubmit(
+  request: Request,
+  env: Env,
+  session: SessionPayload,
+): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) {
+    return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  }
+
+  let body: { events?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
+  }
+  if (!Array.isArray(body?.events)) {
+    return jsonError(400, 'INVALID_BODY', 'events must be an array.');
+  }
+  const events = body.events as Array<Record<string, unknown>>;
+  if (events.length === 0) {
+    return jsonOk({ ok: true, inserted: 0, duplicates: 0 });
+  }
+  if (events.length > MAX_EVENTS_PER_BATCH) {
+    return jsonError(
+      400,
+      'BATCH_TOO_LARGE',
+      `Submit at most ${MAX_EVENTS_PER_BATCH} events per call.`,
+    );
+  }
+
+  let inserted = 0;
+  let duplicates = 0;
+  const errors: Array<{ index: number; reason: string }> = [];
+
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i] || {};
+    const clientEventId = typeof e.client_event_id === 'string' ? e.client_event_id : '';
+    const eventType     = typeof e.event_type      === 'string' ? e.event_type      : '';
+    const metric        = typeof e.metric          === 'string' ? e.metric          : '';
+    const source        = typeof e.source          === 'string' ? e.source          : '';
+    const occurredAt    = typeof e.occurred_at     === 'string' ? e.occurred_at     : '';
+    const duelId        = typeof e.duel_id         === 'string' ? e.duel_id         : null;
+    const metricDate    = typeof e.metric_date     === 'string' ? e.metric_date     : null;
+    const windowStart   = typeof e.window_start    === 'string' ? e.window_start    : null;
+    const windowEnd     = typeof e.window_end      === 'string' ? e.window_end      : null;
+    const clientCreated = typeof e.client_created_at === 'string' ? e.client_created_at : null;
+    const metadata      = typeof e.metadata_json   === 'string' ? e.metadata_json   : null;
+    const rawValue      = e.value;
+    let value = 1;
+    if (rawValue !== undefined && rawValue !== null) {
+      if (typeof rawValue !== 'number' || !Number.isFinite(rawValue) || rawValue < 0) {
+        errors.push({ index: i, reason: 'INVALID_VALUE' });
+        continue;
+      }
+      value = Math.round(rawValue);
+    }
+
+    if (!clientEventId) { errors.push({ index: i, reason: 'MISSING_CLIENT_EVENT_ID' }); continue; }
+    if (!ALLOWED_EVENT_TYPES.has(eventType)) {
+      errors.push({ index: i, reason: 'INVALID_EVENT_TYPE' }); continue;
+    }
+    if (!metric) { errors.push({ index: i, reason: 'MISSING_METRIC' }); continue; }
+    if (!ALLOWED_EVENT_SOURCES.has(source)) {
+      errors.push({ index: i, reason: 'INVALID_SOURCE' }); continue;
+    }
+    if (!occurredAt) { errors.push({ index: i, reason: 'MISSING_OCCURRED_AT' }); continue; }
+
+    try {
+      const result = await env.DB.prepare(
+        `INSERT OR IGNORE INTO verified_events (
+           id, user_id, duel_id, event_type, metric, value, source,
+           occurred_at, metric_date, window_start, window_end,
+           client_event_id, client_created_at, server_created_at,
+           metadata_json
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+      )
+        .bind(
+          crypto.randomUUID(),
+          session.userId,
+          duelId,
+          eventType,
+          metric,
+          value,
+          source,
+          occurredAt,
+          metricDate,
+          windowStart,
+          windowEnd,
+          clientEventId,
+          clientCreated,
+          metadata,
+        )
+        .run();
+      // D1's meta.changes is 1 when the row was actually inserted, 0
+      // on a UNIQUE collision (the INSERT OR IGNORE path).
+      const changes = Number(result?.meta?.changes ?? 0);
+      if (changes > 0) inserted += 1;
+      else duplicates += 1;
+    } catch (err) {
+      errors.push({ index: i, reason: err instanceof Error ? err.message : 'INSERT_FAILED' });
+    }
+  }
+
+  return jsonOk({ ok: true, inserted, duplicates, errors });
+}
+
+// ─────────────────────────────────────────────────────────────
+// GET /v1/duels/:id/score
+//
+// Verified Duel Scoring Engine v1 (v3 Phase 1z). Returns a labelled
+// score readout for both participants — used by the client to format
+// per-type score strings without duplicating the aggregator. Returns
+// 'Awaiting boss-event logging' label for boss_race.
+// ─────────────────────────────────────────────────────────────
+function formatScoreLabel(duelType: string, value: number): string {
+  if (duelType === 'boss_race') return 'Awaiting boss-event logging';
+  if (duelType === 'steps') {
+    const n = Math.max(0, Math.round(value || 0));
+    try { return n.toLocaleString('en-US') + ' steps'; } catch (_) { return n + ' steps'; }
+  }
+  if (duelType === 'sleep') {
+    const n = Math.max(0, Math.round(value || 0));
+    return n + (n === 1 ? ' night' : ' nights');
+  }
+  if (duelType === 'bedtime') {
+    const n = Math.max(0, Math.round(value || 0));
+    return n + (n === 1 ? ' bedtime' : ' bedtimes');
+  }
+  if (duelType === 'strength') {
+    const n = Math.max(0, Math.round(value || 0));
+    return n + (n === 1 ? ' workout' : ' workouts');
+  }
+  if (duelType === 'verified_objectives') {
+    const n = Math.max(0, Math.round(value || 0));
+    return n + ' verified';
+  }
+  return String(value || 0);
+}
+
+export async function handleDuelScoreGet(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  duelId: string,
+): Promise<Response> {
+  const rl = await env.RL_DUELS_READ.limit({ key: session.userId });
+  if (!rl.success) {
+    return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  }
+  const row = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
+  if (!row) {
+    return jsonError(404, 'NOT_FOUND', 'Duel not found.');
+  }
+  if (
+    row.challenger_user_id !== session.userId &&
+    row.opponent_user_id !== session.userId
+  ) {
+    return jsonError(403, 'FORBIDDEN', 'You are not a participant in this duel.');
+  }
+  const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.opponent_user_id]);
+  const progress = await getDuelEffectiveScores(env, row);
+  const cScore = progress.get(row.challenger_user_id) ?? 0;
+  const oScore = progress.get(row.opponent_user_id) ?? 0;
+  return jsonOk({
+    ok: true,
+    duel: serializeDuel(row, aliasMap, session.userId, progress),
+    score: {
+      duel_type: row.duel_type,
+      challenger: {
+        user_id: row.challenger_user_id,
+        alias:   aliasMap.get(row.challenger_user_id) ?? null,
+        score:   cScore,
+        label:   formatScoreLabel(row.duel_type, cScore),
+      },
+      opponent: {
+        user_id: row.opponent_user_id,
+        alias:   aliasMap.get(row.opponent_user_id) ?? null,
+        score:   oScore,
+        label:   formatScoreLabel(row.duel_type, oScore),
+      },
+    },
   });
 }
