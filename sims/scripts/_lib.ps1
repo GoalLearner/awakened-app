@@ -473,12 +473,20 @@ function Invoke-DuelSim {
         $r5 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/accept" -As 'bravo' -Label 'accept-duel'
         Add-Step 'bravo accepts duel' ($r5.status -eq 200 -and $r5.body.duel.status -eq 'active') "status=$($r5.body.duel.status)"
 
-        # 4. Submit verified events for both
-        $alphaEvts = & $AlphaEvents $duelId
+        # 4. Submit verified events for both.
+        # PS 5.1 unwraps single-element scriptblock returns when invoked
+        # via `&`, so a 1-event scriptblock body would arrive as a bare
+        # hashtable and ConvertTo-Json would emit `"events": { ... }`
+        # (object) where the backend expects `"events": [ ... ]` (array)
+        # and rejects with 400. Wrapping the call site in `@(...)` forces
+        # array context AFTER the unwrap, fixing the single-event case
+        # without affecting multi-event sims (the wrap is a no-op on
+        # arrays that are already arrays).
+        $alphaEvts = @(& $AlphaEvents $duelId)
         $r6 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/verified-events' -As 'alpha' -Body @{ events = $alphaEvts } -Label 'alpha-events'
         Add-Step "alpha submits $($alphaEvts.Count) event(s)" ($r6.status -eq 200) "inserted=$($r6.body.inserted) dup=$($r6.body.duplicates)"
 
-        $bravoEvts = & $BravoEvents $duelId
+        $bravoEvts = @(& $BravoEvents $duelId)
         $r7 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/verified-events' -As 'bravo' -Body @{ events = $bravoEvts } -Label 'bravo-events'
         Add-Step "bravo submits $($bravoEvts.Count) event(s)" ($r7.status -eq 200) "inserted=$($r7.body.inserted)"
 

@@ -25,26 +25,24 @@ $result = Invoke-DuelSim -Label '04-strength' -DuelType 'strength' -ExpectedWinn
     } `
     -BravoEvents {
         param($duelId)
-        # @() wrap forces single-element pipeline back into array
-        # context (PS auto-unwraps `@(-1) | ForEach` to the bare
-        # hashtable, then `$bravoEvts.Count` returns the hashtable's
-        # KEY count, and `@{ events = $bravoEvts }` ships a malformed
-        # body the backend rejects with 400).
-        @(
-            @(-1) | ForEach-Object {
-                @{
-                    client_event_id = "sim-bravo-strength-$duelId-$_"
-                    event_type      = 'strength_workout'
-                    metric          = 'strength'
-                    value           = 1
-                    source          = 'apple_health'
-                    occurred_at     = iso $_
-                    duel_id         = $duelId
-                    metric_date     = dStr $_
-                    metadata_json   = '{"activity":"Functional Strength Training","duration_min":22}'
-                }
+        # Single-event return. The array-context wrap lives at the
+        # assignment site in Invoke-DuelSim (`$bravoEvts = @(& ...)`),
+        # not here -- PS 5.1 unwraps any single-element array returned
+        # from a scriptblock call, so wrapping inside the block has no
+        # effect.
+        @(-1) | ForEach-Object {
+            @{
+                client_event_id = "sim-bravo-strength-$duelId-$_"
+                event_type      = 'strength_workout'
+                metric          = 'strength'
+                value           = 1
+                source          = 'apple_health'
+                occurred_at     = iso $_
+                duel_id         = $duelId
+                metric_date     = dStr $_
+                metadata_json   = '{"activity":"Functional Strength Training","duration_min":22}'
             }
-        )
+        }
     }
 
 if ($result.Pass) { Write-Host "PASS  04-strength-duel  -> $($result.RunDir)" -ForegroundColor Green }
