@@ -22989,11 +22989,17 @@
     function persistUncheckedMap(map) {
       try { localStorage.setItem('hb_av_unchecked_dates', JSON.stringify(map)); } catch (_) {}
     }
-    function recordAutoVerify(id, meta) {
-      if (!today) return;
+    // v3 Phase 1z.8 — optional dateStr (default = today). When set,
+    // writes the auto-verify metadata into the supplied calendar day
+    // instead of today. Used by the yesterday-backfill path so a
+    // retroactively-sealed completion gets the same "auto" provenance
+    // the live path produces.
+    function recordAutoVerify(id, meta, dateStr) {
+      const d = dateStr || today;
+      if (!d) return;
       const map = load();
-      if (!map[today]) map[today] = {};
-      map[today][id] = meta || { source: 'unknown' };
+      if (!map[d]) map[d] = {};
+      map[d][id] = meta || { source: 'unknown' };
       persist(map);
     }
     function clearAutoVerify(id) {
@@ -23032,6 +23038,16 @@
       const map = loadUncheckedMap();
       return Array.isArray(map[habitName]) && map[habitName].includes(today);
     }
+    // v3 Phase 1z.8 — date-aware variant. Used by the yesterday-backfill
+    // path to respect the user's prior explicit un-check of an
+    // auto-verified completion on the date being backfilled. Without
+    // this, the backfill would re-seal a completion the user
+    // intentionally rejected.
+    function wasUncheckedOnDate(habitName, dateStr) {
+      if (!habitName || !dateStr) return false;
+      const map = loadUncheckedMap();
+      return Array.isArray(map[habitName]) && map[habitName].includes(dateStr);
+    }
     // Backward-compat aliases — referenced by existing toggleHabit code.
     // Thin wrappers so we don't have to touch the call site immediately.
     const markWalkUnchecked       = () => markUnchecked('Daily walk');
@@ -23039,11 +23055,137 @@
     return {
       recordAutoVerify, clearAutoVerify,
       isAutoVerifiedToday, isAutoVerifiedOnDate,
-      markUnchecked, wasUncheckedToday,
+      markUnchecked, wasUncheckedToday, wasUncheckedOnDate,
       markWalkUnchecked, wasWalkUncheckedToday, // legacy
     };
   })();
   try { window.AutoVerify = AUTO_VERIFY; } catch (_) {}
+
+  // ── v3 Phase 1z.8 — Yesterday-backfill core helpers ─────
+  // The bug: HealthKit auto-verify only checks "today's" data, so a
+  // workout / walk / sleep that completes after the user's last
+  // app-open of the day is invisible to the auto-verifier the next
+  // morning. Real-world repro: 35-min Traditional Strength Training
+  // workout at 10:06 PM Friday → user doesn't reopen the app until
+  // Saturday morning → auto-verify queries Saturday's data and
+  // Friday's workout is never sealed.
+  //
+  // Fix: a second-pass backfill that checks YESTERDAY's data after
+  // today's auto-verify completes. Silent (no celebration / sound /
+  // +XP float) — the user isn't seeing it happen live, so a popup
+  // would feel disconnected. A quiet toast announces the retro-seal.
+  //
+  // _markHistoricalAutoVerify performs the targeted mutations
+  // (completions[dateStr] push, AUTO_VERIFY record, XP grant, streak
+  // recompute) without firing toggleHabit's UI side-effects.
+  // recomputeStreakFromCompletions walks the completions map backwards
+  // to derive the correct streak count after the historical write —
+  // necessary because the existing check()/uncheck() streak math
+  // assumes the day being completed IS today.
+  //
+  // Idempotent via the completions-includes check. Respects the
+  // user's explicit un-check via wasUncheckedOnDate. Won't restore
+  // an XP grant if the user manually completed the date and then
+  // un-checked (the AUTO_VERIFY data shape is per-date so it
+  // remembers).
+  function recomputeStreakFromCompletions(habit) {
+    if (!habit) return;
+    const habitDays = habit.days || ALL_DAYS;
+    // Walk backwards from today until we hit a missing scheduled day
+    // or a non-completion. Stop at 365 to bound the worst case.
+    const startStr = today;
+    const start = new Date(startStr + 'T00:00:00');
+    let count = 0;
+    let lastDate = null;
+    let prevCount = 0;
+    let prevLastDate = null;
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() - i);
+      const ds = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      const dayList = completions[ds];
+      const done = Array.isArray(dayList) && dayList.includes(habit.id);
+      // Day-of-week scoping: if the habit isn't scheduled on this day,
+      // skip without breaking the streak (same semantics as the live
+      // check() path's hasScheduledDayBetween logic).
+      const dow = d.getDay();
+      const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dow];
+      const scheduled = Array.isArray(habitDays) ? habitDays.includes(dayName) : true;
+      if (done) {
+        if (count === 0) lastDate = ds;
+        else if (prevLastDate === null) { prevCount = count; prevLastDate = lastDate; }
+        count++;
+      } else if (scheduled) {
+        // First missed scheduled day → end of streak.
+        break;
+      }
+      // Otherwise (not scheduled this day, not done) — skip without break.
+    }
+    if (!lastDate) {
+      // No completions found in the lookback window — nuke the streak.
+      streaks[habit.id] = { count: 0, lastDate: null, prevCount: 0, prevLastDate: null };
+    } else {
+      streaks[habit.id] = {
+        count: count,
+        lastDate: lastDate,
+        prevCount: prevCount,
+        prevLastDate: prevLastDate,
+      };
+    }
+  }
+
+  // Returns true iff the historical seal actually wrote a new
+  // completion. Returns false on idempotent re-runs (already
+  // completed on dateStr) and on user-rejection (wasUncheckedOnDate).
+  // Never throws — the caller wraps every invocation in try/catch
+  // for defense in depth.
+  function _markHistoricalAutoVerify(habit, dateStr, meta) {
+    if (!habit || !dateStr) return false;
+    if (!completions[dateStr]) completions[dateStr] = [];
+    // Already sealed for that date? Idempotent — bail.
+    if (completions[dateStr].includes(habit.id)) return false;
+    // User explicitly un-checked this date? Respect.
+    try {
+      if (AUTO_VERIFY.wasUncheckedOnDate &&
+          AUTO_VERIFY.wasUncheckedOnDate(habit.name, dateStr)) {
+        return false;
+      }
+    } catch (_) { /* fall through */ }
+    // Mark complete on the historical date.
+    completions[dateStr].push(habit.id);
+    // Record AUTO provenance on that date so the UI's per-date AUTO
+    // pill (History tab corner dot, etc.) renders correctly.
+    try { AUTO_VERIFY.recordAutoVerify(habit.id, meta || { source: 'backfill' }, dateStr); }
+    catch (_) {}
+    // Grant XP. diffPts() doubles on Sat/Sun PT today — for the
+    // historical date we want the rate that WAS in effect for that
+    // calendar day, but diffPts has no date parameter and the worst
+    // case is yesterday (always weekday-vs-weekend off by one). The
+    // ratio of correctness vs added complexity favors using today's
+    // diffPts for now; refactor if a weekly backfill ever ships.
+    const pts = diffPts(habit ? habit.difficulty : 'easy');
+    totalPoints += pts;
+    try { applyStatPts(habit, pts, 1); } catch (_) {}
+    // Recompute streak from the completions map. The naive
+    // increment-on-write path (check()) assumes today; for a
+    // historical seal we have to reconstruct the streak from
+    // contiguous completions.
+    try { recomputeStreakFromCompletions(habit); } catch (_) {}
+    save();
+    // Light-touch achievement check — historical XP can push the
+    // user across thresholds (rank up / stat level) but we suppress
+    // celebrations: those popups would feel disconnected from a
+    // retroactive seal.
+    try { checkAchievements(); } catch (_) {}
+    try { checkStatBonuses(); } catch (_) {}
+    return true;
+  }
+  try {
+    window._markHistoricalAutoVerify = _markHistoricalAutoVerify;
+    window._recomputeStreakFromCompletions = recomputeStreakFromCompletions;
+  } catch (_) {}
 
   // ── Walk auto-verify orchestration ───────────────────────
   // Locates the canonical "Daily walk" habit (strict equality on name +
