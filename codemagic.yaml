@@ -301,6 +301,15 @@ workflows:
             echo "FAIL: www/styles.css missing --ease-cinema token (Phase 1z.2 tokens)"
             exit 1
           fi
+          # v3 Phase 1z.9 — Compact 2X XP buff pill replacing full-width banner.
+          if ! grep -q "aw-buff-pill--xp2x" www/index.html; then
+            echo "FAIL: www/index.html missing aw-buff-pill--xp2x (Phase 1z.9 pill markup)"
+            exit 1
+          fi
+          if ! grep -q "aw-buff-pill" www/styles.css; then
+            echo "FAIL: www/styles.css missing .aw-buff-pill block (Phase 1z.9 pill CSS)"
+            exit 1
+          fi
           # v3 Phase 1z.6 — boss-defeat result modal must be present.
           if ! grep -q "boss-result-overlay" www/index.html; then
             echo "FAIL: www/index.html missing #boss-result-overlay (Phase 1z.6)"
@@ -469,6 +478,15 @@ workflows:
           fi
           if ! grep -q "\-\-ease-cinema" "$PUB/styles.css"; then
             echo "FAIL: $PUB/styles.css missing --ease-cinema token (Phase 1z.2 tokens)"
+            exit 1
+          fi
+          # v3 Phase 1z.9 — Compact 2X XP buff pill must reach iOS bundle.
+          if ! grep -q "aw-buff-pill--xp2x" "$PUB/index.html"; then
+            echo "FAIL: $PUB/index.html missing aw-buff-pill--xp2x (Phase 1z.9 pill markup)"
+            exit 1
+          fi
+          if ! grep -q "aw-buff-pill" "$PUB/styles.css"; then
+            echo "FAIL: $PUB/styles.css missing .aw-buff-pill block (Phase 1z.9 pill CSS)"
             exit 1
           fi
           # v3 Phase 1z.6 — boss-defeat result modal must reach iOS bundle.
