@@ -323,6 +323,15 @@ workflows:
             echo "FAIL: www/styles.css missing .bro-overlay-title (Phase 1z.7)"
             exit 1
           fi
+          # v3 Phase 1z.8 — yesterday-backfill helpers must reach www/.
+          if ! grep -q "_markHistoricalAutoVerify" www/app.js; then
+            echo "FAIL: www/app.js missing _markHistoricalAutoVerify (Phase 1z.8 backfill)"
+            exit 1
+          fi
+          if ! grep -q "_backfillStrengthYesterday" www/app.js; then
+            echo "FAIL: www/app.js missing _backfillStrengthYesterday (Phase 1z.8 backfill)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.
@@ -482,6 +491,15 @@ workflows:
           fi
           if ! grep -q "bro-overlay-title" "$PUB/styles.css"; then
             echo "FAIL: $PUB/styles.css missing .bro-overlay-title (Phase 1z.7)"
+            exit 1
+          fi
+          # v3 Phase 1z.8 — yesterday-backfill helpers must reach iOS bundle.
+          if ! grep -q "_markHistoricalAutoVerify" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing _markHistoricalAutoVerify (Phase 1z.8 backfill)"
+            exit 1
+          fi
+          if ! grep -q "_backfillStrengthYesterday" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing _backfillStrengthYesterday (Phase 1z.8 backfill)"
             exit 1
           fi
           # sw.js cache version cross-check

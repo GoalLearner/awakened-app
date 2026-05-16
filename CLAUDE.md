@@ -716,6 +716,37 @@ Why the policy shifted: the "system is honest" framing applies uniformly. Mixed 
 3. If the habit is HealthKit-auto-verifiable, add it to `isHealthAutoVerifiableHabit()` chain so `sortHabitsAutoVerifyFirst()` pins it to the top
 4. The buildItem render path + click handler already branch on `isReadOnlyAutoVerifyHabit` — no new wiring needed
 
+### Yesterday-backfill (v3 Phase 1z.8)
+
+**Bug:** prior to 1z.8, HealthKit auto-verify only queried "today's" data on every entry-point fire. A workout / walk / sleep that completed AFTER the user's last app-open of the day was permanently invisible to the auto-verifier the next morning — the user would open the app on Saturday, the verifier would query Saturday's data, find nothing, and Friday's 10 PM strength workout was silently dropped. Real-world repro that triggered this fix: 35-min Traditional Strength Training workout at 10:06 PM Friday, app not reopened until Saturday morning, habit never sealed.
+
+**Fix scope:** all four read-only HealthKit habits (Daily walk, Sleep, Sleep before midnight, Strength training) now run a second-pass backfill that checks **yesterday's** Apple Health data after today's auto-verify completes. Yesterday only — not 2 or 3 days. Reduces blast radius; extension is straightforward later if real-world feedback demands it.
+
+**Backfill behavior:**
+- Silent. No celebration animation, no `playCheckSound`, no spawn-XP-particles, no `xp-float` element. The user wasn't watching the moment happen — a popup for yesterday's accomplishment would feel disconnected.
+- Quiet toast announces the retro-seal: `"Strength training sealed for yesterday — 1 verified workout."` / `"Daily walk sealed for yesterday — 8,432 verified steps."` / `"Sleep sealed for yesterday — 7.3h verified."` / `"Sleep before midnight sealed for yesterday — verified."`
+- **XP awarded retroactively.** The user verifiably did the work; their rank/stats math should reflect it.
+- **Streak repaired retroactively.** `recomputeStreakFromCompletions(habit)` walks completions[] backwards from today, counting consecutive scheduled-day completions. A streak broken artificially by yesterday's missing seal is restored when backfill writes yesterday's row.
+- Idempotent: `completions[yesterday].includes(habit.id)` short-circuits a second run in the same session, AND the backend's `recordAutoVerify(id, meta, dateStr)` per-date map prevents double-stamping.
+- Respects user un-check: if `AUTO_VERIFY.wasUncheckedOnDate(habit.name, yesterday)` is true (user explicitly un-checked yesterday's auto-verified completion), backfill refuses to re-seal it.
+
+**Core helpers** (in `app.js`, near the AUTO_VERIFY module):
+- `_markHistoricalAutoVerify(habit, dateStr, meta)` — the sibling of `toggleHabit` that performs the targeted mutations: push into `completions[dateStr]`, record AUTO provenance on that date via `AUTO_VERIFY.recordAutoVerify(id, meta, dateStr)`, grant `diffPts(habit.difficulty)` to `totalPoints` + via `applyStatPts`, recompute streak. Returns `true` only when a new completion was actually written.
+- `recomputeStreakFromCompletions(habit)` — walks completions backwards from `today`, honoring `habit.days` scheduling, stops at first missed scheduled day. 365-day lookback cap. Rebuilds `streaks[habit.id]` with correct `{ count, lastDate, prevCount, prevLastDate }`.
+- `AUTO_VERIFY.recordAutoVerify(id, meta, dateStr)` — `dateStr` argument added in 1z.8 (defaults to today, preserving all existing call sites).
+- `AUTO_VERIFY.wasUncheckedOnDate(habitName, dateStr)` — new date-aware variant of `wasUncheckedToday`.
+
+**Per-habit backfill helpers:**
+- `_backfillWalkYesterday()` — uses `Health.getStepsBetween(yesterday00:00, yesterday23:59)`, threshold from `getHabitStepGoal(walkHabit)`.
+- `_backfillSleepYesterday()` — single `Health.getSleepBetween(2_days_ago_noon, today_noon)` query feeds BOTH Sleep duration + Sleep before midnight. Pulls `byDate[yesterday]` from the returned shape. Bedtime convention matches the live path (the date sealed equals the morning AFTER bedtime).
+- `_backfillStrengthYesterday()` — uses `Health.getStrengthWorkoutsBetween(yesterday00:00, yesterday23:59)`, accepts ≥1 qualifying workout.
+
+**Entry-point wiring:** `autoVerifyWalk`, `autoVerifySleep`, `autoVerifyStrengthTraining` were restructured so today's bail conditions (no habit, paused auto-verify, already-checked, threshold not met, zero workouts today) no longer kill the backfill call at the bottom. Each function wraps today's logic in a guarded block and invokes the backfill UNCONDITIONALLY at the end — backfill has its own gates and runs even when today's path bailed.
+
+**Future extension hooks:**
+- Extending to a 3-day window: change `getDeviceLocalYesterday()` to a loop over a date array. Pity-check: re-running over older dates increases write volume; consider gating to only-needed-dates (e.g. iterate only over dates where `completions[ds]` doesn't already include the habit AND not in the wasUnchecked map). The 14-day prune window on `hb_av_unchecked_dates` is enough to support up to a 14-day backfill window without storage changes.
+- Adding a fifth HealthKit habit: add a new `_backfillXYesterday()` helper following the existing shape and call it from the matching `autoVerifyX` entry point.
+
 ---
 
 ## Daily Insight / Morning Briefing (v1.1.5)
@@ -2475,7 +2506,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=273`, `app.js?v=369`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.255`, `APP_BUILD_TAG = '2.2.1-w19'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=273`, `app.js?v=370`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.256`, `APP_BUILD_TAG = '2.2.1-w20'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ### Boss Defeated design pass (v3 Phase 1z.7)
 
@@ -2595,6 +2626,11 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Adding `hb_boss_result_seen_*` keys to `CloudSync.SNAPSHOT_KEYS`.** These flags are device-local UI acknowledgment, NOT user progress. A reinstall should fire the modal fresh on the next defeat — sync would cause the modal to silently skip on a new device for a kill the user never actually saw on that device. Same principle as the Phase 1w.2 HealthKit reset and Phase 1z.1 verified-event outbox: device-sovereign acknowledgment / transport state stays device-local. If you're unsure: would the user expect this value to follow them to a new phone? For a "modal already shown" flag, the answer is no.
 - **Firing the boss-result modal for rare/ultra drops.** Rare/ultra defeats already trigger the existing cinematic reveal at `#reveal-overlay` via `processRevealQueue`. `announceKillAndDrop` explicitly skips the new `#boss-result-overlay` when `dropInfo.wasFirst && (rarity === 'rare' || rarity === 'ultra_rare')`. Double-firing would stack two dramatic surfaces on top of each other — bad UX, lost emphasis on the rare moment. Common drops and no-drop defeats are the only cases the new modal owns.
 - **Editing the SYSTEM-MANAGED message copy in `index.html` instead of `systemManagedHtmlFor`.** The Notes-modal system-managed body is filled dynamically per-habit by `systemManagedHtmlFor(habit)` (in `app.js`). The HTML in `index.html` is just an empty `#vn-system-message` div. Edit copy in the JS helper; the HTML container is generic.
+- **Making yesterday-backfill loud.** The v3 Phase 1z.8 backfill is silent by design — no `playCheckSound`, no `spawnXpParticles`, no `xp-float`, no rank-up modal, no class-change modal. The user didn't see the moment happen live; popping a celebration for "yesterday's accomplishment" feels disconnected. The quiet toast (`"Strength training sealed for yesterday — 1 verified workout."`) is the only user-visible signal. `_markHistoricalAutoVerify` deliberately bypasses `toggleHabit` for this reason. If you ever change this, surface it as an explicit product decision — never accidentally re-enable the burst by routing backfill through `toggleHabit`.
+- **Backfilling more than yesterday in v1.** Don't extend the window to 2+ days in this pass. Yesterday-only is enough for the dominant case (workout after last app-open, app reopened the next morning). Wider windows mean more retroactive XP, harder-to-audit streak math, more chances for a user to be surprised by a sudden rank-up triggered by a week-old workout. Extension is a follow-up product decision, not an in-pass tweak.
+- **Bypassing `_markHistoricalAutoVerify` for retroactive seal.** Don't directly push into `completions[dateStr]` and call `applyStatPts` ad-hoc. The helper consolidates: idempotency check, wasUncheckedOnDate respect, completion push, AUTO provenance write to the correct dateStr, XP grant, streak recompute, save. Skipping any of those produces inconsistent state — most commonly a sealed completion without AUTO provenance (UI shows the check but no AUTO pill on History) or a sealed completion without streak recompute (streak still reads as broken).
+- **Re-sealing a date the user explicitly un-checked.** The backfill path checks `AUTO_VERIFY.wasUncheckedOnDate(habit.name, yesterday)` before sealing. If the user manually un-checked yesterday's auto-verified completion (via the toggle path that calls `AUTO_VERIFY.markUnchecked`), the backfill MUST respect that. The 14-day prune on `hb_av_unchecked_dates` is wide enough to cover this; don't shorten it.
+- **Forgetting that `AUTO_VERIFY.recordAutoVerify` takes an optional `dateStr` since v3 Phase 1z.8.** Default is still today, so existing call sites compile cleanly. But if you write a new auto-verify path that operates on a historical date, you MUST pass the dateStr — otherwise the AUTO provenance gets stamped on today instead of the date being sealed, breaking the History tab's per-date AUTO dots.
 - **Daily Insight using `getPTDate()` for its day-change check.** The card uses **device-local** time (`getDeviceLocalDate()`), NOT PT. Same rule as notifications and sleep windows. A user in Tokyo opening the app at 6 AM Tokyo time should see today's briefing even though their PT-anchored "today" is yesterday. Don't "fix" this to use PT. Use of PT for the briefing's day-change would also break the visibilitychange retry path for users who travel timezones.
 - **Adding a habit to `HABIT_TIME_OF_DAY` without testing the slate render.** The map only contains `morning` / `evening` exceptions; everything else falls through to `'day'`. If you add a habit and want it grouped under a specific bucket, double-check the spelling matches `DEFAULT_HABITS[].name` exactly (foreign-key match). A typo silently puts the habit in `'day'` — no error, just unexpected grouping. The fallback is intentional but easy to misuse.
 - **Editing `app.js` and forgetting `?v=N`.** Browser will serve the cached old script; you'll think your change is broken when it just hasn't loaded.
