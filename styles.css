@@ -21100,3 +21100,432 @@ body.bro-locked { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .bro-overlay, .bro-shell { animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   v3 Phase 1z.12 — Direction B "Premium Character Sheet"
+   Status card rebuilt; header gains a subtle gold rune underline.
+   Source: Claude Design handoff (Dashboard Explorations / dash-dir-b).
+   Only the Status card structure changes; top dashboard is unchanged
+   except for the rune underline.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Header gold rune underline ──────────────────────────── */
+.aw-header__rune {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Slot inside the existing .header-top { margin-bottom: 16px } — the
+     rune sits in that breathing space so total header height is
+     unchanged. Pulls up tight against the wordmark, breathes 14px below. */
+  margin: -10px 0 14px;
+  pointer-events: none;
+}
+.aw-header__rune-diamond {
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+  background: #f59e0b;
+  opacity: 0.80;
+  flex: 0 0 auto;
+}
+.aw-header__rune-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(245,158,11,0.55), rgba(245,158,11,0));
+  opacity: 0.85;
+}
+
+/* ── Status card · Direction B Profile shell ─────────────── */
+.sc-card.sc-card--profile {
+  /* The profile variant deepens the card background gradient + tightens
+     the border. Existing .sc-card rule still provides the base shadow. */
+  background: linear-gradient(180deg, #15153a 0%, #0c0c24 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  box-shadow:
+    0 0 24px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+/* Banner — rune-flanked HUNTER PROFILE kicker */
+.sc-card--profile .sc-banner {
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.05), transparent);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+}
+.sc-card--profile .sc-banner__rune {
+  width: 28px;
+  height: 1px;
+  flex: 0 0 auto;
+  opacity: 0.6;
+}
+.sc-card--profile .sc-banner__rune--left {
+  background: linear-gradient(90deg, transparent, #f5b842);
+}
+.sc-card--profile .sc-banner__rune--right {
+  background: linear-gradient(90deg, #f5b842, transparent);
+}
+.sc-card--profile .sc-banner__title {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f5b842;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(245,184,66,0.32);
+  line-height: 1;
+}
+
+/* Identity hero row */
+.sc-card--profile .sc-hero {
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: transparent;
+}
+.sc-card--profile .sc-rank-hero {
+  /* Stronger inner glow per Direction B spec; the existing per-rank color
+     vars still drive the ring color via [data-rank] attribute selectors. */
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 26px;
+  background: radial-gradient(circle at 35% 30%, rgba(167,139,250,0.40) 0%, transparent 65%), #1d1d2e;
+  box-shadow:
+    0 0 14px rgba(167,139,250,0.55),
+    inset 0 0 14px rgba(167,139,250,0.30);
+}
+/* Re-tint the rank disc by stored rank — uses the existing rank palette */
+.sc-card--profile .sc-rank-hero[data-rank="E"]  { color: #a78bfa; border: 1.5px solid #a78bfa; box-shadow: 0 0 14px rgba(167,139,250,0.55), inset 0 0 14px rgba(167,139,250,0.30); }
+.sc-card--profile .sc-rank-hero[data-rank="D"]  { color: #8b5cf6; border: 1.5px solid #8b5cf6; box-shadow: 0 0 14px rgba(139, 92,246,0.55), inset 0 0 14px rgba(139, 92,246,0.30); background: radial-gradient(circle at 35% 30%, rgba(139,92,246,0.40) 0%, transparent 65%), #1d1d2e; }
+.sc-card--profile .sc-rank-hero[data-rank="C"]  { color: #8b5cf6; border: 1.5px solid #8b5cf6; box-shadow: 0 0 14px rgba(139, 92,246,0.55), inset 0 0 14px rgba(139, 92,246,0.30); background: radial-gradient(circle at 35% 30%, rgba(139,92,246,0.40) 0%, transparent 65%), #1d1d2e; }
+.sc-card--profile .sc-rank-hero[data-rank="B"]  { color: #3b82f6; border: 1.5px solid #3b82f6; box-shadow: 0 0 14px rgba( 59,130,246,0.55), inset 0 0 14px rgba( 59,130,246,0.30); background: radial-gradient(circle at 35% 30%, rgba(59,130,246,0.40) 0%, transparent 65%), #1d1d2e; }
+.sc-card--profile .sc-rank-hero[data-rank="A"]  { color: #a855f7; border: 1.5px solid #a855f7; box-shadow: 0 0 14px rgba(168, 85,247,0.55), inset 0 0 14px rgba(168, 85,247,0.30); background: radial-gradient(circle at 35% 30%, rgba(168,85,247,0.40) 0%, transparent 65%), #1d1d2e; }
+.sc-card--profile .sc-rank-hero[data-rank="S"]  { color: #f97316; border: 1.5px solid #f97316; box-shadow: 0 0 14px rgba(249,115, 22,0.55), inset 0 0 14px rgba(249,115, 22,0.30); background: radial-gradient(circle at 35% 30%, rgba(249,115,22,0.40) 0%, transparent 65%), #1d1d2e; }
+.sc-card--profile .sc-rank-hero.splus,
+.sc-card--profile .sc-rank-hero[data-rank="S+"] { color: #f59e0b; border: 1.5px solid #f59e0b; box-shadow: 0 0 18px rgba(245,158, 11,0.65), inset 0 0 14px rgba(245,158, 11,0.32); background: radial-gradient(circle at 35% 30%, rgba(245,158,11,0.42) 0%, transparent 65%), #1d1d2e; }
+
+.sc-card--profile .sc-hero-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sc-card--profile .sc-hero-name {
+  /* Cinzel 22 per Direction B spec */
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.4px;
+  line-height: 1.05;
+}
+
+/* Inline identity strip — RANK · PTS · CLASS */
+.sc-card--profile .sc-identity-strip {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+.sc-card--profile .sc-identity-rank {
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+.sc-card--profile .sc-identity-rank[data-rank="E"]  { color: #a78bfa; }
+.sc-card--profile .sc-identity-rank[data-rank="D"],
+.sc-card--profile .sc-identity-rank[data-rank="C"]  { color: #8b5cf6; }
+.sc-card--profile .sc-identity-rank[data-rank="B"]  { color: #3b82f6; }
+.sc-card--profile .sc-identity-rank[data-rank="A"]  { color: #a855f7; }
+.sc-card--profile .sc-identity-rank[data-rank="S"]  { color: #f97316; }
+.sc-card--profile .sc-identity-rank[data-rank="S+"] { color: #f59e0b; }
+.sc-card--profile .sc-identity-sep {
+  color: var(--text-tertiary);
+  margin: 0 6px;
+  font-weight: 600;
+}
+.sc-card--profile .sc-identity-pts { color: var(--text-primary); }
+
+/* The class segment of the strip carries the existing .sc-hero-class
+   class + data-class-key so the delegated class-detail click handler
+   still fires. Reset the legacy .sc-hero-class block layout for inline
+   use here. */
+.sc-card--profile .sc-identity-class.sc-hero-class {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  margin: 0;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 11.5px;
+  letter-spacing: 0.5px;
+  /* color inherits from inline style="color:cls.color" */
+}
+.sc-card--profile .sc-identity-class.sc-hero-class:hover  { background: rgba(255,255,255,0.04); }
+.sc-card--profile .sc-identity-class.sc-hero-class:active { transform: scale(0.98); }
+.sc-card--profile .sc-identity-class .sc-hero-class-name {
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* Italic awakening / class flavor line */
+.sc-card--profile .sc-awakening-msg {
+  margin-top: 8px;
+  font-family: Georgia, "Cormorant Garamond", "Times New Roman", serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+/* Awakening Path — full-width gold button */
+.sc-card--profile .sc-origin-row {
+  padding: 0 16px 14px;
+}
+.sc-card--profile .sc-origin-btn.sc-origin-btn--gold {
+  /* Override the legacy compact .sc-origin-btn appearance with the
+     full-width gold variant. Element still carries id="sc-origin-btn"
+     so its existing click handler fires unchanged. */
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.18), rgba(245,184,66,0.04));
+  border: 1px solid rgba(245,184,66,0.35);
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #f5b842;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow:
+    0 0 14px rgba(245,184,66,0.32),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: transform 0.12s ease, box-shadow 0.18s ease;
+}
+.sc-card--profile .sc-origin-btn.sc-origin-btn--gold:hover {
+  box-shadow:
+    0 0 20px rgba(245,184,66,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.07);
+}
+.sc-card--profile .sc-origin-btn.sc-origin-btn--gold:active { transform: scale(0.98); }
+.sc-card--profile .sc-origin-btn__glyph { font-size: 14px; line-height: 1; }
+.sc-card--profile .sc-origin-btn__label { line-height: 1; }
+.sc-card--profile .sc-origin-btn--gold .sc-origin-chapters {
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(245,184,66,0.15);
+  border: 1px solid rgba(245,184,66,0.35);
+  color: #f5b842;
+  font-weight: 700;
+}
+.sc-card--profile .sc-origin-btn__chev {
+  margin-left: 2px;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+/* Portrait frame — bounded zone, hex backdrop, gold corner brackets */
+.sc-card--profile .sc-portrait-frame {
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background:
+    radial-gradient(ellipse at 30% 60%, rgba(167,139,250,0.32) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(245,184,66,0.08), transparent 60%);
+}
+.sc-card--profile .sc-portrait-hex {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.18;
+  pointer-events: none;
+}
+.sc-card--profile .sc-portrait-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  opacity: 0.65;
+  pointer-events: none;
+}
+.sc-card--profile .sc-portrait-corner--tl { top: 8px;    left: 8px;    border-top:    1px solid #f5b842; border-left:   1px solid #f5b842; }
+.sc-card--profile .sc-portrait-corner--tr { top: 8px;    right: 8px;   border-top:    1px solid #f5b842; border-right:  1px solid #f5b842; }
+.sc-card--profile .sc-portrait-corner--bl { bottom: 8px; left: 8px;    border-bottom: 1px solid #f5b842; border-left:   1px solid #f5b842; }
+.sc-card--profile .sc-portrait-corner--br { bottom: 8px; right: 8px;   border-bottom: 1px solid #f5b842; border-right:  1px solid #f5b842; }
+
+/* Reuse existing .sc-portrait-row layout — already side-by-side. Just
+   layer it above the hex backdrop and corner brackets. */
+.sc-card--profile .sc-portrait-row {
+  position: relative;
+  z-index: 1;
+  padding: 14px 16px;
+  gap: 10px;
+}
+.sc-card--profile .sc-portrait-row .sc-avatar-row { background: none; padding: 0; }
+.sc-card--profile .sc-portrait-row .sc-avatar { width: 130px; height: auto; }
+
+/* Sigil tile footer — 4-up grid, TOTAL XP gold-rimmed primary */
+.sc-card--profile .sc-metrics.sc-metrics--sigil {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px 12px 14px;
+  background: transparent;
+  border-top: none;
+}
+.sc-card--profile .sc-metric.sc-metric--sigil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 4px 8px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-right: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.sc-card--profile .sc-metric.sc-metric--sigil:last-child { border-right: 1px solid rgba(255,255,255,0.07); }
+.sc-card--profile .sc-metric--sigil .sc-metric-val {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-primary);
+  text-shadow: none;
+}
+.sc-card--profile .sc-metric--sigil .sc-metric-lbl {
+  margin-top: 6px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+/* Primary tile — TOTAL XP, gold rim + glow */
+.sc-card--profile .sc-metric--primary {
+  background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.02));
+  border: 1px solid rgba(245,184,66,0.35);
+  box-shadow: inset 0 0 10px rgba(245,184,66,0.16);
+}
+.sc-card--profile .sc-metric--primary .sc-metric-val {
+  color: #f5b842;
+  text-shadow: 0 0 10px rgba(245,184,66,0.32);
+}
+.sc-card--profile .sc-metric--primary .sc-metric-lbl {
+  color: rgba(245,184,66,0.85);
+}
+
+/* Mobile — iPhone SE / sub-360px viewports */
+@media (max-width: 360px) {
+  .sc-card--profile .sc-portrait-row .sc-avatar { width: 110px; }
+  .sc-card--profile .sc-metric--sigil .sc-metric-val { font-size: 16px; }
+}
+@media (max-width: 339px) {
+  /* 2×2 sigil tile fallback */
+  .sc-card--profile .sc-metrics.sc-metrics--sigil {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Reduced motion — kill any avatar pulse */
+@media (prefers-reduced-motion: reduce) {
+  .sc-card--profile .sc-avatar-changed { animation: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   v3 Phase 1z.13 — Status vertical compact pass
+   Goal: full Hunter Profile card visible on a standard iPhone
+   viewport without scrolling. CSS-only override layer — no
+   markup changes, no JS changes, no logic changes. All wired
+   ids preserved.
+   ═══════════════════════════════════════════════════════════ */
+
+/* 1. Status tab outer padding — was 16px above the card, now 4px.
+   Saves 12px directly above the Hunter Profile card. Bottom stays
+   0 because the panel itself scrolls. */
+#profile-panel .status-content { padding: 4px 16px 8px; }
+
+/* 2. Daily quote — small further trim. Shared across tabs but the
+   shave is conservative; quote remains readable + centered. */
+.daily-quote {
+  padding: 6px 16px 6px;
+  min-height: 44px;
+}
+
+/* 3. Hunter Profile banner — tighten vertical padding without
+   dropping the rune-flanked title weight. */
+.sc-card.sc-card--profile .sc-banner { padding: 9px 16px 8px; }
+
+/* 4. Identity row — pull rank disc + name closer to the banner. */
+.sc-card.sc-card--profile .sc-hero            { padding: 10px 16px 8px; gap: 11px; }
+.sc-card.sc-card--profile .sc-identity-strip  { margin-top: 4px; }
+.sc-card.sc-card--profile .sc-awakening-msg   { margin-top: 6px; line-height: 1.4; }
+
+/* 5. Awakening Path button — slightly shorter; still gold + tappable.
+   Tap target stays ≥36px which is plenty for a labeled CTA inside a
+   scroll surface (iOS HIG 44pt minimum is for primary nav targets;
+   inline CTAs in a card surface routinely run 36–40px). */
+.sc-card.sc-card--profile .sc-origin-row                                { padding: 0 16px 10px; }
+.sc-card.sc-card--profile .sc-origin-btn.sc-origin-btn--gold            { padding: 8px 14px; }
+
+/* 6. Portrait frame — biggest single saving. Drop min-height
+   220→178 + tighter inner padding. Avatar shrinks 130→118 to fit
+   the lower frame without cropping the silhouette feet. Radar is
+   already capped at max-width:180px so it scales naturally. */
+.sc-card.sc-card--profile .sc-portrait-frame                { min-height: 178px; }
+.sc-card.sc-card--profile .sc-portrait-row                  { padding: 8px 12px; gap: 6px; }
+.sc-card.sc-card--profile .sc-portrait-row .sc-avatar       { width: 118px; }
+.sc-card.sc-card--profile .sc-portrait-row .sc-radar-svg    { max-width: 178px; }
+
+/* 7. Sigil tile footer — tighter padding + smaller value font on
+   the typical iPhone viewport. Labels stay readable; values stay
+   tabular. */
+.sc-card.sc-card--profile .sc-metrics.sc-metrics--sigil       { padding: 8px 10px 10px; gap: 6px; }
+.sc-card.sc-card--profile .sc-metric.sc-metric--sigil         { padding: 7px 4px 6px; }
+.sc-card.sc-card--profile .sc-metric--sigil .sc-metric-val    { font-size: 16px; }
+.sc-card.sc-card--profile .sc-metric--sigil .sc-metric-lbl    { margin-top: 4px; font-size: 8px; }
+
+/* 8. Wider viewports (~iPhone 14 Pro+, ≥390px) — give a couple
+   extra pixels back so the card doesn't read as cramped on the
+   larger screen real estate. */
+@media (min-width: 400px) {
+  .sc-card.sc-card--profile .sc-portrait-frame              { min-height: 188px; }
+  .sc-card.sc-card--profile .sc-portrait-row .sc-avatar     { width: 126px; }
+}
+
+/* 9. iPhone SE & narrower — keep the previous SE stack/sizing rule
+   but reapply tightened paddings so the compact pass holds. The
+   prior @media (max-width: 380px) on .sc-portrait-row stacks
+   avatar above radar; here we just shrink the gap. */
+@media (max-width: 380px) {
+  .sc-card.sc-card--profile .sc-portrait-frame              { min-height: auto; }
+  .sc-card.sc-card--profile .sc-portrait-row                { gap: 6px; padding: 8px 10px 10px; }
+}

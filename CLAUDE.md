@@ -2506,7 +2506,74 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=275`, `app.js?v=373`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.259`, `APP_BUILD_TAG = '2.2.1-w23'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=277`, `app.js?v=375`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.261`, `APP_BUILD_TAG = '2.2.1-w25'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Status vertical compact pass (v3 Phase 1z.13)
+
+CSS-only follow-up to 1z.12. The Direction B Hunter Profile card looked premium but on a standard iPhone viewport the bottom sigil tiles fell below the fold. This pass tightens vertical spacing on the Status tab so the full card — banner through sigil tile footer — fits on first screen without scrolling. Ships in `2.2.1-w25`.
+
+**Where the savings came from (top → bottom):**
+- `.status-content` top padding 16→4 (-12px)
+- `.daily-quote` padding 10/9→6/6, min-height 58→44 (-18px; shared across tabs, conservative shave)
+- `.sc-card--profile .sc-banner` padding 14/12→9/8 (-9px)
+- `.sc-card--profile .sc-hero` padding 14/10→10/8, identity margin-top 6→4, awakening margin-top 8→6 (-9px)
+- `.sc-card--profile .sc-origin-row` bottom padding 14→10; gold button 10→8 vertical (-8px)
+- `.sc-card--profile .sc-portrait-frame` min-height 220→178; portrait-row padding 14→8; avatar 130→118 (-44px — largest single saving)
+- `.sc-card--profile .sc-metrics--sigil` padding 12/14→8/10; tile padding 9/8→7/6; value 18→16; label 8.5→8, margin-top 6→4 (-12px)
+
+Total reclaimed ≈ 112px on the typical iPhone Pro/Pro Max viewport. Bottom sigil tiles now land above the fold.
+
+**Wider viewports (≥400px)** get a couple pixels back via a `@media (min-width: 400px)` block — portrait frame breathes to 188px min-height and avatar grows to 126px so iPhone 14 Pro+ doesn't read as cramped against the smaller-screen baseline.
+
+**iPhone SE (≤380px)** uses the pre-existing `.sc-portrait-row` vertical-stack media query (avatar above radar) — the compact pass just tightens that stack's padding/gap so the SE degrades gracefully without the avatar getting cropped.
+
+**Preserved (zero changes to logic / wiring / markup):**
+- All wired ids — `#sc-name-val`, `#sc-name-edit`, `#sc-avatar-img`, `#sc-radar-wrap`, `#sc-origin-btn`, `.sc-hero-class[data-class-key]`
+- All click handlers — armory tap, class detail, name edit, Awakening Path
+- Awakening Path button is still gold + full-width + tappable (8px vertical padding inside a labeled CTA on a scroll surface is well above the comfortable-tap threshold)
+- Radar chart math, stat keys, color mapping
+- 2X XP buff pill, souls badge, XP/souls/HealthKit/Duels logic — untouched
+
+**Anti-patterns:**
+- Don't shave the tab-bar (`.tab-btn min-height: 44px`) or tab-icon size — 44px is iOS HIG tap-target minimum for primary nav.
+- Don't kill the daily quote entirely — the trim keeps the line visible + centered. Removing it altogether was offered as a fallback but not needed.
+- Don't tighten the portrait frame below 178px without re-testing on iPhone SE (avatar feet start cropping ~170px at the current silhouette aspect).
+- Don't move `.sc-card--profile` padding rules into the base `.sc-card--profile` selector in 1z.12 — keep the compact pass as a clearly-bounded override section so 1z.12 stays a clean baseline if a future redesign reverts.
+
+### Status card rebuilt as Premium Character Sheet — Direction B (v3 Phase 1z.12)
+
+Claude Design's "Dashboard Explorations" handoff landed; Direction B (Premium Character Sheet) is implemented on the Status card. Top dashboard is intentionally untouched except for one subtle header polish. Ships in `2.2.1-w24`.
+
+**Scope (and what stayed off-limits):**
+- IMPLEMENTED: Status card structural rebuild (Direction B).
+- IMPLEMENTED: subtle gold rune underline on the AWAKENED header (`.aw-header__rune`).
+- NOT IMPLEMENTED on purpose: Direction D's taller hero header. Stat-card rune corners + gold-rim-on-current-card polish from Direction B's spec (kept out per "top dashboard mostly unchanged" instruction). Habits-row inner highlight. Quote whisper variant. Date+gear meta row (kept inline with wordmark so header height stays unchanged).
+
+**Status card structure (replaces the prior STATUS kicker + hero + divider + portrait + flat-strip metrics):**
+1. **Rune-flanked HUNTER PROFILE banner** — Cinzel 12 / +0.32em letter-spacing in gold, flanked by 28px hairline gradients fading to/from gold. Replaces the small "STATUS" kicker (`.sc-banner` + `.sc-banner__rune` + `.sc-banner__title`).
+2. **Identity row** — rank disc 54×54 with stronger inner glow (per-rank color via `[data-rank]` attribute), Cinzel 22 name, inline strip `E RANK · 41 PTS · CIVILIAN`. The class segment of the strip keeps the existing `.sc-hero-class` class + `data-class-key` attribute so the class-detail delegated click handler at `app.js:9255` still fires.
+3. **Italic awakening line** — `cls.desc` rendered in Georgia italic 11.5px (`.sc-awakening-msg`). Conveys "Train any stat to Lv 5 to awaken your path." for Civilian; class flavor for awakened classes.
+4. **Full-width gold Awakening Path button** — `.sc-origin-btn--gold` modifier on the existing `#sc-origin-btn` element. Gradient gold rim, scroll glyph, chapter pill, chevron suffix. Click handler unchanged. Conditional render preserved (only when `originBeginning.text`).
+5. **Portrait frame** — bounded zone with hex grid backdrop (inline SVG `<pattern>` at 0.18 opacity, violet stroke) + 4 gold corner brackets (`.sc-portrait-corner--tl/tr/bl/br`). Avatar + radar layered on top via existing `.sc-portrait-row` (no JS changes — same `#sc-avatar-img` / `#sc-radar-wrap` IDs hosting the existing armory-tap + radar-injection wiring).
+6. **4 sigil tiles** — replaces the flat-strip `.sc-metrics`. Same 4 metrics (Total XP / Best Streak / Days Active / Today), now in a 4-column grid with TOTAL XP elevated to a gold-rimmed primary tile (`.sc-metric--primary`, gold border + inset glow + gold value + gold-tinted label). Sub-340px viewports collapse to 2×2; sub-360px shrinks the metric value 18→16.
+
+**Wired IDs preserved (single source for all class delegations + handlers):**
+- `#sc-name-val` — name span, name-edit replace target
+- `#sc-name-edit` — conditional edit pencil (only when `hb_hunter_name_claimed !== '1'`)
+- `#sc-avatar-img` — armory tap (delegated handler at ~line 12573)
+- `#sc-radar-wrap` — radar injection target (`buildRadarChart` reads this)
+- `#sc-origin-btn` — Awakening Path button (handler at ~line 14192)
+- `.sc-hero-class[data-class-key]` — class-detail delegated click (line ~9255). Now on the CIVILIAN segment of `.sc-identity-strip`.
+
+**Header rune (subtle polish, top-dashboard scope):**
+A 1px diamond + gold-to-transparent linear gradient row sits inside the existing `.header-top { margin-bottom: 16px }` slot. Total header height is unchanged. Decorative only; `aria-hidden="true"` on both the wrapper and inner spans. Class: `.aw-header__rune` with `__rune-diamond` + `__rune-line` children.
+
+**Anti-patterns to avoid:**
+- Don't add a second meta row (date + gear under wordmark) — Direction D shape. We explicitly kept the wordmark + date/gear inline.
+- Don't add the Direction B stat-card rune corners or `.is-current` gold-rim variant on the top 3-card metric strip. User scope is "top dashboard mostly unchanged except for subtle header/rune polish." Rune-corner polish is deferred until product re-greenlights it.
+- Don't reintroduce the `.sc-top` kicker / `.sc-divider` / `.sc-hero-class-desc` / flat `.sc-metrics` styling on the profile variant. The `.sc-card--profile` modifier rewires those classes. The non-profile rules are kept for any future surface that wants the legacy treatment.
+- Don't change the inline strip's class-segment markup without preserving `.sc-hero-class` + `data-class-key`. The class-detail delegated handler keys on that selector; renaming silently breaks class tap.
+- Don't bring back the class emblem inline next to the class name in the identity strip. Direction B intentionally drops it — the strip is identity data, not class iconography. Class emblem may resurface in a future class-detail-card surface.
 
 ### Status-card PR chip retired (v3 Phase 1z.11)
 

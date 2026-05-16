@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w23';
+  const APP_BUILD_TAG = '2.2.1-w25';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9833,108 +9833,115 @@
     const cls        = CLASSES[currentClass] || CLASSES.SAGE;
     const shifting   = isClassShifting();
 
+    // v3 Phase 1z.12 — Status card rebuilt as Direction B "Premium Character
+    // Sheet" (Claude Design handoff). Markup restructured into:
+    //   1. Rune-flanked HUNTER PROFILE banner (replaces the small STATUS kicker)
+    //   2. Identity row: rank disc + Cinzel name + inline rank·pts·class strip
+    //      + italic awakening line
+    //   3. Full-width gold Awakening Path button (conditional)
+    //   4. Portrait frame: avatar + radar inside one hex-backdropped bounded
+    //      zone with 4 gold corner brackets
+    //   5. Footer: 4 sigil tiles with TOTAL XP elevated in gold
+    // Every wired id is preserved:
+    //   #sc-name-val · #sc-name-edit · #sc-avatar-img · #sc-radar-wrap ·
+    //   #sc-origin-btn · .sc-hero-class[data-class-key] (class-detail delegation)
     document.getElementById('status-content').innerHTML =
-      '<div class="sc-card' + (isSPlus ? ' sc-splus' : '') + '">' +
-        // Header label
-        // v3 Phase 1z.10 — Status-card "2x XP" badge retired here so the
-        // top resource-row buff pill is the single source of weekend XP
-        // visibility. The badge duplicated state; no functional loss.
-        '<div class="sc-top">' +
-          '<span class="sc-top-title">STATUS</span>' +
+      '<div class="sc-card sc-card--profile' + (isSPlus ? ' sc-splus' : '') + '">' +
+        // Rune-flanked HUNTER PROFILE banner
+        '<div class="sc-banner">' +
+          '<span class="sc-banner__rune sc-banner__rune--left" aria-hidden="true"></span>' +
+          '<span class="sc-banner__title">Hunter Profile</span>' +
+          '<span class="sc-banner__rune sc-banner__rune--right" aria-hidden="true"></span>' +
         '</div>' +
-        // Hero: rank badge + name + rank + class
-        '<div class="sc-hero">' +
+        // Identity row
+        '<div class="sc-hero sc-hero--profile">' +
           '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '" data-rank="' + esc(rank.id) + '">' + rank.id + '</div>' +
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +
               '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + '</span>' +
               // v3 Phase 1j — hunter name is claim-once. Render the
-              // edit pencil only for users who haven't claimed yet
-              // (legacy path; new users go through signin alias).
+              // edit pencil only for users who haven't claimed yet.
               (localStorage.getItem('hb_hunter_name_claimed') === '1'
                 ? ''
                 : '<button class="sc-edit-btn" id="sc-name-edit" aria-label="Edit name">✎</button>') +
-              // v3 Phase 1z.11 — PR chip retired from the Status card.
-              // The floating "🏆 PR" badge felt decorative and unanchored
-              // next to the hunter identity. Removed entirely per product
-              // call. `buildPRStripHTML()`, the All-PRs sheet markup
-              // (`#pr-all-overlay` / `#pr-all-sheet`), and the delegated
-              // `#pr-open-btn` click handler remain in source as harmless
-              // dead code so future surfaces (e.g. a dedicated Achievements
-              // tab section) can re-wire the All-PRs sheet without
-              // re-implementing the data layer. `personalRecords` storage
-              // continues to capture PRs in the background.
             '</div>' +
-            '<div class="sc-hero-rank' + (isSPlus ? ' sc-gold' : '') + '">' +
-              rank.label + ' · ' + totalPoints.toLocaleString() + ' pts' +
+            // Inline stat strip — carries .sc-hero-class + data-class-key
+            // on the class segment so the existing class-detail delegated
+            // click handler (at ~line 9255) still fires.
+            '<div class="sc-identity-strip">' +
+              '<span class="sc-identity-rank" data-rank="' + esc(rank.id) + '">' + esc(rank.id) + ' RANK</span>' +
+              '<span class="sc-identity-sep">·</span>' +
+              '<span class="sc-identity-pts">' + totalPoints.toLocaleString() + ' PTS</span>' +
+              '<span class="sc-identity-sep">·</span>' +
+              '<span class="sc-identity-class sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
+                '<span class="sc-hero-class-name">' + esc((cls.name || '').toUpperCase()) + '</span>' +
+              '</span>' +
             '</div>' +
-            // Whole class line (name + emblem) is one tappable target —
-            // opens the Class Detail sheet. Inner emblem still has its
-            // own visual hover/press feedback, but tapping the name
-            // works equivalently.
-            '<div class="sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
-              '<span class="sc-hero-class-name">' + esc(cls.name) + '</span>' +
-              // v2.1 — drop the class emblem next to 'Civilian'. The rank
-              // badge + 'Civilian' label already convey the state; the
-              // emblem reads as redundant clutter pre-Awakening. Other
-              // classes keep the emblem since it's a meaningful identity
-              // cue once the user has chosen a path. Text alignment with
-              // sibling rows is preserved by .sc-hero-class's negative
-              // margin-left offset against its hover-padding.
-              (currentClass && currentClass !== 'CIVILIAN'
-                ? ' <span class="sc-class-emblem-btn">' +
-                    classIconHtml(currentClass, { size: 36 }) +
-                  '</span>'
-                : '') +
-            '</div>' +
-            '<div class="sc-hero-class-desc">' + esc(cls.desc) + '</div>' +
-            // 'Awakening Path' — visible whenever we have at least Chapter 1.
-            // Counter shows "(2 chapters)" once the user has awakened.
-            // Renamed from 'Your Origin' in v2.1 for stronger worldbuilding.
-            ((originBeginning && originBeginning.text)
-              ? '<button class="sc-origin-btn" id="sc-origin-btn" type="button">📜 Awakening Path' +
-                  ((originAwakening && originAwakening.text) ? ' <span class="sc-origin-chapters">2 chapters</span>' : '') +
-                '</button>'
-              : '') +
-            (shifting ? '<div class="sc-shifting" style="margin-top:4px">⚠️ Your class is shifting...</div>' : '') +
-            // Path badge + compound streak badges (Morning Routine / Locked-In)
-            // were removed from the Status hero in v1.1.4 — that information
-            // now lives in the "All Streaks" sheet, accessible by tapping the
-            // 🔥 streak pill in the app header.
+            // Italic awakening / class flavor line
+            '<div class="sc-awakening-msg">' + esc(cls.desc) + '</div>' +
+            (shifting ? '<div class="sc-shifting" style="margin-top:6px">⚠️ Your class is shifting...</div>' : '') +
           '</div>' +
         '</div>' +
-        '<div class="sc-divider"></div>' +
-        // Avatar portrait beside the radar chart
+        // Full-width gold Awakening Path button (conditional on Chapter 1)
+        ((originBeginning && originBeginning.text)
+          ? '<div class="sc-origin-row">' +
+              '<button class="sc-origin-btn sc-origin-btn--gold" id="sc-origin-btn" type="button">' +
+                '<span class="sc-origin-btn__glyph" aria-hidden="true">📜</span>' +
+                '<span class="sc-origin-btn__label">Awakening Path</span>' +
+                ((originAwakening && originAwakening.text) ? ' <span class="sc-origin-chapters">2 chapters</span>' : '') +
+                '<span class="sc-origin-btn__chev" aria-hidden="true">›</span>' +
+              '</button>' +
+            '</div>'
+          : '') +
+        // Portrait frame — avatar + radar inside one bounded gold-cornered
+        // zone with hex grid backdrop.
         (function() {
           const src         = getAvatarSrc();
           const justChanged = (_lastAvatarSrc !== null) && (_lastAvatarSrc !== src);
           _lastAvatarSrc    = src;
-          return '<div class="sc-portrait-row">' +
-            '<div class="sc-avatar-row">' +
-              '<img id="sc-avatar-img" class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
-                   'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to view armory" ' +
-                   'loading="eager" ' +
-                   'role="button" tabindex="0" ' +
-                   'style="cursor:pointer">' +
+          return '<div class="sc-portrait-frame">' +
+            // Hex grid backdrop (decorative SVG, aria-hidden)
+            '<svg class="sc-portrait-hex" viewBox="0 0 390 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+              '<defs>' +
+                '<pattern id="sc-hex-bg" patternUnits="userSpaceOnUse" width="20" height="17.32">' +
+                  '<path d="M10 0 L20 5.77 L20 11.55 L10 17.32 L0 11.55 L0 5.77 Z" fill="none" stroke="#a78bfa" stroke-width="0.4"/>' +
+                '</pattern>' +
+              '</defs>' +
+              '<rect width="100%" height="100%" fill="url(#sc-hex-bg)"/>' +
+            '</svg>' +
+            // 4 gold corner brackets
+            '<span class="sc-portrait-corner sc-portrait-corner--tl" aria-hidden="true"></span>' +
+            '<span class="sc-portrait-corner sc-portrait-corner--tr" aria-hidden="true"></span>' +
+            '<span class="sc-portrait-corner sc-portrait-corner--bl" aria-hidden="true"></span>' +
+            '<span class="sc-portrait-corner sc-portrait-corner--br" aria-hidden="true"></span>' +
+            // Avatar + radar
+            '<div class="sc-portrait-row">' +
+              '<div class="sc-avatar-row">' +
+                '<img id="sc-avatar-img" class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
+                     'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to view armory" ' +
+                     'loading="eager" ' +
+                     'role="button" tabindex="0" ' +
+                     'style="cursor:pointer">' +
+              '</div>' +
+              '<div id="sc-radar-wrap" class="sc-radar-wrap"></div>' +
             '</div>' +
-            '<div id="sc-radar-wrap" class="sc-radar-wrap"></div>' +
           '</div>';
         })() +
-        // Metrics strip
-        '<div class="sc-metrics">' +
-          '<div class="sc-metric">' +
+        // 4 sigil tiles — TOTAL XP elevated in gold
+        '<div class="sc-metrics sc-metrics--sigil">' +
+          '<div class="sc-metric sc-metric--sigil sc-metric--primary">' +
             '<span class="sc-metric-val">' + totalPoints.toLocaleString() + '</span>' +
             '<span class="sc-metric-lbl">Total XP</span>' +
           '</div>' +
-          '<div class="sc-metric">' +
+          '<div class="sc-metric sc-metric--sigil">' +
             '<span class="sc-metric-val">' + maxStreak + '</span>' +
             '<span class="sc-metric-lbl">Best Streak</span>' +
           '</div>' +
-          '<div class="sc-metric">' +
+          '<div class="sc-metric sc-metric--sigil">' +
             '<span class="sc-metric-val">' + (daysActive || 0) + '</span>' +
             '<span class="sc-metric-lbl">Days Active</span>' +
           '</div>' +
-          '<div class="sc-metric">' +
+          '<div class="sc-metric sc-metric--sigil">' +
             '<span class="sc-metric-val">' + todayDone + '/' + todaySched + '</span>' +
             '<span class="sc-metric-lbl">Today</span>' +
           '</div>' +
