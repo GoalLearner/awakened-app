@@ -18,3 +18,11 @@ www/
 
 # Original RGB-only avatar PNGs (backed up before alpha-channel fix)
 avatar-originals-rgb/
+
+# Duel sim scaffolding — JWTs + per-run outputs MUST NEVER be committed.
+# Only sims/scripts/, sims/sql/, sims/README.md are version-controlled.
+sims/.secrets/
+sims/runs/
+
+# Temp design extraction (Claude Design handoff bundles)
+.design-tmp/
