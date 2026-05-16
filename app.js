@@ -14396,6 +14396,196 @@
   }
   try { window.submitActiveStepsDuelProgress = submitActiveStepsDuelProgress; } catch (_) {}
 
+  // ───────────────────────────────────────────────────────────
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z).
+  //
+  // Generalizes the v0.1 steps-only submitter into a 5-duel-type
+  // verified event submitter. Walks every active duel, builds
+  // duel-scoped verified events from the matching Apple Health surface,
+  // and batches them to POST /v1/verified-events. Boss-race duels are
+  // skipped — no verified boss-event logging path exists yet.
+  //
+  // Server dedupes via UNIQUE(user_id, client_event_id), so events
+  // resubmitted on every trigger are no-ops. Client builds a stable
+  // client_event_id per (event_type, duel_id, key) so the same Apple
+  // Health datum always lands on the same backend row.
+  // ───────────────────────────────────────────────────────────
+  const VERIFIED_DUEL_TYPES_SCORABLE = new Set([
+    'steps', 'sleep', 'bedtime', 'strength', 'verified_objectives',
+  ]);
+  // Threshold used to mint verified_objective_daily_walk events. Matches
+  // the canonical Daily-walk default goal. Per-day granularity would
+  // be ideal but Health.getStepsBetween returns one total for the
+  // window — for now we approximate by minting one event "today" when
+  // today's steps >= threshold. Daily breakdown is future work.
+  const VERIFIED_OBJ_DAILY_WALK_STEPS = 3000;
+
+  async function _buildEventsForActiveDuel(duel) {
+    const events = [];
+    if (!duel || !duel.starts_at || !duel.ends_at) return events;
+    const startMs = Date.parse(duel.starts_at);
+    const endMs   = Math.min(Date.now(), Date.parse(duel.ends_at));
+    if (!isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) return events;
+    const startISO = new Date(startMs).toISOString();
+    const endISO   = new Date(endMs).toISOString();
+    const nowISO   = new Date().toISOString();
+    const dt = duel.duel_type;
+
+    // ── Steps surface ──
+    if (dt === 'steps' || dt === 'verified_objectives') {
+      let steps = null;
+      try { steps = await Health.getStepsBetween(startISO, endISO); }
+      catch (_) { steps = null; }
+      if (typeof steps === 'number' && steps >= 0) {
+        if (dt === 'steps') {
+          events.push({
+            client_event_id: 'steps_total:' + duel.id,
+            event_type: 'steps_total',
+            metric: 'steps',
+            value: Math.round(steps),
+            source: 'apple_health',
+            occurred_at: nowISO,
+            duel_id: duel.id,
+            window_start: duel.starts_at,
+            window_end: duel.ends_at,
+          });
+        } else if (dt === 'verified_objectives' && typeof Health.getStepsToday === 'function') {
+          // For verified_objectives, mint a single daily-walk objective
+          // event for "today" once today's step total clears the
+          // threshold. Cheap proxy until per-day granularity lands.
+          try {
+            const today = await Health.getStepsToday();
+            if (typeof today === 'number' && today >= VERIFIED_OBJ_DAILY_WALK_STEPS) {
+              const dateKey = (typeof getDeviceLocalDate === 'function')
+                ? getDeviceLocalDate()
+                : new Date().toISOString().slice(0, 10);
+              events.push({
+                client_event_id: 'verified_objective_daily_walk:' + duel.id + ':' + dateKey,
+                event_type: 'verified_objective_daily_walk',
+                metric: 'verified_objectives',
+                value: 1,
+                source: 'system_verified',
+                occurred_at: nowISO,
+                duel_id: duel.id,
+                metric_date: dateKey,
+              });
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    // ── Sleep + Bedtime surface ──
+    if (dt === 'sleep' || dt === 'bedtime' || dt === 'verified_objectives') {
+      if (typeof Health.getSleepBetween === 'function') {
+        let sleep = null;
+        try { sleep = await Health.getSleepBetween(startISO, endISO); }
+        catch (_) { sleep = null; }
+        const byDate = (sleep && sleep.byDate) || {};
+        for (const dateKey of Object.keys(byDate)) {
+          const entry = byDate[dateKey] || {};
+          const total = Number(entry.totalAsleepHours) || 0;
+          const onset = entry.earliestSleepStart || null;
+          // Sleep ≥7h night.
+          if ((dt === 'sleep' || dt === 'verified_objectives') && total >= 7) {
+            const type = (dt === 'verified_objectives') ? 'verified_objective_sleep' : 'sleep_7h_night';
+            events.push({
+              client_event_id: type + ':' + duel.id + ':' + dateKey,
+              event_type: type,
+              metric: (dt === 'verified_objectives') ? 'verified_objectives' : 'sleep_nights',
+              value: 1,
+              source: (dt === 'verified_objectives') ? 'system_verified' : 'apple_health',
+              occurred_at: onset || new Date(dateKey + 'T00:00:00').toISOString(),
+              duel_id: duel.id,
+              metric_date: dateKey,
+            });
+          }
+          // Bedtime before midnight (earliestSleepStart already
+          // restricted to [20:00, 24:00) prior-day window).
+          if ((dt === 'bedtime' || dt === 'verified_objectives') && onset) {
+            const type = (dt === 'verified_objectives') ? 'verified_objective_bedtime' : 'bedtime_before_midnight';
+            events.push({
+              client_event_id: type + ':' + duel.id + ':' + dateKey,
+              event_type: type,
+              metric: (dt === 'verified_objectives') ? 'verified_objectives' : 'bedtime_nights',
+              value: 1,
+              source: (dt === 'verified_objectives') ? 'system_verified' : 'apple_health',
+              occurred_at: onset,
+              duel_id: duel.id,
+              metric_date: dateKey,
+            });
+          }
+        }
+      }
+    }
+
+    // ── Strength surface ──
+    if (dt === 'strength' || dt === 'verified_objectives') {
+      if (typeof Health.getStrengthWorkoutsBetween === 'function') {
+        let workouts = null;
+        try { workouts = await Health.getStrengthWorkoutsBetween(startISO, endISO); }
+        catch (_) { workouts = null; }
+        for (const w of (workouts || [])) {
+          const uid = (w && w.uuid) || (w && w.startDate ? (w.startDate + ':' + (w.duration_min || 0)) : null);
+          if (!uid) continue;
+          const type = (dt === 'verified_objectives') ? 'verified_objective_strength' : 'strength_workout';
+          const dateKey = (w && w.startDate) ? String(w.startDate).slice(0, 10) : null;
+          events.push({
+            client_event_id: type + ':' + duel.id + ':' + uid,
+            event_type: type,
+            metric: (dt === 'verified_objectives') ? 'verified_objectives' : 'strength_workouts',
+            value: 1,
+            source: (dt === 'verified_objectives') ? 'system_verified' : 'apple_health',
+            occurred_at: (w && w.startDate) || nowISO,
+            duel_id: duel.id,
+            metric_date: dateKey,
+          });
+        }
+      }
+    }
+
+    return events;
+  }
+
+  const _VERIFIED_EVENTS_MIN_MS = 5 * 60 * 1000; // 5min debounce between batches
+  let _lastVerifiedEventsAt = 0;
+
+  async function submitVerifiedEventsForDuels(opts) {
+    const force = !!(opts && opts.force);
+    if (!force && Date.now() - _lastVerifiedEventsAt < _VERIFIED_EVENTS_MIN_MS) return;
+    if (!window.Auth || typeof Auth.submitVerifiedEvents !== 'function') return;
+    if (!window.Health || typeof Health.isAvailable !== 'function' || !Health.isAvailable()) return;
+    if (typeof Health.permissionStatus === 'function' && Health.permissionStatus() !== 'granted') return;
+    if (typeof Auth.fetchDuels !== 'function') return;
+
+    let res;
+    try { res = await Auth.fetchDuels(); }
+    catch (_) { return; }
+    if (!res || !res.ok || !Array.isArray(res.active) || res.active.length === 0) {
+      _lastVerifiedEventsAt = Date.now();
+      return;
+    }
+
+    const all = [];
+    for (const duel of res.active) {
+      if (!duel || !VERIFIED_DUEL_TYPES_SCORABLE.has(duel.duel_type)) continue;
+      try {
+        const batch = await _buildEventsForActiveDuel(duel);
+        if (Array.isArray(batch) && batch.length) all.push.apply(all, batch);
+      } catch (_) { /* per-duel isolation */ }
+    }
+    if (all.length === 0) { _lastVerifiedEventsAt = Date.now(); return; }
+
+    // Chunk to <=25 per API call (matches backend MAX_EVENTS_PER_BATCH).
+    for (let i = 0; i < all.length; i += 25) {
+      const chunk = all.slice(i, i + 25);
+      try { await Auth.submitVerifiedEvents(chunk); }
+      catch (_) { /* network noise — try again next trigger */ }
+    }
+    _lastVerifiedEventsAt = Date.now();
+  }
+  try { window.submitVerifiedEventsForDuels = submitVerifiedEventsForDuels; } catch (_) {}
+
   // Steps Duel Scoring v1 — server-authoritative resolution. Called
   // when the Duels tab loads and there's an active duel past its
   // ends_at, OR when the user opens a specific past-ends_at duel.
@@ -14717,8 +14907,11 @@
 
     // Best-effort submit current steps for active steps duels (debounced).
     try { submitActiveStepsDuelProgress(); } catch (_) {}
-    // Note: res.recent intentionally NOT rendered in v1. Completed-duel
-    // outcomes don't have real data until server-side scoring ships.
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z). Submit the
+    // verified-event batch for all scorable duel types. Debounced
+    // independently — both calls coexist while the legacy steps-only
+    // path keeps backwards compat with pre-1z active duels.
+    try { submitVerifiedEventsForDuels(); } catch (_) {}
 
     // Drive the hero with the most-recently-accepted active duel.
     renderActiveDuelHero(active);
@@ -15258,6 +15451,8 @@
           // immediately on accept so the rival sees fresh data the
           // moment they look at the duel.
           try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
+          // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
+          try { submitVerifiedEventsForDuels({ force: true }); } catch (_) {}
         }
         renderDuelsSection();
       });
@@ -15292,6 +15487,8 @@
         if (action === 'accept') {
           // Steps Duel Scoring v1 (v3 Phase 1y) — force submit on accept.
           try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
+          // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
+          try { submitVerifiedEventsForDuels({ force: true }); } catch (_) {}
         }
         const duelId = _ddoCurrentDuelId;
         closeDuelDetail();
@@ -21176,6 +21373,144 @@
       }
     }
 
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z). Range-based sleep
+    // query — generalization of getSleepLastNight() over an arbitrary
+    // [start, end] ISO window. Used by the duel-event submitter to
+    // synthesize sleep_7h_night / bedtime_before_midnight events per
+    // qualifying night inside the duel window.
+    //
+    // Returns:
+    //   {
+    //     samples: <flat asleep sample array>,
+    //     byDate:  {
+    //       'YYYY-MM-DD': {
+    //         totalAsleepHours: <number>,         // sum of 'Asleep' durations
+    //         earliestSleepStart: <ISO string|null>, // first asleep sample whose
+    //                                                // start ∈ [20:00, 24:00) on
+    //                                                // the prior day (the bedtime
+    //                                                // window — same rule as
+    //                                                // getBedtimeSamplesInWindow)
+    //         samples: <samples that contributed to this night>
+    //       }
+    //     }
+    //   }
+    //
+    // Night grouping: every 'Asleep' sample is grouped by its DEVICE-LOCAL
+    // "morning date" (the calendar day that follows the sleep onset). A
+    // sleep block starting at 23:30 on 2026-05-14 belongs to night key
+    // '2026-05-15'. This matches the same convention used by the
+    // Carouser/Insomniac evaluators (the user opens the app on the
+    // morning AFTER the night being evaluated).
+    //
+    // Returns null on:
+    //   - non-native platform / missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws
+    //
+    // Never throws. NOT cached — caller batches; window-keyed caching
+    // would balloon.
+    async function getSleepBetween(startISO, endISO) {
+      if (!isAvailable()) return null;
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+      if (typeof startISO !== 'string' || typeof endISO !== 'string') return null;
+      const p = plugin();
+      if (!p) return null;
+      try {
+        const result = await p.queryHKitSampleType({
+          sampleName: 'sleepAnalysis',
+          startDate:  startISO,
+          endDate:    endISO,
+          limit:      0,
+        });
+        const samples = (result && result.resultData) || [];
+        const asleep = samples.filter(s => s && s.sleepState === 'Asleep');
+        const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
+        const byDate = {};
+        for (const s of asleep) {
+          const start = s.startDate ? new Date(s.startDate) : null;
+          if (!start || isNaN(start.getTime())) continue;
+          // Night key = the device-local calendar day AFTER the sleep
+          // onset. For a sleep block starting before midnight, that's
+          // start+1 day; for one starting at/after midnight, that's
+          // start's own date (post-midnight is part of the same night).
+          // We pick the date of `start + 4h` so 23:xx → next day, 03:xx
+          // → same day. The +4h offset matches the bedtime-window logic.
+          const shifted = new Date(start.getTime() + 4 * 3600 * 1000);
+          const y = shifted.getFullYear();
+          const m = String(shifted.getMonth() + 1).padStart(2, '0');
+          const d = String(shifted.getDate()).padStart(2, '0');
+          const key = `${y}-${m}-${d}`;
+          if (!byDate[key]) byDate[key] = { totalAsleepHours: 0, earliestSleepStart: null, samples: [] };
+          byDate[key].totalAsleepHours += (Number(s.duration) || 0);
+          byDate[key].samples.push(s);
+        }
+        // Compute earliestSleepStart per night using the same
+        // [20:00, 24:00) prior-day window the production bedtime check
+        // uses. Sample must qualify on duration too.
+        for (const key of Object.keys(byDate)) {
+          const entry = byDate[key];
+          const midnight = new Date(key + 'T00:00:00');
+          const winStart = new Date(midnight.getTime() - 4 * 3600 * 1000); // 20:00 prior day
+          const qualifying = entry.samples
+            .filter(s => Number(s.duration) >= napFloorHours)
+            .map(s => ({ start: new Date(s.startDate), src: s }))
+            .filter(s => s.start >= winStart && s.start < midnight)
+            .sort((a, b) => a.start - b.start);
+          entry.earliestSleepStart = qualifying.length ? qualifying[0].start.toISOString() : null;
+        }
+        setStatus('granted');
+        return { samples: asleep, byDate };
+      } catch (e) {
+        console.warn('[Health] sleep range query failed', e);
+        return null;
+      }
+    }
+
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z). Range-based
+    // strength-workout query — generalization of
+    // getStrengthWorkoutsToday() over an arbitrary [start, end] ISO
+    // window. Returns an array of qualifying workouts:
+    //   [{ uuid, startDate, duration_min }, ...]
+    // uuid uses the sample's uuid if available; falls back to a
+    // composite (startDate + duration) so deduping via client_event_id
+    // stays stable on the backend.
+    //
+    // Returns null on:
+    //   - non-native platform / missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws
+    //
+    // Never throws. NOT cached.
+    async function getStrengthWorkoutsBetween(startISO, endISO) {
+      if (!isAvailable()) return null;
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+      if (typeof startISO !== 'string' || typeof endISO !== 'string') return null;
+      const p = plugin();
+      if (!p) return null;
+      try {
+        const result = await p.queryHKitSampleType({
+          sampleName: 'workoutType',
+          startDate:  startISO,
+          endDate:    endISO,
+          limit:      0,
+        });
+        const samples = (result && result.resultData) || [];
+        const qualifying = samples.filter(_isStrengthWorkoutSample).map(s => ({
+          uuid:         (s && (s.uuid || s.UUID)) || null,
+          startDate:    s && s.startDate || null,
+          duration_min: _workoutDurationMinutes(s),
+          raw:          s,
+        }));
+        setStatus('granted');
+        return qualifying;
+      } catch (e) {
+        console.warn('[Health] workout range query failed', e);
+        return null;
+      }
+    }
+
     // Strength-workout filter. Apple's HKWorkoutActivityType enum is
     // surfaced by the plugin as a string — naming varies across
     // plugin versions / iOS versions, so match defensively against a
@@ -21223,7 +21558,9 @@
       getStepsToday,
       getStepsBetween,       // Steps Duel Scoring v1 (v3 Phase 1y)
       getSleepLastNight,
+      getSleepBetween,       // Verified Duel Scoring Engine v1 (v3 Phase 1z)
       getStrengthWorkoutsToday,
+      getStrengthWorkoutsBetween, // Verified Duel Scoring Engine v1 (v3 Phase 1z)
       permissionStatus,
       clearCache,            // step cache
       clearSleepCache,       // sleep cache
@@ -22850,6 +23187,8 @@
       // Steps Duel Scoring v1 (v3 Phase 1y) — push fresh step total
       // for any active steps duels (debounced to 5 min).
       try { submitActiveStepsDuelProgress(); } catch (_) {}
+      // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
+      try { submitVerifiedEventsForDuels(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
@@ -22882,6 +23221,8 @@
       // Steps Duel Scoring v1 (v3 Phase 1y) — force one submit on
       // cold launch so any active steps duels pick up overnight steps.
       try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
+      // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
+      try { submitVerifiedEventsForDuels({ force: true }); } catch (_) {}
       // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
       // fresh installs with a cloud backup; otherwise schedules a
       // baseline upload). Visibility-hidden flush keeps cloud

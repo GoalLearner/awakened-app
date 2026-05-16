@@ -946,6 +946,23 @@
     return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/resolve');
   }
 
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z). Batch-submit
+  // verified events (≤25 per call). The backend dedupes via
+  // UNIQUE(user_id, client_event_id) so retries are safe. Callers
+  // should chunk batches of >25 events.
+  function submitVerifiedEvents(events) {
+    if (!Array.isArray(events)) {
+      return Promise.resolve({ ok: false, code: 'INVALID_PAYLOAD', detail: 'events must be an array.' });
+    }
+    return _authedFetch('POST', '/v1/verified-events', { events: events });
+  }
+
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z). GET both
+  // participants' per-type score + label for a duel.
+  function fetchDuelScore(duelId) {
+    return _authedFetch('GET', '/v1/duels/' + encodeURIComponent(duelId) + '/score');
+  }
+
   // Expose on window for app.js + Settings interactions.
   window.Auth = {
     getCurrentUser,
@@ -976,6 +993,9 @@
     // Steps Duel Scoring v1 (v3 Phase 1y)
     submitDuelProgress,
     resolveDuel,
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z)
+    submitVerifiedEvents,
+    fetchDuelScore,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,
