@@ -160,25 +160,106 @@ function Invoke-SimD1 {
     $errObj = $null
     $parsed = $null
 
-    # wrangler prints WARNING lines + the JSON envelope to stdout. Strip
-    # leading non-JSON noise by finding the first '[' or '{' and parsing
-    # from there. Belt-and-suspenders against the wrangler.toml warning
-    # banner contaminating the JSON.
-    $bracket = $rawStr.IndexOf('[')
-    $brace   = $rawStr.IndexOf('{')
-    $jsonStart = if ($bracket -lt 0) { $brace } elseif ($brace -lt 0) { $bracket } else { [Math]::Min($bracket, $brace) }
+    # ── Sanitize wrangler output before JSON parsing ──────────────
+    #
+    # When wrangler is invoked via the npm-shim wrangler.ps1 with
+    # `2>&1`, PowerShell 5.1 wraps every stderr line into a
+    # NativeCommandError, prepends "node.exe :", and includes the
+    # caller's stack as plain text. The output also retains real ANSI
+    # CSI sequences AND -- after the NativeCommandError text round-trip
+    # -- "literal" ANSI residue like `[33m`, `[43;33m`, `[0m` where
+    # the leading ESC byte got lost.
+    #
+    # The previous parser found the FIRST `[` in the buffer (from a
+    # leftover `[33m` ANSI code), tried to parse from there, and
+    # crashed with "Invalid JSON primitive: 33m". This sanitization
+    # pass strips both the real ANSI bytes and the literal residue,
+    # then drops PS NativeCommandError wrapper lines, BEFORE the JSON
+    # extraction step.
 
-    if ($jsonStart -ge 0) {
-        $jsonText = $rawStr.Substring($jsonStart)
+    $ansiDetected = $false
+
+    # 1. Real ANSI CSI sequences: ESC '[' params final.
+    $esc = [char]27
+    $ansiRegex = [string]($esc) + '\[[0-9;?]*[ -/]*[@-~]'
+    if ($rawStr -match $ansiRegex) { $ansiDetected = $true }
+    $clean = $rawStr -replace $ansiRegex, ''
+
+    # 2. Literal ANSI residue where the ESC byte was lost in
+    #    stdout/stderr conversion: `[33m`, `[1m`, `[43;33m`, `[0m`, etc.
+    #    Matches `[` + 1-3 digit numbers (optionally semicolon-paired)
+    #    + final `m`.
+    if ($clean -match '\[[0-9]{1,3}(;[0-9]{1,3})*m') { $ansiDetected = $true }
+    $clean = $clean -replace '\[[0-9]{1,3}(;[0-9]{1,3})*m', ''
+
+    # 3. PS NativeCommandError wrapper noise.
+    #    - "node.exe :" line prefixes
+    #    - "At C:\...\wrangler.ps1:24 char:5" stack frames
+    #    - "+ ..." continuation lines (carat indicator + diagnostic text)
+    #    - bare leftover unicode box-drawing residue like "Γû▓"
+    $clean = $clean -replace '(?m)^node\.exe\s*:\s*', ''
+    $clean = $clean -replace '(?m)^At\s+\S+:\d+\s+char:\d+.*$', ''
+    $clean = $clean -replace '(?m)^\s*\+\s+.*$', ''
+    $clean = $clean -replace 'Γû▓', ''
+
+    # 4. wrangler banner tokens: after ANSI strip, the warning banner
+    #    leaves literal "[WARNING]", "[INFO]", "[wrangler:info]", etc.
+    #    These start with `[` and would be picked up as JSON-envelope
+    #    candidates. Strip them.
+    $clean = $clean -replace '\[(?:WARNING|INFO|DEBUG|ERROR|NOTE)\]', ''
+    $clean = $clean -replace '\[wrangler:[^\]]+\]', ''
+
+    # 5. Find the JSON envelope inside the cleaned text. wrangler emits
+    #    the JSON LAST, after all banner / warning lines, so scanning
+    #    from the right is more reliable than left-to-right. Try
+    #    candidates in DESCENDING position order: last '[', last '{',
+    #    first '[', first '{'. For each candidate, require the next
+    #    non-whitespace character to look like a JSON token (`{`, `[`,
+    #    `"`, digit, `-`, `t`/`f`/`n` for true/false/null). Anything
+    #    else (e.g. `[Word]` style text we missed) is rejected before
+    #    even trying ConvertFrom-Json.
+    $candidates = @()
+    $lastBr = $clean.LastIndexOf('[')
+    if ($lastBr -ge 0) { $candidates += $lastBr }
+    $lastBc = $clean.LastIndexOf('{')
+    if ($lastBc -ge 0) { $candidates += $lastBc }
+    $firstBr = $clean.IndexOf('[')
+    if ($firstBr -ge 0 -and $candidates -notcontains $firstBr) { $candidates += $firstBr }
+    $firstBc = $clean.IndexOf('{')
+    if ($firstBc -ge 0 -and $candidates -notcontains $firstBc) { $candidates += $firstBc }
+    $candidates = @($candidates | Sort-Object -Descending -Unique)
+
+    foreach ($pos in $candidates) {
+        if ($pos + 1 -ge $clean.Length) { continue }
+        $jsonText = $clean.Substring($pos)
+        # Pre-check: the char immediately after the opener must look
+        # JSON-ish once whitespace is skipped. Rejects "[WARNING ..."
+        # and similar banner text without going through ConvertFrom-Json.
+        $rest = $jsonText.Substring(1).TrimStart()
+        if ($rest.Length -gt 0) {
+            $c = $rest[0]
+            $isJsonish = ($c -eq '{' -or $c -eq '[' -or $c -eq '"' -or
+                          $c -eq '}' -or $c -eq ']' -or $c -eq '-' -or
+                          $c -eq 't' -or $c -eq 'f' -or $c -eq 'n' -or
+                          [char]::IsDigit($c))
+            if (-not $isJsonish) { continue }
+        }
         try {
             $parsed = $jsonText | ConvertFrom-Json -ErrorAction Stop
+            break
         } catch {
-            $ok = $false
-            $errObj = [pscustomobject]@{ text = "could not parse wrangler JSON: $($_.Exception.Message)"; code = -1; name = 'JsonParseError' }
+            $parsed = $null
         }
-    } else {
+    }
+
+    if ($null -eq $parsed) {
         $ok = $false
-        $errObj = [pscustomobject]@{ text = 'wrangler emitted no JSON envelope'; code = -1; name = 'NoJsonEnvelope' }
+        $preview = if ($clean.Length -gt 300) { $clean.Substring(0, 300) + '...[truncated]' } else { $clean }
+        $errObj = [pscustomobject]@{
+            text = "could not parse wrangler JSON envelope. ansi_detected=$ansiDetected exit_code=$exit cleaned_first_300=" + $preview
+            code = -1
+            name = 'JsonParseError'
+        }
     }
 
     if ($exit -ne 0) { $ok = $false }
