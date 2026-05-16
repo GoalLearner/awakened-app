@@ -3656,25 +3656,93 @@ footer {
   line-height: 1;
 }
 
-/* ── DOUBLE XP BANNER ── */
-.double-xp-banner {
-  background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(245,158,11,0.07));
-  border: 1px solid rgba(245,158,11,0.3);
-  border-radius: 10px;
-  padding: 8px 14px;
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.07em;
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.9 — Compact buff pill (Double XP Weekend marker).
+   Sits in .today-strip-right between #perfect-streak-display and
+   #souls-badge. Hidden Mon–Thu via #double-xp-banner.hidden.
+   Replaces the prior full-width .double-xp-banner row entirely.
+   ═══════════════════════════════════════════════════════════════ */
+.aw-buff-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(167, 139, 250, 0.55);
+  background: linear-gradient(135deg, rgba(167,139,250,0.18) 0%, rgba(245,184,66,0.18) 100%);
   color: var(--gold);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  animation: banner-pulse 2.5s ease-in-out infinite;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow:
+    0 0 10px rgba(167, 139, 250, 0.28),
+    inset 0 0 8px rgba(245, 184, 66, 0.08);
+  animation: aw-buff-pill-glow 2.4s ease-in-out infinite;
 }
-
-@keyframes banner-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
-  50%       { box-shadow: 0 0 10px 2px rgba(245,158,11,0.18); }
+.aw-buff-pill.hidden { display: none; }
+/* Invisible hit-area expansion to meet 44pt iOS tap target without
+   visually growing the pill. */
+.aw-buff-pill::before {
+  content: '';
+  position: absolute;
+  inset: -11px -6px;
+  z-index: -1;
+}
+.aw-buff-pill__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(245, 184, 66, 0.45));
+}
+.aw-buff-pill__label { white-space: nowrap; }
+.aw-buff-pill__pulse {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+  margin-left: 1px;
+  animation: aw-buff-pill-pulse 1.6s ease-in-out infinite;
+}
+.aw-buff-pill:active { transform: scale(0.96); }
+.aw-buff-pill:focus-visible {
+  outline: 2px solid rgba(245, 184, 66, 0.8);
+  outline-offset: 2px;
+}
+/* Hover only on devices that actually have a pointer.
+   On iOS Safari, applying :hover styles to touch interactions can
+   cause the first tap to "eat" hover instead of firing click. */
+@media (hover: hover) {
+  .aw-buff-pill:hover { filter: brightness(1.08); }
+}
+/* Violet→gold hue-shift glow loop. Subtle. */
+@keyframes aw-buff-pill-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(167, 139, 250, 0.28), inset 0 0 8px rgba(245, 184, 66, 0.08); }
+  50%      { box-shadow: 0 0 14px rgba(245, 184, 66, 0.32), inset 0 0 10px rgba(167, 139, 250, 0.10); }
+}
+@keyframes aw-buff-pill-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.25); }
+}
+/* Narrow viewport — collapse "2X XP" to "2X" */
+@media (max-width: 359px) {
+  .aw-buff-pill__label-xp { display: none; }
+}
+/* Honor reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .aw-buff-pill,
+  .aw-buff-pill__pulse { animation: none; }
 }
 
 /* ── HABIT PTS INDICATOR ── */
@@ -10576,36 +10644,10 @@ footer {
   .wn-drag-handle { display: none; }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   DOUBLE XP BANNER — tappable Weekend Warrior entry point
-   ═══════════════════════════════════════════════════════════════ */
-.double-xp-banner {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s ease, filter 0.18s ease;
-  user-select: none;
-  -webkit-user-select: none;
-  /* Allow taps to register on iOS — touch-action default 'auto' is fine
-     here, but explicit 'manipulation' disables double-tap-zoom delay. */
-  touch-action: manipulation;
-  position: relative;
-  z-index: 11;  /* sit above sibling banners just in case */
-}
-/* Hover only on devices that actually have a pointer.
-   On iOS Safari, applying :hover styles to touch interactions can cause
-   the first tap to "eat" hover instead of firing click — disabling
-   :hover on touch fixes the unclickable banner symptom. */
-@media (hover: hover) {
-  .double-xp-banner:hover { filter: brightness(1.08); }
-}
-.double-xp-banner:active { transform: scale(0.985); }
-.double-xp-banner:focus-visible {
-  outline: 2px solid rgba(245, 158, 11, 0.8);
-  outline-offset: 2px;
-}
-/* "Active" variant — when user already has No alcohol in their list.
-   Only the text changes; gold styling stays the same per spec. */
-.double-xp-banner.dxb--active { font-size: 0.78rem; }
+/* DOUBLE XP BANNER block retired v3 Phase 1z.9 — replaced by the
+   .aw-buff-pill compact pill defined earlier in this file. The
+   .dxb--active variant is gone (the pill no longer reflects
+   Weekend-Warrior-active state — the WW sheet still does). */
 
 /* ═══════════════════════════════════════════════════════════════
    WEEKEND WARRIOR — bottom-sheet popup
