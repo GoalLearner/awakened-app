@@ -699,6 +699,62 @@ export async function handleDuelsDecline(
 }
 
 // ─────────────────────────────────────────────────────────────
+// POST /v1/duels/:id/cancel — challenger-only, pending-only
+// (v3 Phase 1z.1). Idempotent: returns ok+alreadyCancelled when
+// the duel is already cancelled. No souls movement, no ledger
+// writes — pending duels never debited stake.
+// ─────────────────────────────────────────────────────────────
+export async function handleDuelsCancel(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  duelId: string,
+): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) {
+    return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  }
+
+  const row = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
+  if (!row) {
+    return jsonError(404, 'NOT_FOUND', 'Duel not found.');
+  }
+  if (row.challenger_user_id !== session.userId) {
+    return jsonError(403, 'FORBIDDEN', 'Only the challenger can cancel this duel.');
+  }
+  if (row.status === 'cancelled') {
+    const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.opponent_user_id]);
+    return jsonOk({
+      ok: true,
+      alreadyCancelled: true,
+      duel: serializeDuel(row, aliasMap, session.userId),
+    });
+  }
+  if (row.status !== 'pending') {
+    return jsonError(
+      400,
+      'DUEL_NOT_CANCELLABLE',
+      `Cannot cancel a ${row.status} duel. Only pending invites can be cancelled.`,
+    );
+  }
+  await env.DB.prepare(
+    "UPDATE duels SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+  )
+    .bind(duelId)
+    .run();
+  const updated = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
+    .bind(duelId)
+    .first<DuelRow>();
+  if (!updated) {
+    return jsonError(500, 'INTERNAL', 'Failed to read back cancelled duel.');
+  }
+  const aliasMap = await getAliasMap(env, [updated.challenger_user_id, updated.opponent_user_id]);
+  return jsonOk({ ok: true, duel: serializeDuel(updated, aliasMap, session.userId) });
+}
+
+// ─────────────────────────────────────────────────────────────
 // GET /v1/duels/:id
 // ─────────────────────────────────────────────────────────────
 export async function handleDuelsDetail(

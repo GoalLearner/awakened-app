@@ -40,6 +40,7 @@ import {
   handleDuelsCreate,
   handleDuelsAccept,
   handleDuelsDecline,
+  handleDuelsCancel,
   handleDuelsDetail,
   handleDuelsSubmitProgress,
   handleDuelsResolve,
@@ -53,7 +54,7 @@ import { jsonError } from './lib/responses';
 // Capture group #1 is the row UUID. We accept the standard randomUUID()
 // charset (hex + dashes) — anything else 404s implicitly.
 const FRIENDS_ID_RE = /^\/v1\/friends\/([0-9a-fA-F-]{8,})\/(accept|decline|remove)$/;
-const DUELS_ID_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(accept|decline)$/;
+const DUELS_ID_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(accept|decline|cancel)$/;
 // Steps Duel Scoring v1 (v3 Phase 1y) — POST progress + resolve.
 const DUELS_SCORING_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(progress|resolve)$/;
 // Verified Duel Scoring Engine v1 (v3 Phase 1z) — GET /v1/duels/:id/score.
@@ -150,8 +151,11 @@ export default {
             const action = match[2];
             if (action === 'accept') {
               response = await handleDuelsAccept(request, env, session, duelId);
-            } else {
+            } else if (action === 'decline') {
               response = await handleDuelsDecline(request, env, session, duelId);
+            } else {
+              // 'cancel' — challenger-only, pending-only (v3 Phase 1z.1).
+              response = await handleDuelsCancel(request, env, session, duelId);
             }
           } else if (DUELS_SCORING_RE.test(path) && method === 'POST') {
             // Steps Duel Scoring v1 (v3 Phase 1y).
