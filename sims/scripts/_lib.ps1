@@ -230,7 +230,12 @@ function Invoke-DuelSim {
             Add-Step 'reward_settled_at set' ($null -ne $resolved.reward_settled_at -and $resolved.reward_settled_at -ne '') ''
         }
 
-        # 8. /resolve second call -- idempotent
+        # 8. /resolve second call -- idempotent. Sleep 3s first so the
+        # second call doesn't race the first into the RL_DUELS_WRITE
+        # 6/min window. Idempotency contract is enforced by the SQL
+        # UNIQUE on user_souls_ledger, not by call timing, so the
+        # delay does not weaken the test.
+        Start-Sleep -Seconds 3
         $r10 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-2-idempotent'
         Add-Step '/resolve idempotent (200)' ($r10.status -eq 200) ''
         Add-Step 'idempotent re-call same winner' ($r10.body.duel.winner_user_id -eq $resolved.winner_user_id) ''

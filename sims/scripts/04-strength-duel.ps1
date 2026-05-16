@@ -25,19 +25,26 @@ $result = Invoke-DuelSim -Label '04-strength' -DuelType 'strength' -ExpectedWinn
     } `
     -BravoEvents {
         param($duelId)
-        @(-1) | ForEach-Object {
-            @{
-                client_event_id = "sim-bravo-strength-$duelId-$_"
-                event_type      = 'strength_workout'
-                metric          = 'strength'
-                value           = 1
-                source          = 'apple_health'
-                occurred_at     = iso $_
-                duel_id         = $duelId
-                metric_date     = dStr $_
-                metadata_json   = '{"activity":"Functional Strength Training","duration_min":22}'
+        # @() wrap forces single-element pipeline back into array
+        # context (PS auto-unwraps `@(-1) | ForEach` to the bare
+        # hashtable, then `$bravoEvts.Count` returns the hashtable's
+        # KEY count, and `@{ events = $bravoEvts }` ships a malformed
+        # body the backend rejects with 400).
+        @(
+            @(-1) | ForEach-Object {
+                @{
+                    client_event_id = "sim-bravo-strength-$duelId-$_"
+                    event_type      = 'strength_workout'
+                    metric          = 'strength'
+                    value           = 1
+                    source          = 'apple_health'
+                    occurred_at     = iso $_
+                    duel_id         = $duelId
+                    metric_date     = dStr $_
+                    metadata_json   = '{"activity":"Functional Strength Training","duration_min":22}'
+                }
             }
-        }
+        )
     }
 
 if ($result.Pass) { Write-Host "PASS  04-strength-duel  -> $($result.RunDir)" -ForegroundColor Green }

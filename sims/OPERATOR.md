@@ -283,7 +283,40 @@ the deferred type.
 (`taskkill /F /IM workerd.exe`) and retry.
 
 **Rate limit hit** (`429` responses) — slow down. The sims hit
-`RL_DUELS_WRITE` (6/min) and `RL_FRIENDS_WRITE` (10/min) caps.
-Wait 60s between full-matrix runs.
+`RL_DUELS_WRITE` (6/min per user) and `RL_FRIENDS_WRITE` (10/min)
+caps. The bundled `run-all.ps1` already sleeps 75 s between scripts
++ 3 s between the two `/resolve` calls inside a single script, both
+of which keep the per-user 60-s sliding window drained. If running
+sims by hand, wait 60–75 s between scripts.
+
+**`409` on create duel** ("DUEL_ALREADY_EXISTS_BETWEEN_PAIR" or
+similar) — there's an unresolved pending/active duel between the
+sim pair from a prior run that didn't reach `/resolve`. Either:
+- Re-run the prior script so its duel resolves, or
+- Run `POST /teardown` against the seed worker to wipe everything
+  and start clean (then re-seed JWTs and resume).
+
+**`400` on submit verified-events** with empty body — the script
+sent a malformed batch. Most common cause: a single-element
+`@(-1) | ForEach-Object {...}` pipeline auto-unwrapped into a bare
+hashtable; wrap the whole pipeline in `@(...)` to force array
+context.
+
+### What an aborted run-all looks like (real example, May 16)
+
+First two scripts pass, rest fail in a cascade:
+
+| Run | Status | Diagnosis |
+|---|---|---|
+| 01-steps | PASS | clean |
+| 02-sleep | FAIL (idempotent `/resolve` 429) | back-to-back resolve hit `RL_DUELS_WRITE` cap |
+| 03-bedtime | FAIL (create 429) | window still hot from 01+02 |
+| 04-strength | FAIL (alpha events 429 + bravo events 400) | rate-limit + the single-element bravo array bug |
+| 05-verified-objectives | FAIL (create 409) | 04's strength duel never reached `/resolve`, so it's still active and the same pair can't open a second active duel |
+| 06-boss-race | FAIL (create 409) | same active-duel collision |
+
+Fixes shipped 2026-05-16: pacing bumped to 75 s + 3 s, bravo array
+bug fixed in `04-strength-duel.ps1`. To recover from this state,
+run `POST /teardown` then `POST /seed` again, then `run-all.ps1`.
 
 **JWT expired** (after 90 days) → re-run `/seed`; JWTs are minted fresh.

@@ -1,5 +1,14 @@
-# run-all.ps1 -- Run every sim sequentially. 60s sleep between each
-# to stay well under the RL_DUELS_WRITE rate-limit cap (6/min).
+# run-all.ps1 -- Run every sim sequentially.
+#
+# Pacing: each sim performs ~4-6 RL_DUELS_WRITE-bucket calls per user
+# (create + accept + resolve x2 + sometimes more). The CF rate-limit
+# binding RL_DUELS_WRITE is 6/min on a sliding window per user, so
+# back-to-back sim runs saturate the window and the next script gets
+# 429s on its first write. 75s between scripts gives the window time
+# to drain. (Theoretical minimum is 60s; 75s adds buffer.)
+#
+# Within a script, the two /resolve calls (the idempotency check) are
+# separated by a 3s sleep inside Invoke-DuelSim for the same reason.
 
 $ErrorActionPreference = 'Continue'
 
@@ -28,10 +37,11 @@ foreach ($s in $scripts) {
         Pass     = ($code -eq 0)
         Duration = $dt.TotalSeconds
     }
-    # Pause between sims to keep under rate-limit (RL_DUELS_WRITE 6/min)
+    # Pause between sims so the RL_DUELS_WRITE 60-s sliding window
+    # has time to drain. See script header for the math.
     if ($s -ne $scripts[-1]) {
-        Write-Host "  sleeping 15s before next sim..." -ForegroundColor DarkGray
-        Start-Sleep -Seconds 15
+        Write-Host "  sleeping 75s before next sim..." -ForegroundColor DarkGray
+        Start-Sleep -Seconds 75
     }
 }
 
@@ -51,7 +61,10 @@ foreach ($r in $results) {
     Write-Host ("  {0}  {1,-36}  {2,5:N1}s" -f $tag, $r.Script, $r.Duration) -ForegroundColor $color
 }
 Write-Host ""
-Write-Host ("  $pcount/$($scripts.Count) PASS - $fcount FAIL - total $('{0:N1}' -f $totalDt.TotalSeconds)s") -ForegroundColor (if ($pass) { 'Green' } else { 'Red' })
+# PS 5.1 cannot use an inline `if/else` as a parameter-argument
+# expression; hoist the color into a variable first.
+$summaryColor = if ($pass) { 'Green' } else { 'Red' }
+Write-Host ("  $pcount/$($scripts.Count) PASS - $fcount FAIL - total $('{0:N1}' -f $totalDt.TotalSeconds)s") -ForegroundColor $summaryColor
 Write-Host ""
 
 exit ([int](-not $pass))
