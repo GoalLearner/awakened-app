@@ -23355,6 +23355,186 @@
     });
   }
 
+  // ── v3 Phase 1z.8 — Yesterday-backfill helpers (per-habit) ─
+  //
+  // Each backfill helper queries Apple Health for yesterday's data
+  // via the range-based Health.getXBetween functions (which already
+  // exist for duels) and seals the habit on yesterday's date if it
+  // qualifies. All four follow the same shape:
+  //   1. Gate checks (Health available, permission granted, pause off)
+  //   2. Find the canonical habit; bail if user doesn't have it
+  //   3. Bail if completions[yesterday] already includes the habit id
+  //   4. Query the matching Apple Health surface for yesterday's window
+  //   5. Apply the threshold check
+  //   6. Call _markHistoricalAutoVerify(habit, yesterday, meta)
+  //   7. On success: silent toast announcing the retroactive seal
+  //
+  // None of these helpers fire celebrations / sound / +XP float — the
+  // user wasn't watching the moment. Idempotent on
+  // completions-includes; respects wasUncheckedOnDate.
+  async function _backfillStrengthYesterday() {
+    try {
+      if (!Health.isAvailable()) return;
+      if (Health.permissionStatus() !== 'granted') return;
+      if (isAutoVerifyDisabled()) return;
+      const habit = findStrengthHabit();
+      if (!habit) return;
+      const yesterday = getDeviceLocalYesterday();
+      if (!yesterday) return;
+      if (completions[yesterday] && completions[yesterday].includes(habit.id)) return;
+      if (AUTO_VERIFY.wasUncheckedOnDate &&
+          AUTO_VERIFY.wasUncheckedOnDate(habit.name, yesterday)) return;
+      // Query workouts in yesterday's device-local day window.
+      const start = new Date(yesterday + 'T00:00:00').toISOString();
+      const end   = new Date(yesterday + 'T23:59:59.999').toISOString();
+      let workouts = null;
+      try { workouts = await Health.getStrengthWorkoutsBetween(start, end); }
+      catch (_) { return; }
+      if (!Array.isArray(workouts) || workouts.length < 1) return;
+      const totalMinutes = workouts.reduce((sum, w) => sum + (Number(w.duration_min) || 0), 0);
+      const did = _markHistoricalAutoVerify(habit, yesterday, {
+        source: 'healthkit-strength-workout-backfill',
+        value: totalMinutes,
+        threshold: HEALTHKIT_STRENGTH_MIN_MINUTES,
+        workoutCount: workouts.length,
+      });
+      if (!did) return;
+      try {
+        showHabitToast('Strength training sealed for yesterday — ' +
+          workouts.length + ' verified workout' +
+          (workouts.length === 1 ? '' : 's') + '.');
+      } catch (_) {}
+      if (currentTab === 'habits') renderHabits();
+      if (currentTab === 'profile' && typeof renderProfile === 'function') {
+        try { renderProfile(); } catch (_) {}
+      }
+      console.log('[Health] backfilled Strength training for', yesterday,
+                  '—', workouts.length, 'workout(s),', totalMinutes.toFixed(0), 'min');
+    } catch (e) { console.warn('[Health] strength backfill failed', e); }
+  }
+
+  async function _backfillWalkYesterday() {
+    try {
+      if (!Health.isAvailable()) return;
+      if (Health.permissionStatus() !== 'granted') return;
+      if (isAutoVerifyDisabled()) return;
+      const habit = findWalkHabit();
+      if (!habit) return;
+      const yesterday = getDeviceLocalYesterday();
+      if (!yesterday) return;
+      if (completions[yesterday] && completions[yesterday].includes(habit.id)) return;
+      if (AUTO_VERIFY.wasUncheckedOnDate &&
+          AUTO_VERIFY.wasUncheckedOnDate(habit.name, yesterday)) return;
+      const threshold = getHabitStepGoal(habit);
+      const start = new Date(yesterday + 'T00:00:00').toISOString();
+      const end   = new Date(yesterday + 'T23:59:59.999').toISOString();
+      let steps = null;
+      try { steps = await Health.getStepsBetween(start, end); }
+      catch (_) { return; }
+      if (steps == null || steps < threshold) return;
+      const did = _markHistoricalAutoVerify(habit, yesterday, {
+        source: 'healthkit-steps-backfill',
+        value: steps,
+        threshold: threshold,
+      });
+      if (!did) return;
+      try {
+        showHabitToast('Daily walk sealed for yesterday — ' +
+          Math.round(steps).toLocaleString() + ' verified steps.');
+      } catch (_) {}
+      if (currentTab === 'habits') renderHabits();
+      if (currentTab === 'profile' && typeof renderProfile === 'function') {
+        try { renderProfile(); } catch (_) {}
+      }
+      console.log('[Health] backfilled Daily walk for', yesterday, '—', steps, 'steps');
+    } catch (e) { console.warn('[Health] walk backfill failed', e); }
+  }
+
+  // Sleep duration + bedtime share a single getSleepBetween query
+  // since they read the same data shape. Combined helper avoids
+  // duplicate HealthKit roundtrips.
+  async function _backfillSleepYesterday() {
+    try {
+      if (!Health.isAvailable()) return;
+      if (Health.permissionStatus() !== 'granted') return;
+      if (isAutoVerifyDisabled()) return;
+      const sleep   = findSleepHabit();
+      const bedtime = findSleepBeforeMidnightHabit();
+      if (!sleep && !bedtime) return;
+      const yesterday = getDeviceLocalYesterday();
+      if (!yesterday) return;
+      const sleepAlready   = sleep   && completions[yesterday] && completions[yesterday].includes(sleep.id);
+      const bedtimeAlready = bedtime && completions[yesterday] && completions[yesterday].includes(bedtime.id);
+      if (sleepAlready && bedtimeAlready) return;
+      // 48-hour window: from 2 days ago noon → today noon. Captures the
+      // sleep block that ENDS on yesterday morning (byDate key = yesterday).
+      const twoAgo = new Date();
+      twoAgo.setDate(twoAgo.getDate() - 2);
+      twoAgo.setHours(12, 0, 0, 0);
+      const today12 = new Date();
+      today12.setHours(12, 0, 0, 0);
+      const startISO = twoAgo.toISOString();
+      const endISO   = today12.toISOString();
+      let data = null;
+      try { data = await Health.getSleepBetween(startISO, endISO); }
+      catch (_) { return; }
+      if (!data || !data.byDate) return;
+      const night = data.byDate[yesterday];
+      if (!night) return;
+      // ── Sleep duration backfill ───────────────────────────
+      if (sleep && !sleepAlready &&
+          !(AUTO_VERIFY.wasUncheckedOnDate && AUTO_VERIFY.wasUncheckedOnDate(sleep.name, yesterday))) {
+        const goalHours = getSleepGoalHours(sleep);
+        if ((night.totalAsleepHours || 0) >= goalHours) {
+          const did = _markHistoricalAutoVerify(sleep, yesterday, {
+            source: 'healthkit-sleep-duration-backfill',
+            value: night.totalAsleepHours,
+            threshold: goalHours,
+          });
+          if (did) {
+            try {
+              showHabitToast('Sleep sealed for yesterday — ' +
+                Number(night.totalAsleepHours).toFixed(1) + 'h verified.');
+            } catch (_) {}
+            console.log('[Health] backfilled Sleep for', yesterday,
+                        '—', Number(night.totalAsleepHours).toFixed(2), 'h');
+          }
+        }
+      }
+      // ── Sleep before midnight backfill ────────────────────
+      // Convention match: the live path seals "Sleep before midnight"
+      // on the morning AFTER bedtime (today's date for last night's
+      // sleep). For backfill, byDate[yesterday] already corresponds
+      // to the sleep block ending on yesterday morning, so the date
+      // to seal is yesterday — consistent with the live path.
+      if (bedtime && !bedtimeAlready &&
+          !(AUTO_VERIFY.wasUncheckedOnDate && AUTO_VERIFY.wasUncheckedOnDate(bedtime.name, yesterday))) {
+        if (night.earliestSleepStart) {
+          const did = _markHistoricalAutoVerify(bedtime, yesterday, {
+            source: 'healthkit-sleep-bedtime-backfill',
+            value: night.earliestSleepStart,
+          });
+          if (did) {
+            try { showHabitToast('Sleep before midnight sealed for yesterday — verified.'); }
+            catch (_) {}
+            console.log('[Health] backfilled Sleep before midnight for', yesterday,
+                        '— onset', night.earliestSleepStart);
+          }
+        }
+      }
+      if (currentTab === 'habits') renderHabits();
+      if (currentTab === 'profile' && typeof renderProfile === 'function') {
+        try { renderProfile(); } catch (_) {}
+      }
+    } catch (e) { console.warn('[Health] sleep backfill failed', e); }
+  }
+
+  try {
+    window._backfillStrengthYesterday = _backfillStrengthYesterday;
+    window._backfillWalkYesterday     = _backfillWalkYesterday;
+    window._backfillSleepYesterday    = _backfillSleepYesterday;
+  } catch (_) {}
+
   // Auto-verify entry point. Called from renderHabits() on each render.
   // Async: returns a promise that resolves after the HealthKit query
   // completes (or short-circuits). Never throws — auto-verify is a
@@ -23383,7 +23563,12 @@
     //   2. Habit auto-verify — gated on habit presence + pause +
     //      already-checked + opted-out.
     const steps = await Health.getStepsToday();
-    if (steps == null) return;
+    if (steps == null) {
+      // v3 Phase 1z.8 — still backfill yesterday even if today's
+      // fetch failed (yesterday uses its own getStepsBetween query).
+      try { _backfillWalkYesterday(); } catch (_) {}
+      return;
+    }
 
     // ── Leaderboard recording (v2.0.2) ─────────────────────
     // Independent of habit presence + pause toggle (see module
@@ -23405,33 +23590,38 @@
       evaluateGlassStriderForDay(steps, getDeviceLocalDate());
     } catch (e) { console.warn('[Bosses] glass strider eval failed', e); }
 
-    // ── Habit auto-verify gates ────────────────────────────
-    // User has paused auto-verify in Settings → Apple Health. Manual
-    // completion path is unaffected. (v1.1.5)
-    if (isAutoVerifyDisabled()) return;
-    if (!walk) return;                           // user doesn't have the habit
-    if (isChecked(walk.id)) return;              // already done (manual or auto)
-    if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) return;  // user opted out for today
-    const threshold = getHabitStepGoal(walk);
-    if (steps < threshold) return;
+    // ── Today habit auto-verify ────────────────────────────
+    // Restructured (v3 Phase 1z.8) so today's bail conditions don't
+    // also kill the yesterday-backfill call at the bottom. Each
+    // guard `skip` rather than `return`.
+    let didTodaySeal = false;
+    if (isAutoVerifyDisabled() || !walk) {
+      // skip today
+    } else if (isChecked(walk.id)) {
+      // skip today
+    } else if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) {
+      // skip today
+    } else {
+      const threshold = getHabitStepGoal(walk);
+      if (steps >= threshold) {
+        AUTO_VERIFY.recordAutoVerify(walk.id, {
+          source: 'healthkit-steps',
+          value: steps,
+          threshold: threshold,
+        });
+        const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+        toggleHabit(walk.id, li, { silent: true });
+        console.log('[Health] auto-verified Daily walk:', steps, 'steps');
+        didTodaySeal = true;
+      }
+    }
 
-    AUTO_VERIFY.recordAutoVerify(walk.id, {
-      source: 'healthkit-steps',
-      value: steps,
-      threshold: threshold,
-    });
+    if (didTodaySeal && currentTab === 'habits') renderHabits();
 
-    // If the LI is currently in the DOM, animate via the standard
-    // toggleHabit path (silent mode skips the burst). Otherwise mutate
-    // state silently — UI catches up on next renderHabits().
-    const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
-    toggleHabit(walk.id, li, { silent: true });
-    console.log('[Health] auto-verified Daily walk:', steps, 'steps');
-
-    // Re-render so buildItem() can paint the auto-verify pill into the
-    // card. The next autoVerifyWalk() call from that render no-ops via
-    // the isChecked() guard, so no loop.
-    if (currentTab === 'habits') renderHabits();
+    // v3 Phase 1z.8 — yesterday backfill. Steps logged after the user's
+    // last app-open of yesterday are otherwise invisible to the
+    // auto-verifier. Always runs (subject to its own gates).
+    try { _backfillWalkYesterday(); } catch (_) {}
   }
   try { window.autoVerifyWalk = autoVerifyWalk; } catch (_) {}
 
@@ -23469,7 +23659,12 @@
     await Health.requestSleepPermissionIfNeeded();
 
     const data = await Health.getSleepLastNight();
-    if (!data) return;
+    if (!data) {
+      // v3 Phase 1z.8 — still backfill yesterday even if today's
+      // sleep fetch failed (backfill uses its own range query).
+      try { _backfillSleepYesterday(); } catch (_) {}
+      return;
+    }
 
     // ── Boss evaluation (v1.1.7+) ───────────────────────────
     // Runs independently of habit presence + pause toggle. The
@@ -23503,10 +23698,12 @@
     } catch (e) { console.warn('[Leaderboard] sleep record failed', e); }
 
     // ── Habit auto-verify — gated on pause toggle + habit presence ──
-    if (isAutoVerifyDisabled()) return;
+    // Restructured (v3 Phase 1z.8) so today's bail conditions don't
+    // kill the yesterday-backfill call at the bottom. Wrapped in a
+    // block instead of early returns; backfill always runs.
     const sleep = findSleepHabit();
     const bedtime = findSleepBeforeMidnightHabit();
-    if (!sleep && !bedtime) return;
+    if (!isAutoVerifyDisabled() && (sleep || bedtime)) {
 
     // ── Path A: Sleep duration ──────────────────────────────
     if (sleep && !isChecked(sleep.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep')) {
@@ -23561,6 +23758,15 @@
     // Single re-render after both paths — buildItem() picks up new pills,
     // next render's autoVerifySleep() no-ops via isChecked() guards.
     if (currentTab === 'habits') renderHabits();
+
+    } // end if (!isAutoVerifyDisabled() && (sleep || bedtime))
+
+    // v3 Phase 1z.8 — yesterday backfill. Sleep + bedtime share one
+    // getSleepBetween query. Necessary for users who slept the night
+    // before but didn't open the app the next morning. Runs even
+    // when today's path bailed (pause toggle, no habits, etc.) —
+    // backfill has its own gates.
+    try { _backfillSleepYesterday(); } catch (_) {}
   }
   try { window.autoVerifySleep = autoVerifySleep; } catch (_) {}
 
@@ -23597,40 +23803,57 @@
     // AND the Strength training habit auto-verify below (gated).
     // Single roundtrip via the 5-min workout cache.
     const data = await Health.getStrengthWorkoutsToday();
-    if (!data) { log('bail: getStrengthWorkoutsToday returned null'); return; }
-    log('data:', data.count, 'qualifying workout(s),', (data.totalMinutes || 0).toFixed(1), 'min');
+    if (data) {
+      log('data:', data.count, 'qualifying workout(s),', (data.totalMinutes || 0).toFixed(1), 'min');
 
-    // ── Boss evaluation (Iron Warden, D-rank) ──────────────
-    // Mirrors the Insomniac/Carouser/Steel Wolf pattern: bosses
-    // ignore the pause toggle + habit presence. The shared-data
-    // principle from CLAUDE.md applies — a single ≥10 min strength
-    // workout drives BOTH the boss kill AND the habit auto-check.
-    try {
-      evaluateIronWardenForDay(data, getDeviceLocalDate());
-    } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
+      // ── Boss evaluation (Iron Warden, D-rank) ──────────────
+      // Mirrors the Insomniac/Carouser/Steel Wolf pattern: bosses
+      // ignore the pause toggle + habit presence. The shared-data
+      // principle from CLAUDE.md applies — a single ≥10 min strength
+      // workout drives BOTH the boss kill AND the habit auto-check.
+      try {
+        evaluateIronWardenForDay(data, getDeviceLocalDate());
+      } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
+    } else {
+      log('bail (today only): getStrengthWorkoutsToday returned null');
+    }
 
-    // ── Habit auto-verify — gated on pause toggle + habit presence ──
-    if (isAutoVerifyDisabled()) { log('bail: auto-verify paused in Settings'); return; }
-    const strength = findStrengthHabit();
-    if (!strength) { log('bail: Strength training habit not in user list'); return; }
-    if (isChecked(strength.id)) { log('bail: already checked today'); return; }
-    if (AUTO_VERIFY.wasUncheckedToday('Strength training')) { log('bail: user un-checked today'); return; }
-    if (data.count < 1) { log('bail: 0 qualifying workouts today'); return; }
+    // ── Today habit auto-verify ────────────────────────────
+    // Each guard `goto skip` rather than `return` so that backfill
+    // still fires below. The whole reason backfill exists is the
+    // case where TODAY has no workout but yesterday did.
+    let didTodaySeal = false;
+    if (!data || isAutoVerifyDisabled()) {
+      log('skip today: data null or auto-verify paused');
+    } else {
+      const strength = findStrengthHabit();
+      if (!strength)                                       log('skip today: habit not in list');
+      else if (isChecked(strength.id))                     log('skip today: already checked');
+      else if (AUTO_VERIFY.wasUncheckedToday('Strength training')) log('skip today: user un-checked');
+      else if (data.count < 1)                             log('skip today: 0 qualifying workouts');
+      else {
+        AUTO_VERIFY.recordAutoVerify(strength.id, {
+          source:        'healthkit-strength-workout',
+          value:         data.totalMinutes,
+          threshold:     HEALTHKIT_STRENGTH_MIN_MINUTES,
+          workoutCount:  data.count,
+        });
+        const li = document.querySelector('.habit-item[data-id="' + strength.id + '"]');
+        toggleHabit(strength.id, li, { silent: true });
+        log('SEALED Strength training:', data.count, 'workout(s),', (data.totalMinutes || 0).toFixed(0), 'min');
+        console.log('[Health] auto-verified Strength training:',
+                    data.count, 'workout(s),', data.totalMinutes.toFixed(0), 'min');
+        didTodaySeal = true;
+      }
+    }
 
-    AUTO_VERIFY.recordAutoVerify(strength.id, {
-      source:        'healthkit-strength-workout',
-      value:         data.totalMinutes,
-      threshold:     HEALTHKIT_STRENGTH_MIN_MINUTES,
-      workoutCount:  data.count,
-    });
+    if (didTodaySeal && currentTab === 'habits') renderHabits();
 
-    const li = document.querySelector('.habit-item[data-id="' + strength.id + '"]');
-    toggleHabit(strength.id, li, { silent: true });
-    log('SEALED Strength training:', data.count, 'workout(s),', (data.totalMinutes || 0).toFixed(0), 'min');
-    console.log('[Health] auto-verified Strength training:',
-                data.count, 'workout(s),', data.totalMinutes.toFixed(0), 'min');
-
-    if (currentTab === 'habits') renderHabits();
+    // v3 Phase 1z.8 — yesterday backfill. The "10 PM workout, app
+    // opened Sat morning" case this whole pass exists to fix.
+    // Runs UNCONDITIONALLY (subject to its own gates) — must reach
+    // here even when today has 0 qualifying workouts.
+    try { _backfillStrengthYesterday(); } catch (_) {}
   }
   try { window.autoVerifyStrengthTraining = autoVerifyStrengthTraining; } catch (_) {}
 
