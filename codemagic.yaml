@@ -341,6 +341,27 @@ workflows:
             echo "FAIL: www/app.js missing _backfillStrengthYesterday (Phase 1z.8 backfill)"
             exit 1
           fi
+          # v3 Phase 1z.12 — Direction B Premium Character Sheet markup.
+          # These four sentinels prove the Status card rebuild + header
+          # rune polish reached www/. A future inadvertent sed against
+          # renderStatus() or the header would be caught here instead of
+          # silently shipping a regressed Status tab to TestFlight.
+          if ! grep -q "sc-card--profile" www/app.js; then
+            echo "FAIL: www/app.js missing sc-card--profile (Phase 1z.12 Status card)"
+            exit 1
+          fi
+          if ! grep -q "sc-banner__title" www/app.js; then
+            echo "FAIL: www/app.js missing sc-banner__title (Phase 1z.12 Hunter Profile banner)"
+            exit 1
+          fi
+          if ! grep -q "sc-portrait-frame" www/styles.css; then
+            echo "FAIL: www/styles.css missing .sc-portrait-frame (Phase 1z.12 portrait zone)"
+            exit 1
+          fi
+          if ! grep -q "aw-header__rune" www/index.html; then
+            echo "FAIL: www/index.html missing .aw-header__rune (Phase 1z.12 header polish)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.
@@ -518,6 +539,26 @@ workflows:
           fi
           if ! grep -q "_backfillStrengthYesterday" "$PUB/app.js"; then
             echo "FAIL: $PUB/app.js missing _backfillStrengthYesterday (Phase 1z.8 backfill)"
+            exit 1
+          fi
+          # v3 Phase 1z.12 — Direction B Premium Character Sheet markup
+          # must reach iOS bundle. Catches the case where renderStatus()
+          # silently regresses to the legacy Status template after a
+          # bad merge or sed.
+          if ! grep -q "sc-card--profile" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing sc-card--profile (Phase 1z.12 Status card)"
+            exit 1
+          fi
+          if ! grep -q "sc-banner__title" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing sc-banner__title (Phase 1z.12 Hunter Profile banner)"
+            exit 1
+          fi
+          if ! grep -q "sc-portrait-frame" "$PUB/styles.css"; then
+            echo "FAIL: $PUB/styles.css missing .sc-portrait-frame (Phase 1z.12 portrait zone)"
+            exit 1
+          fi
+          if ! grep -q "aw-header__rune" "$PUB/index.html"; then
+            echo "FAIL: $PUB/index.html missing .aw-header__rune (Phase 1z.12 header polish)"
             exit 1
           fi
           # sw.js cache version cross-check
