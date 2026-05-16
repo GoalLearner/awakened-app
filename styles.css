@@ -21461,71 +21461,74 @@ body.bro-locked { overflow: hidden; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   v3 Phase 1z.13 — Status vertical compact pass
-   Goal: full Hunter Profile card visible on a standard iPhone
-   viewport without scrolling. CSS-only override layer — no
-   markup changes, no JS changes, no logic changes. All wired
-   ids preserved.
+   v3 Phase 1z.14 — Status vertical compact pass (RELAXED)
+   Supersedes 1z.13. The 1z.13 values squeezed the Premium
+   Character Sheet too hard — the portrait frame + avatar +
+   sigil tiles all read as cramped. This relaxed pass restores
+   most of the card's internal breathing room while keeping the
+   top-of-page savings (status-content top padding, quote shave)
+   that were doing useful work above the card.
+   Design principle: premium feel > forced no-scroll fit.
    ═══════════════════════════════════════════════════════════ */
 
-/* 1. Status tab outer padding — was 16px above the card, now 4px.
-   Saves 12px directly above the Hunter Profile card. Bottom stays
-   0 because the panel itself scrolls. */
-#profile-panel .status-content { padding: 4px 16px 8px; }
+/* 1. Status tab outer padding — keep most of the saving above the
+   card (was 16, briefly 4, now 6). Card sits close to the tab row
+   without crowding it. */
+#profile-panel .status-content { padding: 6px 16px 10px; }
 
-/* 2. Daily quote — small further trim. Shared across tabs but the
-   shave is conservative; quote remains readable + centered. */
+/* 2. Daily quote — conservative trim (shared across tabs).
+   Restores a few pixels over 1z.13 so the quote feels intentionally
+   centered rather than thinned. */
 .daily-quote {
-  padding: 6px 16px 6px;
-  min-height: 44px;
+  padding: 7px 16px 7px;
+  min-height: 48px;
 }
 
-/* 3. Hunter Profile banner — tighten vertical padding without
-   dropping the rune-flanked title weight. */
-.sc-card.sc-card--profile .sc-banner { padding: 9px 16px 8px; }
+/* 3. Hunter Profile banner — restored breathing. Sits between the
+   1z.12 original (14/12) and the 1z.13 squeeze (9/8). */
+.sc-card.sc-card--profile .sc-banner { padding: 12px 16px 10px; }
 
-/* 4. Identity row — pull rank disc + name closer to the banner. */
-.sc-card.sc-card--profile .sc-hero            { padding: 10px 16px 8px; gap: 11px; }
-.sc-card.sc-card--profile .sc-identity-strip  { margin-top: 4px; }
-.sc-card.sc-card--profile .sc-awakening-msg   { margin-top: 6px; line-height: 1.4; }
+/* 4. Identity row — rank disc, name, strip, awakening line. */
+.sc-card.sc-card--profile .sc-hero            { padding: 12px 16px 10px; gap: 12px; }
+.sc-card.sc-card--profile .sc-identity-strip  { margin-top: 5px; }
+.sc-card.sc-card--profile .sc-awakening-msg   { margin-top: 7px; line-height: 1.45; }
 
-/* 5. Awakening Path button — slightly shorter; still gold + tappable.
-   Tap target stays ≥36px which is plenty for a labeled CTA inside a
-   scroll surface (iOS HIG 44pt minimum is for primary nav targets;
-   inline CTAs in a card surface routinely run 36–40px). */
-.sc-card.sc-card--profile .sc-origin-row                                { padding: 0 16px 10px; }
-.sc-card.sc-card--profile .sc-origin-btn.sc-origin-btn--gold            { padding: 8px 14px; }
+/* 5. Awakening Path button — comfortable gold CTA. 10px vertical
+   sits well above the comfortable-tap threshold for a labeled
+   inline CTA on a scroll surface. */
+.sc-card.sc-card--profile .sc-origin-row                                { padding: 0 16px 12px; }
+.sc-card.sc-card--profile .sc-origin-btn.sc-origin-btn--gold            { padding: 10px 14px; }
 
-/* 6. Portrait frame — biggest single saving. Drop min-height
-   220→178 + tighter inner padding. Avatar shrinks 130→118 to fit
-   the lower frame without cropping the silhouette feet. Radar is
-   already capped at max-width:180px so it scales naturally. */
-.sc-card.sc-card--profile .sc-portrait-frame                { min-height: 178px; }
-.sc-card.sc-card--profile .sc-portrait-row                  { padding: 8px 12px; gap: 6px; }
-.sc-card.sc-card--profile .sc-portrait-row .sc-avatar       { width: 118px; }
-.sc-card.sc-card--profile .sc-portrait-row .sc-radar-svg    { max-width: 178px; }
+/* 6. Portrait frame — restored as the centerpiece. min-height
+   bumped 178→204 (still 16px shorter than the 1z.12 original 220).
+   Avatar grows back to 128px (down only 2 from the 1z.12 original
+   130). Padding restored so the avatar + radar feel framed, not
+   squeezed against the corner brackets. */
+.sc-card.sc-card--profile .sc-portrait-frame                { min-height: 204px; }
+.sc-card.sc-card--profile .sc-portrait-row                  { padding: 12px 14px; gap: 8px; }
+.sc-card.sc-card--profile .sc-portrait-row .sc-avatar       { width: 128px; }
+.sc-card.sc-card--profile .sc-portrait-row .sc-radar-svg    { max-width: 180px; }
 
-/* 7. Sigil tile footer — tighter padding + smaller value font on
-   the typical iPhone viewport. Labels stay readable; values stay
-   tabular. */
-.sc-card.sc-card--profile .sc-metrics.sc-metrics--sigil       { padding: 8px 10px 10px; gap: 6px; }
-.sc-card.sc-card--profile .sc-metric.sc-metric--sigil         { padding: 7px 4px 6px; }
-.sc-card.sc-card--profile .sc-metric--sigil .sc-metric-val    { font-size: 16px; }
-.sc-card.sc-card--profile .sc-metric--sigil .sc-metric-lbl    { margin-top: 4px; font-size: 8px; }
+/* 7. Sigil tile footer — restored to read as real tiles. Returns
+   to the 1z.12 baseline value/label sizes; padding kept a hair
+   tighter than the original for top-down rhythm. */
+.sc-card.sc-card--profile .sc-metrics.sc-metrics--sigil       { padding: 11px 12px 13px; gap: 7px; }
+.sc-card.sc-card--profile .sc-metric.sc-metric--sigil         { padding: 9px 4px 7px; }
+.sc-card.sc-card--profile .sc-metric--sigil .sc-metric-val    { font-size: 18px; }
+.sc-card.sc-card--profile .sc-metric--sigil .sc-metric-lbl    { margin-top: 5px; font-size: 8.5px; }
 
-/* 8. Wider viewports (~iPhone 14 Pro+, ≥390px) — give a couple
-   extra pixels back so the card doesn't read as cramped on the
-   larger screen real estate. */
+/* 8. Wider viewports (~iPhone 14 Pro+, ≥400px) — frame breathes
+   slightly more on the larger screen so the avatar reads as
+   centerpiece on Pro Max devices. */
 @media (min-width: 400px) {
-  .sc-card.sc-card--profile .sc-portrait-frame              { min-height: 188px; }
-  .sc-card.sc-card--profile .sc-portrait-row .sc-avatar     { width: 126px; }
+  .sc-card.sc-card--profile .sc-portrait-frame              { min-height: 216px; }
+  .sc-card.sc-card--profile .sc-portrait-row .sc-avatar     { width: 134px; }
 }
 
-/* 9. iPhone SE & narrower — keep the previous SE stack/sizing rule
-   but reapply tightened paddings so the compact pass holds. The
-   prior @media (max-width: 380px) on .sc-portrait-row stacks
-   avatar above radar; here we just shrink the gap. */
+/* 9. iPhone SE & narrower — keep the previous SE vertical-stack
+   rule (avatar above radar) but slightly relax padding so the
+   stack doesn't read crushed on the smallest viewport. */
 @media (max-width: 380px) {
   .sc-card.sc-card--profile .sc-portrait-frame              { min-height: auto; }
-  .sc-card.sc-card--profile .sc-portrait-row                { gap: 6px; padding: 8px 10px 10px; }
+  .sc-card.sc-card--profile .sc-portrait-row                { gap: 10px; padding: 12px 12px 14px; }
 }

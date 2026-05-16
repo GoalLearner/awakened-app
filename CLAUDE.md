@@ -2506,7 +2506,36 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=277`, `app.js?v=375`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.261`, `APP_BUILD_TAG = '2.2.1-w25'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=278`, `app.js?v=376`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.262`, `APP_BUILD_TAG = '2.2.1-w26'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Status vertical compact pass — relaxed (v3 Phase 1z.14)
+
+The 1z.13 compact pass over-compressed the Premium Character Sheet: portrait frame, avatar, and sigil tiles all read as crushed. 1z.14 supersedes 1z.13 — keeps the useful top-of-page savings (status-content top padding, daily-quote shave) and restores the card's internal breathing room. Single CSS override section in `styles.css`; the prior 1z.13 block was rewritten in-place rather than layered. Ships in `2.2.1-w26`.
+
+**Values now (vs 1z.12 original / vs 1z.13 over-compressed):**
+
+| Surface | 1z.12 orig | 1z.13 crushed | **1z.14 relaxed** |
+|---|---|---|---|
+| `.status-content` top padding | 16 | 4 | **6** |
+| `.daily-quote` padding · min-h | 10/9 · 58 | 6/6 · 44 | **7/7 · 48** |
+| `.sc-banner` padding | 14/12 | 9/8 | **12/10** |
+| `.sc-hero` padding · gaps | 14/10 · 6 · 8 | 10/8 · 4 · 6 | **12/10 · 5 · 7** |
+| `.sc-origin-row` · btn v-pad | 14 / 10 | 10 / 8 | **12 / 10** |
+| `.sc-portrait-frame` min-h | 220 | 178 | **204** |
+| `.sc-portrait-row` pad · avatar | 14/16 · 130 | 8/12 · 118 | **12/14 · 128** |
+| Sigil grid · tile · value · label | 12/14 · 9/8 · 18 · 8.5 | 8/10 · 7/6 · 16 · 8 | **11/13 · 9/7 · 18 · 8.5** |
+
+Net result: top of the page reclaims ~12px (status-content) + ~10px (quote) = ~22px above the card. Inside the card, only the portrait frame stays meaningfully shorter than 1z.12 (204 vs 220 = -16px). Everything else is within 1–3px of the 1z.12 baseline. Most of the Hunter Profile card lands on first screen; the last sigil tile row may peek-below-fold on iPhone SE/13 mini but is reachable with a tiny scroll.
+
+**Wider viewports (≥400px)** breathe further: frame 216px, avatar 134px. **iPhone SE (≤380px)** keeps the vertical-stack media query with relaxed padding (12/12·14, gap 10).
+
+**Design priority going forward:** premium feel beats forced no-scroll fit. If a future redesign or content addition pushes content below the fold, prefer trimming above-card space (quote / margins) before squeezing the card itself.
+
+**Anti-patterns (carried forward):**
+- Don't push `.sc-portrait-frame min-height` below 204 on the typical viewport. Below ~200px the avatar silhouette + radar labels start visibly crowding.
+- Don't drop `.sc-metric--sigil .sc-metric-val` below 18px on the typical viewport — the tiles stop reading as "real tiles" and start reading as a label strip.
+- Don't shave the tab-bar (`.tab-btn min-height: 44px`) or tab-icon size — 44px is iOS HIG tap-target minimum for primary nav.
+- Don't kill the daily quote entirely — the 7px/48px shave keeps the line visible + centered.
 
 ### Status vertical compact pass (v3 Phase 1z.13)
 
