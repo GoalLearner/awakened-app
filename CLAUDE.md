@@ -151,10 +151,30 @@ Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: 
 
 **5. Steps Duel Scoring v1 (v3 Phase 1y)**
 - `POST /v1/duels/:id/progress` — body `{ duel_type, metric, value, window_start, window_end, client_updated_at }`. Upserts a row into `duel_progress_snapshots` (UNIQUE on `duel_id, user_id, metric` so re-submits overwrite). Server enforces `metric === 'steps'` and `duel.duel_type === 'steps'`; non-steps types reject with `DUEL_TYPE_NOT_SCORED_YET`. Returns `{ ok, you, rival }`. `source` is server-set to `'apple_health'`.
-- `POST /v1/duels/:id/resolve` — idempotent winner resolution. Reads both snapshots (missing = 0), compares, writes `winner_user_id`, `result`, scores, `resolved_at`, marks `completed`. Rejects with `DUEL_NOT_ENDED` if `now < ends_at`. Re-call on already-completed returns the existing row.
-- D1 table: `duel_progress_snapshots (id, duel_id, user_id, duel_type, metric, value, source, window_start, window_end, client_updated_at, server_updated_at)`.
+- `POST /v1/duels/:id/resolve` — idempotent winner resolution. v3 Phase 1z extended this — now uses verified_events first (any duel type), falls back to `duel_progress_snapshots` if no verified events exist (back-compat for pre-1z active duels). Settles the reward into `user_souls_ledger` in the same transaction; UNIQUE constraint prevents double-pay. Sets `reward_settled_at` on the duels row.
+- D1 table: `duel_progress_snapshots (id, duel_id, user_id, duel_type, metric, value, source, window_start, window_end, client_updated_at, server_updated_at)` — legacy steps-only snapshot; kept live for in-flight steps duels created before Phase 1z.
 - Reuses `RL_DUELS_WRITE` (no new wrangler binding); client debounces submits to 5 min.
-- **Deferred to a later pass:** scoring for non-steps duel types (sleep/bedtime/strength/verified_objectives/boss_race), APNs / push notifications, on-device signed snapshots (current v1 trusts client values), souls movement, real-time multi-device merge, ghost battles, matchmaking.
+
+**6. Verified Duel Scoring Engine v1 (v3 Phase 1z)**
+- `POST /v1/verified-events` — batch ingestion (≤25 events/call). Body: `{ events: [{ client_event_id, event_type, metric, value?, source, occurred_at, duel_id?, metric_date?, window_start?, window_end?, client_created_at?, metadata_json? }, ...] }`. UNIQUE(user_id, client_event_id) deduplicates retries. Returns `{ ok, inserted, duplicates, errors }`.
+- `GET /v1/duels/:id/score` — auth, participant only. Returns both participants' verified scores + `formatScoreLabel` rendering for the duel type. Useful for surfaces that want server-formatted labels without duplicating the formatter.
+- 5 scorable duel types + boss_race deferred:
+  - **steps** → MAX(value) over `steps_total` events (multiple snapshots overwrite via max-take).
+  - **sleep** → COUNT DISTINCT metric_date over `sleep_7h_night` events.
+  - **bedtime** → COUNT DISTINCT metric_date over `bedtime_before_midnight` events.
+  - **strength** → COUNT(*) over `strength_workout` events (one row per workout; client uses sample uuid in `client_event_id` to dedupe).
+  - **verified_objectives** → COUNT DISTINCT (event_type, metric_date) pairs across `verified_objective_daily_walk` / `_sleep` / `_bedtime` / `_strength`. boss_defeat_verified events are NOT counted here in v1.
+  - **boss_race** → unsupported. resolve returns `BOSS_RACE_SCORING_DEFERRED`; UI shows "Boss Race scoring activates after verified boss-event logging."
+- Reward ledger auto-settles on `resolve`. UNIQUE(user_id, ref_type, ref_id, reason) on `user_souls_ledger` makes settle idempotent (retries are no-ops). Stake is NOT deducted in v1; reward is recorded server-side only — **local `hb_souls` is NOT modified by v1**, the ledger is the eventual reconciliation target.
+- D1 tables (migration `0006_verified_duel_scoring_engine.sql`):
+  - `verified_events (id, user_id, duel_id?, event_type, metric, value, source, occurred_at, metric_date?, window_start?, window_end?, client_event_id, client_created_at?, server_created_at, metadata_json?)` + 5 indices + UNIQUE(user_id, client_event_id).
+  - `user_souls_ledger (id, user_id, delta, reason, ref_type?, ref_id?, created_at, metadata_json?)` + UNIQUE(user_id, ref_type, ref_id, reason).
+  - `ALTER TABLE duels ADD COLUMN reward_settled_at TEXT`.
+- Allowed `event_type`s: `steps_total`, `sleep_7h_night`, `bedtime_before_midnight`, `strength_workout`, `verified_objective_daily_walk`, `verified_objective_sleep`, `verified_objective_bedtime`, `verified_objective_strength`, `boss_defeat_verified` (reserved, not scored).
+- Allowed `source`s: `apple_health`, `system_verified`, `verified_boss`.
+- Reuses `RL_DUELS_WRITE`; client batches at most 25/call.
+- **Trust model:** v1 trusts client-submitted Apple Health values. Not full anti-cheat. Future hardening = signed device attestations or HealthKit-via-watch.
+- **Deferred to a later pass:** boss_race scoring (needs verified boss-event log), APNs / push, on-device signed snapshots, souls reconciliation between ledger ↔ local hb_souls, real-time multi-device merge.
 
 **Auth + rate-limit middleware** — every authenticated route in `src/index.ts` parses `Bearer <jwt>` from the Authorization header, calls `verifySessionJwt(token, env)`, and passes the resulting `{ userId, alias }` to the handler. All write endpoints have per-user rate-limit bindings via Cloudflare's Rate Limiting API.
 
@@ -1303,6 +1323,70 @@ Non-steps duel types keep the "Scoring activates in the next duel pass." italic 
 
 ---
 
+## Verified Duel Scoring Engine v1 (v3 Phase 1z)
+
+Generalizes the Phase 1y steps-only loop into a server-authoritative event log + auto-settling reward ledger covering all 5 verified duel types. The 1y legacy path (`duel_progress_snapshots` + `POST /v1/duels/:id/progress`) stays live for backward compat with already-active steps duels; new clients prefer the verified-events path.
+
+**Server-side authority.** Client submits events. Backend aggregates. Backend resolves. Backend records the reward. The local app does not decide outcomes and does not touch its own soul balance.
+
+**Two new endpoints.**
+
+- `POST /v1/verified-events` — batch ingestion (≤25 events/call). UNIQUE(user_id, client_event_id) dedupes retries via INSERT OR IGNORE — client can re-submit the same event safely. Returns `{ ok, inserted, duplicates, errors }`. Validates `event_type` against `ALLOWED_EVENT_TYPES`, `source` against `ALLOWED_EVENT_SOURCES`, `value` non-negative integer.
+- `GET /v1/duels/:id/score` — participant-only. Returns the duel + a `score` block with both participants' verified scores + per-type formatted labels. Useful for surfaces that want server-formatted strings without duplicating the formatter client-side.
+
+**Five scorable duel types + boss_race deferred.**
+
+| Duel type             | Event types                                              | Aggregation                                |
+|-----------------------|----------------------------------------------------------|---------------------------------------------|
+| `steps`               | `steps_total`                                            | MAX(value)                                  |
+| `sleep`               | `sleep_7h_night`                                         | COUNT DISTINCT metric_date                  |
+| `bedtime`             | `bedtime_before_midnight`                                | COUNT DISTINCT metric_date                  |
+| `strength`            | `strength_workout`                                       | COUNT(*)                                    |
+| `verified_objectives` | `verified_objective_{daily_walk,sleep,bedtime,strength}` | COUNT DISTINCT (event_type, metric_date)    |
+| `boss_race`           | (none)                                                   | unsupported — resolve returns `BOSS_RACE_SCORING_DEFERRED` |
+
+Steps uses MAX (multiple snapshots overwrite). Sleep/bedtime/strength use count semantics so multiple submits per night/workout dedupe naturally via UNIQUE(user_id, client_event_id). verified_objectives counts distinct (event_type, metric_date) pairs — so a verified daily-walk + verified sleep on the same day = 2 objectives.
+
+**Resolve uses verified_events first; falls back to legacy `duel_progress_snapshots` only if no verified_events exist for the duel** (back-compat for in-flight steps duels created pre-1z). All-zeros stays as draw. After computing the winner, `settleDuelReward(env, duel)` inserts the `+reward_souls` row into `user_souls_ledger` with `ref_type='duel'`, `ref_id=duel.id`, `reason='duel_win'`. UNIQUE(user_id, ref_type, ref_id, reason) makes settle idempotent — retries are no-ops. `duels.reward_settled_at` is set in the same transaction.
+
+**Local `hb_souls` is NOT modified by v1.** The ledger is the eventual reconciliation target. The completed-duel detail overlay shows "Reward recorded: +40 souls" for the winner with a small italic note ("Souls economy reconciliation comes in a future pass."). Draws show "No reward awarded." Losers see nothing. **Stake is NOT deducted on accept** — the localStorage `hb_souls` value is untouchable from backend in v1.
+
+**Client event builder (`_buildEventsForActiveDuel(duel)`).** Per active scorable duel, queries the matching Apple Health surface for the duel's `[starts_at, min(now, ends_at)]` window and synthesizes verified events. Stable `client_event_id` per (event_type, duel_id, key) so retries always land on the same backend row.
+
+- `steps` → `Health.getStepsBetween(start, end)` → 1 event `steps_total` with `value = total`.
+- `sleep` / `bedtime` → `Health.getSleepBetween(start, end)` → per-night events keyed by device-local "night date" (sleep onset shifted +4h to assign post-midnight to the same night). 7h threshold → `sleep_7h_night`. Earliest qualifying onset in `[20:00, 24:00)` prior-day window → `bedtime_before_midnight`.
+- `strength` → `Health.getStrengthWorkoutsBetween(start, end)` → 1 event `strength_workout` per qualifying workout. Sample uuid (or `startDate:duration` fallback) is the dedupe key in `client_event_id`.
+- `verified_objectives` → all four Apple Health surfaces, with `event_type = verified_objective_*` and `source = 'system_verified'`. Daily-walk objective uses a 3,000-step threshold (matches the canonical Daily walk default goal) — emitted once per day when today's steps clear the threshold. Finer per-day granularity is future work.
+
+**Submitter (`submitVerifiedEventsForDuels(opts)`).** Self-debounced (`_VERIFIED_EVENTS_MIN_MS = 5 * 60 * 1000`). Walks `Auth.fetchDuels().active`, filters to scorable types, builds events, chunks to ≤25/POST, fires `Auth.submitVerifiedEvents(chunk)`. Triggers: end of `init()` (force), `renderDuelsSection`, `visibilitychange` to visible, post-accept (force). Coexists with the legacy `submitActiveStepsDuelProgress` (which still fires; backward compat).
+
+**UI surfaces extended.** Active duel hero, active duel card row, and detail overlay all branch on `duel.duel_type` to render the right score string (`formatDuelScoreValue(type, n)`) and the right result verb (`outstepped` / `outslept` / `outrested` / `outlifted` / `outdisciplined`). boss_race surfaces show "Boss Race scoring activates after verified boss-event logging." The reward row appears on completed duels only for the winner (gold border, "+40 souls"), or for a draw ("No reward awarded.").
+
+**Storage / D1 schema.**
+
+```
+verified_events (id, user_id, duel_id?, event_type, metric, value, source,
+                 occurred_at, metric_date?, window_start?, window_end?,
+                 client_event_id, client_created_at?, server_created_at,
+                 metadata_json?)
+  UNIQUE(user_id, client_event_id) — dedupe via INSERT OR IGNORE
+  + 5 indexes (user, type, duel, duel+user, user+occurred_at)
+
+user_souls_ledger (id, user_id, delta, reason, ref_type?, ref_id?,
+                   created_at, metadata_json?)
+  UNIQUE(user_id, ref_type, ref_id, reason) — prevents double-pay
+
+duels.reward_settled_at TEXT — set by settleDuelReward
+```
+
+**Trust model.** v1 trusts client-submitted Apple Health values. NOT full anti-cheat — a savvy user could spoof events. Future hardening: signed device attestations, HealthKit-via-watch companion, or per-event signature verification. Documented integrity gap, not a blocker for v1.
+
+**Operational rule for new event types.** Adding a new scored event requires: (a) add to `ALLOWED_EVENT_TYPES` in backend, (b) add to `DUEL_SCORING_CFG[type].eventTypes`, (c) extend `_buildEventsForActiveDuel` with the matching Apple Health surface, (d) add a JS-side score formatter case in `formatDuelScoreValue` AND a verb in `_DUEL_VERB_BY_TYPE`. The aggregator stays generic per the 4 strategies (max / count_distinct_date / count_events / count_distinct_type_date).
+
+**Operational rule for ledger writes.** Any future server-side soul reward (boss kill server-side, achievement, login bonus) MUST go through `user_souls_ledger` with a unique `(ref_type, ref_id, reason)` per logical reward event. The UNIQUE index protects against double-pay across retries.
+
+---
+
 ## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
 
 Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Relic Archive** (renamed from "Pokédex" in v2.2.0 — see "Relic Archive" section). Single source of truth for design: `DROPS.md` (v1.8 code state — file header still reads v1.4) + `EQUIPMENT.md` (v1.3).
@@ -2255,7 +2339,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=268`, `app.js?v=361`, `auth.js?v=11`, `simulated-leaderboard.js?v=4`, `sw.js v5.247`, `APP_BUILD_TAG = '2.2.1-w11'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=269`, `app.js?v=362`, `auth.js?v=12`, `simulated-leaderboard.js?v=4`, `sw.js v5.248`, `APP_BUILD_TAG = '2.2.1-w12'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2405,6 +2489,13 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Implying scoring works before the scoring engine exists.** The Active Duel hero and Duel Detail overlay both MUST show `"Scoring activates in the next duel pass."` — never a numeric score, never "You: 0 · Opp: 0", never even a placeholder zero bar. Backend rows have score columns that always return 0 today; rendering those would lie to the user. The footnote is the only correct UX until real scoring lands.
 - **Forgetting to add a new duel type to BOTH `ALLOWED_DUEL_TYPES` (backend) and `DUEL_TYPES` (frontend).** Backend rejects unknown types with `400 INVALID_DUEL_TYPE`. Frontend `getDuelTypeMeta` falls back to the default if the id isn't in the map. Both sources must stay in sync — when you add a 7th type, edit `backend/src/handlers/duels.ts` AND `app.js` together (also update `DUEL_TYPE_SHORT_CODES` so the HUNTING strip pill renders the new code, and the docs subsection here).
 - **Forgetting to update Codemagic gates after touching duel-type markup.** The pre-sync and post-sync gates check for `DUEL_TYPES` in `www/app.js` + `ios/App/App/public/app.js`, and `duel-type-overlay` in both `index.html`s. If you rename the constant or the overlay id, you must also update `codemagic.yaml`.
+- **Scoring manual habits in a duel.** The five scorable types in v3 Phase 1z (`steps` / `sleep` / `bedtime` / `strength` / `verified_objectives`) are ALL Apple Health / system-verified. Manual habit completions never enter `verified_events`. If you want a future "manual XP duel," add it under a separate `unverified_*` namespace — DO NOT inject manual habit data into the verified-events stream. The integrity story rests on the source field never lying.
+- **Mutating `localStorage hb_souls` from duel resolution.** Backend ledger ONLY in v1. The completed-duel UI surfaces "Reward recorded: +40 souls" sourced from `duel.reward_settled_at` / `duel.reward_souls`. Don't add `Souls.earn(40)` on resolve, don't decrement on accept. Soul reconciliation between `user_souls_ledger` ↔ local `hb_souls` is a future pass.
+- **Computing steps duel score with SUM(value).** v3 Phase 1z uses MAX(value). Multiple `steps_total` snapshots overwrite — the latest fetched total IS the running total over the duel window (Apple Health is cumulative within the window). SUM would multi-count overlapping snapshots. Sleep/bedtime use COUNT DISTINCT metric_date instead; strength uses COUNT(*) with uuid-based client_event_id dedupe; verified_objectives uses COUNT DISTINCT (event_type, metric_date).
+- **Double-paying a duel reward.** UNIQUE(user_id, ref_type, ref_id, reason) on `user_souls_ledger` protects against this — `settleDuelReward` uses `INSERT OR IGNORE` so concurrent resolve retries are safe. Don't add a parallel ledger-write path that bypasses this constraint. If you ever need to award a NON-duel soul reward, pick a `ref_type` + (`ref_id`, `reason`) combination that uniquely identifies the logical event so the UNIQUE constraint still meaningfully blocks duplicates.
+- **Claiming full anti-cheat for v1.** The integrity model trusts client-submitted Apple Health values. A user can submit fake step totals or fake workout uuids. v1 ships this gap deliberately — the alternative (HealthKit-via-watch attestation, signed device events) is a large, separate pass. Don't market the v1 engine as cheat-proof; the UI copy and CLAUDE.md both explicitly disclose the trust gap. Future hardening lands in a separate phase.
+- **Adding a new `event_type` without extending `ALLOWED_EVENT_TYPES`.** Backend rejects unknown event types via `INVALID_EVENT_TYPE` in the per-event error map (the rest of the batch still inserts). Pre-flight: add to `ALLOWED_EVENT_TYPES` in `backend/src/handlers/duels.ts`, add to `DUEL_SCORING_CFG[type].eventTypes` if it should affect a duel type's score, and add the matching builder branch in `_buildEventsForActiveDuel` in `app.js`. Codemagic gates also greps for `submitVerifiedEventsForDuels` / `getSleepBetween` / `getStrengthWorkoutsBetween` / `submitVerifiedEvents` — keep those greps current.
+- **boss_race scoring before verified boss-event logging exists.** `POST /v1/duels/:id/resolve` returns `BOSS_RACE_SCORING_DEFERRED` for boss_race duels and the UI shows the matching deferred message. The frontend's `maybeResolveDuelIfEnded` short-circuits boss_race to avoid a doomed network roundtrip. Don't wire boss_race scoring until: (a) verified boss-defeat events are entering `verified_events` from a trusted server-side path (likely tied to the boss-kill flow on the backend, not the client), (b) the aggregator strategy is decided (first-to-kill vs total-kills-in-window), and (c) the UI verb + headline copy is approved.
 
 ---
 
