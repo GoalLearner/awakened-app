@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w17';
+  const APP_BUILD_TAG = '2.2.1-w18';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2332,7 +2332,251 @@
         (dropInfo.card.rarity === 'rare' || dropInfo.card.rarity === 'ultra_rare')) {
       setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 500);
     }
+
+    // v3 Phase 1z.6 — Boss-result modal hook.
+    //
+    // Today, defeating a boss is silent for common + no-drop cases —
+    // the kill toast scrolls past in seconds and the user has to
+    // manually open the Relic Archive to discover their drop. This
+    // modal makes the defeat moment visible.
+    //
+    // Rare/Ultra already have a dramatic cinematic reveal (above),
+    // so skip the additional modal there. Common + no-drop are the
+    // cases that go unacknowledged today.
+    try {
+      const card = dropInfo && dropInfo.card;
+      const rarity = card && card.rarity;
+      const skipForReveal = (rarity === 'rare' || rarity === 'ultra_rare') &&
+                            dropInfo && dropInfo.wasFirst;
+      if (!skipForReveal) {
+        const liveState = (typeof getBossState === 'function') ? getBossState(cfg.id) : null;
+        const mercy = (typeof getDropPityDisplay === 'function')
+          ? getDropPityDisplay(cfg.id) : null;
+        _queueBossResult({
+          bossId:         cfg.id,
+          bossName:       cfg.name,
+          rank:           cfg.rank,
+          kill_count:     liveState ? liveState.kill_count : 1,
+          conditionLabel: cfg.killCondShort || cfg.killCondLong || '',
+          drop: card ? {
+            cardId:   card.id,
+            name:     card.name,
+            rarity:   card.rarity,
+            slot:     card.slot,
+            artPath:  card.art_path,
+            stats:    card.bonuses,
+            flavor:   card.flavor,
+            fromPity: !!(dropInfo && dropInfo.fromPity),
+            pityType: dropInfo && dropInfo.pityType,
+            wasFirst: !!(dropInfo && dropInfo.wasFirst),
+          } : null,
+          mercy: mercy ? {
+            anyDropCurrent:   mercy.anyDropCurrent,
+            anyDropTarget:    mercy.anyDropTarget,
+            rareCurrent:      mercy.rareCurrent,
+            rareTarget:       mercy.rareTarget,
+            ultraCurrent:     mercy.ultraCurrent,
+            ultraSoftTarget:  mercy.ultraSoftTarget,
+            ultraHardTarget:  mercy.ultraHardTarget,
+          } : null,
+        });
+      }
+    } catch (_) {}
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // v3 Phase 1z.6 — Boss-defeat result modal (#boss-result-overlay)
+  // ─────────────────────────────────────────────────────────────
+  //
+  // Fired by announceKillAndDrop for common drops + no-drop defeats.
+  // Rare/ultra defeats are handled by the existing cinematic reveal
+  // (processRevealQueue → #reveal-overlay) and skipped here.
+  //
+  // One-shot per (bossId, kill_count) via hb_boss_result_seen_<id>_<n>
+  // — device-local UI acknowledgment, intentionally NOT in
+  // CloudSync.SNAPSHOT_KEYS. Re-installs and re-renders never re-fire
+  // a previously acknowledged result.
+  //
+  // Multiple defeats in one tick (rare D-rank simultaneous evals)
+  // stack in _bossResultQueue and drain one-at-a-time, each waiting
+  // for the prior modal to close before the next opens.
+  let _bossResultQueue = [];
+  let _bossResultBusy  = false;
+  let _bossResultCurrent = null;
+
+  function _bossResultSeenKey(bossId, killCount) {
+    return 'hb_boss_result_seen_' + bossId + '_' + killCount;
+  }
+
+  function _queueBossResult(evt) {
+    if (!evt || !evt.bossId) return;
+    try {
+      const key = _bossResultSeenKey(evt.bossId, evt.kill_count);
+      if (localStorage.getItem(key) === '1') return;
+    } catch (_) {}
+    _bossResultQueue.push(evt);
+    _drainBossResultQueue();
+  }
+
+  function _drainBossResultQueue() {
+    if (_bossResultBusy) return;
+    const next = _bossResultQueue.shift();
+    if (!next) return;
+    _bossResultBusy = true;
+    // setTimeout 600ms — give the kill toast its moment first.
+    setTimeout(() => { try { _showBossResult(next); } catch (_) { _bossResultBusy = false; } }, 600);
+  }
+
+  function _showBossResult(evt) {
+    const overlay = document.getElementById('boss-result-overlay');
+    if (!overlay) { _bossResultBusy = false; return; }
+
+    // Set seen flag FIRST so any re-render / aux path can't re-queue.
+    try { localStorage.setItem(_bossResultSeenKey(evt.bossId, evt.kill_count), '1'); } catch (_) {}
+
+    _bossResultCurrent = evt;
+
+    const nameEl = document.getElementById('bro-boss-name');
+    if (nameEl) nameEl.textContent = evt.bossName || '—';
+    const condEl = document.getElementById('bro-condition');
+    if (condEl) {
+      condEl.textContent = evt.conditionLabel
+        ? evt.conditionLabel + ' · cleared.'
+        : 'Kill condition cleared.';
+    }
+
+    const relicCard  = document.getElementById('bro-relic-card');
+    const nodropCard = document.getElementById('bro-nodrop-card');
+    const viewBtn    = document.getElementById('bro-view-relic');
+
+    if (evt.drop) {
+      // Relic acquired — even commons fall here.
+      if (relicCard)  relicCard.classList.remove('hidden');
+      if (nodropCard) nodropCard.classList.add('hidden');
+      if (viewBtn) {
+        viewBtn.classList.remove('hidden');
+        viewBtn.setAttribute('data-card-id', evt.drop.cardId);
+      }
+      const eyebrowEl = document.getElementById('bro-relic-eyebrow');
+      if (eyebrowEl) {
+        const rarityLabel = (RARITY_LABELS && RARITY_LABELS[evt.drop.rarity]) || evt.drop.rarity || '';
+        eyebrowEl.textContent = evt.drop.fromPity
+          ? (evt.drop.pityType === 'ultra_hard' ? 'FATE ANSWERED · ' : 'MERCY AWAKENED · ') + rarityLabel.toUpperCase()
+          : 'RELIC ACQUIRED · ' + rarityLabel.toUpperCase();
+      }
+      const artImg = document.getElementById('bro-relic-art');
+      if (artImg) {
+        artImg.onerror = () => { artImg.style.display = 'none'; };
+        artImg.onload  = () => { artImg.style.display = ''; };
+        artImg.style.display = 'none';
+        if (evt.drop.artPath) artImg.src = evt.drop.artPath;
+      }
+      const slotIconEl = document.getElementById('bro-relic-slot-icon');
+      if (slotIconEl) slotIconEl.textContent = (SLOT_ICONS && SLOT_ICONS[evt.drop.slot]) || '✦';
+      const relicNameEl = document.getElementById('bro-relic-name');
+      if (relicNameEl) relicNameEl.textContent = evt.drop.name || '';
+      const metaEl = document.getElementById('bro-relic-meta');
+      if (metaEl) {
+        const slotLabel = (evt.drop.slot || '').toUpperCase();
+        const newPill = evt.drop.wasFirst ? '<span class="bro-relic-new">NEW</span>' : '';
+        metaEl.innerHTML = (slotLabel ? '<span class="bro-relic-slot">' + slotLabel + '</span>' : '') + newPill;
+      }
+      const statsEl = document.getElementById('bro-relic-stats');
+      if (statsEl) {
+        const card = CARDS && CARDS[evt.drop.cardId];
+        statsEl.innerHTML = card ? cardStatBadgesHtml(card) : '';
+      }
+    } else {
+      // No drop — mercy increased.
+      if (relicCard)  relicCard.classList.add('hidden');
+      if (nodropCard) nodropCard.classList.remove('hidden');
+      if (viewBtn)    viewBtn.classList.add('hidden');
+      const mercyBlock = document.getElementById('bro-mercy-block');
+      if (mercyBlock && evt.mercy) {
+        const m = evt.mercy;
+        const cur1 = Math.min(m.anyDropCurrent || 0, m.anyDropTarget || 0);
+        const cur2 = Math.min(m.rareCurrent    || 0, m.rareTarget    || 0);
+        const cur3 = Math.min(m.ultraCurrent   || 0, m.ultraHardTarget || 0);
+        mercyBlock.innerHTML =
+          '<div class="bro-mercy-row"><span class="bro-mercy-label">Guaranteed relic</span>' +
+            '<span class="bro-mercy-val">' + cur1 + ' / ' + (m.anyDropTarget || 0) + '</span></div>' +
+          '<div class="bro-mercy-row"><span class="bro-mercy-label">Rare mercy</span>' +
+            '<span class="bro-mercy-val">' + cur2 + ' / ' + (m.rareTarget || 0) + '</span></div>' +
+          '<div class="bro-mercy-row"><span class="bro-mercy-label">Ultra mercy</span>' +
+            '<span class="bro-mercy-val">' + cur3 + ' / ' + (m.ultraHardTarget || 0) + '</span></div>';
+      } else if (mercyBlock) {
+        mercyBlock.innerHTML = '';
+      }
+    }
+
+    // Wire Hunt Again button data-boss-id.
+    const huntAgainBtn = document.getElementById('bro-hunt-again');
+    if (huntAgainBtn) huntAgainBtn.setAttribute('data-boss-id', evt.bossId);
+
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('bro-locked');
+  }
+
+  function closeBossResult(opts) {
+    const overlay = document.getElementById('boss-result-overlay');
+    if (overlay) {
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('bro-locked');
+    _bossResultCurrent = null;
+    _bossResultBusy = false;
+    // Drain the next queued result, if any.
+    if (!(opts && opts.suppressDrain)) {
+      _drainBossResultQueue();
+    }
+  }
+
+  function setupBossResultModal() {
+    const overlay = document.getElementById('boss-result-overlay');
+    if (!overlay) return;
+    const closeBtn = document.getElementById('bro-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => closeBossResult());
+    const huntAgainBtn = document.getElementById('bro-hunt-again');
+    if (huntAgainBtn) {
+      huntAgainBtn.addEventListener('click', () => {
+        const id = huntAgainBtn.getAttribute('data-boss-id');
+        // Close first so re-engage toasts aren't hidden behind the modal.
+        // Suppress drain so the re-engage doesn't race with the next queued result.
+        closeBossResult({ suppressDrain: true });
+        if (id) {
+          try { engageBoss(id); } catch (_) {}
+        }
+        // Now drain any remaining queued results.
+        _drainBossResultQueue();
+      });
+    }
+    const viewBtn = document.getElementById('bro-view-relic');
+    if (viewBtn) {
+      viewBtn.addEventListener('click', () => {
+        const cardId = viewBtn.getAttribute('data-card-id');
+        closeBossResult({ suppressDrain: true });
+        try {
+          const card = CARDS && CARDS[cardId];
+          const inv = (typeof getInventory === 'function') ? getInventory() : null;
+          const entry = inv && inv.cards && inv.cards[cardId];
+          if (card && entry && typeof openCardDetailModal === 'function') {
+            openCardDetailModal(card, entry);
+          }
+        } catch (_) {}
+        _drainBossResultQueue();
+      });
+    }
+    // ESC closes.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (overlay.classList.contains('hidden')) return;
+      closeBossResult();
+    });
+  }
+
+  try { window.closeBossResult = closeBossResult; } catch (_) {}
 
   // ── Reveal modal: cinematic card-drop ceremony ──────────────
   // Processes hb_inventory.reveal_queue one-at-a-time. If queue
@@ -12058,6 +12302,8 @@
     // fresh) should not leave the modal hanging over.
     if (typeof closeBossFullScreen === 'function') closeBossFullScreen();
     if (typeof closeDuelDetail === 'function') closeDuelDetail();
+    // v3 Phase 1z.6 — boss-defeat result modal closes on tab switch.
+    if (typeof closeBossResult === 'function') closeBossResult({ suppressDrain: true });
     currentTab = tab;
     // v3 Phase 1k — expose active tab on <body> so CSS can hide /
     // reflow tab-specific chrome (e.g., the duplicate "X / Y HABITS
@@ -16601,9 +16847,25 @@
           // — broke-state is handled by engageBoss's balance check
           // which fires a precise "Need N souls. You have M." toast.
           const cost = engageCostSouls(cfg.rank);
+          // v3 Phase 1z.6 — when kill_count > 0 AND not engaged, the
+          // boss was defeated and the hunt naturally ended. Swap the
+          // button copy to "HUNT AGAIN" so the framing is "resume the
+          // hunt" rather than "first engagement." Cost still applies.
+          const huntedBefore = (state.kill_count || 0) > 0;
+          const verb = huntedBefore ? 'HUNT AGAIN' : 'ENGAGE BOSS';
           engageBtn.textContent = cost > 0
-            ? 'ENGAGE BOSS — ' + cost + ' SOULS'
-            : 'ENGAGE BOSS';
+            ? verb + ' — ' + cost + ' SOULS'
+            : verb;
+        }
+        // Swap blurb copy for the post-defeat state.
+        const blurb = engageCta.querySelector('.bfs-engage-blurb');
+        if (blurb) {
+          if ((state.kill_count || 0) > 0) {
+            blurb.textContent = (cfg.name || 'This boss') +
+              ' has been defeated. Engage again to begin a new hunt.';
+          } else {
+            blurb.textContent = "This boss only counts progress while you're actively hunting it. You can hunt up to 3 bosses at once.";
+          }
         }
       }
     }
@@ -23732,6 +23994,8 @@
     setupPokedex();
     setupCardDetailModal();
     setupMysteryCardModal();
+    // v3 Phase 1z.6 — boss-defeat result modal wiring.
+    try { setupBossResultModal(); } catch (_) {}
     if (typeof setupSocialDuels === 'function') setupSocialDuels();
     // Process any reveals queued from drops that happened in a prior
     // session but the modal didn't get a chance to show (e.g., user

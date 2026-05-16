@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=271">
+  <link rel="stylesheet" href="styles.css?v=272">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -910,6 +910,40 @@
       <div id="bfs-mercy" class="bfs-mercy"></div>
       <p class="bfs-mercy-note">Bad-luck protection only increases when this boss is defeated.</p>
     </section>
+  </div>
+
+  <!-- Boss defeat result modal (v3 Phase 1z.6) — fires for common
+       drops + no-drop defeats. Rare/ultra continue to use the
+       existing cinematic reveal in #reveal-overlay. -->
+  <div id="boss-result-overlay" class="bro-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="bro-boss-name">
+    <div class="bro-shell">
+      <div class="bro-eyebrow">SYSTEM RESULT · BOSS DEFEATED</div>
+      <h2 id="bro-boss-name" class="bro-boss-name">—</h2>
+      <div id="bro-condition" class="bro-condition"></div>
+
+      <div id="bro-relic-card" class="bro-relic-card hidden">
+        <div id="bro-relic-eyebrow" class="bro-relic-eyebrow">RELIC ACQUIRED</div>
+        <div class="bro-relic-art-wrap">
+          <span id="bro-relic-slot-icon" class="bro-relic-slot-icon" aria-hidden="true">✦</span>
+          <img id="bro-relic-art" class="bro-relic-art" alt="" loading="lazy">
+        </div>
+        <div id="bro-relic-name" class="bro-relic-name"></div>
+        <div id="bro-relic-meta" class="bro-relic-meta"></div>
+        <div id="bro-relic-stats" class="bro-relic-stats"></div>
+      </div>
+
+      <div id="bro-nodrop-card" class="bro-nodrop-card hidden">
+        <div class="bro-nodrop-title">NO RELIC DROPPED</div>
+        <div class="bro-nodrop-body">Mercy increased. Next hunt is closer to a guaranteed relic.</div>
+        <div id="bro-mercy-block" class="bro-mercy-block"></div>
+      </div>
+
+      <div class="bro-actions">
+        <button id="bro-view-relic" type="button" class="bro-btn bro-btn--gold hidden">View Relic</button>
+        <button id="bro-hunt-again" type="button" class="bro-btn bro-btn--primary">Hunt Again</button>
+        <button id="bro-close" type="button" class="bro-btn">Close</button>
+      </div>
+    </div>
   </div>
 
   <!-- Leaderboard ranking sheet — opened from a Social-tab stat card.
@@ -1810,7 +1844,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=367"></script>
+  <script src="app.js?v=368"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -20131,3 +20131,237 @@ body.duel-type-locked { overflow: hidden; }
   font-style: italic;
   margin-top: 2px;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   v3 Phase 1z.6 — Boss-defeat result modal (#boss-result-overlay)
+   Fires for common drops + no-drop defeats. Rare/ultra still use
+   the existing #reveal-overlay cinematic. Matches the .bfs-* shell
+   aesthetic — dark navy bg, gold accents, Cinzel header.
+   ────────────────────────────────────────────────────────────── */
+.bro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(5, 5, 16, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 18px calc(24px + var(--safe-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: bro-overlay-in 0.36s var(--ease-cinema, ease-out);
+}
+.bro-overlay.hidden { display: none !important; }
+body.bro-locked { overflow: hidden; }
+
+@keyframes bro-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.bro-shell {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-raised, #16163a);
+  border: 1px solid var(--border-accent, rgba(139,92,246,0.50));
+  border-radius: 16px;
+  padding: 22px 20px 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6),
+              0 0 32px rgba(245,158,11,0.15) inset;
+  text-align: center;
+  animation: bro-shell-in 0.46s var(--ease-cinema, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@keyframes bro-shell-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.bro-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  color: var(--gold, #f59e0b);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+.bro-boss-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 1.7rem;
+  color: var(--gold, #f59e0b);
+  margin: 0 0 6px;
+  text-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+}
+.bro-condition {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #8e8e93);
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+/* ── Relic card variant ─────────────────────────────────────── */
+.bro-relic-card {
+  background: var(--bg-card, #1e1e3f);
+  border: 1px solid var(--border, rgba(255,255,255,0.10));
+  border-radius: 12px;
+  padding: 14px 12px;
+  margin: 0 0 16px;
+}
+.bro-relic-eyebrow {
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
+  color: var(--gold, #f59e0b);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.bro-relic-art-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(139,92,246,0.18), rgba(245,158,11,0.10));
+  border: 1px solid var(--border-accent, rgba(139,92,246,0.50));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bro-relic-slot-icon {
+  font-size: 3rem;
+  opacity: 0.55;
+}
+.bro-relic-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bro-relic-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-primary, #f2f2f7);
+  margin-bottom: 6px;
+}
+.bro-relic-meta {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  color: var(--text-secondary, #8e8e93);
+  margin-bottom: 10px;
+}
+.bro-relic-slot {
+  background: rgba(139, 92, 246, 0.18);
+  color: var(--accent, #8b5cf6);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.bro-relic-new {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #050510;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.bro-relic-stats { margin-top: 4px; }
+.bro-relic-stats .stat-row { justify-content: center; }
+
+/* ── No-drop variant ────────────────────────────────────────── */
+.bro-nodrop-card {
+  background: var(--bg-card, #1e1e3f);
+  border: 1px dashed var(--border, rgba(255,255,255,0.16));
+  border-radius: 12px;
+  padding: 16px 14px;
+  margin: 0 0 16px;
+}
+.bro-nodrop-title {
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  color: var(--text-secondary, #8e8e93);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.bro-nodrop-body {
+  font-size: 0.85rem;
+  color: var(--text-primary, #f2f2f7);
+  font-style: italic;
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+.bro-mercy-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border, rgba(255,255,255,0.10));
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.bro-mercy-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+.bro-mercy-label {
+  color: var(--text-secondary, #8e8e93);
+  letter-spacing: 0.08em;
+}
+.bro-mercy-val {
+  color: var(--gold, #f59e0b);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+/* ── Actions ────────────────────────────────────────────────── */
+.bro-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.bro-btn {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(255,255,255,0.10));
+  background: var(--bg-card, #1e1e3f);
+  color: var(--text-primary, #f2f2f7);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.16s ease, transform 0.12s ease;
+}
+.bro-btn:hover { filter: brightness(1.1); }
+.bro-btn:active { transform: scale(0.985); }
+.bro-btn--primary {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(139, 92, 246, 0.35);
+}
+.bro-btn--gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 1px solid rgba(245, 158, 11, 0.65);
+  color: #050510;
+  font-weight: 700;
+}
+.bro-btn.hidden { display: none !important; }
+
+@media (max-width: 360px) {
+  .bro-shell    { padding: 18px 16px 16px; }
+  .bro-boss-name { font-size: 1.45rem; }
+  .bro-relic-art-wrap { width: 120px; height: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bro-overlay, .bro-shell { animation: none !important; }
+}
