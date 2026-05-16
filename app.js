@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w14';
+  const APP_BUILD_TAG = '2.2.1-w15';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14528,12 +14528,26 @@
           // For verified_objectives, mint a single daily-walk objective
           // event for "today" once today's step total clears the
           // threshold. Cheap proxy until per-day granularity lands.
+          //
+          // v3 Phase 1z.3 (C1 fix) — metric_date must match the date
+          // semantics of Health.getStepsToday(), which is PT-anchored
+          // via getPTDate(). Using a device-local date here would let
+          // a non-PT user mint two distinct client_event_ids for the
+          // SAME PT-day step total across local midnight (eg. EST user
+          // at 9 PM EST = PT-Mon, then 12:30 AM EST = PT-Mon still,
+          // device-local has rolled to Tue). Both events would count
+          // as distinct verified_objectives via COUNT DISTINCT date.
+          // Pinning metric_date to PT-day keeps the client_event_id
+          // stable so server-side UNIQUE(user_id, client_event_id)
+          // dedupes the retry idempotently.
           try {
             const today = await Health.getStepsToday();
             if (typeof today === 'number' && today >= VERIFIED_OBJ_DAILY_WALK_STEPS) {
-              const dateKey = (typeof getDeviceLocalDate === 'function')
-                ? getDeviceLocalDate()
-                : new Date().toISOString().slice(0, 10);
+              const dateKey = (typeof getPTDate === 'function')
+                ? getPTDate()
+                : (typeof getDeviceLocalDate === 'function'
+                    ? getDeviceLocalDate()
+                    : new Date().toISOString().slice(0, 10));
               events.push({
                 client_event_id: 'verified_objective_daily_walk:' + duel.id + ':' + dateKey,
                 event_type: 'verified_objective_daily_walk',
@@ -14604,7 +14618,23 @@
           const uid = (w && w.uuid) || (w && w.startDate ? (w.startDate + ':' + (w.duration_min || 0)) : null);
           if (!uid) continue;
           const type = (dt === 'verified_objectives') ? 'verified_objective_strength' : 'strength_workout';
-          const dateKey = (w && w.startDate) ? String(w.startDate).slice(0, 10) : null;
+          // v3 Phase 1z.3 (C2 fix) — device-local YYYY-MM-DD of the
+          // workout's start, not UTC slice. Aligns metric_date with the
+          // user's perceived calendar day so verified_objectives
+          // COUNT(DISTINCT event_type || metric_date) doesn't mis-count
+          // workouts logged near local midnight.
+          let dateKey = null;
+          if (w && w.startDate) {
+            const sd = new Date(w.startDate);
+            if (!isNaN(sd.getTime())) {
+              dateKey =
+                sd.getFullYear() + '-' +
+                String(sd.getMonth() + 1).padStart(2, '0') + '-' +
+                String(sd.getDate()).padStart(2, '0');
+            } else {
+              dateKey = String(w.startDate).slice(0, 10);
+            }
+          }
           events.push({
             client_event_id: type + ':' + duel.id + ':' + uid,
             event_type: type,
@@ -14856,6 +14886,17 @@
   // already viewer-relative, so we don't need the backend user_id.
   // v3 Phase 1z — all 5 scorable types now fire toasts (boss_race
   // stays excluded until verified boss-event logging ships).
+  // v3 Phase 1z.3 (H6 fix) — duel result toasts now stagger when
+  // multiple completed-but-unseen duels surface in the same tick.
+  // Without this, three resolves in the same render loop would call
+  // showHabitToast 3× synchronously and only the LAST message stayed
+  // visible (the toast slot is single). Module-level cursor tracks
+  // the earliest moment a new toast can fire; consecutive calls bump
+  // the cursor by DUEL_TOAST_STAGGER_MS so each result gets its own
+  // read window. The "seen" flag is set on SCHEDULE (not fire) so
+  // re-renders between schedule and fire don't double-queue.
+  const DUEL_TOAST_STAGGER_MS = 1500;
+  let _nextDuelToastReadyAt = 0;
   function _maybeFireDuelResultToast(duel) {
     if (!duel || duel.status !== 'completed') return;
     if (duel.duel_type === 'boss_race') return;
@@ -14878,8 +14919,20 @@
                (result === 'opponent_win'   && role === 'challenger')) {
       msg = 'Duel lost. ' + getDuelDefeatBody(duel.duel_type, opp);
     } else return;
-    try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
+    // Mark seen up-front so a duel that gets re-included in the next
+    // render before its scheduled toast fires doesn't enqueue twice.
     try { localStorage.setItem(key, '1'); } catch (_) {}
+    const now = Date.now();
+    const fireAt = Math.max(now, _nextDuelToastReadyAt);
+    const delay = fireAt - now;
+    _nextDuelToastReadyAt = fireAt + DUEL_TOAST_STAGGER_MS;
+    if (delay <= 0) {
+      try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
+    } else {
+      setTimeout(() => {
+        try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
+      }, delay);
+    }
   }
 
   // Derive (yourValue, rivalValue) from a serialized duel object based
