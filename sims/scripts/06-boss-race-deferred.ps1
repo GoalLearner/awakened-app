@@ -1,4 +1,4 @@
-# 06-boss-race-deferred.ps1 — boss_race is the deferred 6th duel type
+# 06-boss-race-deferred.ps1 -- boss_race is the deferred 6th duel type
 # (Phase 1z left it unsupported). This sim verifies the deferred path:
 #   - Creating a boss_race duel succeeds (metadata-only)
 #   - Accepting succeeds
@@ -22,7 +22,7 @@ function Add-Step6 {
 }
 
 try {
-    # Idempotent friendship — same pattern as the other sims.
+    # Idempotent friendship -- same pattern as the other sims.
     $r1 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/friends/request' -As 'alpha' -Body @{ alias = 'sim_bravo' } -Label 'friend-request'
     Add-Step6 'friend-request (idempotent)' ($r1.status -in 200,409) "status=$($r1.status)"
 
@@ -36,7 +36,7 @@ try {
         Add-Step6 'friendship already accepted' $true 'idempotent'
     }
 
-    # Create boss_race duel — metadata-only.
+    # Create boss_race duel -- metadata-only.
     $r4 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/duels' -As 'alpha' -Body @{
         opponent_alias = 'sim_bravo'
         duration_days  = 3
@@ -51,7 +51,7 @@ try {
     $r5 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/accept" -As 'bravo' -Label 'accept-boss-race'
     Add-Step6 'bravo accepts boss_race' ($r5.status -eq 200 -and $r5.body.duel.status -eq 'active') ''
 
-    # /score on a boss_race duel — backend may return a placeholder.
+    # /score on a boss_race duel -- backend may return a placeholder.
     $r6 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId/score" -As 'alpha' -Label 'score-boss-race'
     Add-Step6 '/score returns 200 even for boss_race' ($r6.status -eq 200) "body=$($r6.body | ConvertTo-Json -Depth 4 -Compress)"
 
@@ -60,7 +60,7 @@ try {
     Invoke-SimD1 -RunDir $runDir -Sql $sql -Label 'force-ends-at' | Out-Null
     Add-Step6 'ends_at forced into past' $true ''
 
-    # /resolve — expected to FAIL with BOSS_RACE_SCORING_DEFERRED.
+    # /resolve -- expected to FAIL with BOSS_RACE_SCORING_DEFERRED.
     $r7 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-expect-deferred'
     $isDeferred = ($r7.status -eq 400 -or $r7.status -eq 422) -and (
         ($r7.body.code -eq 'BOSS_RACE_SCORING_DEFERRED') -or
@@ -79,7 +79,7 @@ try {
     Add-Step6 'no ledger row written for boss_race' ($ledgerRaw -match '"n":\s*0') ''
 
     # Clean up the unresolved boss_race duel so it doesn't linger.
-    # Use challenger-side cancel — only works on pending, so fall back to a direct D1
+    # Use challenger-side cancel -- only works on pending, so fall back to a direct D1
     # status update if needed.
     $cancelSql = "UPDATE duels SET status = 'cancelled', resolved_at = datetime('now') WHERE id = '$duelId' AND status = 'active';"
     Invoke-SimD1 -RunDir $runDir -Sql $cancelSql -Label 'cleanup-boss-race-duel' | Out-Null
@@ -101,6 +101,6 @@ Write-SimSummary -RunDir $runDir -Result @{
     RunDir   = $runDir
 }
 
-if ($pass) { Write-Host "PASS  06-boss-race-deferred  → $runDir" -ForegroundColor Green }
-else       { Write-Host "FAIL  06-boss-race-deferred  → $runDir" -ForegroundColor Red }
+if ($pass) { Write-Host "PASS  06-boss-race-deferred  -> $runDir" -ForegroundColor Green }
+else       { Write-Host "FAIL  06-boss-race-deferred  -> $runDir" -ForegroundColor Red }
 exit ([int](-not $pass))

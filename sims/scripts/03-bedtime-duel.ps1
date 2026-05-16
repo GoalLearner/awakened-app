@@ -1,5 +1,5 @@
-# 03-bedtime-duel.ps1 — Bedtime duel: COUNT DISTINCT metric_date over
-# 'bedtime_before_midnight' events. Alpha 3 nights vs bravo 2 → alpha wins.
+# 03-bedtime-duel.ps1 -- Bedtime duel: COUNT DISTINCT metric_date over
+# 'bedtime_before_midnight' events. Alpha 3 nights vs bravo 2 -> alpha wins.
 
 . (Join-Path $PSScriptRoot '_lib.ps1')
 
@@ -38,6 +38,6 @@ $result = Invoke-DuelSim -Label '03-bedtime' -DuelType 'bedtime' -ExpectedWinner
         }
     }
 
-if ($result.Pass) { Write-Host "PASS  03-bedtime-duel  → $($result.RunDir)" -ForegroundColor Green }
-else              { Write-Host "FAIL  03-bedtime-duel  → $($result.RunDir)" -ForegroundColor Red }
+if ($result.Pass) { Write-Host "PASS  03-bedtime-duel  -> $($result.RunDir)" -ForegroundColor Green }
+else              { Write-Host "FAIL  03-bedtime-duel  -> $($result.RunDir)" -ForegroundColor Red }
 exit ([int](-not $result.Pass))

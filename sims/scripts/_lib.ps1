@@ -1,4 +1,4 @@
-# _lib.ps1 — Shared helpers for duel sims.
+# _lib.ps1 -- Shared helpers for duel sims.
 #
 # Loaded via `. .\_lib.ps1` at the top of each per-type script.
 # Reads JWTs from sims\.secrets\, performs authenticated requests,
@@ -8,7 +8,7 @@
 
 $script:BackendBase = 'https://awakened-backend.richmondcampano93.workers.dev'
 
-# Repo-root resolution — assumes _lib.ps1 lives in sims\scripts\.
+# Repo-root resolution -- assumes _lib.ps1 lives in sims\scripts\.
 $script:RepoRoot   = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $script:SimsDir    = Join-Path $RepoRoot 'sims'
 $script:SecretsDir = Join-Path $SimsDir '.secrets'
@@ -65,7 +65,7 @@ function Invoke-SimRequest {
         label  = $Label
         method = $Method
         url    = $url
-        as     = $As           # NOT the JWT — just which user
+        as     = $As           # NOT the JWT -- just which user
         body   = $Body
     } | ConvertTo-Json -Depth 8
 
@@ -132,13 +132,13 @@ function Invoke-DuelSim {
     and to handle the deferred-error path respectively.
 
     Parameters:
-      Label           — sim label (e.g. '02-sleep')
-      DuelType        — one of: steps, sleep, bedtime, strength, verified_objectives
-      ExpectedWinner  — 'alpha' (challenger_win) or 'bravo' (opponent_win) or 'draw'
-      AlphaEvents     — scriptblock that takes $duelId, returns event array for alpha
-      BravoEvents     — scriptblock that takes $duelId, returns event array for bravo
+      Label           -- sim label (e.g. '02-sleep')
+      DuelType        -- one of: steps, sleep, bedtime, strength, verified_objectives
+      ExpectedWinner  -- 'alpha' (challenger_win) or 'bravo' (opponent_win) or 'draw'
+      AlphaEvents     -- scriptblock that takes $duelId, returns event array for alpha
+      BravoEvents     -- scriptblock that takes $duelId, returns event array for bravo
 
-    Returns: hashtable with Pass, Steps, Errors, DuelId — caller writes summary.
+    Returns: hashtable with Pass, Steps, Errors, DuelId -- caller writes summary.
     #>
     param(
         [Parameter(Mandatory)][string] $Label,
@@ -230,7 +230,7 @@ function Invoke-DuelSim {
             Add-Step 'reward_settled_at set' ($null -ne $resolved.reward_settled_at -and $resolved.reward_settled_at -ne '') ''
         }
 
-        # 8. /resolve second call — idempotent
+        # 8. /resolve second call -- idempotent
         $r10 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-2-idempotent'
         Add-Step '/resolve idempotent (200)' ($r10.status -eq 200) ''
         Add-Step 'idempotent re-call same winner' ($r10.body.duel.winner_user_id -eq $resolved.winner_user_id) ''
@@ -281,16 +281,16 @@ function Write-SimSummary {
         [Parameter(Mandatory)][hashtable] $Result
     )
     $md = @()
-    $md += "# Sim run — $($Result.Label)"
+    $md += "# Sim run -- $($Result.Label)"
     $md += ""
-    $md += "**Result:** $($Result.Pass ? 'PASS' : 'FAIL')"
+    $md += "**Result:** $(if ($Result.Pass) { 'PASS' } else { 'FAIL' })"
     $md += "**Started:** $($Result.Started)"
     $md += "**Finished:** $($Result.Finished)"
     $md += "**Duel ID:** $($Result.DuelId)"
     $md += ""
     $md += "## Steps"
     foreach ($s in $Result.Steps) {
-        $md += "- $(if ($s.Pass) { '✅' } else { '❌' }) **$($s.Name)** — $($s.Note)"
+        $md += "- $(if ($s.Pass) { '[PASS]' } else { '[FAIL]' }) **$($s.Name)** -- $($s.Note)"
     }
     if ($Result.Errors -and $Result.Errors.Count -gt 0) {
         $md += ""

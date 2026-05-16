@@ -1,5 +1,5 @@
-# 04-strength-duel.ps1 — Strength duel: COUNT(*) over 'strength_workout'
-# events. Alpha submits 3 workouts vs bravo's 1 → alpha wins.
+# 04-strength-duel.ps1 -- Strength duel: COUNT(*) over 'strength_workout'
+# events. Alpha submits 3 workouts vs bravo's 1 -> alpha wins.
 
 . (Join-Path $PSScriptRoot '_lib.ps1')
 
@@ -40,6 +40,6 @@ $result = Invoke-DuelSim -Label '04-strength' -DuelType 'strength' -ExpectedWinn
         }
     }
 
-if ($result.Pass) { Write-Host "PASS  04-strength-duel  → $($result.RunDir)" -ForegroundColor Green }
-else              { Write-Host "FAIL  04-strength-duel  → $($result.RunDir)" -ForegroundColor Red }
+if ($result.Pass) { Write-Host "PASS  04-strength-duel  -> $($result.RunDir)" -ForegroundColor Green }
+else              { Write-Host "FAIL  04-strength-duel  -> $($result.RunDir)" -ForegroundColor Red }
 exit ([int](-not $result.Pass))

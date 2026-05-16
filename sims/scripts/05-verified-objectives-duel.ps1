@@ -1,7 +1,7 @@
-# 05-verified-objectives-duel.ps1 — Verified Objectives duel:
+# 05-verified-objectives-duel.ps1 -- Verified Objectives duel:
 # COUNT DISTINCT (event_type, metric_date) pairs across the four
 # verified_objective_* event types. Alpha covers 4 pairs (walk+sleep on
-# day -1, bedtime+strength on day -2), bravo covers 2 → alpha wins.
+# day -1, bedtime+strength on day -2), bravo covers 2 -> alpha wins.
 
 . (Join-Path $PSScriptRoot '_lib.ps1')
 
@@ -39,6 +39,6 @@ $result = Invoke-DuelSim -Label '05-verified-objectives' -DuelType 'verified_obj
         )
     }
 
-if ($result.Pass) { Write-Host "PASS  05-verified-objectives-duel  → $($result.RunDir)" -ForegroundColor Green }
-else              { Write-Host "FAIL  05-verified-objectives-duel  → $($result.RunDir)" -ForegroundColor Red }
+if ($result.Pass) { Write-Host "PASS  05-verified-objectives-duel  -> $($result.RunDir)" -ForegroundColor Green }
+else              { Write-Host "FAIL  05-verified-objectives-duel  -> $($result.RunDir)" -ForegroundColor Red }
 exit ([int](-not $result.Pass))

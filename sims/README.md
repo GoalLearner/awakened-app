@@ -82,16 +82,20 @@ After test users are seeded:
 
 ```powershell
 cd C:\Users\richm\Documents\repos\awakened-app
-pwsh sims/scripts/01-steps-duel.ps1
-pwsh sims/scripts/02-sleep-duel.ps1
+powershell -ExecutionPolicy Bypass -File .\sims\scripts\01-steps-duel.ps1
+powershell -ExecutionPolicy Bypass -File .\sims\scripts\02-sleep-duel.ps1
 # ... etc
 ```
 
 Or run all sequentially:
 
 ```powershell
-pwsh sims/scripts/run-all.ps1
+powershell -ExecutionPolicy Bypass -File .\sims\scripts\run-all.ps1
 ```
+
+Scripts are Windows PowerShell 5.1 compatible (ASCII-only, no PS7-
+exclusive operators). They work identically under `pwsh` (PowerShell 7+)
+if you have it installed.
 
 ## Safety rules
 

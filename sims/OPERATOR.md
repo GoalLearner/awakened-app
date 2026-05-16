@@ -109,13 +109,19 @@ Terminal B:
 
 ```powershell
 cd C:\Users\richm\Documents\repos\awakened-app
-pwsh sims/scripts/01-steps-duel.ps1
+powershell -ExecutionPolicy Bypass -File .\sims\scripts\01-steps-duel.ps1
 ```
+
+Note: use `powershell` (Windows PowerShell 5.1) — not `pwsh` (PowerShell 7).
+The sim scripts are ASCII-only and use no PS7-exclusive syntax (no
+ternary, no null-coalescing, no pipeline chains), so they work
+identically under both shells. If you do have `pwsh` installed and
+prefer it, swap in `pwsh -File .\sims\scripts\01-steps-duel.ps1`.
 
 Expected output (final line):
 
 ```
-PASS  01-steps-duel  → C:\...\sims\runs\20260516-220511-01-steps
+PASS  01-steps-duel  -> C:\...\sims\runs\20260516-220511-01-steps
 ```
 
 If you see `FAIL` instead, open the per-run dir's `summary.md` to
@@ -130,7 +136,7 @@ find which checkpoint missed. Common causes:
 ## 3 · Run the full matrix
 
 ```powershell
-pwsh sims/scripts/run-all.ps1
+powershell -ExecutionPolicy Bypass -File .\sims\scripts\run-all.ps1
 ```
 
 Runs all 6 sims sequentially (01 → 06). Per-run output lands in

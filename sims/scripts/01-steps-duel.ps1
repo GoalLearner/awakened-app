@@ -1,11 +1,11 @@
-# 01-steps-duel.ps1 — End-to-end smoke test for the `steps` duel type.
+# 01-steps-duel.ps1 -- End-to-end smoke test for the `steps` duel type.
 #
 # Flow:
 #   1. Ensure alpha + bravo are friends (idempotent: send request, then
-#      bravo's accept either flips A→B pending or returns "already
+#      bravo's accept either flips A->B pending or returns "already
 #      accepted").
 #   2. Alpha creates a steps duel against bravo.
-#   3. Bravo accepts the duel (status → active).
+#   3. Bravo accepts the duel (status -> active).
 #   4. Both users POST verified_events of type 'steps_total'. Alpha
 #      submits a higher value than bravo, so alpha should win.
 #   5. SQL forces ends_at into the past so /resolve will accept.
@@ -39,14 +39,14 @@ try {
     $alphaId = Get-SimUserId -User 'alpha'
     $bravoId = Get-SimUserId -User 'bravo'
 
-    # ─── 1. Friendship (idempotent) ─────────────────────────────
+    # --- 1. Friendship (idempotent) -----------------------------
     $r1 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/friends/request' -As 'alpha' -Body @{ alias = 'sim_bravo' } -Label 'alpha-friend-request'
     Add-Step 'alpha sends friend request to bravo' ($r1.status -eq 200 -or $r1.status -eq 409) "status=$($r1.status)"
 
     $r2 = Invoke-SimRequest -RunDir $runDir -Method GET -Path '/v1/friends' -As 'bravo' -Label 'bravo-fetch-friends'
     Add-Step 'bravo fetches friends list' ($r2.status -eq 200) "incoming=$($r2.body.incoming.Count) friends=$($r2.body.friends.Count)"
 
-    # Find the pending friendship from alpha → bravo
+    # Find the pending friendship from alpha -> bravo
     $pendingFriendship = @($r2.body.incoming) | Where-Object { $_.alias -eq 'sim_alpha' } | Select-Object -First 1
     $alreadyFriends    = @($r2.body.friends)  | Where-Object { $_.alias -eq 'sim_alpha' } | Select-Object -First 1
 
@@ -57,7 +57,7 @@ try {
         Add-Step 'friendship already accepted' $true 'idempotent path'
     }
 
-    # ─── 2. Create steps duel ───────────────────────────────────
+    # --- 2. Create steps duel -----------------------------------
     $r4 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/duels' -As 'alpha' -Body @{
         opponent_alias = 'sim_bravo'
         duration_days  = 3
@@ -69,11 +69,11 @@ try {
 
     if (-not $duelId) { throw 'No duel_id returned; aborting.' }
 
-    # ─── 3. Bravo accepts ───────────────────────────────────────
+    # --- 3. Bravo accepts ---------------------------------------
     $r5 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/accept" -As 'bravo' -Label 'bravo-accept-duel'
     Add-Step 'bravo accepts duel' ($r5.status -eq 200) "status=$($r5.status) duel_status=$($r5.body.duel.status)"
 
-    # ─── 4. Submit verified_events ──────────────────────────────
+    # --- 4. Submit verified_events ------------------------------
     $now    = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
     $startW = (Get-Date).ToUniversalTime().AddDays(-3).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
 
@@ -105,16 +105,16 @@ try {
     $r7 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/verified-events' -As 'bravo' -Body @{ events = @($bravoEvent) } -Label 'bravo-submit-steps'
     Add-Step 'bravo submits 9,800 steps' ($r7.status -eq 200 -and $r7.body.inserted -eq 1) "inserted=$($r7.body.inserted)"
 
-    # ─── 5. /score before resolve (should show both) ────────────
+    # --- 5. /score before resolve (should show both) ------------
     $r8 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId/score" -As 'alpha' -Label 'alpha-fetch-score-preresolve'
     Add-Step '/score returns 200 pre-resolve' ($r8.status -eq 200) "alpha_score=$($r8.body.score.you.value) rival_score=$($r8.body.score.rival.value)"
 
-    # ─── 6. Force ends_at into the past ─────────────────────────
+    # --- 6. Force ends_at into the past -------------------------
     $sql = "UPDATE duels SET ends_at = datetime('now', '-10 seconds') WHERE id = '$duelId' AND status = 'active';"
     Invoke-SimD1 -RunDir $runDir -Sql $sql -Label 'force-ends-at-past' | Out-Null
     Add-Step 'ends_at forced into past via D1' $true 'wrangler d1 execute'
 
-    # ─── 7. /resolve (first call) ──────────────────────────────
+    # --- 7. /resolve (first call) ------------------------------
     $r9 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-first-call'
     $resolved = $r9.body.duel
     Add-Step '/resolve returns 200' ($r9.status -eq 200) "duel.status=$($resolved.status) result=$($resolved.result) winner=$($resolved.winner_user_id)"
@@ -123,12 +123,12 @@ try {
     Add-Step 'winner_user_id = alpha'       ($resolved.winner_user_id -eq $alphaId) "expected $alphaId got $($resolved.winner_user_id)"
     Add-Step 'reward_settled_at set'        ($null -ne $resolved.reward_settled_at -and $resolved.reward_settled_at -ne '') "value=$($resolved.reward_settled_at)"
 
-    # ─── 8. /resolve (second call) — idempotent ────────────────
+    # --- 8. /resolve (second call) -- idempotent ----------------
     $r10 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-second-call-idempotent'
     Add-Step '/resolve idempotent (200 on re-call)' ($r10.status -eq 200) "status=$($r10.status)"
     Add-Step '/resolve re-call same winner'         ($r10.body.duel.winner_user_id -eq $alphaId) ''
 
-    # ─── 9. Ledger verification ─────────────────────────────────
+    # --- 9. Ledger verification ---------------------------------
     $ledgerSql = "SELECT user_id, delta, reason, ref_type, ref_id FROM user_souls_ledger WHERE ref_type = 'duel' AND ref_id = '$duelId';"
     $ledgerRaw = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-ledger'
     $ledgerHasOne   = ($ledgerRaw -match '"rows_read":\s*1') -or ($ledgerRaw -match '"delta":\s*40')
@@ -136,7 +136,7 @@ try {
     Add-Step 'ledger has 1 row for this duel'      $ledgerHasOne   ''
     Add-Step 'ledger row belongs to alpha (winner)' $ledgerHasAlpha ''
 
-    # ─── 10. GET /v1/duels/:id matches the /resolve response ──
+    # --- 10. GET /v1/duels/:id matches the /resolve response --
     # Catches any read-path drift between the /resolve response and
     # the cached duel state on subsequent reads.
     $r11 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId" -As 'alpha' -Label 'get-duel-postresolve'
@@ -162,5 +162,5 @@ Write-SimSummary -RunDir $runDir -Result @{
     Errors   = $errors
 }
 
-if ($pass) { Write-Host "PASS  01-steps-duel  → $runDir" -ForegroundColor Green }
-else       { Write-Host "FAIL  01-steps-duel  → $runDir" -ForegroundColor Red }
+if ($pass) { Write-Host "PASS  01-steps-duel  -> $runDir" -ForegroundColor Green }
+else       { Write-Host "FAIL  01-steps-duel  -> $runDir" -ForegroundColor Red }

@@ -1,4 +1,4 @@
-# run-all.ps1 — Run every sim sequentially. 60s sleep between each
+# run-all.ps1 -- Run every sim sequentially. 60s sleep between each
 # to stay well under the RL_DUELS_WRITE rate-limit cap (6/min).
 
 $ErrorActionPreference = 'Continue'
@@ -17,7 +17,7 @@ $startedAll = Get-Date
 
 foreach ($s in $scripts) {
     Write-Host ""
-    Write-Host "── Running $s ─────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "-- Running $s ---------------------------------" -ForegroundColor Cyan
     $t0 = Get-Date
     & (Join-Path $PSScriptRoot $s)
     $code = $LASTEXITCODE
@@ -42,16 +42,16 @@ $pcount = ($results | Where-Object { $_.Pass }).Count
 $fcount = ($results | Where-Object { -not $_.Pass }).Count
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host "  SUMMARY" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===================================================" -ForegroundColor Cyan
 foreach ($r in $results) {
     $tag = if ($r.Pass) { 'PASS' } else { 'FAIL' }
     $color = if ($r.Pass) { 'Green' } else { 'Red' }
     Write-Host ("  {0}  {1,-36}  {2,5:N1}s" -f $tag, $r.Script, $r.Duration) -ForegroundColor $color
 }
 Write-Host ""
-Write-Host ("  $pcount/$($scripts.Count) PASS · $fcount FAIL · total $('{0:N1}' -f $totalDt.TotalSeconds)s") -ForegroundColor (if ($pass) { 'Green' } else { 'Red' })
+Write-Host ("  $pcount/$($scripts.Count) PASS - $fcount FAIL - total $('{0:N1}' -f $totalDt.TotalSeconds)s") -ForegroundColor (if ($pass) { 'Green' } else { 'Red' })
 Write-Host ""
 
 exit ([int](-not $pass))

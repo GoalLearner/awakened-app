@@ -1,5 +1,5 @@
-# 02-sleep-duel.ps1 — Sleep duel: COUNT DISTINCT metric_date over
-# 'sleep_7h_night' events. Alpha submits 3 nights, bravo 2 → alpha wins.
+# 02-sleep-duel.ps1 -- Sleep duel: COUNT DISTINCT metric_date over
+# 'sleep_7h_night' events. Alpha submits 3 nights, bravo 2 -> alpha wins.
 
 . (Join-Path $PSScriptRoot '_lib.ps1')
 
@@ -38,6 +38,6 @@ $result = Invoke-DuelSim -Label '02-sleep' -DuelType 'sleep' -ExpectedWinner 'al
         }
     }
 
-if ($result.Pass) { Write-Host "PASS  02-sleep-duel  → $($result.RunDir)" -ForegroundColor Green }
-else              { Write-Host "FAIL  02-sleep-duel  → $($result.RunDir)" -ForegroundColor Red }
+if ($result.Pass) { Write-Host "PASS  02-sleep-duel  -> $($result.RunDir)" -ForegroundColor Green }
+else              { Write-Host "FAIL  02-sleep-duel  -> $($result.RunDir)" -ForegroundColor Red }
 exit ([int](-not $result.Pass))
