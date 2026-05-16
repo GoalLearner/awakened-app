@@ -272,9 +272,22 @@ Stop the seed Worker (`Ctrl+C` in Terminal A).
 
 **"JWT file not found"** → run `/seed` (section 1).
 
-**"DUEL_NOT_ENDED"** → the `force-ends-at-past.sql` step didn't run
-or didn't match the duel id. Re-check the SQL in the run's `sql/`
-directory matches the duel ID from the response.
+**"DUEL_NOT_ENDED"** on `/resolve` → the verified force-end step
+should now catch this BEFORE `/resolve` is called. If the sim still
+proceeded to `/resolve` and got DUEL_NOT_ENDED, it means the harness
+is out of date — pull latest. Otherwise open
+`runs/<ts>/responses/*force-end-*.json` to see whether the SELECT
+before, UPDATE, or SELECT after failed; the most common cause is a
+wrangler `Authentication error [code: 10000]` (re-run
+`wrangler login`).
+
+**"force-end: rows_written > 0" FAILED** → the UPDATE matched 0
+rows. Inspect the SELECT-before response to see the actual status
+(it may already be `completed`/`cancelled`) or the actual duel id.
+
+**wrangler `Authentication error [code: 10000]`** → the OAuth token
+expired or got revoked. Run `wrangler login` and retry the sim from
+a fresh seed.
 
 **"DUEL_TYPE_NOT_SCORED_YET"** on `boss_race` is **expected** — that's
 the deferred type.

@@ -55,10 +55,16 @@ try {
     $r6 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId/score" -As 'alpha' -Label 'score-boss-race'
     Add-Step6 '/score returns 200 even for boss_race' ($r6.status -eq 200) "body=$($r6.body | ConvertTo-Json -Depth 4 -Compress)"
 
-    # Force ends_at into the past.
-    $sql = "UPDATE duels SET ends_at = datetime('now', '-10 seconds') WHERE id = '$duelId' AND status = 'active';"
-    Invoke-SimD1 -RunDir $runDir -Sql $sql -Label 'force-ends-at' | Out-Null
-    Add-Step6 'ends_at forced into past' $true ''
+    # Force ends_at into the past with verification (boss_race still
+    # needs the duel ended so /resolve can reach the deferred-code
+    # branch -- otherwise it would short-circuit on DUEL_NOT_ENDED and
+    # we'd never see BOSS_RACE_SCORING_DEFERRED).
+    $forceEnd = Invoke-SimForceEndDuel -RunDir $runDir -DuelId $duelId
+    Add-Step6 'force-end: rows_written > 0' ($forceEnd.Changes -gt 0) "changes=$($forceEnd.Changes)"
+    Add-Step6 'force-end: ends_at moved into past' ($forceEnd.Pass) "before_ends=$($forceEnd.BeforeEnds) after_ends=$($forceEnd.AfterEnds)"
+    if (-not $forceEnd.Pass) {
+        throw "Force-end aborted: $($forceEnd.Reason). Refusing to call /resolve."
+    }
 
     # /resolve -- expected to FAIL with BOSS_RACE_SCORING_DEFERRED.
     $r7 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-expect-deferred'
@@ -75,15 +81,17 @@ try {
 
     # Verify no ledger row was written for boss_race.
     $ledgerSql = "SELECT COUNT(*) AS n FROM user_souls_ledger WHERE ref_type = 'duel' AND ref_id = '$duelId';"
-    $ledgerRaw = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-no-ledger'
-    Add-Step6 'no ledger row written for boss_race' ($ledgerRaw -match '"n":\s*0') ''
+    $ledger = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-no-ledger'
+    Add-Step6 'ledger SQL ran cleanly' ($ledger.ok) "error=$($ledger.error.text)"
+    $ledgerN = if ($ledger.results.Count -ge 1) { [int]$ledger.results[0].n } else { -1 }
+    Add-Step6 'no ledger row written for boss_race' ($ledgerN -eq 0) "n=$ledgerN"
 
     # Clean up the unresolved boss_race duel so it doesn't linger.
-    # Use challenger-side cancel -- only works on pending, so fall back to a direct D1
-    # status update if needed.
+    # Cancel via D1 (challenger-side cancel only works on pending; the
+    # duel is active here, so we direct-update the status).
     $cancelSql = "UPDATE duels SET status = 'cancelled', resolved_at = datetime('now') WHERE id = '$duelId' AND status = 'active';"
-    Invoke-SimD1 -RunDir $runDir -Sql $cancelSql -Label 'cleanup-boss-race-duel' | Out-Null
-    Add-Step6 'boss_race duel cancelled for cleanup' $true ''
+    $cancel = Invoke-SimD1 -RunDir $runDir -Sql $cancelSql -Label 'cleanup-boss-race-duel'
+    Add-Step6 'boss_race duel cancelled for cleanup' ($cancel.ok -and $cancel.changes -eq 1) "ok=$($cancel.ok) changes=$($cancel.changes) error=$($cancel.error.text)"
 } catch {
     $script:pass = $false
     $script:errors += $_.ToString()

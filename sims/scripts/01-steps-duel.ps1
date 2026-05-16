@@ -110,9 +110,16 @@ try {
     Add-Step '/score returns 200 pre-resolve' ($r8.status -eq 200) "alpha_score=$($r8.body.score.you.value) rival_score=$($r8.body.score.rival.value)"
 
     # --- 6. Force ends_at into the past -------------------------
-    $sql = "UPDATE duels SET ends_at = datetime('now', '-10 seconds') WHERE id = '$duelId' AND status = 'active';"
-    Invoke-SimD1 -RunDir $runDir -Sql $sql -Label 'force-ends-at-past' | Out-Null
-    Add-Step 'ends_at forced into past via D1' $true 'wrangler d1 execute'
+    # Verified force-end: SELECT before -> UPDATE (with row-count
+    # check) -> SELECT after (must show ends_at in the past). Aborts
+    # the sim before /resolve if any step fails -- a green /resolve
+    # against a still-future duel would be a misleading PASS.
+    $forceEnd = Invoke-SimForceEndDuel -RunDir $runDir -DuelId $duelId
+    Add-Step 'force-end: rows_written > 0' ($forceEnd.Changes -gt 0) "changes=$($forceEnd.Changes)"
+    Add-Step 'force-end: ends_at moved into past' ($forceEnd.Pass) "before_ends=$($forceEnd.BeforeEnds) after_ends=$($forceEnd.AfterEnds) before_status=$($forceEnd.BeforeStat) after_status=$($forceEnd.AfterStat)"
+    if (-not $forceEnd.Pass) {
+        throw "Force-end aborted: $($forceEnd.Reason). Refusing to call /resolve."
+    }
 
     # --- 7. /resolve (first call) ------------------------------
     $r9 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-first-call'
@@ -130,11 +137,14 @@ try {
 
     # --- 9. Ledger verification ---------------------------------
     $ledgerSql = "SELECT user_id, delta, reason, ref_type, ref_id FROM user_souls_ledger WHERE ref_type = 'duel' AND ref_id = '$duelId';"
-    $ledgerRaw = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-ledger'
-    $ledgerHasOne   = ($ledgerRaw -match '"rows_read":\s*1') -or ($ledgerRaw -match '"delta":\s*40')
-    $ledgerHasAlpha = $ledgerRaw -match [regex]::Escape($alphaId)
-    Add-Step 'ledger has 1 row for this duel'      $ledgerHasOne   ''
-    Add-Step 'ledger row belongs to alpha (winner)' $ledgerHasAlpha ''
+    $ledger = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-ledger'
+    Add-Step 'ledger SQL ran cleanly' ($ledger.ok) "rows_read=$($ledger.rowsRead) error=$($ledger.error.text)"
+    $ledgerRows = @($ledger.results)
+    $ledgerWinner = if ($ledgerRows.Count -ge 1) { [string]$ledgerRows[0].user_id } else { '' }
+    $ledgerDelta  = if ($ledgerRows.Count -ge 1) { $ledgerRows[0].delta } else { $null }
+    Add-Step 'ledger has 1 row for this duel'       ($ledgerRows.Count -eq 1) "rows=$($ledgerRows.Count)"
+    Add-Step 'ledger row belongs to alpha (winner)' ($ledgerWinner -eq $alphaId) "ledger_user=$ledgerWinner expected=$alphaId"
+    Add-Step 'ledger delta = +40'                   ($ledgerDelta -eq 40) "delta=$ledgerDelta"
 
     # --- 10. GET /v1/duels/:id matches the /resolve response --
     # Catches any read-path drift between the /resolve response and

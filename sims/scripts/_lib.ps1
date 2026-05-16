@@ -106,6 +106,34 @@ function Invoke-SimRequest {
 }
 
 function Invoke-SimD1 {
+    <#
+    Run a SQL statement against the production awakened-db via
+    `wrangler d1 execute --remote --json`. Parses the JSON envelope
+    so callers see structured success/error rather than a raw stdout
+    blob.
+
+    Returns a pscustomobject with:
+      ok            : $true iff the command exited 0 AND the response
+                      JSON parsed to an array of result blocks AND none
+                      of them carry an `error` field.
+      changes       : sum of `meta.changes` across result blocks (the
+                      number of rows the statement actually wrote /
+                      modified). Use this to detect "UPDATE matched 0
+                      rows" silent failures.
+      rowsRead      : sum of `meta.rows_read` across result blocks.
+      results       : flattened array of every row returned (for SELECT).
+      error         : { text, code, name } object when ok=$false.
+                      Includes Cloudflare API errors (e.g.
+                      "Authentication error [code: 10000]") which
+                      previously slipped past the harness silently.
+      raw           : the verbatim stdout+stderr capture, also written
+                      to disk for forensics.
+      exitCode      : $LASTEXITCODE from wrangler.
+
+    The helper does NOT throw on failure -- callers decide whether a
+    given SQL is allowed to no-op (e.g. teardown queries that target
+    rows that may not exist) or must hard-fail (e.g. force-end-duel).
+    #>
     param(
         [Parameter(Mandatory)][string] $RunDir,
         [Parameter(Mandatory)][string] $Sql,
@@ -114,15 +142,181 @@ function Invoke-SimD1 {
     $script:_ReqSeq++
     $seq = '{0:D3}' -f $script:_ReqSeq
     Set-Content -LiteralPath (Join-Path $RunDir "sql/$seq-$Label.sql") -Value $Sql -Encoding utf8
+
     Push-Location (Join-Path $script:RepoRoot 'backend')
     try {
         $raw = wrangler d1 execute awakened-db --remote --json --command $Sql 2>&1
+        $exit = $LASTEXITCODE
     } finally {
         Pop-Location
     }
-    $rawStr = $raw -join "`n"
+    $rawStr = ($raw | Out-String).TrimEnd()
     Set-Content -LiteralPath (Join-Path $RunDir "responses/$seq-$Label.json") -Value $rawStr -Encoding utf8
-    return $rawStr
+
+    $ok = $true
+    $changes = 0
+    $rowsRead = 0
+    $resultsFlat = @()
+    $errObj = $null
+    $parsed = $null
+
+    # wrangler prints WARNING lines + the JSON envelope to stdout. Strip
+    # leading non-JSON noise by finding the first '[' or '{' and parsing
+    # from there. Belt-and-suspenders against the wrangler.toml warning
+    # banner contaminating the JSON.
+    $bracket = $rawStr.IndexOf('[')
+    $brace   = $rawStr.IndexOf('{')
+    $jsonStart = if ($bracket -lt 0) { $brace } elseif ($brace -lt 0) { $bracket } else { [Math]::Min($bracket, $brace) }
+
+    if ($jsonStart -ge 0) {
+        $jsonText = $rawStr.Substring($jsonStart)
+        try {
+            $parsed = $jsonText | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            $ok = $false
+            $errObj = [pscustomobject]@{ text = "could not parse wrangler JSON: $($_.Exception.Message)"; code = -1; name = 'JsonParseError' }
+        }
+    } else {
+        $ok = $false
+        $errObj = [pscustomobject]@{ text = 'wrangler emitted no JSON envelope'; code = -1; name = 'NoJsonEnvelope' }
+    }
+
+    if ($exit -ne 0) { $ok = $false }
+
+    # Two response shapes:
+    #   success: array of { results: [...], meta: { changes, rows_read, ... }, success: true }
+    #   error:   { error: { text, code, name } }   OR an array whose first elt has `.error`
+    if ($null -ne $parsed) {
+        $blocks = if ($parsed -is [System.Array]) { $parsed } else { ,$parsed }
+        foreach ($blk in $blocks) {
+            if ($blk.PSObject.Properties.Name -contains 'error' -and $null -ne $blk.error) {
+                $ok = $false
+                $e = $blk.error
+                $errObj = [pscustomobject]@{
+                    text = ($e.text)
+                    code = ($e.code)
+                    name = ($e.name)
+                }
+            }
+            if ($blk.PSObject.Properties.Name -contains 'meta' -and $null -ne $blk.meta) {
+                if ($null -ne $blk.meta.changes)   { $changes  += [int]$blk.meta.changes }
+                if ($null -ne $blk.meta.rows_read) { $rowsRead += [int]$blk.meta.rows_read }
+            }
+            if ($blk.PSObject.Properties.Name -contains 'results' -and $null -ne $blk.results) {
+                $resultsFlat += @($blk.results)
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        ok       = $ok
+        changes  = $changes
+        rowsRead = $rowsRead
+        results  = $resultsFlat
+        error    = $errObj
+        raw      = $rawStr
+        exitCode = $exit
+    }
+}
+
+function Invoke-SimForceEndDuel {
+    <#
+    Force the named duel's ends_at into the past so /resolve will
+    accept it. Verifies the UPDATE actually modified the row and that
+    the new ends_at is meaningfully in the past. Returns a structured
+    result with before/after timestamps + a Pass flag callers should
+    assert on BEFORE calling /resolve.
+
+    Verification steps:
+      1. SELECT ends_at + status of the duel BEFORE.
+         FAIL if the row is missing, already completed, or any wrangler
+         auth error fires.
+      2. UPDATE ... WHERE id = '<duelId>' AND status = 'active'.
+         FAIL if changes != 1 (wrong id, wrong status, or wrangler
+         error swallowed the operation).
+      3. SELECT ends_at + status AFTER.
+         FAIL if the row vanished, ends_at didn't move into the past,
+         or status drifted away from 'active'.
+
+    Returns:
+      Pass        : $true iff all three steps verified clean
+      Reason      : human-readable failure description (empty when Pass)
+      Changes     : rows-written count from the UPDATE
+      BeforeEnds  : ends_at string BEFORE update
+      AfterEnds   : ends_at string AFTER update
+      BeforeStat  : status BEFORE
+      AfterStat   : status AFTER
+    #>
+    param(
+        [Parameter(Mandatory)][string] $RunDir,
+        [Parameter(Mandatory)][string] $DuelId
+    )
+
+    $out = [pscustomobject]@{
+        Pass = $false
+        Reason = ''
+        Changes = 0
+        BeforeEnds = ''
+        AfterEnds = ''
+        BeforeStat = ''
+        AfterStat = ''
+    }
+
+    # SQL injection on $DuelId: it's a UUID from a backend response. We
+    # still single-quote it but a UUID can't escape the literal.
+    $selBefore = "SELECT status, ends_at FROM duels WHERE id = '$DuelId';"
+    $r1 = Invoke-SimD1 -RunDir $RunDir -Sql $selBefore -Label 'force-end-select-before'
+    if (-not $r1.ok) {
+        $out.Reason = "SELECT before failed: $($r1.error.text) [code=$($r1.error.code) exit=$($r1.exitCode)]"
+        return $out
+    }
+    if ($r1.results.Count -lt 1) {
+        $out.Reason = "duel id $DuelId not found in duels table (SELECT returned 0 rows)"
+        return $out
+    }
+    $out.BeforeStat = [string]$r1.results[0].status
+    $out.BeforeEnds = [string]$r1.results[0].ends_at
+    if ($out.BeforeStat -ne 'active') {
+        $out.Reason = "duel already in status '$($out.BeforeStat)' before force-end (expected 'active')"
+        return $out
+    }
+
+    $update = "UPDATE duels SET ends_at = datetime('now', '-10 seconds') WHERE id = '$DuelId' AND status = 'active';"
+    $r2 = Invoke-SimD1 -RunDir $RunDir -Sql $update -Label 'force-end-update'
+    if (-not $r2.ok) {
+        $out.Reason = "UPDATE failed: $($r2.error.text) [code=$($r2.error.code) exit=$($r2.exitCode)]"
+        return $out
+    }
+    $out.Changes = $r2.changes
+    if ($r2.changes -lt 1) {
+        $out.Reason = "UPDATE matched 0 rows (id mismatch or status drifted away from 'active' between SELECT and UPDATE)"
+        return $out
+    }
+
+    $selAfter = "SELECT status, ends_at, (julianday('now') - julianday(ends_at)) * 86400.0 AS seconds_since_end FROM duels WHERE id = '$DuelId';"
+    $r3 = Invoke-SimD1 -RunDir $RunDir -Sql $selAfter -Label 'force-end-select-after'
+    if (-not $r3.ok) {
+        $out.Reason = "SELECT after failed: $($r3.error.text) [code=$($r3.error.code) exit=$($r3.exitCode)]"
+        return $out
+    }
+    if ($r3.results.Count -lt 1) {
+        $out.Reason = "duel id $DuelId disappeared after UPDATE (no row returned post-update)"
+        return $out
+    }
+    $out.AfterStat = [string]$r3.results[0].status
+    $out.AfterEnds = [string]$r3.results[0].ends_at
+    $secSinceEnd = [double]($r3.results[0].seconds_since_end)
+    if ($secSinceEnd -lt 1.0) {
+        $out.Reason = "ends_at did not move into the past after UPDATE (seconds_since_end=$secSinceEnd, after_ends=$($out.AfterEnds))"
+        return $out
+    }
+    if ($out.AfterStat -ne 'active') {
+        $out.Reason = "status drifted to '$($out.AfterStat)' after UPDATE (expected 'active')"
+        return $out
+    }
+
+    $out.Pass = $true
+    return $out
 }
 
 function Invoke-DuelSim {
@@ -211,10 +405,17 @@ function Invoke-DuelSim {
         $r8 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId/score" -As 'alpha' -Label 'score-preresolve'
         Add-Step '/score 200 pre-resolve' ($r8.status -eq 200) "you=$($r8.body.score.you.value) rival=$($r8.body.score.rival.value)"
 
-        # 6. Force ends_at into the past
-        $sql = "UPDATE duels SET ends_at = datetime('now', '-10 seconds') WHERE id = '$duelId' AND status = 'active';"
-        Invoke-SimD1 -RunDir $runDir -Sql $sql -Label 'force-ends-at' | Out-Null
-        Add-Step 'ends_at forced into past' $true ''
+        # 6. Force ends_at into the past. Verified end-to-end:
+        # SELECT before, UPDATE with row-count check, SELECT after with
+        # past-timestamp check. If ANY of these fail, abort the sim
+        # before calling /resolve -- a successful-looking /resolve on a
+        # still-future duel would be a misleading green.
+        $forceEnd = Invoke-SimForceEndDuel -RunDir $runDir -DuelId $duelId
+        Add-Step 'force-end SQL: rows_written > 0' ($forceEnd.Changes -gt 0) "changes=$($forceEnd.Changes)"
+        Add-Step 'force-end SQL: ends_at moved into past' ($forceEnd.Pass) "before_ends=$($forceEnd.BeforeEnds) after_ends=$($forceEnd.AfterEnds) before_status=$($forceEnd.BeforeStat) after_status=$($forceEnd.AfterStat)"
+        if (-not $forceEnd.Pass) {
+            throw "Force-end aborted: $($forceEnd.Reason). Refusing to call /resolve on a duel that was not actually ended."
+        }
 
         # 7. /resolve first call
         $r9 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-1'
@@ -240,16 +441,24 @@ function Invoke-DuelSim {
         Add-Step '/resolve idempotent (200)' ($r10.status -eq 200) ''
         Add-Step 'idempotent re-call same winner' ($r10.body.duel.winner_user_id -eq $resolved.winner_user_id) ''
 
-        # 9. Ledger verification
+        # 9. Ledger verification -- structured Invoke-SimD1 result.
         $ledgerSql = "SELECT user_id, delta, reason FROM user_souls_ledger WHERE ref_type = 'duel' AND ref_id = '$duelId';"
-        $ledgerRaw = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-ledger'
+        $ledger = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-ledger'
+        Add-Step 'ledger SQL ran cleanly' ($ledger.ok) "rows_read=$($ledger.rowsRead) error=$($ledger.error.text)"
+        $rows = @($ledger.results)
         if ($ExpectedWinner -eq 'draw') {
-            Add-Step 'ledger has 0 rows (draw, no reward)' (($ledgerRaw -match '"rows_read":\s*0') -or ($ledgerRaw -notmatch '"delta"')) ''
+            Add-Step 'ledger has 0 rows (draw, no reward)' ($rows.Count -eq 0) "rows=$($rows.Count)"
         } else {
-            $hasOne   = ($ledgerRaw -match '"rows_read":\s*1') -or ($ledgerRaw -match '"delta":\s*40')
-            $hasUser  = $ledgerRaw -match [regex]::Escape($expectedWinId)
-            Add-Step 'ledger has 1 row'              $hasOne  ''
-            Add-Step 'ledger row is the winner'      $hasUser ''
+            $hasOne = ($rows.Count -eq 1)
+            $hasUser = $false
+            $winnerDelta = $null
+            if ($hasOne) {
+                $hasUser = ([string]$rows[0].user_id -eq [string]$expectedWinId)
+                $winnerDelta = $rows[0].delta
+            }
+            Add-Step 'ledger has 1 row'         $hasOne  "rows=$($rows.Count)"
+            Add-Step 'ledger row is the winner' $hasUser "ledger_user=$($rows[0].user_id) expected=$expectedWinId"
+            Add-Step 'ledger delta = +40'       ($winnerDelta -eq 40) "delta=$winnerDelta"
         }
 
         # 10. GET /duels/:id matches /resolve
