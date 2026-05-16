@@ -288,6 +288,19 @@ workflows:
             echo "FAIL: www/auth.js missing cancelDuel (Phase 1z.1 outgoing cancel)"
             exit 1
           fi
+          # v3 Phase 1z.2 — Duels polish pass gates.
+          if ! grep -q "DUEL_VERB_BY_TYPE" www/app.js; then
+            echo "FAIL: www/app.js missing DUEL_VERB_BY_TYPE (Phase 1z.2 verb bank)"
+            exit 1
+          fi
+          if ! grep -q "outanchored" www/app.js; then
+            echo "FAIL: www/app.js missing outanchored verb (Phase 1z.2 brand-locked bedtime verb)"
+            exit 1
+          fi
+          if ! grep -q "\-\-ease-cinema" www/styles.css; then
+            echo "FAIL: www/styles.css missing --ease-cinema token (Phase 1z.2 tokens)"
+            exit 1
+          fi
           # Compare app.js / styles.css / auth.js / sw.js version
           # strings between repo-root index.html and www/index.html.
           # Any mismatch means www/ is stale.
@@ -412,6 +425,19 @@ workflows:
           fi
           if ! grep -q "cancelDuel" "$PUB/auth.js"; then
             echo "FAIL: $PUB/auth.js missing cancelDuel (Phase 1z.1 outgoing cancel)"
+            exit 1
+          fi
+          # v3 Phase 1z.2 — Duels polish pass gates.
+          if ! grep -q "DUEL_VERB_BY_TYPE" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing DUEL_VERB_BY_TYPE (Phase 1z.2 verb bank)"
+            exit 1
+          fi
+          if ! grep -q "outanchored" "$PUB/app.js"; then
+            echo "FAIL: $PUB/app.js missing outanchored verb (Phase 1z.2 brand-locked bedtime verb)"
+            exit 1
+          fi
+          if ! grep -q "\-\-ease-cinema" "$PUB/styles.css"; then
+            echo "FAIL: $PUB/styles.css missing --ease-cinema token (Phase 1z.2 tokens)"
             exit 1
           fi
           # sw.js cache version cross-check

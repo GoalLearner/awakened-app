@@ -1450,6 +1450,50 @@ Cloud Sync's SNAPSHOT_KEYS is an **allowlist for USER STATE**, not device state.
 
 ---
 
+## Duels polish pass (v3 Phase 1z.2)
+
+Brand-defining polish pass on top of the Verified Duel Scoring Engine. Ships in `2.2.1-w14`. Focused on the locked-down moments — verbs, draw bodies, accordion behavior, live ticks, HUNTING-pill type-glyph integration — that carry duel identity through the UI without requiring structural overhaul of the existing surfaces.
+
+### Visual identity locks
+
+- **Six type glyphs (SVG, inline).** `DUEL_TYPE_GLYPH_SVG` map exposes a `<svg>` string per duel type: footprint (steps), moon (sleep), moon-with-clock (bedtime), dumbbell (strength), shield-check (verified_objectives), crowned skull (boss_race). Resolved via `getDuelTypeGlyphSvg(type)`. Used in the HUNTING-strip duel pill today; reusable by future detail / picker / global-rankings surfaces.
+- **Cinzel/JetBrains-Mono split + rune-divider treatment** stays as established. Tokens added: `--gold-hot`, `--gold-glow-soft`, `--purple-glow-soft`, `--border-gold-strong`, `--border-purple-strong`, `--border-emerald`, `--border-red-strong`, plus `--ease-pop` + `--ease-cinema` curves. All live in `:root` next to the existing `--duels-*` tokens.
+- **Six brand-locked verbs (`DUEL_VERB_BY_TYPE`).** One unique verb per type — `outstepped` / `outrested` / `outanchored` / `outlifted` / `outdisciplined` / `outhunted`. Carries type identity into every toast and detail-overlay outcome string. **Do not change these without explicit product reversal** — they are brand-defining terms. `_DUEL_VERB_BY_TYPE` (the older `{ win, loss, prefix }` shape) was also realigned for consistency (`sleep` → `outrested`, `bedtime` → `outanchored`, `boss_race` → `outhunted`).
+- **Draw rotation.** `DUEL_DRAW_BODIES` carries 3 strings — `"Even ground with {opponent}."` / `"Stalemate. Neither hunter blinked."` / `"Both held the line. Duel ends sealed."` Index persists via `hb_duel_draw_rot_idx` localStorage so consecutive draws rotate. The detail overlay re-uses the **prior** index (n−1) so toast + overlay show the same body for the same resolution.
+
+### Accordion behavior
+
+- **Persistence.** Toggling either accordion writes `hb_duels_friends_expanded` or `hb_duels_duels_expanded` (`'1'` or `'0'`).
+- **First-daily-open auto-expand.** When `_friendsCache.incoming.length > 0` OR `_duelsCache.incoming.length > 0` on the first session of the device-local day, the corresponding accordion auto-expands and a daily flag (`hb_duels_friends_auto_expanded_<YYYY-MM-DD>` / `hb_duels_duels_auto_expanded_<YYYY-MM-DD>`) marks it so it only triggers once that day. After that, manual state wins.
+- Helper: `_restoreDuelsAccordionState()` reads the persisted flag, then layers auto-expand on top. Called from the social-panel collapse-wire init.
+
+### Live 60s tick
+
+- `startDuelsLiveTick()` / `stopDuelsLiveTick()` — sets a `setInterval` that decrements `_duelsCache.active[*].time_remaining_ms` by 60 000ms every tick and re-renders the hero + HUNTING strip pill. No backend polling.
+- Started on `switchTab('social')` entry; stopped on every other tab. Wrapped in try/catch so any failure inside the tick can never break a tab switch.
+- Future bedtime work: if a duel ends mid-tick (`time_remaining_ms` reaches 0), the next render still calls `renderActiveDuelHero` with the cached active list; auto-resolve only happens via `maybeResolveDuelIfEnded` on the next real fetch — by design, the tick is read-only.
+
+### HUNTING-strip duel pill (decision #3)
+
+- Pill now renders: leading gold pulse dot (`.duel-hpill-pulse`, soft 1.6 s pulse) → `tab-social.png` icon → `[TYPE_CODE] · VS [ALIAS]` text → inline gold type glyph (`.duel-hpill-glyph`) → countdown.
+- `_buildDuelHeaderPill` exposes `duelType` on the pill descriptor; `updateStatusPills` renders the gold pulse + glyph for `kind === 'duel'` pills only (boss pill markup unchanged).
+- Tap navigation already wired (existing `_setupHeaderPillDuelClick`).
+
+### Result toast copy (brand-locked)
+
+`_maybeFireDuelResultToast` now composes via:
+- **Victory:** `"Duel won. " + getDuelVictoryBody(type, opponent)` → e.g. `"Duel won. You outanchored Kazuto."`
+- **Defeat:** `"Duel lost. " + getDuelDefeatBody(type, opponent)` → e.g. `"Duel lost. Kazuto outanchored you. Train. Rematch."`
+- **Draw:** `"Duel sealed — " + getDuelDrawBody(opponent, idx)` with `idx` from `_nextDuelDrawRotationIndex` (advances + persists).
+
+One body per (type, outcome) pair in v1 — no in-type flavor rotation. Detail overlay headline uses the same helpers so toast + overlay agree, with the overlay re-reading the previous index so a single resolution shows the same body across both surfaces.
+
+### Future passes (not yet shipped)
+
+The full hero rewrite (Cinzel "VICTORY" with gold-dust particles, twin duelist columns + VS sigil + score-gap bar, corner runes on hero/victory cards), the 5-variant Duel Detail overlay redesign (incoming / outgoing / active / completed-victory / completed-defeat / completed-draw), the Choose Verified Duel sheet redesign (40×40 glyph blocks + radial gold selected state), and the Stats Global Rankings card overhaul are **deferred to a follow-up polish pass**. The current pass ships the high-leverage brand commitments (verbs, draw rotation, toast copy, glyphs in HUNTING pill, accordion behavior, live tick) so users feel the type-identity carry through every win/loss moment without taking on the structural risk of rewriting the working surfaces.
+
+---
+
 ## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
 
 Card-drop system layered on top of boss kills. Each kill rolls against the boss's drop table; rare/ultra-rare drops trigger a cinematic Solo Leveling reveal modal, commons fire a combined kill-toast. Collection surface is the **Items tab → Relic Archive** (renamed from "Pokédex" in v2.2.0 — see "Relic Archive" section). Single source of truth for design: `DROPS.md` (v1.8 code state — file header still reads v1.4) + `EQUIPMENT.md` (v1.3).
@@ -2403,7 +2447,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=270`, `app.js?v=363`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.249`, `APP_BUILD_TAG = '2.2.1-w13'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=271`, `app.js?v=364`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.250`, `APP_BUILD_TAG = '2.2.1-w14'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2561,6 +2605,7 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Allowing cancel on accepted duels.** Cancel only works on `status='pending'`. Active / completed / declined / expired duels return `400 DUEL_NOT_CANCELLABLE`. Don't surface a Cancel button on active-duel cards, and don't loosen the server's pending-only guard to handle "post-accept regret" — by the time the duel is accepted, the opponent is invested and the scoring engine has started consuming events. If a future product call wants a "mutual abandon" path, build it as a separate endpoint with both-party confirmation, not by relaxing cancel.
 - **Double-counting queued duplicates.** The outbox dedups by `client_event_id` client-side (newer steps_total wins; same-id events get refreshed in place); the backend dedups via UNIQUE(user_id, client_event_id) server-side. Both layers exist because both are cheap, and the cost of getting it wrong is the user's competitive score moving in a direction it shouldn't. Don't remove either layer thinking the other will catch it.
 - **Computing steps duel score with SUM(value).** v3 Phase 1z uses MAX(value). Multiple `steps_total` snapshots overwrite — the latest fetched total IS the running total over the duel window (Apple Health is cumulative within the window). SUM would multi-count overlapping snapshots. Sleep/bedtime use COUNT DISTINCT metric_date instead; strength uses COUNT(*) with uuid-based client_event_id dedupe; verified_objectives uses COUNT DISTINCT (event_type, metric_date).
+- **Changing the six brand-locked duel verbs.** `DUEL_VERB_BY_TYPE` ships `outstepped` / `outrested` / `outanchored` / `outlifted` / `outdisciplined` / `outhunted`. These are brand-defining terms — `outanchored` for bedtime is product-locked even though it's not standard English. Do not change without explicit product reversal. The codemagic gates `grep` for `outanchored` and `DUEL_VERB_BY_TYPE` in both pre-sync and post-sync passes, so a silent rename would fail the build.
 - **Double-paying a duel reward.** UNIQUE(user_id, ref_type, ref_id, reason) on `user_souls_ledger` protects against this — `settleDuelReward` uses `INSERT OR IGNORE` so concurrent resolve retries are safe. Don't add a parallel ledger-write path that bypasses this constraint. If you ever need to award a NON-duel soul reward, pick a `ref_type` + (`ref_id`, `reason`) combination that uniquely identifies the logical event so the UNIQUE constraint still meaningfully blocks duplicates.
 - **Claiming full anti-cheat for v1.** The integrity model trusts client-submitted Apple Health values. A user can submit fake step totals or fake workout uuids. v1 ships this gap deliberately — the alternative (HealthKit-via-watch attestation, signed device events) is a large, separate pass. Don't market the v1 engine as cheat-proof; the UI copy and CLAUDE.md both explicitly disclose the trust gap. Future hardening lands in a separate phase.
 - **Adding a new `event_type` without extending `ALLOWED_EVENT_TYPES`.** Backend rejects unknown event types via `INVALID_EVENT_TYPE` in the per-event error map (the rest of the batch still inserts). Pre-flight: add to `ALLOWED_EVENT_TYPES` in `backend/src/handlers/duels.ts`, add to `DUEL_SCORING_CFG[type].eventTypes` if it should affect a duel type's score, and add the matching builder branch in `_buildEventsForActiveDuel` in `app.js`. Codemagic gates also greps for `submitVerifiedEventsForDuels` / `getSleepBetween` / `getStrengthWorkoutsBetween` / `submitVerifiedEvents` — keep those greps current.
