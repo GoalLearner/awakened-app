@@ -2506,7 +2506,11 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=275`, `app.js?v=372`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.258`, `APP_BUILD_TAG = '2.2.1-w22'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=275`, `app.js?v=373`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.259`, `APP_BUILD_TAG = '2.2.1-w23'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Status-card PR chip retired (v3 Phase 1z.11)
+
+The compact `🏆 PR` button (`#pr-open-btn` / `.pr-open-chip`) that lived inline next to the hunter name in the Status card's `.sc-hero-name` row has been removed. It felt decorative and unanchored — a floating badge next to the hunter identity with no clear product hook. The call site in `renderStatus` (the `buildPRStripHTML()` concatenation) was deleted; the function definition itself, the `.pr-open-chip` CSS rules, the `#pr-all-overlay` / `#pr-all-sheet` markup, and the delegated `#pr-open-btn` click handler all remain in source as harmless dead code so a future surface (e.g. a dedicated Achievements section) can re-wire the All-PRs sheet without re-implementing the data layer. **PR data continues to be captured in the background** via `personalRecords` writes — only the UI entry point was retired. Consequence: there's currently no in-app way to open the All-PRs sheet. Acceptable per product call; re-add an entry point when an Achievements surface is designed.
 
 ### Resource-row polish pass (v3 Phase 1z.10)
 

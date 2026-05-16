@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w22';
+  const APP_BUILD_TAG = '2.2.1-w23';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9854,8 +9854,16 @@
               (localStorage.getItem('hb_hunter_name_claimed') === '1'
                 ? ''
                 : '<button class="sc-edit-btn" id="sc-name-edit" aria-label="Edit name">✎</button>') +
-              // Compact Personal Records chip — taps open the All-PRs sheet
-              buildPRStripHTML() +
+              // v3 Phase 1z.11 — PR chip retired from the Status card.
+              // The floating "🏆 PR" badge felt decorative and unanchored
+              // next to the hunter identity. Removed entirely per product
+              // call. `buildPRStripHTML()`, the All-PRs sheet markup
+              // (`#pr-all-overlay` / `#pr-all-sheet`), and the delegated
+              // `#pr-open-btn` click handler remain in source as harmless
+              // dead code so future surfaces (e.g. a dedicated Achievements
+              // tab section) can re-wire the All-PRs sheet without
+              // re-implementing the data layer. `personalRecords` storage
+              // continues to capture PRs in the background.
             '</div>' +
             '<div class="sc-hero-rank' + (isSPlus ? ' sc-gold' : '') + '">' +
               rank.label + ' · ' + totalPoints.toLocaleString() + ' pts' +
