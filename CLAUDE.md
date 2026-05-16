@@ -50,7 +50,7 @@ Pure HTML / CSS / JS. No build step for the web app. The only "build" is Capacit
 | `auth.js` | Sign-in-with-Apple + alias claim + JWT/token plumbing. Loaded BEFORE `app.js` via `<script>` so `window.Auth` is available at IIFE start. Exposes `getCurrentUser`, `signInWithApple`, `completeSignIn`, `validateAlias`, `setAlias`, `devSignInIfLocalhost`. Sets `localStorage.hb_name` on alias commit so the rest of the app sees a populated name from first launch. (v2.1.0 Phase A → B) |
 | `app.js` | All logic. Single file IIFE — every runtime constant, every render function, every event wiring. Top of file: `setupSignInGateIfNeeded()` short-circuits the IIFE when there's no signed-in user. |
 | `styles.css` | All styling. Defines a `:root` token set. Dark-mode only — Light theme was removed in v1.1.3. |
-| `sw.js` | Service worker. Precaches app shell, avatar PNGs, tab/stat icon PNGs, and app icons (icon-192/512). The dynamic OffscreenCanvas icon generator was removed once real icons shipped. v2.2.0: install handler does NOT call `skipWaiting()` — the new auto-update path in `app.js` posts `SKIP_WAITING` silently on update. |
+| `sw.js` | Service worker. Precaches app shell, avatar PNGs, tab/stat icon PNGs, and app icons (icon-192/512). The dynamic OffscreenCanvas icon generator was removed once real icons shipped. v2.2.0 originally kept skipWaiting OUT of install (relying on the client-side `postMessage({type:'SKIP_WAITING'})` path in `app.js`), but **v3 Phase 1x flipped it: install handler now calls `self.skipWaiting()` directly** after precache resolves. Reason: iOS Capacitor WebView, every IPA update ships a new `sw.js` that must take over immediately — otherwise the OLD SW from the previous IPA keeps serving stale `/index.html` from its precache and new static markup never reaches the user. The web `postMessage` path stays as a belt-and-suspenders backup. |
 | `manifest.json` | PWA manifest. Theme `#0a0a0a`. Standalone portrait. References static `icon-192.png` / `icon-512.png`. |
 | `capacitor.config.json` | Capacitor config. `webDir: www`. |
 | `codemagic.yaml` | iOS build pipeline. Copies static files → `www/`, runs `npx cap sync ios`, sets `ITSAppUsesNonExemptEncryption=false`, builds & uploads to TestFlight. **Has its own `APP_VERSION` env var that must move with the one in `app.js`.** |
@@ -2058,7 +2058,7 @@ The prior flow forced users to wait for the SW's ~24h freshness check, then clic
 
 1. **Immediate `reg.update()` on page load.** Forces a network fetch of `/sw.js` — the browser otherwise won't re-check within a session (default ~24h).
 2. **Re-check on `visibilitychange` to visible + `focus`.** Catches tabs left open across deploys.
-3. **Silent auto-skip-waiting.** When a new SW reaches `'installed'` state AND a controller exists (= this is an UPDATE, not first install), the page silently `postMessage({ type: 'SKIP_WAITING' })`. No banner click required.
+3. **Silent auto-skip-waiting (belt-and-suspenders with the install-handler skipWaiting).** When a new SW reaches `'installed'` state AND a controller exists (= this is an UPDATE, not first install), the page silently `postMessage({ type: 'SKIP_WAITING' })`. No banner click required. As of v3 Phase 1x the new SW's own install handler ALSO calls `self.skipWaiting()` directly after precache (iOS Capacitor reliability — see file-map row for `sw.js`); the postMessage is now a redundant backup, not the primary mechanism. The redundancy is intentional: either path lands the new SW immediately.
 4. **`controllerchange` handler reloads once.** Single silent reload per deploy.
 5. **Version-string compare safety net.** 2s after register, fetches `sw.js` with `cache: 'no-store'`, parses `CACHE_VERSION`, compares with `hb_sw_last_active_version`. On drift: wipe caches + `reg.unregister()` + `location.reload()`. Catches races where the SW reports itself as fresh but disk has a newer version.
 
@@ -2082,7 +2082,7 @@ One silent reload per deploy. Awakened state lives in `localStorage`, so the rel
 
 ### What NOT to revert
 
-- Don't add `self.skipWaiting()` to `sw.js`'s install handler. The auto-skip happens client-side via postMessage; doing it server-side would skip waiting for first-install too (where there's no existing controller, which would change reload semantics).
+- `sw.js`'s install handler intentionally calls `self.skipWaiting()` after the precache promise resolves (added in v3 Phase 1x to fix iOS Capacitor WebView staleness — every IPA update ships a new `sw.js` and the OLD SW from the previous IPA would otherwise keep serving stale `/index.html` from its precache). The earlier "don't add skipWaiting" guidance from v2.2.0 was for the web-only update-banner UX that doesn't apply inside an iOS WebView. The client-side `postMessage({type:'SKIP_WAITING'})` path in `app.js` stays as a belt-and-suspenders backup — both paths together = the new SW always takes over on the first chance it gets.
 - Don't remove the version-string safety net — it's caught real drift cases in production.
 - Don't reintroduce the banner as the default flow.
 
@@ -2584,7 +2584,7 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 
 **Hunter name is claim-once.** Once `hb_hunter_name_claimed === '1'`, no UI in the app exposes a rename path. The signin alias is the canonical claim. Don't reintroduce the Status-tab pencil, don't add a Settings → Account → "Change name" affordance, don't re-prompt on signin re-auth. See "Hunter name claim & lock" section.
 
-**SW auto-update is silent by default.** Don't put `self.skipWaiting()` in `sw.js`'s install handler — the auto-skip happens client-side via `postMessage` so first-install vs update can be distinguished. Don't reintroduce the in-app banner as the default flow. Manual mode is available via `localStorage.setItem('hb_sw_manual_update', '1')` for users who want explicit control. See "Service worker auto-update" section.
+**SW auto-update is silent by default.** Install handler now calls `self.skipWaiting()` directly (v3 Phase 1x — iOS Capacitor WebView fix; see file-map row for `sw.js` for the full reason). The client-side `postMessage({type:'SKIP_WAITING'})` path in `app.js` is the redundant backup. Don't reintroduce the in-app update banner as the default flow. Manual mode is available via `localStorage.setItem('hb_sw_manual_update', '1')` for users who want explicit control. See "Service worker auto-update" section.
 
 **Armory is fully open.** All 6 typed equipment slots unlock at every rank. The rank-gated render path (locked tiles with `REACH X RANK`) is dead code retained for safety. Don't reintroduce rank-gating without explicit product ask.
 
