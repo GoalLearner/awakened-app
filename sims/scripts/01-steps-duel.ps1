@@ -135,6 +135,17 @@ try {
     $ledgerHasAlpha = $ledgerRaw -match [regex]::Escape($alphaId)
     Add-Step 'ledger has 1 row for this duel'      $ledgerHasOne   ''
     Add-Step 'ledger row belongs to alpha (winner)' $ledgerHasAlpha ''
+
+    # ─── 10. GET /v1/duels/:id matches the /resolve response ──
+    # Catches any read-path drift between the /resolve response and
+    # the cached duel state on subsequent reads.
+    $r11 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId" -As 'alpha' -Label 'get-duel-postresolve'
+    $cached = $r11.body.duel
+    Add-Step 'GET /duels/:id returns 200 post-resolve' ($r11.status -eq 200) "status=$($r11.status)"
+    Add-Step 'cached duel.status matches resolved'     ($cached.status -eq $resolved.status) "cached=$($cached.status) resolved=$($resolved.status)"
+    Add-Step 'cached duel.result matches resolved'     ($cached.result -eq $resolved.result) "cached=$($cached.result) resolved=$($resolved.result)"
+    Add-Step 'cached winner_user_id matches resolved'  ($cached.winner_user_id -eq $resolved.winner_user_id) ''
+    Add-Step 'cached reward_settled_at matches'        ($cached.reward_settled_at -eq $resolved.reward_settled_at) ''
 } catch {
     $script:pass = $false
     $script:errors += $_.ToString()

@@ -125,6 +125,156 @@ function Invoke-SimD1 {
     return $rawStr
 }
 
+function Invoke-DuelSim {
+    <#
+    Shared 10-checkpoint duel sim driver. Used by 02-05; 01-steps and
+    06-boss-race have their own per-script flow for didactic clarity
+    and to handle the deferred-error path respectively.
+
+    Parameters:
+      Label           — sim label (e.g. '02-sleep')
+      DuelType        — one of: steps, sleep, bedtime, strength, verified_objectives
+      ExpectedWinner  — 'alpha' (challenger_win) or 'bravo' (opponent_win) or 'draw'
+      AlphaEvents     — scriptblock that takes $duelId, returns event array for alpha
+      BravoEvents     — scriptblock that takes $duelId, returns event array for bravo
+
+    Returns: hashtable with Pass, Steps, Errors, DuelId — caller writes summary.
+    #>
+    param(
+        [Parameter(Mandatory)][string] $Label,
+        [Parameter(Mandatory)][string] $DuelType,
+        [Parameter(Mandatory)][ValidateSet('alpha', 'bravo', 'draw')] $ExpectedWinner,
+        [Parameter(Mandatory)][scriptblock] $AlphaEvents,
+        [Parameter(Mandatory)][scriptblock] $BravoEvents
+    )
+
+    $runDir  = New-SimRunDir -Label $Label
+    $started = Get-Date
+    $errors  = @()
+    $steps   = @()
+    $pass    = $true
+    $duelId  = $null
+
+    function Add-Step {
+        param([string] $Name, [bool] $Pass, [string] $Note = '')
+        $script:_simSteps += @{ Name = $Name; Pass = $Pass; Note = $Note }
+        if (-not $Pass) { $script:_simPass = $false }
+    }
+    # Use script-scoped vars so Add-Step can mutate them.
+    $script:_simSteps = $steps
+    $script:_simPass  = $pass
+
+    try {
+        $alphaId = Get-SimUserId -User 'alpha'
+        $bravoId = Get-SimUserId -User 'bravo'
+
+        # 1. Friendship (idempotent)
+        $r1 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/friends/request' -As 'alpha' -Body @{ alias = 'sim_bravo' } -Label 'friend-request'
+        Add-Step 'alpha sends friend request' ($r1.status -in 200,409) "status=$($r1.status)"
+
+        $r2 = Invoke-SimRequest -RunDir $runDir -Method GET -Path '/v1/friends' -As 'bravo' -Label 'bravo-fetch-friends'
+        Add-Step 'bravo fetches friends' ($r2.status -eq 200) ''
+        $pending = @($r2.body.incoming) | Where-Object { $_.alias -eq 'sim_alpha' } | Select-Object -First 1
+        $already = @($r2.body.friends)  | Where-Object { $_.alias -eq 'sim_alpha' } | Select-Object -First 1
+        if ($pending -and -not $already) {
+            $r3 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/friends/$($pending.id)/accept" -As 'bravo' -Label 'accept-friend'
+            Add-Step 'bravo accepts friend' ($r3.status -eq 200) ''
+        } else {
+            Add-Step 'friendship already accepted' $true 'idempotent'
+        }
+
+        # 2. Create duel
+        $r4 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/duels' -As 'alpha' -Body @{
+            opponent_alias = 'sim_bravo'
+            duration_days  = 3
+            stake_souls    = 25
+            duel_type      = $DuelType
+        } -Label 'create-duel'
+        Add-Step "alpha creates $DuelType duel" ($r4.status -eq 200) "duel_id=$($r4.body.duel.id)"
+        $duelId = $r4.body.duel.id
+        if (-not $duelId) { throw "No duel_id returned for $DuelType" }
+
+        # 3. Bravo accepts
+        $r5 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/accept" -As 'bravo' -Label 'accept-duel'
+        Add-Step 'bravo accepts duel' ($r5.status -eq 200 -and $r5.body.duel.status -eq 'active') "status=$($r5.body.duel.status)"
+
+        # 4. Submit verified events for both
+        $alphaEvts = & $AlphaEvents $duelId
+        $r6 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/verified-events' -As 'alpha' -Body @{ events = $alphaEvts } -Label 'alpha-events'
+        Add-Step "alpha submits $($alphaEvts.Count) event(s)" ($r6.status -eq 200) "inserted=$($r6.body.inserted) dup=$($r6.body.duplicates)"
+
+        $bravoEvts = & $BravoEvents $duelId
+        $r7 = Invoke-SimRequest -RunDir $runDir -Method POST -Path '/v1/verified-events' -As 'bravo' -Body @{ events = $bravoEvts } -Label 'bravo-events'
+        Add-Step "bravo submits $($bravoEvts.Count) event(s)" ($r7.status -eq 200) "inserted=$($r7.body.inserted)"
+
+        # 5. /score pre-resolve
+        $r8 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId/score" -As 'alpha' -Label 'score-preresolve'
+        Add-Step '/score 200 pre-resolve' ($r8.status -eq 200) "you=$($r8.body.score.you.value) rival=$($r8.body.score.rival.value)"
+
+        # 6. Force ends_at into the past
+        $sql = "UPDATE duels SET ends_at = datetime('now', '-10 seconds') WHERE id = '$duelId' AND status = 'active';"
+        Invoke-SimD1 -RunDir $runDir -Sql $sql -Label 'force-ends-at' | Out-Null
+        Add-Step 'ends_at forced into past' $true ''
+
+        # 7. /resolve first call
+        $r9 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-1'
+        $resolved = $r9.body.duel
+        Add-Step '/resolve 200' ($r9.status -eq 200) "result=$($resolved.result) winner=$($resolved.winner_user_id)"
+        Add-Step 'duel.status = completed' ($resolved.status -eq 'completed') ''
+
+        $expectedResult  = switch ($ExpectedWinner) { 'alpha' { 'challenger_win' } 'bravo' { 'opponent_win' } default { 'draw' } }
+        $expectedWinId   = switch ($ExpectedWinner) { 'alpha' { $alphaId } 'bravo' { $bravoId } default { $null } }
+        Add-Step "result = $expectedResult" ($resolved.result -eq $expectedResult) "got=$($resolved.result)"
+        Add-Step 'winner_user_id matches'    ($resolved.winner_user_id -eq $expectedWinId) "expected=$expectedWinId got=$($resolved.winner_user_id)"
+        if ($ExpectedWinner -ne 'draw') {
+            Add-Step 'reward_settled_at set' ($null -ne $resolved.reward_settled_at -and $resolved.reward_settled_at -ne '') ''
+        }
+
+        # 8. /resolve second call — idempotent
+        $r10 = Invoke-SimRequest -RunDir $runDir -Method POST -Path "/v1/duels/$duelId/resolve" -As 'alpha' -Body @{} -Label 'resolve-2-idempotent'
+        Add-Step '/resolve idempotent (200)' ($r10.status -eq 200) ''
+        Add-Step 'idempotent re-call same winner' ($r10.body.duel.winner_user_id -eq $resolved.winner_user_id) ''
+
+        # 9. Ledger verification
+        $ledgerSql = "SELECT user_id, delta, reason FROM user_souls_ledger WHERE ref_type = 'duel' AND ref_id = '$duelId';"
+        $ledgerRaw = Invoke-SimD1 -RunDir $runDir -Sql $ledgerSql -Label 'verify-ledger'
+        if ($ExpectedWinner -eq 'draw') {
+            Add-Step 'ledger has 0 rows (draw, no reward)' (($ledgerRaw -match '"rows_read":\s*0') -or ($ledgerRaw -notmatch '"delta"')) ''
+        } else {
+            $hasOne   = ($ledgerRaw -match '"rows_read":\s*1') -or ($ledgerRaw -match '"delta":\s*40')
+            $hasUser  = $ledgerRaw -match [regex]::Escape($expectedWinId)
+            Add-Step 'ledger has 1 row'              $hasOne  ''
+            Add-Step 'ledger row is the winner'      $hasUser ''
+        }
+
+        # 10. GET /duels/:id matches /resolve
+        $r11 = Invoke-SimRequest -RunDir $runDir -Method GET -Path "/v1/duels/$duelId" -As 'alpha' -Label 'get-duel-postresolve'
+        $cached = $r11.body.duel
+        Add-Step 'GET /duels/:id 200 post-resolve'      ($r11.status -eq 200) ''
+        Add-Step 'cached status = resolved status'      ($cached.status -eq $resolved.status) ''
+        Add-Step 'cached result = resolved result'      ($cached.result -eq $resolved.result) ''
+        Add-Step 'cached winner = resolved winner'      ($cached.winner_user_id -eq $resolved.winner_user_id) ''
+        Add-Step 'cached reward_settled_at = resolved'  ($cached.reward_settled_at -eq $resolved.reward_settled_at) ''
+    } catch {
+        $script:_simPass = $false
+        $errors += $_.ToString()
+    }
+
+    $finished = Get-Date
+    $result = @{
+        Label    = $Label
+        Pass     = $script:_simPass
+        Started  = $started.ToString('o')
+        Finished = $finished.ToString('o')
+        DuelId   = $duelId
+        Steps    = $script:_simSteps
+        Errors   = $errors
+        RunDir   = $runDir
+    }
+    Write-SimSummary -RunDir $runDir -Result $result
+    return $result
+}
+
 function Write-SimSummary {
     param(
         [Parameter(Mandatory)][string] $RunDir,
