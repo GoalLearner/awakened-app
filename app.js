@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w11';
+  const APP_BUILD_TAG = '2.2.1-w12';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14593,6 +14593,9 @@
   async function maybeResolveDuelIfEnded(duel) {
     if (!duel || duel.status !== 'active') return null;
     if (!duel.ends_at) return null;
+    // boss_race is deferred — backend rejects resolve. Skip to avoid
+    // a doomed network roundtrip on every list render.
+    if (duel.duel_type === 'boss_race') return null;
     const endsMs = Date.parse(duel.ends_at);
     if (!isFinite(endsMs) || Date.now() < endsMs) return null;
     if (!window.Auth || typeof Auth.resolveDuel !== 'function') return null;
@@ -14603,23 +14606,53 @@
     return null;
   }
 
+  // Verified Duel Scoring Engine v1 (v3 Phase 1z). Per-type display
+  // helpers — mirror the backend's formatScoreLabel so UI renders
+  // consistent score strings without an extra fetch.
+  const _DUEL_VERB_BY_TYPE = {
+    steps:               { win: 'outstepped',     loss: 'outstepped',     prefix: 'verified steps' },
+    sleep:               { win: 'outslept',       loss: 'outslept',       prefix: 'qualified sleep nights' },
+    bedtime:             { win: 'outrested',      loss: 'outrested',      prefix: 'before-midnight bedtimes' },
+    strength:            { win: 'outlifted',      loss: 'outlifted',      prefix: 'strength workouts' },
+    verified_objectives: { win: 'outdisciplined', loss: 'outdisciplined', prefix: 'verified objectives' },
+    boss_race:           { win: 'out-hunted',     loss: 'out-hunted',     prefix: 'boss kills' },
+  };
+  function _duelVerb(type) {
+    return _DUEL_VERB_BY_TYPE[type] || _DUEL_VERB_BY_TYPE.verified_objectives;
+  }
+  function formatDuelScoreValue(duelType, value) {
+    const n = Math.max(0, Math.round(Number(value) || 0));
+    if (duelType === 'boss_race') return 'Awaiting boss-event logging';
+    if (duelType === 'steps') {
+      try { return n.toLocaleString() + ' steps'; } catch (_) { return n + ' steps'; }
+    }
+    if (duelType === 'sleep')               return n + (n === 1 ? ' night'    : ' nights');
+    if (duelType === 'bedtime')             return n + (n === 1 ? ' bedtime'  : ' bedtimes');
+    if (duelType === 'strength')            return n + (n === 1 ? ' workout'  : ' workouts');
+    if (duelType === 'verified_objectives') return n + ' verified';
+    try { return n.toLocaleString(); } catch (_) { return String(n); }
+  }
+
   // One-shot per-duel result toast. Keyed by localStorage so it never
   // replays on subsequent loads. Derives win/lose via the serialized
   // duel's `role` + `result` fields (set by the backend) — these are
   // already viewer-relative, so we don't need the backend user_id.
+  // v3 Phase 1z — all 5 scorable types now fire toasts (boss_race
+  // stays excluded until verified boss-event logging ships).
   function _maybeFireDuelResultToast(duel) {
     if (!duel || duel.status !== 'completed') return;
-    if (duel.duel_type !== 'steps') return; // only steps duels score in v1
+    if (duel.duel_type === 'boss_race') return;
     const key = 'hb_duel_result_seen_' + duel.id;
     try { if (localStorage.getItem(key)) return; } catch (_) { return; }
     const result = duel.result;
     const role   = duel.role;
+    const verb   = _duelVerb(duel.duel_type);
     let msg;
     if (result === 'draw')                                          msg = 'Duel ended in a draw.';
-    else if (result === 'challenger_win' && role === 'challenger')  msg = 'Duel won — verified steps decided it.';
-    else if (result === 'opponent_win'   && role === 'opponent')    msg = 'Duel won — verified steps decided it.';
-    else if (result === 'challenger_win' && role === 'opponent')    msg = 'Duel lost — your rival logged more verified steps.';
-    else if (result === 'opponent_win'   && role === 'challenger')  msg = 'Duel lost — your rival logged more verified steps.';
+    else if ((result === 'challenger_win' && role === 'challenger') ||
+             (result === 'opponent_win'   && role === 'opponent'))  msg = 'Duel won — your ' + verb.prefix + ' decided it.';
+    else if ((result === 'challenger_win' && role === 'opponent') ||
+             (result === 'opponent_win'   && role === 'challenger'))msg = 'Duel lost — your rival ' + verb.loss + ' you.';
     else return;
     try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
     try { localStorage.setItem(key, '1'); } catch (_) {}
@@ -14689,13 +14722,15 @@
     const stake  = (duel.stake_souls  != null) ? duel.stake_souls  : 25;
     const reward = (duel.reward_souls != null) ? duel.reward_souls : 40;
     const typeMeta = getDuelTypeMeta(duel.duel_type);
-    // Steps Duel Scoring v1 (v3 Phase 1y) — verified score row for
-    // steps duels; placeholder footnote for other types.
-    let scoreHtml = '<div class="duels-hero-footnote">Scoring activates in the next duel pass.</div>';
-    if (duel.duel_type === 'steps') {
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z) — verified score
+    // row for all 5 scorable types; deferred footnote for boss_race.
+    let scoreHtml;
+    if (duel.duel_type === 'boss_race') {
+      scoreHtml = '<div class="duels-hero-footnote">Boss Race scoring activates after verified boss-event logging.</div>';
+    } else {
       const { you, rival } = _duelStepsForViewer(duel);
-      const youDisp   = (you   == null) ? '—' : _fmtSteps(you);
-      const rivalDisp = (rival == null) ? 'awaiting data' : _fmtSteps(rival);
+      const youDisp   = (you   == null) ? '—' : formatDuelScoreValue(duel.duel_type, you);
+      const rivalDisp = (rival == null) ? 'awaiting data' : formatDuelScoreValue(duel.duel_type, rival);
       scoreHtml =
         '<div class="duels-hero-score-row">' +
           '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">You</span><span class="duels-hero-score-value">' + esc(youDisp) + '</span></span>' +
@@ -14985,13 +15020,18 @@
       for (const d of active) {
         const opp = _socialDisplayAlias(d.opponent_alias || '—');
         const typeLabel = formatDuelTypeLabel(d.duel_type);
-        // Steps Duel Scoring v1 (v3 Phase 1y) — score row only for
-        // steps duels. Other types show no row (kept tidy).
+        // Verified Duel Scoring Engine v1 (v3 Phase 1z) — score row
+        // for all 5 scorable types. boss_race shows a deferred note.
         let scoreRow = '';
-        if (d.duel_type === 'steps') {
+        if (d.duel_type === 'boss_race') {
+          scoreRow =
+            '<div class="duel-card-scores duel-card-scores--deferred">' +
+              'Boss Race scoring activates after verified boss-event logging.' +
+            '</div>';
+        } else {
           const { you, rival } = _duelStepsForViewer(d);
-          const youDisp   = (you   == null) ? '—' : _fmtSteps(you);
-          const rivalDisp = (rival == null) ? 'awaiting data' : _fmtSteps(rival);
+          const youDisp   = (you   == null) ? '—' : formatDuelScoreValue(d.duel_type, you);
+          const rivalDisp = (rival == null) ? 'awaiting data' : formatDuelScoreValue(d.duel_type, rival);
           scoreRow =
             '<div class="duel-card-scores">You: <span class="duel-card-scores-you">' + esc(youDisp) +
             '</span> · Rival: <span class="duel-card-scores-rival">' + esc(rivalDisp) + '</span></div>';
@@ -15202,9 +15242,10 @@
       return;
     }
     let d = res.duel;
-    // Steps Duel Scoring v1 (v3 Phase 1y) — auto-resolve if active +
-    // past ends_at. Idempotent on backend.
-    if (d.status === 'active' && d.duel_type === 'steps' && d.ends_at) {
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z) — auto-resolve if
+    // active + past ends_at, for any scorable duel type (skip
+    // boss_race; backend rejects until verified boss-event logging).
+    if (d.status === 'active' && d.duel_type !== 'boss_race' && d.ends_at) {
       const endsMs = Date.parse(d.ends_at);
       if (isFinite(endsMs) && Date.now() >= endsMs && typeof Auth.resolveDuel === 'function') {
         try {
@@ -15240,19 +15281,22 @@
       const daysLeft = Math.floor(hrs / 24);
       setText('ddo-remaining', 'Time remaining: ' + (daysLeft > 0 ? daysLeft + 'd ' + (hrs % 24) + 'h' : hrs + 'h'));
     }
-    // Steps Duel Scoring v1 (v3 Phase 1y) — verified score + result.
-    // Non-steps types keep the legacy footnote.
+    // Verified Duel Scoring Engine v1 (v3 Phase 1z) — verified score
+    // + result for all 5 scorable types. boss_race surfaces a
+    // deferred message until verified boss-event logging ships.
     const scoreEl = document.getElementById('ddo-score');
     if (scoreEl) {
-      if (d.duel_type !== 'steps') {
-        scoreEl.innerHTML = '<span style="font-style:italic; opacity:0.75;">Scoring activates in the next duel pass.</span>';
+      if (d.duel_type === 'boss_race') {
+        scoreEl.innerHTML = '<span style="font-style:italic; opacity:0.75;">Boss Race scoring activates after verified boss-event logging.</span>';
       } else if (d.status === 'completed') {
         const { you, rival } = _duelStepsForViewer(d);
-        const youDisp   = (you   == null) ? '0' : _fmtSteps(you);
-        const rivalDisp = (rival == null) ? '0' : _fmtSteps(rival);
+        const youDisp   = formatDuelScoreValue(d.duel_type, you || 0);
+        const rivalDisp = formatDuelScoreValue(d.duel_type, rival || 0);
         const oppDisp   = esc(_socialDisplayAlias(d.opponent_alias || '—'));
         const result    = d.result;
         const role      = d.role;
+        const verb      = _duelVerb(d.duel_type);
+        const prefix    = verb.prefix;
         let headline = '';
         let outcome  = '';
         if (result === 'draw') {
@@ -15261,38 +15305,59 @@
         } else if ((result === 'challenger_win' && role === 'challenger') ||
                    (result === 'opponent_win'   && role === 'opponent')) {
           outcome = 'win';
-          headline = 'Victory — you outstepped ' + oppDisp + '.';
+          headline = 'Victory — you ' + verb.win + ' ' + oppDisp + '.';
         } else if ((result === 'challenger_win' && role === 'opponent') ||
                    (result === 'opponent_win'   && role === 'challenger')) {
           outcome = 'loss';
-          headline = 'Defeat — ' + oppDisp + ' outstepped you.';
+          headline = 'Defeat — ' + oppDisp + ' ' + verb.loss + ' you.';
+        }
+        // Reward readout (v3 Phase 1z) — backend ledger has already
+        // settled (UNIQUE-protected). Local hb_souls remains
+        // untouched in v1; the ledger is the eventual reconciliation
+        // target.
+        let rewardHtml = '';
+        const settled = !!d.reward_settled_at;
+        const reward  = (d.reward_souls != null) ? d.reward_souls : 40;
+        if (outcome === 'win' && settled) {
+          rewardHtml =
+            '<div class="ddo-reward-row ddo-reward-row--win">' +
+              '<div class="ddo-reward-amount">Reward recorded: +' + esc(reward) + ' souls</div>' +
+              '<div class="ddo-reward-note">Souls economy reconciliation comes in a future pass.</div>' +
+            '</div>';
+        } else if (outcome === 'draw') {
+          rewardHtml =
+            '<div class="ddo-reward-row ddo-reward-row--draw">' +
+              '<div class="ddo-reward-amount">No reward awarded.</div>' +
+            '</div>';
         }
         scoreEl.innerHTML =
           '<div class="ddo-result-row ddo-result-row--' + esc(outcome || 'draw') + '">' +
             '<div class="ddo-result-headline">' + headline + '</div>' +
             '<div class="ddo-score-row ddo-score-row--final">' +
-              '<span><span class="ddo-score-label">Your verified steps:</span> <span class="ddo-score-value">' + esc(youDisp) + '</span></span>' +
-              '<span><span class="ddo-score-label">Rival verified steps:</span> <span class="ddo-score-value">' + esc(rivalDisp) + '</span></span>' +
+              '<span><span class="ddo-score-label">Your ' + esc(prefix) + ':</span> <span class="ddo-score-value">' + esc(youDisp) + '</span></span>' +
+              '<span><span class="ddo-score-label">Rival ' + esc(prefix) + ':</span> <span class="ddo-score-value">' + esc(rivalDisp) + '</span></span>' +
             '</div>' +
-            '<div class="ddo-rewards-note" style="font-style:italic; opacity:0.65; margin-top:8px;">Rewards activate in a future economy pass.</div>' +
+            rewardHtml +
           '</div>';
       } else {
-        // active steps duel (or pending — pending shouldn't have data, render placeholder)
+        // active (or pending — pending shouldn't have data, render placeholder)
+        const verb      = _duelVerb(d.duel_type);
+        const prefix    = verb.prefix;
         const { you, rival } = _duelStepsForViewer(d);
-        const youDisp   = (you   == null) ? '—' : _fmtSteps(you);
-        const rivalDisp = (rival == null) ? 'Awaiting data' : _fmtSteps(rival);
+        const youDisp   = (you   == null) ? '—' : formatDuelScoreValue(d.duel_type, you);
+        const rivalDisp = (rival == null) ? 'Awaiting data' : formatDuelScoreValue(d.duel_type, rival);
         // Health gating tip — if user is on iOS with no perm, surface it.
         let tip = '';
         try {
           if (window.Health && Health.isAvailable && Health.isAvailable() &&
               Health.permissionStatus && Health.permissionStatus() !== 'granted') {
-            tip = '<div class="ddo-score-tip">Connect Apple Health to submit verified steps.</div>';
+            tip = '<div class="ddo-score-tip">Connect Apple Health to submit verified data.</div>';
           }
         } catch (_) {}
         scoreEl.innerHTML =
           '<div class="ddo-score-row">' +
-            '<div><span class="ddo-score-label">Your verified steps:</span> <span class="ddo-score-value">' + esc(youDisp) + '</span></div>' +
-            '<div><span class="ddo-score-label">Rival verified steps:</span> <span class="ddo-score-value">' + esc(rivalDisp) + '</span></div>' +
+            '<div><span class="ddo-score-label">Your ' + esc(prefix) + ':</span> <span class="ddo-score-value">' + esc(youDisp) + '</span></div>' +
+            '<div><span class="ddo-score-label">Rival ' + esc(prefix) + ':</span> <span class="ddo-score-value">' + esc(rivalDisp) + '</span></div>' +
           '</div>' + tip;
       }
     }

@@ -19898,6 +19898,41 @@ body.ddo-locked { overflow: hidden; }
   color: var(--text-primary);
 }
 
+/* Verified Duel Scoring Engine v1 (v3 Phase 1z) — reward readout on completed duels. */
+.ddo-reward-row {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(20, 16, 32, 0.55);
+  border: 1px solid var(--border);
+}
+.ddo-reward-row--win {
+  border-color: rgba(245, 158, 11, 0.6);
+  background: rgba(245, 158, 11, 0.08);
+}
+.ddo-reward-row--win .ddo-reward-amount {
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+.ddo-reward-row--draw .ddo-reward-amount {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+.ddo-reward-note {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+.duel-card-scores--deferred {
+  font-style: italic;
+  color: var(--text-tertiary);
+  opacity: 0.85;
+}
+
 .bfs-rank-pill[data-status="active"]   { color: var(--gold); }
 .bfs-rank-pill[data-status="completed"]{ color: var(--gold); }
 .bfs-rank-pill[data-status="declined"], .bfs-rank-pill[data-status="cancelled"], .bfs-rank-pill[data-status="expired"] {
