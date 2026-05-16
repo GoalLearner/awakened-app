@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w12';
+  const APP_BUILD_TAG = '2.2.1-w13';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14550,6 +14550,110 @@
   const _VERIFIED_EVENTS_MIN_MS = 5 * 60 * 1000; // 5min debounce between batches
   let _lastVerifiedEventsAt = 0;
 
+  // ───────────────────────────────────────────────────────────
+  // Verified Event Outbox (v3 Phase 1z.1)
+  //
+  // Local-only transport queue for verified events. Events from
+  // `_buildEventsForActiveDuel` get enqueued first, then drained
+  // through `Auth.submitVerifiedEvents`. On network/5xx/transient
+  // failure they stay in the queue and replay on the next drain
+  // trigger (init, Duels tab open, visibilitychange→visible).
+  //
+  // Keys are device-local; NEVER added to CloudSync.SNAPSHOT_KEYS —
+  // restoring an outbox onto a different device would replay events
+  // with stale `duel_id` references and stale `metric_date` values.
+  // Backend's UNIQUE(user_id, client_event_id) protects against
+  // double-insert even if the client retries the same event twice.
+  // ───────────────────────────────────────────────────────────
+  const VERIFIED_EVENT_OUTBOX_KEY = 'hb_verified_event_outbox';
+  const VERIFIED_EVENT_OUTBOX_CAP = 250;
+  let _outboxLast401At = 0;
+
+  function _loadVerifiedEventOutbox() {
+    try {
+      const raw = localStorage.getItem(VERIFIED_EVENT_OUTBOX_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) { return []; }
+  }
+
+  function _saveVerifiedEventOutbox(arr) {
+    try {
+      // FIFO drop when over cap.
+      if (arr.length > VERIFIED_EVENT_OUTBOX_CAP) arr = arr.slice(arr.length - VERIFIED_EVENT_OUTBOX_CAP);
+      localStorage.setItem(VERIFIED_EVENT_OUTBOX_KEY, JSON.stringify(arr));
+    } catch (_) { /* quota exceeded — best effort */ }
+  }
+
+  function _enqueueVerifiedEvents(events) {
+    if (!Array.isArray(events) || events.length === 0) return;
+    const queue = _loadVerifiedEventOutbox();
+    const byId = new Map();
+    for (const e of queue) if (e && e.client_event_id) byId.set(e.client_event_id, e);
+    for (const e of events) {
+      if (!e || !e.client_event_id) continue;
+      const existing = byId.get(e.client_event_id);
+      // For steps_total, prefer the higher value — steps over a window
+      // are cumulative and should never decrease across submissions.
+      if (existing && e.event_type === 'steps_total' &&
+          Number(existing.value || 0) > Number(e.value || 0)) {
+        continue;
+      }
+      const enriched = Object.assign({}, e, {
+        queued_at: (existing && existing.queued_at) || new Date().toISOString(),
+        attempt_count: 0,
+        last_error: null,
+      });
+      byId.set(e.client_event_id, enriched);
+    }
+    _saveVerifiedEventOutbox(Array.from(byId.values()));
+  }
+
+  async function _drainVerifiedEventOutbox() {
+    const queue = _loadVerifiedEventOutbox();
+    if (queue.length === 0) return { drained: 0, kept: 0 };
+    if (!window.Auth || typeof Auth.submitVerifiedEvents !== 'function') {
+      return { drained: 0, kept: queue.length };
+    }
+    // 401 throttle — back off for 60s after an auth failure so we don't
+    // hammer the server while the user re-auths.
+    if (Date.now() - _outboxLast401At < 60 * 1000) {
+      return { drained: 0, kept: queue.length };
+    }
+
+    let kept = [];
+    let drained = 0;
+    for (let i = 0; i < queue.length; i += 25) {
+      const chunk = queue.slice(i, i + 25);
+      let res;
+      try { res = await Auth.submitVerifiedEvents(chunk); }
+      catch (_) { res = null; }
+      if (!res) {
+        // Network error or thrown — keep batch, retry next trigger.
+        kept = kept.concat(chunk);
+        continue;
+      }
+      if (res.code === 'EXPIRED' || res.code === 'UNAUTHORIZED' || res.code === 'NOT_SIGNED_IN') {
+        _outboxLast401At = Date.now();
+        kept = kept.concat(chunk);
+        continue;
+      }
+      if (!res.ok) {
+        // Opaque non-ok (rate limit, 5xx, etc.) — keep batch.
+        kept = kept.concat(chunk);
+        continue;
+      }
+      // Success: the server either accepted or de-duped each event.
+      // Either way, the row is on the backend and can leave the queue.
+      drained += chunk.length;
+    }
+    _saveVerifiedEventOutbox(kept);
+    try { console.log('[outbox] drained=' + drained + ' kept=' + kept.length); } catch (_) {}
+    return { drained, kept: kept.length };
+  }
+  try { window._drainVerifiedEventOutbox = _drainVerifiedEventOutbox; } catch (_) {}
+
   async function submitVerifiedEventsForDuels(opts) {
     const force = !!(opts && opts.force);
     if (!force && Date.now() - _lastVerifiedEventsAt < _VERIFIED_EVENTS_MIN_MS) return;
@@ -14576,12 +14680,12 @@
     }
     if (all.length === 0) { _lastVerifiedEventsAt = Date.now(); return; }
 
-    // Chunk to <=25 per API call (matches backend MAX_EVENTS_PER_BATCH).
-    for (let i = 0; i < all.length; i += 25) {
-      const chunk = all.slice(i, i + 25);
-      try { await Auth.submitVerifiedEvents(chunk); }
-      catch (_) { /* network noise — try again next trigger */ }
-    }
+    // v3 Phase 1z.1 — route through the outbox. Enqueue first, then
+    // attempt to drain. On network/5xx failure the events stay queued
+    // and replay on the next drain trigger; backend dedupes server-side.
+    _enqueueVerifiedEvents(all);
+    try { await _drainVerifiedEventOutbox(); }
+    catch (_) { /* drain is best-effort; queue persists on failure */ }
     _lastVerifiedEventsAt = Date.now();
   }
   try { window.submitVerifiedEventsForDuels = submitVerifiedEventsForDuels; } catch (_) {}
@@ -14947,6 +15051,9 @@
     // independently — both calls coexist while the legacy steps-only
     // path keeps backwards compat with pre-1z active duels.
     try { submitVerifiedEventsForDuels(); } catch (_) {}
+    // v3 Phase 1z.1 — drain queued events on every Duels tab render
+    // so offline-collected progress flushes when the user comes back.
+    try { _drainVerifiedEventOutbox(); } catch (_) {}
 
     // Drive the hero with the most-recently-accepted active duel.
     renderActiveDuelHero(active);
@@ -15010,6 +15117,7 @@
             _duelMetaStripHtml(stake, reward, duration) +
             '<div class="duel-card-actions">' +
               '<button class="social-btn duel-card-view-btn" data-duel-action="view">View</button>' +
+              '<button class="social-btn social-btn--ghost duel-card-cancel-btn" data-duel-action="cancel">Cancel</button>' +
             '</div>' +
           '</div>'
         );
@@ -15497,6 +15605,26 @@
         if (!did) return;
         if (action === 'view') {
           openDuelDetail(did);
+          return;
+        }
+        // v3 Phase 1z.1 — outgoing-duel cancel. Challenger-only, pending-only.
+        if (action === 'cancel') {
+          if (!window.confirm('Cancel this duel invite?')) return;
+          btn.disabled = true;
+          let cres;
+          try { cres = await Auth.cancelDuel(did); }
+          catch (_) { cres = { ok: false, detail: 'Network error' }; }
+          btn.disabled = false;
+          if (!cres || !cres.ok) {
+            if (cres && cres.code === 'DUEL_NOT_CANCELLABLE') {
+              showHabitToast('Duel already started — cannot cancel.');
+            } else {
+              showHabitToast((cres && cres.detail) || 'Could not cancel.');
+            }
+            return;
+          }
+          showHabitToast(cres.alreadyCancelled ? 'Duel already cancelled.' : 'Duel cancelled.');
+          renderDuelsSection();
           return;
         }
         btn.disabled = true;
@@ -23254,6 +23382,9 @@
       try { submitActiveStepsDuelProgress(); } catch (_) {}
       // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
       try { submitVerifiedEventsForDuels(); } catch (_) {}
+      // v3 Phase 1z.1 — drain any queued verified events from prior
+      // offline sessions. Cheap when the queue is empty.
+      try { _drainVerifiedEventOutbox(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
@@ -23288,6 +23419,8 @@
       try { submitActiveStepsDuelProgress({ force: true }); } catch (_) {}
       // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
       try { submitVerifiedEventsForDuels({ force: true }); } catch (_) {}
+      // v3 Phase 1z.1 — drain pending events from prior sessions.
+      try { _drainVerifiedEventOutbox(); } catch (_) {}
       // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
       // fresh installs with a cloud backup; otherwise schedules a
       // baseline upload). Visibility-hidden flush keeps cloud

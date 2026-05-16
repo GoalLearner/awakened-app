@@ -934,6 +934,9 @@
   }
   function acceptDuel(duelId)                   { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/accept'); }
   function declineDuel(duelId)                  { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/decline'); }
+  // Outgoing duel cancel (v3 Phase 1z.1). Challenger-only, pending-only,
+  // idempotent (returns `alreadyCancelled: true` if already cancelled).
+  function cancelDuel(duelId)                   { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/cancel'); }
   function fetchDuel(duelId)                    { return _authedFetch('GET',  '/v1/duels/' + encodeURIComponent(duelId)); }
 
   // Steps Duel Scoring v1 (v3 Phase 1y). Submit a per-participant
@@ -989,6 +992,7 @@
     createDuel,
     acceptDuel,
     declineDuel,
+    cancelDuel,
     fetchDuel,
     // Steps Duel Scoring v1 (v3 Phase 1y)
     submitDuelProgress,

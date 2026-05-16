@@ -19546,6 +19546,16 @@ body.reveal-locked { overflow: hidden; }
 .duel-card-actions .social-btn { flex: 1; }
 .duel-card-view-btn { flex: 0 0 auto !important; }
 
+/* v3 Phase 1z.1 — outgoing-duel Cancel button. Muted gray-ghost so it
+ * doesn't compete with the primary purple Accept on incoming cards. */
+.social-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary, #8e8e93);
+}
+.social-btn--ghost:hover { color: var(--text-primary, #f2f2f7); border-color: rgba(255,255,255,0.32); }
+.duel-card-cancel-btn { flex: 0 0 auto !important; }
+
 /* Rich empty states */
 .social-empty--rich {
   padding: 18px 16px;
