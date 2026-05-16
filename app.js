@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w16';
+  const APP_BUILD_TAG = '2.2.1-w17';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22035,28 +22035,75 @@
       // 21 = coreTraining — excluded; counted only via explicit core->strength
       //      naming on the next deploy if user reports it
     ]);
-    const STRENGTH_KEYWORDS = [
-      'strengthtraining', 'weighttraining', 'resistancetraining',
-      'strength training', 'weight training', 'resistance training',
-      'traditional strength', 'functional strength',
+    // Normalized keywords (lowercase, no spaces/punctuation) matched
+    // via substring search against _normalizeActivityName(raw). Catches
+    // all variants: "Traditional Strength Training", "traditionalStrengthTraining",
+    // "HKWorkoutActivityTypeTraditionalStrengthTraining", "traditional-strength-training",
+    // etc., in one comparison.
+    const STRENGTH_KEYWORDS_NORM = [
+      'traditionalstrengthtraining',
+      'functionalstrengthtraining',
+      'strengthtraining',
+      'weighttraining',
+      'resistancetraining',
     ];
+    // v3 Phase 1z.5 CRITICAL field-name fix.
+    // @perfood/capacitor-healthkit emits workout samples with:
+    //   workoutActivityName : human string ("Traditional Strength Training")
+    //   workoutActivityId   : HKWorkoutActivityType rawValue (50, 20, etc.)
+    // Earlier filter probed `workoutActivityType` / `activityType` /
+    // `workoutType` / `type` — NONE of those are set by the plugin, so
+    // type-match always returned undefined and every strength workout
+    // was silently rejected. Reproduced on TestFlight with a 35-min
+    // Traditional Strength Training workout that failed to seal.
+    //
+    // Normalize both sides (lowercase + strip whitespace / punctuation)
+    // so "Traditional Strength Training" matches "traditionalstrengthtraining".
+    function _normalizeActivityName(raw) {
+      return String(raw || '').toLowerCase().replace(/[\s_\-./]+/g, '');
+    }
+    function _extractWorkoutActivityFields(s) {
+      if (!s) return { name: null, id: null };
+      // Primary: current @perfood plugin shape
+      let name = (typeof s.workoutActivityName === 'string') ? s.workoutActivityName : null;
+      let id   = (typeof s.workoutActivityId === 'number') ? s.workoutActivityId : null;
+      // Defensive fallbacks for future plugin versions
+      if (!name && typeof s.workoutActivityType === 'string') name = s.workoutActivityType;
+      if (!name && typeof s.activityType === 'string')        name = s.activityType;
+      if (!name && typeof s.workoutType === 'string')         name = s.workoutType;
+      if (!name && typeof s.type === 'string')                name = s.type;
+      if (id === null && typeof s.workoutActivityType === 'number') id = s.workoutActivityType;
+      if (id === null && typeof s.activityType === 'number')        id = s.activityType;
+      if (id === null && typeof s.workoutType === 'number')         id = s.workoutType;
+      if (id === null && typeof s.type === 'number')                id = s.type;
+      return { name: name, id: id };
+    }
     function _isStrengthWorkoutSample(s) {
       if (!s) { _hkDebug('strength filter: null sample'); return false; }
-      const rawType = (s.workoutActivityType !== undefined) ? s.workoutActivityType
-                    : (s.activityType !== undefined) ? s.activityType
-                    : (s.workoutType !== undefined) ? s.workoutType
-                    : s.type;
+      const fields = _extractWorkoutActivityFields(s);
       let matchesStrength = false;
       let reason;
-      // Numeric path
-      if (typeof rawType === 'number' && Number.isFinite(rawType)) {
-        matchesStrength = STRENGTH_NUMERIC_TYPES.has(rawType);
-        reason = matchesStrength ? ('numeric:' + rawType + '✓') : ('numeric:' + rawType + '✗');
-      } else {
-        const typeStr = String(rawType || '').toLowerCase();
-        matchesStrength = STRENGTH_KEYWORDS.some(k => typeStr.includes(k.replace(/\s+/g, '')));
-        reason = matchesStrength ? ('string:"' + typeStr + '"✓') : ('string:"' + typeStr + '"✗');
+      // String path FIRST — most reliable. Plugin's workoutActivityName
+      // is a human-readable label with spaces ("Traditional Strength
+      // Training"). Normalize both sides to strip whitespace + punctuation
+      // so prefixed / spaced / camelCase variants all match.
+      if (fields.name) {
+        const norm = _normalizeActivityName(fields.name);
+        matchesStrength = STRENGTH_KEYWORDS_NORM.some(k => norm.indexOf(k) >= 0);
+        reason = matchesStrength
+          ? ('name:"' + fields.name + '"→' + norm + ' ✓')
+          : ('name:"' + fields.name + '"→' + norm + ' ✗');
       }
+      // Numeric fallback if name was absent / didn't match an allowlisted keyword
+      if (!matchesStrength && fields.id !== null && Number.isFinite(fields.id)) {
+        if (STRENGTH_NUMERIC_TYPES.has(fields.id)) {
+          matchesStrength = true;
+          reason = (reason ? reason + ' | ' : '') + 'id=' + fields.id + ' ✓';
+        } else if (!reason) {
+          reason = 'id=' + fields.id + ' ✗ (not in strength allowlist)';
+        }
+      }
+      if (!reason) reason = 'no activity-type field found';
       if (!matchesStrength) {
         _hkDebug('strength filter REJECT (' + reason + ')', s);
         return false;
@@ -22064,7 +22111,8 @@
       const minutes = _workoutDurationMinutes(s);
       const meetsDuration = minutes >= HEALTHKIT_STRENGTH_MIN_MINUTES;
       _hkDebug('strength filter ' + (meetsDuration ? 'ACCEPT' : 'REJECT-DURATION') +
-               ' (' + reason + ', ' + minutes.toFixed(1) + ' min)', s);
+               ' (' + reason + ', ' + minutes.toFixed(1) + ' min, threshold=' +
+               HEALTHKIT_STRENGTH_MIN_MINUTES + ')', s);
       return meetsDuration;
     }
 
