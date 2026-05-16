@@ -125,7 +125,7 @@ Cloudflare Workers + D1, repo lives at `awakened-app/backend/`. Production URL: 
 - `POST /v1/account/delete`
 - `GET /v1/users/me/state`, `POST /v1/users/me/state`
 - `GET /v1/friends`, `POST /v1/friends/request`, `POST /v1/friends/:id/accept`, `POST /v1/friends/:id/decline`, `POST /v1/friends/:id/remove`
-- `GET /v1/duels`, `POST /v1/duels`, `GET /v1/duels/:id`, `POST /v1/duels/:id/accept`, `POST /v1/duels/:id/decline`, `POST /v1/duels/:id/progress`, `POST /v1/duels/:id/resolve`, `GET /v1/duels/:id/score`
+- `GET /v1/duels`, `POST /v1/duels`, `GET /v1/duels/:id`, `POST /v1/duels/:id/accept`, `POST /v1/duels/:id/decline`, `POST /v1/duels/:id/cancel`, `POST /v1/duels/:id/progress`, `POST /v1/duels/:id/resolve`, `GET /v1/duels/:id/score`
 - `POST /v1/verified-events`
 
 **Migration history** (`backend/migrations/`):
