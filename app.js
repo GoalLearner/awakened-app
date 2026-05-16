@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w20';
+  const APP_BUILD_TAG = '2.2.1-w21';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5712,8 +5712,14 @@
     showHabitToast('No alcohol added — let the Weekend Warrior begin');
   }
 
-  // Updates the Habits-tab Double XP banner: visibility, text, and active
-  // state styling. Called on render() and after habit changes.
+  // v3 Phase 1z.9 — Toggles visibility of the compact 2X XP buff pill
+  // (#double-xp-banner, now an .aw-buff-pill inside .today-strip-right).
+  // Inner markup is static (icon + label + pulse dot), so this function
+  // just adds/removes .hidden based on PT-anchored isWeekend(). The
+  // prior dxb--active "Weekend Warrior active" copy variant is retired
+  // — the pill is uniformly "⚡ 2X XP" on weekends, and Weekend Warrior
+  // state still surfaces inside the #ww-overlay sheet on tap. The id
+  // and the setupDoubleXpBanner click/pointerup wiring are unchanged.
   function updateDoubleXpBanner() {
     const el = document.getElementById('double-xp-banner');
     if (!el) return;
@@ -5722,16 +5728,6 @@
       return;
     }
     el.classList.remove('hidden');
-    // innerHTML so the streak icon can render. streakify() escapes the
-    // surrounding text, so this is safe even if upstream copy ever
-    // includes user-generated content (it doesn't, but defensive).
-    if (userHasNoAlcohol()) {
-      el.classList.add('dxb--active');
-      el.innerHTML = streakify('⚡ Weekend Warrior active — +30 XP if you finish all 3 nights 🔥', 16);
-    } else {
-      el.classList.remove('dxb--active');
-      el.innerHTML = streakify('⚡ DOUBLE XP WEEKEND 🔥', 16);
-    }
   }
 
   function setupDoubleXpBanner() {
