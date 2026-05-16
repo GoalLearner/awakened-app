@@ -1385,6 +1385,10 @@ duels.reward_settled_at TEXT — set by settleDuelReward
 
 **Operational rule for ledger writes.** Any future server-side soul reward (boss kill server-side, achievement, login bonus) MUST go through `user_souls_ledger` with a unique `(ref_type, ref_id, reason)` per logical reward event. The UNIQUE index protects against double-pay across retries.
 
+**Production rollout state (as of v3 Phase 1z deploy).** Migration `0006_verified_duel_scoring_engine.sql` applied to remote D1 (11 queries, 16 rows written). Worker deployed — `Current Version ID: 6874ae4d-c67a-4dda-ac2c-3d788966bdfb`. Both new endpoints (`POST /v1/verified-events` + `GET /v1/duels/:id/score`) return 401 to unauthenticated requests, confirming routes are live and auth-gated. iOS bundle catch-up rides the next Codemagic build on `8bd04d5`.
+
+**Rate-limit binding decision (v1).** `POST /v1/verified-events` does NOT have a dedicated Cloudflare Workers rate-limit binding (`RL_VERIFIED_EVENTS` was specced but skipped to avoid a risky wrangler.toml edit mid-engine-build). The handler uses an in-memory rate limiter as the fallback. Caveat: Cloudflare's isolate-per-region model means the in-memory counter isn't globally consistent — a user could spread submissions across regions and exceed the intended 60/min cap. Acceptable for v1 (low-volume + small user base + idempotent UNIQUE constraint already protects against duplicate effects). Promote to a real Cloudflare rate-limit binding when traffic grows. The 11 existing bindings (DB + 10 rate-limit) are unchanged.
+
 ---
 
 ## Drops & Card Collection (v2.0.2 Phase 1 → v2.2.0 Phase 1h)
