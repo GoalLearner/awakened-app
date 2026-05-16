@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=274">
+  <link rel="stylesheet" href="styles.css?v=275">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -303,18 +303,19 @@
           <span class="today-strip-chevron" aria-hidden="true">›</span>
         </div>
         <div class="today-strip-right">
-          <div id="perfect-streak-display" class="perfect-streak-display">
-            <span class="ps-fire"></span><span class="ps-count">0</span>
-          </div>
-          <!-- v3 Phase 1z.9 — Double XP weekend compact buff pill.
-               Hidden on weekdays. Tap → opens Weekend Warrior sheet.
-               PT-anchored weekend boundary via isWeekend() in app.js.
-               Sits BETWEEN streak chip and souls badge by design. -->
+          <!-- v3 Phase 1z.10 polish pass —
+               1. Perfect-streak/flame chip retired from this row (`#perfect-streak-display`
+                  removed). The All-Streaks sheet is now opened from the Status tab's
+                  perfect-day card; `updatePerfectStreakDisplay()` early-returns on
+                  missing element so the underlying streak math is unaffected.
+               2. Lightning emoji removed from the XP pill — gold text + gradient
+                  + pulse dot now carry the buff identity. Premium > emoji clutter.
+               3. Status-card "2x XP" duplicate badge retired so the pill is the
+                  single source of weekend XP visibility. -->
           <button id="double-xp-banner"
                   class="aw-buff-pill aw-buff-pill--xp2x hidden"
                   type="button"
                   aria-label="Double XP weekend active — tap for details">
-            <span class="aw-buff-pill__icon" aria-hidden="true">⚡</span>
             <span class="aw-buff-pill__label">2X<span class="aw-buff-pill__label-xp"> XP</span></span>
             <span class="aw-buff-pill__pulse" aria-hidden="true"></span>
           </button>
@@ -1961,7 +1962,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=371"></script>
+  <script src="app.js?v=372"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

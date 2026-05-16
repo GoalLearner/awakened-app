@@ -2506,7 +2506,17 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=274`, `app.js?v=371`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.257`, `APP_BUILD_TAG = '2.2.1-w21'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=275`, `app.js?v=372`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.258`, `APP_BUILD_TAG = '2.2.1-w22'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Resource-row polish pass (v3 Phase 1z.10)
+
+Three small follow-ups to v3 Phase 1z.9's 2X XP buff pill — all in `.today-strip-right`:
+
+1. **Perfect-streak chip retired from the resource row.** `#perfect-streak-display` markup removed from `index.html`. `updatePerfectStreakDisplay()` already early-returns on missing element, so the underlying perfect-day streak math (counts, milestones, achievements) is fully unaffected. The All-Streaks sheet remains reachable from the Status tab's perfect-day card; the small gray flame chip in the resource row was redundant with the Status surface.
+2. **Status-card `2x XP` badge retired.** The duplicate badge in `renderStatus`'s `.sc-top` was the second weekend XP indicator in the same screen. Removed. The compact buff pill in the resource row is the single source of weekend XP visibility. `.stats-2x-badge` CSS rule remains in `styles.css` harmlessly (no longer rendered).
+3. **Lightning-emoji glyph retired from the buff pill.** `.aw-buff-pill__icon` span removed from markup. Pill is now `2X XP` (or `2X` under 360px) in mono gold with the violet→gold gradient + pulse dot carrying the buff identity. CSS rule reduced to `.aw-buff-pill__icon { display: none; }` for SW-transition safety against a cached pre-1z.10 markup. Symmetric `padding: 4px 10px` instead of the icon-offset `4px 10px 4px 8px`.
+
+Final resource-row reads `[N/M HABITS TODAY ›] [2X XP] [170 SOULS]` on weekends, `[N/M HABITS TODAY ›] [170 SOULS]` on weekdays. The PT-anchored `isWeekend()` boundary and Weekend Warrior 30-XP bonus + sheet are unchanged.
 
 ---
 

@@ -3668,7 +3668,8 @@ footer {
   align-items: center;
   gap: 5px;
   height: 22px;
-  padding: 4px 10px 4px 8px;
+  /* v3 Phase 1z.10 — lightning icon span retired; pill is symmetric. */
+  padding: 4px 10px;
   border-radius: 12px;
   border: 1px solid rgba(167, 139, 250, 0.55);
   background: linear-gradient(135deg, rgba(167,139,250,0.18) 0%, rgba(245,184,66,0.18) 100%);
@@ -3697,14 +3698,10 @@ footer {
   inset: -11px -6px;
   z-index: -1;
 }
-.aw-buff-pill__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  line-height: 1;
-  filter: drop-shadow(0 0 4px rgba(245, 184, 66, 0.45));
-}
+/* .aw-buff-pill__icon retired in v3 Phase 1z.10 — pill is text+pulse only.
+   Rule retained (display: none) so a stale cached HTML carrying the span
+   doesn't render a stray emoji during the 1z.9 → 1z.10 SW transition. */
+.aw-buff-pill__icon { display: none; }
 .aw-buff-pill__label { white-space: nowrap; }
 .aw-buff-pill__pulse {
   width: 4px;

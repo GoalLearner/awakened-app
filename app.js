@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w21';
+  const APP_BUILD_TAG = '2.2.1-w22';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9836,9 +9836,11 @@
     document.getElementById('status-content').innerHTML =
       '<div class="sc-card' + (isSPlus ? ' sc-splus' : '') + '">' +
         // Header label
+        // v3 Phase 1z.10 — Status-card "2x XP" badge retired here so the
+        // top resource-row buff pill is the single source of weekend XP
+        // visibility. The badge duplicated state; no functional loss.
         '<div class="sc-top">' +
           '<span class="sc-top-title">STATUS</span>' +
-          (isWeekend() ? '<span class="stats-2x-badge">2x XP</span>' : '') +
         '</div>' +
         // Hero: rank badge + name + rank + class
         '<div class="sc-hero">' +
