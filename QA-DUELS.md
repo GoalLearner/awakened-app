@@ -268,3 +268,53 @@ The filter (`_isStrengthWorkoutSample`) accepts both string and numeric `workout
 - Strings (case-insensitive, includes match): `strengthTraining`, `traditionalStrengthTraining`, `functionalStrengthTraining`, `weightTraining`, `resistanceTraining`, prefixed variants like `HKWorkoutActivityTypeFunctionalStrengthTraining`.
 - Numerics: 20 (functional), 50 (traditional). HIIT (30), Core Training (21), and other strength-adjacent activities are deliberately excluded — they're not pure strength.
 
+
+---
+
+## 6. Boss defeat / relic drop QA (v3 Phase 1z.6)
+
+The defeat moment must be visible. Hunt ends after defeat. This is a single-device test — no friend coordination needed.
+
+### Setup
+
+- [ ] Device A: open Awakened → Quests tab → enter the E-Rank dungeon.
+- [ ] Engage **The Insomniac** (or any boss you can force-trip via console — Insomniac is simplest).
+- [ ] Confirm: HUNTING strip pill shows the boss name + streak progress. Boss card has the gold `bcard--engaged` treatment.
+- [ ] Confirm: boss detail overlay shows the **HUNTING SINCE** line + **Stop Hunting** button.
+
+### Force-trip a defeat (console)
+
+```js
+// On the Awakened tab, open DevTools / Safari Web Inspector console:
+Bosses.evaluateInsomniacForNight(7.5, getDeviceLocalDate());
+```
+
+Repeat if `streakTarget > 1` — Insomniac needs 2 consecutive nights with the new device-local dates.
+
+### Verification checklist
+
+- [ ] **Modal fires.** `#boss-result-overlay` appears 600 ms after the kill toast. Header reads "SYSTEM RESULT · BOSS DEFEATED" + boss name in gold Cinzel.
+- [ ] **Common drop case:** relic card renders with art (or emoji fallback if 404), slot pill, NEW pill if first-acquisition, stat badges. "View Relic" + "Hunt Again" + "Close" all visible.
+- [ ] **No-drop case:** "NO RELIC DROPPED" + 3-row mercy block (Guaranteed relic / Rare mercy / Ultra mercy). View Relic button hidden.
+- [ ] **Rare/ultra drop case:** modal does NOT fire — existing cinematic `#reveal-overlay` covers it. (Use `Drops.forceRoll('the_insomniac', 'rare')` to trip a rare without waiting for RNG; confirm no extra modal layers on top.)
+- [ ] **One-shot:** close the modal, then re-trigger `Bosses.evaluateInsomniacForNight(...)` for the same kill_count — modal does NOT re-fire. Verify `localStorage.getItem('hb_boss_result_seen_the_insomniac_<N>')` is `'1'`.
+- [ ] **HUNTING strip drops the boss.** Status header pill row no longer shows the defeated boss.
+- [ ] **Boss card flips.** Dungeon list card loses the `bcard--engaged` gold treatment.
+- [ ] **Boss detail flips to HUNT COMPLETE.** Open the boss detail overlay: ENGAGE section now shows the engage CTA with copy `"The Insomniac has been defeated. Engage again to begin a new hunt."` + button labeled `HUNT AGAIN — N SOULS`.
+- [ ] **Hunt Again button works.** Tap it: modal closes, souls debit (toast), state.engaged flips back to true, HUNTING strip re-shows the boss, boss card re-engaged.
+- [ ] **Tab switch closes modal.** Re-trip a defeat; while modal is visible, tap a different bottom-nav tab. Modal hides immediately.
+- [ ] **ESC closes modal.** (Desktop browser test.) Re-trip a defeat; press ESC. Modal hides.
+- [ ] **View Relic button.** Tap on a common-drop result: opens `#carddetail-overlay` showing the card art + EQUIP TO BUILD button. Closing carddetail returns user to neutral state (Quests tab).
+
+### Cloud Sync isolation
+
+- [ ] `hb_boss_result_seen_*` keys are NOT in `CloudSync.SNAPSHOT_KEYS`. Verify via:
+
+```js
+// Confirm none of the result-seen keys are allowlisted.
+Object.keys(localStorage).filter(k => k.startsWith('hb_boss_result_seen_'));
+// → array of seen-flags from local testing
+// Now: install fresh on a second device + restore. None of those keys should arrive.
+```
+
+A reinstall must NOT carry old result-seen flags. If a user reinstalls and re-evaluates a kill, the modal should fire fresh.

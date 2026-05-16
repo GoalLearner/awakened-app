@@ -1087,6 +1087,30 @@ Bosses.getBossState('the_steel_wolf');
 
 The boss-card markup is generic — name, rank, flavor, kill condition, progress dots (count = `streakTarget`), kill count. Detail modal is also generic — same fields.
 
+### Boss-defeat result flow + hunt lifecycle (v3 Phase 1z.6)
+
+**Hunt ends on defeat.** When `kill_count` increments, the same write also sets `state.engaged = false`, `state.engaged_at = null`, and a new `state.last_defeated_at = ISO string`. Re-engagement is explicit — the user taps **Hunt Again** in the result modal or the boss detail overlay's engage CTA. The HUNTING strip pill row, `bcard--engaged` boss-card treatment, and boss detail ENGAGED section all key off `state.engaged`, so a single flip resolves every surface at once.
+
+The four kill sites are wired identically: `evaluateInsomniacForNight`, `evaluateCarouserForNight`, `evaluateSteelWolfForDay`, and the shared `_awardSingleShotKill` helper (used by all three D-rank evaluators). Carouser additionally clears `current_weekend_id` so a re-engagement starts a fresh weekend cycle.
+
+**Boss-result modal (`#boss-result-overlay`).** Queued by `announceKillAndDrop` for common drops and no-drop defeats only — rare/ultra continue to fire the existing cinematic reveal at `#reveal-overlay` (`processRevealQueue`). Modal contents:
+- Header: "SYSTEM RESULT · BOSS DEFEATED" + boss name (Cinzel gold) + cleared kill condition.
+- **Relic variant** (any drop, including common): rarity-themed eyebrow ("RELIC ACQUIRED · COMMON", or "MERCY AWAKENED · …" / "FATE ANSWERED · …" for pity-driven drops), 140px art tile with emoji-slot fallback on 404, item name, slot pill, NEW pill on first-acquisition, stat bonus badges via `cardStatBadgesHtml`.
+- **No-drop variant**: "NO RELIC DROPPED" + "Mercy increased" body + 3-row mercy readout (Guaranteed relic / Rare mercy / Ultra mercy) sourced from `getDropPityDisplay(bossId)`.
+- Actions: **View Relic** (common-drop only, opens `openCardDetailModal`), **Hunt Again** (calls `engageBoss(bossId)` then closes), **Close**.
+
+**One-shot per defeat.** Keyed by `hb_boss_result_seen_<bossId>_<kill_count>` localStorage flag. Set BEFORE the modal renders so a re-render path can't re-queue. **Not in `CloudSync.SNAPSHOT_KEYS`** — device-local UI acknowledgment, not progress; a reinstall must NOT replay old defeats. Per CLAUDE.md's device-vs-user-state rule, transport / acknowledgment state stays device-local.
+
+**Queue model.** Two or more simultaneous defeats in one tick (D-rank `_awardSingleShotKill` chain across Iron Warden + Glass Strider + Dream Tyrant during a single morning-of-everything launch) push to `_bossResultQueue` and drain one-at-a-time, each waiting for the prior modal to close. 600 ms delay between the kill toast and the modal opening so the toast has its moment first.
+
+**Boss detail HUNT COMPLETE state.** When `kill_count > 0 && !engaged`, the existing engage CTA (`#bfs-engage-cta`) renders with two changes:
+- Button text becomes **"HUNT AGAIN — N SOULS"** instead of **"ENGAGE BOSS — N SOULS"**.
+- Blurb swaps to `"<Boss name> has been defeated. Engage again to begin a new hunt."`
+
+The first-engagement copy (`"This boss only counts progress while you're actively hunting it…"`) is preserved when `kill_count === 0`. Same engage button + click handler — no new wiring; just a text swap. Souls cost still applies.
+
+**Close paths.** Close button, ESC keydown, and any tab switch (`switchTab` calls `closeBossResult({ suppressDrain: true })`). The `suppressDrain` flag prevents queued results from racing with a re-engage on Hunt Again — the re-engage toast finishes before the next queued result fires.
+
 ---
 
 ## Leaderboard (v2.0.1+)
@@ -2400,6 +2424,7 @@ Prefix `hb_` for almost everything:
 | `hb_sw_last_active_version` | sw cache version string | v2.2.0 (auto-update safety net). Written by the version-drift detector 2s after register. Compared against live sw.js fetch — drift triggers unregister + cache wipe + reload. |
 | `hb_sw_manual_update`  | `'1'` (opt-in) | v2.2.0. Opt back into the banner-driven update flow. Default behavior is silent auto-apply. |
 | `hb_verified_event_outbox` | JSON array of queued verified events | **v3 Phase 1z.1.** Device-local transport queue for `Auth.submitVerifiedEvents`. 250-event cap with FIFO drop; dedup by `client_event_id` (steps_total prefers the higher value when re-queued). Drained on init, Duels-tab open, and visibilitychange→visible. 60 s backoff after a 401. **Explicitly NOT in `CloudSync.SNAPSHOT_KEYS`** — restoring an outbox onto a different device would replay events with stale `duel_id` / `metric_date` references. Backend's `UNIQUE(user_id, client_event_id)` constraint silently dedupes any retry-driven duplicates server-side. |
+| `hb_boss_result_seen_<bossId>_<kill_count>` | `'1'` | **v3 Phase 1z.6.** One-shot flag per boss-defeat result modal. Set BEFORE the `#boss-result-overlay` modal renders so re-render paths can't re-queue. **Not in `CloudSync.SNAPSHOT_KEYS`** — device-local UI acknowledgment, not progress. A reinstall must fire the modal fresh on the next defeat. State alongside `state.last_defeated_at` on the boss row, which IS in snapshot keys (it's user progress — "this boss has been defeated at least once on this account"). |
 
 All dates stored in **America/Los_Angeles** timezone via `getPTDate()`. Timezone is a hard rule — **EXCEPT for HealthKit sleep windows + Daily Insight**, which use device-local time (sleep crosses midnight; the morning briefing is meant to mark "the user's morning" wherever they are; same rule as notifications — see CLAUDE.md "Notifications fire in DEVICE-LOCAL time, not PT"). Use `getDeviceLocalDate()` for these features, not `getPTDate()`.
 
@@ -2450,7 +2475,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=271`, `app.js?v=364`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.250`, `APP_BUILD_TAG = '2.2.1-w14'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=272`, `app.js?v=368`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.254`, `APP_BUILD_TAG = '2.2.1-w18'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ---
 
@@ -2540,6 +2565,9 @@ Never "fix" notification scheduling to use PT — that would be a bug.
 - **Adding a new HealthKit-auto-verify habit without updating `isHealthAutoVerifiableHabit`.** The auto-verify-first sort (`sortHabitsAutoVerifyFirst`) is called inside `save()` and uses `isHealthAutoVerifiableHabit(habit)` to decide what pins to top. If you add a new auto-verify habit type but only wire its detection logic without adding it to that helper's OR chain, the habit will auto-verify correctly but won't sort to the top of the Habits tab. Cosmetic bug, easy to miss.
 - **Adding boss progression that respects `isAutoVerifyDisabled()`.** Boss eval is intentionally INDEPENDENT of the Settings → Apple Health pause toggle. The pause is scoped to habit auto-verify only; bosses are passive background progress. If you wire a new boss evaluator and gate it on `isAutoVerifyDisabled()`, you've broken the design. Boss evaluators run in `autoVerifySleep` (or whichever auto-verify hook they belong to) BEFORE the `isAutoVerifyDisabled()` early-return. Mirror that placement for new bosses.
 - **Triggering boss missed-period reset from `visibilitychange` instead of init.** Multi-foreground days would mis-reset on every resume after midnight crossed. Missed-night/missed-day checks belong in init() — once per cold launch. The boss state's idempotency (`last_eval_date`) handles repeated visibilitychange refires within the same calendar day.
+- **Re-engaging a boss automatically on defeat.** v3 Phase 1z.6 made the hunt EXPLICITLY end on defeat — `state.engaged = false` + `engaged_at = null` flip at the moment `kill_count` increments. Don't add a path that auto-re-engages a defeated boss "for convenience." Auto-re-engagement would mean a defeated boss keeps showing in the HUNTING strip + boss detail forever, and the user can never distinguish "I'm hunting" from "I just killed it." Re-engagement must be the user's deliberate tap on **Hunt Again** (in the result modal or boss detail). The souls cost on Hunt Again is the same as first-time engagement — that's the wager principle the engagement economy depends on.
+- **Adding `hb_boss_result_seen_*` keys to `CloudSync.SNAPSHOT_KEYS`.** These flags are device-local UI acknowledgment, NOT user progress. A reinstall should fire the modal fresh on the next defeat — sync would cause the modal to silently skip on a new device for a kill the user never actually saw on that device. Same principle as the Phase 1w.2 HealthKit reset and Phase 1z.1 verified-event outbox: device-sovereign acknowledgment / transport state stays device-local. If you're unsure: would the user expect this value to follow them to a new phone? For a "modal already shown" flag, the answer is no.
+- **Firing the boss-result modal for rare/ultra drops.** Rare/ultra defeats already trigger the existing cinematic reveal at `#reveal-overlay` via `processRevealQueue`. `announceKillAndDrop` explicitly skips the new `#boss-result-overlay` when `dropInfo.wasFirst && (rarity === 'rare' || rarity === 'ultra_rare')`. Double-firing would stack two dramatic surfaces on top of each other — bad UX, lost emphasis on the rare moment. Common drops and no-drop defeats are the only cases the new modal owns.
 - **Editing the SYSTEM-MANAGED message copy in `index.html` instead of `systemManagedHtmlFor`.** The Notes-modal system-managed body is filled dynamically per-habit by `systemManagedHtmlFor(habit)` (in `app.js`). The HTML in `index.html` is just an empty `#vn-system-message` div. Edit copy in the JS helper; the HTML container is generic.
 - **Daily Insight using `getPTDate()` for its day-change check.** The card uses **device-local** time (`getDeviceLocalDate()`), NOT PT. Same rule as notifications and sleep windows. A user in Tokyo opening the app at 6 AM Tokyo time should see today's briefing even though their PT-anchored "today" is yesterday. Don't "fix" this to use PT. Use of PT for the briefing's day-change would also break the visibilitychange retry path for users who travel timezones.
 - **Adding a habit to `HABIT_TIME_OF_DAY` without testing the slate render.** The map only contains `morning` / `evening` exceptions; everything else falls through to `'day'`. If you add a habit and want it grouped under a specific bucket, double-check the spelling matches `DEFAULT_HABITS[].name` exactly (foreign-key match). A typo silently puts the habit in `'day'` — no error, just unexpected grouping. The fallback is intentional but easy to misuse.
