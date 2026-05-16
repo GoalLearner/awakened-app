@@ -3049,6 +3049,14 @@
       if (state.streak >= cfg.streakTarget) {
         state.kill_count += 1;
         state.streak = 0;
+        // v3 Phase 1z.6 — hunt ends on defeat. Re-engagement is
+        // explicit (user taps "Hunt Again" on result modal or boss
+        // detail). HUNTING strip pill + bcard--engaged + boss detail
+        // ENGAGED state all key off state.engaged, so flipping it
+        // here resolves every surface.
+        state.engaged = false;
+        state.engaged_at = null;
+        state.last_defeated_at = new Date().toISOString();
         setBossState(id, state);
         // v2.0.1: kill grants tier-scaled souls. Earn happens here so
         // the toast message can include the actual amount awarded.
@@ -3061,6 +3069,7 @@
         // Re-render the Quests panel so the streak progress + kill
         // count update if user is currently looking at it.
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
       }
       setBossState(id, state);
@@ -3176,12 +3185,20 @@
         state.kill_count += 1;
         state.streak = 0;
         state.weekend_burned = false;
+        // v3 Phase 1z.6 — hunt ends on defeat. Same shape as the
+        // other evaluators. Carouser's weekend fields stay cleared
+        // (re-engagement gets a fresh weekend cycle).
+        state.engaged = false;
+        state.engaged_at = null;
+        state.last_defeated_at = new Date().toISOString();
+        state.current_weekend_id = null;
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
         const dropped = rollBossDrop(id);
         announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
       }
       setBossState(id, state);
@@ -3260,12 +3277,17 @@
       if (state.streak >= cfg.streakTarget) {
         state.kill_count += 1;
         state.streak = 0;
+        // v3 Phase 1z.6 — hunt ends on defeat.
+        state.engaged = false;
+        state.engaged_at = null;
+        state.last_defeated_at = new Date().toISOString();
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
         const dropped = rollBossDrop(id);
         announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
       }
       setBossState(id, state);
@@ -3320,6 +3342,10 @@
     state.kill_count = (state.kill_count || 0) + 1;
     state.streak = 0;
     state.last_eval_date = dayDate;
+    // v3 Phase 1z.6 — hunt ends on defeat. Re-engagement is explicit.
+    state.engaged = false;
+    state.engaged_at = null;
+    state.last_defeated_at = new Date().toISOString();
     setBossState(id, state);
     const reward = killRewardSouls(cfg.rank);
     if (reward > 0) earnSouls(reward, 'kill_' + id);
