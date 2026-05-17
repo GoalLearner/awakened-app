@@ -2510,7 +2510,62 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=282`, `app.js?v=384`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.269`, `APP_BUILD_TAG = '2.2.1-w34'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=282`, `app.js?v=385`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.270`, `APP_BUILD_TAG = '2.2.1-w35'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### "The Spark" brand mark migration (v3 Phase 1z.26)
+
+ClaudeDesign handoff — Awakened's primary brand mark is now **The Spark**: a gold outlined triangle with three rune-cut notches at the vertices and a solid gold flame teardrop inside. Replaces the prior splash + app-icon mark (triangle + circle + small flame). Spec tagline: *"The discipline within. A contained fire that does not go out."*
+
+**Important release context:** this is **NOT in `2.2.1-w34`** (the App-Store-Connect-awaiting-review build). The Spark migration ships in `2.2.1-w35` and is intended for the next build after the current review outcome. If `w34` is approved and released, `w35` becomes the first follow-up build users see. If `w34` is rejected, `w35` is the resubmission target with the new mark.
+
+**Canonical Spark geometry (viewBox 100×100):**
+- Triangle outline: `M50 12 L84 82 L16 82 Z`, stroke `#f5b842` 3.5 units, rounded joins
+- Rune notches at each vertex: 3 short stroke segments (`M48 14 L52 14`, `M18 84 L22 80`, `M82 84 L78 80`)
+- Solid flame teardrop: `M50 34 C 42 48 42 60 50 66 C 58 60 58 48 50 34 Z`, fill `#f5b842`
+- Mark occupies ~62% of icon edge (safe margin per spec)
+
+**New brand asset folder: `assets/brand/`**
+
+| File | Purpose |
+|---|---|
+| `assets/brand/spark.svg` | Canonical mark — viewBox 100×100, gold `#f5b842`, transparent background, used as the design source |
+| `assets/brand/spark-app-icon.svg` | 1024×1024 composed app-icon variant — navy gradient background (`#14143a → #08081a`) + Spark mark centered at 62% edge. Fully opaque (Apple's requirement). |
+
+**Rasterization pipeline (no Inkscape / ImageMagick dependency):**
+
+1. `scripts/generate-spark-icon-source.ps1` — new. Renders the Spark mark directly via `System.Drawing.GraphicsPath` (triangle polygon + 3 notch line segments + bezier flame) onto a 1024×1024 24bpp RGB bitmap with the navy gradient background, writes `app-icon-source.png`. No external rasterizer needed.
+2. `scripts/generate-app-icons.ps1` — unchanged. Reads the new `app-icon-source.png` and downsamples to all 18 iOS sizes (`AppIcon-20.png` → `AppIcon-1024.png`) plus the 2 PWA sizes (`icon-192.png`, `icon-512.png`). All RGB, no alpha — Apple's app-icon requirement.
+3. `scripts/verify-app-icons.ps1` — unchanged. All 20 icons verified clean post-regeneration.
+
+**Surfaces updated in this phase:**
+
+- **Splash emblem** (`#awakened-splash .splash-emblem` in `index.html`) — inline SVG swapped to Spark geometry. Reuses the existing `.splash-emblem { color: #f59e0b }` CSS token via `currentColor` so the splash gold stays tonally aligned with the `AWAKENED` wordmark on the same screen. Standalone `assets/brand/spark.svg` uses spec gold `#f5b842`. Both render as "gold" to users; the slight tonal split between standalone-mark and integrated-with-wordmark contexts is intentional and allowed by the spec ("Use gold `#f5b842` or the existing Awakened gold token if better aligned").
+- **App icon source** (`app-icon-source.png`) — regenerated.
+- **18 iOS AppIcon files** (`resources/ios/AppIcon.appiconset/`) — regenerated, dimension-verified clean.
+- **2 PWA icons** (`icon-192.png`, `icon-512.png` at repo root) — regenerated, dimension-verified clean. Already in `sw.js PRECACHE_ASSETS`; `CACHE_VERSION` bumped to invalidate the prior icon bytes in the SW cache.
+
+**Surfaces intentionally NOT touched:**
+- `manifest.json` — already references `icon-192.png` / `icon-512.png` by path; nothing to change.
+- Boss art, relic/item art, stat icons, tab icons, habit art, class avatars — unrelated to the brand mark.
+- Achievement / accolade seals — no current surface uses the old brand mark inside an achievement.
+- In-app "rune" decorative elements (Direction B Status banner runes, Morning Briefing sigil dots, etc.) — those are abstract Awakened ornamentation, not the brand mark.
+
+**Anti-patterns:**
+- Don't reference the legacy logo geometry (`M32 6 L58 56 H6 Z` + circle + 4-pt flame). The Spark replaces it. Old paths should NOT reappear in any new splash/icon work.
+- Don't add a glow/drop-shadow filter to the rasterized app-icon. Apple downsamples icons aggressively; baked-in filters read as halos at small sizes. The `.splash-emblem` CSS keeps its drop-shadow for the runtime splash (that's a screen, not an icon asset).
+- Don't transparent-background the app-icon source. Apple rejects transparent app icons. The PS rasterizer writes 24bpp RGB explicitly.
+- Don't change the canonical Spark geometry without coordinating with `spark.svg`, `spark-app-icon.svg`, the splash inline SVG, AND the PS rasterizer. All four must stay byte-for-byte consistent — they're the same mark in four contexts.
+- Don't apply The Spark mark to bosses / relics / habit icons / class avatars / tab icons. The Spark is the BRAND mark; the rest is content art. They live in different visual systems.
+
+**Re-rasterize procedure** (when geometry or gold token changes in the future):
+1. Edit `assets/brand/spark.svg` (canonical) AND `assets/brand/spark-app-icon.svg` (1024 composed variant) AND `scripts/generate-spark-icon-source.ps1` (the PS rasterizer) AND the inline SVG inside `#awakened-splash .splash-emblem` in `index.html`.
+2. `powershell -ExecutionPolicy Bypass -File .\scripts\generate-spark-icon-source.ps1` → produces new `app-icon-source.png`.
+3. `powershell -ExecutionPolicy Bypass -File .\scripts\generate-app-icons.ps1` → produces all 18 iOS + 2 PWA derivatives.
+4. `powershell -ExecutionPolicy Bypass -File .\scripts\verify-app-icons.ps1` → confirms dimensions clean.
+5. Bump `sw.js CACHE_VERSION` so the SW invalidates the prior icon bytes.
+6. Bump `APP_BUILD_TAG`.
+
+Bumps for this phase: `app.js?v=385`, `sw.js v5.270`, `APP_BUILD_TAG '2.2.1-w35'`. `APP_VERSION` unchanged. `styles.css` untouched (existing `.splash-emblem` rules work with the new viewBox via `width: 100%`). No backend, no Duels, no scoring, no data changes.
 
 ### May 17 handoff + 2.3 roadmap (v3 Phase 1z.25)
 
