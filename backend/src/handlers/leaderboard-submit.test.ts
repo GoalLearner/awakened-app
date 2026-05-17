@@ -154,4 +154,72 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(accoladeInsert!.binds).toContain('2026-05-17');
     expect(accoladeInsert!.binds).toContain('step_100k_club');
   });
+
+  // ── v3 Phase 1z.36 — Weekly Steps Hall of Fame write path ──────
+  it('writes a weekly_step_records row on a real-user step_total submit', async () => {
+    const db = makeDb({ current_value: 88420, best_value: 88420 });
+    const env = makeEnv(db);
+    const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 88420 }), env, session);
+    expect(res.status).toBe(200);
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const wsrInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+    expect(wsrInsert).toBeDefined();
+    // bind layout: id, user_id, week_start, steps, created_at, updated_at
+    expect(wsrInsert!.binds[1]).toBe('user-abc');
+    expect(wsrInsert!.binds[2]).toBe('2026-05-17');
+    expect(wsrInsert!.binds[3]).toBe(88420);
+  });
+
+  it('weekly_step_records UPSERT preserves the higher value (same-week lower resubmit cannot reduce)', async () => {
+    const db = makeDb({ current_value: 50000, best_value: 88420 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 50000 }), env, session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const wsrInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+    expect(wsrInsert).toBeDefined();
+    // ON CONFLICT clause must use MAX(weekly_step_records.steps, excluded.steps)
+    expect(wsrInsert!.sql).toMatch(/ON CONFLICT[\s\S]+steps\s*=\s*MAX\(weekly_step_records\.steps,\s*excluded\.steps\)/i);
+  });
+
+  it('does NOT write weekly_step_records for sleep_streak or bedtime_streak', async () => {
+    const db = makeDb({ current_value: 14, best_value: 22 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(makeReq({ metric: 'sleep_streak', current_value: 14 }), env, session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const wsrInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+    expect(wsrInsert).toBeUndefined();
+  });
+
+  it('does NOT write weekly_step_records for sim users (apple_sub LIKE sim_test_%)', async () => {
+    // Override the users SELECT to return a sim apple_sub. The default
+    // helper returns 'apple_real_user'; this test re-stubs to return a
+    // sim_test_ apple_sub so the isSimUser guard short-circuits.
+    const calls: CapturedCall[] = [];
+    const simDb = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          calls.push({ sql, binds: args });
+          return {
+            all: async () => ({ results: [], success: true, meta: {} }),
+            first: async () => {
+              if (sql.includes('FROM users')) return { apple_sub: 'sim_test_alpha' };
+              if (sql.includes('FROM leaderboard_snapshots')) return { current_value: 10000, best_value: 10000 };
+              return null;
+            },
+            run: async () => ({ success: true, meta: { changes: 1 } }),
+          };
+        },
+      }),
+    } as unknown as D1Database;
+    const env = makeEnv(simDb);
+    const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 10000 }), env, session);
+    expect(res.status).toBe(200);
+    const wsrInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+    expect(wsrInsert).toBeUndefined();
+    // Also: 100K branch should not fire even if value >=100000 (this test is
+    // at 10000 so it doesn't, but the guard is shared).
+    const accoladeInsert = calls.find(c => c.sql.includes('INSERT INTO user_accolades'));
+    expect(accoladeInsert).toBeUndefined();
+  });
 });

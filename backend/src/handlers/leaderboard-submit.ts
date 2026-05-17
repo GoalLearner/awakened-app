@@ -124,6 +124,40 @@ export async function handleLeaderboardSubmit(
     .bind(session.userId, metric)
     .first<SnapshotRow>();
 
+  // v3 Phase 1z.36 -- Weekly Steps Hall of Fame write path. Real
+  // users submitting a current-week step_total upsert a per-week
+  // record into weekly_step_records. Same-week lower resubmits
+  // never reduce the record; same-week higher resubmits raise it;
+  // new-week submits create a new (user, week) row. Sim users
+  // (apple_sub LIKE 'sim_test_%') are excluded -- they remain
+  // client-only display entries.
+  //
+  // We share the apple_sub lookup with the 100K accolade branch
+  // below by hoisting it. One SELECT per submit instead of two.
+  let appleSub: string | null = null;
+  let isSimUser = false;
+  if (metric === 'step_total') {
+    const userRow = await env.DB.prepare(
+      'SELECT apple_sub FROM users WHERE id = ?',
+    ).bind(session.userId).first<{ apple_sub: string }>();
+    appleSub = userRow?.apple_sub ?? null;
+    isSimUser = !!appleSub && appleSub.startsWith(SIM_APPLE_SUB_PREFIX);
+
+    if (!isSimUser && weekStart !== null) {
+      const recordId = crypto.randomUUID();
+      await env.DB.prepare(
+        `INSERT INTO weekly_step_records
+           (id, user_id, week_start, steps, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id, week_start) DO UPDATE SET
+           steps      = MAX(weekly_step_records.steps, excluded.steps),
+           updated_at = excluded.updated_at`,
+      )
+        .bind(recordId, session.userId, weekStart, value, now, now)
+        .run();
+    }
+  }
+
   // v3 Phase 1z.27 -- 100K Step Club accolade award (inline).
   // Runs ONLY when:
   //   - metric is step_total
@@ -133,10 +167,7 @@ export async function handleLeaderboardSubmit(
   // do NOT increment repeat_count (CASE on last_qualified_week_start).
   // Cross-week qualifying submits increment repeat_count.
   if (metric === 'step_total' && value >= STEP_100K_THRESHOLD) {
-    const userRow = await env.DB.prepare(
-      'SELECT apple_sub FROM users WHERE id = ?',
-    ).bind(session.userId).first<{ apple_sub: string }>();
-    const isSimUser = !!userRow?.apple_sub && userRow.apple_sub.startsWith(SIM_APPLE_SUB_PREFIX);
+    // appleSub + isSimUser already loaded above (hoisted in 1z.36).
     if (!isSimUser) {
       const weekStart = getAccoladeWeekStart(now);
       const accoladeId = crypto.randomUUID();

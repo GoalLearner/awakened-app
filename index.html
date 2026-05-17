@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=287">
+  <link rel="stylesheet" href="styles.css?v=288">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1185,7 +1185,18 @@
       <button id="lb-rank-close" class="vn-close-btn" aria-label="Close">✕</button>
     </div>
     <div class="lb-rank-body">
+      <!-- v3 Phase 1z.36 — segmented control for Steps: This Week / Hall of Fame.
+           Hidden for non-step metrics (sleep_streak, bedtime_streak) which keep
+           their single-list rendering. JS toggles `.is-active` on the buttons
+           and swaps the list contents. -->
+      <div id="lb-rank-tabs" class="lb-rank-tabs hidden" role="tablist">
+        <button type="button" role="tab" class="lb-rank-tab is-active" data-lb-tab="this-week"
+                aria-selected="true">This Week</button>
+        <button type="button" role="tab" class="lb-rank-tab" data-lb-tab="hof"
+                aria-selected="false">Hall of Fame</button>
+      </div>
       <p id="lb-rank-blurb" class="lb-rank-blurb">—</p>
+      <div id="lb-rank-mebest" class="lb-rank-mebest hidden"></div>
       <div id="lb-rank-list" class="lb-rank-list"></div>
     </div>
   </div>
@@ -2065,12 +2076,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=14"></script>
+  <script src="auth.js?v=15"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=5"></script>
-  <script src="app.js?v=392"></script>
+  <script src="app.js?v=393"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

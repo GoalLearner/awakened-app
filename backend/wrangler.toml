@@ -137,3 +137,14 @@ name = "RL_USER_ACCOLADES_READ"
 type = "ratelimit"
 namespace_id = "1011"
 simple = { limit = 12, period = 60 }  # 12/min per user
+
+# Weekly Steps Hall of Fame (v3 Phase 1z.36). Authenticated read of
+# the all-time top weekly step records. Two D1 queries per request
+# (top-N JOIN + me_best lookup with rank count). 30/min mirrors
+# the existing leaderboard-top budget so a user toggling between
+# the "This Week" and "Hall of Fame" tabs doesn't trip either limit.
+[[unsafe.bindings]]
+name = "RL_LEADERBOARD_HOF"
+type = "ratelimit"
+namespace_id = "1012"
+simple = { limit = 30, period = 60 }  # 30/min per user

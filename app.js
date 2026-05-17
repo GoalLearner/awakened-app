@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w43';
+  const APP_BUILD_TAG = '2.2.1-w44';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17051,6 +17051,17 @@
   const LB_CACHE_KEY_PREFIX = 'hb_lb_cache_';
   const LB_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h — past this, treat as empty
 
+  // v3 Phase 1z.36 — Weekly Steps Hall of Fame cache. Separate from
+  // the current-week cache because the shape is different (records[]
+  // not top[], me_best not me) and the TTL is shorter (the records
+  // change less often per-user but should still feel fresh; 10 min
+  // is long enough to snap the sheet open after a refresh and short
+  // enough that a new PR appears soon).
+  const LB_HOF_CACHE_KEY_PREFIX = 'hb_lb_hof_';
+  const LB_HOF_CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 min
+  // Metrics that support the Hall of Fame tab. v1: step_total only.
+  const LB_HOF_METRICS = new Set(['step_total']);
+
   function lbCacheRead(metric) {
     try {
       const raw = localStorage.getItem(LB_CACHE_KEY_PREFIX + metric);
@@ -17081,6 +17092,54 @@
       }));
     } catch (_) {}
   }
+  // v3 Phase 1z.36 — HoF cache read/write. Records are read-only on
+  // the client (no merging, no sim injection) so the shape is simple.
+  function lbHofCacheRead(metric) {
+    try {
+      const raw = localStorage.getItem(LB_HOF_CACHE_KEY_PREFIX + metric);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.fetched_at !== 'number') return null;
+      if ((Date.now() - parsed.fetched_at) > LB_HOF_CACHE_MAX_AGE_MS) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+  function lbHofCacheWrite(metric, records, me_best) {
+    try {
+      localStorage.setItem(LB_HOF_CACHE_KEY_PREFIX + metric, JSON.stringify({
+        records:    Array.isArray(records) ? records : [],
+        me_best:    me_best || null,
+        fetched_at: Date.now(),
+      }));
+    } catch (_) {}
+  }
+
+  // Compact step count: 104821 -> "104.8K", 9999 -> "9,999".
+  // Used in HoF rows where space is tight and the precise digits
+  // matter less than the magnitude.
+  function lbFormatStepsCompact(n) {
+    const v = Number(n) || 0;
+    if (v < 10000) return v.toLocaleString('en-US');
+    const k = v / 1000;
+    // 1 decimal under 1000K, 0 decimal at/above.
+    return (k >= 100 ? Math.round(k) : k.toFixed(1)) + 'K';
+  }
+
+  // Format a "Week of May 17–May 23" label given two ISO YYYY-MM-DD
+  // strings. Used for the HoF row tagline.
+  function lbFormatWeekRangeFromIso(weekStartIso, weekEndIso) {
+    if (!weekStartIso || !weekEndIso) return '';
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function parts(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+      if (!m) return null;
+      return { mo: parseInt(m[2], 10), d: parseInt(m[3], 10) };
+    }
+    const a = parts(weekStartIso), b = parts(weekEndIso);
+    if (!a || !b) return '';
+    return 'Week of ' + MONTHS[a.mo - 1] + ' ' + a.d + '–' + MONTHS[b.mo - 1] + ' ' + b.d;
+  }
+
   function lbFormatRelativeTime(epochMs) {
     const diffMs = Date.now() - epochMs;
     const mins = Math.floor(diffMs / 60000);
@@ -17197,6 +17256,63 @@
     return yourRankLine + topRows + footer;
   }
 
+  // v3 Phase 1z.36 — Hall of Fame list builder. Simpler than the
+  // current-week renderer: no out-of-top row (me_best is its own
+  // pinned card above the list), no simulated entries, no
+  // alias dedupe gymnastics (HoF rows are independent records
+  // and the same real user can appear multiple times under their
+  // canonical alias). Empty state explicitly references the
+  // "set a weekly record" framing instead of "be the first to rank".
+  function lbBuildHofList(records) {
+    if (!Array.isArray(records) || records.length === 0) {
+      return (
+        '<div class="lb-rank-empty">' +
+          '<div class="lb-rank-empty-icon" aria-hidden="true">🏆</div>' +
+          '<div class="lb-rank-empty-title">No records yet</div>' +
+          '<div class="lb-rank-empty-body">Be the first hunter to set a weekly record.</div>' +
+        '</div>'
+      );
+    }
+    const myAlias = lbGetMyAlias();
+    return records.map(rec => {
+      const isMe = myAlias && rec.alias === myAlias;
+      const aliasDisplay = lbNormalizeAliasForDisplay(rec.alias);
+      const weekLabel = lbFormatWeekRangeFromIso(rec.week_start, rec.week_end);
+      const rowClass = isMe ? 'lb-rank-row lb-rank-row--hof lb-rank-row--me' : 'lb-rank-row lb-rank-row--hof';
+      return '<div class="' + rowClass + '">' +
+        '<span class="lb-rank-pos">#' + (rec.rank || '?') + '</span>' +
+        '<span class="lb-rank-name">' +
+          esc(aliasDisplay || '—') +
+          (weekLabel ? '<span class="lb-rank-row__weeks">' + esc(weekLabel) + '</span>' : '') +
+        '</span>' +
+        '<span class="lb-rank-value">' + esc(lbFormatStepsCompact(rec.steps)) + ' steps</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Renders the pinned "YOUR BEST" me-best row above the HoF list.
+  // Null me_best → empty-state copy. Setting the contents on the
+  // dedicated element keeps the list scrollable without scrolling
+  // the user's own pinned record off-screen.
+  function lbBuildHofMeBest(meBest) {
+    if (!meBest) {
+      return (
+        '<div class="lb-rank-mebest__empty">No Hall of Fame record yet.</div>'
+      );
+    }
+    const weekLabel = lbFormatWeekRangeFromIso(meBest.week_start, meBest.week_end);
+    return (
+      '<div>' +
+        '<div class="lb-rank-mebest__label">Your best</div>' +
+        '<div class="lb-rank-mebest__value">' +
+          '#' + (meBest.rank || '?') + ' · ' +
+          esc(lbFormatStepsCompact(meBest.steps)) + ' steps' +
+          (weekLabel ? ' · ' + esc(weekLabel) : '') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function lbBuildLoadingSkeleton() {
     let html = '';
     for (let i = 0; i < 5; i++) {
@@ -17288,35 +17404,33 @@
     return { top: merged, me: newMe };
   }
 
-  async function openLeaderboardRanking(metric) {
-    const meta = LB_METRIC_META[metric];
-    if (!meta) return;
-    const sheet   = document.getElementById('lb-rank-sheet');
-    const overlay = document.getElementById('lb-rank-overlay');
-    const listEl  = document.getElementById('lb-rank-list');
-    if (!sheet || !overlay || !listEl) return;
+  // v3 Phase 1z.36 — tracks the active tab inside the sheet for
+  // metrics that have a Hall of Fame view. 'this-week' (default)
+  // or 'hof'. Concurrent fetches on tab switch are gated by both
+  // _lbCurrentOpenMetric and _lbCurrentTab.
+  let _lbCurrentTab = 'this-week';
 
-    document.getElementById('lb-rank-title').textContent = meta.title;
-    // v3 Phase 1z.33 — for weekly metrics, prepend the visible date
-    // range so users can see exactly which Sunday→Saturday window is
-    // ranking right now. The backend uses Sunday-UTC week buckets and
-    // this copy must match that convention (avoid "device-local"
-    // language that contradicts the backend).
+  // Renders the "This Week" view (current-weekly ranking with sim
+  // merge). Extracted from openLeaderboardRanking so the same flow
+  // can be triggered on tab switch without re-opening the sheet.
+  async function _lbRenderThisWeekTab(metric) {
+    const listEl   = document.getElementById('lb-rank-list');
+    const meBestEl = document.getElementById('lb-rank-mebest');
+    const blurbEl  = document.getElementById('lb-rank-blurb');
+    if (!listEl) return;
+    if (meBestEl) meBestEl.classList.add('hidden');
+
+    // Blurb: weekly metrics get the visible date range; non-weekly
+    // keep the static meta.blurb.
+    const meta = LB_METRIC_META[metric];
     let blurbText = meta.blurb;
     if (LB_WEEKLY_METRICS.has(metric)) {
       const wk = lbGetCurrentWeekStartUTC();
       const range = lbFormatWeekRange(wk);
-      if (range) {
-        blurbText = range + ' · resets Sunday 12:00 AM UTC. Apple Health is the only source.';
-      }
+      if (range) blurbText = range + ' · resets Sunday 12:00 AM UTC. Apple Health is the only source.';
     }
-    document.getElementById('lb-rank-blurb').textContent = blurbText;
+    if (blurbEl) blurbEl.textContent = blurbText;
 
-    _lbCurrentOpenMetric = metric;
-
-    // Phase 1: instant render from cache if we have one, otherwise
-    // show the loading skeleton. This makes repeat opens of the same
-    // metric feel snappy even before the network responds.
     const cached = lbCacheRead(metric);
     if (cached) {
       const staleNote = 'Last updated ' + lbFormatRelativeTime(cached.fetched_at);
@@ -17326,44 +17440,148 @@
       listEl.innerHTML = lbBuildLoadingSkeleton();
     }
 
-    overlay.classList.remove('hidden');
-    sheet.classList.remove('hidden');
-
-    // Phase 2: background fetch. If the user closed the sheet or
-    // switched metrics by the time it lands, don't write to the DOM.
     let result;
     try {
       result = await window.Auth.fetchLeaderboardTop(metric);
     } catch (e) {
       result = { ok: false, code: 'NETWORK' };
     }
-    if (_lbCurrentOpenMetric !== metric) return; // user moved on
+    // Concurrency guard: user may have closed the sheet, switched
+    // metrics, or switched tabs (to HoF) while the fetch was in
+    // flight. Each of those races would otherwise paint stale.
+    if (_lbCurrentOpenMetric !== metric || _lbCurrentTab !== 'this-week') return;
 
     if (result && result.ok) {
-      // Cache the REAL response only — simulated entries are never
-      // persisted to localStorage or anywhere else.
       lbCacheWrite(metric, result.top, result.me);
       const sim2 = _lbMaybeSimulate(metric, result.top, result.me);
       listEl.innerHTML = lbBuildRankList(metric, sim2.top, sim2.me);
-      // v3 Phase 1z.18 — refresh the top-dashboard World Rank card
-      // when the steps cache lands so its loading -> active transition
-      // happens without waiting for the next habit toggle.
       if (metric === 'step_total') {
         try { updateStepsCard(); } catch (_) {}
       }
     } else if (result && result.code === 'EXPIRED') {
-      // JWT died mid-view. Auth.fetchLeaderboardTop already cleared
-      // hb_user; reload re-arms the sign-in gate.
       window.location.reload();
     } else if (!cached) {
-      // No cache to fall back on — show error or stub state
       listEl.innerHTML = lbBuildErrorState(result && result.code);
     }
-    // If we have cached AND fetch failed (not EXPIRED), the cached
-    // render from Phase 1 stays — nothing to do here.
+  }
+
+  // v3 Phase 1z.36 — Hall of Fame tab renderer. Always real-only:
+  // never merges with simulated-leaderboard. Reads from the dedicated
+  // hb_lb_hof_<metric> cache (10-min TTL) for snappy reopens.
+  async function _lbRenderHofTab(metric) {
+    const listEl   = document.getElementById('lb-rank-list');
+    const meBestEl = document.getElementById('lb-rank-mebest');
+    const blurbEl  = document.getElementById('lb-rank-blurb');
+    if (!listEl) return;
+
+    if (blurbEl) blurbEl.textContent = 'Highest verified weekly totals ever recorded.';
+
+    // Phase 1: render from cache instantly if fresh.
+    const cached = lbHofCacheRead(metric);
+    if (cached) {
+      if (meBestEl) {
+        meBestEl.innerHTML = lbBuildHofMeBest(cached.me_best);
+        meBestEl.classList.remove('hidden');
+      }
+      listEl.innerHTML = lbBuildHofList(cached.records);
+    } else {
+      if (meBestEl) meBestEl.classList.add('hidden');
+      listEl.innerHTML = lbBuildLoadingSkeleton();
+    }
+
+    // Phase 2: fresh fetch.
+    let result;
+    try {
+      result = await window.Auth.fetchLeaderboardHallOfFame(metric, 50);
+    } catch (e) {
+      result = { ok: false, code: 'NETWORK' };
+    }
+    if (_lbCurrentOpenMetric !== metric || _lbCurrentTab !== 'hof') return;
+
+    if (result && result.ok) {
+      lbHofCacheWrite(metric, result.records, result.me_best);
+      if (meBestEl) {
+        meBestEl.innerHTML = lbBuildHofMeBest(result.me_best);
+        meBestEl.classList.remove('hidden');
+      }
+      listEl.innerHTML = lbBuildHofList(result.records);
+    } else if (result && result.code === 'EXPIRED') {
+      window.location.reload();
+    } else if (!cached) {
+      // No cached fallback — render the same error/stub state used
+      // by the This Week tab for consistency.
+      listEl.innerHTML = lbBuildErrorState(result && result.code);
+    }
+  }
+
+  async function openLeaderboardRanking(metric) {
+    const meta = LB_METRIC_META[metric];
+    if (!meta) return;
+    const sheet   = document.getElementById('lb-rank-sheet');
+    const overlay = document.getElementById('lb-rank-overlay');
+    const listEl  = document.getElementById('lb-rank-list');
+    if (!sheet || !overlay || !listEl) return;
+
+    // v3 Phase 1z.36 — title is "Steps" when the HoF tab is available
+    // (the segmented control labels handle the "This Week" framing);
+    // otherwise the per-metric title (e.g. "7+ hour sleep streak").
+    const tabsEl = document.getElementById('lb-rank-tabs');
+    const hasHof = LB_HOF_METRICS.has(metric);
+    document.getElementById('lb-rank-title').textContent = hasHof ? 'Steps' : meta.title;
+    if (tabsEl) {
+      tabsEl.classList.toggle('hidden', !hasHof);
+      // Reset tab state to 'this-week' on every open so a previous
+      // session's HoF selection doesn't surprise users.
+      const buttons = tabsEl.querySelectorAll('.lb-rank-tab');
+      buttons.forEach(b => {
+        const isThisWeek = b.getAttribute('data-lb-tab') === 'this-week';
+        b.classList.toggle('is-active', isThisWeek);
+        b.setAttribute('aria-selected', isThisWeek ? 'true' : 'false');
+      });
+    }
+
+    _lbCurrentOpenMetric = metric;
+    _lbCurrentTab = 'this-week';
+
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+
+    // Default tab is always This Week.
+    await _lbRenderThisWeekTab(metric);
+  }
+
+  // Tab click handler — switches active tab for the current open
+  // metric, refreshes the visible list. Idempotent: clicking the
+  // same tab is a no-op.
+  async function _lbSwitchTab(tab) {
+    if (!_lbCurrentOpenMetric) return;
+    if (tab !== 'this-week' && tab !== 'hof') return;
+    if (_lbCurrentTab === tab) return;
+    _lbCurrentTab = tab;
+    const tabsEl = document.getElementById('lb-rank-tabs');
+    if (tabsEl) {
+      const buttons = tabsEl.querySelectorAll('.lb-rank-tab');
+      buttons.forEach(b => {
+        const isActive = b.getAttribute('data-lb-tab') === tab;
+        b.classList.toggle('is-active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
+    if (tab === 'this-week') {
+      await _lbRenderThisWeekTab(_lbCurrentOpenMetric);
+    } else {
+      await _lbRenderHofTab(_lbCurrentOpenMetric);
+    }
   }
 
   function closeLeaderboardRanking() {
+    // v3 Phase 1z.36 — reset both metric + tab so concurrent fetches
+    // that land after the sheet closes drop on the floor cleanly,
+    // and so the next open always defaults to This Week.
+    _lbCurrentOpenMetric = null;
+    _lbCurrentTab = 'this-week';
+    const meBestEl = document.getElementById('lb-rank-mebest');
+    if (meBestEl) meBestEl.classList.add('hidden');
     const sheet   = document.getElementById('lb-rank-sheet');
     const overlay = document.getElementById('lb-rank-overlay');
     if (sheet)   sheet.classList.add('hidden');
@@ -17387,6 +17605,18 @@
     if (sheet && typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(sheet, overlay, closeLeaderboardRanking, {
         scrollTarget: '.lb-rank-list',
+      });
+    }
+    // v3 Phase 1z.36 — segmented control (This Week / Hall of Fame).
+    // Delegated handler on the tabs container so the buttons can be
+    // re-rendered later without rewiring.
+    const tabsEl = document.getElementById('lb-rank-tabs');
+    if (tabsEl) {
+      tabsEl.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest && e.target.closest('.lb-rank-tab');
+        if (!btn) return;
+        const tab = btn.getAttribute('data-lb-tab');
+        if (tab) _lbSwitchTab(tab);
       });
     }
   }

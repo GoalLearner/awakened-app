@@ -430,6 +430,61 @@
     };
   }
 
+  // v3 Phase 1z.36 -- Weekly Steps Hall of Fame read endpoint.
+  // GET /v1/leaderboard/hall-of-fame?metric=step_total&limit=N.
+  // Returns the all-time top weekly step records plus caller's best.
+  //
+  //   { ok: true, metric, records: [...], me_best: {...} | null }
+  //   { ok: false, code: 'EXPIRED' | 'RATE_LIMITED' | 'NETWORK' | 'ERROR' | 'INVALID_METRIC' }
+  async function fetchLeaderboardHallOfFame(metric, limit) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    if (typeof metric !== 'string' || metric.length === 0) {
+      return { ok: false, code: 'INVALID_METRIC' };
+    }
+    // Backend caps at 100; client default at 50 matches the handler.
+    const lim = (Number.isInteger(limit) && limit > 0 && limit <= 100) ? limit : 50;
+    const url = BACKEND_URL + '/v1/leaderboard/hall-of-fame?metric=' + encodeURIComponent(metric) + '&limit=' + lim;
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+
+    if (res.status === 200 && data) {
+      return {
+        ok: true,
+        metric:  data.metric,
+        records: Array.isArray(data.records) ? data.records : [],
+        me_best: data.me_best || null,
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    if (res.status === 400) {
+      return { ok: false, code: 'INVALID_METRIC', detail: (data && data.detail) || 'Unsupported metric.' };
+    }
+    return {
+      ok: false,
+      code: 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
   // v3 Phase 1z.27 -- 100K Step Club + future accolade types.
   // GET /v1/users/me/accolades.
   //
@@ -1025,6 +1080,8 @@
     deleteAccount,
     submitLeaderboardSnapshot,
     fetchLeaderboardTop,
+    // Weekly Steps Hall of Fame (v3 Phase 1z.36)
+    fetchLeaderboardHallOfFame,
     // 100K Step Club + future accolades (v3 Phase 1z.27)
     fetchAccolades,
     // Cloud Sync v1 (v3 Phase 1w)

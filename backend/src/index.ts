@@ -26,6 +26,7 @@ import { verifySessionJwt } from './session-jwt';
 import { handleAuthVerify } from './handlers/auth-verify';
 import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
 import { handleLeaderboardTop } from './handlers/leaderboard-top';
+import { handleLeaderboardHallOfFame } from './handlers/hall-of-fame';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
@@ -117,6 +118,9 @@ export default {
             response = await handleLeaderboardSubmit(request, env, session);
           } else if (path === '/v1/leaderboard/top' && method === 'GET') {
             response = await handleLeaderboardTop(request, env, session);
+          } else if (path === '/v1/leaderboard/hall-of-fame' && method === 'GET') {
+            // v3 Phase 1z.36 — Weekly Steps Hall of Fame read endpoint.
+            response = await handleLeaderboardHallOfFame(request, env, session);
           } else if (path === '/v1/account/delete' && method === 'POST') {
             response = await handleAccountDelete(request, env, session);
           } else if (path === '/v1/users/me/state' && method === 'GET') {

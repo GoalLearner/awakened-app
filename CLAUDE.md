@@ -2510,7 +2510,175 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=287`, `app.js?v=392`, `auth.js?v=14`, `simulated-leaderboard.js?v=5`, `sw.js v5.278`, `APP_BUILD_TAG = '2.2.1-w43'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=288`, `app.js?v=393`, `auth.js?v=15`, `simulated-leaderboard.js?v=5`, `sw.js v5.279`, `APP_BUILD_TAG = '2.2.1-w44'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Weekly Steps Hall of Fame — implemented, not deployed (v3 Phase 1z.36)
+
+**Feature.** A permanent all-time leaderboard of the highest verified weekly step totals ever recorded by real users. Separate surface from `Steps · This Week` (current weekly board, resets Sunday) and the `100K Step Club` accolade. A real user can appear in the Hall of Fame multiple times — once per qualifying high week. Simulated/sim-test users never appear (filtered at write time; never merged at read time).
+
+**Status:** backend + frontend implemented locally. **Not deployed.** Awaiting approval before remote D1 migration and Worker deploy.
+
+#### Schema (`migrations/0009_weekly_step_records.sql`)
+
+```sql
+CREATE TABLE IF NOT EXISTS weekly_step_records (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL,
+  week_start  TEXT NOT NULL,        -- 'YYYY-MM-DD' Sunday-UTC
+  steps       INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (user_id, week_start)
+);
+CREATE INDEX idx_weekly_step_records_steps ON weekly_step_records (steps DESC, updated_at DESC);
+CREATE INDEX idx_weekly_step_records_week  ON weekly_step_records (week_start, steps DESC);
+CREATE INDEX idx_weekly_step_records_user  ON weekly_step_records (user_id, steps DESC);
+```
+
+Alias is NOT denormalized. Reads `JOIN users` so alias edits flow through automatically.
+
+#### Write path (extended `handlers/leaderboard-submit.ts`)
+
+For real-user `step_total` submits, upsert one row keyed by `(user_id, week_start)`:
+
+```sql
+INSERT INTO weekly_step_records (id, user_id, week_start, steps, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id, week_start) DO UPDATE SET
+  steps      = MAX(weekly_step_records.steps, excluded.steps),
+  updated_at = excluded.updated_at;
+```
+
+Same-week lower resubmits never reduce the record (the `MAX` semantic). Same-week higher resubmits raise it. New-week submits create a second row for the same user. Sim users (`apple_sub LIKE 'sim_test_%'`) are short-circuited — the `apple_sub` lookup is now hoisted out of the 100K-accolade branch and shared between both write paths (one SELECT per submit instead of two).
+
+This is independent of `leaderboard_snapshots.best_value` (which keeps its own all-time max for the current-week board) and `user_accolades` (100K Step Club). All three surfaces co-exist cleanly.
+
+#### Read endpoint — `GET /v1/leaderboard/hall-of-fame`
+
+`backend/src/handlers/hall-of-fame.ts` · wired in `src/index.ts` next to `/v1/leaderboard/top`.
+
+```
+GET /v1/leaderboard/hall-of-fame?metric=step_total&limit=N
+Auth required (same JWT gate as /top).
+Rate limit: RL_LEADERBOARD_HOF (namespace_id 1012, 30/min per user).
+v1: metric=step_total only. Streak metrics → 400 INVALID_METRIC.
+limit: default 50, max 100.
+```
+
+Response:
+```json
+{
+  "metric": "step_total",
+  "records": [
+    { "rank": 1, "alias": "Richie", "steps": 104821, "week_start": "2026-05-17", "week_end": "2026-05-23" }
+  ],
+  "me_best": { "rank": 7, "steps": 88420, "week_start": "2026-05-17", "week_end": "2026-05-23" }
+}
+```
+
+`week_end` is computed server-side as `week_start + 6 days` (UTC). Tiebreaker: older week wins (`ORDER BY steps DESC, week_start ASC` — first-to-the-summit semantic).
+
+#### Frontend integration
+
+**Auth helper:** `Auth.fetchLeaderboardHallOfFame(metric, limit)` in `auth.js` (parallel to `fetchLeaderboardTop`). Returns `{ ok, metric, records, me_best }` or an error-coded result.
+
+**UI:** segmented control inside the existing `#lb-rank-sheet` (no new sheet). For `step_total`:
+- Title becomes `Steps`
+- Two tabs: `This Week` / `Hall of Fame` (segmented buttons via `.lb-rank-tabs`)
+- `This Week` tab: existing current-weekly board (sim merge preserved; date-range blurb preserved)
+- `Hall of Fame` tab:
+  - Blurb: `Highest verified weekly totals ever recorded.`
+  - Pinned `#lb-rank-mebest` row: `YOUR BEST · #7 · 88.4K steps · Week of May 17–May 23` (or `No Hall of Fame record yet.` if me_best is null)
+  - Rows: `#rank` · `alias` + week range tagline · compact step count (e.g. `104.8K steps`)
+  - Empty state: `🏆 No records yet · Be the first hunter to set a weekly record.`
+
+For non-step metrics (sleep_streak, bedtime_streak), the tabs are hidden and the existing single-list rendering is unchanged.
+
+**Cache:** `hb_lb_hof_<metric>` with 10-minute TTL. Separate from `hb_lb_cache_<metric>` (different shape, different freshness needs). HoF cache stores `{records, me_best, fetched_at}`. No sim merge ever runs against this data.
+
+#### Simulated users — confirmed isolation
+
+- `simulated-leaderboard.js` is untouched in this phase (cap at 45,555 from Phase 1z.35 stands).
+- Sim users never write `weekly_step_records` (filtered at submit by the `sim_test_` apple_sub prefix).
+- `_lbMaybeSimulate()` is only called from `_lbRenderThisWeekTab()`. The HoF render path never invokes it.
+- `hb_lb_hof_<metric>` cache stores backend response verbatim — no merging.
+- 100K Step Club still works: real users with `steps >= 100000` simultaneously get the accolade write AND the weekly_step_records row.
+
+#### Concurrency guards
+
+Both renders are gated by `_lbCurrentOpenMetric` AND `_lbCurrentTab`. Tab-switch races (open `step_total` → tap HoF → tap back to This Week before the HoF fetch returns) correctly drop the late HoF response on the floor. `closeLeaderboardRanking()` resets both back to null/`'this-week'` so stale fetches landing after dismiss are silenced.
+
+#### Files changed
+
+Backend (5):
+- `backend/migrations/0009_weekly_step_records.sql` (new)
+- `backend/src/handlers/hall-of-fame.ts` (new)
+- `backend/src/handlers/hall-of-fame.test.ts` (new — 11 vitest cases)
+- `backend/src/handlers/leaderboard-submit.ts` (write path extension + hoisted sim filter)
+- `backend/src/handlers/leaderboard-submit.test.ts` (+4 new vitest cases)
+- `backend/src/env.ts` (added `RL_LEADERBOARD_HOF` binding type)
+- `backend/src/index.ts` (route wiring + import)
+- `backend/wrangler.toml` (added `RL_LEADERBOARD_HOF` namespace_id 1012)
+
+Frontend (5):
+- `app.js` (HoF cache + helpers + tab renderers + `openLeaderboardRanking` refactor + close handler reset + build tag)
+- `auth.js` (`fetchLeaderboardHallOfFame` + export wire-up)
+- `index.html` (tabs markup + me-best slot + version bumps for styles/app/auth)
+- `styles.css` (`.lb-rank-tabs`, `.lb-rank-tab`, `.lb-rank-mebest`, `.lb-rank-row--hof` block)
+- `sw.js` (CACHE_VERSION bump)
+
+#### Tests
+
+74/74 backend vitest pass:
+- 11 new HoF handler tests (ordering, ties, me_best, limit cap, metric validation, ratelimit, JOIN shape, week_end math)
+- 4 new submit-handler tests (writes weekly_step_records, MAX preserves, skips non-step metrics, skips sim users)
+- 59 existing tests still green (no regressions)
+
+`node --check app.js` + `node --check auth.js` both OK. `tsc --noEmit` clean for the new + modified backend files.
+
+#### Deployment steps needed (when approved)
+
+1. Apply remote migration:
+   ```
+   cd backend
+   echo y | npx wrangler d1 execute awakened-db --remote --file=migrations/0009_weekly_step_records.sql
+   ```
+2. Verify table + indexes:
+   ```
+   npx wrangler d1 execute awakened-db --remote --command "PRAGMA table_info(weekly_step_records);"
+   npx wrangler d1 execute awakened-db --remote --command "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='weekly_step_records';"
+   ```
+   Expect 6 columns (id, user_id, week_start, steps, created_at, updated_at) and 3 indexes (idx_weekly_step_records_steps / _week / _user) + the auto-index for the unique constraint.
+3. Deploy worker:
+   ```
+   npx wrangler deploy
+   ```
+4. Smoke tests:
+   - `GET /v1/leaderboard/hall-of-fame?metric=step_total` unauth → 401 AUTH_REQUIRED.
+   - `GET /v1/leaderboard/hall-of-fame?metric=sleep_streak` (auth'd) → 400 INVALID_METRIC.
+   - `D1 SELECT COUNT(*) FROM weekly_step_records` → starts at 0; grows as users submit.
+   - `POST /v1/leaderboard/submit metric=step_total` against a real-user JWT → check that a `weekly_step_records` row appears with the submitted value.
+5. Only AFTER smoke checks pass: Codemagic-trigger the iOS build shipping `app.js?v=393` / `auth.js?v=15`.
+
+#### Risks / open questions
+
+- **Backfill:** existing 5 step_total rows in `leaderboard_snapshots` with `week_start = NULL` are NOT migrated to `weekly_step_records`. This is intentional — they have no week tag, so we can't claim "this user hit X steps in week Y". When those users next submit, they'll start populating weekly_step_records normally.
+- **Minimum-qualify threshold:** none in v1. Every real-user submit produces a record. If the HoF gets noisy with sub-10k entries we can add a server-side `WHERE steps >= 10000` filter later without a schema change.
+- **Same-user repetition:** allowed. The board can show the same person multiple times across different weeks. That's the product spec.
+- **Alias collisions on display:** the existing `lbNormalizeAliasForDisplay` lowercase rule is applied per-row in `lbBuildHofList`, but the `lbBuildDisplayAliases` dedupe-suffix logic is NOT applied (a single user appearing twice should look like the same person, not "richie" then "richie_2"). The `Richie` allowlist override still applies.
+- **Tiebreak choice documented:** `steps DESC, week_start ASC`. Older week wins. Documented in the migration comment and the handler header.
+
+#### Acceptance criteria check
+- ✅ Historical Hall of Fame exists as backend + frontend feature.
+- ✅ No fake users appear in HoF (write-time filter + read-path never merges sims).
+- ✅ Same real user can appear multiple times for multiple weeks.
+- ✅ Current-week leaderboard still works (existing flow untouched in `_lbRenderThisWeekTab`).
+- ✅ 100K Step Club still works (74/74 tests including the existing accolade case).
+- ✅ No Duels changes.
+- ✅ No remote deploy until approved.
+
+Bumps: `app.js?v=393`, `auth.js?v=15`, `styles.css?v=288`, `sw.js v5.279`, `APP_BUILD_TAG '2.2.1-w44'`. `APP_VERSION` unchanged.
 
 ### Simulated leaderboard weekly-step cap + Hall of Fame plan (v3 Phase 1z.35)
 

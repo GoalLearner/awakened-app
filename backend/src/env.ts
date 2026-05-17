@@ -67,4 +67,7 @@ export interface Env {
   /** 100K Step Club + future accolades (v3 Phase 1z.27) — guards
    *  GET /v1/users/me/accolades. 12/min per user. */
   RL_USER_ACCOLADES_READ: RateLimit;
+  /** Weekly Steps Hall of Fame (v3 Phase 1z.36) — guards
+   *  GET /v1/leaderboard/hall-of-fame. namespace_id 1012 in wrangler.toml. */
+  RL_LEADERBOARD_HOF: RateLimit;
 }
