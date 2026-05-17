@@ -13987,6 +13987,58 @@ body.bfs-locked { overflow: hidden; }
 .bfs-engage-preview.hidden { display: none; }
 
 .bfs-engage-cta { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* v3 Phase 1z.39 — Souls balance readout above the Engage Boss button.
+   Compact, dark-fantasy palette aligned with the existing #souls-badge
+   header pill. Two states: sufficient (gold) / insufficient (red ember). */
+.bfs-souls-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.10), rgba(245, 184, 66, 0.03));
+  border: 1px solid rgba(245, 184, 66, 0.30);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.bfs-souls-balance__label {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: rgba(245, 184, 66, 0.85);
+  text-transform: uppercase;
+}
+.bfs-souls-balance__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f5b842;
+  letter-spacing: 0.4px;
+  line-height: 1;
+}
+.bfs-souls-balance__icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  filter: drop-shadow(0 0 4px rgba(245, 184, 66, 0.45));
+}
+/* Insufficient state — red ember; matches the "Need N souls" toast intent. */
+.bfs-souls-balance--insufficient {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.10), rgba(239, 68, 68, 0.03));
+  border-color: rgba(239, 68, 68, 0.40);
+}
+.bfs-souls-balance--insufficient .bfs-souls-balance__label { color: rgba(248, 113, 113, 0.95); }
+.bfs-souls-balance--insufficient .bfs-souls-balance__value { color: #f87171; }
+.bfs-souls-balance--insufficient .bfs-souls-balance__icon  { filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.45)) hue-rotate(-50deg); }
+
 .bfs-engage-btn {
   width: 100%;
   max-width: 320px;
@@ -14002,10 +14054,20 @@ body.bfs-locked { overflow: hidden; }
   cursor: pointer;
   text-transform: uppercase;
   box-shadow: 0 0 16px rgba(245, 158, 11, 0.30);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.18s ease, filter 0.18s ease;
 }
 .bfs-engage-btn:hover  { transform: scale(1.02); box-shadow: 0 0 22px rgba(245, 158, 11, 0.45); }
 .bfs-engage-btn:active { transform: scale(0.98); }
+/* v3 Phase 1z.39 — visually soften when the user can't afford the engage
+   cost. Button remains tappable (the existing balance toast handles the
+   precise "Need N souls" message); this just makes the gate visible
+   before tap. */
+.bfs-engage-btn--insufficient {
+  opacity: 0.55;
+  filter: grayscale(0.35);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+}
+.bfs-engage-btn--insufficient:hover { box-shadow: 0 0 16px rgba(239, 68, 68, 0.35); }
 .bfs-engage-blurb {
   margin: 0;
   font-size: 0.82rem;

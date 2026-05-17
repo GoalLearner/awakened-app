@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w45';
+  const APP_BUILD_TAG = '2.2.1-w46';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17927,12 +17927,12 @@
         if (disengageBtn) disengageBtn.setAttribute('data-boss-id', id);
       } else {
         engageCta.classList.remove('hidden');
+        const cost = engageCostSouls(cfg.rank);
         if (engageBtn) {
           engageBtn.setAttribute('data-boss-id', id);
           // v2.0.1: button text shows the souls cost. Always-tappable
           // — broke-state is handled by engageBoss's balance check
           // which fires a precise "Need N souls. You have M." toast.
-          const cost = engageCostSouls(cfg.rank);
           // v3 Phase 1z.6 — when kill_count > 0 AND not engaged, the
           // boss was defeated and the hunt naturally ended. Swap the
           // button copy to "HUNT AGAIN" so the framing is "resume the
@@ -17942,6 +17942,35 @@
           engageBtn.textContent = cost > 0
             ? verb + ' — ' + cost + ' SOULS'
             : verb;
+          // v3 Phase 1z.39 — visually soften the button when broke.
+          // The existing engageBoss() guard already toasts the
+          // precise "Need N souls. You have M." message; this just
+          // makes the UI state visible before tap so users can
+          // self-discover the gate.
+          let balance = 0;
+          try { balance = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0; } catch (_) {}
+          engageBtn.classList.toggle('bfs-engage-btn--insufficient', cost > 0 && balance < cost);
+        }
+        // v3 Phase 1z.39 — populate the Souls balance readout above
+        // the button. Reads from the single source of truth
+        // (getSoulsBalance) — never duplicates state. Two states:
+        //   sufficient   — "Souls available · {balance}" in gold
+        //   insufficient — "{balance} / {cost} needed" in red
+        const balanceEl    = document.getElementById('bfs-souls-balance');
+        const balanceNumEl = document.getElementById('bfs-souls-balance-num');
+        const balanceLabelEl = balanceEl ? balanceEl.querySelector('.bfs-souls-balance__label') : null;
+        if (balanceEl && balanceNumEl) {
+          let balance = 0;
+          try { balance = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0; } catch (_) {}
+          const insufficient = cost > 0 && balance < cost;
+          balanceEl.classList.toggle('bfs-souls-balance--insufficient', insufficient);
+          if (insufficient) {
+            if (balanceLabelEl) balanceLabelEl.textContent = 'Need more souls';
+            balanceNumEl.textContent = balance.toLocaleString('en-US') + ' / ' + cost + ' needed';
+          } else {
+            if (balanceLabelEl) balanceLabelEl.textContent = 'Souls available';
+            balanceNumEl.textContent = balance.toLocaleString('en-US');
+          }
         }
         // Swap blurb copy for the post-defeat state.
         const blurb = engageCta.querySelector('.bfs-engage-blurb');

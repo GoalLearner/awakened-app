@@ -2510,7 +2510,23 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=288`, `app.js?v=394`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.280`, `APP_BUILD_TAG = '2.2.1-w45'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=289`, `app.js?v=395`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.281`, `APP_BUILD_TAG = '2.2.1-w46'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Boss detail Souls balance readout (v3 Phase 1z.39)
+
+**Problem.** TestFlight tester opened a boss detail screen showing `ENGAGE BOSS — 25 SOULS`, didn't know how many souls they had before tapping. The dashboard header pill (`#souls-badge`) is hidden by the full-screen boss overlay, so the only existing balance surface is invisible at decision time.
+
+**Fix.** Added a compact balance readout inside `#bfs-engage-cta`, positioned ABOVE the engage button. Two states:
+- **Sufficient (gold):** `SOULS AVAILABLE` label + `🩸 185` (icon + count). Matches the existing header pill palette (gold gradient, gold text).
+- **Insufficient (red ember):** `NEED MORE SOULS` label + `12 / 25 needed`. Engage button additionally takes a `.bfs-engage-btn--insufficient` modifier (`opacity: 0.55, filter: grayscale(0.35)`, red glow instead of gold) so the gate is visible before tap.
+
+The engage button stays tappable in both states. The existing `engageBoss()` balance guard (`if (balance < cost) showHabitToast('Need N souls. You have M.'); return false;`) is the source of truth for spending — this UI just makes the same information visible upfront.
+
+**Source of truth preserved.** The balance read uses the existing `getSoulsBalance()` accessor — same function the header pill uses. No new state, no caching, no duplication. The HTML element is populated on every `openBossFullScreen()` so it always reflects the latest balance when the user opens or re-opens the screen.
+
+**Files changed (frontend only, 4):** `index.html` (new `#bfs-souls-balance` markup inside `#bfs-engage-cta`; version bumps for app/styles), `app.js` (populate balance + softened-button toggle in `openBossFullScreen` engage-cta branch; build tag), `styles.css` (`.bfs-souls-balance` + `.bfs-souls-balance--insufficient` + `.bfs-engage-btn--insufficient`), `sw.js` (cache bump). No backend, no Duels, no sims, no Codemagic.
+
+Bumps: `app.js?v=395`, `styles.css?v=289`, `sw.js v5.281`, `APP_BUILD_TAG '2.2.1-w46'`. `APP_VERSION` unchanged at `2.2.1`.
 
 ### Hall of Fame write isolation (v3 Phase 1z.38)
 
