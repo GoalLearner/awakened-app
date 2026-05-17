@@ -2506,7 +2506,27 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=280`, `app.js?v=380`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.265`, `APP_BUILD_TAG = '2.2.1-w30'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=280`, `app.js?v=381`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.266`, `APP_BUILD_TAG = '2.2.1-w31'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### World Rank card rank-mismatch fix (v3 Phase 1z.21)
+
+Bug surfaced on TestFlight `2.2.1-w30`: the dashboard's **World Rank Steps card** rendered `#4` while the full Global Rankings → Steps sheet (tapped from that same card) rendered `#13`. Identical user, same metric, two different rank numbers.
+
+Root cause: the card was reading **`cached.me.rank` directly** from the leaderboard cache (raw backend response, real users only — Richie was #4 among the 5 real Apple-signed users + a few real submitters). The sheet, by contrast, runs the cached `top + me` through `_lbMaybeSimulate('step_total', top, me)` before rendering, which calls `window.SimulatedLeaderboard.merge(...)` and injects 10 fixed simulated hunters (`ShadowMonarch_K`, `ascendantnova`, etc.) into the displayed board. Several of those bots roll step totals higher than the user's, which pushes the user to ~`#13` in the merged display. The card was reading pre-merge; the sheet was reading post-merge.
+
+**Fix:** `updateStepsCard()` now routes `cached.top + cached.me` through `_lbMaybeSimulate('step_total', ..., ...)` and reads `displayMe.rank` / `displayMe.current_value` for the active-state render. `_lbMaybeSimulate` is the same helper the sheet uses inside `openLeaderboardRanking`; there is now a single source of truth for "what rank does the user see for step_total on this device today." If the simulator is disabled (`SimulatedLeaderboard.SIMULATE_USERS = false`) or unavailable, the helper short-circuits to `{ top, me }` unchanged, so the card falls back to the raw cache cleanly.
+
+**Step total stays correct.** `displayMe.current_value` is sourced from the merged board's user row, which the sim helper computes from either the server's `me.current_value` or the local `lbGetSnapshot().steps_last_7_days` snapshot — same source the user saw on their own row in the sheet. No drift.
+
+**Card states preserved.** Active / loading / empty all branch off the same conditions as before — only the rank+value source for the active path changed.
+
+**Anti-patterns:**
+- Don't read `cached.me.rank` directly anywhere user-facing as long as `SimulatedLeaderboard.SIMULATE_USERS` can be true. Use `_lbMaybeSimulate(metric, top, me)` and read the returned `me.rank`.
+- Don't try to invert-compute the merge in the card (e.g., "subtract simulated bots that beat the user from the raw rank"). The merge is the canonical view; calling it directly is cheaper, simpler, and guaranteed to stay in sync if the bot roster ever changes.
+- Don't disable `SimulatedLeaderboard` to mask this kind of bug — `SIMULATE_USERS` is a product-UX decision (sparse boards feel populated). The fix is correct sourcing, not removing the feature.
+- Don't add a separate "displayRank" field to the leaderboard cache. Recomputing via `_lbMaybeSimulate` on each render is cheap (the merge is pure + O(top.length + 10)) and avoids stale-state drift.
+
+Bumps: `app.js?v=381`, `sw.js v5.266`, `APP_BUILD_TAG '2.2.1-w31'`. `APP_VERSION` unchanged. No CSS, no backend, no Duels, no scoring logic touched.
 
 ### Morning Briefing Minimal Premium Polish (v3 Phase 1z.19)
 

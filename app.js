@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w30';
+  const APP_BUILD_TAG = '2.2.1-w31';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11775,11 +11775,27 @@
     card.classList.remove('is-loading', 'is-empty', 'is-web');
     const labelText = card.querySelector('.steps-card__label-text');
 
-    // ACTIVE: we have cached me with a rank > 0
-    if (cached && cached.me && typeof cached.me.rank === 'number' && cached.me.rank > 0) {
+    // v3 Phase 1z.21 — Dashboard card MUST use the display rank after
+    // the simulated leaderboard merge, so it matches what the user
+    // sees in the Stats > Global Rankings > Steps sheet. The raw
+    // backend `cached.me.rank` would read the pre-merge position
+    // (e.g. #4 from real users only); the sheet renders #13 because
+    // 10 simulated hunters are injected ahead of the user. Route
+    // through the same `_lbMaybeSimulate` helper the sheet uses so
+    // there's a single source of truth.
+    let displayMe = (cached && cached.me) ? cached.me : null;
+    if (cached && (cached.me || cached.top)) {
+      try {
+        const sim = _lbMaybeSimulate('step_total', cached.top || [], cached.me || null);
+        if (sim && sim.me) displayMe = sim.me;
+      } catch (_) { /* fall back to raw cached.me */ }
+    }
+
+    // ACTIVE: we have a post-merge me with a rank > 0
+    if (displayMe && typeof displayMe.rank === 'number' && displayMe.rank > 0) {
       if (labelText) labelText.textContent = 'WORLD RANK';
-      const rank = cached.me.rank;
-      const steps = (typeof cached.me.current_value === 'number') ? cached.me.current_value : 0;
+      const rank = displayMe.rank;
+      const steps = (typeof displayMe.current_value === 'number') ? displayMe.current_value : 0;
       const showHash = _stepsCardRankHasHash(rank);
       const rankNum = _formatRankNumber(rank);
       body.innerHTML =
