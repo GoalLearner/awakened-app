@@ -1465,7 +1465,7 @@ duels.reward_settled_at TEXT — set by settleDuelReward
 
 **Operational rule for ledger writes.** Any future server-side soul reward (boss kill server-side, achievement, login bonus) MUST go through `user_souls_ledger` with a unique `(ref_type, ref_id, reason)` per logical reward event. The UNIQUE index protects against double-pay across retries.
 
-**Production rollout state (current — end of May 16 work session).** Migration `0006_verified_duel_scoring_engine.sql` applied to remote D1 (11 queries, 16 rows written). Worker deployed at `Current Version ID: 6874ae4d-c67a-4dda-ac2c-3d788966bdfb`; subsequent deploys shipped the Phase 1z.1 cancel endpoint (`POST /v1/duels/:id/cancel`). Live endpoint surface verified via curl returning 401 to unauthenticated requests: `POST /v1/verified-events`, `GET /v1/duels/:id/score`, `POST /v1/duels/:id/cancel`. iOS bundle: Codemagic build on commit `5c54eda` passed all pre-sync + post-sync gates and published 2.2.1 build to TestFlight on May 15. **The original May 15 App Store submission for 2.2.1 was MANUALLY PULLED on May 16** because it was set for automatic release and the owner wanted the cleaner sim-verified `2.2.1-w28` train submitted instead. This was NOT an Apple rejection — pure product decision. Next ship target: Codemagic build on commit `f6c1a69` (HEAD on May 16), TestFlight smoke test, resubmit to App Review. **Verified Duels v1 backend is empirically proven on prod D1 as of May 16** — full 5/5 sim matrix passed end-to-end (steps / sleep / bedtime / strength / verified_objectives) including idempotent resolve + ledger settle. See "Verified Duels v1 prod sim pass + App Store pull (v3 Phase 1z.17)" section below for the full result. Conservative polish-pass landing decision: brand verbs (`outstepped` / `outrested` / `outanchored` / `outlifted` / `outdisciplined` / `outhunted`) + behavior wiring (accordion persist, 60s live tick, draw rotation, HUNTING-pill type glyph) shipped; 4 structural redesigns deferred to a future pass (full active duel hero rewrite with twin columns + VS sigil + score-gap bar, 5-variant detail overlay with Cinzel "VICTORY" + gold-dust, Choose Verified Duel sheet glyph-block redesign, Global Rankings card overhaul). Deferral rationale: high blast radius across already-shipping surfaces; brand+behavior were the highest-leverage targets and they're in.
+**Production rollout state (current — May 17, 11:07 AM PT clock-in).** Migration `0006_verified_duel_scoring_engine.sql` applied to remote D1 (11 queries, 16 rows written). Worker deployed at `Current Version ID: 6874ae4d-c67a-4dda-ac2c-3d788966bdfb`; subsequent deploys shipped the Phase 1z.1 cancel endpoint (`POST /v1/duels/:id/cancel`). Live endpoint surface verified via curl returning 401 to unauthenticated requests: `POST /v1/verified-events`, `GET /v1/duels/:id/score`, `POST /v1/duels/:id/cancel`. **Current App Store Connect status: `2.2.1-w34` submitted evening of May 16 / overnight, currently AWAITING App Review.** Submission is on commit `78a2c6a` (HEAD of `main`). The earlier May 15 submission was manually pulled on May 16 because it was set for automatic release and the owner wanted the cleaner sim-verified train submitted instead — this was NOT an Apple rejection, pure product decision. The pulled build is NOT the active review target; `w34` is. **Verified Duels v1 backend is empirically proven on prod D1 as of May 16** — full 5/5 sim matrix passed end-to-end (steps / sleep / bedtime / strength / verified_objectives) including idempotent resolve + ledger settle. The work-train between May 16 morning and May 16/17 night landed (in order): Direction B Status card (1z.12), Status compact passes (1z.13 → 1z.14), codemagic sentinels + OneDrive cleanup (1z.15), Boss Race hidden from picker (1z.16), Verified Duels v1 prod sim pass + App Store pull recorded (1z.17), World Rank Steps card replaces Week XP (1z.18), Morning Briefing Minimal Premium Polish (1z.19), World Rank rank-mismatch fix (1z.21), iOS long-press callout hotfix (1z.22), iOS native image-drag hotfix + centralized cleanup (1z.23), **and finally habit drag-to-reorder DISABLED for 2.2.1 release stability (1z.24)** after three hotfix attempts could not fully eliminate the iOS WebView ghost artifact. Habit drag is gated behind `ENABLE_HABIT_DRAG_REORDER = false` in `app.js`; tap-to-complete + Add Habits + scrolling all unaffected. Conservative polish-pass landing decision from the May 15 evening: brand verbs (`outstepped` / `outrested` / `outanchored` / `outlifted` / `outdisciplined` / `outhunted`) + behavior wiring (accordion persist, 60s live tick, draw rotation, HUNTING-pill type glyph) shipped; 4 structural redesigns deferred to a future pass (full active duel hero rewrite with twin columns + VS sigil + score-gap bar, 5-variant detail overlay with Cinzel "VICTORY" + gold-dust, Choose Verified Duel sheet glyph-block redesign, Global Rankings card overhaul). Deferral rationale: high blast radius across already-shipping surfaces; brand+behavior were the highest-leverage targets and they're in.
 
 **Rate-limit binding decision (v1).** `POST /v1/verified-events` does NOT have a dedicated Cloudflare Workers rate-limit binding (`RL_VERIFIED_EVENTS` was specced but skipped to avoid a risky wrangler.toml edit mid-engine-build). The handler uses an in-memory rate limiter as the fallback. Caveat: Cloudflare's isolate-per-region model means the in-memory counter isn't globally consistent — a user could spread submissions across regions and exceed the intended 60/min cap. Acceptable for v1 (low-volume + small user base + idempotent UNIQUE constraint already protects against duplicate effects). Promote to a real Cloudflare rate-limit binding when traffic grows. The 11 existing bindings (DB + 10 rate-limit) are unchanged.
 
@@ -2508,6 +2508,62 @@ Every meaningful change must:
 
 The current state is `styles.css?v=282`, `app.js?v=384`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.269`, `APP_BUILD_TAG = '2.2.1-w34'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
+### May 17 handoff + 2.3 roadmap (v3 Phase 1z.25)
+
+Documentation-only phase. Snapshot of state at May 17, 11:07 AM PT clock-in, before any new-thread work begins.
+
+**Current release target:**
+- Commit: `78a2c6a` (HEAD of `main`)
+- `APP_VERSION = '2.2.1'`
+- `APP_BUILD_TAG = '2.2.1-w34'`
+- `app.js?v=384`, `styles.css?v=281`, `sw.js v5.269`
+
+**App Store Connect status:** `2.2.1-w34` was submitted evening of May 16 / overnight. **Currently AWAITING App Review.** Likely outcome within the next several hours (Apple's typical 2.x review cadence has been ~24h). The earlier May 15 submission was manually pulled May 16 due to auto-release-on-approval being enabled — that pulled build is NOT the current review target; do not refer to it as if it were active. The cleaner `w34` build is what users will receive if approved.
+
+**What `w34` contains (cumulative since the pulled May 15 build):**
+| Phase | What |
+|---|---|
+| 1z.12 | Direction B "Premium Character Sheet" replaces the Status card |
+| 1z.13 → 1z.14 | Status vertical compact (then relaxed) |
+| 1z.15 | Codemagic sentinels for Direction B markup + OneDrive cleanup |
+| 1z.16 | Boss Race hidden from picker (5-type v1) |
+| 1z.17 | Verified Duels v1 prod sim 5/5 pass + App Store pull recorded |
+| 1z.18 | World Rank Steps card replaces Week XP slot |
+| 1z.19 | Morning Briefing Minimal Premium Polish |
+| 1z.21 | World Rank card rank-mismatch fix (post-merge `_lbMaybeSimulate`) |
+| 1z.22 | iOS long-press callout hotfix (`-webkit-touch-callout: none`) |
+| 1z.23 | iOS native image-drag hotfix + centralized cleanup |
+| **1z.24** | **Habit drag-to-reorder DISABLED for 2.2.1 stability** |
+
+**Smoke-test checklist for the live build (when it lands):**
+1. Long-press a habit → nothing weird happens (no ghost, no shaking, no selection handles) ✅ expected because the feature is gated off
+2. Tap a habit → marks complete / uncompletes
+3. Tap "Add Habits" → opens the library sheet
+4. Top dashboard middle card → "WORLD RANK" Steps card visible; tap → opens Stats > Global Rankings > Steps; rank on the card matches rank in the sheet
+5. Duels tab → Challenge friend → Choose Verified Duel sheet shows EXACTLY 5 cards (Verified Discipline / Steps / Sleep / Bedtime / Strength). **Boss Race must NOT appear.**
+6. Morning Briefing (auto-fires on a fresh device-local day after Day 1) → 3-segment summary row, sigil-headed Morning/Day/Evening groups, gold-rimmed TOTAL XP sigil tile, premium gold LOCK IN button
+7. Status tab → Direction B Premium Character Sheet (banner / identity strip / portrait frame / sigil tiles)
+
+**Do NOT start 2.3 feature work until the 2.2.1 review outcome is known.** If approved → confirm release/availability and watch for crash reports. If rejected → inspect Apple's rejection reason BEFORE changing code; do not assume what they flagged.
+
+### 2.3 Roadmap (May 17 brainstorm — NOT IMPLEMENTED)
+
+Ideas captured for the next train. None of these are shipped. None of these are in `w34`. Listed here so the next session has a starting point if/when 2.2.1 is in users' hands and the team wants to plan 2.3:
+
+- **Weekly Steps Champion** — recognize the #1 steps leaderboard user each week. Top-of-Monday announcement, premium accolade on hunter profile.
+- **Historical weekly steps leaderboard records** — persist past-week leaderboard snapshots so "last week's top hunters" can be displayed. Needs backend table or D1 column expansion.
+- **100K Step Club unlock** — permanent accolade for hunters who cross 100K steps in a single week. One-time visual reward (gold sigil + profile badge).
+- **Hunter Accolades sheet / profile surface** — a new section inside the Status card or Stats tab that lists weekly + lifetime accolades (Weekly Champion, 100K Club, perfect-week streaks, etc.). Reuses the existing sigil-tile visual language from 1z.12.
+- **Monday Morning Briefing winner recognition** — when Morning Briefing fires on a Monday and the user placed top-N in the previous week's steps leaderboard, prepend a banner ("LAST WEEK · #3 GLOBAL STEPS") above the standard briefing.
+- **Weekly prestige/reward loop for steps leaderboard** — tie the Weekly Steps Champion accolade to a souls reward + a `last_won_at` timestamp on the user record. Could pair with the relic-drop system for a weekly cosmetic drop.
+- **Habit reorder UX redesign (re-enable Phase)** — required before flipping `ENABLE_HABIT_DRAG_REORDER` back to `true` in 2.2.2 or later. Options ranked by risk: (a) explicit edit-mode toggle with on-card up/down chevrons (lowest risk, matches Things/Reminders), (b) battle-tested touch-DnD library like SortableJS (medium), (c) native iOS drag-and-drop API via Capacitor plugin (highest fidelity, biggest integration cost). See 1z.24 anti-patterns before choosing.
+
+**Anti-patterns (carried forward):**
+- Don't refer to the older pulled May 15 build as if it's still in review. `w34` is the active submission.
+- Don't say "Codemagic still needs to be triggered" for `w34`. Codemagic already ran for `w34`; the IPA is already in App Store Connect; the gate is App Review, not the build pipeline.
+- Don't ship 2.3 feature work into the 2.2.1 train. If a hotfix is needed for a rejection, it's a 2.2.2 train, not a 2.3 train.
+- Don't start any of the 2.3 ideas above before the 2.2.1 outcome is known. Premature work risks divergent branches if Apple flags something.
+
 ### Habit drag-to-reorder disabled for 2.2.1 release (v3 Phase 1z.24)
 
 After two hotfix attempts (1z.22 `-webkit-touch-callout: none`, 1z.23 `-webkit-user-drag: none` + centralized cleanup + backgrounding safety), the iOS WKWebView long-press / native-image-drag collision continued to produce a visible ghost-text artifact along the left edge of the viewport after drop attempts. Rather than ship a known visible defect to App Review, **habit drag-to-reorder is disabled in 2.2.1** via a single feature flag in `app.js`:
@@ -2763,7 +2819,7 @@ Reason: the original submission was set to **automatic release on approval**. Pr
 - Sim-harness hardening (1z.13–1z.16) — though that's docs/ops, not runtime
 - Empirical prod sim proof (this phase, 1z.17)
 
-The pull was a **product decision, NOT an Apple rejection.** Next ship target: Codemagic build on commit `f6c1a69` (current `main` HEAD) → TestFlight smoke test → resubmit to App Review. APP_VERSION stays `2.2.1`; the train just gets a new build number when Codemagic runs.
+The pull was a **product decision, NOT an Apple rejection.** Next ship target AT THAT MOMENT (May 16 evening): Codemagic build on commit `f6c1a69` (HEAD on May 16 evening). APP_VERSION stays `2.2.1`; the train just gets a new build number when Codemagic runs. **Historical note (May 17):** `f6c1a69` was NOT the final submitted build — subsequent hotfixes (1z.21 rank-mismatch, 1z.22 long-press callout, 1z.23 image-drag, 1z.24 drag-disable) layered on top before the actual App Store Connect submission landed on commit `78a2c6a` as build `2.2.1-w34`. See "May 17 handoff + 2.3 roadmap (v3 Phase 1z.25)" above for the current state.
 
 **Smoke test checklist for the new TestFlight build** (informational, not gating):
 1. App opens; signin gate appears (or main app mounts for signed-in users)
