@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w31';
+  const APP_BUILD_TAG = '2.2.1-w32';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19286,6 +19286,16 @@
       let canceled  = false;
       let triggered = false;
       item.classList.add('lp-pressing');
+      // v3 Phase 1z.22 -- arm the body-level iOS callout/selection
+      // suppression for the duration of the 400ms hold. Even if the
+      // press is canceled (release or movement > 10px), the class is
+      // cleared in cleanup() below. Pure CSS-driven; no behavior
+      // change to the drag itself.
+      try { document.body.classList.add('habit-drag-armed'); } catch (_) {}
+      // Clear any iOS text selection that may have armed BEFORE our
+      // handler attached -- prevents the magnifier carrying over
+      // from a previous tap on adjacent text.
+      try { if (window.getSelection) window.getSelection().removeAllRanges(); } catch (_) {}
 
       const pressTimer = setTimeout(() => {
         if (canceled) return;
@@ -19314,6 +19324,10 @@
       };
       function cleanup() {
         item.classList.remove('lp-pressing');
+        // v3 Phase 1z.22 -- drop the armed body class. If enterDragMode
+        // fired, it will have promoted to habit-drag-active (which is
+        // dropped by endDrag); the armed class always clears here.
+        try { document.body.classList.remove('habit-drag-armed'); } catch (_) {}
         if (isTouch) {
           document.removeEventListener('touchmove',   onMove);
           document.removeEventListener('touchend',    onEnd);
@@ -19358,6 +19372,13 @@
     document.body.appendChild(ghost);
     item.classList.add('drag-placeholder');
     list.classList.add('is-dragging');
+    // v3 Phase 1z.22 -- body-level iOS callout suppression active
+    // for the entire drag. Drops in endDrag() below.
+    try {
+      document.body.classList.remove('habit-drag-armed');
+      document.body.classList.add('habit-drag-active');
+      if (window.getSelection) window.getSelection().removeAllRanges();
+    } catch (_) {}
 
     // Prevent body scroll + selection while dragging.
     const bodyOverflow = document.body.style.overflow;
@@ -19443,6 +19464,8 @@
     drag.item.classList.remove('drag-placeholder');
     drag = null;
     document.getElementById('habit-list').classList.remove('is-dragging', 'reorder-mode');
+    // v3 Phase 1z.22 -- drop body-level iOS callout suppression.
+    try { document.body.classList.remove('habit-drag-active', 'habit-drag-armed'); } catch (_) {}
     _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
     renderHabits();
   }
@@ -19471,6 +19494,8 @@
     drag.item.classList.remove('drag-placeholder');
     drag = null;
     document.getElementById('habit-list').classList.remove('is-dragging', 'reorder-mode');
+    // v3 Phase 1z.22 -- drop body-level iOS callout suppression (idle path).
+    try { document.body.classList.remove('habit-drag-active', 'habit-drag-armed'); } catch (_) {}
     _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
   }
 

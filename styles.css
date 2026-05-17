@@ -244,6 +244,21 @@ h1 {
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
+  /* v3 Phase 1z.22 -- iOS long-press collision fix.
+   * The card has its own 400ms long-press handler that triggers
+   * reorder mode. Without -webkit-touch-callout: none, iOS's
+   * native long-press fires in parallel at ~500ms and shows the
+   * text-selection magnifier + blue selection handles + the
+   * "Copy/Lookup" callout. That collision is what produced the
+   * shaking icons + stray left-edge text + selection handles on
+   * "Add Habits" in 2.2.1-w31 TestFlight.
+   * `user-select: none` (above) prevents mouse-drag selection;
+   * `-webkit-touch-callout: none` is the SEPARATE WebKit-only
+   * property that suppresses the iOS long-press callout. Both
+   * must be set. tap-highlight is wiped so the gray flash on
+   * touchstart doesn't survive into the press-armed state. */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   /* Sized to accommodate the 72px habit icons + 2-line habit name +
      XP/diff row without clipping. The bumped min-height keeps cards
      proportional on iPhone-width grids. */
@@ -289,6 +304,31 @@ h1 {
 .habit-list.is-dragging .habit-item:not(.drag-placeholder) {
   opacity: 0.7;
   transition: opacity 0.18s ease;
+}
+
+/* v3 Phase 1z.22 -- iOS long-press collision fix (descendants).
+ * `-webkit-touch-callout: none` does NOT reliably inherit through
+ * inline children on iOS, so the leaf text nodes (.hg-name, .xp,
+ * the difficulty badge text, etc.) can still arm iOS's callout.
+ * Pin every descendant of a habit card to no-callout + no-select
+ * so the iOS long-press magnifier cannot wake up no matter where
+ * the user's finger lands inside the card. */
+.habit-item,
+.habit-item * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Belt-and-suspenders: while a drag is in flight, freeze selection
+ * across the whole habit list. Even if the user's finger slides
+ * onto a sibling card mid-drag, that card cannot initiate iOS
+ * text selection (which would re-fire the callout collision). */
+.habit-list.is-dragging,
+.habit-list.is-dragging * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 /* Long-press "armed" state — subtle scale-down so the user feels the
@@ -637,7 +677,16 @@ footer {
   transition: all 0.18s ease;
   -webkit-appearance: none;
   appearance: none;
+  /* v3 Phase 1z.22 -- iOS callout suppression. The Add Habits text
+   * was selectable on iOS WKWebView, which let the long-press magnifier
+   * arm even when the user's finger slid out of the habit grid onto
+   * this CTA mid-reorder. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+.add-btn * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
 .add-btn:active {
   background: var(--bg-card-active);
@@ -21742,6 +21791,35 @@ body.bro-locked { overflow: hidden; }
 @media (max-width: 360px) {
   .metric-card.steps-card .steps-card__pct  { display: none; }
   .metric-card.steps-card .steps-card__rank { font-size: 20px; }
+}
+
+/* ===========================================================
+   v3 Phase 1z.22 -- iOS long-press collision body-scope.
+   While a habit-card long-press is armed (400ms hold) OR an
+   active reorder drag is in flight, suppress text-selection
+   and the iOS long-press callout across the ENTIRE document.
+   This is the global belt-and-suspenders for the descendant
+   rules above: if the user's finger slides out of the habit
+   list onto the header, the tab bar, or the Add Habits CTA
+   mid-gesture, iOS still cannot wake up the selection
+   magnifier or fire the blue selection-handles UI.
+   Body class is added/removed by attachLongPressDrag +
+   enterDragMode + endDrag in app.js.
+   =========================================================== */
+body.habit-drag-armed,
+body.habit-drag-armed *,
+body.habit-drag-active,
+body.habit-drag-active * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+body.habit-drag-active {
+  /* While dragging, the document itself should not be selectable
+   * (clears any in-flight iOS selection range that started before
+   * the body class was applied). */
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 /* ===========================================================

@@ -2506,7 +2506,43 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=280`, `app.js?v=381`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.266`, `APP_BUILD_TAG = '2.2.1-w31'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=281`, `app.js?v=382`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.267`, `APP_BUILD_TAG = '2.2.1-w32'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### iOS long-press / native-callout collision hotfix (v3 Phase 1z.22)
+
+Reproducible bug surfaced on TestFlight `2.2.1-w31`: long-press on a habit card to start a reorder drag would also fire iOS's native long-press text-selection (magnifier + blue selection handles + the "Copy/Lookup" callout). Once iOS entered selection mode, the user saw:
+- icons + habit art shaking/pulsing (our `.lp-pressing` / `.is-dragging` classes flipping rapidly because iOS's gesture recognizer was stealing the touch)
+- blue selection handles on the "Add Habits" CTA text
+- a thin strip of iOS-selection-magnifier overlay peeking from the left edge
+
+**Root cause:** `.habit-item` had `user-select: none` + `-webkit-user-select: none` but **was missing `-webkit-touch-callout: none`** — that property is the WebKit-only switch that suppresses the iOS long-press callout, and it's separate from selection. Both must be set. Without the callout suppression, our 400ms long-press handler and iOS's ~500ms native long-press both fire from the same touch, the second one shows the magnifier on top of our drag visuals.
+
+**Fix (CSS-first, minimal JS):**
+- `.habit-item` gains `-webkit-touch-callout: none` + `-webkit-tap-highlight-color: transparent`
+- New descendant rule `.habit-item, .habit-item * { -webkit-touch-callout: none; ... }` — callout doesn't reliably inherit through inline children on iOS, so leaf text nodes (habit name, XP chip, difficulty badge) needed explicit suppression
+- New rule scoped to `.habit-list.is-dragging` + descendants — even if the user's finger slides onto a sibling card mid-drag, iOS can't initiate selection there
+- `.add-btn` gained the same suppression block — the "Add Habits" pill was the most visible victim in the screenshots
+- New body-level scope `body.habit-drag-armed, body.habit-drag-active, ... *` — covers the entire viewport (tab bar, header, top-row cards) during the long-press + drag window. The `armed` class is added on `touchstart` inside `attachLongPressDrag.onStart` and dropped in `cleanup()`; the `active` class is added when `enterDragMode` actually fires and dropped in `endDrag` + `cancelDragSilently`. Also clears any in-flight iOS selection range via `window.getSelection().removeAllRanges()` on entry.
+
+**Why this works:**
+- iOS's text-selection magnifier is gated by `-webkit-touch-callout`. Set it to `none` and the magnifier cannot arm, period.
+- Our drag handler keeps working unchanged — we just suppress iOS's competing gesture.
+- The body-level class is the global fallback. If the user's finger leaves the habit grid mid-drag and lands on header text / tab bar text, iOS still cannot initiate selection.
+- `getSelection().removeAllRanges()` on long-press start kills any selection that may have armed BEFORE our handler attached (e.g., from a previous tap that lingered).
+
+**No behavior changes:**
+- Tap-to-complete on habit cards unchanged
+- Long-press-to-reorder unchanged (400ms threshold, 10px move-cancel, post-drop click guard all the same)
+- Add Habits open/close unchanged
+- Habit grid layout, tab bar, top-row cards all visually identical when no drag is in flight
+
+**Anti-patterns:**
+- Don't rely on `user-select: none` alone for iOS — `-webkit-touch-callout: none` is required separately for long-press suppression.
+- Don't suppress callouts via `pointer-events: none` — that breaks tap. Only the callout-specific properties belong here.
+- Don't gate the body-class on `enterDragMode` alone — by the time the 400ms hold completes, iOS may have already armed the magnifier. The `habit-drag-armed` class fires from `touchstart` so iOS never gets the chance.
+- Don't move `-webkit-tap-highlight-color` to the body — it'd disable the gray flash on every tappable element in the app, including settings rows where it provides useful feedback.
+
+Bumps: `app.js?v=382`, `styles.css?v=281`, `sw.js v5.267`, `APP_BUILD_TAG '2.2.1-w32'`. `APP_VERSION` unchanged. No backend / Duels / scoring / data changes. Pure CSS + body-class lifecycle.
 
 ### World Rank card rank-mismatch fix (v3 Phase 1z.21)
 
