@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=279">
+  <link rel="stylesheet" href="styles.css?v=280">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -820,43 +820,75 @@
   <div id="daily-insight-overlay" class="vn-overlay hidden"></div>
   <div id="daily-insight-sheet"   class="vn-sheet   hidden">
     <div class="vn-drag-handle"></div>
-    <div class="di-body">
+    <!-- v3 Phase 1z.19 — Minimal Premium Polish redesign. The
+         `briefing--premium` modifier scopes every new rule so the
+         legacy .di-* baseline still matches if the modifier is
+         ever stripped for a rollback. Every wired ID below is
+         preserved verbatim from the prior layout. -->
+    <div class="di-body briefing--premium">
 
-      <!-- 1. HEADER: "THU · MAY 7 · DAY 11" + "TODAY'S BRIEFING" -->
-      <div class="di-header">
-        <div id="di-header-line" class="di-header-line"></div>
-        <div class="di-header-title">TODAY'S BRIEFING</div>
+      <!-- 1. HEADER: "FRI · MAY 16 · DAY 11" + "TODAY'S BRIEFING" -->
+      <div class="di-header briefing-header">
+        <div id="di-header-line" class="di-header-line briefing-date"></div>
+        <div class="di-header-title briefing-title">TODAY'S BRIEFING</div>
       </div>
 
-      <!-- 2. STATUS LINE: tactical objectives summary -->
-      <div id="di-status-line" class="di-status-line"></div>
+      <!-- 2. 3-SEGMENT SUMMARY — total / verified / manual. Old
+           single-pill #di-status-line lives below (hidden via CSS
+           in the premium variant) so any future consumer of the
+           composed string keeps working without crashes. -->
+      <div class="briefing-summary-grid" role="group" aria-label="Today's objectives summary">
+        <div class="briefing-summary-segment briefing-summary-segment--total">
+          <span id="di-summary-total" class="briefing-summary-num">0</span>
+          <span class="briefing-summary-lbl">
+            <span class="briefing-summary-lbl-1">OBJECTIVES</span>
+            <span class="briefing-summary-lbl-2">TOTAL</span>
+          </span>
+        </div>
+        <div class="briefing-summary-segment briefing-summary-segment--verified">
+          <span id="di-summary-verified" class="briefing-summary-num">0</span>
+          <span class="briefing-summary-lbl">
+            <span class="briefing-summary-lbl-1">VERIFIED</span>
+            <span class="briefing-summary-lbl-2">BY SYSTEM</span>
+          </span>
+        </div>
+        <div class="briefing-summary-segment briefing-summary-segment--manual">
+          <span id="di-summary-manual" class="briefing-summary-num">0</span>
+          <span class="briefing-summary-lbl">
+            <span class="briefing-summary-lbl-1">ON YOU</span>
+            <span class="briefing-summary-lbl-2">MANUAL</span>
+          </span>
+        </div>
+      </div>
+      <div id="di-status-line" class="di-status-line briefing-status-line--hidden" aria-hidden="true"></div>
 
       <!-- 3. HABIT SLATE: grouped by time of day. Populated by JS. -->
       <div id="di-slate" class="di-slate"></div>
 
-      <!-- 4. WHERE YOU STAND -->
-      <div class="di-section">
-        <div class="vn-section-label">WHERE YOU STAND</div>
-        <div class="di-stats-row">
-          <div class="di-stat-inline">
-            <span id="di-xp"     class="di-stat-value">0</span>
-            <span class="di-stat-label">Total XP</span>
+      <!-- 4. WHERE YOU STAND — 3 sigil tiles -->
+      <div class="di-section briefing-stand">
+        <div class="vn-section-label briefing-stand-label">
+          <span class="briefing-stand-label-text">WHERE YOU STAND</span>
+          <span class="briefing-stand-label-rule" aria-hidden="true"></span>
+        </div>
+        <div class="briefing-stand-grid">
+          <div class="briefing-stand-tile briefing-stand-tile--primary">
+            <span id="di-xp"     class="briefing-stand-val">0</span>
+            <span class="briefing-stand-lbl">TOTAL XP</span>
           </div>
-          <span class="di-stat-sep" aria-hidden="true">·</span>
-          <div class="di-stat-inline">
-            <span id="di-streak" class="di-stat-value">0</span>
-            <span class="di-stat-label">Perfect Days</span>
+          <div class="briefing-stand-tile">
+            <span id="di-streak" class="briefing-stand-val">0</span>
+            <span class="briefing-stand-lbl">PERFECT DAYS</span>
           </div>
-          <span class="di-stat-sep" aria-hidden="true">·</span>
-          <div class="di-stat-inline">
-            <span id="di-days"   class="di-stat-value">0</span>
-            <span class="di-stat-label">Days Active</span>
+          <div class="briefing-stand-tile">
+            <span id="di-days"   class="briefing-stand-val">0</span>
+            <span class="briefing-stand-lbl">DAYS ACTIVE</span>
           </div>
         </div>
       </div>
 
       <!-- 5. CTA — drag-down + tap-outside also dismiss. -->
-      <button id="di-enter-btn" class="di-cta-btn" type="button">LOCK IN</button>
+      <button id="di-enter-btn" class="di-cta-btn briefing-lockin-btn" type="button">LOCK IN</button>
     </div>
   </div>
 
@@ -1980,7 +2012,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=379"></script>
+  <script src="app.js?v=380"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w29';
+  const APP_BUILD_TAG = '2.2.1-w30';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18408,24 +18408,44 @@
   }
 
   // Build a single habit row for the briefing slate. Pure HTML
-  // string — caller injects into the appropriate group container.
-  // Layout: [colored difficulty dot] [name · goal] [verify tag] [+XP]
+  // string -- caller injects into the appropriate group container.
+  // Layout: [stat-color dot] [name . goal + verify badge] [+XP]
+  //
+  // v3 Phase 1z.19: dot now uses stat-primary color (per Minimal
+  // Premium Polish spec) via inline `background-color: <hex>` so
+  // any of the 6 stats (red / pink / blue / yellow / orange / gold)
+  // map directly without inflating the CSS bank. The legacy
+  // .di-row-dot--{easy|medium|hard|legendary} difficulty classes
+  // are still applied for backwards compatibility -- the inline
+  // background overrides them when the premium modifier is active,
+  // and they stay readable in any rollback path.
   function buildBriefingRow(habit) {
     const diff = (DIFFICULTY[habit.difficulty] || DIFFICULTY.easy);
     const parts = (typeof habitDisplayParts === 'function')
       ? habitDisplayParts(habit) : { base: habit.name, goal: null };
-    const display = parts.goal ? (parts.base + ' · ' + parts.goal) : parts.base;
+    const display = parts.goal ? (parts.base + ' . ' + parts.goal) : parts.base;
+    const statColor = (typeof getHabitStatColor === 'function')
+      ? getHabitStatColor(habit) : null;
+    const dotStyle = statColor ? ' style="background:' + statColor + ';box-shadow:0 0 4px ' + statColor + '"' : '';
     const verifyTag = canAutoVerify(habit)
-      ? '<span class="di-row-verify">Apple Health verifies</span>'
+      ? (
+          '<span class="di-row-verify briefing-row-verify">' +
+            '<svg class="briefing-row-verify-icon" width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">' +
+              '<circle cx="4.5" cy="4.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1"/>' +
+              '<path d="M3 4.5l1.2 1.2L6 3.8" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '</svg>' +
+            '<span>Apple Health verifies</span>' +
+          '</span>'
+        )
       : '';
     return (
-      '<div class="di-row">' +
-        '<span class="di-row-dot di-row-dot--' + (habit.difficulty || 'easy') + '"></span>' +
-        '<div class="di-row-main">' +
-          '<span class="di-row-name">' + esc(display) + '</span>' +
+      '<div class="di-row briefing-row">' +
+        '<span class="di-row-dot briefing-row-dot di-row-dot--' + (habit.difficulty || 'easy') + '"' + dotStyle + '></span>' +
+        '<div class="di-row-main briefing-row-main">' +
+          '<span class="di-row-name briefing-row-name">' + esc(display) + '</span>' +
           verifyTag +
         '</div>' +
-        '<span class="di-row-xp">+' + diff.pts + '</span>' +
+        '<span class="di-row-xp briefing-row-xp">+' + diff.pts + '</span>' +
       '</div>'
     );
   }
@@ -18449,7 +18469,22 @@
       headerEl.textContent = line;
     }
 
-    // ── Tactical status line ──
+    // ── 3-segment summary: total / verified / manual ──
+    // v3 Phase 1z.19. Replaces the legacy single-pill #di-status-line
+    // (kept in markup, hidden via CSS) with three discrete number tiles.
+    // composeBriefingStatusLine() is still called below as a defensive
+    // write to #di-status-line so any future consumer of the legacy
+    // composed string keeps working.
+    const total = (habits && habits.length) || 0;
+    const autoCount = total === 0 ? 0 : habits.filter(canAutoVerify).length;
+    const manualCount = Math.max(0, total - autoCount);
+    const totalEl    = document.getElementById('di-summary-total');
+    const verifiedEl = document.getElementById('di-summary-verified');
+    const manualEl   = document.getElementById('di-summary-manual');
+    if (totalEl)    totalEl.textContent    = total;
+    if (verifiedEl) verifiedEl.textContent = autoCount;
+    if (manualEl)   manualEl.textContent   = manualCount;
+
     const statusEl = document.getElementById('di-status-line');
     if (statusEl) statusEl.textContent = composeBriefingStatusLine();
 
@@ -18468,13 +18503,23 @@
     ];
     const slateEl = document.getElementById('di-slate');
     if (slateEl) {
+      // v3 Phase 1z.19 -- section header now carries a small gold sigil
+      // dot + a horizontal rule that flexes to the right edge, and the
+      // row list is wrapped in a bordered panel (.briefing-section-panel)
+      // for the grouped-card treatment.
       const html = groupConfig.map(g => {
         const list = buckets[g.id];
         if (!list.length) return '';
         return (
-          '<div class="di-group">' +
-            '<div class="di-group-label">' + g.label + '</div>' +
-            list.map(buildBriefingRow).join('') +
+          '<div class="di-group briefing-section">' +
+            '<div class="di-group-label briefing-section-title">' +
+              '<span class="briefing-section-dot" aria-hidden="true"></span>' +
+              '<span class="briefing-section-text">' + g.label + '</span>' +
+              '<span class="briefing-section-rule" aria-hidden="true"></span>' +
+            '</div>' +
+            '<div class="briefing-section-panel">' +
+              list.map(buildBriefingRow).join('') +
+            '</div>' +
           '</div>'
         );
       }).join('');

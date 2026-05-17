@@ -21743,3 +21743,309 @@ body.bro-locked { overflow: hidden; }
   .metric-card.steps-card .steps-card__pct  { display: none; }
   .metric-card.steps-card .steps-card__rank { font-size: 20px; }
 }
+
+/* ===========================================================
+   v3 Phase 1z.19 -- Morning Briefing Minimal Premium Polish
+   Scoped to .di-body.briefing--premium so every legacy .di-*
+   rule still matches the baseline. Stripping the modifier
+   reverts the sheet to the prior look.
+   =========================================================== */
+
+/* Outer body rhythm */
+.di-body.briefing--premium {
+  gap: 16px;
+  padding-top: 14px;
+}
+
+/* Header */
+.di-body.briefing--premium .briefing-header {
+  gap: 6px;
+}
+.di-body.briefing--premium .briefing-date {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.24em;
+}
+.di-body.briefing--premium .briefing-title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  color: var(--text-primary);
+}
+
+/* 3-segment summary -- gradient-bordered tri-cell */
+.di-body.briefing--premium .briefing-summary-grid {
+  display: flex;
+  align-items: stretch;
+  padding: 1px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(167,139,250,0.50), rgba(245,184,66,0.30));
+  margin-top: 2px;
+}
+.di-body.briefing--premium .briefing-summary-segment {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+.di-body.briefing--premium .briefing-summary-segment:first-child {
+  border-left: none;
+  border-top-left-radius: 11px;
+  border-bottom-left-radius: 11px;
+}
+.di-body.briefing--premium .briefing-summary-segment:last-child {
+  border-top-right-radius: 11px;
+  border-bottom-right-radius: 11px;
+}
+.di-body.briefing--premium .briefing-summary-segment--total    { background: rgba(167,139,250,0.12); }
+.di-body.briefing--premium .briefing-summary-segment--verified { background: rgba(245,184,66,0.08); }
+.di-body.briefing--premium .briefing-summary-segment--manual   { background: rgba(245,184,66,0.16); }
+.di-body.briefing--premium .briefing-summary-num {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.di-body.briefing--premium .briefing-summary-segment--total    .briefing-summary-num { color: #a78bfa; }
+.di-body.briefing--premium .briefing-summary-segment--verified .briefing-summary-num { color: #a78bfa; }
+.di-body.briefing--premium .briefing-summary-segment--manual   .briefing-summary-num {
+  color: #f5b842;
+  text-shadow: 0 0 8px rgba(245,184,66,0.32);
+}
+.di-body.briefing--premium .briefing-summary-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  min-width: 0;
+}
+.di-body.briefing--premium .briefing-summary-lbl-1 {
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+.di-body.briefing--premium .briefing-summary-segment--total    .briefing-summary-lbl-1 { color: #a78bfa; }
+.di-body.briefing--premium .briefing-summary-segment--verified .briefing-summary-lbl-1 { color: #a78bfa; }
+.di-body.briefing--premium .briefing-summary-segment--manual   .briefing-summary-lbl-1 { color: #f5b842; }
+.di-body.briefing--premium .briefing-summary-lbl-2 {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+/* Hide the legacy single-pill status line in premium mode but keep
+   it in the DOM so showDailyInsight()'s defensive write to
+   #di-status-line stays a no-op. */
+.di-body.briefing--premium .briefing-status-line--hidden,
+.di-body.briefing--premium #di-status-line { display: none !important; }
+
+/* Section header -- sigil dot + label + flexing rule */
+.di-body.briefing--premium .briefing-section { margin-top: 14px; gap: 6px; }
+.di-body.briefing--premium .briefing-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.di-body.briefing--premium .briefing-section-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 4px;
+  background: #f5b842;
+  box-shadow: 0 0 4px #f5b842;
+  flex: 0 0 auto;
+}
+.di-body.briefing--premium .briefing-section-rule {
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+}
+
+/* Section panel -- grouped card wrapping the rows */
+.di-body.briefing--premium .briefing-section-panel {
+  background: #1a1a3a;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* Row inside a section panel */
+.di-body.briefing--premium .briefing-row {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 12px;
+  gap: 11px;
+}
+.di-body.briefing--premium .briefing-section-panel .briefing-row:last-child {
+  border-bottom: none;
+}
+.di-body.briefing--premium .briefing-row-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 6px;
+  /* inline `style` from buildBriefingRow sets stat color + glow */
+}
+.di-body.briefing--premium .briefing-row-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+  letter-spacing: 0.005em;
+  /* Allow wrap on long names (e.g. "No phone after waking · 30 min") */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.di-body.briefing--premium .briefing-row-verify {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+}
+.di-body.briefing--premium .briefing-row-verify-icon {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+.di-body.briefing--premium .briefing-row-xp {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f5b842;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 8px rgba(245,184,66,0.14);
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* WHERE YOU STAND -- label with right-flexing rule + 3 sigil tiles */
+.di-body.briefing--premium .briefing-stand { margin-top: 6px; gap: 8px; }
+.di-body.briefing--premium .briefing-stand-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.di-body.briefing--premium .briefing-stand-label-rule {
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+}
+.di-body.briefing--premium .briefing-stand-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.di-body.briefing--premium .briefing-stand-tile {
+  padding: 10px 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.025);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.di-body.briefing--premium .briefing-stand-tile--primary {
+  background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.02));
+  border: 1px solid rgba(245,184,66,0.32);
+  box-shadow: inset 0 0 10px rgba(245,184,66,0.14);
+}
+.di-body.briefing--premium .briefing-stand-val {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.di-body.briefing--premium .briefing-stand-tile--primary .briefing-stand-val {
+  color: #f5b842;
+  text-shadow: 0 0 10px rgba(245,184,66,0.32);
+}
+.di-body.briefing--premium .briefing-stand-lbl {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+/* LOCK IN -- premium gold gradient CTA with soft outer + inset shadows */
+.di-body.briefing--premium .briefing-lockin-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 15px 16px;
+  background: linear-gradient(180deg, #f7c558 0%, #f5b842 50%, #c08418 100%);
+  color: #1d1300;
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow:
+    0 6px 20px rgba(245,184,66,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.40),
+    inset 0 -2px 0 rgba(0,0,0,0.18);
+  transition: transform 0.1s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+.di-body.briefing--premium .briefing-lockin-btn:hover {
+  filter: brightness(1.04);
+  box-shadow:
+    0 8px 24px rgba(245,184,66,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.45),
+    inset 0 -2px 0 rgba(0,0,0,0.18);
+}
+.di-body.briefing--premium .briefing-lockin-btn:active {
+  transform: scale(0.985);
+  box-shadow:
+    0 3px 12px rgba(245,184,66,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.35),
+    inset 0 -2px 0 rgba(0,0,0,0.22);
+}
+.di-body.briefing--premium .briefing-lockin-btn:focus-visible {
+  outline: 2px solid rgba(245,184,66,0.85);
+  outline-offset: 3px;
+}
+
+/* Narrow viewports: tighten the summary segment numerics + the
+   stand tile values so 3-up grids don't blow out below 360px. */
+@media (max-width: 360px) {
+  .di-body.briefing--premium .briefing-summary-segment { padding: 8px 9px; gap: 6px; }
+  .di-body.briefing--premium .briefing-summary-num     { font-size: 16px; }
+  .di-body.briefing--premium .briefing-summary-lbl     { font-size: 8.5px; }
+  .di-body.briefing--premium .briefing-stand-val       { font-size: 16px; }
+  .di-body.briefing--premium .briefing-stand-tile      { padding: 9px 6px; }
+}
+
+/* Reduced motion -- kill non-essential transitions on the CTA */
+@media (prefers-reduced-motion: reduce) {
+  .di-body.briefing--premium .briefing-lockin-btn { transition: none; }
+}

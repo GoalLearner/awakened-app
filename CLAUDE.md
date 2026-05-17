@@ -2506,7 +2506,39 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=279`, `app.js?v=379`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.264`, `APP_BUILD_TAG = '2.2.1-w29'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=280`, `app.js?v=380`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.265`, `APP_BUILD_TAG = '2.2.1-w30'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Morning Briefing Minimal Premium Polish (v3 Phase 1z.19)
+
+ClaudeDesign handoff "Minimal Premium Polish" (Direction 4 of the Morning Briefing explorations). Pre-App-Review polish — same flow, same copy, same data path, sharper hierarchy. Ships in `2.2.1-w30`.
+
+**Visual diff:**
+- Single purple status pill → 3-segment summary grid: `OBJECTIVES TOTAL` (violet) · `VERIFIED BY SYSTEM` (violet on light-gold) · `ON YOU MANUAL` (gold). Gradient violet→gold border wraps the row; numbers are 18px tabular-nums.
+- Section headers (`MORNING` / `DAY` / `EVENING`) gained a small gold sigil dot + a horizontal rule that flexes to the right edge.
+- Each section's habit rows are now wrapped in a grouped card panel (`.briefing-section-panel`) with subtle row separators instead of free-floating rows on the body background.
+- Habit row dots switched from difficulty-color to **stat-color** (per Minimal Premium Polish spec) — `getHabitStatColor(habit)` drives an inline `background` + `box-shadow` glow, so each habit's primary stat reads directly. The legacy `.di-row-dot--{easy|medium|hard|legendary}` difficulty classes still ship for rollback safety; the inline color overrides them in the premium variant.
+- "Apple Health verifies" sub-label gained a small stroked check-circle glyph (inline SVG, no PNG dependency).
+- `WHERE YOU STAND` inline text strip → 3 sigil tiles. TOTAL XP gets the gold-rimmed primary variant (matches the Status-card sigil treatment); PERFECT DAYS + DAYS ACTIVE are muted-navy.
+- `LOCK IN` CTA upgraded to a true gold-gradient button (`#f7c558 → #f5b842 → #c08418`), with outer gold glow + inner highlight + pressed-state ring (matches the Awakening Path button visual language).
+
+**Preserved (zero behavior changes):**
+- All wired IDs — `#daily-insight-sheet`, `#daily-insight-overlay`, `#di-header-line`, `#di-status-line`, `#di-slate`, `#di-xp`, `#di-streak`, `#di-days`, `#di-enter-btn`.
+- All public functions — `showDailyInsight()`, `dismissDailyInsight()`, `setupDailyInsight()`, `shouldShowDailyInsight()`, `composeBriefingStatusLine()`, `buildBriefingRow()` (signature unchanged), `getDaysSinceOrigin()`, `canAutoVerify()`, `getHabitTimeOfDay()`.
+- Trigger sites (init + visibilitychange + post-What's-New 900ms setTimeout) untouched.
+- Gating contract (`hb_daily_insight_last_shown` localStorage key written by `dismissDailyInsight` AFTER hide) untouched.
+- `composeBriefingStatusLine()` is now orphaned-but-defensive — `showDailyInsight()` still calls it and writes to the now-hidden `#di-status-line` so any future consumer doesn't crash. The 3-segment numbers are written separately to `#di-summary-total`, `#di-summary-verified`, `#di-summary-manual`.
+- Drag-down dismiss helper (`attachSheetDismissGesture` with `scrollTarget: '.di-body'`) unchanged — `.di-body` is still the scroll container; we only added the `briefing--premium` modifier.
+
+**Scoping:**
+- All new CSS lives in a single labeled section at the END of `styles.css` (`/* v3 Phase 1z.19 — Morning Briefing Minimal Premium Polish */`). Every rule is scoped to `.di-body.briefing--premium`, so stripping the `briefing--premium` class from the markup reverts the sheet to the prior look without touching CSS.
+- Shared bottom-sheet shell rules (`.vn-overlay`, `.vn-sheet`, `.vn-drag-handle`, `.vn-section-label`) are **NOT touched** — same precaution as 1z.14: those shells back `#note-modal`, `#lb-rank-sheet`, `#xp-detail-sheet`. The briefing's `.vn-section-label` is wrapped in a `.briefing-stand-label` that adds the right-flexing rule via a child span, leaving the base class untouched.
+- Difficulty-color dot rules (`.di-row-dot--easy/medium/hard/legendary`) are NOT changed — they still ship for any non-premium consumer. The premium variant just overrides with inline stat color.
+
+**Anti-patterns:**
+- Don't strip the legacy `#di-status-line` element from markup; the defensive write in `showDailyInsight()` still hits it. The CSS hides it cleanly.
+- Don't change `attachSheetDismissGesture`'s `scrollTarget: '.di-body'` — `.di-body` is still the scroll surface. If a future redesign moves scrolling to a new container, update the option in lockstep.
+- Don't reintroduce the single purple status pill as the primary status surface; the 3-segment grid is now the canonical hierarchy.
+- Don't replace stat-color dots with difficulty colors in the premium variant — that was the explicit pre-1z.19 baseline and the design call inverted it.
 
 ### World Rank Steps card replaces Week XP slot (v3 Phase 1z.18)
 
