@@ -430,6 +430,52 @@
     };
   }
 
+  // v3 Phase 1z.27 -- 100K Step Club + future accolade types.
+  // GET /v1/users/me/accolades.
+  //
+  // Returns:
+  //   { ok: true,  accolades: [...] }   (200 — may be empty array)
+  //   { ok: false, code: 'EXPIRED' }    (401 — session gone, local cleared)
+  //   { ok: false, code: 'RATE_LIMITED' | 'NETWORK' | 'ERROR' | ... }
+  async function fetchAccolades() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    const url = BACKEND_URL + '/v1/users/me/accolades';
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+
+    if (res.status === 200 && data) {
+      return {
+        ok:        true,
+        accolades: Array.isArray(data.accolades) ? data.accolades : [],
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) {
+      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+    }
+    return {
+      ok: false,
+      code: 'ERROR',
+      detail: (data && data.detail) || ('Server responded ' + res.status),
+    };
+  }
+
   // Hard-deletes the current user's backend account by POSTing to
   // /v1/account/delete with the active session JWT. On success the
   // backend cascade-deletes the user's row + all leaderboard
@@ -979,6 +1025,8 @@
     deleteAccount,
     submitLeaderboardSnapshot,
     fetchLeaderboardTop,
+    // 100K Step Club + future accolades (v3 Phase 1z.27)
+    fetchAccolades,
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,
     uploadCloudState,

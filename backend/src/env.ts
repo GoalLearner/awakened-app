@@ -64,4 +64,7 @@ export interface Env {
   RL_DUELS_READ: RateLimit;
   /** Discipline Duels v1 — duel writes (create/accept/decline). */
   RL_DUELS_WRITE: RateLimit;
+  /** 100K Step Club + future accolades (v3 Phase 1z.27) — guards
+   *  GET /v1/users/me/accolades. 12/min per user. */
+  RL_USER_ACCOLADES_READ: RateLimit;
 }

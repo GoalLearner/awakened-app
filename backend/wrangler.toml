@@ -126,3 +126,14 @@ name = "RL_DUELS_WRITE"
 type = "ratelimit"
 namespace_id = "1010"
 simple = { limit = 6, period = 60 }   # 6/min per user
+
+# 100K Step Club + future accolades (v3 Phase 1z.27). Authenticated
+# read of the user's own accolade list. Cheap (single PK-indexed
+# scan with bounded row count). Client fetches once per app session
+# + once after a step_total submit crosses 100K. 12/min gives ample
+# headroom for visibilitychange refreshes without inviting abuse.
+[[unsafe.bindings]]
+name = "RL_USER_ACCOLADES_READ"
+type = "ratelimit"
+namespace_id = "1011"
+simple = { limit = 12, period = 60 }  # 12/min per user

@@ -18,6 +18,19 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { isValidMetric, METRIC_CAPS, type Metric } from '../lib/metrics';
+import { getAccoladeWeekStart } from '../lib/accolade-week';
+
+// v3 Phase 1z.27 -- 100K Step Club accolade. Awarded inline during
+// leaderboard submit when `metric === 'step_total'` and the submitted
+// value crosses 100,000 in the current Sunday-UTC week. Type kept
+// generic so future accolade types ('sleep_perfect_month', etc.) can
+// be awarded from their own write paths without schema changes.
+const STEP_100K_THRESHOLD = 100000;
+const STEP_100K_ACCOLADE_TYPE = 'step_100k_club';
+// Sim test users (sims/scripts seed worker) must not earn real
+// accolades. Their apple_sub values are 'sim_test_alpha' /
+// 'sim_test_bravo' (see backend/scripts/seed-sim-users.ts).
+const SIM_APPLE_SUB_PREFIX = 'sim_test_';
 
 interface SubmitBody {
   metric?: unknown;
@@ -98,6 +111,52 @@ export async function handleLeaderboardSubmit(
   )
     .bind(session.userId, metric)
     .first<SnapshotRow>();
+
+  // v3 Phase 1z.27 -- 100K Step Club accolade award (inline).
+  // Runs ONLY when:
+  //   - metric is step_total
+  //   - submitted value >= 100,000 (sanity cap already applied above)
+  //   - the user is NOT a sim test user
+  // Same-week resubmits at higher value bump best_value via MAX but
+  // do NOT increment repeat_count (CASE on last_qualified_week_start).
+  // Cross-week qualifying submits increment repeat_count.
+  if (metric === 'step_total' && value >= STEP_100K_THRESHOLD) {
+    const userRow = await env.DB.prepare(
+      'SELECT apple_sub FROM users WHERE id = ?',
+    ).bind(session.userId).first<{ apple_sub: string }>();
+    const isSimUser = !!userRow?.apple_sub && userRow.apple_sub.startsWith(SIM_APPLE_SUB_PREFIX);
+    if (!isSimUser) {
+      const weekStart = getAccoladeWeekStart(now);
+      const accoladeId = crypto.randomUUID();
+      await env.DB.prepare(
+        `INSERT INTO user_accolades
+           (id, user_id, accolade_type, unlock_week_start, unlock_value,
+            best_value, repeat_count, last_qualified_week_start, unlocked_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+         ON CONFLICT(user_id, accolade_type) DO UPDATE SET
+           best_value   = MAX(user_accolades.best_value, excluded.best_value),
+           repeat_count = CASE
+             WHEN user_accolades.last_qualified_week_start = excluded.last_qualified_week_start
+               THEN user_accolades.repeat_count
+               ELSE user_accolades.repeat_count + 1
+           END,
+           last_qualified_week_start = excluded.last_qualified_week_start,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(
+          accoladeId,
+          session.userId,
+          STEP_100K_ACCOLADE_TYPE,
+          weekStart,        // unlock_week_start (only used on INSERT)
+          value,            // unlock_value      (only used on INSERT)
+          value,            // best_value        (INSERT + MAX UPDATE candidate)
+          weekStart,        // last_qualified_week_start
+          now,              // unlocked_at       (only used on INSERT)
+          now,              // updated_at
+        )
+        .run();
+    }
+  }
 
   return jsonOk({
     metric,

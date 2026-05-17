@@ -22154,3 +22154,173 @@ body.habit-drag-active * {
 @media (prefers-reduced-motion: reduce) {
   .di-body.briefing--premium .briefing-lockin-btn { transition: none; }
 }
+
+/* ===========================================================
+   v3 Phase 1z.27 — 100K Step Club accolade
+   - Gold prestige frame around the rank disc when the user has
+     earned step_100k_club. Rank disc tier color is preserved;
+     the frame sits OUTSIDE the disc as a layered ring.
+   - One-time pulse on first earn (.is-new modifier).
+   - Bottom sheet styling for the accolade detail surface.
+   =========================================================== */
+
+/* Outer gold prestige frame. Uses two stacked box-shadows:
+   the inner one paints the gold ring 4px out from the disc,
+   the outer one is the soft glow. Frame survives the per-rank
+   inner-glow rules already applied to .sc-rank-hero because
+   it's an OUTER box-shadow halo, not an inset. */
+.sc-rank-hero--prestige {
+  position: relative;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow:
+    0 0 0 3px rgba(245, 184, 66, 0.95),     /* gold ring */
+    0 0 14px 2px rgba(245, 184, 66, 0.35),  /* soft outer glow */
+    inset 0 0 14px rgba(167, 139, 250, 0.30); /* preserve violet inner glow on E rank */
+}
+
+/* Per-rank inner glow already covered by the existing
+   .sc-card--profile .sc-rank-hero[data-rank=...] rules; the
+   prestige frame layers OUTSIDE those. For non-E ranks, suppress
+   the violet inset above so the rank's own color glow shows
+   through. */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="D"],
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="C"] {
+  box-shadow:
+    0 0 0 3px rgba(245, 184, 66, 0.95),
+    0 0 14px 2px rgba(245, 184, 66, 0.35),
+    inset 0 0 14px rgba(139, 92, 246, 0.30);
+}
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="B"] {
+  box-shadow:
+    0 0 0 3px rgba(245, 184, 66, 0.95),
+    0 0 14px 2px rgba(245, 184, 66, 0.35),
+    inset 0 0 14px rgba(59, 130, 246, 0.30);
+}
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="A"] {
+  box-shadow:
+    0 0 0 3px rgba(245, 184, 66, 0.95),
+    0 0 14px 2px rgba(245, 184, 66, 0.35),
+    inset 0 0 14px rgba(168, 85, 247, 0.30);
+}
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="S"] {
+  box-shadow:
+    0 0 0 3px rgba(245, 184, 66, 0.95),
+    0 0 14px 2px rgba(245, 184, 66, 0.35),
+    inset 0 0 14px rgba(249, 115, 22, 0.30);
+}
+/* S+ is already gold-on-gold — bump the glow + add a thin inner
+   violet hairline so the prestige frame visually separates from
+   the gold disc beneath. */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="S+"] {
+  box-shadow:
+    0 0 0 1px rgba(167, 139, 250, 0.45),    /* violet hairline separator */
+    0 0 0 4px rgba(245, 184, 66, 1),
+    0 0 18px 3px rgba(245, 184, 66, 0.50),
+    inset 0 0 14px rgba(245, 158, 11, 0.32);
+}
+
+.sc-rank-hero--prestige:focus-visible {
+  outline: 2px solid rgba(245, 184, 66, 0.85);
+  outline-offset: 4px;
+}
+
+/* First-unlock pulse — single 600ms ping. JS adds .is-new and
+   removes it after the animation. prefers-reduced-motion kills
+   the keyframes entirely. */
+@keyframes sc-rank-prestige-pulse {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(245,184,66,0.0)); }
+  50%  { transform: scale(1.06); filter: drop-shadow(0 0 12px rgba(245,184,66,0.55)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(245,184,66,0.0)); }
+}
+.sc-rank-hero--prestige.is-new {
+  animation: sc-rank-prestige-pulse 0.6s ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sc-rank-hero--prestige.is-new { animation: none; }
+}
+
+/* ── Accolade detail sheet (#accolade-step-100k-sheet) ───────── */
+.acc-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 18px calc(20px + var(--safe-bottom));
+  max-height: calc(100dvh - 8vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.acc-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+.acc-sheet-sigil {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 10px rgba(245, 184, 66, 0.40));
+}
+.acc-sheet-title {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f5b842;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0;
+  text-shadow: 0 0 12px rgba(245, 184, 66, 0.32);
+  flex: 1 1 auto;
+}
+.acc-sheet-blurb {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.acc-sheet-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.acc-sheet-stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #1a1a3a;
+  gap: 12px;
+  min-width: 0;
+}
+.acc-sheet-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+.acc-sheet-stat-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.acc-sheet-footer {
+  margin: 4px 0 0;
+  font-family: Georgia, 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}

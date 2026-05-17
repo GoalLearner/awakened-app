@@ -2510,7 +2510,103 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=282`, `app.js?v=385`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.270`, `APP_BUILD_TAG = '2.2.1-w35'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=283`, `app.js?v=386`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.271`, `APP_BUILD_TAG = '2.2.1-w36'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### 100K Step Club prestige feature (v3 Phase 1z.27)
+
+Permanent accolade earned by recording 100,000+ Apple-Health-verified steps in a single leaderboard week. Hunter Profile rank badge gains a gold outer prestige frame; tapping the frame opens a 100K Step Club detail sheet.
+
+**Important release context: NOT in `2.2.1-w34` (the App-Store-Connect-awaiting-review build).** Ships in `2.2.1-w36` and is intended for the next build after the current review outcome. Backend + frontend implemented, but NO migration applied, NO backend deployed, NO Codemagic triggered. The diff is ready to ship as a follow-up.
+
+**Backend (Phase B):**
+
+- New migration `backend/migrations/0007_user_accolades.sql`:
+  ```
+  user_accolades(
+    id TEXT PK, user_id TEXT, accolade_type TEXT,
+    unlock_week_start TEXT, unlock_value INTEGER,
+    best_value INTEGER, repeat_count INTEGER DEFAULT 1,
+    last_qualified_week_start TEXT,
+    unlocked_at INTEGER, updated_at INTEGER,
+    metadata_json TEXT,
+    UNIQUE(user_id, accolade_type),
+    FK user_id → users(id) ON DELETE CASCADE
+  )
+  ```
+  Schema is generic for future accolade types; v1 ships only `step_100k_club`.
+- New helper `backend/src/lib/accolade-week.ts` — `getAccoladeWeekStart(nowMs?)` returns the Sunday-UTC `YYYY-MM-DD` for the week the timestamp falls in. **Decision: Sunday UTC** (deterministic; no per-user timezone needed). 11 boundary unit tests cover every day of the week + UTC midnight + month/year rollover.
+- `backend/src/handlers/leaderboard-submit.ts` award branch (inline). When `metric === 'step_total'` AND `value >= 100000` AND `users.apple_sub NOT LIKE 'sim_test_%'`: `INSERT … ON CONFLICT(user_id, accolade_type) DO UPDATE` with:
+  - `best_value = MAX(best_value, excluded.best_value)`
+  - `repeat_count = CASE WHEN last_qualified_week_start = excluded.last_qualified_week_start THEN repeat_count ELSE repeat_count + 1 END`
+  - `last_qualified_week_start = excluded.last_qualified_week_start`
+  - `updated_at = excluded.updated_at`
+  - `unlock_week_start`, `unlock_value`, `unlocked_at`, `repeat_count=1` only on INSERT
+- New handler `backend/src/handlers/accolades.ts` + route `GET /v1/users/me/accolades` wired in `src/index.ts`. Response shape: `{ accolades: [{ type, unlock_week_start, unlock_value, best_value, repeat_count, last_qualified_week_start, unlocked_at, updated_at, metadata? }] }` (no `ok: true` field — project convention).
+- New rate-limit binding `RL_USER_ACCOLADES_READ` at `namespace_id = "1011"` with `12/min per user` in `wrangler.toml`; `Env` interface field added in `env.ts`.
+- 6 handler-shape tests in `accolades.test.ts` cover: empty array, populated row mapping, `metadata_json` parsing (null + malformed), 429 rate-limit, query-by-userId binding. Full SQL behavior (ON CONFLICT, sim-user filter) is exercised by the production sim harness post-deploy — the project doesn't ship miniflare-D1 unit tests, by precedent.
+
+**Total backend test count: 36 → 48 (all passing).**
+
+**Frontend (Phase C):**
+
+- New `Auth.fetchAccolades()` in `auth.js`. Returns `{ ok, accolades }` or `{ ok: false, code }`. Same shape as `fetchLeaderboardTop`.
+- New `accolades` module in `app.js` with cache-first SWR: `accolades.has(type)`, `accolades.get(type)`, `accolades.refresh({force})`, `accolades.clearLocal()`. Cache: `hb_accolades_cache` (24h TTL). Truth lives on the backend; cache is display-only.
+- `renderStatus()` markup updated. When `accolades.has('step_100k_club')`:
+  - `.sc-rank-hero` gets `sc-rank-hero--prestige` class + `data-prestige="step_100k_club"` + `role="button"` + `tabindex="0"` + `aria-label="100K Step Club member. Tap for details."`
+  - When not earned, the rank disc is visually unchanged.
+- New CSS rules in `styles.css`:
+  - `.sc-rank-hero--prestige` — outer gold ring + soft glow via stacked `box-shadow`. Layers OUTSIDE the existing per-rank inner glow. Per-rank rules redeclare the inset glow to preserve tier color.
+  - S+ gets a special "violet hairline + thicker gold ring" treatment so the prestige frame visually separates from the already-gold disc.
+  - `.is-new` modifier triggers a single 0.6s scale-pulse on first earn (respects `prefers-reduced-motion`).
+- New bottom sheet `#accolade-step-100k-sheet` in `index.html`. Uses the existing `.vn-sheet` shell. Renders Spark sigil + title + blurb + 4 stat rows (Best week, Joined, Weeks qualified, Last qualified) + footer copy. Closed via overlay tap, drag-down, or × button.
+- Document-delegated tap handler on `.sc-rank-hero[data-prestige="step_100k_club"]` opens the sheet. Keyboard Enter/Space also opens it (since the disc carries `role="button"` + `tabindex="0"`).
+- One-time celebration: `_maybeFireFirstUnlockToast('step_100k_club')` compares `accolade.unlocked_at` against `hb_accolade_seen_step_100k` localStorage timestamp. If newer → fires `showHabitToast('Welcome to the 100K Step Club.')` + adds `.is-new` to the prestige frame for the 600 ms pulse. Self-resetting on success.
+- Refresh hooks:
+  - `init()` — `accolades.refresh()` (cache-warm, no-op if fresh < 24h)
+  - `lbSubmitAllMetrics()` — after a successful submit where `step_total >= 100000`, calls `accolades.refresh({force: true})` so the just-earned row paints without waiting for the next foreground.
+
+**LocalStorage keys (NOT in `CloudSync.SNAPSHOT_KEYS`):**
+- `hb_accolades_cache` — `{ accolades: [...], fetched_at: <ms> }`. Display-only cache.
+- `hb_accolade_seen_step_100k` — first-unlock-celebration dedup timestamp.
+- Both keys are device-local and intentionally NOT part of Cloud Sync. The backend `user_accolades` table is the cross-device source of truth.
+
+**Surfaces intentionally NOT touched:**
+- Boss / relic / item / habit / tab art, achievement seal system, in-app sigil decoration. The accolade is a self-only Status-card detail.
+- `manifest.json`, app icon, splash. No brand impact.
+- Duels, Discipline Duels v1 picker, World Rank Steps card, Morning Briefing — all unaffected.
+- Public profile / shared-profile concept — does not exist yet; accolades are self-view-only.
+
+**Anti-patterns:**
+- Don't seed `user_accolades` with backfilled "historical" rows. Decision is **forward-only**: only weeks submitted AFTER 2.3 ships count. Communicate this explicitly in 2.3 release notes if asked.
+- Don't add `ok: true` to the `GET /v1/users/me/accolades` response. Project convention is `error` field on failure; presence implies failure, absence implies success.
+- Don't treat the cache as authoritative for unlock state. The `accolades.has()` helper reads the cache, which is server-confirmed. If cache says "earned" but backend disagrees (e.g., legitimate revoke flow ever ships), the next 24h refresh corrects it. Frontend never invents unlock state.
+- Don't allow sim test users (`apple_sub LIKE 'sim_test_%'`) to earn the accolade. The award branch already filters them; if anyone adds a backfill or admin tool, preserve this filter.
+- Don't change the week-key semantics without considering data migration. `unlock_week_start` and `last_qualified_week_start` are ISO date strings that imply a Sunday-UTC bucket. Switching to user-local time later would require either backfilling existing rows or treating "pre-2.3" rows as legacy/grandfather.
+- Don't add `RL_USER_ACCOLADES_READ` calls outside `handleUserAccoladesGet` — keep the binding scoped to the read endpoint it was created for. Future endpoints get their own bindings.
+
+**Deployment steps still required (NOT done):**
+1. Apply migration `0007_user_accolades.sql` to remote D1: `wrangler d1 migrations apply awakened-db --remote`
+2. Deploy backend: `wrangler deploy` (from `backend/`)
+3. Wait for `2.2.1-w34` App Review outcome
+4. Trigger Codemagic on commit containing this work for `2.2.1-w36` iOS build
+5. TestFlight smoke test (manual QA checklist in §1z.25)
+6. Submit `w36` to App Review
+
+**Manual QA checklist (when build lands):**
+- User with no accolade row: rank disc shows no gold frame; no extra tap behavior
+- User earns step_100k_club: gold prestige frame appears after next foreground or after the next step_total ≥100K submit
+- Tap on prestige frame: 100K Step Club sheet opens
+- Sheet shows correct best_value, unlock_week_start, repeat_count, last_qualified_week_start
+- First-earn moment: one-time toast `"Welcome to the 100K Step Club."` + 600 ms pulse on the frame
+- Reload after first earn: no replay of toast (dedupe via `hb_accolade_seen_step_100k`)
+- Existing rank color still visible underneath the prestige frame
+- Status card layout unchanged for unearned users
+- Web build / no-HealthKit: no false unlock (no submit, no row, no frame)
+- Sim test users in prod D1: no accolade row, no frame
+- Duel flow unchanged
+- Leaderboard sheet unchanged
+
+Bumps: `app.js?v=386`, `styles.css?v=283`, `auth.js?v=14`, `sw.js v5.271`, `APP_BUILD_TAG '2.2.1-w36'`. `APP_VERSION` unchanged. No Duels, no scoring engine, no data-model changes outside the new accolade table.
 
 ### "The Spark" brand mark migration (v3 Phase 1z.26)
 

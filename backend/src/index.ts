@@ -28,6 +28,7 @@ import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
 import { handleLeaderboardTop } from './handlers/leaderboard-top';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
+import { handleUserAccoladesGet } from './handlers/accolades';
 import {
   handleFriendsList,
   handleFriendsRequest,
@@ -124,6 +125,9 @@ export default {
           } else if (path === '/v1/users/me/state' && method === 'POST') {
             // Cloud Sync v1 (v3 Phase 1w) — backup upsert.
             response = await handleUserStatePost(request, env, session);
+          } else if (path === '/v1/users/me/accolades' && method === 'GET') {
+            // v3 Phase 1z.27 — 100K Step Club + future accolade types.
+            response = await handleUserAccoladesGet(request, env, session);
           }
           // ── Discipline Duels v1 (v3 Phase 1x) ──
           else if (path === '/v1/friends' && method === 'GET') {

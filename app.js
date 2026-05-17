@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w35';
+  const APP_BUILD_TAG = '2.2.1-w36';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4240,6 +4240,19 @@
         window.Auth.submitLeaderboardSnapshot(m, lbSanitizeValue(m, v))
           .catch(() => null) // never let a single failure poison the others
       ));
+      // v3 Phase 1z.27 — if the just-submitted step_total crossed
+      // 100K, refresh accolades so the just-earned step_100k_club
+      // row paints without waiting for the next visibility-change.
+      // Refresh is force=true (bypasses 24h SWR fresh-check) since
+      // the backend may have just written the row we want to pull.
+      try {
+        const stepsEntry = metrics.find(p => p[0] === 'step_total');
+        if (stepsEntry && stepsEntry[1] >= 100000) {
+          if (typeof accolades !== 'undefined' && accolades && typeof accolades.refresh === 'function') {
+            accolades.refresh({ force: true });
+          }
+        }
+      } catch (_) {}
     } catch (_) {}
   }
 
@@ -9823,6 +9836,201 @@
     return '—';
   }
 
+  // ── v3 Phase 1z.27 — Accolades (100K Step Club + future types) ──
+  // Cache-first SWR module. Truth lives on the backend in
+  // user_accolades; localStorage `hb_accolades_cache` is display-only
+  // and never authoritative for unlock state. Refreshed on:
+  //   1. init (after sign-in is confirmed)
+  //   2. visibility-resume if cache > 1h stale
+  //   3. successful leaderboard submit where metric=step_total AND
+  //      value >= 100000 (so newly-earned accolade paints without
+  //      requiring a manual refresh)
+  // Sim leaderboard users never reach this layer -- they have no
+  // user_id and no JWT.
+  const ACCOLADES_CACHE_KEY    = 'hb_accolades_cache';
+  const ACCOLADES_CACHE_MAX_MS = 24 * 60 * 60 * 1000;  // 24h SWR TTL
+  const STEP_100K_SEEN_KEY     = 'hb_accolade_seen_step_100k';
+  let _accoladesInFlight = false;
+
+  function _accoladesCacheRead() {
+    try {
+      const raw = localStorage.getItem(ACCOLADES_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.accolades)) return null;
+      // Stale read still returns -- we render-first then revalidate.
+      return parsed;
+    } catch (_) { return null; }
+  }
+  function _accoladesCacheWrite(accolades) {
+    try {
+      localStorage.setItem(ACCOLADES_CACHE_KEY, JSON.stringify({
+        accolades:   Array.isArray(accolades) ? accolades : [],
+        fetched_at:  Date.now(),
+      }));
+    } catch (_) {}
+  }
+  function _accoladesCacheFresh() {
+    const c = _accoladesCacheRead();
+    if (!c || typeof c.fetched_at !== 'number') return false;
+    return (Date.now() - c.fetched_at) < ACCOLADES_CACHE_MAX_MS;
+  }
+
+  const accolades = {
+    has(type) {
+      const c = _accoladesCacheRead();
+      if (!c) return false;
+      return c.accolades.some(a => a && a.type === type);
+    },
+    get(type) {
+      const c = _accoladesCacheRead();
+      if (!c) return null;
+      return c.accolades.find(a => a && a.type === type) || null;
+    },
+    async refresh(opts) {
+      const force = !!(opts && opts.force);
+      if (!force && _accoladesCacheFresh()) return;
+      if (_accoladesInFlight) return;
+      if (typeof window === 'undefined' || !window.Auth || typeof window.Auth.fetchAccolades !== 'function') return;
+      _accoladesInFlight = true;
+      try {
+        const res = await window.Auth.fetchAccolades();
+        if (res && res.ok) {
+          _accoladesCacheWrite(res.accolades || []);
+          // Repaint Status (which is where the prestige frame lives)
+          // if it's currently mounted. Cheap re-render.
+          try {
+            if (currentTab === 'profile' && typeof renderStatus === 'function') renderStatus();
+          } catch (_) {}
+          // Fire one-time celebration toast if this is the first time
+          // we've seen the step_100k_club accolade.
+          try { _maybeFireFirstUnlockToast('step_100k_club'); } catch (_) {}
+        }
+        // On error (network / 429 / etc.) the cache is left intact.
+        // No banner -- accolade absence is silently graceful.
+      } catch (_) {
+      } finally {
+        _accoladesInFlight = false;
+      }
+    },
+    clearLocal() {
+      // Used on sign-out / account-delete paths.
+      try { localStorage.removeItem(ACCOLADES_CACHE_KEY); } catch (_) {}
+      try { localStorage.removeItem(STEP_100K_SEEN_KEY); } catch (_) {}
+    },
+  };
+
+  // One-time celebration when the user first earns an accolade.
+  // Fires a light toast (no full-screen overlay -- explicit product
+  // decision for v1) and stamps the seen-at timestamp so reload
+  // doesn't replay it.
+  function _maybeFireFirstUnlockToast(type) {
+    if (type !== 'step_100k_club') return;  // v1: only this type
+    const a = accolades.get('step_100k_club');
+    if (!a) return;
+    const seenStr = localStorage.getItem(STEP_100K_SEEN_KEY);
+    const seenAt  = seenStr ? parseInt(seenStr, 10) : 0;
+    const unlockedAt = (typeof a.unlocked_at === 'number') ? a.unlocked_at : 0;
+    if (seenAt && seenAt >= unlockedAt) return;  // already celebrated
+    try { localStorage.setItem(STEP_100K_SEEN_KEY, String(Date.now())); } catch (_) {}
+    try {
+      if (typeof showHabitToast === 'function') {
+        showHabitToast('Welcome to the 100K Step Club.');
+      }
+    } catch (_) {}
+    // Trigger the 600ms one-time pulse on the rank-hero frame, if
+    // the Status card is currently mounted. CSS rule:
+    // `.sc-rank-hero--prestige.is-new` animates a single pulse,
+    // class self-removes via setTimeout.
+    try {
+      const el = document.querySelector('.sc-rank-hero--prestige');
+      if (el) {
+        el.classList.add('is-new');
+        setTimeout(() => { try { el.classList.remove('is-new'); } catch (_) {} }, 700);
+      }
+    } catch (_) {}
+  }
+
+  // Bottom sheet wiring -- opens when the user taps the prestige
+  // frame on .sc-rank-hero[data-prestige]. Sheet markup lives in
+  // index.html (#accolade-step-100k-sheet + #accolade-step-100k-overlay).
+  function openStep100KSheet() {
+    const sheet   = document.getElementById('accolade-step-100k-sheet');
+    const overlay = document.getElementById('accolade-step-100k-overlay');
+    if (!sheet || !overlay) return;
+    const a = accolades.get('step_100k_club') || {};
+
+    const fmtSteps = (n) => {
+      n = Math.max(0, Math.floor(Number(n) || 0));
+      if (n < 1000)    return n.toLocaleString();
+      if (n < 100000)  { const v = n / 1000; const f = v.toFixed(1); return (f.endsWith('.0') ? f.slice(0,-2) : f) + 'K'; }
+      if (n < 1000000) return Math.round(n / 1000) + 'K';
+      return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    };
+    const fmtWeek = (iso) => {
+      if (!iso || typeof iso !== 'string') return '—';
+      const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return iso;
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      return 'Week of ' + months[parseInt(m[2],10)-1] + ' ' + parseInt(m[3],10) + ', ' + m[1];
+    };
+
+    const bestEl  = document.getElementById('acc-100k-best');
+    const joinEl  = document.getElementById('acc-100k-joined');
+    const repEl   = document.getElementById('acc-100k-repeat');
+    const lastEl  = document.getElementById('acc-100k-last');
+    if (bestEl) bestEl.textContent = (a.best_value != null) ? (fmtSteps(a.best_value) + ' steps') : '—';
+    if (joinEl) joinEl.textContent = fmtWeek(a.unlock_week_start);
+    if (repEl)  repEl.textContent  = (a.repeat_count != null) ? String(a.repeat_count) : '—';
+    if (lastEl) lastEl.textContent = fmtWeek(a.last_qualified_week_start);
+
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+  function closeStep100KSheet() {
+    const sheet   = document.getElementById('accolade-step-100k-sheet');
+    const overlay = document.getElementById('accolade-step-100k-overlay');
+    if (sheet)   sheet.classList.add('hidden');
+    if (overlay) { overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden', 'true'); }
+  }
+  function setupStep100KSheet() {
+    const sheet   = document.getElementById('accolade-step-100k-sheet');
+    const overlay = document.getElementById('accolade-step-100k-overlay');
+    const closeBtn= document.getElementById('acc-100k-close');
+    if (!sheet || !overlay) return;
+    if (sheet.getAttribute('data-wired') === '1') return;
+    sheet.setAttribute('data-wired', '1');
+    if (closeBtn) closeBtn.addEventListener('click', closeStep100KSheet);
+    overlay.addEventListener('click', closeStep100KSheet);
+    if (typeof attachSheetDismissGesture === 'function') {
+      try { attachSheetDismissGesture(sheet, overlay, closeStep100KSheet, {}); } catch (_) {}
+    }
+  }
+
+  // Delegated tap on the prestige frame. Idempotent setup (the
+  // listener is on document; renderStatus re-renders the rank disc
+  // but the document-level listener survives).
+  let _step100kClickWired = false;
+  function setupStep100KTap() {
+    if (_step100kClickWired) return;
+    _step100kClickWired = true;
+    document.addEventListener('click', (e) => {
+      const t = e.target && e.target.closest && e.target.closest('.sc-rank-hero[data-prestige="step_100k_club"]');
+      if (!t) return;
+      openStep100KSheet();
+    });
+    // Keyboard activation (Enter / Space) on the frame, since it
+    // carries role="button" + tabindex="0" via renderStatus().
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const t = e.target && e.target.closest && e.target.closest('.sc-rank-hero[data-prestige="step_100k_club"]');
+      if (!t) return;
+      e.preventDefault();
+      openStep100KSheet();
+    });
+  }
+
   function renderStatus() {
     const rank       = getRank(totalPoints);
     const isSPlus    = rank.id === 'S+';
@@ -9855,7 +10063,24 @@
         '</div>' +
         // Identity row
         '<div class="sc-hero sc-hero--profile">' +
-          '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '" data-rank="' + esc(rank.id) + '">' + rank.id + '</div>' +
+          // v3 Phase 1z.27 -- 100K Step Club prestige frame. When the
+          // authenticated user has the step_100k_club accolade, the
+          // rank disc gains an OUTER gold frame + tap behavior; the
+          // tier color of the disc itself is unchanged.
+          (function() {
+            const has100k = (typeof accolades !== 'undefined' && accolades && typeof accolades.has === 'function')
+              ? accolades.has('step_100k_club') : false;
+            const cls = 'sc-rank-hero'
+              + (isSPlus ? ' splus' : '')
+              + (has100k ? ' sc-rank-hero--prestige' : '');
+            const attrs = ' data-rank="' + esc(rank.id) + '"'
+              + (has100k
+                  ? (' data-prestige="step_100k_club"' +
+                     ' role="button" tabindex="0"' +
+                     ' aria-label="100K Step Club member. Tap for details."')
+                  : '');
+            return '<div class="' + cls + '"' + attrs + '>' + esc(rank.id) + '</div>';
+          })() +
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +
               '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + '</span>' +
@@ -25182,6 +25407,11 @@
     // on every habit toggle, but we paint here too so the card is
     // not stuck in 'is-loading' before the first habit interaction.
     try { setupStepsCard(); updateStepsCard(); } catch (_) {}
+    // v3 Phase 1z.27 — 100K Step Club accolade init + cache prime.
+    // Wires the prestige-frame tap handler + the bottom sheet, then
+    // kicks off a cache-warm fetch. Both calls are idempotent.
+    try { setupStep100KSheet(); setupStep100KTap(); } catch (_) {}
+    try { accolades.refresh(); } catch (_) {}
     // Process any reveals queued from drops that happened in a prior
     // session but the modal didn't get a chance to show (e.g., user
     // closed app mid-reveal). DROPS.md spec: "Show them one at a
