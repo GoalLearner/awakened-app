@@ -106,9 +106,70 @@ describe('GET /v1/leaderboard/hall-of-fame', () => {
     const db = makeDb({ topRows: [], myBest: null });
     await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
     const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
-    const topQuery = calls.find(c => c.sql.includes('FROM weekly_step_records'));
+    // Top query is now the union CTE — match on the trailing ORDER BY clause.
+    const topQuery = calls.find(c => c.sql.includes('FROM merged m'));
     expect(topQuery).toBeDefined();
     expect(topQuery!.sql).toMatch(/ORDER BY[\s\S]*steps\s+DESC[\s\S]*week_start\s+ASC/i);
+  });
+
+  // v3 Phase 1z.41 — fallback union from leaderboard_snapshots.
+  it('top query unions weekly_step_records with eligible leaderboard_snapshots rows', async () => {
+    const db = makeDb({ topRows: [], myBest: null });
+    await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const topQuery = calls.find(c => c.sql.includes('FROM weekly_step_records') && c.sql.includes('UNION ALL'));
+    expect(topQuery).toBeDefined();
+    // Eligibility filters on the snapshot fallback branch.
+    expect(topQuery!.sql).toMatch(/metric\s*=\s*'step_total'/i);
+    expect(topQuery!.sql).toMatch(/week_start\s+IS NOT NULL/i);
+    expect(topQuery!.sql).toMatch(/apple_sub\s+NOT LIKE\s+'sim_test_%'/i);
+    // Dedupe: snapshot rows excluded when wsr already has the (user, week).
+    expect(topQuery!.sql).toMatch(/NOT EXISTS[\s\S]+FROM weekly_step_records\s+w[\s\S]+w\.user_id\s*=\s*ls\.user_id[\s\S]+w\.week_start\s*=\s*ls\.week_start/i);
+  });
+
+  it('me_best query unions weekly_step_records with caller\'s eligible snapshot rows', async () => {
+    const db = makeDb({ topRows: [], myBest: { steps: 3110, week_start: '2026-05-17' } });
+    await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    // me_best lookup is the only query with `my_rows AS` CTE.
+    const meQuery = calls.find(c => c.sql.includes('my_rows AS'));
+    expect(meQuery).toBeDefined();
+    expect(meQuery!.sql).toMatch(/UNION ALL/i);
+    expect(meQuery!.sql).toMatch(/week_start\s+IS NOT NULL/i);
+    // Three binds of session.userId (wsr branch + ls branch + NOT EXISTS subquery).
+    expect(meQuery!.binds).toEqual(['user-abc', 'user-abc', 'user-abc']);
+  });
+
+  it('rank query counts against the same merged set (wsr + ls fallback)', async () => {
+    const db = makeDb({
+      topRows: [],
+      myBest: { steps: 3110, week_start: '2026-05-17' },
+      rank: 2,
+    });
+    await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const rankQuery = calls.find(c => c.sql.includes('COUNT(*)'));
+    expect(rankQuery).toBeDefined();
+    expect(rankQuery!.sql).toMatch(/merged AS/i);
+    expect(rankQuery!.sql).toMatch(/UNION ALL/i);
+    expect(rankQuery!.sql).toMatch(/WHERE\s+steps\s*>\s*\?/i);
+    expect(rankQuery!.binds).toEqual([3110]);
+  });
+
+  it('snapshot fallback excludes NULL week_start rows (defended in the WHERE clause)', async () => {
+    const db = makeDb({ topRows: [], myBest: null });
+    await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const topQuery = calls.find(c => c.sql.includes('FROM merged m'));
+    expect(topQuery!.sql).toMatch(/ls\.week_start\s+IS NOT NULL/i);
+  });
+
+  it('snapshot fallback excludes sim users via apple_sub filter', async () => {
+    const db = makeDb({ topRows: [], myBest: null });
+    await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const topQuery = calls.find(c => c.sql.includes('FROM merged m'));
+    expect(topQuery!.sql).toMatch(/u\.apple_sub\s+NOT LIKE\s+'sim_test_%'/i);
   });
 
   it('returns me_best when caller has at least one record', async () => {

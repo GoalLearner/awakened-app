@@ -113,14 +113,55 @@ export async function handleLeaderboardHallOfFame(
     }
   }
 
-  // Top-N global query. JOIN users so alias edits flow through; the
-  // table itself stores user_id only. Tie-breaker: older week wins
-  // (week_start ASC) -- first-to-the-summit semantic.
+  // v3 Phase 1z.41 -- fallback union from leaderboard_snapshots.
+  //
+  // The 1z.36 deploy created weekly_step_records empty. Real users
+  // with existing valid step_total snapshots (week_start IS NOT NULL,
+  // post-1z.33 submits) wouldn't appear in Hall of Fame until they
+  // submitted again, even though their week is legitimate. Visible
+  // Hall of Fame on launch day looked like just simulated filler.
+  //
+  // Fix: UNION the authoritative weekly_step_records table with
+  // eligible leaderboard_snapshots rows that AREN'T already in it.
+  // Once a user submits post-1z.36 their wsr row supersedes the
+  // ls fallback for the same (user, week) via NOT EXISTS.
+  //
+  // Eligibility for the snapshot fallback:
+  //   - metric = 'step_total'
+  //   - week_start IS NOT NULL   (excludes pre-1z.33 stale rows --
+  //     they can't be attributed to any specific week, so they
+  //     would be misleading historical records)
+  //   - users.apple_sub NOT LIKE 'sim_test_%'   (excludes sim test
+  //     users; defense in depth -- they shouldn't have submitted
+  //     via the production path anyway, but mirror the same filter
+  //     used at write time in leaderboard-submit)
+  //   - NOT EXISTS in weekly_step_records for the same
+  //     (user_id, week_start)   (dedupe -- prefer wsr's MAX(stored,
+  //     new) semantic over ls's current_value LAST-write semantic)
+  //
+  // Top-N global query. JOIN users so alias edits flow through.
+  // Tie-breaker: older week wins (week_start ASC) -- first-to-the-
+  // summit semantic.
   const topResult = await env.DB.prepare(
-    `SELECT u.alias AS alias, wsr.steps AS steps, wsr.week_start AS week_start
-     FROM weekly_step_records wsr
-     JOIN users u ON u.id = wsr.user_id
-     ORDER BY wsr.steps DESC, wsr.week_start ASC
+    `WITH merged AS (
+       SELECT user_id, week_start, steps
+         FROM weekly_step_records
+       UNION ALL
+       SELECT ls.user_id, ls.week_start, ls.current_value AS steps
+         FROM leaderboard_snapshots ls
+         JOIN users u ON u.id = ls.user_id
+         WHERE ls.metric = 'step_total'
+           AND ls.week_start IS NOT NULL
+           AND u.apple_sub NOT LIKE 'sim_test_%'
+           AND NOT EXISTS (
+             SELECT 1 FROM weekly_step_records w
+             WHERE w.user_id = ls.user_id AND w.week_start = ls.week_start
+           )
+     )
+     SELECT u.alias AS alias, m.steps AS steps, m.week_start AS week_start
+     FROM merged m
+     JOIN users u ON u.id = m.user_id
+     ORDER BY m.steps DESC, m.week_start ASC
      LIMIT ?`,
   )
     .bind(limit)
@@ -140,14 +181,33 @@ export async function handleLeaderboardHallOfFame(
   // global ranking. Ties: a strict > rank with ASC week_start
   // tiebreaker means our row gets the rank position of the FIRST
   // record at our exact value -- consistent with the records[] order.
+  //
+  // v3 Phase 1z.41 -- the me_best query also unions
+  // leaderboard_snapshots so a user whose only step_total row is
+  // still in the legacy table (pre-1z.36 submit, but post-1z.33
+  // week_start tagging) appears as their own best. Same dedupe
+  // rules as the top-N query.
   const myBestRow = await env.DB.prepare(
-    `SELECT steps, week_start
-     FROM weekly_step_records
-     WHERE user_id = ?
+    `WITH my_rows AS (
+       SELECT week_start, steps
+         FROM weekly_step_records
+         WHERE user_id = ?
+       UNION ALL
+       SELECT ls.week_start, ls.current_value AS steps
+         FROM leaderboard_snapshots ls
+         WHERE ls.user_id = ?
+           AND ls.metric = 'step_total'
+           AND ls.week_start IS NOT NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM weekly_step_records w
+             WHERE w.user_id = ? AND w.week_start = ls.week_start
+           )
+     )
+     SELECT week_start, steps FROM my_rows
      ORDER BY steps DESC, week_start ASC
      LIMIT 1`,
   )
-    .bind(session.userId)
+    .bind(session.userId, session.userId, session.userId)
     .first<MyBestRow>();
 
   let me_best: {
@@ -163,9 +223,29 @@ export async function handleLeaderboardHallOfFame(
     // determines which record at that value is "rank N" -- but for
     // the user themselves, COUNT(*) WHERE steps > ours produces a
     // stable, defensible number that matches the records[] ordering.
+    //
+    // v3 Phase 1z.41 -- count is computed against the same merged
+    // set (weekly_step_records UNION eligible leaderboard_snapshots
+    // fallback) so the rank matches the top-N ordering. Without
+    // this, a user whose best is in the ls fallback could see their
+    // me_best.rank computed against only the wsr rows above them.
     const rankResult = await env.DB.prepare(
-      `SELECT COUNT(*) + 1 AS rank
-       FROM weekly_step_records
+      `WITH merged AS (
+         SELECT steps FROM weekly_step_records
+         UNION ALL
+         SELECT ls.current_value AS steps
+           FROM leaderboard_snapshots ls
+           JOIN users u ON u.id = ls.user_id
+           WHERE ls.metric = 'step_total'
+             AND ls.week_start IS NOT NULL
+             AND u.apple_sub NOT LIKE 'sim_test_%'
+             AND NOT EXISTS (
+               SELECT 1 FROM weekly_step_records w
+               WHERE w.user_id = ls.user_id AND w.week_start = ls.week_start
+             )
+       )
+       SELECT COUNT(*) + 1 AS rank
+       FROM merged
        WHERE steps > ?`,
     )
       .bind(myBestRow.steps)

@@ -2512,6 +2512,76 @@ Every meaningful change must:
 
 The current state is `styles.css?v=289`, `app.js?v=396`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.282`, `APP_BUILD_TAG = '2.2.1-w47'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
+### Hall of Fame fallback union from leaderboard_snapshots (v3 Phase 1z.41)
+
+**Backend-only fix.** No schema change. No new migration. Re-deploy worker only.
+
+**Bug.** Real users like `galilea`, `melvin`, `rendiesel`, `immortalshadow` who appear in the current-week leaderboard were MISSING from the Hall of Fame. Visible HoF showed mostly simulated filler.
+
+**Diagnosis (confirmed against remote D1):**
+```
+weekly_step_records:                    1 row
+leaderboard_snapshots step_total:       5 rows total
+  with week_start IS NOT NULL:          2 (post-1z.33, eligible fallback)
+  with week_start IS NULL:              3 (pre-1z.33 stale — exclude)
+```
+The 2 eligible rows are real users (`RenDIESEL` @ 3,246 and `Richie` @ 3,110, both for week `2026-05-17`) who submitted between the 1z.33 weekly-scope deploy and the 1z.36 Hall of Fame deploy. They have a valid `week_start` tag in `leaderboard_snapshots` but no `weekly_step_records` row because the HoF write path didn't exist when they submitted. The HoF endpoint only read from `weekly_step_records`, so they were invisible.
+
+**Chosen fix:** endpoint-side UNION fallback (not a one-time backfill — safer per the spec preference: "endpoint fallback union is safest and avoids one-time data mutation").
+
+**Fix in `backend/src/handlers/hall-of-fame.ts`** — three queries now read from a UNION of `weekly_step_records` + eligible `leaderboard_snapshots` rows. Eligibility for the snapshot fallback:
+- `metric = 'step_total'`
+- `week_start IS NOT NULL` (excludes pre-1z.33 stale NULL-week rows)
+- `users.apple_sub NOT LIKE 'sim_test_%'` (excludes sim test users — mirrors the write-time filter in `leaderboard-submit.ts`)
+- `NOT EXISTS` in `weekly_step_records` for the same `(user_id, week_start)` (dedupe — wsr supersedes ls when both have the pair, since wsr's `MAX(stored, new)` semantic is stricter than ls's last-write-wins)
+
+```sql
+WITH merged AS (
+  SELECT user_id, week_start, steps FROM weekly_step_records
+  UNION ALL
+  SELECT ls.user_id, ls.week_start, ls.current_value AS steps
+    FROM leaderboard_snapshots ls
+    JOIN users u ON u.id = ls.user_id
+    WHERE ls.metric = 'step_total'
+      AND ls.week_start IS NOT NULL
+      AND u.apple_sub NOT LIKE 'sim_test_%'
+      AND NOT EXISTS (
+        SELECT 1 FROM weekly_step_records w
+        WHERE w.user_id = ls.user_id AND w.week_start = ls.week_start
+      )
+)
+SELECT u.alias, m.steps, m.week_start
+FROM merged m
+JOIN users u ON u.id = m.user_id
+ORDER BY m.steps DESC, m.week_start ASC
+LIMIT ?
+```
+
+The `me_best` lookup and the rank-counting query use the same union pattern (the rank query's `WHERE steps > ?` is applied to the merged set so a user whose best is in the snapshot fallback gets a rank consistent with the displayed top-N).
+
+**Behavior after deploy:**
+- `RenDIESEL` (3,246), `Richie` (3,110) appear in HoF immediately — no resubmit required.
+- Once `Richie` submits again, his `weekly_step_records` row supersedes the snapshot fallback via NOT EXISTS. No duplicate.
+- New submits going forward continue to write `weekly_step_records` and naturally take over from the snapshot fallback over time.
+- Pre-1z.33 NULL-week_start rows stay excluded — they have no defensible week attribution.
+- Sim users (none currently) stay excluded.
+- Backend `me_best` for users without a wsr row but with an eligible snapshot now resolves correctly (rather than null).
+
+**Backend tests (+5 in `hall-of-fame.test.ts`, 16 total HoF cases, 30 HoF + submit, 84/84 suite-wide):**
+- Top query unions wsr + ls with `metric='step_total'`, `week_start IS NOT NULL`, `apple_sub NOT LIKE 'sim_test_%'`, and the NOT EXISTS dedupe.
+- me_best query has the same union and binds session.userId three times.
+- Rank query counts strictly higher rows against the same union.
+- Snapshot fallback excludes NULL week_start rows.
+- Snapshot fallback excludes sim users.
+
+**No app version bump.** Backend-only change. Frontend continues to call `Auth.fetchLeaderboardHallOfFame` and runs its existing sim filler merge on top of the now-richer real response — real users naturally sort above sims capped at 45,555.
+
+**Deployment steps needed (when approved):**
+1. `cd backend && npx wrangler deploy` (no migration; schema unchanged)
+2. Smoke: `D1 SELECT COUNT(*)` queries unchanged, but `GET /v1/leaderboard/hall-of-fame?metric=step_total` (authenticated) now returns 2 real records + the 1 wsr row (currently same user — dedupes to 2 unique records: RenDIESEL 3,246 + Richie 3,110).
+
+**Files changed (backend only, 3):** `backend/src/handlers/hall-of-fame.ts`, `backend/src/handlers/hall-of-fame.test.ts`, `CLAUDE.md`. No Duels, sims, Codemagic, or migration.
+
 ### Hall of Fame smoke-test fixes — me_best rank + sheet scroll-dismiss (v3 Phase 1z.40)
 
 Two distinct TestFlight bugs from the first real-device pass over Hall of Fame.
