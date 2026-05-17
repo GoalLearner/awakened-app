@@ -22166,73 +22166,227 @@ body.habit-drag-active * {
    - Bottom sheet styling for the accolade detail surface.
    =========================================================== */
 
-/* (1z.27/1z.29/1z.30 outer-gold-frame CSS retired in 1z.31 —
-   replaced by the self-contained takeover badge below.) */
+/* (1z.27/1z.29/1z.30 outer-gold-frame CSS retired in 1z.31. The
+   1z.31 self-contained takeover badge was retired in 1z.32 and
+   replaced by the rank-aware .club-badge system below.) */
 
-/* ── 1z.31 — 100K Step Club takeover badge ──────────────────
-   When the user has the step_100k_club accolade, the rank disc's
-   visual contents are REPLACED with this gold prestige badge.
-   Same 54x54 footprint as the normal rank disc so layout doesn't
-   shift. Rank identity continues to show in the .sc-identity-strip
-   below the disc (E RANK . 36 PTS . CIVILIAN).
+/* ── 1z.32 — Rank Hero 100K Step Club badge system ─────────
+   ClaudeDesign final spec (club-badge-final.jsx). The 54x54 rank
+   disc becomes a rank-aware medallion when the user holds the
+   step_100k_club accolade. Stacked content: "100K" topline,
+   dominant rank letter hero, "CLUB" underline. Gold frame is
+   constant; the inner ring + well wash + hero glow vary per rank.
 
-   Specificity note: this rule is scoped to
-   `.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club`
-   (specificity 0,3,0). The per-rank rules at
-   `.sc-card--profile .sc-rank-hero[data-rank="E"]` are also (0,3,0).
-   This block ships LATER in the file -> wins on cascade. So this
-   badge overrides background / border / box-shadow / color
-   regardless of which rank the user holds. */
-.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club {
+   Six variants (S+ falls back to S):
+     E violet · D green · C blue · B royal · A amber+violet ring
+     · S crimson + embers.
+
+   Compatibility:
+   - Outer .sc-rank-hero + data-prestige="step_100k_club" preserved
+     for the existing setupStep100KTap() delegated handler.
+   - .sc-rank-hero--100k-club kept as the pulse target hook.
+
+   Specificity / cascade:
+   The base disc selector `.sc-card--profile .sc-rank-hero` and the
+   per-rank `[data-rank="X"]` rules sit at (0,3,0). The block below
+   uses an extra class on the same compound (.sc-rank-hero.club-badge)
+   to lift it to (0,3,0) too, and it ships LATER in the file so it
+   wins on cascade order regardless of the rank colorway. */
+.sc-card--profile .sc-rank-hero.club-badge {
+  /* Tier custom props -- defaulted to E (violet); each rank variant
+     overrides these. Keeping them here means the hero/ring/well CSS
+     below can stay generic. */
+  --tier:       #a78bfa;
+  --tier-ring:  rgba(167, 139, 250, 0.55);
+  --tier-wash:  rgba(167, 139, 250, 0.12);
+  --tier-glow:  rgba(167, 139, 250, 0.55);
+  --gold:       #f5b842;
+  --gold-light: #f7c558;
+  --gold-deep:  #c08418;
+  --gold-glow:  rgba(245, 184, 66, 0.55);
+  --navy-deep:  #0e0e2a;
+
   width: 54px;
   height: 54px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #f7c558 0%, #f5b842 50%, #c08418 100%);
-  border: 1.5px solid #f5b842;
-  box-shadow:
-    0 0 18px rgba(245, 184, 66, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.20);
-  color: #0e0e2a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  /* Disable per-rank text color/glow on the disc -- the rank letter
-     is NOT rendered when this class is active; the SVG takes over. */
+  /* Reset every visual the base rank disc paints -- the .club-badge
+     internals draw the entire surface from scratch. */
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: transparent;
   text-shadow: none;
+  /* Override the base disc's flex-centering so children can absolute
+     position over the full footprint. */
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: pointer;
   transition: transform 0.12s ease, filter 0.18s ease;
 }
-.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club:hover  { filter: brightness(1.06); }
-.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club:active { transform: scale(0.97); }
-.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club:focus-visible {
+.sc-card--profile .sc-rank-hero.club-badge:hover  { filter: brightness(1.06); }
+.sc-card--profile .sc-rank-hero.club-badge:active { transform: scale(0.97); }
+.sc-card--profile .sc-rank-hero.club-badge:focus-visible {
   outline: 2px solid rgba(245, 184, 66, 0.9);
   outline-offset: 3px;
 }
 
-.sc-rank-hero__100k-svg {
-  width: 70%;
-  height: 70%;
-  display: block;
-  /* Spark mark engraves the gold disc. Drop-shadow gives a subtle
-     bevel effect against the gold gradient -- reads as engraved,
-     not flat-painted-on. */
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
+/* Per-rank tier custom-property overrides (frame stays gold). */
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--e {
+  --tier:      #a78bfa;
+  --tier-ring: rgba(167, 139, 250, 0.55);
+  --tier-wash: rgba(167, 139, 250, 0.12);
+  --tier-glow: rgba(167, 139, 250, 0.55);
+}
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--d {
+  --tier:      #22c55e;
+  --tier-ring: rgba(34, 197, 94, 0.55);
+  --tier-wash: rgba(34, 197, 94, 0.10);
+  --tier-glow: rgba(34, 197, 94, 0.55);
+}
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--c {
+  --tier:      #3b82f6;
+  --tier-ring: rgba(59, 130, 246, 0.55);
+  --tier-wash: rgba(59, 130, 246, 0.10);
+  --tier-glow: rgba(59, 130, 246, 0.55);
+}
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--b {
+  --tier:      #5b8def;
+  --tier-ring: rgba(30, 64, 175, 0.65);
+  --tier-wash: rgba(30, 64, 175, 0.16);
+  --tier-glow: rgba(91, 141, 239, 0.55);
+}
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--a {
+  --tier:      #fcd34d;
+  --tier-ring: rgba(167, 139, 250, 0.55); /* violet ring breaks gold-on-gold */
+  --tier-wash: rgba(252, 211, 77, 0.10);
+  --tier-glow: rgba(252, 211, 77, 0.55);
+}
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--s {
+  --tier:      #ef4444;
+  --tier-ring: rgba(239, 68, 68, 0.60);
+  --tier-wash: rgba(239, 68, 68, 0.14);
+  --tier-glow: rgba(239, 68, 68, 0.65);
 }
 
-/* First-unlock pulse -- single 600ms ping when the user first earns
-   the accolade. JS adds .is-new and removes it after the animation.
-   prefers-reduced-motion kills the keyframes entirely. */
-@keyframes sc-rank-100k-pulse {
-  0%   { transform: scale(1);    filter: brightness(1) drop-shadow(0 0 0 rgba(245,184,66,0)); }
-  50%  { transform: scale(1.08); filter: brightness(1.15) drop-shadow(0 0 16px rgba(245,184,66,0.7)); }
-  100% { transform: scale(1);    filter: brightness(1) drop-shadow(0 0 0 rgba(245,184,66,0)); }
+/* Frame -- gold, constant across every rank. Uses padding to draw
+   a 1.5px gradient "border" via background-clip layering. */
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__frame {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1.5px;
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+  box-shadow:
+    0 0 14px var(--gold-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  display: block;
 }
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__ring {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 10.5px;
+  padding: 1px;
+  background: linear-gradient(180deg, var(--tier-ring), color-mix(in srgb, var(--tier-ring) 35%, transparent));
+}
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__well {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 9.5px;
+  background:
+    radial-gradient(circle at 50% 25%, var(--tier-wash) 0%, transparent 60%),
+    radial-gradient(circle at 50% 25%, #1a1640 0%, var(--navy-deep) 70%);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.65);
+}
+
+/* Stacked content -- 100K topline · rank letter hero · CLUB underline */
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__stack {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0 5px;
+  pointer-events: none;
+  z-index: 1;
+}
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__topline {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-weight: 800;
+  font-size: 8px;
+  color: var(--gold);
+  letter-spacing: 1.2px;
+  line-height: 1;
+  text-shadow: 0 0 3px rgba(245, 184, 66, 0.35);
+}
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__hero {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--tier);
+  line-height: 1;
+  letter-spacing: 0.2px;
+  text-shadow: 0 0 8px var(--tier-glow);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__underline {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-weight: 800;
+  font-size: 6px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  opacity: 0.75;
+  line-height: 1;
+}
+
+/* Per-rank accents -- A: gold laurel sprigs · S: gold embers */
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__accent {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__accent--laurel {
+  bottom: -4px;
+  width: 36px;
+  height: 8px;
+  background:
+    radial-gradient(circle at 25% 100%, transparent 5px, var(--gold) 5.5px, transparent 6.5px),
+    radial-gradient(circle at 75% 100%, transparent 5px, var(--gold) 5.5px, transparent 6.5px);
+  opacity: 0.75;
+  mask: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+  -webkit-mask: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+}
+.sc-card--profile .sc-rank-hero.club-badge .club-badge__accent--embers {
+  top: 50%;
+  width: 42px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle at 8%  20%, var(--gold) 0.9px, transparent 1.6px),
+    radial-gradient(circle at 92% 18%, var(--gold) 1.1px, transparent 1.8px),
+    radial-gradient(circle at 10% 80%, var(--gold) 0.7px, transparent 1.4px),
+    radial-gradient(circle at 90% 82%, var(--gold) 0.7px, transparent 1.4px);
+  filter: drop-shadow(0 0 2px var(--gold-glow));
+}
+
+/* First-unlock pulse -- one-shot 1.4s gold flicker on .is-first-unlock
+   AND the legacy .is-new class so the existing JS pulse hook keeps
+   firing without modification. prefers-reduced-motion disables. */
+@keyframes club-badge-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(245, 184, 66, 0.4)); }
+  50%      { filter: drop-shadow(0 0 16px rgba(245, 184, 66, 1)) brightness(1.1); }
+}
+.sc-card--profile .sc-rank-hero.club-badge.is-first-unlock,
 .sc-rank-hero--100k-club.is-new {
-  animation: sc-rank-100k-pulse 0.6s ease-out 1;
+  animation: club-badge-pulse 1.4s ease-in-out 1;
 }
 @media (prefers-reduced-motion: reduce) {
+  .sc-card--profile .sc-rank-hero.club-badge.is-first-unlock,
   .sc-rank-hero--100k-club.is-new { animation: none; }
 }
 

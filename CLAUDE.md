@@ -2510,7 +2510,64 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=286`, `app.js?v=389`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.274`, `APP_BUILD_TAG = '2.2.1-w39'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=287`, `app.js?v=390`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.275`, `APP_BUILD_TAG = '2.2.1-w40'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Rank-aware 100K Club Rank Hero badge system (v3 Phase 1z.32)
+
+ClaudeDesign final spec (`club-badge-final.jsx`). The 1z.31 gold/Spark takeover badge removed rank identity from the disc; the Rank Hero system restores it by **stacking 100K / rank-letter / CLUB inside a gold-framed medallion with per-rank color identity.**
+
+**Markup change in `renderStatus()`** (when `accolades.has('step_100k_club')`):
+
+```html
+<div class="sc-rank-hero sc-rank-hero--100k-club club-badge club-badge--{rank}"
+     data-rank="E" data-prestige="step_100k_club"
+     role="button" tabindex="0"
+     aria-label="E Rank 100K Step Club member. Tap for details.">
+  <span class="club-badge__frame" aria-hidden="true">
+    <span class="club-badge__ring">
+      <span class="club-badge__well"></span>
+    </span>
+  </span>
+  <span class="club-badge__stack" aria-hidden="true">
+    <span class="club-badge__topline">100K</span>
+    <span class="club-badge__hero">E<!-- + .club-badge__accent--laurel for A, --embers for S --></span>
+    <span class="club-badge__underline">CLUB</span>
+  </span>
+</div>
+```
+
+Unearned path unchanged. Tap handler still matches `.sc-rank-hero[data-prestige="step_100k_club"]`. Pulse target keeps `.sc-rank-hero--100k-club` for back-compat with the `_maybeFireFirstUnlockToast` selector.
+
+**Per-rank tier table (canonical, source of truth):**
+
+| Rank | Letter `--tier` | Inner ring `--tier-ring` | Well wash `--tier-wash` | Glow `--tier-glow` | Accent |
+|------|---|---|---|---|---|
+| E | `#a78bfa` | `rgba(167,139,250,0.55)` | `rgba(167,139,250,0.12)` | `rgba(167,139,250,0.55)` | — |
+| D | `#22c55e` | `rgba(34,197,94,0.55)` | `rgba(34,197,94,0.10)` | `rgba(34,197,94,0.55)` | — |
+| C | `#3b82f6` | `rgba(59,130,246,0.55)` | `rgba(59,130,246,0.10)` | `rgba(59,130,246,0.55)` | — |
+| B | `#5b8def` | `rgba(30,64,175,0.65)` | `rgba(30,64,175,0.16)` | `rgba(91,141,239,0.55)` | — |
+| A | `#fcd34d` | `rgba(167,139,250,0.55)` (violet, breaks gold-on-gold) | `rgba(252,211,77,0.10)` | `rgba(252,211,77,0.55)` | gold laurel |
+| S | `#ef4444` | `rgba(239,68,68,0.60)` | `rgba(239,68,68,0.14)` | `rgba(239,68,68,0.65)` | gold embers |
+
+Frame stays gold (`#f7c558 → #f5b842 → #c08418`) on every rank. S+ gracefully falls back to S (spec removed S+ this iteration).
+
+**CSS — retired + new:**
+- Retired: `.sc-rank-hero.sc-rank-hero--100k-club` background/border/box-shadow swap, `.sc-rank-hero__100k-svg`, `@keyframes sc-rank-100k-pulse`.
+- New: `.club-badge` base + six `.club-badge--{e,d,c,b,a,s}` variants that override `--tier*` custom props. Frame/ring/well are three nested `<span>`s using padding-as-border layering. `.club-badge__stack` absolute-positions 100K/letter/CLUB over the well. `.club-badge__accent--laurel` and `--embers` are pseudo-mask radial-gradient SVGless accents.
+- New keyframe `@keyframes club-badge-pulse` — 1.4s gold drop-shadow flicker. Fires on `.is-first-unlock` AND the legacy `.is-new` class.
+- `@media (prefers-reduced-motion: reduce)` disables both.
+
+**Cascade:** `.sc-card--profile .sc-rank-hero.club-badge` sits at (0,3,0), matching the per-rank `[data-rank="X"]` rules. The block ships LATER in the file → wins on cascade order regardless of rank.
+
+**Why this works (vs 1z.31):** rank identity is dominant inside the badge — the user reads BOTH "100K Club member" AND "I am an E-rank hunter" from the disc alone. Frame stays gold so all six variants feel like one family. A's gold-on-gold collision is broken by a violet inner ring. S's prestige tier gets ember accents in addition to the crimson colorway.
+
+**Anti-patterns:**
+- Don't recolor the frame per rank — frame is always gold.
+- Don't let the 100K topline overpower the rank letter.
+- Don't render this badge below 28px — fall back to the plain rank disc plus a small `100K` chip.
+- Don't change the unearned path. It stays byte-identical to the pre-1z.27 baseline.
+
+Bumps: `styles.css?v=287`, `app.js?v=390` (markup + build tag), `sw.js v5.275`, `APP_BUILD_TAG '2.2.1-w40'`. `APP_VERSION` unchanged. No backend, no Duels, no scoring, no JS-logic changes — pure visual-render swap.
 
 ### 100K Step Club takeover badge — direction change (v3 Phase 1z.31)
 
