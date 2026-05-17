@@ -17,7 +17,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
-import { isValidMetric, METRIC_CAPS, type Metric } from '../lib/metrics';
+import { isValidMetric, isWeeklyMetric, METRIC_CAPS, type Metric } from '../lib/metrics';
 import { getAccoladeWeekStart } from '../lib/accolade-week';
 
 // v3 Phase 1z.27 -- 100K Step Club accolade. Awarded inline during
@@ -90,18 +90,30 @@ export async function handleLeaderboardSubmit(
 
   const now = Date.now();
 
+  // v3 Phase 1z.33 -- weekly scoping. For weekly metrics (step_total),
+  // tag the snapshot row with the current Sunday-UTC week key so the
+  // top handler can filter stale prior-week rows out of the ranking.
+  // Non-weekly metrics (sleep_streak, bedtime_streak) pass NULL --
+  // they represent running counts that intentionally carry forward.
+  const weekStart: string | null = isWeeklyMetric(metric)
+    ? getAccoladeWeekStart(now)
+    : null;
+
   // UPSERT with MAX preservation on best_value. SQLite (D1) supports
   // ON CONFLICT...DO UPDATE syntax. excluded.<col> refers to the values
-  // we tried to insert.
+  // we tried to insert. week_start is also updated on conflict so a
+  // user submitting in a new week overwrites their prior-week tag.
   await env.DB.prepare(
-    `INSERT INTO leaderboard_snapshots (user_id, metric, current_value, best_value, updated_at)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO leaderboard_snapshots
+       (user_id, metric, current_value, best_value, updated_at, week_start)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, metric) DO UPDATE SET
        current_value = excluded.current_value,
        best_value = MAX(leaderboard_snapshots.best_value, excluded.current_value),
-       updated_at = excluded.updated_at`,
+       updated_at = excluded.updated_at,
+       week_start = excluded.week_start`,
   )
-    .bind(session.userId, metric, value, value, now)
+    .bind(session.userId, metric, value, value, now, weekStart)
     .run();
 
   // Read back the row to return DB-authoritative values. Cheap (PK

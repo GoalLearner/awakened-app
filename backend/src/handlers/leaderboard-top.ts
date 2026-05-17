@@ -21,7 +21,8 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
-import { isValidMetric, type Metric } from '../lib/metrics';
+import { isValidMetric, isWeeklyMetric, type Metric } from '../lib/metrics';
+import { getAccoladeWeekStart } from '../lib/accolade-week';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -70,18 +71,37 @@ export async function handleLeaderboardTop(
     }
   }
 
-  // Top-N query. Uses idx_leaderboard_metric_value for index-only
-  // range scan; no full-table sort.
-  const topResult = await env.DB.prepare(
-    `SELECT u.alias AS alias, ls.current_value AS current_value
-     FROM leaderboard_snapshots ls
-     JOIN users u ON u.id = ls.user_id
-     WHERE ls.metric = ?
-     ORDER BY ls.current_value DESC
-     LIMIT ?`,
-  )
-    .bind(metric, limit)
-    .all<TopRow>();
+  // v3 Phase 1z.33 -- weekly scoping. For weekly metrics, all reads
+  // filter on the current Sunday-UTC week key so prior-week snapshots
+  // don't leak into the ranking. Non-weekly metrics keep their
+  // historical query path (no week filter).
+  const weekly = isWeeklyMetric(metric);
+  const currentWeek: string | null = weekly ? getAccoladeWeekStart() : null;
+
+  // Top-N query. Uses idx_leaderboard_metric_week_value (weekly path)
+  // or idx_leaderboard_metric_value (non-weekly) for index-only range
+  // scan; no full-table sort.
+  const topResult = weekly
+    ? await env.DB.prepare(
+        `SELECT u.alias AS alias, ls.current_value AS current_value
+         FROM leaderboard_snapshots ls
+         JOIN users u ON u.id = ls.user_id
+         WHERE ls.metric = ? AND ls.week_start = ?
+         ORDER BY ls.current_value DESC
+         LIMIT ?`,
+      )
+        .bind(metric, currentWeek, limit)
+        .all<TopRow>()
+    : await env.DB.prepare(
+        `SELECT u.alias AS alias, ls.current_value AS current_value
+         FROM leaderboard_snapshots ls
+         JOIN users u ON u.id = ls.user_id
+         WHERE ls.metric = ?
+         ORDER BY ls.current_value DESC
+         LIMIT ?`,
+      )
+        .bind(metric, limit)
+        .all<TopRow>();
 
   const top = (topResult.results ?? []).map((row, i) => ({
     rank: i + 1,
@@ -89,24 +109,43 @@ export async function handleLeaderboardTop(
     current_value: row.current_value,
   }));
 
-  // Caller's row (if they've submitted this metric).
-  const myRow = await env.DB.prepare(
-    'SELECT current_value FROM leaderboard_snapshots WHERE user_id = ? AND metric = ?',
-  )
-    .bind(session.userId, metric)
-    .first<MyRow>();
+  // Caller's row (if they've submitted this metric). For weekly metrics,
+  // we additionally require the row's week_start to match the current
+  // week -- otherwise the user is treated as "not yet ranked this week".
+  const myRow = weekly
+    ? await env.DB.prepare(
+        `SELECT current_value FROM leaderboard_snapshots
+         WHERE user_id = ? AND metric = ? AND week_start = ?`,
+      )
+        .bind(session.userId, metric, currentWeek)
+        .first<MyRow>()
+    : await env.DB.prepare(
+        'SELECT current_value FROM leaderboard_snapshots WHERE user_id = ? AND metric = ?',
+      )
+        .bind(session.userId, metric)
+        .first<MyRow>();
 
   let me: { rank: number; current_value: number } | null = null;
   if (myRow) {
     // Rank = count of rows with strictly higher current_value + 1.
-    // Ties get the same rank as the first of the tie group.
-    const rankResult = await env.DB.prepare(
-      `SELECT COUNT(*) + 1 AS rank
-       FROM leaderboard_snapshots
-       WHERE metric = ? AND current_value > ?`,
-    )
-      .bind(metric, myRow.current_value)
-      .first<RankRow>();
+    // Ties get the same rank as the first of the tie group. The same
+    // weekly filter applies so the rank is computed against the same
+    // population as `top`.
+    const rankResult = weekly
+      ? await env.DB.prepare(
+          `SELECT COUNT(*) + 1 AS rank
+           FROM leaderboard_snapshots
+           WHERE metric = ? AND week_start = ? AND current_value > ?`,
+        )
+          .bind(metric, currentWeek, myRow.current_value)
+          .first<RankRow>()
+      : await env.DB.prepare(
+          `SELECT COUNT(*) + 1 AS rank
+           FROM leaderboard_snapshots
+           WHERE metric = ? AND current_value > ?`,
+        )
+          .bind(metric, myRow.current_value)
+          .first<RankRow>();
     me = {
       rank: rankResult?.rank ?? -1,
       current_value: myRow.current_value,

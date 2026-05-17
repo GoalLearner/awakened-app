@@ -2510,7 +2510,54 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=287`, `app.js?v=390`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.275`, `APP_BUILD_TAG = '2.2.1-w40'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=287`, `app.js?v=391`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.276`, `APP_BUILD_TAG = '2.2.1-w41'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Weekly scoping for Global Steps leaderboard (v3 Phase 1z.33)
+
+**Problem.** The Global Steps leaderboard sheet (`Steps · this week`) was paint­ing stale prior-week totals at the top of the ranking. `leaderboard_snapshots` stored one row per `(user_id, metric)` with no week tag — a user who submitted 35,369 steps last week but didn't reopen the app stayed pinned at the top of "this week" indefinitely.
+
+**Fix.** Tag every step_total snapshot with the current Sunday-UTC week key; filter the top + me-rank queries on that key. Existing rows (week_start NULL) drop out of the current-week ranking automatically.
+
+**Backend changes:**
+- `backend/migrations/0008_leaderboard_week_start.sql` — adds nullable `week_start TEXT` column + `idx_leaderboard_metric_week_value (metric, week_start, current_value DESC)`. The legacy `idx_leaderboard_metric_value` is kept for non-weekly metric queries.
+- `backend/src/lib/metrics.ts` — adds `WEEKLY_METRICS` set (just `step_total` for v1) and `isWeeklyMetric()` helper. `sleep_streak` / `bedtime_streak` are intentionally excluded; they're running consecutive-night counts that must carry across weeks.
+- `backend/src/handlers/leaderboard-submit.ts` — computes `weekStart = getAccoladeWeekStart(now)` for weekly metrics, NULL otherwise. Bound as 6th INSERT arg. `ON CONFLICT … DO UPDATE SET week_start = excluded.week_start` so a user submitting in week W+1 overwrites their prior-week tag.
+- `backend/src/handlers/leaderboard-top.ts` — for weekly metrics, both the top-N query and the user's me-row + rank query gain `AND week_start = ?` bound to `getAccoladeWeekStart()`. Non-weekly metrics keep the legacy unfiltered path.
+- 100K accolade logic unchanged — already used `getAccoladeWeekStart(now)` for its own `unlock_week_start` / `last_qualified_week_start` tagging. Same helper, same convention.
+
+**Frontend changes (`app.js`):**
+- `lbGetCurrentWeekStartUTC(nowMs)` — mirrors backend's `getAccoladeWeekStart`. Format `YYYY-MM-DD`.
+- `lbFormatWeekRange(weekStartIso)` — returns `"May 17–May 23"` (en-dash) for the visible subcopy.
+- `LB_WEEKLY_METRICS` Set + `LB_METRIC_META.step_total.blurb` rewritten — drops the misleading "(device-local)" copy now that the backend uses UTC.
+- `openLeaderboardRanking()` — for weekly metrics, computes the dynamic blurb `"May 17–May 23 · resets Sunday 12:00 AM UTC. Apple Health is the only source."` and sets it on `#lb-rank-blurb` after the static title.
+- `lbCacheRead()` — adds a cross-week guard for weekly metrics. The 24h TTL alone wasn't enough (a Saturday 11pm UTC cache is still <24h old at Sunday 12:01am UTC but represents last week's data). Now rejects any weekly cache whose `fetched_at` falls in a prior UTC week.
+- World Rank card (`updateStepsCard`) — no code change; benefits automatically from the cache invalidation. After the Sunday boundary, the cache returns null → falls to the existing "Syncing…" loading state until the next `openLeaderboardRanking()` fetch lands.
+
+**Convention chosen and documented:** Sunday 00:00 UTC week boundary. Matches the backend's existing 100K Step Club convention. UI copy now reads "resets Sunday 12:00 AM UTC" instead of "device-local" so the backend and visible label agree.
+
+**100K Step Club compatibility verified:** the accolade award branch in `leaderboard-submit.ts` is independent of the new `week_start` column on `leaderboard_snapshots`. `user_accolades.last_qualified_week_start` still gets tagged via the same `getAccoladeWeekStart()` helper, `best_value` stays an all-time MAX, `repeat_count` still increments on new-week qualifying submits, and `step_100k_club` still fires at `value >= 100000`.
+
+**Simulated leaderboard verified:** `_lbMaybeSimulate()` operates on whatever real top list it's given. With the backend now scoped to the current week, the real list it receives is already current-week-only — simulated bots merge on top normally. No simulated-leaderboard.js change needed.
+
+**Backend tests (vitest, 11 new):**
+- `backend/src/handlers/leaderboard-submit.test.ts` — verifies (a) `step_total` submits bind `weekStart` as the 6th INSERT arg, (b) `sleep_streak` / `bedtime_streak` bind NULL there, (c) the ON CONFLICT clause updates `week_start = excluded.week_start`, (d) 100K accolade still awards at `>= 100000`.
+- `backend/src/handlers/leaderboard-top.test.ts` — verifies (a) `step_total` top + me + rank queries all carry `week_start = ?` and bind the current week key, (b) `sleep_streak` / `bedtime_streak` queries don't filter on `week_start`, (c) the response shape is unchanged when current-week data exists.
+- Shape-test style matches the existing `accolades.test.ts` convention. Real-SQL behavior (ON CONFLICT MAX, index scan, etc.) continues to be exercised end-to-end via `sims/scripts/*.ps1` against the prod backend.
+- All 59 backend vitest tests pass locally (including the 5 + 6 new). No TypeScript regressions introduced by this change (`npx tsc --noEmit` errors are pre-existing in unrelated `apple-jwks.test.ts` / `session-jwt.test.ts`).
+
+**Deployment NOT performed.** Per request, only local implementation + tests. Migration `0008` and the worker deploy are staged and ready. To ship:
+1. `cd backend && wrangler d1 execute awakened-db --remote --file=migrations/0008_leaderboard_week_start.sql`
+2. `cd backend && wrangler deploy`
+3. Smoke: `curl -sS https://awakened-backend.richmondcampano93.workers.dev/v1/leaderboard/top?metric=step_total -H "Authorization: Bearer …"` (expect 200 with current-week-only `top`).
+4. Verify D1 column landed: `wrangler d1 execute awakened-db --remote --command="PRAGMA table_info(leaderboard_snapshots)"`.
+
+**Anti-patterns:**
+- Don't drop `idx_leaderboard_metric_value` — non-weekly metric queries still use it.
+- Don't add `week_start` to the PK — keeping the `(user_id, metric)` PK means a user has exactly one row per metric at any time; new-week submits overwrite the prior-week tag via `ON CONFLICT DO UPDATE`.
+- Don't try to backfill `week_start` for existing rows. The whole point of this fix is that stale rows drop out of the ranking — backfilling would re-introduce them.
+- Don't change the iOS HealthKit-step-submission logic. The backend filter is the authoritative gate; whatever number the client submits this week, it goes into the current week's bucket.
+
+Bumps: `app.js?v=391` (helpers + cache guard + dynamic blurb + build tag), `sw.js v5.276`, `APP_BUILD_TAG '2.2.1-w41'`. `styles.css` unchanged. `APP_VERSION` unchanged at `2.2.1`. No Duels, no sims, no Codemagic config touched.
 
 ### Rank-aware 100K Club Rank Hero badge system (v3 Phase 1z.32)
 

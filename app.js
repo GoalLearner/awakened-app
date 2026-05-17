@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w40';
+  const APP_BUILD_TAG = '2.2.1-w41';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16967,10 +16967,54 @@
   // The Social-tab cards use these same IDs as data-lb-metric so
   // open/fetch don't require any translation.
 
+  // v3 Phase 1z.33 — weekly scoping for the Global Steps leaderboard.
+  // The backend now scopes step_total rankings to the current Sunday-UTC
+  // week (see migrations/0008_leaderboard_week_start.sql and
+  // backend/src/handlers/leaderboard-top.ts). The client mirrors that
+  // week-key convention so we can:
+  //   1. render the visible date range below the sheet title
+  //   2. invalidate the local step_total cache when the boundary rolls
+  //      over so the World Rank card doesn't show last-week's rank
+  // Format matches backend getAccoladeWeekStart(): 'YYYY-MM-DD'.
+  const LB_WEEKLY_METRICS = new Set(['step_total']);
+  function lbGetCurrentWeekStartUTC(nowMs) {
+    const ms = (typeof nowMs === 'number') ? nowMs : Date.now();
+    const d = new Date(ms);
+    const dayOfWeek = d.getUTCDay(); // 0 = Sunday
+    const sundayMs = ms - dayOfWeek * 24 * 60 * 60 * 1000;
+    const s = new Date(sundayMs);
+    const yyyy = s.getUTCFullYear();
+    const mm   = String(s.getUTCMonth() + 1).padStart(2, '0');
+    const dd   = String(s.getUTCDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+  // Render "May 17–May 23" given the Sunday-UTC start date string.
+  // The Saturday end is Sunday + 6 days. Uses UTC for the format so the
+  // visible label matches the backend's bucket boundary exactly.
+  function lbFormatWeekRange(weekStartIso) {
+    if (!weekStartIso || !/^\d{4}-\d{2}-\d{2}$/.test(weekStartIso)) return '';
+    const startMs = Date.UTC(
+      parseInt(weekStartIso.slice(0, 4), 10),
+      parseInt(weekStartIso.slice(5, 7), 10) - 1,
+      parseInt(weekStartIso.slice(8, 10), 10),
+    );
+    const endMs = startMs + 6 * 24 * 60 * 60 * 1000;
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const s = new Date(startMs), e = new Date(endMs);
+    const sLabel = MONTHS[s.getUTCMonth()] + ' ' + s.getUTCDate();
+    const eLabel = MONTHS[e.getUTCMonth()] + ' ' + e.getUTCDate();
+    return sLabel + '–' + eLabel; // en-dash
+  }
+
   const LB_METRIC_META = {
     step_total: {
       title: 'Steps · this week',
-      blurb: 'Total steps from Sunday 12:00 AM through Saturday 11:59 PM (device-local). Your weekly count starts over each Sunday — the leaderboard keeps the best totals. Apple Health is the only source — no manual logging.',
+      // Blurb is computed dynamically by openLeaderboardRanking() — the
+      // visible date range needs to follow the current week, so we
+      // resolve it at render time rather than baking the strings in
+      // here. This static fallback is only used if the dynamic path
+      // is ever bypassed.
+      blurb: 'Resets every Sunday 12:00 AM UTC. Apple Health is the only source — no manual logging.',
       unit:  'steps',
       formatValue: n => (n || 0).toLocaleString('en-US'),
     },
@@ -17000,6 +17044,17 @@
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed.fetched_at !== 'number') return null;
       if ((Date.now() - parsed.fetched_at) > LB_CACHE_MAX_AGE_MS) return null;
+      // v3 Phase 1z.33 — weekly metrics get an extra cross-week guard.
+      // The 24h TTL above isn't enough: a cache written Saturday 11pm
+      // UTC is still <24h old at Sunday 12:01am UTC, but its data is
+      // last week's ranking. Reject any weekly cache whose fetched_at
+      // falls in a prior UTC week so the World Rank card + sheet
+      // never paint stale prior-week rank/values after the boundary.
+      if (LB_WEEKLY_METRICS.has(metric)) {
+        const fetchedWeek = lbGetCurrentWeekStartUTC(parsed.fetched_at);
+        const currentWeek = lbGetCurrentWeekStartUTC();
+        if (fetchedWeek !== currentWeek) return null;
+      }
       return parsed;
     } catch (_) { return null; }
   }
@@ -17228,7 +17283,20 @@
     if (!sheet || !overlay || !listEl) return;
 
     document.getElementById('lb-rank-title').textContent = meta.title;
-    document.getElementById('lb-rank-blurb').textContent = meta.blurb;
+    // v3 Phase 1z.33 — for weekly metrics, prepend the visible date
+    // range so users can see exactly which Sunday→Saturday window is
+    // ranking right now. The backend uses Sunday-UTC week buckets and
+    // this copy must match that convention (avoid "device-local"
+    // language that contradicts the backend).
+    let blurbText = meta.blurb;
+    if (LB_WEEKLY_METRICS.has(metric)) {
+      const wk = lbGetCurrentWeekStartUTC();
+      const range = lbFormatWeekRange(wk);
+      if (range) {
+        blurbText = range + ' · resets Sunday 12:00 AM UTC. Apple Health is the only source.';
+      }
+    }
+    document.getElementById('lb-rank-blurb').textContent = blurbText;
 
     _lbCurrentOpenMetric = metric;
 

@@ -34,3 +34,23 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
 export function isValidMetric(value: unknown): value is Metric {
   return typeof value === 'string' && (METRICS as readonly string[]).includes(value);
 }
+
+/**
+ * Metrics whose `current_value` is scoped to a single Sunday-UTC week.
+ *
+ * v3 Phase 1z.33 — adds weekly scoping for the Global Steps leaderboard.
+ * The submit handler tags the snapshot row with the current Sunday-UTC
+ * week key (see `getAccoladeWeekStart`), and the top handler filters
+ * `WHERE week_start = $currentWeek` for these metrics so stale rows
+ * from earlier weeks don't leak into "Steps · this week" rankings.
+ *
+ * Streak metrics (sleep_streak, bedtime_streak) are intentionally
+ * NOT weekly — they represent running consecutive-night counts that
+ * carry forward across weeks. Adding them here would force a daily
+ * resubmit just to stay on the board.
+ */
+export const WEEKLY_METRICS: ReadonlySet<Metric> = new Set<Metric>(['step_total']);
+
+export function isWeeklyMetric(metric: Metric): boolean {
+  return WEEKLY_METRICS.has(metric);
+}
