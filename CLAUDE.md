@@ -2512,6 +2512,28 @@ Every meaningful change must:
 
 The current state is `styles.css?v=283`, `app.js?v=386`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.271`, `APP_BUILD_TAG = '2.2.1-w36'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
+### 100K Step Club backend deployed live (v3 Phase 1z.28)
+
+Backend-only deployment milestone. The 100K Step Club backend (Phase B of `1z.27`) is now **live in production** as of May 17. The May 16 `2.2.1-w34` build (currently in App Review) is **no longer a blocker** for forward iOS work — we're moving the next Codemagic / TestFlight build forward on commit `f29a551` regardless of `w34`'s outcome.
+
+**What's live (May 17):**
+- D1 migration `0007_user_accolades.sql` applied directly to remote `awakened-db` via `wrangler d1 execute --remote --file=...` (3 queries, 6 rows written, `changed_db: true`, ~5 ms). Table `user_accolades` + indexes `idx_user_accolades_user` + `idx_user_accolades_type` + 2 SQLite auto-indexes (PRIMARY KEY + UNIQUE) all present in `sqlite_master`. (Note: applied via direct execute, not the migrations runner — `d1_migrations` tracker is NOT seeded for 0001–0007; matches the project's historical pattern. Deferred for a future cleanup.)
+- Worker deployed at `Current Version ID: 9593f398-53e7-41b3-ade7-c41b7620de48` (115.86 KiB upload / 23.66 KiB gzip / 4 ms startup). 11 RL bindings live, including the new `env.RL_USER_ACCOLADES_READ`.
+- `GET /v1/users/me/accolades` live, returns `401 AUTH_REQUIRED` to unauthenticated callers, ready to serve `{ accolades: [] }` for authenticated empty-state users + the full row shape for users who earn the accolade.
+- Inline award path live in `handleLeaderboardSubmit`: any authenticated `POST /v1/leaderboard/submit` with `metric=step_total` AND `value >= 100000` AND `apple_sub NOT LIKE 'sim_test_%'` now writes to `user_accolades`. No retroactive backfill (forward-only by design).
+- Smoke-checked: `/v1/leaderboard/top`, `/v1/duels`, `/v1/friends` all still gated at 401 — no regression.
+
+**Next iOS build target: commit `f29a551`.**
+- `APP_VERSION = '2.2.1'`
+- `APP_BUILD_TAG = '2.2.1-w36'`
+- `app.js?v=386`, `styles.css?v=283`, `auth.js?v=14`, `sw.js v5.271`
+- Contains: Direction B Status card, World Rank Steps card, Morning Briefing polish, drag-disabled hotfix, Spark brand mark (1z.26), 100K Step Club frontend (1z.27)
+- Backend integration: `Auth.fetchAccolades()` → live `GET /v1/users/me/accolades` → cache-first prestige frame on `.sc-rank-hero` → tap → 100K Step Club sheet
+
+**w34 status (informational, not blocking):** May 15 build, currently in App Review since May 16 submission. May approve and ship, may stay pending. Either way, `w36` is the next active iOS build target with the brand migration + 100K feature; `w34` is being treated as a separate, earlier-train build whose outcome no longer gates this train.
+
+**No backend redeploy needed for this iOS build.** The accolade endpoint + award path are stable; the iOS bundle just needs to ship the frontend that consumes them.
+
 ### 100K Step Club prestige feature (v3 Phase 1z.27)
 
 Permanent accolade earned by recording 100,000+ Apple-Health-verified steps in a single leaderboard week. Hunter Profile rank badge gains a gold outer prestige frame; tapping the frame opens a 100K Step Club detail sheet.
