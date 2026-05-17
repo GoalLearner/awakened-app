@@ -4,6 +4,113 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## 📌 Session handoff — May 17, 2026 4:30 PM (read this first)
+
+**Current HEAD:** `6fc7acf35886c5e040401b3174123c158a4c6fd4` · `fix: hall of fame falls back to leaderboard_snapshots` · in sync with `origin/main`. Working tree clean apart from two untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`) that have been sitting around for a while and are NOT part of the build.
+
+**Version knobs (extracted from source, NOT from notes):**
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.1` |
+| `APP_BUILD_TAG` | `2.2.1-w47` |
+| `app.js?v=` | `396` |
+| `auth.js?v=` | `15` |
+| `styles.css?v=` | `289` |
+| `simulated-leaderboard.js?v=` | `6` |
+| `sw.js CACHE_VERSION` | `v5.282` |
+| `HEALTHKIT_AUTH_VERSION` | `2` |
+
+### What shipped today (May 17 work)
+
+**A. Spark branding (earlier session arc)** — Spark mark replaced legacy logo across the app icon, splash, and brand surfaces. Static `/icon-192.png` / `/icon-512.png` generated from `app-icon-source.png` via `scripts/generate-app-icons.ps1`; OffscreenCanvas dynamic-icon path retired from `sw.js`. Splash + brand mark use the canonical Spark geometry.
+
+**B. 100K Step Club (Phase 1z.27 → 1z.32)** — backend `user_accolades` D1 table live; `GET /v1/users/me/accolades` live with `RL_USER_ACCOLADES_READ` ratelimit. Inline award on `step_total >= 100000` from real users only (sim filter at write time). Final UI = the **rank-aware "Rank Hero" 100K Club badge** (Phase 1z.32) — 6 variants (E violet · D green · C blue · B royal · A amber+violet ring+laurel · S crimson+embers), gold frame constant, stacked `100K / rank-letter / CLUB` content, S+ falls back to S. The accolade detail sheet works. Local browser preview tested via `hb_accolades_cache` localStorage mock.
+
+**C. Weekly Steps leaderboard scoping (Phase 1z.33)** — migration `0008_leaderboard_week_start.sql` deployed. `leaderboard_snapshots` now has a `week_start TEXT` column + `idx_leaderboard_metric_week_value` composite index. `GET /v1/leaderboard/top?metric=step_total` filters by current Sunday-UTC week. Submit path tags rows; ON CONFLICT preserves the new-week overwrite. Sheet copy updated to `May 17–May 23 · resets Sunday 12:00 AM UTC. Apple Health is the only source.` Stale pre-1z.33 NULL-week rows correctly drop out (3 rows on prod: Immortal Shadow / Melvin / Galilea — invisible until they resubmit). Convention documented: **Sunday 00:00 UTC**, identical to the 100K accolade week key. Client cache also cross-week-guards so the World Rank card doesn't paint last-week's rank after the boundary.
+
+**D. Simulated leaderboard cap (Phase 1z.35)** — `simulated-leaderboard.js` rev v5 → v6. `SIM_STEP_WEEKLY_CAP = 45555` constant centralized and exposed on `window.SimulatedLeaderboard`. Hard clamp in `botStepsThroughDay`. Defense-in-depth re-clamp after the tie-bump in the merge. Bot cast retuned across the four product bands (Light / Normal / Active / High but realistic). Stress test across 200 random week keys: max bot weekly = 45,555 exactly (cap engages on tail rolls, never exceeded). Sims cannot visually approach 100K Club territory.
+
+**E. Weekly Steps Hall of Fame (Phase 1z.36 → 1z.41)** — full feature shipped end-to-end:
+- Backend: migration `0009_weekly_step_records.sql` deployed (table + 3 named indexes + 2 auto-indexes). `GET /v1/leaderboard/hall-of-fame?metric=step_total&limit=N` deployed with `RL_LEADERBOARD_HOF` (namespace 1012, 30/min). Write path extended in `leaderboard-submit.ts` with the `MAX(stored, new)` upsert wrapped in a try/catch (1z.38) so HoF write failures cannot break the core leaderboard / accolade writes. **Fallback-union (1z.41) reads from `weekly_step_records` UNION ALL eligible `leaderboard_snapshots` rows** (metric=step_total, week_start IS NOT NULL, apple_sub NOT LIKE 'sim_test_%', NOT EXISTS in wsr) so real users with valid pre-1z.36 week-tagged snapshots appear in HoF immediately without backfill.
+- Frontend: segmented `This Week / Hall of Fame` control inside `#lb-rank-sheet`. `hb_lb_hof_step_total` cache (10-min TTL). `_lbMergeHofRecords` returns `{records, me_best_displayed}` so the pinned `YOUR BEST` rank matches the visible merged list (1z.40 fix). Sims are CLIENT-ONLY filler (1z.37 decision) — never persisted, never affect `me_best`, capped at 45,555.
+- **Current D1 state:** `weekly_step_records` has 1 row (Richie's post-1z.36 submit). `leaderboard_snapshots` has 2 eligible fallback rows (RenDIESEL 3,246 + Richie 3,110, both week `2026-05-17`). HoF endpoint returns 2 unique records (wsr's Richie row supersedes the ls fallback via NOT EXISTS dedupe).
+- Backend Worker version live: **`761b6392-d274-41d1-b923-97bf009e2820`** (the 1z.41 fallback-union deploy).
+
+**F. Leaderboard sheet UX (Phase 1z.40)** — `#lb-rank-sheet` is X-only close. Removed both `overlay click → close` AND `attachSheetDismissGesture` for this sheet specifically (the HoF list is the longest content of any sheet in the app and the drag-dismiss mis-fired during legitimate scrolls). All 12 other sheets keep their existing drag + overlay-tap dismiss — scope-limited fix. **Needs on-device QA confirmation** in the next iOS build: scroll the HoF list down vigorously → sheet stays open; tap X → closes; tap overlay → stays open.
+
+**G. iOS post-save freeze (Phase 1z.34)** — fixed across 4 save handlers. Root cause was the `save(); renderHabits(); closeXModal();` anti-pattern: a synchronous throw inside `renderHabits` (e.g. `buildItem` hitting an unexpected habit shape after edit) bubbled past the close call and the overlay kept intercepting touches. New pattern across all sites: **persist → close → render-in-try-catch**. Affected flows: `commitEdit` (Edit Habit Save), `saveCustomHabit` (Add Custom Habit), the `sched-save-btn` handler (Schedule picker save), `confirmPackAdd` (Lock-In / Morning Routine pack confirm). `closeEditModal` was also hardened — each DOM step is independently try/caught so a missing element cannot leave the overlay stuck.
+
+**H. Boss detail Souls balance (Phase 1z.39)** — IMPLEMENTED. Compact `SOULS AVAILABLE / 🩸 185` readout inside `#bfs-engage-cta`, above the gradient ENGAGE BOSS button. Two states: sufficient (gold) / insufficient (red ember, `NEED MORE SOULS / 12 / 25 needed`). Engage button gains `.bfs-engage-btn--insufficient` modifier (55% opacity, grayscale, red glow) when broke. Reads from existing `getSoulsBalance()` accessor — no new state. Existing `engageBoss()` toast guard is still the source of truth for spending.
+
+### Deployment status — what is LIVE right now
+
+**Backend (Cloudflare Worker @ `awakened-backend.richmondcampano93.workers.dev`):**
+- D1 has **11 tables** (added `weekly_step_records` today on top of `users`, `leaderboard_snapshots`, `user_state_snapshots`, `user_accolades`, `friends`, `duels`, `verified_events`, `duel_progress_snapshots`, `user_souls_ledger`, `d1_migrations`).
+- Migrations applied to remote D1: `0001` through `0009` (today added `0008` weekly scoping + `0009` HoF table).
+- Endpoints live: `/v1/auth/verify`, `/v1/leaderboard/submit`, `/v1/leaderboard/top`, **`/v1/leaderboard/hall-of-fame`** (new), `/v1/account/delete`, `/v1/users/me/state` (GET/POST), `/v1/users/me/accolades`, `/v1/friends*`, `/v1/duels*`.
+- Current Worker version ID: **`761b6392-d274-41d1-b923-97bf009e2820`** (1z.41 fallback-union deploy, May 17 evening).
+- 12 ratelimit bindings (added `RL_LEADERBOARD_HOF` namespace 1012 today).
+
+**Frontend (iOS / PWA):**
+- `main` at `6fc7acf` carries everything above, but **Codemagic has NOT been triggered for any of today's work.** The last iOS build on TestFlight predates Phase 1z.32. To get the rank-aware 100K badges + weekly leaderboard + Hall of Fame + freeze fix + boss-souls readout + sheet-scroll fix onto a device, Codemagic must be triggered on the current main HEAD.
+
+### Next-session checklist (when work resumes)
+
+**Before triggering Codemagic:**
+1. `git pull` → confirm HEAD is still `6fc7acf` (or newer if anything lands overnight) and matches `origin/main`.
+2. Re-check the version knobs table above against `app.js`, `index.html`, `sw.js` — they should still read w47 / v396 / v289 / v5.282. If they've drifted (a stray commit could land), update CLAUDE.md before building.
+3. Local browser preview (optional, fast confidence check):
+   - Hall of Fame tab populates with real records (RenDIESEL + Richie) + sim filler.
+   - This Week tab still scopes to current week.
+   - Sheet scrolls without dismissing; X closes it; overlay tap does NOT close it.
+   - Rank-aware 100K badge renders correctly for each rank (use the `hb_accolades_cache` mock from Phase 1z.31 instructions).
+   - Edit Habit → change goal → Save → modal closes immediately (no freeze).
+   - Lock-In pack confirm → no freeze.
+   - Boss detail → Souls balance readout above the Engage button; switches to insufficient state when broke.
+   - World Rank card opens the leaderboard sheet defaulting to This Week.
+
+**Codemagic:**
+- Trigger on current main HEAD (`6fc7acf` or later).
+- Build tag will read `2.2.1-w47`.
+- **Do not build an older `w43` / `w45` / `w46` if `w47` or later is current** — the older builds are missing the HoF me_best displayed-rank fix, the sheet scroll-dismiss fix, and the Souls balance readout.
+- After TestFlight install, run the manual QA list above on-device.
+
+**Post-build QA acceptance gates:**
+- HoF YOUR BEST card rank matches a visible row in the merged list.
+- HoF list scroll does not dismiss; X is the only close path.
+- Edit Habit / Lock-In saves never leave a stuck modal.
+- 100K badge renders correctly per rank.
+- Boss Souls balance is visible and correctly toggles insufficient state.
+- 5-type Duels picker only (no Boss Race; deferred).
+- No drag-reorder on habits list (still disabled for 2.2.1).
+
+### Known open items / NOT shipped
+
+These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a new ticket if planning work:
+
+1. **Historical weekly champions / Monday winner recognition** — no backend cron, no recognition UI. The data to support it (`weekly_step_records`) is now live, so this could be the next feature pass. Idea: a "last week's champion" pill on the dashboard each Sunday/Monday.
+2. **Weekly Steps Champion reward** — no souls/relic/XP grant for winning a week. No tournament mechanic.
+3. **Accolades sheet / profile history** — beyond the 100K Step Club row, no aggregate accolades UI. `user_accolades` schema is generic enough for future types (`sleep_perfect_month`, etc.) but no other accolade type ships today.
+4. **100K Club repeat-count richer UI** — `repeat_count` and `last_qualified_week_start` are persisted; the sheet currently shows the count but not a "week-by-week timeline." Could be a future deep-dive view.
+5. **Boss rewards / loot / cards expansion** — current 6 bosses + 24 drop cards is the v2.2.1 dungeon. No new bosses planned this train.
+6. **Habit reorder redesign via explicit edit mode** — drag-reorder is intentionally DISABLED for 2.2.1 (caused too many accidental reorders). When it returns, the spec is "explicit edit-mode toggle + drag handles per row" — no design or code yet.
+7. **UI wording polish** — `"resets Sunday 12:00 AM UTC"` in the This Week blurb is technically correct but reads as engineering-speak. A future copy pass could shorten to `"resets Sunday"`. Don't change without product approval.
+8. **Hall of Fame minimum-qualify threshold** — currently every real-user submit creates a row. If the table gets noisy with sub-10k entries, add a `WHERE steps >= 10000` filter at write time (no schema change required).
+9. **Sims-to-HoF backend persistence** — explicitly DECIDED AGAINST. Sims stay client-only filler. Do not add sim users to `weekly_step_records`.
+
+### 🛑 Safety warnings (read before any destructive work)
+
+- **D1 migrations.** Do NOT run `wrangler d1 migrations apply` — the historical migrations are not seeded in the `d1_migrations` tracker. Use direct `wrangler d1 execute --remote --file=migrations/XXXX.sql` (with `printf 'y\n' |` to bypass the interactive confirmation) for new migrations. The `0008` and `0009` migrations applied today both used this pattern.
+- **Sim seed / teardown scripts under `sims/`** — do NOT run unless explicitly testing sims. They mutate prod D1 (insert/delete test users).
+- **Backend / Duels.** Do NOT touch backend handlers or Duels code casually before App Store / TestFlight QA. The 5-type duels picker, deferred Boss Race scoring, and verified-event aggregation are all known-good states that should not regress.
+- **Sim cap.** `SIM_STEP_WEEKLY_CAP = 45555` is load-bearing. Do not raise it, do not bypass it, do not allow sims to ever submit to backend (they don't — keep it that way).
+- **100K Club accolade.** Sims must NEVER earn it. The `apple_sub LIKE 'sim_test_%'` filter at write time in `leaderboard-submit.ts` is the gate. The HoF table inherits the same filter both at write time and via the union read.
+- **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
+- **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
+- **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+---
+
 ## Project at a glance
 
 **Awakened — Daily Habit Tracker** (`com.goallearner.awakened`, name on App Store: *Awakened: Habit RPG*).
@@ -2703,11 +2810,11 @@ All under cap. Deterministic on second call. Top-tier bots correctly contribute 
 
 Bumps: `simulated-leaderboard.js?v=6`, `app.js?v=394`, `sw.js v5.280`, `APP_BUILD_TAG '2.2.1-w45'`. `APP_VERSION` unchanged at `2.2.1`.
 
-### Weekly Steps Hall of Fame — implemented, not deployed (v3 Phase 1z.36)
+### Weekly Steps Hall of Fame (v3 Phase 1z.36 — DEPLOYED, backend live)
 
-**Feature.** A permanent all-time leaderboard of the highest verified weekly step totals ever recorded by real users. Separate surface from `Steps · This Week` (current weekly board, resets Sunday) and the `100K Step Club` accolade. A real user can appear in the Hall of Fame multiple times — once per qualifying high week. Simulated/sim-test users never appear (filtered at write time; never merged at read time).
+**Feature.** A permanent all-time leaderboard of the highest verified weekly step totals ever recorded by real users. Separate surface from `Steps · This Week` (current weekly board, resets Sunday) and the `100K Step Club` accolade. A real user can appear in the Hall of Fame multiple times — once per qualifying high week. Simulated/sim-test users never appear in the backend table (filtered at write time). Sim filler IS allowed at the client display layer (see 1z.37 decision and 1z.40/1z.41 follow-ups), capped at 45,555 weekly steps; sims never affect `me_best`.
 
-**Status:** backend + frontend implemented locally. **Not deployed.** Awaiting approval before remote D1 migration and Worker deploy.
+**Status (as of May 17, 2026 EOD):** backend deployed (migration 0009 applied, Worker live with fallback-union). Frontend tabs + sim filler merge + me_best displayed-rank fix all committed and pushed; iOS build NOT yet shipped via Codemagic — staged for next session.
 
 #### Schema (`migrations/0009_weekly_step_records.sql`)
 
