@@ -1325,7 +1325,7 @@ If A has a pending request to B and B tries to send one to A, B's attempt does N
 - **No Recent Duels in v1.** `res.recent` is intentionally ignored by `renderDuelsSection`. Completed-duel rows ship once server-side scoring produces real outcomes.
 - **No fake scoring anywhere.** As of v3 Phase 1z, 5 of 6 duel types render REAL verified scores (sourced from `GET /v1/duels/:id/score`). The 6th (`boss_race`) is deferred and shows `"Boss Race scoring activates after verified boss-event logging."` Never inject placeholder "You: 0 · Opp: 0" rows when events haven't been submitted yet — the UI distinguishes "pending events" from "zero score." The earlier blanket footnote `"Scoring activates in the next duel pass."` is removed from all paths except `boss_race`.
 - **Challenge button** opens the **Choose Verified Duel sheet** (`#duel-type-overlay`), where the user selects one of the verified-only duel types before sending the invite. The picker pre-selects `verified_objectives` by default and submits via `Auth.createDuel(alias, { duration_days: 3, stake_souls: 25, duel_type })`. The 25-soul stake is metadata only — no local souls deduction. The legacy `window.confirm("Challenge ...")` flow is retired (Phase 1x.6 — see Verified-only Discipline Duel Types section).
-- **Duel detail overlay** (`#duel-detail-overlay`): reuses the `.bfs-*` boss-fullscreen pattern with its own `body.ddo-locked` scroll lock. Shows opponent (display-normalized alias), status pill, schedule (starts/ends/time-remaining), stake/reward/duration metadata, "scoring activates in the next pass" footnote, and Accept/Decline buttons for pending duels in the opponent role. Closes on Back button, ESC, or any tab switch (wired into `switchTab`'s top-level closer).
+- **Duel detail overlay** (`#duel-detail-overlay`): reuses the `.bfs-*` boss-fullscreen pattern with its own `body.ddo-locked` scroll lock. Shows opponent (display-normalized alias), status pill, schedule (starts/ends/time-remaining), stake/reward/duration metadata, real per-side verified scores for the 5 scorable types (Phase 1z), and Accept/Decline buttons for pending duels in the opponent role. The blanket "scoring activates in the next pass" footnote that shipped pre-1z is now scoped to `boss_race` only — the 5 scorable types render their real aggregated scores from `GET /v1/duels/:id/score`. Boss Race is also hidden from the v1 picker (Phase 1z.16), so the deferred footnote is only reachable via legacy `boss_race` rows. Closes on Back button, ESC, or any tab switch (wired into `switchTab`'s top-level closer).
 
 ### Deferred to a later pass
 
@@ -1465,7 +1465,7 @@ duels.reward_settled_at TEXT — set by settleDuelReward
 
 **Operational rule for ledger writes.** Any future server-side soul reward (boss kill server-side, achievement, login bonus) MUST go through `user_souls_ledger` with a unique `(ref_type, ref_id, reason)` per logical reward event. The UNIQUE index protects against double-pay across retries.
 
-**Production rollout state (current — end of May 15 work session).** Migration `0006_verified_duel_scoring_engine.sql` applied to remote D1 (11 queries, 16 rows written). Worker deployed at `Current Version ID: 6874ae4d-c67a-4dda-ac2c-3d788966bdfb`; subsequent deploys shipped the Phase 1z.1 cancel endpoint (`POST /v1/duels/:id/cancel`). Live endpoint surface verified via curl returning 401 to unauthenticated requests: `POST /v1/verified-events`, `GET /v1/duels/:id/score`, `POST /v1/duels/:id/cancel`. iOS bundle: Codemagic build on commit `5c54eda` (HEAD of `main` at end-of-day May 15) passed all pre-sync + post-sync gates and published 2.2.1 build to TestFlight. **App Store submission for 2.2.1 was queued for the evening of May 15**; review window expected ~24h matching the 2.2.0 cadence. Conservative polish-pass landing decision: brand verbs (`outstepped` / `outrested` / `outanchored` / `outlifted` / `outdisciplined` / `outhunted`) + behavior wiring (accordion persist, 60s live tick, draw rotation, HUNTING-pill type glyph) shipped; 4 structural redesigns deferred to a future pass (full active duel hero rewrite with twin columns + VS sigil + score-gap bar, 5-variant detail overlay with Cinzel "VICTORY" + gold-dust, Choose Verified Duel sheet glyph-block redesign, Global Rankings card overhaul). Deferral rationale: high blast radius across already-shipping surfaces; brand+behavior were the highest-leverage targets and they're in.
+**Production rollout state (current — end of May 16 work session).** Migration `0006_verified_duel_scoring_engine.sql` applied to remote D1 (11 queries, 16 rows written). Worker deployed at `Current Version ID: 6874ae4d-c67a-4dda-ac2c-3d788966bdfb`; subsequent deploys shipped the Phase 1z.1 cancel endpoint (`POST /v1/duels/:id/cancel`). Live endpoint surface verified via curl returning 401 to unauthenticated requests: `POST /v1/verified-events`, `GET /v1/duels/:id/score`, `POST /v1/duels/:id/cancel`. iOS bundle: Codemagic build on commit `5c54eda` passed all pre-sync + post-sync gates and published 2.2.1 build to TestFlight on May 15. **The original May 15 App Store submission for 2.2.1 was MANUALLY PULLED on May 16** because it was set for automatic release and the owner wanted the cleaner sim-verified `2.2.1-w28` train submitted instead. This was NOT an Apple rejection — pure product decision. Next ship target: Codemagic build on commit `f6c1a69` (HEAD on May 16), TestFlight smoke test, resubmit to App Review. **Verified Duels v1 backend is empirically proven on prod D1 as of May 16** — full 5/5 sim matrix passed end-to-end (steps / sleep / bedtime / strength / verified_objectives) including idempotent resolve + ledger settle. See "Verified Duels v1 prod sim pass + App Store pull (v3 Phase 1z.17)" section below for the full result. Conservative polish-pass landing decision: brand verbs (`outstepped` / `outrested` / `outanchored` / `outlifted` / `outdisciplined` / `outhunted`) + behavior wiring (accordion persist, 60s live tick, draw rotation, HUNTING-pill type glyph) shipped; 4 structural redesigns deferred to a future pass (full active duel hero rewrite with twin columns + VS sigil + score-gap bar, 5-variant detail overlay with Cinzel "VICTORY" + gold-dust, Choose Verified Duel sheet glyph-block redesign, Global Rankings card overhaul). Deferral rationale: high blast radius across already-shipping surfaces; brand+behavior were the highest-leverage targets and they're in.
 
 **Rate-limit binding decision (v1).** `POST /v1/verified-events` does NOT have a dedicated Cloudflare Workers rate-limit binding (`RL_VERIFIED_EVENTS` was specced but skipped to avoid a risky wrangler.toml edit mid-engine-build). The handler uses an in-memory rate limiter as the fallback. Caveat: Cloudflare's isolate-per-region model means the in-memory counter isn't globally consistent — a user could spread submissions across regions and exceed the intended 60/min cap. Acceptable for v1 (low-volume + small user base + idempotent UNIQUE constraint already protects against duplicate effects). Promote to a real Cloudflare rate-limit binding when traffic grows. The 11 existing bindings (DB + 10 rate-limit) are unchanged.
 
@@ -2507,6 +2507,72 @@ Every meaningful change must:
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
 The current state is `styles.css?v=278`, `app.js?v=378`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.263`, `APP_BUILD_TAG = '2.2.1-w28'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Verified Duels v1 prod sim pass + App Store pull (v3 Phase 1z.17)
+
+Documentation-only phase recording two milestones from the May 16 work session.
+
+**1. Verified Duels v1 backend is empirically proven on production D1.**
+
+End-to-end sim matrix passed for all 5 user-selectable verified duel types against the prod Workers + D1 backend (`https://awakened-backend.richmondcampano93.workers.dev` / `awakened-db`):
+
+| Sim | Duel type | Aggregator | Result | Duration |
+|---|---|---|---|---|
+| `01-steps-duel.ps1` | `steps` | MAX(value) | PASS | 9.2s |
+| `02-sleep-duel.ps1` | `sleep` | COUNT DISTINCT metric_date | PASS | 10.6s |
+| `03-bedtime-duel.ps1` | `bedtime` | COUNT DISTINCT metric_date | PASS | 10.9s |
+| `04-strength-duel.ps1` | `strength` | COUNT(*) | PASS | 11.0s |
+| `05-verified-objectives-duel.ps1` | `verified_objectives` | COUNT DISTINCT (event_type, metric_date) | PASS | 11.3s |
+| **Total** | | | **5/5 PASS · 0 FAIL · 0 SKIPPED** | **353.1s** |
+
+Each sim ran the full 23-checkpoint flow: friendship request/accept → duel create → opponent accept → verified events submit → `/score` pre-resolve → force-end via D1 (with row-count + past-timestamp verification) → `/resolve` (200, correct `challenger_win` / `winner_user_id` / `reward_settled_at`) → `/resolve` idempotent on second call (no double-pay; `user_souls_ledger` UNIQUE constraint holds) → ledger row count = 1, user matches winner, delta = +40 → `GET /duels/:id` post-resolve matches `/resolve` response.
+
+Teardown via the seed worker (`POST /teardown`) returned a clean before/after report:
+```
+before:  { users: 2, friends: 1, duels: 5, verified_events: 22, user_souls_ledger: 5, ... }
+deleted: { users: 2, friends: 1, duels: 5, verified_events: 22, user_souls_ledger: 5, ... }
+after:   { users: 0, friends: 0, duels: 0, verified_events: 0, user_souls_ledger: 0, ... }
+note:    "CLEAN: all sim artifact tables read 0 post-teardown."
+```
+
+Independent `GET /verify` confirmed `"clean": true`. Local JWTs wiped from `sims/.secrets/`. Prod D1 contains only the 5 real Apple-signed users — no sim residue.
+
+**Boss Race deferred** — not part of v1 acceptance, hidden from picker (see Phase 1z.16). `sims/scripts/06-boss-race-deferred.ps1` remains in tree, solo-runnable, for verifying the `BOSS_RACE_SCORING_DEFERRED` contract is still honoured. Not in `run-all.ps1`'s default matrix.
+
+**2. App Store review for original 2.2.1 (May 15 submission) was manually pulled.**
+
+Reason: the original submission was set to **automatic release on approval**. Product decision was to NOT ship that build because the May 16 work session added meaningful additions on top — most notably:
+- Direction B Premium Character Sheet (Phase 1z.12) + compact-pass refinements (1z.13 → 1z.14)
+- Status-card PR chip retirement (1z.11)
+- 2X XP buff pill refinements (1z.10)
+- Boss Race hidden from picker (1z.16)
+- Sim-harness hardening (1z.13–1z.16) — though that's docs/ops, not runtime
+- Empirical prod sim proof (this phase, 1z.17)
+
+The pull was a **product decision, NOT an Apple rejection.** Next ship target: Codemagic build on commit `f6c1a69` (current `main` HEAD) → TestFlight smoke test → resubmit to App Review. APP_VERSION stays `2.2.1`; the train just gets a new build number when Codemagic runs.
+
+**Smoke test checklist for the new TestFlight build** (informational, not gating):
+1. App opens; signin gate appears (or main app mounts for signed-in users)
+2. Status card renders the Direction B Premium Character Sheet (banner / identity strip / portrait frame / sigil tiles)
+3. Duels tab → Choose Verified Duel picker shows EXACTLY 5 cards: Verified Discipline · Steps · Sleep · Bedtime · Strength. Boss Race is NOT visible.
+4. 2X XP buff pill renders correctly on weekend launches; tap opens Weekend Warrior sheet
+5. Apple HealthKit permission flow still works (first-launch prompt + Settings → Apple Health pause toggle)
+6. No console errors on cold launch
+
+**3. Sim harness final state (post-1z.16).**
+
+The harness is now production-ready for regression use:
+- Windows PowerShell 5.1 compatible (no PS 7 syntax, ASCII-only scripts, parser-verified under `5.1.19041.6456`)
+- ANSI / wrangler-output resistant — strips real ANSI CSI, literal ANSI mojibake, PS NativeCommandError wrapping, and wrangler banner tokens before JSON parsing
+- Explicit, sim-only teardown via the seed-worker `/teardown` route (walks 8 child tables before deleting users; reports before/after counts; cannot touch real-user data by construction)
+- Stop-on-first-failure (`run-all.ps1` halts the moment any sim returns non-zero exit and prints the failed run folder + 4-step recovery procedure)
+- Verified force-end SQL (SELECT before → UPDATE with row-count check → SELECT after with past-timestamp check; aborts before `/resolve` if any step fails)
+- Default matrix is 5 sims (Boss Race deferred path is solo-runnable; outside the v1 ship gate)
+
+**Anti-patterns for future contributors:**
+- Don't reintroduce `06-boss-race-deferred.ps1` to the default `run-all.ps1` matrix without first flipping `DUEL_TYPES.boss_race.selectable: true` AND restoring the picker order array. The deferred path's expected FAIL would mask the actual 5/5 acceptance signal.
+- Don't claim Verified Duels v1 scoring is "not proven on prod" — it is, as of May 16, 2026. Re-prove only if scoring code changes meaningfully.
+- Don't describe the pulled May 15 submission as an Apple rejection. It was a deliberate product pull.
 
 ### Boss Race hidden from user-facing duel picker (v3 Phase 1z.16)
 

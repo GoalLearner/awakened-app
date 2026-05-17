@@ -171,7 +171,14 @@ in `completed` state, but if any solo sim aborted mid-flight, an
 powershell -ExecutionPolicy Bypass -File .\sims\scripts\run-all.ps1
 ```
 
-Runs the 6 sims sequentially (01 → 06). Per-run output lands in
+Runs the 5 scorable verified-duel sims sequentially (01 → 05).
+Boss Race (`06-boss-race-deferred.ps1`) is intentionally NOT in
+the default matrix — it's hidden from the v1 picker and the
+deferred-resolve path's expected `BOSS_RACE_SCORING_DEFERRED`
+exit code reads as a FAIL row that would mask the real 5/5
+acceptance signal. Run it solo if you want to verify the
+deferred-resolve contract still holds (see "Boss Race (deferred)"
+section below). Per-run output lands in
 `sims/runs/<timestamp>-<label>/`.
 
 ### Stop-on-first-failure behavior
