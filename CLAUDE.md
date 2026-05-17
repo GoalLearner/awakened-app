@@ -2512,6 +2512,28 @@ Every meaningful change must:
 
 The current state is `styles.css?v=288`, `app.js?v=394`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.280`, `APP_BUILD_TAG = '2.2.1-w45'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
+### Hall of Fame write isolation (v3 Phase 1z.38)
+
+**Belt-and-suspenders safety before the 1z.36 deploy.** The `weekly_step_records` INSERT in `handlers/leaderboard-submit.ts` is now wrapped in its own `try/catch` so a HoF write failure cannot break the existing leaderboard submit flow.
+
+**Why.** Migration `0009_weekly_step_records.sql` is still pending. If the worker deploys ahead of (or without) that migration, the bare INSERT throws `D1_ERROR: no such table: weekly_step_records`, which would otherwise bubble up and 500 the entire submit — taking down both the current-week `leaderboard_snapshots` upsert AND the 100K Step Club accolade with it. The same risk applies to any transient D1 outage on that one statement.
+
+**What's wrapped:**
+- ONLY the `INSERT INTO weekly_step_records ... ON CONFLICT ... DO UPDATE` statement.
+- Not the `leaderboard_snapshots` upsert above it (core write — failures SHOULD surface as 500 so the client retries).
+- Not the `user_accolades` upsert below it (100K accolade write — same reasoning).
+
+**Failure mode:** logged as `console.warn('[hall-of-fame] weekly_step_records upsert failed; submit continues.', user_id=..., week_start=..., value=..., error=...)`. The submit returns 200 with the authoritative `current_value` + `best_value` from the (successful) `leaderboard_snapshots` read-back. HoF is best-effort historical metadata — a missed write on a flaky tick is recovered automatically by the user's next submit (the same-week `MAX(stored, new)` semantic fills in the gap).
+
+**Tests** (5 new in `leaderboard-submit.test.ts`, suite "Hall of Fame write isolation (1z.38)"):
+1. Submit still returns 200 when the HoF INSERT throws.
+2. `leaderboard_snapshots` upsert still ran (proves we're not skipping the HoF statement entirely).
+3. 100K accolade still awards at >= 100,000 when HoF throws.
+4. Warning is logged with `[hall-of-fame]`, `weekly_step_records`, user_id, and week_start.
+5. Normal HoF write still succeeds on a healthy DB (no false suppression).
+
+**79/79 backend vitest pass.** No schema changes. No frontend changes. No version bumps required. The 1z.36 deploy plan is unchanged and still pending approval — with this isolation in place, deploying the worker AHEAD of migration 0009 is no longer a 500-the-whole-submit risk, only a "HoF will be empty until the migration applies" risk.
+
 ### Hall of Fame spec correction — sim filler allowed, real-only `me_best` (v3 Phase 1z.37)
 
 **Spec change.** Originally (Phase 1z.36) the Hall of Fame was strictly real-users-only on both server and client. Updated product call: at launch the board can read as empty for too long, so the **client** is allowed to merge in simulated filler records so the surface looks populated. The **backend remains real-only** — no sim writes, no sim accolades.

@@ -144,17 +144,44 @@ export async function handleLeaderboardSubmit(
     isSimUser = !!appleSub && appleSub.startsWith(SIM_APPLE_SUB_PREFIX);
 
     if (!isSimUser && weekStart !== null) {
-      const recordId = crypto.randomUUID();
-      await env.DB.prepare(
-        `INSERT INTO weekly_step_records
-           (id, user_id, week_start, steps, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id, week_start) DO UPDATE SET
-           steps      = MAX(weekly_step_records.steps, excluded.steps),
-           updated_at = excluded.updated_at`,
-      )
-        .bind(recordId, session.userId, weekStart, value, now, now)
-        .run();
+      // v3 Phase 1z.38 -- belt-and-suspenders. The weekly_step_records
+      // table is added by migration 0009. If the worker is deployed
+      // ahead of (or without) that migration, this INSERT throws
+      // SqliteError: no such table -- which without isolation would
+      // bubble up and 500 the entire submit, taking down the current-
+      // week leaderboard write AND the 100K accolade award with it.
+      // Wrap ONLY this statement so a HoF write failure degrades to
+      // a logged warning while the rest of the submit completes.
+      //
+      // We intentionally do NOT wrap the leaderboard_snapshots upsert
+      // above or the user_accolades upsert below -- those are core
+      // and a failure there SHOULD surface as 500 so the caller can
+      // retry. HoF is best-effort historical metadata; a missed
+      // record on a flaky write is recoverable via the user's next
+      // submit (same-week MAX-preserve semantics handle the gap).
+      try {
+        const recordId = crypto.randomUUID();
+        await env.DB.prepare(
+          `INSERT INTO weekly_step_records
+             (id, user_id, week_start, steps, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, week_start) DO UPDATE SET
+             steps      = MAX(weekly_step_records.steps, excluded.steps),
+             updated_at = excluded.updated_at`,
+        )
+          .bind(recordId, session.userId, weekStart, value, now, now)
+          .run();
+      } catch (e) {
+        const detail = e instanceof Error ? (e.message || String(e)) : String(e);
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[hall-of-fame] weekly_step_records upsert failed; submit continues.',
+          'user_id=' + session.userId,
+          'week_start=' + weekStart,
+          'value=' + value,
+          'error=' + detail,
+        );
+      }
     }
   }
 

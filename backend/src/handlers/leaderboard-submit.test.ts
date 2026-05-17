@@ -191,6 +191,108 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(wsrInsert).toBeUndefined();
   });
 
+  // ── v3 Phase 1z.38 — Hall of Fame write isolation ──────────────
+  // The weekly_step_records INSERT is wrapped in try/catch so a
+  // missing table (e.g. worker deployed before migration 0009) or
+  // any other transient failure on the HoF write degrades to a
+  // logged warning while the rest of the submit completes normally.
+  describe('Hall of Fame write isolation (1z.38)', () => {
+    // Build a DB that throws on the weekly_step_records INSERT only.
+    // All other prepare(...).run() / .first() calls behave normally.
+    function makeDbWithHofThrow(snapshotRow: { current_value: number; best_value: number }) {
+      const calls: CapturedCall[] = [];
+      return {
+        prepare: (sql: string) => ({
+          bind: (...args: unknown[]) => {
+            calls.push({ sql, binds: args });
+            const isHofWrite = sql.includes('INSERT INTO weekly_step_records');
+            return {
+              all:   async () => ({ results: [], success: true, meta: {} }),
+              first: async () => {
+                if (sql.includes('FROM leaderboard_snapshots')) return snapshotRow;
+                if (sql.includes('FROM users')) return { apple_sub: 'apple_real_user' };
+                return null;
+              },
+              run: async () => {
+                if (isHofWrite) {
+                  throw new Error('D1_ERROR: no such table: weekly_step_records');
+                }
+                return { success: true, meta: { changes: 1 } };
+              },
+            };
+          },
+        }),
+        _calls: () => calls,
+      } as unknown as D1Database & { _calls: () => CapturedCall[] };
+    }
+
+    it('submit still returns 200 when the HoF INSERT throws', async () => {
+      const db  = makeDbWithHofThrow({ current_value: 12000, best_value: 12000 });
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 12000 }), env, session);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { metric: string; current_value: number; best_value: number };
+      expect(body.metric).toBe('step_total');
+      expect(body.current_value).toBe(12000);
+    });
+
+    it('leaderboard_snapshots upsert still ran when HoF throws (core write not skipped)', async () => {
+      const db  = makeDbWithHofThrow({ current_value: 12000, best_value: 12000 });
+      const env = makeEnv(db);
+      await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 12000 }), env, session);
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      const snapInsert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'));
+      expect(snapInsert).toBeDefined();
+      // Belt-and-suspenders: the HoF INSERT was also attempted (proves
+      // we're not just skipping it).
+      const hofInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+      expect(hofInsert).toBeDefined();
+    });
+
+    it('100K accolade still awards when HoF throws and value >= 100000', async () => {
+      const db  = makeDbWithHofThrow({ current_value: 104821, best_value: 104821 });
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 104821 }), env, session);
+      expect(res.status).toBe(200);
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      const accoladeInsert = calls.find(c => c.sql.includes('INSERT INTO user_accolades'));
+      expect(accoladeInsert).toBeDefined();
+      expect(accoladeInsert!.binds).toContain('step_100k_club');
+      expect(accoladeInsert!.binds).toContain('2026-05-17');
+    });
+
+    it('logs a clear warning when the HoF write fails', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const db  = makeDbWithHofThrow({ current_value: 12000, best_value: 12000 });
+        const env = makeEnv(db);
+        await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 12000 }), env, session);
+        expect(warnSpy).toHaveBeenCalled();
+        const msg = warnSpy.mock.calls.map(c => c.join(' ')).join(' ');
+        expect(msg).toMatch(/hall-of-fame/i);
+        expect(msg).toMatch(/weekly_step_records/);
+        expect(msg).toMatch(/user-abc/);
+        expect(msg).toMatch(/2026-05-17/);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('normal HoF write still works when the DB is healthy', async () => {
+      // Uses the standard makeDb (no throw). Mirrors the 1z.36 happy-path
+      // assertion -- ensures the try/catch wrapper doesn't accidentally
+      // suppress successful writes.
+      const db  = makeDb({ current_value: 88420, best_value: 88420 });
+      const env = makeEnv(db);
+      await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 88420 }), env, session);
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      const hofInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+      expect(hofInsert).toBeDefined();
+      expect(hofInsert!.binds[2]).toBe('2026-05-17');
+      expect(hofInsert!.binds[3]).toBe(88420);
+    });
+  });
+
   it('does NOT write weekly_step_records for sim users (apple_sub LIKE sim_test_%)', async () => {
     // Override the users SELECT to return a sim apple_sub. The default
     // helper returns 'apple_real_user'; this test re-stubs to return a
