@@ -2510,7 +2510,197 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=287`, `app.js?v=392`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.277`, `APP_BUILD_TAG = '2.2.1-w42'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=287`, `app.js?v=392`, `auth.js?v=14`, `simulated-leaderboard.js?v=5`, `sw.js v5.278`, `APP_BUILD_TAG = '2.2.1-w43'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Simulated leaderboard weekly-step cap + Hall of Fame plan (v3 Phase 1z.35)
+
+**Two-part task.** Part 1 (shipped now): cap simulated step totals at 45,555/week and retune the bot cast so the natural distribution looks varied and realistic. Part 2 (planning only): document the Weekly Steps Hall of Fame schema, finalization strategy, and UI integration — no migration, no endpoint, no UI built yet, pending explicit approval.
+
+---
+
+#### Part 1 — Simulated leaderboard cap (shipped)
+
+**Problem.** With the new weekly-scoped leaderboard live, the simulated bots' end-of-week cumulative totals were running up to ~99,400 (ShadowMonarch_K's `avgDailySteps: 14200 × 7`). That looked like bots chasing the 100K Step Club threshold, and a bot saturating ~99k visually risked being indistinguishable from a real 100K-Club hunter in the rankings.
+
+**Audit before fix** (top bot avgDailySteps × 7, Sat-end of week):
+- ShadowMonarch_K: ~99,400/wk
+- AscendantNova: ~87,500/wk
+- ghostlift: ~75,600/wk
+- Marcus T.: ~67,200/wk
+- Sienna K.: ~61,600/wk
+- voidwalker_88: ~51,800/wk
+- Jordan F.: ~43,400/wk (right at cap)
+- AwakenedRen: ~33,600/wk
+- Priya N.: ~25,900/wk
+- nightowl: ~16,800/wk
+
+7 of 10 bots routinely exceeded the 45,555 cap.
+
+**Fix in `simulated-leaderboard.js`** (rev v4 → v5):
+- Centralized `SIM_STEP_WEEKLY_CAP = 45555` constant. Exposed on `window.SimulatedLeaderboard.SIM_STEP_WEEKLY_CAP` so any future Hall of Fame UI can guard against displaying simulated values where they don't belong.
+- Hard cumulative clamp at the end of `botStepsThroughDay()`: `if (sum > SIM_STEP_WEEKLY_CAP) sum = SIM_STEP_WEEKLY_CAP`. Single source of truth — defense at the cumulative-sum boundary catches every roll combination.
+- Defense-in-depth clamp in the merge tie-breaker: if a bot already at the cap shares the real user's value, the `+137` nudge could push past — clamp again right after.
+- Bot cast retuned to spread across the four product-spec bands (Light / Normal / Active / High but realistic) with `avgDailySteps` lowered by ~60–75%. PRNG seeds (`weekStartKey + bot.name + dayIdx`) are unchanged so determinism within a given week is preserved — same week produces the same totals for any given bot, just shifted to a lower mean.
+
+**Verified distribution (Sat-end of week 2026-05-17)**:
+| Bot | Weekly total | Band |
+|---|---|---|
+| ShadowMonarch_K | 39,630 | High but realistic (36k–45,555) |
+| AscendantNova | 38,182 | High but realistic |
+| ghostlift | 31,383 | Active (22k–36k) |
+| Marcus T. | 23,541 | Active |
+| Sienna K. | 23,193 | Active |
+| voidwalker_88 | 18,519 | Normal (8k–22k) |
+| Jordan F. | 12,928 | Normal |
+| AwakenedRen | 7,867 | Normal/Light boundary |
+| Priya N. | 3,594 | Light (2k–8k) |
+| nightowl | 1,714 | Just-starting |
+
+Stress test across 200 randomly-chosen week keys: max bot weekly = exactly 45,555 (cap engages on rare tail rolls; never exceeded). Tie-bump nudge re-clamp test: 0 bots over cap when real user value = cap.
+
+**100K Step Club isolation:** with the cap at 45,555 (less than half the 100K threshold), no bot can visually appear to be in or near 100K Club territory. Sims are still client-only display — they're never sent to backend, never appear in `user_accolades`, never appear in the real top-N response.
+
+**Files changed (frontend only):** `simulated-leaderboard.js`, `index.html` (version bump), `sw.js` (cache bump), `app.js` (build tag), `CLAUDE.md`.
+
+Bumps: `simulated-leaderboard.js?v=5`, `sw.js v5.278`, `APP_BUILD_TAG '2.2.1-w43'`. `APP_VERSION` unchanged.
+
+---
+
+#### Part 2 — Weekly Steps Hall of Fame · IMPLEMENTATION PLAN (not shipped)
+
+**Status: planning only.** No migration, no endpoint, no UI built. Awaiting approval per `Do not implement full backend historical leaderboard until I approve`.
+
+**Goal.** Permanent record board showing the highest weekly step totals ever achieved by real users. A user can appear multiple times for multiple high weeks. Does not reset. Real users only. Separate from `Steps · this week`.
+
+##### Schema proposal — `weekly_step_records`
+
+```sql
+-- migrations/0009_weekly_step_records.sql  (NOT YET WRITTEN)
+CREATE TABLE weekly_step_records (
+  id          TEXT PRIMARY KEY,          -- UUID
+  user_id     TEXT NOT NULL,
+  week_start  TEXT NOT NULL,             -- 'YYYY-MM-DD' Sunday-UTC, same key as leaderboard_snapshots
+  steps       INTEGER NOT NULL,          -- weekly cumulative total at time of last write
+  updated_at  INTEGER NOT NULL,          -- Unix ms; bumped on every overwrite
+  created_at  INTEGER NOT NULL,          -- Unix ms; set on initial INSERT
+  UNIQUE (user_id, week_start),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_weekly_step_records_steps ON weekly_step_records (steps DESC);
+CREATE INDEX idx_weekly_step_records_week  ON weekly_step_records (week_start);
+```
+
+**Why not `alias` denormalized:** lookup at read time via `JOIN users u ON u.id = wsr.user_id` keeps the table small and uses the existing alias edit path. Adds one JOIN to the read query; acceptable for a top-100 read.
+
+**Why not `rank_at_finalize`:** computed at read time. Adds complexity for no display value — the Hall of Fame ranks are always the current global ranking among historical records, not the rank at the moment of finalization.
+
+**Why not `week_end`:** derivable from `week_start + 6 days`. Storing it would just be redundant.
+
+##### Finalization strategy — recommended: **Option A (write on every submit)**
+
+Recommendation: **Option A — upsert the weekly_step_records row on every authenticated `step_total` submit.** The current week is included in the Hall of Fame as soon as a user submits.
+
+- **Pros:** simpler (no cron, no scheduled worker, no end-of-week job); record is always live; identical write path to the existing leaderboard_snapshots upsert; if a worker outage misses the Sunday boundary nothing is lost; users see their PR ascending in real time.
+- **Cons:** the current in-progress week is visible alongside completed weeks. Mitigation: label the column `Week of MM/DD–MM/DD` and let the user infer freshness from the date range. Add a small `· in progress` tag next to the current Sunday-UTC week's row if needed.
+- **Why not Option B (end-of-week finalize):** requires a scheduled task / Cron Trigger on the Worker. Adds operational surface area (cron failures, replay handling). The Option A write-path is already on the hot path; doing it there is one extra D1 row touch per submit.
+
+**The upsert (in `leaderboard-submit.ts`, inside the existing `if (metric === 'step_total')` block):**
+```sql
+INSERT INTO weekly_step_records (id, user_id, week_start, steps, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(user_id, week_start) DO UPDATE SET
+  steps      = MAX(weekly_step_records.steps, excluded.steps),  -- weekly best wins
+  updated_at = excluded.updated_at;
+```
+
+`MAX(stored, new)` semantics means a same-week resubmit with a lower number (rare — would only happen on cache/replay edge cases) cannot reduce the record. Each user's weekly record is the maximum they hit during that week.
+
+Sim-user filter: the same `apple_sub.startsWith('sim_test_')` guard from the 100K accolade path applies. Sim users never get weekly_step_records rows.
+
+##### Endpoint — `GET /v1/leaderboard/hall-of-fame`
+
+```
+GET /v1/leaderboard/hall-of-fame?metric=step_total&limit=100
+Auth: required (same JWT gate as /top)
+Rate limit: new RL_LEADERBOARD_HOF binding (same shape as existing RL_LEADERBOARD_TOP)
+```
+
+Response shape:
+```json
+{
+  "metric": "step_total",
+  "records": [
+    { "rank": 1, "alias": "Richie",   "steps": 104821, "week_start": "2026-05-17" },
+    { "rank": 2, "alias": "Alex",     "steps":  98400, "week_start": "2026-05-24" },
+    { "rank": 3, "alias": "Richie",   "steps":  92110, "week_start": "2026-06-07" }
+  ],
+  "me_best": { "rank": 12, "steps": 41200, "week_start": "2026-04-26" } | null
+}
+```
+
+Query:
+```sql
+SELECT u.alias AS alias, wsr.steps AS steps, wsr.week_start AS week_start
+FROM weekly_step_records wsr
+JOIN users u ON u.id = wsr.user_id
+ORDER BY wsr.steps DESC, wsr.week_start ASC  -- ties broken by older week first
+LIMIT ?
+```
+
+`me_best` = the calling user's highest historical week (one SELECT + one COUNT for rank).
+
+##### Frontend integration — Global Leaderboard sheet with tabs
+
+```
+┌────────────────────────────────────────┐
+│  GLOBAL LEADERBOARD              ✕    │
+│  Steps                                 │
+│  ┌──────────┐  ┌────────────────┐     │
+│  │This Week │  │ Hall of Fame   │     │  ← segmented control
+│  └──────────┘  └────────────────┘     │
+│                                        │
+│  [tab content]                         │
+└────────────────────────────────────────┘
+```
+
+- Reuse `#lb-rank-sheet`. Add a segmented control between the title and the list. Default tab: This Week (current behavior preserved).
+- Hall of Fame tab renders rows as `#1 Richie — 104,821 steps — Week of May 17–May 23`. Use the existing `lbBuildRankList` shape with a third metadata column.
+- "Steps" parent title; the two tabs replace the `Steps · this week` single-line title.
+- `me_best` is rendered as the "your best week" footer line (parallels the existing "your rank #N" pattern).
+- Sleep/bedtime metrics: keep their single-list rendering (no Hall of Fame for streak metrics in v1).
+
+##### Simulated leaderboard interaction
+
+- The Hall of Fame **never includes simulated bots.** No code path in `simulated-leaderboard.js` merges into the Hall of Fame response. The endpoint reads from `weekly_step_records` which never receives sim writes (sim users are filtered at submit, and sims don't submit anyway — they're client-only).
+- Sparse-board fallback: if `records.length === 0`, render the same "Be the first to rank" empty state that the This Week tab uses.
+
+##### 100K Step Club interaction
+
+- Independent. The Hall of Fame is a separate display surface. The accolade write in `leaderboard-submit.ts` keeps doing what it does. Real users with `steps >= 100000` will naturally appear at the top of Hall of Fame AND get the accolade — both paths fire from the same submit.
+- Sim users never qualify for either (cap at 45,555 in client; never reach 100,000; never written to backend tables anyway).
+
+##### Migration safety / deploy order (when approved)
+
+1. Write `migrations/0009_weekly_step_records.sql`.
+2. Apply remote: `wrangler d1 execute awakened-db --remote --file=...`
+3. Add `RL_LEADERBOARD_HOF` ratelimit binding in `wrangler.toml`.
+4. Implement `handlers/hall-of-fame.ts` + route wiring.
+5. Extend `handlers/leaderboard-submit.ts` with the weekly_step_records upsert (idempotent — no harm if it runs against the not-yet-deployed table, but order matters: migration BEFORE deploy).
+6. Add backend tests in `leaderboard-submit.test.ts` + new `hall-of-fame.test.ts`.
+7. Frontend: extend `LB_METRIC_META` / `openLeaderboardRanking` with the tab control.
+8. Bump versions + ship.
+
+**Estimated scope:** ~1 migration + 1 new handler + ~50 LOC change in leaderboard-submit + ~100 LOC frontend + 8–10 vitest cases. About the same size as Phase 1z.33.
+
+**Open product questions** (need answers before implementation begins):
+1. **Include current week, or completed-weeks-only?** Recommendation: include current week with a `· in progress` tag.
+2. **One record per user per week, or unlimited?** Recommendation: unique `(user_id, week_start)` (one row per user per week, but a user can appear many times in the top-N across different weeks).
+3. **Min steps to qualify?** Recommendation: yes, `steps >= 10000` filter at write time to avoid the leaderboard being noise. Easily changed later.
+4. **Display limit?** Recommendation: top 100.
+5. **Hall of Fame name confirmation?** Going with "Hall of Fame" per the suggested options unless overridden.
+
+Awaiting approval to move from plan → implementation.
 
 ### iOS post-save freeze fix — Edit Habit + pack-add flows (v3 Phase 1z.34)
 

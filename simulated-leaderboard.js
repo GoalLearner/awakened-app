@@ -1,9 +1,24 @@
 // ─────────────────────────────────────────────────────────────
-// simulated-leaderboard.js (v3 Phase 1s — rev v4: 10 fixed bots)
+// simulated-leaderboard.js (v3 Phase 1z.35 — rev v5: capped bots)
 //
 // Client-side ONLY. Injects 10 simulated hunters into the live
 // leaderboard render so sparse boards still feel populated.
 // NEVER sent to the backend, NEVER persisted to localStorage.
+//
+// v5 / Phase 1z.35 changes:
+//   - Hard cap: no simulated weekly step total exceeds
+//     SIM_STEP_WEEKLY_CAP (45,555). This is well below the
+//     100K Step Club threshold (100,000) so bots can never
+//     visually qualify for that accolade.
+//   - Bot cast retuned across the four suggested bands so the
+//     natural distribution feels realistic and spread out
+//     instead of saturating the cap:
+//       Light (2k–8k) · Normal (8k–22k) · Active (22k–36k)
+//       · High but realistic (36k–45,555)
+//   - Determinism + seeded PRNG layout unchanged. Same week
+//     produces the same totals before and after — only the
+//     bots' avgDailySteps / stepStdDev shifted and the
+//     cumulative is clamped to the cap at the end.
 //
 // Design (rev v4):
 //   - FIXED cast of 10 bots. Same 10 names every week, every
@@ -44,6 +59,15 @@
   // ─── KILL SWITCH ──────────────────────────────────────────
   const SIMULATE_USERS = true;
 
+  // ─── HARD CAP — v3 Phase 1z.35 ────────────────────────────
+  // No simulated weekly step total is ever allowed to exceed
+  // this number. Well below the 100K Step Club threshold so
+  // bots can never appear to be chasing or qualifying for the
+  // accolade. Single source of truth — both the cumulative
+  // clamp in botStepsThroughDay() and the post-tie-bump clamp
+  // in the merge reference this constant.
+  const SIM_STEP_WEEKLY_CAP = 45555;
+
   // ─── THE CAST OF 10 ───────────────────────────────────────
   // Each bot has an archetype that drives ALL three metrics so
   // they feel like a real person, not three independent rolls.
@@ -55,28 +79,40 @@
   //   sleepJitter    — how much sleep can vary week to week
   //   bedtimeJitter  — same for bedtime
   //
-  // Spread across the leaderboard so the board has top performers,
-  // a middle band, and a long tail with realistic-feeling streaks.
+  // v5 retune (Phase 1z.35): avgDailySteps lowered so the natural
+  // 7-day mean spreads across the four product-spec bands instead
+  // of saturating the cap. Approximate weekly means at avg×7:
+  //   ShadowMonarch_K  ~40,600   (High but realistic)
+  //   AscendantNova    ~36,400   (High but realistic)
+  //   ghostlift        ~30,800   (Active)
+  //   Marcus T.        ~25,900   (Active)
+  //   Sienna K.        ~23,100   (Active / Normal)
+  //   voidwalker_88    ~18,200   (Normal)
+  //   Jordan F.        ~14,700   (Normal)
+  //   AwakenedRen      ~10,500   (Normal)
+  //   Priya N.         ~7,000    (Light)
+  //   nightowl         ~3,850    (Light)
+  // The hard SIM_STEP_WEEKLY_CAP clamp catches the high tail of
+  // top-tier bots so they can never exceed 45,555 even on a
+  // luckiest-week-ever roll.
   const BOTS = [
-    // Top tier — high-volume disciplined hunters
-    { name: 'ShadowMonarch_K', avgDailySteps: 14200, stepStdDev: 2800, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4 },
-    { name: 'AscendantNova',   avgDailySteps: 12500, stepStdDev: 2400, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3 },
+    // High but realistic (36,000–45,555)
+    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4 },
+    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3 },
 
-    // Strong mid-pack
-    { name: 'ghostlift',       avgDailySteps: 10800, stepStdDev: 2200, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2 },
-    { name: 'Marcus T.',       avgDailySteps:  9600, stepStdDev: 1900, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2 },
-    { name: 'Sienna K.',       avgDailySteps:  8800, stepStdDev: 1700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2 },
+    // Active (22,000–36,000)
+    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2 },
+    { name: 'Marcus T.',       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2 },
+    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2 },
 
-    // Average users
-    { name: 'voidwalker_88',   avgDailySteps:  7400, stepStdDev: 1800, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2 },
-    { name: 'Jordan F.',       avgDailySteps:  6200, stepStdDev: 1600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1 },
+    // Normal (8,000–22,000)
+    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2 },
+    { name: 'Jordan F.',       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1 },
+    { name: 'AwakenedRen',     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1 },
 
-    // Light / inconsistent
-    { name: 'AwakenedRen',     avgDailySteps:  4800, stepStdDev: 1500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1 },
-    { name: 'Priya N.',        avgDailySteps:  3700, stepStdDev: 1300, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1 },
-
-    // Just-starting
-    { name: 'nightowl',        avgDailySteps:  2400, stepStdDev: 1100, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1 },
+    // Light (2,000–8,000)
+    { name: 'Priya N.',        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1 },
+    { name: 'nightowl',        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1 },
   ];
 
   // ─── PRNG ─────────────────────────────────────────────────
@@ -155,11 +191,16 @@
   // inclusive. This is what shows on the leaderboard for the
   // current calendar week. Monotonic non-decreasing as dayIdx
   // grows since each day's roll is ≥ 0.
+  // v3 Phase 1z.35 -- hard cap at SIM_STEP_WEEKLY_CAP. Single
+  // source of truth for the bot weekly ceiling; well below the
+  // 100K Step Club threshold so a bot can never visually
+  // qualify for that accolade no matter how lucky the rolls.
   function botStepsThroughDay(weekStartKey, bot, dayIdx) {
     let sum = 0;
     for (let d = 0; d <= dayIdx; d++) {
       sum += rollBotDayStep(weekStartKey, bot, d);
     }
+    if (sum > SIM_STEP_WEEKLY_CAP) sum = SIM_STEP_WEEKLY_CAP;
     return sum;
   }
 
@@ -219,6 +260,10 @@
       // Avoid an exact tie with the real user (cosmetic — the
       // gold "ME" row should still feel distinct).
       if (val === realValue) val = metric === 'step_total' ? val + 137 : val + 1;
+      // v3 Phase 1z.35 -- defense-in-depth: re-clamp after the
+      // tie-bump so a bot already at the cap (e.g. saturated)
+      // can't be nudged 137 over by the tie-breaker.
+      if (metric === 'step_total' && val > SIM_STEP_WEEKLY_CAP) val = SIM_STEP_WEEKLY_CAP;
       fakes.push({ alias: bot.name, current_value: val, _sim: true });
     }
 
@@ -250,9 +295,10 @@
 
   if (typeof window !== 'undefined') {
     window.SimulatedLeaderboard = {
-      SIMULATE_USERS:    SIMULATE_USERS,
-      merge:             mergeWithSimulated,
-      BOTS:              BOTS,
+      SIMULATE_USERS:        SIMULATE_USERS,
+      SIM_STEP_WEEKLY_CAP:   SIM_STEP_WEEKLY_CAP,
+      merge:                 mergeWithSimulated,
+      BOTS:                  BOTS,
       // Exposed for dev / debug / preview QA
       _hashKey:          hashKey,
       _mulberry32:       mulberry32,
