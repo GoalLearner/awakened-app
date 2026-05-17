@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w46';
+  const APP_BUILD_TAG = '2.2.1-w47';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17465,18 +17465,58 @@
     }
   }
 
-  // v3 Phase 1z.37 — Hall of Fame display merge. Combines the real
-  // backend response with deterministic simulated filler records so
-  // the board doesn't read as empty at launch. The merge is CLIENT-
-  // ONLY: sims are never persisted, never sent to the backend, never
-  // affect me_best, and are capped at SIM_STEP_WEEKLY_CAP (45,555)
-  // by the generator. Real records can exceed the cap and will
-  // naturally sort above all sims after the merge re-sort.
+  // v3 Phase 1z.37/40 — Hall of Fame display merge. Combines real
+  // backend records with deterministic simulated filler so the
+  // board isn't empty at launch. Sims are CLIENT-ONLY: never
+  // persisted, never sent to the backend, never written to D1,
+  // and never used to derive accolades. Sims are capped at
+  // SIM_STEP_WEEKLY_CAP (45,555) by the generator; real records
+  // can exceed the cap and will naturally sort above all sims
+  // after the merge re-sort.
   //
-  // Returns the same shape as the backend records array, with
-  // continuous rank numbers across the merged list.
-  function _lbMergeHofRecords(realRecords) {
+  // 1z.40 fix: returns BOTH the merged record list AND a
+  // displayed-rank version of me_best. The pinned "YOUR BEST"
+  // card used to render the BACKEND rank (real-records-only),
+  // which was misleading: with 12 sims merged above a real user
+  // at 3,110 steps, the pinned card showed "#1" while the visible
+  // list put the real user at ~#13. The displayed rank now
+  // matches the visible list. The real `me_best.steps` /
+  // `week_start` / `week_end` are still sourced from the backend
+  // response — only the rank number is recomputed against the
+  // merged set.
+  //
+  // Also: if the caller's me_best record isn't already in the
+  // real `records` array (e.g. it fell outside the limit window),
+  // inject it as a synthetic row with `_injectedSelf: true` so
+  // the user appears in the scrollable list, not only in the
+  // pinned card. The injection preserves the same alias/steps/
+  // week_start triple from the backend response.
+  //
+  // Returns: { records: [...], me_best_displayed: {...} | null }
+  function _lbMergeHofRecords(realRecords, realMeBest) {
     const real = Array.isArray(realRecords) ? realRecords.slice() : [];
+    const myAlias = lbGetMyAlias();
+
+    // Inject the user's own me_best record if it isn't already in
+    // the real records list. Matched by (alias, week_start) since
+    // a user can have multiple records across weeks.
+    let injectedMe = null;
+    if (realMeBest && typeof realMeBest.steps === 'number' && myAlias) {
+      const alreadyPresent = real.some(r =>
+        r && r.alias === myAlias && r.week_start === realMeBest.week_start
+      );
+      if (!alreadyPresent) {
+        injectedMe = {
+          alias:        myAlias,
+          steps:        realMeBest.steps,
+          week_start:   realMeBest.week_start,
+          week_end:     realMeBest.week_end,
+          _injectedSelf: true,
+        };
+        real.push(injectedMe);
+      }
+    }
+
     let sims = [];
     try {
       if (typeof window.SimulatedLeaderboard !== 'undefined' &&
@@ -17486,22 +17526,44 @@
         sims = window.SimulatedLeaderboard.getHallOfFameRecords(dateKey, 'step_total') || [];
       }
     } catch (_) { sims = []; }
-    // Defensive: if a real user happens to share an alias with a bot,
-    // drop the sim row so the real user's record isn't duplicated.
-    if (sims.length && real.length) {
+    // Defensive: if a real user happens to share an alias with a
+    // bot, drop the sim row so the real user's record isn't
+    // duplicated. This includes the caller's own alias.
+    if (sims.length) {
       const realAliases = new Set(real.map(r => r && r.alias).filter(Boolean));
+      if (myAlias) realAliases.add(myAlias);
       sims = sims.filter(s => !realAliases.has(s.alias));
     }
     const merged = real.concat(sims);
-    // Re-sort: steps DESC, then older week_start ASC (matches backend
-    // convention). Real records over 45,555 always rank above sims.
+    // Re-sort: steps DESC, then older week_start ASC (matches
+    // backend convention). Real records over 45,555 always rank
+    // above sims.
     merged.sort((a, b) => {
       const da = (b.steps || 0) - (a.steps || 0);
       if (da !== 0) return da;
       return String(a.week_start || '').localeCompare(String(b.week_start || ''));
     });
     merged.forEach((r, i) => { r.rank = i + 1; });
-    return merged;
+
+    // Recompute the displayed rank for the pinned YOUR BEST card.
+    // Match by (alias, week_start) so a user with multiple records
+    // gets the correct rank for their *best* week. Falls back to
+    // the backend rank if for some reason the row isn't found
+    // (shouldn't happen after the injection above, but defensive).
+    let meBestDisplayed = null;
+    if (realMeBest) {
+      const myRow = myAlias
+        ? merged.find(r => r && r.alias === myAlias && r.week_start === realMeBest.week_start)
+        : null;
+      meBestDisplayed = {
+        rank:       myRow ? myRow.rank : (typeof realMeBest.rank === 'number' ? realMeBest.rank : -1),
+        steps:      realMeBest.steps,
+        week_start: realMeBest.week_start,
+        week_end:   realMeBest.week_end,
+      };
+    }
+
+    return { records: merged, me_best_displayed: meBestDisplayed };
   }
 
   // v3 Phase 1z.36/37 — Hall of Fame tab renderer.
@@ -17520,14 +17582,18 @@
 
     // Phase 1: render from cache instantly if fresh. Re-run the sim
     // merge on every render — sims are never cached, only the real
-    // backend response is.
+    // backend response is. v3 1z.40: me_best rank is recomputed
+    // against the merged list so the pinned card matches the visible
+    // ranking (it used to show backend-only rank, e.g. "#1", while
+    // the user actually appeared at ~#13 once sims were merged in).
     const cached = lbHofCacheRead(metric);
     if (cached) {
+      const m = _lbMergeHofRecords(cached.records, cached.me_best);
       if (meBestEl) {
-        meBestEl.innerHTML = lbBuildHofMeBest(cached.me_best);
+        meBestEl.innerHTML = lbBuildHofMeBest(m.me_best_displayed);
         meBestEl.classList.remove('hidden');
       }
-      listEl.innerHTML = lbBuildHofList(_lbMergeHofRecords(cached.records));
+      listEl.innerHTML = lbBuildHofList(m.records);
     } else {
       if (meBestEl) meBestEl.classList.add('hidden');
       listEl.innerHTML = lbBuildLoadingSkeleton();
@@ -17546,24 +17612,25 @@
       // Cache the REAL response only — sims are regenerated at render
       // time, never persisted. Mirrors the "This Week" cache discipline.
       lbHofCacheWrite(metric, result.records, result.me_best);
+      const m = _lbMergeHofRecords(result.records, result.me_best);
       if (meBestEl) {
-        meBestEl.innerHTML = lbBuildHofMeBest(result.me_best);
+        meBestEl.innerHTML = lbBuildHofMeBest(m.me_best_displayed);
         meBestEl.classList.remove('hidden');
       }
-      listEl.innerHTML = lbBuildHofList(_lbMergeHofRecords(result.records));
+      listEl.innerHTML = lbBuildHofList(m.records);
     } else if (result && result.code === 'EXPIRED') {
       window.location.reload();
     } else if (!cached) {
       // No cache + fetch failed. Show sims as offline-friendly filler
       // so the board isn't completely empty during a transient outage.
       // me_best stays hidden — we have no real data to attribute.
-      const sims = _lbMergeHofRecords([]);
-      if (sims.length > 0) {
+      const m = _lbMergeHofRecords([], null);
+      if (m.records.length > 0) {
         if (meBestEl) {
           meBestEl.innerHTML = lbBuildHofMeBest(null);
           meBestEl.classList.remove('hidden');
         }
-        listEl.innerHTML = lbBuildHofList(sims);
+        listEl.innerHTML = lbBuildHofList(m.records);
       } else {
         listEl.innerHTML = lbBuildErrorState(result && result.code);
       }
@@ -17656,13 +17723,18 @@
     const overlay = document.getElementById('lb-rank-overlay');
     const sheet   = document.getElementById('lb-rank-sheet');
     const close   = document.getElementById('lb-rank-close');
-    if (overlay) overlay.addEventListener('click', closeLeaderboardRanking);
     if (close)   close.addEventListener('click', closeLeaderboardRanking);
-    if (sheet && typeof attachSheetDismissGesture === 'function') {
-      attachSheetDismissGesture(sheet, overlay, closeLeaderboardRanking, {
-        scrollTarget: '.lb-rank-list',
-      });
-    }
+    // v3 Phase 1z.40 — leaderboard sheet is X-only close.
+    // TestFlight repro: scrolling the Hall of Fame list (longer than
+    // any other sheet in the app) triggered the drag-dismiss gesture
+    // and closed the sheet mid-scroll. Disabling both the overlay-
+    // tap close AND the drag gesture for this sheet fixes the issue.
+    // The X button in the top-right (#lb-rank-close, wired above) is
+    // now the only close path. Other sheets keep their existing
+    // dismiss behaviour — this scope change is leaderboard-only.
+    // Voiding the `sheet`/`overlay` references here keeps lint happy
+    // and signals intent to future readers.
+    void sheet; void overlay;
     // v3 Phase 1z.36 — segmented control (This Week / Hall of Fame).
     // Delegated handler on the tabs container so the buttons can be
     // re-rendered later without rewiring.

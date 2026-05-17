@@ -2510,7 +2510,38 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=289`, `app.js?v=395`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.281`, `APP_BUILD_TAG = '2.2.1-w46'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=289`, `app.js?v=396`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.282`, `APP_BUILD_TAG = '2.2.1-w47'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Hall of Fame smoke-test fixes — me_best rank + sheet scroll-dismiss (v3 Phase 1z.40)
+
+Two distinct TestFlight bugs from the first real-device pass over Hall of Fame.
+
+**Bug 1: YOUR BEST card showed misleading rank.** Reporter's pinned card said `#1 · 3,110 steps · Week of May 17–May 23`, but the visible list had 12 simulated users (top: ShadowMonarch_K at 44,412) ranked above the real user's record. The pinned `#1` was the backend `me_best.rank` (real-records-only), which doesn't account for the client-side sim merge. Visible list said `#13`, pinned card said `#1` — contradiction.
+
+**Root cause.** The pinned "YOUR BEST" card was rendered from `result.me_best` (or `cached.me_best`) directly. The backend (correctly) computes `me_best.rank` against `weekly_step_records` only — sims aren't in the table. Once the client merges 12 sims above a low-step real record, the backend rank is stale.
+
+**Fix.** Refactored `_lbMergeHofRecords` to take BOTH the real `records` array AND `realMeBest`. Returns `{ records, me_best_displayed }` where `me_best_displayed.rank` is computed by scanning the merged list for `(alias, week_start)` matching the backend response. `me_best.steps`, `week_start`, `week_end` still come from the backend response — only the rank is recomputed.
+
+Additionally, if the user's `me_best` record isn't already in the real `records` array (e.g. fell outside the limit window because too many sims sit above it), the merge injects a synthetic row with `_injectedSelf: true` so the user appears in the scrollable list, not only the pinned card. Sim aliases collide with the user's alias are dropped defensively (same pattern already used for real-vs-sim alias collisions).
+
+Verified end-to-end with the reporter's exact scenario:
+```
+Backend me_best.rank:   #1   (real-records-only)
+Displayed me_best.rank: #13  (after merge — matches visible list)
+```
+The pinned card and the visible row at position #13 now agree.
+
+**Bug 2: Leaderboard sheet closed when scrolling.** The Hall of Fame list is the longest content of any sheet in the app, and `attachSheetDismissGesture(... { scrollTarget: '.lb-rank-list' })` mis-fired on iOS during legitimate scrolls. Compounding it: `overlay.addEventListener('click', closeLeaderboardRanking)` meant any accidental rubber-banded background tap also dismissed.
+
+**Fix.** Made `#lb-rank-sheet` X-only close. Removed both `overlay click → close` AND the `attachSheetDismissGesture` wiring. The X button (`#lb-rank-close`) is now the sole close path. Native iOS scroll inside `.lb-rank-body` works without contention from a gesture handler. **Scope-limited:** other sheets (streaks, class detail, step-100K, build picker, etc.) keep their existing drag-dismiss + overlay-tap behavior unchanged. Grep confirms only the leaderboard sheet's `attachSheetDismissGesture` call was removed.
+
+**Files changed (frontend only, 5):** `app.js` (merge refactor + 3 render call sites + sheet setup), `index.html` (version bumps for app.js), `sw.js` (cache bump), `CLAUDE.md`. No `styles.css` change, no `auth.js`, no `simulated-leaderboard.js`. Sim generator's 45,555 cap is untouched.
+
+**Real users visibility.** Confirmed: backend handler at `/v1/leaderboard/hall-of-fame` is correct — it returns all real records in `weekly_step_records` (currently 1 row, the reporter's). Pre-1z.40 they only appeared in the pinned card because the limit window + merge couldn't accommodate them; post-1z.40 they appear in BOTH places (pinned card with correct displayed rank + a row in the merged list flagged via the `_injectedSelf` path). The table starts at 0 real rows and grows as users submit — no backfill, no migration. Once a second real user submits, both appear in the merged list automatically.
+
+**Backend untouched.** No D1 schema changes, no handler logic changes, no migrations. The backend still produces real-only `me_best` — only the client's rendering of that value changed.
+
+Bumps: `app.js?v=396`, `sw.js v5.282`, `APP_BUILD_TAG '2.2.1-w47'`. `APP_VERSION` unchanged at `2.2.1`. No `styles.css` change.
 
 ### Boss detail Souls balance readout (v3 Phase 1z.39)
 
