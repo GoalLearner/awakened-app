@@ -22169,21 +22169,32 @@ body.habit-drag-active * {
    the outer one is the soft glow. Frame survives the per-rank
    inner-glow rules already applied to .sc-rank-hero because
    it's an OUTER box-shadow halo, not an inset. */
+/* Base prestige rule -- specificity intentionally scoped to
+   `.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige` so it
+   wins over `.sc-card--profile .sc-rank-hero[data-rank="X"]`
+   (both have specificity 0,3,0; cascade order decides; this rule
+   ships LATER in the file so it wins). */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige,
 .sc-rank-hero--prestige {
   position: relative;
   cursor: pointer;
   z-index: 1;
+}
+
+/* E-rank prestige frame -- gold ring + soft outer glow + violet
+   inner glow (E uses violet for the disc; the per-rank rule for
+   data-rank="E" sets violet which we preserve as the inset). */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="E"],
+.sc-rank-hero--prestige {
   box-shadow:
     0 0 0 3px rgba(245, 184, 66, 0.95),     /* gold ring */
     0 0 14px 2px rgba(245, 184, 66, 0.35),  /* soft outer glow */
-    inset 0 0 14px rgba(167, 139, 250, 0.30); /* preserve violet inner glow on E rank */
+    inset 0 0 14px rgba(167, 139, 250, 0.30); /* violet inner glow (E) */
 }
 
-/* Per-rank inner glow already covered by the existing
-   .sc-card--profile .sc-rank-hero[data-rank=...] rules; the
-   prestige frame layers OUTSIDE those. For non-E ranks, suppress
-   the violet inset above so the rank's own color glow shows
-   through. */
+/* Per-rank prestige variants. Each preserves the gold outer ring +
+   glow and overrides the inner inset glow to match the rank's
+   own tier color. */
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="D"],
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="C"] {
   box-shadow:
@@ -22223,6 +22234,26 @@ body.habit-drag-active * {
 .sc-rank-hero--prestige:focus-visible {
   outline: 2px solid rgba(245, 184, 66, 0.85);
   outline-offset: 4px;
+}
+
+/* Spark crest at the top of the frame -- small gold upward-
+   pointing triangle. The Status card's overflow: hidden would
+   clip it if rendered on .sc-rank-hero alone, so we anchor it
+   with `top: -4px` so it sits ON the ring rather than above the
+   card boundary. Scaled to read at 54px disc size. */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 8px;
+  background: #f5b842;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  filter: drop-shadow(0 0 4px rgba(245, 184, 66, 0.7));
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* First-unlock pulse — single 600ms ping. JS adds .is-new and

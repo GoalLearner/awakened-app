@@ -2510,7 +2510,36 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=283`, `app.js?v=386`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.271`, `APP_BUILD_TAG = '2.2.1-w36'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=284`, `app.js?v=387`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.272`, `APP_BUILD_TAG = '2.2.1-w37'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### 100K prestige frame CSS specificity fix + Spark crest (v3 Phase 1z.29)
+
+Bug observed in browser preview of `2.2.1-w36`: the 100K Step Club sheet was opening correctly (proving `accolades.has()` returned `true` AND `data-prestige="step_100k_club"` was set on the rank disc), but the gold prestige frame was not rendering on E-rank discs. Same fall-through would have affected anyone seeing the empty-state baseline color via the per-rank CSS.
+
+**Root cause:** CSS specificity. The base prestige rule `.sc-rank-hero--prestige` had specificity `(0,1,0)`. The existing per-rank rule `.sc-card--profile .sc-rank-hero[data-rank="E"]` has specificity `(0,3,0)` and sets its own `box-shadow` for the violet inner glow. Both rules target `box-shadow`; the per-rank rule wins → the gold ring rule never paints. 1z.27 had added explicit per-rank overrides for D, C, B, A, S, S+ but **missed E** — E-rank users fell through to the unscoped base rule, which lost.
+
+**Fix:**
+- New scoped E-rank rule `.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="E"]` at `(0,3,0)` matching the per-rank specificity. Cascade order decides ties; the prestige rules ship later in the file, so they win cleanly.
+- Restructured the base rule into two parts: a position/cursor/z-index block (always applies) + an E-rank scoped block for the shadow (matches per-rank specificity).
+- Kept the legacy unscoped `.sc-rank-hero--prestige { box-shadow: ... }` selector as a fallback for any future non-`.sc-card--profile` consumer.
+
+**Bonus addition (was specced, not built in 1z.27):** small gold upward-pointing **Spark crest** at the top of every prestige frame, rendered via `::before` pseudo-element on `.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige`. 10×8px gold triangle with soft drop-shadow, anchored at `top: -4px` so it overlaps the ring but stays within `.sc-card`'s `overflow: hidden` clip (the disc has 12px of `.sc-hero` padding above it).
+
+**Verified visually:** with the local dev mock accolade injected via the snippet from prior turn, the E-rank disc now shows:
+- Gold ring outside the violet disc
+- Soft gold outer glow
+- Small Spark crest perched at the top
+- Violet inner glow preserved
+- All other ranks (D-S+) unchanged from 1z.27
+
+**No JS changes.** Pure CSS specificity fix + pseudo-element addition.
+
+**Anti-patterns:**
+- Don't write new `.sc-rank-hero` rules without `.sc-card--profile` scope and at least matching `(0,3,0)` specificity. The per-rank shadow rules will silently win otherwise.
+- Don't omit `data-rank="E"` from per-rank overrides for any new state that needs to override the rank color. Every rank from E through S+ must be covered.
+- Don't add `overflow: hidden` to `.sc-rank-hero` itself — that would clip both the gold ring (which is `box-shadow` outside the border) AND the Spark crest pseudo-element.
+
+Bumps: `styles.css?v=284`, `app.js?v=387` (build-tag-only change), `sw.js v5.272`, `APP_BUILD_TAG '2.2.1-w37'`. `APP_VERSION` unchanged. No backend, no Duels, no scoring, no JS logic changes.
 
 ### 100K Step Club backend deployed live (v3 Phase 1z.28)
 
