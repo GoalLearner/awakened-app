@@ -2510,7 +2510,48 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=287`, `app.js?v=391`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.276`, `APP_BUILD_TAG = '2.2.1-w41'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=287`, `app.js?v=392`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.277`, `APP_BUILD_TAG = '2.2.1-w42'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### iOS post-save freeze fix — Edit Habit + pack-add flows (v3 Phase 1z.34)
+
+**Bug.** TestFlight users reported a freeze after tapping Save in the Edit Habit modal, and after committing through the Lock-In / pack-add flow. Pattern in both cases: the data persisted (the edit was present on relaunch), but the UI was stuck and required force-quit to recover.
+
+**Root cause.** A `save(); renderHabits(); closeXModal();` anti-pattern across four save handlers. Persistence happened first, then `renderHabits()` (or a sibling render) ran BEFORE the close call. If the render threw synchronously — e.g. `buildItem()` hitting an unexpected habit shape, a guard tripping inside `updateProgress`, a transient DOM state during the modal-still-on-top frame — the exception propagated past the close and the overlay element kept its hidden-removed state, intercepting all touches. Data was safe; the modal was a tombstone.
+
+**Sites fixed:**
+| Handler | Line | Flow |
+|---|---|---|
+| `commitEdit()` | ~19163 | Edit Habit → Save (the reproduced bug) |
+| `saveCustomHabit()` | ~13249 | Add Habits → Custom → Save |
+| `sched-save-btn` listener | ~14152 | Edit Habit → Schedule picker → Save |
+| `confirmPackAdd()` | ~13314 | Morning Routine / Lock-In pack confirmation |
+
+**The new pattern** (all four sites):
+```
+try { save(); } catch (e) { console.warn(...) }
+closeXModal();                                  // dismiss FIRST
+try { renderHabits(); } catch (e) { console.warn(...) }
+```
+
+Also hardened `closeEditModal()` itself — each `getElementById(...).classList.add('hidden')` step is independently try/caught so a missing element (rare, but possible mid-DOM-reflow) cannot leave the overlay visible. `confirmPackAdd` had a duplicate `updateLockedInButtonVisibility()` call that was also cleaned up.
+
+**Why this is the fix, not Health.* throttling.** An earlier hypothesis blamed the fire-and-forget `autoVerifyWalk / autoVerifySleep / autoVerifyStrengthTraining` calls at the end of `renderHabits()`. Those are already `try/catch`-wrapped at the call site and they're `async` — they suspend and return immediately, they do NOT block the JS thread. The real culprit is plain synchronous throw inside `renderHabits()`'s DOM-rebuild path during the post-save call. The async Health work is unaffected by this change.
+
+**Lock-In specifically.** `confirmPackAdd` already closed the modal before rendering, so the freeze couldn't be the same render-before-close bug. The hardening here is defense-in-depth: if any render in the post-close chain throws, the user still sees the toast (when possible) and the next interaction works. The remaining likely cause for that specific report is the same render-throw landing AFTER the close but inside the chain that updates the Morning / Lock-In buttons — fixed by isolating each step in try/catch.
+
+**Files changed (frontend only):** `app.js`, `index.html`, `sw.js`, `CLAUDE.md`.
+
+**Out of scope (confirmed):** no backend, no Duels, no sims, no Codemagic config, no styles.css, no auth.js. Verified by `git diff --name-only` and grep.
+
+**Manual QA checklist** (run on iOS Capacitor build that ships `app.js?v=392`):
+1. Edit Habit → change goal → Save → modal closes immediately, app responsive, edit persists on relaunch.
+2. Edit Habit → Cancel → no freeze.
+3. Lock-In button → confirm pack → modal closes, toast appears, habits visible in list.
+4. Tap Save rapidly twice → no stuck state.
+5. Open Edit Habit with input focused (keyboard up) → Save → keyboard dismisses, modal closes.
+6. Schedule picker → change days → Save → picker closes, schedule persists.
+
+Bumps: `app.js?v=392`, `sw.js v5.277`, `APP_BUILD_TAG '2.2.1-w42'`. `APP_VERSION` unchanged at `2.2.1`. `styles.css` unchanged.
 
 ### Weekly scoping for Global Steps leaderboard (v3 Phase 1z.33)
 

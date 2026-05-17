@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w41';
+  const APP_BUILD_TAG = '2.2.1-w42';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13245,10 +13245,13 @@
       custom:      true,
     };
     habits.push(newH);
-    save();
-    renderHabits();
-    renderLibrary();
+    // v3 Phase 1z.34 -- close BEFORE rendering. Same iOS post-save
+    // freeze pattern as commitEdit: a thrown render exception would
+    // otherwise strand the Add Custom Habit overlay.
+    try { save(); } catch (e) { try { console.warn('[custom] save failed', e); } catch (_) {} }
     closeCustomHabitModal();
+    try { renderHabits();  } catch (e) { try { console.warn('[custom] post-save renderHabits failed', e); } catch (_) {} }
+    try { renderLibrary(); } catch (e) { try { console.warn('[custom] post-save renderLibrary failed', e); } catch (_) {} }
     // Per-habit reminder offers were removed in v1.1.3 — Awakened sends
     // ONE morning digest by default, no per-habit prompts. Power users
     // can still set per-habit reminders via Edit Habit.
@@ -13312,13 +13315,22 @@
     }
 
     const pack = getPackById(packId);
-    closeMorningPackModal();
-    closeLibrary();
-    renderHabits();
-    updateMorningButtonVisibility();
-    updateLockedInButtonVisibility();
-    updateLockedInButtonVisibility();
-    showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
+    // v3 Phase 1z.34 -- iOS post-save freeze hardening. The Lock-In /
+    // Morning Routine pack-add modal was reported stuck after Save on
+    // TestFlight. The close calls run first (good), but any throw in
+    // the render/update chain that follows would prevent the toast
+    // from firing and -- depending on which call throws -- could
+    // leave overlay state inconsistent. Each step now isolated.
+    try { closeMorningPackModal(); } catch (e) { try { console.warn('[pack] close modal failed', e); } catch (_) {} }
+    try { closeLibrary();          } catch (e) { try { console.warn('[pack] close library failed', e); } catch (_) {} }
+    try { renderHabits();          } catch (e) { try { console.warn('[pack] post-save render failed', e); } catch (_) {} }
+    try { updateMorningButtonVisibility();  } catch (_) {}
+    try { updateLockedInButtonVisibility(); } catch (_) {}
+    try {
+      if (pack && pack.name) {
+        showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
+      }
+    } catch (_) {}
 
     // Auto-trigger the notification prompt when a pack is added and the
     // user hasn't been asked yet. Pack-based paths (Morning Routine,
@@ -14154,10 +14166,12 @@
       if (habit) {
         if (schedFormDays.length === 7) delete habit.days;
         else habit.days = [...schedFormDays];
-        save();
-        renderHabits();
+        // v3 Phase 1z.34 -- close picker BEFORE rendering so a render
+        // throw can't leave the schedule sheet stuck on iOS.
+        try { save(); } catch (e) { try { console.warn('[sched] save failed', e); } catch (_) {} }
       }
       closeSchedulePicker();
+      try { renderHabits(); } catch (e) { try { console.warn('[sched] post-save render failed', e); } catch (_) {} }
     });
 
     document.getElementById('sched-days-row').querySelectorAll('.day-btn').forEach(btn => {
@@ -19108,9 +19122,14 @@
   }
 
   function closeEditModal() {
-    closeEmojiPicker();
-    document.getElementById('edit-modal').classList.add('hidden');
-    document.getElementById('modal-overlay').classList.add('hidden');
+    // v3 Phase 1z.34 -- bulletproof close. Each step is independently
+    // try/caught so a missing element or transient DOM state cannot
+    // leave the modal/overlay stuck visible (iOS TestFlight freeze
+    // repro: any sync throw between Save and the .add('hidden') calls
+    // left the overlay intercepting touches with no recovery path).
+    try { closeEmojiPicker(); } catch (_) {}
+    try { document.getElementById('edit-modal').classList.add('hidden'); } catch (_) {}
+    try { document.getElementById('modal-overlay').classList.add('hidden'); } catch (_) {}
     editingId = null;
   }
 
@@ -19160,9 +19179,23 @@
         const m = MEASURABLE_HABITS[habit.name];
         if (m) habit.goal = { value: editGoalValue, unit: m.unit };
       }
-      save(); renderHabits();
+      // v3 Phase 1z.34 -- iOS post-save freeze fix.
+      // Bug repro (TestFlight): user taps Save, data persists, modal
+      // never closes -- force-quit required. Root cause: the original
+      // sequence `save(); renderHabits(); closeEditModal();` ran the
+      // render BEFORE the close. If renderHabits() threw synchronously
+      // (e.g. buildItem hitting an unexpected habit shape after the
+      // edit), the exception bubbled past the close call and the
+      // overlay stayed visible intercepting all touches.
+      // Fix: persist → close → render-in-try-catch. The modal is
+      // guaranteed to dismiss before any render work that could
+      // throw, so a render failure surfaces as a console warning
+      // instead of a frozen UI. Persist is also try/caught so a
+      // localStorage quota error doesn't strand the user either.
+      try { save(); } catch (e) { try { console.warn('[edit] save failed', e); } catch (_) {} }
     }
     closeEditModal();
+    try { renderHabits(); } catch (e) { try { console.warn('[edit] post-save render failed', e); } catch (_) {} }
   }
 
   function setupEditModal() {
