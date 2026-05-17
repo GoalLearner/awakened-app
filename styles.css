@@ -22181,54 +22181,86 @@ body.habit-drag-active * {
   z-index: 1;
 }
 
-/* E-rank prestige frame -- gold ring + soft outer glow + violet
-   inner glow (E uses violet for the disc; the per-rank rule for
-   data-rank="E" sets violet which we preserve as the inset). */
+/* Ranked-game prestige frame -- visible at small size, premium look.
+ *
+ * v3 Phase 1z.30 refinement after browser preview showed the 1z.27
+ * version reading too faint on E-rank. Now uses a 4-layer stacked
+ * box-shadow that reads as a real "framed" prestige badge:
+ *
+ *   1. INNER:  rank-color inset glow (preserved per data-rank)
+ *   2. RING:   2px dark separator immediately outside the disc edge
+ *              (creates a visible notch / inset look between disc
+ *              and gold ring -- the trick that makes the frame feel
+ *              like a real ranked-game frame, not a glow)
+ *   3. FRAME:  4px solid gold ring (the actual frame)
+ *   4. EDGE:   1px brighter gold highlight at the outermost edge
+ *              (subtle 3D depth cue, makes the ring feel bevelled)
+ *   5. GLOW:   22px ambient gold halo at moderate alpha
+ *
+ * Total visual extension: 7px from disc edge. Hero padding (12px
+ * around the disc) accommodates without clipping.
+ *
+ * Box-shadow order matters: earlier shadows paint ON TOP of later
+ * ones. So the dark separator layer (band 0-2px) goes FIRST, the
+ * gold ring (band 0-6px) goes SECOND -- the gold covers 2-6px
+ * because the dark 0-2px is on top of the gold 0-2px region. */
+
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="E"],
 .sc-rank-hero--prestige {
   box-shadow:
-    0 0 0 3px rgba(245, 184, 66, 0.95),     /* gold ring */
-    0 0 14px 2px rgba(245, 184, 66, 0.35),  /* soft outer glow */
-    inset 0 0 14px rgba(167, 139, 250, 0.30); /* violet inner glow (E) */
+    0 0 0 2px rgba(8, 8, 26, 0.95),           /* (2) dark separator notch */
+    0 0 0 6px #f5b842,                        /* (3) gold frame 2-6px */
+    0 0 0 7px rgba(255, 200, 74, 0.85),       /* (4) bright outer edge highlight */
+    0 0 22px 4px rgba(245, 184, 66, 0.55),    /* (5) ambient glow */
+    inset 0 0 14px rgba(167, 139, 250, 0.45); /* (1) violet inner glow (E) */
 }
 
-/* Per-rank prestige variants. Each preserves the gold outer ring +
-   glow and overrides the inner inset glow to match the rank's
-   own tier color. */
+/* Per-rank prestige variants. Each preserves the layered
+   separator+frame+edge+glow stack and overrides only the inner
+   inset glow to match the rank's own tier color. */
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="D"],
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="C"] {
   box-shadow:
-    0 0 0 3px rgba(245, 184, 66, 0.95),
-    0 0 14px 2px rgba(245, 184, 66, 0.35),
-    inset 0 0 14px rgba(139, 92, 246, 0.30);
+    0 0 0 2px rgba(8, 8, 26, 0.95),
+    0 0 0 6px #f5b842,
+    0 0 0 7px rgba(255, 200, 74, 0.85),
+    0 0 22px 4px rgba(245, 184, 66, 0.55),
+    inset 0 0 14px rgba(139, 92, 246, 0.45);
 }
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="B"] {
   box-shadow:
-    0 0 0 3px rgba(245, 184, 66, 0.95),
-    0 0 14px 2px rgba(245, 184, 66, 0.35),
-    inset 0 0 14px rgba(59, 130, 246, 0.30);
+    0 0 0 2px rgba(8, 8, 26, 0.95),
+    0 0 0 6px #f5b842,
+    0 0 0 7px rgba(255, 200, 74, 0.85),
+    0 0 22px 4px rgba(245, 184, 66, 0.55),
+    inset 0 0 14px rgba(59, 130, 246, 0.45);
 }
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="A"] {
   box-shadow:
-    0 0 0 3px rgba(245, 184, 66, 0.95),
-    0 0 14px 2px rgba(245, 184, 66, 0.35),
-    inset 0 0 14px rgba(168, 85, 247, 0.30);
+    0 0 0 2px rgba(8, 8, 26, 0.95),
+    0 0 0 6px #f5b842,
+    0 0 0 7px rgba(255, 200, 74, 0.85),
+    0 0 22px 4px rgba(245, 184, 66, 0.55),
+    inset 0 0 14px rgba(168, 85, 247, 0.45);
 }
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="S"] {
   box-shadow:
-    0 0 0 3px rgba(245, 184, 66, 0.95),
-    0 0 14px 2px rgba(245, 184, 66, 0.35),
-    inset 0 0 14px rgba(249, 115, 22, 0.30);
+    0 0 0 2px rgba(8, 8, 26, 0.95),
+    0 0 0 6px #f5b842,
+    0 0 0 7px rgba(255, 200, 74, 0.85),
+    0 0 22px 4px rgba(245, 184, 66, 0.55),
+    inset 0 0 14px rgba(249, 115, 22, 0.45);
 }
-/* S+ is already gold-on-gold — bump the glow + add a thin inner
-   violet hairline so the prestige frame visually separates from
-   the gold disc beneath. */
+/* S+ is already gold-on-gold -- swap the dark separator for a
+   violet hairline so the frame visually separates from the disc.
+   Keep the bright outer edge + glow at slightly higher intensity. */
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="S+"] {
   box-shadow:
-    0 0 0 1px rgba(167, 139, 250, 0.45),    /* violet hairline separator */
-    0 0 0 4px rgba(245, 184, 66, 1),
-    0 0 18px 3px rgba(245, 184, 66, 0.50),
-    inset 0 0 14px rgba(245, 158, 11, 0.32);
+    0 0 0 2px rgba(167, 139, 250, 0.55),
+    0 0 0 6px #f5b842,
+    0 0 0 7px rgba(255, 200, 74, 0.90),
+    0 0 26px 5px rgba(245, 184, 66, 0.60),
+    inset 0 0 14px rgba(245, 158, 11, 0.45);
 }
 
 .sc-rank-hero--prestige:focus-visible {
@@ -22236,24 +22268,46 @@ body.habit-drag-active * {
   outline-offset: 4px;
 }
 
-/* Spark crest at the top of the frame -- small gold upward-
-   pointing triangle. The Status card's overflow: hidden would
-   clip it if rendered on .sc-rank-hero alone, so we anchor it
-   with `top: -4px` so it sits ON the ring rather than above the
-   card boundary. Scaled to read at 54px disc size. */
+/* Spark crest at the top of the frame -- gold upward-pointing
+   triangle. v3 Phase 1z.30 refinement: bumped to 14x12 (was 10x8)
+   with a stronger drop-shadow and a 1px dark outline via the
+   surrounding shadow stack so the apex reads clearly against the
+   navy background. Positioned at top: -9px so it sits ABOVE the
+   gold ring (which extends 7px above the disc edge), leaving a
+   2px visual separation between crest base and ring top.
+   The Status card has `.sc-hero { padding: 12px 16px 10px }` so
+   the crest's outer extent at top:-9 + height:12 still fits
+   inside the card without clipping. */
 .sc-card--profile .sc-rank-hero.sc-rank-hero--prestige::before {
   content: '';
   position: absolute;
-  top: -4px;
+  top: -9px;
   left: 50%;
   transform: translateX(-50%);
-  width: 10px;
-  height: 8px;
+  width: 14px;
+  height: 12px;
   background: #f5b842;
   clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  filter: drop-shadow(0 0 4px rgba(245, 184, 66, 0.7));
+  filter:
+    drop-shadow(0 0 6px rgba(245, 184, 66, 0.85))
+    drop-shadow(0 0 1px rgba(8, 8, 26, 1));    /* dark hairline */
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
+}
+/* Thin inner highlight on the crest -- second pseudo-element gives
+   the apex a brighter top edge. Reads as 3D depth, not flat. */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige::after {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(255, 220, 130, 0.95) 0%, rgba(255, 200, 74, 0) 55%);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  pointer-events: none;
+  z-index: 4;
 }
 
 /* First-unlock pulse — single 600ms ping. JS adds .is-new and

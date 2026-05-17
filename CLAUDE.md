@@ -2510,7 +2510,44 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=284`, `app.js?v=387`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.272`, `APP_BUILD_TAG = '2.2.1-w37'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=285`, `app.js?v=388`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.273`, `APP_BUILD_TAG = '2.2.1-w38'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### 100K prestige frame visibility refinement (v3 Phase 1z.30)
+
+Browser preview of `1z.29` showed the gold prestige frame rendering correctly but **too faint** — barely readable on an E-rank disc. The single 3px gold ring + 14px soft glow didn't communicate "prestige" at the small disc size; the Spark crest at 10×8px read as a pixel artifact rather than a deliberate badge. Refining for stronger ranked-game presence without going cartoonish.
+
+**Frame change — single-layer ring → 4-layer stacked frame:**
+
+| Layer | Before (1z.29) | After (1z.30) |
+|---|---|---|
+| Inner inset glow | `inset 0 0 14px rgba(violet, 0.30)` | `inset 0 0 14px rgba(violet, 0.45)` — slight bump for E |
+| Dark separator notch | — | `0 0 0 2px rgba(8,8,26, 0.95)` — NEW; creates the "framed" feel |
+| Gold ring | `0 0 0 3px rgba(245,184,66, 0.95)` | `0 0 0 6px #f5b842` — solid, 4px thick effective (2-6px due to dark separator on top) |
+| Bright outer edge | — | `0 0 0 7px rgba(255,200,74, 0.85)` — NEW; 1px highlight at outermost edge, gives bevelled 3D cue |
+| Ambient glow | `0 0 14px 2px rgba(245,184,66, 0.35)` | `0 0 22px 4px rgba(245,184,66, 0.55)` — stronger spread + alpha |
+
+Total visual extension from disc edge: 3px → **7px**. Fits inside the existing 12px `.sc-hero` padding around the disc, no clipping.
+
+The trick is the **dark separator notch** between the disc and the gold ring. Without it, the gold reads as glow. With it, the gold reads as a real frame attached to the disc. This is the same visual idiom used in ranked-game UIs (League of Legends ranks, Apex predator badges, Diablo class crests).
+
+**Spark crest change — 10×8 → 14×12 with 3D depth:**
+
+- Apex sits at `top: -9px` (was -4), now floats clearly above the gold ring's top edge with a 2px visual gap
+- Stacked dual filter: `drop-shadow(0 0 6px gold 0.85) drop-shadow(0 0 1px navy 1)` — gold halo + thin dark hairline so the apex separates from the navy background
+- NEW `::after` pseudo-element layered on top of the `::before` — a downward-fading gold-to-transparent linear gradient on the same triangle shape gives the crest a brighter top edge, reading as 3D rather than flat
+
+**Per-rank coverage:**
+
+All 7 ranks (E, D, C, B, A, S, S+) now get the same 4-layer stacked frame. The inner inset glow remains rank-specific (violet for E, deeper purple for D/C, blue for B, A-purple for A, orange for S). S+ swaps the dark separator for a violet hairline since the gold ring is already gold-on-gold for that rank.
+
+**Unearned state:** unchanged. `.sc-rank-hero--prestige` class is only added by `renderStatus()` when `accolades.has('step_100k_club')` is true. Discs without the accolade keep their plain per-rank styling.
+
+**Anti-patterns:**
+- Don't drop the dark separator notch. It's the single most important layer for "frame vs glow" perception. Removing it makes the gold read as a halo.
+- Don't move the crest above `top: -10px` — `.sc-hero` only has 12px of padding above the disc; any higher and the crest gets clipped by `.sc-card { overflow: hidden }`.
+- Don't add `filter` properties to `.sc-rank-hero--prestige` itself — that would create a new stacking context and the crest pseudo-element's drop-shadow gets re-rasterized into the parent, causing soft-edge artifacts.
+
+Bumps: `styles.css?v=285`, `app.js?v=388` (build-tag only), `sw.js v5.273`, `APP_BUILD_TAG '2.2.1-w38'`. `APP_VERSION` unchanged. No backend, no Duels, no JS logic changes.
 
 ### 100K prestige frame CSS specificity fix + Spark crest (v3 Phase 1z.29)
 
