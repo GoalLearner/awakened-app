@@ -2510,7 +2510,59 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=288`, `app.js?v=393`, `auth.js?v=15`, `simulated-leaderboard.js?v=5`, `sw.js v5.279`, `APP_BUILD_TAG = '2.2.1-w44'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=288`, `app.js?v=394`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.280`, `APP_BUILD_TAG = '2.2.1-w45'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Hall of Fame spec correction — sim filler allowed, real-only `me_best` (v3 Phase 1z.37)
+
+**Spec change.** Originally (Phase 1z.36) the Hall of Fame was strictly real-users-only on both server and client. Updated product call: at launch the board can read as empty for too long, so the **client** is allowed to merge in simulated filler records so the surface looks populated. The **backend remains real-only** — no sim writes, no sim accolades.
+
+**Rules enforced:**
+- Sims may appear in the HoF tab. ✅
+- Sims are capped at `SIM_STEP_WEEKLY_CAP = 45,555`. ✅ (already enforced from 1z.35)
+- Sims never qualify for 100K Step Club. ✅ (cap < 100k, and sim users were already filtered at submit)
+- Sims never affect `me_best`. ✅ (`me_best` is taken directly from the backend response in `_lbRenderHofTab`)
+- Real users can exceed 45,555 and naturally sort above all sims. ✅ (verified end-to-end: a real 88,420-step record sorts above the top sim at ~44,412)
+- Sim records are deterministic per week — reloads don't reshuffle. ✅
+- Sims are NEVER persisted to D1 or sent to the backend. ✅
+
+**Sim HoF generator (`simulated-leaderboard.js` rev v5 → v6):**
+- New public API: `SimulatedLeaderboard.getHallOfFameRecords(dateKey, metric)` returns ~12 deterministic records.
+- Uses the existing 10-bot cast. Top-tier bots (index 0–1) contribute 2 records each; everyone else contributes 1. Total: 12 rows.
+- Candidate weeks: the 8 Sunday-UTC weeks BEFORE the current week (current week is excluded; HoF is meant to reflect completed history).
+- Per-(bot, week) value: Gaussian roll seeded by `weekKey + bot.name + 'hof'` (different seed family than the current-week daily roll so the two systems can never agree). Centered on `bot.avgDailySteps × 7` with stddev `bot.stepStdDev × √7`. Hard-clamped to 45,555.
+- For each bot, the generator picks that bot's HIGHEST 1–2 weeks from the candidate pool — the rolled "weekly best ever" snapshot, not arbitrary weeks.
+- Rows tagged `_sim: true` + `_simulated: true` (no UI difference; internal flags only).
+- Returns `[]` for non-step metrics (the HoF tab is hidden for them anyway).
+
+**Verified output** (dateKey = 2026-05-17):
+```
+#1  ShadowMonarch_K  44,412  2026-05-10..2026-05-16
+#2  ShadowMonarch_K  41,875  2026-05-03..2026-05-09
+#3  AscendantNova    40,865  2026-03-29..2026-04-04
+#4  AscendantNova    38,360  2026-05-03..2026-05-09
+#5  ghostlift        35,493  2026-04-19..2026-04-25
+#6  Marcus T.        29,489  2026-05-10..2026-05-16
+#7  Sienna K.        26,141  2026-03-29..2026-04-04
+#8  voidwalker_88    20,528  2026-04-26..2026-05-02
+#9  Jordan F.        16,995  2026-04-12..2026-04-18
+#10 AwakenedRen      12,001  2026-04-26..2026-05-02
+#11 Priya N.          8,001  2026-03-29..2026-04-04
+#12 nightowl          6,150  2026-04-26..2026-05-02
+```
+All under cap. Deterministic on second call. Top-tier bots correctly contribute 2 records each with DIFFERENT week_starts (no clutter at the same week).
+
+**Frontend merge (`_lbMergeHofRecords` in `app.js`):**
+- Called from `_lbRenderHofTab` on every render path (cached, fresh, offline-fallback).
+- Defensive alias-collision dedupe: if a real record shares an alias with a sim bot, the sim is dropped.
+- Re-sorts the combined list by `steps DESC, week_start ASC` — same convention as the backend tiebreaker, so a real record at the exact same step count as a sim (rare given the cap separation) gets older-week priority.
+- Re-ranks 1..N across the merged list. `me_best` is rendered separately from `result.me_best` (backend response) and never touches the sim list.
+- Offline fallback: if the fetch fails and there's no cache, the sim list still renders so the board isn't completely empty during a transient outage. `me_best` stays hidden in that path (no real attribution available).
+
+**Backend untouched in this phase.** `handlers/hall-of-fame.ts`, the `weekly_step_records` table, the submit handler's write filter, and all 11 HoF backend tests + 4 submit tests are unchanged. The sim filter on submit (`apple_sub LIKE 'sim_test_%'`) was already correct — sim users never write to D1.
+
+**Files changed (4):** `simulated-leaderboard.js` (new `getHallOfFameRecords` + helpers), `app.js` (`_lbMergeHofRecords` + render path updates + build tag), `index.html` (3 version bumps), `sw.js` (cache bump). `CLAUDE.md` updated. **No backend changes.** **No Duels changes.** **No Codemagic trigger.** **Still not deployed** — the 1z.36 deploy plan (apply 0009 migration, then deploy worker) is unchanged and still pending approval.
+
+Bumps: `simulated-leaderboard.js?v=6`, `app.js?v=394`, `sw.js v5.280`, `APP_BUILD_TAG '2.2.1-w45'`. `APP_VERSION` unchanged at `2.2.1`.
 
 ### Weekly Steps Hall of Fame — implemented, not deployed (v3 Phase 1z.36)
 

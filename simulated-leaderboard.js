@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// simulated-leaderboard.js (v3 Phase 1z.35 — rev v5: capped bots)
+// simulated-leaderboard.js (v3 Phase 1z.37 — rev v6: HoF filler)
 //
 // Client-side ONLY. Injects 10 simulated hunters into the live
 // leaderboard render so sparse boards still feel populated.
@@ -293,11 +293,131 @@
     return merged;
   }
 
+  // ─── Weekly Steps Hall of Fame — client-side filler ─────────
+  // v3 Phase 1z.37 — spec correction: fake users CAN appear in the
+  // Hall of Fame so the board doesn't look empty at launch. They
+  // remain capped at SIM_STEP_WEEKLY_CAP (45,555), are NEVER
+  // persisted to D1, NEVER affect me_best, and are merged into the
+  // display by app.js on top of the real backend response.
+  //
+  // Determinism: same `dateKey` (week) produces the same fake
+  // records on every load. A page reload doesn't reshuffle. Past
+  // weeks are seeded by (weekStartKey + bot.name + 'hof') so each
+  // (bot, week) pair has a stable rolled value.
+  //
+  // Distribution: each top-tier bot contributes 2 records (their
+  // best 2 of the last PAST_WEEKS), every other bot contributes
+  // 1 record (their best of the last PAST_WEEKS). ~12 fake rows
+  // total — enough to populate, few enough to leave room for real
+  // records to dominate as they appear.
+  const HOF_PAST_WEEKS  = 8;
+  const HOF_TOP_TIER_COUNT = 2;          // bots index 0..1 → 2 records each
+  const HOF_PER_BOT_DEFAULT = 1;
+
+  // Saturday-UTC YYYY-MM-DD given the Sunday-UTC week_start.
+  function _weekEndFromStart(weekStart) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStart);
+    if (!m) return weekStart;
+    const ms = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+             + 6 * 24 * 60 * 60 * 1000;
+    const d = new Date(ms);
+    const yyyy = d.getUTCFullYear();
+    const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getUTCDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  // Build the list of past Sunday-UTC week keys: 1..HOF_PAST_WEEKS
+  // BEFORE the current week (current week excluded so HoF reflects
+  // completed weeks). Returns YYYY-MM-DD strings in any order.
+  function _pastWeekStartsUTC(currentWeekKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(currentWeekKey || '');
+    if (!m) return [];
+    const baseMs = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const out = [];
+    for (let i = 1; i <= HOF_PAST_WEEKS; i++) {
+      const ms = baseMs - i * 7 * 24 * 60 * 60 * 1000;
+      const d = new Date(ms);
+      out.push(
+        d.getUTCFullYear() + '-' +
+        String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getUTCDate()).padStart(2, '0')
+      );
+    }
+    return out;
+  }
+
+  // Deterministic weekly-best-ever value for (bot, week). Different
+  // PRNG seed family than the current-week daily roll (suffix 'hof')
+  // so the two systems can never accidentally agree on identical
+  // numbers. Always clamped to SIM_STEP_WEEKLY_CAP.
+  function _rollBotWeeklyBestForHof(weekKey, bot) {
+    const seed = hashKey(weekKey + '|' + bot.name + '|hof');
+    const rng = mulberry32(seed);
+    const z = gaussian(rng);
+    // Weekly total ≈ avgDailySteps × 7 + (Gaussian noise scaled
+    // for 7-day aggregation). sqrt(7) damps the per-day variance
+    // when summed across the week.
+    let v = bot.avgDailySteps * 7 + z * bot.stepStdDev * Math.sqrt(7);
+    v = Math.round(v);
+    if (v < 0) v = 0;
+    if (v > SIM_STEP_WEEKLY_CAP) v = SIM_STEP_WEEKLY_CAP;
+    return v;
+  }
+
+  /**
+   * Returns the deterministic list of simulated Hall of Fame records
+   * for the given dateKey. Each row:
+   *   { alias, steps, week_start, week_end, _sim: true, _simulated: true }
+   *
+   * Caller (app.js) merges these on top of the real backend response,
+   * re-sorts by steps DESC + week_start ASC, and re-ranks. The
+   * frontend never persists this list. The backend NEVER receives it.
+   *
+   * v1: metric=step_total only. Streak metrics return [] (HoF tab
+   * is hidden for them at the UI layer too).
+   */
+  function getHallOfFameRecords(dateKey, metric) {
+    if (!SIMULATE_USERS) return [];
+    if (metric && metric !== 'step_total') return [];
+    const currentWeekKey = getWeekStartKey(dateKey || '');
+    if (!currentWeekKey) return [];
+    const weekKeys = _pastWeekStartsUTC(currentWeekKey);
+    if (weekKeys.length === 0) return [];
+
+    const records = [];
+    BOTS.forEach((bot, idx) => {
+      const slots = idx < HOF_TOP_TIER_COUNT ? 2 : HOF_PER_BOT_DEFAULT;
+      // Compute this bot's weekly best across the candidate weeks.
+      const cands = weekKeys.map(wk => ({
+        week_start: wk,
+        steps: _rollBotWeeklyBestForHof(wk, bot),
+      }));
+      // Highest first; week tiebreaker keeps the picks deterministic
+      // when two of a bot's weeks roll to the same number.
+      cands.sort((a, b) => (b.steps - a.steps) || a.week_start.localeCompare(b.week_start));
+      cands.slice(0, slots).forEach(c => {
+        records.push({
+          alias:      bot.name,
+          steps:      c.steps,
+          week_start: c.week_start,
+          week_end:   _weekEndFromStart(c.week_start),
+          _sim:       true,
+          _simulated: true,
+        });
+      });
+    });
+
+    return records;
+  }
+
   if (typeof window !== 'undefined') {
     window.SimulatedLeaderboard = {
       SIMULATE_USERS:        SIMULATE_USERS,
       SIM_STEP_WEEKLY_CAP:   SIM_STEP_WEEKLY_CAP,
       merge:                 mergeWithSimulated,
+      // v3 Phase 1z.37 — Hall of Fame client-side filler.
+      getHallOfFameRecords:  getHallOfFameRecords,
       BOTS:                  BOTS,
       // Exposed for dev / debug / preview QA
       _hashKey:          hashKey,

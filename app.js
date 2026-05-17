@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w44';
+  const APP_BUILD_TAG = '2.2.1-w45';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17465,9 +17465,51 @@
     }
   }
 
-  // v3 Phase 1z.36 — Hall of Fame tab renderer. Always real-only:
-  // never merges with simulated-leaderboard. Reads from the dedicated
-  // hb_lb_hof_<metric> cache (10-min TTL) for snappy reopens.
+  // v3 Phase 1z.37 — Hall of Fame display merge. Combines the real
+  // backend response with deterministic simulated filler records so
+  // the board doesn't read as empty at launch. The merge is CLIENT-
+  // ONLY: sims are never persisted, never sent to the backend, never
+  // affect me_best, and are capped at SIM_STEP_WEEKLY_CAP (45,555)
+  // by the generator. Real records can exceed the cap and will
+  // naturally sort above all sims after the merge re-sort.
+  //
+  // Returns the same shape as the backend records array, with
+  // continuous rank numbers across the merged list.
+  function _lbMergeHofRecords(realRecords) {
+    const real = Array.isArray(realRecords) ? realRecords.slice() : [];
+    let sims = [];
+    try {
+      if (typeof window.SimulatedLeaderboard !== 'undefined' &&
+          window.SimulatedLeaderboard.SIMULATE_USERS &&
+          typeof window.SimulatedLeaderboard.getHallOfFameRecords === 'function') {
+        const dateKey = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
+        sims = window.SimulatedLeaderboard.getHallOfFameRecords(dateKey, 'step_total') || [];
+      }
+    } catch (_) { sims = []; }
+    // Defensive: if a real user happens to share an alias with a bot,
+    // drop the sim row so the real user's record isn't duplicated.
+    if (sims.length && real.length) {
+      const realAliases = new Set(real.map(r => r && r.alias).filter(Boolean));
+      sims = sims.filter(s => !realAliases.has(s.alias));
+    }
+    const merged = real.concat(sims);
+    // Re-sort: steps DESC, then older week_start ASC (matches backend
+    // convention). Real records over 45,555 always rank above sims.
+    merged.sort((a, b) => {
+      const da = (b.steps || 0) - (a.steps || 0);
+      if (da !== 0) return da;
+      return String(a.week_start || '').localeCompare(String(b.week_start || ''));
+    });
+    merged.forEach((r, i) => { r.rank = i + 1; });
+    return merged;
+  }
+
+  // v3 Phase 1z.36/37 — Hall of Fame tab renderer.
+  // me_best is taken EXCLUSIVELY from the real backend response —
+  // sims never affect a real user's "your best" surface. The cache
+  // stores the raw backend response (records + me_best); the sim
+  // merge happens at render time so paging the past-week boundary
+  // refreshes the sim list naturally.
   async function _lbRenderHofTab(metric) {
     const listEl   = document.getElementById('lb-rank-list');
     const meBestEl = document.getElementById('lb-rank-mebest');
@@ -17476,14 +17518,16 @@
 
     if (blurbEl) blurbEl.textContent = 'Highest verified weekly totals ever recorded.';
 
-    // Phase 1: render from cache instantly if fresh.
+    // Phase 1: render from cache instantly if fresh. Re-run the sim
+    // merge on every render — sims are never cached, only the real
+    // backend response is.
     const cached = lbHofCacheRead(metric);
     if (cached) {
       if (meBestEl) {
         meBestEl.innerHTML = lbBuildHofMeBest(cached.me_best);
         meBestEl.classList.remove('hidden');
       }
-      listEl.innerHTML = lbBuildHofList(cached.records);
+      listEl.innerHTML = lbBuildHofList(_lbMergeHofRecords(cached.records));
     } else {
       if (meBestEl) meBestEl.classList.add('hidden');
       listEl.innerHTML = lbBuildLoadingSkeleton();
@@ -17499,18 +17543,30 @@
     if (_lbCurrentOpenMetric !== metric || _lbCurrentTab !== 'hof') return;
 
     if (result && result.ok) {
+      // Cache the REAL response only — sims are regenerated at render
+      // time, never persisted. Mirrors the "This Week" cache discipline.
       lbHofCacheWrite(metric, result.records, result.me_best);
       if (meBestEl) {
         meBestEl.innerHTML = lbBuildHofMeBest(result.me_best);
         meBestEl.classList.remove('hidden');
       }
-      listEl.innerHTML = lbBuildHofList(result.records);
+      listEl.innerHTML = lbBuildHofList(_lbMergeHofRecords(result.records));
     } else if (result && result.code === 'EXPIRED') {
       window.location.reload();
     } else if (!cached) {
-      // No cached fallback — render the same error/stub state used
-      // by the This Week tab for consistency.
-      listEl.innerHTML = lbBuildErrorState(result && result.code);
+      // No cache + fetch failed. Show sims as offline-friendly filler
+      // so the board isn't completely empty during a transient outage.
+      // me_best stays hidden — we have no real data to attribute.
+      const sims = _lbMergeHofRecords([]);
+      if (sims.length > 0) {
+        if (meBestEl) {
+          meBestEl.innerHTML = lbBuildHofMeBest(null);
+          meBestEl.classList.remove('hidden');
+        }
+        listEl.innerHTML = lbBuildHofList(sims);
+      } else {
+        listEl.innerHTML = lbBuildErrorState(result && result.code);
+      }
     }
   }
 
