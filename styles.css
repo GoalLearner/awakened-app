@@ -35,6 +35,21 @@ html {
   background: var(--bg);
 }
 
+/* v3 Phase 1z.23 — iOS native image-drag kill.
+ * iOS WebKit treats <img> elements as natively draggable by
+ * default. When a user long-pressed on a habit card's icon image,
+ * iOS would initiate a native image drag-and-drop in parallel with
+ * our reorder drag, producing the translucent ghost preview that
+ * lingered along the left edge of the viewport after release.
+ * The app never legitimately uses HTML5 drag-and-drop on images,
+ * so suppressing it globally is a free win. The matching
+ * `draggable="false"` attribute is set on habit icon images from
+ * habitIconHtml() as belt-and-suspenders. */
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
 body {
   height: 100%;
   background: var(--bg);
@@ -319,6 +334,12 @@ h1 {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* v3 Phase 1z.23 -- kill native iOS image-drag from habit-icon
+   * <img> elements inside the card. The CSS-only fix above kills it
+   * globally; this scoped duplicate covers any Safari version that
+   * ignores the global rule when the image has positioned ancestors. */
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 /* Belt-and-suspenders: while a drag is in flight, freeze selection
  * across the whole habit list. Even if the user's finger slides
@@ -21813,13 +21834,19 @@ body.habit-drag-active * {
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
+  /* v3 Phase 1z.23 -- kill native iOS image-drag globally during
+   * the long-press hold + the active drag. The "vertical strip of
+   * ghost text along the left edge after drop" symptom was iOS's
+   * native image-drag preview, which the CSS-only `img` rule above
+   * already kills; this body-scope rule is the global guarantee.
+   * touch-action: none stops iOS from competing-interpreting the
+   * touch as pan/zoom/scroll mid-drag. */
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
 }
-body.habit-drag-active {
-  /* While dragging, the document itself should not be selectable
-   * (clears any in-flight iOS selection range that started before
-   * the body class was applied). */
-  -webkit-user-select: none !important;
-  user-select: none !important;
+body.habit-drag-active,
+body.habit-drag-active * {
+  touch-action: none !important;
 }
 
 /* ===========================================================

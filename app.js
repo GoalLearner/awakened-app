@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w32';
+  const APP_BUILD_TAG = '2.2.1-w33';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19431,41 +19431,77 @@
     if (target) target.el.classList.add(target.before ? 'drop-target--before' : 'drop-target--after');
   }
 
+  // v3 Phase 1z.23 -- centralized drag teardown. Runs identically
+  // from every cleanup path (successful drop, idle cancel, visibility
+  // hidden, pagehide). Idempotent: safe to call when drag is already
+  // null. Guarantees every visible artifact -- ghost clone, drop-target
+  // outlines, body-class lockdowns, inline body styles, in-flight iOS
+  // selection -- is fully torn down before render.
+  function _finalizeDragCleanup() {
+    // 1. Drop document listeners regardless of which path we're on.
+    try { document.removeEventListener('touchmove', onDragMove); } catch (_) {}
+    try { document.removeEventListener('mousemove', onDragMove); } catch (_) {}
+    // 2. Restore inline body styles (idempotent -- '' if not set).
+    try {
+      document.body.style.userSelect       = '';
+      document.body.style.webkitUserSelect = '';
+      document.body.style.cursor           = '';
+      document.body.style.overflow         = (drag && drag.bodyOverflow) || '';
+    } catch (_) {}
+    // 3. Body-class lockdown OFF.
+    try { document.body.classList.remove('habit-drag-active', 'habit-drag-armed'); } catch (_) {}
+    // 4. Clear list-level drag classes + every drop-target outline.
+    try {
+      const list = document.getElementById('habit-list');
+      if (list) list.classList.remove('is-dragging', 'reorder-mode');
+      document.querySelectorAll('.habit-item.drop-target--before, .habit-item.drop-target--after')
+        .forEach(el => el.classList.remove('drop-target--before', 'drop-target--after'));
+      document.querySelectorAll('.habit-item.drag-placeholder')
+        .forEach(el => el.classList.remove('drag-placeholder'));
+      document.querySelectorAll('.habit-item.lp-pressing')
+        .forEach(el => el.classList.remove('lp-pressing'));
+    } catch (_) {}
+    // 5. Remove the ghost clone + any stray ghosts that may have leaked
+    //    from a prior incomplete teardown (defense-in-depth).
+    try {
+      document.querySelectorAll('.drag-ghost').forEach(el => el.remove());
+    } catch (_) {}
+    // 6. Kill any in-flight iOS selection range. The native long-press
+    //    selection can survive into the post-drop window if it armed
+    //    before our suppression took effect; this nukes it.
+    try { if (window.getSelection) window.getSelection().removeAllRanges(); } catch (_) {}
+    // 7. Cancel timers + auto-scroll RAF.
+    try {
+      if (drag) {
+        clearTimeout(drag.idleTimer);
+        if (drag.autoScrollRAF) cancelAnimationFrame(drag.autoScrollRAF);
+      }
+    } catch (_) {}
+    drag = null;
+  }
+
   function onDragEnd(e) {
     if (!drag) return;
-    const isTouch = drag.isTouch;
-    if (isTouch) document.removeEventListener('touchmove', onDragMove);
-    else         document.removeEventListener('mousemove', onDragMove);
 
-    // Restore body styles
-    document.body.style.userSelect       = '';
-    document.body.style.webkitUserSelect = '';
-    document.body.style.cursor           = '';
-    document.body.style.overflow         = drag.bodyOverflow || '';
-
-    // Stop helpers
-    clearTimeout(drag.idleTimer);
-    if (drag.autoScrollRAF) cancelAnimationFrame(drag.autoScrollRAF);
-
+    // Compute reorder BEFORE teardown -- we need drag.id + drag.item
+    // still attached to read dataset/positions.
     const items = getOtherItems();
-    items.forEach(el => el.classList.remove('drop-target--before', 'drop-target--after'));
-
     const { x, y } = clientPos(e);
     const target = findDropTarget(items, x, y);
+    let didReorder = false;
     if (target && target.el.dataset.id !== drag.id) {
       const fromIdx = habits.findIndex(h => h.id === drag.id);
-      const [moved] = habits.splice(fromIdx, 1);
-      const toIdx   = habits.findIndex(h => h.id === target.el.dataset.id);
-      habits.splice(target.before ? toIdx : toIdx + 1, 0, moved);
-      save();
-      navigator.vibrate && navigator.vibrate(15);
+      if (fromIdx >= 0) {
+        const [moved] = habits.splice(fromIdx, 1);
+        const toIdx   = habits.findIndex(h => h.id === target.el.dataset.id);
+        habits.splice(target.before ? toIdx : toIdx + 1, 0, moved);
+        save();
+        didReorder = true;
+        navigator.vibrate && navigator.vibrate(15);
+      }
     }
-    drag.ghost.remove();
-    drag.item.classList.remove('drag-placeholder');
-    drag = null;
-    document.getElementById('habit-list').classList.remove('is-dragging', 'reorder-mode');
-    // v3 Phase 1z.22 -- drop body-level iOS callout suppression.
-    try { document.body.classList.remove('habit-drag-active', 'habit-drag-armed'); } catch (_) {}
+
+    _finalizeDragCleanup();
     _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
     renderHabits();
   }
@@ -19481,23 +19517,35 @@
 
   function cancelDragSilently() {
     if (!drag) return;
-    document.removeEventListener('touchmove', onDragMove);
-    document.removeEventListener('mousemove', onDragMove);
-    document.body.style.userSelect       = '';
-    document.body.style.webkitUserSelect = '';
-    document.body.style.cursor           = '';
-    document.body.style.overflow         = drag.bodyOverflow || '';
-    if (drag.autoScrollRAF) cancelAnimationFrame(drag.autoScrollRAF);
-    const items = getOtherItems();
-    items.forEach(el => el.classList.remove('drop-target--before', 'drop-target--after'));
-    drag.ghost.remove();
-    drag.item.classList.remove('drag-placeholder');
-    drag = null;
-    document.getElementById('habit-list').classList.remove('is-dragging', 'reorder-mode');
-    // v3 Phase 1z.22 -- drop body-level iOS callout suppression (idle path).
-    try { document.body.classList.remove('habit-drag-active', 'habit-drag-armed'); } catch (_) {}
+    _finalizeDragCleanup();
     _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
   }
+
+  // v3 Phase 1z.23 -- if the app backgrounds or the page hides while
+  // a drag is in flight (iOS app switcher, incoming call, etc.), iOS
+  // suspends without firing touchend/touchcancel for us. The drag
+  // state would otherwise stick across foreground/background cycles,
+  // leaving the ghost + body classes + native iOS image-drag preview
+  // alive. These listeners run cleanup once.
+  function _backgroundDragSafety() {
+    if (drag) {
+      try { cancelDragSilently(); } catch (_) {}
+    } else {
+      // Even with no active drag, the long-press armed state may
+      // still be on (touchstart fired, suspension hit before either
+      // the 400ms timer or touchend). Idempotent class removal.
+      try { document.body.classList.remove('habit-drag-armed', 'habit-drag-active'); } catch (_) {}
+      try {
+        document.querySelectorAll('.habit-item.lp-pressing')
+          .forEach(el => el.classList.remove('lp-pressing'));
+      } catch (_) {}
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') _backgroundDragSafety();
+  });
+  window.addEventListener('pagehide', _backgroundDragSafety);
+  window.addEventListener('blur',     _backgroundDragSafety);
 
   function startAutoScrollLoop() {
     // The Habits panel itself scrolls (#main-scroll). Fall back to

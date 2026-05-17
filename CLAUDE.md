@@ -2506,7 +2506,56 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=281`, `app.js?v=382`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.267`, `APP_BUILD_TAG = '2.2.1-w32'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=282`, `app.js?v=383`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.268`, `APP_BUILD_TAG = '2.2.1-w33'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### iOS native image-drag hotfix + centralized cleanup (v3 Phase 1z.23)
+
+Follow-up to 1z.22. `w32` suppressed iOS's native long-press **selection** callout (`-webkit-touch-callout: none`), but a separate iOS gesture survived: **native `<img>` drag-and-drop**. Every habit card contains `<img class="habit-icon-img">` for the habit art, and iOS WebKit treats `<img>` elements as natively draggable unless explicitly disabled. The "vertical strip of ghost text along the left edge that appeared AFTER drop" was iOS's native image-drag preview — a translucent floating clone of the lifted image that follows the finger and lingers briefly during a settling animation post-release.
+
+`draggable="false"` on the image element already shipped (via `habitIconHtml`), but iOS WebKit doesn't always honor that attribute reliably for multi-touch long-press sequences. The real defense is the **CSS** `-webkit-user-drag: none`.
+
+**Fix layers (defense-in-depth):**
+
+1. **Global CSS** `img { -webkit-user-drag: none; user-drag: none; }` — kills native image-drag for the entire app. The app never legitimately uses HTML5 drag-and-drop on images, so this is a free safety win.
+2. **Habit card CSS** `.habit-item, .habit-item *` reinforced with the same — scoped duplicate covers any Safari version that ignores the global rule under positioned ancestors.
+3. **Body-class CSS** `body.habit-drag-active *, body.habit-drag-armed *` reinforced with `-webkit-user-drag: none !important` AND `touch-action: none !important` during active drag — kills iOS pan/zoom/scroll competition mid-gesture.
+4. **`draggable="false"` attribute** already on habit icon images (`habitIconHtml`), preserved.
+
+**Centralized cleanup (`_finalizeDragCleanup`):** every cleanup path — successful drop, idle cancel, visibility hidden, pagehide, blur — now runs **identical** teardown:
+- Document listeners removed (touchmove/mousemove)
+- Inline body styles restored (userSelect / cursor / overflow)
+- Body-class lockdown removed (`habit-drag-active` + `habit-drag-armed`)
+- List-level drag classes removed (`is-dragging` + `reorder-mode`)
+- ALL drop-target outlines cleared via document-wide query (catches strays from prior runs)
+- ALL `.drag-placeholder` and `.lp-pressing` classes removed via document-wide query
+- ALL `.drag-ghost` clones removed via document-wide query (defense against leaked ghosts)
+- In-flight iOS selection range cleared via `getSelection().removeAllRanges()` — fixes the case where selection armed BEFORE the suppression took effect
+- Idle timer + auto-scroll RAF canceled
+- `drag = null`
+
+Helper is **idempotent**: safe to call when `drag` is already null. Helper is called from `onDragEnd`, `cancelDragSilently`, AND a new `_backgroundDragSafety` handler.
+
+**Backgrounding safety (`_backgroundDragSafety`):** iOS suspends WebView when the user backgrounds the app (app switcher, incoming call, etc.) without firing `touchend` / `touchcancel`. Without this handler, drag state would stick across foreground/background cycles. Listeners on `visibilitychange` (hidden), `pagehide`, and `blur` invoke cleanup. Even when `drag` is null (suspension during the 400 ms armed window before drag actually enters), the helper still strips `habit-drag-armed` / `habit-drag-active` body classes and `.lp-pressing` markers as defensive sweep.
+
+**Why this works:**
+- `-webkit-user-drag: none` is the actual property iOS checks for native image-drag initiation. Set globally + scoped to the habit card and active-drag body class. The drag preview cannot arm anywhere.
+- Centralized cleanup eliminates the "did every path actually run every step" question. One function, one source of truth, idempotent.
+- Document-wide query cleanup (e.g. `document.querySelectorAll('.drag-ghost').forEach(el => el.remove())`) sweeps any element the prior fragmented cleanup might have missed — even from a previous incomplete drag.
+- `getSelection().removeAllRanges()` at end of cleanup nukes the case where iOS armed selection before our suppression could apply.
+- Backgrounding handlers prevent the stuck-state case where iOS suspends mid-drag.
+
+**No behavior changes:**
+- Tap-to-complete unchanged.
+- Long-press-to-reorder threshold (400 ms), move-cancel (10 px), idle timeout, post-drop click guard all the same.
+- Reorder semantics unchanged — `_finalizeDragCleanup` runs AFTER the splice/save so the new order persists.
+
+**Anti-patterns:**
+- Don't add per-path inline cleanup back into `onDragEnd` or `cancelDragSilently`. The centralized `_finalizeDragCleanup()` is the single source of truth; bypassing it is how the original fragmentation happened.
+- Don't remove `draggable="false"` from `habitIconHtml` — CSS handles the case where iOS ignores it, but both layers should be present.
+- Don't rely on `-webkit-touch-callout: none` for image-drag suppression. That property only governs the **selection magnifier**. Image drag is governed by `-webkit-user-drag`. Different properties, different mechanisms.
+- Don't suppress `touch-action` globally (`html, body { touch-action: none }`) — that breaks normal scrolling. Only active during `body.habit-drag-active`.
+
+Bumps: `app.js?v=383`, `styles.css?v=282`, `sw.js v5.268`, `APP_BUILD_TAG '2.2.1-w33'`. `APP_VERSION` unchanged. No backend / Duels / scoring / data changes. Pure CSS + JS-cleanup-lifecycle additions.
 
 ### iOS long-press / native-callout collision hotfix (v3 Phase 1z.22)
 
