@@ -29,13 +29,20 @@
 
 $ErrorActionPreference = 'Continue'
 
+# v3 Phase 1z.16 -- Default matrix is the 5 user-selectable verified
+# duel types. Boss Race is deferred (not user-selectable in v1) and
+# its sim lives in sims/scripts/06-boss-race-deferred.ps1 for any
+# operator who wants to verify the deferred-resolve path still
+# rejects with BOSS_RACE_SCORING_DEFERRED -- but it is NOT part of
+# the default run-all matrix because (a) it cannot be reached via
+# the picker, and (b) including it makes the matrix end in a FAIL
+# row that masks the actual acceptance criterion (5/5).
 $scripts = @(
     '01-steps-duel.ps1',
     '02-sleep-duel.ps1',
     '03-bedtime-duel.ps1',
     '04-strength-duel.ps1',
-    '05-verified-objectives-duel.ps1',
-    '06-boss-race-deferred.ps1'
+    '05-verified-objectives-duel.ps1'
 )
 
 $results = @()

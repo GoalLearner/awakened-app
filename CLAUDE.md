@@ -2506,7 +2506,34 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=278`, `app.js?v=377`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.262`, `APP_BUILD_TAG = '2.2.1-w27'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=278`, `app.js?v=378`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.263`, `APP_BUILD_TAG = '2.2.1-w28'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Boss Race hidden from user-facing duel picker (v3 Phase 1z.16)
+
+Backend verified-duel sims passed end-to-end against prod D1 for all 5 scorable types — steps, sleep, bedtime, strength, verified_objectives — and the engine + reward ledger work cleanly. `boss_race` remains deferred (no verified boss-event log yet) and was always going to surface a non-actionable "scoring activates after verified boss-event logging" message in the picker. Product call: hide it from the picker entirely in v1 rather than ship a card that's intentionally unusable.
+
+**Scope (frontend-only):**
+- `DUEL_TYPES.boss_race` gained `selectable: false`; all other entries got `selectable: true` explicitly.
+- `_renderDuelTypeCards()` order array dropped `'boss_race'` AND the per-iteration loop also rejects any entry with `selectable === false` (defense-in-depth for future hidden types).
+- The picker click-handler in `setupDuelTypePicker` refuses to set a hidden type as the current selection even if a stale DOM node sneaks in.
+- All read paths — `getDuelTypeMeta`, glyph map, short-code map, verb map, deferred-resolve copy ("Awaiting boss-event logging") — are UNCHANGED. Legacy duel rows with `duel_type='boss_race'` still render gracefully on the Duels tab, in the HUNTING-strip pill, in the duel-detail overlay, and in any cached state.
+
+**Backend left alone:**
+- `ALLOWED_DUEL_TYPES` in `backend/src/handlers/duels.ts` still includes `'boss_race'`. Removing it would reject historical rows on read and break alias lookups for any in-flight duel.
+- `POST /v1/duels/:id/resolve` still returns `BOSS_RACE_SCORING_DEFERRED` for that type — same behavior, same code path.
+- No migration. No schema change. No deploy.
+
+**Sims:**
+- `run-all.ps1` default matrix is now the 5 user-selectable scorable types. `06-boss-race-deferred.ps1` stays in `sims/scripts/` and is runnable on its own; it just isn't part of the default matrix. Successful matrix is `5/5 PASS - 0 FAIL - 0 SKIPPED`.
+- `OPERATOR.md` updated to reflect the 5-type acceptance criterion and to note that boss_race remains deferred / not part of v1 ship gate.
+
+**Anti-patterns:**
+- Don't reintroduce `boss_race` to the picker's order array without first removing `selectable: false` (the `selectable` filter would still hide it, but the asymmetry would be confusing).
+- Don't remove `boss_race` from `DUEL_TYPES` entirely or strip its glyph / verb / short-code entries — legacy duel rows still need those for graceful rendering.
+- Don't remove `'boss_race'` from `backend/src/handlers/duels.ts`'s `ALLOWED_DUEL_TYPES` — historical rows would fail validation on read.
+- Don't re-add `06-boss-race-deferred.ps1` to `run-all.ps1`'s default matrix; the deferred path's failure would mask the actual 5/5 acceptance signal.
+
+When verified boss-event logging ships (future phase), flip `selectable: true` on the `boss_race` entry, restore it to the picker's order array, and re-add the sim to the default matrix. That's the entire surgical surface to un-defer.
 
 ### Codemagic sentinels + OneDrive deletion (v3 Phase 1z.15)
 

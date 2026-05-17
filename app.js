@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w27';
+  const APP_BUILD_TAG = '2.2.1-w28';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14765,42 +14765,58 @@
   // Metadata + UI only. No scoring engine, no souls movement. When the
   // scoring engine ships, `duel.duel_type` decides which verified
   // query runs against each participant's data.
+  // `selectable: false` hides a duel type from the user-facing Choose
+  // Verified Duel picker (Phase 1z.16). Legacy / pre-existing duels
+  // with that type still render gracefully -- getDuelTypeMeta, glyphs,
+  // short-codes, verbs, and the deferred-resolve copy all stay intact
+  // for backward compatibility. Backend's ALLOWED_DUEL_TYPES is
+  // unchanged so historical rows with boss_race continue to round-trip.
   const DUEL_TYPES = {
     steps: {
       id: 'steps', label: 'Steps Duel',
       short: 'Most Apple Health steps wins.',
       win:   'Most verified steps during the duel window wins.',
       source:'Apple Health steps',
+      selectable: true,
     },
     sleep: {
       id: 'sleep', label: 'Sleep Duel',
       short: 'Most 7+ hour sleep nights wins.',
       win:   'Most verified nights with at least 7 hours of sleep wins.',
       source:'Apple Health sleep',
+      selectable: true,
     },
     bedtime: {
       id: 'bedtime', label: 'Bedtime Duel',
       short: 'Most nights asleep before midnight wins.',
       win:   'Most verified before-midnight bedtimes wins.',
       source:'Apple Health sleep',
+      selectable: true,
     },
     strength: {
       id: 'strength', label: 'Strength Duel',
       short: 'Most verified strength workouts wins.',
       win:   'Most Apple Health strength workouts during the duel window wins.',
       source:'Apple Health workouts',
+      selectable: true,
     },
     verified_objectives: {
       id: 'verified_objectives', label: 'Verified Discipline Duel',
       short: 'Only system-verified objectives count.',
       win:   'Most verified objectives during the duel window wins.',
       source:'System-verified objectives',
+      selectable: true,
     },
     boss_race: {
+      // Deferred in v1. Hidden from the picker; meta + glyph + verb
+      // are kept so any legacy duel row with this type renders
+      // without crashing the UI. Backend ALLOWED_DUEL_TYPES still
+      // includes 'boss_race' so old rows fetched from D1 round-trip.
       id: 'boss_race', label: 'Boss Race',
       short: 'Race to defeat a verified boss.',
       win:   'First hunter to defeat the selected HealthKit-backed boss wins.',
       source:'Verified boss progress',
+      selectable: false,
     },
   };
   // v3 Phase 1z.2 — inline SVG type glyphs (one per duel type).
@@ -16033,15 +16049,22 @@
   try { window.closeDuelDetail = closeDuelDetail; } catch (_) {}
 
   // ── Choose Verified Duel sheet (v3 Phase 1x.6) ──
+  // v3 Phase 1z.16 — picker is the 5 scorable verified duel types
+  // ONLY. Boss Race is deferred and intentionally not user-selectable
+  // until verified boss-event logging exists. The boss_race entry in
+  // DUEL_TYPES carries `selectable: false`; both the order array AND
+  // the per-card guard reject anything that isn't selectable, so
+  // adding a future hidden type only requires the flag.
   function _renderDuelTypeCards() {
     const grid = document.getElementById('duel-type-grid');
     if (!grid) return;
     const selected = _duelTypeChoice.selectedType || DEFAULT_DUEL_TYPE;
-    const order = ['verified_objectives', 'steps', 'sleep', 'bedtime', 'strength', 'boss_race'];
+    const order = ['verified_objectives', 'steps', 'sleep', 'bedtime', 'strength'];
     const parts = [];
     for (const id of order) {
       const meta = DUEL_TYPES[id];
       if (!meta) continue;
+      if (meta.selectable === false) continue;
       const isSel = (id === selected);
       parts.push(
         '<button type="button" class="duel-type-card' + (isSel ? ' duel-type-card--selected' : '') + '" ' +
@@ -16114,6 +16137,9 @@
         if (!card) return;
         const id = card.getAttribute('data-duel-type');
         if (!id || !DUEL_TYPES[id]) return;
+        // Defense-in-depth: refuse to set a hidden type as the
+        // current selection even if a stale DOM node sneaks in.
+        if (DUEL_TYPES[id].selectable === false) return;
         _duelTypeChoice.selectedType = id;
         _renderDuelTypeCards();
       });

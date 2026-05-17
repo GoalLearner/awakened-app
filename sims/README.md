@@ -47,15 +47,22 @@ before/after artifact counts; every `after` count MUST be 0. See
 
 ## Smoke test matrix
 
-Five scorable duel types from Phase 1z + boss_race deferred. One script
-per type lives in `sims/scripts/`:
+**v1 acceptance matrix (the default `run-all.ps1`):** 5 scorable
+verified duel types — exactly the set the picker exposes to users.
 
 1. `01-steps-duel.ps1` — steps_total events, MAX(value) aggregation
 2. `02-sleep-duel.ps1` — sleep_7h_night events, COUNT DISTINCT metric_date
 3. `03-bedtime-duel.ps1` — bedtime_before_midnight events, COUNT DISTINCT metric_date
 4. `04-strength-duel.ps1` — strength_workout events, COUNT(*) with uuid dedupe
-5. `05-verified-objectives.ps1` — mixed objective events, COUNT DISTINCT (type, date)
-6. `06-boss-race-deferred.ps1` — verifies BOSS_RACE_SCORING_DEFERRED is returned
+5. `05-verified-objectives-duel.ps1` — mixed objective events, COUNT DISTINCT (type, date)
+
+**Deferred (NOT part of default matrix):**
+
+6. `06-boss-race-deferred.ps1` — verifies BOSS_RACE_SCORING_DEFERRED
+   is returned on `/resolve`. Boss Race is hidden from the picker
+   in v1 (DUEL_TYPES entry has `selectable: false`); the user cannot
+   create one through the app. The sim still works for the backend
+   contract check — run it solo, not via `run-all.ps1`.
 
 Each script:
 1. Creates a friendship between sim_alpha and sim_bravo (idempotent)
