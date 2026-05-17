@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w38';
+  const APP_BUILD_TAG = '2.2.1-w39';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9938,12 +9938,12 @@
         showHabitToast('Welcome to the 100K Step Club.');
       }
     } catch (_) {}
-    // Trigger the 600ms one-time pulse on the rank-hero frame, if
+    // Trigger the 600ms one-time pulse on the 100K Club badge, if
     // the Status card is currently mounted. CSS rule:
-    // `.sc-rank-hero--prestige.is-new` animates a single pulse,
+    // `.sc-rank-hero--100k-club.is-new` animates a single pulse,
     // class self-removes via setTimeout.
     try {
-      const el = document.querySelector('.sc-rank-hero--prestige');
+      const el = document.querySelector('.sc-rank-hero--100k-club');
       if (el) {
         el.classList.add('is-new');
         setTimeout(() => { try { el.classList.remove('is-new'); } catch (_) {} }, 700);
@@ -10063,23 +10063,49 @@
         '</div>' +
         // Identity row
         '<div class="sc-hero sc-hero--profile">' +
-          // v3 Phase 1z.27 -- 100K Step Club prestige frame. When the
-          // authenticated user has the step_100k_club accolade, the
-          // rank disc gains an OUTER gold frame + tap behavior; the
-          // tier color of the disc itself is unchanged.
+          // v3 Phase 1z.31 -- 100K Step Club takeover badge.
+          // When the user has the step_100k_club accolade, the rank
+          // disc's VISUAL contents are replaced with a self-contained
+          // gold prestige badge (the Spark mark in dark navy on a
+          // gold disc). Same 54x54 footprint -- no layout shift, no
+          // change to the .sc-identity-strip below where the rank
+          // letter / pts / class line continues to show the user's
+          // actual rank. The disc still carries data-rank="..." so
+          // any rank-keyed analytics or styling that depends on the
+          // attribute (rather than the visible disc color) keeps
+          // working. data-prestige="step_100k_club" on the element
+          // means the existing tap handler at setupStep100KTap()
+          // continues to match without modification.
+          //
+          // ASSET HOOK: this currently inlines an SVG of the Spark
+          // mark. When ClaudeDesign delivers a final 100K Club badge
+          // PNG/SVG, replace the inner SVG markup with an <img>
+          // pointing at assets/brand/100k-club-badge.png (or .svg)
+          // and the CSS below will still center it correctly.
           (function() {
             const has100k = (typeof accolades !== 'undefined' && accolades && typeof accolades.has === 'function')
               ? accolades.has('step_100k_club') : false;
-            const cls = 'sc-rank-hero'
-              + (isSPlus ? ' splus' : '')
-              + (has100k ? ' sc-rank-hero--prestige' : '');
-            const attrs = ' data-rank="' + esc(rank.id) + '"'
-              + (has100k
-                  ? (' data-prestige="step_100k_club"' +
-                     ' role="button" tabindex="0"' +
-                     ' aria-label="100K Step Club member. Tap for details."')
-                  : '');
-            return '<div class="' + cls + '"' + attrs + '>' + esc(rank.id) + '</div>';
+            if (has100k) {
+              return '<div class="sc-rank-hero sc-rank-hero--100k-club"' +
+                       ' data-rank="' + esc(rank.id) + '"' +
+                       ' data-prestige="step_100k_club"' +
+                       ' role="button" tabindex="0"' +
+                       ' aria-label="100K Step Club member. Tap for details.">' +
+                       '<svg class="sc-rank-hero__100k-svg" viewBox="0 0 100 100" aria-hidden="true">' +
+                         '<path d="M50 12 L84 82 L16 82 Z" fill="none" stroke="#0e0e2a" stroke-width="6" stroke-linejoin="round"/>' +
+                         '<g stroke="#0e0e2a" stroke-width="3.5" stroke-linecap="round">' +
+                           '<path d="M48 14 L52 14"/>' +
+                           '<path d="M18 84 L22 80"/>' +
+                           '<path d="M82 84 L78 80"/>' +
+                         '</g>' +
+                         '<path d="M50 34 C 42 48 42 60 50 66 C 58 60 58 48 50 34 Z" fill="#0e0e2a"/>' +
+                       '</svg>' +
+                     '</div>';
+            }
+            return '<div class="sc-rank-hero' + (isSPlus ? ' splus' : '') + '"' +
+                       ' data-rank="' + esc(rank.id) + '">' +
+                       esc(rank.id) +
+                   '</div>';
           })() +
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +

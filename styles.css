@@ -22156,173 +22156,84 @@ body.habit-drag-active * {
 }
 
 /* ===========================================================
-   v3 Phase 1z.27 — 100K Step Club accolade
-   - Gold prestige frame around the rank disc when the user has
-     earned step_100k_club. Rank disc tier color is preserved;
-     the frame sits OUTSIDE the disc as a layered ring.
+   v3 Phase 1z.27 / 1z.31 — 100K Step Club accolade
+   - 1z.31: replaced the prior CSS prestige-frame approach with
+     a self-contained gold takeover badge that swaps the disc
+     contents entirely when the accolade is earned. The Spark
+     mark (in dark navy) sits on a gold disc; same 54x54
+     footprint as the normal rank disc.
    - One-time pulse on first earn (.is-new modifier).
    - Bottom sheet styling for the accolade detail surface.
    =========================================================== */
 
-/* Outer gold prestige frame. Uses two stacked box-shadows:
-   the inner one paints the gold ring 4px out from the disc,
-   the outer one is the soft glow. Frame survives the per-rank
-   inner-glow rules already applied to .sc-rank-hero because
-   it's an OUTER box-shadow halo, not an inset. */
-/* Base prestige rule -- specificity intentionally scoped to
-   `.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige` so it
-   wins over `.sc-card--profile .sc-rank-hero[data-rank="X"]`
-   (both have specificity 0,3,0; cascade order decides; this rule
-   ships LATER in the file so it wins). */
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige,
-.sc-rank-hero--prestige {
-  position: relative;
+/* (1z.27/1z.29/1z.30 outer-gold-frame CSS retired in 1z.31 —
+   replaced by the self-contained takeover badge below.) */
+
+/* ── 1z.31 — 100K Step Club takeover badge ──────────────────
+   When the user has the step_100k_club accolade, the rank disc's
+   visual contents are REPLACED with this gold prestige badge.
+   Same 54x54 footprint as the normal rank disc so layout doesn't
+   shift. Rank identity continues to show in the .sc-identity-strip
+   below the disc (E RANK . 36 PTS . CIVILIAN).
+
+   Specificity note: this rule is scoped to
+   `.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club`
+   (specificity 0,3,0). The per-rank rules at
+   `.sc-card--profile .sc-rank-hero[data-rank="E"]` are also (0,3,0).
+   This block ships LATER in the file -> wins on cascade. So this
+   badge overrides background / border / box-shadow / color
+   regardless of which rank the user holds. */
+.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f7c558 0%, #f5b842 50%, #c08418 100%);
+  border: 1.5px solid #f5b842;
+  box-shadow:
+    0 0 18px rgba(245, 184, 66, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.20);
+  color: #0e0e2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  z-index: 1;
+  position: relative;
+  /* Disable per-rank text color/glow on the disc -- the rank letter
+     is NOT rendered when this class is active; the SVG takes over. */
+  text-shadow: none;
+  transition: transform 0.12s ease, filter 0.18s ease;
+}
+.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club:hover  { filter: brightness(1.06); }
+.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club:active { transform: scale(0.97); }
+.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club:focus-visible {
+  outline: 2px solid rgba(245, 184, 66, 0.9);
+  outline-offset: 3px;
 }
 
-/* Ranked-game prestige frame -- visible at small size, premium look.
- *
- * v3 Phase 1z.30 refinement after browser preview showed the 1z.27
- * version reading too faint on E-rank. Now uses a 4-layer stacked
- * box-shadow that reads as a real "framed" prestige badge:
- *
- *   1. INNER:  rank-color inset glow (preserved per data-rank)
- *   2. RING:   2px dark separator immediately outside the disc edge
- *              (creates a visible notch / inset look between disc
- *              and gold ring -- the trick that makes the frame feel
- *              like a real ranked-game frame, not a glow)
- *   3. FRAME:  4px solid gold ring (the actual frame)
- *   4. EDGE:   1px brighter gold highlight at the outermost edge
- *              (subtle 3D depth cue, makes the ring feel bevelled)
- *   5. GLOW:   22px ambient gold halo at moderate alpha
- *
- * Total visual extension: 7px from disc edge. Hero padding (12px
- * around the disc) accommodates without clipping.
- *
- * Box-shadow order matters: earlier shadows paint ON TOP of later
- * ones. So the dark separator layer (band 0-2px) goes FIRST, the
- * gold ring (band 0-6px) goes SECOND -- the gold covers 2-6px
- * because the dark 0-2px is on top of the gold 0-2px region. */
-
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="E"],
-.sc-rank-hero--prestige {
-  box-shadow:
-    0 0 0 2px rgba(8, 8, 26, 0.95),           /* (2) dark separator notch */
-    0 0 0 6px #f5b842,                        /* (3) gold frame 2-6px */
-    0 0 0 7px rgba(255, 200, 74, 0.85),       /* (4) bright outer edge highlight */
-    0 0 22px 4px rgba(245, 184, 66, 0.55),    /* (5) ambient glow */
-    inset 0 0 14px rgba(167, 139, 250, 0.45); /* (1) violet inner glow (E) */
+.sc-rank-hero__100k-svg {
+  width: 70%;
+  height: 70%;
+  display: block;
+  /* Spark mark engraves the gold disc. Drop-shadow gives a subtle
+     bevel effect against the gold gradient -- reads as engraved,
+     not flat-painted-on. */
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
 
-/* Per-rank prestige variants. Each preserves the layered
-   separator+frame+edge+glow stack and overrides only the inner
-   inset glow to match the rank's own tier color. */
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="D"],
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="C"] {
-  box-shadow:
-    0 0 0 2px rgba(8, 8, 26, 0.95),
-    0 0 0 6px #f5b842,
-    0 0 0 7px rgba(255, 200, 74, 0.85),
-    0 0 22px 4px rgba(245, 184, 66, 0.55),
-    inset 0 0 14px rgba(139, 92, 246, 0.45);
+/* First-unlock pulse -- single 600ms ping when the user first earns
+   the accolade. JS adds .is-new and removes it after the animation.
+   prefers-reduced-motion kills the keyframes entirely. */
+@keyframes sc-rank-100k-pulse {
+  0%   { transform: scale(1);    filter: brightness(1) drop-shadow(0 0 0 rgba(245,184,66,0)); }
+  50%  { transform: scale(1.08); filter: brightness(1.15) drop-shadow(0 0 16px rgba(245,184,66,0.7)); }
+  100% { transform: scale(1);    filter: brightness(1) drop-shadow(0 0 0 rgba(245,184,66,0)); }
 }
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="B"] {
-  box-shadow:
-    0 0 0 2px rgba(8, 8, 26, 0.95),
-    0 0 0 6px #f5b842,
-    0 0 0 7px rgba(255, 200, 74, 0.85),
-    0 0 22px 4px rgba(245, 184, 66, 0.55),
-    inset 0 0 14px rgba(59, 130, 246, 0.45);
-}
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="A"] {
-  box-shadow:
-    0 0 0 2px rgba(8, 8, 26, 0.95),
-    0 0 0 6px #f5b842,
-    0 0 0 7px rgba(255, 200, 74, 0.85),
-    0 0 22px 4px rgba(245, 184, 66, 0.55),
-    inset 0 0 14px rgba(168, 85, 247, 0.45);
-}
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="S"] {
-  box-shadow:
-    0 0 0 2px rgba(8, 8, 26, 0.95),
-    0 0 0 6px #f5b842,
-    0 0 0 7px rgba(255, 200, 74, 0.85),
-    0 0 22px 4px rgba(245, 184, 66, 0.55),
-    inset 0 0 14px rgba(249, 115, 22, 0.45);
-}
-/* S+ is already gold-on-gold -- swap the dark separator for a
-   violet hairline so the frame visually separates from the disc.
-   Keep the bright outer edge + glow at slightly higher intensity. */
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige[data-rank="S+"] {
-  box-shadow:
-    0 0 0 2px rgba(167, 139, 250, 0.55),
-    0 0 0 6px #f5b842,
-    0 0 0 7px rgba(255, 200, 74, 0.90),
-    0 0 26px 5px rgba(245, 184, 66, 0.60),
-    inset 0 0 14px rgba(245, 158, 11, 0.45);
-}
-
-.sc-rank-hero--prestige:focus-visible {
-  outline: 2px solid rgba(245, 184, 66, 0.85);
-  outline-offset: 4px;
-}
-
-/* Spark crest at the top of the frame -- gold upward-pointing
-   triangle. v3 Phase 1z.30 refinement: bumped to 14x12 (was 10x8)
-   with a stronger drop-shadow and a 1px dark outline via the
-   surrounding shadow stack so the apex reads clearly against the
-   navy background. Positioned at top: -9px so it sits ABOVE the
-   gold ring (which extends 7px above the disc edge), leaving a
-   2px visual separation between crest base and ring top.
-   The Status card has `.sc-hero { padding: 12px 16px 10px }` so
-   the crest's outer extent at top:-9 + height:12 still fits
-   inside the card without clipping. */
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige::before {
-  content: '';
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 12px;
-  background: #f5b842;
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  filter:
-    drop-shadow(0 0 6px rgba(245, 184, 66, 0.85))
-    drop-shadow(0 0 1px rgba(8, 8, 26, 1));    /* dark hairline */
-  pointer-events: none;
-  z-index: 3;
-}
-/* Thin inner highlight on the crest -- second pseudo-element gives
-   the apex a brighter top edge. Reads as 3D depth, not flat. */
-.sc-card--profile .sc-rank-hero.sc-rank-hero--prestige::after {
-  content: '';
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 12px;
-  background: linear-gradient(180deg, rgba(255, 220, 130, 0.95) 0%, rgba(255, 200, 74, 0) 55%);
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  pointer-events: none;
-  z-index: 4;
-}
-
-/* First-unlock pulse — single 600ms ping. JS adds .is-new and
-   removes it after the animation. prefers-reduced-motion kills
-   the keyframes entirely. */
-@keyframes sc-rank-prestige-pulse {
-  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(245,184,66,0.0)); }
-  50%  { transform: scale(1.06); filter: drop-shadow(0 0 12px rgba(245,184,66,0.55)); }
-  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(245,184,66,0.0)); }
-}
-.sc-rank-hero--prestige.is-new {
-  animation: sc-rank-prestige-pulse 0.6s ease-out 1;
+.sc-rank-hero--100k-club.is-new {
+  animation: sc-rank-100k-pulse 0.6s ease-out 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .sc-rank-hero--prestige.is-new { animation: none; }
+  .sc-rank-hero--100k-club.is-new { animation: none; }
 }
 
 /* ── Accolade detail sheet (#accolade-step-100k-sheet) ───────── */

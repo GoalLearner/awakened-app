@@ -2510,7 +2510,45 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=285`, `app.js?v=388`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.273`, `APP_BUILD_TAG = '2.2.1-w38'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=286`, `app.js?v=389`, `auth.js?v=14`, `simulated-leaderboard.js?v=4`, `sw.js v5.274`, `APP_BUILD_TAG = '2.2.1-w39'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### 100K Step Club takeover badge — direction change (v3 Phase 1z.31)
+
+Three iterations on the outer-gold-frame approach (1z.27 specced, 1z.29 specificity fix, 1z.30 stronger 4-layer stack) failed to land a frame that read as premium at the 54×54 disc size. Browser preview kept showing either a faint glow or a noisy ring overlaying the violet rank disc. Product direction change: **stop decorating the rank disc; replace it.**
+
+**New approach:** when the user has `step_100k_club`, the disc's visual contents are swapped wholesale to a self-contained gold prestige badge — gold disc + dark-navy Spark mark engraved on it. Rank identity continues to be visible in the `.sc-identity-strip` row below (`E RANK · 36 PTS · CIVILIAN`), so users still know their actual rank; the disc itself becomes the accolade.
+
+**Markup change in `renderStatus()`** — branches on `accolades.has('step_100k_club')`:
+- **Earned:** `<div class="sc-rank-hero sc-rank-hero--100k-club" data-rank="..." data-prestige="step_100k_club" role="button" tabindex="0" aria-label="...">` containing an inline Spark SVG (canonical geometry, dark navy `#0e0e2a` fill on gold). No rank letter rendered.
+- **Unearned:** unchanged — `<div class="sc-rank-hero" data-rank="...">{rank.id}</div>`.
+
+The existing `data-prestige="step_100k_club"` attribute keeps the existing tap handler in `setupStep100KTap()` working without modification — same selector match, same sheet open. Keyboard Enter/Space activation also preserved.
+
+**CSS — retired + new:**
+- Retired: `.sc-rank-hero--prestige` base + per-rank variants (D, C, B, A, S, S+), `::before` Spark crest, `::after` highlight, `@keyframes sc-rank-prestige-pulse`. All the 1z.27 / 1z.29 / 1z.30 frame stacking is gone.
+- New: `.sc-card--profile .sc-rank-hero.sc-rank-hero--100k-club` overrides background (gold gradient `#f7c558 → #f5b842 → #c08418`), border (`1.5px solid #f5b842`), box-shadow (gold halo + inset top highlight + inset bottom shade for depth), color (`#0e0e2a` for the SVG fill). Same specificity (0,3,0) as per-rank rules → ships later → wins on cascade.
+- `.sc-rank-hero__100k-svg` — inline SVG sized at 70% of the disc edge, drop-shadow gives a subtle bevelled engraving effect.
+- New keyframe `@keyframes sc-rank-100k-pulse` for first-unlock — scale 1 → 1.08 + brightness pulse. JS continues to add `.is-new` to the badge for 600ms via the existing `_maybeFireFirstUnlockToast` path, but the selector switched from `.sc-rank-hero--prestige` to `.sc-rank-hero--100k-club`.
+
+**Asset hook for future ClaudeDesign exports:** the inline SVG is a placeholder. When a final 100K Club badge PNG or SVG arrives, swap the SVG markup inside the disc for an `<img>` tag pointing at `assets/brand/100k-club-badge.png` (or `.svg`) — the CSS `.sc-rank-hero__100k-svg` rule centers/sizes any element via `width: 70%; height: 70%`, so an `<img>` swap is drop-in.
+
+**Why this works better than the frame:**
+- Self-contained visual — no specificity dance against per-rank rules
+- Reads at small size (gold disc is high-contrast against the navy `.sc-hero` background, no faint edges)
+- The Spark mark IS the accolade — no need to layer a crest on top of a frame on top of a disc
+- Layout footprint unchanged (54×54), no Hunter Profile height shift
+- Unearned state is byte-identical to pre-1z.27 — zero risk of regression for users who haven't earned the accolade
+- Asset path is clean — ClaudeDesign can swap to a final PNG without touching JS
+
+**Sheet, click handler, accolade cache, backend — all unchanged.** This is purely a visual-render swap inside the disc.
+
+**Anti-patterns:**
+- Don't try to combine the takeover badge AND the outer frame approach. They fight for visual hierarchy. Takeover badge alone is the design call.
+- Don't render both the rank letter and the SVG inside the disc when the accolade is earned. The disc IS the badge; the letter lives below in `.sc-identity-strip`.
+- Don't change the `.sc-rank-hero` element class structure for unearned users. Keep the unearned path byte-identical to the pre-1z.27 baseline.
+- Don't re-introduce the `::before`/`::after` Spark crest. The Spark is now inside the disc, where it belongs.
+
+Bumps: `styles.css?v=286`, `app.js?v=389` (build tag + markup edit), `sw.js v5.274`, `APP_BUILD_TAG '2.2.1-w39'`. `APP_VERSION` unchanged. No backend, no Duels, no scoring, no JS-logic changes — pure visual-render swap.
 
 ### 100K prestige frame visibility refinement (v3 Phase 1z.30)
 
