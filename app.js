@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w33';
+  const APP_BUILD_TAG = '2.2.1-w34';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19241,6 +19241,27 @@
   // Order persists via the in-memory `habits` array → save() → hb_habits
   // localStorage. Pack streaks (MR, LI) are pack-membership-based, not
   // list-position-based, so visual reorder doesn't affect them.
+  //
+  // v3 Phase 1z.24 — DISABLED FOR 2.2.1 RELEASE STABILITY.
+  // Habit drag reorder is disabled for the 2.2.1 App Review build via
+  // the ENABLE_HABIT_DRAG_REORDER feature flag below. The iOS WKWebView
+  // long-press / native-image-drag collision produced a visible ghost
+  // artifact on the left edge of the viewport after drop attempts;
+  // 1z.22 + 1z.23 hotfixes did not fully eliminate it. Rather than ship
+  // a known visible defect, the gesture is gated off. All underlying
+  // helpers (attachLongPressDrag, enterDragMode, onDragEnd,
+  // cancelDragSilently, _finalizeDragCleanup, _backgroundDragSafety,
+  // CSS for .drag-ghost / .lp-pressing / .is-dragging / body classes)
+  // remain in source for the re-enable path. Habit ORDER persistence
+  // is untouched — saved order in hb_habits localStorage continues to
+  // render, just no longer reorderable via gesture in 2.2.1.
+  // Re-enable in 2.2.2 by flipping ENABLE_HABIT_DRAG_REORDER back to
+  // true AFTER a more iOS-safe gesture approach is shipped (e.g.,
+  // explicit edit-mode toggle with on-card up/down chevrons, or a
+  // FLIP-list animation library that doesn't compete with iOS's
+  // native long-press recognizer).
+  const ENABLE_HABIT_DRAG_REORDER = false;
+
   const LONG_PRESS_MS         = 400;
   const LP_MOVE_THRESHOLD     = 10;     // px — finger movement that cancels long-press
   const DRAG_IDLE_TIMEOUT_MS  = 1500;   // exit drag mode if no movement after this
@@ -19251,6 +19272,14 @@
   let _postDropGuardUntil = 0;
 
   function bindDrag() {
+    // v3 Phase 1z.24 — feature-flag short-circuit. Disabled for 2.2.1.
+    // When false (the 2.2.1 state), bindDrag is a no-op: no long-press
+    // handlers attached, no handle-drag handlers attached. All habit
+    // cards behave as plain tap-to-complete targets; long-pressing
+    // does nothing app-side. Normal scrolling still works because
+    // touch-action: pan-y stays on .habit-item via the existing rule.
+    if (!ENABLE_HABIT_DRAG_REORDER) return;
+
     const list = document.getElementById('habit-list');
     if (!list) return;
     // Long-press on the entire card body — primary trigger.

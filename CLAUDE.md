@@ -2506,7 +2506,49 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=282`, `app.js?v=383`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.268`, `APP_BUILD_TAG = '2.2.1-w33'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=282`, `app.js?v=384`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.269`, `APP_BUILD_TAG = '2.2.1-w34'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Habit drag-to-reorder disabled for 2.2.1 release (v3 Phase 1z.24)
+
+After two hotfix attempts (1z.22 `-webkit-touch-callout: none`, 1z.23 `-webkit-user-drag: none` + centralized cleanup + backgrounding safety), the iOS WKWebView long-press / native-image-drag collision continued to produce a visible ghost-text artifact along the left edge of the viewport after drop attempts. Rather than ship a known visible defect to App Review, **habit drag-to-reorder is disabled in 2.2.1** via a single feature flag in `app.js`:
+
+```js
+const ENABLE_HABIT_DRAG_REORDER = false;
+```
+
+`bindDrag()` short-circuits at the top when the flag is false — no long-press handlers attached, no `[data-drag]` handle handlers attached. Habit cards behave as plain tap-to-complete targets. Long-pressing a habit does nothing app-side; iOS's native gestures may still fire on the WebView but with no Awakened drag visuals competing, the visible artifact disappears.
+
+**What's preserved:**
+- All underlying drag machinery in source (`attachLongPressDrag`, `enterDragMode`, `onDragEnd`, `cancelDragSilently`, `_finalizeDragCleanup`, `_backgroundDragSafety`, and every related CSS rule).
+- All defensive CSS from 1z.22 + 1z.23 (`-webkit-touch-callout: none`, `-webkit-user-drag: none`, body-class lockdown) — harmless to keep, useful when the flag flips back on.
+- `hb_habits` localStorage shape unchanged — saved habit order continues to render in the exact order the user previously arranged it. Users do not lose any ordering they already had.
+- `sortHabitsAutoVerifyFirst()` still runs inside `save()`, pinning the 4 HealthKit auto-verify habits to the top of the list (per Phase 1u policy). That's a CODE-driven sort, not gesture-driven, so it works independently of this flag.
+
+**What's gone in 2.2.1 specifically:**
+- Long-pressing a habit card does nothing visible.
+- The `.lp-pressing` scale-down armed state cannot apply (handler never attached).
+- The `.is-dragging` sibling-dim state cannot apply.
+- The `.drag-ghost` clone is never created.
+- The `body.habit-drag-armed` / `body.habit-drag-active` classes are never set.
+- The 6-dot drag handle (already `opacity: 0` in CSS) stays invisible AND inert.
+- Reorder via the `[data-drag]` handle ALSO disabled (shared `bindDrag` short-circuit).
+
+**Re-enable path for 2.2.2:**
+1. Replace the long-press gesture with an iOS-safe approach:
+   - Option A: explicit edit-mode toggle (settings → "Edit habit order"), then on-card up/down chevrons that reorder via tap. No long-press, no native gesture competition.
+   - Option B: a battle-tested library like SortableJS or react-dnd's HTML5Backend with a custom touch backend that fully captures the gesture before iOS can interpret it.
+   - Option C: native iOS drag-and-drop API (`UIDragInteraction` in the Capacitor shell, dispatched to JS via plugin). Highest fidelity, biggest integration cost.
+2. Flip `ENABLE_HABIT_DRAG_REORDER = true` in `app.js`.
+3. Validate on TestFlight with the 7-step QA checklist from 1z.23 before shipping.
+
+**Anti-patterns:**
+- Don't remove the disabled drag machinery from source to "clean up" — that would force a from-scratch rewrite when the flag re-enables. The current code is correct in isolation; iOS's gesture-recognizer competition is the integration problem.
+- Don't ship 2.2.2 with the same long-press-on-card gesture pattern. The collision with iOS's native long-press is structural, not a CSS bug. Need a different gesture model (explicit edit mode, dedicated handle that captures the entire gesture, or native plugin) before flipping the flag.
+- Don't try to mask the artifact with overflow / z-index hacks. Three hotfix attempts proved that's not the path.
+
+**Operational note:** the 7 manual QA steps from 1z.23 are now mostly moot for 2.2.1 — long-press has no effect. The remaining checks (tap completes habit, Add Habits opens library, scroll works, header gear opens settings) all stay valid.
+
+Bumps: `app.js?v=384`, `sw.js v5.269`, `APP_BUILD_TAG '2.2.1-w34'`. `APP_VERSION` unchanged. No CSS bump (the defensive rules from 1z.22 + 1z.23 stay in place and are harmless with the flag off). No backend / Duels / scoring / data changes.
 
 ### iOS native image-drag hotfix + centralized cleanup (v3 Phase 1z.23)
 
