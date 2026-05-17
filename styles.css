@@ -21532,3 +21532,214 @@ body.bro-locked { overflow: hidden; }
   .sc-card.sc-card--profile .sc-portrait-frame              { min-height: auto; }
   .sc-card.sc-card--profile .sc-portrait-row                { gap: 10px; padding: 12px 12px 14px; }
 }
+
+/* ===========================================================
+   v3 Phase 1z.18 -- World Rank . Steps card
+   Replaces the legacy WEEK XP card in the top metric strip.
+   Same outer footprint as the surrounding .metric-card slot;
+   internal layout per the Steps Card design final spec
+   (RPG variant with active / loading / empty states).
+   The whole card is a button; tap opens Stats > Global
+   Rankings > Steps (lb-rank-sheet).
+   =========================================================== */
+
+.metric-card.steps-card {
+  /* Button reset on top of the existing .metric-card shell. */
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(245, 158, 11, 0.30);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  /* Subtle violet radial glow in the bottom-right corner per spec. */
+  background:
+    radial-gradient(circle at 100% 100%, rgba(167, 139, 250, 0.16), transparent 62%),
+    var(--bg-card);
+  transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.metric-card.steps-card:hover {
+  border-color: rgba(245, 158, 11, 0.50);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.12);
+}
+.metric-card.steps-card:active   { transform: scale(0.985); }
+.metric-card.steps-card:focus-visible {
+  outline: 2px solid rgba(245, 158, 11, 0.65);
+  outline-offset: 2px;
+}
+
+.steps-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.steps-card__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #f5b842;
+  line-height: 1;
+}
+.steps-card__icon {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  display: block;
+}
+.steps-card__chev {
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  color: rgba(245, 158, 11, 0.55);
+  margin-left: 4px;
+}
+
+.steps-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Active state -- big gold rank + steps total */
+.steps-card__rankrow {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.steps-card__hash {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #f5b842;
+  line-height: 1;
+}
+.steps-card__rank {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f5b842;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.32);
+}
+.steps-card__pct {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(167, 139, 250, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.40);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #a78bfa;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  align-self: center;
+}
+.steps-card__pct.hidden { display: none; }
+
+.steps-card__totalrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+.steps-card__total b {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  margin-right: 2px;
+}
+.steps-card__delta {
+  margin-left: 6px;
+  color: #7dd07d;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+}
+.steps-card__delta.is-down { color: #ef4444; }
+.steps-card__delta.hidden  { display: none; }
+
+/* Loading state -- pulsing dot + Syncing... */
+.steps-card.is-loading .steps-card__label-text { color: var(--text-secondary); }
+.steps-card.is-loading .steps-card__label .steps-card__icon path { stroke: var(--text-secondary); }
+.steps-card__rankrow--loading {
+  align-items: center;
+}
+.steps-card__rank-pending {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.steps-card__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 7px;
+  background: #f5b842;
+  box-shadow: 0 0 6px #f5b842;
+  margin-left: auto;
+  animation: steps-card-pulse 1.2s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .steps-card__pulse { animation: none; }
+}
+@keyframes steps-card-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+.steps-card__loading-sub {
+  font-family: Georgia, 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Empty state -- iOS only / Sync steps to rank */
+.steps-card.is-empty .steps-card__label-text { color: var(--text-secondary); }
+.steps-card.is-empty .steps-card__label .steps-card__icon path { stroke: var(--text-tertiary); }
+.steps-card__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.steps-card__empty-title {
+  color: var(--text-secondary);
+}
+.steps-card__empty-sub {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Narrow viewports: collapse the "TOP %" chip first per spec
+   ("If TOP 18% would push past card width, hide the % chip first,
+   keep the rank."). The chip is hidden in v1 already; this rule
+   stays for future activation when backend exposes total-users. */
+@media (max-width: 360px) {
+  .metric-card.steps-card .steps-card__pct  { display: none; }
+  .metric-card.steps-card .steps-card__rank { font-size: 20px; }
+}

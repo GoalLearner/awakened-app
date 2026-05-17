@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=278">
+  <link rel="stylesheet" href="styles.css?v=279">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -254,23 +254,34 @@
           <span id="rank-label" class="hidden-compat">E Rank</span>
         </div>
 
-        <!-- Card 2: This calendar week's XP (Sun→Sat, resets Sunday) -->
-        <div class="metric-card metric-card--week">
-          <div class="metric-card-head">
-            <span class="metric-card-label">WEEK</span>
-            <span class="metric-card-reset">RESETS · SUN</span>
+        <!-- Card 2: World Rank · Steps leaderboard summary (Phase 1z.18).
+             Replaces the prior WEEK XP card. The whole card is a button;
+             tap opens Stats > Global Rankings > Steps (lb-rank-sheet).
+             Legacy week-xp-* element IDs are GONE from this slot; the
+             updateHeaderMetrics() week-xp writes already null-guard every
+             setter, so the dead code is harmless until a future cleanup.
+             The XP · 30D sparkline (Card 3) is untouched. -->
+        <button type="button" id="steps-card"
+                class="metric-card metric-card--steps steps-card is-loading"
+                aria-label="Open global steps leaderboard">
+          <div class="steps-card__head">
+            <span class="steps-card__label">
+              <svg class="steps-card__icon" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M5 2.5 V8 C5 9 4 9.4 4 10.4 V12 Q4 13 5 13 H11 Q12 13 12 12 V10.4 C12 9.4 10 9 9 8 V2.5 Z"
+                      fill="none" stroke="#f5b842" stroke-width="0.9" stroke-linejoin="round"/>
+                <path d="M5 5 H9" stroke="#f5b842" stroke-width="0.7" stroke-linecap="round"/>
+              </svg>
+              <span class="steps-card__label-text">WORLD RANK</span>
+            </span>
+            <span class="steps-card__chev" aria-hidden="true">›</span>
           </div>
-          <div class="metric-card-bar">
-            <div id="week-xp-bar" class="metric-card-bar-fill"></div>
+          <div class="steps-card__body" id="steps-card-body" aria-live="polite">
+            <!-- Filled by updateStepsCard() with one of:
+                  - active state  (rank + steps)
+                  - loading state (iOS + permission, no cache yet)
+                  - empty state   (web / iOS without HealthKit grant) -->
           </div>
-          <div class="metric-card-body">
-            <span id="week-xp-current" class="metric-card-value">0</span>
-            <span class="metric-card-unit">XP</span>
-          </div>
-          <div class="metric-card-sub">
-            DAY <b id="week-xp-day">1</b> / 7
-          </div>
-        </div>
+        </button>
 
         <!-- Card 3: 30-day cumulative XP sparkline -->
         <div class="metric-card metric-card--spark">
@@ -1969,7 +1980,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=4"></script>
-  <script src="app.js?v=378"></script>
+  <script src="app.js?v=379"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

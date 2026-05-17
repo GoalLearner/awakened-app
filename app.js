@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w28';
+  const APP_BUILD_TAG = '2.2.1-w29';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11720,6 +11720,118 @@
         dot.setAttribute('cy', last[1].toFixed(2));
       }
     } catch (_) {}
+
+    // ── World Rank · Steps card (Phase 1z.18) ────────────────
+    // Replaces the legacy WEEK XP card. State-driven render
+    // (active / loading / empty). Whole card opens the existing
+    // Stats > Global Rankings > Steps sheet via openLeaderboardRanking.
+    try { updateStepsCard(); } catch (_) {}
+  }
+
+  // ── World Rank · Steps card (Phase 1z.18) ─────────────────────
+  // Formats:
+  //   <1k       -> "847"
+  //   1k-100k   -> "12.4K" (one decimal, drop trailing zero)
+  //   100k-1M   -> "127K"
+  //   >=1M      -> "1.2M"
+  function _formatStepCount(n) {
+    n = Math.max(0, Math.floor(Number(n) || 0));
+    if (n < 1000) return String(n);
+    if (n < 100000) {
+      const v = n / 1000;
+      const fixed = v.toFixed(1);
+      return (fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed) + 'K';
+    }
+    if (n < 1000000) return Math.round(n / 1000) + 'K';
+    return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  // Rank format per spec: "Rank scales smoothly: #1 -> #9999
+  // (drop "#" prefix at 5 digits, keep number)". The "#" prefix
+  // sits in static markup; this helper returns just the digit
+  // portion, and the caller hides the prefix span past 5 digits.
+  function _formatRankNumber(rank) {
+    rank = Math.max(0, Math.floor(Number(rank) || 0));
+    return String(rank);
+  }
+  function _stepsCardRankHasHash(rank) {
+    rank = Math.max(0, Math.floor(Number(rank) || 0));
+    return rank > 0 && rank < 10000;
+  }
+
+  function updateStepsCard() {
+    const card = document.getElementById('steps-card');
+    const body = document.getElementById('steps-card-body');
+    if (!card || !body) return;
+
+    let cached = null;
+    try { cached = lbCacheRead('step_total'); } catch (_) {}
+
+    const hasHealth = (typeof Health !== 'undefined' && Health && Health.isAvailable && Health.isAvailable());
+    let permGranted = false;
+    try { permGranted = hasHealth && Health.permissionStatus && Health.permissionStatus() === 'granted'; } catch (_) {}
+
+    // Clear state classes; the active path sets nothing extra, the
+    // loading/empty paths re-add their markers.
+    card.classList.remove('is-loading', 'is-empty', 'is-web');
+    const labelText = card.querySelector('.steps-card__label-text');
+
+    // ACTIVE: we have cached me with a rank > 0
+    if (cached && cached.me && typeof cached.me.rank === 'number' && cached.me.rank > 0) {
+      if (labelText) labelText.textContent = 'WORLD RANK';
+      const rank = cached.me.rank;
+      const steps = (typeof cached.me.current_value === 'number') ? cached.me.current_value : 0;
+      const showHash = _stepsCardRankHasHash(rank);
+      const rankNum = _formatRankNumber(rank);
+      body.innerHTML =
+        '<div class="steps-card__rankrow">' +
+          (showHash ? '<span class="steps-card__hash">#</span>' : '') +
+          '<span class="steps-card__rank">' + esc(rankNum) + '</span>' +
+          // TOP % chip + climb delta hooks reserved for future
+          // activation once backend exposes total-users and
+          // historical rank. Markup intentionally omitted in v1.
+        '</div>' +
+        '<div class="steps-card__totalrow">' +
+          '<span class="steps-card__total"><b>' + esc(_formatStepCount(steps)) + '</b> STEPS</span>' +
+        '</div>';
+      return;
+    }
+
+    // EMPTY: web build OR iOS without HealthKit permission. Show
+    // the iOS-only fallback. Avoid surfacing a misleading "#0".
+    if (!hasHealth || !permGranted) {
+      card.classList.add('is-empty');
+      if (!hasHealth) card.classList.add('is-web');
+      if (labelText) labelText.textContent = 'STEPS · GLOBAL';
+      body.innerHTML =
+        '<div class="steps-card__empty">' +
+          '<div class="steps-card__empty-title">iOS only</div>' +
+          '<div class="steps-card__empty-sub">Sync steps to rank</div>' +
+        '</div>';
+      return;
+    }
+
+    // LOADING: iOS with permission but no cache yet. Pulsing dot +
+    // "Syncing..." subline. Will refresh once renderLeaderboard
+    // populates the cache.
+    card.classList.add('is-loading');
+    if (labelText) labelText.textContent = 'STEPS · GLOBAL';
+    body.innerHTML =
+      '<div class="steps-card__rankrow steps-card__rankrow--loading">' +
+        '<span class="steps-card__rank-pending">#&mdash;&mdash;</span>' +
+        '<span class="steps-card__pulse" aria-hidden="true"></span>' +
+      '</div>' +
+      '<div class="steps-card__loading-sub">Syncing&hellip;</div>';
+  }
+
+  function setupStepsCard() {
+    const card = document.getElementById('steps-card');
+    if (!card) return;
+    // Idempotent guard against double-wiring.
+    if (card.getAttribute('data-wired') === '1') return;
+    card.setAttribute('data-wired', '1');
+    card.addEventListener('click', () => {
+      try { openLeaderboardRanking('step_total'); } catch (_) {}
+    });
   }
 
   // Renders the status pill row: active habit packs (Morning Routine,
@@ -16880,6 +16992,12 @@
       lbCacheWrite(metric, result.top, result.me);
       const sim2 = _lbMaybeSimulate(metric, result.top, result.me);
       listEl.innerHTML = lbBuildRankList(metric, sim2.top, sim2.me);
+      // v3 Phase 1z.18 — refresh the top-dashboard World Rank card
+      // when the steps cache lands so its loading -> active transition
+      // happens without waiting for the next habit toggle.
+      if (metric === 'step_total') {
+        try { updateStepsCard(); } catch (_) {}
+      }
     } else if (result && result.code === 'EXPIRED') {
       // JWT died mid-view. Auth.fetchLeaderboardTop already cleared
       // hb_user; reload re-arms the sign-in gate.
@@ -24896,6 +25014,11 @@
     // v3 Phase 1z.6 — boss-defeat result modal wiring.
     try { setupBossResultModal(); } catch (_) {}
     if (typeof setupSocialDuels === 'function') setupSocialDuels();
+    // v3 Phase 1z.18 — World Rank · Steps card click handler +
+    // first paint. updateHeaderMetrics() also calls updateStepsCard
+    // on every habit toggle, but we paint here too so the card is
+    // not stuck in 'is-loading' before the first habit interaction.
+    try { setupStepsCard(); updateStepsCard(); } catch (_) {}
     // Process any reveals queued from drops that happened in a prior
     // session but the modal didn't get a chance to show (e.g., user
     // closed app mid-reveal). DROPS.md spec: "Show them one at a

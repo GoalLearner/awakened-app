@@ -2506,7 +2506,42 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=278`, `app.js?v=378`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.263`, `APP_BUILD_TAG = '2.2.1-w28'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=279`, `app.js?v=379`, `auth.js?v=13`, `simulated-leaderboard.js?v=4`, `sw.js v5.264`, `APP_BUILD_TAG = '2.2.1-w29'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### World Rank Steps card replaces Week XP slot (v3 Phase 1z.18)
+
+Claude Design's "Steps Card" handoff (Direction 3, RPG variant with the climb delta borrowed from Direction 2). The top metric strip's middle card was previously WEEK XP — a progress bar against an arbitrary `WEEK_XP_TARGET = 200`. Product decision: replace it with a tappable global-steps leaderboard summary so the dashboard's middle slot carries competitive utility instead of restating progress already visible everywhere else.
+
+**New middle card — `<button id="steps-card" class="metric-card metric-card--steps steps-card">`:**
+
+- **Label row:** stroked gold boot SVG + `WORLD RANK` (mono 9pt, +0.12em letter-spacing) + a right chevron.
+- **Rank row:** `#` prefix (Cinzel 13 gold) + `<rank>` (Cinzel 22 gold with soft gold glow). Rank prefix hides past 5 digits (per spec).
+- **Total row:** `<total> STEPS` (bold tabular-nums + uppercase mono label, text-secondary). Reserved hooks for a future climb-delta chip.
+- **Background:** unchanged top-card surface + a soft violet radial glow in the bottom-right corner.
+
+**Three states wired in `updateStepsCard()`:**
+
+| State | When | Rendered |
+|---|---|---|
+| **Active** | `lbCacheRead('step_total').me.rank > 0` | `WORLD RANK` + `#N` + `42.1K STEPS` |
+| **Loading** | iOS + permission granted + no cache yet | `STEPS · GLOBAL` + `#— —` with pulsing gold dot + italic `Syncing…` |
+| **Empty (web / no HK)** | `!Health.isAvailable()` OR permission ≠ `granted` | `STEPS · GLOBAL` + `iOS only` + `Sync steps to rank`. Avoids surfacing a misleading `#0`. |
+
+`updateStepsCard()` is called from `updateHeaderMetrics()` (every habit toggle / progress update) AND from `openLeaderboardRanking` when a successful steps fetch lands (`metric === 'step_total'`) AND once at init via `setupStepsCard()` — so the card transitions loading → active without waiting for a habit interaction.
+
+**Tap = `openLeaderboardRanking('step_total')`.** Whole card is a `<button>` (keyboard-activatable, `aria-label="Open global steps leaderboard"`), reuses the existing leaderboard sheet — no tab switch, no new endpoints, no new state. The `setupStepsCard` wiring is idempotent (guards with `data-wired="1"`).
+
+**Backend untouched.** Reuses `lbCacheRead('step_total')` (stale-while-revalidate, 24h TTL) and the live `GET /v1/leaderboard/top?metric=step_total` fetch already powered by the Stats tab.
+
+**TOP % chip + climb delta are intentionally deferred.** The current `GET /v1/leaderboard/top` response shape returns `me: { rank, current_value }` but no total-users count and no historical rank, so a percentile would be misleading and a climb delta would always be `null`. CSS hooks (`.steps-card__pct`, `.steps-card__delta`) ship in the ruleset for future activation when the backend exposes both. The narrow-viewport rule already hides the `%` chip first per spec ("If TOP 18% would push past card width, hide the % chip first, keep the rank.").
+
+**Week XP math is now dead code.** `updateHeaderMetrics()` still computes the Sunday→today XP sum and writes to `#week-xp-bar` / `#week-xp-current` / `#week-xp-day`, but those elements no longer exist in the markup; every write is null-guarded so the dead code is harmless. Leaving it alone preserves the third card (XP · 30D sparkline) which shares the same `try` block. A future cleanup pass can excise the Week-XP loop without risk; today it's a controlled no-op.
+
+**Anti-patterns:**
+- Don't re-introduce the Week XP card in the middle slot — the data lives on the Stats tab + History tab already, and surfacing it here is what made the slot feel redundant.
+- Don't add the `%` chip or climb-delta UI before the backend exposes `total_users` and historical rank — a placeholder of "TOP 100%" or "↑0 spots" reads as a bug, not a feature.
+- Don't call `openLeaderboardRanking('step_total')` from anywhere other than the card click or the existing Stats-tab card. The sheet is a single source of truth for the steps leaderboard; multiple entry points are fine, but each must reuse this helper.
+- Don't write to `lb-rank-*` element IDs from `updateStepsCard()` — that surface owns the Top-50 modal. The steps card is a shortcut, never a duplicate render.
 
 ### Verified Duels v1 prod sim pass + App Store pull (v3 Phase 1z.17)
 
