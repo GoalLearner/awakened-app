@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w68` |
-| `app.js?v=` | `417` |
+| `APP_BUILD_TAG` | `2.2.1-w69` |
+| `app.js?v=` | `418` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.303` |
+| `sw.js CACHE_VERSION` | `v5.304` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,30 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Ascendant Colossus C-rank drop pool (v3 Phase 1z.64)
+
+**5 C-rank relics for The Ascendant Colossus (1z.63 / 1z.63b boss).** 3 common, 1 rare, 1 ultra rare.
+
+**Slot-coverage audit (totals across pre-1z.64 cards):** helm 4 · cape 4 · amulet 4 · weapon 3 · body 4 · **legs 1** · gloves 2 · boots 4 · ring 4. Legs was the most underrepresented; **Stairbound Greaves** fills it. Remaining 4 slots in this pool (boots, ring, amulet, helm) match the boss's ascension theme: feet on stairs, ring of ascent oath, keystone amulet, summit crown.
+
+**Stat-distribution audit:** prior C/D/E pools lean **VIT-heavy** (Steel Wolf / Glass Strider / Dream Tyrant all VIT primary). The Ascendant Colossus pool deliberately mixes — **STR appears in 4/5 items**, FOCUS in 2, WILL in 2, INT in 1, VIT in 4. Climbing is endurance AND strength AND discipline AND focus.
+
+| Item | Rarity | Slot | Stats | Total |
+|---|---|---|---|---|
+| Summit Treads | Common | boots | STR +2, VIT +2 | 4 |
+| Stairbound Greaves | Common | legs | STR +3, VIT +1 | 4 |
+| Upper Gate Band | Common | ring | WILL +2, FOCUS +1, VIT +1 | 4 |
+| Keystone Pendant | Rare | amulet | STR +3, VIT +3, FOCUS +2 | 8 |
+| Crown of the Ascendant | Ultra-Rare | helm | STR +4, VIT +3, WILL +3, INT +2 | 12 |
+
+Power curve hits the spec PART C targets exactly (C common ≈ 4, C rare ≈ 8, C ultra ≈ 12). `bonus_ranges` provided per PVP.md so PvP randomization works when enabled (not touching Duels here).
+
+**Drop integration.** `rollBossDrop` filters `CARDS` by `source_boss === bossId` — adding `source_boss: 'the_ascendant_colossus'` to each card auto-wires them into the pool. Drop rates derive from cadence (`daily` for Ascendant Colossus): ultra 5% / rare 8.33% / common 54.07% / common_protected 79.67% (first-common-per-boss). Mercy/pity all daily-tier (any-drop after 4, rare-mercy after 12, ultra-soft after 20, ultra-hard after 40). No changes to drop rates, mercy thresholds, stack caps, or roll order.
+
+**Art assets — PENDING.** The 5 PNGs at `assets/items/<id with hyphens>.png` are not on disk yet. The existing `setModalCardArt` / Pokédex onerror path falls back to slot emoji + rarity gradient — no broken images, no crash. Intentionally **NOT precached in sw.js** (cache.addAll would reject install on a 404). Drop the PNGs in later + add precache entries; they'll render automatically.
+
+**No backend / no Duels / no leaderboard / no METRIC_CAPS.** Frontend content only.
 
 ### First C-rank boss — The Ascendant Colossus (v3 Phase 1z.63)
 

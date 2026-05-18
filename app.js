@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w68';
+  const APP_BUILD_TAG = '2.2.1-w69';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1629,6 +1629,110 @@
       art_path: 'assets/items/crown-of-deep-rest.png',
       bonuses:       { str: 0, vit: 10, int: 0, focus: 5, will: 0, wlt: 0 },
       bonus_ranges:  { str: [0,0], vit: [8,12], int: [0,0], focus: [3,7], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // v3 Phase 1z.64 — first C-rank drop pool for The Ascendant
+    // Colossus (1z.63 boss).
+    //
+    // Power-curve targets (C tier, per spec PART C):
+    //   C Common  ≈ +4 total stat points
+    //   C Rare    ≈ +8 total stat points
+    //   C Ultra   ≈ +12 total stat points
+    //
+    // Slot-coverage audit (totals across all pre-1z.64 cards):
+    //   helm 4 · cape 4 · amulet 4 · weapon 3 · body 4 · legs 1 ·
+    //   gloves 2 · boots 4 · ring 4
+    // Legs is the most underrepresented slot — Stairbound Greaves
+    // (common, this pool) fills the gap. The remaining 4 slots
+    // (boots, ring, amulet, helm) are tied at 4, matching the
+    // boss's ascension/climb theme: feet on stairs, ring of
+    // ascent oath, keystone amulet, summit crown.
+    //
+    // Stat-distribution audit: prior pools lean VIT-heavy (E +
+    // D Steel Wolf / Glass Strider / Dream Tyrant all run VIT
+    // primary). This pool deliberately MIXES — STR appears in
+    // 4/5 items, FOCUS in 2, WILL in 2, INT in 1, VIT in 4 —
+    // so the C-tier isn't another VIT-only block.
+    //
+    // Art: assets/items/<id>.png (hyphenated). PNGs not on disk
+    // yet — the existing setModalCardArt / Pokédex tile onerror
+    // path falls back to slot emoji + rarity gradient. Drop the
+    // PNGs in later and they show automatically; sw.js precache
+    // gets the entries when art ships (intentionally NOT precached
+    // here — cache.addAll would reject install on a 404).
+    // ═══════════════════════════════════════════════════════════
+
+    // ── The Ascendant Colossus (C, VIT) — signature slot: HELM ─
+    summit_treads: {
+      id: 'summit_treads',
+      name: 'Summit Treads',
+      slot: 'boots',
+      source_boss: 'the_ascendant_colossus',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'Boots worn by those who climb until the air grows thin.',
+      art_path: 'assets/items/summit-treads.png',
+      bonuses:       { str: 2, vit: 2, int: 0, focus: 0, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [1,3], vit: [1,3], int: [0,0], focus: [0,0], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    stairbound_greaves: {
+      id: 'stairbound_greaves',
+      name: 'Stairbound Greaves',
+      slot: 'legs',
+      source_boss: 'the_ascendant_colossus',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'Stone-braced greaves that remember every step upward.',
+      art_path: 'assets/items/stairbound-greaves.png',
+      bonuses:       { str: 3, vit: 1, int: 0, focus: 0, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [2,4], vit: [0,2], int: [0,0], focus: [0,0], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    upper_gate_band: {
+      id: 'upper_gate_band',
+      name: 'Upper Gate Band',
+      slot: 'ring',
+      source_boss: 'the_ascendant_colossus',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'A narrow ring etched with the oath of those who refuse to descend.',
+      art_path: 'assets/items/upper-gate-band.png',
+      bonuses:       { str: 0, vit: 1, int: 0, focus: 1, will: 2, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [0,2], int: [0,0], focus: [0,2], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    keystone_pendant: {
+      id: 'keystone_pendant',
+      name: 'Keystone Pendant',
+      slot: 'amulet',
+      source_boss: 'the_ascendant_colossus',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: "A pendant cut from the first stone of the tower's highest gate.",
+      art_path: 'assets/items/keystone-pendant.png',
+      bonuses:       { str: 3, vit: 3, int: 0, focus: 2, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [2,4], vit: [2,4], int: [0,0], focus: [1,3], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    crown_of_the_ascendant: {
+      id: 'crown_of_the_ascendant',
+      name: 'Crown of the Ascendant',
+      slot: 'helm',
+      source_boss: 'the_ascendant_colossus',
+      rarity: 'ultra_rare',
+      tier: 'C',
+      flavor: 'A crown awarded only to those who reached the summit while others turned back. Best in slot for the STR/VIT ascension build.',
+      art_path: 'assets/items/crown-of-the-ascendant.png',
+      bonuses:       { str: 4, vit: 3, int: 2, focus: 0, will: 3, wlt: 0 },
+      bonus_ranges:  { str: [3,5], vit: [2,4], int: [1,3], focus: [0,0], will: [2,4], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
