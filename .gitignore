@@ -26,3 +26,9 @@ sims/runs/
 
 # Temp design extraction (Claude Design handoff bundles)
 .design-tmp/
+
+# Playwright e2e smoke artifacts (traces / videos / reports)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

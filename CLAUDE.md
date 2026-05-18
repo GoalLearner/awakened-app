@@ -54,12 +54,60 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 **Frontend (iOS / PWA):**
 - `main` at `6fc7acf` carries everything above, but **Codemagic has NOT been triggered for any of today's work.** The last iOS build on TestFlight predates Phase 1z.32. To get the rank-aware 100K badges + weekly leaderboard + Hall of Fame + freeze fix + boss-souls readout + sheet-scroll fix onto a device, Codemagic must be triggered on the current main HEAD.
 
+### Playwright smoke tests (NEW — added end of May 17)
+
+Browser-level confidence pass before Codemagic / TestFlight.
+
+**Commands:**
+```
+npm run test:e2e          # headless run, prints list output
+npm run test:e2e:headed   # see the browser drive the app
+npm run test:e2e:ui       # Playwright UI mode for picking individual tests
+npm run test:e2e:report   # open the HTML report from the last run
+```
+
+**Setup (already done):**
+- `@playwright/test ^1.60.0` added as a devDependency.
+- Chromium installed via `npx playwright install chromium` (just Chromium — the iOS WKWebView shipping shape is closest to Chromium-family; the cross-browser matrix is unnecessary for a PWA wrapped in Capacitor).
+- `playwright.config.ts` boots the existing `serve.ps1` static server at `http://localhost:8080` via `webServer` (with `reuseExistingServer: true` for local dev iterations). Viewport set to 414×896 (iPhone-ish portrait). `trace: retain-on-failure`, `screenshot: only-on-failure`, `video: retain-on-failure`.
+- Single worker (`workers: 1`) since the app is stateful and we don't want cross-test localStorage races.
+
+**Tests live in `tests/e2e/smoke.spec.ts`** — 7 covers:
+1. **A · App boots** — shell mounts, no fatal JS errors. Tolerates 401/network noise from the dev stub JWT hitting the production worker.
+2. **B · Status tab** — default-active, "Hunter Profile" content visible.
+3. **C · Habits tab** — opens, habit list area mounts (either `#habit-list` or `#empty-state` visible), Add Habit affordance reachable.
+4. **D · Edit Habit modal** — opens + closes cleanly via Cancel, overlay is not stranded (covers the iOS post-save freeze regression from Phase 1z.34).
+5. **E · Leaderboard sheet** — opens via the World Rank Steps card, `This Week / Hall of Fame` tabs visible, week date-range blurb present, HoF tab switch works, scroll keeps the sheet open, X closes (covers Phase 1z.40 scroll-dismiss fix).
+6. **F · Boss detail Souls readout** — `SOULS AVAILABLE` pill renders above the Engage button (covers Phase 1z.39).
+7. **G · Duels picker** — `boss_race` is NOT in the type set; 5 allowed types are present (soft-passes with a warning log if the DUEL_TYPES global isn't introspectable in the current bundle path).
+
+**`freshApp(page)` helper** seeds the gate-skipping localStorage keys via `page.addInitScript()` BEFORE the page script runs:
+- `hb_onboarding_seen_v2`, `hb_welcomed`, `hb_hunter_name_claimed`, `hb_cloud_restore_dismissed`, `hb_whats_new_seen` (set to `99.99.99` so the What's New modal never paints).
+- Auth comes from `Auth.devSignInIfLocalhost()` — see auth.js. On `http://localhost` the app auto-signs in as "DevUser" with a stub JWT, so we never hit Apple Sign In.
+- Then the helper waits for the splash to detach + force-hides any transient overlays (`#awakened-splash`, `#wn-overlay`, `#modal-overlay`, etc.) as a belt-and-suspenders safety net.
+
+**What the smoke suite intentionally does NOT cover:**
+- End-to-end Apple Sign In or any production-JWT flow.
+- Real backend integration (the dev stub JWT 401s on `/v1/*` — filtered from the console.error watcher).
+- HealthKit step submission / 100K Step Club accolade earning (HealthKit is a Capacitor-native plugin and only works on iOS).
+- The Capacitor wrapper itself (WKWebView gestures, native nav).
+- Drag-reorder regressions (intentionally disabled for 2.2.1).
+- Duel CREATE / verified-event scoring flows (write paths against the real backend).
+- iOS-only modals or sheet gestures that don't render in the Chromium engine.
+
+**Where it fits in the pre-ship pipeline:**
+- After a code change, before triggering Codemagic: `npm run test:e2e`. ~35 seconds for the full pass. If it's green, the Status/Habits/Edit-modal/Leaderboard/Boss-detail/Duels-tab flows aren't visually broken at a browser-render level.
+- The suite is NOT a substitute for on-device TestFlight QA. iOS-specific Capacitor + WKWebView behavior (the post-save freeze repro itself) still needs an iPhone for ground-truth. The smoke suite catches the structural regressions that would otherwise burn a Codemagic build slot.
+
+**Run output is sequential + fast.** Failures retain trace+video+screenshot under `test-results/` (gitignored). `npm run test:e2e:report` opens the last HTML report.
+
 ### Next-session checklist (when work resumes)
 
 **Before triggering Codemagic:**
-1. `git pull` → confirm HEAD is still `6fc7acf` (or newer if anything lands overnight) and matches `origin/main`.
-2. Re-check the version knobs table above against `app.js`, `index.html`, `sw.js` — they should still read w47 / v396 / v289 / v5.282. If they've drifted (a stray commit could land), update CLAUDE.md before building.
-3. Local browser preview (optional, fast confidence check):
+1. `git pull` → confirm HEAD matches `origin/main`.
+2. Re-check the version knobs table above against `app.js`, `index.html`, `sw.js`. If they've drifted (a stray commit could land), update CLAUDE.md before building.
+3. **Run the Playwright smoke suite: `npm run test:e2e`** — ~35 seconds, exercises Status/Habits/Edit-modal/Leaderboard/Boss-detail/Duels-tab. Must be green before triggering Codemagic.
+4. Local browser preview (optional, fast confidence check on top of the smoke suite):
    - Hall of Fame tab populates with real records (RenDIESEL + Richie) + sim filler.
    - This Week tab still scopes to current week.
    - Sheet scrolls without dismissing; X closes it; overlay tap does NOT close it.
