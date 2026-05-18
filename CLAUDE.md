@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w69` |
-| `app.js?v=` | `418` |
+| `APP_BUILD_TAG` | `2.2.1-w70` |
+| `app.js?v=` | `419` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.304` |
+| `sw.js CACHE_VERSION` | `v5.305` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,24 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Ascendant Colossus art installed (v3 Phase 1z.65)
+
+**Boss + 5 item PNGs landed on disk.** Art was generated locally and downloaded into the repo root with mixed naming (spaces / title case / underscores). Moved into the canonical asset layout + renamed to kebab-case so the existing path conventions resolve cleanly. Pending status from 1z.64 cleared — BOSS DEFEATED modal + Pokédex + boss-card/detail now render real art instead of emoji+gradient fallback.
+
+**Final paths:**
+- `assets/bosses/the-ascendant-colossus.png` (resolves via `buildBossCardHTML`'s `id.replace(/_/g, '-') + '.png'`).
+- `assets/items/summit-treads.png`
+- `assets/items/stairbound-greaves.png`
+- `assets/items/upper-gate-band.png`
+- `assets/items/keystone-pendant.png`
+- `assets/items/crown-of-the-ascendant.png`
+
+Item `art_path` fields in `CARDS` were already set to these exact strings in 1z.64 — no JS change needed; just the file moves.
+
+**Service worker precache.** Added all 6 new paths to `PRECACHE_ASSETS` in `sw.js`. All paths verified to exist before adding (otherwise `cache.addAll` rejects the entire install on 404). `CACHE_VERSION` bumped `v5.304 → v5.305` so the SW reinstalls and pre-fetches the new art.
+
+**No backend / no Duels / no styles / no auth changes.** Asset move + sw.js update only.
 
 ### Ascendant Colossus C-rank drop pool (v3 Phase 1z.64)
 

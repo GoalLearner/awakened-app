@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.304';
+const CACHE_VERSION = 'v5.305';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -120,6 +120,8 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-iron-warden.png',
   '/assets/bosses/the-glass-strider.png',
   '/assets/bosses/the-dream-tyrant.png',
+  // v3 Phase 1z.65 — first C-rank boss
+  '/assets/bosses/the-ascendant-colossus.png',
   // Item-card illustrations. Only paths that EXIST on disk get listed
   // here — cache.addAll rejects the entire install if any entry 404s.
   // The remaining 8 launch cards fall through to the network (404 in
@@ -162,6 +164,15 @@ const PRECACHE_ASSETS = [
   '/assets/items/hushed-night-cloak.png',
   '/assets/items/tyrants-sleep-mask.png',
   '/assets/items/crown-of-deep-rest.png',
+  // v3 Phase 1z.65 — C-rank Ascendant Colossus drops (5 items).
+  // Art landed on disk this release; precache activates offline +
+  // SW delivery so the BOSS DEFEATED modal renders real art via
+  // setModalCardArt instead of the emoji+gradient fallback.
+  '/assets/items/summit-treads.png',
+  '/assets/items/stairbound-greaves.png',
+  '/assets/items/upper-gate-band.png',
+  '/assets/items/keystone-pendant.png',
+  '/assets/items/crown-of-the-ascendant.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)
