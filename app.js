@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w53';
+  const APP_BUILD_TAG = '2.2.1-w54';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3136,13 +3136,18 @@
           ? (evt.drop.pityType === 'ultra_hard' ? 'FATE ANSWERED' : 'MERCY AWAKENED')
           : 'RELIC ACQUIRED';
       }
-      const artImg = document.getElementById('bro-relic-art');
-      if (artImg) {
-        artImg.onerror = () => { artImg.style.display = 'none'; };
-        artImg.onload  = () => { artImg.style.display = ''; };
-        artImg.style.display = 'none';
-        if (evt.drop.artPath) artImg.src = evt.drop.artPath;
-      }
+      // v3 Phase 1z.48 — route through the shared setModalCardArt
+      // helper used by openCardDetailModal so the Boss Defeated
+      // result modal and the relic-detail page render artwork
+      // identically. The previous inline block paired the same
+      // onload/onerror dance with a `loading="lazy"` <img>, which
+      // (combined with `display: none` set before src) caused
+      // browsers to defer the load and never fire `onload` — the
+      // emoji slot-icon fallback stayed visible even though the
+      // artwork exists. The img element now has no lazy attribute
+      // (see index.html) and uses the same code path as the
+      // working detail page.
+      setModalCardArt('bro-relic-art', evt.drop.artPath);
       const slotIconEl = document.getElementById('bro-relic-slot-icon');
       if (slotIconEl) slotIconEl.textContent = (SLOT_ICONS && SLOT_ICONS[evt.drop.slot]) || '✦';
       const relicNameEl = document.getElementById('bro-relic-name');

@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w53` |
-| `app.js?v=` | `402` |
+| `APP_BUILD_TAG` | `2.2.1-w54` |
+| `app.js?v=` | `403` |
 | `auth.js?v=` | `15` |
 | `styles.css?v=` | `291` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.288` |
+| `sw.js CACHE_VERSION` | `v5.289` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,25 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=291`, `app.js?v=402`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.288`, `APP_BUILD_TAG = '2.2.1-w53'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=291`, `app.js?v=403`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.289`, `APP_BUILD_TAG = '2.2.1-w54'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Boss Defeated modal relic art fix (v3 Phase 1z.48)
+
+**Bug.** On-device repro: defeating The Insomniac dropped Tossing Bedroll. The Boss Defeated result modal's Relic Acquired card showed a generic slot-emoji fallback instead of the actual `tossing_bedroll.png` artwork. Tapping VIEW RELIC opened the relic-detail page which rendered the SAME `card.art_path` correctly. Both paths read from the same data field — so the bug had to be in how the result modal loaded the image.
+
+**Root cause.** The `#bro-relic-art` element in `index.html` carried `loading="lazy"`. The JS at `_showBossResult` set `img.style.display = 'none'` BEFORE assigning `img.src`. Browsers treat lazy-loaded images that are `display: none` (and additionally sit inside a parent that toggles `.hidden`) as offscreen and **defer the fetch indefinitely** — `onload` never fires, the inline `display: none` is never reset, and the slot-emoji fallback underneath stays visible. The detail-page img (`#carddetail-card-art-img`) has no `loading="lazy"` attribute, which is exactly why the same data path renders correctly there.
+
+**Fix (two parts):**
+1. **Removed `loading="lazy"`** from `#bro-relic-art` in `index.html`. The image is on a modal that's only opened on a boss kill — there's no performance cost to fetching eagerly.
+2. **Consolidated the inline image-load block** in `_showBossResult` to call the shared `setModalCardArt('bro-relic-art', evt.drop.artPath)` helper that the relic-detail page already uses. Single source of truth for both render paths going forward.
+
+**Audit.** Verified all 30 `art_path` references in `app.js` are listed in `sw.js` PRECACHE_ASSETS — 0 missing. The fix works for both filename styles (E-rank underscore: `tossing_bedroll.png`; D-rank hyphen: `iron-grip-wraps.png`) because the data model carries the literal path; the renderer never derives it from the card id.
+
+**Files changed (frontend only, 4):** `app.js` (one block + build tag), `index.html` (img attr cleanup + app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic.
+
+**Verified:** `node --check app.js` OK. `npm run test:e2e` → 7/7 green.
+
+Bumps: `app.js?v=403`, `sw.js v5.289`, `APP_BUILD_TAG '2.2.1-w54'`. `APP_VERSION` unchanged at `2.2.1`.
 
 ### Drop rate nothing-target tuning (v3 Phase 1z.47)
 

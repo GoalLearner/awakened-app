@@ -1110,7 +1110,15 @@
         <div class="bro-relic-row">
           <div class="bro-relic-art-wrap">
             <span id="bro-relic-slot-icon" class="bro-relic-slot-icon" aria-hidden="true">✦</span>
-            <img id="bro-relic-art" class="bro-relic-art" alt="" loading="lazy">
+            <!-- v3 Phase 1z.48 — dropped `loading="lazy"`. The image
+                 is inside a section that toggles `.hidden` and the JS
+                 sets `display:none` BEFORE assigning `src`. Browsers
+                 treat lazy-loaded hidden images as offscreen and
+                 defer the fetch; `onload` then never fires and the
+                 slot-emoji fallback remains visible. The detail-page
+                 img (`#carddetail-card-art-img`) has no lazy attribute,
+                 which is why the same path renders correctly there. -->
+            <img id="bro-relic-art" class="bro-relic-art" alt="">
           </div>
           <div class="bro-relic-info">
             <div id="bro-relic-rarity-pill" class="bro-relic-rarity-pill" data-rarity="common">COMMON</div>
@@ -2132,7 +2140,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=402"></script>
+  <script src="app.js?v=403"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
