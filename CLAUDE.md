@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w47` |
-| `app.js?v=` | `396` |
+| `APP_BUILD_TAG` | `2.2.1-w48` |
+| `app.js?v=` | `397` |
 | `auth.js?v=` | `15` |
 | `styles.css?v=` | `289` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.282` |
+| `sw.js CACHE_VERSION` | `v5.283` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,28 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=289`, `app.js?v=396`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.282`, `APP_BUILD_TAG = '2.2.1-w47'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=289`, `app.js?v=397`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.283`, `APP_BUILD_TAG = '2.2.1-w48'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Boss progress noun + Today's Briefing dismiss fix (v3 Phase 1z.42)
+
+Two on-device smoke-test bugs caught after the May 17 handoff.
+
+**Bug 1: Steel Wolf detail showed `0 / 1 night`.** A steps-based boss was rendering its progress label with the sleep-boss noun. Root cause: lines 17863 (boss-card list) and 17954 (boss-detail full screen) had a hardcoded `(cfg.streakTarget === 1 ? 'night' : 'nights')` regardless of cadence or kill-condition metric. Affected every steps/workout boss — Steel Wolf, Glass Strider, Iron Warden — they all rendered as "night/nights" even though their conditions are day-based. Defeat logic itself was always correct (`evaluateSteelWolfForDay` at line 3745 increments streak when `stepCount >= cfg.stepThreshold` and fires the kill path on `streak >= streakTarget`) — only the label was wrong.
+
+**Fix.** New `_bossProgressNoun(cfg)` helper (near `loadBosses` at line ~412):
+```
+sleep boss   (cfg.sleepHours)       → 'night' / 'nights'
+steps boss   (cfg.stepThreshold)    → 'day'   / 'days'
+workout boss (cfg.workoutMinutes)   → 'day'   / 'days'
+fallback                            → 'day'   / 'days'
+```
+Both render sites (boss-card list + full-screen detail) now call the helper. Verified the mapping for all 6 bosses (Insomniac/Carouser/Dream Tyrant → night; Steel Wolf/Glass Strider/Iron Warden → day). Carouser correctly renders "nights" (streakTarget=2 sleep boss). All checks pass.
+
+**Bug 2: Today's Briefing dismissed on swipe-down + overlay tap.** The sheet is meant to be a committal review surface — the user must scroll to LOCK IN and tap it to acknowledge the day's plan. Removed both `overlay.addEventListener('click', dismissDailyInsight)` AND the `attachSheetDismissGesture` wiring in `setupDailyInsight`. The LOCK IN button (`#di-enter-btn`) remains the sole close path. **Scope-limited** — same pattern as the Phase 1z.40 fix for the leaderboard sheet; all 12 other sheets keep their existing drag + overlay-tap dismiss unchanged.
+
+**Files changed (frontend only, 4):** `app.js` (new helper + 2 render-site updates + setupDailyInsight tightened + build tag), `index.html` (app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no styles.css, no auth.js. Playwright suite (`npm run test:e2e`) still green 7/7 after the change.
+
+Bumps: `app.js?v=397`, `sw.js v5.283`, `APP_BUILD_TAG '2.2.1-w48'`. `APP_VERSION` unchanged at `2.2.1`.
 
 ### Hall of Fame fallback union from leaderboard_snapshots (v3 Phase 1z.41)
 

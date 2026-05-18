@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w47';
+  const APP_BUILD_TAG = '2.2.1-w48';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -402,6 +402,25 @@
       statDomain:       'VIT',
     },
   };
+
+  // v3 Phase 1z.42 -- boss progress noun helper. Bosses whose kill
+  // condition is sleep-based (sleepHours) measure progress in
+  // "night/nights"; everything else (stepThreshold, workoutMinutes,
+  // and future verified metrics) measures in "day/days". This was
+  // previously hardcoded to "night/nights" for ALL bosses, so the
+  // Steel Wolf (a steps boss) was rendering "0 / 1 night" instead
+  // of "0 / 1 day" on its detail screen.
+  //
+  // The defeat logic itself was always correct -- streak/streakTarget
+  // increments and the kill path fires when the step threshold is met
+  // (see evaluateSteelWolfForDay around line 3745). Only the label
+  // was wrong.
+  function _bossProgressNoun(cfg) {
+    if (!cfg) return 'day';
+    const isNightBoss = (typeof cfg.sleepHours === 'number');
+    if (isNightBoss) return cfg.streakTarget === 1 ? 'night' : 'nights';
+    return cfg.streakTarget === 1 ? 'day' : 'days';
+  }
 
   function loadBosses() {
     try { return JSON.parse(localStorage.getItem('hb_bosses') || '{}'); }
@@ -17860,7 +17879,7 @@
         // Region f: Progress — dots + streak label + kill count
         '<div class="bcard-progress">' +
           '<div class="bcard-dots">' + dots + '</div>' +
-          '<div class="bcard-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + (cfg.streakTarget === 1 ? 'night' : 'nights') + '</div>' +
+          '<div class="bcard-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg) + '</div>' +
           '<div class="bcard-kills">' + killText + '</div>' +
         '</div>' +
       '</button>'
@@ -17951,7 +17970,7 @@
       ).join('');
       progressEl.innerHTML =
         '<div class="bfs-dots">' + dots + '</div>' +
-        '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + (cfg.streakTarget === 1 ? 'night' : 'nights') + '</div>';
+        '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg) + '</div>';
     }
 
     // Burned banner (Carouser only when weekend_burned === true)
@@ -19301,15 +19320,22 @@
     const cta     = document.getElementById('di-enter-btn');
     if (!sheet || !overlay) return;
 
-    if (cta)     cta.addEventListener('click', dismissDailyInsight);
-    if (overlay) overlay.addEventListener('click', dismissDailyInsight);
-
-    // Drag-down dismiss — same pattern as other bottom sheets.
-    if (typeof attachSheetDismissGesture === 'function') {
-      attachSheetDismissGesture(sheet, overlay, dismissDailyInsight, {
-        scrollTarget: '.di-body',
-      });
-    }
+    // v3 Phase 1z.42 -- Today's Briefing is LOCK IN-only close.
+    // On-device TestFlight feedback: swipe-down + overlay-tap were
+    // dismissing the briefing too easily before the user reviewed
+    // the day's plan. The intent is a committal review surface --
+    // user must scroll to LOCK IN and tap it to acknowledge.
+    // Mirrors the Phase 1z.40 decision for #lb-rank-sheet: long
+    // content should scroll freely; close only via the deliberate
+    // action button.
+    //
+    // Other sheets keep their existing drag-dismiss + overlay-tap
+    // behavior unchanged -- scope-limited fix.
+    if (cta) cta.addEventListener('click', dismissDailyInsight);
+    // (overlay click handler intentionally NOT wired; was previously
+    //  `overlay.addEventListener('click', dismissDailyInsight)`.)
+    // (attachSheetDismissGesture intentionally NOT called here;
+    //  was previously wired with { scrollTarget: '.di-body' }.)
   }
 
   // ── EDIT MODAL ───────────────────────────────────────────
