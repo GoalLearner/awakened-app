@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w51';
+  const APP_BUILD_TAG = '2.2.1-w52';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1458,24 +1458,35 @@
   // Each tier carries its own `common_protected` rate that applies
   // until the user's first common from THIS boss (per-boss now,
   // not global — see first_common_by_boss in hb_inventory).
+  // v3 Phase 1z.46 -- +13 percentage-point buff on common rates only.
+  // ultra_rare and rare rates are UNCHANGED; the same is true for the
+  // mercy/pity thresholds, the ultra->rare->common roll order, the
+  // one-card-max behavior, and the per-boss first-common protection.
+  // Pre-buff vs post-buff common rates:
+  //   daily      common:  0.20    -> 0.33
+  //   daily      protect: 0.6667  -> 0.7967
+  //   triweekly  common:  0.30    -> 0.43
+  //   triweekly  protect: 0.65    -> 0.78
+  //   weekly     common:  0.40    -> 0.53
+  //   weekly     protect: 0.70    -> 0.83
   const DROP_RATES_BY_CADENCE = {
     daily: {
-      ultra_rare:        1 / 20,        // 5%
-      rare:              1 / 12,        // 8.33%
-      common:            1 / 5,         // 20%
-      common_protected:  2 / 3,         // 66.67% until first common from this boss
+      ultra_rare:        1 / 20,                       // 5%   (unchanged)
+      rare:              1 / 12,                       // 8.33% (unchanged)
+      common:            (1 / 5) + 0.13,               // 33%  (was 20%)
+      common_protected:  (2 / 3) + 0.13,               // 79.67% until first common from this boss (was 66.67%)
     },
     triweekly: {
-      ultra_rare:        0.10,          // 10%
-      rare:              0.15,          // 15%
-      common:            0.30,          // 30%
-      common_protected:  0.65,          // 65% until first common from this boss
+      ultra_rare:        0.10,                         // 10%  (unchanged)
+      rare:              0.15,                         // 15%  (unchanged)
+      common:            0.30 + 0.13,                  // 43%  (was 30%)
+      common_protected:  0.65 + 0.13,                  // 78%  (was 65%)
     },
     weekly: {
-      ultra_rare:        0.20,          // 20%
-      rare:              0.25,          // 25%
-      common:            0.40,          // 40%
-      common_protected:  0.70,          // 70% until first common from this boss
+      ultra_rare:        0.20,                         // 20%  (unchanged)
+      rare:              0.25,                         // 25%  (unchanged)
+      common:            0.40 + 0.13,                  // 53%  (was 40%)
+      common_protected:  0.70 + 0.13,                  // 83%  (was 70%)
     },
   };
   // Bad-luck protection thresholds per cadence. See DROPS.md notes.

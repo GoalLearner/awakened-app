@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w51` |
-| `app.js?v=` | `400` |
+| `APP_BUILD_TAG` | `2.2.1-w52` |
+| `app.js?v=` | `401` |
 | `auth.js?v=` | `15` |
 | `styles.css?v=` | `291` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.286` |
+| `sw.js CACHE_VERSION` | `v5.287` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,39 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=291`, `app.js?v=400`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.286`, `APP_BUILD_TAG = '2.2.1-w51'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=291`, `app.js?v=401`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.287`, `APP_BUILD_TAG = '2.2.1-w52'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Common drop rate buff (+13 percentage points) (v3 Phase 1z.46)
+
+**Tuning-only change.** Bumped the `common` and `common_protected` rates inside `DROP_RATES_BY_CADENCE` by +13 percentage points each — common drops should feel noticeably more rewarding without disturbing rare/ultra scarcity or mercy pacing.
+
+**Common rates: before → after**
+| Cadence | Slot | Before | After |
+|---|---|---|---|
+| daily | `common` | 0.20 | **0.33** |
+| daily | `common_protected` | 0.6667 | **0.7967** |
+| triweekly | `common` | 0.30 | **0.43** |
+| triweekly | `common_protected` | 0.65 | **0.78** |
+| weekly | `common` | 0.40 | **0.53** |
+| weekly | `common_protected` | 0.70 | **0.83** |
+
+Expression form in `app.js` (line ~1469): `(1/5) + 0.13`, `(2/3) + 0.13`, `0.30 + 0.13`, `0.65 + 0.13`, `0.40 + 0.13`, `0.70 + 0.13`. Arithmetic verified end-to-end against the target table (all 6 land exactly on spec, biggest IEEE-754 drift is 3.3e-11 on the daily-protected value — well below any rounding floor used downstream).
+
+**Explicitly unchanged:**
+- `ultra_rare` rates (daily 5%, triweekly 10%, weekly 20%)
+- `rare` rates (daily 8.33%, triweekly 15%, weekly 25%)
+- All `DROP_PITY_BY_CADENCE` thresholds: `any_drop_guarantee_after`, `rare_mercy_after`, `ultra_soft_pity_after`, `ultra_soft_pity_add`, `ultra_soft_pity_max`, `ultra_hard_pity_after`
+- Roll order: ultra → rare → common
+- One-card-max-per-boss-kill behavior
+- Per-boss first-common protection (`first_common_by_boss`)
+- Rare Mercy floor
+- Any-drop guarantee
+- Ultra Mercy soft + hard pity
+- Item stats, drop caps, boss souls economy
+
+**Files changed (frontend only, 4):** `app.js` (one block + build tag), `index.html` (app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic.
+
+Bumps: `app.js?v=401`, `sw.js v5.287`, `APP_BUILD_TAG '2.2.1-w52'`. `APP_VERSION` unchanged at `2.2.1`. `styles.css`, `auth.js`, `simulated-leaderboard.js` all unchanged.
 
 ### Souls info modal X-close fix + Souls Ledger (v3 Phase 1z.44)
 
