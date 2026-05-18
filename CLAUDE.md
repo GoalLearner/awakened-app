@@ -12,13 +12,13 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w64` |
-| `app.js?v=` | `413` |
+| `APP_BUILD_TAG` | `2.2.1-w65` |
+| `app.js?v=` | `414` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.299` |
-| `HEALTHKIT_AUTH_VERSION` | `2` |
+| `sw.js CACHE_VERSION` | `v5.300` |
+| `HEALTHKIT_AUTH_VERSION` | `3` |
 
 ### What shipped today (May 17 work)
 
@@ -164,6 +164,36 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Flights Climbed verified stat plumbing (v3 Phase 1z.61)
+
+**Frontend / Health-plugin plumbing only.** Adds Apple Health "Flights Climbed" as a first-class verified stat alongside steps / sleep / strength workouts. **Foundation for a future C-rank dungeon boss** (Stat Domain: VIT, triweekly cadence, climb-N-verified-flights kill condition) — the boss itself is NOT added yet. No leaderboard, no Hall of Fame, no Duels, no backend changes.
+
+**HealthKit plugin support — confirmed.** `@perfood/capacitor-healthkit ^1.3.2` exposes:
+- Auth alias `'stairs'` → native bridge maps to `HKQuantityTypeIdentifierFlightsClimbed` (verified in `node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift:90-91`).
+- Query `sampleName: 'flightsClimbed'` (verified in `dist/esm/definitions.d.ts:129`).
+- Returns the same `{ countReturn, resultData: [{ value, ... }] }` shape as steps.
+
+**Changes.**
+1. `HEALTHKIT_AUTH_VERSION` bumped `2 → 3`. New flag `hb_healthkit_flights_requested` added to `HEALTHKIT_AUTH_FLAGS_TO_CLEAR` so existing v1.1.5 users get an iOS sheet for ONLY the new 'stairs' category on next cold launch.
+2. `requestPermissions()` read array now `['steps', 'activity', 'stairs']` — fresh installs bundle flights into the first permission sheet.
+3. New upgrade-path helper `Health.requestFlightsPermissionIfNeeded()` mirroring the sleep upgrade-path pattern. Idempotent via the new flag. Fires once per cold launch from init (3000ms delay, staggered after the sleep upgrade) when the user has `permissionStatus === 'granted'`.
+4. New 5-min flights cache (`flightsCache`, `FLIGHTS_CACHE_TTL_MS`) + `isFlightsCacheFresh()` + `clearFlightsCache()`.
+5. New helpers on the public `Health` surface:
+   - `Health.getFlightsClimbedToday()` — device-local day window (matches strength workouts, NOT PT-anchored like steps; flights are wall-clock activity). Returns integer or `null`.
+   - `Health.getFlightsClimbedBetween(startISO, endISO)` — range query for the future boss hunt window resolver. Uncached.
+   - `_queryFlightsInRange` internal, sums `resultData[].value` like steps.
+
+**Graceful-failure contract — same as steps/sleep/strength.** Never throws. Returns `null` on non-iOS / missing plugin / permission denied / permission unknown / query throws. Web/PWA `isAvailable()` returns `false` and every helper short-circuits to `null` — Playwright smoke unaffected.
+
+**NOT shipped (deferred until C-rank boss content lands):**
+- No habit type (no `cfg.flightsThreshold` boss-eval branch, no Add-Habits library entry).
+- No dashboard stat card.
+- No leaderboard metric / Hall of Fame.
+- No backend `METRIC_CAPS` entry.
+- No Duels verified-event type.
+
+**Manual QA next iOS build:** install build; existing users get a permission sheet for "Flights Climbed" on first cold launch after sleep prompt; new installs get a single sheet covering steps + sleep + workouts + flights together; denying flights does not break any existing flow; granting + climbing real stairs lets the future boss read the count via `Health.getFlightsClimbedToday()`.
 
 ### Rank detail sheet — sub-rank divisions (v3 Phase 1z.59)
 

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w64';
+  const APP_BUILD_TAG = '2.2.1-w65';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -245,12 +245,18 @@
   // Version log:
   //   1 — v1.1.4: steps only
   //   2 — v1.1.5: steps + sleep + workouts (via 'activity' alias)
+  //   3 — v3 Phase 1z.61: + flights climbed (via 'stairs' alias).
+  //                       Foundation for a future C-rank dungeon boss.
+  //                       No backend / leaderboard / Duels surface yet.
   //
   // When you bump, also update HEALTHKIT_AUTH_FLAGS_TO_CLEAR below
   // with any new per-category flags so the migration knows what to
-  // wipe. (For v1 → v2 there's only one such flag.)
-  const HEALTHKIT_AUTH_VERSION = 2;
-  const HEALTHKIT_AUTH_FLAGS_TO_CLEAR = ['hb_healthkit_sleep_requested'];
+  // wipe.
+  const HEALTHKIT_AUTH_VERSION = 3;
+  const HEALTHKIT_AUTH_FLAGS_TO_CLEAR = [
+    'hb_healthkit_sleep_requested',
+    'hb_healthkit_flights_requested',
+  ];
 
   // ── HealthKit sleep auto-verification ────────────────────
   // v1.1.5: canonical 'Sleep' habit auto-verifies via Apple Health
@@ -24503,9 +24509,12 @@
     const STEP_CACHE_TTL_MS    = 5 * 60 * 1000;
     const SLEEP_CACHE_TTL_MS   = 5 * 60 * 1000;
     const WORKOUT_CACHE_TTL_MS = 5 * 60 * 1000;
+    // v3 Phase 1z.61 — flights climbed cache (today-only, mirrors step).
+    const FLIGHTS_CACHE_TTL_MS = 5 * 60 * 1000;
     let stepCache    = null; // { steps, fetchedAt }
     let sleepCache   = null; // { totalAsleepHours, earliestSleepStart, samples, fetchedAt }
     let workoutCache = null; // { count, totalMinutes, workouts, fetchedAt }
+    let flightsCache = null; // { flights, fetchedAt }
 
     function isCacheFresh() {
       return stepCache && (Date.now() - stepCache.fetchedAt) < STEP_CACHE_TTL_MS;
@@ -24516,6 +24525,9 @@
     function isWorkoutCacheFresh() {
       return workoutCache && (Date.now() - workoutCache.fetchedAt) < WORKOUT_CACHE_TTL_MS;
     }
+    function isFlightsCacheFresh() {
+      return flightsCache && (Date.now() - flightsCache.fetchedAt) < FLIGHTS_CACHE_TTL_MS;
+    }
 
     function clearCache() {
       stepCache = null;
@@ -24525,6 +24537,9 @@
     }
     function clearWorkoutCache() {
       workoutCache = null;
+    }
+    function clearFlightsCache() {
+      flightsCache = null;
     }
 
     // ── Permission status (locally tracked) ──────────────
@@ -24572,8 +24587,14 @@
         // plugin's auth API; 'activity' is the only path to sleep
         // authorization. Workout permission is requested as a side effect
         // — used for v1.2.0+ workout-type habits.
+        // v3 Phase 1z.61 — 'stairs' alias maps to
+        // HKQuantityTypeIdentifierFlightsClimbed in the @perfood plugin's
+        // native bridge. Including it here means flights climbed is
+        // bundled into the FIRST permission sheet for fresh installs.
+        // Existing v1.1.5 users get prompted via the auth-version
+        // upgrade path (HEALTHKIT_AUTH_VERSION bumped 2 → 3).
         await p.requestAuthorization({
-          read: ['steps', 'activity'],
+          read: ['steps', 'activity', 'stairs'],
           write: [''],
           all: [''],
         });
@@ -24623,8 +24644,14 @@
         // Re-pass 'steps' so iOS sees a coherent set; the existing Steps
         // grant stays untouched, and the new sheet shows ONLY the new
         // categories (sleep + workout).
+        // v3 Phase 1z.61 — 'stairs' alias maps to
+        // HKQuantityTypeIdentifierFlightsClimbed in the @perfood plugin's
+        // native bridge. Including it here means flights climbed is
+        // bundled into the FIRST permission sheet for fresh installs.
+        // Existing v1.1.5 users get prompted via the auth-version
+        // upgrade path (HEALTHKIT_AUTH_VERSION bumped 2 → 3).
         await p.requestAuthorization({
-          read: ['steps', 'activity'],
+          read: ['steps', 'activity', 'stairs'],
           write: [''],
           all: [''],
         });
@@ -24637,6 +24664,39 @@
         // Do NOT set the flag here. A throw is a real failure —
         // retry next cold launch. (Previously flagged defensively
         // here, which left users stuck with flag=1 and no sheet.)
+        return 'failed';
+      }
+    }
+
+    // ── Upgrade-path flights authorization ───────────────
+    // v3 Phase 1z.61. Mirrors requestSleepPermissionIfNeeded but for
+    // the new 'stairs' / flightsClimbed category. Existing users
+    // granted before the auth bump never saw a sheet for flights;
+    // this re-fires requestAuthorization on next cold launch so iOS
+    // surfaces a sheet for ONLY the new category. Existing steps +
+    // sleep + workout grants stay untouched.
+    //
+    // Flag: hb_healthkit_flights_requested. Cleared by the
+    // HEALTHKIT_AUTH_VERSION 2 → 3 migration, so existing v1.1.5
+    // users get the prompt on their first launch after this ships.
+    // ONLY set on successful resolve — never in catch (same defensive
+    // pattern as the sleep upgrade path).
+    async function requestFlightsPermissionIfNeeded() {
+      if (!isAvailable()) return 'unavailable';
+      if (localStorage.getItem('hb_healthkit_flights_requested') === '1') return 'already-requested';
+      const p = plugin();
+      if (!p) return 'unavailable';
+      try {
+        await p.requestAuthorization({
+          read: ['steps', 'activity', 'stairs'],
+          write: [''],
+          all: [''],
+        });
+        try { localStorage.setItem('hb_healthkit_flights_requested', '1'); } catch (_) {}
+        console.log('[Health] flights permission request completed (upgrade path)');
+        return 'requested';
+      } catch (e) {
+        console.warn('[Health] flights permission request failed', e);
         return 'failed';
       }
     }
@@ -25191,21 +25251,111 @@
       return d / 60;                 // seconds
     }
 
+    // ── Flights climbed query (v3 Phase 1z.61) ─────────────
+    // Apple Health "Flights Climbed" — total stair-flights ascended for
+    // a window. Plugin contract: sampleName: 'flightsClimbed'. Auth
+    // alias 'stairs' (requested in requestPermissions /
+    // requestSleepPermissionIfNeeded / requestFlightsPermissionIfNeeded).
+    //
+    // Foundation for a future C-rank dungeon boss (Stat Domain: VIT,
+    // triweekly cadence, climb-N-verified-flights kill condition).
+    // No leaderboard / Hall of Fame / Duels surface yet.
+    //
+    // Returns null on:
+    //   - non-native platform
+    //   - missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws
+    //
+    // Never throws — same silent-enhancement contract as steps/sleep.
+    async function getFlightsClimbedToday() {
+      if (!isAvailable()) return null;
+      if (isFlightsCacheFresh()) return flightsCache.flights;
+
+      const p = plugin();
+      if (!p) return null;
+
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+
+      // Device-local start of today. Flights are an everyday activity
+      // tied to the user's wall-clock day (e.g. "the stairs I climbed
+      // today"), so we use device-local — matches strength workouts,
+      // NOT PT-anchored like steps.
+      const todayLocal = (typeof getDeviceLocalDate === 'function')
+        ? getDeviceLocalDate()
+        : new Date().toISOString().slice(0, 10);
+      const start = new Date(todayLocal + 'T00:00:00');
+      const end = new Date();
+
+      const total = await _queryFlightsInRange(start.toISOString(), end.toISOString());
+      if (total == null) return null;
+
+      flightsCache = { flights: total, fetchedAt: Date.now() };
+      console.log('[Health] flights climbed today:', total);
+      return total;
+    }
+
+    // Range-based generalization — used by future boss hunt window
+    // resolvers (see resolveBossHuntsAcrossWindow for the existing
+    // step/workout/sleep pattern). Not cached intentionally: different
+    // windows return different answers; caching by window would balloon.
+    async function getFlightsClimbedBetween(startISO, endISO) {
+      if (!isAvailable()) return null;
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+      if (typeof startISO !== 'string' || typeof endISO !== 'string') return null;
+      return _queryFlightsInRange(startISO, endISO);
+    }
+
+    // Internal — actual HealthKit flights query against a [start, end]
+    // ISO window. Returns null on any failure, otherwise an integer
+    // total (rounded). Mirrors _queryStepsInRange's contract — the
+    // plugin returns the same { countReturn, resultData: [{value, ...}] }
+    // shape for flightsClimbed.
+    async function _queryFlightsInRange(startISO, endISO) {
+      const p = plugin();
+      if (!p) return null;
+      try {
+        const result = await p.queryHKitSampleType({
+          sampleName: 'flightsClimbed',
+          startDate: startISO,
+          endDate: endISO,
+          limit: 0,
+        });
+        const samples = (result && result.resultData) || [];
+        let total = 0;
+        for (const s of samples) {
+          const v = Number(s && s.value);
+          if (isFinite(v) && v > 0) total += v;
+        }
+        setStatus('granted');
+        return Math.round(total);
+      } catch (e) {
+        console.warn('[Health] flights query failed', e);
+        return null;
+      }
+    }
+
     // Public surface
     return {
       isAvailable,
       requestPermissions,
       requestSleepPermissionIfNeeded,
+      requestFlightsPermissionIfNeeded, // v3 Phase 1z.61
       getStepsToday,
       getStepsBetween,       // Steps Duel Scoring v1 (v3 Phase 1y)
       getSleepLastNight,
       getSleepBetween,       // Verified Duel Scoring Engine v1 (v3 Phase 1z)
       getStrengthWorkoutsToday,
       getStrengthWorkoutsBetween, // Verified Duel Scoring Engine v1 (v3 Phase 1z)
+      getFlightsClimbedToday,    // v3 Phase 1z.61
+      getFlightsClimbedBetween,  // v3 Phase 1z.61
       permissionStatus,
       clearCache,            // step cache
       clearSleepCache,       // sleep cache
       clearWorkoutCache,     // workout cache
+      clearFlightsCache,     // flights cache (v3 Phase 1z.61)
     };
   })();
 
@@ -27094,6 +27244,22 @@
           setTimeout(() => {
             try { Health.requestSleepPermissionIfNeeded(); } catch (_) {}
           }, 1500);
+        }
+      }
+    } catch (_) {}
+    // ── v3 Phase 1z.61 flights auth upgrade-path ─────────────
+    // Same idempotent pattern as the sleep upgrade above. Fires once
+    // per cold launch when the flag is missing (cleared by the
+    // HEALTHKIT_AUTH_VERSION 2→3 migration). iOS shows the permission
+    // sheet for ONLY the new 'stairs' category; existing steps/sleep/
+    // workout grants stay untouched. Delay staggered after the sleep
+    // upgrade to avoid stacking permission sheets on cold launch.
+    try {
+      if (Health.isAvailable() && Health.permissionStatus() === 'granted') {
+        if (localStorage.getItem('hb_healthkit_flights_requested') !== '1') {
+          setTimeout(() => {
+            try { Health.requestFlightsPermissionIfNeeded(); } catch (_) {}
+          }, 3000);
         }
       }
     } catch (_) {}
