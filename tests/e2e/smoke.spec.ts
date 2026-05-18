@@ -288,48 +288,58 @@ test.describe('F · Boss detail Souls readout', () => {
 // G. Duels picker — Boss Race deferred; 5 verified types only
 // ─────────────────────────────────────────────────────────────
 test.describe('G · Duels picker', () => {
-  test('Boss Race is not in the picker; 5 allowed types are', async ({ page }) => {
+  test('Boss Race is hidden; 5 selectable types render in the picker', async ({ page }) => {
     await freshApp(page);
-    // Open the Duels tab. The picker UI is reached via the "New
-    // Duel" / challenge entry button — we don't need to navigate the
-    // full create flow; the type set is rendered in the DOM as soon
-    // as the picker mounts. Just opening the panel is enough to
-    // confirm the 5-vs-6 split for now.
+    // Step 1 — open the Duels tab so the picker's wiring
+    // (`setupDuelTypePicker`) has run and event listeners are
+    // attached. The tab body itself stays mostly empty without a
+    // friend roster (production data lives behind auth), which is
+    // fine — we only need the picker DOM to be hot.
     await page.locator('#tab-social').click();
-    // Either the social/duels panel mounts and we can introspect, or
-    // the panel is gated by missing friends — both are acceptable.
-    // Read the static DUEL_TYPES set from the running app so this
-    // assertion isn't coupled to picker-modal markup that may shift.
-    const types = await page.evaluate(() => {
-      try {
-        // The app exposes DUEL_TYPES under a few names; sniff the
-        // canonical set without depending on a specific global.
-        // The data lives in app.js — read what's actually rendered
-        // and used in the duels flow.
-        const w = window as unknown as Record<string, unknown>;
-        const dt = (w.DUEL_TYPES || w._DUEL_TYPES) as unknown;
-        if (Array.isArray(dt)) {
-          return dt.map((t: unknown) => (t as { id?: string }).id || String(t));
-        }
-        // Fallback: read any rendered picker option attributes.
-        const picked = Array.from(document.querySelectorAll('[data-duel-type]'))
-          .map(el => (el as HTMLElement).getAttribute('data-duel-type') || '');
-        return picked;
-      } catch (_) { return []; }
+    // Step 2 — open the type picker. `window.openDuelTypePicker`
+    // is a pre-existing global that the app uses to dispatch the
+    // picker from outside its IIFE (see `try { window.openDuelTypePicker
+    // = ... } catch (_) {}` in app.js). We pass a stub opponent
+    // alias — the picker only uses it for the "vs <alias>" header
+    // and the optional submit, neither of which the test invokes.
+    // This is the cleanest test-friendly surface: no runtime
+    // changes, no test-only exports, no DUEL_TYPES global needed.
+    const opened = await page.evaluate(() => {
+      const w = window as unknown as { openDuelTypePicker?: (alias: string) => void };
+      if (typeof w.openDuelTypePicker !== 'function') return false;
+      try { w.openDuelTypePicker('PlaywrightOpponent'); return true; }
+      catch (_) { return false; }
     });
+    expect(opened, 'openDuelTypePicker must be exposed on window for in-app dispatch').toBe(true);
 
-    // The picker is intentionally 5 types in v2.2.1 — boss_race is
-    // deferred. If we couldn't introspect (picker not yet wired in
-    // this build path), the test downgrades to verifying the Duels
-    // tab opens cleanly, which is still useful smoke coverage.
-    if (types && types.length >= 5) {
-      expect(types).not.toContain('boss_race');
-      expect(types.length).toBeGreaterThanOrEqual(5);
-    } else {
-      // Soft pass — Duels tab opened without a crash. Log so the
-      // operator knows the deeper assertion was skipped.
-      // eslint-disable-next-line no-console
-      console.warn('[smoke G] DUEL_TYPES not found in window — Duels tab opened cleanly; deeper assertion skipped.');
-    }
+    // Step 3 — the picker mounts a grid of cards; each carries
+    // `data-duel-type="<id>"`. Boss Race is `selectable: false`
+    // in DUEL_TYPES and is filtered out by `_renderDuelTypeCards`,
+    // so its card never reaches the DOM. We assert against UI text
+    // / DOM attributes only — no runtime globals.
+    const cards = page.locator('#duel-type-grid [data-duel-type]');
+    await expect(cards).toHaveCount(5);
+
+    const ids = await cards.evaluateAll(els =>
+      els.map(el => (el as HTMLElement).getAttribute('data-duel-type') || '')
+    );
+    expect(ids).not.toContain('boss_race');
+    // The five v2.2.1 verified types — order is governed by the
+    // `order` array in `_renderDuelTypeCards`. Assert the SET (not
+    // the order) so a future re-ordering doesn't break the test.
+    expect(new Set(ids)).toEqual(new Set([
+      'verified_objectives',
+      'steps',
+      'sleep',
+      'bedtime',
+      'strength',
+    ]));
+
+    // Step 4 — close cleanly so the next test doesn't inherit a
+    // body class lock (`body.duel-type-locked`).
+    await page.evaluate(() => {
+      const w = window as unknown as { closeDuelTypePicker?: () => void };
+      if (typeof w.closeDuelTypePicker === 'function') w.closeDuelTypePicker();
+    });
   });
 });

@@ -56,21 +56,29 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ### Playwright smoke tests (NEW — added end of May 17)
 
-Browser-level confidence pass before Codemagic / TestFlight.
+**Pre-Codemagic smoke gate, NOT a TestFlight replacement.** Browser-level structural-regression catcher. Run before every Codemagic trigger. Expected green state: **`7 passed`** in ~33s.
 
-**Commands:**
+**First-time setup on a new machine (or fresh clone):**
 ```
-npm run test:e2e          # headless run, prints list output
+npm install                       # picks up @playwright/test from devDependencies
+npx playwright install chromium   # downloads the browser binary (one-time)
+npm run test:e2e                  # should print "7 passed"
+```
+Skipping the `npx playwright install chromium` step is the most common first-run failure — the test runner exits with "Executable doesn't exist" and a hint to run that command.
+
+**Standard commands:**
+```
+npm run test:e2e          # headless run, prints list output — the gate
 npm run test:e2e:headed   # see the browser drive the app
 npm run test:e2e:ui       # Playwright UI mode for picking individual tests
 npm run test:e2e:report   # open the HTML report from the last run
 ```
 
-**Setup (already done):**
-- `@playwright/test ^1.60.0` added as a devDependency.
-- Chromium installed via `npx playwright install chromium` (just Chromium — the iOS WKWebView shipping shape is closest to Chromium-family; the cross-browser matrix is unnecessary for a PWA wrapped in Capacitor).
+**Setup baked into the repo:**
+- `@playwright/test ^1.60.0` in devDependencies.
 - `playwright.config.ts` boots the existing `serve.ps1` static server at `http://localhost:8080` via `webServer` (with `reuseExistingServer: true` for local dev iterations). Viewport set to 414×896 (iPhone-ish portrait). `trace: retain-on-failure`, `screenshot: only-on-failure`, `video: retain-on-failure`.
 - Single worker (`workers: 1`) since the app is stateful and we don't want cross-test localStorage races.
+- Chromium-only (the iOS WKWebView shipping shape is closest to Chromium-family; cross-browser matrix is unnecessary for a PWA wrapped in Capacitor).
 
 **Tests live in `tests/e2e/smoke.spec.ts`** — 7 covers:
 1. **A · App boots** — shell mounts, no fatal JS errors. Tolerates 401/network noise from the dev stub JWT hitting the production worker.
@@ -79,7 +87,7 @@ npm run test:e2e:report   # open the HTML report from the last run
 4. **D · Edit Habit modal** — opens + closes cleanly via Cancel, overlay is not stranded (covers the iOS post-save freeze regression from Phase 1z.34).
 5. **E · Leaderboard sheet** — opens via the World Rank Steps card, `This Week / Hall of Fame` tabs visible, week date-range blurb present, HoF tab switch works, scroll keeps the sheet open, X closes (covers Phase 1z.40 scroll-dismiss fix).
 6. **F · Boss detail Souls readout** — `SOULS AVAILABLE` pill renders above the Engage button (covers Phase 1z.39).
-7. **G · Duels picker** — `boss_race` is NOT in the type set; 5 allowed types are present (soft-passes with a warning log if the DUEL_TYPES global isn't introspectable in the current bundle path).
+7. **G · Duels picker** — opens the picker via `window.openDuelTypePicker(stubAlias)` (pre-existing global used by in-app dispatch; not a test-only export) and asserts exactly 5 cards render with `data-duel-type` in `{verified_objectives, steps, sleep, bedtime, strength}`. `boss_race` is filtered by `selectable: false` in `_renderDuelTypeCards` and never reaches the DOM. UI-attribute-based — no DUEL_TYPES global needed.
 
 **`freshApp(page)` helper** seeds the gate-skipping localStorage keys via `page.addInitScript()` BEFORE the page script runs:
 - `hb_onboarding_seen_v2`, `hb_welcomed`, `hb_hunter_name_claimed`, `hb_cloud_restore_dismissed`, `hb_whats_new_seen` (set to `99.99.99` so the What's New modal never paints).
