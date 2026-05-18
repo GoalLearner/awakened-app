@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w52';
+  const APP_BUILD_TAG = '2.2.1-w53';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1458,35 +1458,48 @@
   // Each tier carries its own `common_protected` rate that applies
   // until the user's first common from THIS boss (per-boss now,
   // not global — see first_common_by_boss in hb_inventory).
-  // v3 Phase 1z.46 -- +13 percentage-point buff on common rates only.
-  // ultra_rare and rare rates are UNCHANGED; the same is true for the
-  // mercy/pity thresholds, the ultra->rare->common roll order, the
-  // one-card-max behavior, and the per-boss first-common protection.
-  // Pre-buff vs post-buff common rates:
-  //   daily      common:  0.20    -> 0.33
-  //   daily      protect: 0.6667  -> 0.7967
-  //   triweekly  common:  0.30    -> 0.43
-  //   triweekly  protect: 0.65    -> 0.78
-  //   weekly     common:  0.40    -> 0.53
-  //   weekly     protect: 0.70    -> 0.83
+  // v3 Phase 1z.47 -- nothing-rate tuning. Common base rates are
+  // calibrated so the per-kill "nothing" outcome lands on product
+  // targets:
+  //   daily      base nothing  -> 40%   (was 58.35% after 1z.46)
+  //   triweekly  base nothing  -> 40%   (was 43.61% after 1z.46)
+  //   weekly     base nothing  ->  0%   (was 28.20% after 1z.46)
+  //
+  // Math: P(nothing) = (1 - ultra) * (1 - rare) * (1 - common).
+  // Solving for common given the target nothing rate:
+  //   daily      common = 1 - 0.40/((19/20)*(11/12))   ~= 0.5407
+  //   triweekly  common = 1 - 0.40/(0.90*0.85)         ~= 0.4771
+  //   weekly     common = 1 - 0.00/(0.80*0.75)         = 1.00
+  //
+  // Weekly common at 1.0 means: when the ultra and rare rolls both
+  // miss, the common roll ALWAYS hits. Per-kill nothing is exactly
+  // 0% on every weekly boss kill. Weekly `common_protected` rides
+  // up to 1.0 too so that protected can't be lower than base.
+  //
+  // Protected rates for daily/triweekly are PRESERVED from 1z.46
+  // (0.7967 and 0.78) so the first-common per-boss bonus still
+  // provides a meaningful head start above the new base rate.
+  //
+  // ultra_rare, rare, mercy/pity thresholds, roll order, one-card-
+  // max, and per-boss first-common protection are all UNCHANGED.
   const DROP_RATES_BY_CADENCE = {
     daily: {
       ultra_rare:        1 / 20,                       // 5%   (unchanged)
       rare:              1 / 12,                       // 8.33% (unchanged)
-      common:            (1 / 5) + 0.13,               // 33%  (was 20%)
-      common_protected:  (2 / 3) + 0.13,               // 79.67% until first common from this boss (was 66.67%)
+      common:            0.5407,                       // base nothing = 40.00%
+      common_protected:  (2 / 3) + 0.13,               // 79.67% (preserved from 1z.46; protected nothing = 17.71%)
     },
     triweekly: {
       ultra_rare:        0.10,                         // 10%  (unchanged)
       rare:              0.15,                         // 15%  (unchanged)
-      common:            0.30 + 0.13,                  // 43%  (was 30%)
-      common_protected:  0.65 + 0.13,                  // 78%  (was 65%)
+      common:            0.4771,                       // base nothing = 40.00%
+      common_protected:  0.78,                         // 78%   (preserved from 1z.46; protected nothing = 16.83%)
     },
     weekly: {
       ultra_rare:        0.20,                         // 20%  (unchanged)
       rare:              0.25,                         // 25%  (unchanged)
-      common:            0.40 + 0.13,                  // 53%  (was 40%)
-      common_protected:  0.70 + 0.13,                  // 83%  (was 70%)
+      common:            1.00,                         // base nothing = 0% (always drops when ultra+rare miss)
+      common_protected:  1.00,                         // matches base (protected cannot be < base)
     },
   };
   // Bad-luck protection thresholds per cadence. See DROPS.md notes.

@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w52` |
-| `app.js?v=` | `401` |
+| `APP_BUILD_TAG` | `2.2.1-w53` |
+| `app.js?v=` | `402` |
 | `auth.js?v=` | `15` |
 | `styles.css?v=` | `291` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.287` |
+| `sw.js CACHE_VERSION` | `v5.288` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,60 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=291`, `app.js?v=401`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.287`, `APP_BUILD_TAG = '2.2.1-w52'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=291`, `app.js?v=402`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.288`, `APP_BUILD_TAG = '2.2.1-w53'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Drop rate nothing-target tuning (v3 Phase 1z.47)
+
+**Tuning-only change.** Base common rates are calibrated so the per-kill "nothing" outcome lands on explicit product targets. Builds on 1z.46.
+
+**Targets:**
+| Cadence | Base nothing | Change vs 1z.46 |
+|---|---|---|
+| daily | **40.00%** | was 58.35% |
+| triweekly | **40.00%** | was 43.61% |
+| weekly | **0.00%** | was 28.20% |
+
+**Math.** `P(nothing) = (1 − ultra) × (1 − rare) × (1 − common)`. Solving for `common`:
+- daily: `common = 1 − 0.40 / ((19/20) × (11/12)) = 0.5407`
+- triweekly: `common = 1 − 0.40 / (0.90 × 0.85) = 0.4771`
+- weekly: `common = 1 − 0.00 / (0.80 × 0.75) = 1.00`
+
+Weekly common at 1.0 means: whenever the ultra and rare rolls both miss, the common roll always hits — every weekly kill produces a card. The weekly `common_protected` rides up to 1.0 as well so protected can't fall below base.
+
+**Common rates: before → after**
+| Cadence | Slot | Before (1z.46) | After (1z.47) |
+|---|---|---|---|
+| daily | `common` | 0.33 | **0.5407** |
+| daily | `common_protected` | 0.7967 | **0.7967** (preserved) |
+| triweekly | `common` | 0.43 | **0.4771** |
+| triweekly | `common_protected` | 0.78 | **0.78** (preserved) |
+| weekly | `common` | 0.53 | **1.00** |
+| weekly | `common_protected` | 0.83 | **1.00** (now matches base) |
+
+**Full per-kill distribution after this change:**
+| Cadence / state | Ultra | Rare | Common | Nothing |
+|---|---|---|---|---|
+| daily (base) | 5.00% | 7.92% | 47.09% | **40.00%** |
+| daily (protected) | 5.00% | 7.92% | 69.38% | 17.71% |
+| triweekly (base) | 10.00% | 13.50% | 36.50% | **40.00%** |
+| triweekly (protected) | 10.00% | 13.50% | 59.67% | 16.83% |
+| weekly (base) | 20.00% | 20.00% | 60.00% | **0.00%** |
+| weekly (protected) | 20.00% | 20.00% | 60.00% | 0.00% |
+
+All rows sum to 100.00% — verified end-to-end.
+
+**Explicitly unchanged:**
+- `ultra_rare` rates (5% / 10% / 20%)
+- `rare` rates (8.33% / 15% / 25%)
+- All `DROP_PITY_BY_CADENCE` thresholds (any-drop guarantee, rare mercy, ultra soft/hard pity)
+- Roll order ultra → rare → common
+- One-card-max-per-boss-kill behavior
+- Per-boss first-common protection (`first_common_by_boss`)
+- Item stats, drop caps, boss souls economy
+
+**Files changed (frontend only, 4):** `app.js` (one block + build tag), `index.html` (app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic.
+
+Bumps: `app.js?v=402`, `sw.js v5.288`, `APP_BUILD_TAG '2.2.1-w53'`. `APP_VERSION` unchanged at `2.2.1`. `styles.css`, `auth.js`, `simulated-leaderboard.js` all unchanged.
 
 ### Common drop rate buff (+13 percentage points) (v3 Phase 1z.46)
 
