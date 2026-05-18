@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=290">
+  <link rel="stylesheet" href="styles.css?v=291">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1422,6 +1422,15 @@
         <p class="souls-info-subtitle">The currency of the dungeon.</p>
       </div>
 
+      <!-- v3 Phase 1z.45 — VIEW TRANSACTIONS promoted to the top of
+           the info modal so it's visible the instant the modal opens
+           (above-the-fold on iPhone). Previously sat below the rate
+           tables and the warning section; users had to scroll the
+           entire info card to find it. -->
+      <button id="souls-info-ledger-btn" class="souls-info-ledger-btn" type="button">
+        VIEW TRANSACTIONS
+      </button>
+
       <section class="souls-info-section">
         <p class="souls-info-body">Souls are the essence collected from defeated dungeon bosses. You spend them to engage new bosses — every fight requires a wager. Hunt wisely.</p>
       </section>
@@ -1458,13 +1467,6 @@
       <section class="souls-info-section souls-info-warning">
         <p class="souls-info-body"><b>Souls spent on engagement are non-refundable.</b> If you disengage without a kill, your souls are lost. Hunt only what you intend to defeat.</p>
       </section>
-
-      <!-- v3 Phase 1z.44 — gateway into the Souls Ledger. Bottom of the
-           info modal so it doesn't compete with the rate tables for
-           visual hierarchy. Tapping opens #souls-ledger-sheet. -->
-      <button id="souls-info-ledger-btn" class="souls-info-ledger-btn" type="button">
-        VIEW TRANSACTIONS
-      </button>
     </div>
   </div>
 
@@ -2130,7 +2132,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=399"></script>
+  <script src="app.js?v=400"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

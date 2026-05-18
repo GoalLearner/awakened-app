@@ -1789,11 +1789,13 @@ footer {
 .souls-info-close:hover  { background: rgba(255, 255, 255, 0.10); color: var(--text-primary); }
 .souls-info-close:active { transform: scale(0.94); }
 
-/* VIEW TRANSACTIONS button at the bottom of the souls info modal. */
+/* VIEW TRANSACTIONS button — v3 Phase 1z.45 moved to the TOP of
+   the souls info modal (directly under the header) so it's
+   visible the instant the modal opens, no scroll required. */
 .souls-info-ledger-btn {
   display: block;
   width: 100%;
-  margin: 14px 0 4px;
+  margin: 0 0 18px;
   padding: 12px 16px;
   font-family: 'Cinzel', serif;
   font-size: 0.78rem;
