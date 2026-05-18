@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w58` |
-| `app.js?v=` | `407` |
+| `APP_BUILD_TAG` | `2.2.1-w59` |
+| `app.js?v=` | `408` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `294` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.293` |
+| `sw.js CACHE_VERSION` | `v5.294` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,55 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Boss hunt timer format polish (v3 Phase 1z.55)
+
+**Audit verdict.** The boss hunt expiration-window infrastructure (Part A → K of the spec) was already shipped in Phase 1z.43:
+- `hunt_started_at` + `hunt_expires_at` stamped at engage, cleared on defeat/disengage.
+- `getBossHuntDurationMs(cfg)` → 24h / 3d / 7d by cadence.
+- `_migrateBossHuntFields(id, state, cfg)` migrates legacy engaged hunts safely.
+- `resolveBossHuntsAcrossWindow()` re-queries Health for the full active window on app init / visibility-change / boss-detail open / `renderHabits` cycle. Steel Wolf delayed-defeat path verified working.
+- `_expireBossHunt(id)` clears engaged + hunt fields when the window elapses without qualifying data; sets `last_hunt_outcome='expired'`.
+- All six bosses (Insomniac, Carouser, Dream Tyrant, Steel Wolf, Glass Strider, Iron Warden) audited; each routes through `_clearBossHuntFields(state)` on kill so defeats/drops/mercy/souls fire exactly once.
+- All four other sheet-dismiss invariants intact: Today's Briefing LOCK IN-only (1z.42), Hall of Fame X-only (1z.40), Souls info swipe+X+overlay (1z.44), Souls Ledger drag-dismiss enabled.
+
+**Only delta this phase: timer format (Part D).** Previous format produced `14h 07m` / `2d 5h` — read like a stopwatch. New RPG-clean format buckets:
+| Remaining | Display |
+|---|---|
+| ≤ 0 | `Expired` |
+| < 1 minute | `<1m` |
+| < 1 hour | `Nm` (e.g. `42m`, `9m`) |
+| < 48 hours | `Nh` (e.g. `24h`, `23h`, `7h`, `2h`, `1h`) |
+| ≥ 48 hours | `Nd` (e.g. `2d`, `3d`, `7d`) |
+
+The 48h day-boundary keeps a freshly-engaged daily boss showing `24h` (not `1d`) so the user sees the full hour budget at engage. Once the timer crosses below 48h it switches to `47h` → `46h` → ... → `1h` → `59m` → `<1m` → `Expired` cleanly.
+
+**Triweekly / weekly behaviour:** triweekly (72h) shows `3d` until under 48h remain, then `47h`. Weekly (168h) shows `7d` → `6d` → ... → `2d` → `47h` → ... .
+
+**Verified.** 16/16 format boundary cases pass:
+```
+-1s   → Expired      0      → Expired
+30s   → <1m          59s    → <1m
+1m    → 1m           42m    → 42m       59m    → 59m
+1h    → 1h           2h17m  → 2h        23h59m → 23h
+24h   → 24h          47h30m → 47h
+48h   → 2d           3d     → 3d        7d     → 7d
+```
+
+`HUNT ENDS IN <X>` copy in `openBossFullScreen` (line 18784) automatically picks up the new format — no other call site.
+
+**Files changed (frontend only, 4):** `app.js` (`_formatHuntRemaining` function body + comment block + build tag), `index.html` (app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic, no styles.css.
+
+**`npm run test:e2e` → 7/7 green.** No regressions to any of the other sheet invariants (verified by grep on the file before commit).
+
+Bumps: `app.js?v=408`, `sw.js v5.294`, `APP_BUILD_TAG '2.2.1-w59'`. `APP_VERSION` unchanged at `2.2.1`. `styles.css`, `auth.js`, `simulated-leaderboard.js` all unchanged.
+
+**Manual QA next iOS build:**
+1. Engage Steel Wolf → detail reads `HUNT ENDS IN 24h` (or `23h` after a few minutes).
+2. Wait until under 1 hour remains → reads `HUNT ENDS IN 59m` → `42m` → ... → `<1m` → `HUNT EXPIRED` if no qualifying steps.
+3. Engage Carouser (weekly) → reads `HUNT ENDS IN 7d` → counts down to `2d` → then switches to `47h` and counts hours.
+4. Walk 6,000+ steps inside Steel Wolf window → next renderHabits / app foreground → boss defeats. Defeat count +1, drop/mercy/souls fire once. (1z.43 path; verified intact.)
+5. Today's Briefing still LOCK IN-only. Hall of Fame still X-only. Souls Ledger still drag-dismissible. Habit drag-reorder still disabled. All unchanged.
 
 ### 📒 Souls Ledger pre-1z.44 history gap (Phase 1z.54 — known artifact)
 
@@ -2754,7 +2803,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=294`, `app.js?v=407`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.293`, `APP_BUILD_TAG = '2.2.1-w58'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=294`, `app.js?v=408`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.294`, `APP_BUILD_TAG = '2.2.1-w59'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ### 100K Step Club roster tab (v3 Phase 1z.52)
 

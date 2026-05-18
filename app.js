@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w58';
+  const APP_BUILD_TAG = '2.2.1-w59';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -502,22 +502,32 @@
     return Math.max(0, exp - Date.now());
   }
 
-  // Format remaining hunt time. Examples:
-  //   42m       (under 1 hour)
-  //   14h 07m   (under 24 hours)
-  //   2d 5h     (over 24 hours)
-  //   Expired   (<= 0)
+  // v3 Phase 1z.55 — RPG-clean countdown format. Tester feedback:
+  // the previous "14h 07m" / "2d 5h" precision read like a stopwatch
+  // instead of a hunt timer. The boss UX should feel deliberate, not
+  // counted by the minute. Bucketed rules:
+  //
+  //   <= 0           → "Expired"
+  //   < 1 minute     → "<1m"            (final moments of a hunt)
+  //   < 1 hour       → "Nm"             ("42m", "9m" — only the final hour)
+  //   < 48 hours     → "Nh"             ("23h", "7h" — daily window + early triweekly)
+  //   >= 48 hours    → "Nd"             ("3d", "7d" — triweekly + weekly window)
+  //
+  // The 48h day-boundary keeps a freshly-engaged daily boss showing
+  // "24h" (not "1d") so the user sees the full hour budget at engage.
+  // Triweekly (72h) → "3d"; weekly (168h) → "7d". Once the timer
+  // crosses below 48h it switches to "47h" → "46h" → ... → "1h" →
+  // "59m" → ... → "<1m" → "Expired" cleanly.
   function _formatHuntRemaining(ms) {
     if (ms == null) return '';
     if (ms <= 0) return 'Expired';
     const totalMin = Math.floor(ms / 60000);
+    if (totalMin < 1)  return '<1m';
     if (totalMin < 60) return totalMin + 'm';
-    const hours = Math.floor(totalMin / 60);
-    const mins = totalMin % 60;
-    if (hours < 24) return hours + 'h ' + String(mins).padStart(2, '0') + 'm';
-    const days = Math.floor(hours / 24);
-    const hrsRem = hours % 24;
-    return days + 'd ' + hrsRem + 'h';
+    const totalHr = Math.floor(totalMin / 60);
+    if (totalHr < 48) return totalHr + 'h';
+    const totalDays = Math.floor(totalHr / 24);
+    return totalDays + 'd';
   }
 
   // Enumerate device-local YYYY-MM-DD day keys that fall inside
