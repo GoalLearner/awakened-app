@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w54';
+  const APP_BUILD_TAG = '2.2.1-w55';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20005,6 +20005,19 @@
     if (modal) modal.classList.toggle('edit-modal--canonical', canonical);
     const nameInput = document.getElementById('edit-input');
     if (nameInput) nameInput.readOnly = canonical;
+    // v3 Phase 1z.49 — discoverable Delete affordance for CUSTOM
+    // habits only. The context-menu (3-dot) Delete already exists
+    // for every habit, but tester feedback (long-press expected
+    // edit/delete) showed it's not discoverable enough. Canonical
+    // habits stay deletable only through the existing context menu
+    // because they're tied to per-name lookups that other surfaces
+    // assume exist — accidental Delete from the same screen the
+    // user just opened to "edit a goal" would be too sharp an edge.
+    const deleteRow = document.getElementById('edit-delete-row');
+    if (deleteRow) {
+      const isCustom = habit.custom === true;
+      deleteRow.classList.toggle('hidden', !isCustom);
+    }
     // Hide the "Tap to choose an emoji" hint when locked.
     const emojiHint = document.querySelector('#edit-modal .emoji-row-hint');
     if (emojiHint) emojiHint.classList.toggle('hidden', canonical);
@@ -20208,6 +20221,31 @@
       if (e.key === 'Enter') commitEdit();
       if (e.key === 'Escape') closeEditModal();
     });
+    // v3 Phase 1z.49 — Delete-habit button (custom habits only).
+    // Confirms via window.confirm so a fat-finger tap can't nuke a
+    // habit + its history. Follows the same save → close → render
+    // pattern from 1z.34 so a post-delete render exception cannot
+    // strand the modal: persist via deleteHabit() (which calls
+    // save() + renderHabits() internally), then close the edit
+    // modal, then re-render-in-try-catch as a defensive belt.
+    const deleteBtn = document.getElementById('edit-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        const id = editingId;
+        if (!id) return;
+        const habit = habits.find(h => h.id === id);
+        if (!habit || habit.custom !== true) return; // defense in depth
+        const name = habit.name || 'this habit';
+        let ok = true;
+        try {
+          ok = window.confirm('Delete "' + name + '"? This removes the habit and its completion history. This cannot be undone.');
+        } catch (_) { ok = true; }
+        if (!ok) return;
+        try { deleteHabit(id); } catch (e) { try { console.warn('[edit] delete failed', e); } catch (_) {} }
+        closeEditModal();
+        try { renderHabits(); } catch (e) { try { console.warn('[edit] post-delete render failed', e); } catch (_) {} }
+      });
+    }
     document.getElementById('edit-emoji-btn').addEventListener('click', () => {
       // Canonical habits: emoji is locked. See openEditModal for why.
       const habit = habits.find(h => h.id === editingId);

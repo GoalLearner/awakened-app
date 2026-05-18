@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w54` |
-| `app.js?v=` | `403` |
+| `APP_BUILD_TAG` | `2.2.1-w55` |
+| `app.js?v=` | `404` |
 | `auth.js?v=` | `15` |
-| `styles.css?v=` | `291` |
+| `styles.css?v=` | `292` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.289` |
+| `sw.js CACHE_VERSION` | `v5.290` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,44 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=291`, `app.js?v=403`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.289`, `APP_BUILD_TAG = '2.2.1-w54'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=292`, `app.js?v=404`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.290`, `APP_BUILD_TAG = '2.2.1-w55'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Custom habit Delete affordance + freeze/long-press audit (v3 Phase 1z.49)
+
+**Tester report.** "Have had some freezes on the edit custom goal and pressing and holding on a custom goal thinking I'd be able to edit/delete a duplicate."
+
+**Audit findings:**
+
+1. **Save freeze on custom habit edit** — already fixed by Phase 1z.34. Both `saveCustomHabit` (line 13809) and `commitEdit` (line 20138) follow the safe `save() → close → render-in-try-catch` pattern. Tester was almost certainly on a pre-1z.34 TestFlight build. Verified at current HEAD: no remaining anti-pattern.
+2. **Long-press behavior** — the habit-drag-reorder flag (`ENABLE_HABIT_DRAG_REORDER`) is `false` for 2.2.1; `bindDrag()` short-circuits at line 20632. No `pointerdown`/`touchstart` listeners are attached to habit rows, no `.lp-pressing` class is added on touch, no 400ms timer ever fires. `_backgroundDragSafety` cleans orphan `.lp-pressing` classes on `visibilitychange` / `pagehide` / `blur` (lines 20917–20930). CSS already suppresses iOS native long-press callout / text-selection on `.habit-item` (lines 260–275, 333–352) via `user-select: none` + `-webkit-touch-callout: none`. No freeze risk on long-press in the current build.
+3. **Duplicate custom habits** — `uid()` (timestamp + random) guarantees unique IDs. Click handlers dispatch by `habit.id` (not name), so two custom habits sharing a name edit independently. `editingId` is the habit's ID, round-trips correctly. Delete was already available via the 3-dot context menu (`[data-more]` → ctx-delete), but discoverability was poor — tester's expectation of long-press = edit/delete reveals that.
+
+**Change shipped: discoverable Delete-habit button in the Edit Habit modal (custom habits only).**
+
+Custom habits had a hidden delete affordance buried in the per-row 3-dot context menu. Tester reflexively long-pressed instead. To meet them where they are without breaking habits that other surfaces depend on, the Edit Habit modal now shows a subtle text-only `Delete habit` button — but only when `habit.custom === true`. Canonical habits stay deletable only through the context menu (they're foreign-keyed by name into `HABIT_ICONS`, `AUTO_VERIFY`, etc. — an accidental Delete tap from the same screen the user opened to "edit a goal" would be too sharp an edge).
+
+**Implementation:**
+- `index.html` — new `#edit-delete-row` containing `#edit-delete-btn`, hidden by default, sits above the Cancel/Save action row.
+- `app.js` — `openEditModal` toggles `#edit-delete-row.hidden` based on `habit.custom`. `setupEditModal` wires a click handler that:
+  1. Re-checks `habit.custom === true` (defense-in-depth).
+  2. `window.confirm('Delete "<name>"? …')` — prevents fat-finger.
+  3. `try { deleteHabit(id); } catch …`
+  4. `closeEditModal()` (modal dismissed BEFORE the post-delete render, mirroring the 1z.34 freeze-safety pattern).
+  5. `try { renderHabits(); } catch …` (belt-and-suspenders — `deleteHabit` already calls `renderHabits` internally).
+- `styles.css` — subtle red-ember text underline treatment so destructive intent is unmistakable but doesn't compete with Save for attention.
+
+**Files changed (frontend only, 5):** `app.js`, `index.html`, `styles.css`, `sw.js`, `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic. `npm run test:e2e` → 7/7 green. `node --check app.js` OK.
+
+Bumps: `app.js?v=404`, `styles.css?v=292`, `sw.js v5.290`, `APP_BUILD_TAG '2.2.1-w55'`. `APP_VERSION` unchanged at `2.2.1`.
+
+**Manual QA next iOS build:**
+1. Add a custom habit. Open Edit Habit. **`Delete habit` button visible at the bottom.**
+2. Tap Delete → confirm dialog → confirm → habit + history removed, modal closes, app responsive.
+3. Tap Delete → confirm dialog → cancel → modal stays open with no state change.
+4. Open Edit Habit on a CANONICAL habit (e.g. Daily walk). **`Delete habit` button is NOT visible.**
+5. Two custom habits with the same name → delete one → the OTHER one is preserved (dispatch by ID).
+6. Long-press any habit → no ghost, no pulsating, no stuck overlay, no freeze (long-press code path is no-op'd; CSS suppresses native callout).
+7. Edit Habit + Save still no-freeze (1z.34 fix verified at current HEAD).
 
 ### Boss Defeated modal relic art fix (v3 Phase 1z.48)
 

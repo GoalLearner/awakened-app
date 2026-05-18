@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=291">
+  <link rel="stylesheet" href="styles.css?v=292">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1584,6 +1584,16 @@
       </div>
     </div>
 
+    <!-- v3 Phase 1z.49 — discoverable Delete button for CUSTOM habits.
+         Hidden by default; openEditModal toggles visibility based on
+         habit.custom (canonical habits cannot be deleted via this
+         modal — they're protected by intent). Sits above the standard
+         Cancel/Save actions as a subtle text-only affordance so it
+         doesn't compete with Save for attention. -->
+    <div id="edit-delete-row" class="edit-delete-row hidden">
+      <button id="edit-delete-btn" type="button" class="edit-delete-btn">Delete habit</button>
+    </div>
+
     <div class="modal-actions">
       <button id="cancel-edit-btn" class="btn-ghost">Cancel</button>
       <button id="save-edit-btn" class="btn-primary">Save</button>
@@ -2140,7 +2150,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=403"></script>
+  <script src="app.js?v=404"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

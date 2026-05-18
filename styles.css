@@ -1148,6 +1148,38 @@ footer {
   justify-content: flex-end;
 }
 
+/* v3 Phase 1z.49 — Delete-habit row inside the Edit Habit modal.
+   Custom habits only. Subtle text-only treatment so it doesn't
+   compete with the primary Save action for attention, but the red
+   ember accent makes the destructive intent unmistakable. The row
+   is hidden by default; openEditModal toggles `.hidden` based on
+   `habit.custom`. */
+.edit-delete-row {
+  display: flex;
+  justify-content: flex-start;
+  margin: 4px 0 14px;
+}
+.edit-delete-row.hidden { display: none; }
+.edit-delete-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 6px 2px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(248, 113, 113, 0.92);
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  text-decoration: underline;
+  text-decoration-color: rgba(248, 113, 113, 0.32);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.edit-delete-btn:hover  { color: #f87171; text-decoration-color: rgba(248, 113, 113, 0.7); }
+.edit-delete-btn:active { transform: translateY(1px); }
+
 .edit-goal-row {
   display: flex;
   align-items: center;
