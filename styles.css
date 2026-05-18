@@ -1741,30 +1741,131 @@ footer {
   /* Slightly wider than the default .modal (360px) — the rate tables
      need horizontal room to read cleanly. */
   max-width: 400px;
-  padding: 22px 22px 18px;
-  /* Allow scrolling if viewport is short — tables are dense. */
+  /* v3 Phase 1z.44 — modal frame itself no longer scrolls. The X
+     close button anchors to the frame; the inner
+     .souls-info-body-scroll is what actually scrolls. Reset the
+     padding so the inner scroll element controls its own gutter. */
+  padding: 0;
   max-height: 88vh;
+  overflow: hidden;
+}
+/* Inner scroll container — splits the modal so the X close button
+   stays visible at all scroll positions on iPhone. */
+.souls-info-body-scroll {
+  max-height: calc(88vh - 8px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding: 22px 22px 18px;
 }
 .souls-info-close {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
+  /* Bigger tap target than the prior 32x32 — iPhone HIG floor is
+     44x44, this lands close enough without breaking the visual
+     proportions of the rate tables underneath. */
   border: 0;
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 10px;
+  background: rgba(20, 20, 35, 0.55);
   color: var(--text-secondary);
   font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s ease, color 0.15s ease;
+  /* iOS hit-testing hygiene: keep above modal content; bypass the
+     double-tap-zoom delay; force pointer events through any
+     ancestor overflow gymnastics. */
+  z-index: 3;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.souls-info-close:hover  { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+.souls-info-close:hover  { background: rgba(255, 255, 255, 0.10); color: var(--text-primary); }
 .souls-info-close:active { transform: scale(0.94); }
+
+/* VIEW TRANSACTIONS button at the bottom of the souls info modal. */
+.souls-info-ledger-btn {
+  display: block;
+  width: 100%;
+  margin: 14px 0 4px;
+  padding: 12px 16px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--text-primary);
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.18), rgba(245, 184, 66, 0.04));
+  border: 1px solid rgba(245, 184, 66, 0.42);
+  border-radius: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.souls-info-ledger-btn:hover  { background: linear-gradient(180deg, rgba(245, 184, 66, 0.28), rgba(245, 184, 66, 0.08)); }
+.souls-info-ledger-btn:active { transform: scale(0.98); }
+
+/* ── v3 Phase 1z.44 — Souls Ledger sheet ─────────────────────
+   Rows are newest-first. Gains render in a gold accent; spends
+   render in a red ember accent. The ledger sheet uses the
+   shared `.vn-sheet` / `.lb-rank-header` shell so the close
+   button + drag handle styling match other bottom sheets. */
+.souls-ledger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.souls-ledger-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+.souls-ledger-row__delta {
+  flex: 0 0 auto;
+  min-width: 64px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+.souls-ledger-row__delta--gain { color: #f5b842; text-shadow: 0 0 6px rgba(245, 184, 66, 0.32); }
+.souls-ledger-row__delta--spend { color: #f87171; text-shadow: 0 0 6px rgba(239, 68, 68, 0.28); }
+.souls-ledger-row__main { flex: 1 1 auto; min-width: 0; }
+.souls-ledger-row__label {
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.souls-ledger-row__meta {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+.souls-ledger-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+.souls-ledger-empty__title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  font-size: 0.98rem;
+}
 
 .souls-info-header {
   text-align: center;

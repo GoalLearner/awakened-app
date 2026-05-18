@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=289">
+  <link rel="stylesheet" href="styles.css?v=290">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1405,50 +1405,85 @@
        .modal-overlay + .modal base styles. Opens on souls-badge tap;
        static info only (earn paths + spend costs). No live stats. -->
   <div id="souls-info-overlay" class="modal-overlay hidden"></div>
+  <!-- v3 Phase 1z.44 — markup refactor for X-close fix on iPhone.
+       Previously the X close button was `position: absolute` inside
+       the modal, which IS the scrolling container (max-height + overflow).
+       When the user scrolled the dense rate tables, the X scrolled
+       UP and OUT of view, and the tap landed on whatever sat under
+       it instead. Splitting into a non-scrolling outer shell plus an
+       inner .souls-info-body-scroll element keeps the X anchored to
+       the visible modal frame regardless of scroll position. -->
   <div id="souls-info-modal" class="modal souls-info-modal hidden" role="dialog" aria-labelledby="souls-info-title">
     <button id="souls-info-close" class="souls-info-close" type="button" aria-label="Close">✕</button>
-    <div class="souls-info-header">
-      <img class="souls-info-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
-      <h2 id="souls-info-title" class="souls-info-title">SOULS</h2>
-      <p class="souls-info-subtitle">The currency of the dungeon.</p>
+    <div class="souls-info-body-scroll">
+      <div class="souls-info-header">
+        <img class="souls-info-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
+        <h2 id="souls-info-title" class="souls-info-title">SOULS</h2>
+        <p class="souls-info-subtitle">The currency of the dungeon.</p>
+      </div>
+
+      <section class="souls-info-section">
+        <p class="souls-info-body">Souls are the essence collected from defeated dungeon bosses. You spend them to engage new bosses — every fight requires a wager. Hunt wisely.</p>
+      </section>
+
+      <section class="souls-info-section">
+        <h3 class="souls-info-section-label">HOW TO EARN</h3>
+        <ul class="souls-info-list">
+          <li><img class="souls-info-bullet-icon" src="assets/habit-icons/icon-pack-morning.png" alt="" draggable="false" loading="lazy" decoding="async"><span class="souls-info-list-text"><b>Daily login</b> — +15 souls every day you open the app</span></li>
+          <li><img class="souls-info-bullet-icon" src="assets/tab-icons/tab-habits.png" alt="" draggable="false" loading="lazy" decoding="async"><span class="souls-info-list-text"><b>Boss kills</b> — souls awarded based on rank</span></li>
+        </ul>
+        <table class="souls-info-table">
+          <tr><td>E-rank kill</td><td>+50 souls</td></tr>
+          <tr><td>D-rank kill</td><td>+100 souls</td></tr>
+          <tr><td>C-rank kill</td><td>+200 souls</td></tr>
+          <tr><td>B-rank kill</td><td>+400 souls</td></tr>
+          <tr><td>A-rank kill</td><td>+800 souls</td></tr>
+          <tr><td>S-rank kill</td><td>+1,600 souls</td></tr>
+        </table>
+      </section>
+
+      <section class="souls-info-section">
+        <h3 class="souls-info-section-label">HOW TO SPEND</h3>
+        <p class="souls-info-body">Engaging a boss costs souls based on its rank:</p>
+        <table class="souls-info-table">
+          <tr><td>E-rank engage</td><td>25 souls</td></tr>
+          <tr><td>D-rank engage</td><td>50 souls</td></tr>
+          <tr><td>C-rank engage</td><td>100 souls</td></tr>
+          <tr><td>B-rank engage</td><td>200 souls</td></tr>
+          <tr><td>A-rank engage</td><td>400 souls</td></tr>
+          <tr><td>S-rank engage</td><td>800 souls</td></tr>
+        </table>
+      </section>
+
+      <section class="souls-info-section souls-info-warning">
+        <p class="souls-info-body"><b>Souls spent on engagement are non-refundable.</b> If you disengage without a kill, your souls are lost. Hunt only what you intend to defeat.</p>
+      </section>
+
+      <!-- v3 Phase 1z.44 — gateway into the Souls Ledger. Bottom of the
+           info modal so it doesn't compete with the rate tables for
+           visual hierarchy. Tapping opens #souls-ledger-sheet. -->
+      <button id="souls-info-ledger-btn" class="souls-info-ledger-btn" type="button">
+        VIEW TRANSACTIONS
+      </button>
     </div>
+  </div>
 
-    <section class="souls-info-section">
-      <p class="souls-info-body">Souls are the essence collected from defeated dungeon bosses. You spend them to engage new bosses — every fight requires a wager. Hunt wisely.</p>
-    </section>
-
-    <section class="souls-info-section">
-      <h3 class="souls-info-section-label">HOW TO EARN</h3>
-      <ul class="souls-info-list">
-        <li><img class="souls-info-bullet-icon" src="assets/habit-icons/icon-pack-morning.png" alt="" draggable="false" loading="lazy" decoding="async"><span class="souls-info-list-text"><b>Daily login</b> — +15 souls every day you open the app</span></li>
-        <li><img class="souls-info-bullet-icon" src="assets/tab-icons/tab-habits.png" alt="" draggable="false" loading="lazy" decoding="async"><span class="souls-info-list-text"><b>Boss kills</b> — souls awarded based on rank</span></li>
-      </ul>
-      <table class="souls-info-table">
-        <tr><td>E-rank kill</td><td>+50 souls</td></tr>
-        <tr><td>D-rank kill</td><td>+100 souls</td></tr>
-        <tr><td>C-rank kill</td><td>+200 souls</td></tr>
-        <tr><td>B-rank kill</td><td>+400 souls</td></tr>
-        <tr><td>A-rank kill</td><td>+800 souls</td></tr>
-        <tr><td>S-rank kill</td><td>+1,600 souls</td></tr>
-      </table>
-    </section>
-
-    <section class="souls-info-section">
-      <h3 class="souls-info-section-label">HOW TO SPEND</h3>
-      <p class="souls-info-body">Engaging a boss costs souls based on its rank:</p>
-      <table class="souls-info-table">
-        <tr><td>E-rank engage</td><td>25 souls</td></tr>
-        <tr><td>D-rank engage</td><td>50 souls</td></tr>
-        <tr><td>C-rank engage</td><td>100 souls</td></tr>
-        <tr><td>B-rank engage</td><td>200 souls</td></tr>
-        <tr><td>A-rank engage</td><td>400 souls</td></tr>
-        <tr><td>S-rank engage</td><td>800 souls</td></tr>
-      </table>
-    </section>
-
-    <section class="souls-info-section souls-info-warning">
-      <p class="souls-info-body"><b>Souls spent on engagement are non-refundable.</b> If you disengage without a kill, your souls are lost. Hunt only what you intend to defeat.</p>
-    </section>
+  <!-- v3 Phase 1z.44 — Souls Ledger bottom sheet.
+       Read-only chronological list of every gain/spend recorded
+       since 1z.44 shipped. Sourced from localStorage key
+       `hb_souls_ledger`. Newest-first. Drag-down dismissible. -->
+  <div id="souls-ledger-overlay" class="vn-overlay hidden"></div>
+  <div id="souls-ledger-sheet" class="vn-sheet hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">SOULS LEDGER</div>
+      <h2 class="lb-rank-title">Transactions</h2>
+      <button id="souls-ledger-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p class="lb-rank-blurb">Every gain and spend, in order.</p>
+      <div id="souls-ledger-list" class="souls-ledger-list"></div>
+    </div>
   </div>
 
   <!-- Edit modal -->
@@ -2095,7 +2130,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=398"></script>
+  <script src="app.js?v=399"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

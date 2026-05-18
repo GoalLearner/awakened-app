@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w49';
+  const APP_BUILD_TAG = '2.2.1-w50';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1606,9 +1606,12 @@
     _souls.balance += amount;
     _souls.totalEarned += amount;
     persistSouls();
+    // v3 Phase 1z.44 — record the gain in the local Souls Ledger.
+    // The `source` param (e.g. 'daily_login', 'kill_the_steel_wolf')
+    // gets classified into a friendly label inside the helper. Fire
+    // AFTER persistSouls so balance_after reflects the new value.
+    try { recordSoulsTransaction(amount, source); } catch (_) {}
     refreshSoulsDisplay();
-    // source param is debug-only; not logged to a transaction history
-    // for MVP. Future: persist a souls_history array if needed.
   }
 
   function spendSouls(amount, sink) {
@@ -1617,7 +1620,186 @@
     _souls.balance -= amount;
     _souls.totalSpent += amount;
     persistSouls();
+    // v3 Phase 1z.44 — record the spend.
+    try { recordSoulsTransaction(-amount, sink); } catch (_) {}
     refreshSoulsDisplay();
+  }
+
+  // ─── v3 Phase 1z.44 — Souls Ledger ──────────────────────────
+  // Lightweight local-only transaction log so users can see every
+  // gain/spend. Source of truth is still `hb_souls` (balance);
+  // this is a passive audit log. Capped to the last 250 entries
+  // to keep localStorage modest.
+  //
+  // Entries are written by recordSoulsTransaction() which is
+  // called from earnSouls/spendSouls AFTER persistSouls so
+  // balance_after is the post-change value.
+  //
+  // Backend untouched — Cloud Sync is NOT extended for the
+  // ledger in v1. If/when this surfaces value at the server, we
+  // can fold it into the existing user_state_snapshots payload.
+  const SOULS_LEDGER_KEY = 'hb_souls_ledger';
+  const SOULS_LEDGER_MAX = 250;
+
+  function _readSoulsLedger() {
+    try {
+      const raw = localStorage.getItem(SOULS_LEDGER_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+  function _writeSoulsLedger(entries) {
+    try {
+      localStorage.setItem(SOULS_LEDGER_KEY, JSON.stringify(entries));
+    } catch (_) { /* quota or browser refusal — silent, balance is unaffected */ }
+  }
+
+  // Convert a `source`/`sink` string from earnSouls/spendSouls into
+  // a typed, user-friendly transaction record. Unknown strings fall
+  // through to a generic 'system' entry rather than dropping data.
+  function _classifySoulsEvent(amount, hint) {
+    const h = String(hint || '');
+    const isGain = amount > 0;
+    if (h.indexOf('kill_') === 0) {
+      const id  = h.slice(5);
+      const cfg = (typeof BOSSES === 'object' && BOSSES) ? BOSSES[id] : null;
+      return {
+        type: 'boss_kill',
+        label: cfg && cfg.name ? 'Defeated ' + cfg.name : 'Boss kill',
+        detail: cfg && cfg.rank ? cfg.rank + '-rank boss kill' : '',
+        ref_id: id,
+      };
+    }
+    if (h.indexOf('engage_') === 0) {
+      const id  = h.slice(7);
+      const cfg = (typeof BOSSES === 'object' && BOSSES) ? BOSSES[id] : null;
+      return {
+        type: 'boss_engage',
+        label: cfg && cfg.name ? 'Engaged ' + cfg.name : 'Boss engagement',
+        detail: cfg && cfg.rank ? cfg.rank + '-rank engage cost' : '',
+        ref_id: id,
+      };
+    }
+    if (h === 'daily_login') {
+      return { type: 'daily_login', label: 'Daily login', detail: 'Daily bonus', ref_id: null };
+    }
+    if (h === 'first_install' || h === 'starter_grant') {
+      return { type: 'system', label: 'Starter souls', detail: 'First install grant', ref_id: null };
+    }
+    return {
+      type: 'system',
+      label: isGain ? 'Souls earned' : 'Souls spent',
+      detail: h || '',
+      ref_id: null,
+    };
+  }
+
+  function recordSoulsTransaction(delta, hint) {
+    if (typeof delta !== 'number' || delta === 0) return;
+    if (!_souls) loadSouls();
+    const meta = _classifySoulsEvent(delta, hint);
+    const now = Date.now();
+    const entry = {
+      id:            String(now) + '_' + Math.random().toString(36).slice(2, 8),
+      ts:            now,
+      delta:         delta,
+      balance_after: _souls.balance,
+      type:          meta.type,
+      label:         meta.label,
+      detail:        meta.detail || '',
+      ref_id:        meta.ref_id || null,
+    };
+    const log = _readSoulsLedger();
+    log.unshift(entry); // newest-first
+    if (log.length > SOULS_LEDGER_MAX) log.length = SOULS_LEDGER_MAX;
+    _writeSoulsLedger(log);
+  }
+
+  // Format epoch ms as "May 18, 1:32 PM" for ledger rows. Avoids
+  // pulling a date lib — same toLocaleString call style used
+  // elsewhere in the app.
+  function _formatLedgerTs(ms) {
+    try {
+      const d = new Date(ms);
+      const datePart = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      return datePart + ', ' + timePart;
+    } catch (_) { return ''; }
+  }
+
+  function _renderSoulsLedger() {
+    const listEl = document.getElementById('souls-ledger-list');
+    if (!listEl) return;
+    const entries = _readSoulsLedger();
+    if (!entries.length) {
+      listEl.innerHTML =
+        '<div class="souls-ledger-empty">' +
+          '<div class="souls-ledger-empty__title">No soul transactions yet.</div>' +
+          '<div>Earn or spend souls and they’ll appear here.</div>' +
+        '</div>';
+      return;
+    }
+    const rows = entries.map(function(e) {
+      const isGain = (e.delta || 0) > 0;
+      const sign   = isGain ? '+' : '−';
+      const abs    = Math.abs(e.delta || 0).toLocaleString('en-US');
+      const deltaCls = isGain ? 'souls-ledger-row__delta--gain' : 'souls-ledger-row__delta--spend';
+      const balanceStr = (typeof e.balance_after === 'number')
+        ? 'Balance: ' + e.balance_after.toLocaleString('en-US')
+        : '';
+      const dateStr = _formatLedgerTs(e.ts);
+      const metaParts = [];
+      if (balanceStr) metaParts.push(balanceStr);
+      if (dateStr)    metaParts.push(dateStr);
+      const meta = metaParts.join(' · ');
+      return (
+        '<div class="souls-ledger-row">' +
+          '<span class="souls-ledger-row__delta ' + deltaCls + '">' + sign + abs + ' souls</span>' +
+          '<div class="souls-ledger-row__main">' +
+            '<div class="souls-ledger-row__label">' + esc(e.label || (isGain ? 'Souls earned' : 'Souls spent')) + '</div>' +
+            (meta ? '<div class="souls-ledger-row__meta">' + esc(meta) + '</div>' : '') +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+    listEl.innerHTML = rows;
+  }
+
+  function openSoulsLedger() {
+    const overlay = document.getElementById('souls-ledger-overlay');
+    const sheet   = document.getElementById('souls-ledger-sheet');
+    if (!overlay || !sheet) return;
+    _renderSoulsLedger();
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeSoulsLedger() {
+    const overlay = document.getElementById('souls-ledger-overlay');
+    const sheet   = document.getElementById('souls-ledger-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+  try {
+    window.openSoulsLedger  = openSoulsLedger;
+    window.closeSoulsLedger = closeSoulsLedger;
+    window.recordSoulsTransaction = recordSoulsTransaction;
+  } catch (_) {}
+
+  function setupSoulsLedger() {
+    const overlay = document.getElementById('souls-ledger-overlay');
+    const sheet   = document.getElementById('souls-ledger-sheet');
+    const close   = document.getElementById('souls-ledger-close');
+    if (!sheet || !overlay) return;
+    if (close)   close.addEventListener('click', closeSoulsLedger);
+    if (overlay) overlay.addEventListener('click', closeSoulsLedger);
+    if (typeof attachSheetDismissGesture === 'function') {
+      try {
+        attachSheetDismissGesture(sheet, overlay, closeSoulsLedger, {
+          scrollTarget: '.souls-ledger-list',
+        });
+      } catch (_) {}
+    }
   }
 
   function killRewardSouls(rank) {
@@ -1694,7 +1876,9 @@
   function setupSoulsInfoModal() {
     const badge   = document.getElementById('souls-badge');
     const overlay = document.getElementById('souls-info-overlay');
+    const modal   = document.getElementById('souls-info-modal');
     const closeBtn = document.getElementById('souls-info-close');
+    const ledgerBtn = document.getElementById('souls-info-ledger-btn');
     if (badge)    badge.addEventListener('click', openSoulsInfoModal);
     if (overlay)  overlay.addEventListener('click', closeSoulsInfoModal);
     if (closeBtn) closeBtn.addEventListener('click', closeSoulsInfoModal);
@@ -1704,6 +1888,35 @@
       const m = document.getElementById('souls-info-modal');
       if (m && !m.classList.contains('hidden')) closeSoulsInfoModal();
     });
+    // v3 Phase 1z.44 — swipe-down dismiss for this modal.
+    // Info-only surface, not a committal action sheet, so a swipe
+    // down is the natural pull-away gesture. Today's Briefing
+    // (LOCK IN-only, 1z.42) and Hall of Fame (X-only, 1z.40) are
+    // intentionally NOT given this treatment — those are gated
+    // surfaces that should resist accidental dismissal.
+    //
+    // The .modal class centers via `transform: translate(-50%, -50%)`
+    // so the gesture helper's `baseTransform` needs to preserve that
+    // centering math while it adds the drag's translateY on top.
+    if (modal && typeof attachSheetDismissGesture === 'function') {
+      try {
+        attachSheetDismissGesture(modal, overlay, closeSoulsInfoModal, {
+          baseTransform:  'translate(-50%, -50%) ',
+          handleSelector: '.souls-info-header, .souls-info-close',
+          scrollTarget:   '.souls-info-body-scroll',
+        });
+      } catch (_) {}
+    }
+    // v3 Phase 1z.44 — VIEW TRANSACTIONS gateway. Closes the info
+    // modal first so the two surfaces don't stack visually, then
+    // opens the ledger sheet on the next frame so the close
+    // animation isn't visibly interrupted.
+    if (ledgerBtn) {
+      ledgerBtn.addEventListener('click', () => {
+        closeSoulsInfoModal();
+        setTimeout(() => { try { openSoulsLedger(); } catch (_) {} }, 80);
+      });
+    }
   }
   try {
     window.openSoulsInfoModal  = openSoulsInfoModal;
@@ -26284,6 +26497,8 @@
     setupQuestsGate();
     setupLeaderboardPreview();
     setupSoulsInfoModal();
+    // v3 Phase 1z.44 — Souls Ledger sheet wiring (drag-dismiss + X + overlay tap).
+    try { setupSoulsLedger(); } catch (_) {}
     // v2.0.1 DROPS Phase 1 — inventory + reveal + Pokédex wiring.
     try { loadInventory(); } catch (_) {}
     setupCardRevealModal();

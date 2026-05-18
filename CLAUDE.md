@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w49` |
-| `app.js?v=` | `398` |
+| `APP_BUILD_TAG` | `2.2.1-w50` |
+| `app.js?v=` | `399` |
 | `auth.js?v=` | `15` |
-| `styles.css?v=` | `289` |
+| `styles.css?v=` | `290` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.284` |
+| `sw.js CACHE_VERSION` | `v5.285` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,70 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=289`, `app.js?v=398`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.284`, `APP_BUILD_TAG = '2.2.1-w49'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=290`, `app.js?v=399`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.285`, `APP_BUILD_TAG = '2.2.1-w50'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Souls info modal X-close fix + Souls Ledger (v3 Phase 1z.44)
+
+Two-part change addressing the on-device Souls info modal close bug and adding a passive transaction log.
+
+**Bug — X close on iPhone didn't fire.** Root cause was structural: `.souls-info-close` was `position: absolute; top: 10px; right: 10px` relative to `.souls-info-modal`, which itself was the scrolling container (`max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch`). Once the user scrolled the dense rate tables, the X scrolled UP and OUT of view; the tap landed wherever the scroll left it instead of the close button. Compounding factor: no explicit `z-index`/`pointer-events`/`touch-action: manipulation` on the button hurt iOS hit-testing reliability.
+
+**Fix.** Markup refactor — modal frame is now non-scrolling; new inner `.souls-info-body-scroll` element owns the overflow. The X close button stays on the outer frame, anchored to a STABLE top-right corner regardless of scroll. Also:
+- Tap target bumped from 32×32 to 40×40 (closer to iOS HIG 44×44 floor).
+- Explicit `z-index: 3` so the button always sits above its siblings.
+- `touch-action: manipulation` to bypass the double-tap-zoom delay.
+- `pointer-events: auto` defensively.
+- Light background tint (`rgba(20, 20, 35, 0.55)`) so the hitbox is visually obvious.
+
+**Swipe-down dismissal added** for this modal only (info surface, not a committal action sheet). Uses `attachSheetDismissGesture` with `baseTransform: 'translate(-50%, -50%) '` to preserve the centering math while adding the drag's translateY. `Today's Briefing` (1z.42, LOCK IN-only) and `Hall of Fame` (1z.40, X-only) are intentionally NOT given this treatment and remain unchanged.
+
+**Souls Ledger** — new passive transaction log. Local-only (no backend, no Cloud Sync extension in v1). Source of truth is still `hb_souls`; the ledger is a one-way audit trail.
+
+`recordSoulsTransaction(delta, hint)` is called from `earnSouls` and `spendSouls` AFTER `persistSouls` so each entry's `balance_after` reflects the post-change value. The `hint` (existing `source`/`sink` string param) is classified inside the helper:
+| Hint pattern | Type | Label |
+|---|---|---|
+| `kill_<bossId>` | `boss_kill` | `Defeated The Steel Wolf` |
+| `engage_<bossId>` | `boss_engage` | `Engaged The Steel Wolf` |
+| `daily_login` | `daily_login` | `Daily login` |
+| `first_install` / `starter_grant` | `system` | `Starter souls` |
+| anything else | `system` | `Souls earned` / `Souls spent` |
+
+Entry shape:
+```js
+{
+  id: '1716075123456_a3f9q2',
+  ts: 1716075123456,
+  delta: -25,             // signed (gains positive, spends negative)
+  balance_after: 200,     // balance after this transaction
+  type: 'boss_engage',
+  label: 'Engaged The Steel Wolf',
+  detail: 'E-rank engage cost',
+  ref_id: 'the_steel_wolf'
+}
+```
+
+Storage: `localStorage['hb_souls_ledger']`. Newest-first array, capped at 250 entries (older fall off automatically). No backfill for existing users — the ledger starts empty and grows on the next earn/spend. The user explicitly accepted this trade-off ("Do not try to reconstruct history").
+
+**UI.** New `VIEW TRANSACTIONS` button at the bottom of the souls info modal → opens `#souls-ledger-sheet` (bottom-sheet pattern reusing the `.vn-sheet` shell). The ledger sheet has X close, overlay-tap close, and drag-down close (`attachSheetDismissGesture`). Rows:
+- gold-accented `+50 souls` for gains, red ember `−25 souls` for spends
+- label + `Balance: N · MMM D, h:mm AM/PM`
+- empty state: `No soul transactions yet. Earn or spend souls and they'll appear here.`
+
+Sheet open path closes the info modal first (80ms timeout to let the close animation settle) so the two surfaces don't stack.
+
+**Sheet-dismiss matrix recap:**
+| Sheet | X | Overlay tap | Drag-down | ESC |
+|---|---|---|---|---|
+| Today's Briefing | LOCK IN only | ❌ | ❌ | ❌ |
+| Hall of Fame | ✓ | ❌ | ❌ | ❌ |
+| Souls info | ✓ | ✓ | ✓ (1z.44) | ✓ |
+| Souls Ledger | ✓ | ✓ | ✓ | (default ESC) |
+
+**Files changed (frontend only, 5):** `app.js` (ledger helpers + earn/spend hooks + setupSoulsLedger + setupSoulsInfoModal swipe-down + ledger button wire), `index.html` (modal markup refactor + ledger sheet + version bumps), `styles.css` (X-close hardening + button + ledger row palette), `sw.js` (cache bump), `CLAUDE.md`. **No backend, no Duels, no sims, no Codemagic.**
+
+`npm run test:e2e` → **7/7 green (~38s)**. No regressions to other sheets (1z.40 Hall of Fame X-only and 1z.42 Today's Briefing LOCK IN-only both verified untouched in the diff).
+
+Bumps: `app.js?v=399`, `styles.css?v=290`, `sw.js v5.285`, `APP_BUILD_TAG '2.2.1-w50'`. `APP_VERSION` unchanged at `2.2.1`.
 
 ### Boss hunt expiration windows + Steel Wolf delayed-defeat fix (v3 Phase 1z.43)
 
