@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w63';
+  const APP_BUILD_TAG = '2.2.1-w64';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7667,8 +7667,10 @@
 
     const divisionLabel = DIVISION_LABELS[divisionIndex];
     const fullLabel = rank.id + ' ' + divisionLabel;
-    // "E Rank III" displayLabel — matches the sheet title spec.
-    const displayLabel = (rank.label || (rank.id + ' Rank')) + ' ' + divisionLabel;
+    // v3 Phase 1z.60 — clean competitive title "E III" (no "Rank"
+    // wordiness). The sheet already communicates rank context, so
+    // dropping the word keeps the title compact.
+    const displayLabel = rank.id + ' ' + divisionLabel;
     const nextDivisionLabel = (divisionIndex < 2)
       ? (rank.id + ' ' + DIVISION_LABELS[divisionIndex + 1])
       : (nextMajor.id + ' ' + DIVISION_LABELS[0]);
