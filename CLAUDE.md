@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w62` |
-| `app.js?v=` | `411` |
+| `APP_BUILD_TAG` | `2.2.1-w63` |
+| `app.js?v=` | `412` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `296` |
+| `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.297` |
+| `sw.js CACHE_VERSION` | `v5.298` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,44 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Rank detail sheet — sub-rank divisions (v3 Phase 1z.59)
+
+**Frontend-only progression milestones.** The major rank ladder (E → D → C → B → A → S → S+) is unchanged: same RANKS thresholds, same `getRank()`, same XP earning, same economy, same small badge (still just the letter). Inside the rank detail popup ONLY, each major rank now subdivides into three divisions: **III (early) → II (middle) → I (near promotion)**.
+
+**Helper.** `getRankDivisionInfo(totalXp)` near the existing `getRank` block. Pure math: takes the current rank's interval `[rank.min, nextMajor.min)`, splits into thirds, returns:
+
+```
+{
+  majorRank, division ("III"|"II"|"I"),
+  fullLabel ("E III"), displayLabel ("E Rank III"),
+  nextDivisionLabel ("E II" or "D III" on promotion),
+  xpToNextDivision, divisionProgress 0..1,
+  divisionIndex 0|1|2, currentDivisionStartXp, nextDivisionStartXp,
+  nextMajorRank, xpToNextMajorRank,
+  isMax, divisions [4 ladder nodes]
+}
+```
+
+Max-rank (S+) returns `{ isMax: true, division: null, divisions: [] }` so the renderer can hide the ladder and division-next line gracefully.
+
+**Sheet UI.**
+- Title row: `<rank>.label + ' ' + division` → `"E Rank III"`.
+- New `#rp-division-next` line under the major-rank "X XP to D Rank" copy → `"131 XP to E II"` (or `"131 XP to D III"` when current = E I).
+- New `#rp-division-ladder` mini ladder: `[E III] → E II → E I → D` (4 nodes; current = gold pill, past/future muted, promotion = violet).
+- Both hidden when `isMax`.
+
+**Small badge unchanged.** The status-card rank badge still renders only the major-rank letter (`E`). Divisions never leak out of the detail sheet — the request explicitly was to not clutter the badge.
+
+**Edge-case math** (E → D span = 500):
+- 0 XP → E III (xpToE II = 167)
+- 36 XP → E III (xpToE II = 131)
+- 167 XP → E II
+- 334 XP → E I
+- 499 XP → E I
+- 500 XP → D III (getRank already promotes)
+
+**No backend / no Duels / no thresholds / no sims / no Codemagic.** Frontend-only.
 
 ### Tappable Hunting pills + Carouser Friday-only engage (v3 Phase 1z.58)
 

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=296">
+  <link rel="stylesheet" href="styles.css?v=297">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2150,6 +2150,9 @@
       <div id="rp-bar-fill" class="rp-bar-fill"></div>
     </div>
     <div id="rp-tonext"  class="rp-tonext"></div>
+    <!-- v3 Phase 1z.59 — sub-rank divisions. Hidden at max rank. -->
+    <div id="rp-division-next" class="rp-division-next hidden"></div>
+    <div id="rp-division-ladder" class="rp-division-ladder hidden" aria-label="Rank divisions"></div>
     <div class="rp-divider"></div>
     <div id="rp-avg"     class="rp-avg"></div>
     <div id="rp-eta"     class="rp-eta"></div>
@@ -2169,7 +2172,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=411"></script>
+  <script src="app.js?v=412"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

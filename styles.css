@@ -8935,7 +8935,64 @@ footer {
   font-size: 0.75rem;
   color: var(--text-secondary);
   text-align: right;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
+}
+/* v3 Phase 1z.59 — sub-rank division readouts inside the rank popup.
+   .rp-division-next is the "131 XP to E II" copy under the major-rank
+   line; .rp-division-ladder is the compact "E III → E II → E I → D"
+   ladder. Subtle, low-emphasis — the major rank stays the headline. */
+.rp-division-next {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-align: right;
+  margin-bottom: 10px;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+.rp-division-ladder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0 0 14px;
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.rp-ladder-node {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+.rp-ladder-node--past    { opacity: 0.4; }
+.rp-ladder-node--future  { opacity: 0.55; }
+.rp-ladder-node--current {
+  opacity: 1;
+  color: var(--gold);
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.10);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+.rp-ladder-node--promotion {
+  color: var(--text-primary);
+  border-color: rgba(139, 92, 246, 0.55);
+  background: rgba(139, 92, 246, 0.10);
+  opacity: 0.9;
+  letter-spacing: 0.08em;
+}
+.rp-ladder-sep {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
 }
 .rp-divider {
   height: 1px;

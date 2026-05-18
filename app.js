@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w62';
+  const APP_BUILD_TAG = '2.2.1-w63';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7610,6 +7610,98 @@
     return RANKS[0];
   }
 
+  // v3 Phase 1z.59 — sub-rank divisions for the rank detail sheet.
+  // Splits each major rank's XP interval into thirds: III (early) →
+  // II (middle) → I (near promotion). PURELY visual — does NOT change
+  // RANKS thresholds, getRank(), XP earning, or any economy. Only
+  // consumed by showRankInfoPopup. Max-rank (S+) returns a graceful
+  // "maxed" shape so callers don't have to special-case.
+  const DIVISION_LABELS = ['III', 'II', 'I'];
+  function getRankDivisionInfo(totalXp) {
+    const xp = (Number.isFinite(totalXp) && totalXp > 0) ? totalXp : 0;
+    const rank = getRank(xp);
+    const rankIdx = RANKS.findIndex(r => r.id === rank.id);
+    const isMax = rank.next === null || rank.next == null;
+    const nextMajor = (!isMax && rankIdx >= 0) ? RANKS[rankIdx + 1] : null;
+
+    if (isMax || !nextMajor) {
+      return {
+        majorRank: rank.id,
+        division: null,
+        divisionIndex: -1,
+        fullLabel: rank.id,
+        displayLabel: rank.label || (rank.id + ' Rank'),
+        nextDivisionLabel: null,
+        xpToNextDivision: 0,
+        divisionProgress: 1,
+        currentDivisionStartXp: rank.min,
+        nextDivisionStartXp: rank.min,
+        nextMajorRank: null,
+        xpToNextMajorRank: 0,
+        isMax: true,
+        divisions: [],
+      };
+    }
+
+    const startXp = rank.min;
+    const endXp   = nextMajor.min; // promotion boundary (exclusive of current rank)
+    const span    = Math.max(1, endXp - startXp);
+    const into    = Math.max(0, xp - startXp);
+    // Each division spans span/3. Clamp to 0..2 so the exact upper
+    // boundary (xp === endXp) doesn't escape — though getRank would
+    // already have promoted by then, this is defensive.
+    let divisionIndex = Math.floor((into / span) * 3);
+    if (divisionIndex < 0) divisionIndex = 0;
+    if (divisionIndex > 2) divisionIndex = 2;
+
+    const divisionSize = span / 3;
+    const currentDivisionStartXp = Math.round(startXp + divisionIndex * divisionSize);
+    const nextDivisionStartXp    = Math.round(startXp + (divisionIndex + 1) * divisionSize);
+    // Cap at promotion boundary so the final division's "next"
+    // collapses cleanly to the major-rank threshold.
+    const nextStop = (divisionIndex === 2) ? endXp : nextDivisionStartXp;
+    const xpToNextDivision = Math.max(0, nextStop - xp);
+    const divisionProgress = Math.max(0, Math.min(1,
+      (xp - currentDivisionStartXp) / Math.max(1, nextStop - currentDivisionStartXp)
+    ));
+
+    const divisionLabel = DIVISION_LABELS[divisionIndex];
+    const fullLabel = rank.id + ' ' + divisionLabel;
+    // "E Rank III" displayLabel — matches the sheet title spec.
+    const displayLabel = (rank.label || (rank.id + ' Rank')) + ' ' + divisionLabel;
+    const nextDivisionLabel = (divisionIndex < 2)
+      ? (rank.id + ' ' + DIVISION_LABELS[divisionIndex + 1])
+      : (nextMajor.id + ' ' + DIVISION_LABELS[0]);
+
+    // Pre-computed ladder for the renderer — current rank's three
+    // divisions plus the next-major-rank promotion node. Each entry
+    // marks state: past / current / future / promotion.
+    const divisions = [
+      { label: rank.id + ' III', kind: 'division', state: divisionIndex === 0 ? 'current' : 'past' },
+      { label: rank.id + ' II',  kind: 'division', state: divisionIndex === 1 ? 'current' : (divisionIndex > 1 ? 'past' : 'future') },
+      { label: rank.id + ' I',   kind: 'division', state: divisionIndex === 2 ? 'current' : 'future' },
+      { label: nextMajor.id,     kind: 'promotion', state: 'future' },
+    ];
+
+    return {
+      majorRank: rank.id,
+      division: divisionLabel,
+      divisionIndex: divisionIndex,
+      fullLabel: fullLabel,
+      displayLabel: displayLabel,
+      nextDivisionLabel: nextDivisionLabel,
+      xpToNextDivision: xpToNextDivision,
+      divisionProgress: divisionProgress,
+      currentDivisionStartXp: currentDivisionStartXp,
+      nextDivisionStartXp: nextStop,
+      nextMajorRank: nextMajor.id,
+      xpToNextMajorRank: Math.max(0, endXp - xp),
+      isMax: false,
+      divisions: divisions,
+    };
+  }
+  try { window.__getRankDivisionInfo = getRankDivisionInfo; } catch (_) {}
+
   // ── XP MIGRATION (v2.0.1 rank-scaling overhaul) ─────────────
   // The new RANKS thresholds are ~5-7× higher than the previous
   // values. Without migration, an existing user at S rank under the
@@ -12342,7 +12434,12 @@
     const rpBadge = document.getElementById('rp-badge');
     rpBadge.textContent = rank.id;
     rpBadge.setAttribute('data-rank', rank.id); // per-rank color via CSS vars
-    document.getElementById('rp-rank-name').textContent = rank.label || rank.id + ' Rank';
+    // v3 Phase 1z.59 — show "E Rank III" division-aware title in the
+    // detail sheet only. The small badge stays unchanged (just the
+    // major letter), and getRank()/RANKS thresholds are untouched.
+    const divInfo = getRankDivisionInfo(totalPoints);
+    const rankNameEl = document.getElementById('rp-rank-name');
+    rankNameEl.textContent = divInfo.displayLabel || (rank.label || rank.id + ' Rank');
     document.getElementById('rp-xp-line').textContent   = totalPoints.toLocaleString() + ' XP total';
 
     const tonextEl = document.getElementById('rp-tonext');
@@ -12351,6 +12448,35 @@
     } else {
       const nextRank = RANKS[rankIdx + 1];
       tonextEl.textContent = toNext.toLocaleString() + ' XP to ' + (nextRank ? nextRank.id : 'next') + ' Rank';
+    }
+
+    // v3 Phase 1z.59 — division next-step line + mini ladder.
+    const divNextEl = document.getElementById('rp-division-next');
+    const ladderEl  = document.getElementById('rp-division-ladder');
+    if (divNextEl) {
+      if (divInfo.isMax) {
+        divNextEl.classList.add('hidden');
+        divNextEl.textContent = '';
+      } else {
+        divNextEl.classList.remove('hidden');
+        divNextEl.textContent =
+          divInfo.xpToNextDivision.toLocaleString() + ' XP to ' + divInfo.nextDivisionLabel;
+      }
+    }
+    if (ladderEl) {
+      if (divInfo.isMax || !Array.isArray(divInfo.divisions) || divInfo.divisions.length === 0) {
+        ladderEl.classList.add('hidden');
+        ladderEl.innerHTML = '';
+      } else {
+        ladderEl.classList.remove('hidden');
+        const nodes = divInfo.divisions.map(d => {
+          const cls = 'rp-ladder-node rp-ladder-node--' + d.kind + ' rp-ladder-node--' + d.state;
+          return '<span class="' + cls + '" data-rank="' + esc(divInfo.majorRank) + '">' + esc(d.label) + '</span>';
+        });
+        // Inject arrow separators between nodes.
+        const sep = '<span class="rp-ladder-sep" aria-hidden="true">→</span>';
+        ladderEl.innerHTML = nodes.join(sep);
+      }
     }
 
     const avgEl = document.getElementById('rp-avg');
