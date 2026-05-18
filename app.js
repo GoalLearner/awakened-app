@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w57';
+  const APP_BUILD_TAG = '2.2.1-w58';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17663,6 +17663,17 @@
   // Metrics that support the Hall of Fame tab. v1: step_total only.
   const LB_HOF_METRICS = new Set(['step_total']);
 
+  // v3 Phase 1z.52 — 100K Step Club roster cache. Single-key cache
+  // (the endpoint is not metric-scoped — it's a single accolade-
+  // typed roster). 10-min TTL matches the HoF cache. Stores
+  // backend response verbatim; no sim filler.
+  const LB_100K_CLUB_CACHE_KEY = 'hb_lb_100k_club';
+  const LB_100K_CLUB_CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 min
+  // Metrics that show the 100K Club tab. v1: step_total only (the
+  // accolade itself is a step_total achievement; future accolades
+  // like sleep_perfect_month would warrant their own surfacing).
+  const LB_100K_CLUB_METRICS = new Set(['step_total']);
+
   function lbCacheRead(metric) {
     try {
       const raw = localStorage.getItem(LB_CACHE_KEY_PREFIX + metric);
@@ -17710,6 +17721,30 @@
       localStorage.setItem(LB_HOF_CACHE_KEY_PREFIX + metric, JSON.stringify({
         records:    Array.isArray(records) ? records : [],
         me_best:    me_best || null,
+        fetched_at: Date.now(),
+      }));
+    } catch (_) {}
+  }
+
+  // v3 Phase 1z.52 — 100K Step Club cache read/write. The endpoint
+  // is global (not metric-scoped) so the key is a single string,
+  // unlike the per-metric caches above. Stores backend response
+  // shape: { members, me, fetched_at }.
+  function lb100kClubCacheRead() {
+    try {
+      const raw = localStorage.getItem(LB_100K_CLUB_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.fetched_at !== 'number') return null;
+      if ((Date.now() - parsed.fetched_at) > LB_100K_CLUB_CACHE_MAX_AGE_MS) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+  function lb100kClubCacheWrite(members, me) {
+    try {
+      localStorage.setItem(LB_100K_CLUB_CACHE_KEY, JSON.stringify({
+        members:    Array.isArray(members) ? members : [],
+        me:         me || null,
         fetched_at: Date.now(),
       }));
     } catch (_) {}
@@ -17909,6 +17944,65 @@
           '#' + (meBest.rank || '?') + ' · ' +
           esc(lbFormatStepsCompact(meBest.steps)) + ' steps' +
           (weekLabel ? ' · ' + esc(weekLabel) : '') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // v3 Phase 1z.52 — 100K Step Club row + me-best builders.
+  // Mirrors lbBuildHofList in shape (rank · alias · stat · week
+  // range), but adds the `Qualified Nx` line for users with
+  // repeat_count > 1 and uses a gold prestige accent in CSS to
+  // signal that this is the exclusive board.
+  function lbBuild100kClubList(members) {
+    if (!Array.isArray(members) || members.length === 0) {
+      return (
+        '<div class="lb-rank-empty">' +
+          '<div class="lb-rank-empty-icon" aria-hidden="true">🩸</div>' +
+          '<div class="lb-rank-empty-title">No hunters in the 100K Club yet.</div>' +
+          '<div class="lb-rank-empty-body">First to 100,000 verified steps in a single week claims the first seat.</div>' +
+        '</div>'
+      );
+    }
+    const myAlias = lbGetMyAlias();
+    return members.map(m => {
+      const isMe = myAlias && m.alias === myAlias;
+      const aliasDisplay = lbNormalizeAliasForDisplay(m.alias);
+      const weekLabel = lbFormatWeekRangeFromIso(m.unlock_week_start, m.unlock_week_end);
+      const repeats = (typeof m.repeat_count === 'number' && m.repeat_count > 1)
+        ? ('Qualified ' + m.repeat_count + 'x')
+        : '';
+      const rowClass = 'lb-rank-row lb-rank-row--club-100k' + (isMe ? ' lb-rank-row--me' : '');
+      const subRow = [weekLabel, repeats].filter(Boolean).join(' · ');
+      return '<div class="' + rowClass + '">' +
+        '<span class="lb-rank-pos">#' + (m.rank || '?') + '</span>' +
+        '<span class="lb-rank-name">' +
+          esc(aliasDisplay || '—') +
+          (subRow ? '<span class="lb-rank-row__weeks">' + esc(subRow) + '</span>' : '') +
+        '</span>' +
+        '<span class="lb-rank-value">' + esc(lbFormatStepsCompact(m.best_value)) + ' steps</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Renders the pinned "YOUR 100K CLUB RECORD" me-best row at the
+  // top of the 100K Club tab. Null me → encouragement empty state.
+  function lbBuild100kClubMeBest(me) {
+    if (!me) {
+      return '<div class="lb-rank-mebest__empty">No 100K Club record yet. Reach 100,000 verified steps in one week to join.</div>';
+    }
+    const weekLabel = lbFormatWeekRangeFromIso(me.unlock_week_start, me.unlock_week_end);
+    const repeats = (typeof me.repeat_count === 'number' && me.repeat_count > 1)
+      ? (' · Qualified ' + me.repeat_count + 'x')
+      : '';
+    return (
+      '<div>' +
+        '<div class="lb-rank-mebest__label">Your 100K Club record</div>' +
+        '<div class="lb-rank-mebest__value">' +
+          '#' + (me.rank || '?') + ' · ' +
+          esc(lbFormatStepsCompact(me.best_value)) + ' steps' +
+          (weekLabel ? ' · ' + esc(weekLabel) : '') +
+          esc(repeats) +
         '</div>' +
       '</div>'
     );
@@ -18238,6 +18332,63 @@
     }
   }
 
+  // v3 Phase 1z.52 — 100K Step Club tab renderer.
+  // Real-users-only board sourced from /v1/leaderboard/step-100k-club.
+  // No sim filler ever runs here -- this is the exclusive prestige
+  // surface. The pinned `YOUR 100K CLUB RECORD` card shows the
+  // caller's status (rank + best week steps + repeat count) when
+  // they're a member, or an encouragement prompt when they're not.
+  //
+  // Cache: `hb_lb_100k_club` (10-min TTL). Stores backend response
+  // verbatim; client never injects extra rows.
+  async function _lbRender100kClubTab(metric) {
+    const listEl   = document.getElementById('lb-rank-list');
+    const meBestEl = document.getElementById('lb-rank-mebest');
+    const blurbEl  = document.getElementById('lb-rank-blurb');
+    if (!listEl) return;
+
+    if (blurbEl) blurbEl.textContent = 'Hunters who recorded 100,000+ verified steps in a single week.';
+
+    // Phase 1: render from cache instantly if fresh.
+    const cached = lb100kClubCacheRead();
+    if (cached) {
+      if (meBestEl) {
+        meBestEl.innerHTML = lbBuild100kClubMeBest(cached.me);
+        meBestEl.classList.remove('hidden');
+      }
+      listEl.innerHTML = lbBuild100kClubList(cached.members);
+    } else {
+      if (meBestEl) meBestEl.classList.add('hidden');
+      listEl.innerHTML = lbBuildLoadingSkeleton();
+    }
+
+    // Phase 2: fresh fetch.
+    let result;
+    try {
+      result = await window.Auth.fetchStep100kClub(50);
+    } catch (e) {
+      result = { ok: false, code: 'NETWORK' };
+    }
+    if (_lbCurrentOpenMetric !== metric || _lbCurrentTab !== 'club-100k') return;
+
+    if (result && result.ok) {
+      lb100kClubCacheWrite(result.members, result.me);
+      if (meBestEl) {
+        meBestEl.innerHTML = lbBuild100kClubMeBest(result.me);
+        meBestEl.classList.remove('hidden');
+      }
+      listEl.innerHTML = lbBuild100kClubList(result.members);
+    } else if (result && result.code === 'EXPIRED') {
+      window.location.reload();
+    } else if (!cached) {
+      // No cache + fetch failed. 100K Club is real-users-only, so
+      // there's no sim fallback like HoF -- just show the error/stub
+      // state. me-best stays hidden in that path.
+      if (meBestEl) meBestEl.classList.add('hidden');
+      listEl.innerHTML = lbBuildErrorState(result && result.code);
+    }
+  }
+
   async function openLeaderboardRanking(metric) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
@@ -18277,9 +18428,10 @@
   // Tab click handler — switches active tab for the current open
   // metric, refreshes the visible list. Idempotent: clicking the
   // same tab is a no-op.
+  // v3 Phase 1z.52 — added 'club-100k' tab routing.
   async function _lbSwitchTab(tab) {
     if (!_lbCurrentOpenMetric) return;
-    if (tab !== 'this-week' && tab !== 'hof') return;
+    if (tab !== 'this-week' && tab !== 'hof' && tab !== 'club-100k') return;
     if (_lbCurrentTab === tab) return;
     _lbCurrentTab = tab;
     const tabsEl = document.getElementById('lb-rank-tabs');
@@ -18293,8 +18445,10 @@
     }
     if (tab === 'this-week') {
       await _lbRenderThisWeekTab(_lbCurrentOpenMetric);
-    } else {
+    } else if (tab === 'hof') {
       await _lbRenderHofTab(_lbCurrentOpenMetric);
+    } else if (tab === 'club-100k') {
+      await _lbRender100kClubTab(_lbCurrentOpenMetric);
     }
   }
 

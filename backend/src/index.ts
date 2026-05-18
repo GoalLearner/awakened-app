@@ -27,6 +27,7 @@ import { handleAuthVerify } from './handlers/auth-verify';
 import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
 import { handleLeaderboardTop } from './handlers/leaderboard-top';
 import { handleLeaderboardHallOfFame } from './handlers/hall-of-fame';
+import { handleStep100kClub } from './handlers/step-100k-club';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
@@ -121,6 +122,9 @@ export default {
           } else if (path === '/v1/leaderboard/hall-of-fame' && method === 'GET') {
             // v3 Phase 1z.36 — Weekly Steps Hall of Fame read endpoint.
             response = await handleLeaderboardHallOfFame(request, env, session);
+          } else if (path === '/v1/leaderboard/step-100k-club' && method === 'GET') {
+            // v3 Phase 1z.52 — 100K Step Club roster (real users only).
+            response = await handleStep100kClub(request, env, session);
           } else if (path === '/v1/account/delete' && method === 'POST') {
             response = await handleAccountDelete(request, env, session);
           } else if (path === '/v1/users/me/state' && method === 'GET') {

@@ -148,3 +148,15 @@ name = "RL_LEADERBOARD_HOF"
 type = "ratelimit"
 namespace_id = "1012"
 simple = { limit = 30, period = 60 }  # 30/min per user
+
+# 100K Step Club roster (v3 Phase 1z.52). Authenticated read of
+# the user_accolades table filtered to step_100k_club entries,
+# joined to users for live alias and filtered to exclude sim users.
+# Three D1 queries per request (top-N JOIN + me lookup + me rank).
+# Same 30/min budget as HoF -- a user toggling between the three
+# tabs (This Week / Hall of Fame / 100K Club) won't trip any limit.
+[[unsafe.bindings]]
+name = "RL_LEADERBOARD_STEP_100K_CLUB"
+type = "ratelimit"
+namespace_id = "1013"
+simple = { limit = 30, period = 60 }  # 30/min per user

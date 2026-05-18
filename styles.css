@@ -9414,6 +9414,30 @@ footer {
   margin-top: 2px;
   letter-spacing: 0.2px;
 }
+
+/* v3 Phase 1z.52 — 100K Step Club tab rows.
+   Same layout as Hall of Fame (rank · alias + sub · stat) but with
+   a gold prestige accent border + subtle gold gradient wash so the
+   board reads as exclusive. The sub-row carries the week range +
+   optional `Qualified Nx` repeat count. */
+.lb-rank-row--club-100k {
+  background: linear-gradient(135deg, rgba(245, 184, 66, 0.10), rgba(139, 92, 246, 0.06));
+  border-color: rgba(245, 184, 66, 0.40);
+}
+.lb-rank-row--club-100k .lb-rank-pos {
+  color: rgba(245, 184, 66, 0.95);
+}
+.lb-rank-row--club-100k .lb-rank-row__weeks {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  letter-spacing: 0.2px;
+}
+.lb-rank-row--club-100k .lb-rank-value {
+  color: #f5b842;
+  text-shadow: 0 0 6px rgba(245, 184, 66, 0.30);
+}
 .lb-rank-list {
   display: flex;
   flex-direction: column;

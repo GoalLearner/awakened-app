@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w57` |
-| `app.js?v=` | `406` |
-| `auth.js?v=` | `15` |
-| `styles.css?v=` | `293` |
+| `APP_BUILD_TAG` | `2.2.1-w58` |
+| `app.js?v=` | `407` |
+| `auth.js?v=` | `16` |
+| `styles.css?v=` | `294` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.292` |
+| `sw.js CACHE_VERSION` | `v5.293` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,97 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=293`, `app.js?v=406`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.292`, `APP_BUILD_TAG = '2.2.1-w57'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=294`, `app.js?v=407`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.293`, `APP_BUILD_TAG = '2.2.1-w58'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### 100K Step Club roster tab (v3 Phase 1z.52)
+
+**Feature.** Third tab on the Steps leaderboard sheet, sitting next to `This Week` + `Hall of Fame`:
+
+```
+This Week  |  Hall of Fame  |  100K Club
+```
+
+Real-users-only prestige board listing every hunter who has earned the `step_100k_club` accolade (recorded 100,000+ verified steps in a single Sunday-UTC week). **Sim/test users never appear here.** No client-side filler — this tab reads the backend response verbatim.
+
+#### Backend — new endpoint
+
+`GET /v1/leaderboard/step-100k-club?limit=N` · auth required · `RL_LEADERBOARD_STEP_100K_CLUB` (namespace_id 1013, 30/min per user).
+
+Reads `user_accolades` filtered to `accolade_type = 'step_100k_club'`, JOINed to `users` for live alias, with `apple_sub NOT LIKE 'sim_test_%'` as defense-in-depth (the write path in `leaderboard-submit.ts` already refuses to award the accolade to sim users; the read-side filter keeps the path correct in isolation).
+
+```sql
+SELECT u.alias, ua.best_value, ua.unlock_week_start,
+       ua.repeat_count, ua.last_qualified_week_start, ua.unlocked_at
+FROM user_accolades ua
+JOIN users u ON u.id = ua.user_id
+WHERE ua.accolade_type = 'step_100k_club'
+  AND u.apple_sub NOT LIKE 'sim_test_%'
+ORDER BY ua.best_value DESC, ua.repeat_count DESC, ua.unlocked_at ASC
+LIMIT ?
+```
+
+**Ordering** — `best_value DESC, repeat_count DESC, unlocked_at ASC`. Highest single-week total wins outright; ties broken by repeat-qualification count, then by earliest unlocker (first-to-the-summit).
+
+**Response shape:**
+```json
+{
+  "type": "step_100k_club",
+  "members": [
+    {
+      "rank": 1,
+      "alias": "Richie",
+      "best_value": 104821,
+      "unlock_week_start": "2026-05-17",
+      "unlock_week_end":   "2026-05-23",
+      "repeat_count": 2,
+      "last_qualified_week_start": "2026-05-17",
+      "last_qualified_week_end":   "2026-05-23",
+      "unlocked_at": 1760000000000
+    }
+  ],
+  "me": { "rank": 1, "best_value": 104821, "unlock_week_start": "2026-05-17", "unlock_week_end": "2026-05-23", "repeat_count": 2 }
+}
+```
+
+**Backend tests** (`step-100k-club.test.ts`, 11 cases): filters by `accolade_type`, excludes sims via `apple_sub NOT LIKE`, sorts three-tier, returns members with computed `week_end`, returns `me.rank` when caller is a member, returns `me: null` when not, me-rank counts strictly higher `best_value`, default limit 50 / max 100, 429 when ratelimited, JOINs users for alias, week_end handles month + year rollover correctly. **95/95 suite-wide pass.**
+
+#### Frontend — third tab + render path + cache
+
+- **`auth.js`** — new `Auth.fetchStep100kClub(limit)` helper. Same error-coded result shape as the other leaderboard helpers (`EXPIRED` / `RATE_LIMITED` / `NETWORK` / `ERROR`).
+- **`index.html`** — added `<button data-lb-tab="club-100k">100K Club</button>` inside `#lb-rank-tabs`. The tabs container stays scoped to step_total (current behavior); 100K Club appears alongside HoF whenever the tabs are visible.
+- **`app.js`** — new `_lbRender100kClubTab(metric)` mirroring `_lbRenderHofTab` shape. Reads from `hb_lb_100k_club` cache (10-min TTL). No sim filler in any code path. Tab-switch wiring in `_lbSwitchTab` extended to route `'club-100k'` to the new renderer. `lbBuild100kClubList(members)` renders each row as `rank · alias + (Week range · Qualified Nx if >1) · best-steps`. `lbBuild100kClubMeBest(me)` renders the pinned `Your 100K Club record` card or an encouragement empty-state.
+- **`styles.css`** — new `.lb-rank-row--club-100k` block: subtle gold-violet gradient background, gold `#f5b842` accent on the rank pill + step value, gold-tinted border. The board reads as exclusive without overpowering the rest of the sheet.
+
+#### Sheet-dismiss matrix (unchanged)
+| Sheet | X | Overlay tap | Drag-down |
+|---|---|---|---|
+| Steps leaderboard (all 3 tabs) | ✓ | ❌ | ❌ |
+
+`#lb-rank-sheet` stays X-only close (Phase 1z.40). Scrolling the 100K Club list does not dismiss the sheet.
+
+#### Compatibility
+- **Existing personal 100K badge** (rank-aware Rank Hero in `renderStatus()`): unchanged.
+- **Existing 100K detail sheet** (`#accolade-step-100k-overlay`): unchanged.
+- **`GET /v1/users/me/accolades`**: unchanged — still serves the caller's full accolade list.
+- **`leaderboard-submit.ts` accolade award path** (step_total >= 100,000, real users only): unchanged.
+- **Hall of Fame sim filler**: still capped at 45,555 weekly and confined to the HoF tab. Sims never reach 100K Club.
+- **World Rank card** on the dashboard: unchanged.
+
+#### Files changed (11)
+Backend (4): `backend/src/handlers/step-100k-club.ts` (new), `backend/src/handlers/step-100k-club.test.ts` (new), `backend/src/index.ts` (route + import), `backend/src/env.ts` (binding type), `backend/wrangler.toml` (namespace_id 1013).
+
+Frontend (7): `auth.js` (helper + export), `app.js` (constants + cache + render + tab switch + build tag), `index.html` (tab button + version bumps for auth/app/styles), `styles.css` (row palette), `sw.js` (cache bump), `CLAUDE.md`. **No Duels, no sims, no simulated-leaderboard.js.**
+
+#### Deployment steps needed (when approved)
+1. **No migration** — schema unchanged.
+2. `cd backend && npx wrangler deploy`
+3. Smoke checks:
+   - UNAUTH `GET /v1/leaderboard/step-100k-club?metric=…` → 401 AUTH_REQUIRED
+   - D1: `SELECT COUNT(*) FROM user_accolades WHERE accolade_type='step_100k_club';` (sanity check on roster size)
+   - Authenticated read (if you have a JWT) → expect `{ type, members, me }` per the spec.
+4. Frontend Codemagic trigger for the iOS build that ships `app.js?v=407` + `auth.js?v=16`.
+
+Bumps: `app.js?v=407`, `auth.js?v=16`, `styles.css?v=294`, `sw.js v5.293`, `APP_BUILD_TAG '2.2.1-w58'`. `APP_VERSION` unchanged at `2.2.1`. `simulated-leaderboard.js` unchanged.
 
 ### Habit-card manage button — one consistent glyph (v3 Phase 1z.51)
 

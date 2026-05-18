@@ -70,4 +70,7 @@ export interface Env {
   /** Weekly Steps Hall of Fame (v3 Phase 1z.36) — guards
    *  GET /v1/leaderboard/hall-of-fame. namespace_id 1012 in wrangler.toml. */
   RL_LEADERBOARD_HOF: RateLimit;
+  /** 100K Step Club roster (v3 Phase 1z.52) — guards
+   *  GET /v1/leaderboard/step-100k-club. namespace_id 1013 in wrangler.toml. */
+  RL_LEADERBOARD_STEP_100K_CLUB: RateLimit;
 }
