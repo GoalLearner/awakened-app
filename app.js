@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w48';
+  const APP_BUILD_TAG = '2.2.1-w49';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -406,21 +406,329 @@
   // v3 Phase 1z.42 -- boss progress noun helper. Bosses whose kill
   // condition is sleep-based (sleepHours) measure progress in
   // "night/nights"; everything else (stepThreshold, workoutMinutes,
-  // and future verified metrics) measures in "day/days". This was
-  // previously hardcoded to "night/nights" for ALL bosses, so the
-  // Steel Wolf (a steps boss) was rendering "0 / 1 night" instead
-  // of "0 / 1 day" on its detail screen.
-  //
-  // The defeat logic itself was always correct -- streak/streakTarget
-  // increments and the kill path fires when the step threshold is met
-  // (see evaluateSteelWolfForDay around line 3745). Only the label
-  // was wrong.
+  // and future verified metrics) measures in "day/days".
   function _bossProgressNoun(cfg) {
     if (!cfg) return 'day';
     const isNightBoss = (typeof cfg.sleepHours === 'number');
     if (isNightBoss) return cfg.streakTarget === 1 ? 'night' : 'nights';
     return cfg.streakTarget === 1 ? 'day' : 'days';
   }
+
+  // ─── v3 Phase 1z.43 — Boss hunt expiration windows + window-aware
+  // backfill ────────────────────────────────────────────────────
+  // Each hunt now has an explicit time window stamped at engage.
+  // Daily bosses get 24h, triweekly 3d, weekly 7d. The window is
+  // the inclusive [hunt_started_at, hunt_expires_at] interval
+  // (epoch ms). Evaluation only counts HealthKit data inside that
+  // window — fixes the Steel Wolf bug where yesterday's qualifying
+  // 6,000+ steps weren't being credited because the existing
+  // evaluators only inspected the CURRENT moment's step count.
+  //
+  // State fields added (migration-safe; legacy engaged users
+  // inherit a fresh window on first access — see
+  // _migrateBossHuntFields below):
+  //   hunt_started_at: number (epoch ms)
+  //   hunt_expires_at: number (epoch ms)
+  //   last_hunt_outcome: 'expired' | 'defeated' | undefined  (display hint)
+  //
+  // Defeat semantics unchanged: state.engaged flips to false on
+  // kill, all hunt-window fields cleared. Re-engage starts fresh.
+  const _BOSS_HUNT_DAY_MS = 24 * 60 * 60 * 1000;
+  function getBossHuntDurationMs(cfg) {
+    if (!cfg) return _BOSS_HUNT_DAY_MS;
+    switch (cfg.cadence) {
+      case 'weekly':    return 7 * _BOSS_HUNT_DAY_MS;
+      case 'triweekly': return 3 * _BOSS_HUNT_DAY_MS;
+      case 'daily':     return _BOSS_HUNT_DAY_MS;
+      default:          return _BOSS_HUNT_DAY_MS;
+    }
+  }
+
+  // Derive a usable hunt-start timestamp from any state shape.
+  // Prefers the new numeric field; falls back to parsing the
+  // pre-1z.43 ISO `engaged_at` so existing engaged hunts keep
+  // their original start.
+  function _bossHuntStartMs(state) {
+    if (!state) return 0;
+    if (typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0) {
+      return state.hunt_started_at;
+    }
+    if (state.engaged_at) {
+      const t = Date.parse(state.engaged_at);
+      if (Number.isFinite(t)) return t;
+    }
+    return 0;
+  }
+
+  function _bossHuntExpiresMs(state, cfg) {
+    if (!state || !cfg) return 0;
+    if (typeof state.hunt_expires_at === 'number' && state.hunt_expires_at > 0) {
+      return state.hunt_expires_at;
+    }
+    const start = _bossHuntStartMs(state);
+    return start ? start + getBossHuntDurationMs(cfg) : 0;
+  }
+
+  // Migrate legacy engaged state into the new hunt-window shape.
+  // Returns true if a write was made so callers can refresh UI.
+  function _migrateBossHuntFields(id, state, cfg) {
+    if (!state || !cfg) return false;
+    if (state.engaged !== true) return false;
+    const hasFields = (typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0) &&
+                      (typeof state.hunt_expires_at === 'number' && state.hunt_expires_at > 0);
+    if (hasFields) return false;
+    const now = Date.now();
+    let started = _bossHuntStartMs(state);
+    // Legacy hunts without engaged_at OR an unrecoverable timestamp:
+    // give a fresh full window starting now (be generous; don't
+    // accidentally expire someone who was hunting an old boss).
+    if (!started) started = now;
+    state.hunt_started_at = started;
+    state.hunt_expires_at = started + getBossHuntDurationMs(cfg);
+    setBossState(id, state);
+    return true;
+  }
+
+  function _bossHuntActive(state, cfg) {
+    if (!state || state.engaged !== true) return false;
+    const exp = _bossHuntExpiresMs(state, cfg);
+    if (!exp) return true; // legacy engaged, no timestamp yet — assume active
+    return Date.now() <= exp;
+  }
+
+  function _bossHuntRemainingMs(state, cfg) {
+    const exp = _bossHuntExpiresMs(state, cfg);
+    if (!exp) return null;
+    return Math.max(0, exp - Date.now());
+  }
+
+  // Format remaining hunt time. Examples:
+  //   42m       (under 1 hour)
+  //   14h 07m   (under 24 hours)
+  //   2d 5h     (over 24 hours)
+  //   Expired   (<= 0)
+  function _formatHuntRemaining(ms) {
+    if (ms == null) return '';
+    if (ms <= 0) return 'Expired';
+    const totalMin = Math.floor(ms / 60000);
+    if (totalMin < 60) return totalMin + 'm';
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    if (hours < 24) return hours + 'h ' + String(mins).padStart(2, '0') + 'm';
+    const days = Math.floor(hours / 24);
+    const hrsRem = hours % 24;
+    return days + 'd ' + hrsRem + 'h';
+  }
+
+  // Enumerate device-local YYYY-MM-DD day keys that fall inside
+  // the hunt window [startMs, endMs] inclusive. Used to walk
+  // candidate qualifying days for steps/workout/sleep bosses.
+  function _huntWindowLocalDays(startMs, endMs) {
+    if (!startMs || !endMs || endMs < startMs) return [];
+    const out = [];
+    const startDay = new Date(startMs); startDay.setHours(0, 0, 0, 0);
+    const endDay = new Date(endMs); endDay.setHours(0, 0, 0, 0);
+    let cursor = startDay.getTime();
+    const cap = endDay.getTime();
+    let guard = 0;
+    while (cursor <= cap && guard++ < 14) {  // hard cap: weekly hunt = 7 days
+      const d = new Date(cursor);
+      out.push(
+        d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0')
+      );
+      cursor += _BOSS_HUNT_DAY_MS;
+    }
+    return out;
+  }
+
+  // Clear all hunt-window fields. Used by defeat + expiration +
+  // disengage paths so re-engage always starts from a clean slate.
+  function _clearBossHuntFields(state) {
+    if (!state) return;
+    state.engaged = false;
+    state.engaged_at = null;
+    state.hunt_started_at = null;
+    state.hunt_expires_at = null;
+  }
+
+  // Mark an active hunt as expired. Leaves kill_count alone (this
+  // is a failed hunt, not a defeat). Sets last_hunt_outcome so the
+  // detail screen can show a friendlier "Re-engage to try again"
+  // copy. Idempotent: a second call on an already-expired boss is
+  // a no-op.
+  function _expireBossHunt(id) {
+    const state = getBossState(id);
+    if (!state) return;
+    if (state.engaged !== true) return;
+    _clearBossHuntFields(state);
+    state.last_hunt_outcome = 'expired';
+    setBossState(id, state);
+    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
+  }
+
+  // Award a hunt kill via the shared single-shot path. Used by the
+  // window-backfill resolver below when it finds a qualifying day
+  // anywhere inside an active hunt window.
+  function _awardHuntKillFromBackfill(id, cfg, dayDate) {
+    const state = getBossState(id);
+    if (!state || state.engaged !== true) return;
+    _awardSingleShotKill(id, cfg, dayDate, state);
+  }
+
+  // v3 Phase 1z.43 — Window-aware hunt resolver.
+  // Walks each engaged boss and re-queries HealthKit for the entire
+  // [hunt_started_at, min(hunt_expires_at, now)] window. Fixes the
+  // Steel Wolf bug: previously the evaluators only looked at the
+  // CURRENT moment's step total, so qualifying steps that occurred
+  // yesterday (during the active hunt) were never credited when
+  // the app was opened today.
+  //
+  // Per boss type:
+  //   - Steps boss (stepThreshold): for each device-local day in the
+  //     window, query Health.getStepsBetween over [day-start ∩ window,
+  //     day-end ∩ window]. If any day reaches the threshold, kill.
+  //   - Workout boss (workoutMinutes): query
+  //     Health.getStrengthWorkoutsBetween across the whole window.
+  //     One qualifying workout (already filtered by the helper's
+  //     minute floor) defeats.
+  //   - Single-night sleep boss (sleepHours, streakTarget=1): query
+  //     Health.getSleepBetween across the whole window and check
+  //     each night's totalAsleepHours from the byDate map. Any
+  //     qualifying night defeats.
+  //   - Multi-night weekend boss (Carouser): the existing weekend-
+  //     scoped evaluator still drives kills; this resolver only
+  //     handles its expiration sweep.
+  //
+  // After the kill OR if no qualifying data is found AND the window
+  // has expired, the hunt is marked expired (engaged=false, fields
+  // cleared, last_hunt_outcome='expired').
+  //
+  // Idempotent: a defeat flips engaged=false so subsequent calls
+  // skip this boss until the user re-engages. Existing
+  // last_eval_date / streak gating prevents double-counting.
+  async function resolveBossHuntsAcrossWindow() {
+    if (typeof Health === 'undefined' || !Health || !Health.isAvailable) return;
+    if (!Health.isAvailable()) return;
+    if (typeof Health.permissionStatus !== 'function') return;
+    if (Health.permissionStatus() !== 'granted') return;
+    if (typeof BOSSES !== 'object' || !BOSSES) return;
+
+    const now = Date.now();
+    for (const id of Object.keys(BOSSES)) {
+      const cfg = BOSSES[id];
+      const state = getBossState(id);
+      if (!state || state.engaged !== true) continue;
+      _migrateBossHuntFields(id, state, cfg);
+      const start = _bossHuntStartMs(state);
+      const end   = _bossHuntExpiresMs(state, cfg);
+      if (!start) continue;
+      const evalEnd = Math.min(end || now, now);
+
+      let defeated = false;
+
+      // ── Steps bosses ───────────────────────────────────────
+      if (typeof cfg.stepThreshold === 'number' && typeof Health.getStepsBetween === 'function') {
+        const days = _huntWindowLocalDays(start, evalEnd);
+        for (const dayIso of days) {
+          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+          let steps = null;
+          try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { continue; }
+          if (typeof steps === 'number' && steps >= cfg.stepThreshold) {
+            _awardHuntKillFromBackfill(id, cfg, dayIso);
+            defeated = true;
+            break;
+          }
+        }
+      }
+      // ── Workout boss (Iron Warden) ─────────────────────────
+      else if (typeof cfg.workoutMinutes === 'number' && typeof Health.getStrengthWorkoutsBetween === 'function') {
+        const sIso = new Date(start).toISOString();
+        const eIso = new Date(evalEnd).toISOString();
+        let workouts = null;
+        try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+        const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+        // Pick the device-local day of the first qualifying workout
+        // so last_eval_date is meaningful. Helper already returns
+        // workouts >= cfg.workoutMinutes per its filter.
+        const first = list && list.length ? list[0] : null;
+        if (first) {
+          const dayKey = (function(iso){
+            try {
+              const d = new Date(iso);
+              return d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+            } catch (_) { return getDeviceLocalDate(); }
+          })(first.startDate || new Date(start).toISOString());
+          _awardHuntKillFromBackfill(id, cfg, dayKey);
+          defeated = true;
+        }
+      }
+      // ── Single-night sleep boss (Insomniac, Dream Tyrant) ──
+      else if (typeof cfg.sleepHours === 'number' && cfg.streakTarget === 1 && typeof Health.getSleepBetween === 'function') {
+        // Look at a slightly widened window so a sleep block that
+        // ENDED on the first morning inside the hunt is captured
+        // (the byDate key uses sleep-onset shifted +4h; a Sun→Mon
+        // sleep block keyed to Mon would otherwise be edge-case).
+        const sIso = new Date(start - 12 * 3600 * 1000).toISOString();
+        const eIso = new Date(evalEnd).toISOString();
+        let res = null;
+        try { res = await Health.getSleepBetween(sIso, eIso); } catch (_) { res = null; }
+        const byDate = (res && res.byDate) || {};
+        // Only credit nights whose key falls inside the hunt window
+        // (start..end). Iterate the same day list as the steps path.
+        const days = _huntWindowLocalDays(start, evalEnd);
+        for (const dayIso of days) {
+          const entry = byDate[dayIso];
+          const hours = entry && typeof entry.totalAsleepHours === 'number' ? entry.totalAsleepHours : 0;
+          if (hours >= cfg.sleepHours) {
+            _awardHuntKillFromBackfill(id, cfg, dayIso);
+            defeated = true;
+            break;
+          }
+        }
+      }
+      // (Carouser is handled by its existing weekend-scoped evaluator;
+      //  this resolver only enforces its expiration below.)
+
+      // ── Expire stale hunts ─────────────────────────────────
+      if (!defeated && end && now > end) {
+        _expireBossHunt(id);
+      }
+    }
+  }
+
+  // Synchronous expiration sweep — cheap, no HealthKit. Runs on
+  // boot + visibility-change before the async resolver fires so the
+  // UI never paints an "expired" hunt as still active. The async
+  // resolver below may upgrade an expired-state hunt back to a
+  // defeat if it finds qualifying data inside the original window
+  // (delayed HealthKit sync) — but only if engaged=true, which is
+  // why this sync sweep ONLY fires for hunts that have ZERO chance
+  // of recovery (no Health permission / no HealthKit available).
+  // Otherwise we let resolveBossHuntsAcrossWindow handle expiry.
+  function _sweepExpiredBossHuntsNoHealth() {
+    if (typeof BOSSES !== 'object' || !BOSSES) return;
+    const healthAvailable = (typeof Health !== 'undefined' && Health && Health.isAvailable && Health.isAvailable() &&
+                             typeof Health.permissionStatus === 'function' && Health.permissionStatus() === 'granted');
+    if (healthAvailable) return; // let the async resolver handle it
+    const now = Date.now();
+    for (const id of Object.keys(BOSSES)) {
+      const cfg = BOSSES[id];
+      const state = getBossState(id);
+      if (!state || state.engaged !== true) continue;
+      _migrateBossHuntFields(id, state, cfg);
+      const exp = _bossHuntExpiresMs(state, cfg);
+      if (exp && now > exp) _expireBossHunt(id);
+    }
+  }
+  try { window.resolveBossHuntsAcrossWindow = resolveBossHuntsAcrossWindow; } catch (_) {}
 
   function loadBosses() {
     try { return JSON.parse(localStorage.getItem('hb_bosses') || '{}'); }
@@ -515,7 +823,15 @@
     }
     if (cost > 0) spendSouls(cost, 'engage_' + bossId);
     state.engaged = true;
-    state.engaged_at = new Date().toISOString();
+    const _engageNow = Date.now();
+    state.engaged_at = new Date(_engageNow).toISOString();
+    // v3 Phase 1z.43 — stamp explicit hunt window. Engagement IS the
+    // start; expiration is start + cadence-derived duration. Clear
+    // any stale last_hunt_outcome from a prior expired/defeated run
+    // so the new hunt renders cleanly.
+    state.hunt_started_at = _engageNow;
+    state.hunt_expires_at = _engageNow + getBossHuntDurationMs(cfg);
+    state.last_hunt_outcome = null;
     setBossState(bossId, state);
     try {
       if (typeof showHabitToast === 'function') {
@@ -535,8 +851,8 @@
     if (!cfg) return false;
     const state = getBossState(bossId);
     if (state.engaged !== true) return true; // already disengaged
-    state.engaged = false;
-    state.engaged_at = null;
+    // v3 Phase 1z.43 — also clear hunt-window fields on manual stop.
+    _clearBossHuntFields(state);
     // Streak doesn't survive disengagement — re-engaging starts fresh.
     state.streak = 0;
     state.last_eval_date = null;
@@ -3570,12 +3886,11 @@
         state.streak = 0;
         // v3 Phase 1z.6 — hunt ends on defeat. Re-engagement is
         // explicit (user taps "Hunt Again" on result modal or boss
-        // detail). HUNTING strip pill + bcard--engaged + boss detail
-        // ENGAGED state all key off state.engaged, so flipping it
-        // here resolves every surface.
-        state.engaged = false;
-        state.engaged_at = null;
+        // detail).
+        // v3 Phase 1z.43 — also clear hunt-window fields.
+        _clearBossHuntFields(state);
         state.last_defeated_at = new Date().toISOString();
+        state.last_hunt_outcome = 'defeated';
         setBossState(id, state);
         // v2.0.1: kill grants tier-scaled souls. Earn happens here so
         // the toast message can include the actual amount awarded.
@@ -3707,9 +4022,10 @@
         // v3 Phase 1z.6 — hunt ends on defeat. Same shape as the
         // other evaluators. Carouser's weekend fields stay cleared
         // (re-engagement gets a fresh weekend cycle).
-        state.engaged = false;
-        state.engaged_at = null;
+        // v3 Phase 1z.43 — also clear hunt-window fields.
+        _clearBossHuntFields(state);
         state.last_defeated_at = new Date().toISOString();
+        state.last_hunt_outcome = 'defeated';
         state.current_weekend_id = null;
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
@@ -3797,9 +4113,10 @@
         state.kill_count += 1;
         state.streak = 0;
         // v3 Phase 1z.6 — hunt ends on defeat.
-        state.engaged = false;
-        state.engaged_at = null;
+        // v3 Phase 1z.43 — also clear hunt-window fields.
+        _clearBossHuntFields(state);
         state.last_defeated_at = new Date().toISOString();
+        state.last_hunt_outcome = 'defeated';
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
@@ -3862,9 +4179,10 @@
     state.streak = 0;
     state.last_eval_date = dayDate;
     // v3 Phase 1z.6 — hunt ends on defeat. Re-engagement is explicit.
-    state.engaged = false;
-    state.engaged_at = null;
+    // v3 Phase 1z.43 — also clear hunt-window fields.
+    _clearBossHuntFields(state);
     state.last_defeated_at = new Date().toISOString();
+    state.last_hunt_outcome = 'defeated';
     setBossState(id, state);
     const reward = killRewardSouls(cfg.rank);
     if (reward > 0) earnSouls(reward, 'kill_' + id);
@@ -9530,6 +9848,12 @@
     try { autoVerifyWalk(); } catch (_) {}
     try { autoVerifySleep(); } catch (_) {}
     try { autoVerifyStrengthTraining(); } catch (_) {}
+    // v3 Phase 1z.43 — window-aware boss hunt resolver. Each
+    // renderHabits cycle is the right rhythm to re-evaluate the
+    // active hunt window against HealthKit and fire delayed kills
+    // or expirations. Idempotent; cheap when no boss is engaged.
+    try { resolveBossHuntsAcrossWindow(); } catch (_) {}
+    try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
   }
 
   function renderRank() {
@@ -17917,6 +18241,15 @@
     const state = getBossState(id);
     const overlay = document.getElementById('boss-fs-overlay');
     if (!overlay) return;
+    // v3 Phase 1z.43 — opening boss detail is a natural moment to
+    // re-resolve the hunt window. If a delayed-sync kill is sitting
+    // in HealthKit, fire it now so the detail screen renders the
+    // post-kill state instead of a stale "still hunting" surface.
+    // Fire-and-forget; the open path below renders the current
+    // best-known state immediately, and the resolver will call
+    // refreshBossFullScreenIfOpen if it transitions the boss.
+    try { resolveBossHuntsAcrossWindow(); } catch (_) {}
+    try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
 
     const cadenceLabel = (cfg.cadence || 'daily').charAt(0).toUpperCase() +
                          (cfg.cadence || 'daily').slice(1);
@@ -18012,8 +18345,22 @@
         }
       } else if (state.engaged === true) {
         engageState.classList.remove('hidden');
+        // v3 Phase 1z.43 — replace the vague "HUNTING SINCE …" with a
+        // concrete remaining-time readout so the user can see when
+        // the hunt window closes. Falls back to the legacy copy if
+        // we somehow lack hunt-window fields (defensive — the
+        // engageBoss path always stamps them now, and legacy state
+        // is migrated on first access via _migrateBossHuntFields).
+        _migrateBossHuntFields(id, state, cfg);
+        const remainingMs = _bossHuntRemainingMs(state, cfg);
         if (engageSince) {
-          engageSince.textContent = 'HUNTING SINCE ' + formatEngagedAt(state.engaged_at);
+          if (remainingMs == null) {
+            engageSince.textContent = 'HUNTING SINCE ' + formatEngagedAt(state.engaged_at);
+          } else if (remainingMs <= 0) {
+            engageSince.textContent = 'HUNT EXPIRED';
+          } else {
+            engageSince.textContent = 'HUNT ENDS IN ' + _formatHuntRemaining(remainingMs);
+          }
         }
         if (disengageBtn) disengageBtn.setAttribute('data-boss-id', id);
       } else {
@@ -26027,6 +26374,14 @@
       try { autoVerifyWalk();              } catch (_) {}
       try { autoVerifySleep();             } catch (_) {}
       try { autoVerifyStrengthTraining();  } catch (_) {}
+      // v3 Phase 1z.43 — window-aware boss hunt resolver. Sweeps any
+      // active hunt's full [start, expires] window and credits the
+      // kill if HealthKit shows a qualifying day inside the window
+      // (fixes Steel Wolf: previously only "today" was checked).
+      // Also expires hunts whose windows have elapsed with no
+      // qualifying data. Fire-and-forget; idempotent.
+      try { resolveBossHuntsAcrossWindow(); } catch (_) {}
+      try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
       // v2.1.0 Phase C — push fresh metric snapshot to backend on
       // resume. Debounced to 5 min so rapid foreground/background
       // cycling doesn't hammer the workers.

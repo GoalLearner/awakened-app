@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w48` |
-| `app.js?v=` | `397` |
+| `APP_BUILD_TAG` | `2.2.1-w49` |
+| `app.js?v=` | `398` |
 | `auth.js?v=` | `15` |
 | `styles.css?v=` | `289` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.283` |
+| `sw.js CACHE_VERSION` | `v5.284` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,68 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=289`, `app.js?v=397`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.283`, `APP_BUILD_TAG = '2.2.1-w48'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=289`, `app.js?v=398`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.284`, `APP_BUILD_TAG = '2.2.1-w49'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Boss hunt expiration windows + Steel Wolf delayed-defeat fix (v3 Phase 1z.43)
+
+**Two-part change** addressing the on-device Steel Wolf smoke-test report and adding the missing hunt-timer surface.
+
+**Part 1 — Steel Wolf delayed defeat (the real bug).**
+
+User engaged Steel Wolf yesterday, walked 6,000+ steps yesterday, opened the app today, boss wasn't defeated. The 1z.42 noun fix shipped the right copy but did NOT address the underlying evaluation: `evaluateSteelWolfForDay(stepCount, dayDate)` was called with TODAY's `Health.getStepsToday()` result against TODAY's date. Yesterday's qualifying 6,500 was never re-queried — `last_eval_date < yesterday` reset the streak to 0, and today's running count (e.g. 500) is below threshold, so no defeat fires. Same shape applied to Glass Strider, Iron Warden, Insomniac, Dream Tyrant.
+
+**Fix.** New `resolveBossHuntsAcrossWindow()` async function walks each engaged boss and re-queries HealthKit for the entire active hunt window:
+- **Steps boss** (Steel Wolf 6,000 / Glass Strider 7,500): iterates each device-local day inside `[hunt_started_at, min(hunt_expires_at, now)]`. For each day, calls `Health.getStepsBetween(dayStart ∩ window, dayEnd ∩ window)`. Any day at or above threshold fires `_awardSingleShotKill` with that day's date.
+- **Workout boss** (Iron Warden): single `Health.getStrengthWorkoutsBetween` over the whole window. Returns a pre-filtered list (helper already enforces the 10-minute floor). One qualifying workout defeats.
+- **Single-night sleep boss** (Insomniac 7h, Dream Tyrant 7.5h): single `Health.getSleepBetween` over the window plus a 12h pre-window pad (the byDate keys use sleep-onset shifted +4h; the pad captures a Sun→Mon block keyed to Mon). Iterates each day key inside the window; any night at or above threshold defeats.
+- **Carouser** (weekly weekend boss, multi-night): existing weekend-scoped evaluator keeps driving kills; the resolver only enforces this boss's expiration.
+
+Pre-engagement steps never count: the window's `start` is `hunt_started_at`, which is stamped to `Date.now()` at engage time. Health queries clip to that lower bound. Post-expiration data never counts: `evalEnd = min(end, now)` clips the upper bound.
+
+Idempotency: a defeat flips `state.engaged = false` and clears every hunt-window field, so subsequent resolver calls on the same boss skip immediately. Same-window double-award is impossible.
+
+**Part 2 — Hunt expiration windows + timer UI.**
+
+New state fields on engaged bosses (migration-safe — legacy engaged hunts get a fresh window stamped on first access via `_migrateBossHuntFields`):
+- `hunt_started_at` (epoch ms) — set in `engageBoss`
+- `hunt_expires_at` (epoch ms) — `started + getBossHuntDurationMs(cfg)`
+- `last_hunt_outcome` (`'expired' | 'defeated' | null`) — display hint for re-engage UI
+
+**Durations** (`getBossHuntDurationMs`):
+| Cadence | Window |
+|---|---|
+| daily | 24 h |
+| triweekly | 3 d |
+| weekly | 7 d |
+| fallback | 24 h |
+
+**Detail screen** (`openBossFullScreen` engage-state branch at ~line 17999): replaces `HUNTING SINCE yesterday` with a concrete remaining-time readout — `HUNT ENDS IN 14h 07m`, `HUNT ENDS IN 42m`, `HUNT ENDS IN 2d 5h`, or `HUNT EXPIRED`. Falls back to the legacy copy if migration hasn't run (defensive).
+
+**Expiration sweep.** When the window elapses without a qualifying event, `_expireBossHunt(id)` marks the hunt expired: clears `engaged`, all hunt fields, stamps `last_hunt_outcome = 'expired'`. The boss can be re-engaged immediately. The synchronous `_sweepExpiredBossHuntsNoHealth()` fallback handles users without Health permission so their windows still expire.
+
+**Wired on:**
+- `renderHabits` (every render cycle — same rhythm as `autoVerifyWalk`)
+- `visibilitychange → visible` (after the `Health.clearCache` + autoVerify trio)
+- `openBossFullScreen` (so the detail screen reflects post-resolve state)
+
+Resolver is fire-and-forget; idempotent; cheap when no boss is engaged. Exposed on `window.resolveBossHuntsAcrossWindow` for debug.
+
+**Defeat/drop/mercy/souls** all run exactly once per kill — the shared `_awardSingleShotKill` and the inline kill paths for Insomniac/Carouser/Steel Wolf were updated to call `_clearBossHuntFields(state)` so re-engage always starts from a clean slate. No double-award, no double-drop, no double-mercy.
+
+**Today's Briefing 1z.42 fix preserved.** Verified by grep — `setupDailyInsight` still has neither `overlay.addEventListener('click', ...)` nor `attachSheetDismissGesture(...)`. LOCK IN remains the sole close path. Hall of Fame sheet (1z.40) also still X-only close.
+
+**Verified:** `node --check app.js` OK. `npm run test:e2e` → **7/7 green** (~39s). No backend, no Duels, no sims, no Codemagic.
+
+Bumps: `app.js?v=398`, `sw.js v5.284`, `APP_BUILD_TAG '2.2.1-w49'`. `APP_VERSION` unchanged.
+
+**Manual QA for next iOS build:**
+1. Engage Steel Wolf → detail shows `HUNT ENDS IN 23h 59m` (or close).
+2. Walk 6,000+ steps. Open app later → boss defeats, defeat count +1, drop/mercy/souls update once. Detail switches to defeated state.
+3. Engage Steel Wolf, immediately disengage, walk 6,000+ → no defeat (engaged=false gates the resolver).
+4. Engage Steel Wolf with 6,000 steps already on the watch from before engaging → no defeat (pre-engagement steps clipped by the window's start bound).
+5. Engage Steel Wolf, let 24h pass without walking → `HUNT EXPIRED`. Re-engage works.
+6. Open Insomniac / Dream Tyrant detail after a qualifying night → defeats via the sleep path. Carouser keeps existing weekend semantics.
+7. Today's Briefing still cannot swipe-dismiss; LOCK IN closes it.
 
 ### Boss progress noun + Today's Briefing dismiss fix (v3 Phase 1z.42)
 
