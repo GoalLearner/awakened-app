@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=294">
+  <link rel="stylesheet" href="styles.css?v=295">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1136,6 +1136,20 @@
         <div id="bro-mercy-block" class="bro-mercy-block"></div>
       </section>
 
+      <!-- v3 Phase 1z.56 — failure variant (hunt expired without
+           defeat). Shown when _expireBossHunt queues an
+           `outcome: 'failed'` event. No drop / no souls / no mercy
+           progress. Sibling to bro-relic-card + bro-nodrop-card so
+           the existing one-section-visible logic toggles cleanly. -->
+      <section id="bro-failed-card" class="bro-reward bro-reward--failed hidden">
+        <div class="bro-reward-kicker bro-reward-kicker--failed">HUNT EXPIRED</div>
+        <div id="bro-failed-body" class="bro-nodrop-body">The hunt window closed before the objective was completed.</div>
+        <div class="bro-failed-rewards">
+          <div class="bro-failed-line">No relic found</div>
+          <div class="bro-failed-line">No souls gained</div>
+        </div>
+      </section>
+
       <!-- Action stack: primary purple → gold secondary → ghost tertiary -->
       <div class="bro-actions">
         <button id="bro-view-relic" type="button" class="bro-btn bro-btn--primary hidden">View Relic</button>
@@ -2155,7 +2169,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=408"></script>
+  <script src="app.js?v=409"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

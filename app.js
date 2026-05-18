@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w59';
+  const APP_BUILD_TAG = '2.2.1-w60';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -572,9 +572,30 @@
     const state = getBossState(id);
     if (!state) return;
     if (state.engaged !== true) return;
+    // v3 Phase 1z.56 — capture the hunt-window fields BEFORE
+    // clearing so we can pass `hunt_started_at` into the failure
+    // event for the per-hunt seen-key guard. Without it, repeated
+    // foregrounds after expiration would re-pop the modal forever.
+    const cfg = BOSSES[id];
+    const huntStartedAt = state.hunt_started_at || 0;
     _clearBossHuntFields(state);
     state.last_hunt_outcome = 'expired';
     setBossState(id, state);
+    // v3 Phase 1z.56 — queue a failure result event so the user
+    // sees a clear "Hunt Failed" screen once per expired hunt.
+    // The event flows through the same _queueBossResult →
+    // _drainBossResultQueue → _showBossResult pipeline as
+    // defeated results, but takes the failure-render branch.
+    try {
+      _queueBossResult({
+        outcome:         'failed',
+        bossId:          id,
+        bossName:        cfg && cfg.name,
+        rank:            cfg && cfg.rank,
+        conditionLabel:  cfg && (cfg.killCondShort || cfg.killCondLong || ''),
+        hunt_started_at: huntStartedAt,
+      });
+    } catch (_) {}
     try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
     try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
   }
@@ -3008,6 +3029,15 @@
     return 'hb_boss_result_seen_' + bossId + '_' + killCount;
   }
 
+  // v3 Phase 1z.56 — per-hunt seen-key for failure events. Keyed
+  // by hunt_started_at so re-engaging the same boss and failing
+  // again pops the modal again (different timestamp = different
+  // hunt). Foregrounding the app after closing the failure modal
+  // for the SAME failed hunt is a no-op.
+  function _bossFailedSeenKey(bossId, huntStartedAt) {
+    return 'hb_boss_failed_seen_' + bossId + '_' + (huntStartedAt || 0);
+  }
+
   // v3 Phase 1z.7 — single-slot pending-result key. Drives the
   // HUNTING strip gold pill until the user acknowledges (closes the
   // overlay) OR 24h pass. Intentionally device-local; NEVER in
@@ -3059,14 +3089,25 @@
 
   function _queueBossResult(evt) {
     if (!evt || !evt.bossId) return;
+    // v3 Phase 1z.56 — branch on outcome so failure events get
+    // their own per-hunt seen-key and do NOT write the gold
+    // HUNTING-strip pending-result pill (the pill is meant to
+    // celebrate a pending defeat; a failed hunt has nothing to
+    // celebrate).
+    const isFailed = evt.outcome === 'failed';
     try {
-      const key = _bossResultSeenKey(evt.bossId, evt.kill_count);
+      const key = isFailed
+        ? _bossFailedSeenKey(evt.bossId, evt.hunt_started_at)
+        : _bossResultSeenKey(evt.bossId, evt.kill_count);
       if (localStorage.getItem(key) === '1') return;
     } catch (_) {}
-    // v3 Phase 1z.7 — write the pending-result envelope so the
-    // HUNTING strip pill surfaces immediately, even before the
-    // modal opens (kill-toast → 600ms → modal).
-    try { _writeBossResultPending(evt); } catch (_) {}
+    if (!isFailed) {
+      // v3 Phase 1z.7 — write the pending-result envelope so the
+      // HUNTING strip pill surfaces immediately, even before the
+      // modal opens (kill-toast → 600ms → modal). Skipped for
+      // failure events.
+      try { _writeBossResultPending(evt); } catch (_) {}
+    }
     _bossResultQueue.push(evt);
     _drainBossResultQueue();
   }
@@ -3084,10 +3125,37 @@
     const overlay = document.getElementById('boss-result-overlay');
     if (!overlay) { _bossResultBusy = false; return; }
 
+    // v3 Phase 1z.56 — branch on outcome. Failure events get a
+    // different seen-key (keyed by hunt_started_at) and a
+    // different render variant below.
+    const isFailed = evt.outcome === 'failed';
+
     // Set seen flag FIRST so any re-render / aux path can't re-queue.
-    try { localStorage.setItem(_bossResultSeenKey(evt.bossId, evt.kill_count), '1'); } catch (_) {}
+    try {
+      const seenKey = isFailed
+        ? _bossFailedSeenKey(evt.bossId, evt.hunt_started_at)
+        : _bossResultSeenKey(evt.bossId, evt.kill_count);
+      localStorage.setItem(seenKey, '1');
+    } catch (_) {}
+
+    // Theme the overlay via a class so CSS can mute the gold accents
+    // for failure (red ember palette). Removed on close.
+    overlay.classList.toggle('bro-overlay--failed', isFailed);
 
     _bossResultCurrent = evt;
+
+    // v3 Phase 1z.56 — title + subline + "Fallen/Escaped" copy
+    // diverge between defeat and failure paths.
+    const titleEl = document.getElementById('bro-overlay-title');
+    if (titleEl) titleEl.textContent = isFailed ? 'HUNT FAILED' : 'BOSS DEFEATED';
+    const sublineEl = overlay.querySelector('.bro-subline');
+    if (sublineEl) {
+      sublineEl.textContent = isFailed
+        ? ((evt.bossName ? 'The ' + evt.bossName.replace(/^The\s+/i, '') : 'The boss') + ' escaped.')
+        : 'Your discipline broke the hunt.';
+    }
+    const fallenEl = overlay.querySelector('.bro-fallen');
+    if (fallenEl) fallenEl.textContent = isFailed ? 'Escaped' : 'Has Fallen';
 
     // Boss card — name, rank pill, condition row, portrait
     const nameEl = document.getElementById('bro-boss-name');
@@ -3110,6 +3178,12 @@
       portraitImg.alt = evt.bossName || '';
     }
 
+    // v3 Phase 1z.56 — hide the "VERIFIED" defeat row on failure
+    // (no defeat happened). The row stays in the DOM so re-using
+    // the same modal for a subsequent defeat repaints cleanly.
+    const defeatRow = overlay.querySelector('.bro-defeat-row');
+    if (defeatRow) defeatRow.classList.toggle('hidden', isFailed);
+
     const condEl = document.getElementById('bro-condition');
     if (condEl) {
       const short = (BOSS_DEFEAT_CONDITIONS && BOSS_DEFEAT_CONDITIONS[evt.bossId]) || null;
@@ -3118,10 +3192,31 @@
 
     const relicCard  = document.getElementById('bro-relic-card');
     const nodropCard = document.getElementById('bro-nodrop-card');
+    const failedCard = document.getElementById('bro-failed-card');
     const viewBtn    = document.getElementById('bro-view-relic');
     const viewMercy  = document.getElementById('bro-view-mercy');
 
-    if (evt.drop) {
+    if (isFailed) {
+      // v3 Phase 1z.56 — failure variant: hide relic + mercy cards,
+      // show the failed card with no-reward copy. HUNT AGAIN stays
+      // available (engageBoss handles the souls cost gate).
+      if (relicCard)  relicCard.classList.add('hidden');
+      if (nodropCard) nodropCard.classList.add('hidden');
+      if (failedCard) failedCard.classList.remove('hidden');
+      if (viewBtn)    viewBtn.classList.add('hidden');
+      if (viewMercy)  viewMercy.classList.add('hidden');
+      // Populate the failure body with the unmet condition so the
+      // user understands WHAT they needed to do. Falls back to a
+      // generic line if no condition copy is available.
+      const failedBody = document.getElementById('bro-failed-body');
+      if (failedBody) {
+        const cond = (evt.conditionLabel || '').trim();
+        failedBody.textContent = cond
+          ? ('Objective not completed in time: ' + cond)
+          : 'The hunt window closed before the objective was completed.';
+      }
+    } else if (evt.drop) {
+      if (failedCard) failedCard.classList.add('hidden');
       // Relic acquired — even commons fall here.
       if (relicCard)  relicCard.classList.remove('hidden');
       if (nodropCard) nodropCard.classList.add('hidden');
@@ -3181,6 +3276,7 @@
       // No drop — mercy increased. Render 3-row mercy block with bar fills.
       if (relicCard)  relicCard.classList.add('hidden');
       if (nodropCard) nodropCard.classList.remove('hidden');
+      if (failedCard) failedCard.classList.add('hidden');
       if (viewBtn)    viewBtn.classList.add('hidden');
       if (viewMercy) {
         viewMercy.classList.remove('hidden');
@@ -3233,6 +3329,9 @@
     if (overlay) {
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
+      // v3 Phase 1z.56 — strip the failure-theme class so a
+      // subsequent defeat opens with the standard gold palette.
+      overlay.classList.remove('bro-overlay--failed');
     }
     document.body.classList.remove('bro-locked');
     _bossResultCurrent = null;

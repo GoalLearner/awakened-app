@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w59` |
-| `app.js?v=` | `408` |
+| `APP_BUILD_TAG` | `2.2.1-w60` |
+| `app.js?v=` | `409` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `294` |
+| `styles.css?v=` | `295` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.294` |
+| `sw.js CACHE_VERSION` | `v5.295` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,91 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Boss hunt failure screen (v3 Phase 1z.56)
+
+**Feature.** When a boss hunt's expiration window elapses without the user meeting the kill condition, the existing boss-result modal now opens once with a HUNT FAILED variant. Same shell, different render branch — no new modal markup chrome to maintain.
+
+#### Trigger path
+`resolveBossHuntsAcrossWindow()` finds an engaged boss whose `hunt_expires_at < now` and no qualifying HealthKit data inside the window → calls `_expireBossHunt(id)` → captures `hunt_started_at` BEFORE clearing the hunt fields → queues a failure event:
+
+```js
+_queueBossResult({
+  outcome:         'failed',
+  bossId, bossName, rank,
+  conditionLabel:  cfg.killCondShort || cfg.killCondLong,
+  hunt_started_at: <captured before clear>,
+});
+```
+
+#### Per-hunt seen guard
+New `_bossFailedSeenKey(bossId, huntStartedAt)` → `hb_boss_failed_seen_<bossId>_<startedAt>`. The hunt-start timestamp differentiates one failed hunt from another — re-engaging the same boss and failing again pops a fresh modal (different timestamp). Foregrounding the app after closing the modal for the same failed hunt is a silent no-op.
+
+Defeat events keep their existing `_bossResultSeenKey(bossId, kill_count)` guard, so the two paths never collide.
+
+#### Modal render branch (in `_showBossResult`)
+Per-event `isFailed = evt.outcome === 'failed'` branches the renderer:
+| Element | Defeat | Failure |
+|---|---|---|
+| `#bro-overlay-title` | `BOSS DEFEATED` | `HUNT FAILED` |
+| `.bro-subline` | `Your discipline broke the hunt.` | `The <boss> escaped.` |
+| `.bro-fallen` | `Has Fallen` | `Escaped` |
+| `.bro-defeat-row` (✓ VERIFIED) | shown | hidden |
+| `#bro-relic-card` | shown if drop | hidden |
+| `#bro-nodrop-card` | shown if no drop | hidden |
+| `#bro-failed-card` (new) | hidden | shown |
+| `#bro-view-relic` button | shown if drop | hidden |
+| `#bro-view-mercy` button | shown if no drop | hidden |
+| `#bro-hunt-again` button | shown | shown (re-engage routes through existing `engageBoss` souls-cost gate) |
+| `overlay.classList` | (none) | `bro-overlay--failed` |
+
+The `.bro-overlay--failed` class scopes red-ember CSS overrides: title in `#f87171`, portrait grayscaled 35% + 85% brightness, gold-dust opacity dropped to 18%, runes/kicker/subline tinted red. Defeat path stays gold and untouched.
+
+#### Failure card content
+```
+[HUNT EXPIRED]                          ← red kicker
+Objective not completed in time:        ← body, uses cfg.killCondShort
+  Walk 6,000+ steps in a single day      so user knows what they needed
+NO RELIC FOUND                          ← supporting line
+NO SOULS GAINED                         ← supporting line
+```
+
+Falls back to `"The hunt window closed before the objective was completed."` if no condition copy is available.
+
+#### Rewards / mercy semantics
+- **No drop roll** — `rollBossDrop` is not invoked (only fires on the `_awardSingleShotKill` / inline-kill paths).
+- **No souls reward** — `earnSouls` not called.
+- **No mercy increment** — `evt.mercy` is null for failures; nothing writes to the mercy counters.
+- **No `kill_count` increment** — `state.kill_count` stays at its prior value.
+- **Souls spent at engage are NOT refunded** — that's the wager mechanic. The user already accepted it via the existing engage flow. The failure copy doesn't surface "you lost X souls" because that's a sunk cost and dwelling on it reads as punitive; the design tone is motivational ("re-engage when ready"), not punishing.
+
+#### Hunt Again button on failure
+`#bro-hunt-again` is wired the same way for both paths via `data-boss-id` attribute. The handler routes through the existing `engageBoss(id)` function, which already enforces the souls-cost gate (`if (balance < cost) showHabitToast('Need N souls. You have M.'); return false;`). No new gate, no new toast — the existing insufficient-souls UX applies.
+
+#### Modal class cleanup on close
+`closeBossResult` now strips `bro-overlay--failed` so a subsequent defeat opens with the standard gold palette. Defense-in-depth: each render path explicitly toggles each card's visibility so a re-used modal between defeat / no-drop / failure paints cleanly.
+
+#### Pending-result pill discipline
+`_queueBossResult` skips `_writeBossResultPending` for failure events. The gold HUNTING-strip pill is "you have a pending pending result you haven't acknowledged" — that's meant to celebrate a defeat. A failed hunt has nothing to celebrate; surfacing the pill would be wrong.
+
+#### Manual-stop semantics
+Manually tapping "Stop Hunting" (disengageBoss) does NOT trigger the failure modal. `disengageBoss` clears the hunt fields directly and does NOT call `_expireBossHunt`. Failure popups fire only on actual time-window expiration with no qualifying data.
+
+#### Files changed (frontend only, 5)
+`index.html` (new `#bro-failed-card` section + version bumps), `app.js` (`_expireBossHunt` queues failure event + `_queueBossResult` branches + `_showBossResult` failure render branch + `closeBossResult` class cleanup + `_bossFailedSeenKey` helper + build tag), `styles.css` (failure theme + card + line copy), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic.
+
+**Verified.** `node --check app.js` OK. `npm run test:e2e` → **7/7 green (~38s)**. The other sheet invariants (1z.40 HoF X-only, 1z.42 Briefing LOCK IN-only, 1z.44 Souls swipe+X) confirmed intact in the diff.
+
+Bumps: `app.js?v=409`, `styles.css?v=295`, `sw.js v5.295`, `APP_BUILD_TAG '2.2.1-w60'`. `APP_VERSION` unchanged.
+
+**Manual QA next iOS build:**
+1. Engage a daily boss. Let 24h pass without meeting the condition.
+2. Open the app → red-themed `HUNT FAILED` modal appears, says "The <Boss> escaped" + "Objective not completed in time: <condition>" + NO RELIC FOUND + NO SOULS GAINED. HUNT AGAIN + Close buttons.
+3. Tap Close → modal dismisses. Re-foreground the app → modal does NOT reappear for the same failed hunt.
+4. Tap HUNT AGAIN → existing engage flow fires (souls cost gate + new 24h window).
+5. Defeat the same boss successfully → BOSS DEFEATED modal appears in gold (not red), drop/mercy/souls work normally.
+6. Manually Stop Hunting before expiration → NO failure modal (manual stop is intentional).
+7. If qualifying steps happened inside the original window but the app was backgrounded → `resolveBossHuntsAcrossWindow` catches it and the user sees BOSS DEFEATED instead of HUNT FAILED.
 
 ### Boss hunt timer format polish (v3 Phase 1z.55)
 
@@ -2803,7 +2888,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=294`, `app.js?v=408`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.294`, `APP_BUILD_TAG = '2.2.1-w59'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=295`, `app.js?v=409`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.295`, `APP_BUILD_TAG = '2.2.1-w60'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ### 100K Step Club roster tab (v3 Phase 1z.52)
 

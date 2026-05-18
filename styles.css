@@ -21396,6 +21396,58 @@ body.bro-locked { overflow: hidden; }
   color: var(--text-tertiary, #54546e);
   line-height: 1.4;
 }
+
+/* v3 Phase 1z.56 — Hunt Failed variant.
+   Re-uses the existing .bro-overlay shell. The .bro-overlay--failed
+   class (toggled in _showBossResult) mutes the gold accents and
+   leans red-ember so the failure is unmistakable but not punishing.
+   The failure card mirrors the no-drop card structurally (kicker
+   + body + supporting lines) and inherits its outer chrome from
+   .bro-reward. */
+.bro-reward-kicker--failed {
+  color: rgba(248, 113, 113, 0.92);
+  border-color: rgba(239, 68, 68, 0.45);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.03));
+}
+.bro-reward--failed {
+  border-color: rgba(239, 68, 68, 0.40);
+  background: linear-gradient(135deg, rgba(40, 18, 22, 0.45), rgba(20, 12, 18, 0.65));
+}
+.bro-failed-rewards {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.bro-failed-line {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: rgba(248, 113, 113, 0.78);
+  text-transform: uppercase;
+}
+
+/* Overlay-level theming for the failure variant -- mute the gold
+   title accent + de-emphasize the boss portrait so the "escape"
+   reads visually. The shared modal chrome stays in place so the
+   user doesn't get visual whiplash between defeat + failure. */
+.bro-overlay--failed .bro-overlay-title {
+  color: #f87171;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.32);
+}
+.bro-overlay--failed .bro-kicker { color: rgba(248, 113, 113, 0.75); }
+.bro-overlay--failed .bro-subline { color: rgba(248, 113, 113, 0.82); font-style: italic; }
+.bro-overlay--failed .bro-rune-sparkle { color: rgba(239, 68, 68, 0.55); }
+.bro-overlay--failed .bro-boss-portrait-img {
+  filter: grayscale(0.35) brightness(0.85);
+}
+.bro-overlay--failed .bro-boss-portrait-slash { opacity: 0.25; }
+.bro-overlay--failed .bro-fallen {
+  color: rgba(248, 113, 113, 0.85);
+}
+.bro-overlay--failed .bro-gold-dust { opacity: 0.18; filter: hue-rotate(-30deg); }
 .bro-mercy-block {
   margin-top: 12px;
   display: flex;
