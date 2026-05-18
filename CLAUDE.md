@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w67` |
-| `app.js?v=` | `416` |
+| `APP_BUILD_TAG` | `2.2.1-w68` |
+| `app.js?v=` | `417` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.302` |
+| `sw.js CACHE_VERSION` | `v5.303` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -170,7 +170,7 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 **Boss config.** New entry in `BOSSES`:
 - `id: 'the_ascendant_colossus'`
 - `name: 'The Ascendant Colossus'`
-- `rank: 'C'`, `statDomain: 'VIT'`, `cadence: 'triweekly'` (→ 3-day hunt window via `getBossHuntDurationMs`)
+- `rank: 'C'`, `statDomain: 'VIT'`, `cadence: 'daily'` (→ 24-hour hunt window via `getBossHuntDurationMs`). **Corrected in 1z.63b from triweekly to daily** — daily is the right cadence for a 10-flights goal that should be hittable in a single active day.
 - `streakTarget: 1`, `flightThreshold: 10`
 - Flavor + kill-cond copy locked: *"A giant chained above the stairwell between earth and sky. It weakens only when you ascend."* / *"Climb 10+ verified flights before the hunt expires"* / *"The tower sealed before you reached the summit."*
 

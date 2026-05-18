@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w67';
+  const APP_BUILD_TAG = '2.2.1-w68';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -436,11 +436,11 @@
       flavorShort:      'A giant chained above the stairwell between earth and sky.',
       flavorLong:       'A giant chained above the stairwell between earth and sky. It weakens only when you ascend.',
       killCondShort:    'Climb 10+ verified flights before the hunt expires',
-      killCondLong:     'Climb at least 10 verified flights of stairs (Apple Health) during the 3-day hunt window. Cumulative — every flight counts.',
+      killCondLong:     'Climb at least 10 verified flights of stairs (Apple Health) during the 24-hour hunt window. Cumulative — every flight counts.',
       failedCopy:       'The tower sealed before you reached the summit.',
       streakTarget:     1,
       flightThreshold:  10,
-      cadence:          'triweekly',
+      cadence:          'daily',
       statDomain:       'VIT',
     },
   };
