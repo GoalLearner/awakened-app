@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w60';
+  const APP_BUILD_TAG = '2.2.1-w61';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -444,6 +444,50 @@
     }
   }
 
+  // v3 Phase 1z.57 — Carouser-specific end-of-Sunday helper.
+  // The Carouser's kill condition is two consecutive weekend nights
+  // (Fri + Sat), so a generic 7-day window after engagement is
+  // wrong: a Friday engagement should expire Sunday night, not the
+  // following Friday. Computes Sunday 23:59:59.999 device-local for
+  // the weekend containing `refMs`.
+  //
+  // Day-of-week math (JS Date.getDay() → 0=Sun..6=Sat):
+  //   Sun (0): daysUntilSun = (7-0) % 7 = 0  → today end-of-day
+  //   Mon (1): daysUntilSun = (7-1) % 7 = 6  → upcoming Sunday
+  //   Fri (5): daysUntilSun = 2              → this Sunday
+  //   Sat (6): daysUntilSun = 1              → this Sunday
+  //
+  // A Monday engagement maps to the UPCOMING Sunday (6 days out)
+  // rather than locking the user out — matches the spec's "set
+  // expiration to the upcoming Sunday" guidance.
+  function _endOfSundayLocalMs(refMs) {
+    const d = new Date(refMs);
+    const dow = d.getDay();
+    const daysUntilSun = (7 - dow) % 7;
+    d.setDate(d.getDate() + daysUntilSun);
+    d.setHours(23, 59, 59, 999);
+    return d.getTime();
+  }
+
+  // v3 Phase 1z.57 — high-level expiration helper. Routes Carouser
+  // through the end-of-Sunday rule; everything else uses the
+  // duration-based math (24h / 3d / 7d / fallback).
+  // Three stamp sites call this: engageBoss (line ~864),
+  // _migrateBossHuntFields (legacy 1z.43 stamps), and
+  // _bossHuntExpiresMs (default derivation when no stored value
+  // is present). Each Carouser hunt's expiration is therefore
+  // deterministic from hunt_started_at — re-deriving from start
+  // ms always produces the same end-of-Sunday timestamp.
+  function getBossHuntExpiresAtMs(cfg, startedAtMs) {
+    if (!cfg || !Number.isFinite(startedAtMs) || startedAtMs <= 0) {
+      return 0;
+    }
+    if (cfg.id === 'the_carouser') {
+      return _endOfSundayLocalMs(startedAtMs);
+    }
+    return startedAtMs + getBossHuntDurationMs(cfg);
+  }
+
   // Derive a usable hunt-start timestamp from any state shape.
   // Prefers the new numeric field; falls back to parsing the
   // pre-1z.43 ISO `engaged_at` so existing engaged hunts keep
@@ -465,8 +509,12 @@
     if (typeof state.hunt_expires_at === 'number' && state.hunt_expires_at > 0) {
       return state.hunt_expires_at;
     }
+    // v3 Phase 1z.57 — derive via getBossHuntExpiresAtMs so Carouser
+    // hunts default to end-of-Sunday device-local rather than 7-day.
+    // For all other bosses the helper returns start + duration, so
+    // behaviour is identical to the prior arithmetic.
     const start = _bossHuntStartMs(state);
-    return start ? start + getBossHuntDurationMs(cfg) : 0;
+    return start ? getBossHuntExpiresAtMs(cfg, start) : 0;
   }
 
   // Migrate legacy engaged state into the new hunt-window shape.
@@ -474,19 +522,38 @@
   function _migrateBossHuntFields(id, state, cfg) {
     if (!state || !cfg) return false;
     if (state.engaged !== true) return false;
+    let wrote = false;
     const hasFields = (typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0) &&
                       (typeof state.hunt_expires_at === 'number' && state.hunt_expires_at > 0);
-    if (hasFields) return false;
-    const now = Date.now();
-    let started = _bossHuntStartMs(state);
-    // Legacy hunts without engaged_at OR an unrecoverable timestamp:
-    // give a fresh full window starting now (be generous; don't
-    // accidentally expire someone who was hunting an old boss).
-    if (!started) started = now;
-    state.hunt_started_at = started;
-    state.hunt_expires_at = started + getBossHuntDurationMs(cfg);
-    setBossState(id, state);
-    return true;
+    if (!hasFields) {
+      const now = Date.now();
+      let started = _bossHuntStartMs(state);
+      // Legacy hunts without engaged_at OR an unrecoverable timestamp:
+      // give a fresh full window starting now (be generous; don't
+      // accidentally expire someone who was hunting an old boss).
+      if (!started) started = now;
+      state.hunt_started_at = started;
+      state.hunt_expires_at = getBossHuntExpiresAtMs(cfg, started);
+      wrote = true;
+    }
+    // v3 Phase 1z.57 — Carouser re-migration. Pre-1z.57 Carouser
+    // hunts stamped `hunt_expires_at = start + 7 days` because
+    // cadence === 'weekly'. Recompute to end-of-Sunday device-local
+    // so an active Carouser hunt from an older build picks up the
+    // correct expiration the next time anything reads it. Idempotent
+    // — only writes when the stored value disagrees with the
+    // canonical value. New Carouser engagements stamp the correct
+    // value via engageBoss → getBossHuntExpiresAtMs and skip this.
+    if (id === 'the_carouser' &&
+        typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0) {
+      const correct = getBossHuntExpiresAtMs(cfg, state.hunt_started_at);
+      if (state.hunt_expires_at !== correct) {
+        state.hunt_expires_at = correct;
+        wrote = true;
+      }
+    }
+    if (wrote) setBossState(id, state);
+    return wrote;
   }
 
   function _bossHuntActive(state, cfg) {
@@ -857,11 +924,13 @@
     const _engageNow = Date.now();
     state.engaged_at = new Date(_engageNow).toISOString();
     // v3 Phase 1z.43 — stamp explicit hunt window. Engagement IS the
-    // start; expiration is start + cadence-derived duration. Clear
-    // any stale last_hunt_outcome from a prior expired/defeated run
-    // so the new hunt renders cleanly.
+    // start; expiration derives from cfg via the central helper.
+    // v3 Phase 1z.57 — getBossHuntExpiresAtMs routes Carouser through
+    // end-of-Sunday device-local; all other bosses get start + duration.
+    // Clear any stale last_hunt_outcome from a prior expired/defeated
+    // run so the new hunt renders cleanly.
     state.hunt_started_at = _engageNow;
-    state.hunt_expires_at = _engageNow + getBossHuntDurationMs(cfg);
+    state.hunt_expires_at = getBossHuntExpiresAtMs(cfg, _engageNow);
     state.last_hunt_outcome = null;
     setBossState(bossId, state);
     try {

@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w60` |
-| `app.js?v=` | `409` |
+| `APP_BUILD_TAG` | `2.2.1-w61` |
+| `app.js?v=` | `410` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `295` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.295` |
+| `sw.js CACHE_VERSION` | `v5.296` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,61 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Carouser end-of-Sunday expiration (v3 Phase 1z.57)
+
+**Special-case for The Carouser.** The boss is `cadence: 'weekly'` with a kill condition that requires Friday AND Saturday nights (sleep 7h + bedtime before midnight on both). The generic 7-day hunt timer made no sense for this boss — a Friday engagement should expire Sunday night, not the following Friday.
+
+**Rule shipped:** The Carouser hunt expires at **Sunday 23:59:59.999 device-local** for the weekend containing the engagement timestamp. Friday / Saturday / Sunday engages all map to THIS Sunday end-of-day. Monday–Thursday engages map to the UPCOMING Sunday end-of-day (per spec; no weekday engagement lock).
+
+**Implementation.** One new helper + one new utility + three stamp-site updates:
+
+1. `_endOfSundayLocalMs(refMs)` — pure date math. JS `Date.getDay()` (0=Sun..6=Sat) drives `daysUntilSun = (7 - dow) % 7`, then `setDate(+daysUntilSun)` + `setHours(23, 59, 59, 999)`.
+2. `getBossHuntExpiresAtMs(cfg, startedAtMs)` — high-level expiration helper. Routes Carouser through `_endOfSundayLocalMs`; everything else returns `startedAtMs + getBossHuntDurationMs(cfg)`.
+3. Three stamp sites now go through the helper:
+   - `engageBoss` at line ~933 (was `_engageNow + getBossHuntDurationMs(cfg)`)
+   - `_bossHuntExpiresMs` default-derivation path (was the same)
+   - `_migrateBossHuntFields` (was the same)
+
+**Verified date math** (anchored on May 2026 calendar):
+| Engagement | Day | Expires (Sunday end-of-day) | Window |
+|---|---|---|---|
+| Fri 6pm | 2026-05-15 | Sun 2026-05-17 11:59 PM | ~2.3 days |
+| Sat 10am | 2026-05-16 | Sun 2026-05-17 11:59 PM | ~1.6 days |
+| Sun 9am | 2026-05-17 | Sun 2026-05-17 11:59 PM (same day) | ~15h |
+| Sun 10:30pm | 2026-05-17 | Sun 2026-05-17 11:59 PM | ~1.5h |
+| Mon 7am | 2026-05-18 | Sun 2026-05-24 11:59 PM | ~6.7 days |
+| Thu 23:59 | 2026-05-21 | Sun 2026-05-24 11:59 PM | ~3 days |
+
+Non-Carouser sanity: daily still 1d, triweekly still 3d, any other-weekly still 7d. Unchanged.
+
+**Migration safety for active Carouser hunts on legacy 1z.43 builds.** Pre-1z.57 Carouser engages stamped `hunt_expires_at = start + 7d`. The updated `_migrateBossHuntFields` adds an idempotent Carouser-only re-write block: on any access to the boss (renderHabits cycle, visibilitychange, boss-detail open), the function checks if `state.hunt_expires_at !== getBossHuntExpiresAtMs(cfg, state.hunt_started_at)`. If so, it rewrites to the correct end-of-Sunday timestamp and persists. Idempotent — only writes when the stored value disagrees. Once corrected, subsequent calls are no-ops.
+
+If the corrected Sunday-end is already in the past at migration time, the normal `resolveBossHuntsAcrossWindow` resolution runs on the next cycle: if Health data inside the window qualifies → defeat; otherwise → 1z.56 HUNT FAILED modal.
+
+**Timer display.** Driven by the existing `_formatHuntRemaining` (1z.55):
+- Carouser engaged Friday: shows `2d` → ... → `23h` (Saturday morning) → ... → `1h` → `59m` → `<1m` → `Expired`
+- Carouser engaged Saturday: shows `1d` → ... → `23h` → ... → `59m` → `<1m`
+- Carouser engaged Sunday morning: shows `15h` (already under 48h) → counts down
+- Carouser never shows `7d` again
+
+**Evaluation window untouched.** The existing weekend-scoped Carouser evaluator (`evaluateCarouserForNight` / Fri+Sat night requirement, `dayOfWeekScoped: true` in cfg) continues to drive defeats. The 1z.43 `resolveBossHuntsAcrossWindow` skips Carouser for active-resolution (`(Carouser is handled by its existing weekend-scoped evaluator)` per code comment) but does enforce expiration via the new end-of-Sunday boundary.
+
+**Files changed (frontend only, 4):** `app.js` (one new util + one new helper + 3 site updates + 1 migration block + build tag), `index.html` (app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. **No `styles.css` change.** No backend, no Duels, no sims, no Codemagic.
+
+**Verified.** `node --check app.js` OK. `npm run test:e2e` → **7/7 green (~38s)**. Date math validated across all 6 engagement-day scenarios.
+
+Bumps: `app.js?v=410`, `sw.js v5.296`, `APP_BUILD_TAG '2.2.1-w61'`. `APP_VERSION` unchanged.
+
+**Manual QA next iOS build:**
+1. Engage Carouser on a Friday → detail shows `HUNT ENDS IN 2d` (or `47h` if Friday afternoon).
+2. Engage Carouser on a Saturday → `HUNT ENDS IN 1d` (or `23h` after Saturday midnight).
+3. Engage Carouser on a Sunday morning → `HUNT ENDS IN 15h` (or whatever remains until 11:59:59 PM).
+4. Engage Carouser on a Monday → `HUNT ENDS IN 6d` (then counts down day by day, switches to hours at 48h).
+5. **Never see `HUNT ENDS IN 7d` for Carouser.**
+6. If legacy active Carouser hunt had a 7-day stamp pre-1z.57: opening boss detail or backgrounding/foregrounding the app silently rewrites it to the correct end-of-Sunday. If that Sunday already passed, the 1z.56 failure modal fires.
+7. Other weekly bosses (none currently shipped beyond Carouser, but if added later) → still get 7d.
+8. Daily / triweekly bosses → unchanged.
 
 ### Boss hunt failure screen (v3 Phase 1z.56)
 
@@ -2888,7 +2943,7 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=295`, `app.js?v=409`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.295`, `APP_BUILD_TAG = '2.2.1-w60'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=295`, `app.js?v=410`, `auth.js?v=16`, `simulated-leaderboard.js?v=6`, `sw.js v5.296`, `APP_BUILD_TAG = '2.2.1-w61'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
 
 ### 100K Step Club roster tab (v3 Phase 1z.52)
 
