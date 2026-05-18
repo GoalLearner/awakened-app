@@ -14227,6 +14227,15 @@ body.bfs-locked { overflow: hidden; }
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
 }
 .bfs-engage-btn--insufficient:hover { box-shadow: 0 0 16px rgba(239, 68, 68, 0.35); }
+/* v3 Phase 1z.58 — Carouser engage button outside Friday. Disabled
+   state; muted purple ring instead of the broke-state red ring. */
+.bfs-engage-btn--locked {
+  opacity: 0.55;
+  filter: grayscale(0.55);
+  cursor: not-allowed;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.18);
+}
+.bfs-engage-btn--locked:hover { box-shadow: 0 0 12px rgba(139, 92, 246, 0.18); }
 .bfs-engage-blurb {
   margin: 0;
   font-size: 0.82rem;
@@ -16778,6 +16787,14 @@ body.reveal-locked { overflow: hidden; }
 /* Hunting view — boss pill is purple-accented; idle = no engaged bosses */
 .status-pill--boss {
   border-color: rgba(139, 92, 246, 0.45);
+}
+/* v3 Phase 1z.58 — boss pills are tappable when engaged (data-boss-id
+   set by the renderer). Cursor + focus-ring match the duel pill. */
+.status-pill--boss[data-boss-id] { cursor: pointer; }
+.status-pill--boss[data-boss-id]:hover { filter: brightness(1.1); }
+.status-pill--boss[data-boss-id]:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
 }
 .status-pill--idle {
   border-color: rgba(255, 255, 255, 0.08);

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w61';
+  const APP_BUILD_TAG = '2.2.1-w62';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -467,6 +467,27 @@
     d.setDate(d.getDate() + daysUntilSun);
     d.setHours(23, 59, 59, 999);
     return d.getTime();
+  }
+
+  // v3 Phase 1z.58 — Carouser engagement is restricted to Friday
+  // (device-local). The 1z.57 end-of-Sunday timer already keeps an
+  // active hunt alive through Saturday + Sunday, but a NEW engage
+  // tap must only succeed when getDay() === 5. Centralised here so
+  // the engageBoss guard + the detail-screen CTA + HUNT AGAIN flow
+  // all share one source of truth.
+  function isCarouserEngageDay(date) {
+    const d = (date instanceof Date) ? date : new Date();
+    return d.getDay() === 5;
+  }
+  // Generic engage-now gate. Returns { ok, reason } so callers can
+  // either toast the reason or render read-only CTA copy. Today only
+  // Carouser has a date-restricted engage window, but the shape is
+  // open for future weekday-scoped bosses.
+  function canEngageBossNow(bossId, cfg, now) {
+    if (bossId === 'the_carouser' && !isCarouserEngageDay(now)) {
+      return { ok: false, reason: 'The Carouser opens Friday.' };
+    }
+    return { ok: true, reason: null };
   }
 
   // v3 Phase 1z.57 — high-level expiration helper. Routes Carouser
@@ -886,6 +907,18 @@
     if (!cfg) return false;
     const state = getBossState(bossId);
     if (state.engaged === true) return true; // already engaged, no-op
+    // v3 Phase 1z.58 — date-scoped engage gate (Carouser is Friday-only).
+    // An already-engaged hunt bypasses this entirely (returned above),
+    // so a Friday engagement that crosses into Sat/Sun is unaffected.
+    {
+      const gate = canEngageBossNow(bossId, cfg, new Date());
+      if (!gate.ok) {
+        try {
+          if (typeof showHabitToast === 'function') showHabitToast(gate.reason);
+        } catch (_) {}
+        return false;
+      }
+    }
     // Defense-in-depth: preview-mode bosses (rank not yet unlocked)
     // can be viewed but not engaged. The detail modal already swaps
     // ENGAGE BOSS for a static label in this state, but a stray call
@@ -12915,12 +12948,14 @@
           // Boss portraits map by id — file convention is id-with-hyphens.
           const iconSrc = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
           pills.push({
-            kind:  'boss',
-            key:   id,
-            icon:  iconSrc,
-            name:  name,
-            sub:   streak + '/' + target,
-            hot:   streak > 0,
+            kind:    'boss',
+            key:     id,
+            bossId:  id,
+            fullName: cfg.name || id,
+            icon:    iconSrc,
+            name:    name,
+            sub:     streak + '/' + target,
+            hot:     streak > 0,
           });
         });
       }
@@ -13070,9 +13105,13 @@
       const cls = isDuel
         ? 'status-pill status-pill--duel status-pill--active'
         : 'status-pill status-pill--boss' + (p.hot ? ' status-pill--active' : '');
+      // v3 Phase 1z.58 — boss pills are tappable; open the boss detail
+      // full-screen via the delegated handler (data-pill-kind="boss").
       const attrs = isDuel
         ? ' role="button" tabindex="0" data-pill-kind="duel"'
-        : '';
+        : (p.bossId
+            ? ' role="button" tabindex="0" data-pill-kind="boss" data-boss-id="' + esc(p.bossId) + '" aria-label="Open ' + esc(p.fullName || p.name) + ' hunt details"'
+            : '');
       const sub = p.sub
         ? ' <span class="status-pill-num">' + esc(p.sub) + '</span>'
         : '';
@@ -13115,11 +13154,21 @@
     const reopenResult = () => {
       try { if (typeof openBossResultFromPending === 'function') openBossResultFromPending(); } catch (_) {}
     };
+    // v3 Phase 1z.58 — boss pills are tappable too; route to the
+    // boss detail full-screen via openBossFullScreen(bossId).
+    const openBossPill = (el) => {
+      try {
+        const id = el && el.getAttribute && el.getAttribute('data-boss-id');
+        if (id && typeof openBossFullScreen === 'function') openBossFullScreen(id);
+      } catch (_) {}
+    };
     row.addEventListener('click', (e) => {
       // v3 Phase 1z.7 — result pill takes precedence; tapping it
       // re-opens the Boss Defeated overlay populated from pending.
       const resultPill = e.target.closest && e.target.closest('.status-pill--result');
       if (resultPill) { reopenResult(); return; }
+      const bossPill = e.target.closest && e.target.closest('.status-pill--boss[data-boss-id]');
+      if (bossPill) { openBossPill(bossPill); return; }
       const pill = e.target.closest && e.target.closest('.status-pill--duel');
       if (pill) open();
     });
@@ -13127,6 +13176,8 @@
       if (e.key !== 'Enter' && e.key !== ' ') return;
       const resultPill = e.target.closest && e.target.closest('.status-pill--result');
       if (resultPill) { e.preventDefault(); reopenResult(); return; }
+      const bossPill = e.target.closest && e.target.closest('.status-pill--boss[data-boss-id]');
+      if (bossPill) { e.preventDefault(); openBossPill(bossPill); return; }
       const pill = e.target.closest && e.target.closest('.status-pill--duel');
       if (pill) { e.preventDefault(); open(); }
     });
@@ -19009,6 +19060,27 @@
           } else {
             blurb.textContent = "This boss only counts progress while you're actively hunting it. You can hunt up to 3 bosses at once.";
           }
+        }
+        // v3 Phase 1z.58 — Carouser is Friday-only. When the engage CTA
+        // is rendered outside Friday, disable the button and swap copy
+        // to "AVAILABLE FRIDAY" so the gate is self-evident rather than
+        // silently rejected by the toast on tap. Engage button remains
+        // disabled to prevent accidental taps; the engageBoss guard is
+        // still the source of truth (defense in depth).
+        const engageGate = canEngageBossNow(id, cfg, new Date());
+        if (engageBtn) {
+          engageBtn.classList.toggle('bfs-engage-btn--locked', !engageGate.ok);
+          if (!engageGate.ok) {
+            engageBtn.disabled = true;
+            engageBtn.setAttribute('aria-disabled', 'true');
+            engageBtn.textContent = 'AVAILABLE FRIDAY';
+          } else {
+            engageBtn.disabled = false;
+            engageBtn.removeAttribute('aria-disabled');
+          }
+        }
+        if (blurb && !engageGate.ok) {
+          blurb.textContent = 'The Carouser only opens on Fridays. Return Friday to begin the hunt — it stays active through Sunday night.';
         }
       }
     }

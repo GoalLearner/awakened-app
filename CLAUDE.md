@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w61` |
-| `app.js?v=` | `410` |
+| `APP_BUILD_TAG` | `2.2.1-w62` |
+| `app.js?v=` | `411` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `295` |
+| `styles.css?v=` | `296` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.296` |
+| `sw.js CACHE_VERSION` | `v5.297` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,28 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Tappable Hunting pills + Carouser Friday-only engage (v3 Phase 1z.58)
+
+**Two frontend-only boss UX rules.** Built on top of the 1z.57 timer; no backend / Duels touched.
+
+**A. Active boss pills in the dashboard Hunting row are tappable.** `_buildHuntingPills` now carries `bossId` + `fullName` in each entry. The renderer in `updateStatusPills` emits `data-pill-kind="boss"` + `data-boss-id="<id>"` + `role="button"` + `tabindex="0"` + `aria-label="Open <Boss Name> hunt details"` on each engaged-boss pill. The delegated click/keydown handler in `_setupHeaderPillDuelClick` gets a new `openBossPill(el)` branch that calls `openBossFullScreen(el.dataset.bossId)`. The duel pill and the result pill keep their existing behavior. CSS: `.status-pill--boss[data-boss-id]` gains `cursor: pointer` + hover brightness + gold focus-ring (matches the duel pill's tappable affordance).
+
+**B. Carouser engagement is Friday-only.** New helpers right after `_endOfSundayLocalMs`:
+
+- `isCarouserEngageDay(date = new Date())` — pure: `date.getDay() === 5`.
+- `canEngageBossNow(bossId, cfg, now)` — generic gate, returns `{ ok, reason }`. Today only Carouser has a date restriction; shape is open for future weekday-scoped bosses.
+
+**Engage path (defense in depth).** `engageBoss(bossId)` calls `canEngageBossNow` first thing after the already-engaged early-return. Outside Friday → toast `"The Carouser opens Friday."` and `return false`. The already-engaged case is bypassed entirely (returned earlier), so a Friday engagement that crosses into Sat/Sun is unaffected — the 1z.57 end-of-Sunday timer still keeps the hunt alive through Sunday night.
+
+**Detail screen CTA.** In the `engageCta` branch of `openBossFullScreen`, after cost/balance setup, `canEngageBossNow` is consulted. When `!ok`:
+- `engageBtn.disabled = true`, `aria-disabled="true"`, text → `"AVAILABLE FRIDAY"`.
+- `.bfs-engage-btn--locked` modifier (new CSS, muted purple ring, grayscale 0.55, opacity 0.55, cursor: not-allowed).
+- Blurb copy → `"The Carouser only opens on Fridays. Return Friday to begin the hunt — it stays active through Sunday night."`
+
+HUNT AGAIN flow also runs through this same `engageCta` branch (when `kill_count > 0` AND not engaged), so the Friday gate covers post-defeat re-engagement too.
+
+**Migration safety.** Active Carouser hunts engaged on a Friday before 1z.58 ship continue normally — they're already engaged, so the new gate doesn't touch them. The 1z.57 end-of-Sunday expiration is intact.
 
 ### Carouser end-of-Sunday expiration (v3 Phase 1z.57)
 
