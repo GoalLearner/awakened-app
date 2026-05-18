@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w55';
+  const APP_BUILD_TAG = '2.2.1-w56';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11145,8 +11145,17 @@
         '<span class="drag-dot"></span><span class="drag-dot"></span>' +
         '<span class="drag-dot"></span><span class="drag-dot"></span>' +
       '</div>' +
-      // More button — preserved exact attribute for context menu
-      '<button class="habit-more-btn" data-more aria-label="Options">' +
+      // v3 Phase 1z.50 — the manage button is now ALWAYS visible on
+      // every habit card (was previously CSS-hidden, only shown
+      // during drag-reorder which is disabled for 2.2.1). Sole
+      // habit-management affordance: tap to open the context menu
+      // (Edit Habit / Add Note / Schedule / Delete). aria-label
+      // updated from "Options" to "Manage habit" so VoiceOver
+      // announces intent clearly. Click handler at line 11169 below
+      // calls stopPropagation + showCtxMenu(habit.id, li) -- tapping
+      // does NOT toggle completion or interact with the (disabled)
+      // drag path.
+      '<button class="habit-more-btn" data-more aria-label="Manage habit">' +
         (habitNotes[habit.id] ? '📝' : '···') +
       '</button>';
 

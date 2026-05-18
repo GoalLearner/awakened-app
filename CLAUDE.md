@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w55` |
-| `app.js?v=` | `404` |
+| `APP_BUILD_TAG` | `2.2.1-w56` |
+| `app.js?v=` | `405` |
 | `auth.js?v=` | `15` |
-| `styles.css?v=` | `292` |
+| `styles.css?v=` | `293` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.290` |
+| `sw.js CACHE_VERSION` | `v5.291` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,41 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=292`, `app.js?v=404`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.290`, `APP_BUILD_TAG = '2.2.1-w55'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=293`, `app.js?v=405`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.291`, `APP_BUILD_TAG = '2.2.1-w56'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Habit-card manage button is now visible (v3 Phase 1z.50)
+
+**Tester report.** "No obvious edit button anymore on habit cards. Hard to edit a habit, delete a custom habit, add/change a schedule, change a goal."
+
+**Diagnosis.** The 3-dot `[data-more]` button was already rendered on every habit card in `buildItem` (line 11149) and already wired (line 11169) to open the existing context menu (`Edit Habit` / `Add Note` / `Schedule` / `Delete`) via `showCtxMenu(habit.id, li)` with `stopPropagation` so it doesn't toggle completion. **The button was just CSS-hidden** — `styles.css` line 18703 had `display: none` with the comment *"shown on long-press / reorder; preserved attribute"*. Since long-press / drag-reorder is intentionally disabled for 2.2.1 (`ENABLE_HABIT_DRAG_REORDER = false`), the button was permanently invisible.
+
+**Change shipped.**
+
+1. **Unhid `.habit-more-btn`** and restyled it as a discoverable circular dark pill (28×28 glyph, ~40×40 effective tap target via transparent border padding), positioned bottom-right corner of each card. Reuses the same iOS hit-testing hygiene as the souls X (`touch-action: manipulation`, `-webkit-tap-highlight-color`, explicit `pointer-events: auto`).
+2. **Hid the `.drag-handle` 6-dot affordance.** Drag-reorder is disabled; those dots looked like an interactive control but did nothing when tapped. Element stays in the DOM (markup unchanged) so re-enabling drag in a future release won't need any HTML change. Just flipped `display: none` on the CSS rule.
+3. **aria-label updated** from `"Options"` to `"Manage habit"` for clearer VoiceOver intent.
+
+**Behavior preserved (no code change needed):**
+- Tap opens the existing context menu — Edit Habit / Add Note / Schedule / Delete. Schedule editing reachable via `Schedule` row → opens the existing schedule picker sheet.
+- Custom habits also get the inline Delete button inside the Edit Habit modal (from 1z.49). Both Delete paths route through the same `deleteHabit(id)` helper.
+- Canonical habits' Delete row stays visible in the context menu (canonical habits ARE technically deletable; the 1z.49 modal Delete was scoped to custom-only as a safety guard for the Edit-modal surface specifically).
+- `stopPropagation` on the manage-button click handler prevents completion toggle.
+- Long-press code path remains no-op'd.
+
+**Files changed (frontend only, 5):** `app.js` (aria-label + comment; the click handler at line 11169 was already correct), `index.html` (version bumps for app.js + styles.css), `styles.css` (unhide manage button + hide drag-handle + restyle), `sw.js` (cache bump), `CLAUDE.md`. No backend, no Duels, no sims, no Codemagic.
+
+`npm run test:e2e` → **7/7 green (~37s)**. The existing Habits-tab smoke test continues to pass.
+
+Bumps: `app.js?v=405`, `styles.css?v=293`, `sw.js v5.291`, `APP_BUILD_TAG '2.2.1-w56'`. `APP_VERSION` unchanged at `2.2.1`.
+
+**Manual QA next iOS build:**
+1. Open Habits tab. Every habit card has a visible `···` button bottom-right (or 📝 if the habit has a note attached).
+2. Tap `···` on a normal habit → context menu pops up with Edit / Note / Schedule / Delete. Tap Edit → Edit Habit modal opens. Cancel → modal closes, app responsive.
+3. Tap `···` on a custom habit → context menu → Edit → modal opens with the `Delete habit` button visible at the bottom (1z.49).
+4. Tap `···` on a sealed/completed habit → context menu opens, completion ring is NOT toggled.
+5. Tap a normal habit card body (NOT the `···`) → completion still works as before.
+6. Tap `···` → Schedule → schedule picker sheet opens; can change days; Save persists.
+7. Long-press any habit → no drag ghost / pulsating / stuck overlay / freeze (long-press code path still no-op'd).
 
 ### Custom habit Delete affordance + freeze/long-press audit (v3 Phase 1z.49)
 

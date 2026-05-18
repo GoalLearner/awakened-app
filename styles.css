@@ -18687,21 +18687,59 @@ body.reveal-locked { overflow: hidden; }
 /* Drag handle + more button — preserved exact data attributes for
    existing drag/click logic. Positioned over the card surface so
    they remain tappable without disturbing the centered layout. */
+
+/* v3 Phase 1z.50 — drag-handle dots HIDDEN.
+   Habit drag-reorder is disabled for 2.2.1 (ENABLE_HABIT_DRAG_REORDER
+   = false in app.js); the 6-dot affordance looks like an
+   interactive control but does nothing when tapped. Hide it
+   entirely so the manage button below can take this corner. The
+   element stays in the DOM so the drag-reorder feature can be
+   re-enabled later without a markup change. */
 .habit-item.codex .drag-handle {
+  display: none;
+}
+
+/* v3 Phase 1z.50 — manage button (the 3-dot ···) is now ALWAYS
+   visible on every habit card, not just during long-press/reorder
+   (which is disabled anyway). Tester feedback: there was no
+   obvious way to reach Edit Habit / Schedule / Delete from the
+   card. The button opens the existing context menu (Edit Habit /
+   Add Note / Schedule / Delete) — same wiring as before, just
+   discoverable now. Custom habits also get the inline Delete
+   button inside the Edit Habit modal (1z.49). */
+.habit-item.codex .habit-more-btn {
   position: absolute;
   bottom: 4px;
   right: 4px;
   z-index: 3;
+  width: 28px;
+  height: 28px;
+  /* iOS HIG asks for 44x44 tap targets; the visible glyph is 28x28
+     but we pad the hit area outward via a transparent border so
+     the effective touch target is closer to 40x40 without
+     visually enlarging the pill. */
+  padding: 0;
+  border: 6px solid transparent;
+  background-clip: padding-box;
+  background-color: rgba(20, 20, 35, 0.55);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  /* iOS hit-testing hygiene — same set we used on the souls X. */
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.08);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
-.habit-item.codex .habit-more-btn {
-  position: absolute;
-  top: 4px;
-  right: 36px;
-  z-index: 3;
-  width: 22px;
-  height: 22px;
-  display: none; /* shown on long-press / reorder; preserved attribute */
-}
+.habit-item.codex .habit-more-btn:hover  { background-color: rgba(40, 40, 60, 0.8); color: #fff; }
+.habit-item.codex .habit-more-btn:active { transform: scale(0.92); }
 
 /* Schedule pills + No-alcohol challenge badge — keep visible but
    subordinate. Anchor bottom-right corner of card. */
