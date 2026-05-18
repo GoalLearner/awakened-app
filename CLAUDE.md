@@ -165,6 +165,71 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### 🔮 Future anti-cheat / verified stats risk (Phase 1z.53 — DOC ONLY)
+
+**Status:** documented, NOT implemented. No enforcement in 2.2.1. This section exists so we don't forget — and so the next session doesn't accidentally re-discover the gap mid-feature.
+
+#### Current known risk
+
+The backend trusts client-submitted leaderboard values. A user holding a valid JWT can POST any `current_value` up to the sanity ceiling (`METRIC_CAPS.step_total = 200_000`) without ever surfacing a real HealthKit sample. One request earns:
+- a `step_100k_club` row in `user_accolades` (100K Step Club accolade + 100K Club tab membership),
+- Hall of Fame rank #1 in `weekly_step_records` for the current week,
+- top rank on `Steps · This Week` via `leaderboard_snapshots`,
+- a Hall of Fame fallback-union appearance (1z.41 read path) even if the user never resubmits.
+
+No iOS device required, no real step history required, no Apple Health install required. The vulnerable surface is `POST /v1/leaderboard/submit`.
+
+The same client-trust assumption applies to `submit-verified-events` (Duels). Sleep + workout submits inherit the same shape.
+
+#### Why we are NOT fixing it yet (deliberate)
+
+- App is early. Total user base is small; cheaters are not currently visible.
+- Premature enforcement could lock out legitimate users on the HealthKit boundary (high-step marathon days, daylight-saving sleep windows, watch sync gaps).
+- **`@perfood/capacitor-healthkit` does not surface `sourceRevision` / `wasUserEntered` / `bundleIdentifier`** in JS — the underlying HKQuantitySample carries them, but the plugin strips them before returning samples to `app.js`. Real source classification needs either a plugin fork or a Capacitor shim, both of which are days of work.
+- We want more real-world TestFlight data before committing to a specific enforcement shape.
+
+#### Future Tier 1 — Backend-only prestige gating (cheapest first)
+
+Server-side checks only. No client work, no plugin upgrade, no migration:
+- Lower `METRIC_CAPS.step_total` from `200_000` to ~`70_000`. World-class single-day verified step record is ~62k; 70k accommodates outliers, kills the trivial cheat.
+- Refuse to award the 100K Step Club accolade on a user's first-ever submit if that submit alone crosses 100K (requires a prior non-zero `leaderboard_snapshots` row).
+- Flag huge sudden jumps: if `current_value - prev_value > 50_000` AND time-since-last-submit < 6h, write the row but **suppress the prestige writes** (no accolade, no `weekly_step_records` update). Personal XP and habit-checking still flow normally.
+- Block only prestige writes; never block normal app usage. False-flagged users see no UI change.
+
+Scope: ~1 day, ~3 backend tests, no D1 migration.
+
+#### Future Tier 2 — Submit audit log + suspicion scoring
+
+If Tier 1 lands and we want forensics before tightening further:
+- New table `leaderboard_submit_audit (user_id, metric, value, prev_value, delta, dt_seconds, suspicion_score, rejected_reason, ip, ua, created_at)`.
+- Score every submit; persist them all; let high-score submits write `leaderboard_snapshots.current_value` but NOT `user_accolades` / `weekly_step_records`.
+- Build a small admin query path: "show me last 7 days of submits with suspicion_score >= N." No user-facing surface — it's a forensic tool.
+
+Scope: ~2-3 days, one migration, one read endpoint.
+
+#### Future Tier 3 — HealthKit source metadata (real source filtering)
+
+The actual fix. Requires the most work:
+- Fork or extend `@perfood/capacitor-healthkit` to surface `sourceRevision.source.bundleIdentifier`, `device.name`, and `HKMetadataKeyWasUserEntered` on every sample.
+- Frontend classifies each submit's value into `source_type: 'apple_watch' | 'iphone_motion' | 'manual' | 'third_party' | 'unknown'` and passes it in the submit body.
+- Backend stores `source_type` (new column on `leaderboard_snapshots` + `weekly_step_records`).
+- Prestige writes (accolade, Hall of Fame, 100K Club) require `source_type IN ('apple_watch', 'iphone_motion')`.
+- Manual entries still drive personal XP + habit-checking. Zero behavior change for legitimate users; cheaters via Apple Health manual entry stop earning prestige.
+
+Scope: multi-week. Plugin work + iOS bridge + frontend tagging + backend schema. Land Tier 1 + Tier 2 first; this is the structural fix once we have the data to justify it.
+
+#### Product principle
+
+- **Private / local progress can stay forgiving.** XP, ranks, habit streaks, stats, the user's own dashboard — all of these are personal and should be permissive on the HealthKit boundary.
+- **Public / prestige rewards should eventually be stricter.** Leaderboards, Hall of Fame, 100K Club, future tournaments — anything visible to other users earns a trust gradient. Tier 1 → Tier 2 → Tier 3 layers progressively tighten that gate without affecting the personal surfaces.
+
+#### Explicit current decision
+
+- **No anti-cheat enforcement in 2.2.1.**
+- **No behavior changes today.**
+- Revisit only if (a) the user base grows past ~hundreds of active users, (b) cheating becomes visible (e.g. a suspiciously high record appears on the HoF), or (c) a Tier 1 ship makes sense alongside another planned backend pass.
+- When we DO ship Tier 1, the user-facing copy on the leaderboard sheet should add a single line: *"Verified by Apple Health. Manual entries don't count toward prestige rewards."* — don't telegraph specifics about caps or velocity checks to potential cheaters.
+
 ---
 
 ## Project at a glance
