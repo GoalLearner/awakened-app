@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w56` |
-| `app.js?v=` | `405` |
+| `APP_BUILD_TAG` | `2.2.1-w57` |
+| `app.js?v=` | `406` |
 | `auth.js?v=` | `15` |
 | `styles.css?v=` | `293` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.291` |
+| `sw.js CACHE_VERSION` | `v5.292` |
 | `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
@@ -2673,7 +2673,29 @@ Every meaningful change must:
 
 **v2.2.0 auto-update SW means web users no longer need a manual cache-clear after deploys.** The new `registerSW()` in `app.js` calls `reg.update()` on every page load + tab focus, then silently `SKIP_WAITING`s the new SW. One controlled reload per deploy. See "Service worker auto-update" section. Bumping `CACHE_VERSION` is still required (each new SW only installs because its bytes differ — the version constant is the cheapest way to force that).
 
-The current state is `styles.css?v=293`, `app.js?v=405`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.291`, `APP_BUILD_TAG = '2.2.1-w56'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+The current state is `styles.css?v=293`, `app.js?v=406`, `auth.js?v=15`, `simulated-leaderboard.js?v=6`, `sw.js v5.292`, `APP_BUILD_TAG = '2.2.1-w57'`, `APP_VERSION = '2.2.1'` (in BOTH `app.js` and `codemagic.yaml`), `HEALTHKIT_AUTH_VERSION = 2`. (Re-check from the files; they drift quickly.)
+
+### Habit-card manage button — one consistent glyph (v3 Phase 1z.51)
+
+**Tester feedback.** "Some cards show the new visible `···` manage button and some cards show the little notepad/manage button. From the user point of view, it feels like there are two different edit buttons."
+
+**Diagnosis.** Same element, different glyph. Line 11159 in `buildItem` previously used `(habitNotes[habit.id] ? '📝' : '···')` — a single `.habit-more-btn` swapping its label based on whether the habit has a note attached. Architecturally one button; visually two affordances. The context menu was updated (1z-era) so its "View Note" item is always present regardless of note state — the button glyph no longer needs to communicate note presence to make the feature discoverable.
+
+**Fix.** One line. The manage button now always renders `···`. Note state is only surfaced inside the View Note sheet (which has both view and edit affordances built in).
+
+**Files changed (frontend only, 4):** `app.js` (one line glyph + a comment block; build tag), `index.html` (app.js version bump), `sw.js` (cache bump), `CLAUDE.md`. **No `styles.css` change.** No backend, no Duels, no sims, no Codemagic.
+
+**Verified.** `node --check app.js` OK. `npm run test:e2e` → **7/7 green (~38s)** — no regressions.
+
+Bumps: `app.js?v=406`, `sw.js v5.292`, `APP_BUILD_TAG '2.2.1-w57'`. `APP_VERSION` unchanged at `2.2.1`. `styles.css` unchanged.
+
+**Acceptance check:**
+- ✅ No habit card shows both a `···` manage button and a separate note/edit button.
+- ✅ All habit cards show the same single manage control (the `···` button bottom-right, from 1z.50).
+- ✅ Tapping the manage control opens the context menu (Edit Habit / View Note / Schedule / Delete).
+- ✅ Tapping the habit card body still toggles completion (no JS change).
+- ✅ Cards with notes are still distinguishable inside the View Note sheet — no second action button at the card level.
+- ✅ Playwright smoke remains green.
 
 ### Habit-card manage button is now visible (v3 Phase 1z.50)
 

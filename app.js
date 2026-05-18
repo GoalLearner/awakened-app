@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w56';
+  const APP_BUILD_TAG = '2.2.1-w57';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11149,15 +11149,22 @@
       // every habit card (was previously CSS-hidden, only shown
       // during drag-reorder which is disabled for 2.2.1). Sole
       // habit-management affordance: tap to open the context menu
-      // (Edit Habit / Add Note / Schedule / Delete). aria-label
-      // updated from "Options" to "Manage habit" so VoiceOver
-      // announces intent clearly. Click handler at line 11169 below
-      // calls stopPropagation + showCtxMenu(habit.id, li) -- tapping
-      // does NOT toggle completion or interact with the (disabled)
-      // drag path.
-      '<button class="habit-more-btn" data-more aria-label="Manage habit">' +
-        (habitNotes[habit.id] ? '📝' : '···') +
-      '</button>';
+      // (Edit Habit / View Note / Schedule / Delete). aria-label
+      // "Manage habit" for clear VoiceOver intent. Click handler at
+      // line 11169 below calls stopPropagation + showCtxMenu so
+      // tapping does NOT toggle completion or interact with the
+      // (disabled) drag path.
+      //
+      // v3 Phase 1z.51 — glyph is ALWAYS '···'. The previous build
+      // swapped to '📝' when the habit had a note attached, which
+      // (per tester feedback) read as two different action buttons
+      // even though it was the same element. Note state is now
+      // communicated only inside the context menu (`View Note`
+      // item is always present and opens the habit detail sheet
+      // which shows the note if one exists, or an editor to add
+      // one if not). Single consistent affordance across every
+      // habit card.
+      '<button class="habit-more-btn" data-more aria-label="Manage habit">···</button>';
 
     li.addEventListener('pointerdown', e => { if (!e.target.closest('[data-drag]') && !e.target.closest('[data-more]')) li.classList.add('pressing'); });
     li.addEventListener('pointerup',    () => li.classList.remove('pressing'));
