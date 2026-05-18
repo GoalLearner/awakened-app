@@ -165,6 +165,22 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### 📒 Souls Ledger pre-1z.44 history gap (Phase 1z.54 — known artifact)
+
+**Status:** documented as a known artifact, NOT a bug. No code change.
+
+The Souls Ledger (`hb_souls_ledger`, Phase 1z.44) starts empty on every device and only records souls events that fire AFTER the user updates to the 1z.44 (or later) build. Souls earned/spent BEFORE the update — including daily login bonuses, boss kills, engagement costs — are not reconstructable from the running balance.
+
+**Specifically for daily login:** `tryGrantDailyLoginBonus()` (line 1846) is gated by `_souls.lastDailyBonusDate === today`. If a user claimed today's bonus on a pre-1z.44 build and then upgraded, the same-day re-entry into the function returns `false` BEFORE calling `earnSouls`, so the ledger never sees today's grant. Tomorrow's grant fires cleanly via the standard path: `tryGrantDailyLoginBonus → earnSouls(15, 'daily_login') → persistSouls → recordSoulsTransaction(15, 'daily_login') → hb_souls_ledger entry { type: 'daily_login', label: 'Daily login', delta: +15, balance_after, ts }`.
+
+**Verified single-source-of-truth audit** (grep confirmed):
+- `_souls.balance += ...` exists ONLY inside `earnSouls`.
+- `_souls.balance -= ...` exists ONLY inside `spendSouls`.
+- `_souls.balance = ...` exists ONLY inside `loadSouls`'s first-install grant.
+- Every `earnSouls` and `spendSouls` call routes through `recordSoulsTransaction` via `try { ... } catch (_) {}` so a transient localStorage quota failure never breaks the balance write.
+
+All future souls events (daily login, boss kill, boss engage) DO create ledger entries. The gap is strictly historical and matches the explicit "do not reconstruct old history" constraint for this feature.
+
 ### 🔮 Future anti-cheat / verified stats risk (Phase 1z.53 — DOC ONLY)
 
 **Status:** documented, NOT implemented. No enforcement in 2.2.1. This section exists so we don't forget — and so the next session doesn't accidentally re-discover the gap mid-feature.
