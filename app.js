@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w65';
+  const APP_BUILD_TAG = '2.2.1-w66';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -247,15 +247,22 @@
   //   2 — v1.1.5: steps + sleep + workouts (via 'activity' alias)
   //   3 — v3 Phase 1z.61: + flights climbed (via 'stairs' alias).
   //                       Foundation for a future C-rank dungeon boss.
-  //                       No backend / leaderboard / Duels surface yet.
+  //                       Verified on-device in TestFlight: iOS sheet
+  //                       showed Flights Climbed + Sleep + Steps +
+  //                       Workouts; user enabled all four; no crash.
+  //   4 — v3 Phase 1z.62: + active energy burned (via 'calories' alias).
+  //                       Foundation for future calorie-based boss /
+  //                       quest verification. No backend / leaderboard
+  //                       / Duels surface yet.
   //
   // When you bump, also update HEALTHKIT_AUTH_FLAGS_TO_CLEAR below
   // with any new per-category flags so the migration knows what to
   // wipe.
-  const HEALTHKIT_AUTH_VERSION = 3;
+  const HEALTHKIT_AUTH_VERSION = 4;
   const HEALTHKIT_AUTH_FLAGS_TO_CLEAR = [
     'hb_healthkit_sleep_requested',
     'hb_healthkit_flights_requested',
+    'hb_healthkit_energy_requested',
   ];
 
   // ── HealthKit sleep auto-verification ────────────────────
@@ -24511,10 +24518,13 @@
     const WORKOUT_CACHE_TTL_MS = 5 * 60 * 1000;
     // v3 Phase 1z.61 — flights climbed cache (today-only, mirrors step).
     const FLIGHTS_CACHE_TTL_MS = 5 * 60 * 1000;
+    // v3 Phase 1z.62 — active energy (kcal) cache (today-only).
+    const ACTIVE_ENERGY_CACHE_TTL_MS = 5 * 60 * 1000;
     let stepCache    = null; // { steps, fetchedAt }
     let sleepCache   = null; // { totalAsleepHours, earliestSleepStart, samples, fetchedAt }
     let workoutCache = null; // { count, totalMinutes, workouts, fetchedAt }
     let flightsCache = null; // { flights, fetchedAt }
+    let activeEnergyCache = null; // { kcal, fetchedAt }
 
     function isCacheFresh() {
       return stepCache && (Date.now() - stepCache.fetchedAt) < STEP_CACHE_TTL_MS;
@@ -24528,6 +24538,9 @@
     function isFlightsCacheFresh() {
       return flightsCache && (Date.now() - flightsCache.fetchedAt) < FLIGHTS_CACHE_TTL_MS;
     }
+    function isActiveEnergyCacheFresh() {
+      return activeEnergyCache && (Date.now() - activeEnergyCache.fetchedAt) < ACTIVE_ENERGY_CACHE_TTL_MS;
+    }
 
     function clearCache() {
       stepCache = null;
@@ -24540,6 +24553,9 @@
     }
     function clearFlightsCache() {
       flightsCache = null;
+    }
+    function clearActiveEnergyCache() {
+      activeEnergyCache = null;
     }
 
     // ── Permission status (locally tracked) ──────────────
@@ -24594,7 +24610,7 @@
         // Existing v1.1.5 users get prompted via the auth-version
         // upgrade path (HEALTHKIT_AUTH_VERSION bumped 2 → 3).
         await p.requestAuthorization({
-          read: ['steps', 'activity', 'stairs'],
+          read: ['steps', 'activity', 'stairs', 'calories'],
           write: [''],
           all: [''],
         });
@@ -24651,7 +24667,7 @@
         // Existing v1.1.5 users get prompted via the auth-version
         // upgrade path (HEALTHKIT_AUTH_VERSION bumped 2 → 3).
         await p.requestAuthorization({
-          read: ['steps', 'activity', 'stairs'],
+          read: ['steps', 'activity', 'stairs', 'calories'],
           write: [''],
           all: [''],
         });
@@ -24688,7 +24704,7 @@
       if (!p) return 'unavailable';
       try {
         await p.requestAuthorization({
-          read: ['steps', 'activity', 'stairs'],
+          read: ['steps', 'activity', 'stairs', 'calories'],
           write: [''],
           all: [''],
         });
@@ -24697,6 +24713,37 @@
         return 'requested';
       } catch (e) {
         console.warn('[Health] flights permission request failed', e);
+        return 'failed';
+      }
+    }
+
+    // ── Upgrade-path active-energy authorization ─────────
+    // v3 Phase 1z.62. Mirrors requestFlightsPermissionIfNeeded but for
+    // the new 'calories' alias (covers HKQuantityTypeIdentifier
+    // activeEnergyBurned + basalEnergyBurned in the @perfood plugin's
+    // native bridge). Existing users granted before this auth bump
+    // never saw a sheet for active energy; this re-fires
+    // requestAuthorization on next cold launch so iOS surfaces a
+    // sheet for ONLY the new category. Existing grants stay untouched.
+    //
+    // Flag: hb_healthkit_energy_requested. Cleared by the
+    // HEALTHKIT_AUTH_VERSION 3 → 4 migration.
+    async function requestActiveEnergyPermissionIfNeeded() {
+      if (!isAvailable()) return 'unavailable';
+      if (localStorage.getItem('hb_healthkit_energy_requested') === '1') return 'already-requested';
+      const p = plugin();
+      if (!p) return 'unavailable';
+      try {
+        await p.requestAuthorization({
+          read: ['steps', 'activity', 'stairs', 'calories'],
+          write: [''],
+          all: [''],
+        });
+        try { localStorage.setItem('hb_healthkit_energy_requested', '1'); } catch (_) {}
+        console.log('[Health] active-energy permission request completed (upgrade path)');
+        return 'requested';
+      } catch (e) {
+        console.warn('[Health] active-energy permission request failed', e);
         return 'failed';
       }
     }
@@ -25337,12 +25384,102 @@
       }
     }
 
+    // ── Active energy query (v3 Phase 1z.62) ───────────────
+    // Apple Health "Active Energy Burned" — total movement-derived
+    // calories for a window, in KILOCALORIES (kcal). Plugin contract:
+    // sampleName: 'activeEnergyBurned'. Auth alias 'calories' (covers
+    // active + basal in the @perfood native bridge — the plugin's
+    // 'calories' alias requests BOTH categories, but we only query
+    // active here; basal stays available for future use without a
+    // second permission sheet).
+    //
+    // Unit: kcal. Verified in CapacitorHealthkitPlugin.swift:436-438
+    // — the plugin auto-selects HKUnit.kilocalorie() when the sample's
+    // quantity is compatible with that unit (always true for
+    // activeEnergyBurned). resultData[].value is the kcal number.
+    //
+    // Foundation for future calorie-based boss / quest verification.
+    // No leaderboard / Hall of Fame / Duels surface yet.
+    //
+    // Returns null on:
+    //   - non-native platform
+    //   - missing plugin
+    //   - permission denied / never requested
+    //   - HealthKit query throws
+    //
+    // Never throws.
+    async function getActiveEnergyToday() {
+      if (!isAvailable()) return null;
+      if (isActiveEnergyCacheFresh()) return activeEnergyCache.kcal;
+
+      const p = plugin();
+      if (!p) return null;
+
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+
+      // Device-local start of today. Active energy is wall-clock
+      // activity (the calories I burned today), same convention as
+      // strength workouts and flights climbed.
+      const todayLocal = (typeof getDeviceLocalDate === 'function')
+        ? getDeviceLocalDate()
+        : new Date().toISOString().slice(0, 10);
+      const start = new Date(todayLocal + 'T00:00:00');
+      const end = new Date();
+
+      const total = await _queryActiveEnergyInRange(start.toISOString(), end.toISOString());
+      if (total == null) return null;
+
+      activeEnergyCache = { kcal: total, fetchedAt: Date.now() };
+      console.log('[Health] active energy today:', total, 'kcal');
+      return total;
+    }
+
+    // Range-based generalization — for future boss hunt window
+    // resolvers. Uncached: different windows return different answers.
+    async function getActiveEnergyBetween(startISO, endISO) {
+      if (!isAvailable()) return null;
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+      if (typeof startISO !== 'string' || typeof endISO !== 'string') return null;
+      return _queryActiveEnergyInRange(startISO, endISO);
+    }
+
+    // Internal — actual HealthKit query. Returns kcal total (rounded
+    // integer) or null on any failure. Mirrors _queryStepsInRange /
+    // _queryFlightsInRange: sum resultData[].value, the plugin
+    // already returns kcal for activeEnergyBurned.
+    async function _queryActiveEnergyInRange(startISO, endISO) {
+      const p = plugin();
+      if (!p) return null;
+      try {
+        const result = await p.queryHKitSampleType({
+          sampleName: 'activeEnergyBurned',
+          startDate: startISO,
+          endDate: endISO,
+          limit: 0,
+        });
+        const samples = (result && result.resultData) || [];
+        let total = 0;
+        for (const s of samples) {
+          const v = Number(s && s.value);
+          if (isFinite(v) && v > 0) total += v;
+        }
+        setStatus('granted');
+        return Math.round(total);
+      } catch (e) {
+        console.warn('[Health] active-energy query failed', e);
+        return null;
+      }
+    }
+
     // Public surface
     return {
       isAvailable,
       requestPermissions,
       requestSleepPermissionIfNeeded,
-      requestFlightsPermissionIfNeeded, // v3 Phase 1z.61
+      requestFlightsPermissionIfNeeded,      // v3 Phase 1z.61
+      requestActiveEnergyPermissionIfNeeded, // v3 Phase 1z.62
       getStepsToday,
       getStepsBetween,       // Steps Duel Scoring v1 (v3 Phase 1y)
       getSleepLastNight,
@@ -25351,11 +25488,14 @@
       getStrengthWorkoutsBetween, // Verified Duel Scoring Engine v1 (v3 Phase 1z)
       getFlightsClimbedToday,    // v3 Phase 1z.61
       getFlightsClimbedBetween,  // v3 Phase 1z.61
+      getActiveEnergyToday,      // v3 Phase 1z.62 (kcal)
+      getActiveEnergyBetween,    // v3 Phase 1z.62 (kcal)
       permissionStatus,
       clearCache,            // step cache
       clearSleepCache,       // sleep cache
       clearWorkoutCache,     // workout cache
       clearFlightsCache,     // flights cache (v3 Phase 1z.61)
+      clearActiveEnergyCache,// active energy cache (v3 Phase 1z.62)
     };
   })();
 
@@ -27260,6 +27400,20 @@
           setTimeout(() => {
             try { Health.requestFlightsPermissionIfNeeded(); } catch (_) {}
           }, 3000);
+        }
+      }
+    } catch (_) {}
+    // ── v3 Phase 1z.62 active-energy auth upgrade-path ───────
+    // Same idempotent pattern as flights. Staggered after the flights
+    // upgrade so iOS doesn't stack permission sheets on cold launch.
+    // Cleared by the HEALTHKIT_AUTH_VERSION 3→4 migration; existing
+    // users get the prompt on first cold launch after this ships.
+    try {
+      if (Health.isAvailable() && Health.permissionStatus() === 'granted') {
+        if (localStorage.getItem('hb_healthkit_energy_requested') !== '1') {
+          setTimeout(() => {
+            try { Health.requestActiveEnergyPermissionIfNeeded(); } catch (_) {}
+          }, 4500);
         }
       }
     } catch (_) {}

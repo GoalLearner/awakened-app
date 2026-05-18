@@ -12,13 +12,13 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w65` |
-| `app.js?v=` | `414` |
+| `APP_BUILD_TAG` | `2.2.1-w66` |
+| `app.js?v=` | `415` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.300` |
-| `HEALTHKIT_AUTH_VERSION` | `3` |
+| `sw.js CACHE_VERSION` | `v5.301` |
+| `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
 
@@ -164,6 +164,34 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Active Energy verified stat plumbing (v3 Phase 1z.62)
+
+**TestFlight verification for 1z.61 first.** Installed the 1z.61 IPA on iPhone. iOS Health Access sheet for Awakened correctly displayed **Flights Climbed + Sleep + Steps + Workouts**, with the new Flights Climbed toggle alongside the three existing ones. User enabled all four. No crash. The auth-version upgrade path (HEALTHKIT_AUTH_VERSION 2→3) fired exactly once and surfaced the new category. This validates the `'stairs'` auth alias and `'flightsClimbed'` query sampleName on real-device HealthKit. C-rank dungeon boss content remains pending.
+
+**Now: Active Energy plumbing (Phase 1z.62).** Same shape as 1z.61. Frontend/iOS HealthKit plumbing only — no boss, no leaderboard, no Hall of Fame, no Duels, no backend.
+
+**Plugin support confirmed in `@perfood/capacitor-healthkit ^1.3.2`:**
+- Auth alias `'calories'` → native bridge inserts **both** `HKQuantityTypeIdentifier.activeEnergyBurned` AND `basalEnergyBurned` (Swift line 97-99). Including 'calories' in the read array authorises both; the query helper here only fetches active.
+- Query `sampleName: 'activeEnergyBurned'` (TS defs line 131: `ACTIVE_ENERGY_BURNED = "activeEnergyBurned"`).
+- **Unit: kilocalorie (kcal).** Verified in `CapacitorHealthkitPlugin.swift:436-438` — the plugin auto-selects `HKUnit.kilocalorie()` when the sample's quantity is compatible with that unit (always true for activeEnergyBurned). `resultData[].value` is the kcal number.
+
+**Changes (frontend / iOS only):**
+1. `HEALTHKIT_AUTH_VERSION` bumped `3 → 4`. New flag `hb_healthkit_energy_requested` added to `HEALTHKIT_AUTH_FLAGS_TO_CLEAR`.
+2. `requestPermissions()` read array now `['steps', 'activity', 'stairs', 'calories']` — fresh installs bundle active energy into the first sheet.
+3. The 1z.61 `requestFlightsPermissionIfNeeded()` and the new `requestActiveEnergyPermissionIfNeeded()` both pass the full read array, so iOS dedupes within a single auth call and existing grants stay untouched while the NEW category alone triggers a sheet.
+4. New `Health.requestActiveEnergyPermissionIfNeeded()` idempotent upgrade-path helper. Fires once per cold launch from init (4500ms delay, staggered after the flights upgrade) when status is `'granted'`.
+5. New 5-min `activeEnergyCache` (`{ kcal, fetchedAt }`) + `isActiveEnergyCacheFresh()` + `clearActiveEnergyCache()`.
+6. New public Health surface members:
+   - `Health.getActiveEnergyToday()` — device-local day window (wall-clock activity, matches strength + flights, NOT PT-anchored). Returns integer **kcal** or `null`.
+   - `Health.getActiveEnergyBetween(startISO, endISO)` — uncached range query for the future boss hunt window resolver.
+   - Internal `_queryActiveEnergyInRange` sums `resultData[].value` like `_queryFlightsInRange`.
+
+**Graceful-failure contract preserved.** Never throws. Returns `null` on non-iOS / missing plugin / permission denied / query throws. Web/PWA `isAvailable()` returns false and every helper short-circuits — Playwright smoke unaffected.
+
+**NOT shipped:** no habit type, no dashboard stat card, no leaderboard metric, no Hall of Fame, no METRIC_CAPS entry, no Duels verified-event type. Future calorie-based boss / quest verification will call `Health.getActiveEnergyBetween(hunt_started_at, hunt_expires_at)`.
+
+**Manual QA next TestFlight build:** existing 1z.61 users → next cold launch shows a sheet for ONLY "Active Energy"; fresh installs → single sheet covering steps + sleep + workouts + flights + active energy; denying active energy does not break any existing flow; granting it lets future boss code read kcal via `Health.getActiveEnergyToday()`.
 
 ### Flights Climbed verified stat plumbing (v3 Phase 1z.61)
 
