@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w66';
+  const APP_BUILD_TAG = '2.2.1-w67';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -414,6 +414,35 @@
       cadence:          'daily',
       statDomain:       'VIT',
     },
+    // v3 Phase 1z.63 — first C-rank boss. Powered by the 1z.61
+    // Flights Climbed plumbing (Health.getFlightsClimbedBetween over
+    // the triweekly hunt window). Cumulative — every verified flight
+    // inside [hunt_started_at, hunt_expires_at] counts; reaching
+    // flightThreshold defeats the boss for that hunt. The resolver
+    // also writes state.flight_progress for live "N / 10 flights"
+    // display in the detail screen.
+    //
+    // Drop pool: empty by design for v1 ship (no C-rank items defined
+    // yet). rollBossDrop handles an empty source_boss filter cleanly
+    // — returns null, which announceKillAndDrop renders as the
+    // no-drop BOSS DEFEATED variant. C-rank loot ships separately.
+    //
+    // Rank-gated: users below C-rank see the boss in preview state
+    // ("Reach C rank to engage") via the existing isGateUnlocked path.
+    the_ascendant_colossus: {
+      id:               'the_ascendant_colossus',
+      name:             'The Ascendant Colossus',
+      rank:             'C',
+      flavorShort:      'A giant chained above the stairwell between earth and sky.',
+      flavorLong:       'A giant chained above the stairwell between earth and sky. It weakens only when you ascend.',
+      killCondShort:    'Climb 10+ verified flights before the hunt expires',
+      killCondLong:     'Climb at least 10 verified flights of stairs (Apple Health) during the 3-day hunt window. Cumulative — every flight counts.',
+      failedCopy:       'The tower sealed before you reached the summit.',
+      streakTarget:     1,
+      flightThreshold:  10,
+      cadence:          'triweekly',
+      statDomain:       'VIT',
+    },
   };
 
   // v3 Phase 1z.42 -- boss progress noun helper. Bosses whose kill
@@ -422,6 +451,13 @@
   // and future verified metrics) measures in "day/days".
   function _bossProgressNoun(cfg) {
     if (!cfg) return 'day';
+    // v3 Phase 1z.63 — flight-threshold bosses (Ascendant Colossus)
+    // measure cumulative flights inside the hunt window, not
+    // qualifying days/nights. Singular/plural switch on the
+    // threshold count, not streakTarget (which stays at 1).
+    if (typeof cfg.flightThreshold === 'number') {
+      return cfg.flightThreshold === 1 ? 'flight' : 'flights';
+    }
     const isNightBoss = (typeof cfg.sleepHours === 'number');
     if (isNightBoss) return cfg.streakTarget === 1 ? 'night' : 'nights';
     return cfg.streakTarget === 1 ? 'day' : 'days';
@@ -662,6 +698,10 @@
     state.engaged_at = null;
     state.hunt_started_at = null;
     state.hunt_expires_at = null;
+    // v3 Phase 1z.63 — also clear flight-progress cache. Used by the
+    // Ascendant Colossus's window resolver to mirror live flights
+    // count for the detail label. Each new hunt starts fresh.
+    state.flight_progress = 0;
   }
 
   // Mark an active hunt as expired. Leaves kill_count alone (this
@@ -777,6 +817,37 @@
             break;
           }
         }
+      }
+      // ── Flights boss (Ascendant Colossus) ──────────────────
+      // v3 Phase 1z.63. Cumulative kill condition: every verified
+      // flight inside [hunt_started_at, evalEnd] counts. Single
+      // window query — total >= flightThreshold defeats. Writes
+      // state.flight_progress for the live "N / 10 flights" detail
+      // label even before the threshold is hit.
+      else if (typeof cfg.flightThreshold === 'number' && typeof Health.getFlightsClimbedBetween === 'function') {
+        const sIso = new Date(start).toISOString();
+        const eIso = new Date(evalEnd).toISOString();
+        let flights = null;
+        try { flights = await Health.getFlightsClimbedBetween(sIso, eIso); } catch (_) { flights = null; }
+        if (typeof flights === 'number') {
+          // Mirror progress into state so the detail screen can render
+          // the live count without re-querying. Cap at threshold for
+          // display sanity.
+          state.flight_progress = Math.min(flights, cfg.flightThreshold);
+          setBossState(id, state);
+          if (flights >= cfg.flightThreshold) {
+            // Use the device-local day of the resolver tick as the
+            // last_eval_date — matches the workout-boss pattern when
+            // an exact qualifying day isn't meaningful.
+            const dayKey = (typeof getDeviceLocalDate === 'function')
+              ? getDeviceLocalDate()
+              : new Date().toISOString().slice(0, 10);
+            _awardHuntKillFromBackfill(id, cfg, dayKey);
+            defeated = true;
+          }
+        }
+        // flights === null → HealthKit unavailable or denied. Skip
+        // silently; don't expire here, let the timer handle it below.
       }
       // ── Workout boss (Iron Warden) ─────────────────────────
       else if (typeof cfg.workoutMinutes === 'number' && typeof Health.getStrengthWorkoutsBetween === 'function') {
@@ -978,6 +1049,10 @@
     state.hunt_started_at = _engageNow;
     state.hunt_expires_at = getBossHuntExpiresAtMs(cfg, _engageNow);
     state.last_hunt_outcome = null;
+    // v3 Phase 1z.63 — defensive reset for the flight-progress mirror
+    // even though _clearBossHuntFields already zeros it on the prior
+    // hunt's close. Belt-and-braces against a partial-migration shape.
+    state.flight_progress = 0;
     setBossState(bossId, state);
     try {
       if (typeof showHabitToast === 'function') {
@@ -18891,9 +18966,17 @@
     const cfg = BOSSES[id];
     const state = getBossState(id);
     const imgPath = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
-    const dots = Array.from({ length: cfg.streakTarget }, (_, i) =>
-      '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
-    ).join('');
+    // v3 Phase 1z.63 — flight-threshold bosses render a single
+    // threshold dot (filled = boss defeated this hunt). Progress
+    // detail lives in the label below. Other bosses keep the
+    // streak-dots pattern.
+    const dots = (typeof cfg.flightThreshold === 'number')
+      ? '<span class="bcard-dot' +
+        ((typeof state.flight_progress === 'number' && state.flight_progress >= cfg.flightThreshold)
+          ? ' bcard-dot--filled' : '') + '"></span>'
+      : Array.from({ length: cfg.streakTarget }, (_, i) =>
+          '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
+        ).join('');
 
     // Compose state classes. They stack — engaged + active + defeated
     // can all apply at once. v2.0.1 engagement-pivot adds .bcard--engaged
@@ -18982,10 +19065,16 @@
         '<div class="bcard-flavor">' + esc(cfg.flavorShort) + '</div>' +
         // Region e: Kill condition
         '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
-        // Region f: Progress — dots + streak label + kill count
+        // Region f: Progress — dots + streak label + kill count.
+        // v3 Phase 1z.63 — flight-threshold bosses display cumulative
+        // "N / threshold flights" instead of streak progress.
         '<div class="bcard-progress">' +
           '<div class="bcard-dots">' + dots + '</div>' +
-          '<div class="bcard-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg) + '</div>' +
+          '<div class="bcard-progress-label">' +
+            (typeof cfg.flightThreshold === 'number'
+              ? (Math.max(0, Math.min(cfg.flightThreshold, (typeof state.flight_progress === 'number') ? state.flight_progress : 0)) + ' / ' + cfg.flightThreshold + ' ' + _bossProgressNoun(cfg))
+              : (state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg))) +
+          '</div>' +
           '<div class="bcard-kills">' + killText + '</div>' +
         '</div>' +
       '</button>'
@@ -19078,14 +19167,32 @@
     if (killCondEl) killCondEl.textContent = cfg.killCondLong || cfg.killCondShort || '';
 
     // Progress dots + label (sized larger via CSS for the modal context)
+    // v3 Phase 1z.63 — flight-threshold bosses (Ascendant Colossus) use
+    // a cumulative-count label instead of streak dots. flight_progress
+    // is written by the window resolver; when missing (e.g. permission
+    // denied or first paint before the resolver returns), falls back
+    // to 0 — never crashes.
     const progressEl = document.getElementById('bfs-progress');
     if (progressEl) {
-      const dots = Array.from({ length: cfg.streakTarget }, (_, i) =>
-        '<span class="bfs-dot' + (i < state.streak ? ' bfs-dot--filled' : '') + '"></span>'
-      ).join('');
-      progressEl.innerHTML =
-        '<div class="bfs-dots">' + dots + '</div>' +
-        '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg) + '</div>';
+      if (typeof cfg.flightThreshold === 'number') {
+        const cur = Math.max(0, Math.min(cfg.flightThreshold,
+          (typeof state.flight_progress === 'number') ? state.flight_progress : 0));
+        // Single threshold-pill dot pair: filled vs. unfilled — matches
+        // the streakTarget=1 visual for daily bosses, but the label
+        // carries the granular count.
+        const filled = cur >= cfg.flightThreshold;
+        const dots = '<span class="bfs-dot' + (filled ? ' bfs-dot--filled' : '') + '"></span>';
+        progressEl.innerHTML =
+          '<div class="bfs-dots">' + dots + '</div>' +
+          '<div class="bfs-progress-label">' + cur + ' / ' + cfg.flightThreshold + ' ' + _bossProgressNoun(cfg) + '</div>';
+      } else {
+        const dots = Array.from({ length: cfg.streakTarget }, (_, i) =>
+          '<span class="bfs-dot' + (i < state.streak ? ' bfs-dot--filled' : '') + '"></span>'
+        ).join('');
+        progressEl.innerHTML =
+          '<div class="bfs-dots">' + dots + '</div>' +
+          '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg) + '</div>';
+      }
     }
 
     // Burned banner (Carouser only when weekend_burned === true)

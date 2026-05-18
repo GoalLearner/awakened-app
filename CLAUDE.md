@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w66` |
-| `app.js?v=` | `415` |
+| `APP_BUILD_TAG` | `2.2.1-w67` |
+| `app.js?v=` | `416` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.301` |
+| `sw.js CACHE_VERSION` | `v5.302` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,38 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### First C-rank boss — The Ascendant Colossus (v3 Phase 1z.63)
+
+**Boss config.** New entry in `BOSSES`:
+- `id: 'the_ascendant_colossus'`
+- `name: 'The Ascendant Colossus'`
+- `rank: 'C'`, `statDomain: 'VIT'`, `cadence: 'triweekly'` (→ 3-day hunt window via `getBossHuntDurationMs`)
+- `streakTarget: 1`, `flightThreshold: 10`
+- Flavor + kill-cond copy locked: *"A giant chained above the stairwell between earth and sky. It weakens only when you ascend."* / *"Climb 10+ verified flights before the hunt expires"* / *"The tower sealed before you reached the summit."*
+
+**Kill condition.** Cumulative: at least 10 verified flights climbed inside `[hunt_started_at, hunt_expires_at]`. Each flight counts; reaching the threshold defeats the boss for that hunt. Sub-threshold expiration → 1z.56 HUNT FAILED modal. Defeat → standard BOSS DEFEATED flow + 1z.61 `Health.getFlightsClimbedBetween` window query.
+
+**Where it plugs in.**
+- `resolveBossHuntsAcrossWindow` gets a new `cfg.flightThreshold` branch after the steps branch and before workouts. Single `Health.getFlightsClimbedBetween(start, evalEnd)` call; on `>= threshold` calls `_awardHuntKillFromBackfill` (single-shot kill, reuses the existing souls + drop + announce + UI-refresh flow). On sub-threshold writes `state.flight_progress` for the live label.
+- `_bossProgressNoun` returns `'flight' | 'flights'` for any boss with `cfg.flightThreshold`.
+- `buildBossCardHTML` (dungeon-grid card) renders a single threshold dot + `"N / 10 flights"` label when `cfg.flightThreshold` is set.
+- `openBossFullScreen` progress region renders a single dot + `"N / 10 flights"` label same way. `flight_progress` falls back to 0 when missing.
+- `_clearBossHuntFields` now also zeros `state.flight_progress` so a new hunt starts fresh; `engageBoss` also defensively zeros it (belt-and-braces).
+
+**Pre/post-window exclusion.** The resolver reads only the explicit `[hunt_started_at, evalEnd]` window — `Health.getFlightsClimbedBetween` is uncached and queries only this range. Flights logged before engagement or after expiration are naturally excluded by the window query. Defeat fires `_awardSingleShotKill` exactly once (last_eval_date idempotency); subsequent resolver passes short-circuit because `state.engaged === false`.
+
+**Drop pool.** Empty for this ship. `rollBossDrop` filters `CARDS` by `source_boss === 'the_ascendant_colossus'`; with zero matching cards the function returns `null` (line 2875-2878). `announceKillAndDrop` renders the no-drop BOSS DEFEATED variant. C-rank loot ships separately.
+
+**Boss art.** No `assets/bosses/the-ascendant-colossus.png` on disk yet — the `<img>` 404s and shows a broken icon, but the panel does not crash. Path follows the existing `id.replace(/_/g, '-') + '.png'` convention so dropping the asset later "just works" — no code change needed. NOT precached in `sw.js` (cache.addAll would reject the whole install if the asset 404s).
+
+**Rank gating.** Users below C-rank see the boss in preview state via `isGateUnlocked(cfg.rank)` — boss card carries `bcard--preview` class + PREVIEW corner label, detail screen swaps ENGAGE for "Reach C rank to engage". `engageBoss` also refuses defensively.
+
+**Permission behavior.** Health permission for flights is already wired (1z.61). If user denied the new 'stairs' category, `getFlightsClimbedBetween` returns `null` and the resolver silently skips defeat; the timer still expires the hunt and the HUNT FAILED modal fires when the window closes. No crash, no false defeat.
+
+**Verification.** All previously-shipped bosses continue to work (steps/workout/sleep branches unchanged). `node --check` passes; Playwright smoke 7/7 (no boss-related selectors in suite). Manual QA next TestFlight build per spec PART M.
+
+**No backend / no leaderboard / no Hall of Fame / no Duels / no METRIC_CAPS.** Frontend-only.
 
 ### Active Energy verified stat plumbing (v3 Phase 1z.62)
 
