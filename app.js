@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w86';
+  const APP_BUILD_TAG = '2.2.1-w87';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4449,16 +4449,24 @@
     }
 
     const relicCard  = document.getElementById('bro-relic-card');
+    const sealedCard = document.getElementById('bro-sealed-card');
     const nodropCard = document.getElementById('bro-nodrop-card');
     const failedCard = document.getElementById('bro-failed-card');
     const viewBtn    = document.getElementById('bro-view-relic');
     const viewMercy  = document.getElementById('bro-view-mercy');
+
+    // v3 Phase 1z.83 — Sealed Mystery Relic. Show the sealed card
+    // (NOT bro-relic-card) for rare / ultra FIRST acquisitions. The
+    // relic identity stays entirely absent from the DOM until reveal.
+    const _sealRelic = !!(evt.drop && evt.drop.wasFirst &&
+      (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare'));
 
     if (isFailed) {
       // v3 Phase 1z.56 — failure variant: hide relic + mercy cards,
       // show the failed card with no-reward copy. HUNT AGAIN stays
       // available (engageBoss handles the souls cost gate).
       if (relicCard)  relicCard.classList.add('hidden');
+      if (sealedCard) sealedCard.classList.add('hidden');
       if (nodropCard) nodropCard.classList.add('hidden');
       if (failedCard) failedCard.classList.remove('hidden');
       if (viewBtn)    viewBtn.classList.add('hidden');
@@ -4473,14 +4481,48 @@
           ? ('Objective not completed in time: ' + cond)
           : 'The hunt window closed before the objective was completed.';
       }
+    } else if (evt.drop && _sealRelic) {
+      // v3 Phase 1z.83 — sealed-mystery branch. The relic identity is
+      // NOT rendered in the DOM. The sealed sigil + "A sealed relic
+      // has emerged." copy stands in. Tap Reveal Relic → close →
+      // queue drain → Sigil Bloom cinematic fires.
+      if (failedCard) failedCard.classList.add('hidden');
+      if (relicCard)  relicCard.classList.add('hidden');
+      if (nodropCard) nodropCard.classList.add('hidden');
+      if (sealedCard) sealedCard.classList.remove('hidden');
+      if (viewMercy)  viewMercy.classList.add('hidden');
+      if (viewBtn) {
+        viewBtn.classList.remove('hidden');
+        // cardId stays on the button so the queue chain can route
+        // the right card to processRevealQueue post-close. data-masked
+        // signals "tap → close + drain, don't open card detail."
+        viewBtn.setAttribute('data-card-id', evt.drop.cardId);
+        viewBtn.setAttribute('data-masked', '1');
+        // Wipe any prior text + restore as "Reveal Relic" with the
+        // seal-glyph icon. is-armed adds the violet pulse + glow.
+        viewBtn.classList.add('is-armed');
+        viewBtn.innerHTML =
+          '<span class="bro-btn-seal-glyph" aria-hidden="true">' +
+            '<svg viewBox="0 0 16 16">' +
+              '<circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+              '<path d="M5 9 L11 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+              '<path d="M8 4 L8 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+            '</svg>' +
+          '</span>' +
+          'Reveal Relic';
+      }
     } else if (evt.drop) {
       if (failedCard) failedCard.classList.add('hidden');
-      // Relic acquired — even commons fall here.
+      if (sealedCard) sealedCard.classList.add('hidden');
+      // Relic acquired — commons + duplicate rare/ultra fall here.
       if (relicCard)  relicCard.classList.remove('hidden');
       if (nodropCard) nodropCard.classList.add('hidden');
       if (viewBtn) {
         viewBtn.classList.remove('hidden');
+        viewBtn.classList.remove('is-armed');
+        viewBtn.removeAttribute('data-masked');
         viewBtn.setAttribute('data-card-id', evt.drop.cardId);
+        viewBtn.textContent = 'View Relic';
       }
       if (viewMercy) viewMercy.classList.add('hidden');
 
@@ -4531,56 +4573,16 @@
         statsEl.innerHTML = card ? cardStatBadgesHtml(card) : '';
       }
 
-      // v3 Phase 1z.82 — mask the relic identity in the Boss Defeated
-      // modal for rare/ultra FIRST-acquisitions so the Sigil Bloom
-      // (which fires after this modal closes via the reveal queue
-      // chain set up in 1z.73) is the true reveal moment.
-      //
-      // The rarity pill + "RELIC ACQUIRED" eyebrow + source boss
-      // name all stay visible so the user knows something special
-      // dropped. Everything that would spoil the relic identity —
-      // art, slot icon, name, stat badges, "NEW" pill — gets masked
-      // to "???". The View Relic button copy switches to "REVEAL
-      // RELIC" to set expectations.
-      //
-      // Duplicate rare/ultra (wasFirst=false) and ALL commons are
-      // unaffected — they show the full relic as before because
-      // there's no cinematic reveal queued for them.
-      const _maskRelic = !!(evt.drop && evt.drop.wasFirst &&
-        (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare'));
-      if (_maskRelic) {
-        // Hide art — setModalCardArt(null) removes src and keeps
-        // the img hidden. The slot-icon span becomes the visual.
-        setModalCardArt('bro-relic-art', null);
-        if (slotIconEl) slotIconEl.textContent = '?';
-        if (relicNameEl) relicNameEl.textContent = '???';
-        if (metaEl) {
-          // Keep "From <Boss>" since the user just defeated that boss
-          // and already knows. Drop the slot label + NEW pill — those
-          // hint at identity.
-          const sourceLabel = evt.bossName ? ('From ' + evt.bossName.toUpperCase()) : '';
-          metaEl.innerHTML =
-            '<span class="bro-relic-slot">???</span>' +
-            (sourceLabel ? '<span class="bro-relic-source">· ' + sourceLabel + '</span>' : '');
-        }
-        if (statsEl) statsEl.innerHTML = '';
-        // Flag the View Relic button so its click handler knows to
-        // skip openCardDetailModal and let the queue drain chain to
-        // the cinematic reveal instead.
-        if (viewBtn) {
-          viewBtn.textContent = 'Reveal Relic';
-          viewBtn.setAttribute('data-masked', '1');
-        }
-      } else if (viewBtn) {
-        // Restore defaults (defensive — the same modal element is
-        // re-used across queued results, so an unmasked drop after a
-        // masked one must not inherit the masked button copy).
-        viewBtn.textContent = 'View Relic';
-        viewBtn.removeAttribute('data-masked');
-      }
+      // v3 Phase 1z.83 — rare/ultra FIRST-acquisitions are now
+      // handled by the `_sealRelic` branch above (Sealed Mystery
+      // Relic card). The legacy 1z.82 "???" masking inside
+      // bro-relic-card was retired with that move. Commons +
+      // duplicate rare/ultra reach this branch and see the full
+      // relic as before.
     } else {
       // No drop — mercy increased. Render 3-row mercy block with bar fills.
       if (relicCard)  relicCard.classList.add('hidden');
+      if (sealedCard) sealedCard.classList.add('hidden');
       if (nodropCard) nodropCard.classList.remove('hidden');
       if (failedCard) failedCard.classList.add('hidden');
       if (viewBtn)    viewBtn.classList.add('hidden');
@@ -4713,6 +4715,15 @@
     setTimeout(() => { try { _showBossResult(evt); } catch (_) { _bossResultBusy = false; } }, 60);
   }
   try { window.openBossResultFromPending = openBossResultFromPending; } catch (_) {}
+  // v3 Phase 1z.83 — expose for QA/preview console snippets only.
+  // Production code uses the IIFE-scoped originals; these globals let
+  // localhost preview snippets simulate a sealed-relic flow without
+  // grinding an actual boss defeat.
+  try {
+    window.__queueBossResult     = _queueBossResult;
+    window.__processRevealQueue  = processRevealQueue;
+    window.__loadInventory       = loadInventory;
+  } catch (_) {}
 
   function setupBossResultModal() {
     const overlay = document.getElementById('boss-result-overlay');

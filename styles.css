@@ -23245,3 +23245,194 @@ body.habit-drag-active * {
    .is-card-revealed; without the class the card would stay hidden
    in reduced-motion. _runSigilBloom adds the class up-front when
    reduced-motion is detected (see app.js). */
+
+/* ═══════════════════════════════════════════════════════════
+   v3 Phase 1z.83 — Sealed Mystery Relic (ClaudeDesign).
+   Boss Defeated reward panel for rare / ultra FIRST acquisitions.
+   The relic identity is hidden until the user taps "Reveal Relic"
+   which chains to the Sigil Bloom cinematic (1z.74). Commons and
+   duplicate rare/ultra drops use the legacy #bro-relic-card path.
+   ═══════════════════════════════════════════════════════════ */
+.bro-reward--sealed {
+  position: relative;
+  padding: 1.5px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(167,139,250,0.55), rgba(245,184,66,0.30), rgba(167,139,250,0.45));
+  box-shadow: 0 0 24px rgba(167,139,250,0.30), 0 8px 24px rgba(0,0,0,0.4);
+  overflow: visible;
+}
+.bro-reward--sealed::after {
+  /* Inner navy card surface */
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 12.5px;
+  background: #14143a;
+  z-index: 0;
+}
+.bro-sealed-kicker {
+  position: relative;
+  z-index: 2;
+  padding: 14px 14px 0;
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  color: #f5b842;
+  letter-spacing: 0.24em;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(245,184,66,0.18);
+}
+.bro-sealed-aura {
+  position: absolute;
+  inset: -20px;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 42%, rgba(167,139,250,0.32) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(245,184,66,0.18) 0%, transparent 50%);
+}
+.bro-sealed-motes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 12.5px;
+}
+.bro-sealed-mote {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: bro-sealed-motes-drift 4s ease-in-out infinite;
+}
+.bro-sealed-mote--v1 { left: 12%; top: 78%; background: #a78bfa; box-shadow: 0 0 5px #a78bfa; animation-delay: 0s; }
+.bro-sealed-mote--g1 { left: 38%; top: 88%; background: #f5b842; box-shadow: 0 0 5px #f5b842; animation-delay: 0.6s; }
+.bro-sealed-mote--v2 { left: 64%; top: 72%; background: #a78bfa; box-shadow: 0 0 5px #a78bfa; animation-delay: 1.2s; width: 1.6px; height: 1.6px; }
+.bro-sealed-mote--g2 { left: 82%; top: 60%; background: #f5b842; box-shadow: 0 0 5px #f5b842; animation-delay: 1.8s; }
+.bro-sealed-mote--v3 { left: 22%; top: 56%; background: #a78bfa; box-shadow: 0 0 5px #a78bfa; animation-delay: 2.4s; width: 1.4px; height: 1.4px; }
+.bro-sealed-mote--g3 { left: 70%; top: 50%; background: #f5b842; box-shadow: 0 0 5px #f5b842; animation-delay: 3.0s; }
+@keyframes bro-sealed-motes-drift {
+  0%   { opacity: 0; transform: translateY(0); }
+  25%  { opacity: 0.7; }
+  75%  { opacity: 0.5; }
+  100% { opacity: 0; transform: translateY(-60px); }
+}
+.bro-sealed-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px 16px;
+}
+.bro-sealed-sigil {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  position: relative;
+}
+.bro-sealed-sigil-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #f5b842, #a78bfa);
+  box-shadow: 0 0 16px rgba(167,139,250,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.bro-sealed-sigil-well {
+  width: 100%;
+  height: 100%;
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(167,139,250,0.22) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, #1a1640 0%, #08081a 75%);
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.65);
+  position: relative;
+  overflow: hidden;
+}
+.bro-sealed-sigil-aura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(245,184,66,0.18) 0%, transparent 60%);
+  animation: bro-sealed-pulse 2.8s ease-in-out infinite;
+}
+.bro-sealed-sigil-well > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+@keyframes bro-sealed-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1.0; }
+}
+.bro-sealed-text {
+  flex: 1;
+  min-width: 0;
+}
+.bro-sealed-title {
+  font-family: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+.bro-sealed-title--1 { color: #f5f5fa; }
+.bro-sealed-title--2 {
+  margin-top: 3px;
+  color: #f5b842;
+  text-shadow: 0 0 12px rgba(245,184,66,0.18);
+}
+.bro-sealed-whisper {
+  margin-top: 8px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  color: #9090a8;
+  line-height: 1.4;
+}
+
+/* "Reveal Relic" CTA — violet glow + seal glyph icon. The button
+   already uses .bro-btn--primary; the .is-armed modifier amplifies
+   the violet glow + adds a pulsing aura so the sealed state's
+   primary action reads as "the magic is here, tap me." */
+.bro-btn--primary.is-armed {
+  background: linear-gradient(180deg, rgba(167,139,250,0.32), rgba(167,139,250,0.12));
+  border-color: rgba(167,139,250,0.85);
+  color: #f5f5fa;
+  box-shadow:
+    0 0 16px rgba(167,139,250,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  animation: bro-armed-pulse 2.4s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.bro-btn--primary.is-armed:hover {
+  box-shadow: 0 0 22px rgba(167,139,250,0.75), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.bro-btn-seal-glyph {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+}
+.bro-btn-seal-glyph svg { display: block; width: 100%; height: 100%; }
+@keyframes bro-armed-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(167,139,250,0.40), inset 0 1px 0 rgba(255,255,255,0.10); }
+  50%      { box-shadow: 0 0 22px rgba(167,139,250,0.70), inset 0 1px 0 rgba(255,255,255,0.18); }
+}
+
+/* Reduced motion — skip the pulse / drift animations. The sealed
+   sigil stays visually intact; only motion is suppressed. */
+@media (prefers-reduced-motion: reduce) {
+  .bro-sealed-sigil-aura,
+  .bro-sealed-mote,
+  .bro-btn--primary.is-armed {
+    animation: none !important;
+  }
+}

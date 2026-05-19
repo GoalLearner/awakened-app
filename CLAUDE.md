@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w86` |
-| `app.js?v=` | `435` |
+| `APP_BUILD_TAG` | `2.2.1-w87` |
+| `app.js?v=` | `436` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `301` |
+| `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.321` |
+| `sw.js CACHE_VERSION` | `v5.322` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,44 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Sealed Mystery Relic — ClaudeDesign reveal panel (v3 Phase 1z.83)
+
+**Replaces 1z.82's "???" masking.** Per ClaudeDesign spec, the Boss Defeated modal now shows a proper **sealed sigil** card for rare/ultra first-acquisitions instead of greying out the existing relic card's fields. The relic identity is entirely absent from the DOM until reveal (spec hard requirement — accessibility tools cannot read what doesn't exist).
+
+**Three discrete moments:**
+1. **"I won"** — Boss Defeated header + sealed sigil + copy.
+2. **"What is it?"** — user taps Reveal Relic (violet pulsing glow + seal-glyph icon).
+3. **"Oh, that's what it is."** — Sigil Bloom cinematic fires → tap-to-reveal → real relic card.
+
+**DOM structure** — new `<section id="bro-sealed-card">` in index.html as a sibling of `bro-relic-card`. Contains:
+- Kicker: `· RELIC ACQUIRED ·` (mono gold)
+- 88×88 sealed sigil with gold→violet gradient frame, navy radial well, gold corner cuts, two rune circles (gold outer + violet dashed inner), centered Spark flame, horizontal gold seal bar (the "locked" symbol), pulsing gold radial aura
+- 6 drifting violet/gold motes (4s loop, staggered delays)
+- Two-line title: **A sealed relic** (white) / **has emerged.** (gold w/ glow)
+- Whisper: *Its power is hidden. Reveal to identify.* (italic Cormorant Garamond)
+
+**No identity hints** — same sealed visual for rare and ultra. Rarity differentiation only happens post-reveal in the Sigil Bloom.
+
+**`_showBossResult` flow:**
+- `_sealRelic = !!(evt.drop.wasFirst && (rare || ultra_rare))`
+- Sealed branch: show `bro-sealed-card`, hide `bro-relic-card` entirely; viewBtn copy → `Reveal Relic` + `.is-armed` class (violet pulse) + seal-glyph icon + `data-masked="1"`.
+- Common / duplicate rare-or-ultra branch: show `bro-relic-card` with full identity as before; viewBtn copy → `View Relic`; clears `.is-armed` and `data-masked` defensively (the same modal element is reused across queued results).
+
+**Reveal flow:** View Relic click handler (from 1z.82) checks `data-masked` and short-circuits to `closeBossResult({ suppressDrain: true })` + `_drainBossResultQueue()`. The drain's empty-queue branch chains to `processRevealQueue` (per 1z.73) → opens `openCardRevealModal` → fires Sigil Bloom. The cinematic's tap-to-continue handles marking the card as seen.
+
+**1z.82's "???" masking removed.** The legacy block inside the `bro-relic-card` else-if branch was a placeholder that no longer fires (sealed drops never reach that branch).
+
+**Animation specs:**
+- `bro-sealed-pulse`: 2.8s ease-in-out infinite on the inner gold radial aura (opacity 0.6 → 1.0 → 0.6)
+- `bro-sealed-motes-drift`: 4s ease-in-out infinite, motes translate Y -60px while fading
+- `bro-armed-pulse`: 2.4s ease-in-out infinite on the Reveal Relic button's violet glow
+
+**Reduced motion:** `prefers-reduced-motion: reduce` disables all three animations. Sigil + aura stay visually intact; only motion is suppressed. Sigil Bloom's existing reduced-motion path takes over at reveal time.
+
+**New globals for QA/preview only:** `window.__queueBossResult`, `window.__processRevealQueue`, `window.__loadInventory`. Console preview snippets can simulate a sealed-relic flow on localhost without grinding an actual defeat. Production code still uses the IIFE-scoped originals.
+
+**Versions:** `app.js?v=436`, `styles.css?v=302`, `sw.js v5.322`, `APP_BUILD_TAG 2.2.1-w87`. `APP_VERSION` stays 2.2.1.
 
 ### Mask rare/ultra relic identity in Boss Defeated modal (v3 Phase 1z.82)
 
