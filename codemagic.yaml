@@ -73,6 +73,52 @@ workflows:
     # ── Build steps ────────────────────────────────────────────────
     scripts:
 
+      - name: Print build provenance (commit hash + version knobs)
+        script: |
+          # v3 Phase 1z.90 — make every Codemagic build log self-describing.
+          # Reconciling "brand-new TestFlight build" against runtime
+          # APP_BUILD_TAG requires knowing EXACTLY:
+          #   - which git commit Codemagic checked out
+          #   - what APP_BUILD_TAG is in the checked-out app.js
+          #   - what app.js?v query string is in the checked-out index.html
+          #   - what CACHE_VERSION is in the checked-out sw.js
+          #   - what TestFlight build number this run will produce
+          # All printed loudly so a Codemagic log inspector can instantly
+          # match the in-app boot stamp to a specific IPA.
+          echo "════════════════════════════════════════════════════════════"
+          echo "BUILD PROVENANCE — Awakened iOS"
+          echo "════════════════════════════════════════════════════════════"
+          echo "Git commit:        $(git rev-parse HEAD)"
+          echo "Git short:         $(git rev-parse --short HEAD)"
+          echo "Git branch:        $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '(detached)')"
+          echo "Git subject:       $(git log -1 --pretty=format:'%s')"
+          echo "Git author date:   $(git log -1 --pretty=format:'%ai')"
+          echo "----"
+          # Repo source-of-truth knobs (BEFORE cap sync)
+          REPO_BUILD_TAG=$(grep -oE "APP_BUILD_TAG\s*=\s*'[^']+'" app.js | head -1 | sed -E "s/.*'([^']+)'/\1/")
+          REPO_APPJS_V=$(grep -oE "app\.js\?v=[0-9]+" index.html | head -1)
+          REPO_SW_CV=$(grep -oE "CACHE_VERSION\s*=\s*'[^']+'" sw.js | head -1 | sed -E "s/.*'([^']+)'/\1/")
+          REPO_APP_VERSION=$(grep -oE "APP_VERSION\s*=\s*'[^']+'" app.js | head -1 | sed -E "s/.*'([^']+)'/\1/")
+          echo "Repo APP_VERSION:     $REPO_APP_VERSION"
+          echo "Repo APP_BUILD_TAG:   $REPO_BUILD_TAG"
+          echo "Repo index.html ref:  $REPO_APPJS_V"
+          echo "Repo sw.js cache:     $REPO_SW_CV"
+          echo "----"
+          # Fail loudly if APP_BUILD_TAG is missing entirely. Catches a
+          # bad merge that wiped the constant.
+          if [ -z "$REPO_BUILD_TAG" ]; then
+            echo "FAIL: APP_BUILD_TAG not found in app.js — cannot proceed"
+            exit 1
+          fi
+          # TestFlight build number this run will produce (best-effort).
+          # The actual increment happens later in the pipeline; this is
+          # just for the provenance log.
+          LATEST_TF=$(app-store-connect get-latest-testflight-build-number \
+            "$APP_STORE_ID" 2>/dev/null || echo "unknown")
+          echo "TestFlight latest:    $LATEST_TF"
+          echo "This build will be:   $((LATEST_TF + 1)) (best-effort estimate)"
+          echo "════════════════════════════════════════════════════════════"
+
       - name: Install Node dependencies
         script: npm install
 
@@ -392,6 +438,20 @@ workflows:
             echo "FAIL: sw.js CACHE_VERSION drift (repo=$repo_cv www=$www_cv)"
             exit 1
           fi
+          # v3 Phase 1z.90 — APP_BUILD_TAG sanity. Catches the case
+          # where app.js made it into www/ but a stale copy lacks the
+          # build-tag constant (or a merge regressed the constant).
+          repo_tag=$(grep -oE "APP_BUILD_TAG\s*=\s*'[^']+'" app.js | head -1)
+          www_tag=$(grep -oE "APP_BUILD_TAG\s*=\s*'[^']+'" www/app.js | head -1)
+          if [ -z "$repo_tag" ] || [ -z "$www_tag" ]; then
+            echo "FAIL: APP_BUILD_TAG missing (repo='$repo_tag' www='$www_tag')"
+            exit 1
+          fi
+          if [ "$repo_tag" != "$www_tag" ]; then
+            echo "FAIL: APP_BUILD_TAG drift (repo=$repo_tag www=$www_tag)"
+            exit 1
+          fi
+          echo "  APP_BUILD_TAG:       $repo_tag"
           # v3 Phase 1z.81 — C-rank boss art must be in www/. The prior
           # boss-art copy loop was a hardcoded allowlist of 6 files
           # that didn't include the C-rank bosses shipped in 1z.65,
@@ -596,6 +656,22 @@ workflows:
             echo "FAIL: $PUB/sw.js CACHE_VERSION drift (ios=$ios_cv repo=$repo_cv)"
             exit 1
           fi
+          # v3 Phase 1z.90 — APP_BUILD_TAG cross-check repo ↔ iOS public.
+          # If cap sync dropped the wrong app.js, this is where it fails.
+          ios_tag=$(grep -oE "APP_BUILD_TAG\s*=\s*'[^']+'" "$PUB/app.js" | head -1)
+          repo_tag=$(grep -oE "APP_BUILD_TAG\s*=\s*'[^']+'" app.js | head -1)
+          if [ -z "$ios_tag" ] || [ -z "$repo_tag" ]; then
+            echo "FAIL: APP_BUILD_TAG missing post-sync (ios='$ios_tag' repo='$repo_tag')"
+            exit 1
+          fi
+          if [ "$ios_tag" != "$repo_tag" ]; then
+            echo "FAIL: APP_BUILD_TAG drift post-sync (ios=$ios_tag repo=$repo_tag)"
+            exit 1
+          fi
+          # Also print the resolved tag from the iOS bundle so the
+          # Codemagic log shows EXACTLY what will ship.
+          echo "  iOS public APP_BUILD_TAG: $ios_tag"
+          echo "  iOS public app.js?v ref:  $(grep -oE 'app\.js\?v=[0-9]+' "$PUB/index.html" | head -1)"
           # v3 Phase 1z.81 — confirm C-rank boss art reached the iOS
           # public dir. Mirror of the pre-sync check above; catches
           # the case where cap sync somehow drops these specific files.

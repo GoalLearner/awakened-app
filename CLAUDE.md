@@ -292,6 +292,73 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### Build-provenance reconciliation pass (v3 Phase 1z.90)
+
+**Trigger.** After Phases 1z.88 (commit `3829456`) and 1z.89 (commit `a623113`) were pushed to `origin/main`, the user reported the Add Habits freeze still reproed on what they believed was the brand-new TestFlight build. ClaudeCode initially concluded the runtime was stale based on `APP_BUILD_TAG = 2.2.2-w2` vs the source `2.2.2-w4` and the fact that no Codemagic build had been explicitly approved during the session. User pushed back: they were certain the build was new.
+
+**Root question.** The contradiction has four possible explanations:
+1. **User installed an older TestFlight build** (TestFlight retains old builds; the device list can default to the prior build after an IPA upload notification).
+2. **Codemagic ran on a stale commit checkout** (gates were verifying internal repo↔www↔iOS consistency but NOT verifying the checkout commit matched origin/main HEAD). Both sides could agree on w2 and pass.
+3. **Build pipeline silently dropped the new assets** (`cap sync ios` copied the wrong files, or the force-clean step didn't wipe a sub-asset).
+4. **iOS Capacitor WebView served stale assets from a registered service-worker cache** that survived the IPA replace.
+
+ClaudeCode cannot determine which of the four from the local source alone — Codemagic build logs and App Store Connect build numbers are required. The 1z.90 pass therefore makes future ambiguity impossible to sustain rather than attempting to retroactively diagnose the current one.
+
+**Fix (build-pipeline only — no app.js change, no version-knob bump):**
+
+1. **New `codemagic.yaml` step "Print build provenance"** runs first, before `npm install`. Loudly prints to the Codemagic log:
+   - Full git commit hash + short hash + branch + commit subject + author date.
+   - `APP_VERSION` value parsed from `app.js`.
+   - `APP_BUILD_TAG` value parsed from `app.js` (fails the build if missing entirely).
+   - `app.js?v=` query string parsed from `index.html`.
+   - `CACHE_VERSION` parsed from `sw.js`.
+   - Latest TestFlight build number from App Store Connect, plus best-effort estimate of what this build will be numbered.
+2. **`APP_BUILD_TAG` added to existing freshness gates** — both pre-sync (`www/`) and post-sync (`ios/App/App/public/`). If `app.js` ever loses the constant or drifts between locations, the build fails loudly. Previously the gates only checked `app.js?v=` query strings and `CACHE_VERSION`.
+3. **Post-sync log lines** print the resolved `APP_BUILD_TAG` and `app.js?v=` from the iOS bundle so a Codemagic log inspector can match the in-app boot stamp (`[Awakened] boot · APP_VERSION=… · build=…`) to a specific IPA without guesswork.
+
+**What this does NOT do.** It does not retroactively fix the current TestFlight installation. The user must still:
+1. Open the TestFlight app on the device.
+2. Tap "Awakened" → look at the **Build** number shown.
+3. Cross-reference against the App Store Connect build list — which build number is actually installed?
+4. Or — attach Safari devtools (Mac → Safari → Develop → iPhone → Awakened) and read the `[Awakened] boot · APP_VERSION=2.2.2 · build=…` console line. That settles the question.
+
+Once a NEW Codemagic build runs with these provenance changes, every future build log shows commit hash + `APP_BUILD_TAG` + TestFlight build number on one line. The next time a "brand-new build still buggy" report comes in, the Codemagic log + Safari devtools boot line together resolve the question instantly.
+
+**Decision tree (used to classify the current incident before any further Add Habits patches):**
+
+| Evidence | Classification | Action |
+|---|---|---|
+| TestFlight build number on device = latest in ASC, boot stamp shows `build=2.2.2-w4` | Runtime is current; Add Habits bug is real on w4 | Resume universal Add Habits freeze debugging |
+| TestFlight build on device < latest in ASC | User installed an older build | Have user reinstall latest; do NOT patch app.js |
+| Latest ASC build matches source HEAD commit hash but boot stamp says `build=2.2.2-w2` | Codemagic built off old commit, gates didn't catch it | New Codemagic build off HEAD; the 1z.90 provenance step exposes the cause |
+| Latest ASC build commit matches HEAD but boot stamp wrong + Codemagic log shows correct tag pre-sync | iOS WebView served stale SW cache | Investigate sw.js activation (skipWaiting/clientsClaim); inflict cache name bump |
+| Boot stamp says `build=2.2.2-w4` and freeze still reproes | Add Habits bug is real on w4 — runtime cleared | Resume universal Add Habits freeze debugging with confidence |
+
+**Files touched (1z.90 only):**
+- `codemagic.yaml` — new provenance step + `APP_BUILD_TAG` cross-check in both freshness gates.
+- `CLAUDE.md` — this section.
+
+**No app.js / sw.js / index.html / styles.css change. No version-knob bump (existing knobs remain at `APP_BUILD_TAG=2.2.2-w4`, `app.js?v=442`, `sw.js v5.328`). No Add Habits logic touched. No backend / D1 / Duels / HealthKit / Notification / boss / drop / economy / QA-unlock change.**
+
+**Verification:**
+- `node --check app.js` → OK (file unchanged this phase)
+- `node --check sw.js` → OK (file unchanged this phase)
+- `bash -n codemagic.yaml` is not meaningful (YAML, not bash). Manual review of the new step shows it is valid bash inside a literal block, uses `set -e`-compatible idioms, and the version-knob extractors are the same ones already used elsewhere in the pipeline.
+- `git diff --name-only` → `CLAUDE.md`, `codemagic.yaml`. No backend/D1/Duels/HealthKit/Notification/boss/economy files. `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+**Manual reconciliation checklist (user action required):**
+1. **Device check:** On the iPhone, open the TestFlight app → Awakened → note the Build number displayed (e.g. "Build 77" or "Build 76").
+2. **ASC check:** Log into App Store Connect → My Apps → Awakened → TestFlight → iOS Builds. List the most recent builds and their upload dates.
+3. **Boot stamp check:** Plug iPhone into Mac → Safari → Develop → iPhone Name → Awakened. Read the console. Look for `[Awakened] boot · APP_VERSION=2.2.2 · build=…`. Paste the line back to ClaudeCode.
+4. **Codemagic log check (if a build was triggered post-3829456):** Open Codemagic dashboard → Awakened → last build. Look for either the existing `✓ www/ bundle verified fresh` line (current pipeline) OR — once 1z.90 ships — a `BUILD PROVENANCE` block with the commit hash.
+5. Send the four findings back. ClaudeCode will then classify per the decision tree and proceed accordingly.
+
+**Known non-goals:**
+- No Add Habits logic patched until runtime identity is established.
+- No automatic Codemagic trigger.
+- No HealthKit/Notification permission wording changed.
+- No boss / drop / pity / mercy / rank-threshold / QA-unlock / economy / Duels / D1 / backend changes.
+
 ### Add Habits parent-sheet freeze — close-to-Habits-tab fix (v3 Phase 1z.89)
 
 **Bug summary.** After Phase 1z.88 the freeze MOVED from the child detail sheet to the parent Add Habits library sheet. User reported on TestFlight 2.2.2 build 76 (the 1z.88 build = `APP_BUILD_TAG 2.2.2-w3`): tapping "Add to My Habits" from a preset detail successfully closed the detail screen, returned to the parent Add Habits library — and then the whole sheet became non-interactive. Force-quit was required. The habit DID persist (save() ran), but the user couldn't use the sheet or any tab control until relaunch.
