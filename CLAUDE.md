@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w4` |
-| `app.js?v=` | `442` |
+| `APP_BUILD_TAG` | `2.2.2-w5` |
+| `app.js?v=` | `443` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.328` |
+| `sw.js CACHE_VERSION` | `v5.329` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,73 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Add Habits freeze — instrumented conservative add path (v3 Phase 1z.91)
+
+**Bug confirmed real on w4.** TestFlight build 79 (`APP_BUILD_TAG 2.2.2-w4`, app.js?v=442) was installed fresh from Codemagic build off `e83da84` per the 1z.90 provenance pass. User force-quit + relaunched (which would have eliminated any SW cache poisoning class). Add Habits still freezes on every preset add. `hb_habits` localStorage shows the habit persists after force-quit, so `save()` runs — the freeze is somewhere in the close / render / interaction-cleanup path AFTER save.
+
+Because the freeze requires force-quit (which destroys the console log buffer), there is no way to know from the device which step actually stalls. 1z.91 makes that diagnosis trivial post-mortem by writing a persistent breadcrumb ring to localStorage at every step of the add path, then makes the path more conservative.
+
+**Five changes:**
+
+1. **`_addHabitBreadcrumb(step, data)` helper** writes to `localStorage['hb_add_habit_debug_v1']` (capped 80 entries) at EVERY step of the add path. Each entry is `{ t, step, data? }`. Also mirrored to `console.log('[add-habit-debug]', step, data)`. Survives force-quit so a freeze can be diagnosed by inspecting localStorage on the device or via Safari devtools post-relaunch. Documented as a temporary diagnostic surface.
+
+2. **`forceCloseAddHabitsStack(reason)` helper.** Single deterministic close path — bundles `closeHabitDetail` + `closeLibrary` + `resetAddHabitsInteractionState` + a final overlay scrub. Idempotent. Each underlying call independently try-wrapped. Used by the success path, the dup tap guard, the outer-catch, and the post-add watchdog. Eliminates three-call-site drift.
+
+3. **`ensureHabitsTabInteractive()` helper.** Snapshots the post-add interaction state (tab bar visibility, body class, sheet/overlay hidden flags) to breadcrumbs so the next freeze repro tells us exactly which element is intercepting. Never throws.
+
+4. **No `renderLibrary()` after successful add.** 1z.88/1z.89 still re-rendered the library on a deferred tick post-add. The library sheet is closed at that point so the rebuild was pure DOM thrash into a hidden subtree — a suspected freeze contributor on iOS. The library re-renders on the next `openLibrary()` call regardless. Removed.
+
+5. **Longer render delay + 500ms watchdog.** `renderHabits` deferred 150ms (a real paint frame on iOS WebView, not the 0ms macrotask the prior phases used). A 500ms watchdog re-runs `forceCloseAddHabitsStack` idempotently as belt-and-braces against any stale overlay surviving the first close. Alive probes at 100ms / 500ms / 1000ms write breadcrumbs that distinguish JS-blocked freezes from touch-interception freezes (if alive crumbs land, JS is alive — freeze is touch interception).
+
+**Breadcrumb sequence on a clean fresh add (canonical):**
+```
+tap-start → busy-guard-set → dup-guard-start → dup-guard-passed
+→ cfg-build-start → cfg-build-complete
+→ onConfirm-start → onConfirm-complete (saveOK:true)
+→ force-close-start → forceClose-start → forceClose-complete → force-close-complete
+→ toast-shown → finally-cleanup
+→ alive-100
+→ render-tick-start → render-tick-ok
+→ alive-500 → watchdog-complete (forceClose-start/complete + ensureInteractive nested)
+→ alive-1000
+```
+
+**Inspecting breadcrumbs after a TestFlight freeze:**
+1. Force-quit + relaunch the app.
+2. Settings → some QA affordance OR Safari devtools console:
+   ```js
+   JSON.parse(localStorage.getItem('hb_add_habit_debug_v1') || '[]')
+   ```
+3. The LAST entry tells you the deepest step the freeze reached. Cross-reference against the canonical sequence above to pinpoint which step stalled.
+
+**Files touched (1z.91 only):**
+- `app.js` — `_addHabitBreadcrumb`, `forceCloseAddHabitsStack`, `ensureHabitsTabInteractive` helpers; click-handler refactor with breadcrumbs at every step; renderLibrary removed from success path; 150ms render delay; 500ms watchdog; alive probes; `APP_BUILD_TAG → 2.2.2-w5`.
+- `index.html` — `app.js?v=443`.
+- `sw.js` — `CACHE_VERSION = v5.329`.
+- `tests/e2e/smoke.spec.ts` — section H updated to assert the canonical breadcrumb sequence and watchdog completion.
+- `CLAUDE.md` — this section + handoff version table.
+
+**Version knobs (post-1z.91):** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w5`, `app.js?v=443`, `sw.js v5.329`. `styles.css?v=302` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log for the gating run; section H now asserts the breadcrumb sequence.
+- `git diff --name-only` → `CLAUDE.md`, `app.js`, `index.html`, `sw.js`, `tests/e2e/smoke.spec.ts`. No backend / D1 / Duels / HealthKit / Notification / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy files. `QA_UNLOCK_C_RANK_DUNGEONS` stays `false`.
+
+**Manual QA checklist (next TestFlight build):**
+1. Boot — Safari devtools console must show `[Awakened] boot · APP_VERSION=2.2.2 · build=2.2.2-w5`. If not, you're on a stale build.
+2. **Mobility & Stretching fresh add** — sheets close, lands on Habits tab, toast shows, habit visible, app fully responsive.
+3. **Sprint session fresh add** — same.
+4. **Protein goal fresh add** (the screenshot habit) — same.
+5. **Rapid double-tap** — only one habit added.
+6. **If the freeze STILL reproes** — force-quit + relaunch, then in Safari devtools run `JSON.parse(localStorage.getItem('hb_add_habit_debug_v1'))`. Paste the last 5-10 entries. The step name on the last entry tells us which line of the handler stalled.
+
+**Known non-goals:**
+- `sw.js ignoreSearch: true` was identified as a possible SW cache-poisoning vector in 1z.90 but force-quit/relaunch ruled it out as the cause of the user-reported freeze. Documented for a later pass; not touched here.
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- Codemagic NOT triggered by this commit.
 
 ### Build-provenance reconciliation pass (v3 Phase 1z.90)
 

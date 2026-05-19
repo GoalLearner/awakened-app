@@ -373,8 +373,8 @@ test.describe('G · Duels picker', () => {
 //
 // This covers the freeze regression AND the already-added invariant
 // in a single deterministic flow.
-test.describe('H · Add Habits preset add path (1z.88)', () => {
-  test('library preset add closes cleanly, app stays responsive, card disappears from library', async ({ page }) => {
+test.describe('H · Add Habits preset add path (1z.91)', () => {
+  test('library preset add closes cleanly, breadcrumbs trace path, watchdog runs, app stays responsive', async ({ page }) => {
     await freshApp(page);
 
     // Habits tab → + Add Habit.
@@ -463,5 +463,38 @@ test.describe('H · Add Habits preset add path (1z.88)', () => {
     expect(inlineStyle.transition).toBe('');
     expect(inlineStyle.opacity).toBe('');
     expect(inlineStyle.pointerEvents).toBe('');
+
+    // v3 Phase 1z.91 — persistent breadcrumb assertion. After the add
+    // flow the localStorage ring `hb_add_habit_debug_v1` must contain
+    // the canonical sequence of steps for a clean add. If any step
+    // is missing, the freeze repro on iOS will tell us exactly which
+    // step the path stopped at. Wait long enough for the 500ms
+    // watchdog + 1000ms alive probe to land.
+    await page.waitForTimeout(1300);
+    const crumbs = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_add_habit_debug_v1');
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) { return []; }
+    });
+    const steps = (crumbs as Array<{ step: string }>).map(c => c.step);
+    // Canonical fresh-add sequence — strict membership checks (we
+    // tolerate extra breadcrumbs in between for future-proofing).
+    expect(steps).toContain('tap-start');
+    expect(steps).toContain('busy-guard-set');
+    expect(steps).toContain('dup-guard-passed');
+    expect(steps).toContain('cfg-build-complete');
+    expect(steps).toContain('onConfirm-complete');
+    expect(steps).toContain('force-close-start');
+    expect(steps).toContain('force-close-complete');
+    expect(steps).toContain('finally-cleanup');
+    expect(steps).toContain('render-tick-ok');
+    expect(steps).toContain('watchdog-complete');
+    expect(steps).toContain('alive-1000');
+    // The dup-guard MUST NOT have tripped for a fresh add.
+    expect(steps).not.toContain('dup-guard-tripped');
+    // No outer throw on the happy path.
+    expect(steps).not.toContain('outer-threw');
+    expect(steps).not.toContain('render-tick-threw');
   });
 });

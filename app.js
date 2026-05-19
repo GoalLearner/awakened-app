@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w4';
+  const APP_BUILD_TAG = '2.2.2-w5';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15816,6 +15816,38 @@
     catch (_) { return false; }
   }
 
+  // v3 Phase 1z.91 — persistent breadcrumb for the Add Habits add path.
+  // The freeze repros on iOS Capacitor only and the app has to be
+  // force-killed to recover, which destroys the console log buffer.
+  // We persist a tiny ring of breadcrumbs to localStorage so that after
+  // force-quit + relaunch we can inspect `hb_add_habit_debug_v1` and
+  // see EXACTLY which step the previous freeze stopped at.
+  //
+  // Ring is capped at 80 entries to bound localStorage growth. Each
+  // entry is { t, step, data? } — `t` is ms since epoch, `step` is a
+  // short identifier (e.g. 'tap-start', 'after-save'), `data` is an
+  // optional small JSON-safe payload (no DOM nodes, no huge objects).
+  //
+  // EVERY call is independently try-wrapped so a localStorage failure
+  // (quota, private mode, disabled) can never break the add path.
+  function _addHabitBreadcrumb(step, data) {
+    try {
+      const key = 'hb_add_habit_debug_v1';
+      let existing;
+      try { existing = JSON.parse(localStorage.getItem(key) || '[]'); }
+      catch (_) { existing = []; }
+      if (!Array.isArray(existing)) existing = [];
+      const entry = { t: Date.now(), step: String(step) };
+      if (data !== undefined && data !== null) {
+        try { entry.data = JSON.parse(JSON.stringify(data)); } catch (_) {}
+      }
+      existing.push(entry);
+      if (existing.length > 80) existing.splice(0, existing.length - 80);
+      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+    } catch (_) {}
+    try { console.log('[add-habit-debug]', step, data || ''); } catch (_) {}
+  }
+
   // v3 Phase 1z.89 — deterministic interaction reset for the Add Habits
   // surface. After a successful preset add we close BOTH the detail
   // sheet (#hd-sheet) AND the parent library sheet (#lib-sheet) and
@@ -15858,6 +15890,56 @@
     // it here because renderLibrary() runs on the deferred tick AFTER
     // this helper, and we want the rebuilt list to be ready for the
     // next open.
+  }
+
+  // v3 Phase 1z.91 — single deterministic close path for the Add Habits
+  // stack. Bundles closeHabitDetail + closeLibrary +
+  // resetAddHabitsInteractionState into one call with a reason string
+  // so breadcrumbs identify the source. Each underlying call is wrapped
+  // independently — a missing node / thrown DOM op cannot strand the
+  // user. Safe to call any number of times (idempotent).
+  //
+  // Used by:
+  //   - the success path inside addBtn click
+  //   - the duplicate tap guard
+  //   - the outer-catch on any unexpected throw
+  //   - the post-add watchdog (~500ms after add) as belt-and-braces
+  function forceCloseAddHabitsStack(reason) {
+    _addHabitBreadcrumb('forceClose-start', { reason: reason || 'unspecified' });
+    try { closeHabitDetail(); } catch (_) {}
+    try { closeLibrary(); } catch (_) {}
+    try { resetAddHabitsInteractionState(); } catch (_) {}
+    // Belt-and-braces — even after the above, a stray pointer-events
+    // on the body or the overlay roots could still intercept taps.
+    // Walk the known Add Habits roots one more time and force interactive.
+    try {
+      const overlay = document.getElementById('lib-overlay');
+      if (overlay) {
+        try { overlay.classList.add('hidden'); } catch (_) {}
+        try { overlay.style.removeProperty('pointer-events'); } catch (_) {}
+        try { overlay.style.removeProperty('opacity'); } catch (_) {}
+      }
+    } catch (_) {}
+    _addHabitBreadcrumb('forceClose-complete', { reason: reason || 'unspecified' });
+  }
+
+  // v3 Phase 1z.91 — post-add interactive guard. Confirms the Habits
+  // tab is active and the bottom tab bar is responsive. If a stale
+  // overlay survived, log a breadcrumb so the next freeze repro tells
+  // us exactly which element is intercepting. NEVER throws.
+  function ensureHabitsTabInteractive() {
+    try {
+      const tabBar = document.getElementById('bottom-tabs');
+      const tabHabits = document.getElementById('tab-habits');
+      _addHabitBreadcrumb('ensureInteractive', {
+        tabBarVisible: !!(tabBar && !tabBar.classList.contains('hidden')),
+        tabHabitsActive: !!(tabHabits && tabHabits.classList.contains('active')),
+        bodyClass: (document.body && document.body.className) || '',
+        libSheetHidden: !!(document.getElementById('lib-sheet') || {}).classList?.contains('hidden'),
+        hdSheetHidden:  !!(document.getElementById('hd-sheet')  || {}).classList?.contains('hidden'),
+        libOverlayHidden: !!(document.getElementById('lib-overlay') || {}).classList?.contains('hidden'),
+      });
+    } catch (_) {}
   }
 
   // ── HABIT DETAIL SCREEN ───────────────────────────────────
@@ -16310,43 +16392,52 @@
       //   5. finally → clear button busy/disabled state.
       // Double-tap guard via dataset.busy prevents duplicate adds while the
       // handler is mid-flight.
+      // v3 Phase 1z.91 — fully instrumented + conservative add path.
+      // Persistent localStorage breadcrumbs at every step so a freeze
+      // that requires force-quit can be diagnosed post-mortem. No
+      // renderLibrary after successful add (the sheet is closed; the
+      // library will re-render on next openLibrary). Renders deferred
+      // to a real 150ms paint window. Watchdog at 500ms re-runs the
+      // force-close as belt-and-braces against any stale overlay.
       addBtn.addEventListener('click', () => {
-        if (addBtn.dataset.busy === '1') return;
+        _addHabitBreadcrumb('tap-start', {
+          name: (h && h.name) || null,
+          context: opts.context || null,
+          build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : null,
+        });
+        if (addBtn.dataset.busy === '1') {
+          _addHabitBreadcrumb('tap-busy-already-set');
+          return;
+        }
         addBtn.dataset.busy = '1';
         addBtn.disabled = true;
-        console.log('[habit-detail] add click start name=', h && h.name, 'context=', opts.context);
-        // v3 Phase 1z.88 — click-time defensive guard. Even though the
-        // render path early-returns for already-added presets, a stale
-        // detail sheet (e.g. opened before the dup was added in another
-        // flow) could still expose this button. Recompute at tap time
-        // against the live habits[] array; if dup, toast + close + return.
-        // This is the "no path can create a freeze or a duplicate" line
-        // of defence — the main handler below never runs for dups.
+        _addHabitBreadcrumb('busy-guard-set');
+
+        // ── Already-added tap guard ───────────────────────────────
         try {
+          _addHabitBreadcrumb('dup-guard-start');
           if (!isOnboarding && isHabitAlreadyAdded(h)) {
-            console.log('[habit-detail] tap guard · already added, short-circuiting name=', h && h.name);
+            _addHabitBreadcrumb('dup-guard-tripped', { name: h && h.name });
             try {
               if (typeof showHabitToast === 'function') {
                 showHabitToast((h && h.name ? h.name : 'Habit') + ' is already in your habits.');
               }
             } catch (_) {}
-            try { closeHabitDetail(); } catch (_) {}
-            // v3 Phase 1z.89 — also close the library on the dup path
-            // so the user is never left on a frozen parent sheet.
-            // Consistent with the success path (Option 1: always return
-            // to Habits tab after a preset interaction).
-            if (opts.context === 'library') {
-              try { closeLibrary(); } catch (_) {}
-              try { resetAddHabitsInteractionState(); } catch (_) {}
-            }
+            try { forceCloseAddHabitsStack('dup-guard'); } catch (_) {}
             addBtn.dataset.busy = '';
             addBtn.disabled = false;
+            _addHabitBreadcrumb('dup-guard-complete');
             return;
           }
+          _addHabitBreadcrumb('dup-guard-passed');
         } catch (err) {
-          console.error('[habit-detail] tap guard threw', err);
+          _addHabitBreadcrumb('dup-guard-threw', { err: String(err && err.message || err) });
         }
+
+        // ── Main add path ─────────────────────────────────────────
+        let saveOK = false;
         try {
+          _addHabitBreadcrumb('cfg-build-start');
           const days = getScheduleDays();
           const cfg  = {
             type:       hdType,
@@ -16354,24 +16445,26 @@
             ndays:      hdNdays,
             difficulty: hdDiff,
             days:       days || undefined,
-            // Goal — mutually exclusive between three branches:
-            //   step-goal habits carry stepGoal (Daily walk)
-            //   sleep-goal habits carry sleepGoalHours (Sleep)
-            //   measurable habits carry the legacy goal{value,unit} shape
             goal:           (!hdIsStepGoal && !hdIsSleepGoal && measurable) ? { value: hdGoal, unit: measurable.unit } : undefined,
             stepGoal:       hdIsStepGoal  ? hdStepGoal  : undefined,
             sleepGoalHours: hdIsSleepGoal ? hdSleepGoal : undefined,
             startDate:  hdStart !== today ? hdStart : undefined,
           };
+          _addHabitBreadcrumb('cfg-build-complete', {
+            type: cfg.type, sched: cfg.sched, hasGoal: !!cfg.goal,
+            hasStepGoal: typeof cfg.stepGoal === 'number',
+            hasSleepGoal: typeof cfg.sleepGoalHours === 'number',
+          });
+
           if (opts.onConfirm) {
-            // Library / onboarding callback. Wrapped so a throw inside the
-            // caller's push/save logic doesn't skip the close+render below.
-            console.log('[habit-detail] calling opts.onConfirm');
-            try { opts.onConfirm(cfg); }
-            catch (err) { console.error('[habit-detail] opts.onConfirm threw', err); }
-            console.log('[habit-detail] opts.onConfirm returned');
+            _addHabitBreadcrumb('onConfirm-start');
+            try { opts.onConfirm(cfg); saveOK = true; }
+            catch (err) {
+              _addHabitBreadcrumb('onConfirm-threw', { err: String(err && err.message || err) });
+            }
+            _addHabitBreadcrumb('onConfirm-complete', { saveOK });
           } else {
-            // Default standalone-detail behaviour (no caller-supplied onConfirm).
+            _addHabitBreadcrumb('default-save-start');
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
             if (days)               newH.days           = days;
             if (hdIsStepGoal)       newH.stepGoal       = hdStepGoal;
@@ -16379,88 +16472,81 @@
             else if (measurable)    newH.goal           = { value: hdGoal, unit: measurable.unit };
             if (hdStart !== today)  newH.startDate      = hdStart;
             habits.push(newH);
-            try { save(); }
-            catch (err) { console.error('[habit-detail] save threw', err); }
+            try { save(); saveOK = true; }
+            catch (err) {
+              _addHabitBreadcrumb('default-save-threw', { err: String(err && err.message || err) });
+            }
+            _addHabitBreadcrumb('default-save-complete', { saveOK });
           }
-          // Close FIRST — sheet must not strand even if the renders throw.
-          try { closeHabitDetail(); } catch (_) {}
-          console.log('[habit-detail] sheet closed');
-          // v3 Phase 1z.89 — when the detail was opened from the library,
-          // ALSO close the parent Add Habits sheet and return the user
-          // to the Habits tab. On TestFlight 2.2.2-w3 the parent sheet
-          // was stranding after a successful preset add (Mobility &
-          // Stretching repro) — most likely culprit was residual inline
-          // transform/transition left on #lib-sheet by the swipe-dismiss
-          // gesture handler when the post-add renderLibrary thrashed
-          // the DOM before transitionend could fire.
-          //
-          // Closing the parent sheet eliminates the entire half-state
-          // class. The library still re-renders on the deferred tick
-          // so the next openLibrary() reflects the new habits[].
-          // resetAddHabitsInteractionState scrubs any gesture residue
-          // off both sheets + the overlay so the next open is clean.
-          if (opts.context === 'library') {
-            try { closeLibrary(); } catch (_) {}
-            try { resetAddHabitsInteractionState(); } catch (_) {}
-            console.log('[habit-detail] library sheet closed');
+
+          // Close BEFORE any render. 1z.91 routes everything through
+          // forceCloseAddHabitsStack — single deterministic helper.
+          _addHabitBreadcrumb('force-close-start');
+          try { forceCloseAddHabitsStack('add-success'); } catch (_) {}
+          _addHabitBreadcrumb('force-close-complete');
+
+          // Success toast.
+          if (saveOK && opts.context === 'library') {
             try {
               if (typeof showHabitToast === 'function' && h && h.name) {
                 showHabitToast(h.name + ' added to your habits.');
+                _addHabitBreadcrumb('toast-shown');
               }
             } catch (_) {}
           }
         } catch (err) {
-          // Outer-shell failure (e.g. cfg builder threw). Force-close the
-          // sheet so the user is never trapped.
-          console.error('[habit-detail] add click outer failure', err);
-          try { closeHabitDetail(); } catch (_) {}
-          // Best-effort parent-sheet reset on failure too — better to
-          // strand-free than half-open.
-          if (opts.context === 'library') {
-            try { closeLibrary(); } catch (_) {}
-            try { resetAddHabitsInteractionState(); } catch (_) {}
-          }
+          _addHabitBreadcrumb('outer-threw', { err: String(err && err.message || err) });
+          try { forceCloseAddHabitsStack('outer-throw'); } catch (_) {}
         } finally {
-          // v3 Phase 1z.87 — clear busy + disabled BEFORE the deferred
-          // renders. Even if a render hangs in the next frame, the
-          // button is already unlocked and the sheet is already closed.
           addBtn.dataset.busy = '';
           addBtn.disabled = false;
+          _addHabitBreadcrumb('finally-cleanup');
         }
-        // v3 Phase 1z.88 — chained setTimeout(0) deferral. 1z.87 used a
-        // single requestAnimationFrame, but on iOS Capacitor WebView the
-        // rAF callback fires BEFORE paint commits in some cases, so a
-        // heavy renderHabits in the same frame still blocks the close
-        // from being visible. Splitting renderHabits and renderLibrary
-        // into separate macrotasks (setTimeout 0) lets the WebView
-        // paint between each step, which empirically unsticks the
-        // freeze. Each callback is independently try/caught so one
-        // bad render can't break the chain.
-        const _scheduleRenders = () => {
+
+        // ── Deferred render (renderHabits ONLY — no renderLibrary) ─
+        // 1z.91 drops renderLibrary from the success path entirely.
+        // The library sheet is closing; rendering into a closing sheet
+        // was a suspected freeze contributor. The library re-renders
+        // on the next openLibrary() call regardless.
+        //
+        // Delay of 150ms (not setTimeout 0) gives the iOS Capacitor
+        // WebView a real paint frame to commit the close before the
+        // heavy renderHabits work hits. 150ms is below the ~200ms
+        // human-perceptible-pause threshold and well above a single
+        // 16ms paint tick so the WebView reliably commits.
+        try {
           setTimeout(() => {
-            console.log('[habit-detail] tick1 · renderHabits');
-            try { renderHabits(); }
-            catch (err) { console.error('[habit-detail] renderHabits threw', err); }
-            if (opts.context === 'library') {
-              setTimeout(() => {
-                console.log('[habit-detail] tick2 · renderLibrary');
-                try { renderLibrary(); }
-                catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
-                console.log('[habit-detail] renders complete');
-              }, 0);
-            } else {
-              console.log('[habit-detail] renders complete');
+            _addHabitBreadcrumb('render-tick-start');
+            try { renderHabits(); _addHabitBreadcrumb('render-tick-ok'); }
+            catch (err) {
+              _addHabitBreadcrumb('render-tick-threw', { err: String(err && err.message || err) });
             }
-          }, 0);
-        };
-        try { _scheduleRenders(); }
-        catch (_) {
-          // Fallback if setTimeout is somehow unavailable — sync path.
-          try { renderHabits(); }      catch (err) { console.error('[habit-detail] renderHabits threw', err); }
-          if (opts.context === 'library') {
-            try { renderLibrary(); }   catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
-          }
+          }, 150);
+        } catch (_) {
+          // Fallback if setTimeout is somehow unavailable — sync.
+          try { renderHabits(); } catch (_) {}
         }
+
+        // ── Post-add watchdog (~500ms) ─────────────────────────────
+        // Belt-and-braces: if ANY layer of the close path failed to
+        // hide an overlay or clear pointer-events, this watchdog
+        // re-runs forceCloseAddHabitsStack idempotently. Also logs
+        // an interaction-state snapshot for the next freeze repro.
+        try {
+          setTimeout(() => {
+            try { forceCloseAddHabitsStack('watchdog-500ms'); } catch (_) {}
+            try { ensureHabitsTabInteractive(); } catch (_) {}
+            _addHabitBreadcrumb('watchdog-complete');
+          }, 500);
+        } catch (_) {}
+
+        // ── Alive probes (post-tap) ───────────────────────────────
+        // If these breadcrumbs land but the user reports freeze, the
+        // JS main thread is alive — the freeze is touch interception.
+        // If they don't land, JS is genuinely blocked.
+        try { setTimeout(() => _addHabitBreadcrumb('alive-100'),  100); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-500'),  500); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-1000'), 1000); } catch (_) {}
       });
       footer.appendChild(addBtn);
 
