@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w82';
+  const APP_BUILD_TAG = '2.2.1-w83';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22210,38 +22210,46 @@
   }
 
   // Permission explainer modal — shown once before the iOS native prompt.
+  // v3 Phase 1z.78 — App Store Review 5.1.1(iv) compliance. The
+  // notifications pre-permission modal (#notif-explain-overlay)
+  // previously had a "Not Now" cancel button alongside "Enable
+  // Notifications". Same risk pattern as the HealthKit pre-prompt
+  // fixed in 1z.77. Now single neutral "Continue" button; tap
+  // proceeds directly to iOS's native UNUserNotificationCenter
+  // permission sheet, where the user makes the real choice.
+  //
+  // The function still receives a callback for backwards-compat
+  // with onboarding/settings code paths; cb is always invoked with
+  // ok=true (no cancel path remains). Legacy opts.cancelLabel /
+  // opts.enableLabel are ignored — the button copy stays neutral.
   function showNotifExplainer(callback, opts) {
     opts = opts || {};
     const ov = document.getElementById('notif-explain-overlay');
     if (!ov) { callback && callback(true); return; }
 
-    // Allow callers to override copy/labels for context (onboarding A vs.
-    // in-edit prompt). Defaults are the in-edit copy that already shipped.
+    // Allow callers to override title/body copy for context
+    // (onboarding A vs. in-edit prompt). The button label opts are
+    // intentionally ignored post-1z.78 — single neutral "Continue"
+    // is the only valid primary now.
     const titleEl = ov.querySelector('.custom-title');
     const subEl   = ov.querySelector('.custom-sub');
-    const cancelBtn = document.getElementById('notif-explain-cancel');
     const enableBtn = document.getElementById('notif-explain-enable');
     const _origTitle  = titleEl ? titleEl.innerHTML  : '';
     const _origSub    = subEl   ? subEl.innerHTML    : '';
-    const _origCancel = cancelBtn ? cancelBtn.textContent : '';
-    const _origEnable = enableBtn ? enableBtn.textContent : '';
-    if (opts.title  && titleEl) titleEl.innerHTML = opts.title;
-    if (opts.body   && subEl)   subEl.innerHTML   = opts.body;
-    if (opts.cancelLabel && cancelBtn) cancelBtn.textContent = opts.cancelLabel;
-    if (opts.enableLabel && enableBtn) enableBtn.textContent = opts.enableLabel;
+    if (opts.title && titleEl) titleEl.innerHTML = opts.title;
+    if (opts.body  && subEl)   subEl.innerHTML   = opts.body;
+    // (opts.cancelLabel / opts.enableLabel intentionally ignored —
+    //  see compliance comment above.)
 
     ov.classList.remove('hidden');
     const finish = (ok) => {
       ov.classList.add('hidden');
       // Restore originals so the next caller (e.g., in-edit) gets default copy.
-      if (titleEl)  titleEl.innerHTML  = _origTitle;
-      if (subEl)    subEl.innerHTML    = _origSub;
-      if (cancelBtn) cancelBtn.textContent = _origCancel;
-      if (enableBtn) enableBtn.textContent = _origEnable;
+      if (titleEl) titleEl.innerHTML = _origTitle;
+      if (subEl)   subEl.innerHTML   = _origSub;
       try { callback && callback(ok); } catch (_) {}
     };
-    cancelBtn.onclick = () => finish(false);
-    enableBtn.onclick = () => finish(true);
+    if (enableBtn) enableBtn.onclick = () => finish(true);
   }
 
   // ── Onboarding A: ask for notification permission once, before the
@@ -22251,11 +22259,13 @@
     try {
       if (Notif.permAskedBefore && Notif.permAskedBefore()) { cb && cb(); return; }
     } catch (_) {}
+    // v3 Phase 1z.78 — the explainer no longer has a cancel/skip
+    // button (5.1.1(iv) compliance), so `ok` is always true. The
+    // legacy if-not-ok branch remains as defensive dead code in case
+    // a future change re-introduces an opt-out path.
     showNotifExplainer(async (ok) => {
       if (!ok) {
-        // "Maybe Later" → mark BOTH the deferred flag and the
-        // perm-asked flag so A never fires a second time. The spec
-        // expects A to fire at most once per user.
+        // Defensive — legacy "Maybe Later" path. Unreachable in 1z.78.
         try {
           localStorage.setItem('hb_notif_perm_deferred', '1');
           localStorage.setItem('hb_notif_perm_requested', '1');
@@ -22275,7 +22285,7 @@
           }
         } else {
           if (typeof showHabitToast === 'function') {
-            showHabitToast('Reminders are off. Enable in iOS Settings → Awakened anytime.', { sticky: true });
+            showHabitToast('Reminders are off. Turn them on in iOS Settings → Awakened anytime.', { sticky: true });
           }
         }
       } catch (_) {}
@@ -22283,8 +22293,6 @@
     }, {
       title: 'Stay on Track',
       body:  'Just the Morning Briefing.<br>The rest is on you.',
-      cancelLabel: 'Maybe Later',
-      enableLabel: 'Enable Reminder',
     });
   }
 

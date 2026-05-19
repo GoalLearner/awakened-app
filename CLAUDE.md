@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w82` |
-| `app.js?v=` | `431` |
+| `APP_BUILD_TAG` | `2.2.1-w83` |
+| `app.js?v=` | `432` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `301` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.317` |
+| `sw.js CACHE_VERSION` | `v5.318` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,67 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### App Store Review compliance — full permission-prompt audit (v3 Phase 1z.78)
+
+**Full audit of every native permission system in the app.** Triggered by the 1z.77 HealthKit fix to make sure no other Guideline 5.1.1(iv) risks remain. Apple's specific guidance:
+
+- Pre-permission custom messages must use neutral button copy (`Continue`, `Next`).
+- Words reserved for the system dialog and **disallowed** in custom UI: `Enable`, `Allow`, `Grant`, `Turn On`, `Accept`.
+- The user must always proceed to the system permission request after the custom message — no exit / cancel / skip option may precede the system sheet.
+
+**Native permission systems present in the app:**
+
+| Permission | Custom pre-prompt? | Native request follows | Risk | Fix |
+|---|---|---|---|---|
+| **HealthKit** | `#hk-preprompt-overlay` (`showHealthKitPreprompt`) | `Health.requestPermissions()` | High → fixed in 1z.77 | Single `Continue`. No cancel. |
+| **HealthKit sleep upgrade** | none | `requestSleepPermissionIfNeeded` → native sheet directly | Low | None needed |
+| **HealthKit flights upgrade** | none | `requestFlightsPermissionIfNeeded` → native sheet directly | Low | None needed |
+| **HealthKit active-energy upgrade** | none | `requestActiveEnergyPermissionIfNeeded` → native sheet directly | Low | None needed |
+| **Notifications** (UNUserNotificationCenter via LocalNotifications) | `#notif-explain-overlay` (`showNotifExplainer`) | `Notif.requestPermission()` | High → fixed this phase | Single `Continue`. No cancel. |
+| **Notifications — Settings panel button** | n/a (the button itself, label was `Enable`) | Opens explainer above, then native | Medium → fixed this phase | Renamed to `Set up notifications` |
+
+**Confirmed absent — no audit needed:**
+- Camera / Photos / Microphone / Location / Motion / Contacts / Calendar / Bluetooth / App Tracking Transparency. Grep of the source (`navigator.geolocation`, `Camera`, `Photos`, `requestTrackingAuth`, etc.) returns zero hits.
+
+**Fixes applied this phase (1z.78):**
+
+1. **Notifications explainer** (`showNotifExplainer` / `#notif-explain-overlay`):
+   - Removed `notif-explain-cancel` button entirely (was `Not Now`, with onboarding A passing `cancelLabel: 'Maybe Later'`).
+   - Renamed `notif-explain-enable` button text `Enable Notifications` → `Continue`.
+   - `showNotifExplainer` now ignores `opts.cancelLabel` / `opts.enableLabel` so callers can't reintroduce non-neutral copy.
+   - `runOnboardingNotifPrompt`'s legacy if-not-ok branch kept as defensive dead code (never reached now).
+   - Post-denial toast softened from `"Reminders are off. Enable in iOS Settings → Awakened anytime."` to `"Reminders are off. Turn them on in iOS Settings → Awakened anytime."` — denial messaging is allowed per Apple's guidance ("you may include a notification to inform the user and provide a link to the Settings app").
+
+2. **Settings panel reminders button** (`#settings-rem-enable`):
+   - Renamed `Enable` → `Set up notifications`. The Settings panel is the persistent app UI (not a transient modal), but the button copy still triggered concern since it directly opens the explainer + native permission sheet. Neutralised the copy to remove ambiguity.
+
+**Risk-category review of remaining `Enable` / `Not Now` strings in the source:**
+
+| Match | Location | Risk | Status |
+|---|---|---|---|
+| `app.js` line 22215 | Compliance docstring comment | Low — comment only | OK |
+| `"Enable in iOS Settings"` toast | Post-denial messaging | Low — describes the system action, not the app's pre-permission UI | Softened to "Turn them on" anyway |
+| `Edit Reminder` modal's enable/save labels | In-app feature toggle, not a permission request | Low | OK |
+| `editStepGoalEnabled` / `editSleepGoalEnabled` / similar | Internal variable names | None | OK |
+| `soundEnabled` | Internal variable name | None | OK |
+
+No remaining `Not Now` strings in the app's permission flow. No remaining `Enable` button text in front of a native permission request.
+
+**HealthKit entitlements / Info.plist usage descriptions unchanged.** This is a UI-copy fix only.
+
+**Versions:** `app.js?v=432`, `sw.js v5.318`, `APP_BUILD_TAG 2.2.1-w83`. `styles.css?v=301` (no CSS changes). `APP_VERSION` stays 2.2.1 (still the same submission cycle, not a new version).
+
+**Support URL (Guideline 1.5)** — still pending. Manual App Store Connect action as documented in 1z.77.
+
+**Preserved:** drop rates, mercy, pity, souls, XP, rank thresholds, daily one-kill-per-day lock, Carouser Friday-only, temp 1z.71 C-rank QA unlock, Sigil Bloom, queue semantics. No backend / no Duels / no HealthKit entitlement changes.
+
+**Manual QA next TestFlight build:**
+1. Fresh install OR clear `hb_healthkit_prompted` + `hb_notif_perm_requested` + `hb_notif_perm_deferred` in localStorage.
+2. Trigger HealthKit explainer → confirm single `Continue` button → tap → iOS sheet appears.
+3. Trigger notifications explainer (onboarding A or Settings → Reminders → Set up notifications) → confirm single `Continue` button, no `Not Now` / `Maybe Later` → tap → iOS sheet appears.
+4. Deny both → app does not crash; existing graceful unavailable states apply.
+5. Grant both → reminders + Health auto-verify work as before.
 
 ### App Store Review compliance — HealthKit pre-permission modal (v3 Phase 1z.77)
 

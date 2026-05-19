@@ -1751,12 +1751,16 @@
         </div>
       </div>
 
-      <div class="notif-explain-actions">
+      <!-- v3 Phase 1z.78 — App Store Review 5.1.1(iv) compliance.
+           Same fix pattern as the HealthKit pre-prompt in 1z.77.
+           Single neutral primary button; no cancel/exit before the
+           native iOS Notifications permission sheet. The user makes
+           the real Allow / Don't Allow choice on the system sheet. -->
+      <div class="notif-explain-actions notif-explain-actions--single">
         <button id="notif-explain-enable" class="notif-explain-btn notif-explain-btn--primary" type="button">
           <span class="notif-explain-btn-rune" aria-hidden="true">✦</span>
-          Enable Notifications
+          Continue
         </button>
-        <button id="notif-explain-cancel" class="notif-explain-btn notif-explain-btn--ghost" type="button">Not Now</button>
       </div>
 
       <p class="notif-explain-trust">
@@ -2172,7 +2176,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=431"></script>
+  <script src="app.js?v=432"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2445,7 +2449,14 @@
         <span class="settings-rem-label">Notification permission</span>
         <span id="settings-rem-permission" class="settings-rem-value">Not set</span>
       </div>
-      <button id="settings-rem-enable" class="settings-rem-enable-btn hidden" type="button">Enable</button>
+      <!-- v3 Phase 1z.78 — App Store Review 5.1.1(iv) compliance.
+           Renamed from "Enable" to "Set up notifications" so the
+           button copy stays neutral. Apple flags "Enable" alongside
+           "Allow" / "Grant" / "Turn On" as words reserved for the
+           system permission dialog. Tapping this button opens the
+           1z.78-compliant explainer modal (single Continue) which
+           proceeds to iOS's native permission sheet. -->
+      <button id="settings-rem-enable" class="settings-rem-enable-btn hidden" type="button">Set up notifications</button>
       <p id="settings-rem-web-note" class="settings-rem-note hidden">
         Reminders work best in the iOS app. Install from App Store for full functionality.
       </p>
