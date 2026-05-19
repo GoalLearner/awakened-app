@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w85';
+  const APP_BUILD_TAG = '2.2.1-w86';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4530,6 +4530,54 @@
         const card = CARDS && CARDS[evt.drop.cardId];
         statsEl.innerHTML = card ? cardStatBadgesHtml(card) : '';
       }
+
+      // v3 Phase 1z.82 — mask the relic identity in the Boss Defeated
+      // modal for rare/ultra FIRST-acquisitions so the Sigil Bloom
+      // (which fires after this modal closes via the reveal queue
+      // chain set up in 1z.73) is the true reveal moment.
+      //
+      // The rarity pill + "RELIC ACQUIRED" eyebrow + source boss
+      // name all stay visible so the user knows something special
+      // dropped. Everything that would spoil the relic identity —
+      // art, slot icon, name, stat badges, "NEW" pill — gets masked
+      // to "???". The View Relic button copy switches to "REVEAL
+      // RELIC" to set expectations.
+      //
+      // Duplicate rare/ultra (wasFirst=false) and ALL commons are
+      // unaffected — they show the full relic as before because
+      // there's no cinematic reveal queued for them.
+      const _maskRelic = !!(evt.drop && evt.drop.wasFirst &&
+        (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare'));
+      if (_maskRelic) {
+        // Hide art — setModalCardArt(null) removes src and keeps
+        // the img hidden. The slot-icon span becomes the visual.
+        setModalCardArt('bro-relic-art', null);
+        if (slotIconEl) slotIconEl.textContent = '?';
+        if (relicNameEl) relicNameEl.textContent = '???';
+        if (metaEl) {
+          // Keep "From <Boss>" since the user just defeated that boss
+          // and already knows. Drop the slot label + NEW pill — those
+          // hint at identity.
+          const sourceLabel = evt.bossName ? ('From ' + evt.bossName.toUpperCase()) : '';
+          metaEl.innerHTML =
+            '<span class="bro-relic-slot">???</span>' +
+            (sourceLabel ? '<span class="bro-relic-source">· ' + sourceLabel + '</span>' : '');
+        }
+        if (statsEl) statsEl.innerHTML = '';
+        // Flag the View Relic button so its click handler knows to
+        // skip openCardDetailModal and let the queue drain chain to
+        // the cinematic reveal instead.
+        if (viewBtn) {
+          viewBtn.textContent = 'Reveal Relic';
+          viewBtn.setAttribute('data-masked', '1');
+        }
+      } else if (viewBtn) {
+        // Restore defaults (defensive — the same modal element is
+        // re-used across queued results, so an unmasked drop after a
+        // masked one must not inherit the masked button copy).
+        viewBtn.textContent = 'View Relic';
+        viewBtn.removeAttribute('data-masked');
+      }
     } else {
       // No drop — mercy increased. Render 3-row mercy block with bar fills.
       if (relicCard)  relicCard.classList.add('hidden');
@@ -4691,6 +4739,21 @@
     if (viewBtn) {
       viewBtn.addEventListener('click', () => {
         const cardId = viewBtn.getAttribute('data-card-id');
+        // v3 Phase 1z.82 — masked-drop branch. For rare/ultra first-
+        // acquisitions, the boss-defeated modal hid the relic identity.
+        // Tapping "Reveal Relic" should NOT open the static card-detail
+        // page (that would spoil the relic without the cinematic). Just
+        // close the modal — _drainBossResultQueue chains to
+        // processRevealQueue when the boss-defeated queue empties,
+        // and the Sigil Bloom fires from openCardRevealModal. The
+        // cinematic itself marks the card as seen + clears the NEW
+        // chip when the user taps to continue.
+        const isMasked = viewBtn.getAttribute('data-masked') === '1';
+        if (isMasked) {
+          closeBossResult({ suppressDrain: true });
+          _drainBossResultQueue();
+          return;
+        }
         closeBossResult({ suppressDrain: true });
         try {
           // v3 Phase 1z.7 — viewing the relic clears its NEW chip.

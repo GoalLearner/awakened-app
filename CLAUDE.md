@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w85` |
-| `app.js?v=` | `434` |
+| `APP_BUILD_TAG` | `2.2.1-w86` |
+| `app.js?v=` | `435` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `301` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.320` |
+| `sw.js CACHE_VERSION` | `v5.321` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,39 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Mask rare/ultra relic identity in Boss Defeated modal (v3 Phase 1z.82)
+
+**Product fix.** Before 1z.82, rare/ultra first-acquisitions showed the relic art + name + stats in the Boss Defeated modal AND then again in the Sigil Bloom cinematic — the cinematic lost its impact because the user had already seen the item.
+
+**New flow:**
+
+| Drop | Boss Defeated modal | View Relic button | After tap |
+|---|---|---|---|
+| Common | Full relic (art + name + stats) | "View Relic" → opens card detail | (no cinematic) |
+| Duplicate rare/ultra | Full relic (no cinematic queued) | "View Relic" → opens card detail | (no cinematic) |
+| **Rare/Ultra FIRST acquisition** | **Masked: silhouette + "???" name + "???" slot + "From <Boss>"** | **"Reveal Relic"** → closes modal, queue drains | **Sigil Bloom cinematic fires** |
+
+What stays visible on a masked drop (so the moment still reads as significant):
+- `RELIC ACQUIRED` eyebrow
+- Rarity pill (`ULTRA-RARE` / `RARE`)
+- `From <Boss Name>` source label
+
+What gets masked:
+- Art (img cleared via `setModalCardArt(null)`)
+- Slot icon ('?' replaces the emoji)
+- Name ('???' replaces the real name)
+- Stat badges (cleared)
+- "NEW" pill (hidden — that's a spoiler too)
+
+**Code.** Two surgical edits in app.js:
+
+1. In `_showBossResult`, after the existing relic-render block, compute `_maskRelic = !!(evt.drop.wasFirst && (rarity === 'rare' || rarity === 'ultra_rare'))`. When true, override the rendered fields and stamp `data-masked="1"` on the View Relic button. When false, defensively restore the default button copy (the same modal element is reused across queued results).
+2. The View Relic click handler now checks `data-masked` and short-circuits when set: `closeBossResult({ suppressDrain: true })` + `_drainBossResultQueue()`. The drain's empty-queue branch chains to `processRevealQueue` (per 1z.73) which opens `openCardRevealModal` → fires the Sigil Bloom. The cinematic's tap-to-reveal handles marking the card as seen.
+
+The Close button on a masked drop also triggers the cinematic (it calls `_drainBossResultQueue` directly). Hunt Again behavior is unchanged from 1z.73.
+
+**Versions:** `app.js?v=435`, `sw.js v5.321`, `APP_BUILD_TAG 2.2.1-w86`. `styles.css` unchanged. `APP_VERSION` stays 2.2.1.
 
 ### ACTUAL root cause of C-rank boss art blanks: Codemagic copy script (v3 Phase 1z.81)
 
