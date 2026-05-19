@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w79';
+  const APP_BUILD_TAG = '2.2.1-w80';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3848,8 +3848,25 @@
       _sigilBloomCleanupId = null;
     }
     stage.innerHTML = '';
-    overlay.classList.remove('is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4', 'is-ultra');
+    overlay.classList.remove(
+      'is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4',
+      'is-ultra', 'is-bloom-ready', 'is-card-revealed'
+    );
     overlay.classList.add('reveal-overlay--sigil');
+
+    // v3 Phase 1z.75 — reduced-motion users skip the bloom + tap-to-reveal.
+    // The relic card displays immediately; the modal closes on any tap.
+    // Audio still fires (audio is not motion) per the spec.
+    let reducedMotion = false;
+    try {
+      reducedMotion = !!(window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (_) {}
+    if (reducedMotion) {
+      overlay.classList.add('is-bloom-ready', 'is-card-revealed');
+      try { _playSigilBloomSfx(rarity); } catch (_) {}
+      return;
+    }
 
     const ultra = (rarity === 'ultra_rare');
     if (ultra) overlay.classList.add('is-ultra');
@@ -4102,6 +4119,14 @@
     _sigilBloomTimers.push(setTimeout(() => setPhase(2), timings.ignite));
     _sigilBloomTimers.push(setTimeout(() => setPhase(3), timings.burst));
     _sigilBloomTimers.push(setTimeout(() => setPhase(4), timings.settle));
+    // v3 Phase 1z.75 — mark bloom as "ready" once the settle phase
+    // lands so the tap handler knows the user's first tap should
+    // REVEAL the relic card (instead of closing). The second tap
+    // then closes as normal. Card stays hidden through every phase
+    // — only .is-card-revealed shows it.
+    _sigilBloomTimers.push(setTimeout(() => {
+      try { overlay.classList.add('is-bloom-ready'); } catch (_) {}
+    }, timings.settle));
 
     // SFX
     try { _playSigilBloomSfx(rarity); } catch (_) {}
@@ -4201,7 +4226,8 @@
     const overlay = document.getElementById('reveal-overlay');
     const stage   = document.getElementById('sigil-bloom-stage');
     if (overlay) overlay.classList.remove(
-      'reveal-overlay--sigil', 'is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4', 'is-ultra'
+      'reveal-overlay--sigil', 'is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4',
+      'is-ultra', 'is-bloom-ready', 'is-card-revealed'
     );
     if (stage) stage.innerHTML = '';
   }
@@ -4754,15 +4780,34 @@
   function setupCardRevealModal() {
     const overlay = document.getElementById('reveal-overlay');
     if (!overlay) return;
-    // Tap anywhere on the overlay (including the card) dismisses.
+    // v3 Phase 1z.75 — two-tap reveal for sigil bloom path.
+    //   1st tap (bloom done, card not yet revealed) → reveal card.
+    //   2nd tap (card revealed) → close modal.
+    //   Common-drop fallback (no .reveal-overlay--sigil class) closes
+    //   on first tap as before.
     overlay.addEventListener('click', () => {
-      if (overlay.classList.contains('reveal-overlay--showing')) {
-        closeCardRevealModal();
+      if (!overlay.classList.contains('reveal-overlay--showing')) return;
+      const isSigil = overlay.classList.contains('reveal-overlay--sigil');
+      const cardRevealed = overlay.classList.contains('is-card-revealed');
+      const bloomReady = overlay.classList.contains('is-bloom-ready');
+      if (isSigil && bloomReady && !cardRevealed) {
+        // Reveal the relic card; consume this tap. Next tap closes.
+        overlay.classList.add('is-card-revealed');
+        return;
       }
+      if (isSigil && !bloomReady && !cardRevealed) {
+        // User tapped DURING the bloom — let them skip ahead to the
+        // reveal so the animation never feels gated.
+        overlay.classList.add('is-bloom-ready', 'is-card-revealed');
+        return;
+      }
+      closeCardRevealModal();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (overlay.classList.contains('reveal-overlay--showing')) closeCardRevealModal();
+      if (!overlay.classList.contains('reveal-overlay--showing')) return;
+      // ESC always closes — bloom mid-flight or not.
+      closeCardRevealModal();
     });
   }
 

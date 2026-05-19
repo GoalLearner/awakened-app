@@ -22957,8 +22957,9 @@ body.habit-drag-active * {
 .reveal-overlay--sigil .sigil-bloom-stage { opacity: 1; }
 
 /* When sigil bloom is active, suppress the existing materialize +
-   pulse on .reveal-card. The card slides in at phase 3 via its
-   own translateY animation. */
+   pulse on .reveal-card. The card stays hidden through every bloom
+   phase and only slides in when the user taps to continue — gated
+   by the .is-card-revealed class added by the tap handler. */
 .reveal-overlay--sigil .reveal-card {
   opacity: 0 !important;
   transform: translateY(12px) !important;
@@ -22966,10 +22967,31 @@ body.habit-drag-active * {
   transition: opacity 500ms ease, transform 500ms ease,
               box-shadow 0.4s ease;
 }
-.reveal-overlay--sigil.is-phase-3 .reveal-card,
-.reveal-overlay--sigil.is-phase-4 .reveal-card {
+.reveal-overlay--sigil.is-card-revealed .reveal-card {
   opacity: 1 !important;
   transform: translateY(0) !important;
+}
+/* Tap-to-continue prompt during bloom should pulse softly. When the
+   card is revealed, the prompt copy stays ("TAP TO CONTINUE" still
+   means "tap to dismiss") but visually de-emphasises slightly. */
+.reveal-overlay--sigil .reveal-continue-hint { opacity: 0.7; }
+.reveal-overlay--sigil.is-bloom-ready:not(.is-card-revealed) .reveal-continue-hint {
+  opacity: 1;
+  animation: sb-continue-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sb-continue-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+/* Once the card is revealed, fade out the rune/wordmark/silhouette
+   so the relic is the only focal point. The relic-card slide-in
+   replaces them in the same area. */
+.reveal-overlay--sigil.is-card-revealed .sb-rune,
+.reveal-overlay--sigil.is-card-revealed .sb-wordmark,
+.reveal-overlay--sigil.is-card-revealed .sb-silhouette,
+.reveal-overlay--sigil.is-card-revealed .sb-vignette {
+  opacity: 0 !important;
+  transition: opacity 350ms ease;
 }
 
 /* Hide the system lines + drifting particles during sigil bloom —
@@ -23209,3 +23231,10 @@ body.habit-drag-active * {
     transition: none !important;
   }
 }
+
+/* v3 Phase 1z.75 — for the reduced-motion path the bloom is hidden
+   and the card shows immediately, so flag the overlay as already
+   "card revealed" via JS on open. The CSS above gates the card on
+   .is-card-revealed; without the class the card would stay hidden
+   in reduced-motion. _runSigilBloom adds the class up-front when
+   reduced-motion is detected (see app.js). */

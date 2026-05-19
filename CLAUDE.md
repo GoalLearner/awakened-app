@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w79` |
-| `app.js?v=` | `428` |
+| `APP_BUILD_TAG` | `2.2.1-w80` |
+| `app.js?v=` | `429` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `298` |
+| `styles.css?v=` | `299` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.314` |
+| `sw.js CACHE_VERSION` | `v5.315` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,24 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Sigil Bloom — tap-to-reveal gate (v3 Phase 1z.75)
+
+**Defers relic card until user tap.** Original 1z.74 design slid the relic card in during phase 3, sharing the screen with the rune circle and silhouette. New flow:
+
+1. Bloom plays phases 1 → 4 (gather → ignite → burst → settle). Card stays hidden the entire time.
+2. After settle, overlay gets `.is-bloom-ready` + the "TAP TO CONTINUE" hint pulses.
+3. **First tap** → adds `.is-card-revealed`. Rune / wordmark / silhouette / vignette fade out (350ms ease); relic card slides in (500ms translateY 12→0 + opacity 0→1).
+4. **Second tap** → `closeCardRevealModal` as before.
+5. **Mid-bloom tap** → skip ahead: adds both `.is-bloom-ready` and `.is-card-revealed` in one step (no forced animation watch).
+
+**Reduced-motion path** unchanged in outcome: the bloom is hidden, but now JS also adds `.is-bloom-ready` + `.is-card-revealed` up front so the card appears immediately (the new CSS gates card visibility on `.is-card-revealed` instead of phase classes). Audio still fires. First tap closes.
+
+**ESC** always closes the modal regardless of state (no bloom watching required for keyboard users).
+
+**Teardown** strips the two new classes alongside the existing phase + rarity classes so a chained reveal starts clean.
+
+**Files touched:** `app.js`, `styles.css`. Bumped: `app.js?v=429`, `styles.css?v=299`, `sw.js v5.315`, `APP_BUILD_TAG 2.2.1-w80`. No backend / no Duels / no economy changes.
 
 ### Sigil Bloom Relic Reveal (v3 Phase 1z.74)
 
