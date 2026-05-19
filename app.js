@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w81';
+  const APP_BUILD_TAG = '2.2.1-w82';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27090,9 +27090,17 @@
         '<p class="hk-preprompt-body hk-preprompt-privacy">' +
           dataLabel + ' stay on your device. Awakened never sees them leave your phone.' +
         '</p>' +
-        '<div class="hk-preprompt-actions">' +
-          '<button class="hk-preprompt-secondary" id="hk-preprompt-skip">Not Now</button>' +
-          '<button class="hk-preprompt-primary"   id="hk-preprompt-enable">Enable</button>' +
+        // v3 Phase 1z.77 — App Store Review 5.1.1(iv) compliance.
+        // Apple rejected 2.2.1 (61) for the prior "Not Now / Enable"
+        // buttons on this custom pre-permission modal — those button
+        // labels were treated as directing the user to grant the
+        // permission before the system sheet. The fix per the
+        // reviewer's guidance: single neutral primary button, no
+        // exit/cancel before the request. Tapping it advances
+        // directly to iOS's HealthKit permission sheet (which is
+        // the user's real Allow / Don't Allow choice).
+        '<div class="hk-preprompt-actions hk-preprompt-actions--single">' +
+          '<button class="hk-preprompt-primary" id="hk-preprompt-continue">Continue</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -27105,9 +27113,9 @@
     // ── Step-goal picker wiring ──────────────────────────────
     // Tapping the inline number toggles the chip picker. Tapping a
     // preset writes via setHabitStepGoal (immediately persists, since
-    // the modal has no Save button — just Enable / Not Now). The
-    // displayed number updates live so the user sees their choice
-    // reflected before they grant permission.
+    // the modal has no Save button — just the single Continue button
+    // post-1z.77). The displayed number updates live so the user sees
+    // their choice reflected before they Continue to the system sheet.
     const goalBtn  = document.getElementById('hk-preprompt-goal-btn');
     const picker   = document.getElementById('hk-preprompt-stepgoal');
     const chipGrp  = picker.querySelector('.habit-edit-stepgoal-chips');
@@ -27164,12 +27172,14 @@
     customIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitCustom(); });
     customCancel.addEventListener('click', () => { customRow.classList.add('hidden'); });
 
-    // ── Skip / Enable wiring ─────────────────────────────────
-    document.getElementById('hk-preprompt-skip').addEventListener('click', () => {
-      console.log('[Health] user declined pre-prompt — proceeding without HealthKit');
-      close();
-    });
-    document.getElementById('hk-preprompt-enable').addEventListener('click', async () => {
+    // ── Continue wiring ──────────────────────────────────────
+    // v3 Phase 1z.77 — App Store Review 5.1.1(iv) compliance.
+    // Single neutral button; tap advances directly to iOS's native
+    // HealthKit sheet. User's real Allow / Don't Allow happens
+    // there. Denial is handled gracefully by the existing
+    // unavailable-state code paths (permissionStatus !== 'granted'
+    // throughout autoVerify* and the resolver).
+    document.getElementById('hk-preprompt-continue').addEventListener('click', async () => {
       close();
       const result = await Health.requestPermissions();
       console.log('[Health] permission result:', result);

@@ -921,6 +921,14 @@ footer {
 .hk-preprompt-secondary:active {
   transform: scale(0.97);
 }
+/* v3 Phase 1z.77 — App Store Review 5.1.1(iv) compliance. Single-
+   button variant for the HealthKit pre-permission modal after the
+   "Not Now" / "Enable" pair was collapsed to a single neutral
+   "Continue". The lone button stays full-width inside its row for
+   touch target hygiene on iPad + iPhone. */
+.hk-preprompt-actions--single .hk-preprompt-primary {
+  flex: 1;
+}
 /* Tappable step-goal value embedded in the pre-prompt copy. Looks
    like an inline button — accent-tinted, dotted underline, expands
    into the chip picker on tap. */

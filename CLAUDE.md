@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w81` |
-| `app.js?v=` | `430` |
+| `APP_BUILD_TAG` | `2.2.1-w82` |
+| `app.js?v=` | `431` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `300` |
+| `styles.css?v=` | `301` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.316` |
+| `sw.js CACHE_VERSION` | `v5.317` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,54 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### App Store Review compliance — HealthKit pre-permission modal (v3 Phase 1z.77)
+
+**⚠️ App Store Review rejection fix.** Apple rejected iOS App 2.2.1 (61) on May 19, 2026 for two issues. Reviewed on iPad Air 11" (M3) + iPhone 17 Pro Max. Submission ID `07b1380d-d40f-49bc-bb19-8bb2ba508e7c`.
+
+**Issue 1 — Guideline 5.1.1(iv) Privacy: Data Collection and Storage.** The HealthKit pre-permission custom modal (`#hk-preprompt-overlay`, surfaced from `autoVerifyWalk`'s first-encounter path in `showHealthKitPreprompt`) used button text Apple flagged as directing users to grant permission before the system sheet:
+- ❌ `Not Now` (cancel/exit before the request — Apple: "the user should always proceed to the permission request after the custom message")
+- ❌ `Enable` (Apple: "use words like 'Continue' or 'Next' on the button instead")
+
+**Fix.** Collapsed to a single neutral primary button:
+- ✅ `Continue` — tapping immediately calls `Health.requestPermissions()`, which fires iOS's native HealthKit permission sheet. The Allow / Don't Allow choice happens there, where the user has full control.
+- Removed the secondary `Not Now` button entirely. No exit before the system request.
+- Existing graceful unavailable-state code paths (every `autoVerify*` and the resolver short-circuit on `permissionStatus !== 'granted'`) handle denial without crashing.
+- Added `.hk-preprompt-actions--single` CSS modifier so the lone button still uses the full row for touch-target hygiene on iPad + iPhone.
+
+**Other upgrade helpers audited and clean.** `requestSleepPermissionIfNeeded` (1z.55-era), `requestFlightsPermissionIfNeeded` (1z.61), `requestActiveEnergyPermissionIfNeeded` (1z.62) all fire the native `requestAuthorization` sheet directly with **no custom pre-permission modal preceding** — they don't trip 5.1.1(iv).
+
+**Notifications pre-prompt unchanged.** The "Enable Notifications" / "Not Now" buttons in `#notif-explain-overlay` are a separate permission system (UNUserNotificationCenter, not HealthKit). Apple's rejection was scoped to HealthKit per 5.1.1(iv). If a future review flags it, apply the same fix.
+
+**Issue 2 — Guideline 1.5 Safety: Developer Information.** Support URL in App Store Connect — `https://github.com/GoalLearner/awakened-app` — is "currently not functional and/or displays an error."
+
+**Required App Store Connect action (manual, NOT a code change):**
+1. Sign in to App Store Connect → Awakened: Habit RPG → App Information.
+2. Replace **Support URL** with a functional public support page. Options:
+   - GitHub Pages site (push a static `support/index.html` to the same repo + enable Pages in repo settings).
+   - Notion public page, Carrd, Framer, or any hosted static page.
+3. Content the support page must include:
+   - App name: **Awakened: Habit RPG**
+   - Contact email
+   - Privacy Policy link
+   - Basic FAQ / data deletion / Health data explanation
+4. Once the URL resolves to a real page (not the bare repo), resubmit.
+
+**Not adding a `support/` folder to the repo this turn** — the spec says only do this if it fits, and an in-repo static page won't be served from a publicly addressable HTTPS URL without separately configuring GitHub Pages (which is a manual App Store Connect action anyway). Documenting it here is the actionable handoff.
+
+**HealthKit entitlements unchanged** — `Info.plist` / native iOS project still declares the same usage descriptions. Just the JS UI message before the system sheet changed.
+
+**Preserved:** drop rates, mercy, pity, souls, XP, rank thresholds, daily one-kill-per-day lock, Carouser Friday-only, temp 1z.71 C-rank QA unlock, Sigil Bloom (1z.74→76), queue semantics. No backend / no Duels / no entitlement changes.
+
+**Versions:** `app.js?v=431`, `styles.css?v=301`, `sw.js v5.317`, `APP_BUILD_TAG 2.2.1-w82`. `APP_VERSION` stays 2.2.1 — not bumped, this is a compliance fix on the same submission.
+
+**Manual QA next TestFlight build:**
+1. Fresh install OR clear `localStorage.hb_healthkit_prompted` + `hb_healthkit_status` to reset the prompt gate.
+2. Trigger the HealthKit pre-prompt (default walk habit at threshold should surface it).
+3. Confirm modal shows **single Continue button**. No `Not Now`, no `Enable`.
+4. Tap Continue → iOS's native HealthKit sheet appears.
+5. Tap Don't Allow → app does not crash. `permissionStatus` becomes `'denied'`. Existing unavailable-state UX applies.
+6. Repeat + Allow → real-time auto-verify runs (`autoVerifyWalk` / `autoVerifySleep` / `autoVerifyStrengthTraining` fire immediately).
 
 ### Sigil Bloom — keep silhouette visible during tap wait (v3 Phase 1z.76)
 
