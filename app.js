@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w77';
+  const APP_BUILD_TAG = '2.2.1-w78';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -567,6 +567,15 @@
     d.setDate(d.getDate() + daysUntilSun);
     d.setHours(23, 59, 59, 999);
     return d.getTime();
+  }
+
+  // v3 Phase 1z.73 — central boss-art path helper. All boss-art
+  // render sites (boss-card, boss-detail hero, boss-defeated portrait,
+  // hunting-pill icon, boss-defeated-from-pending re-open) call this
+  // so the convention (`assets/bosses/<id-with-hyphens>.png`) lives
+  // in exactly one place. Future renames or fallback rules go here.
+  function getBossArtPath(bossId) {
+    return 'assets/bosses/' + String(bossId || '').replace(/_/g, '-') + '.png';
   }
 
   // v3 Phase 1z.58 — Carouser engagement is restricted to Friday
@@ -3594,32 +3603,21 @@
       if (typeof showHabitToast === 'function') showHabitToast(toastMsg);
     } catch (_) {}
 
-    // Rare/Ultra-Rare first-acquisition: kick the reveal queue.
-    // rollBossDrop already pushed the card_id; processRevealQueue
-    // picks up on a 500ms delay so the kill toast has its moment
-    // first. Dupes (stacked or capped) skip — toast carries the
-    // signal alone.
-    if (dropInfo && dropInfo.wasFirst &&
-        (dropInfo.card.rarity === 'rare' || dropInfo.card.rarity === 'ultra_rare')) {
-      setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 500);
-    }
-
-    // v3 Phase 1z.6 — Boss-result modal hook.
-    //
-    // Today, defeating a boss is silent for common + no-drop cases —
-    // the kill toast scrolls past in seconds and the user has to
-    // manually open the Relic Archive to discover their drop. This
-    // modal makes the defeat moment visible.
-    //
-    // Rare/Ultra already have a dramatic cinematic reveal (above),
-    // so skip the additional modal there. Common + no-drop are the
-    // cases that go unacknowledged today.
+    // v3 Phase 1z.73 — every defeat queues a boss-result modal,
+    // even when a rare/ultra first-acquisition is also queued for
+    // the cinematic reveal. Previously the boss-defeated modal was
+    // skipped for rare/ultra-first to avoid double-modaling, but
+    // that meant multi-boss defeats where one had a rare drop only
+    // showed ONE boss-defeated modal — users couldn't tell two
+    // bosses fell. New flow:
+    //   1. Each kill enqueues a boss-defeated modal (this block).
+    //   2. Boss-defeated queue drains one-at-a-time.
+    //   3. When the queue is empty, _drainBossResultQueue chains
+    //      processRevealQueue so rare/ultra cinematic reveals fire
+    //      after all defeats are acknowledged.
     try {
-      const card = dropInfo && dropInfo.card;
-      const rarity = card && card.rarity;
-      const skipForReveal = (rarity === 'rare' || rarity === 'ultra_rare') &&
-                            dropInfo && dropInfo.wasFirst;
-      if (!skipForReveal) {
+      {
+        const card = dropInfo && dropInfo.card;
         const liveState = (typeof getBossState === 'function') ? getBossState(cfg.id) : null;
         const mercy = (typeof getDropPityDisplay === 'function')
           ? getDropPityDisplay(cfg.id) : null;
@@ -3680,6 +3678,142 @@
   let _bossResultQueue = [];
   let _bossResultBusy  = false;
   let _bossResultCurrent = null;
+
+  // ═══════════════════════════════════════════════════════════
+  // v3 Phase 1z.73 — Rare/Ultra drop celebration. Confetti burst +
+  // Web Audio chime fires when a boss-defeat result or first-acquisition
+  // reveal includes a rare or ultra_rare relic. Common drops stay
+  // silent — the kill toast carries the signal.
+  //
+  // Confetti: lightweight canvas particle burst. Reuses the pdc-overlay
+  // / pdc-canvas pair from the existing Perfect Day Celebration so no
+  // new DOM is needed. Each call spawns its own RAF loop and clears
+  // itself when the particles fade. Safe to call while another
+  // celebration is mid-flight — the canvas overwrites and the new
+  // particles race the old ones harmlessly.
+  //
+  // Sound: short Web Audio chime, same `soundEnabled` gate as every
+  // other chime in the app. Triangle+sine layered, ascending interval
+  // (perfect 5th for rare, octave for ultra). Wrapped in try/catch
+  // so autoplay restrictions / missing AudioContext never crash.
+  //
+  // Once-per-event: callers gate with their own dedup (boss-result
+  // seen-key or reveal queue head). This helper has no internal dedup —
+  // it's safe to call multiple times in a session.
+  // ═══════════════════════════════════════════════════════════
+  let _relicConfettiRafId = null;
+  function _relicConfettiBurst(rarity) {
+    const overlay = document.getElementById('pdc-overlay');
+    const canvas  = document.getElementById('pdc-canvas');
+    if (!overlay || !canvas) return;
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    // Rare: gold + violet, 70 particles. Ultra: gold + violet + white +
+    // brighter, 130 particles + faster initial velocity (more drama).
+    const isUltra = (rarity === 'ultra_rare');
+    const COLORS = isUltra
+      ? ['#fbbf24', '#f59e0b', '#a78bfa', '#c084fc', '#ffffff', '#fde68a']
+      : ['#f59e0b', '#fbbf24', '#a78bfa', '#c084fc'];
+    const count = isUltra ? 130 : 70;
+    const cx = canvas.width  / 2;
+    const cy = canvas.height * 0.42; // burst near the modal centre
+    const dots = Array.from({ length: count }, () => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (isUltra ? 5.5 : 4.0) + Math.random() * (isUltra ? 5 : 3);
+      return {
+        x:     cx,
+        y:     cy,
+        vx:    Math.cos(angle) * speed,
+        vy:    Math.sin(angle) * speed - (isUltra ? 1.2 : 0.8),
+        r:     2.5 + Math.random() * (isUltra ? 4 : 3),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        alpha: 1,
+      };
+    });
+    if (_relicConfettiRafId) {
+      cancelAnimationFrame(_relicConfettiRafId);
+      _relicConfettiRafId = null;
+    }
+    overlay.classList.remove('hidden');
+    overlay.classList.add('pdc-active');
+    // Mark the overlay so its existing click-to-dismiss + pdc-active
+    // styling apply, but DO NOT add a tap listener — the underlying
+    // boss-result / reveal modal owns dismissal. The overlay sits
+    // above the modal? — pdc-overlay is a fullscreen layer; pointer-
+    // events on canvas is typically 'none' so taps fall through.
+    function drawRelic() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      dots.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.10;          // gravity
+        p.vx *= 0.992;          // air resistance
+        p.alpha -= 0.008;
+        if (p.alpha <= 0) return;
+        alive = true;
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle   = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      if (alive) {
+        _relicConfettiRafId = requestAnimationFrame(drawRelic);
+      } else {
+        _relicConfettiRafId = null;
+        overlay.classList.remove('pdc-active');
+        overlay.classList.add('hidden');
+      }
+    }
+    _relicConfettiRafId = requestAnimationFrame(drawRelic);
+  }
+
+  function _relicChime(rarity) {
+    if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = ac.currentTime;
+      const isUltra = (rarity === 'ultra_rare');
+      // Rare: A4 → E5 (perfect fifth). Ultra: A4 → C#5 → E5 → A5
+      // (major arpeggio resolving to octave) — bigger drama.
+      const notes = isUltra
+        ? [
+            { f: 440.00, s: 0.00, d: 0.22, p: 0.18 },
+            { f: 554.37, s: 0.10, d: 0.22, p: 0.18 },
+            { f: 659.25, s: 0.22, d: 0.30, p: 0.20 },
+            { f: 880.00, s: 0.36, d: 0.90, p: 0.24 },
+          ]
+        : [
+            { f: 440.00, s: 0.00, d: 0.22, p: 0.16 },
+            { f: 659.25, s: 0.12, d: 0.50, p: 0.20 },
+          ];
+      notes.forEach(n => {
+        ['sine', 'triangle'].forEach(type => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(n.f, t0 + n.s);
+          osc.connect(gain); gain.connect(ac.destination);
+          const peak = type === 'sine' ? n.p : n.p * 0.55;
+          gain.gain.setValueAtTime(0.0001, t0 + n.s);
+          gain.gain.exponentialRampToValueAtTime(peak, t0 + n.s + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.s + n.d);
+          osc.start(t0 + n.s);
+          osc.stop(t0 + n.s + n.d + 0.05);
+        });
+      });
+    } catch (_) {}
+  }
+
+  function celebrateRareDrop(rarity) {
+    if (rarity !== 'rare' && rarity !== 'ultra_rare') return;
+    try { _relicConfettiBurst(rarity); } catch (_) {}
+    try { _relicChime(rarity); } catch (_) {}
+    try { navigator.vibrate && navigator.vibrate(rarity === 'ultra_rare' ? [40, 30, 80] : [30]); } catch (_) {}
+  }
 
   // v3 Phase 1z.7 — short per-boss defeat-condition copy for the
   // overlay's gold-bordered VERIFIED row. Falls back to cfg.killCondShort
@@ -3783,7 +3917,18 @@
   function _drainBossResultQueue() {
     if (_bossResultBusy) return;
     const next = _bossResultQueue.shift();
-    if (!next) return;
+    if (!next) {
+      // v3 Phase 1z.73 — queue is empty. Chain to the cinematic
+      // reveal queue (rare/ultra first-acquisition) so those modals
+      // fire AFTER all boss-defeated modals are acknowledged.
+      // Previously processRevealQueue fired from announceKillAndDrop
+      // 500ms post-kill, which raced with the boss-defeated modal
+      // when both a common-drop boss and a rare-drop boss fell in
+      // the same tick. Centralising the trigger here guarantees
+      // sequential UX.
+      setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 200);
+      return;
+    }
     _bossResultBusy = true;
     // setTimeout 600ms — give the kill toast its moment first.
     setTimeout(() => { try { _showBossResult(next); } catch (_) { _bossResultBusy = false; } }, 600);
@@ -3841,7 +3986,7 @@
       portraitImg.removeAttribute('data-art');
       portraitImg.onerror = () => { portraitImg.setAttribute('data-art', 'missing'); };
       portraitImg.onload  = () => { portraitImg.removeAttribute('data-art'); };
-      const path = 'assets/bosses/' + String(evt.bossId || '').replace(/_/g, '-') + '.png';
+      const path = getBossArtPath(evt.bossId);
       portraitImg.src = path;
       portraitImg.alt = evt.bossName || '';
     }
@@ -3990,6 +4135,18 @@
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('bro-locked');
+
+    // v3 Phase 1z.73 — confetti + chime when the boss-defeated modal
+    // opens with a rare or ultra_rare relic in evt.drop. Failed-outcome
+    // events have no drop, so the celebration only ever fires for
+    // genuine defeats. Cinematic reveals get their own celebration
+    // hook in openCardRevealModal; duplicates that route through the
+    // boss-defeated modal (not the cinematic) get their celebration
+    // here.
+    if (!isFailed && evt.drop && evt.drop.rarity &&
+        (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare')) {
+      try { celebrateRareDrop(evt.drop.rarity); } catch (_) {}
+    }
   }
 
   function closeBossResult(opts) {
@@ -4168,6 +4325,10 @@
     // the keyframe animations rather than instantly snapping.
     void overlay.offsetWidth;
     overlay.classList.add('reveal-overlay--showing');
+    // v3 Phase 1z.73 — confetti + chime for first-acquisition rare /
+    // ultra reveals. Every card that reaches this modal is rare or
+    // ultra by design, but we double-check the rarity for safety.
+    try { celebrateRareDrop(card.rarity); } catch (_) {}
   }
 
   function closeCardRevealModal() {
@@ -13640,7 +13801,7 @@
           // Drop "The " prefix to save horizontal space on the pill.
           const name = (cfg.name || id).replace(/^The\s+/, '');
           // Boss portraits map by id — file convention is id-with-hyphens.
-          const iconSrc = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
+          const iconSrc = getBossArtPath(id);
           pills.push({
             kind:    'boss',
             key:     id,
@@ -19443,7 +19604,7 @@
   function buildBossCardHTML(id) {
     const cfg = BOSSES[id];
     const state = getBossState(id);
-    const imgPath = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
+    const imgPath = getBossArtPath(id);
     // v3 Phase 1z.63 — flight-threshold bosses render a single
     // threshold dot (filled = boss defeated this hunt). Progress
     // detail lives in the label below. Other bosses keep the
@@ -19636,7 +19797,7 @@
 
     const cadenceLabel = (cfg.cadence || 'daily').charAt(0).toUpperCase() +
                          (cfg.cadence || 'daily').slice(1);
-    const imgPath = 'assets/bosses/' + id.replace(/_/g, '-') + '.png';
+    const imgPath = getBossArtPath(id);
 
     // Header — rank pill
     const rankPill = document.getElementById('bfs-rank-pill');
@@ -19981,7 +20142,7 @@
       portraitImg.removeAttribute('data-art');
       portraitImg.onerror = () => { portraitImg.setAttribute('data-art', 'missing'); };
       portraitImg.onload  = () => { portraitImg.removeAttribute('data-art'); };
-      portraitImg.src = 'assets/bosses/' + String(id).replace(/_/g, '-') + '.png';
+      portraitImg.src = getBossArtPath(id);
     }
 
     const rankPill = document.getElementById('bfs-defeated-rank-pill');

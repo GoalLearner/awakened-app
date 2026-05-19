@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w77` |
-| `app.js?v=` | `426` |
+| `APP_BUILD_TAG` | `2.2.1-w78` |
+| `app.js?v=` | `427` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.312` |
+| `sw.js CACHE_VERSION` | `v5.313` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,32 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Boss-result polish: art helper, drop celebration, queue (v3 Phase 1z.73)
+
+**Three fixes from the next round of TestFlight smoke testing.**
+
+**1. Boss art still missing — `getBossArtPath` central helper.** Files exist on disk (9 PNGs, all tracked + precached). Five different code paths previously inlined the same `assets/bosses/' + id.replace(/_/g, '-') + '.png'` derivation. Now all route through one `getBossArtPath(bossId)` helper. Easier to audit, single chokepoint for future convention changes. *Root cause of the on-device blank art is most likely a TestFlight IPA that pre-dates 1z.65 / 1z.68 / 1z.70 — rebuild via Codemagic bundles the new PNGs.*
+
+**2. Rare/Ultra drop celebration.** New `celebrateRareDrop(rarity)` helper:
+- **Confetti:** lightweight canvas burst on the existing `pdc-overlay` / `pdc-canvas` (same pattern as Perfect Day Celebration). Rare = gold + violet, 70 particles. Ultra = gold + violet + white, 130 particles + stronger initial velocity.
+- **Chime:** Web Audio, layered sine + triangle oscillators. Rare = A4 → E5 (perfect fifth). Ultra = A4 → C#5 → E5 → A5 (major arpeggio resolving to octave). Gated on the existing `soundEnabled` flag.
+- **Haptic:** `navigator.vibrate(30)` for rare, `[40, 30, 80]` pattern for ultra.
+- Wrapped in try/catch — autoplay restrictions or missing AudioContext can't crash.
+
+Hooked into:
+- `openCardRevealModal` — fires on every first-acquisition cinematic reveal (always rare/ultra by design).
+- `_showBossResult` — fires when the boss-defeated modal opens with `evt.drop.rarity === 'rare' || 'ultra_rare'` (catches duplicate rare drops that don't route through the cinematic reveal).
+
+**3. Queue every defeat — multi-boss defeats now show one modal per boss.** Previously when a boss defeated with a rare/ultra first-acquisition, `_queueBossResult` was *skipped entirely* (the cinematic reveal was deemed sufficient). With two bosses falling in the same resolver tick — one common-drop, one rare-drop — only ONE boss-defeated modal showed; users couldn't tell two bosses fell.
+
+Fix: every defeat queues a boss-defeated modal. The cinematic reveal queue (`processRevealQueue`) is now chained from `_drainBossResultQueue` when the queue empties — so the user sees: boss-defeated #1 → close → boss-defeated #2 → close → cinematic reveal (if any rare/ultra first-acquisitions). All defeats acknowledged, rare/ultra drops still get their cinematic moment.
+
+Removed the 500ms `processRevealQueue` kick inside `announceKillAndDrop`. Single trigger point now lives in the queue drain.
+
+**Preserved:** Daily one-kill-per-day lock (1z.72), Carouser Friday-only (1z.58 / 1z.72), drop rates, mercy, pity, souls economy, XP economy, rank thresholds, leaderboard, HoF, 100K Club, habit verification, temporary 1z.71 C-rank QA unlock. No backend / no Duels changes.
+
+**Manual QA next TestFlight build:** rebuild IPA → confirm C-rank boss art renders; defeat a boss with a rare drop → confetti + chime fire on the cinematic reveal; defeat two bosses simultaneously → both boss-defeated modals show one after the other.
 
 ### Daily-boss verification window + one-kill-per-day lock (v3 Phase 1z.72)
 
