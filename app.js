@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w71';
+  const APP_BUILD_TAG = '2.2.1-w72';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -429,6 +429,35 @@
     //
     // Rank-gated: users below C-rank see the boss in preview state
     // ("Reach C rank to engage") via the existing isGateUnlocked path.
+    // v3 Phase 1z.67 — first dual-condition C-rank boss. Requires
+    // BOTH a verified strength workout AND ≥ 300 active kcal during
+    // the daily (24h) hunt window. Powered by the 1z.62 active-energy
+    // helper (Health.getActiveEnergyBetween) plus the existing
+    // strength workout helper (Health.getStrengthWorkoutsBetween).
+    // The resolver branch is AND-gated: either condition alone is
+    // insufficient. Drop pool: 5 C-rank relics filling thin slots
+    // (gloves/legs/body/weapon/cape — see 1z.66 audit follow-ups).
+    //
+    // Rank-gated: users below C-rank see preview state via
+    // isGateUnlocked. engageBoss also refuses defensively.
+    the_furnace_knight: {
+      id:               'the_furnace_knight',
+      name:             'The Furnace Knight',
+      rank:             'C',
+      flavorShort:      'A knight sealed inside a living forge.',
+      flavorLong:       'A knight sealed inside a living forge. It only yields to those who lift under fire and burn through the trial.',
+      killCondShort:    'Verified strength workout AND 300+ active kcal before the hunt expires',
+      killCondLong:     'Complete a verified Strength Training workout and burn at least 300 Active Energy kcal during the 24-hour hunt window. Both conditions are required.',
+      failedCopy:       'The forge cooled before the trial was complete.',
+      streakTarget:     1,
+      // Dual-condition gate. The resolver checks BOTH fields and
+      // only awards the kill when both pass inside the hunt window.
+      workoutMinutes:   10,
+      activeEnergyKcal: 300,
+      cadence:          'daily',
+      statDomain:       'STR',
+    },
+
     the_ascendant_colossus: {
       id:               'the_ascendant_colossus',
       name:             'The Ascendant Colossus',
@@ -702,6 +731,12 @@
     // Ascendant Colossus's window resolver to mirror live flights
     // count for the detail label. Each new hunt starts fresh.
     state.flight_progress = 0;
+    // v3 Phase 1z.67 — dual-condition state (Furnace Knight). The
+    // resolver mirrors verified strength + active-energy progress
+    // into these fields; reset between hunts so the next engage
+    // starts at 0/0 rather than carrying over stale progress.
+    state.strength_done = false;
+    state.energy_progress = 0;
   }
 
   // Mark an active hunt as expired. Leaves kill_count alone (this
@@ -816,6 +851,41 @@
             defeated = true;
             break;
           }
+        }
+      }
+      // ── Dual-condition boss (Furnace Knight) ───────────────
+      // v3 Phase 1z.67. AND-gated: requires BOTH a verified strength
+      // workout AND >= activeEnergyKcal inside the hunt window.
+      // Branched before the single-condition workout / energy paths
+      // so the dual config doesn't get caught by them. Writes
+      // state.strength_done + state.energy_progress for the live
+      // dual-condition detail label. Either metric returning null
+      // (permission denied / unavailable) leaves the condition
+      // unmet — no false defeat.
+      if (!defeated &&
+          typeof cfg.workoutMinutes === 'number' &&
+          typeof cfg.activeEnergyKcal === 'number' &&
+          typeof Health.getStrengthWorkoutsBetween === 'function' &&
+          typeof Health.getActiveEnergyBetween === 'function') {
+        const sIso = new Date(start).toISOString();
+        const eIso = new Date(evalEnd).toISOString();
+        let workouts = null;
+        let kcal     = null;
+        try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+        try { kcal     = await Health.getActiveEnergyBetween(sIso, eIso);     } catch (_) { kcal = null; }
+        const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+        const strengthDone = list.length >= 1;
+        state.strength_done = strengthDone;
+        if (typeof kcal === 'number') {
+          state.energy_progress = Math.min(kcal, cfg.activeEnergyKcal);
+        }
+        setBossState(id, state);
+        if (strengthDone && typeof kcal === 'number' && kcal >= cfg.activeEnergyKcal) {
+          const dayKey = (typeof getDeviceLocalDate === 'function')
+            ? getDeviceLocalDate()
+            : new Date().toISOString().slice(0, 10);
+          _awardHuntKillFromBackfill(id, cfg, dayKey);
+          defeated = true;
         }
       }
       // ── Flights boss (Ascendant Colossus) ──────────────────
@@ -1053,6 +1123,9 @@
     // even though _clearBossHuntFields already zeros it on the prior
     // hunt's close. Belt-and-braces against a partial-migration shape.
     state.flight_progress = 0;
+    // v3 Phase 1z.67 — same belt-and-braces for dual-condition mirrors.
+    state.strength_done = false;
+    state.energy_progress = 0;
     setBossState(bossId, state);
     try {
       if (typeof showHabitToast === 'function') {
@@ -1731,6 +1804,97 @@
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
+    // ═══════════════════════════════════════════════════════════
+    // v3 Phase 1z.67 — C-rank drops for The Furnace Knight (first
+    // dual-condition boss). Slot picks address the 1z.66-audit
+    // follow-ups: legs were thin, gloves had no rare, body had no
+    // ultra, cape had no ultra, weapon curve had gaps. This pool
+    // fills body / weapon / cape with new C entries and pads gloves /
+    // legs.
+    //
+    // Stat distribution: STR primary (forge-knight theme), FOCUS
+    // heavily represented, WILL secondary, INT on the rare and ultra
+    // for utility. No VIT in the gloves/weapon — keeps the pool
+    // distinct from the Ascendant's STR/VIT lean. Power curve hits
+    // C-tier targets exactly: common 6, rare 14, ultra 22.
+    //
+    // Art: PNGs not on disk yet; setModalCardArt / Pokédex fall
+    // through to slot-emoji + rarity gradient. Drop the PNGs in
+    // later + add precache entries; rendering is automatic.
+    // ═══════════════════════════════════════════════════════════
+
+    // ── The Furnace Knight (C, STR) — signature slot: weapon ─
+    embergrip_gauntlets: {
+      id: 'embergrip_gauntlets',
+      name: 'Embergrip Gauntlets',
+      slot: 'gloves',
+      source_boss: 'the_furnace_knight',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'Gloves blackened by forge smoke, built for holding the line when the heat rises.',
+      art_path: 'assets/items/embergrip-gauntlets.png',
+      bonuses:      { str: 3, vit: 0, int: 0, focus: 2, will: 1, wlt: 0 },
+      bonus_ranges: { str: [2,4], vit: [0,0], int: [0,0], focus: [1,3], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    furnacewalk_legplates: {
+      id: 'furnacewalk_legplates',
+      name: 'Furnacewalk Legplates',
+      slot: 'legs',
+      source_boss: 'the_furnace_knight',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'Legplates tempered by every step taken through the furnace floor.',
+      art_path: 'assets/items/furnacewalk-legplates.png',
+      bonuses:      { str: 3, vit: 2, int: 0, focus: 1, will: 0, wlt: 0 },
+      bonus_ranges: { str: [2,4], vit: [1,3], int: [0,0], focus: [0,2], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    cinderplate_harness: {
+      id: 'cinderplate_harness',
+      name: 'Cinderplate Harness',
+      slot: 'body',
+      source_boss: 'the_furnace_knight',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'A scorched harness worn by challengers who refused to leave the forge.',
+      art_path: 'assets/items/cinderplate-harness.png',
+      bonuses:      { str: 2, vit: 2, int: 0, focus: 0, will: 2, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [1,3], int: [0,0], focus: [0,0], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    kilnforged_warblade: {
+      id: 'kilnforged_warblade',
+      name: 'Kilnforged Warblade',
+      slot: 'weapon',
+      source_boss: 'the_furnace_knight',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'A blade pulled from the kiln before the metal had finished screaming.',
+      art_path: 'assets/items/kilnforged-warblade.png',
+      bonuses:      { str: 6, vit: 0, int: 2, focus: 4, will: 2, wlt: 0 },
+      bonus_ranges: { str: [4,8], vit: [0,0], int: [1,3], focus: [3,5], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    ashen_monarchs_cape: {
+      id: 'ashen_monarchs_cape',
+      name: "Ashen Monarch's Cape",
+      slot: 'cape',
+      source_boss: 'the_furnace_knight',
+      rarity: 'ultra_rare',
+      tier: 'C',
+      flavor: 'A royal mantle woven from cooled ash and the will to endure the flame. Best in slot for the STR/FOCUS forge build.',
+      art_path: 'assets/items/ashen-monarchs-cape.png',
+      bonuses:      { str: 6, vit: 4, int: 3, focus: 5, will: 4, wlt: 0 },
+      bonus_ranges: { str: [4,8], vit: [3,5], int: [2,4], focus: [3,7], will: [3,5], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
     crown_of_the_ascendant: {
       id: 'crown_of_the_ascendant',
       name: 'Crown of the Ascendant',
@@ -19083,13 +19247,21 @@
     // threshold dot (filled = boss defeated this hunt). Progress
     // detail lives in the label below. Other bosses keep the
     // streak-dots pattern.
-    const dots = (typeof cfg.flightThreshold === 'number')
-      ? '<span class="bcard-dot' +
-        ((typeof state.flight_progress === 'number' && state.flight_progress >= cfg.flightThreshold)
-          ? ' bcard-dot--filled' : '') + '"></span>'
-      : Array.from({ length: cfg.streakTarget }, (_, i) =>
-          '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
-        ).join('');
+    // v3 Phase 1z.67 — dual-condition bosses (Furnace Knight) render
+    // a single threshold dot; the dual progress lines render in the
+    // label below.
+    const _isDualBoss = (typeof cfg.workoutMinutes === 'number' && typeof cfg.activeEnergyKcal === 'number');
+    const _dualSatisfied = _isDualBoss && state.strength_done === true &&
+      typeof state.energy_progress === 'number' && state.energy_progress >= cfg.activeEnergyKcal;
+    const dots = _isDualBoss
+      ? '<span class="bcard-dot' + (_dualSatisfied ? ' bcard-dot--filled' : '') + '"></span>'
+      : (typeof cfg.flightThreshold === 'number')
+        ? '<span class="bcard-dot' +
+          ((typeof state.flight_progress === 'number' && state.flight_progress >= cfg.flightThreshold)
+            ? ' bcard-dot--filled' : '') + '"></span>'
+        : Array.from({ length: cfg.streakTarget }, (_, i) =>
+            '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
+          ).join('');
 
     // Compose state classes. They stack — engaged + active + defeated
     // can all apply at once. v2.0.1 engagement-pivot adds .bcard--engaged
@@ -19181,12 +19353,18 @@
         // Region f: Progress — dots + streak label + kill count.
         // v3 Phase 1z.63 — flight-threshold bosses display cumulative
         // "N / threshold flights" instead of streak progress.
+        // v3 Phase 1z.67 — dual-condition bosses (Furnace Knight)
+        // render a two-line summary: strength check + kcal progress.
         '<div class="bcard-progress">' +
           '<div class="bcard-dots">' + dots + '</div>' +
           '<div class="bcard-progress-label">' +
-            (typeof cfg.flightThreshold === 'number'
-              ? (Math.max(0, Math.min(cfg.flightThreshold, (typeof state.flight_progress === 'number') ? state.flight_progress : 0)) + ' / ' + cfg.flightThreshold + ' ' + _bossProgressNoun(cfg))
-              : (state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg))) +
+            (_isDualBoss
+              ? ((state.strength_done === true ? '✓' : '○') + ' strength · ' +
+                  Math.max(0, Math.min(cfg.activeEnergyKcal, (typeof state.energy_progress === 'number') ? state.energy_progress : 0)) +
+                  ' / ' + cfg.activeEnergyKcal + ' kcal')
+              : (typeof cfg.flightThreshold === 'number'
+                ? (Math.max(0, Math.min(cfg.flightThreshold, (typeof state.flight_progress === 'number') ? state.flight_progress : 0)) + ' / ' + cfg.flightThreshold + ' ' + _bossProgressNoun(cfg))
+                : (state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg)))) +
           '</div>' +
           '<div class="bcard-kills">' + killText + '</div>' +
         '</div>' +
@@ -19285,9 +19463,25 @@
     // is written by the window resolver; when missing (e.g. permission
     // denied or first paint before the resolver returns), falls back
     // to 0 — never crashes.
+    // v3 Phase 1z.67 — dual-condition bosses (Furnace Knight) render
+    // a single threshold dot + two-line summary: strength verified
+    // check + kcal progress toward activeEnergyKcal.
     const progressEl = document.getElementById('bfs-progress');
     if (progressEl) {
-      if (typeof cfg.flightThreshold === 'number') {
+      const isDualBoss = (typeof cfg.workoutMinutes === 'number' && typeof cfg.activeEnergyKcal === 'number');
+      if (isDualBoss) {
+        const kcalCur = Math.max(0, Math.min(cfg.activeEnergyKcal,
+          (typeof state.energy_progress === 'number') ? state.energy_progress : 0));
+        const strengthOk = state.strength_done === true;
+        const bothDone = strengthOk && kcalCur >= cfg.activeEnergyKcal;
+        const dots = '<span class="bfs-dot' + (bothDone ? ' bfs-dot--filled' : '') + '"></span>';
+        const strengthLine = (strengthOk ? '✓ ' : '○ ') + 'Strength workout' + (strengthOk ? ' verified' : '');
+        const kcalLine = kcalCur + ' / ' + cfg.activeEnergyKcal + ' active kcal';
+        progressEl.innerHTML =
+          '<div class="bfs-dots">' + dots + '</div>' +
+          '<div class="bfs-progress-label">' + esc(strengthLine) + '</div>' +
+          '<div class="bfs-progress-label">' + esc(kcalLine) + '</div>';
+      } else if (typeof cfg.flightThreshold === 'number') {
         const cur = Math.max(0, Math.min(cfg.flightThreshold,
           (typeof state.flight_progress === 'number') ? state.flight_progress : 0));
         // Single threshold-pill dot pair: filled vs. unfilled — matches

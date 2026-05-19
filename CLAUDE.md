@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w71` |
-| `app.js?v=` | `420` |
+| `APP_BUILD_TAG` | `2.2.1-w72` |
+| `app.js?v=` | `421` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.306` |
+| `sw.js CACHE_VERSION` | `v5.307` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,46 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Second C-rank boss — The Furnace Knight (v3 Phase 1z.67)
+
+**First dual-condition boss.** Requires BOTH a verified strength workout AND ≥ 300 active kcal inside the 24-hour hunt window. Powered by the 1z.62 active-energy plumbing (`Health.getActiveEnergyBetween`) combined with the existing strength workout plumbing (`Health.getStrengthWorkoutsBetween`). AND-gated — either condition alone is insufficient.
+
+**Boss config (`BOSSES.the_furnace_knight`):**
+- `rank: 'C'`, `statDomain: 'STR'`, `cadence: 'daily'` (24h window)
+- `streakTarget: 1`
+- `workoutMinutes: 10` AND `activeEnergyKcal: 300` — the presence of BOTH fields signals dual-condition to the resolver.
+- Copy: *"A knight sealed inside a living forge. It only yields to those who lift under fire and burn through the trial."* / *"Complete a verified strength workout AND 300+ active kcal before the hunt expires"* / *"The forge cooled before the trial was complete."*
+
+**Resolver dual-condition branch.** New block in `resolveBossHuntsAcrossWindow` placed before the existing flights / workout / sleep branches. Discriminator: presence of BOTH `cfg.workoutMinutes` AND `cfg.activeEnergyKcal`. Iron Warden (workoutMinutes only) is unaffected — that branch's condition `typeof cfg.activeEnergyKcal === 'number'` rejects it. The dual branch:
+- Queries `getStrengthWorkoutsBetween` + `getActiveEnergyBetween` over `[start, evalEnd]`.
+- Writes `state.strength_done` (boolean) and `state.energy_progress` (capped at `cfg.activeEnergyKcal`) for live UI.
+- Awards the kill via `_awardHuntKillFromBackfill` only when BOTH conditions pass.
+- Either metric returning `null` (permission denied / unavailable) leaves the condition unmet — no false defeat. Timer-based HUNT FAILED still fires on window expiration.
+
+**State reset.** `_clearBossHuntFields` and `engageBoss` both now zero `state.strength_done` and `state.energy_progress` so a new hunt starts fresh.
+
+**Progress UI.** `buildBossCardHTML` + `openBossFullScreen` both detect dual-condition bosses (`workoutMinutes && activeEnergyKcal`) and render:
+- Single threshold dot (filled only when BOTH conditions pass).
+- Two-line label: `"✓ Strength workout verified"` (or `"○ Strength workout"`) + `"N / 300 active kcal"`.
+
+**Drop pool — 5 C-rank items** (`source_boss: 'the_furnace_knight'`):
+
+| Item | Rarity | Slot | STR | VIT | INT | FOC | WILL | Σ |
+|---|---|---|---|---|---|---|---|---|
+| Embergrip Gauntlets | common | gloves | 3 | · | · | 2 | 1 | **6** |
+| Furnacewalk Legplates | common | legs | 3 | 2 | · | 1 | · | **6** |
+| Cinderplate Harness | common | body | 2 | 2 | · | · | 2 | **6** |
+| Kilnforged Warblade | rare | weapon | 6 | · | 2 | 4 | 2 | **14** |
+| Ashen Monarch's Cape | ultra | cape | 6 | 4 | 3 | 5 | 4 | **22** |
+
+Slot picks address 1z.66 audit gaps: legs (thin), gloves (no rare), body (no ultra), cape (no ultra), weapon (curve gap). STR-primary, FOCUS heavily represented, INT/WILL secondary. All totals hit C-tier targets (common 6 / rare 14 / ultra 22). No WLT anywhere.
+
+**Art: PENDING.** PNGs at `assets/items/<id with hyphens>.png` + `assets/bosses/the-furnace-knight.png` not on disk yet. `setModalCardArt` / Pokédex onerror falls back to slot emoji + rarity gradient; boss-card `<img>` 404s show broken icon but don't crash. **NOT precached in `sw.js`** (cache.addAll would reject install on 404).
+
+**Rank-gated** below C via `isGateUnlocked` (preview state). `engageBoss` refuses defensively.
+
+**No backend / no Duels / no drop rates / no economy changes.** Frontend content + resolver logic only.
 
 ### Item stat rebalance (v3 Phase 1z.66)
 
