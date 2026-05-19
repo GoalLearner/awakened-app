@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w84` |
-| `app.js?v=` | `433` |
+| `APP_BUILD_TAG` | `2.2.1-w85` |
+| `app.js?v=` | `434` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `301` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.319` |
+| `sw.js CACHE_VERSION` | `v5.320` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,41 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### ACTUAL root cause of C-rank boss art blanks: Codemagic copy script (v3 Phase 1z.81)
+
+**The real bug.** 1z.80 hardened the JS render path, which was a real improvement but not the root cause. The C-rank boss art was blank on TestFlight because **`codemagic.yaml` had a hardcoded allowlist of 6 boss filenames in its `cp` loop and never copied the three C-rank PNGs into the iOS bundle.**
+
+Lines 117-119 (pre-fix):
+```bash
+for boss in the-insomniac the-carouser the-steel-wolf the-iron-warden the-glass-strider the-dream-tyrant; do
+  cp "assets/bosses/$boss.png" "www/assets/bosses/$boss.png"
+done
+```
+
+The three new C-rank PNGs (`the-ascendant-colossus`, `the-furnace-knight`, `the-marathon-wraith`) landed on disk in phases 1z.65 / 1z.68 / 1z.70, were tracked in git, and were correctly added to `sw.js` precache. But the Codemagic build script never copied them into `www/` → `cap sync` propagated nothing → the iOS bundle shipped without the files → `<img src>` 404'd on device → blank art. No amount of JS hardening would fix this; the asset literally wasn't in the IPA.
+
+**The contrast.** Item art works fine because the `cp assets/items/*.png` loop right below (line 134-137) uses glob copy. Bosses had the only hardcoded allowlist.
+
+**Fix.** Converted the boss loop to glob copy (same pattern as items):
+```bash
+mkdir -p www/assets/bosses
+if compgen -G "assets/bosses/*.png" > /dev/null; then
+  cp assets/bosses/*.png www/assets/bosses/
+fi
+```
+
+Any future boss PNG dropped into `assets/bosses/` now bundles automatically. No more `codemagic.yaml` edit required when a new boss ships.
+
+**Defensive freshness gates added.** Both the pre-sync (`www/`) and post-sync (`ios/App/App/public/`) verification steps now explicitly check that the three C-rank PNGs are present. A future regression of the copy step fails the build loudly with a pointer to the line that broke instead of silently shipping blank boss cards.
+
+**Per-IPA implication.** TestFlight build #61 (and any earlier build) doesn't have the C-rank boss PNGs in its bundle. Codemagic must build a fresh IPA off `main` post-`1574deb` (the 1z.80 commit) + this `1z.81` commit before the boss art renders correctly on-device.
+
+**1z.80 changes still good.** The robust `setBossImage` + `loading="lazy"` removal + QA-unlock relock are all real fixes that should stay shipped — they make the JS render path resilient to genuine asset-load failures (which can still happen during SW cache transitions, offline-first-launch, etc.). 1z.80 hardened the JS; 1z.81 fixes the actual asset pipeline.
+
+**Versions:** `app.js?v=434`, `sw.js v5.320`, `APP_BUILD_TAG 2.2.1-w85`. Bumped for traceability + SW cache bust even though only `codemagic.yaml` changed materially. `APP_VERSION` stays 2.2.1.
+
+**Next step:** trigger Codemagic build off the current `main` HEAD. The post-sync freshness gate now blocks the build if the C-rank PNGs don't make it through.
 
 ### C-rank QA unlock RELOCKED + boss-art rendering deep fix (v3 Phase 1z.80)
 

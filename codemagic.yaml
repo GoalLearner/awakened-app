@@ -113,10 +113,22 @@ workflows:
           done
           # Boss illustrations (CARDS.md spec preview). 1254×1254 manhwa
           # portraits ride inside the new card's art window.
+          #
+          # v3 Phase 1z.81 — switched from a hardcoded allowlist to a
+          # glob copy (same pattern items use below). The prior loop
+          # only listed the original 6 E/D bosses; the three C-rank
+          # bosses shipped in 1z.65 / 1z.68 / 1z.70 (Ascendant Colossus,
+          # Furnace Knight, Marathon Wraith) never made it into the IPA
+          # even though their PNGs were on disk + tracked in git +
+          # precached in sw.js. That was the entire root cause of the
+          # "C-rank boss art blank on TestFlight" smoke-test failure.
+          # Glob copy now picks up any future boss PNG automatically.
           mkdir -p www/assets/bosses
-          for boss in the-insomniac the-carouser the-steel-wolf the-iron-warden the-glass-strider the-dream-tyrant; do
-            cp "assets/bosses/$boss.png" "www/assets/bosses/$boss.png"
-          done
+          if compgen -G "assets/bosses/*.png" > /dev/null; then
+            cp assets/bosses/*.png www/assets/bosses/
+            echo "Boss art copied:"
+            ls -1 www/assets/bosses/
+          fi
           # General-purpose UI icons (v2.0.1). Currently just the souls
           # currency icon; future utility icons (XP, drops, etc.) can
           # land here too. Distinct from habit-icons (which is now
@@ -380,12 +392,28 @@ workflows:
             echo "FAIL: sw.js CACHE_VERSION drift (repo=$repo_cv www=$www_cv)"
             exit 1
           fi
+          # v3 Phase 1z.81 — C-rank boss art must be in www/. The prior
+          # boss-art copy loop was a hardcoded allowlist of 6 files
+          # that didn't include the C-rank bosses shipped in 1z.65,
+          # 1z.68, 1z.70. The IPA shipped without the new PNGs even
+          # though the JS referenced them. Now using glob copy +
+          # explicit presence check so any future regression fails
+          # loudly here instead of silently shipping blank boss cards.
+          for boss in the-ascendant-colossus the-furnace-knight the-marathon-wraith; do
+            if [ ! -f "www/assets/bosses/$boss.png" ]; then
+              echo "FAIL: www/assets/bosses/$boss.png missing — Codemagic boss-art copy regressed"
+              echo "      The hardcoded allowlist on line ~117 of codemagic.yaml has likely been re-introduced."
+              ls -la www/assets/bosses/ || true
+              exit 1
+            fi
+          done
           echo "✓ www/ bundle verified fresh"
           echo "  index.html size:    $(wc -c < www/index.html) bytes"
           echo "  app.js size:        $(wc -c < www/app.js) bytes"
           echo "  auth.js size:       $(wc -c < www/auth.js) bytes"
           echo "  styles.css size:    $(wc -c < www/styles.css) bytes"
           echo "  sw.js CACHE_VERSION: $www_cv"
+          echo "  boss art count:     $(ls www/assets/bosses/ | wc -l) PNGs"
 
       - name: Force-clean Capacitor iOS public dir before sync
         script: |
@@ -568,9 +596,20 @@ workflows:
             echo "FAIL: $PUB/sw.js CACHE_VERSION drift (ios=$ios_cv repo=$repo_cv)"
             exit 1
           fi
+          # v3 Phase 1z.81 — confirm C-rank boss art reached the iOS
+          # public dir. Mirror of the pre-sync check above; catches
+          # the case where cap sync somehow drops these specific files.
+          for boss in the-ascendant-colossus the-furnace-knight the-marathon-wraith; do
+            if [ ! -f "$PUB/assets/bosses/$boss.png" ]; then
+              echo "FAIL: $PUB/assets/bosses/$boss.png missing after cap sync"
+              ls -la "$PUB/assets/bosses/" || true
+              exit 1
+            fi
+          done
           echo "✓ iOS public bundle verified fresh"
           echo "  $PUB/index.html size: $(wc -c < $PUB/index.html) bytes"
           echo "  $PUB/sw.js CACHE_VERSION: $ios_cv"
+          echo "  $PUB boss art count:  $(ls $PUB/assets/bosses/ | wc -l) PNGs"
 
       - name: Declare export compliance (no custom encryption)
         script: |
