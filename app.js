@@ -196,10 +196,15 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w1';
+  const APP_BUILD_TAG = '2.2.2-w2';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
+  // v3 Phase 1z.87 — boot-time version line so Safari devtools (or
+  // any console inspector) can confirm which IPA the device is
+  // actually running. Helps disambiguate "user has the fix" vs
+  // "user is still on the prior build" when a freeze repros.
+  try { console.log('[Awakened] boot · APP_VERSION=' + APP_VERSION + ' · build=' + APP_BUILD_TAG); } catch (_) {}
 
   // v2.1 Phase E — single point of update when Richie publishes a new
   // privacy policy URL. All references in code must go through the
@@ -16253,6 +16258,7 @@
         if (addBtn.dataset.busy === '1') return;
         addBtn.dataset.busy = '1';
         addBtn.disabled = true;
+        console.log('[habit-detail] add click start name=', h && h.name, 'context=', opts.context);
         try {
           const days = getScheduleDays();
           const cfg  = {
@@ -16289,21 +16295,43 @@
           }
           // Close FIRST — sheet must not strand even if the renders throw.
           try { closeHabitDetail(); } catch (_) {}
-          // Renders AFTER close, each independently wrapped.
-          try { renderHabits(); }
-          catch (err) { console.error('[habit-detail] renderHabits threw', err); }
-          if (opts.context === 'library') {
-            try { renderLibrary(); }
-            catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
-          }
+          console.log('[habit-detail] sheet closed');
         } catch (err) {
           // Outer-shell failure (e.g. cfg builder threw). Force-close the
           // sheet so the user is never trapped.
           console.error('[habit-detail] add click outer failure', err);
           try { closeHabitDetail(); } catch (_) {}
         } finally {
+          // v3 Phase 1z.87 — clear busy + disabled BEFORE the deferred
+          // renders. Even if a render hangs in the next frame, the
+          // button is already unlocked and the sheet is already closed.
           addBtn.dataset.busy = '';
           addBtn.disabled = false;
+        }
+        // v3 Phase 1z.87 — defer renders to the next animation frame
+        // so iOS Capacitor WebView can paint the closed-sheet state
+        // BEFORE the heavy render work runs. Without this, a sync
+        // renderHabits/renderLibrary right after closeHabitDetail()
+        // can prevent the browser from repainting until the renders
+        // finish — making it LOOK like the sheet is still stuck even
+        // though it's logically closed. Splitting the close + render
+        // across animation frames is the canonical iOS-friendly fix.
+        try {
+          requestAnimationFrame(() => {
+            try { renderHabits(); }
+            catch (err) { console.error('[habit-detail] renderHabits threw', err); }
+            if (opts.context === 'library') {
+              try { renderLibrary(); }
+              catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
+            }
+            console.log('[habit-detail] renders complete');
+          });
+        } catch (_) {
+          // Fallback if rAF is somehow unavailable — just run synchronously.
+          try { renderHabits(); }      catch (err) { console.error('[habit-detail] renderHabits threw', err); }
+          if (opts.context === 'library') {
+            try { renderLibrary(); }   catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
+          }
         }
       });
       footer.appendChild(addBtn);

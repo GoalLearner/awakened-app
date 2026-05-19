@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w1` |
-| `app.js?v=` | `439` |
+| `APP_BUILD_TAG` | `2.2.2-w2` |
+| `app.js?v=` | `440` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.325` |
+| `sw.js CACHE_VERSION` | `v5.326` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,19 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### iOS-friendlier preset Add Habits fix (v3 Phase 1z.87)
+
+**Reinforces 1z.85.** User reported the freeze still reproed on the new TestFlight 2.2.2 build (`Sleep before midnight`, `No sugar/junk food`). 1z.85's `persist → close → render-in-try-catch` ordering was correct, but on iOS Capacitor WebView the close + heavy renders ran in the same JS turn — so the WebView didn't get a chance to paint the closed-sheet state until the renders finished, making it LOOK frozen.
+
+**Three tweaks:**
+
+1. **Renders deferred to `requestAnimationFrame`** so iOS paints the close first. Synchronous fallback if rAF is somehow unavailable.
+2. **`busy` + `disabled` cleared BEFORE the deferred renders** so even if a render hangs in the next frame, the button is already unlocked.
+3. **Console logging** added at three points (`add click start`, `sheet closed`, `renders complete`) so Safari devtools can confirm where a future repro stops.
+4. **Boot-time version log** (`[Awakened] boot · APP_VERSION=2.2.2 · build=2.2.2-w2`) so Safari devtools can confirm which IPA the device is actually running — disambiguates "has the fix" vs "still on the prior build" when a repro comes in.
+
+**Versions:** `app.js?v=440`, `sw.js v5.326`, `APP_BUILD_TAG 2.2.2-w2`. `styles.css` unchanged. `APP_VERSION` stays 2.2.2.
 
 ### Marketing version bump 2.2.1 → 2.2.2 (v3 Phase 1z.86)
 
