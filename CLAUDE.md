@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w83` |
-| `app.js?v=` | `432` |
+| `APP_BUILD_TAG` | `2.2.1-w84` |
+| `app.js?v=` | `433` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `301` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.318` |
+| `sw.js CACHE_VERSION` | `v5.319` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,55 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### C-rank QA unlock RELOCKED + boss-art rendering deep fix (v3 Phase 1z.80)
+
+**Two urgent fixes pre-App-Review-resubmission.**
+
+#### 1. C-rank QA unlock RELOCKED
+
+`QA_UNLOCK_C_RANK_DUNGEONS = false`. Must stay false for App Review / public builds. The temporary unlock added in 1z.71 was a smoke-test affordance only.
+
+Restored behavior: C-rank gate goes back to normal rank comparison via `isGateUnlocked('C')`. Users below C see the three C-rank bosses in **preview state** (still walkable / inspectable — the dungeon view does NOT hide them), but the engage button shows `"Reach C rank to engage"` and `engageBoss` defensively refuses. D / B / A / S / S+ gates unchanged. No XP / rank-threshold / displayed-rank changes — purely the gate flag.
+
+Flip back to `true` for future local QA passes (grep anchor: `QA_UNLOCK_C_RANK_DUNGEONS`).
+
+#### 2. Boss-art rendering — root cause + deep fix
+
+**Root cause identified.** Item art renders fine because Pokédex + reveal modal use `setModalCardArt` — start-hidden + onload-reveals pattern. Boss art was rendered via inline `<img src="..." onerror="this.style.display='none'">` (introduced in 1z.73). On iOS Capacitor WebView, **transient SW fetch races during card render cause onerror to fire even for assets that subsequently load fine** — the image gets `display:none` permanently for the session.
+
+Confirmed by reading both code paths side-by-side at app.js:5090 (`setModalCardArt`) vs the prior boss-card inline `<img>` — the `setModalCardArt` pattern always succeeded, the inline pattern intermittently failed on iOS.
+
+**Fix — new `setBossImage(imgEl, bossId)` helper** that mirrors `setModalCardArt`'s safe pattern:
+- Clears prior on{load,error} handlers (re-use across re-renders).
+- Starts the image **hidden** (`display:none`).
+- `onload` reveals (`display:''`) — only fires on real decode success.
+- `onerror` keeps hidden + warns to console for QA debugging.
+- Removes any `loading` attribute (eager only).
+- Sets `decoding="async"` then `src`.
+
+**Call-site refactor:**
+
+| Surface | Before | After |
+|---|---|---|
+| Boss-card (dungeon grid) | Inline `<img src=imgPath onerror="display:none">` | Hidden placeholder `<img data-boss-art-id=...>`; `renderBossesPanel` post-render iterates and calls `setBossImage` |
+| Boss detail hero (`#bfs-hero-img`) | Raw `heroImg.src = imgPath` | `setBossImage(heroImg, id)` |
+| Hunting-row pill icon (`_statusPillIcon`) | `loading="lazy"` on inline `<img>` | `loading="lazy"` removed (eager); src remains inline (pills are tiny + above-the-fold so cheap) |
+| Boss-defeated portrait (`#bfs-defeated-portrait-img`) | Already-safe `data-art="missing"` CSS fallback | Unchanged — its pattern was already robust |
+| Pending-result re-open | Routed through the boss-defeated modal | Unchanged |
+
+The `data-boss-art-id` attribute on the boss-card img is the only new DOM contract — it lets `renderBossesPanel` find every boss-art `<img>` post-`innerHTML` and wire `setBossImage` on each.
+
+**No other boss/item logic touched.** Drop rates, mercy, pity, souls, XP, rank thresholds, daily one-kill-per-day lock, Carouser Friday-only, App Review permission compliance, Sigil Bloom, queue semantics — all preserved.
+
+**Versions:** `app.js?v=433`, `sw.js v5.319`, `APP_BUILD_TAG 2.2.1-w84`. `styles.css?v=301` (no CSS changes). `APP_VERSION` stays 2.2.1.
+
+**Manual QA next TestFlight build:**
+1. Open dungeon tab as E-rank user. C-rank bosses visible in preview state with `"Reach C rank to engage"` label. Engage button disabled / refuses.
+2. Confirm Ascendant Colossus, Furnace Knight, Marathon Wraith cards render real boss art (not blank).
+3. Open each boss detail screen → confirm hero art renders.
+4. Engage a non-C boss to verify hunting-row pill icon renders.
+5. Confirm item art in inventory still renders.
 
 ### App Store Support URL fix — public support page (v3 Phase 1z.79)
 

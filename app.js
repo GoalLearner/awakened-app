@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w83';
+  const APP_BUILD_TAG = '2.2.1-w84';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -576,6 +576,39 @@
   // in exactly one place. Future renames or fallback rules go here.
   function getBossArtPath(bossId) {
     return 'assets/bosses/' + String(bossId || '').replace(/_/g, '-') + '.png';
+  }
+
+  // v3 Phase 1z.80 — robust boss-image loader. Mirrors setModalCardArt's
+  // start-hidden / onload-reveals pattern, which is the proven-reliable
+  // approach for the iOS Capacitor WebView.
+  //
+  // Root-cause history: 1z.73 introduced inline `<img onerror="display:none">`
+  // on boss-card art. That pattern is fragile on iOS WebView — any transient
+  // fetch race / SW cache miss fires onerror and permanently hides the image
+  // for the rest of the session, even after the asset later loads fine.
+  // Item art never had this bug because Pokédex + reveal modal use
+  // setModalCardArt which starts hidden and only reveals on onload success.
+  //
+  // setBossImage applies the same robust pattern to boss art:
+  //   1. Clears any prior on{load,error} handlers (re-use across cards).
+  //   2. Hides the image up front.
+  //   3. onload reveals (display:'') — guaranteed only fires when the
+  //      browser actually decodes the bitmap.
+  //   4. onerror keeps it hidden (no-op since it was already hidden) and
+  //      logs to console for QA debugging.
+  //   5. No `loading="lazy"` race — eager load is the default.
+  function setBossImage(imgEl, bossId) {
+    if (!imgEl) return;
+    const path = getBossArtPath(bossId);
+    imgEl.onload  = function () { this.style.display = ''; };
+    imgEl.onerror = function () {
+      this.style.display = 'none';
+      try { console.warn('[boss-art] failed to load', path); } catch (_) {}
+    };
+    imgEl.style.display = 'none';   // start hidden
+    imgEl.removeAttribute('loading'); // belt-and-braces against stale lazy
+    imgEl.decoding = 'async';
+    imgEl.src = path;
   }
 
   // v3 Phase 1z.58 — Carouser engagement is restricted to Friday
@@ -14219,9 +14252,13 @@
 
   function _statusPillIcon(src, sizePx) {
     const sz = sizePx || 14;
+    // v3 Phase 1z.80 — removed loading="lazy". Hunting-row pills are
+    // above-the-fold and iOS Capacitor WebView misbehaves with lazy
+    // images for bundled assets (same root cause as the 1z.48 relic-
+    // art bug). Eager load only.
     return '<img class="status-pill-img" src="' + src + '" alt="" ' +
            'style="width:' + sz + 'px;height:' + sz + 'px" ' +
-           'draggable="false" loading="lazy" decoding="async">';
+           'draggable="false" decoding="async">';
   }
 
   function _buildHuntingPills() {
@@ -20144,13 +20181,14 @@
           '<span class="bcard-name">' + esc(cfg.name) + '</span>' +
         '</div>' +
         // Region b: Art window — bleed-to-edge illustration.
-        // v3 Phase 1z.72 — onerror hides the <img> on 404 so iOS' default
-        // broken-image glyph doesn't show through. The .bcard-art box
-        // keeps its dark background — cleaner than a broken ?-icon for
-        // bosses whose PNGs haven't shipped yet.
+        // v3 Phase 1z.80 — img rendered without inline src; renderBossesPanel
+        // calls setBossImage(img, id) post-render so the load uses the same
+        // start-hidden / onload-reveals pattern as item art (setModalCardArt).
+        // The previous inline `onerror="display:none"` pattern fired on
+        // transient iOS Capacitor WebView fetch races and permanently hid
+        // the image even after the asset loaded fine.
         '<div class="bcard-art">' +
-          '<img src="' + imgPath + '" alt="" draggable="false" decoding="async"' +
-            ' onerror="this.style.display=\'none\'">' +
+          '<img alt="" draggable="false" data-boss-art-id="' + esc(id) + '" style="display:none">' +
         '</div>' +
         // Region c: Stat strip — STAT · CADENCE
         '<div class="bcard-stats">' +
@@ -20208,6 +20246,14 @@
     }
     list.classList.add('bosses-list--cards');
     list.innerHTML = bossIds.map(buildBossCardHTML).join('');
+    // v3 Phase 1z.80 — wire boss art via setBossImage post-render so the
+    // robust start-hidden / onload-reveals pattern applies to every card.
+    try {
+      list.querySelectorAll('.bcard-art img[data-boss-art-id]').forEach(img => {
+        const id = img.getAttribute('data-boss-art-id');
+        if (id) setBossImage(img, id);
+      });
+    } catch (_) {}
   }
 
   // ── Full-screen boss detail modal ──────────────────────────
@@ -20245,8 +20291,12 @@
     // Hero art
     const heroImg = document.getElementById('bfs-hero-img');
     if (heroImg) {
-      heroImg.src = imgPath;
+      // v3 Phase 1z.80 — robust setBossImage replaces the prior raw
+      // imgPath assignment that left the broken-image glyph visible
+      // on transient iOS Capacitor WebView fetch races. Starts hidden,
+      // onload reveals, onerror keeps hidden (clean fallback).
       heroImg.alt = cfg.name;
+      setBossImage(heroImg, id);
     }
 
     // Name + rank label
@@ -20856,7 +20906,10 @@
   // Relock path: set the flag to false, bump versions, rebuild.
   // Documented in CLAUDE.md Phase 1z.71 entry.
   // ═══════════════════════════════════════════════════════════
-  const QA_UNLOCK_C_RANK_DUNGEONS = true;
+  // v3 Phase 1z.80 — RELOCKED. Must stay false for App Review / public
+  // builds. Flip to true ONLY during local QA when smoke-testing C-rank
+  // bosses without grinding to rank C.
+  const QA_UNLOCK_C_RANK_DUNGEONS = false;
 
   // Returns true if the user's current rank is at or above the gate's
   // rank tier. RANKS array is ordered E,D,C,B,A,S,S+ — index comparison
