@@ -165,6 +165,69 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### App Store Support URL fix — public support page (v3 Phase 1z.79)
+
+**Resolves the remaining half of the App Review rejection** (Guideline 1.5 Safety: Developer Information). Apple flagged the App Store Connect Support URL — currently `https://github.com/GoalLearner/awakened-app` — as non-functional. This phase ships a clean static support page at `docs/support.html` plus a `docs/index.html` landing card, ready for GitHub Pages.
+
+**Files created (docs only — no app code changes):**
+- `docs/support.html` — full support page. Sections: Contact (email `richmondcampano93@gmail.com`), Privacy reference, Apple Health data explanation (mentions steps / sleep / workouts / flights climbed / active energy + how to manage permissions in iOS Settings or the Apple Health app), Account & Data Requests (subject-line guidance), FAQ (5 entries).
+- `docs/index.html` — minimal landing page. Title + tagline + a single Support card linking to `support.html`. So GitHub Pages site root resolves to something legible if a reviewer hits the bare URL.
+
+Both pages are pure static HTML/CSS — no external scripts, no analytics, no tracking, no forms requiring a backend. Self-contained styling (dark bg + gold accents matching the app's brand). Mobile-responsive.
+
+**No app runtime changes.** `app.js`, `styles.css`, `index.html`, `sw.js`, `auth.js` all untouched. No version bumps. `APP_VERSION` stays 2.2.1. `APP_BUILD_TAG` stays `2.2.1-w83`.
+
+---
+
+#### Manual setup — enable GitHub Pages (one-time)
+
+1. Push this commit to `main` (already done by this phase).
+2. Open the repo on GitHub: `https://github.com/GoalLearner/awakened-app`.
+3. Click **Settings** (top right).
+4. In the left sidebar, click **Pages**.
+5. Under **Build and deployment** → **Source**, select **Deploy from a branch**.
+6. Under **Branch**, choose:
+   - Branch: `main`
+   - Folder: `/docs`
+7. Click **Save**.
+8. Wait ~30–60 seconds for GitHub to publish. Refresh the Pages settings page to see the published URL.
+
+**Expected published URLs** (case-sensitive; verify the casing on the Pages settings panel):
+- Landing: `https://goallearner.github.io/awakened-app/`
+- Support: `https://goallearner.github.io/awakened-app/support.html`
+
+If GitHub displays the URL with a different username casing (`GoalLearner` vs `goallearner`), GitHub Pages always lowercases — use whatever the Pages settings panel shows as the canonical Site URL.
+
+---
+
+#### Manual setup — update App Store Connect Support URL (one-time)
+
+1. Sign in to **App Store Connect** → Apps → **Awakened: Habit RPG**.
+2. Left sidebar → **App Information**.
+3. Scroll to **General Information** → **Support URL**.
+4. Replace the broken value (`https://github.com/GoalLearner/awakened-app`) with the GitHub Pages support URL — preferably the deep link to the support page:
+   - `https://goallearner.github.io/awakened-app/support.html`
+   - (The root URL would also work because it links to support, but the deep link is more direct.)
+5. **Save**.
+6. Go to the rejected app version (2.2.1 build 61 or a fresh build with the 1z.77 + 1z.78 HealthKit / notifications fixes).
+7. **Resubmit for App Review**.
+
+When Apple re-reviews, both rejection reasons are addressed:
+- **5.1.1(iv)** — HealthKit + Notifications pre-permission modals now use single neutral `Continue` button, no exit before the system sheet (1z.77 + 1z.78).
+- **1.5** — Support URL now resolves to a functional public support page (this phase).
+
+---
+
+#### Verification
+
+- `docs/support.html` exists and renders standalone (open it in a browser locally to confirm — no broken links, no missing assets, no external dependencies).
+- `docs/index.html` exists and links to `support.html`.
+- `git status` shows only the two new files in `docs/`.
+- `npm run test:e2e` not re-run (no app code changed).
+- `node --check app.js` not re-run (no app code changed).
+
+No backend / no Duels / no app runtime / no entitlement changes.
+
 ### App Store Review compliance — full permission-prompt audit (v3 Phase 1z.78)
 
 **Full audit of every native permission system in the app.** Triggered by the 1z.77 HealthKit fix to make sure no other Guideline 5.1.1(iv) risks remain. Apple's specific guidance:

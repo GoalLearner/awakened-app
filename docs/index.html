@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Awakened: Habit RPG — habit-tracking RPG with Apple Health verification.">
+  <title>Awakened: Habit RPG</title>
+  <style>
+    :root {
+      --bg:        #050513;
+      --bg-card:   #0e0e2a;
+      --border:    rgba(245, 184, 66, 0.18);
+      --gold:      #f5b842;
+      --gold-soft: #fbbf24;
+      --violet:    #a78bfa;
+      --text:      #f5f5fa;
+      --text-2:    #9090a8;
+      --text-3:    #54546e;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); min-height: 100vh; }
+    body {
+      font-family: -apple-system, "SF Pro Display", system-ui, "Segoe UI",
+                   Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+    main {
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+    .kicker {
+      font-family: ui-monospace, "JetBrains Mono", "SF Mono", monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.26em;
+      color: var(--text-3);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-family: "Cinzel", "Trajan Pro", Georgia, serif;
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--gold);
+      margin: 0 0 14px;
+      line-height: 1.05;
+    }
+    .tagline {
+      color: var(--text-2);
+      font-size: 16px;
+      margin: 0 0 32px;
+      line-height: 1.55;
+    }
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .link-card {
+      display: block;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: border-color 150ms ease, transform 150ms ease;
+    }
+    .link-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+    .link-card .arrow {
+      float: right;
+      color: var(--gold);
+    }
+    .link-sub {
+      display: block;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-2);
+      margin-top: 2px;
+    }
+    footer {
+      margin-top: 40px;
+      color: var(--text-3);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="kicker">Awakened</div>
+    <h1>Awakened: Habit RPG</h1>
+    <p class="tagline">
+      A habit-tracking RPG that builds consistency through quests, habits,
+      and Apple Health-verified progress.
+    </p>
+    <div class="links">
+      <a class="link-card" href="support.html">
+        Support
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="link-sub">Contact, FAQ, Apple Health permissions, data requests</span>
+      </a>
+    </div>
+    <footer>© Awakened: Habit RPG</footer>
+  </main>
+</body>
+</html>
