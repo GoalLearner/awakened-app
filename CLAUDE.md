@@ -13,7 +13,7 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 **Submission ID (approved):** `f5373012-82a7-49ff-9bb7-e6bc3a6a6321`
 **Previous (rejected) submission:** `07b1380d-d40f-49bc-bb19-8bb2ba508e7c` (rejected May 18 evening on 5.1.1(iv) HealthKit pre-prompt buttons + 1.5 Support URL).
 
-Apple may take up to 24h to flip the build from "Ready for Distribution" to publicly available. As of this handoff, 2.2.1 is live in App Store Connect waiting on distribution.
+Apple may take up to 24h to flip the build from "Ready for Distribution" to publicly available. As of this handoff, 2.2.1 is approved/eligible for distribution in App Store Connect. Confirm whether it has been manually released or is publicly available before announcing.
 
 ### Current HEAD vs. approved IPA — IMPORTANT GAP
 
@@ -123,9 +123,21 @@ Boss art files → all 9 present on disk and tracked in git
 
 The previous handoff section (May 17 PM) documented the 100K Step Club / Hall of Fame / leaderboard work that shipped to backend D1 then. That work is now stable, documented in its own phase sections below, and no longer requires top-of-file attention. Backend D1 state is unchanged since 1z.41 (Worker version `761b6392`).
 
+---
+
+## ⚠️ ARCHIVED HISTORICAL HANDOFF — DO NOT USE FOR CURRENT BUILD INSTRUCTIONS
+
+> The May 17 handoff below describes the state of the repo as of `6fc7acf` (build tag `2.2.1-w61`, `app.js?v=410`). It is preserved for historical context only.
+>
+> **The current source of truth is the May 19 handoff at the top of this file** (`d20f2e7`, `2.2.1-w85`, `app.js?v=434`, App Store-approved).
+>
+> Any references in this archived section to HEAD `6fc7acf`, build tag `2.2.1-w47`, or "trigger Codemagic on current main" are HISTORICAL — they reflected the state at the time of writing and have been superseded.
+
+---
+
 ### Previous handoff (archived) — May 17, 2026 4:30 PM
 
-**Current HEAD:** `6fc7acf35886c5e040401b3174123c158a4c6fd4` · `fix: hall of fame falls back to leaderboard_snapshots` · in sync with `origin/main`. Working tree clean apart from two untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`) that have been sitting around for a while and are NOT part of the build.
+**Then-current HEAD:** `6fc7acf35886c5e040401b3174123c158a4c6fd4` · `fix: hall of fame falls back to leaderboard_snapshots` · in sync with `origin/main` at the time. Working tree was clean apart from two untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`) that had been sitting around for a while and were NOT part of the build.
 
 **Version knobs at the time:**
 | Knob | Value |
@@ -170,8 +182,8 @@ The previous handoff section (May 17 PM) documented the 100K Step Club / Hall of
 - Current Worker version ID: **`761b6392-d274-41d1-b923-97bf009e2820`** (1z.41 fallback-union deploy, May 17 evening).
 - 12 ratelimit bindings (added `RL_LEADERBOARD_HOF` namespace 1012 today).
 
-**Frontend (iOS / PWA):**
-- `main` at `6fc7acf` carries everything above, but **Codemagic has NOT been triggered for any of today's work.** The last iOS build on TestFlight predates Phase 1z.32. To get the rank-aware 100K badges + weekly leaderboard + Hall of Fame + freeze fix + boss-souls readout + sheet-scroll fix onto a device, Codemagic must be triggered on the current main HEAD.
+**Frontend (iOS / PWA) — as of May 17:**
+- `main` at `6fc7acf` carried everything above, but **Codemagic had NOT yet been triggered for that day's work.** The last iOS build on TestFlight at the time predated Phase 1z.32. (Historical only — the work has since shipped through subsequent build cycles that culminated in the App Store-approved 2.2.1.)
 
 ### Playwright smoke tests (NEW — added end of May 17)
 
@@ -228,36 +240,32 @@ npm run test:e2e:report   # open the HTML report from the last run
 
 **Run output is sequential + fast.** Failures retain trace+video+screenshot under `test-results/` (gitignored). `npm run test:e2e:report` opens the last HTML report.
 
-### Next-session checklist (when work resumes)
+### Historical only — superseded by May 19 handoff
 
-**Before triggering Codemagic:**
-1. `git pull` → confirm HEAD matches `origin/main`.
-2. Re-check the version knobs table above against `app.js`, `index.html`, `sw.js`. If they've drifted (a stray commit could land), update CLAUDE.md before building.
-3. **Run the Playwright smoke suite: `npm run test:e2e`** — ~35 seconds, exercises Status/Habits/Edit-modal/Leaderboard/Boss-detail/Duels-tab. Must be green before triggering Codemagic.
-4. Local browser preview (optional, fast confidence check on top of the smoke suite):
-   - Hall of Fame tab populates with real records (RenDIESEL + Richie) + sim filler.
-   - This Week tab still scopes to current week.
-   - Sheet scrolls without dismissing; X closes it; overlay tap does NOT close it.
-   - Rank-aware 100K badge renders correctly for each rank (use the `hb_accolades_cache` mock from Phase 1z.31 instructions).
-   - Edit Habit → change goal → Save → modal closes immediately (no freeze).
-   - Lock-In pack confirm → no freeze.
-   - Boss detail → Souls balance readout above the Engage button; switches to insufficient state when broke.
-   - World Rank card opens the leaderboard sheet defaulting to This Week.
+> ⚠️ The checklist, Codemagic action items, and acceptance gates below describe what the May 17 author intended the NEXT session to do. **They are NOT current instructions.** The May 19 handoff at the top of this file is the source of truth for any active build/release work. Read this subsection for historical context only — the action items have all been overtaken by subsequent build cycles culminating in the App Store-approved 2.2.1.
 
-**Codemagic:**
-- Trigger on current main HEAD (`6fc7acf` or later).
-- Build tag will read `2.2.1-w47`.
-- **Do not build an older `w43` / `w45` / `w46` if `w47` or later is current** — the older builds are missing the HoF me_best displayed-rank fix, the sheet scroll-dismiss fix, and the Souls balance readout.
-- After TestFlight install, run the manual QA list above on-device.
+**Historical: next-session checklist that was queued at May 17 EOD:**
+1. `git pull` to confirm HEAD matched `origin/main`.
+2. Re-check the (then-current) version knobs table against `app.js`, `index.html`, `sw.js`.
+3. Run the Playwright smoke suite (`npm run test:e2e`) before any Codemagic trigger.
+4. Local browser preview spot-checks were listed for: Hall of Fame populated with real records + sim filler; This Week tab scoping; sheet scroll/dismiss behavior; rank-aware 100K badge rendering; Edit Habit + Lock-In save flows; Boss detail Souls balance; World Rank card → leaderboard sheet.
 
-**Post-build QA acceptance gates:**
-- HoF YOUR BEST card rank matches a visible row in the merged list.
-- HoF list scroll does not dismiss; X is the only close path.
-- Edit Habit / Lock-In saves never leave a stuck modal.
-- 100K badge renders correctly per rank.
-- Boss Souls balance is visible and correctly toggles insufficient state.
-- 5-type Duels picker only (no Boss Race; deferred).
-- No drag-reorder on habits list (still disabled for 2.2.1).
+**Historical: Codemagic build target the May 17 session expected:**
+- Trigger on then-current main HEAD (`6fc7acf` or later).
+- Build tag was expected to read `2.2.1-w47`.
+- Guidance was: do NOT build an older `w43` / `w45` / `w46` once `w47` or later is current.
+- Manual on-device QA list was queued for post-install verification.
+
+**Historical: post-build QA acceptance gates the May 17 session set:**
+- HoF YOUR BEST card rank had to match a visible row in the merged list.
+- HoF list scroll could not dismiss; X had to be the only close path.
+- Edit Habit / Lock-In saves could not leave a stuck modal.
+- 100K badge had to render correctly per rank.
+- Boss Souls balance had to be visible and toggle insufficient state correctly.
+- 5-type Duels picker only (Boss Race deferred).
+- No drag-reorder on habits list (intentionally disabled for 2.2.1).
+
+(All of the above have either been verified shipped through subsequent build cycles or were superseded by later product decisions. Do NOT re-execute as a checklist — refer to the May 19 handoff for current build state and any active follow-ups.)
 
 ### Known open items / NOT shipped
 
@@ -281,7 +289,7 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Sim cap.** `SIM_STEP_WEEKLY_CAP = 45555` is load-bearing. Do not raise it, do not bypass it, do not allow sims to ever submit to backend (they don't — keep it that way).
 - **100K Club accolade.** Sims must NEVER earn it. The `apple_sub LIKE 'sim_test_%'` filter at write time in `leaderboard-submit.ts` is the gate. The HoF table inherits the same filter both at write time and via the union read.
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
-- **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
+- **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
 ### ACTUAL root cause of C-rank boss art blanks: Codemagic copy script (v3 Phase 1z.81)
