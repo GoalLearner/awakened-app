@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.307';
+const CACHE_VERSION = 'v5.308';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -122,6 +122,8 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-dream-tyrant.png',
   // v3 Phase 1z.65 — first C-rank boss
   '/assets/bosses/the-ascendant-colossus.png',
+  // v3 Phase 1z.68 — second C-rank boss (dual-condition)
+  '/assets/bosses/the-furnace-knight.png',
   // Item-card illustrations. Only paths that EXIST on disk get listed
   // here — cache.addAll rejects the entire install if any entry 404s.
   // The remaining 8 launch cards fall through to the network (404 in
@@ -173,6 +175,12 @@ const PRECACHE_ASSETS = [
   '/assets/items/upper-gate-band.png',
   '/assets/items/keystone-pendant.png',
   '/assets/items/crown-of-the-ascendant.png',
+  // v3 Phase 1z.68 — C-rank Furnace Knight drops (5 items).
+  '/assets/items/embergrip-gauntlets.png',
+  '/assets/items/furnacewalk-legplates.png',
+  '/assets/items/cinderplate-harness.png',
+  '/assets/items/kilnforged-warblade.png',
+  '/assets/items/ashen-monarchs-cape.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)

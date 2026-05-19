@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w72` |
-| `app.js?v=` | `421` |
+| `APP_BUILD_TAG` | `2.2.1-w73` |
+| `app.js?v=` | `422` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.307` |
+| `sw.js CACHE_VERSION` | `v5.308` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,24 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Furnace Knight art installed (v3 Phase 1z.68)
+
+**Boss + 5 item PNGs landed on disk.** Generated locally and downloaded into the repo root with mixed naming. Moved into the canonical asset layout. Pending status from 1z.67 cleared — boss-card / detail / BOSS DEFEATED modal / Pokédex now render real art.
+
+**Final paths:**
+- `assets/bosses/the-furnace-knight.png` (resolves via `buildBossCardHTML`'s `id.replace(/_/g,'-')+'.png'`). Source file `furnace-knight.png` was renamed to add the `the-` prefix to match the existing convention.
+- `assets/items/embergrip-gauntlets.png`
+- `assets/items/furnacewalk-legplates.png`
+- `assets/items/cinderplate-harness.png`
+- `assets/items/kilnforged-warblade.png`
+- `assets/items/ashen-monarchs-cape.png`
+
+Item `art_path` fields were already set to these exact strings in 1z.67. Just the file moves wire them up. No JS change.
+
+**Service worker precache.** All 6 new paths added to `PRECACHE_ASSETS` in `sw.js`. All paths verified to exist on disk before adding. `CACHE_VERSION` bumped `v5.307 → v5.308` so the SW reinstalls and pre-fetches the new art.
+
+**No backend / no Duels / no styles / no auth changes.** Asset move + sw.js precache update only.
 
 ### Second C-rank boss — The Furnace Knight (v3 Phase 1z.67)
 
