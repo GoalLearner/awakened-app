@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w3';
+  const APP_BUILD_TAG = '2.2.2-w4';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15816,6 +15816,50 @@
     catch (_) { return false; }
   }
 
+  // v3 Phase 1z.89 — deterministic interaction reset for the Add Habits
+  // surface. After a successful preset add we close BOTH the detail
+  // sheet (#hd-sheet) AND the parent library sheet (#lib-sheet) and
+  // return the user to the Habits tab. The freeze user-reported on
+  // TestFlight 2.2.2-w3 was the PARENT sheet stranding after the
+  // child detail closed — most likely culprit was residual inline
+  // transform / transition / opacity left on #lib-sheet by the swipe-
+  // dismiss gesture handler (attachSheetDismissGesture in setupLibrary)
+  // when the transitionend listener never fired through iOS WebView
+  // DOM-thrash during renderLibrary. This helper hard-resets the
+  // entire surface so no path can leave a sheet in a non-interactive
+  // half-state. Each DOM op is independently try-wrapped so a missing
+  // node can't break the chain.
+  function resetAddHabitsInteractionState() {
+    const ids = ['hd-sheet', 'lib-sheet', 'lib-overlay'];
+    ids.forEach(id => {
+      try {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // Hidden via class first; closeHabitDetail/closeLibrary already
+        // do this but we re-apply belt-and-braces.
+        try { el.classList.add('hidden'); } catch (_) {}
+        // Clear any inline overrides the gesture handler may have left.
+        // These survive across the next openLibrary() if not cleared,
+        // because openLibrary only toggles .hidden — it never touches
+        // inline transform/transition/opacity/pointer-events.
+        try { el.style.removeProperty('transform'); } catch (_) {}
+        try { el.style.removeProperty('transition'); } catch (_) {}
+        try { el.style.removeProperty('opacity'); } catch (_) {}
+        try { el.style.removeProperty('pointer-events'); } catch (_) {}
+        // hd-sheet uses inline display:none !important (1z.88 belt-and-
+        // braces) — preserve that for #hd-sheet, clear it for the others.
+        if (id !== 'hd-sheet') {
+          try { el.style.removeProperty('display'); } catch (_) {}
+        }
+      } catch (_) {}
+    });
+    // Clear lib content innerHTML lazily — renderLibrary will rebuild
+    // it on the next openLibrary() call. We intentionally do NOT clear
+    // it here because renderLibrary() runs on the deferred tick AFTER
+    // this helper, and we want the rebuilt list to be ready for the
+    // next open.
+  }
+
   // ── HABIT DETAIL SCREEN ───────────────────────────────────
   // opts: { context, isSelected, existingConfig, onConfirm, onRemove }
   //   context       'library' (default) | 'onboarding'
@@ -16287,6 +16331,14 @@
               }
             } catch (_) {}
             try { closeHabitDetail(); } catch (_) {}
+            // v3 Phase 1z.89 — also close the library on the dup path
+            // so the user is never left on a frozen parent sheet.
+            // Consistent with the success path (Option 1: always return
+            // to Habits tab after a preset interaction).
+            if (opts.context === 'library') {
+              try { closeLibrary(); } catch (_) {}
+              try { resetAddHabitsInteractionState(); } catch (_) {}
+            }
             addBtn.dataset.busy = '';
             addBtn.disabled = false;
             return;
@@ -16333,11 +16385,41 @@
           // Close FIRST — sheet must not strand even if the renders throw.
           try { closeHabitDetail(); } catch (_) {}
           console.log('[habit-detail] sheet closed');
+          // v3 Phase 1z.89 — when the detail was opened from the library,
+          // ALSO close the parent Add Habits sheet and return the user
+          // to the Habits tab. On TestFlight 2.2.2-w3 the parent sheet
+          // was stranding after a successful preset add (Mobility &
+          // Stretching repro) — most likely culprit was residual inline
+          // transform/transition left on #lib-sheet by the swipe-dismiss
+          // gesture handler when the post-add renderLibrary thrashed
+          // the DOM before transitionend could fire.
+          //
+          // Closing the parent sheet eliminates the entire half-state
+          // class. The library still re-renders on the deferred tick
+          // so the next openLibrary() reflects the new habits[].
+          // resetAddHabitsInteractionState scrubs any gesture residue
+          // off both sheets + the overlay so the next open is clean.
+          if (opts.context === 'library') {
+            try { closeLibrary(); } catch (_) {}
+            try { resetAddHabitsInteractionState(); } catch (_) {}
+            console.log('[habit-detail] library sheet closed');
+            try {
+              if (typeof showHabitToast === 'function' && h && h.name) {
+                showHabitToast(h.name + ' added to your habits.');
+              }
+            } catch (_) {}
+          }
         } catch (err) {
           // Outer-shell failure (e.g. cfg builder threw). Force-close the
           // sheet so the user is never trapped.
           console.error('[habit-detail] add click outer failure', err);
           try { closeHabitDetail(); } catch (_) {}
+          // Best-effort parent-sheet reset on failure too — better to
+          // strand-free than half-open.
+          if (opts.context === 'library') {
+            try { closeLibrary(); } catch (_) {}
+            try { resetAddHabitsInteractionState(); } catch (_) {}
+          }
         } finally {
           // v3 Phase 1z.87 — clear busy + disabled BEFORE the deferred
           // renders. Even if a render hangs in the next frame, the

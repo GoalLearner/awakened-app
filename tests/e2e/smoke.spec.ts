@@ -424,21 +424,44 @@ test.describe('H · Add Habits preset add path (1z.88)', () => {
     // Exactly one (rapid double-tap dup-guard regression).
     expect((stored || []).filter((h: { name?: string }) => h.name === 'Sprint session').length).toBe(1);
 
-    // The library sheet stays open after a detail-add (by design —
-    // lets the user keep adding habits). Verify the freshly-added
-    // Sprint session card is gone from the library (renderLibrary
-    // filters by activeNames). This proves the already-added invariant
-    // — a user cannot re-tap an already-added preset.
-    await expect(page.locator('#lib-sheet')).toBeVisible();
-    // Card must NOT exist in the DOM at all (filtered, not just hidden).
-    await expect(page.locator('.lib-card', { hasText: 'Sprint session' })).toHaveCount(0);
+    // v3 Phase 1z.89 — the parent Add Habits sheet must ALSO close on
+    // successful preset add (Option 1 UX). User lands back on the
+    // Habits tab. No more parent-sheet half-state freeze class.
+    await expect(page.locator('#lib-sheet')).toBeHidden({ timeout: 5_000 });
+    await expect(page.locator('#lib-overlay')).toBeHidden();
 
-    // App stays responsive — close the library, then a tab switch
-    // must work with no stranded overlay capturing pointer events.
-    // This is the freeze symptom the user reported.
-    await page.locator('#lib-close-btn').click();
-    await expect(page.locator('#lib-sheet')).toBeHidden();
+    // Toast confirming the add. Auto-dismisses; we just assert it
+    // showed up so the user has feedback.
+    await expect(page.locator('.habit-toast').first()).toContainText(/sprint session added/i);
+
+    // App stays responsive — tab switch works with no stranded overlay
+    // capturing pointer events. This is the symptom the user reported.
     await page.locator('#tab-profile').click();
     await expect(page.locator('#tab-profile.active')).toBeVisible();
+
+    // Re-open library — the freshly added preset must NOT appear in
+    // its category. Confirms renderLibrary fired with the new habits[]
+    // on the deferred tick (filter via activeNames).
+    await page.locator('#tab-habits').click();
+    await page.locator('#add-habit-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+    const accHeaderAgain = page.locator('.ob-acc-header', { hasText: /physical performance/i }).first();
+    await accHeaderAgain.click();
+    await expect(page.locator('.lib-card', { hasText: 'Sprint session' })).toHaveCount(0);
+
+    // resetAddHabitsInteractionState invariant — re-opened library
+    // must NOT carry inline transform / transition residue from the
+    // prior close cycle. Stale inline transform was the freeze
+    // mechanism the parent-sheet fix addresses.
+    const inlineStyle = await page.locator('#lib-sheet').evaluate((el) => ({
+      transform: (el as HTMLElement).style.transform,
+      transition: (el as HTMLElement).style.transition,
+      opacity: (el as HTMLElement).style.opacity,
+      pointerEvents: (el as HTMLElement).style.pointerEvents,
+    }));
+    expect(inlineStyle.transform).toBe('');
+    expect(inlineStyle.transition).toBe('');
+    expect(inlineStyle.opacity).toBe('');
+    expect(inlineStyle.pointerEvents).toBe('');
   });
 });

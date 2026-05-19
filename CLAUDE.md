@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w3` |
-| `app.js?v=` | `441` |
+| `APP_BUILD_TAG` | `2.2.2-w4` |
+| `app.js?v=` | `442` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.327` |
+| `sw.js CACHE_VERSION` | `v5.328` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,67 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Add Habits parent-sheet freeze — close-to-Habits-tab fix (v3 Phase 1z.89)
+
+**Bug summary.** After Phase 1z.88 the freeze MOVED from the child detail sheet to the parent Add Habits library sheet. User reported on TestFlight 2.2.2 build 76 (the 1z.88 build = `APP_BUILD_TAG 2.2.2-w3`): tapping "Add to My Habits" from a preset detail successfully closed the detail screen, returned to the parent Add Habits library — and then the whole sheet became non-interactive. Force-quit was required. The habit DID persist (save() ran), but the user couldn't use the sheet or any tab control until relaunch.
+
+**Affected example reported:**
+- **`Mobility & Stretching`** opened from Add Habits → Physical Performance. Add to My Habits → returns to library → frozen library sheet, force-quit required.
+
+**Root cause (analysed, not guessed).**
+The library sheet (`#lib-sheet`) has its own swipe-down-to-dismiss gesture attached at `setupLibrary` (line 15315: `attachSheetDismissGesture(libSheet, libOverlay, …)`). That gesture handler mutates **inline** `transform`, `transition`, and `opacity` on `#lib-sheet` and `#lib-overlay` during touch. It clears them via a `transitionend` listener.
+
+On iOS Capacitor WebView, the post-add `renderLibrary()` (deferred 1z.88 setTimeout chain) tears down and rebuilds the entire `#lib-list` subtree. If the user's tap or any micro-drag had nudged the gesture into a "dragging" state — or if `transitionend` simply never fires through the DOM thrash — residual inline `transform: translateY(...)` / `transition` / `opacity` survives on `#lib-sheet`. The sheet is then visually mid-transition or partially translated, and on iOS the WebView's hit-testing through that style state becomes inconsistent. Result: parent sheet visible but non-interactive.
+
+The 1z.88 fix only hardened `#hd-sheet` (the detail), not the parent `#lib-sheet`. Closing the detail with belt-and-braces inline styles solved the detail freeze, but the user landed on the still-broken parent.
+
+**Distinguishing JS-freeze vs touch-interception freeze.** This was a **touch-interception freeze**, not a JS-main-thread freeze. Evidence: `save()` ran to completion (habit persisted to localStorage), `closeHabitDetail()` ran (detail visibly closed), and the user returned to a rendered parent sheet — that whole chain executed. The freeze was the sheet's hit-testing post-render, not blocked JS.
+
+**Chosen UX (PART D Option 1 — "much safer" route).**
+After a successful preset add from the library, close BOTH sheets and return the user to the Habits tab with a toast confirming the add. This eliminates the entire half-state class — no parent sheet means no parent sheet freeze. The library still re-renders on the deferred tick so the next `openLibrary()` reflects the new `habits[]`.
+
+The trade-off: users who wanted to add multiple presets in a row now reopen the library each time. We accept this — bulk-add is what the Morning Routine / Locked-In packs are for, and the existing pack modal is unaffected. Adding individual presets one at a time was always the slower flow.
+
+**Fix — three pieces:**
+
+1. **`resetAddHabitsInteractionState()` helper.** Hard-resets `#hd-sheet`, `#lib-sheet`, and `#lib-overlay` — re-applies `.hidden`, scrubs inline `transform`, `transition`, `opacity`, `pointer-events`, and `display` (preserves `#hd-sheet`'s inline `display:none` from 1z.88 belt-and-braces). Each DOM op is independently try-wrapped. Single source of truth for cleaning up gesture residue.
+2. **Click handler — close parent on add.** After `closeHabitDetail()`, if `opts.context === 'library'`, also call `closeLibrary()`, then `resetAddHabitsInteractionState()`, then show a `<name> added to your habits.` toast. Applied to both the success path AND the outer catch (force-close on any thrown failure).
+3. **Tap-guard parity.** The 1z.88 dup tap guard now also closes the library on duplicate-detect, for consistency. The guard still toasts and short-circuits before save/render — only the destination changes.
+
+`closeLibrary()` itself is unchanged (it just toggles `.hidden` on `#lib-sheet` + `#lib-overlay`). The reset helper compensates for the inline-style residue that `closeLibrary` doesn't touch.
+
+Render deferral (chained `setTimeout(0)` from 1z.88) is unchanged — both `renderHabits` and `renderLibrary` still fire after the close so the Habits tab list and the (now-hidden) library are both fresh for next open.
+
+**Files touched (1z.89 only):**
+- `app.js` — `resetAddHabitsInteractionState` helper, click handler closes library + toast on add success and on dup, `APP_BUILD_TAG → 2.2.2-w4`.
+- `index.html` — `app.js?v=442`.
+- `sw.js` — `CACHE_VERSION = v5.328`.
+- `tests/e2e/smoke.spec.ts` — section **H** updated to assert the parent library sheet is CLOSED (not visible) after add, the user is back on the Habits tab, and the app is responsive. New duplicate-detect coverage too.
+- `CLAUDE.md` — this section + handoff version table.
+
+**Version knobs (post-1z.89):** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w4`, `app.js?v=442`, `sw.js v5.328`. `styles.css?v=302` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log for the gating run.
+- `git diff --name-only` confirms: `CLAUDE.md`, `app.js`, `index.html`, `sw.js`, `tests/e2e/smoke.spec.ts`. **No backend, D1, Duels, HealthKit, Notification, boss, drop-rate, pity, mercy, rank-threshold, QA-unlock, or economy files changed.** `QA_UNLOCK_C_RANK_DUNGEONS` stays `false`.
+
+**Manual QA checklist (TestFlight 2.2.2-w4):**
+1. Boot — Safari devtools console must show `[Awakened] boot · APP_VERSION=2.2.2 · build=2.2.2-w4`. If not, kill + relaunch the IPA.
+2. **Mobility & Stretching fresh add.** Add Habits → Physical Performance → Mobility & Stretching → Add to My Habits. Both sheets close, user lands on Habits tab, toast shows "Mobility & Stretching added to your habits.", habit visible in list, all tabs responsive.
+3. **Sprint session fresh add.** Same flow. Same expected outcome.
+4. **Rapid double-tap.** Two fast taps on Add to My Habits. Only one habit added (busy guard), no freeze.
+5. **Re-open library after add.** Tap Add Habits again — the freshly added preset must NOT appear in its category (renderLibrary filters on activeNames).
+6. **Pack flows unaffected.** Morning Routine / Locked-In pack add flows still close their own modal correctly (pack modal is a different path — not touched).
+7. **Console.** Expected sequence per add: `add click start → calling opts.onConfirm → opts.onConfirm returned → sheet closed → library sheet closed → tick1 · renderHabits → tick2 · renderLibrary → renders complete`. No `threw` entries.
+
+**Known non-goals:**
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop-rate / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- Codemagic NOT triggered by this commit.
+- Onboarding habit-detail flow (`opts.context === 'onboarding'`) is intentionally untouched — onboarding has its own multi-select grid pattern and doesn't suffer the post-add return-to-library state.
+- We do NOT diagnose whether the underlying gesture handler is itself buggy (e.g. whether `attachSheetDismissGesture` should be made idempotent). That's deferred — the close-to-Habits-tab approach makes that bug unreachable for the Add Habits flow. If a similar freeze surfaces in other sheets using the same gesture helper (Streaks, Souls Ledger, Class Detail, etc.), revisit the gesture handler itself.
 
 ### Add Habits freeze — defensive hardening pass (v3 Phase 1z.88)
 
