@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.309';
+const CACHE_VERSION = 'v5.310';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -124,6 +124,8 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-ascendant-colossus.png',
   // v3 Phase 1z.68 — second C-rank boss (dual-condition)
   '/assets/bosses/the-furnace-knight.png',
+  // v3 Phase 1z.70 — third C-rank boss (10k-steps daily)
+  '/assets/bosses/the-marathon-wraith.png',
   // Item-card illustrations. Only paths that EXIST on disk get listed
   // here — cache.addAll rejects the entire install if any entry 404s.
   // The remaining 8 launch cards fall through to the network (404 in
@@ -181,6 +183,12 @@ const PRECACHE_ASSETS = [
   '/assets/items/cinderplate-harness.png',
   '/assets/items/kilnforged-warblade.png',
   '/assets/items/ashen-monarchs-cape.png',
+  // v3 Phase 1z.70 — C-rank Marathon Wraith drops (5 items).
+  '/assets/items/roadworn-mantle.png',
+  '/assets/items/phantom-mile-wraps.png',
+  '/assets/items/wayfarers-signet.png',
+  '/assets/items/ten-thousand-step-blade.png',
+  '/assets/items/greaves-of-the-endless-road.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)
