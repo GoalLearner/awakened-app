@@ -23151,15 +23151,14 @@ body.habit-drag-active * {
 }
 .reveal-overlay--sigil.is-phase-1 .sb-silhouette { opacity: 0.4; }
 .reveal-overlay--sigil.is-phase-2 .sb-silhouette,
-.reveal-overlay--sigil.is-phase-3 .sb-silhouette {
+.reveal-overlay--sigil.is-phase-3 .sb-silhouette,
+.reveal-overlay--sigil.is-phase-4 .sb-silhouette {
   opacity: 1;
   filter: blur(0);
 }
-.reveal-overlay--sigil.is-phase-4 .sb-silhouette {
-  opacity: 0;
-  filter: blur(0);
-  transition: opacity 500ms ease 200ms;
-}
+/* v3 Phase 1z.76 — silhouette stays visible after settle so the
+   "TAP TO CONTINUE" wait state has a focal subject. It only fades
+   when the user taps and .is-card-revealed is added (handled below). */
 
 /* ── Wordmark (rarity title + whisper) ─────────────────────── */
 .sb-wordmark {

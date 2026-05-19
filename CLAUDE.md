@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w80` |
-| `app.js?v=` | `429` |
+| `APP_BUILD_TAG` | `2.2.1-w81` |
+| `app.js?v=` | `430` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `299` |
+| `styles.css?v=` | `300` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.315` |
+| `sw.js CACHE_VERSION` | `v5.316` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,17 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Sigil Bloom — keep silhouette visible during tap wait (v3 Phase 1z.76)
+
+**Fix.** After 1z.75 deferred the relic card to a first-tap, the screen went blank between settle and tap because:
+
+1. The `.is-phase-4 .sb-silhouette` rule was fading the silhouette to opacity 0 at settle.
+2. The 2500/3000ms safety cleanup was calling `stage.innerHTML = ''` and stripping everything out.
+
+Both removed. The sword (rare) / crown (ultra) silhouette + wordmark now stay rendered through the "TAP TO CONTINUE" wait. They only fade when the user taps and `.is-card-revealed` is added (existing 350ms fade rule). Stage cleanup happens at modal close via `_teardownSigilBloom`.
+
+**Files touched:** `app.js`, `styles.css`. Bumped: `app.js?v=430`, `styles.css?v=300`, `sw.js v5.316`, `APP_BUILD_TAG 2.2.1-w81`.
 
 ### Sigil Bloom — tap-to-reveal gate (v3 Phase 1z.75)
 

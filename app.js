@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w80';
+  const APP_BUILD_TAG = '2.2.1-w81';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4144,15 +4144,10 @@
       }
     } catch (_) {}
 
-    // Safety cleanup — strips motes / svg / vignette from the stage
-    // and the phase classes from the overlay. Reveal modal itself
-    // stays open; user dismisses via tap-to-continue.
-    _sigilBloomCleanupId = setTimeout(() => {
-      try { stage.innerHTML = ''; } catch (_) {}
-      // Keep .reveal-overlay--sigil class so the .reveal-card stays
-      // visible (its CSS gates on it). Strip only the phase + ultra
-      // classes so a subsequent bloom can start fresh.
-    }, timings.cleanup);
+    // v3 Phase 1z.76 — no safety stage-cleanup. The silhouette and
+    // wordmark are the focal subject during the "TAP TO CONTINUE"
+    // wait state and must stay rendered. _teardownSigilBloom clears
+    // the stage on modal close.
   }
 
   // Sigil bloom audio — three layers per ClaudeDesign spec.
