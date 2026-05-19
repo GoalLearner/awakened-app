@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w78';
+  const APP_BUILD_TAG = '2.2.1-w79';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3815,6 +3815,397 @@
     try { navigator.vibrate && navigator.vibrate(rarity === 'ultra_rare' ? [40, 30, 80] : [30]); } catch (_) {}
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // v3 Phase 1z.74 — Sigil Bloom Relic Reveal (ClaudeDesign).
+  //
+  // Phase timeline (Rare / Ultra in ms):
+  //   0  idle       — stage rendered, hidden by CSS.
+  //   1  gather     — 100  /  100. Motes spiral inward, rune scales in.
+  //   2  ignite     — 700  /  900. Bloom flash + (ultra) ray fan,
+  //                   silhouette resolves from blur, wordmark fades in.
+  //   3  burst      — 1300 / 1700. Motes drift outward, relic card
+  //                   slides in below.
+  //   4  settle     — 1800 / 2400. Rune fades.
+  //   safety unmount — 2500 / 3000. Hard cleanup of all motes/elements.
+  //
+  // Common drops skip this entirely — only rare + ultra_rare reach
+  // openCardRevealModal so the rarity check is defensive.
+  // ═══════════════════════════════════════════════════════════
+  let _sigilBloomCleanupId = null;
+  let _sigilBloomTimers = [];
+  function _runSigilBloom(rarity) {
+    if (rarity !== 'rare' && rarity !== 'ultra_rare') return;
+    const overlay = document.getElementById('reveal-overlay');
+    const stage   = document.getElementById('sigil-bloom-stage');
+    if (!overlay || !stage) return;
+
+    // Clear any prior bloom in case the queue chains a second reveal
+    // before the first's safety timeout fires.
+    _sigilBloomTimers.forEach(t => clearTimeout(t));
+    _sigilBloomTimers = [];
+    if (_sigilBloomCleanupId) {
+      clearTimeout(_sigilBloomCleanupId);
+      _sigilBloomCleanupId = null;
+    }
+    stage.innerHTML = '';
+    overlay.classList.remove('is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4', 'is-ultra');
+    overlay.classList.add('reveal-overlay--sigil');
+
+    const ultra = (rarity === 'ultra_rare');
+    if (ultra) overlay.classList.add('is-ultra');
+
+    // ── Mount DOM ────────────────────────────────────────────
+    const accent = ultra ? '#f5b842' : '#a78bfa';
+    const ring2  = ultra ? '#a78bfa' : '#f5b842';
+    const palette = ultra
+      ? ['#f5b842', '#fcd34d', '#a78bfa', '#fff8e1']
+      : ['#a78bfa', '#f5b842', '#c4b5fd'];
+    const burstPalette = ultra
+      ? ['#f5b842', '#fcd34d', '#a78bfa', '#fff8e1']
+      : ['#a78bfa', '#f5b842', '#c4b5fd', '#e6d8ff'];
+
+    // Vignette (ultra only — CSS gates display).
+    const vignette = document.createElement('div');
+    vignette.className = 'sb-vignette';
+    stage.appendChild(vignette);
+
+    // Wordmark.
+    const wordmark = document.createElement('div');
+    wordmark.className = 'sb-wordmark';
+    wordmark.innerHTML =
+      '<div class="sb-wordmark-kicker">SYSTEM RESULT · DROP</div>' +
+      '<div class="sb-wordmark-title">' + (ultra ? 'ULTRA RARE' : 'RARE') + '</div>' +
+      '<div class="sb-wordmark-whisper">' +
+        (ultra ? '"A relic of the Hollow King has awakened."'
+               : '"A rare relic has awakened."') +
+      '</div>';
+    stage.appendChild(wordmark);
+
+    // Rune circle — outer ring, inner dashed ring, 12 tick marks,
+    // (ultra) 4 cardinal spark sigils. Single SVG, hand-built so
+    // it never goes through the boss-art 404 fallback.
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', 'sb-rune');
+    svg.setAttribute('viewBox', '0 0 280 280');
+    svg.setAttribute('width', '280');
+    svg.setAttribute('height', '280');
+    // Outer ring
+    const outer = document.createElementNS(SVG_NS, 'circle');
+    outer.setAttribute('cx', '140'); outer.setAttribute('cy', '140');
+    outer.setAttribute('r',  '100'); outer.setAttribute('fill', 'none');
+    outer.setAttribute('stroke', accent); outer.setAttribute('stroke-width', '1.4');
+    outer.setAttribute('opacity', '0.85');
+    outer.setAttribute('style', 'filter: drop-shadow(0 0 6px ' + accent + ');');
+    svg.appendChild(outer);
+    // Inner dashed ring (spins after ignite)
+    const inner = document.createElementNS(SVG_NS, 'circle');
+    inner.setAttribute('class', 'sb-rune__inner');
+    inner.setAttribute('cx', '140'); inner.setAttribute('cy', '140');
+    inner.setAttribute('r',  '80');  inner.setAttribute('fill', 'none');
+    inner.setAttribute('stroke', accent); inner.setAttribute('stroke-width', '0.7');
+    inner.setAttribute('opacity', '0.55');
+    inner.setAttribute('stroke-dasharray', '2 5');
+    svg.appendChild(inner);
+    // Second outer ring (faint)
+    const outer2 = document.createElementNS(SVG_NS, 'circle');
+    outer2.setAttribute('cx', '140'); outer2.setAttribute('cy', '140');
+    outer2.setAttribute('r',  '118'); outer2.setAttribute('fill', 'none');
+    outer2.setAttribute('stroke', ring2); outer2.setAttribute('stroke-width', '0.6');
+    outer2.setAttribute('opacity', '0.4');
+    svg.appendChild(outer2);
+    // 12 tick marks around the rim
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+      const r1 = 102, r2 = 114;
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', String(140 + Math.cos(a) * r1));
+      line.setAttribute('y1', String(140 + Math.sin(a) * r1));
+      line.setAttribute('x2', String(140 + Math.cos(a) * r2));
+      line.setAttribute('y2', String(140 + Math.sin(a) * r2));
+      line.setAttribute('stroke', accent);
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('opacity', '0.7');
+      svg.appendChild(line);
+    }
+    // Cardinal flame sigils (ultra only)
+    if (ultra) {
+      [0, 90, 180, 270].forEach(deg => {
+        const g = document.createElementNS(SVG_NS, 'g');
+        g.setAttribute('transform', 'rotate(' + deg + ' 140 140) translate(133 18) scale(0.14)');
+        const tri = document.createElementNS(SVG_NS, 'path');
+        tri.setAttribute('d', 'M50 12 L84 82 L16 82 Z');
+        tri.setAttribute('fill', 'none');
+        tri.setAttribute('stroke', accent);
+        tri.setAttribute('stroke-width', '3.5');
+        tri.setAttribute('stroke-linejoin', 'round');
+        g.appendChild(tri);
+        const flame = document.createElementNS(SVG_NS, 'path');
+        flame.setAttribute('d', 'M50 34 C 42 48 42 60 50 66 C 58 60 58 48 50 34 Z');
+        flame.setAttribute('fill', accent);
+        g.appendChild(flame);
+        svg.appendChild(g);
+      });
+    }
+    stage.appendChild(svg);
+
+    // Gather motes — DOM spans with per-element CSS vars for start
+    // position. Animation timing is driven by the .is-phase-1 class.
+    const gatherCount = ultra ? 22 : 14;
+    const gatherDur = ultra ? 800 : 600;
+    const gatherWrap = document.createElement('div');
+    gatherWrap.className = 'sb-motes sb-motes--gather';
+    for (let i = 0; i < gatherCount; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const dist = 90 + Math.random() * 60;
+      const size = 2 + Math.random() * 3;
+      const color = palette[Math.floor(Math.random() * palette.length)];
+      const delay = Math.random() * 200;
+      const span = document.createElement('span');
+      span.className = 'sb-mote sb-mote--gather';
+      span.style.width  = size + 'px';
+      span.style.height = size + 'px';
+      span.style.background = color;
+      span.style.boxShadow = '0 0 ' + (size * 2) + 'px ' + color;
+      span.style.setProperty('--sx', (Math.cos(a) * dist) + 'px');
+      span.style.setProperty('--sy', (Math.sin(a) * dist) + 'px');
+      span.style.setProperty('--sb-gather-dur', gatherDur + 'ms');
+      span.style.setProperty('--sb-delay', delay + 'ms');
+      gatherWrap.appendChild(span);
+    }
+    stage.appendChild(gatherWrap);
+
+    // Bloom flash + ray fan
+    const flash = document.createElement('div');
+    flash.className = 'sb-flash';
+    stage.appendChild(flash);
+
+    if (ultra) {
+      const rays = document.createElementNS(SVG_NS, 'svg');
+      rays.setAttribute('class', 'sb-rays');
+      rays.setAttribute('viewBox', '0 0 320 320');
+      rays.setAttribute('width', '320'); rays.setAttribute('height', '320');
+      const defs = document.createElementNS(SVG_NS, 'defs');
+      const grad = document.createElementNS(SVG_NS, 'linearGradient');
+      grad.setAttribute('id', 'sb-ray-grad');
+      grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
+      grad.setAttribute('x2', '0'); grad.setAttribute('y2', '1');
+      [['0', '#fff8e1', '0'], ['0.5', '#fcd34d', '0.85'], ['1', '#f5b842', '0']]
+        .forEach(([offset, col, op]) => {
+          const stop = document.createElementNS(SVG_NS, 'stop');
+          stop.setAttribute('offset', offset);
+          stop.setAttribute('stop-color', col);
+          stop.setAttribute('stop-opacity', op);
+          grad.appendChild(stop);
+        });
+      defs.appendChild(grad);
+      rays.appendChild(defs);
+      for (let i = 0; i < 12; i++) {
+        const r = document.createElementNS(SVG_NS, 'rect');
+        r.setAttribute('x', '158'); r.setAttribute('y', '40');
+        r.setAttribute('width', '4'); r.setAttribute('height', '80');
+        r.setAttribute('fill', 'url(#sb-ray-grad)');
+        r.setAttribute('transform', 'rotate(' + (i / 12) * 360 + ' 160 160)');
+        rays.appendChild(r);
+      }
+      stage.appendChild(rays);
+    }
+
+    // Silhouette — sword for rare, crown for ultra. Hand-built SVG
+    // so missing item-art assets don't affect the cinematic.
+    const silhouette = document.createElementNS(SVG_NS, 'svg');
+    silhouette.setAttribute('class', 'sb-silhouette');
+    if (ultra) {
+      silhouette.setAttribute('viewBox', '0 0 100 80');
+      silhouette.setAttribute('width', '100'); silhouette.setAttribute('height', '80');
+      silhouette.setAttribute('style', 'filter: drop-shadow(0 0 14px rgba(245,184,66,0.45));');
+      const body = document.createElementNS(SVG_NS, 'path');
+      body.setAttribute('d', 'M10 70 L20 22 L34 50 L50 18 L66 50 L80 22 L90 70 Z');
+      body.setAttribute('fill', '#f5b842');
+      body.setAttribute('stroke', '#c08418');
+      body.setAttribute('stroke-width', '1');
+      body.setAttribute('stroke-linejoin', 'round');
+      silhouette.appendChild(body);
+      const base = document.createElementNS(SVG_NS, 'rect');
+      base.setAttribute('x', '10'); base.setAttribute('y', '68');
+      base.setAttribute('width', '80'); base.setAttribute('height', '6');
+      base.setAttribute('fill', '#c08418');
+      silhouette.appendChild(base);
+      [['20', '22', '3'], ['50', '18', '3.5'], ['80', '22', '3']].forEach(([cx, cy, r]) => {
+        const gem = document.createElementNS(SVG_NS, 'circle');
+        gem.setAttribute('cx', cx); gem.setAttribute('cy', cy); gem.setAttribute('r', r);
+        gem.setAttribute('fill', '#a78bfa');
+        silhouette.appendChild(gem);
+      });
+    } else {
+      silhouette.setAttribute('viewBox', '0 0 40 80');
+      silhouette.setAttribute('width', '64'); silhouette.setAttribute('height', '100');
+      silhouette.setAttribute('style', 'filter: drop-shadow(0 0 12px rgba(167,139,250,0.6));');
+      const blade = document.createElementNS(SVG_NS, 'path');
+      blade.setAttribute('d', 'M20 4 L26 14 L26 56 L20 60 L14 56 L14 14 Z');
+      blade.setAttribute('fill', '#a78bfa');
+      silhouette.appendChild(blade);
+      const cross = document.createElementNS(SVG_NS, 'rect');
+      cross.setAttribute('x', '10'); cross.setAttribute('y', '56');
+      cross.setAttribute('width', '20'); cross.setAttribute('height', '4');
+      cross.setAttribute('fill', '#f5b842');
+      silhouette.appendChild(cross);
+      const grip = document.createElementNS(SVG_NS, 'rect');
+      grip.setAttribute('x', '19'); grip.setAttribute('y', '58');
+      grip.setAttribute('width', '2'); grip.setAttribute('height', '14');
+      grip.setAttribute('fill', '#f5b842');
+      silhouette.appendChild(grip);
+      const pommel = document.createElementNS(SVG_NS, 'circle');
+      pommel.setAttribute('cx', '20'); pommel.setAttribute('cy', '74'); pommel.setAttribute('r', '3');
+      pommel.setAttribute('fill', '#f5b842');
+      silhouette.appendChild(pommel);
+    }
+    stage.appendChild(silhouette);
+
+    // Burst motes — placed but inert until .is-phase-3 class lands.
+    const burstCount = ultra ? 28 : 16;
+    const burstDur = ultra ? 1600 : 1300;
+    const spread = ultra ? 220 : 170;
+    const burstWrap = document.createElement('div');
+    burstWrap.className = 'sb-motes sb-motes--burst';
+    for (let i = 0; i < burstCount; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const dist = spread * (0.5 + Math.random() * 0.55);
+      const size = 2 + Math.random() * 4;
+      const color = burstPalette[Math.floor(Math.random() * burstPalette.length)];
+      const delay = Math.random() * 120;
+      const span = document.createElement('span');
+      span.className = 'sb-mote sb-mote--burst';
+      span.style.width  = size + 'px';
+      span.style.height = size + 'px';
+      span.style.background = color;
+      span.style.boxShadow = '0 0 ' + (size * 2) + 'px ' + color;
+      span.style.setProperty('--dx', (Math.cos(a) * dist) + 'px');
+      span.style.setProperty('--dy', (Math.sin(a) * dist - 20) + 'px');
+      span.style.setProperty('--sb-burst-dur', burstDur + 'ms');
+      span.style.setProperty('--sb-delay', delay + 'ms');
+      burstWrap.appendChild(span);
+    }
+    stage.appendChild(burstWrap);
+
+    // ── Phase timeline ──────────────────────────────────────
+    const timings = ultra
+      ? { gather: 100, ignite: 900, burst: 1700, settle: 2400, cleanup: 3000 }
+      : { gather: 100, ignite: 700, burst: 1300, settle: 1800, cleanup: 2500 };
+
+    const setPhase = (n) => {
+      overlay.classList.remove('is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4');
+      overlay.classList.add('is-phase-' + n);
+    };
+
+    _sigilBloomTimers.push(setTimeout(() => setPhase(1), timings.gather));
+    _sigilBloomTimers.push(setTimeout(() => setPhase(2), timings.ignite));
+    _sigilBloomTimers.push(setTimeout(() => setPhase(3), timings.burst));
+    _sigilBloomTimers.push(setTimeout(() => setPhase(4), timings.settle));
+
+    // SFX
+    try { _playSigilBloomSfx(rarity); } catch (_) {}
+
+    // Haptics — light at ignite, ultra adds heavy at burst.
+    try {
+      const hapticAtIgnite = ultra ? [40, 30, 60] : [25];
+      _sigilBloomTimers.push(setTimeout(() => {
+        try { navigator.vibrate && navigator.vibrate(hapticAtIgnite); } catch (_) {}
+      }, timings.ignite - 20));
+      if (ultra) {
+        _sigilBloomTimers.push(setTimeout(() => {
+          try { navigator.vibrate && navigator.vibrate([90]); } catch (_) {}
+        }, timings.burst));
+      }
+    } catch (_) {}
+
+    // Safety cleanup — strips motes / svg / vignette from the stage
+    // and the phase classes from the overlay. Reveal modal itself
+    // stays open; user dismisses via tap-to-continue.
+    _sigilBloomCleanupId = setTimeout(() => {
+      try { stage.innerHTML = ''; } catch (_) {}
+      // Keep .reveal-overlay--sigil class so the .reveal-card stays
+      // visible (its CSS gates on it). Strip only the phase + ultra
+      // classes so a subsequent bloom can start fresh.
+    }, timings.cleanup);
+  }
+
+  // Sigil bloom audio — three layers per ClaudeDesign spec.
+  //   1. Gather hum    — rising sine,  ~0.85s
+  //   2. Ignite impact — falling sine, ~0.40s, lands at ignite
+  //   3. Chime         — triangle (rare) / sine (ultra) staggered notes
+  // Shared AudioContext on window so iOS doesn't accumulate suspended
+  // contexts across reveals. Wrapped in try/catch — autoplay
+  // restrictions never crash.
+  function _playSigilBloomSfx(rarity) {
+    if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!window.__bloomCtx) window.__bloomCtx = new Ctx();
+      const ctx = window.__bloomCtx;
+      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) {} }
+      const now = ctx.currentTime;
+      const ultra = (rarity === 'ultra_rare');
+
+      // Gather hum
+      const hum = ctx.createOscillator();
+      const hg  = ctx.createGain();
+      hum.type = 'sine';
+      hum.frequency.setValueAtTime(ultra ? 90 : 160, now + 0.10);
+      hum.frequency.exponentialRampToValueAtTime(ultra ? 260 : 380, now + 0.85);
+      hg.gain.setValueAtTime(0.0001, now + 0.10);
+      hg.gain.linearRampToValueAtTime(ultra ? 0.18 : 0.12, now + 0.30);
+      hg.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
+      hum.connect(hg); hg.connect(ctx.destination);
+      hum.start(now + 0.10); hum.stop(now + 1.00);
+
+      // Ignite impact
+      const tImpact = ultra ? now + 0.90 : now + 0.70;
+      const impact = ctx.createOscillator();
+      const ig = ctx.createGain();
+      impact.type = 'sine';
+      impact.frequency.setValueAtTime(ultra ? 130 : 200, tImpact);
+      impact.frequency.exponentialRampToValueAtTime(ultra ? 60 : 110, tImpact + 0.45);
+      ig.gain.setValueAtTime(0.0001, tImpact);
+      ig.gain.linearRampToValueAtTime(ultra ? 0.28 : 0.18, tImpact + 0.025);
+      ig.gain.exponentialRampToValueAtTime(0.0001, tImpact + 0.55);
+      impact.connect(ig); ig.connect(ctx.destination);
+      impact.start(tImpact); impact.stop(tImpact + 0.65);
+
+      // Crystalline chime
+      const notes = ultra ? [660, 990, 1320, 1760] : [880, 1320, 1760];
+      const tChime = ultra ? now + 1.05 : now + 0.80;
+      notes.forEach((f, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = ultra ? 'sine' : 'triangle';
+        const t = tChime + i * 0.06;
+        o.frequency.setValueAtTime(f, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(ultra ? 0.13 : 0.16, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 0.8);
+      });
+    } catch (_) {}
+  }
+
+  // Clean up the bloom stage when the reveal modal closes so the
+  // next reveal starts from a clean slate. Wired from
+  // closeCardRevealModal in setupCardRevealModal.
+  function _teardownSigilBloom() {
+    _sigilBloomTimers.forEach(t => clearTimeout(t));
+    _sigilBloomTimers = [];
+    if (_sigilBloomCleanupId) { clearTimeout(_sigilBloomCleanupId); _sigilBloomCleanupId = null; }
+    const overlay = document.getElementById('reveal-overlay');
+    const stage   = document.getElementById('sigil-bloom-stage');
+    if (overlay) overlay.classList.remove(
+      'reveal-overlay--sigil', 'is-phase-1', 'is-phase-2', 'is-phase-3', 'is-phase-4', 'is-ultra'
+    );
+    if (stage) stage.innerHTML = '';
+  }
+
   // v3 Phase 1z.7 — short per-boss defeat-condition copy for the
   // overlay's gold-bordered VERIFIED row. Falls back to cfg.killCondShort
   // when no map entry exists.
@@ -4325,10 +4716,12 @@
     // the keyframe animations rather than instantly snapping.
     void overlay.offsetWidth;
     overlay.classList.add('reveal-overlay--showing');
-    // v3 Phase 1z.73 — confetti + chime for first-acquisition rare /
-    // ultra reveals. Every card that reaches this modal is rare or
-    // ultra by design, but we double-check the rarity for safety.
-    try { celebrateRareDrop(card.rarity); } catch (_) {}
+    // v3 Phase 1z.74 — Sigil Bloom Relic Reveal (ClaudeDesign).
+    // Replaces the 1z.73 confetti+chime celebration for first-
+    // acquisition cinematic reveals. The boss-defeated modal path
+    // still uses celebrateRareDrop for duplicate rare/ultra drops
+    // (they don't reach this modal).
+    try { _runSigilBloom(card.rarity); } catch (_) {}
   }
 
   function closeCardRevealModal() {
@@ -4341,6 +4734,9 @@
       overlay.classList.remove('reveal-overlay--closing');
       document.body.classList.remove('reveal-locked');
       _revealActive = false;
+      // v3 Phase 1z.74 — strip the sigil-bloom state so the next
+      // reveal (if queued) starts clean.
+      try { _teardownSigilBloom(); } catch (_) {}
       // Pop the head of the queue and chain to the next one if any.
       const inv = getInventory();
       if (inv.reveal_queue && inv.reveal_queue.length > 0) {

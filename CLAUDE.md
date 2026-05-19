@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w78` |
-| `app.js?v=` | `427` |
+| `APP_BUILD_TAG` | `2.2.1-w79` |
+| `app.js?v=` | `428` |
 | `auth.js?v=` | `16` |
-| `styles.css?v=` | `297` |
+| `styles.css?v=` | `298` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.313` |
+| `sw.js CACHE_VERSION` | `v5.314` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,50 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Sigil Bloom Relic Reveal (v3 Phase 1z.74)
+
+**ClaudeDesign-spec rare/ultra reveal.** Replaces the loot-box/treasure-chest concept with a magic-sigil bloom: motes spiral inward → rune ignites → silhouette resolves → relic card slides in. Same anatomy at both tiers; intensity scales via `.is-ultra`. Common drops bypass this entirely (they don't reach `openCardRevealModal`).
+
+**Phase timeline** (Rare / Ultra ms):
+
+| Phase | Rare | Ultra | What happens |
+|---|---|---|---|
+| 1 gather | 100 | 100 | Motes spiral inward; rune scales in; hum (sine rising) |
+| 2 ignite | 700 | 900 | Bloom flash; ultra adds 12-ray fan; silhouette resolves from blur; wordmark fades in; impact (sine falling) |
+| 3 burst | 1300 | 1700 | Motes drift outward; relic card slides in below; crystalline chime (3 triangle / 4 sine notes, 60ms stagger) |
+| 4 settle | 1800 | 2400 | Rune fades; dashed inner ring keeps slow rotation |
+| safety unmount | 2500 | 3000 | Hard cleanup of motes; phase classes stripped on modal close |
+
+**DOM:** new `#sigil-bloom-stage` div added inside `#reveal-overlay` before `.reveal-card`. `_runSigilBloom(rarity)` mounts the rune SVG (handbuilt, no external assets), 14/22 gather motes, bloom flash, ultra ray-fan, sword/crown silhouette SVG, wordmark, 16/28 burst motes. All children carry `pointer-events: none` so action buttons stay tappable from t=0.
+
+**Audio:** new `_playSigilBloomSfx(rarity)` implements the 3-layer Web Audio cue per spec. Shared `window.__bloomCtx`, `ctx.resume()` on each play (iOS suspension), wrapped in try/catch. Gated on existing `soundEnabled` flag.
+
+**Haptics:** light pattern at ignite (rare = `[25]`, ultra = `[40,30,60]`); ultra adds a heavy `[90]` at burst.
+
+**Differentiation matrix:**
+
+| Aspect | Rare | Ultra |
+|---|---|---|
+| Rune accent | violet `#a78bfa` | gold `#f5b842` |
+| Cardinal sigils | none | 4 flame sigils at N/E/S/W |
+| Vignette | none | radial transparent → 0.55α at edges |
+| Bloom flash | violet wash | white-gold wash |
+| Ray fan | none | 12-ray gradient burst |
+| Silhouette | sword (violet body, gold pommel) | crown (gold body, violet gems) |
+| Wordmark | `RARE` violet, glow violet | `ULTRA RARE` gold, glow gold |
+| Whisper | "A rare relic has awakened." | "A relic of the Hollow King has awakened." |
+| Total duration | ~1.8s settle | ~2.4s settle |
+
+**Reduced motion fallback:** `prefers-reduced-motion: reduce` hides the rune/motes/flash/rays/silhouette/vignette entirely. The wordmark stays visible (no animation) and the relic card displays immediately. **Audio still fires** — audio is not motion. Per the spec.
+
+**Queue preservation:** the sigil bloom fires on the modal's mount, NOT on the underlying state-change event. Each queued boss-defeated → reveal modal independently triggers its own bloom. `_teardownSigilBloom()` runs from `closeCardRevealModal` so the next reveal starts clean. The 1z.73 queue chain (boss-defeated drain → `processRevealQueue` → reveal modal → close → next) is intact.
+
+**Boss-defeated modal celebration** (1z.73 confetti + chime) stays in place for **duplicate** rare/ultra drops that route through the boss-defeated modal (not the cinematic reveal). Together: cinematic reveal = sigil bloom; boss-defeated = confetti + 1z.73 chime.
+
+**Preserved:** drop rates, mercy, pity, souls, XP, rank thresholds, daily one-kill-per-day lock, Carouser Friday-only, temp 1z.71 C-rank QA unlock, queue semantics. No backend / no Duels changes.
+
+**Files touched:** `app.js`, `index.html`, `styles.css`. Bumped: `app.js?v=428`, `styles.css?v=298`, `sw.js v5.314`, `APP_BUILD_TAG 2.2.1-w79`.
 
 ### Boss-result polish: art helper, drop celebration, queue (v3 Phase 1z.73)
 

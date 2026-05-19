@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=297">
+  <link rel="stylesheet" href="styles.css?v=298">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2172,7 +2172,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=6"></script>
-  <script src="app.js?v=427"></script>
+  <script src="app.js?v=428"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2766,6 +2766,11 @@
     <div class="reveal-systemline reveal-systemline--top" aria-hidden="true"></div>
     <div class="reveal-systemline reveal-systemline--bottom" aria-hidden="true"></div>
     <div class="reveal-particles" aria-hidden="true"></div>
+    <!-- v3 Phase 1z.74 — Sigil Bloom Relic Reveal. Empty container;
+         _runSigilBloom mounts rune circle / motes / flash / silhouette
+         / wordmark when a rare or ultra_rare drop reveals. Phase
+         classes (.is-phase-N) drive the animation timeline. -->
+    <div id="sigil-bloom-stage" class="sigil-bloom-stage" aria-hidden="true"></div>
     <div class="reveal-card">
       <div class="reveal-card-art">
         <span id="reveal-slot-icon" class="reveal-slot-icon" aria-hidden="true">✦</span>

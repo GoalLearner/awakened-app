@@ -22935,3 +22935,277 @@ body.habit-drag-active * {
   line-height: 1.5;
   letter-spacing: 0.02em;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   v3 Phase 1z.74 — Sigil Bloom Relic Reveal
+   ClaudeDesign-spec rare/ultra reveal animation. Replaces the
+   loot-box concept with a magic-sigil bloom: motes gather → rune
+   ignites → silhouette resolves → relic card slides in. Same
+   anatomy for both rarities, intensity scales via .is-ultra.
+   Common drops bypass this entirely.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Stage — sits behind the reveal-card, hosts rune + motes + flash. */
+.sigil-bloom-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* taps fall through to overlay / card */
+  z-index: 1;           /* below .reveal-card (z-index:2) */
+  overflow: hidden;
+  opacity: 0;
+}
+.reveal-overlay--sigil .sigil-bloom-stage { opacity: 1; }
+
+/* When sigil bloom is active, suppress the existing materialize +
+   pulse on .reveal-card. The card slides in at phase 3 via its
+   own translateY animation. */
+.reveal-overlay--sigil .reveal-card {
+  opacity: 0 !important;
+  transform: translateY(12px) !important;
+  animation: none !important;
+  transition: opacity 500ms ease, transform 500ms ease,
+              box-shadow 0.4s ease;
+}
+.reveal-overlay--sigil.is-phase-3 .reveal-card,
+.reveal-overlay--sigil.is-phase-4 .reveal-card {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Hide the system lines + drifting particles during sigil bloom —
+   the bloom owns the visual hierarchy. */
+.reveal-overlay--sigil .reveal-systemline,
+.reveal-overlay--sigil .reveal-particles { display: none; }
+
+/* ── Rune circle ───────────────────────────────────────────── */
+.sb-rune {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms ease,
+              transform 600ms cubic-bezier(.22, .61, .36, 1);
+}
+.reveal-overlay--sigil.is-phase-1 .sb-rune,
+.reveal-overlay--sigil.is-phase-2 .sb-rune {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.reveal-overlay--sigil.is-phase-3 .sb-rune,
+.reveal-overlay--sigil.is-phase-4 .sb-rune {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1);
+}
+/* Inner dashed ring spins continuously after ignite. */
+.sb-rune__inner {
+  transform-origin: 140px 140px;
+}
+.reveal-overlay--sigil.is-phase-2 .sb-rune__inner,
+.reveal-overlay--sigil.is-phase-3 .sb-rune__inner,
+.reveal-overlay--sigil.is-phase-4 .sb-rune__inner {
+  animation: sb-rune-spin 8s linear infinite;
+}
+@keyframes sb-rune-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ── Vignette (ultra only) ─────────────────────────────────── */
+.sb-vignette {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.5) 80%);
+  opacity: 0;
+  display: none;
+}
+.reveal-overlay--sigil.is-ultra .sb-vignette { display: block; }
+.reveal-overlay--sigil.is-ultra.is-phase-1 .sb-vignette,
+.reveal-overlay--sigil.is-ultra.is-phase-2 .sb-vignette,
+.reveal-overlay--sigil.is-ultra.is-phase-3 .sb-vignette {
+  animation: sb-vignette-in 1400ms ease-out forwards;
+}
+@keyframes sb-vignette-in {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+
+/* ── Motes (gather + burst) ────────────────────────────────── */
+.sb-motes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sb-mote {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.reveal-overlay--sigil.is-phase-1 .sb-mote--gather {
+  animation: sb-gather var(--sb-gather-dur, 600ms)
+             cubic-bezier(.42, 0, .2, 1) var(--sb-delay, 0ms) forwards;
+}
+@keyframes sb-gather {
+  0%   { opacity: 0; transform: translate(-50%, -50%) translate(var(--sx, 0), var(--sy, 0)) scale(0.8); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(0.3); }
+}
+.reveal-overlay--sigil.is-phase-3 .sb-mote--burst,
+.reveal-overlay--sigil.is-phase-4 .sb-mote--burst {
+  animation: sb-burst var(--sb-burst-dur, 1300ms)
+             cubic-bezier(.22, .61, .36, 1) var(--sb-delay, 0ms) forwards;
+}
+@keyframes sb-burst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(0.4); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--dx, 0), var(--dy, 0)) scale(1); }
+}
+
+/* ── Bloom flash (radial) ──────────────────────────────────── */
+.sb-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  transform: translate(-50%, -50%) scale(0.4);
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(230, 216, 255, 0.85), rgba(167, 139, 250, 0.45) 32%, transparent 65%);
+  pointer-events: none;
+}
+.reveal-overlay--sigil.is-ultra .sb-flash {
+  background: radial-gradient(circle, rgba(255, 250, 220, 0.95), rgba(245, 184, 66, 0.55) 30%, transparent 60%);
+}
+.reveal-overlay--sigil.is-phase-2 .sb-flash {
+  animation: sb-bloom-flash 700ms ease-out forwards;
+}
+@keyframes sb-bloom-flash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+/* ── Ray fan (ultra only) ──────────────────────────────────── */
+.sb-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translate(-50%, -50%) scale(0.5) rotate(-20deg);
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+.reveal-overlay--sigil.is-ultra .sb-rays { display: block; }
+.reveal-overlay--sigil.is-ultra.is-phase-2 .sb-rays {
+  animation: sb-rays-fan 900ms ease-out forwards;
+}
+@keyframes sb-rays-fan {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-20deg); }
+  30%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3) rotate(20deg); }
+}
+
+/* ── Silhouette (sword for rare, crown for ultra) ──────────── */
+.sb-silhouette {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease, filter 400ms ease;
+}
+.reveal-overlay--sigil.is-phase-1 .sb-silhouette { opacity: 0.4; }
+.reveal-overlay--sigil.is-phase-2 .sb-silhouette,
+.reveal-overlay--sigil.is-phase-3 .sb-silhouette {
+  opacity: 1;
+  filter: blur(0);
+}
+.reveal-overlay--sigil.is-phase-4 .sb-silhouette {
+  opacity: 0;
+  filter: blur(0);
+  transition: opacity 500ms ease 200ms;
+}
+
+/* ── Wordmark (rarity title + whisper) ─────────────────────── */
+.sb-wordmark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6%;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+}
+.sb-wordmark-kicker {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: rgba(245, 245, 250, 0.6);
+  letter-spacing: 0.24em;
+  margin-bottom: 4px;
+}
+.sb-wordmark-title {
+  font-family: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(167, 139, 250, 0.55);
+}
+.reveal-overlay--sigil.is-ultra .sb-wordmark-title {
+  color: #f5b842;
+  text-shadow: 0 0 18px rgba(245, 184, 66, 0.45);
+}
+.sb-wordmark-whisper {
+  margin-top: 4px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  color: rgba(245, 245, 250, 0.55);
+  letter-spacing: 0.4px;
+}
+.reveal-overlay--sigil.is-phase-2 .sb-wordmark,
+.reveal-overlay--sigil.is-phase-3 .sb-wordmark,
+.reveal-overlay--sigil.is-phase-4 .sb-wordmark {
+  animation: sb-wordmark-in 600ms ease-out 100ms forwards;
+}
+@keyframes sb-wordmark-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Reduced motion — skip the bloom; show static rarity title
+   above the relic card. Audio still fires (audio is not motion). ── */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-overlay--sigil .sb-rune,
+  .reveal-overlay--sigil .sb-motes,
+  .reveal-overlay--sigil .sb-flash,
+  .reveal-overlay--sigil .sb-rays,
+  .reveal-overlay--sigil .sb-silhouette,
+  .reveal-overlay--sigil .sb-vignette {
+    display: none !important;
+  }
+  .reveal-overlay--sigil .sb-wordmark {
+    opacity: 1;
+    animation: none !important;
+  }
+  .reveal-overlay--sigil .reveal-card {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
