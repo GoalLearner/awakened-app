@@ -40,13 +40,13 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 
 | Knob | Value |
 |---|---|
-| `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w89` |
-| `app.js?v=` | `438` |
+| `APP_VERSION` | `2.2.2` |
+| `APP_BUILD_TAG` | `2.2.2-w1` |
+| `app.js?v=` | `439` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.324` |
+| `sw.js CACHE_VERSION` | `v5.325` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,41 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Marketing version bump 2.2.1 → 2.2.2 (v3 Phase 1z.86)
+
+**App Store Connect publish failure on Codemagic.** Build #102 IPA upload to App Store Connect failed with:
+
+```
+This bundle is invalid. The value for key CFBundleShortVersionString [2.2.1]
+in the Info.plist file must contain a higher version than that of the
+previously approved version [2.2.1].
+```
+
+**Root cause.** 2.2.1 was already approved by Apple Review on May 19 and is "Ready for Distribution." Apple's bundling check requires the **marketing version** (`CFBundleShortVersionString`) to be strictly greater than the previously approved version. Incrementing only the build number (`CFBundleVersion`, e.g. build 62 vs build 61) is enough for TestFlight, but once a marketing version reaches Distribution status, the next IPA must bump the marketing version.
+
+**Fix.** Three files updated to advance the marketing version:
+
+| File | Change |
+|---|---|
+| `codemagic.yaml` env vars | `APP_VERSION: "2.2.1"` → `"2.2.2"` (drives `agvtool new-marketing-version`) |
+| `app.js` constant | `const APP_VERSION = '2.2.1'` → `'2.2.2'` |
+| `app.js` build tag | `APP_BUILD_TAG = '2.2.1-w89'` → `'2.2.2-w1'` (new w-series for the 2.2.2 cycle) |
+
+Plus the standard SW + JS-query bumps (`app.js?v=439`, `sw.js v5.325`) so the new web bundle cache-busts.
+
+**What ships in 2.2.2** (everything on `main` since the 2.2.1 IPA was built):
+- 1z.80 — `setBossImage` robust loader + QA unlock relock
+- 1z.81 — Codemagic glob-copy fix that finally bundles C-rank boss PNGs into the IPA
+- 1z.82 → 1z.83 — Sealed Mystery Relic reveal flow (replaces "???" placeholder)
+- 1z.84 — "PERFECT DAY" banner leak fix on rare/ultra drops
+- 1z.85 — Preset Add Habits freeze fix (this is the user-visible bug fix that motivated the new submission)
+
+**Build number** continues to auto-increment from the latest TestFlight upload via the existing `agvtool new-version -all $((LATEST + 1))` step in codemagic.yaml — no manual edit needed.
+
+**App Store Connect side:** the rejected build (102) will appear in TestFlight as a failed upload. Create a new 2.2.2 version in App Store Connect → App Information → Version, then trigger Codemagic off `main`. The next build will bundle marketing version 2.2.2 with a fresh auto-incremented build number.
+
+**Versions:** `APP_VERSION 2.2.2`, `app.js?v=439`, `sw.js v5.325`, `APP_BUILD_TAG 2.2.2-w1`.
 
 ### iOS post-save freeze fix — preset Add Habits detail (v3 Phase 1z.85)
 
