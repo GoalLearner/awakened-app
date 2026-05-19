@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w70` |
-| `app.js?v=` | `419` |
+| `APP_BUILD_TAG` | `2.2.1-w71` |
+| `app.js?v=` | `420` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.305` |
+| `sw.js CACHE_VERSION` | `v5.306` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,46 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Item stat rebalance (v3 Phase 1z.66)
+
+**Pool-wide rebalance.** Updated `bonuses` (and added/replaced `bonus_ranges`) for **all 35 relic cards** across E + D + C tiers. Drop rates, mercy thresholds, stack caps, boss economy, XP formulas, inventory/equip logic — all untouched.
+
+**Target power curve (now enforced for every item):**
+
+| Rarity | E | D | C |
+|---|---|---|---|
+| Common | 2 | 4 | 6 |
+| Rare | 6 | 10 | 14 |
+| Ultra | 12 | 15 | 22 |
+
+**Major outlier fixes:**
+- Trail-Worn Boots (D ultra): 24 → 15 (was the biggest outlier in the catalog).
+- Alpha's Mantle (D rare): 12 → 10 (was at ultra-budget).
+- Keystone Pendant (C rare): 8 → 14 (was below D-rare budget).
+- Crown of the Ascendant (C ultra): 12 → 22 (was at D-rare budget).
+- Tracker's Wrap / Rusted Training Blade / Strider's Laces / Quiet Thread: 3 → 4 (undershooting D-common curve).
+- C commons all bumped 4 → 6.
+
+**Stat distribution fixes:**
+- **WLT removed from all items.** Shardwalker Wrap's WLT +1 → STR +1 (only item that had WLT). All `wlt` fields now hard-zero in both `bonuses` and `bonus_ranges`.
+- **VIT no longer dominates.** Now distributed alongside STR/FOCUS/INT/WILL per the boss-identity matrix below.
+- **INT** appears on: Moonlit Lens, Tyrant's Sleep Mask, Crown of Deep Rest, Upper Gate Band, Keystone Pendant, Crown of the Ascendant (6 items vs. 1 before).
+- **FOCUS** appears on 16/35 items (was ~5).
+- **STR** appears on 13/35 items, including all 3 Iron Warden commons (was already strong there), with strong representation in Ascendant Colossus + secondary roles in Steel Wolf and Glass Strider.
+
+**Boss stat identities (per spec PART B):**
+- Insomniac → VIT primary, FOCUS/WILL secondary.
+- Carouser → WILL primary, FOCUS secondary.
+- Steel Wolf → VIT primary, STR/FOCUS secondary.
+- Iron Warden → STR primary, WILL/FOCUS/VIT secondary.
+- Glass Strider → VIT primary, FOCUS/STR secondary.
+- Dream Tyrant → VIT primary, FOCUS/INT/WILL secondary.
+- Ascendant Colossus → STR/VIT primary, FOCUS/INT/WILL secondary.
+
+**`bonus_ranges` convention** (added to 9 legacy items that previously had only `bonuses`): generated via `rng(n)` — `1 → [0,2]`, `2 → [1,3]`, `3 → [2,4]`, `4 → [3,5]`, `5 → [3,7]`, `6 → [4,8]`, `7 → [5,9]`, `8 → [6,10]`, `9 → [7,11]`, `10+ → [n-2, n+2]`. Matches the existing PVP.md per-stat roll conventions.
+
+**No backend / no Duels / no drop rates / no economy changes.** Content rewrite only.
 
 ### Ascendant Colossus art installed (v3 Phase 1z.65)
 
