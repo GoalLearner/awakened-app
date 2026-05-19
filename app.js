@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w73';
+  const APP_BUILD_TAG = '2.2.1-w74';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -429,6 +429,28 @@
     //
     // Rank-gated: users below C-rank see the boss in preview state
     // ("Reach C rank to engage") via the existing isGateUnlocked path.
+    // v3 Phase 1z.69 — final C-rank boss. Steps-based, daily, 10k.
+    // Plugs into the existing per-day steps resolver branch (same
+    // path as Steel Wolf and Glass Strider). The resolver iterates
+    // device-local days in the hunt window; any day >= 10,000 steps
+    // defeats. Writes state.step_progress for live "N / 10,000"
+    // detail label (max-per-day in window). Rank-gated below C via
+    // isGateUnlocked; engageBoss refuses defensively.
+    the_marathon_wraith: {
+      id:               'the_marathon_wraith',
+      name:             'The Marathon Wraith',
+      rank:             'C',
+      flavorShort:      "A ghost that follows every road you've failed to finish.",
+      flavorLong:       "A ghost that follows every road you've failed to finish. It fades only when your steps outlast its shadow.",
+      killCondShort:    'Walk 10,000+ verified steps before the hunt expires',
+      killCondLong:     'Walk at least 10,000 Apple Health verified steps during the 24-hour hunt window. Any device-local day inside the window that reaches the threshold defeats the boss.',
+      failedCopy:       'The road vanished before the distance was claimed.',
+      streakTarget:     1,
+      stepThreshold:    10000,
+      cadence:          'daily',
+      statDomain:       'VIT',
+    },
+
     // v3 Phase 1z.67 — first dual-condition C-rank boss. Requires
     // BOTH a verified strength workout AND ≥ 300 active kcal during
     // the daily (24h) hunt window. Powered by the 1z.62 active-energy
@@ -737,6 +759,10 @@
     // starts at 0/0 rather than carrying over stale progress.
     state.strength_done = false;
     state.energy_progress = 0;
+    // v3 Phase 1z.69 — step-progress mirror (Marathon Wraith, also
+    // populated for Steel Wolf + Glass Strider). Max-per-day step
+    // count inside the hunt window. Reset between hunts.
+    state.step_progress = 0;
   }
 
   // Mark an active hunt as expired. Leaves kill_count alone (this
@@ -837,8 +863,14 @@
       let defeated = false;
 
       // ── Steps bosses ───────────────────────────────────────
+      // v3 Phase 1z.69 — also mirrors max-per-day step count into
+      // state.step_progress so the boss-card + detail label can
+      // render live "N / threshold steps" without a second query.
+      // Benefits Steel Wolf and Glass Strider too, not just the
+      // new Marathon Wraith.
       if (typeof cfg.stepThreshold === 'number' && typeof Health.getStepsBetween === 'function') {
         const days = _huntWindowLocalDays(start, evalEnd);
+        let maxStepsInDay = 0;
         for (const dayIso of days) {
           const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
           const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
@@ -846,11 +878,20 @@
           const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
           let steps = null;
           try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { continue; }
-          if (typeof steps === 'number' && steps >= cfg.stepThreshold) {
-            _awardHuntKillFromBackfill(id, cfg, dayIso);
-            defeated = true;
-            break;
+          if (typeof steps === 'number') {
+            if (steps > maxStepsInDay) maxStepsInDay = steps;
+            if (steps >= cfg.stepThreshold) {
+              state.step_progress = Math.min(steps, cfg.stepThreshold);
+              setBossState(id, state);
+              _awardHuntKillFromBackfill(id, cfg, dayIso);
+              defeated = true;
+              break;
+            }
           }
+        }
+        if (!defeated && maxStepsInDay > 0) {
+          state.step_progress = Math.min(maxStepsInDay, cfg.stepThreshold);
+          setBossState(id, state);
         }
       }
       // ── Dual-condition boss (Furnace Knight) ───────────────
@@ -1126,6 +1167,8 @@
     // v3 Phase 1z.67 — same belt-and-braces for dual-condition mirrors.
     state.strength_done = false;
     state.energy_progress = 0;
+    // v3 Phase 1z.69 — step-progress mirror reset.
+    state.step_progress = 0;
     setBossState(bossId, state);
     try {
       if (typeof showHabitToast === 'function') {
@@ -1804,6 +1847,97 @@
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
+    // ═══════════════════════════════════════════════════════════
+    // v3 Phase 1z.69 — C-rank drops for The Marathon Wraith. Steps
+    // boss, VIT theme but pool deliberately mixes STR/FOCUS/INT/WILL
+    // so VIT doesn't dominate. Slot picks per spec:
+    //   - ULTRA = legs (still the thinnest catalog slot per 1z.66
+    //     audit; Furnace Knight intentionally used cape for ultra,
+    //     so this boss must use legs)
+    //   - RARE  = weapon (not gloves; weapon-rare slot was thin)
+    //   - 3 commons across body / gloves / ring
+    //
+    // Power-curve hits C-tier targets exactly: common 6, rare 14,
+    // ultra 22. No WLT anywhere.
+    //
+    // Art: PENDING. PNGs at assets/items/<id with hyphens>.png are
+    // not on disk yet. setModalCardArt / Pokédex onerror falls
+    // through to slot-emoji + rarity gradient. NOT precached in
+    // sw.js until art ships.
+    // ═══════════════════════════════════════════════════════════
+
+    // ── The Marathon Wraith (C, VIT) — signature slot: legs ──
+    roadworn_mantle: {
+      id: 'roadworn_mantle',
+      name: 'Roadworn Mantle',
+      slot: 'body',
+      source_boss: 'the_marathon_wraith',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'A travel-worn mantle carried by those who refused to stop moving.',
+      art_path: 'assets/items/roadworn-mantle.png',
+      bonuses:      { str: 0, vit: 3, int: 0, focus: 2, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [2,4], int: [0,0], focus: [1,3], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    phantom_mile_wraps: {
+      id: 'phantom_mile_wraps',
+      name: 'Phantom Mile Wraps',
+      slot: 'gloves',
+      source_boss: 'the_marathon_wraith',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'Handwraps left behind by runners who crossed roads no map remembers.',
+      art_path: 'assets/items/phantom-mile-wraps.png',
+      bonuses:      { str: 2, vit: 2, int: 0, focus: 2, will: 0, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [1,3], int: [0,0], focus: [1,3], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    wayfarers_signet: {
+      id: 'wayfarers_signet',
+      name: "Wayfarer's Signet",
+      slot: 'ring',
+      source_boss: 'the_marathon_wraith',
+      rarity: 'common',
+      tier: 'C',
+      flavor: 'A ring worn by travelers who measured discipline in miles, not moments.',
+      art_path: 'assets/items/wayfarers-signet.png',
+      bonuses:      { str: 0, vit: 2, int: 1, focus: 2, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [1,3], int: [0,2], focus: [1,3], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    ten_thousand_step_blade: {
+      id: 'ten_thousand_step_blade',
+      name: 'Ten-Thousand Step Blade',
+      slot: 'weapon',
+      source_boss: 'the_marathon_wraith',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'A blade that sharpens only after its bearer has earned the road.',
+      art_path: 'assets/items/ten-thousand-step-blade.png',
+      bonuses:      { str: 5, vit: 4, int: 0, focus: 3, will: 2, wlt: 0 },
+      bonus_ranges: { str: [3,7], vit: [3,5], int: [0,0], focus: [2,4], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    greaves_of_the_endless_road: {
+      id: 'greaves_of_the_endless_road',
+      name: 'Greaves of the Endless Road',
+      slot: 'legs',
+      source_boss: 'the_marathon_wraith',
+      rarity: 'ultra_rare',
+      tier: 'C',
+      flavor: 'Leg armor worn by the few who walked until the horizon finally bowed. Best in slot for the VIT/STR/FOCUS endurance build.',
+      art_path: 'assets/items/greaves-of-the-endless-road.png',
+      bonuses:      { str: 5, vit: 6, int: 3, focus: 5, will: 3, wlt: 0 },
+      bonus_ranges: { str: [3,7], vit: [4,8], int: [2,4], focus: [3,7], will: [2,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
     // ═══════════════════════════════════════════════════════════
     // v3 Phase 1z.67 — C-rank drops for The Furnace Knight (first
     // dual-condition boss). Slot picks address the 1z.66-audit
@@ -19253,15 +19387,26 @@
     const _isDualBoss = (typeof cfg.workoutMinutes === 'number' && typeof cfg.activeEnergyKcal === 'number');
     const _dualSatisfied = _isDualBoss && state.strength_done === true &&
       typeof state.energy_progress === 'number' && state.energy_progress >= cfg.activeEnergyKcal;
+    // v3 Phase 1z.69 — step-threshold bosses (Marathon Wraith, also
+    // applies to Steel Wolf and Glass Strider) get a single threshold
+    // dot in lieu of streak dots, with the granular count in the
+    // label below.
+    const _isStepBoss = (typeof cfg.stepThreshold === 'number');
+    const _stepSatisfied = _isStepBoss && state.kill_count > 0 &&
+      typeof state.last_eval_date === 'string';
     const dots = _isDualBoss
       ? '<span class="bcard-dot' + (_dualSatisfied ? ' bcard-dot--filled' : '') + '"></span>'
       : (typeof cfg.flightThreshold === 'number')
         ? '<span class="bcard-dot' +
           ((typeof state.flight_progress === 'number' && state.flight_progress >= cfg.flightThreshold)
             ? ' bcard-dot--filled' : '') + '"></span>'
-        : Array.from({ length: cfg.streakTarget }, (_, i) =>
-            '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
-          ).join('');
+        : _isStepBoss
+          ? '<span class="bcard-dot' +
+            ((typeof state.step_progress === 'number' && state.step_progress >= cfg.stepThreshold)
+              ? ' bcard-dot--filled' : '') + '"></span>'
+          : Array.from({ length: cfg.streakTarget }, (_, i) =>
+              '<span class="bcard-dot' + (i < state.streak ? ' bcard-dot--filled' : '') + '"></span>'
+            ).join('');
 
     // Compose state classes. They stack — engaged + active + defeated
     // can all apply at once. v2.0.1 engagement-pivot adds .bcard--engaged
@@ -19355,6 +19500,8 @@
         // "N / threshold flights" instead of streak progress.
         // v3 Phase 1z.67 — dual-condition bosses (Furnace Knight)
         // render a two-line summary: strength check + kcal progress.
+        // v3 Phase 1z.69 — step-threshold bosses display "N / threshold
+        // steps" (max-per-day inside window).
         '<div class="bcard-progress">' +
           '<div class="bcard-dots">' + dots + '</div>' +
           '<div class="bcard-progress-label">' +
@@ -19364,7 +19511,9 @@
                   ' / ' + cfg.activeEnergyKcal + ' kcal')
               : (typeof cfg.flightThreshold === 'number'
                 ? (Math.max(0, Math.min(cfg.flightThreshold, (typeof state.flight_progress === 'number') ? state.flight_progress : 0)) + ' / ' + cfg.flightThreshold + ' ' + _bossProgressNoun(cfg))
-                : (state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg)))) +
+                : _isStepBoss
+                  ? (Math.max(0, Math.min(cfg.stepThreshold, (typeof state.step_progress === 'number') ? state.step_progress : 0)).toLocaleString('en-US') + ' / ' + cfg.stepThreshold.toLocaleString('en-US') + ' steps')
+                  : (state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg)))) +
           '</div>' +
           '<div class="bcard-kills">' + killText + '</div>' +
         '</div>' +
@@ -19492,6 +19641,17 @@
         progressEl.innerHTML =
           '<div class="bfs-dots">' + dots + '</div>' +
           '<div class="bfs-progress-label">' + cur + ' / ' + cfg.flightThreshold + ' ' + _bossProgressNoun(cfg) + '</div>';
+      } else if (typeof cfg.stepThreshold === 'number') {
+        // v3 Phase 1z.69 — step-threshold bosses (Marathon Wraith,
+        // Steel Wolf, Glass Strider) show max-per-day step count
+        // toward the threshold. Single dot fills when defeated.
+        const cur = Math.max(0, Math.min(cfg.stepThreshold,
+          (typeof state.step_progress === 'number') ? state.step_progress : 0));
+        const filled = cur >= cfg.stepThreshold;
+        const dots = '<span class="bfs-dot' + (filled ? ' bfs-dot--filled' : '') + '"></span>';
+        progressEl.innerHTML =
+          '<div class="bfs-dots">' + dots + '</div>' +
+          '<div class="bfs-progress-label">' + cur.toLocaleString('en-US') + ' / ' + cfg.stepThreshold.toLocaleString('en-US') + ' steps</div>';
       } else {
         const dots = Array.from({ length: cfg.streakTarget }, (_, i) =>
           '<span class="bfs-dot' + (i < state.streak ? ' bfs-dot--filled' : '') + '"></span>'

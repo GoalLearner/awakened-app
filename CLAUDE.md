@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w73` |
-| `app.js?v=` | `422` |
+| `APP_BUILD_TAG` | `2.2.1-w74` |
+| `app.js?v=` | `423` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.308` |
+| `sw.js CACHE_VERSION` | `v5.309` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,39 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Third C-rank boss — The Marathon Wraith (v3 Phase 1z.69)
+
+**Final C-rank boss + step-progress mirror upgrade.** Steps-based daily boss using the existing per-day steps resolver branch (same path as Steel Wolf and Glass Strider). Also adds live `state.step_progress` mirroring so all three step bosses get a granular `"N / threshold steps"` label.
+
+**Boss config (`BOSSES.the_marathon_wraith`):**
+- `rank: 'C'`, `statDomain: 'VIT'`, `cadence: 'daily'` (24h window)
+- `streakTarget: 1`, `stepThreshold: 10000`
+- Copy: *"A ghost that follows every road you've failed to finish. It fades only when your steps outlast its shadow."* / *"Walk 10,000+ verified steps before the hunt expires"* / *"The road vanished before the distance was claimed."*
+
+**Resolver upgrade.** The existing steps branch in `resolveBossHuntsAcrossWindow` now tracks `maxStepsInDay` across all device-local days in the window and writes it to `state.step_progress` (capped at `cfg.stepThreshold`). Defeat semantics unchanged: any single day reaching the threshold defeats. The mirror also benefits Steel Wolf (6,000) and Glass Strider (7,500) — their detail labels now show live progress too.
+
+**State reset.** `_clearBossHuntFields` and `engageBoss` zero `state.step_progress` so each hunt starts fresh.
+
+**Progress UI.** `buildBossCardHTML` + `openBossFullScreen` both detect step bosses (`cfg.stepThreshold`) and render a single threshold dot + `"7,842 / 10,000 steps"` label (locale-formatted with commas).
+
+**Drop pool — 5 C-rank items** (`source_boss: 'the_marathon_wraith'`):
+
+| Item | Rarity | Slot | STR | VIT | INT | FOC | WILL | Σ |
+|---|---|---|---|---|---|---|---|---|
+| Roadworn Mantle | common | body | · | 3 | · | 2 | 1 | **6** |
+| Phantom Mile Wraps | common | gloves | 2 | 2 | · | 2 | · | **6** |
+| Wayfarer's Signet | common | ring | · | 2 | 1 | 2 | 1 | **6** |
+| Ten-Thousand Step Blade | rare | weapon | 5 | 4 | · | 3 | 2 | **14** |
+| Greaves of the Endless Road | ultra | legs | 5 | 6 | 3 | 5 | 3 | **22** |
+
+**Per-spec slot picks:** Ultra = **legs** (still the thinnest catalog slot per 1z.66 audit; Furnace Knight took cape for its ultra, so this boss takes legs). Rare = **weapon**. Commons spread across body / gloves / ring. STR/FOCUS/WILL/INT all represented; VIT doesn't dominate. No WLT. Power curve hits C-tier targets exactly.
+
+**Art: PENDING.** PNGs at `assets/items/<id with hyphens>.png` + `assets/bosses/the-marathon-wraith.png` not on disk yet. Fallback rendering handles it. **NOT precached in `sw.js`**.
+
+**Rank-gated** below C via `isGateUnlocked`. `engageBoss` refuses defensively.
+
+**No backend / no Duels / no drop rates / no economy changes.** Frontend content + resolver mirror only.
 
 ### Furnace Knight art installed (v3 Phase 1z.68)
 
