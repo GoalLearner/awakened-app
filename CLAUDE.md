@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w75` |
-| `app.js?v=` | `424` |
+| `APP_BUILD_TAG` | `2.2.1-w76` |
+| `app.js?v=` | `425` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.310` |
+| `sw.js CACHE_VERSION` | `v5.311` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,44 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### TEMP QA — C-rank dungeon unlock (v3 Phase 1z.71)
+
+**⚠️ TEMPORARY TestFlight/QA flag. Relock before public release.**
+
+**What changed.** New constant `QA_UNLOCK_C_RANK_DUNGEONS = true` near `isGateUnlocked`. When true, the C-rank gate (and ONLY the C-rank gate) returns unlocked regardless of user rank. All three C-rank bosses (Ascendant Colossus, Furnace Knight, Marathon Wraith) become engageable on TestFlight without grinding to C.
+
+**Single-chokepoint design.** All gate-aware call sites already route through `isGateUnlocked`:
+- `engageBoss` rank-gate check (toast: "Reach C rank to engage <boss>")
+- `buildBossCardHTML` — `bcard--preview` class + PREVIEW corner label
+- `openBossFullScreen` — preview vs. engage CTA rendering
+
+One edit cascades to all three. No other code paths touched.
+
+**What this does NOT do:**
+- Does NOT modify `RANKS` thresholds or any XP economy.
+- Does NOT grant XP, souls, or kills.
+- Does NOT change the displayed user rank — status-card badge, rank-detail popup, leaderboard, and HoF all still read `getRank(totalPoints).id` directly and show the user's REAL rank.
+- Does NOT bypass any other check: souls cost, `MAX_ENGAGED_BOSSES`, Carouser Friday-only (`canEngageBossNow`), hunt-window timer, HealthKit kill conditions, drop rates, mercy thresholds. All remain real and unmodified.
+- Does NOT touch backend, Duels, or leaderboard identity.
+- Does NOT affect D / B / A / S / S+ gates — those still gate normally.
+
+**Relock path** (after C-rank QA passes on TestFlight):
+1. Set `QA_UNLOCK_C_RANK_DUNGEONS = false` in `app.js`.
+2. Bump `app.js?v`, `sw.js CACHE_VERSION`, `APP_BUILD_TAG`.
+3. Run `node --check app.js` + `npm run test:e2e`.
+4. Commit + push.
+5. Build via Codemagic.
+
+Grep anchor for relock: `QA_UNLOCK_C_RANK_DUNGEONS`.
+
+**Manual QA next TestFlight build:**
+1. Open app as a normal low-rank user; confirm status-card rank still shows the REAL rank (e.g. E).
+2. Open dungeon tab; C-rank tier shows 3 bosses engageable (not preview).
+3. Engage Ascendant Colossus — real souls cost applies; 24h timer starts; needs 10 verified flights.
+4. Engage Furnace Knight — needs verified strength workout AND ≥ 300 active kcal.
+5. Engage Marathon Wraith — needs 10,000 verified steps inside the window.
+6. Confirm E / D bosses behave exactly as before.
 
 ### Marathon Wraith art installed (v3 Phase 1z.70)
 

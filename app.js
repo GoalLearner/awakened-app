@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w75';
+  const APP_BUILD_TAG = '2.2.1-w76';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20164,11 +20164,43 @@
     S: { header: 'S-RANK DUNGEON', flavor: 'The apex. The few.' },
   };
 
+  // ═══════════════════════════════════════════════════════════
+  // TEMP QA ONLY — unlocks C-rank dungeon engagement for TestFlight
+  // smoke testing. Remove or set false after C-rank boss QA passes.
+  //
+  // What this does:
+  //   - Bypasses the rank gate for the THREE C-rank bosses only
+  //     (Ascendant Colossus, Furnace Knight, Marathon Wraith).
+  //   - C-rank boss cards become non-preview / engageable.
+  //   - All other gates (E, D, B, A, S) keep normal behavior.
+  //
+  // What this does NOT do:
+  //   - Does NOT change RANKS thresholds.
+  //   - Does NOT grant XP / souls / kills.
+  //   - Does NOT change the displayed user rank (status card + leaderboard
+  //     still show the user's REAL rank).
+  //   - Does NOT bypass any other check: souls cost, MAX_ENGAGED_BOSSES,
+  //     Carouser Friday-only rule, hunt-window timer, HealthKit kill
+  //     conditions, drop rates, mercy. All remain real.
+  //   - Does NOT touch backend, Duels, or leaderboard identity.
+  //
+  // Relock path: set the flag to false, bump versions, rebuild.
+  // Documented in CLAUDE.md Phase 1z.71 entry.
+  // ═══════════════════════════════════════════════════════════
+  const QA_UNLOCK_C_RANK_DUNGEONS = true;
+
   // Returns true if the user's current rank is at or above the gate's
   // rank tier. RANKS array is ordered E,D,C,B,A,S,S+ — index comparison
   // gives "have I climbed at least to this tier?" semantics. S+ users
   // pass for any gate tier.
+  //
+  // v3 Phase 1z.71 — when QA_UNLOCK_C_RANK_DUNGEONS is true, the C-rank
+  // gate (and only the C-rank gate) returns true regardless of user
+  // rank, so TestFlight QA can smoke-test C-rank bosses without
+  // grinding to C. The check is intentionally scoped to gateRankId
+  // === 'C' so D/B/A/S/S+ gates retain normal locking.
   function isGateUnlocked(gateRankId) {
+    if (QA_UNLOCK_C_RANK_DUNGEONS && gateRankId === 'C') return true;
     const userRankId = getRank(totalPoints).id;
     const userIdx = RANKS.findIndex(r => r.id === userRankId);
     const gateIdx = RANKS.findIndex(r => r.id === gateRankId);
