@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w87` |
-| `app.js?v=` | `436` |
+| `APP_BUILD_TAG` | `2.2.1-w88` |
+| `app.js?v=` | `437` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.322` |
+| `sw.js CACHE_VERSION` | `v5.323` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,18 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Sealed-state cleanup: hide "PERFECT DAY" banner leak (v3 Phase 1z.84)
+
+**Two surgical fixes to the 1z.83 sealed flow.**
+
+1. **`celebrateRareDrop` no longer fires for sealed first-acquisitions.** Per the Sealed Mystery Relic spec, the sealed sigil should be quiet — the Sigil Bloom cinematic carries the celebration. Previously, `_showBossResult` fired `celebrateRareDrop` for ANY rare/ultra drop, which dropped confetti over the sealed card and visually conflicted with the design. Now gated on `!_sealRelic` so only duplicate rare/ultra drops (which skip the cinematic) get the confetti+chime fallback.
+
+2. **`_relicConfettiBurst` now hides `.pdc-content` while it's reusing `pdc-overlay`.** The legacy Perfect Day Celebration overlay contains a `.pdc-banner` element with the text **"PERFECT DAY"** inside `.pdc-content`. When 1z.73 added relic-drop confetti by reusing this overlay's canvas, it forgot to hide the banner — so "PERFECT DAY" rendered over any rare/ultra drop modal. Now `_relicConfettiBurst` sets `pdc-content.style.display = 'none'` on entry and restores it on cleanup, so the real Perfect Day Celebration still works.
+
+Both bugs were observable on localhost preview of the sealed flow — the user saw "PERFECT DAY" text over the Sealed Mystery Relic card alongside drifting motes.
+
+**Versions:** `app.js?v=437`, `sw.js v5.323`, `APP_BUILD_TAG 2.2.1-w88`. `styles.css` unchanged. `APP_VERSION` stays 2.2.1.
 
 ### Sealed Mystery Relic — ClaudeDesign reveal panel (v3 Phase 1z.83)
 

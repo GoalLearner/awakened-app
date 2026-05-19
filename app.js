@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w87';
+  const APP_BUILD_TAG = '2.2.1-w88';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3770,6 +3770,13 @@
     }
     overlay.classList.remove('hidden');
     overlay.classList.add('pdc-active');
+    // v3 Phase 1z.84 — hide the inner .pdc-content ("PERFECT DAY"
+    // banner + XP line) while we're reusing the overlay for the
+    // relic-drop confetti. Without this, the legacy Perfect Day
+    // banner leaked through over the Boss Defeated / cinematic
+    // reveal modal whenever celebrateRareDrop fired.
+    const pdcContent = overlay.querySelector('.pdc-content');
+    if (pdcContent) pdcContent.style.display = 'none';
     // Mark the overlay so its existing click-to-dismiss + pdc-active
     // styling apply, but DO NOT add a tap listener — the underlying
     // boss-result / reveal modal owns dismissal. The overlay sits
@@ -3799,6 +3806,9 @@
         _relicConfettiRafId = null;
         overlay.classList.remove('pdc-active');
         overlay.classList.add('hidden');
+        // v3 Phase 1z.84 — restore the .pdc-content visibility so the
+        // real Perfect Day Celebration can use it next time it fires.
+        if (pdcContent) pdcContent.style.display = '';
       }
     }
     _relicConfettiRafId = requestAnimationFrame(drawRelic);
@@ -4638,7 +4648,15 @@
     // hook in openCardRevealModal; duplicates that route through the
     // boss-defeated modal (not the cinematic) get their celebration
     // here.
-    if (!isFailed && evt.drop && evt.drop.rarity &&
+    //
+    // v3 Phase 1z.84 — skip the confetti+chime for SEALED first
+    // acquisitions. The sealed sigil is intentionally quiet; the
+    // Sigil Bloom cinematic carries the celebration. Without this
+    // guard the legacy pdc-overlay reuse (confetti canvas + the
+    // "PERFECT DAY" banner inside the same DOM element) leaked
+    // through over the sealed card. Only duplicate rare/ultra
+    // drops (wasFirst=false) reach the confetti path now.
+    if (!isFailed && evt.drop && evt.drop.rarity && !_sealRelic &&
         (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare')) {
       try { celebrateRareDrop(evt.drop.rarity); } catch (_) {}
     }
