@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w76';
+  const APP_BUILD_TAG = '2.2.1-w77';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -579,13 +579,60 @@
     const d = (date instanceof Date) ? date : new Date();
     return d.getDay() === 5;
   }
-  // Generic engage-now gate. Returns { ok, reason } so callers can
-  // either toast the reason or render read-only CTA copy. Today only
-  // Carouser has a date-restricted engage window, but the shape is
-  // open for future weekday-scoped bosses.
+  // v3 Phase 1z.72 — device-local date-key formatter (YYYY-MM-DD).
+  // Used by the daily kill-lock and daily verification windows.
+  function _localDateKey(date) {
+    const d = (date instanceof Date) ? date : new Date(date || Date.now());
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+  function _startOfLocalDayMs(now) {
+    const d = (now instanceof Date) ? new Date(now.getTime()) : new Date(now || Date.now());
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  function _endOfLocalDayMs(now) {
+    const d = (now instanceof Date) ? new Date(now.getTime()) : new Date(now || Date.now());
+    d.setHours(23, 59, 59, 999);
+    return d.getTime();
+  }
+
+  // v3 Phase 1z.72 — daily-boss "already cleared today" check.
+  // Uses last_defeated_at (ISO) — that field is only set by successful
+  // kills, so manual disengage or HUNT FAILED never trip this gate.
+  // Returns false for non-daily cadences regardless of state.
+  function wasDailyBossDefeatedToday(state, now) {
+    if (!state) return false;
+    if (!state.last_defeated_at) return false;
+    if ((state.kill_count || 0) <= 0) return false;
+    return _localDateKey(state.last_defeated_at) === _localDateKey(now || new Date());
+  }
+
+  // Generic engage-now gate. Returns { ok, reason, ctaText, blurb } so
+  // callers can toast the reason OR render a custom locked-CTA state.
+  // v3 Phase 1z.58: Carouser Friday-only.
+  // v3 Phase 1z.72: daily kill lock — a successfully-defeated daily
+  //   boss is locked until the next device-local midnight.
   function canEngageBossNow(bossId, cfg, now) {
     if (bossId === 'the_carouser' && !isCarouserEngageDay(now)) {
-      return { ok: false, reason: 'The Carouser opens Friday.' };
+      return {
+        ok: false,
+        reason: 'The Carouser opens Friday.',
+        ctaText: 'AVAILABLE FRIDAY',
+        blurb: 'The Carouser only opens on Fridays. Return Friday to begin the hunt — it stays active through Sunday night.',
+      };
+    }
+    if (cfg && cfg.cadence === 'daily') {
+      const state = (typeof getBossState === 'function') ? getBossState(bossId) : null;
+      if (wasDailyBossDefeatedToday(state, now)) {
+        return {
+          ok: false,
+          reason: 'Daily hunt already cleared. Resets at midnight.',
+          ctaText: 'AVAILABLE TOMORROW',
+          blurb: 'Daily hunts reset at midnight.',
+        };
+      }
     }
     return { ok: true, reason: null };
   }
@@ -855,10 +902,30 @@
       const state = getBossState(id);
       if (!state || state.engaged !== true) continue;
       _migrateBossHuntFields(id, state, cfg);
-      const start = _bossHuntStartMs(state);
-      const end   = _bossHuntExpiresMs(state, cfg);
-      if (!start) continue;
-      const evalEnd = Math.min(end || now, now);
+      const huntStart = _bossHuntStartMs(state);
+      const end       = _bossHuntExpiresMs(state, cfg);
+      if (!huntStart) continue;
+      const huntEvalEnd = Math.min(end || now, now);
+
+      // v3 Phase 1z.72 — daily bosses verify against TODAY's local-day
+      // window, not the [hunt_started_at, evalEnd] window. This lets
+      // same-day pre-engage verified Health activity count: if you
+      // already walked 10k today and then engage Marathon Wraith, the
+      // engage-triggered resolver tick sees today's 10k and defeats.
+      // Yesterday's data still doesn't count (different day key) —
+      // each midnight resets the verification window.
+      //
+      // The hunt-expiration window stays at [hunt_started_at,
+      // hunt_expires_at] for the timer; only the verification window
+      // changes. Carouser keeps its existing weekly logic (cadence !==
+      // 'daily').
+      let start = huntStart;
+      let evalEnd = huntEvalEnd;
+      if (cfg.cadence === 'daily') {
+        const nowDt = new Date(now);
+        start = _startOfLocalDayMs(nowDt);
+        evalEnd = Math.min(_endOfLocalDayMs(nowDt), now);
+      }
 
       let defeated = false;
 
@@ -19479,9 +19546,14 @@
           '<span class="bcard-rank-pill rank-badge" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + '</span>' +
           '<span class="bcard-name">' + esc(cfg.name) + '</span>' +
         '</div>' +
-        // Region b: Art window — bleed-to-edge illustration
+        // Region b: Art window — bleed-to-edge illustration.
+        // v3 Phase 1z.72 — onerror hides the <img> on 404 so iOS' default
+        // broken-image glyph doesn't show through. The .bcard-art box
+        // keeps its dark background — cleaner than a broken ?-icon for
+        // bosses whose PNGs haven't shipped yet.
         '<div class="bcard-art">' +
-          '<img src="' + imgPath + '" alt="" draggable="false" loading="lazy" decoding="async">' +
+          '<img src="' + imgPath + '" alt="" draggable="false" decoding="async"' +
+            ' onerror="this.style.display=\'none\'">' +
         '</div>' +
         // Region c: Stat strip — STAT · CADENCE
         '<div class="bcard-stats">' +
@@ -19776,26 +19848,26 @@
             blurb.textContent = "This boss only counts progress while you're actively hunting it. You can hunt up to 3 bosses at once.";
           }
         }
-        // v3 Phase 1z.58 — Carouser is Friday-only. When the engage CTA
-        // is rendered outside Friday, disable the button and swap copy
-        // to "AVAILABLE FRIDAY" so the gate is self-evident rather than
-        // silently rejected by the toast on tap. Engage button remains
-        // disabled to prevent accidental taps; the engageBoss guard is
-        // still the source of truth (defense in depth).
+        // v3 Phase 1z.58 — Carouser is Friday-only.
+        // v3 Phase 1z.72 — generalized lock-state CTA. canEngageBossNow
+        // returns the locked-state ctaText + blurb (Friday-only for
+        // Carouser, "AVAILABLE TOMORROW" / daily-reset copy for daily
+        // bosses already cleared today). engageBoss enforces the same
+        // gate as the source of truth (defense in depth).
         const engageGate = canEngageBossNow(id, cfg, new Date());
         if (engageBtn) {
           engageBtn.classList.toggle('bfs-engage-btn--locked', !engageGate.ok);
           if (!engageGate.ok) {
             engageBtn.disabled = true;
             engageBtn.setAttribute('aria-disabled', 'true');
-            engageBtn.textContent = 'AVAILABLE FRIDAY';
+            engageBtn.textContent = engageGate.ctaText || 'UNAVAILABLE';
           } else {
             engageBtn.disabled = false;
             engageBtn.removeAttribute('aria-disabled');
           }
         }
-        if (blurb && !engageGate.ok) {
-          blurb.textContent = 'The Carouser only opens on Fridays. Return Friday to begin the hunt — it stays active through Sunday night.';
+        if (blurb && !engageGate.ok && engageGate.blurb) {
+          blurb.textContent = engageGate.blurb;
         }
       }
     }

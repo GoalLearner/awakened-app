@@ -12,12 +12,12 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w76` |
-| `app.js?v=` | `425` |
+| `APP_BUILD_TAG` | `2.2.1-w77` |
+| `app.js?v=` | `426` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `297` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.311` |
+| `sw.js CACHE_VERSION` | `v5.312` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 
 ### What shipped today (May 17 work)
@@ -164,6 +164,36 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. The current main HEAD is the right target for the next build.
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Daily-boss verification window + one-kill-per-day lock (v3 Phase 1z.72)
+
+**Smoke-test fixes from the iPhone TestFlight run.** Three problems addressed:
+
+**1. C-rank boss art `[?]` placeholders.** Files exist on disk and `sw.js` precache lists them, but the TestFlight IPA that was tested may pre-date the 1z.70 art install. `CACHE_VERSION` bumped `v5.311 → v5.312` so the SW reinstalls and pre-fetches on next launch. Defense-in-depth: boss-card `<img>` now carries `onerror="this.style.display='none'"` so a 404 hides the broken-image glyph entirely (clean dark `.bcard-art` background instead). Also removed `loading="lazy"` from boss-card art — paired badly with iOS Capacitor WebView in the 1z.48 relic-art bug; same fix applied preemptively here.
+
+**2. Same-day pre-engage Health data now counts for daily bosses.** Product rule change: for `cadence === 'daily'` bosses, the verification window is now **today's device-local day** `[startOfTodayLocalMs, min(endOfTodayLocalMs, now)]`, NOT `[hunt_started_at, evalEnd]`. The hunt window for the 24-hour timer is unchanged — only the verification range changes.
+
+Applied to ALL daily bosses (Insomniac, Steel Wolf, Glass Strider, Iron Warden, Dream Tyrant, Ascendant Colossus, Furnace Knight, Marathon Wraith, and any future daily). All resolver branches (steps, flights, dual workout+kcal, single workout, sleep) get the same `start` / `evalEnd` override at the top of the per-boss loop. Carouser (`cadence === 'weekly'`) keeps its existing weekend-scoped logic.
+
+**Yesterday's data still doesn't count** — each midnight resets the verification window. **Tomorrow's data doesn't count** either — `evalEnd` clamps to `now`. Pre-engagement same-day data counts because the window doesn't depend on `hunt_started_at`.
+
+**3. One successful daily kill per boss per local day.** New helper `wasDailyBossDefeatedToday(state, now)` compares `_localDateKey(state.last_defeated_at)` to today's date key. `canEngageBossNow` extended with a daily-lock branch and now returns richer `{ ok, reason, ctaText, blurb }`:
+- Locked state ctaText → `"AVAILABLE TOMORROW"`, blurb → `"Daily hunts reset at midnight."`
+- Carouser's Friday-only branch updated with the same shape.
+- `engageBoss` enforces the gate (toast `"Daily hunt already cleared. Resets at midnight."`, returns false, **does not spend souls**).
+- Detail-screen engage CTA renderer is now generic — reads `engageGate.ctaText` / `engageGate.blurb` instead of hardcoded Carouser text.
+
+**`last_defeated_at` semantics:** only `_awardSingleShotKill` sets this ISO timestamp. Manual disengage (`disengageBoss`) doesn't touch it. HUNT FAILED (`_expireBossHunt`) doesn't touch it. So failure / manual stop never trip the daily lock — the user can re-engage same day if they wish. Only a successful kill consumes the daily slot.
+
+**Helper additions** near the `isCarouserEngageDay` block:
+- `_localDateKey(date)` → device-local `YYYY-MM-DD` string.
+- `_startOfLocalDayMs(now)` → epoch ms.
+- `_endOfLocalDayMs(now)` → epoch ms.
+- `wasDailyBossDefeatedToday(state, now)`.
+
+**Preserved:** all drop rates, mercy/pity thresholds, souls economy, XP economy, rank thresholds, leaderboard, HoF, 100K Club, habit verification, Health permissions, Carouser end-of-Sunday expiration, temporary 1z.71 C-rank QA unlock. No backend / no Duels changes.
+
+**Manual QA next TestFlight build:** confirm C-rank boss cards now show real art (or clean dark fallback on missing); engage Marathon Wraith with 10k+ today already → instant defeat; engage Furnace Knight with both strength workout + 300+ kcal today → instant defeat; defeat Ascendant Colossus, confirm Hunt Again becomes "AVAILABLE TOMORROW"; tap blocked button confirms no souls spent; midnight rollover unlocks.
 
 ### TEMP QA — C-rank dungeon unlock (v3 Phase 1z.71)
 
