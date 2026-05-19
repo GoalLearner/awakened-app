@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
-| `APP_BUILD_TAG` | `2.2.1-w88` |
-| `app.js?v=` | `437` |
+| `APP_BUILD_TAG` | `2.2.1-w89` |
+| `app.js?v=` | `438` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.323` |
+| `sw.js CACHE_VERSION` | `v5.324` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,49 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### iOS post-save freeze fix — preset Add Habits detail (v3 Phase 1z.85)
+
+**Same class of bug as 1z.34.** Reproducible on iOS App Store build 2.2.1: Add Habits → tap any preset (e.g. Hydrate) → tap "Add to My Habits" → app freezes on the detail sheet. Force-close + relaunch shows the habit DID persist — so the save path completed; the freeze was post-save UI work.
+
+**Anti-pattern (pre-fix, line ~16215 of `app.js`):**
+```js
+opts.onConfirm(cfg);   // pushes habit + save + renderHabits + renderLibrary
+closeHabitDetail();    // ← never runs if any of the above throws
+```
+
+A synchronous throw inside `renderHabits` (or `renderLibrary`, or anywhere in the chain) bubbled past `closeHabitDetail()` and left the sheet open intercepting all touches.
+
+**Fix.** Same pattern documented for 1z.34 in this file: **persist → close → render-in-try-catch**.
+
+Two edits:
+
+1. **`openHabitDetail`'s addBtn click handler** (line ~16215):
+   - Double-tap guard via `addBtn.dataset.busy` so repeated taps don't queue duplicate adds while the handler is mid-flight.
+   - `try / catch` around `opts.onConfirm(cfg)` so a throw inside the callback can't skip the close.
+   - `closeHabitDetail()` runs unconditionally before any renders.
+   - `renderHabits()` + `renderLibrary()` are now called HERE (not inside the library `onConfirm`), each in its own try/catch.
+   - `renderLibrary()` only runs when `opts.context === 'library'` (skipped for the onboarding flow which doesn't have a library to repaint).
+   - `finally` clears `dataset.busy` + `disabled` so the button can't get stuck in a loading state.
+   - Outer catch force-closes the sheet if the cfg builder itself throws.
+
+2. **Library card's `onConfirm` callback** (line ~15758):
+   - Renders pulled out (now centralized in the addBtn handler above).
+   - New dedup guard: if a habit with the same name + non-custom flag already exists, show a toast (`"<name> is already in your habits."`) and bail. Prevents duplicates when the user re-opens an already-added preset from the library and re-taps Add.
+   - `save()` wrapped in try/catch so a persistence failure doesn't block the close.
+
+**Onboarding `obSelect` callback** (line ~24759) was audited and is safe — it only tracks in-memory selection state, no save / render. No change needed.
+
+**No behavioural changes** to: drop rates, mercy, pity, boss logic, souls, XP, rank thresholds, HealthKit permissions, App Review compliance wording, QA_UNLOCK_C_RANK_DUNGEONS flag, backend, Duels. Pure UI/sequencing fix.
+
+**Versions:** `app.js?v=438`, `sw.js v5.324`, `APP_BUILD_TAG 2.2.1-w89`. `APP_VERSION` stays 2.2.1.
+
+**Manual QA next TestFlight build:**
+1. Fresh install → Add Habits → Hydrate → Add to My Habits → no freeze; detail sheet closes; Hydrate appears in list.
+2. Repeat with multiple presets in sequence.
+3. Open Hydrate again from library → tap Add to My Habits → see toast "Hydrate is already in your habits." → sheet closes.
+4. Double-tap Add to My Habits rapidly → only one habit added, button never stuck.
+5. Force-close + relaunch → habits persist.
 
 ### Sealed-state cleanup: hide "PERFECT DAY" banner leak (v3 Phase 1z.84)
 

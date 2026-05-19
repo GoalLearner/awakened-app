@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.1';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.1-w88';
+  const APP_BUILD_TAG = '2.2.1-w89';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15755,19 +15755,36 @@
 
         card.addEventListener('click', () => openHabitDetail(h, {
           context: 'library',
+          // v3 Phase 1z.85 — push + save ONLY here. renderHabits +
+          // renderLibrary moved to openHabitDetail's addBtn click handler
+          // so a throw in the renders can't strand the detail sheet (the
+          // iOS post-save freeze class). Dedup guard prevents duplicate
+          // preset habits when the user re-opens an already-added preset
+          // from the library and taps Add to My Habits again.
           onConfirm: cfg => {
+            const existing = habits.find(x => !x.custom && x.name === h.name);
+            if (existing) {
+              try {
+                if (typeof showHabitToast === 'function') {
+                  showHabitToast(h.name + ' is already in your habits.');
+                }
+              } catch (_) {}
+              return;
+            }
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: cfg.difficulty, type: cfg.type || h.type || 'build' };
-            if (cfg.days)                                 newH.days           = cfg.days;
-            if (typeof cfg.stepGoal === 'number')         newH.stepGoal       = cfg.stepGoal;
+            if (cfg.days)                                    newH.days           = cfg.days;
+            if (typeof cfg.stepGoal === 'number')            newH.stepGoal       = cfg.stepGoal;
             else if (typeof cfg.sleepGoalHours === 'number') newH.sleepGoalHours = cfg.sleepGoalHours;
-            else if (cfg.goal)                            newH.goal           = cfg.goal;
-            if (cfg.startDate)                            newH.startDate      = cfg.startDate;
+            else if (cfg.goal)                               newH.goal           = cfg.goal;
+            if (cfg.startDate)                               newH.startDate      = cfg.startDate;
             habits.push(newH);
             // Pre-fill note from DEFAULT_HABITS if present
             if (h.note) habitNotes[newH.id] = h.note;
-            save();
-            renderHabits();
-            renderLibrary();
+            try { save(); }
+            catch (err) { console.error('[library] save threw', err); }
+            // Renders intentionally NOT called here — openHabitDetail's
+            // addBtn handler (1z.85 fix) runs renderHabits + renderLibrary
+            // AFTER closing the detail sheet.
           },
         }));
         inner.appendChild(card);
@@ -16212,39 +16229,82 @@
       const addBtn = document.createElement('button');
       addBtn.className = 'hd-add-btn';
       addBtn.textContent = (isOnboarding || !isSelected) ? 'Add to My Habits' : 'Update Habit';
+      // v3 Phase 1z.85 — iOS post-save freeze fix (same class as 1z.34).
+      // Previous pattern was:
+      //   opts.onConfirm(cfg);  // pushes habit + save + renderHabits + renderLibrary
+      //   closeHabitDetail();   // <— never runs if any of the above throws on iOS
+      // A synchronous throw inside renderHabits (e.g. buildItem hitting an
+      // unexpected habit shape) bubbled past closeHabitDetail and left the
+      // sheet open intercepting all touches. Repro: Add Habits → Hydrate →
+      // Add to My Habits → app frozen.
+      //
+      // New pattern: persist → close → render-in-try-catch. Each stage is
+      // independently wrapped so a failure in one can't strand the sheet.
+      // Renders are pulled OUT of the library onConfirm callback (line ~15758
+      // post-fix) and called here so the contract is centralized:
+      //   1. Validate + build cfg.
+      //   2. Call opts.onConfirm (or run the default library push+save).
+      //   3. closeHabitDetail() unconditionally.
+      //   4. renderHabits + renderLibrary, each in its own try/catch.
+      //   5. finally → clear button busy/disabled state.
+      // Double-tap guard via dataset.busy prevents duplicate adds while the
+      // handler is mid-flight.
       addBtn.addEventListener('click', () => {
-        const days = getScheduleDays();
-        const cfg  = {
-          type:       hdType,
-          sched:      hdSched,
-          ndays:      hdNdays,
-          difficulty: hdDiff,
-          days:       days || undefined,
-          // Goal — mutually exclusive between three branches:
-          //   step-goal habits carry stepGoal (Daily walk)
-          //   sleep-goal habits carry sleepGoalHours (Sleep)
-          //   measurable habits carry the legacy goal{value,unit} shape
-          goal:           (!hdIsStepGoal && !hdIsSleepGoal && measurable) ? { value: hdGoal, unit: measurable.unit } : undefined,
-          stepGoal:       hdIsStepGoal  ? hdStepGoal  : undefined,
-          sleepGoalHours: hdIsSleepGoal ? hdSleepGoal : undefined,
-          startDate:  hdStart !== today ? hdStart : undefined,
-        };
-        if (opts.onConfirm) {
-          opts.onConfirm(cfg);
-        } else {
-          // Default (library) behaviour
-          const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
-          if (days)              newH.days           = days;
-          if (hdIsStepGoal)      newH.stepGoal       = hdStepGoal;
-          else if (hdIsSleepGoal) newH.sleepGoalHours = hdSleepGoal;
-          else if (measurable)   newH.goal           = { value: hdGoal, unit: measurable.unit };
-          if (hdStart !== today) newH.startDate      = hdStart;
-          habits.push(newH);
-          save();
-          renderHabits();
-          renderLibrary();
+        if (addBtn.dataset.busy === '1') return;
+        addBtn.dataset.busy = '1';
+        addBtn.disabled = true;
+        try {
+          const days = getScheduleDays();
+          const cfg  = {
+            type:       hdType,
+            sched:      hdSched,
+            ndays:      hdNdays,
+            difficulty: hdDiff,
+            days:       days || undefined,
+            // Goal — mutually exclusive between three branches:
+            //   step-goal habits carry stepGoal (Daily walk)
+            //   sleep-goal habits carry sleepGoalHours (Sleep)
+            //   measurable habits carry the legacy goal{value,unit} shape
+            goal:           (!hdIsStepGoal && !hdIsSleepGoal && measurable) ? { value: hdGoal, unit: measurable.unit } : undefined,
+            stepGoal:       hdIsStepGoal  ? hdStepGoal  : undefined,
+            sleepGoalHours: hdIsSleepGoal ? hdSleepGoal : undefined,
+            startDate:  hdStart !== today ? hdStart : undefined,
+          };
+          if (opts.onConfirm) {
+            // Library / onboarding callback. Wrapped so a throw inside the
+            // caller's push/save logic doesn't skip the close+render below.
+            try { opts.onConfirm(cfg); }
+            catch (err) { console.error('[habit-detail] opts.onConfirm threw', err); }
+          } else {
+            // Default standalone-detail behaviour (no caller-supplied onConfirm).
+            const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
+            if (days)               newH.days           = days;
+            if (hdIsStepGoal)       newH.stepGoal       = hdStepGoal;
+            else if (hdIsSleepGoal) newH.sleepGoalHours = hdSleepGoal;
+            else if (measurable)    newH.goal           = { value: hdGoal, unit: measurable.unit };
+            if (hdStart !== today)  newH.startDate      = hdStart;
+            habits.push(newH);
+            try { save(); }
+            catch (err) { console.error('[habit-detail] save threw', err); }
+          }
+          // Close FIRST — sheet must not strand even if the renders throw.
+          try { closeHabitDetail(); } catch (_) {}
+          // Renders AFTER close, each independently wrapped.
+          try { renderHabits(); }
+          catch (err) { console.error('[habit-detail] renderHabits threw', err); }
+          if (opts.context === 'library') {
+            try { renderLibrary(); }
+            catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
+          }
+        } catch (err) {
+          // Outer-shell failure (e.g. cfg builder threw). Force-close the
+          // sheet so the user is never trapped.
+          console.error('[habit-detail] add click outer failure', err);
+          try { closeHabitDetail(); } catch (_) {}
+        } finally {
+          addBtn.dataset.busy = '';
+          addBtn.disabled = false;
         }
-        closeHabitDetail();
       });
       footer.appendChild(addBtn);
 
