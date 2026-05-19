@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w2` |
-| `app.js?v=` | `440` |
+| `APP_BUILD_TAG` | `2.2.2-w3` |
+| `app.js?v=` | `441` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.326` |
+| `sw.js CACHE_VERSION` | `v5.327` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,61 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Add Habits freeze — defensive hardening pass (v3 Phase 1z.88)
+
+**Bug summary.** Tapping "Add to My Habits" inside the Add Habits detail sheet froze the app on iOS TestFlight (Capacitor WebView). The sheet logically closed but visually stayed up intercepting taps until the JS turn finished — which on slow renders never visibly completed.
+
+**Affected examples reported on TestFlight 2.2.2 build 76:**
+- **`Sprint session`** — regular library preset (Physical Performance category, DEFAULT_HABITS[5]). Normal Add CTA. Tap → freeze.
+- **`No caffeine` opened from the library after the Morning Routine pack shows "All added"** — the user had already added the MR pack, then browsed the library and tapped a preset they'd already added via the pack. The detail sheet still rendered an active "Add to My Habits" button instead of the "Already in your habits list" state. Tapping it tried to push a duplicate, which compounded the freeze.
+
+**Root cause.**
+1. **Detail-state ambiguity.** `openHabitDetail` checked `habits.some(a => a.name === h.name)` directly. That check was correct for the simple case, but a stale-sheet edge case (sheet opened BEFORE the dup landed via another flow) could still expose the active Add CTA. There was no defensive recheck at tap time.
+2. **iOS WebView paint scheduling.** Even with the 1z.85 close-before-render ordering, on Capacitor's WKWebView a single `requestAnimationFrame` (1z.87) wasn't enough to guarantee the close paints before `renderHabits` blocked the next frame. The user saw an apparently-frozen sheet that was actually closed under the hood.
+3. **No belt-and-braces close.** `closeHabitDetail` only toggled `.hidden`. Any leftover inline style or stray transform could leave the sheet invisible-but-interactive.
+
+**Why the prior 1z.87 fix (commit 69eddde) didn't fully resolve it.** 1z.87 deferred renders to a single `requestAnimationFrame`. On the Capacitor iOS WebView, rAF callbacks can fire BEFORE the previous frame's paint commits, so a heavy render in that callback still blocks the close from being visible. Empirically, splitting `renderHabits` and `renderLibrary` into separate `setTimeout(0)` macrotasks is what unsticks the visible freeze.
+
+**Fix — five layers:**
+
+1. **Canonical `isHabitAlreadyAdded(h)` helper** (single source of truth). Excludes `.custom` so user-built habits with a colliding name don't false-positive. Both the render-time check and the new click-time guard route through it.
+2. **Render-time early return** (already existed in `render()`): when `alreadyAdded` is true, paint the "Already in your habits list" message and `return` BEFORE appending the Add CTA. Now uses the helper.
+3. **Click-time defensive tap guard.** First operation inside `addBtn`'s handler: recompute `isHabitAlreadyAdded` against the live `habits[]`. If true → toast + `closeHabitDetail()` + clear busy/disabled + `return`. The heavy save/render branch is unreachable for dups.
+4. **Chained `setTimeout(0)` render deferral** replaces the single rAF. `renderHabits` and `renderLibrary` each get their own macrotask tick so the iOS WebView paints between them.
+5. **Belt-and-braces `closeHabitDetail`.** Beyond `classList.add('hidden')`, the sheet now also gets inline `display:none !important` + `pointer-events:none`, each in its own try. `openHabitDetail` clears those inline styles before re-showing. Renders + close ordering is unchanged: persist → close → deferred renders.
+
+Plus granular logging around `opts.onConfirm` call/return and each `setTimeout` tick so Safari devtools pinpoints any future repro.
+
+**Files touched (1z.88 only):**
+- `app.js` — `isHabitAlreadyAdded` helper, tap guard, chained setTimeout, hardened close + open inline-style reset, `APP_BUILD_TAG → 2.2.2-w3`.
+- `index.html` — `app.js?v=441`.
+- `sw.js` — `CACHE_VERSION = v5.327`.
+- `tests/e2e/smoke.spec.ts` — new section **H** asserting an already-added preset shows the Already-added message, no Add CTA, closes cleanly, app stays responsive.
+- `CLAUDE.md` — this section + handoff version table.
+
+**Version knobs (post-1z.88):** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w3`, `app.js?v=441`, `sw.js v5.327`. `styles.css?v=302` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log for the run that gated this commit.
+- `git diff --name-only` confirms: `CLAUDE.md`, `app.js`, `index.html`, `sw.js`, `tests/e2e/smoke.spec.ts`. **No backend, D1, Duels, HealthKit, Notification, boss, or economy files changed.** `QA_UNLOCK_C_RANK_DUNGEONS` stays `false`.
+
+**Manual QA checklist (TestFlight 2.2.2-w3):**
+1. Boot the app — Safari devtools console must show `[Awakened] boot · APP_VERSION=2.2.2 · build=2.2.2-w3`. If not, the device is still on the prior build — kill + relaunch the IPA.
+2. **Sprint session — fresh add.** Add Habits → Physical Performance → Sprint session → "Add to My Habits". Sheet should close immediately, habit appears in list, app stays responsive.
+3. **Sprint session — re-open already-added.** Re-open Add Habits → Sprint session card. Detail sheet should show "Already in your habits list" and NO Add to My Habits button.
+4. **Morning Routine all-added child.** Add the Morning Routine pack → confirm "All added" state. Then re-open Add Habits → No caffeine (or any MR child). Same already-added state must render — no active Add CTA.
+5. **Rapid double-tap.** On a fresh preset, tap Add to My Habits twice rapidly. Only one habit should be added (busy guard) and no freeze.
+6. **Cancel/back path.** Open any detail, tap the ← back arrow. Sheet closes, no stranded overlay, tab bar still works.
+7. **Console hygiene.** While performing the above, the only `[habit-detail]` logs should be the expected `add click start / calling opts.onConfirm / opts.onConfirm returned / sheet closed / tick1 · renderHabits / tick2 · renderLibrary / renders complete` sequence (or the `tap guard · already added, short-circuiting` line for already-added taps). No `threw` entries.
+
+**Known non-goals:**
+- Onboarding habit-detail flow (`opts.context === 'onboarding'`) is intentionally untouched. The freeze class only affects the post-onboarding library / detail path.
+- No changes to the Lock-In / Morning Routine pack confirm modal itself — only the per-habit library detail. The pack modal already had its own 1z.34 isolation.
+- No changes to HealthKit/Notification wording, boss logic, drop rates, pity, mercy, rank thresholds, QA unlock, economy, Duels, or backend.
+- Codemagic NOT triggered by this commit.
 
 ### iOS-friendlier preset Add Habits fix (v3 Phase 1z.87)
 

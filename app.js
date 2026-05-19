@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w2';
+  const APP_BUILD_TAG = '2.2.2-w3';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15804,6 +15804,18 @@
     requestAnimationFrame(() => libSetOpen(-1));
   }
 
+  // v3 Phase 1z.88 — canonical "is this preset already in the user's habits"
+  // check. Name-based because preset habit identity is the display name
+  // (custom-built habits set .custom and are excluded). Used by both
+  // openHabitDetail render-time and the addBtn click-time defensive guard
+  // so the two paths cannot disagree. Lives in the IIFE so it closes over
+  // the `habits` array reference.
+  function isHabitAlreadyAdded(h) {
+    if (!h || !h.name) return false;
+    try { return habits.some(a => !a.custom && a.name === h.name); }
+    catch (_) { return false; }
+  }
+
   // ── HABIT DETAIL SCREEN ───────────────────────────────────
   // opts: { context, isSelected, existingConfig, onConfirm, onRemove }
   //   context       'library' (default) | 'onboarding'
@@ -15815,7 +15827,7 @@
     opts = opts || {};
     const isOnboarding = opts.context === 'onboarding';
     const isSelected   = isOnboarding && (opts.isSelected || false);
-    const alreadyAdded = !isOnboarding && habits.some(a => a.name === h.name);
+    const alreadyAdded = !isOnboarding && isHabitAlreadyAdded(h);
     const measurable   = MEASURABLE_HABITS[h.name] || null;
 
     // Pre-populate from existing config (re-opening a selected onboarding habit)
@@ -16259,6 +16271,29 @@
         addBtn.dataset.busy = '1';
         addBtn.disabled = true;
         console.log('[habit-detail] add click start name=', h && h.name, 'context=', opts.context);
+        // v3 Phase 1z.88 — click-time defensive guard. Even though the
+        // render path early-returns for already-added presets, a stale
+        // detail sheet (e.g. opened before the dup was added in another
+        // flow) could still expose this button. Recompute at tap time
+        // against the live habits[] array; if dup, toast + close + return.
+        // This is the "no path can create a freeze or a duplicate" line
+        // of defence — the main handler below never runs for dups.
+        try {
+          if (!isOnboarding && isHabitAlreadyAdded(h)) {
+            console.log('[habit-detail] tap guard · already added, short-circuiting name=', h && h.name);
+            try {
+              if (typeof showHabitToast === 'function') {
+                showHabitToast((h && h.name ? h.name : 'Habit') + ' is already in your habits.');
+              }
+            } catch (_) {}
+            try { closeHabitDetail(); } catch (_) {}
+            addBtn.dataset.busy = '';
+            addBtn.disabled = false;
+            return;
+          }
+        } catch (err) {
+          console.error('[habit-detail] tap guard threw', err);
+        }
         try {
           const days = getScheduleDays();
           const cfg  = {
@@ -16279,8 +16314,10 @@
           if (opts.onConfirm) {
             // Library / onboarding callback. Wrapped so a throw inside the
             // caller's push/save logic doesn't skip the close+render below.
+            console.log('[habit-detail] calling opts.onConfirm');
             try { opts.onConfirm(cfg); }
             catch (err) { console.error('[habit-detail] opts.onConfirm threw', err); }
+            console.log('[habit-detail] opts.onConfirm returned');
           } else {
             // Default standalone-detail behaviour (no caller-supplied onConfirm).
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
@@ -16308,26 +16345,35 @@
           addBtn.dataset.busy = '';
           addBtn.disabled = false;
         }
-        // v3 Phase 1z.87 — defer renders to the next animation frame
-        // so iOS Capacitor WebView can paint the closed-sheet state
-        // BEFORE the heavy render work runs. Without this, a sync
-        // renderHabits/renderLibrary right after closeHabitDetail()
-        // can prevent the browser from repainting until the renders
-        // finish — making it LOOK like the sheet is still stuck even
-        // though it's logically closed. Splitting the close + render
-        // across animation frames is the canonical iOS-friendly fix.
-        try {
-          requestAnimationFrame(() => {
+        // v3 Phase 1z.88 — chained setTimeout(0) deferral. 1z.87 used a
+        // single requestAnimationFrame, but on iOS Capacitor WebView the
+        // rAF callback fires BEFORE paint commits in some cases, so a
+        // heavy renderHabits in the same frame still blocks the close
+        // from being visible. Splitting renderHabits and renderLibrary
+        // into separate macrotasks (setTimeout 0) lets the WebView
+        // paint between each step, which empirically unsticks the
+        // freeze. Each callback is independently try/caught so one
+        // bad render can't break the chain.
+        const _scheduleRenders = () => {
+          setTimeout(() => {
+            console.log('[habit-detail] tick1 · renderHabits');
             try { renderHabits(); }
             catch (err) { console.error('[habit-detail] renderHabits threw', err); }
             if (opts.context === 'library') {
-              try { renderLibrary(); }
-              catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
+              setTimeout(() => {
+                console.log('[habit-detail] tick2 · renderLibrary');
+                try { renderLibrary(); }
+                catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
+                console.log('[habit-detail] renders complete');
+              }, 0);
+            } else {
+              console.log('[habit-detail] renders complete');
             }
-            console.log('[habit-detail] renders complete');
-          });
-        } catch (_) {
-          // Fallback if rAF is somehow unavailable — just run synchronously.
+          }, 0);
+        };
+        try { _scheduleRenders(); }
+        catch (_) {
+          // Fallback if setTimeout is somehow unavailable — sync path.
           try { renderHabits(); }      catch (err) { console.error('[habit-detail] renderHabits threw', err); }
           if (opts.context === 'library') {
             try { renderLibrary(); }   catch (err) { console.error('[habit-detail] renderLibrary threw', err); }
@@ -16352,12 +16398,37 @@
     }
 
     render();
-    document.getElementById('hd-sheet').classList.remove('hidden');
+    // v3 Phase 1z.88 — closeHabitDetail now sets inline display:none and
+    // pointer-events:none on the sheet (belt-and-braces). Clear those
+    // before un-hiding so the sheet re-opens reliably.
+    const _hd = document.getElementById('hd-sheet');
+    if (_hd) {
+      try { _hd.style.removeProperty('display'); } catch (_) {}
+      try { _hd.style.removeProperty('pointer-events'); } catch (_) {}
+      _hd.classList.remove('hidden');
+    }
   }
 
+  // v3 Phase 1z.88 — belt-and-braces close. Earlier builds relied on the
+  // `.hidden { display:none !important }` CSS class alone. If a stale style
+  // attribute, leftover transform, or stray inline display:flex ever stuck
+  // on the sheet, the user would be trapped behind an invisible-but-still-
+  // interactive overlay. We now ALSO force inline display:none + clear
+  // pointer-events, and wrap each DOM op in its own try so a broken node
+  // can't strand the whole close path.
   function closeHabitDetail() {
-    document.getElementById('hd-sheet').classList.add('hidden');
-    document.getElementById('hd-content').innerHTML = '';
+    try {
+      const sheet = document.getElementById('hd-sheet');
+      if (sheet) {
+        try { sheet.classList.add('hidden'); } catch (_) {}
+        try { sheet.style.setProperty('display', 'none', 'important'); } catch (_) {}
+        try { sheet.style.pointerEvents = 'none'; } catch (_) {}
+      }
+    } catch (_) {}
+    try {
+      const content = document.getElementById('hd-content');
+      if (content) content.innerHTML = '';
+    } catch (_) {}
   }
 
   function setupHabitDetailGesture() {

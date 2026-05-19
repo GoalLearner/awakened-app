@@ -343,3 +343,102 @@ test.describe('G · Duels picker', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// H. Add Habits — preset add path freeze regression (Phase 1z.88)
+// ─────────────────────────────────────────────────────────────
+// Regression for the persistent iOS Add Habits freeze. The failure
+// mode on TestFlight was: user opens a library preset → taps Add
+// to My Habits → sheet stays frozen on iOS Capacitor WebView while
+// renderHabits + renderLibrary block the next frame.
+//
+// 1z.88 fixes this four ways (see CLAUDE.md):
+//   1. isHabitAlreadyAdded(h) canonical helper
+//   2. click-time defensive tap guard
+//   3. chained setTimeout(0) render deferral (close paints first)
+//   4. hardened closeHabitDetail (inline display:none + pointer-events:none)
+//
+// The renderLibrary path already filters out already-added presets
+// at render time (DEFAULT_HABITS.filter(activeNames check)), so the
+// pure "already added card visible in library" repro can only happen
+// with a stale rendered DOM. We therefore test the END-TO-END add
+// path that was actually freezing:
+//   - open library
+//   - click Sprint session card (fresh)
+//   - tap Add to My Habits
+//   - assert: sheet closes cleanly, habit is in habits[], app stays
+//             responsive (tab switch), re-opening library no longer
+//             shows the card (proving the already-added FILTER works
+//             post-add → no stale state)
+//
+// This covers the freeze regression AND the already-added invariant
+// in a single deterministic flow.
+test.describe('H · Add Habits preset add path (1z.88)', () => {
+  test('library preset add closes cleanly, app stays responsive, card disappears from library', async ({ page }) => {
+    await freshApp(page);
+
+    // Habits tab → + Add Habit.
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#tab-habits.active')).toBeVisible();
+    await page.locator('#add-habit-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+
+    // Expand the "Physical Performance" accordion. Sprint session lives
+    // at DEFAULT_HABITS[5], inside OB_CATEGORIES[0] "Physical Performance".
+    const accHeader = page.locator('.ob-acc-header', { hasText: /physical performance/i }).first();
+    await expect(accHeader).toBeVisible();
+    await accHeader.click();
+
+    // Click the Sprint session card. Wait for visibility — the
+    // accordion uses an animated max-height transition.
+    const sprintCard = page.locator('.lib-card', { hasText: 'Sprint session' }).first();
+    await expect(sprintCard).toBeVisible({ timeout: 5_000 });
+    await sprintCard.click();
+
+    // Detail sheet open with the Add to My Habits CTA.
+    const sheet = page.locator('#hd-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(page.locator('.hd-already')).toHaveCount(0);
+    const addBtn = page.locator('.hd-add-btn');
+    await expect(addBtn).toBeVisible();
+    await expect(addBtn).toContainText(/add to my habits/i);
+
+    // Tap Add to My Habits. On iOS this was the freeze point; in
+    // Chromium it should close cleanly + habit lands in storage.
+    await addBtn.click();
+
+    // Sheet must be fully closed — `toBeHidden` checks computed
+    // visibility, which catches both `.hidden` class AND inline
+    // display:none (1z.88 belt-and-braces close).
+    await expect(sheet).toBeHidden({ timeout: 5_000 });
+
+    // The habit must have landed in hb_habits.
+    const stored = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_habits');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    });
+    expect(Array.isArray(stored)).toBe(true);
+    expect((stored || []).some((h: { name?: string }) => h.name === 'Sprint session')).toBe(true);
+    // Exactly one (rapid double-tap dup-guard regression).
+    expect((stored || []).filter((h: { name?: string }) => h.name === 'Sprint session').length).toBe(1);
+
+    // The library sheet stays open after a detail-add (by design —
+    // lets the user keep adding habits). Verify the freshly-added
+    // Sprint session card is gone from the library (renderLibrary
+    // filters by activeNames). This proves the already-added invariant
+    // — a user cannot re-tap an already-added preset.
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+    // Card must NOT exist in the DOM at all (filtered, not just hidden).
+    await expect(page.locator('.lib-card', { hasText: 'Sprint session' })).toHaveCount(0);
+
+    // App stays responsive — close the library, then a tab switch
+    // must work with no stranded overlay capturing pointer events.
+    // This is the freeze symptom the user reported.
+    await page.locator('#lib-close-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeHidden();
+    await page.locator('#tab-profile').click();
+    await expect(page.locator('#tab-profile.active')).toBeVisible();
+  });
+});
