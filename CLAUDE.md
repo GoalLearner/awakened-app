@@ -4,11 +4,40 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 17, 2026 4:30 PM (read this first)
+## 📌 Session handoff — May 19, 2026 morning (read this first)
 
-**Current HEAD:** `6fc7acf35886c5e040401b3174123c158a4c6fd4` · `fix: hall of fame falls back to leaderboard_snapshots` · in sync with `origin/main`. Working tree clean apart from two untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`) that have been sitting around for a while and are NOT part of the build.
+### 🎉 STATUS: 2.2.1 APPROVED BY APPLE
 
-**Version knobs (extracted from source, NOT from notes):**
+**Approval received:** May 19, 2026 at 12:01 AM Pacific Daylight Time.
+**App Store URL:** `https://apps.apple.com/app/awakened-habit-rpg/id6764727990`
+**Submission ID (approved):** `f5373012-82a7-49ff-9bb7-e6bc3a6a6321`
+**Previous (rejected) submission:** `07b1380d-d40f-49bc-bb19-8bb2ba508e7c` (rejected May 18 evening on 5.1.1(iv) HealthKit pre-prompt buttons + 1.5 Support URL).
+
+Apple may take up to 24h to flip the build from "Ready for Distribution" to publicly available. As of this handoff, 2.2.1 is live in App Store Connect waiting on distribution.
+
+### Current HEAD vs. approved IPA — IMPORTANT GAP
+
+**Current HEAD:** `d20f2e7` · `fix: actual root cause of C-rank boss art — Codemagic copy script` · in sync with `origin/main`. Working tree clean apart from the long-standing untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`).
+
+**The approved 2.2.1 IPA was built off an earlier commit** (pre-1z.80). It contains:
+- All App Review compliance fixes (1z.77 + 1z.78 — HealthKit + Notifications neutral "Continue" buttons).
+- The Sigil Bloom rare/ultra relic reveal (1z.74 → 1z.76).
+- Three C-rank bosses with full drop pools (1z.63 → 1z.70).
+- Apple Health verified stats for steps / sleep / strength / flights / active energy.
+- Item rebalance + sub-rank divisions + dual-condition boss + tappable hunting pills + Carouser Friday-only.
+
+**The approved IPA does NOT contain:**
+- The robust `setBossImage` helper (shipped in 1z.80).
+- The Codemagic glob-copy fix that actually bundles C-rank boss PNGs into the iOS bundle (shipped in 1z.81).
+
+**Practical impact on the live 2.2.1:** C-rank boss cards show **blank art** for the three C-rank bosses (Ascendant Colossus, Furnace Knight, Marathon Wraith). The boss is functional — engagement, kill conditions, drops all work — only the portrait illustration is missing on the card and detail screen.
+
+**Why Apple still approved it:** C-rank bosses are rank-gated. Apple's reviewer is an E-rank fresh install. They saw the three C-rank bosses in **preview state** ("Reach C rank to engage") and didn't engage them, so the blank-art issue was invisible during review. Functional review passed.
+
+**Recommended next step:** trigger Codemagic off `main` HEAD `d20f2e7` to produce 2.2.1 build 62 (or 2.2.2 build 1) with the boss-art pipeline fixed. The new Codemagic freshness gate will block any future build that fails to bundle the C-rank PNGs. **Not urgent** — current users see functional E/D bosses fine; only users who hit C-rank will see the issue, and we're early enough that there should be ~zero users at C-rank yet.
+
+### Version knobs (current `main`, NOT the approved IPA)
+
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.1` |
@@ -19,6 +48,96 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 | `simulated-leaderboard.js?v=` | `6` |
 | `sw.js CACHE_VERSION` | `v5.320` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
+
+### App Store Connect metadata (live, last verified May 19 AM)
+
+| Field | Value |
+|---|---|
+| **Support URL** | `https://goallearner.github.io/awakened-app/support.html` (GitHub Pages from `docs/` folder) |
+| **Marketing URL** | `https://luminous-sorbet-1e5987.netlify.app/` (live PWA — acceptable, polish later) |
+| **Privacy Policy URL** | `https://heartfelt-froyo-54ffa1.netlify.app/` (Netlify-hosted privacy page, ~75 lines, covers on-device vs. backend data) |
+| **Version** | 2.2.1 |
+| **Copyright** | © 2026 Richmond Campano |
+| **App Privacy** (Apple App Privacy form) | Set per the rejection cycle — all categories aligned with the Netlify privacy policy |
+
+### Multi-day arc summary (1z.58 → 1z.81)
+
+The session covering this submission was a ~7-day arc condensed below. Each phase is fully documented in its own section further down in this file.
+
+| Phase | Theme | Key shipped |
+|---|---|---|
+| 1z.58 | Tappable hunting pills + Carouser Friday-only engage | UX polish |
+| 1z.59 → 1z.60 | Rank detail sub-divisions (III → II → I) | UX |
+| 1z.61 → 1z.62 | Apple Health: Flights Climbed + Active Energy plumbing | HealthKit auth v3 → v4 |
+| 1z.63 → 1z.66 | C-rank bosses ×3 (Ascendant Colossus, Furnace Knight, Marathon Wraith) + 15 C-rank items + pool-wide rebalance | Major content |
+| 1z.65, 1z.68, 1z.70 | Boss art + item PNGs installed (canonical paths) | Assets |
+| 1z.67 | First dual-condition boss (strength + active energy) | Resolver logic |
+| 1z.71 | Temporary C-rank QA unlock for TestFlight smoke | QA affordance |
+| 1z.72 | Daily-boss verification window + one-kill-per-day lock | Product rule |
+| 1z.73 → 1z.76 | Sigil Bloom rare/ultra reveal + result queue chaining + tap-to-reveal | ClaudeDesign-spec cinematic |
+| 1z.77 → 1z.78 | App Review compliance — HealthKit + Notifications "Continue" buttons | Apple 5.1.1(iv) |
+| 1z.79 | Public support page (`docs/support.html`) | Apple 1.5 |
+| 1z.80 | C-rank QA unlock RELOCKED + robust `setBossImage` helper | Compliance + JS hardening |
+| 1z.81 | **Real** root cause of C-rank boss art: Codemagic `cp` allowlist → glob copy | Build pipeline |
+
+### Files you'll touch most for follow-up work
+
+| File | What's in it |
+|---|---|
+| `app.js` | 28k+ lines IIFE. `BOSSES` config ~line 330, `CARDS` items ~1180, Health IIFE ~24500, Sigil Bloom code ~3830, `getBossArtPath`/`setBossImage` ~577 |
+| `index.html` | App shell + every overlay/modal markup |
+| `styles.css` | 23k lines; Sigil Bloom block near bottom, boss-card / pill blocks scattered |
+| `sw.js` | Service worker + PRECACHE_ASSETS list (every asset must exist on disk OR cache.addAll fails install) |
+| `codemagic.yaml` | iOS build pipeline. Has pre-sync + post-sync freshness gates with explicit C-rank boss PNG presence checks (1z.81) |
+| `docs/support.html`, `docs/index.html` | Public support page (GitHub Pages) |
+| `auth.js` | Apple Sign In + backend RPC wrappers — DO NOT TOUCH unless backend work approved |
+| `backend/` | Cloudflare Worker + D1. **DO NOT TOUCH unless explicitly approved.** |
+| `tests/e2e/smoke.spec.ts` | Playwright smoke (7 tests, expected `7 passed` in ~40s) |
+
+### Open follow-ups (non-blocking)
+
+1. **Boss art on live 2.2.1:** trigger Codemagic off `d20f2e7` to bundle the C-rank PNGs. Suggest 2.2.2 (since 2.2.1 is approved, a new version is cleaner than a rebuild).
+2. **Marketing URL polish:** swap `luminous-sorbet-1e5987.netlify.app` for `https://goallearner.github.io/awakened-app/` once you flesh out the landing page with screenshots + features. Pure metadata change, no review required.
+3. **Privacy Policy URL polish:** the Netlify subdomain `heartfelt-froyo-54ffa1` works but isn't pretty. Could rename the Netlify site to something like `awakened-privacy.netlify.app`, OR move privacy.html to GitHub Pages alongside support.html. Pure metadata change.
+4. **Support page upgrade:** consider adding a public Privacy Policy section directly on `docs/support.html` or linking the Netlify policy from there for consistency.
+5. **QA_UNLOCK_C_RANK_DUNGEONS:** stays `false`. Flip to `true` ONLY during local QA passes, then flip back before any commit that goes near `main`.
+
+### Codemagic build hygiene (1z.81 hardening)
+
+The build now has **two-stage freshness verification:**
+
+1. **Pre-sync gate** (after `cp` to `www/`): checks every C-rank boss PNG exists in `www/assets/bosses/`. Fails the build loudly if not.
+2. **Post-sync gate** (after `npx cap sync ios`): checks every C-rank boss PNG exists in `ios/App/App/public/assets/bosses/`. Catches the case where `cap sync` somehow drops these specific files.
+
+If either gate fails, the build aborts with a message pointing at the line that broke. This is what would have caught the 1z.65 / 1z.68 / 1z.70 oversight at first commit instead of taking three TestFlight builds to notice. Any future boss PNG you drop into `assets/bosses/` will bundle automatically (glob copy) — no `codemagic.yaml` edit required.
+
+### Smoke gate — current expected state
+
+`node --check app.js` → OK
+`npm run test:e2e` → **7 passed** in ~40s
+Grep for risk strings → clean (no `Not Now` / `Enable` button text near permission requests)
+Boss art files → all 9 present on disk and tracked in git
+
+### What got REMOVED from CLAUDE.md as part of this handoff
+
+The previous handoff section (May 17 PM) documented the 100K Step Club / Hall of Fame / leaderboard work that shipped to backend D1 then. That work is now stable, documented in its own phase sections below, and no longer requires top-of-file attention. Backend D1 state is unchanged since 1z.41 (Worker version `761b6392`).
+
+### Previous handoff (archived) — May 17, 2026 4:30 PM
+
+**Current HEAD:** `6fc7acf35886c5e040401b3174123c158a4c6fd4` · `fix: hall of fame falls back to leaderboard_snapshots` · in sync with `origin/main`. Working tree clean apart from two untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`) that have been sitting around for a while and are NOT part of the build.
+
+**Version knobs at the time:**
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.1` |
+| `APP_BUILD_TAG` | `2.2.1-w61` |
+| `app.js?v=` | `410` |
+| `auth.js?v=` | `16` |
+| `styles.css?v=` | `295` |
+| `simulated-leaderboard.js?v=` | `6` |
+| `sw.js CACHE_VERSION` | `v5.296` |
+| `HEALTHKIT_AUTH_VERSION` | `2` |
 
 ### What shipped today (May 17 work)
 
