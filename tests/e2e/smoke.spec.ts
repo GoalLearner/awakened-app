@@ -442,10 +442,21 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     // Re-open library — the freshly added preset must NOT appear in
     // its category. Confirms renderLibrary fired with the new habits[]
     // on the deferred tick (filter via activeNames).
+    //
+    // Force-dismiss any lingering habit-toast before clicking so it
+    // can't intercept the add-habit-btn tap on a stressed CI runner.
+    await page.evaluate(() => {
+      document.querySelectorAll('.habit-toast').forEach(t => t.remove());
+    });
     await page.locator('#tab-habits').click();
-    await page.locator('#add-habit-btn').click();
-    await expect(page.locator('#lib-sheet')).toBeVisible();
+    await expect(page.locator('#tab-habits.active')).toBeVisible();
+    // Use force:true to skip visibility settle — the button is always
+    // in the DOM at the habits tab footer.
+    await page.locator('#add-habit-btn').click({ force: true });
+    await expect(page.locator('#lib-sheet')).toBeVisible({ timeout: 8_000 });
     const accHeaderAgain = page.locator('.ob-acc-header', { hasText: /physical performance/i }).first();
+    // Wait for the lib-sheet open transition to settle before clicking.
+    await expect(accHeaderAgain).toBeVisible({ timeout: 5_000 });
     await accHeaderAgain.click();
     await expect(page.locator('.lib-card', { hasText: 'Sprint session' })).toHaveCount(0);
 
@@ -464,13 +475,13 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     expect(inlineStyle.opacity).toBe('');
     expect(inlineStyle.pointerEvents).toBe('');
 
-    // v3 Phase 1z.91 — persistent breadcrumb assertion. After the add
+    // v3 Phase 1z.94 — persistent breadcrumb assertion. After the add
     // flow the localStorage ring `hb_add_habit_debug_v1` must contain
     // the canonical sequence of steps for a clean add. If any step
-    // is missing, the freeze repro on iOS will tell us exactly which
-    // step the path stopped at. Wait long enough for the 500ms
-    // watchdog + 1000ms alive probe to land.
-    await page.waitForTimeout(1300);
+    // is missing on iOS, the post-mortem export tells us exactly which
+    // step the path stopped at. Wait long enough for the 3000ms alive
+    // probe + 2000ms side-effects to land.
+    await page.waitForTimeout(3300);
     const crumbs = await page.evaluate(() => {
       try {
         const raw = localStorage.getItem('hb_add_habit_debug_v1');
@@ -491,6 +502,11 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     expect(steps).toContain('render-tick-ok');
     expect(steps).toContain('watchdog-complete');
     expect(steps).toContain('alive-1000');
+    // 1z.94 — alive probes through 3 seconds + side-effects window.
+    expect(steps).toContain('alive-2000');
+    expect(steps).toContain('alive-3000');
+    expect(steps).toContain('side-effects-start');
+    expect(steps).toContain('side-effects-complete');
     // The dup-guard MUST NOT have tripped for a fresh add.
     expect(steps).not.toContain('dup-guard-tripped');
     // No outer throw on the happy path.

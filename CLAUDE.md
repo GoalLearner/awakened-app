@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w6` |
-| `app.js?v=` | `444` |
+| `APP_BUILD_TAG` | `2.2.2-w7` |
+| `app.js?v=` | `445` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.330` |
+| `sw.js CACHE_VERSION` | `v5.331` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,80 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Add Habits freeze — decoupled HealthKit side effects (v3 Phase 1z.94)
+
+**Diagnosis (definitive).** TestFlight 2.2.2-w6 (build 81) shipped 1z.92's in-app debug export. User reproduced the freeze on three different presets (No alcohol, Under 1 hour screen time, Digital declutter) and pasted the breadcrumb JSON. The trace was identical for all three:
+
+```
+tap-start → busy-guard-set → dup-guard-passed
+→ cfg-build-complete → onConfirm-complete (saveOK:true)
+→ force-close-start/complete → toast-shown → finally-cleanup
+→ alive-100 (t+100ms)
+→ render-tick-start (t+150ms) → render-tick-ok (t+169ms, renderHabits took 16ms)
+✗ alive-500 NEVER FIRED
+✗ watchdog-complete NEVER FIRED
+✗ alive-1000 NEVER FIRED
+```
+
+**The add path completed cleanly.** `save()` ran (habit persisted), both sheets closed, toast rendered, renderHabits completed in 16ms. **Then JS main thread died between t+169ms and t+500ms.**
+
+**Root cause.** `renderHabits()` synchronously dispatches HealthKit native-bridge work at the bottom (`autoVerifyWalk`, `autoVerifySleep`, `autoVerifyStrengthTraining`, `resolveBossHuntsAcrossWindow`, `_sweepExpiredBossHuntsNoHealth` — lines 11688–11696). Each dispatch is fast (just postMessage to native), but the **native HealthKit responses arrive ~200–500ms later as async callbacks**. Each callback fires heavy JS work — re-triggering `renderHabits()` in a cascade. With **34 habits / 19 scheduled today** in the user's profile, the cascade was heavy enough to permanently block touch handling on iOS WKWebView. `swController: false` in the export ruled out service-worker poisoning; this was native-bridge cascade blocking, plain and simple.
+
+The 16ms renderHabits time confirms the SYNCHRONOUS part is fine. The freeze is in the asynchronous post-render callback storm.
+
+**Fix (1z.94):**
+
+1. **`renderHabits(opts)` now accepts `opts.skipSideEffects`.** When true, it does the DOM update (user sees new habit immediately) and `return`s before the HealthKit/boss block. When false (the default — everything else in the codebase), behaviour is unchanged.
+
+2. **Add-path renderHabits call passes `{ skipSideEffects: true }`.** Decouples the post-add render from the native-bridge callback cascade. The user sees visual confirmation of the add but doesn't trigger the storm.
+
+3. **Side effects scheduled on a separate 2000ms-deferred tick.** They still run — just after the UI has fully committed paint, the watchdog has fired, and touch input has settled. Each side effect independently try-wrapped + breadcrumbed:
+   - `side-effects-start`
+   - `side-effects-walk-ok` / `side-effects-walk-threw`
+   - `side-effects-sleep-ok` / `side-effects-sleep-threw`
+   - `side-effects-strength-ok` / `side-effects-strength-threw`
+   - `side-effects-boss-resolve-ok` / `side-effects-boss-resolve-threw`
+   - `side-effects-boss-sweep-ok` / `side-effects-boss-sweep-threw`
+   - `side-effects-complete`
+
+4. **New alive probes at 2000ms + 3000ms** (in addition to 100/500/1000). If `alive-3000` lands in the next debug export, the freeze is gone. If it doesn't, the side-effects breadcrumbs above identify the specific HealthKit/boss function still misbehaving.
+
+**What's NOT changed:**
+- `renderHabits()` behaviour for non-add callers (tab switch, day change, visibility change, etc.) is identical. Default `opts.skipSideEffects = undefined → falsy → runs side effects` as before.
+- Side effects still fire — just 2 seconds after the add instead of synchronously. Daily-walk auto-verify and boss-hunt resolution still work; they're just no longer coupled to user clicks on the Add Habits CTA.
+- All other Add Habits flow logic (forceCloseAddHabitsStack, watchdog, dup tap guard, toast) is unchanged.
+
+**Files touched (1z.94 only):**
+- `app.js` — `renderHabits(opts)` signature + skipSideEffects branch; addBtn click handler passes `{ skipSideEffects: true }`, schedules delayed side-effects setTimeout at 2000ms with per-function breadcrumbs, alive probes at 2000/3000ms; `APP_BUILD_TAG → 2.2.2-w7`.
+- `index.html` — `app.js?v=445`.
+- `sw.js` — `CACHE_VERSION = v5.331`.
+- `tests/e2e/smoke.spec.ts` — section H now asserts `side-effects-start`, `side-effects-complete`, `alive-2000`, `alive-3000` are all present; waits 3300ms post-add.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w7`, `app.js?v=445`, `sw.js v5.331`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log for the gating run.
+
+**Manual QA on TestFlight 2.2.2-w7:**
+1. Boot — confirm `[Awakened] boot · build=2.2.2-w7` in Safari devtools (or accept it via the 5-tap unlock + Copy Debug Info → confirm `"build":"2.2.2-w7"` in the JSON).
+2. Add any preset → app should remain interactive immediately.
+3. Tab bar should respond. Other tabs should work.
+4. After 2–3 sec, the delayed side effects run silently.
+5. Export breadcrumbs and confirm:
+   - `alive-2000` ✓
+   - `alive-3000` ✓
+   - `side-effects-start` ✓
+   - `side-effects-complete` ✓
+   - If any `side-effects-*-threw` appears, the specific failure is named — surgical follow-up.
+
+**Known non-goals:**
+- 1z.94 is a freeze fix, not a full HealthKit-cascade audit. If `side-effects-complete` lands but the user still reports a sluggish moment around 2 sec post-add, follow-up phase will move side effects to an idle callback or chained per-tick scheduling. For now: as long as the freeze is gone and the user can interact immediately, the bug is closed.
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy CHANGES (the side-effects functions themselves are unchanged — only their schedule is decoupled).
+- Codemagic NOT triggered.
 
 ### Local-build pipeline — MacBook archive without Codemagic (v3 Phase 1z.93)
 

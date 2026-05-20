@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w6';
+  const APP_BUILD_TAG = '2.2.2-w7';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11657,7 +11657,8 @@
     if (currentTab === 'history')      renderHistory();
   }
 
-  function renderHabits() {
+  function renderHabits(opts) {
+    opts = opts || {};
     const list  = document.getElementById('habit-list');
     const empty = document.getElementById('empty-state');
     const todayHabits = habits.filter(isScheduledToday);
@@ -11681,6 +11682,23 @@
       bindDrag();
     }
     updateProgress();
+
+    // v3 Phase 1z.94 — HealthKit auto-verify + boss-resolver side
+    // effects are SKIPPABLE per-call. The post-add render path passes
+    // {skipSideEffects:true} because on TestFlight 2.2.2-w6 the
+    // breadcrumb trace showed the native HealthKit bridge callbacks
+    // (fired by autoVerifyWalk/Sleep/StrengthTraining) returning ~300–
+    // 500ms later and blocking the JS main thread when re-triggering
+    // renderHabits in a cascade. With 34 habits / 19 today, the
+    // cascade was heavy enough to permanently block touch handling
+    // on iOS WKWebView.
+    //
+    // Skipping these from the post-add render lets the user see the
+    // new habit immediately without the freeze. They run on the next
+    // natural renderHabits (tab switch, day change, app visibility)
+    // OR on the addBtn handler's delayed 2000ms tick — see addBtn's
+    // _scheduleDelayedSideEffects.
+    if (opts.skipSideEffects) return;
 
     // HealthKit auto-verify hooks. Fire async; both no-op on web /
     // when permission isn't granted / when threshold not met. Each
@@ -16784,28 +16802,30 @@
           _addHabitBreadcrumb('finally-cleanup');
         }
 
-        // ── Deferred render (renderHabits ONLY — no renderLibrary) ─
-        // 1z.91 drops renderLibrary from the success path entirely.
-        // The library sheet is closing; rendering into a closing sheet
-        // was a suspected freeze contributor. The library re-renders
-        // on the next openLibrary() call regardless.
+        // ── Deferred render — renderHabits with skipSideEffects ─
+        // 1z.94 — TestFlight 2.2.2-w6 breadcrumbs proved the freeze
+        // happens between render-tick-ok (+169ms) and alive-500
+        // (which never fires). Diagnosis: renderHabits's tail-end
+        // HealthKit auto-verify + boss-resolver calls dispatch
+        // native-bridge work whose async callbacks fire heavy JS
+        // 300–500ms later and block the main thread.
         //
-        // Delay of 150ms (not setTimeout 0) gives the iOS Capacitor
-        // WebView a real paint frame to commit the close before the
-        // heavy renderHabits work hits. 150ms is below the ~200ms
-        // human-perceptible-pause threshold and well above a single
-        // 16ms paint tick so the WebView reliably commits.
+        // Fix: pass {skipSideEffects:true} so renderHabits ONLY
+        // updates the DOM (user sees the new habit immediately) and
+        // does NOT dispatch the HealthKit/boss callbacks. The side
+        // effects run on a separate 2000ms-deferred tick AFTER the
+        // UI has fully settled.
         try {
           setTimeout(() => {
             _addHabitBreadcrumb('render-tick-start');
-            try { renderHabits(); _addHabitBreadcrumb('render-tick-ok'); }
+            try { renderHabits({ skipSideEffects: true }); _addHabitBreadcrumb('render-tick-ok'); }
             catch (err) {
               _addHabitBreadcrumb('render-tick-threw', { err: String(err && err.message || err) });
             }
           }, 150);
         } catch (_) {
           // Fallback if setTimeout is somehow unavailable — sync.
-          try { renderHabits(); } catch (_) {}
+          try { renderHabits({ skipSideEffects: true }); } catch (_) {}
         }
 
         // ── Post-add watchdog (~500ms) ─────────────────────────────
@@ -16821,13 +16841,44 @@
           }, 500);
         } catch (_) {}
 
+        // ── Delayed side-effects (2000ms — 1z.94) ────────────────────
+        // The HealthKit auto-verifies + boss-resolver were the freeze
+        // culprit when synchronous-from-render. Running them 2 seconds
+        // after the add lets the iOS WebView fully commit paint,
+        // settle touch input, and isolate the native-bridge callback
+        // storm from the user's immediate interaction window.
+        //
+        // Each side effect independently try-wrapped + breadcrumbed
+        // so we can see in the next debug export which one (if any)
+        // is still misbehaving.
+        try {
+          setTimeout(() => {
+            _addHabitBreadcrumb('side-effects-start');
+            try { autoVerifyWalk(); _addHabitBreadcrumb('side-effects-walk-ok'); }
+            catch (err) { _addHabitBreadcrumb('side-effects-walk-threw', { err: String(err && err.message || err) }); }
+            try { autoVerifySleep(); _addHabitBreadcrumb('side-effects-sleep-ok'); }
+            catch (err) { _addHabitBreadcrumb('side-effects-sleep-threw', { err: String(err && err.message || err) }); }
+            try { autoVerifyStrengthTraining(); _addHabitBreadcrumb('side-effects-strength-ok'); }
+            catch (err) { _addHabitBreadcrumb('side-effects-strength-threw', { err: String(err && err.message || err) }); }
+            try { resolveBossHuntsAcrossWindow(); _addHabitBreadcrumb('side-effects-boss-resolve-ok'); }
+            catch (err) { _addHabitBreadcrumb('side-effects-boss-resolve-threw', { err: String(err && err.message || err) }); }
+            try { _sweepExpiredBossHuntsNoHealth(); _addHabitBreadcrumb('side-effects-boss-sweep-ok'); }
+            catch (err) { _addHabitBreadcrumb('side-effects-boss-sweep-threw', { err: String(err && err.message || err) }); }
+            _addHabitBreadcrumb('side-effects-complete');
+          }, 2000);
+        } catch (_) {}
+
         // ── Alive probes (post-tap) ───────────────────────────────
         // If these breadcrumbs land but the user reports freeze, the
         // JS main thread is alive — the freeze is touch interception.
         // If they don't land, JS is genuinely blocked.
+        // 1z.94 added 2000ms + 3000ms probes specifically to bracket
+        // the new delayed-side-effects window.
         try { setTimeout(() => _addHabitBreadcrumb('alive-100'),  100); } catch (_) {}
         try { setTimeout(() => _addHabitBreadcrumb('alive-500'),  500); } catch (_) {}
         try { setTimeout(() => _addHabitBreadcrumb('alive-1000'), 1000); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-2000'), 2000); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-3000'), 3000); } catch (_) {}
       });
       footer.appendChild(addBtn);
 
