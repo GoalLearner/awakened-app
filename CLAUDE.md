@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w5` |
-| `app.js?v=` | `443` |
+| `APP_BUILD_TAG` | `2.2.2-w6` |
+| `app.js?v=` | `444` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.329` |
+| `sw.js CACHE_VERSION` | `v5.330` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,84 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### In-app debug-info export — TestFlight breadcrumb retrieval (v3 Phase 1z.92)
+
+**Trigger.** Phase 1z.91 wrote persistent Add Habits breadcrumbs to `localStorage['hb_add_habit_debug_v1']`, with the assumption that the user could read them via Safari Web Inspector. **That assumption broke** — on TestFlight build 80, Safari sees the iPhone under the Develop menu but Awakened is not listed ("No Inspectable Applications"). Apple disables WKWebView's Web Inspector flag in App Store-signed IPAs by default; only debug-signed builds (developer signed) expose it. The breadcrumbs were trapped on the device.
+
+1z.92 closes the loop by giving the user an in-app way to copy the breadcrumb payload to clipboard.
+
+**UX (kept hidden from normal users):**
+1. Open Settings.
+2. Tap the "Version 2.2.2" label five times within 3 seconds.
+3. A "Copy Debug Info" button appears below the version line, plus a toast "Diagnostics unlocked."
+4. Tap the button → JSON payload is copied to clipboard, toast "Debug info copied — paste it in chat."
+5. If clipboard write fails (rare — e.g. permission denied in some WebView contexts), a fallback modal opens with a read-only textarea, a "Select All" button, and a "Close" button. User long-presses → Select All → Copy via iOS share/edit menu.
+
+**Payload shape** (one JSON object, pretty-printed for paste readability):
+```json
+{
+  "kind": "awakened-debug",
+  "schema": 1,
+  "version": "2.2.2",
+  "build": "2.2.2-w6",
+  "createdAt": "...ISO...",
+  "href": "capacitor://localhost/",
+  "userAgent": "...",
+  "isCapacitor": true,
+  "platform": "ios",
+  "addHabitDebug": [ { "t": ..., "step": "...", "data": {...} }, ... ],
+  "uiState": {
+    "sheets": [ { "id": "hd-sheet", "hasHiddenClass": true, "inlineDisplay": "none", ... }, ... ],
+    "activeTab": "tab-habits",
+    "bodyClass": "...",
+    "activeElement": "..."
+  },
+  "habitSummary": { "count": 12, "lastFew": [ { "name": "No alcohol", ... } ] },
+  "swController": true,
+  "knownSwVersion": "v5.329"
+}
+```
+
+**Key implementation details:**
+
+- **Five helpers** added to `app.js`, all IIFE-scoped: `_buildAwakenedDebugPayload()`, `_copyTextToClipboard(text)` (returns Promise<bool>), `_legacyCopyFallback(text, resolve)`, `_showDebugTextFallback(text)`, `_exportAwakenedDebugInfo()`, `_setupDebugInfoUnlock()`, `_revealDebugInfoButton()`.
+- **No `index.html` markup changes** — the Copy button is created dynamically and inserted after the existing `#settings-app-ver` element. No risk of breaking other Settings markup or App Review-relevant copy.
+- **Each DOM op is independently try-wrapped** — the export action can never throw past its own boundary or freeze the app.
+- **Local-only** — no `fetch()`, no analytics, no transmission anywhere. The user copies the JSON and pastes it manually into chat.
+- **App Review safe** — no new permissions, no private APIs, no scary developer copy. The unlock is invisible to a reviewer who doesn't five-tap the version label. The visible copy ("Diagnostics unlocked.", "Local-only diagnostic snapshot.") is neutral.
+- **Add Habits breadcrumbs (`_addHabitBreadcrumb`) are unchanged.** Cap still 80 entries. Existing Playwright section H assertions all pass unchanged.
+
+**Files touched (1z.92 only):**
+- `app.js` — seven new helpers (see above); `_setupDebugInfoUnlock()` wired into the Settings init right after the version-label text assignment; `APP_BUILD_TAG → 2.2.2-w6`.
+- `index.html` — `app.js?v=444`.
+- `sw.js` — `CACHE_VERSION = v5.330`.
+- `CLAUDE.md` — this section + handoff version table.
+
+**Version knobs (post-1z.92):** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w6`, `app.js?v=444`, `sw.js v5.330`. `styles.css?v=302` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log for the gating run (8/8 expected, no Playwright changes needed — section H still asserts the same canonical breadcrumb sequence, and the new debug export is unrelated to the add-flow assertions).
+- `git diff --name-only` → `CLAUDE.md`, `app.js`, `index.html`, `sw.js`. No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy files. `QA_UNLOCK_C_RANK_DUNGEONS` stays `false`.
+
+**Manual QA checklist (TestFlight 2.2.2-w6):**
+1. Boot — open Settings (gear icon top-right).
+2. Tap the "Version 2.2.2" line five times in <3 sec. Toast "Diagnostics unlocked." appears, "Copy Debug Info" button appears below the version line.
+3. Tap Copy Debug Info. Toast "Debug info copied — paste it in chat."
+4. Open the iOS Notes app (or any text field) → long-press → Paste. Confirm JSON appears with `"build": "2.2.2-w6"`, `"addHabitDebug": [...]`, and `"uiState": {...}`.
+5. Reproduce the Add Habits freeze.
+6. Force-quit + relaunch.
+7. Settings → version 5-tap → Copy Debug Info again.
+8. Confirm breadcrumbs survived force-quit and the last entries show where the freeze stopped.
+9. **Paste full payload into chat** for diagnosis.
+
+**Known non-goals:**
+- The debug export does NOT include device-identifying info (no IDFA, no IDFV, no model name beyond what's in the user agent).
+- No automatic transmission — the user must paste it manually.
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- Codemagic NOT triggered by this commit.
 
 ### Add Habits freeze — instrumented conservative add path (v3 Phase 1z.91)
 

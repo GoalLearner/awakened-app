@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w5';
+  const APP_BUILD_TAG = '2.2.2-w6';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15848,6 +15848,287 @@
     try { console.log('[add-habit-debug]', step, data || ''); } catch (_) {}
   }
 
+  // v3 Phase 1z.92 — in-app debug-info export. Safari Web Inspector
+  // does NOT show the Awakened TestFlight build under the iPhone's
+  // Develop menu (Capacitor WKWebView's Web Inspector flag is off in
+  // App Store-signed IPAs by Apple policy), so the 1z.91 breadcrumbs
+  // in localStorage have no way to leave the device. This module
+  // gives the user a hidden "Copy Debug Info" button in Settings —
+  // tap the version line 5 times within 3 seconds to reveal it.
+  //
+  // Payload assembled here is local-only — no network transmission,
+  // no PII outside what's already in localStorage. Copy-only. The
+  // user pastes the result into chat for diagnosis.
+  function _buildAwakenedDebugPayload() {
+    const payload = {
+      kind: 'awakened-debug',
+      schema: 1,
+    };
+    // ── Build / runtime identity ─────────────────────────────
+    try { payload.version    = (typeof APP_VERSION    !== 'undefined') ? APP_VERSION    : null; } catch (_) { payload.version = null; }
+    try { payload.build      = (typeof APP_BUILD_TAG  !== 'undefined') ? APP_BUILD_TAG  : null; } catch (_) { payload.build   = null; }
+    try { payload.createdAt  = new Date().toISOString(); } catch (_) {}
+    try { payload.href       = location.href; } catch (_) {}
+    try { payload.userAgent  = navigator.userAgent; } catch (_) {}
+    try { payload.isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (_) {}
+    try { payload.platform   = (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || null; } catch (_) {}
+
+    // ── Add Habits breadcrumbs (the main diagnostic) ─────────
+    try {
+      const raw = localStorage.getItem('hb_add_habit_debug_v1');
+      if (raw) {
+        try { payload.addHabitDebug = JSON.parse(raw); }
+        catch (parseErr) {
+          payload.addHabitDebugRaw = raw.slice(0, 4000);
+          payload.addHabitDebugParseErr = String(parseErr && parseErr.message || parseErr);
+        }
+      } else {
+        payload.addHabitDebug = [];
+      }
+    } catch (err) {
+      payload.addHabitDebugErr = String(err && err.message || err);
+    }
+
+    // ── Current UI state ─────────────────────────────────────
+    payload.uiState = {};
+    try {
+      const sheetIds = ['hd-sheet', 'lib-sheet', 'lib-overlay', 'modal-overlay', 'edit-modal', 'mr-overlay'];
+      payload.uiState.sheets = sheetIds.map(id => {
+        const el = document.getElementById(id);
+        if (!el) return { id, exists: false };
+        const cs = (() => { try { return getComputedStyle(el); } catch (_) { return null; } })();
+        return {
+          id,
+          exists: true,
+          hasHiddenClass: el.classList.contains('hidden'),
+          inlineDisplay: el.style.display || null,
+          inlinePointerEvents: el.style.pointerEvents || null,
+          inlineTransform: el.style.transform || null,
+          inlineTransition: el.style.transition || null,
+          inlineOpacity: el.style.opacity || null,
+          computedDisplay: cs ? cs.display : null,
+          computedPointerEvents: cs ? cs.pointerEvents : null,
+          className: el.className || '',
+        };
+      });
+    } catch (_) {}
+    try {
+      const activeTab = document.querySelector('.tab-btn.active');
+      payload.uiState.activeTab = activeTab ? activeTab.id : null;
+    } catch (_) {}
+    try {
+      payload.uiState.bodyClass = (document.body && document.body.className) || '';
+    } catch (_) {}
+    try {
+      const ae = document.activeElement;
+      payload.uiState.activeElement = ae ? ((ae.id ? ('#' + ae.id) : '') + (ae.className ? ('.' + String(ae.className).split(' ').join('.')) : '')) : null;
+    } catch (_) {}
+
+    // ── Habit summary (no PII beyond what user typed as habit names) ─
+    payload.habitSummary = {};
+    try {
+      if (Array.isArray(habits)) {
+        payload.habitSummary.count = habits.length;
+        payload.habitSummary.lastFew = habits.slice(-5).map(h => ({ name: h && h.name, type: h && h.type, custom: !!(h && h.custom) }));
+      }
+    } catch (_) {}
+
+    // ── Storage / SW hints ───────────────────────────────────
+    try {
+      payload.swController = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+    } catch (_) {}
+    try {
+      payload.knownSwVersion = localStorage.getItem('hb_sw_known_version') || null;
+    } catch (_) {}
+
+    return payload;
+  }
+
+  // Async copy with progressive fallbacks. Returns a Promise<boolean>
+  // indicating success. Independent of toast/modal — caller handles UX.
+  function _copyTextToClipboard(text) {
+    return new Promise(resolve => {
+      // Path 1 — modern Clipboard API.
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text)
+            .then(() => resolve(true))
+            .catch(() => { _legacyCopyFallback(text, resolve); });
+          return;
+        }
+      } catch (_) {}
+      // Path 2 — legacy textarea + execCommand.
+      _legacyCopyFallback(text, resolve);
+    });
+  }
+  function _legacyCopyFallback(text, resolve) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.left = '0';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      let ok = false;
+      try { ok = document.execCommand && document.execCommand('copy'); } catch (_) {}
+      try { document.body.removeChild(ta); } catch (_) {}
+      resolve(!!ok);
+    } catch (_) {
+      resolve(false);
+    }
+  }
+
+  // Fallback modal when clipboard fails — user can manually select +
+  // copy from a textarea. Created dynamically so no index.html change
+  // is needed. Tap backdrop or Close to dismiss.
+  function _showDebugTextFallback(text) {
+    try {
+      // Remove any prior instance.
+      const prior = document.getElementById('awk-debug-fallback');
+      if (prior) try { prior.parentNode.removeChild(prior); } catch (_) {}
+      const overlay = document.createElement('div');
+      overlay.id = 'awk-debug-fallback';
+      overlay.style.cssText = [
+        'position:fixed','inset:0','z-index:99999','background:rgba(0,0,0,0.82)',
+        'display:flex','flex-direction:column','align-items:stretch','justify-content:flex-start',
+        'padding:env(safe-area-inset-top,16px) 12px env(safe-area-inset-bottom,16px) 12px',
+        'box-sizing:border-box',
+      ].join(';');
+      const card = document.createElement('div');
+      card.style.cssText = [
+        'background:#15151f','color:#e2e8f0','border:1px solid rgba(245,158,11,0.4)',
+        'border-radius:14px','padding:14px','display:flex','flex-direction:column','gap:10px',
+        'flex:1','min-height:0',
+      ].join(';');
+      const title = document.createElement('div');
+      title.textContent = 'Debug Info — long-press inside to Select All, then Copy';
+      title.style.cssText = 'font-size:0.86rem;font-weight:700;color:#f5b842;';
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = [
+        'flex:1','min-height:0','width:100%','box-sizing:border-box',
+        'font-family:ui-monospace,SFMono-Regular,Menlo,monospace','font-size:0.74rem',
+        'background:#0a0a12','color:#cbd5e1','border:1px solid rgba(255,255,255,0.1)',
+        'border-radius:8px','padding:10px','resize:none','-webkit-user-select:text','user-select:text',
+      ].join(';');
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;';
+      const selectAllBtn = document.createElement('button');
+      selectAllBtn.textContent = 'Select All';
+      selectAllBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;background:#8b5cf6;color:#fff;font-weight:700;border:none;font-size:0.92rem;';
+      selectAllBtn.addEventListener('click', () => {
+        try { ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); } catch (_) {}
+      });
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = 'Close';
+      closeBtn.style.cssText = 'flex:1;padding:12px;border-radius:10px;background:#1f1f2e;color:#e2e8f0;font-weight:700;border:1px solid rgba(255,255,255,0.18);font-size:0.92rem;';
+      closeBtn.addEventListener('click', () => { try { overlay.parentNode.removeChild(overlay); } catch (_) {} });
+      row.appendChild(selectAllBtn);
+      row.appendChild(closeBtn);
+      card.appendChild(title);
+      card.appendChild(ta);
+      card.appendChild(row);
+      overlay.appendChild(card);
+      // Tap backdrop (NOT the card) to dismiss.
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) { try { overlay.parentNode.removeChild(overlay); } catch (_) {} }
+      });
+      document.body.appendChild(overlay);
+    } catch (err) {
+      try { console.error('[debug-export] fallback modal failed', err); } catch (_) {}
+    }
+  }
+
+  // The actual export action — assembles payload, attempts copy,
+  // falls back to the modal on failure. Always safe to call (never
+  // throws past its own try block).
+  function _exportAwakenedDebugInfo() {
+    let text;
+    try {
+      const payload = _buildAwakenedDebugPayload();
+      text = JSON.stringify(payload, null, 2);
+    } catch (err) {
+      try {
+        if (typeof showHabitToast === 'function') showHabitToast('Could not build debug info.');
+      } catch (_) {}
+      try { console.error('[debug-export] build failed', err); } catch (_) {}
+      return;
+    }
+    _copyTextToClipboard(text).then(ok => {
+      if (ok) {
+        try {
+          if (typeof showHabitToast === 'function') showHabitToast('Debug info copied — paste it in chat.');
+        } catch (_) {}
+      } else {
+        // Clipboard failed — show selectable textarea as fallback.
+        try { _showDebugTextFallback(text); } catch (_) {}
+      }
+    });
+  }
+
+  // 5-tap unlock on the Settings version line. Hides debug surface
+  // entirely from normal users; only reveals after the gesture. Once
+  // unlocked, the button stays visible for the lifetime of the sheet
+  // (re-opening Settings hides it again).
+  function _setupDebugInfoUnlock() {
+    const verEl = document.getElementById('settings-app-ver');
+    if (!verEl) return;
+    // Avoid double-binding if init runs more than once.
+    if (verEl.dataset.debugUnlockWired === '1') return;
+    verEl.dataset.debugUnlockWired = '1';
+    // Visual affordance: pointer cursor on web; harmless on iOS.
+    try { verEl.style.cursor = 'pointer'; } catch (_) {}
+    let taps = 0;
+    let firstTapAt = 0;
+    verEl.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - firstTapAt > 3000) { taps = 0; firstTapAt = now; }
+      taps += 1;
+      if (taps >= 5) {
+        taps = 0; firstTapAt = 0;
+        try { _revealDebugInfoButton(); } catch (_) {}
+        try {
+          if (typeof showHabitToast === 'function') showHabitToast('Diagnostics unlocked.');
+        } catch (_) {}
+      }
+    });
+  }
+
+  // Inserts the Copy Debug Info button into the Settings sheet (right
+  // below the version line) if not already present. Idempotent.
+  function _revealDebugInfoButton() {
+    if (document.getElementById('awk-debug-copy-btn')) return;
+    const verEl = document.getElementById('settings-app-ver');
+    if (!verEl || !verEl.parentNode) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'awk-debug-row';
+    wrap.style.cssText = 'margin-top:8px;display:flex;flex-direction:column;gap:6px;';
+    const btn = document.createElement('button');
+    btn.id = 'awk-debug-copy-btn';
+    btn.type = 'button';
+    btn.textContent = 'Copy Debug Info';
+    btn.style.cssText = [
+      'padding:10px 14px','border-radius:10px',
+      'background:rgba(245,158,11,0.14)','color:#f5b842',
+      'border:1px solid rgba(245,158,11,0.45)','font-weight:700',
+      'font-size:0.86rem','cursor:pointer',
+    ].join(';');
+    btn.addEventListener('click', () => {
+      try { _exportAwakenedDebugInfo(); } catch (_) {}
+    });
+    const hint = document.createElement('div');
+    hint.textContent = 'Local-only diagnostic snapshot. Paste in chat to help debug.';
+    hint.style.cssText = 'font-size:0.72rem;color:#94a3b8;line-height:1.3;';
+    wrap.appendChild(btn);
+    wrap.appendChild(hint);
+    try { verEl.parentNode.insertBefore(wrap, verEl.nextSibling); } catch (_) {}
+  }
+
   // v3 Phase 1z.89 — deterministic interaction reset for the Add Habits
   // surface. After a successful preset add we close BOTH the detail
   // sheet (#hd-sheet) AND the parent library sheet (#lib-sheet) and
@@ -29261,6 +29542,11 @@
     // Reflect canonical APP_VERSION in the Settings header
     const verEl = document.getElementById('settings-app-ver');
     if (verEl) verEl.textContent = 'Version ' + APP_VERSION;
+
+    // v3 Phase 1z.92 — wire the 5-tap debug unlock on the version line.
+    // Hidden from normal users; only surfaces a Copy Debug Info button
+    // after 5 quick taps. See _setupDebugInfoUnlock for the full UX.
+    try { _setupDebugInfoUnlock(); } catch (_) {}
 
     // Settings → "What's New" button (manual open — does NOT update flag)
     const wnBtn = document.getElementById('settings-whats-new-btn');
