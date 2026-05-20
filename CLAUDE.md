@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w9` |
-| `app.js?v=` | `447` |
+| `APP_BUILD_TAG` | `2.2.2-w10` |
+| `app.js?v=` | `448` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.333` |
+| `sw.js CACHE_VERSION` | `v5.334` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,69 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Habit-mutation freeze fix — skipSideEffects on every user-mutation render (v3 Phase 1z.97)
+
+**Bug.** After 1z.95/1z.96 shipped (build 84, w9), user tested OTHER habit operations and found the same freeze class still present on:
+- **Delete habit** (context menu → Delete)
+- **Schedule save** (Schedule modal Save button)
+- **Edit habit save** (Edit Habit modal Save button)
+
+Plus, by extension, every other user-mutation that calls `renderHabits()` afterward.
+
+**Root cause.** 1z.95 only fixed the Add Habits path. The HealthKit native-bridge microtask cascade described in 1z.95's notes wasn't a property of the add flow specifically — it was a property of ANY render path that called `autoVerifyWalk` / `autoVerifySleep` / `autoVerifyStrengthTraining` / `resolveBossHuntsAcrossWindow` / `_sweepExpiredBossHuntsNoHealth` at the tail. `renderHabits()` does this at the bottom of its body by default. Every site that called `renderHabits()` after a user mutation re-triggered the same cascade.
+
+**Fix.** Audited every `renderHabits()` call site in `app.js` and updated each one to pass `{ skipSideEffects: true }` when the call is a USER-MUTATION render (delete, edit save, schedule save, custom save, pack add, quick-add, drag-drop reorder). Natural-trigger renders (tab switch, day change, visibility change, app boot) keep side effects enabled — those are when the cascade is acceptable because the user expects a brief settle.
+
+Also updated three HealthKit auto-verify completion sites and three yesterday-backfill completion sites to skip side effects — those just ran the side effects, re-running them in the immediate next render is what creates the recursive cascade.
+
+**Sites updated (10):**
+- `app.js:7796` — Weekend Warrior quick-add post-save render → `skipSideEffects`
+- `app.js:15526` — Custom habit save post-save render → `skipSideEffects`
+- `app.js:15599` — Pack (Morning Routine / Locked-In) add post-save render → `skipSideEffects`
+- `app.js:17245` — Schedule modal Save button post-save render → `skipSideEffects`
+- `app.js:23016` — Edit Habit modal Save button post-save render → `skipSideEffects`
+- `app.js:23049` — Edit Habit modal Delete button post-delete render → `skipSideEffects`
+- `app.js:23402` — `deleteHabit()` internal post-delete render → `skipSideEffects`
+- `app.js:23738` — Drag-drop finalize post-reorder render → `skipSideEffects`
+- `app.js:23955` — Stat detail linked-habit add post-save render → `skipSideEffects`
+- `app.js:28227, 28265, 28345` — Yesterday-backfill completion renders (strength / walk / sleep) → `skipSideEffects`
+- `app.js:28429` — `autoVerifyWalk` completion render → `skipSideEffects`
+- `app.js:28584` — `autoVerifySleep` completion render → `skipSideEffects`
+- `app.js:28675` — `autoVerifyStrengthTraining` completion render → `skipSideEffects`
+
+**Sites NOT changed (natural triggers — keep side effects):**
+- `app.js:11651` — `render()` main render orchestrator (called from `switchTab`, day change, etc.)
+- `app.js:25154` — HealthKit pause/unpause toggle in Settings (user explicitly toggling auto-verify; the cascade is desired here)
+
+**Pattern going forward.** Any new code that calls `renderHabits()` in response to a user mutation MUST pass `{ skipSideEffects: true }` to avoid re-introducing this freeze class. Natural-trigger renders can keep the default. The 1z.95 commentary inside `renderHabits()` itself documents this contract.
+
+**Files touched (1z.97 only):**
+- `app.js` — 13 call sites updated with `{ skipSideEffects: true }`; `APP_BUILD_TAG → 2.2.2-w10`.
+- `index.html` — `app.js?v=448`.
+- `sw.js` — `CACHE_VERSION = v5.334`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w10`, `app.js?v=448`, `sw.js v5.334`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log for the gating run.
+
+**Manual QA on TestFlight 2.2.2-w10:**
+1. Boot — verify `"build":"2.2.2-w10"` via debug export.
+2. **Delete a custom habit** (Edit modal → Delete) → modal closes, list updates, app stays interactive.
+3. **Schedule save** (long-press habit → Schedule → change → Save) → modal closes, list updates, app interactive.
+4. **Edit habit save** (long-press habit → Edit → change → Save) → modal closes, list updates, app interactive.
+5. **Drag-drop reorder** → release → list updates, app interactive.
+6. **Add Habits** (existing 1z.95 path) → still works.
+7. Tap around tabs between each — all should respond.
+
+**Known non-goals:**
+- The underlying microtask-cascade behaviour in HealthKit handlers is still present. Tab switches still trigger it (briefly, on a screen the user is moving toward, so it's not user-perceptible). A future phase could break the cascade in the handlers themselves by wrapping native-call continuations in `setTimeout(0)`, but that's a deeper refactor. Today's fix is enough for App Store ship.
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes. The Notif module and the auto-verify logic themselves are untouched.
+- Codemagic NOT triggered.
 
 ### Notification permission auto-recovery + notif state in debug export (v3 Phase 1z.96)
 

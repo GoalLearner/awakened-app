@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w9';
+  const APP_BUILD_TAG = '2.2.2-w10';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7793,7 +7793,8 @@
     habits.push(newH);
     if (def.note) habitNotes[newH.id] = def.note;
     save();
-    renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+    renderHabits({ skipSideEffects: true });
     updateDoubleXpBanner();
 
     // Brief "Added! ✓" flash, then transition popup body to State B
@@ -15523,7 +15524,10 @@
     // otherwise strand the Add Custom Habit overlay.
     try { save(); } catch (e) { try { console.warn('[custom] save failed', e); } catch (_) {} }
     closeCustomHabitModal();
-    try { renderHabits();  } catch (e) { try { console.warn('[custom] post-save renderHabits failed', e); } catch (_) {} }
+    // v3 Phase 1z.97 — skipSideEffects to avoid HealthKit native-bridge
+    // cascade. Same root cause as the Add Habits freeze (1z.95) — every
+    // user-mutation render path was vulnerable, this is custom-habit save.
+    try { renderHabits({ skipSideEffects: true });  } catch (e) { try { console.warn('[custom] post-save renderHabits failed', e); } catch (_) {} }
     try { renderLibrary(); } catch (e) { try { console.warn('[custom] post-save renderLibrary failed', e); } catch (_) {} }
     // Per-habit reminder offers were removed in v1.1.3 — Awakened sends
     // ONE morning digest by default, no per-habit prompts. Power users
@@ -15596,7 +15600,7 @@
     // leave overlay state inconsistent. Each step now isolated.
     try { closeMorningPackModal(); } catch (e) { try { console.warn('[pack] close modal failed', e); } catch (_) {} }
     try { closeLibrary();          } catch (e) { try { console.warn('[pack] close library failed', e); } catch (_) {} }
-    try { renderHabits();          } catch (e) { try { console.warn('[pack] post-save render failed', e); } catch (_) {} }
+    try { renderHabits({ skipSideEffects: true });          } catch (e) { try { console.warn('[pack] post-save render failed', e); } catch (_) {} }
     try { updateMorningButtonVisibility();  } catch (_) {}
     try { updateLockedInButtonVisibility(); } catch (_) {}
     try {
@@ -17239,7 +17243,8 @@
         try { save(); } catch (e) { try { console.warn('[sched] save failed', e); } catch (_) {} }
       }
       closeSchedulePicker();
-      try { renderHabits(); } catch (e) { try { console.warn('[sched] post-save render failed', e); } catch (_) {} }
+      // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+      try { renderHabits({ skipSideEffects: true }); } catch (e) { try { console.warn('[sched] post-save render failed', e); } catch (_) {} }
     });
 
     document.getElementById('sched-days-row').querySelectorAll('.day-btn').forEach(btn => {
@@ -23009,7 +23014,8 @@
       try { save(); } catch (e) { try { console.warn('[edit] save failed', e); } catch (_) {} }
     }
     closeEditModal();
-    try { renderHabits(); } catch (e) { try { console.warn('[edit] post-save render failed', e); } catch (_) {} }
+    // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+    try { renderHabits({ skipSideEffects: true }); } catch (e) { try { console.warn('[edit] post-save render failed', e); } catch (_) {} }
   }
 
   function setupEditModal() {
@@ -23042,7 +23048,8 @@
         if (!ok) return;
         try { deleteHabit(id); } catch (e) { try { console.warn('[edit] delete failed', e); } catch (_) {} }
         closeEditModal();
-        try { renderHabits(); } catch (e) { try { console.warn('[edit] post-delete render failed', e); } catch (_) {} }
+        // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+        try { renderHabits({ skipSideEffects: true }); } catch (e) { try { console.warn('[edit] post-delete render failed', e); } catch (_) {} }
       });
     }
     document.getElementById('edit-emoji-btn').addEventListener('click', () => {
@@ -23393,7 +23400,8 @@
     save();
     // Permanently cancel this habit's reminder + drop it from storage.
     try { Notif.clearReminder(id); } catch (_) {}
-    renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+    renderHabits({ skipSideEffects: true });
   }
 
   // ── EMOJI PICKER ─────────────────────────────────────────
@@ -23735,7 +23743,8 @@
 
     _finalizeDragCleanup();
     _postDropGuardUntil = Date.now() + POST_DROP_GUARD_MS;
-    renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+    renderHabits({ skipSideEffects: true });
   }
 
   function resetIdleTimer() {
@@ -23952,7 +23961,8 @@
     habits.push(newH);
     if (def.note) habitNotes[newH.id] = def.note;
     save();
-    renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+    renderHabits({ skipSideEffects: true });
     updateMorningButtonVisibility();
     updateLockedInButtonVisibility();
     // Re-render the linked-habits list so the row flips to "Active"
@@ -28214,7 +28224,8 @@
           workouts.length + ' verified workout' +
           (workouts.length === 1 ? '' : 's') + '.');
       } catch (_) {}
-      if (currentTab === 'habits') renderHabits();
+      // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+      if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
       if (currentTab === 'profile' && typeof renderProfile === 'function') {
         try { renderProfile(); } catch (_) {}
       }
@@ -28252,7 +28263,8 @@
         showHabitToast('Daily walk sealed for yesterday — ' +
           Math.round(steps).toLocaleString() + ' verified steps.');
       } catch (_) {}
-      if (currentTab === 'habits') renderHabits();
+      // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+      if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
       if (currentTab === 'profile' && typeof renderProfile === 'function') {
         try { renderProfile(); } catch (_) {}
       }
@@ -28332,7 +28344,8 @@
           }
         }
       }
-      if (currentTab === 'habits') renderHabits();
+      // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
+      if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
       if (currentTab === 'profile' && typeof renderProfile === 'function') {
         try { renderProfile(); } catch (_) {}
       }
@@ -28426,7 +28439,11 @@
       }
     }
 
-    if (didTodaySeal && currentTab === 'habits') renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects to avoid re-firing HealthKit
+    // dispatch in a cascade. The auto-verify just completed; the
+    // next renderHabits should just update the UI without triggering
+    // another autoVerifyWalk dispatch.
+    if (didTodaySeal && currentTab === 'habits') renderHabits({ skipSideEffects: true });
 
     // v3 Phase 1z.8 — yesterday backfill. Steps logged after the user's
     // last app-open of yesterday are otherwise invisible to the
@@ -28567,7 +28584,8 @@
 
     // Single re-render after both paths — buildItem() picks up new pills,
     // next render's autoVerifySleep() no-ops via isChecked() guards.
-    if (currentTab === 'habits') renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects to break the HealthKit cascade.
+    if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
 
     } // end if (!isAutoVerifyDisabled() && (sleep || bedtime))
 
@@ -28657,7 +28675,8 @@
       }
     }
 
-    if (didTodaySeal && currentTab === 'habits') renderHabits();
+    // v3 Phase 1z.97 — skipSideEffects to break the HealthKit cascade.
+    if (didTodaySeal && currentTab === 'habits') renderHabits({ skipSideEffects: true });
 
     // v3 Phase 1z.8 — yesterday backfill. The "10 PM workout, app
     // opened Sat morning" case this whole pass exists to fix.
