@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w8';
+  const APP_BUILD_TAG = '2.2.2-w9';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15834,6 +15834,140 @@
     catch (_) { return false; }
   }
 
+  // v3 Phase 1z.96 — persistent breadcrumb ring for the notification
+  // permission auto-recovery path. Mirror of _addHabitBreadcrumb but
+  // for a separate localStorage key so the two diagnostic surfaces
+  // don't collide. Cap 40 entries (lower than habits since notif
+  // events are rarer). Included in the Copy Debug Info export below.
+  function _addNotifBreadcrumb(step, data) {
+    try {
+      const key = 'hb_notif_debug_v1';
+      let existing;
+      try { existing = JSON.parse(localStorage.getItem(key) || '[]'); }
+      catch (_) { existing = []; }
+      if (!Array.isArray(existing)) existing = [];
+      const entry = { t: Date.now(), step: String(step) };
+      if (data !== undefined && data !== null) {
+        try { entry.data = JSON.parse(JSON.stringify(data)); } catch (_) {}
+      }
+      existing.push(entry);
+      if (existing.length > 40) existing.splice(0, existing.length - 40);
+      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+    } catch (_) {}
+    try { console.log('[notif-debug]', step, data || ''); } catch (_) {}
+  }
+
+  // v3 Phase 1z.96 — notification permission auto-recovery.
+  //
+  // Problem: iOS can silently drop an app's notification permission
+  // entry (multiple TestFlight reinstalls in one day, iOS updates,
+  // user clearing system caches, etc.). When this happens:
+  //   - The app's localStorage still has hb_notif_perm_requested='1'
+  //     (we previously asked the user, they tapped Allow).
+  //   - iOS no longer lists the app in Settings → Notifications.
+  //   - Calling LocalNotifications.schedule() silently no-ops.
+  //   - User sees no notifications and has no recovery path inside
+  //     the app (the onboarding-time permission prompt is the only
+  //     re-prompt site, and it's gated by hb_notif_perm_requested='1').
+  //
+  // Fix: on every app launch, compare the in-app "we previously
+  // requested" flag against the current iOS permission status. If
+  // they mismatch (we asked previously but iOS now reports prompt /
+  // undetermined), iOS silently dropped our entry. Re-request once.
+  // iOS will:
+  //   - Show its native dialog if the entry was truly wiped → user
+  //     taps Allow → state recovered.
+  //   - Return the prior decision without prompting if iOS still
+  //     remembers it (no UI shown — silent no-op for the user).
+  // Either way, no repeated prompts, App Review compliant.
+  //
+  // After a successful recovery (status returns to 'granted'), all
+  // existing schedules are re-armed so notifications resume the same
+  // day instead of waiting for the next habit toggle / tab switch.
+  async function recoverNotifPermissionIfDropped() {
+    _addNotifBreadcrumb('recover-start', {
+      build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : null,
+    });
+    try {
+      // Bail if Notif module isn't available (very early boot edge case).
+      if (typeof Notif !== 'object' || !Notif || typeof Notif.checkPermission !== 'function') {
+        _addNotifBreadcrumb('recover-skip-no-notif-module');
+        return;
+      }
+      // Bail on non-native (web). Web Notifications API has its own
+      // flow and doesn't suffer this iOS-specific issue.
+      let isNative = false;
+      try { isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (_) {}
+      if (!isNative) {
+        _addNotifBreadcrumb('recover-skip-not-native');
+        return;
+      }
+      // Bail if we've never requested permission before. The onboarding
+      // flow will handle the first-time prompt for new users.
+      let askedBefore = false;
+      try { askedBefore = localStorage.getItem('hb_notif_perm_requested') === '1'; } catch (_) {}
+      if (!askedBefore) {
+        _addNotifBreadcrumb('recover-skip-onboarding-will-handle');
+        return;
+      }
+      // Read current iOS permission status.
+      let status = 'unknown';
+      try { status = await Notif.checkPermission(); } catch (err) {
+        _addNotifBreadcrumb('recover-checkPermission-threw', { err: String(err && err.message || err) });
+        return;
+      }
+      _addNotifBreadcrumb('recover-status-read', { status });
+      // If iOS already says granted, we're fine. No action needed.
+      if (status === 'granted') {
+        _addNotifBreadcrumb('recover-already-granted-noop');
+        return;
+      }
+      // If iOS reports 'denied' (user previously declined OR iOS has
+      // explicitly disabled), don't auto-prompt — iOS won't show the
+      // dialog anyway, and a sticky toast directing to Settings is
+      // more user-friendly than a silent no-op.
+      if (status === 'denied') {
+        _addNotifBreadcrumb('recover-denied-show-toast');
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast(
+              'Reminders are off. Enable in iOS Settings → Awakened to receive them.',
+              { sticky: true }
+            );
+          }
+        } catch (_) {}
+        return;
+      }
+      // status === 'prompt' or 'unsupported' or 'unknown' — this is
+      // the state mismatch we recover from. iOS thinks we haven't
+      // asked (or doesn't remember the prior grant). Re-request.
+      // App Review safe: this is exactly the same call as the
+      // onboarding prompt, gated to fire at most once per launch.
+      _addNotifBreadcrumb('recover-mismatch-re-requesting', { status });
+      let result = 'unknown';
+      try { result = await Notif.requestPermission(); } catch (err) {
+        _addNotifBreadcrumb('recover-requestPermission-threw', { err: String(err && err.message || err) });
+        return;
+      }
+      _addNotifBreadcrumb('recover-request-result', { result });
+      // Re-arm all schedules so notifications resume immediately.
+      if (result === 'granted') {
+        try {
+          if (typeof Notif.rescheduleAll === 'function') { await Notif.rescheduleAll(); }
+          if (typeof Notif.reapplyDigest === 'function') { await Notif.reapplyDigest(); }
+          if (typeof Notif.reapplyCheckin === 'function') { await Notif.reapplyCheckin(); }
+          if (typeof Notif.reapplyMidDay === 'function') { await Notif.reapplyMidDay(); }
+          _addNotifBreadcrumb('recover-reschedule-ok');
+        } catch (err) {
+          _addNotifBreadcrumb('recover-reschedule-threw', { err: String(err && err.message || err) });
+        }
+      }
+      _addNotifBreadcrumb('recover-complete', { finalStatus: result });
+    } catch (err) {
+      _addNotifBreadcrumb('recover-outer-threw', { err: String(err && err.message || err) });
+    }
+  }
+
   // v3 Phase 1z.91 — persistent breadcrumb for the Add Habits add path.
   // The freeze repros on iOS Capacitor only and the app has to be
   // force-killed to recover, which destroys the console log buffer.
@@ -15957,6 +16091,32 @@
     } catch (_) {}
     try {
       payload.knownSwVersion = localStorage.getItem('hb_sw_known_version') || null;
+    } catch (_) {}
+
+    // ── 1z.96 — notification state + breadcrumbs ─────────────
+    payload.notif = {};
+    try {
+      payload.notif.permAskedBefore = localStorage.getItem('hb_notif_perm_requested') === '1';
+    } catch (_) {}
+    try {
+      payload.notif.disabled = localStorage.getItem('hb_notif_disabled') === '1';
+    } catch (_) {}
+    try {
+      const pausedUntil = parseInt(localStorage.getItem('hb_notif_paused_until') || '0', 10);
+      payload.notif.pausedUntil = pausedUntil;
+      payload.notif.currentlyPaused = pausedUntil > Date.now();
+    } catch (_) {}
+    try {
+      payload.notif.dailyDigestTime = localStorage.getItem('hb_notif_daily_digest_time') || null;
+    } catch (_) {}
+    try {
+      const raw = localStorage.getItem('hb_notif_debug_v1');
+      if (raw) {
+        try { payload.notif.debug = JSON.parse(raw); }
+        catch (_) { payload.notif.debugRaw = raw.slice(0, 4000); }
+      } else {
+        payload.notif.debug = [];
+      }
     } catch (_) {}
 
     return payload;
@@ -29597,6 +29757,15 @@
     // Hidden from normal users; only surfaces a Copy Debug Info button
     // after 5 quick taps. See _setupDebugInfoUnlock for the full UX.
     try { _setupDebugInfoUnlock(); } catch (_) {}
+
+    // v3 Phase 1z.96 — notification permission auto-recovery.
+    // If iOS silently dropped our notification entry (TestFlight reinstall,
+    // iOS update, etc.), this re-requests once on launch. iOS's native
+    // dialog will appear only if the prior decision was truly lost;
+    // otherwise iOS returns the cached decision silently. App Review
+    // compliant — at most one prompt per app launch, gated on the
+    // hb_notif_perm_requested flag.
+    try { recoverNotifPermissionIfDropped(); } catch (_) {}
 
     // Settings → "What's New" button (manual open — does NOT update flag)
     const wnBtn = document.getElementById('settings-whats-new-btn');

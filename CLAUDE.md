@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w8` |
-| `app.js?v=` | `446` |
+| `APP_BUILD_TAG` | `2.2.2-w9` |
+| `app.js?v=` | `447` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.332` |
+| `sw.js CACHE_VERSION` | `v5.333` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,73 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Notification permission auto-recovery + notif state in debug export (v3 Phase 1z.96)
+
+**Bug.** Multiple users (including a friend who has NOT been installing builds today) reported that notifications stopped firing on May 19. iPhone Settings → Notifications no longer lists Awakened at all. The app's localStorage still has `hb_notif_perm_requested='1'` (we previously asked, user granted), but iOS silently dropped its tracking of the app's notification permission.
+
+Cause: iOS occasionally wipes an app's notification permission entry — multiple TestFlight reinstalls in one day (today's 5 builds), iOS updates, or system cache clears can trigger it. The pre-1z.96 code only asked for notification permission ONCE during onboarding (gated by `hb_notif_perm_requested` localStorage flag), with no recovery path when iOS later drops the permission silently. `LocalNotifications.schedule()` calls then no-op without user-visible feedback.
+
+**Fix — `recoverNotifPermissionIfDropped()` runs on every boot.**
+
+1. Bails if not running on native Capacitor (web has its own notif flow).
+2. Bails if `hb_notif_perm_requested` is false (onboarding handles first-time users).
+3. Reads iOS's current permission status via `Notif.checkPermission()`.
+4. Branches on status:
+   - **`granted`** → state is consistent, no action.
+   - **`denied`** → user explicitly declined. Show a sticky toast: "Reminders are off. Enable in iOS Settings → Awakened to receive them." Don't auto-prompt (iOS would just return `denied` without UI).
+   - **`prompt` / `unsupported` / `unknown`** → state mismatch. iOS thinks we never asked. **Re-request once.** iOS shows its native dialog if the entry was wiped, OR silently returns the cached decision if it wasn't. App Review compliant — at most one prompt per app launch, identical to the onboarding prompt.
+5. On successful recovery (`result === 'granted'`), re-arms all schedules: `Notif.rescheduleAll()`, `reapplyDigest()`, `reapplyCheckin()`, `reapplyMidDay()`. Notifications resume the same day.
+
+**Diagnostic instrumentation:**
+
+- New `_addNotifBreadcrumb(step, data)` writes a 40-entry ring to `localStorage.hb_notif_debug_v1`. Mirrors the 1z.91 add-habit breadcrumb pattern.
+- Recovery flow logs at every branch:
+  - `recover-start`, `recover-skip-no-notif-module`, `recover-skip-not-native`, `recover-skip-onboarding-will-handle`
+  - `recover-checkPermission-threw`, `recover-status-read`, `recover-already-granted-noop`
+  - `recover-denied-show-toast`, `recover-mismatch-re-requesting`
+  - `recover-requestPermission-threw`, `recover-request-result`
+  - `recover-reschedule-ok`, `recover-reschedule-threw`
+  - `recover-complete`, `recover-outer-threw`
+- `_buildAwakenedDebugPayload()` extended with `notif` section:
+  - `permAskedBefore` — the localStorage flag value
+  - `disabled` — in-app master toggle state
+  - `pausedUntil` + `currentlyPaused` — paused-until-date status
+  - `dailyDigestTime` — user's chosen Morning Briefing time
+  - `debug` — the full breadcrumb ring
+
+After the next TestFlight build, the user's debug export will reveal exactly which branch the recovery took. If `recover-request-result: granted` appears + `recover-reschedule-ok` follows, the recovery worked and notifications will resume.
+
+**App Review safety:**
+- The re-request uses the EXACT SAME `Notif.requestPermission()` call as the existing onboarding flow. Permission wording in Info.plist (HealthKit usage strings, Sign in with Apple) is unchanged.
+- iOS itself enforces "no repeat prompts" — if the user has previously denied, the call returns `denied` synchronously without showing UI.
+- The recovery only fires when `hb_notif_perm_requested='1'` AND iOS reports a non-granted state. Fresh-install users (App Review reviewers) skip the recovery entirely via the early bail.
+
+**Files touched (1z.96 only):**
+- `app.js` — `_addNotifBreadcrumb` helper, `recoverNotifPermissionIfDropped()` async function, wire into `init()` after `setupNotifTapRouting()`, extend `_buildAwakenedDebugPayload()` with notif section; `APP_BUILD_TAG → 2.2.2-w9`.
+- `index.html` — `app.js?v=447`.
+- `sw.js` — `CACHE_VERSION = v5.333`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes. The Notif module itself is untouched — only the boot path adds a new recovery call.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w9`, `app.js?v=447`, `sw.js v5.333`. `styles.css` unchanged.
+
+**Manual QA on TestFlight 2.2.2-w9:**
+1. Install build.
+2. Force-quit + relaunch.
+3. iOS native dialog should appear: "Awakened would like to send you notifications." Tap **Allow**.
+4. Verify Awakened now appears in iPhone Settings → Notifications.
+5. Wait for the 9 AM / 1 PM / 6 PM (whichever is next) to confirm a notification fires.
+6. Export breadcrumbs:
+   - `notif.permAskedBefore: true` ✓
+   - `notif.debug` should contain `recover-start` → `recover-status-read` → `recover-mismatch-re-requesting` → `recover-request-result {result:'granted'}` → `recover-reschedule-ok` → `recover-complete`.
+7. If iOS doesn't prompt (because it remembers the prior grant), notifications should resume automatically — the recover trail will show `recover-already-granted-noop`.
+
+**Known non-goals:**
+- This doesn't address tab-switch sluggishness from the HealthKit cascade (still present, deferred).
+- Doesn't change permission wording or copy.
+- Codemagic NOT triggered by this commit.
 
 ### Add Habits freeze — side effects fully removed from add path (v3 Phase 1z.95)
 

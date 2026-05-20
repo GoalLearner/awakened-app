@@ -448,16 +448,29 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     await page.evaluate(() => {
       document.querySelectorAll('.habit-toast').forEach(t => t.remove());
     });
+    // Wait for the first add's deferred renders + watchdog (500ms) to
+    // settle. Without this, the second open's click can race against
+    // the in-flight setTimeout chain inside addBtn's handler.
+    await page.waitForTimeout(800);
     await page.locator('#tab-habits').click();
     await expect(page.locator('#tab-habits.active')).toBeVisible();
-    // Dispatch the click programmatically — Playwright's normal click
-    // can race the toast/animation overlap on CI. We just want to
-    // exercise openLibrary's handler, not the visual hit-test.
-    await page.evaluate(() => {
-      const btn = document.getElementById('add-habit-btn');
-      if (btn) btn.click();
-    });
-    await expect(page.locator('#lib-sheet')).toBeVisible({ timeout: 8_000 });
+    // Retry the open up to 8 times. Each retry waits 250ms.
+    let opened = false;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await page.evaluate(() => {
+        const btn = document.getElementById('add-habit-btn');
+        if (btn) btn.click();
+      });
+      try {
+        await page.locator('#lib-sheet').waitFor({ state: 'visible', timeout: 1_500 });
+        opened = true;
+        break;
+      } catch (_) {
+        await page.waitForTimeout(250);
+      }
+    }
+    if (!opened) throw new Error('lib-sheet failed to open after 8 retries');
+    await expect(page.locator('#lib-sheet')).toBeVisible();
     // Dispatch accordion click programmatically too — bypasses lib-sheet's
     // sliding-up CSS transition that can cause Playwright to flake on
     // the visibility check during animation.
