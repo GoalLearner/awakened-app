@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w14` |
-| `app.js?v=` | `452` |
+| `APP_BUILD_TAG` | `2.2.2-w15` |
+| `app.js?v=` | `453` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.338` |
+| `sw.js CACHE_VERSION` | `v5.339` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,76 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### esc() defensive type coercion — root cause of Duels render failure (v3 Phase 1z.102)
+
+**Diagnosis (definitive, from 1z.101's new breadcrumbs).** Build 89 (1z.101) shipped the total-timeout safety net + per-step breadcrumbs. User reported the Duels section now shows "Could not load duels: Render failed." with a "Tap to retry" button. The new `duels.debug` payload revealed the EXACT failure point across 5 separate render attempts:
+
+```
+render-start (token: N)
+inner-start (token: N)
+inner-pre-fetch (token: N)
+inner-fetch-ok (token: N, ok: true)        ← fetch succeeded
+inner-pre-resolve-loop (activeCount: 0)
+inner-post-resolve-loop (didResolveAny: false)
+inner-hero-rendered (outgoingCount: 1)     ← hero rendered for 1 outgoing duel
+render-threw: "s.replace is not a function. (In 's.replace(/&/g,'&amp;')', 's.replace' is undefined)"
+```
+
+The render reached `inner-hero-rendered` consistently, then died 1-3ms later when building the OUTGOING duel card HTML. The user has 1 outgoing duel (the pending challenge to rendiesel).
+
+**Root cause.** The `esc()` HTML-escape helper at line 15248 had no defense against non-string inputs:
+
+```js
+function esc(s) {
+  return s.replace(/&/g,'&amp;')...; // throws if s is not a string
+}
+```
+
+The outgoing duel card construction at line 19587 calls `esc(d.id)`. The backend returns duel `id` as a **number**, not a string. `.replace()` doesn't exist on Number primitives → uncaught TypeError → propagates up through the async chain → caught by 1z.101's outer wrapper → user sees "Could not load duels: Render failed." with the retry button.
+
+This same `esc()` bug could affect any code path that ever passes non-string values: numeric IDs, null/undefined fields, booleans. The defensive fix at one line solves a whole class of latent crashes.
+
+**Fix (one-line):**
+
+```js
+function esc(s) {
+  if (s == null) return '';
+  if (typeof s !== 'string') s = String(s);
+  return s.replace(/&/g,'&amp;')...;
+}
+```
+
+- `null` / `undefined` → empty string (safe for missing fields)
+- numbers, booleans, objects → coerced via `String()`
+- ordinary strings → behaviour unchanged
+
+**Files touched (1z.102 only):**
+- `app.js` — `esc()` made defensive (line 15248); `APP_BUILD_TAG → 2.2.2-w15`.
+- `index.html` — `app.js?v=453`.
+- `sw.js` — `CACHE_VERSION = v5.339`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w15`, `app.js?v=453`, `sw.js v5.339`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log.
+
+**Manual QA (TestFlight 2.2.2-w15):**
+1. Boot — verify `"build":"2.2.2-w15"` via 5-tap debug export.
+2. Open Social tab — duels section should NOW load successfully.
+3. The pending outgoing challenge to rendiesel should appear under **Outgoing** with View / Cancel buttons.
+4. Have your friend send a challenge — should appear under **Incoming** with Accept / Decline / View buttons.
+5. Export breadcrumbs → `duels.debug` should show `render-complete` (no `render-threw`) for each render.
+
+**Acknowledgment.** Phases 1z.99 / 1z.100 / 1z.101 were chasing the wrong symptom. The real bug was a one-line `esc()` defensive gap, not race conditions or timeouts. The breadcrumb instrumentation in 1z.101 surfaced the actual root cause cleanly — instrumentation paid for itself. The 20-second total-timeout safety net stays in place as belt-and-braces against any future similar render-time errors.
+
+**Known non-goals:**
+- The backend returns duel IDs as numbers; not changed here (the frontend defense is sufficient and `esc()` should always have been defensive anyway).
+- No backend / D1 / HealthKit / Notification permission wording / boss / drop / economy changes.
+- Codemagic NOT triggered.
 
 ### Duels render — total-timeout safety net + breadcrumbs (v3 Phase 1z.101)
 

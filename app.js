@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w14';
+  const APP_BUILD_TAG = '2.2.2-w15';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15245,7 +15245,19 @@
   }
 
 
+  // v3 Phase 1z.102 — defensive type-coercion. Pre-1z.102 esc() called
+  // .replace() blindly, which throws "s.replace is not a function" when
+  // a caller passes undefined / null / a number / boolean. User-reported
+  // bug: an outgoing duel's `id` field arrived from the backend as a
+  // number; rendering the outgoing duel card threw "s.replace is not a
+  // function" inside renderDuelsSection, leaving the body on
+  // "Loading duels…" until 1z.101's total-timeout caught it.
+  // Defensive fix: null/undefined → empty string, anything else →
+  // String() coerced before replace. Behaviour for ordinary string
+  // inputs is unchanged.
   function esc(s) {
+    if (s == null) return '';
+    if (typeof s !== 'string') s = String(s);
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
