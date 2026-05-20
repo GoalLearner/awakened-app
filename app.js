@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w10';
+  const APP_BUILD_TAG = '2.2.2-w11';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19588,7 +19588,35 @@
       });
     } catch (_) { res = { ok: false, detail: 'Network error' }; }
     if (!res || !res.ok) {
-      showHabitToast((res && res.detail) || 'Could not send duel.');
+      // v3 Phase 1z.98 — Duels challenge discovery fix.
+      //
+      // Backend can reject a challenge with "A pending duel between you
+      // already exists." when the local cache says the user has no duels
+      // (stale view: the OTHER user sent a challenge while this user's
+      // Social tab was loaded earlier). Pre-1z.98 the toast appeared and
+      // the user had no path to find the pending duel — it stayed
+      // invisible in their UI.
+      //
+      // Fix: on ANY failure, force a renderDuelsSection() refresh so
+      // the freshly-fetched incoming bucket renders. If the duel is
+      // there, the user sees Accept/Decline immediately. The toast
+      // message is also rewritten to point users at the now-rendered
+      // Duels section.
+      const rawDetail = (res && res.detail) || 'Could not send duel.';
+      const isAlreadyExists = /pending.*duel.*already exists/i.test(rawDetail);
+      try { renderDuelsSection(); } catch (_) {}
+      if (isAlreadyExists) {
+        try {
+          showHabitToast(
+            'You already have a duel pending with this hunter. Check Discipline Duels above to accept or decline.',
+            { sticky: true }
+          );
+        } catch (_) {
+          showHabitToast(rawDetail);
+        }
+      } else {
+        showHabitToast(rawDetail);
+      }
       return false;
     }
     showHabitToast('Duel challenge sent.');
@@ -29829,6 +29857,17 @@
       // strip when the app comes back to foreground. 2-min cache
       // inside refreshHeaderDuelState protects against thrashing.
       try { refreshHeaderDuelState(); } catch (_) {}
+      // v3 Phase 1z.98 — refresh the Duels section when the user
+      // returns to foreground IF they're currently on the Social
+      // tab. Catches the "friend sent me a challenge while I was
+      // backgrounded — I have no way to see it" case that was the
+      // user-reported bug. Cheap (one fetchDuels call); only fires
+      // when the Duels UI is actually visible.
+      try {
+        if (currentTab === 'social' && typeof renderDuelsSection === 'function') {
+          renderDuelsSection();
+        }
+      } catch (_) {}
       // Steps Duel Scoring v1 (v3 Phase 1y) — push fresh step total
       // for any active steps duels (debounced to 5 min).
       try { submitActiveStepsDuelProgress(); } catch (_) {}

@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w10` |
-| `app.js?v=` | `448` |
+| `APP_BUILD_TAG` | `2.2.2-w11` |
+| `app.js?v=` | `449` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.334` |
+| `sw.js CACHE_VERSION` | `v5.335` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,55 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Discipline Duels — challenge discovery fix (v3 Phase 1z.98)
+
+**Bug reported.** User A (challenger) sent a Discipline Duel challenge to User B (recipient). User B opened the Social tab on his phone and saw "No active duel — Add a hunter below…" — the empty state. When User B tried to challenge User A BACK, the create-duel API rejected with "A pending duel between you already exists." User B then scrolled around the Duels section trying to find the pending challenge — couldn't see it anywhere. Stuck state: cannot accept, cannot decline, cannot start a new duel with this opponent.
+
+**Root cause (two-layered, both frontend).**
+
+1. **Stale local cache.** `renderDuelsSection()` runs only when the user switches TO the Social tab (line 15312, inside `switchTab` for `tab === 'social'`). It does NOT auto-refresh while the user remains on the tab, and it did NOT run on app foreground resume even if the user was on the Social tab when they backgrounded. So: User B opened Social → fetchDuels returned empty (no duels yet). User A then sent the challenge from a different device. User B's view stayed at the old "empty" result indefinitely until he manually switched tabs and came back.
+
+2. **No recovery from create-duel error.** When User B tried to challenge User A back, the create-duel API returned an "already exists" error. The frontend's `_submitDuelChallenge` handler (line 19581) just showed `res.detail` as a toast and returned. It did NOT refresh `renderDuelsSection`, did NOT guide the user to find the pending duel, did NOT provide ANY recovery path.
+
+**Both bugs are frontend-only — backend logic is correct (it properly rejects duplicate challenges and presumably surfaces the pending duel as "incoming" when fetched fresh). The frontend just never re-fetched at the right moments.**
+
+**Fix — two small changes:**
+
+1. **Visibility-resume refresh.** The main app-foreground visibility handler (line 29802) already does HealthKit cache invalidation, auto-verify retries, header pill refresh, etc. — but didn't refresh `renderDuelsSection`. Now it does, gated on `currentTab === 'social'` so it's free (no fetch) when the user is on any other tab. Catches: "friend sent challenge while I was backgrounded → I open the app → app immediately re-fetches duels → incoming card appears with Accept/Decline."
+
+2. **Create-duel failure → force refresh + actionable toast.** `_submitDuelChallenge` now calls `renderDuelsSection()` on FAILURE as well as success. When the error matches `/pending.*duel.*already exists/i`, it shows a sticky toast: "You already have a duel pending with this hunter. Check Discipline Duels above to accept or decline." This points the user at the now-fresh section where the incoming card has just rendered with Accept/Decline buttons.
+
+The existing Incoming Duel card UI at line 19384 (`duel-card--incoming` with Accept/Decline/View buttons + `_friendAvatarHtml`) is unchanged — it was already implemented and waiting. The bug was just that the data never re-flowed to it at the right moments.
+
+**Files touched (1z.98 only):**
+- `app.js` — `_submitDuelChallenge` error path enhanced (line 19590-19620); visibility handler refresh-on-resume gated on `currentTab === 'social'` (line ~29832-29840); `APP_BUILD_TAG → 2.2.2-w11`.
+- `index.html` — `app.js?v=449`.
+- `sw.js` — `CACHE_VERSION = v5.335`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w11`, `app.js?v=449`, `sw.js v5.335`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → no changes to test surface; suite still 8/8.
+
+**Manual QA (two devices required):**
+1. Device A (challenger) and Device B (recipient) both signed in as different hunters.
+2. Both add each other as friends. Confirm both can see each other under FRIENDS.
+3. Device A: tap Challenge on friend row → pick verified duel type → Submit. Confirm "Duel challenge sent." toast.
+4. Device B: open Social tab. Wait 5 seconds. If already there, swipe to background and reopen → renderDuelsSection refresh fires.
+5. Expected on Device B: under Discipline Duels, Incoming section now shows the challenge card with **Accept**, **Decline**, **View** buttons.
+6. Device B taps Accept → duel becomes active. Both devices see it under Active.
+7. Edge case: Device B tries to challenge Device A BACK before refreshing. Expected: "You already have a duel pending with this hunter. Check Discipline Duels above to accept or decline." toast (sticky) + the incoming card now visible after the forced refresh.
+
+**Known non-goals:**
+- Does NOT add polling (the visibility-resume refresh is the lightweight equivalent — fetchDuels only fires when the user actually returns to the app on the right tab).
+- Does NOT touch backend duel categorization. Backend's `/v1/duels` endpoint is assumed to correctly return pending duels in the `incoming` bucket for the recipient.
+- Does NOT change Duel mechanics (3-day duration, 25 souls stake, 40 souls reward, verified-only types). All product rules preserved.
+- No backend / D1 / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- Codemagic NOT triggered.
 
 ### Habit-mutation freeze fix — skipSideEffects on every user-mutation render (v3 Phase 1z.97)
 
