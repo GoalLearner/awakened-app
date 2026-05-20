@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w11';
+  const APP_BUILD_TAG = '2.2.2-w12';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19305,7 +19305,33 @@
     );
   }
 
+  // v3 Phase 1z.99 — in-flight guard + fetch timeout for renderDuelsSection.
+  //
+  // 1z.98 introduced a visibility-resume refresh that could race with the
+  // initial switchTab('social') call. Both call renderDuelsSection; both
+  // set body to "Loading duels…" then await fetchDuels. If the second
+  // call's "Loading duels…" assignment happened AFTER the first call's
+  // cards rendered, the body stayed stuck on "Loading duels…" visually
+  // even though data was ready.
+  //
+  // Also: fetchDuels had no timeout. If the backend hung or the device
+  // network was slow, the user saw "Loading duels…" indefinitely.
+  //
+  // Fix: a module-level flag prevents concurrent runs (the second call
+  // bails immediately if a first is still in-flight). A 15-second
+  // timeout on fetchDuels surfaces "Tap to retry" instead of an
+  // infinite loading state.
+  let _duelsRenderInFlight = false;
   async function renderDuelsSection() {
+    if (_duelsRenderInFlight) return;
+    _duelsRenderInFlight = true;
+    try {
+      await _renderDuelsSectionInner();
+    } finally {
+      _duelsRenderInFlight = false;
+    }
+  }
+  async function _renderDuelsSectionInner() {
     _ensureSocialMarkup();
     const body = document.getElementById('social-duels-body');
     if (!body) return;
@@ -19315,18 +19341,55 @@
       renderActiveDuelHero([]);
       return;
     }
-    body.innerHTML = '<div class="social-empty">Loading duels…</div>';
+    // Only show "Loading duels…" if we don't already have a cached
+    // result to render. Avoids the flash-to-loading regression when
+    // refresh happens while cards are already visible.
+    const hasCache = _duelsCache && _duelsCache.ok;
+    if (!hasCache) {
+      body.innerHTML = '<div class="social-empty">Loading duels…</div>';
+    }
     let res;
-    try { res = await Auth.fetchDuels(); }
-    catch (_) { res = { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
+    try {
+      // 15-second timeout — if the backend is slow or hung, surface a
+      // retry affordance instead of leaving "Loading duels…" forever.
+      const fetchPromise = Auth.fetchDuels();
+      const timeoutPromise = new Promise((_resolve, reject) => {
+        setTimeout(() => reject(new Error('timeout')), 15000);
+      });
+      res = await Promise.race([fetchPromise, timeoutPromise]);
+    }
+    catch (err) {
+      const isTimeout = err && String(err.message || err).indexOf('timeout') !== -1;
+      res = { ok: false, code: isTimeout ? 'TIMEOUT' : 'NETWORK',
+              detail: isTimeout ? 'Request timed out.' : 'Could not reach server.' };
+    }
     if (!res || !res.ok) {
       if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'STUB_USER' || res.code === 'LOCAL_DEV_SKIP')) {
         body.innerHTML = '<div class="social-empty">Sign in with Apple to duel.</div>';
         renderActiveDuelHero([]);
         return;
       }
-      body.innerHTML = '<div class="social-error">Could not load duels: ' + esc((res && res.detail) || 'unknown error') + '</div>';
-      renderActiveDuelHero([]);
+      // Error UI with a Tap to Retry button — replaces silent "Loading duels…"
+      // stuck state when backend is unreachable / slow / errored.
+      const errMsg = esc((res && res.detail) || 'unknown error');
+      body.innerHTML =
+        '<div class="social-error">Could not load duels: ' + errMsg + '</div>' +
+        '<div class="social-empty"><button id="duels-retry-btn" class="social-btn social-btn--primary" type="button">Tap to retry</button></div>';
+      try {
+        const retryBtn = document.getElementById('duels-retry-btn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', () => {
+            try { renderDuelsSection(); } catch (_) {}
+          });
+        }
+      } catch (_) {}
+      // If we have a stale cache, keep the hero showing the last-known
+      // active duel rather than wiping it to the empty state.
+      if (hasCache && _duelsCache && Array.isArray(_duelsCache.active)) {
+        renderActiveDuelHero(_duelsCache.active);
+      } else {
+        renderActiveDuelHero([]);
+      }
       return;
     }
     _duelsCache = res;

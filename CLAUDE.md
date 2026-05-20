@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w11` |
-| `app.js?v=` | `449` |
+| `APP_BUILD_TAG` | `2.2.2-w12` |
+| `app.js?v=` | `450` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.335` |
+| `sw.js CACHE_VERSION` | `v5.336` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,56 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Duels render — in-flight guard + fetch timeout (v3 Phase 1z.99)
+
+**Bug.** Build 87 (1z.98) shipped to the user. After install, their Discipline Duels section was permanently stuck on "Loading duels…" — no error, no cards, no recovery path.
+
+**Root cause.** 1z.98 added a visibility-resume `renderDuelsSection()` call that could race with the initial `switchTab('social')` call. Two interleaved invocations:
+
+```
+T+0ms   call #1 from switchTab → body = "Loading duels…" → await fetchDuels
+T+200ms call #1 fetchDuels resolves → body = rendered cards
+T+250ms visibility change fires (e.g. transient backgrounding)
+T+250ms call #2 from visibility handler → body = "Loading duels…" → await fetchDuels
+T+????  call #2 fetchDuels still in-flight → body STAYS "Loading duels…"
+```
+
+If the second fetch was slow or hung, the user saw "Loading duels…" indefinitely. Additionally, `Auth.fetchDuels()` had no client-side timeout — a hung backend hung the UI forever.
+
+**Fix — two layers:**
+
+1. **In-flight guard.** Module-level `_duelsRenderInFlight` flag. If `renderDuelsSection()` is called while a prior invocation is still running, the second call bails immediately. The first call completes uninterrupted. Cleared in a `finally` so an exception can never strand the flag.
+
+2. **15-second fetch timeout via `Promise.race`.** If the backend doesn't respond in 15 seconds, the catch branch fires with code `'TIMEOUT'` and the body renders an actionable error: "Could not load duels: Request timed out." with a **"Tap to retry"** button. Same UI on `NETWORK` errors. Cards no longer get stuck on the loading state.
+
+3. **Cache-first refresh, no flash-to-loading.** When `_duelsCache` is populated from a prior successful fetch, `renderDuelsSection()` skips setting body to "Loading duels…" — the existing cards stay visible while the fresh fetch runs in the background. If the refresh succeeds, cards swap in seamlessly. If it errors, the error UI shows but the hero still reflects the cached active duel (so the user doesn't lose context). First-ever load with no cache still shows "Loading duels…" as before.
+
+These three changes together make the duels section resilient to concurrent calls (the visibility handler can fire as often as it wants without breaking the UI), to slow backends (15-second timeout + retry), and to errors (cache survives a failed refresh).
+
+**Files touched (1z.99 only):**
+- `app.js` — `renderDuelsSection` split into outer guard + `_renderDuelsSectionInner`; 15-second timeout + retry button + cache-aware loading; `APP_BUILD_TAG → 2.2.2-w12`.
+- `index.html` — `app.js?v=450`.
+- `sw.js` — `CACHE_VERSION = v5.336`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w12`, `app.js?v=450`, `sw.js v5.336`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log.
+
+**Manual QA on TestFlight 2.2.2-w12:**
+1. Open Social tab — duels load normally with cards (or empty hero if no duels).
+2. Background app + foreground while on Social tab — no "Loading duels…" flash.
+3. Backend reachability test: turn on airplane mode → open Social tab → expected "Could not load duels: Could not reach server." with **Tap to retry** button. Disable airplane mode → tap retry → cards load.
+4. Rapid switching between tabs — no stuck loading state.
+
+**Known non-goals:**
+- Does not fix the (presumed) backend bug where new pending duels might not always be returned to the recipient. 1z.98 mitigates via foreground-resume refresh + create-failure refresh; 1z.99 hardens that refresh path against races and hangs.
+- No backend / D1 / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- Codemagic NOT triggered.
 
 ### Discipline Duels — challenge discovery fix (v3 Phase 1z.98)
 
