@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w13';
+  const APP_BUILD_TAG = '2.2.2-w14';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16123,6 +16123,18 @@
       }
     } catch (_) {}
 
+    // ── 1z.101 — duels render breadcrumbs ────────────────────
+    payload.duels = {};
+    try {
+      const raw = localStorage.getItem('hb_duels_debug_v1');
+      if (raw) {
+        try { payload.duels.debug = JSON.parse(raw); }
+        catch (_) { payload.duels.debugRaw = raw.slice(0, 4000); }
+      } else {
+        payload.duels.debug = [];
+      }
+    } catch (_) {}
+
     return payload;
   }
 
@@ -19305,6 +19317,27 @@
     );
   }
 
+  // v3 Phase 1z.101 — duels render breadcrumb ring + total-timeout
+  // safety net. Mirror of _addHabitBreadcrumb / _addNotifBreadcrumb.
+  // Capped 40 entries; included in Copy Debug Info export.
+  function _addDuelsBreadcrumb(step, data) {
+    try {
+      const key = 'hb_duels_debug_v1';
+      let existing;
+      try { existing = JSON.parse(localStorage.getItem(key) || '[]'); }
+      catch (_) { existing = []; }
+      if (!Array.isArray(existing)) existing = [];
+      const entry = { t: Date.now(), step: String(step) };
+      if (data !== undefined && data !== null) {
+        try { entry.data = JSON.parse(JSON.stringify(data)); } catch (_) {}
+      }
+      existing.push(entry);
+      if (existing.length > 40) existing.splice(0, existing.length - 40);
+      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+    } catch (_) {}
+    try { console.log('[duels-debug]', step, data || ''); } catch (_) {}
+  }
+
   // v3 Phase 1z.100 — request-token pattern for renderDuelsSection.
   //
   // 1z.99 used an in-flight boolean flag to prevent concurrent runs.
@@ -19333,18 +19366,62 @@
   let _duelsRenderToken = 0;
   async function renderDuelsSection() {
     const myToken = ++_duelsRenderToken;
+    _addDuelsBreadcrumb('render-start', { token: myToken });
+    // v3 Phase 1z.101 — total-timeout safety net. 1z.100's per-await
+    // 15-second timeout wasn't firing on iOS WKWebView in the user-
+    // reported case — possibly Capacitor throttles certain setTimeouts
+    // when fetches are pending, OR fetchDuels resolves but a downstream
+    // await (e.g. maybeResolveDuelIfEnded) hangs. Either way, wrap the
+    // entire inner render in a Promise.race so NO render call can hang
+    // longer than 20 seconds. If it does, render an error UI with a
+    // retry button so the user always has a recovery path.
+    const inner = _renderDuelsSectionInner(myToken);
+    const totalTimeout = new Promise((_resolve, reject) => {
+      setTimeout(() => reject(new Error('total-timeout')), 20000);
+    });
     try {
-      await _renderDuelsSectionInner(myToken);
-    } catch (_) {
-      // Defensive — _renderDuelsSectionInner is wrapped internally too.
+      await Promise.race([inner, totalTimeout]);
+      _addDuelsBreadcrumb('render-complete', { token: myToken });
+    } catch (err) {
+      const isTotalTimeout = err && String(err.message || err).indexOf('total-timeout') !== -1;
+      _addDuelsBreadcrumb('render-threw', {
+        token: myToken,
+        isTotalTimeout,
+        err: String(err && err.message || err),
+      });
+      // Only update DOM if we're still the latest call.
+      if (myToken !== _duelsRenderToken) return;
+      try {
+        const body = document.getElementById('social-duels-body');
+        if (body) {
+          const reason = isTotalTimeout ? 'Render timed out.' : 'Render failed.';
+          body.innerHTML =
+            '<div class="social-error">Could not load duels: ' + esc(reason) + '</div>' +
+            '<div class="social-empty"><button id="duels-retry-btn" class="social-btn social-btn--primary" type="button">Tap to retry</button></div>';
+          const retryBtn = document.getElementById('duels-retry-btn');
+          if (retryBtn) {
+            retryBtn.addEventListener('click', () => {
+              try { renderDuelsSection(); } catch (_) {}
+            });
+          }
+        }
+        // Keep the hero showing cached active duel if any.
+        if (_duelsCache && Array.isArray(_duelsCache.active)) {
+          renderActiveDuelHero(_duelsCache.active);
+        } else {
+          renderActiveDuelHero([]);
+        }
+      } catch (_) {}
     }
   }
   async function _renderDuelsSectionInner(myToken) {
+    _addDuelsBreadcrumb('inner-start', { token: myToken });
     _ensureSocialMarkup();
     const body = document.getElementById('social-duels-body');
-    if (!body) return;
+    if (!body) { _addDuelsBreadcrumb('inner-no-body', { token: myToken }); return; }
     if (!window.Auth || typeof Auth.fetchDuels !== 'function') {
-      if (myToken !== _duelsRenderToken) return; // stale
+      if (myToken !== _duelsRenderToken) { _addDuelsBreadcrumb('inner-stale-pre-auth', { token: myToken }); return; }
+      _addDuelsBreadcrumb('inner-no-auth', { token: myToken });
       body.innerHTML = '<div class="social-empty">Sign in to duel.</div>';
       // Render an empty hero so the page header doesn't sit on nothing.
       renderActiveDuelHero([]);
@@ -19357,6 +19434,7 @@
     if (!hasCache) {
       body.innerHTML = '<div class="social-empty">Loading duels…</div>';
     }
+    _addDuelsBreadcrumb('inner-pre-fetch', { token: myToken, hasCache });
     let res;
     try {
       // 15-second timeout — if the backend is slow or hung, surface a
@@ -19366,16 +19444,18 @@
         setTimeout(() => reject(new Error('timeout')), 15000);
       });
       res = await Promise.race([fetchPromise, timeoutPromise]);
+      _addDuelsBreadcrumb('inner-fetch-ok', { token: myToken, ok: !!(res && res.ok) });
     }
     catch (err) {
       const isTimeout = err && String(err.message || err).indexOf('timeout') !== -1;
+      _addDuelsBreadcrumb('inner-fetch-threw', { token: myToken, isTimeout, err: String(err && err.message || err) });
       res = { ok: false, code: isTimeout ? 'TIMEOUT' : 'NETWORK',
               detail: isTimeout ? 'Request timed out.' : 'Could not reach server.' };
     }
     // 1z.100 — stale-call guard. If a newer renderDuelsSection() call
     // has started while we were awaiting fetch, discard our result so
     // we don't clobber the newer call's UI updates.
-    if (myToken !== _duelsRenderToken) return;
+    if (myToken !== _duelsRenderToken) { _addDuelsBreadcrumb('inner-stale-post-fetch', { token: myToken }); return; }
     if (!res || !res.ok) {
       if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'STUB_USER' || res.code === 'LOCAL_DEV_SKIP')) {
         body.innerHTML = '<div class="social-empty">Sign in with Apple to duel.</div>';
@@ -19411,22 +19491,25 @@
     // duels past their ends_at. If any resolved, re-fetch so the
     // freshly-completed ones flow into the `recent` bucket.
     const activeRaw = Array.isArray(res.active) ? res.active : [];
+    _addDuelsBreadcrumb('inner-pre-resolve-loop', { token: myToken, activeCount: activeRaw.length });
     let didResolveAny = false;
     for (const d of activeRaw) {
       const resolved = await maybeResolveDuelIfEnded(d);
       // 1z.100 — stale-call guard inside the loop too. Each iteration
       // can take seconds (network resolve call); a newer render call
       // could start in between.
-      if (myToken !== _duelsRenderToken) return;
+      if (myToken !== _duelsRenderToken) { _addDuelsBreadcrumb('inner-stale-in-resolve-loop', { token: myToken }); return; }
       if (resolved) didResolveAny = true;
     }
+    _addDuelsBreadcrumb('inner-post-resolve-loop', { token: myToken, didResolveAny });
     if (didResolveAny) {
       let res2;
       try { res2 = await Auth.fetchDuels(); }
       catch (_) { res2 = null; }
       // 1z.100 — stale-call guard after re-fetch.
-      if (myToken !== _duelsRenderToken) return;
+      if (myToken !== _duelsRenderToken) { _addDuelsBreadcrumb('inner-stale-post-refetch', { token: myToken }); return; }
       if (res2 && res2.ok) { res = res2; _duelsCache = res2; }
+      _addDuelsBreadcrumb('inner-post-refetch', { token: myToken, refetchOk: !!(res2 && res2.ok) });
     }
 
     const incoming = Array.isArray(res.incoming) ? res.incoming : [];
@@ -19452,6 +19535,7 @@
 
     // Drive the hero with the most-recently-accepted active duel.
     renderActiveDuelHero(active);
+    _addDuelsBreadcrumb('inner-hero-rendered', { token: myToken, activeCount: active.length, incomingCount: incoming.length, outgoingCount: outgoing.length });
 
     const fmtRemaining = ms => {
       if (typeof ms !== 'number' || ms <= 0) return 'ending soon';

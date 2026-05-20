@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w13` |
-| `app.js?v=` | `451` |
+| `APP_BUILD_TAG` | `2.2.2-w14` |
+| `app.js?v=` | `452` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.337` |
+| `sw.js CACHE_VERSION` | `v5.338` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,54 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Duels render — total-timeout safety net + breadcrumbs (v3 Phase 1z.101)
+
+**Bug.** Build 88 (1z.100) shipped the request-token pattern. User reported the Duels section was STILL stuck on "Loading duels…" on the new build. Debug export confirmed `"build":"2.2.2-w13"` — 1z.100 was definitely installed.
+
+**Why 1z.100 didn't fix it.** The token pattern only handles CONCURRENT calls. It doesn't help if a SINGLE call's `await` never resolves AND no newer call comes in to invalidate the token. The user's notif breadcrumbs showed JS was alive (recover-start firing on visibility resumes), but the duels section stayed on "Loading duels…" for >30 seconds — well past the 15s per-await timeout I added in 1z.99. So either:
+- The 15s `setTimeout` itself wasn't firing on iOS WKWebView (Capacitor may throttle certain timers in some states), OR
+- `fetchDuels` resolved but a downstream `await` (e.g. `maybeResolveDuelIfEnded` calling `Auth.resolveDuel`) hangs forever.
+
+Either way, the render path needs an UPPER-BOUND escape hatch.
+
+**Fix — total-timeout safety net.** Wrap the entire `_renderDuelsSectionInner` call in a `Promise.race` against a 20-second total timeout. If the inner render takes longer than 20 seconds (for ANY reason — fetch hang, resolve hang, infinite loop, anything), the race rejects with `'total-timeout'`. The outer handler renders the error UI with a "Tap to retry" button — same recovery path as the per-await timeout from 1z.99/1z.100.
+
+Plus: **per-step breadcrumb instrumentation throughout the render path**, written to `localStorage.hb_duels_debug_v1` (40-entry ring, included in the Copy Debug Info export). Breadcrumbs at:
+- `render-start` / `render-complete` / `render-threw`
+- `inner-start` / `inner-no-body` / `inner-no-auth` / `inner-pre-fetch`
+- `inner-fetch-ok` / `inner-fetch-threw` (with isTimeout flag)
+- `inner-stale-pre-auth` / `inner-stale-post-fetch` / `inner-stale-in-resolve-loop` / `inner-stale-post-refetch`
+- `inner-pre-resolve-loop` / `inner-post-resolve-loop` (with `didResolveAny`)
+- `inner-post-refetch`
+- `inner-hero-rendered` (with active/incoming/outgoing counts — proves render completed)
+
+If 1z.101 STILL has the stuck state, the next debug export will reveal exactly which step the render reached before hanging. Surgical follow-up rather than guessing.
+
+**Files touched (1z.101 only):**
+- `app.js` — `_addDuelsBreadcrumb` helper; total-timeout wrapper on `renderDuelsSection`; breadcrumbs throughout `_renderDuelsSectionInner`; `payload.duels` section in Copy Debug Info export; `APP_BUILD_TAG → 2.2.2-w14`.
+- `index.html` — `app.js?v=452`.
+- `sw.js` — `CACHE_VERSION = v5.338`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w14`, `app.js?v=452`, `sw.js v5.338`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log.
+
+**Manual QA (TestFlight 2.2.2-w14):**
+1. Boot — verify `"build":"2.2.2-w14"` via 5-tap debug export.
+2. Open Social tab. Duels should load OR (worst case) timeout within 20s → retry button appears.
+3. If retry button appears, tap it. Should retry the fetch cleanly.
+4. Background + foreground. Either cards load OR retry button appears within 20s.
+5. Export debug info → inspect `duels.debug` ring to see exactly where each render reached.
+
+**Known non-goals:**
+- Doesn't fix the underlying iOS WKWebView setTimeout-throttling or backend slowness — just bounds the user-visible damage.
+- No backend / D1 / HealthKit / Notification permission wording / boss / drop / economy changes.
+- Codemagic NOT triggered.
 
 ### Duels render — request-token pattern (v3 Phase 1z.100)
 
