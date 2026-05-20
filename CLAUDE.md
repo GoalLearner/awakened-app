@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w12` |
-| `app.js?v=` | `450` |
+| `APP_BUILD_TAG` | `2.2.2-w13` |
+| `app.js?v=` | `451` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.336` |
+| `sw.js CACHE_VERSION` | `v5.337` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,90 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Duels render — request-token pattern (v3 Phase 1z.100)
+
+**Bug.** Build 87 (1z.99) shipped the in-flight guard fix, but the user reported the Duels section was STILL stuck on "Loading duels…" on the new build. Debug export confirmed `"build":"2.2.2-w12"` — so 1z.99 was definitely installed.
+
+**Root cause of the 1z.99 failure.** The in-flight boolean flag approach has a fatal flaw on iOS Capacitor:
+
+```js
+let _duelsRenderInFlight = false;
+async function renderDuelsSection() {
+  if (_duelsRenderInFlight) return;
+  _duelsRenderInFlight = true;
+  try { await _renderDuelsSectionInner(); }
+  finally { _duelsRenderInFlight = false; }
+}
+```
+
+When the app backgrounds on iOS, in-flight `fetch()` promises and `setTimeout` callbacks get paused — and on app foreground they often **DON'T resume** (iOS killed the underlying network connection / timer). This means:
+
+- First `renderDuelsSection()` call: flag→true, body→"Loading duels…", awaits fetchDuels.
+- App backgrounds. fetchDuels promise is now paused permanently.
+- App foregrounds. Visibility handler from 1z.98 calls `renderDuelsSection()` again.
+- Second call: flag is still `true`. Bails immediately.
+- Original promise never settles. The finally never runs. Flag stuck `true`.
+- Every subsequent call bails. Body forever stuck on "Loading duels…".
+
+Confirmed by debug export's `notif.debug` timeline showing 11 visibility-resume cycles (`recover-start` entries) — each one would have hit the stuck-flag bail.
+
+**Fix — request-token pattern.** Replace the boolean flag with a monotonically-increasing token:
+
+```js
+let _duelsRenderToken = 0;
+async function renderDuelsSection() {
+  const myToken = ++_duelsRenderToken;
+  await _renderDuelsSectionInner(myToken);
+}
+async function _renderDuelsSectionInner(myToken) {
+  // ... await fetchDuels ...
+  if (myToken !== _duelsRenderToken) return; // stale — silently exit
+  // ... await maybeResolveDuelIfEnded loop ...
+  if (myToken !== _duelsRenderToken) return; // stale check after each await
+  // ... render
+}
+```
+
+Each call increments the token and captures its number. After every `await`, the call checks whether it's still the latest token. If a newer call has started, the older one silently exits without touching the DOM. The latest call always wins. Stale stuck calls discard their results when (or if) they eventually resolve.
+
+This guarantees:
+- **Visibility-resume always proceeds.** No flag to be stuck.
+- **Concurrent calls don't race on the DOM.** Only the latest writes.
+- **Stuck/cancelled prior calls can't pollute newer calls' UI.** Token check after each await ensures this.
+
+The 1z.99 15-second fetch timeout + cache-aware loading state suppression + retry button are all retained. The "always wins" property of the token pattern makes them work reliably even after iOS suspension events.
+
+Token checks placed at three points:
+1. Right after the `Auth.fetchDuels()` race (post-fetch staleness check).
+2. Inside the `maybeResolveDuelIfEnded` loop (post-iteration check — each network resolve can take seconds).
+3. Right after the optional re-fetch when an active duel auto-resolved.
+
+**Files touched (1z.100 only):**
+- `app.js` — `_duelsRenderInFlight` boolean replaced with `_duelsRenderToken` integer; three token-staleness checks inserted at await boundaries; `APP_BUILD_TAG → 2.2.2-w13`.
+- `index.html` — `app.js?v=451`.
+- `sw.js` — `CACHE_VERSION = v5.337`.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w13`, `app.js?v=451`, `sw.js v5.337`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log.
+
+**Manual QA (TestFlight 2.2.2-w13):**
+1. Boot — verify `"build":"2.2.2-w13"` via 5-tap debug export.
+2. **Open Social tab** — duels load (cards or empty hero).
+3. **Background → foreground while on Social** — duels reload, no stuck "Loading duels…".
+4. **Background mid-fetch** (open Social, IMMEDIATELY background app, wait 30s, return) → second fetch should proceed cleanly. No stuck loading state.
+5. **Have friend send a challenge** — return to app → challenge appears in Incoming with Accept/Decline.
+6. **Repeat 3-5x** to confirm consistency.
+
+**Known non-goals:**
+- The 15-second timeout still applies. If the backend is truly down for >15s, the user sees "Could not load duels: Request timed out. [Tap to retry]" — by design.
+- Doesn't touch any backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy code.
+- Codemagic NOT triggered.
 
 ### Duels render — in-flight guard + fetch timeout (v3 Phase 1z.99)
 

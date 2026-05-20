@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w12';
+  const APP_BUILD_TAG = '2.2.2-w13';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19305,37 +19305,46 @@
     );
   }
 
-  // v3 Phase 1z.99 — in-flight guard + fetch timeout for renderDuelsSection.
+  // v3 Phase 1z.100 — request-token pattern for renderDuelsSection.
   //
-  // 1z.98 introduced a visibility-resume refresh that could race with the
-  // initial switchTab('social') call. Both call renderDuelsSection; both
-  // set body to "Loading duels…" then await fetchDuels. If the second
-  // call's "Loading duels…" assignment happened AFTER the first call's
-  // cards rendered, the body stayed stuck on "Loading duels…" visually
-  // even though data was ready.
+  // 1z.99 used an in-flight boolean flag to prevent concurrent runs.
+  // BUG: on iOS Capacitor, when the app backgrounds, in-flight fetch
+  // promises and setTimeouts get paused — and on app foreground they
+  // often DON'T resume (iOS killed the underlying connection). The
+  // flag stayed `true` forever, the finally clause never ran, and
+  // every subsequent renderDuelsSection() call (including the
+  // visibility-resume one from 1z.98) bailed immediately. Body stuck
+  // on "Loading duels…" indefinitely.
   //
-  // Also: fetchDuels had no timeout. If the backend hung or the device
-  // network was slow, the user saw "Loading duels…" indefinitely.
+  // Fix: replace the flag with a monotonically-increasing token.
+  // Each call increments and captures its token. After EVERY await,
+  // the call checks whether it's still the latest token — if a newer
+  // call has started, the older one silently exits without touching
+  // the DOM. The latest call always wins. Stale stuck calls discard
+  // their results when (or if) they eventually resolve.
   //
-  // Fix: a module-level flag prevents concurrent runs (the second call
-  // bails immediately if a first is still in-flight). A 15-second
-  // timeout on fetchDuels surfaces "Tap to retry" instead of an
-  // infinite loading state.
-  let _duelsRenderInFlight = false;
+  // This guarantees:
+  //   - Visibility-resume always proceeds (no flag to be stuck).
+  //   - Concurrent calls don't race on the DOM (only the latest writes).
+  //   - Stuck/cancelled prior calls can't pollute newer calls' UI.
+  //
+  // Also retains 1z.99's 15-second fetch timeout + cache-aware loading
+  // state suppression.
+  let _duelsRenderToken = 0;
   async function renderDuelsSection() {
-    if (_duelsRenderInFlight) return;
-    _duelsRenderInFlight = true;
+    const myToken = ++_duelsRenderToken;
     try {
-      await _renderDuelsSectionInner();
-    } finally {
-      _duelsRenderInFlight = false;
+      await _renderDuelsSectionInner(myToken);
+    } catch (_) {
+      // Defensive — _renderDuelsSectionInner is wrapped internally too.
     }
   }
-  async function _renderDuelsSectionInner() {
+  async function _renderDuelsSectionInner(myToken) {
     _ensureSocialMarkup();
     const body = document.getElementById('social-duels-body');
     if (!body) return;
     if (!window.Auth || typeof Auth.fetchDuels !== 'function') {
+      if (myToken !== _duelsRenderToken) return; // stale
       body.innerHTML = '<div class="social-empty">Sign in to duel.</div>';
       // Render an empty hero so the page header doesn't sit on nothing.
       renderActiveDuelHero([]);
@@ -19363,6 +19372,10 @@
       res = { ok: false, code: isTimeout ? 'TIMEOUT' : 'NETWORK',
               detail: isTimeout ? 'Request timed out.' : 'Could not reach server.' };
     }
+    // 1z.100 — stale-call guard. If a newer renderDuelsSection() call
+    // has started while we were awaiting fetch, discard our result so
+    // we don't clobber the newer call's UI updates.
+    if (myToken !== _duelsRenderToken) return;
     if (!res || !res.ok) {
       if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'STUB_USER' || res.code === 'LOCAL_DEV_SKIP')) {
         body.innerHTML = '<div class="social-empty">Sign in with Apple to duel.</div>';
@@ -19401,12 +19414,18 @@
     let didResolveAny = false;
     for (const d of activeRaw) {
       const resolved = await maybeResolveDuelIfEnded(d);
+      // 1z.100 — stale-call guard inside the loop too. Each iteration
+      // can take seconds (network resolve call); a newer render call
+      // could start in between.
+      if (myToken !== _duelsRenderToken) return;
       if (resolved) didResolveAny = true;
     }
     if (didResolveAny) {
       let res2;
       try { res2 = await Auth.fetchDuels(); }
       catch (_) { res2 = null; }
+      // 1z.100 — stale-call guard after re-fetch.
+      if (myToken !== _duelsRenderToken) return;
       if (res2 && res2.ok) { res = res2; _duelsCache = res2; }
     }
 
