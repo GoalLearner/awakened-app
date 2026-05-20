@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────
+# scripts/prep-local-build.sh
+#
+# Local mirror of codemagic.yaml's prep steps so a MacBook can produce
+# a TestFlight-ready Xcode archive without Codemagic. Idempotent.
+#
+# Replicates (in order):
+#   1. Copy PWA files into www/                       (codemagic.yaml line 79)
+#   2. Wipe ios/App/App/public/ before cap sync       (codemagic.yaml line 418)
+#   3. cap sync ios                                   (codemagic.yaml line 433)
+#   4. Bump iOS deployment target to 14.0             (codemagic.yaml line 165)
+#   5. pod install                                    (inside cap sync, but
+#                                                      we run again after bump)
+#   6. ITSAppUsesNonExemptEncryption=false in Info.plist (line 614)
+#   7. HealthKit usage descriptions + entitlement     (line 625)
+#   8. Sign in with Apple entitlement                 (line 667)
+#   9. Wire CODE_SIGN_ENTITLEMENTS into Xcode project (line 686)
+#
+# Does NOT do (you handle these in Xcode):
+#   • Signing (Xcode auto-signing or manual profile)
+#   • agvtool build-number bump (pass build number via $1 if you want it set;
+#     otherwise just bump in Xcode → General → Identity → Build before archiving)
+#   • Archive itself (Product → Archive in Xcode)
+#   • Upload (Organizer → Distribute App → App Store Connect)
+#
+# Usage:
+#   bash scripts/prep-local-build.sh                       # prep only
+#   bash scripts/prep-local-build.sh 81                    # prep + set build number to 81
+#
+# Exit nonzero on any failure. Verbose by default so a stuck step is obvious.
+# ─────────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+# Project root assumed = parent of this script's directory.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+BUILD_NUMBER_ARG="${1:-}"
+
+echo "════════════════════════════════════════════════════════════"
+echo "LOCAL BUILD PREP — Awakened iOS"
+echo "════════════════════════════════════════════════════════════"
+echo "Project root: $PROJECT_ROOT"
+echo "Build number arg: ${BUILD_NUMBER_ARG:-(not set — bump manually in Xcode)}"
+echo "Git HEAD: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+echo "Disk free: $(df -h . | tail -1 | awk '{print $4}')"
+echo ""
+
+# ── 1. Copy PWA files into www/ ─────────────────────────────────────
+echo "── [1/9] Copy PWA files into www/ ──"
+rm -rf www
+mkdir -p www
+cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
+cp avatar-*.png www/
+cp icon-192.png icon-512.png www/
+mkdir -p www/assets/tab-icons
+for icon in tab-status tab-habits tab-stats tab-history tab-dungeon tab-items tab-social; do
+  cp "assets/tab-icons/$icon.png" "www/assets/tab-icons/$icon.png"
+done
+mkdir -p www/assets/stat-icons
+for icon in stat-str stat-vit stat-int stat-focus stat-will stat-wlt; do
+  cp "assets/stat-icons/$icon.png" "www/assets/stat-icons/$icon.png"
+done
+mkdir -p www/assets/habit-icons
+# Mirrors codemagic.yaml line 104 — full curated coverage.
+for icon in \
+  icon-water icon-sleep icon-wake icon-walk icon-cardio icon-strength \
+  icon-sunlight icon-gratitude icon-vitamins icon-meditate icon-nutrition \
+  icon-nophone icon-business icon-cold icon-connection icon-finance \
+  icon-grounding icon-journal icon-learning icon-mobility icon-noalcohol \
+  icon-nocaffeine icon-nodoomscroll icon-noscreen-bed icon-nosugar \
+  icon-protein icon-read icon-target icon-tidy icon-sprint icon-nosocial \
+  icon-priority icon-plan-tomorrow icon-screen-cap icon-podcast icon-pray \
+  icon-visualize icon-pack-morning icon-pack-lockedin icon-pack-custom \
+  icon-streak icon-xp icon-class-civilian icon-class-warrior \
+  icon-class-ranger icon-class-mage icon-class-assassin icon-class-paladin \
+  icon-class-merchant icon-class-sage; do
+  src="assets/habit-icons/$icon.png"
+  if [ -f "$src" ]; then
+    cp "$src" "www/assets/habit-icons/$icon.png"
+  else
+    echo "  WARN: $src missing (skipping)"
+  fi
+done
+mkdir -p www/assets/gates
+for gate in gate-e-rank gate-d-rank gate-c-rank gate-b-rank gate-a-rank gate-s-rank; do
+  src="assets/gates/$gate.png"
+  if [ -f "$src" ]; then cp "$src" "www/assets/gates/$gate.png"; fi
+done
+mkdir -p www/assets/bosses
+if compgen -G "assets/bosses/*.png" > /dev/null; then
+  cp assets/bosses/*.png www/assets/bosses/
+fi
+mkdir -p www/assets/icons
+for icon in souls-icon; do
+  src="assets/icons/$icon.png"
+  if [ -f "$src" ]; then cp "$src" "www/assets/icons/$icon.png"; fi
+done
+mkdir -p www/assets/items
+if compgen -G "assets/items/*.png" > /dev/null; then
+  cp assets/items/*.png www/assets/items/
+fi
+echo "  www/ assembled."
+echo ""
+
+# Verify version knobs are in www/ (sanity check)
+echo "── Version knob sanity ──"
+WWW_BUILD_TAG=$(grep -oE "APP_BUILD_TAG\s*=\s*'[^']+'" www/app.js | head -1 || true)
+WWW_APPJS_V=$(grep -oE "app\.js\?v=[0-9]+" www/index.html | head -1 || true)
+WWW_SW_CV=$(grep -oE "CACHE_VERSION\s*=\s*'[^']+'" www/sw.js | head -1 || true)
+echo "  www/app.js  $WWW_BUILD_TAG"
+echo "  www/index.html  $WWW_APPJS_V"
+echo "  www/sw.js  $WWW_SW_CV"
+if [ -z "$WWW_BUILD_TAG" ]; then
+  echo "  FAIL: APP_BUILD_TAG missing from www/app.js"
+  exit 1
+fi
+echo ""
+
+# ── 2. Wipe ios/App/App/public/ before sync ─────────────────────────
+echo "── [2/9] Force-clean ios/App/App/public/ ──"
+if [ -d ios/App/App/public ]; then
+  rm -rf ios/App/App/public/*
+  echo "  ios/App/App/public/* wiped."
+else
+  echo "  ios/App/App/public/ does not exist yet — cap sync will create it"
+fi
+echo ""
+
+# ── 3. cap sync ios ──────────────────────────────────────────────────
+echo "── [3/9] npx cap sync ios ──"
+if [ ! -d node_modules ]; then
+  echo "  node_modules missing — running npm install first (may take 2–4 min)"
+  npm install
+fi
+npx cap sync ios
+echo ""
+
+# ── 4. Bump iOS deployment target to 14.0 ───────────────────────────
+echo "── [4/9] Bump iOS deployment target to 14.0 ──"
+if [ -f ios/App/Podfile ]; then
+  sed -i.bak "s/platform :ios, '[0-9.]*'/platform :ios, '14.0'/" ios/App/Podfile
+  rm -f ios/App/Podfile.bak
+  echo "  Podfile: $(grep "platform :ios" ios/App/Podfile)"
+fi
+if [ -f ios/App/App.xcodeproj/project.pbxproj ]; then
+  # sed in-place differs between BSD (macOS) and GNU. BSD requires ''
+  # after -i. We're macOS-only, so:
+  sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
+  echo "  project.pbxproj: $(grep -c "IPHONEOS_DEPLOYMENT_TARGET = 14.0" ios/App/App.xcodeproj/project.pbxproj) occurrences at 14.0"
+fi
+echo ""
+
+# ── 5. pod install ──────────────────────────────────────────────────
+echo "── [5/9] pod install ──"
+if ! command -v pod >/dev/null 2>&1; then
+  echo "  FAIL: CocoaPods (pod) not installed. Run: brew install cocoapods"
+  exit 1
+fi
+(cd ios/App && pod install)
+echo ""
+
+# ── 6. ITSAppUsesNonExemptEncryption = false ────────────────────────
+echo "── [6/9] Export compliance flag ──"
+PLIST="ios/App/App/Info.plist"
+if [ ! -f "$PLIST" ]; then
+  echo "  FAIL: $PLIST missing"
+  exit 1
+fi
+/usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+echo "  ITSAppUsesNonExemptEncryption: $(/usr/libexec/PlistBuddy -c "Print :ITSAppUsesNonExemptEncryption" "$PLIST")"
+echo ""
+
+# ── 7. HealthKit usage descriptions + entitlement ───────────────────
+echo "── [7/9] HealthKit Info.plist + entitlement ──"
+ENTITLEMENTS="ios/App/App/App.entitlements"
+SHARE_DESC="Awakened uses Apple Health to verify your habits and unlock boss battles in future versions. Your data stays on your device."
+UPDATE_DESC="Awakened only reads from Apple Health. It does not write to it."
+
+/usr/libexec/PlistBuddy -c "Add :NSHealthShareUsageDescription string '$SHARE_DESC'" "$PLIST" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :NSHealthShareUsageDescription '$SHARE_DESC'" "$PLIST"
+
+/usr/libexec/PlistBuddy -c "Add :NSHealthUpdateUsageDescription string '$UPDATE_DESC'" "$PLIST" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :NSHealthUpdateUsageDescription '$UPDATE_DESC'" "$PLIST"
+
+if [ ! -f "$ENTITLEMENTS" ]; then
+  echo '<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+</dict>
+</plist>' > "$ENTITLEMENTS"
+fi
+
+/usr/libexec/PlistBuddy -c "Add :com.apple.developer.healthkit bool true" "$ENTITLEMENTS" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :com.apple.developer.healthkit true" "$ENTITLEMENTS"
+echo "  HealthKit entitlement set."
+echo ""
+
+# ── 8. Sign in with Apple entitlement ───────────────────────────────
+echo "── [8/9] Sign in with Apple entitlement ──"
+/usr/libexec/PlistBuddy -c "Add :com.apple.developer.applesignin array" "$ENTITLEMENTS" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :com.apple.developer.applesignin:0 string 'Default'" "$ENTITLEMENTS" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :com.apple.developer.applesignin:0 'Default'" "$ENTITLEMENTS"
+echo "  applesignin entitlement: $(/usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$ENTITLEMENTS" | tr -d '\n')"
+echo ""
+
+# ── 9. Wire CODE_SIGN_ENTITLEMENTS into Xcode project ───────────────
+echo "── [9/9] Wire CODE_SIGN_ENTITLEMENTS into project.pbxproj ──"
+(cd ios/App && ruby -e "
+  require 'xcodeproj'
+  project_path = 'App.xcodeproj'
+  project = Xcodeproj::Project.open(project_path)
+  target = project.targets.find { |t| t.name == 'App' }
+  raise 'App target not found' unless target
+  target.build_configurations.each do |config|
+    config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
+    puts \"  Set CODE_SIGN_ENTITLEMENTS for #{config.name}\"
+  end
+  project.save
+  puts '  project.pbxproj saved'
+")
+echo ""
+
+# ── Optional: build-number bump ─────────────────────────────────────
+if [ -n "$BUILD_NUMBER_ARG" ]; then
+  echo "── [optional] Set build number to $BUILD_NUMBER_ARG ──"
+  (cd ios/App && agvtool new-marketing-version "2.2.2")
+  (cd ios/App && agvtool new-version -all "$BUILD_NUMBER_ARG")
+  echo ""
+else
+  echo "── [optional] Build number NOT set — bump it in Xcode before archiving"
+  echo "    Xcode → App target → General → Identity → Build"
+  echo "    Set to one higher than the latest TestFlight build for this version."
+  echo ""
+fi
+
+echo "════════════════════════════════════════════════════════════"
+echo "PREP COMPLETE — open Xcode to archive"
+echo "════════════════════════════════════════════════════════════"
+echo "Next: npx cap open ios"
+echo "Then in Xcode:"
+echo "  1. Top device dropdown → 'Any iOS Device (arm64)'"
+echo "  2. App target → Signing & Capabilities — verify Team + Bundle ID"
+echo "  3. App target → General → Identity → Build = next available number"
+echo "  4. Product → Archive  (takes 5–15 min)"
+echo "  5. Organizer opens → Distribute App → App Store Connect → Upload"
+echo ""

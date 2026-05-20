@@ -292,6 +292,38 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### Local-build pipeline — MacBook archive without Codemagic (v3 Phase 1z.93)
+
+**Trigger.** User decided to stop relying on Codemagic ($31/mo cumulative debug-cycle cost was higher than expected). All future TestFlight builds will be archived locally from a MacBook Air via Xcode and uploaded to App Store Connect through Organizer.
+
+**Fix — two files, zero runtime impact:**
+
+1. **`scripts/prep-local-build.sh`** (new). One-shot deterministic prep script that mirrors `codemagic.yaml`'s nine prep steps (web asset copy with codemagic.yaml's curated allowlist, public-dir wipe, `cap sync ios`, deployment-target bump, `pod install`, `ITSAppUsesNonExemptEncryption`, HealthKit + applesignin entitlements, `CODE_SIGN_ENTITLEMENTS` Ruby wiring via xcodeproj gem, optional agvtool build-number bump). Idempotent. Prints disk space, git HEAD, and version-knob sanity at start. Designed to fail loudly on any missing input rather than silently shipping a stale bundle.
+
+2. **`LOCAL_BUILD.md`** (new). Step-by-step reference for the per-build workflow on the Mac. Covers one-time setup (Xcode, Homebrew, Node, CocoaPods, xcodeproj gem, Apple Developer sign-in), per-build commands, and troubleshooting for the known failure modes (`applesignin` provisioning bug, missing Apple Distribution cert, build-number collisions, agvtool not found, disk-space runs).
+
+**What this does NOT do:**
+- Does NOT touch any runtime code (`app.js`, `sw.js`, `index.html`, `styles.css`, `auth.js` all untouched).
+- Does NOT bump version knobs. `APP_BUILD_TAG` stays at `2.2.2-w6`, `app.js?v=444`, `sw.js v5.330`. Local archives off HEAD `7100aec` ship 1z.92 (the debug export) as the user-visible change.
+- Does NOT remove Codemagic. `codemagic.yaml` stays intact as a fallback / safety net. The local script and Codemagic produce equivalent IPAs (same prep steps, same entitlements, same signing model).
+- Does NOT automate signing or upload — Xcode GUI handles those because they're more reliable when interactive (Apple ID 2FA, manual provisioning profile selection, etc.).
+
+**Files touched (1z.93 only):**
+- `scripts/prep-local-build.sh` — new build prep script.
+- `LOCAL_BUILD.md` — new operator reference doc.
+- `CLAUDE.md` — this section.
+
+**No app.js / sw.js / index.html / styles.css change. No version-knob bump. No runtime impact whatsoever** — this is build tooling only.
+
+**Verification:**
+- `bash -n scripts/prep-local-build.sh` → no syntax errors.
+- The script will be exercised tonight on the MacBook by the user; any real-environment issues (CocoaPods specs repo missing, signing snags, etc.) get fixed forward as they surface.
+
+**Known non-goals:**
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- No Codemagic trigger.
+- No Add Habits logic change in this phase — the freeze diagnosis still depends on extracting the 1z.91 breadcrumbs via the 1z.92 in-app debug export, which requires a TestFlight build with 1z.92 code (HEAD `7100aec`). The local archive is the path to that build.
+
 ### In-app debug-info export — TestFlight breadcrumb retrieval (v3 Phase 1z.92)
 
 **Trigger.** Phase 1z.91 wrote persistent Add Habits breadcrumbs to `localStorage['hb_add_habit_debug_v1']`, with the assumption that the user could read them via Safari Web Inspector. **That assumption broke** — on TestFlight build 80, Safari sees the iPhone under the Develop menu but Awakened is not listed ("No Inspectable Applications"). Apple disables WKWebView's Web Inspector flag in App Store-signed IPAs by default; only debug-signed builds (developer signed) expose it. The breadcrumbs were trapped on the device.
