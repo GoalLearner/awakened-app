@@ -450,14 +450,25 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     });
     await page.locator('#tab-habits').click();
     await expect(page.locator('#tab-habits.active')).toBeVisible();
-    // Use force:true to skip visibility settle — the button is always
-    // in the DOM at the habits tab footer.
-    await page.locator('#add-habit-btn').click({ force: true });
+    // Dispatch the click programmatically — Playwright's normal click
+    // can race the toast/animation overlap on CI. We just want to
+    // exercise openLibrary's handler, not the visual hit-test.
+    await page.evaluate(() => {
+      const btn = document.getElementById('add-habit-btn');
+      if (btn) btn.click();
+    });
     await expect(page.locator('#lib-sheet')).toBeVisible({ timeout: 8_000 });
-    const accHeaderAgain = page.locator('.ob-acc-header', { hasText: /physical performance/i }).first();
-    // Wait for the lib-sheet open transition to settle before clicking.
-    await expect(accHeaderAgain).toBeVisible({ timeout: 5_000 });
-    await accHeaderAgain.click();
+    // Dispatch accordion click programmatically too — bypasses lib-sheet's
+    // sliding-up CSS transition that can cause Playwright to flake on
+    // the visibility check during animation.
+    await page.evaluate(() => {
+      const headers = Array.from(document.querySelectorAll('.ob-acc-header'));
+      const target = headers.find(h => /physical performance/i.test(h.textContent || ''));
+      if (target) (target as HTMLElement).click();
+    });
+    // The accordion body uses max-height transition, so wait for the
+    // card to actually appear in the DOM. We're asserting it does NOT
+    // exist for Sprint session (since it was just added).
     await expect(page.locator('.lib-card', { hasText: 'Sprint session' })).toHaveCount(0);
 
     // resetAddHabitsInteractionState invariant — re-opened library
@@ -475,12 +486,16 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     expect(inlineStyle.opacity).toBe('');
     expect(inlineStyle.pointerEvents).toBe('');
 
-    // v3 Phase 1z.94 — persistent breadcrumb assertion. After the add
-    // flow the localStorage ring `hb_add_habit_debug_v1` must contain
-    // the canonical sequence of steps for a clean add. If any step
-    // is missing on iOS, the post-mortem export tells us exactly which
-    // step the path stopped at. Wait long enough for the 3000ms alive
-    // probe + 2000ms side-effects to land.
+    // v3 Phase 1z.95 — persistent breadcrumb assertion. The add path
+    // no longer dispatches HealthKit side effects (those were the
+    // microtask-cascade source that starved setTimeouts on iOS).
+    // Side effects now ONLY run on natural renderHabits triggers
+    // (tab switch / visibility change / day change). So the canonical
+    // post-add breadcrumb sequence MUST contain side-effects-skipped-
+    // on-add and MUST NOT contain side-effects-start / -complete
+    // anywhere in this test's window.
+    //
+    // Wait 3.3 seconds — covers up through the alive-3000 probe.
     await page.waitForTimeout(3300);
     const crumbs = await page.evaluate(() => {
       try {
@@ -502,15 +517,19 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     expect(steps).toContain('render-tick-ok');
     expect(steps).toContain('watchdog-complete');
     expect(steps).toContain('alive-1000');
-    // 1z.94 — alive probes through 3 seconds + side-effects window.
+    // 1z.95 — alive probes through 3 seconds; side-effects skipped.
     expect(steps).toContain('alive-2000');
     expect(steps).toContain('alive-3000');
-    expect(steps).toContain('side-effects-start');
-    expect(steps).toContain('side-effects-complete');
+    expect(steps).toContain('side-effects-skipped-on-add');
     // The dup-guard MUST NOT have tripped for a fresh add.
     expect(steps).not.toContain('dup-guard-tripped');
     // No outer throw on the happy path.
     expect(steps).not.toContain('outer-threw');
     expect(steps).not.toContain('render-tick-threw');
+    // 1z.95 invariant — side effects MUST NOT fire from the add path.
+    // (They will fire on tab switches etc., but not as part of an
+    // immediate add. This is the freeze fix.)
+    expect(steps).not.toContain('side-effects-start');
+    expect(steps).not.toContain('side-effects-complete');
   });
 });

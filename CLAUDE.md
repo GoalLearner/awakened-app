@@ -41,12 +41,12 @@ Apple may take up to 24h to flip the build from "Ready for Distribution" to publ
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.2` |
-| `APP_BUILD_TAG` | `2.2.2-w7` |
-| `app.js?v=` | `445` |
+| `APP_BUILD_TAG` | `2.2.2-w8` |
+| `app.js?v=` | `446` |
 | `auth.js?v=` | `16` |
 | `styles.css?v=` | `302` |
 | `simulated-leaderboard.js?v=` | `6` |
-| `sw.js CACHE_VERSION` | `v5.331` |
+| `sw.js CACHE_VERSION` | `v5.332` |
 | `HEALTHKIT_AUTH_VERSION` | `4` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (relocked in 1z.80 — must stay false for public) |
 
@@ -291,6 +291,78 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Add Habits freeze — side effects fully removed from add path (v3 Phase 1z.95)
+
+**Diagnosis (definitive, from TestFlight 2.2.2-w7 breadcrumb dump).**
+
+For two clean add attempts on w7 (Track finances & net worth, Review your long term goals), every breadcrumb fired correctly through `alive-1000` (t+1004ms) and `side-effects-complete` (t+2009ms). Then:
+
+```
+side-effects-complete (t+2009ms)
+[55-second gap with ZERO breadcrumbs]
+[user eventually taps next preset at t+57600ms]
+```
+
+**`alive-2000`, `alive-3000` NEVER fired** despite being scheduled. `ensureInteractive` at t+500ms reported `tabBarVisible: false` — confirmed touch-block. The 1z.94 2000ms-deferred side-effects ran, then JS got stuck for ~55 seconds.
+
+**Root cause — microtask cascade starving the event loop.** The HealthKit native-bridge calls inside `autoVerifyWalk` / `autoVerifySleep` / `autoVerifyStrengthTraining` return as Promises. Their `.then()` handlers are **microtasks**. The microtask queue runs to completion BEFORE the next macrotask. Each HealthKit response handler can dispatch more native calls (re-`renderHabits` triggers more `autoVerify` dispatches), creating new microtasks indefinitely. As long as new microtasks keep being queued, **macrotasks (setTimeout callbacks) are starved**. That's why `alive-2000` (a setTimeout = macrotask) never fired — the microtask queue never emptied for ~55 seconds.
+
+1z.94's "decouple by 2 seconds" didn't fix the cascade. It just moved it 2 seconds later. The cascade still ran, still starved JS, still felt like a freeze — just shifted to right after the user expected the add to be "done."
+
+**Fix — don't dispatch side effects from the add path at all.**
+
+The side effects are no-ops for habits that don't match (e.g. autoVerifyWalk is a no-op unless the user has a "Daily walk" habit). For habits that DO match (this user has "Strength training 30 min"), the side effect dispatches HealthKit calls. We can defer that dispatch entirely.
+
+The side effects still run — just on natural triggers:
+- **Tab switch** (`switchTab` → `renderHabits` → side effects).
+- **Visibility change** (app foreground → `renderHabits` → side effects).
+- **Day change** (`checkDayChange` → `renderHabits` → side effects).
+
+The cascade still happens on those triggers, but the user is in a different mental context (looking at a new tab, returning to the app, starting a new day). They expect a brief settle. Tapping "Add to My Habits" creates an entirely different expectation — instant interactivity — and that's what 1z.95 delivers.
+
+**What this changes:**
+1. The 2000ms `setTimeout` block in the addBtn handler that ran `autoVerifyWalk` / `autoVerifySleep` / `autoVerifyStrengthTraining` / `resolveBossHuntsAcrossWindow` / `_sweepExpiredBossHuntsNoHealth` — **REMOVED**.
+2. Replaced with a single `side-effects-skipped-on-add` breadcrumb so the next debug export proves we hit the new code path.
+3. Alive probes extended to 5000ms + 10000ms (in addition to existing 100/500/1000/2000/3000) so we can verify JS stays healthy throughout the whole post-add window.
+4. `renderHabits(opts.skipSideEffects)` from 1z.94 retained — when called from the post-add path, it still skips side effects internally. Both safety nets in place.
+
+**What this does NOT change:**
+- `renderHabits()` for non-add callers (tab switch, day change, visibility change) — identical behaviour. They still call all the side effects.
+- `forceCloseAddHabitsStack`, dup tap guard, watchdog at 500ms, toast — all unchanged.
+- The post-add render (still fires at +150ms, still updates the visible habit list).
+
+**Trade-off:** If the user adds a habit and stays on the Habits tab for hours without switching, the auto-verify won't run for any newly-added HealthKit-tracked habit until they next switch tabs. Acceptable — the user can also manually check the habit done, and most users switch tabs within minutes.
+
+**Files touched (1z.95 only):**
+- `app.js` — 2000ms side-effects setTimeout REMOVED from addBtn handler; new `side-effects-skipped-on-add` breadcrumb; alive probes extended to 5000/10000; `APP_BUILD_TAG → 2.2.2-w8`.
+- `index.html` — `app.js?v=446`.
+- `sw.js` — `CACHE_VERSION = v5.332`.
+- `tests/e2e/smoke.spec.ts` — section H now asserts `side-effects-skipped-on-add` present AND `side-effects-start`/`side-effects-complete` absent within the post-add window.
+- `CLAUDE.md` — this section + handoff knob table.
+
+**Version knobs:** `APP_VERSION 2.2.2` (unchanged), `APP_BUILD_TAG 2.2.2-w8`, `app.js?v=446`, `sw.js v5.332`. `styles.css` unchanged.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → see commit log.
+
+**Manual QA on TestFlight 2.2.2-w8:**
+1. Verify boot stamp / debug export shows `"build":"2.2.2-w8"`.
+2. Add any preset. App should be instantly interactive — tap a tab, scroll, anything responds.
+3. Add another preset. Same.
+4. Wait 3 seconds. App should still be interactive (alive-3000 should land in next export).
+5. Wait 10 seconds. App should still be interactive (alive-10000 should land).
+6. Export breadcrumbs:
+   - Expected: `side-effects-skipped-on-add` present.
+   - Expected: `alive-2000`, `alive-3000`, `alive-5000`, `alive-10000` ALL present.
+   - Expected: `side-effects-start` and `side-effects-complete` ABSENT (because the add path no longer dispatches them — they only fire from tab switches now).
+
+**Known non-goals:**
+- The underlying microtask cascade in HealthKit handlers is NOT fixed here. It still runs on natural renderHabits triggers (tab switches, etc.). If users report tab-switch sluggishness, follow-up phase will break the cascade by wrapping native calls in setTimeout(0) to convert microtasks to macrotasks. For now: the freeze the user reported was specifically "tap Add to My Habits → frozen," and 1z.95 addresses that surface.
+- No backend / D1 / Duels / HealthKit / Notification permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.
+- Codemagic NOT triggered.
 
 ### Add Habits freeze — decoupled HealthKit side effects (v3 Phase 1z.94)
 

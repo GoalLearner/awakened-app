@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.2';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.2-w7';
+  const APP_BUILD_TAG = '2.2.2-w8';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16841,44 +16841,43 @@
           }, 500);
         } catch (_) {}
 
-        // ── Delayed side-effects (2000ms — 1z.94) ────────────────────
-        // The HealthKit auto-verifies + boss-resolver were the freeze
-        // culprit when synchronous-from-render. Running them 2 seconds
-        // after the add lets the iOS WebView fully commit paint,
-        // settle touch input, and isolate the native-bridge callback
-        // storm from the user's immediate interaction window.
+        // ── 1z.95 — NO side-effects dispatch from the add path ─────
+        // TestFlight 2.2.2-w7 breadcrumbs proved the cascade pattern:
+        // HealthKit native-bridge callbacks return as Promise
+        // resolutions (microtasks). The handlers chain MORE native
+        // calls (re-renderHabits → more autoVerify dispatches), and
+        // the microtask queue keeps producing new microtasks
+        // indefinitely. This STARVES the macrotask queue (setTimeout)
+        // for 30-60 seconds, blocking touch handling.
         //
-        // Each side effect independently try-wrapped + breadcrumbed
-        // so we can see in the next debug export which one (if any)
-        // is still misbehaving.
-        try {
-          setTimeout(() => {
-            _addHabitBreadcrumb('side-effects-start');
-            try { autoVerifyWalk(); _addHabitBreadcrumb('side-effects-walk-ok'); }
-            catch (err) { _addHabitBreadcrumb('side-effects-walk-threw', { err: String(err && err.message || err) }); }
-            try { autoVerifySleep(); _addHabitBreadcrumb('side-effects-sleep-ok'); }
-            catch (err) { _addHabitBreadcrumb('side-effects-sleep-threw', { err: String(err && err.message || err) }); }
-            try { autoVerifyStrengthTraining(); _addHabitBreadcrumb('side-effects-strength-ok'); }
-            catch (err) { _addHabitBreadcrumb('side-effects-strength-threw', { err: String(err && err.message || err) }); }
-            try { resolveBossHuntsAcrossWindow(); _addHabitBreadcrumb('side-effects-boss-resolve-ok'); }
-            catch (err) { _addHabitBreadcrumb('side-effects-boss-resolve-threw', { err: String(err && err.message || err) }); }
-            try { _sweepExpiredBossHuntsNoHealth(); _addHabitBreadcrumb('side-effects-boss-sweep-ok'); }
-            catch (err) { _addHabitBreadcrumb('side-effects-boss-sweep-threw', { err: String(err && err.message || err) }); }
-            _addHabitBreadcrumb('side-effects-complete');
-          }, 2000);
-        } catch (_) {}
+        // Confirmed in the w7 dump: alive-1000 fires, side-effects-
+        // complete fires at t+2009ms, but alive-2000 (also a 2000ms
+        // setTimeout) NEVER fires because the side-effects callback
+        // ran and the microtask cascade that followed starved the
+        // event loop. ensureInteractive at t+500ms also reported
+        // tabBarVisible:false confirming the touch block.
+        //
+        // Fix: do NOT dispatch side effects from the add path at all.
+        // They run on the next natural renderHabits trigger:
+        //   - Tab switch (switchTab → renderHabits)
+        //   - Visibility change (app foreground/background)
+        //   - Day change (checkDayChange)
+        // User flow becomes: add habit → app instantly interactive.
+        // When user later switches tabs, the cascade runs but they're
+        // already on a new tab and not trying to interact mid-cascade.
+        _addHabitBreadcrumb('side-effects-skipped-on-add');
 
         // ── Alive probes (post-tap) ───────────────────────────────
-        // If these breadcrumbs land but the user reports freeze, the
-        // JS main thread is alive — the freeze is touch interception.
-        // If they don't land, JS is genuinely blocked.
-        // 1z.94 added 2000ms + 3000ms probes specifically to bracket
-        // the new delayed-side-effects window.
-        try { setTimeout(() => _addHabitBreadcrumb('alive-100'),  100); } catch (_) {}
-        try { setTimeout(() => _addHabitBreadcrumb('alive-500'),  500); } catch (_) {}
-        try { setTimeout(() => _addHabitBreadcrumb('alive-1000'), 1000); } catch (_) {}
-        try { setTimeout(() => _addHabitBreadcrumb('alive-2000'), 2000); } catch (_) {}
-        try { setTimeout(() => _addHabitBreadcrumb('alive-3000'), 3000); } catch (_) {}
+        // Extended through 10 seconds. If alive-10000 lands, JS is
+        // healthy throughout the entire post-add interaction window
+        // and the freeze is gone.
+        try { setTimeout(() => _addHabitBreadcrumb('alive-100'),   100); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-500'),   500); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-1000'),  1000); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-2000'),  2000); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-3000'),  3000); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-5000'),  5000); } catch (_) {}
+        try { setTimeout(() => _addHabitBreadcrumb('alive-10000'), 10000); } catch (_) {}
       });
       footer.appendChild(addBtn);
 
