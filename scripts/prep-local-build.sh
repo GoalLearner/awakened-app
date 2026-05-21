@@ -213,6 +213,16 @@ echo "── [8/9] Sign in with Apple entitlement ──"
 echo "  applesignin entitlement: $(/usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$ENTITLEMENTS" | tr -d '\n')"
 echo ""
 
+# ── 8b. iOS AppIcon patch (Phase 1z.109) ────────────────────────────
+# Build 93 shipped to a tester's iPhone with the blue default
+# Capacitor icon because cap copy/sync seeds AppIcon.appiconset
+# with Capacitor's defaults. The tracked Awakened AppIcon set
+# lives at resources/ios/AppIcon.appiconset/ and is byte-identical
+# to Codemagic's icon step.
+echo "── [8b] iOS AppIcon patch ──"
+bash "$SCRIPT_DIR/patch-ios-app-icon.sh"
+echo ""
+
 # ── 9. Wire CODE_SIGN_ENTITLEMENTS into Xcode project ───────────────
 echo "── [9/9] Wire CODE_SIGN_ENTITLEMENTS into project.pbxproj ──"
 (cd ios/App && ruby -e "
@@ -264,8 +274,17 @@ fi
 # APP_BUILD_TAG, app.js?v=, sw.js CACHE_VERSION) between the root
 # sources and ios/App/App/public/. Mismatch → exit 1 → archive
 # blocked.
-echo "── [10/10] Verify iOS public/ matches root sources ──"
+echo "── [10/11] Verify iOS public/ matches root sources ──"
 bash "$SCRIPT_DIR/verify-ios-public-assets.sh"
+echo ""
+
+# ── 11. Verify iOS AppIcon is the canonical Awakened set (1z.109) ───
+# Guards against the build-93 default-Capacitor-icon failure mode.
+# Hash-compares the ship-side 1024 marketing icon to the canonical
+# resources/ios/AppIcon.appiconset/AppIcon-1024.png. Mismatch =
+# default Capacitor icon (or other wrong art) in place → exit 1.
+echo "── [11/11] Verify iOS AppIcon is the canonical Awakened icon ──"
+bash "$SCRIPT_DIR/verify-ios-app-icon.sh"
 echo ""
 
 echo "════════════════════════════════════════════════════════════"

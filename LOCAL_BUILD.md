@@ -139,14 +139,29 @@ npx cap copy ios
 #    instead, you can skip this — that script does the same patch.)
 bash scripts/patch-ios-health-plist.sh
 
-# 7. VERIFY iOS PUBLIC ASSETS MATCH ROOT SOURCES — DO NOT SKIP.
+# 7. Patch the native iOS AppIcon set with the canonical Awakened icons.
+#    `npx cap copy ios` / `cap sync ios` seeds AppIcon.appiconset with
+#    Capacitor's default blue icon. Build 93 shipped to a tester's
+#    iPhone with that default icon for exactly this reason. The tracked
+#    Awakened icons live at resources/ios/AppIcon.appiconset/ (19 PNG
+#    sizes + Contents.json, identical to Codemagic's set). This script
+#    rm -rfs the default and copies the canonical set in.
+bash scripts/patch-ios-app-icon.sh
+
+# 8. VERIFY iOS PUBLIC ASSETS MATCH ROOT SOURCES — DO NOT SKIP.
 #    Compares APP_VERSION, APP_BUILD_TAG, app.js?v=, and sw.js
 #    CACHE_VERSION between the root sources and ios/App/App/public/.
 #    Any mismatch → script exits 1 → DO NOT ARCHIVE. This gate exists
 #    specifically because of the 2.2.3 build 92 stale-asset incident.
 bash scripts/verify-ios-public-assets.sh
 
-# 8. Open Xcode (only if step 7 passed)
+# 9. VERIFY iOS APP ICON IS THE CANONICAL AWAKENED ICON — DO NOT SKIP.
+#    Hash-compares the ship-side 1024 marketing icon to the canonical
+#    resources/ios/AppIcon.appiconset/AppIcon-1024.png. Mismatch =
+#    default Capacitor icon (or other wrong art) is in place → exit 1.
+bash scripts/verify-ios-app-icon.sh
+
+# 10. Open Xcode (only if BOTH verify gates passed)
 npx cap open ios
 ```
 
@@ -177,6 +192,16 @@ npx cap open ios
 - ❌ Bumping marketing version / build number without explicit user instruction
 
 ## Troubleshooting
+
+### Default blue Capacitor app icon on the home screen (the build 93 failure mode)
+
+**Awakened 2.2.3 build 93 shipped to a tester's iPhone with the default blue Capacitor app icon on the home screen** instead of the Awakened gold-triangle-on-navy logo. Symptom: TestFlight installs successfully, the in-app version/build tag fingerprint matches what's on `main`, the web assets are fine — but the home-screen launcher icon is wrong.
+
+**Root cause.** `npx cap copy ios` and `npx cap sync ios` seed `ios/App/App/Assets.xcassets/AppIcon.appiconset/` with Capacitor's default blue icon set. Unless the MacBook explicitly replaces that directory with the tracked Awakened icons, the IPA ships with the default. Codemagic does this replacement step (`codemagic.yaml` line 793-797: `rm -rf ios/App/App/Assets.xcassets/AppIcon.appiconset && cp -R resources/ios/AppIcon.appiconset ios/App/App/Assets.xcassets/`); the lite MacBook flow used to skip it.
+
+**Prevention.** Run `bash scripts/patch-ios-app-icon.sh` after `cap copy` and before opening Xcode. Then run `bash scripts/verify-ios-app-icon.sh` to confirm — it hash-compares the 1024 marketing icon in `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` against the canonical `resources/ios/AppIcon.appiconset/AppIcon-1024.png` (which is byte-identical to root `app-icon-source.png`). If hashes match, the default Capacitor icon is definitively NOT in place. The `prep-local-build.sh` heavy flow runs both as steps 8b and 11 automatically.
+
+**Recovery if you already uploaded a default-icon build.** Bump the build number in Xcode (e.g. 93 → 94), run the patch + both verify gates, archive, upload. No web/cache knob bump is required for an icon-only correction — `APP_BUILD_TAG`, `app.js?v=`, and `sw.js CACHE_VERSION` can stay at the current values if no web code changed. (Ask before bumping web/cache knobs.)
 
 ### Stale web assets inside a fresh native shell (the build 92 failure mode)
 

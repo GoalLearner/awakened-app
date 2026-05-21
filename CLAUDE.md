@@ -6,13 +6,16 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ## 📌 Session handoff — May 20, 2026 (read this first; supersedes the May 19 section below)
 
-### 🛠 STATUS: 2.2.3 build 93 release-prep is committed — MacBook needs to archive with the hardened flow
+### 🛠 STATUS: 2.2.3 build 94 — MacBook needs to archive with the icon patch + verify gates
 
 **Build 92 shipped a 2.2.3 native shell wrapping a stale 2.2.2-w15 JavaScript bundle.** TestFlight (and App Store Connect) showed `2.2.3 (92)` because `agvtool` / Info.plist had been bumped, but Copy Debug Info inside the running app reported `"version": "2.2.2", "build": "2.2.2-w15"`. Root cause: `npx cap copy ios` ran against a `www/` snapshot that hadn't been rebuilt from the root sources. `cap copy` only copies `www/` into `ios/App/App/public/`; it does NOT regenerate `www/`.
 
-**Fixes landed for build 93:**
+**Build 93 fixed the web-assets mismatch but shipped with the default blue Capacitor app icon on the home screen.** Root cause: `cap copy` / `cap sync` seeds `ios/App/App/Assets.xcassets/AppIcon.appiconset/` with Capacitor's default icons. The MacBook flow had no step that replaced them with the tracked Awakened icons. Codemagic does this replacement; the lite MacBook flow skipped it.
+
+**Fixes landed for the upcoming build 94:**
 - 1z.107 (`ec77430`) — defensive recognition of legacy `Strength training` rows so auto-verify never orphans them even if the rename migration misses.
-- 1z.108 (this commit) — release knobs bumped to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341`, and a new tracked gate `scripts/verify-ios-public-assets.sh` will fail the build if `ios/App/App/public/`'s release knobs don't match the root sources after `cap copy`. `scripts/prep-local-build.sh` now also runs the gate as its final step and no longer hardcodes the stale `2.2.2` marketing version in its agvtool path.
+- 1z.108 (`ba6a084`) — release knobs bumped to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341`; new tracked gate `scripts/verify-ios-public-assets.sh` fails the build if `ios/App/App/public/`'s release knobs don't match the root sources after `cap copy`. `scripts/prep-local-build.sh` runs the gate and no longer hardcodes the stale `2.2.2` marketing version.
+- 1z.109 (this commit) — new tracked scripts `scripts/patch-ios-app-icon.sh` and `scripts/verify-ios-app-icon.sh`. The patch script replaces the default Capacitor `AppIcon.appiconset` with the tracked Awakened set at `resources/ios/AppIcon.appiconset/` (19 PNG sizes + `Contents.json`, identical to Codemagic's icon step; `AppIcon-1024.png` byte-identical to root `app-icon-source.png`). The verify gate hash-compares the ship-side 1024 marketing icon to the canonical source, so the default Capacitor icon can never silently ship again. `scripts/prep-local-build.sh` invokes both as steps 8b and 11. **No web/cache knob bumps were needed** — icon-only correction. `APP_BUILD_TAG=2.2.3-w2`, `app.js?v=455`, `sw.js v5.341` stay where they are.
 
 **Current knobs on `main` (post release-prep commit):**
 
@@ -171,23 +174,34 @@ npx cap copy ios                              # web-only updates — fast
 # Apple rejected 2.2.3 build 91 with ITMS-90683 for this exact reason.
 bash scripts/patch-ios-health-plist.sh
 
+# Replace the default blue Capacitor AppIcon set with the tracked
+# Awakened icons. REQUIRED before every archive — cap copy/sync seeds
+# the default icon set every time. Build 93 shipped with the default
+# icon on the home screen for exactly this reason.
+bash scripts/patch-ios-app-icon.sh
+
 # Verify ios/App/App/public/ release knobs match root sources.
 # This gate failing means the IPA would ship a native-shell/web-asset
 # mismatch (the build-92 failure mode). DO NOT archive if this fails.
 bash scripts/verify-ios-public-assets.sh
 
+# Verify the ship-side 1024 marketing icon hash-matches the canonical
+# Awakened icon. Failure = default Capacitor icon (or other wrong art)
+# is in place (the build-93 failure mode). DO NOT archive if this fails.
+bash scripts/verify-ios-app-icon.sh
+
 npx cap open ios
 ```
 
-**In Xcode (Archive + Upload — 2.2.3 build 93 specifics):**
+**In Xcode (Archive + Upload — 2.2.3 build 94 specifics):**
 1. Destination dropdown → **Any iOS Device (arm64)**. NOT Simulator, NOT Richie's iPhone.
 2. App target → Signing & Capabilities → confirm **Release** uses **Manual** signing with profile `Awakened App Store 2026-05-19` + certificate `Apple Distribution: Richmond Campano`. (Debug-signing warnings can be ignored — Archive is Release-only.)
-3. App target → General → Identity → set **Marketing Version: `2.2.3`** and **Build: `93`** (or whichever is `latest TestFlight + 1` — confirm in App Store Connect → TestFlight → iOS Builds before archiving).
+3. App target → General → Identity → set **Marketing Version: `2.2.3`** and **Build: `94`** (or whichever is `latest TestFlight + 1` — confirm in App Store Connect → TestFlight → iOS Builds before archiving).
 4. Product → **Clean Build Folder** (⇧⌘K).
 5. Product → **Archive**. ~5–15 min.
 6. Organizer auto-opens → select the new archive → **Distribute App** → **App Store Connect** → **Upload**.
 7. Wait for **Upload Successful**. ASC ingestion is 5–15 min before the build shows up under TestFlight → iOS Builds.
-8. **After install on phone**, 5-tap version line → Copy Debug Info → confirm `"build": "2.2.3-w2"`. If it still says `2.2.2-w15` or any older tag, the archive shipped stale web assets again — STOP, fix the `www/` rebuild step, archive as build 94.
+8. **After install on phone**, 5-tap version line → Copy Debug Info → confirm `"build": "2.2.3-w2"`. If it still says `2.2.2-w15` or any older tag, the archive shipped stale web assets again — STOP, fix the `www/` rebuild step, archive as the next build number. Also **glance at the home-screen icon** — it must be the Awakened gold-triangle-on-navy logo, not the default blue Capacitor icon. (The new verify gate at step 9 prevents this, but the visual sanity check is free.)
 
 **Forbidden during release prep + upload:**
 - ❌ Do NOT trigger Codemagic.
@@ -230,7 +244,8 @@ npx cap open ios
 | 1z.105 | "Strength training" → "Workout"; verifies from ANY Apple Health workout totaling 30+ min daily. Iron Warden + Strength Duel kept strength-only | Product spec change + idempotent rename migration |
 | 1z.106 | Create Your Own Habit freeze fix — `saveCustomHabit` now closes parent `#lib-sheet` + `#lib-overlay`; new custom-create breadcrumbs; Playwright regression test. Add Habits exit-path audit completed: no remaining unclosed paths | Final freeze-class fix |
 | 1z.107 | Defensive recognition of legacy `Strength training` rows — `isLegacyOrCanonicalWorkoutName` helper threaded through `isStrengthWorkoutHabit` / `isReadOnlyAutoVerifyHabit` / `findStrengthHabit` / migration. Dedup logic for cloud-restore duplicate-row edge. Iron Warden + Strength Duel kept strength-only. 2 new Playwright tests (J.1, J.2) | Belt-and-braces for migration-miss |
-| 1z.108 (this handoff) | Stale-web-assets gate — new `scripts/verify-ios-public-assets.sh` fails the build if `ios/App/App/public/` release knobs don't match root sources after `cap copy`; `prep-local-build.sh` now invokes the gate and no longer hardcodes the stale `2.2.2` marketing version. Release-prep bump to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341` for build 93 | Build-pipeline hardening after build-92 stale-asset incident |
+| 1z.108 | Stale-web-assets gate — new `scripts/verify-ios-public-assets.sh` fails the build if `ios/App/App/public/` release knobs don't match root sources after `cap copy`; `prep-local-build.sh` now invokes the gate and no longer hardcodes the stale `2.2.2` marketing version. Release-prep bump to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341` for build 93 | Build-pipeline hardening after build-92 stale-asset incident |
+| 1z.109 (this handoff) | iOS AppIcon patch + verify gate — new `scripts/patch-ios-app-icon.sh` replaces the default Capacitor icon set with the tracked Awakened set; `scripts/verify-ios-app-icon.sh` hash-compares the ship-side 1024 marketing icon to the canonical source so the default icon can never silently ship again. Both invoked from `prep-local-build.sh`. No web/cache knob bumps — icon-only correction for build 94 | Build-pipeline hardening after build-93 default-icon incident |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 
