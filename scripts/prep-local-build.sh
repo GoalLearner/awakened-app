@@ -176,10 +176,14 @@ echo "  ITSAppUsesNonExemptEncryption: $(/usr/libexec/PlistBuddy -c "Print :ITSA
 echo ""
 
 # ── 7. HealthKit usage descriptions + entitlement ───────────────────
+# Apple-accepted purpose strings (Awakened 2.2.3 build 92, May 20, 2026
+# upload). Apple rejected build 91 with ITMS-90683 for missing these
+# keys; build 92 uploaded successfully after adding them with the exact
+# wording below. KEEP IN SYNC with scripts/patch-ios-health-plist.sh.
 echo "── [7/9] HealthKit Info.plist + entitlement ──"
 ENTITLEMENTS="ios/App/App/App.entitlements"
-SHARE_DESC="Awakened uses Apple Health to verify your habits and unlock boss battles in future versions. Your data stays on your device."
-UPDATE_DESC="Awakened only reads from Apple Health. It does not write to it."
+SHARE_DESC="Awakened reads selected Apple Health data, such as steps, sleep, and workouts, to verify habit completion and personalize your progress."
+UPDATE_DESC="Awakened may request Health access through its HealthKit integration. Health data is used only to support habit verification and progress tracking."
 
 /usr/libexec/PlistBuddy -c "Add :NSHealthShareUsageDescription string '$SHARE_DESC'" "$PLIST" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Set :NSHealthShareUsageDescription '$SHARE_DESC'" "$PLIST"

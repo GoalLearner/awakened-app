@@ -123,7 +123,16 @@ cp avatar-*.png icon-192.png icon-512.png www/
 #    Only use `cap sync ios` when native dependencies (Capacitor plugins) change.
 npx cap copy ios
 
-# 6. Open Xcode
+# 6. Idempotently ensure HealthKit Info.plist purpose strings are present.
+#    Apple rejected 2.2.3 build 91 (ITMS-90683) for missing these keys;
+#    build 92 uploaded successfully after they were added. The `ios/`
+#    folder is NOT tracked in the GitHub repo, so this script re-applies
+#    the Apple-accepted purpose strings every build. Safe + idempotent.
+#    (If you're running the full prep flow via prep-local-build.sh
+#    instead, you can skip this — that script does the same patch.)
+bash scripts/patch-ios-health-plist.sh
+
+# 7. Open Xcode
 npx cap open ios
 ```
 
@@ -154,6 +163,29 @@ npx cap open ios
 - ❌ Bumping marketing version / build number without explicit user instruction
 
 ## Troubleshooting
+
+### ITMS-90683 "Missing purpose string in Info.plist" — NSHealthShareUsageDescription / NSHealthUpdateUsageDescription
+
+**This rejected Awakened 2.2.3 build 91 (May 20, 2026).** App Store Connect responded with:
+
+> "ITMS-90683: Missing purpose string in Info.plist. Apps that collect or transmit user data must clearly disclose the use of such data. Add the NSHealthShareUsageDescription / NSHealthUpdateUsageDescription keys to your app's Info.plist file."
+
+**Root cause.** The desktop GitHub repo does NOT track the generated `ios/` folder. Each MacBook build runs `npx cap copy ios` (or `cap sync ios` on a fresh checkout) which regenerates `ios/App/App/Info.plist` from the Capacitor template. The template does NOT include HealthKit purpose strings — they must be re-applied before every archive.
+
+**Fix.** Run the tracked patch script from the repo root before opening Xcode:
+
+```bash
+bash scripts/patch-ios-health-plist.sh
+```
+
+It idempotently writes both keys with the Apple-accepted text below (the same strings that landed 2.2.3 build 92 successfully). The full `scripts/prep-local-build.sh` runs the same patch as step 7 of its prep flow, so either path works — but the standalone `patch-ios-health-plist.sh` is the lighter call for the day-to-day archive loop.
+
+**Apple-accepted purpose strings (do not modify casually):**
+
+- `NSHealthShareUsageDescription` — "Awakened reads selected Apple Health data, such as steps, sleep, and workouts, to verify habit completion and personalize your progress."
+- `NSHealthUpdateUsageDescription` — "Awakened may request Health access through its HealthKit integration. Health data is used only to support habit verification and progress tracking."
+
+If you ever need to change this copy, sync BOTH `scripts/patch-ios-health-plist.sh` AND `scripts/prep-local-build.sh` (step 7) so the two scripts cannot drift, and update the doc above.
 
 ### "This bundle is invalid... train version 'X.Y.Z' is closed"
 

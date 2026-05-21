@@ -27,7 +27,10 @@ Version knobs bumped on `origin/main` for the 2.2.3 train. The MacBook Air + SSD
 - **1z.106** (`9f62001`) — Create Your Own Habit freeze fix. `saveCustomHabit` now closes the parent `#lib-sheet` + `#lib-overlay` after the custom modal so the library overlay can't intercept pointer events on the tab bar. New custom-create breadcrumbs in `hb_add_habit_debug_v1`. Playwright regression test `I · Create Your Own Habit (1z.106)` covers it. Full e2e: **9/9 passing**.
 - **Add Habits exit-path audit** — performed after 1z.106; every documented exit path for `lib-sheet`, `lib-overlay`, `custom-overlay`, `hd-sheet`, and `mr-overlay` was traced. **No remaining real unclosed paths.** 1z.106 closed the only real stranded-overlay surface. No further code changes warranted from the audit.
 
-**Nothing has been uploaded since the May 20 morning local-archive proof (build 91).** Build 91 was a transport/signing proof only — App Store Connect rejected it during validation because marketing version `2.2.2` is closed (see Version-train rule below). The 2.2.3 release-prep commit is the first valid post-`2.2.2` train upload candidate — the MacBook needs to archive + upload it.
+**Status of recent uploads:**
+- **2.2.2 build 91** — rejected by ASC validation: marketing version `2.2.2` is closed.
+- **2.2.3 build 91** — rejected by Apple with **ITMS-90683 "Missing purpose string in Info.plist"** (`NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription`). The Capacitor template does NOT seed these keys, and the desktop repo does NOT track `ios/`, so every fresh `npx cap copy/sync ios` wipes them. New tracked script `scripts/patch-ios-health-plist.sh` now idempotently re-applies the Apple-accepted strings; the heavy `scripts/prep-local-build.sh` was synced to the same wording.
+- **2.2.3 build 92** — ✅ **uploaded successfully on May 20, 2026** after the Info.plist purpose strings were added on the MacBook. This is the first build on the `2.2.3` train to reach App Store Connect.
 
 **Migrated off Codemagic.** Build cost per Codemagic run was acceptable per-build (~$0.40) but the cumulative iteration cost during heavy debugging sessions added up faster than budgeted. The MacBook Air now does local Xcode archives directly, with the project + Xcode caches living on an external Samsung SSD named `AwakenedDev`. **This is the canonical path going forward.** Codemagic stays in the repo as a documented fallback but must not be triggered without explicit user approval.
 
@@ -143,6 +146,13 @@ npm install --no-audit --no-fund
 # Rebuild www/ from root sources (or use scripts/prep-local-build.sh)
 npx cap copy ios                              # web-only updates — fast
 # Only when native deps changed: npx cap sync ios
+
+# Re-apply HealthKit Info.plist purpose strings (idempotent).
+# REQUIRED before every archive — `ios/` is not tracked, so cap copy/sync
+# regenerates Info.plist from the Capacitor template, which omits these.
+# Apple rejected 2.2.3 build 91 with ITMS-90683 for this exact reason.
+bash scripts/patch-ios-health-plist.sh
+
 npx cap open ios
 ```
 
