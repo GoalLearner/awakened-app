@@ -6,19 +6,25 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ## 📌 Session handoff — May 20, 2026 (read this first; supersedes the May 19 section below)
 
-### 🛠 STATUS: 2.2.3 release-prep is committed to `main` — ready for the MacBook to pull and archive
+### 🛠 STATUS: 2.2.3 build 93 release-prep is committed — MacBook needs to archive with the hardened flow
 
-Version knobs bumped on `origin/main` for the 2.2.3 train. The MacBook Air + SSD `AwakenedDev` local archive pipeline is canonical (proved on May 20). The MacBook can pull tonight, run `npx cap copy ios`, open Xcode, set Marketing Version `2.2.3` + Build `92` (or latest TestFlight + 1), Clean → Archive → Distribute → Upload.
+**Build 92 shipped a 2.2.3 native shell wrapping a stale 2.2.2-w15 JavaScript bundle.** TestFlight (and App Store Connect) showed `2.2.3 (92)` because `agvtool` / Info.plist had been bumped, but Copy Debug Info inside the running app reported `"version": "2.2.2", "build": "2.2.2-w15"`. Root cause: `npx cap copy ios` ran against a `www/` snapshot that hadn't been rebuilt from the root sources. `cap copy` only copies `www/` into `ios/App/App/public/`; it does NOT regenerate `www/`.
+
+**Fixes landed for build 93:**
+- 1z.107 (`ec77430`) — defensive recognition of legacy `Strength training` rows so auto-verify never orphans them even if the rename migration misses.
+- 1z.108 (this commit) — release knobs bumped to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341`, and a new tracked gate `scripts/verify-ios-public-assets.sh` will fail the build if `ios/App/App/public/`'s release knobs don't match the root sources after `cap copy`. `scripts/prep-local-build.sh` now also runs the gate as its final step and no longer hardcodes the stale `2.2.2` marketing version in its agvtool path.
 
 **Current knobs on `main` (post release-prep commit):**
 
 | Knob | Value |
 |---|---|
 | `APP_VERSION` | `2.2.3` |
-| `APP_BUILD_TAG` | `2.2.3-w1` |
-| `app.js?v=` | `454` |
-| `sw.js CACHE_VERSION` | `v5.340` |
+| `APP_BUILD_TAG` | `2.2.3-w2` |
+| `app.js?v=` | `455` |
+| `sw.js CACHE_VERSION` | `v5.341` |
 | `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+
+**MacBook flow for build 93** — DO NOT skip the `rm -rf www && cp <root sources>` step. After `cap copy`, run `bash scripts/verify-ios-public-assets.sh` — if it exits non-zero, **do not archive**. See LOCAL_BUILD.md for the full sequence and troubleshooting.
 
 **This 2.2.3 build bundles:**
 
@@ -135,15 +141,27 @@ Full details + troubleshooting: see `LOCAL_BUILD.md`.
 8. `node --check app.js && node --check sw.js && npm run test:e2e` — must be green.
 9. Commit `chore: prepare X.Y.Z local archive build` and push to `origin/main`.
 
-**MacBook Air — local archive + upload (THIS IS THE ACTIVE STEP FOR 2.2.3):**
+**MacBook Air — local archive + upload (THIS IS THE ACTIVE STEP FOR 2.2.3 BUILD 93):**
 ```bash
 cd /Volumes/AwakenedDev/repos/awakened-app   # or use the ~/Documents symlink
 git fetch origin
 git pull origin main
-git log --oneline -3                          # confirm HEAD matches the bump commit
+git log --oneline -1                          # confirm HEAD shows the 1z.108 bump commit
 # Only if package.json changed since last build:
 npm install --no-audit --no-fund
-# Rebuild www/ from root sources (or use scripts/prep-local-build.sh)
+
+# CRITICAL: rebuild www/ from root sources BEFORE cap copy.
+# Build 92 failed precisely because this step was skipped — cap copy
+# only copies www/, it does NOT regenerate it from root sources.
+rm -rf www
+mkdir -p www
+cp index.html app.js styles.css sw.js auth.js simulated-leaderboard.js manifest.json www/
+cp icon-192.png icon-512.png app-icon-source.png www/ 2>/dev/null || true
+cp -R assets www/assets 2>/dev/null || true
+cp -R docs www/docs 2>/dev/null || true
+# (Or run `bash scripts/prep-local-build.sh` for the full curated allowlist;
+#  that script now also runs the verify gate as its final step.)
+
 npx cap copy ios                              # web-only updates — fast
 # Only when native deps changed: npx cap sync ios
 
@@ -153,17 +171,23 @@ npx cap copy ios                              # web-only updates — fast
 # Apple rejected 2.2.3 build 91 with ITMS-90683 for this exact reason.
 bash scripts/patch-ios-health-plist.sh
 
+# Verify ios/App/App/public/ release knobs match root sources.
+# This gate failing means the IPA would ship a native-shell/web-asset
+# mismatch (the build-92 failure mode). DO NOT archive if this fails.
+bash scripts/verify-ios-public-assets.sh
+
 npx cap open ios
 ```
 
-**In Xcode (Archive + Upload — 2.2.3 specifics):**
+**In Xcode (Archive + Upload — 2.2.3 build 93 specifics):**
 1. Destination dropdown → **Any iOS Device (arm64)**. NOT Simulator, NOT Richie's iPhone.
 2. App target → Signing & Capabilities → confirm **Release** uses **Manual** signing with profile `Awakened App Store 2026-05-19` + certificate `Apple Distribution: Richmond Campano`. (Debug-signing warnings can be ignored — Archive is Release-only.)
-3. App target → General → Identity → set **Marketing Version: `2.2.3`** and **Build: `92`** (or whichever is `latest TestFlight + 1` — confirm in App Store Connect → TestFlight → iOS Builds before archiving).
+3. App target → General → Identity → set **Marketing Version: `2.2.3`** and **Build: `93`** (or whichever is `latest TestFlight + 1` — confirm in App Store Connect → TestFlight → iOS Builds before archiving).
 4. Product → **Clean Build Folder** (⇧⌘K).
 5. Product → **Archive**. ~5–15 min.
 6. Organizer auto-opens → select the new archive → **Distribute App** → **App Store Connect** → **Upload**.
 7. Wait for **Upload Successful**. ASC ingestion is 5–15 min before the build shows up under TestFlight → iOS Builds.
+8. **After install on phone**, 5-tap version line → Copy Debug Info → confirm `"build": "2.2.3-w2"`. If it still says `2.2.2-w15` or any older tag, the archive shipped stale web assets again — STOP, fix the `www/` rebuild step, archive as build 94.
 
 **Forbidden during release prep + upload:**
 - ❌ Do NOT trigger Codemagic.
@@ -204,7 +228,9 @@ npx cap open ios
 | 1z.103 | MacBook Air + SSD local archive pipeline confirmed working; version train 2.2.2 closed; canonical workflow documented | Migration milestone |
 | 1z.104 | HealthKit auto-verify diagnostics — `hb_health_verify_debug_v1` ring + `payload.healthVerify.debug` Copy Debug Info export | Diagnostic instrumentation, no behaviour change |
 | 1z.105 | "Strength training" → "Workout"; verifies from ANY Apple Health workout totaling 30+ min daily. Iron Warden + Strength Duel kept strength-only | Product spec change + idempotent rename migration |
-| 1z.106 (this handoff) | Create Your Own Habit freeze fix — `saveCustomHabit` now closes parent `#lib-sheet` + `#lib-overlay`; new custom-create breadcrumbs; Playwright regression test. Add Habits exit-path audit completed: no remaining unclosed paths | Final freeze-class fix |
+| 1z.106 | Create Your Own Habit freeze fix — `saveCustomHabit` now closes parent `#lib-sheet` + `#lib-overlay`; new custom-create breadcrumbs; Playwright regression test. Add Habits exit-path audit completed: no remaining unclosed paths | Final freeze-class fix |
+| 1z.107 | Defensive recognition of legacy `Strength training` rows — `isLegacyOrCanonicalWorkoutName` helper threaded through `isStrengthWorkoutHabit` / `isReadOnlyAutoVerifyHabit` / `findStrengthHabit` / migration. Dedup logic for cloud-restore duplicate-row edge. Iron Warden + Strength Duel kept strength-only. 2 new Playwright tests (J.1, J.2) | Belt-and-braces for migration-miss |
+| 1z.108 (this handoff) | Stale-web-assets gate — new `scripts/verify-ios-public-assets.sh` fails the build if `ios/App/App/public/` release knobs don't match root sources after `cap copy`; `prep-local-build.sh` now invokes the gate and no longer hardcodes the stale `2.2.2` marketing version. Release-prep bump to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341` for build 93 | Build-pipeline hardening after build-92 stale-asset incident |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 

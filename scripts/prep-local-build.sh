@@ -231,9 +231,22 @@ echo "── [9/9] Wire CODE_SIGN_ENTITLEMENTS into project.pbxproj ──"
 echo ""
 
 # ── Optional: build-number bump ─────────────────────────────────────
+# v3 Phase 1z.108 — marketing version is no longer hardcoded here.
+# The previous "agvtool new-marketing-version '2.2.2'" call would
+# silently back-date any post-2.2.2 train when this script was passed
+# a build-number arg. We now derive it from the root app.js's
+# APP_VERSION, which is the single source of truth (see comment at
+# the constant). If parsing fails for any reason, we skip the
+# marketing-version set and require it to be configured in Xcode.
 if [ -n "$BUILD_NUMBER_ARG" ]; then
   echo "── [optional] Set build number to $BUILD_NUMBER_ARG ──"
-  (cd ios/App && agvtool new-marketing-version "2.2.2")
+  ROOT_MARKETING_VERSION="$(grep -m1 -oE "APP_VERSION[[:space:]]*=[[:space:]]*'[^']+'" app.js | sed -E "s/.*=[[:space:]]*'([^']+)'/\1/")"
+  if [ -n "$ROOT_MARKETING_VERSION" ]; then
+    echo "  Marketing Version (from root app.js APP_VERSION): $ROOT_MARKETING_VERSION"
+    (cd ios/App && agvtool new-marketing-version "$ROOT_MARKETING_VERSION")
+  else
+    echo "  WARN: could not parse APP_VERSION from app.js — set Marketing Version in Xcode."
+  fi
   (cd ios/App && agvtool new-version -all "$BUILD_NUMBER_ARG")
   echo ""
 else
@@ -242,6 +255,18 @@ else
   echo "    Set to one higher than the latest TestFlight build for this version."
   echo ""
 fi
+
+# ── 10. Verify iOS public/ matches root sources ─────────────────────
+# v3 Phase 1z.108 — guard against the build-92 stale-asset bug:
+# the IPA shipped with a 2.2.3 native shell and 2.2.2-w15 web
+# assets inside because www/ wasn't rebuilt before cap copy. This
+# gate compares all four release knobs (APP_VERSION,
+# APP_BUILD_TAG, app.js?v=, sw.js CACHE_VERSION) between the root
+# sources and ios/App/App/public/. Mismatch → exit 1 → archive
+# blocked.
+echo "── [10/10] Verify iOS public/ matches root sources ──"
+bash "$SCRIPT_DIR/verify-ios-public-assets.sh"
+echo ""
 
 echo "════════════════════════════════════════════════════════════"
 echo "PREP COMPLETE — open Xcode to archive"

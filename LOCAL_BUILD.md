@@ -109,14 +109,21 @@ df -h /Volumes/AwakenedDev
 #    (Cap copy and Xcode don't need this if nothing changed)
 npm install --no-audit --no-fund
 
-# 4. Rebuild www/ from root sources
-#    If a prep-local-build.sh script is present, prefer that for the curated
-#    asset copy (mirrors codemagic.yaml's allowlist).
-#    Otherwise:
+# 4. REBUILD www/ FROM ROOT SOURCES — CRITICAL.
+#    `npx cap copy ios` only copies www/ into ios/App/App/public/.
+#    It does NOT pull from the repo root. If www/ is stale, the IPA
+#    will ship the new native shell wrapping OLD JavaScript — this
+#    is exactly what happened with 2.2.3 build 92 (the IPA reported
+#    2.2.3/92 in TestFlight but ran 2.2.2-w15 web code on-device).
+#    ALWAYS rebuild www/ before cap copy:
+rm -rf www
 mkdir -p www
-cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
-cp avatar-*.png icon-192.png icon-512.png www/
-# (full asset copy in scripts/prep-local-build.sh)
+cp index.html app.js styles.css sw.js auth.js simulated-leaderboard.js manifest.json www/
+cp icon-192.png icon-512.png app-icon-source.png www/ 2>/dev/null || true
+cp -R assets www/assets 2>/dev/null || true
+cp -R docs www/docs 2>/dev/null || true
+# For the FULL curated asset allowlist (mirrors codemagic.yaml), use
+# scripts/prep-local-build.sh instead of the minimal cp lines above.
 
 # 5. Push web assets into the iOS bundle.
 #    Use `cap copy ios` for web-only updates (fast; no native dep resolution).
@@ -132,7 +139,14 @@ npx cap copy ios
 #    instead, you can skip this — that script does the same patch.)
 bash scripts/patch-ios-health-plist.sh
 
-# 7. Open Xcode
+# 7. VERIFY iOS PUBLIC ASSETS MATCH ROOT SOURCES — DO NOT SKIP.
+#    Compares APP_VERSION, APP_BUILD_TAG, app.js?v=, and sw.js
+#    CACHE_VERSION between the root sources and ios/App/App/public/.
+#    Any mismatch → script exits 1 → DO NOT ARCHIVE. This gate exists
+#    specifically because of the 2.2.3 build 92 stale-asset incident.
+bash scripts/verify-ios-public-assets.sh
+
+# 8. Open Xcode (only if step 7 passed)
 npx cap open ios
 ```
 
@@ -163,6 +177,14 @@ npx cap open ios
 - ❌ Bumping marketing version / build number without explicit user instruction
 
 ## Troubleshooting
+
+### Stale web assets inside a fresh native shell (the build 92 failure mode)
+
+**This class of bug uploaded 2.2.3 build 92 with old JS inside.** Symptom: TestFlight shows the new build/version (e.g. `2.2.3 (92)`) and Copy Debug Info inside the running app reports an OLDER build tag (e.g. `2.2.2-w15`). Xcode's `agvtool` / Info.plist controls the native shell version, but the bundled JavaScript bundle lives in `ios/App/App/public/` and is only updated when you (a) refresh `www/` from root sources AND (b) run `npx cap copy ios`. Skipping (a) and only doing (b) is a silent no-op — `cap copy` just copies whatever was already in `www/`.
+
+**Prevention.** Run `bash scripts/verify-ios-public-assets.sh` after every `cap copy` / `cap sync` and before opening Xcode. It compares the four release knobs (`APP_VERSION`, `APP_BUILD_TAG`, `app.js?v=`, `sw.js CACHE_VERSION`) between the root and the iOS public copy. Any mismatch → exit 1 → DO NOT archive.
+
+**Recovery if you already uploaded a stale-asset build.** Bump `APP_BUILD_TAG` (e.g. `-w2`), bump `app.js?v=`, bump `sw.js CACHE_VERSION`, push to `main`, then archive a fresh build (next number — 93 if 92 went out stale) using the full flow with `rm -rf www && <cp commands>` BEFORE `cap copy`. The next build will land with matching native + web versions, and Copy Debug Info will confirm.
 
 ### ITMS-90683 "Missing purpose string in Info.plist" — NSHealthShareUsageDescription / NSHealthUpdateUsageDescription
 
