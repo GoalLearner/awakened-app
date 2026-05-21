@@ -4,7 +4,135 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 19, 2026 morning (read this first)
+## 📌 Session handoff — May 20, 2026 (read this first; supersedes the May 19 section below)
+
+### 🛠 STATUS: Local MacBook Air archive pipeline is now the canonical upload path
+
+**Migrated off Codemagic.** Build cost per Codemagic run was acceptable per-build (~$0.40) but the cumulative iteration cost during heavy debugging sessions added up faster than budgeted. The MacBook Air now does local Xcode archives directly, with the project + Xcode caches living on an external Samsung SSD named `AwakenedDev`. **This is the canonical path going forward.** Codemagic stays in the repo as a documented fallback but must not be triggered without explicit user approval.
+
+### Machine roles
+
+| Machine | Role |
+|---|---|
+| **Windows desktop** (ClaudeCode) | Development. Commits + pushes to `origin/main`. Never builds iOS. |
+| **MacBook Air** | Local iOS archive + App Store Connect upload. Pulls from GitHub. |
+| **GitHub `origin/main`** | Source of truth between both machines. |
+| **Codemagic** | Fallback only. **Do not trigger without explicit approval.** |
+
+### Confirmed-working local setup
+
+| Path | Where | Why |
+|---|---|---|
+| `Xcode.app` | **Internal Mac disk** | Apple signing tools break on external. Do not move. |
+| Awakened repo | `/Volumes/AwakenedDev/repos/awakened-app` | Frees internal storage. |
+| Convenience symlink | `~/Documents/repos/awakened-app` → SSD path | Familiar `cd` commands still work. |
+| Xcode DerivedData | `/Volumes/AwakenedDev/Xcode/DerivedData` | Off internal. |
+| Xcode Archives | `/Volumes/AwakenedDev/Xcode/Archives` | Off internal. |
+| npm cache | `/Volumes/AwakenedDev/npm-cache` | Off internal (set via `npm config set cache`). |
+| Claude app data | Relocated to SSD | Frees internal Mac space. |
+| **Internal free space** | **~11 GiB** | post-migration |
+| **SSD free space** | **~921 GiB** | abundant headroom |
+
+### Confirmed-working Release signing
+
+| Field | Value |
+|---|---|
+| Bundle ID | `com.goallearner.awakened` |
+| Team | Richmond Campano |
+| Signing model | **Manual** (Release config only — Debug ignored) |
+| Provisioning Profile | `Awakened App Store 2026-05-19` |
+| Signing Certificate | `Apple Distribution: Richmond Campano` |
+
+Debug-signing warnings in Xcode are expected and irrelevant — Archive uses Release exclusively. Do not press the Play button. Do not select the Simulator or Richie's iPhone as destination. **Use Any iOS Device (arm64).**
+
+### What was proven on May 20
+
+- ✅ Local Xcode archive succeeds.
+- ✅ Manual App Store signing succeeds.
+- ✅ App Store Connect upload reach succeeds (the build was accepted at the upload step).
+- ✅ Build 91 of the 2.2.2 train uploaded all the way through. Then ASC rejected at the **submission** layer because the version train is closed — see next section.
+
+### ⚠️ Version-train rule (CRITICAL — read before any new upload)
+
+**Marketing version `2.2.2` is CLOSED.** App Store Connect rejected build 91 with:
+
+> "This bundle is invalid. The value for key CFBundleShortVersionString [2.2.2] must contain a higher version than that of the previously approved version [2.2.2]."
+> "Invalid Pre-Release Train. The train version '2.2.2' is closed for new build submissions."
+
+This means: even though `2.2.2` has been our active development train since 1z.85, App Store Connect has now permanently closed it for new submissions (because some prior 2.2.2 build was approved and the train cannot accept lower-or-equal marketing versions afterward).
+
+**The next real upload must use:**
+- **Marketing Version (`APP_VERSION` + Xcode):** `2.2.3` (or higher; strictly greater than `2.2.2`)
+- **Build Number (Xcode → General → Identity → Build):** latest TestFlight build + 1 (currently `92` or higher)
+
+**Do not bump these speculatively.** Bump them only when explicitly preparing a new TestFlight/App Store build.
+
+### Standard desktop → MacBook upload workflow
+
+**Desktop (ClaudeCode / Richmond):**
+1. Make code changes.
+2. `git commit` + `git push origin main`.
+3. Tell Richmond it's ready to ship.
+
+**MacBook Air:**
+```bash
+cd /Volumes/AwakenedDev/repos/awakened-app   # or use the ~/Documents symlink
+git fetch origin
+git pull origin main
+git log --oneline -3                          # confirm HEAD matches expected
+# Only if package.json changed:
+npm install --no-audit --no-fund
+# Rebuild www/ from root sources (or use scripts/prep-local-build.sh)
+npx cap copy ios                              # web-only updates — fast
+# Only when native deps changed: npx cap sync ios
+npx cap open ios
+```
+
+**In Xcode:**
+1. Destination dropdown → **Any iOS Device (arm64)**.
+2. App target → Signing & Capabilities → confirm Release uses manual `Awakened App Store 2026-05-19` + `Apple Distribution: Richmond Campano`.
+3. App target → General → Identity → Marketing Version + Build (already bumped if a new upload is intended).
+4. Product → Clean Build Folder (⇧⌘K).
+5. Product → Archive.
+6. Organizer opens → select new archive → Distribute App → App Store Connect → Upload.
+
+Full details + troubleshooting: see `LOCAL_BUILD.md`.
+
+### Hard guardrails for any future ClaudeCode session
+
+- ❌ Do NOT trigger Codemagic without explicit user instruction.
+- ❌ Do NOT bump `APP_VERSION` or build number without explicit user instruction.
+- ❌ Do NOT deploy, upload, or submit to App Store without explicit user instruction.
+- ❌ Do NOT suggest Simulator workflows.
+- ❌ Do NOT select Richie's iPhone as the Xcode destination for Archive builds.
+- ❌ Do NOT press the Play (▶) button in Xcode — Archive only.
+- ❌ Do NOT move Xcode.app off internal storage.
+- ✅ DO commit code changes and push to `origin/main` — that's the only thing ClaudeCode does from the desktop.
+- ✅ DO assume Codemagic stays untouched as a documented fallback.
+
+### Multi-day arc since the prior May 19 handoff (1z.82 → 1z.103)
+
+| Phase | Theme | Key shipped |
+|---|---|---|
+| 1z.82 → 1z.83 | Sealed Mystery Relic reveal flow | Rare/ultra reveal cinematic in Boss Defeated modal |
+| 1z.84 | PERFECT DAY banner leak fix | Confetti overlay scoping |
+| 1z.85 → 1z.87 | First three Add Habits freeze attempts | Failed — wrong layer |
+| 1z.88 → 1z.89 | Child detail + parent sheet close hardening | Partial fix |
+| 1z.90 | Codemagic build provenance + freshness gates | CI hardening |
+| 1z.91 → 1z.92 | Persistent localStorage breadcrumbs + in-app debug export (5-tap version unlock) | Diagnostic infrastructure |
+| 1z.93 | Local-build script + LOCAL_BUILD.md draft | Pre-migration prep |
+| 1z.94 → 1z.95 | Add Habits freeze finally fixed | Side effects decoupled from add path → microtask cascade neutralised |
+| 1z.96 | Notification permission auto-recovery | iOS-dropped-permission fix |
+| 1z.97 | skipSideEffects rolled out to all user-mutation render paths | Class-wide freeze fix |
+| 1z.98 → 1z.101 | Discipline Duels rendering — challenge discovery, in-flight guard, request-token pattern, total-timeout safety net + duels breadcrumbs | Iterative |
+| 1z.102 | `esc()` defensive type coercion | Root cause of "Loading duels…" stuck state. Real fix. |
+| 1z.103 (this handoff) | MacBook Air + SSD local archive pipeline confirmed working; version train 2.2.2 closed; canonical workflow documented | Migration milestone |
+
+The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
+
+---
+
+## 📌 Session handoff — May 19, 2026 morning (historical — superseded by the May 20 section above)
 
 ### 🎉 STATUS: 2.2.1 APPROVED BY APPLE
 
@@ -291,6 +419,70 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### MacBook Air + SSD local archive pipeline confirmed (v3 Phase 1z.103)
+
+**Documentation milestone — no code changes in this phase.**
+
+After the night of freeze-debug arc (1z.85 → 1z.102) consumed more Codemagic builds than the per-build cost justified ($0.40/build × many builds = noticeable burn during heavy iteration), the project moved off Codemagic as the canonical iOS build path. The MacBook Air now archives and uploads directly to App Store Connect.
+
+**Setup achieved on May 20:**
+- External Samsung Portable SSD reformatted to APFS, mounted as `/Volumes/AwakenedDev`.
+- Project repo moved to `/Volumes/AwakenedDev/repos/awakened-app` with a symlink at `~/Documents/repos/awakened-app` so existing muscle-memory commands still work.
+- Xcode Settings → Locations: DerivedData and Archives both relocated to the SSD.
+- npm cache relocated to the SSD via `npm config set cache /Volumes/AwakenedDev/npm-cache`.
+- Claude app data also relocated to free internal Mac space.
+- Internal disk: ~11 GiB free post-migration (was ~0.5 GiB pre-migration).
+- SSD: ~921 GiB free.
+
+**Proven working:**
+- Local Xcode archive succeeds.
+- Manual App Store signing succeeds using:
+  - Provisioning Profile: `Awakened App Store 2026-05-19`
+  - Certificate: `Apple Distribution: Richmond Campano`
+- App Store Connect upload reach succeeds (build 91 of the 2.2.2 train uploaded all the way through to ASC).
+
+**Version-train discovery:** Build 91 (2.2.2) was rejected at the ASC submission layer with:
+> "Invalid Pre-Release Train. The train version '2.2.2' is closed for new build submissions."
+
+Cause: a prior 2.2.2 build was approved, which closed the train. Future uploads require **marketing version ≥ 2.2.3** and **build number ≥ 92** (or latest TestFlight + 1).
+
+**Workflow (now canonical):**
+
+Desktop:
+1. ClaudeCode makes changes.
+2. Commit + push to `origin/main`.
+
+MacBook Air:
+1. `cd /Volumes/AwakenedDev/repos/awakened-app` (or use the symlink).
+2. `git fetch origin && git pull origin main`.
+3. If `package.json` changed: `npm install --no-audit --no-fund`.
+4. Rebuild `www/` (manual cp or via `scripts/prep-local-build.sh`).
+5. `npx cap copy ios` (fast — web-only). Use `cap sync ios` only when native deps changed.
+6. `npx cap open ios`.
+
+Xcode:
+1. Destination: **Any iOS Device (arm64)** — never Simulator, never the physical iPhone.
+2. Confirm Release signing (manual, the profile + cert above).
+3. Marketing Version + Build set (when preparing a new upload).
+4. Product → Clean Build Folder → Product → Archive.
+5. Organizer → Distribute App → App Store Connect → Upload.
+
+**Codemagic status:** `codemagic.yaml` remains in the repo as a documented fallback. **Do not trigger Codemagic without explicit user approval.** Cost was the reason for migration; reverting silently would defeat the migration's purpose.
+
+**Files touched (1z.103 only):**
+- `LOCAL_BUILD.md` — fully rewritten to reflect the SSD-based workflow, the version-train rule, the symlink convention, and `cap copy` vs `cap sync` guidance.
+- `CLAUDE.md` — new top-of-file May 20 handoff section + this phase note + version-train rule documented prominently.
+
+**No version-knob bumps.** `APP_BUILD_TAG`, `app.js?v`, `sw.js CACHE_VERSION` unchanged. App.js and sw.js untouched in this phase. This is documentation only.
+
+**Hard guardrails for future ClaudeCode sessions (also at top of handoff):**
+- Do NOT trigger Codemagic without explicit instruction.
+- Do NOT bump version knobs without explicit instruction.
+- Do NOT upload / submit / deploy without explicit instruction.
+- Do NOT suggest Simulator workflows.
+- Do NOT select the physical iPhone as Archive destination.
+- Do NOT move Xcode.app off internal storage.
 
 ### esc() defensive type coercion — root cause of Duels render failure (v3 Phase 1z.102)
 

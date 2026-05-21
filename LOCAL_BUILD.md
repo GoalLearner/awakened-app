@@ -1,138 +1,236 @@
-# Local TestFlight build (no Codemagic)
+# Local TestFlight build — MacBook Air + SSD pipeline
 
-Run this on the MacBook to produce a TestFlight build without paying for Codemagic.
-Mirrors `codemagic.yaml` as exactly as practical. Idempotent.
+The MacBook Air is the canonical local archive/upload machine for Awakened. Codemagic is preserved as a fallback only and **must not be triggered without explicit approval**.
 
-## One-time setup (do once, ever)
+## Machine roles
+
+| Machine | Role |
+|---|---|
+| **Windows desktop** (ClaudeCode) | Development. Commits + pushes to GitHub. Never builds iOS. |
+| **MacBook Air** | Local iOS archive + App Store Connect upload. Pulls from GitHub. |
+| **GitHub `origin/main`** | Source of truth between both machines. |
+| **Codemagic** | Fallback only. Do not trigger without explicit user approval. |
+
+## Current confirmed-working setup (as of 1z.103)
+
+| Path | Location | Reason |
+|---|---|---|
+| Xcode.app | Internal Mac disk | Apple signing tools break on external. **Do not move.** |
+| Awakened repo | `/Volumes/AwakenedDev/repos/awakened-app` | Frees internal storage. |
+| Symlink | `~/Documents/repos/awakened-app` → SSD path | Lets familiar `cd ~/Documents/...` commands still work. |
+| Xcode DerivedData | `/Volumes/AwakenedDev/Xcode/DerivedData` | Build artifacts (~2-5 GB per project) off internal. |
+| Xcode Archives | `/Volumes/AwakenedDev/Xcode/Archives` | Past archives (~200 MB each) off internal. |
+| npm cache | `/Volumes/AwakenedDev/npm-cache` | Off internal. Run once: `npm config set cache /Volumes/AwakenedDev/npm-cache`. |
+| node_modules, ios/Pods, www/, ios/App/App/public/ | Inside repo on SSD | Generated artifacts live with the repo. |
+
+**Internal storage state**: ~11 GiB free post-migration. **SSD state**: ~921 GiB free.
+
+## Confirmed-working signing (Release config)
+
+| Field | Value |
+|---|---|
+| Bundle ID | `com.goallearner.awakened` |
+| Team | Richmond Campano |
+| Signing | **Manual** (not automatic) |
+| Release Provisioning Profile | `Awakened App Store 2026-05-19` |
+| Release Signing Certificate | `Apple Distribution: Richmond Campano` |
+
+**Debug signing**: don't worry about it. Debug signing only matters if you Run on a physical iPhone from Xcode (we don't — Archive is the only build that matters). Any Debug-signing warning in Xcode can be ignored.
+
+## Version-train rule (CRITICAL)
+
+**Version `2.2.2` is closed.** App Store Connect rejected build 91 with:
+
+> "This bundle is invalid. The value for key CFBundleShortVersionString [2.2.2] must contain a higher version than that of the previously approved version [2.2.2]."
+> "Invalid Pre-Release Train. The train version '2.2.2' is closed for new build submissions."
+
+The next real upload **must** be:
+
+- **Marketing Version**: `2.2.3` or higher (must be strictly greater than the previously approved `2.2.2`)
+- **Build Number**: latest TestFlight build + 1 (currently `92+`)
+
+Bump both in:
+1. `app.js`'s `APP_VERSION` constant (and possibly `APP_BUILD_TAG`).
+2. Xcode App target → General → Identity → Marketing Version + Build.
+3. CLAUDE.md handoff knob table.
+
+**Do not bump versions speculatively.** Bump only when ready to upload an actual TestFlight build.
+
+## One-time setup (already done — for reference only)
 
 ```bash
-# Install Apple's command-line developer tools
+# Apple's command-line developer tools
 xcode-select --install
 
-# Install Homebrew (paste from https://brew.sh)
+# Homebrew (paste from https://brew.sh)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install Node + CocoaPods
+# Node + CocoaPods
 brew install node cocoapods
 
-# Install Xcode (from Mac App Store; ~12 GB; SKIP iOS Simulator runtimes when prompted)
+# Xcode from the Mac App Store (~12 GB; SKIP iOS Simulator runtimes when prompted)
 
-# Install xcodeproj Ruby gem (used by the prep script)
+# xcodeproj Ruby gem (only needed if running scripts/prep-local-build.sh)
 sudo gem install xcodeproj
 
-# Sign in to Xcode with your Apple Developer Apple ID
+# Apple Developer Apple ID signed in
 # Xcode → Settings → Accounts → Add (+)
+
+# SSD relocations
+npm config set cache /Volumes/AwakenedDev/npm-cache
+
+# In Xcode → Settings → Locations:
+#   Derived Data → Custom → /Volumes/AwakenedDev/Xcode/DerivedData
+#   Archives    → Custom → /Volumes/AwakenedDev/Xcode/Archives
 ```
 
-## Sign-in verification
+## Per-build workflow (the actual loop)
 
-In Xcode → Settings → Accounts → click your Apple ID → "Manage Certificates…"
-You need at least:
-- **Apple Distribution** certificate
+### On the Windows desktop (development)
 
-If absent: click `+` in the manage-certificates sheet → "Apple Distribution". Xcode generates the CSR, posts to Apple, and downloads the cert + private key into your login Keychain — same effect as the manual cert dance.
+1. ClaudeCode makes code changes.
+2. Commit + push to `origin/main`.
+3. Tell Richmond when ready to ship a build.
 
-## Per-build workflow
+### On the MacBook Air (build + upload)
 
 ```bash
 # 1. Pull latest
-cd ~/Documents/repos/awakened-app    # or wherever your local repo lives
+cd /Volumes/AwakenedDev/repos/awakened-app    # or use the ~/Documents symlink
 git fetch origin
 git pull origin main
-git log --oneline -3                  # confirm HEAD is what you expect
+git log --oneline -3                          # confirm HEAD matches what's on origin
 
-# 2. Check disk space (need ~8 GB free for archive + DerivedData)
-df -h .
+# 2. Disk check (need ~3 GB free on internal for Xcode caches + ~8 GB on SSD)
+df -h /
+df -h /Volumes/AwakenedDev
 
-# 3. Look up the next TestFlight build number
-#    iPhone → TestFlight app → Awakened → see "Build N"
-#    Pass N+1 to the prep script below.
+# 3. Install JS deps only if package*.json changed since last build
+#    (Cap copy and Xcode don't need this if nothing changed)
+npm install --no-audit --no-fund
 
-# 4. Run the prep script (replaces all the codemagic.yaml prep steps)
-#    Pass the next build number as the first argument.
-bash scripts/prep-local-build.sh 81
+# 4. Rebuild www/ from root sources
+#    If a prep-local-build.sh script is present, prefer that for the curated
+#    asset copy (mirrors codemagic.yaml's allowlist).
+#    Otherwise:
+mkdir -p www
+cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
+cp avatar-*.png icon-192.png icon-512.png www/
+# (full asset copy in scripts/prep-local-build.sh)
 
-# 5. Open Xcode
+# 5. Push web assets into the iOS bundle.
+#    Use `cap copy ios` for web-only updates (fast; no native dep resolution).
+#    Only use `cap sync ios` when native dependencies (Capacitor plugins) change.
+npx cap copy ios
+
+# 6. Open Xcode
 npx cap open ios
 ```
 
-In Xcode:
+### In Xcode (GUI archive + upload)
 
-1. **Top device dropdown** → select "Any iOS Device (arm64)". NOT a Simulator.
-2. **Project navigator** (left) → click "App" (the blue project icon) → select the "App" target → **Signing & Capabilities** tab.
-   - **Team**: pick your Apple Developer team.
-   - **Automatically manage signing**: try this first. If the build later errors with `applesignin` entitlement complaints, untick it and download the existing manual profile from developer.apple.com → drag into Xcode.
-   - **Bundle Identifier**: must be `com.goallearner.awakened`.
+1. **Top destination dropdown** → select **"Any iOS Device (arm64)"**. **NOT** a Simulator. **NOT** Richie's iPhone (that's for Run, not Archive).
+2. **App target → Signing & Capabilities** tab → confirm:
+   - **Release**: Manual signing, profile `Awakened App Store 2026-05-19`, cert `Apple Distribution: Richmond Campano`.
+   - Debug: ignore any warnings here for Archive builds.
 3. **App target → General → Identity** → confirm:
-   - Marketing Version: `2.2.2`
-   - Build: matches what you passed to the script (e.g. `81`)
-4. **Product → Archive** (top menu). Takes 5–15 min.
-5. When done, **Organizer** window opens automatically.
-6. Select the new archive → click **Distribute App** → **App Store Connect** → **Upload** → walk through prompts. Use automatic signing if asked.
-7. Wait for App Store Connect to ingest (5–15 min). TestFlight build appears under TestFlight → iOS Builds.
+   - **Marketing Version**: `2.2.3` (or higher).
+   - **Build**: `92` (or latest TestFlight + 1).
+4. **Product → Clean Build Folder** (`⇧⌘K`). Recommended before each archive.
+5. **Product → Archive**. Takes 5–15 min.
+6. When done, **Organizer** opens.
+7. Select the new archive → **Distribute App** → **App Store Connect** → **Upload**.
+8. Confirm signing — should pre-pick the manual Release profile.
+9. Click through prompts → wait for **"Upload Successful"**.
+10. App Store Connect ingestion takes 5–15 min. Build appears under TestFlight → iOS Builds.
+
+### Forbidden in this workflow
+
+- ❌ Triggering Codemagic (cost-saving — local is the canonical path now)
+- ❌ Selecting a Simulator destination
+- ❌ Selecting Richie's iPhone as destination
+- ❌ Pressing the Play (▶) button — that's for Run-on-device, not Archive
+- ❌ Moving Xcode.app to the SSD
+- ❌ Bumping marketing version / build number without explicit user instruction
 
 ## Troubleshooting
 
+### "This bundle is invalid... train version 'X.Y.Z' is closed"
+
+The marketing version you uploaded is equal to or less than the previously approved version. Bump `APP_VERSION` in `app.js`, Marketing Version in Xcode, push to GitHub, pull on MacBook, archive again.
+
 ### "Provisioning profile doesn't include the com.apple.developer.applesignin entitlement"
 
-Apple's automatic provisioning sometimes drops this. Two fixes:
+Apple's automatic provisioning sometimes drops this. Fix by switching to manual signing with the known-good profile `Awakened App Store 2026-05-19`:
 
-**Fix A (preferred)**: Untick "Automatically manage signing" and use the existing manual profile:
-1. Go to https://developer.apple.com → Account → Certificates, IDs & Profiles → Profiles.
-2. Download `awakened-app-store-manual.mobileprovision`.
-3. Drag the file onto Xcode's dock icon — installs it into `~/Library/MobileDevice/Provisioning Profiles/`.
-4. In Xcode → App target → Signing & Capabilities → manual signing → pick `awakened-app-store-manual` for both Debug and Release.
-
-**Fix B**: Delete and re-create the profile at developer.apple.com with Sign in with Apple explicitly checked, then re-download.
+1. Xcode → App target → Signing & Capabilities → **uncheck** "Automatically manage signing" for Release.
+2. **Release** row → Provisioning Profile → select `Awakened App Store 2026-05-19`.
+3. If the profile isn't listed: developer.apple.com → Profiles → download → drag onto Xcode Dock icon.
 
 ### "No Apple Distribution certificate installed"
 
-In Xcode → Settings → Accounts → click your Apple ID → "Manage Certificates…" → `+` → "Apple Distribution". Xcode handles the rest.
+Xcode → Settings → Accounts → Apple ID → "Manage Certificates…" → `+` → "Apple Distribution". Xcode generates a CSR, posts to Apple, downloads the cert with private key into login Keychain.
 
 ### "Build number already used"
 
-Increase the build number argument to `prep-local-build.sh` and re-run:
-
-```bash
-bash scripts/prep-local-build.sh 82
-```
-
-Or in Xcode: App target → General → Identity → Build → increment.
-
-### "command not found: agvtool"
-
-agvtool comes with Xcode. Ensure Xcode Command Line Tools are pointing at the real Xcode:
-
-```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-agvtool what-version
-```
-
-### "FAIL: APP_BUILD_TAG missing from www/app.js"
-
-The prep script's sanity gate caught this — your `git pull` didn't pick up the latest. Re-run `git pull origin main` and check `git log --oneline -3` matches the expected HEAD.
+Increment the build number in Xcode → App target → General → Identity → Build. App Store Connect rejects duplicates within the same marketing version.
 
 ### Disk space ran out mid-archive
 
-Xcode's DerivedData (default `~/Library/Developer/Xcode/DerivedData/`) bloats fast. After a successful archive, clean:
+Xcode's DerivedData should be on the SSD (per the setup above), so this shouldn't happen on internal. If it does, run:
 
 ```bash
-rm -rf ~/Library/Developer/Xcode/DerivedData/*
+rm -rf /Volumes/AwakenedDev/Xcode/DerivedData/*
 ```
 
-Or relocate DerivedData to an external SSD: Xcode → Settings → Locations → Derived Data → "Custom" → pick a folder on the SSD.
+Safe — Xcode regenerates on next build.
 
-## What the prep script does (so you can read it instead of trusting blindly)
+### "Debug signing failed but Release succeeded"
 
-1. Mirrors codemagic.yaml's www/ asset copy (lines 79–149).
-2. Wipes `ios/App/App/public/*` before sync (line 418).
-3. `npx cap sync ios`.
-4. Bumps Podfile + project.pbxproj IPHONEOS_DEPLOYMENT_TARGET to 14.0 (line 165).
+Ignore. Debug signing only matters for Run-on-physical-iPhone. Archive uses Release exclusively.
+
+### `npx cap copy ios` vs `npx cap sync ios`
+
+- **`cap copy ios`** — fast, just copies `www/` into `ios/App/App/public/`. Use for code-only changes.
+- **`cap sync ios`** — also runs `pod install` to resolve native deps. Slow (~2-5 min). Only needed when:
+  - A Capacitor plugin was added/updated in `package.json`.
+  - First-ever build on this machine.
+  - Native iOS config changed (rare).
+
+## Eject the SSD properly
+
+Before unplugging:
+1. Quit Xcode + any process touching the SSD.
+2. Finder sidebar → click the eject icon next to `AwakenedDev`.
+3. Wait for the volume to disappear.
+4. Unplug.
+
+If you unplug without ejecting, the next mount may need Disk Utility's "First Aid" to repair.
+
+## What the prep script does (`scripts/prep-local-build.sh`)
+
+Mirrors `codemagic.yaml`'s nine prep steps in one command. Use it if you want curated www/ assembly + entitlements wiring done deterministically:
+
+1. Copies the curated www/ asset allowlist (excludes 16 MB of `*-source.png` masters, includes only optimized 192×192 PNGs).
+2. Wipes `ios/App/App/public/*` before sync.
+3. `npx cap sync ios` (full sync — use `cap copy` instead for web-only updates).
+4. Bumps Podfile + project.pbxproj IPHONEOS_DEPLOYMENT_TARGET to 14.0.
 5. `pod install`.
-6. Sets `ITSAppUsesNonExemptEncryption=false` in Info.plist (line 614).
-7. Sets HealthKit usage descriptions + entitlement (line 625).
-8. Sets Sign in with Apple entitlement (line 667).
-9. Wires `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` via the xcodeproj Ruby gem (line 686).
-10. Optionally sets marketing version + build number via agvtool (line 734).
+6. Sets `ITSAppUsesNonExemptEncryption=false` in Info.plist.
+7. Sets HealthKit usage descriptions + entitlement.
+8. Sets Sign in with Apple entitlement.
+9. Wires `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` via the xcodeproj Ruby gem.
 
-The script does NOT handle signing — Xcode's GUI does that more reliably than scripting it.
+Optional positional arg: build number to set via agvtool. Example:
+
+```bash
+bash scripts/prep-local-build.sh 92
+```
+
+The script does NOT handle signing — Xcode's GUI does that more reliably than scripting.
+
+## Codemagic fallback (do not use without approval)
+
+`codemagic.yaml` remains in the repo as a safety net. If local archives ever stop working (Xcode bug, cert revocation, etc.) and you need to ship urgently, Codemagic can produce a build at ~$0.40 per run.
+
+**Do not trigger Codemagic without explicit approval from Richie.** Cost was the reason for migrating off it.
