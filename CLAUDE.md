@@ -420,6 +420,50 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### HealthKit auto-verify breadcrumb instrumentation (v3 Phase 1z.104)
+
+**Trigger.** User reported on May 20 evening that the "Strength training 30 min" habit didn't auto-check even though Apple Health showed 3h 12min of workouts on the same day. Daily walk also unchecked despite Apple Health showing 9,153 steps over the 8,000-step threshold.
+
+**Static audit result.** Code path is structurally correct. Could not distinguish between competing hypotheses from static read alone:
+- (A) Workout type classification — Apple Health's "Workouts" total may include non-strength activities (cardio, walking, etc.) that the `_isStrengthWorkoutSample` filter correctly rejects. The user could simply not have done any strength-typed workout.
+- (B) Auto-verify trigger not firing — both Daily walk AND Strength training are unverified, so it might be a broader trigger / cache / permission issue rather than a strength-specific classification miss.
+- (C) Stale 5-minute cache returning pre-workout step counts.
+- (D) Per-habit gates — `wasUncheckedToday`, `isChecked`, `isAutoVerifyDisabled`, manual user unchecks.
+
+The existing `_hkDebug` logging requires `localStorage.hb_debug_healthkit === '1'` AND Safari Web Inspector console access — both unavailable on App Store-signed TestFlight builds.
+
+**Fix.** Added persistent breadcrumb instrumentation (no behaviour change, no version bumps):
+
+1. **`_addHealthVerifyBreadcrumb(step, data)` helper** — mirrors `_addNotifBreadcrumb` and `_addDuelsBreadcrumb`. Writes to `localStorage.hb_health_verify_debug_v1` (60-entry ring). Each entry: `{ t, step, data }`.
+
+2. **Breadcrumbs in `autoVerifyStrengthTraining`** — at entry, permission read, data fetch (with first 5 sample classifications: `workoutActivityName`, `workoutActivityId`, `duration_min`), and each skip branch (data-null / auto-verify-paused / habit-not-in-list / already-checked / user-unchecked-today / zero-qualifying-workouts) and the sealed path.
+
+3. **Breadcrumbs in `autoVerifyWalk`** — same shape: entry, permission, steps result, each skip branch, threshold check (with `steps`, `threshold`, `meets`), and sealed.
+
+4. **Debug payload extension** — `_buildAwakenedDebugPayload` now includes a `healthVerify.debug` section surfacing the breadcrumb ring via Copy Debug Info.
+
+**Privacy.** The sample classification data captures only the workout type identifiers (name + numeric id + duration in minutes) — not workout history, not source-app name, not raw HealthKit sample objects. Caps at 5 samples per fetch.
+
+**No version-knob bumps.** `APP_BUILD_TAG` stays at `2.2.2-w15`, `app.js?v=453`, `sw.js v5.339`. This diagnostic ships piggyback on the next 2.2.3+ build whenever the user is ready to upload.
+
+**Files touched (1z.104 only):**
+- `app.js` — new `_addHealthVerifyBreadcrumb` helper near the other breadcrumb helpers; instrumentation calls inside `autoVerifyStrengthTraining` (skip-branch breadcrumbs + data classification) and `autoVerifyWalk` (skip-branch breadcrumbs + threshold-check breadcrumb); `payload.healthVerify.debug` added to the Copy Debug Info export.
+- `CLAUDE.md` — this section.
+
+**No backend / D1 / Duels / HealthKit permission wording / boss / drop / pity / mercy / rank-threshold / QA-unlock / economy changes.** No upload triggered. No Codemagic triggered.
+
+**Diagnostic flow when this ships on TestFlight (2.2.3+):**
+1. User reproduces the issue: does workouts, opens app, observes habit not auto-checked.
+2. Settings → 5-tap version → Copy Debug Info → paste JSON.
+3. The `healthVerify.debug` section will tell us:
+   - Did `autoVerifyStrengthTraining` even run? (look for `strength-entry`)
+   - What did HealthKit return? (look for `strength-data` — `count`, `totalMinutes`, `sampleClassification`)
+   - If `count: 0`, were workout samples present but rejected by the strength filter? Sample classification shows the `name`/`id` — we extend the allowlist if needed.
+   - If `strength-skip` fired, what was the `reason`?
+   - Same for walk: `walk-entry`, `walk-steps`, `walk-threshold-check`, `walk-skip` reasons.
+
+That single export will disambiguate hypotheses (A) through (D) completely.
+
 ### MacBook Air + SSD local archive pipeline confirmed (v3 Phase 1z.103)
 
 **Documentation milestone — no code changes in this phase.**

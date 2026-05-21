@@ -15873,6 +15873,43 @@
     try { console.log('[notif-debug]', step, data || ''); } catch (_) {}
   }
 
+  // v3 Phase 1z.104 — persistent breadcrumb ring for HealthKit auto-
+  // verification (Daily walk / Sleep / Strength training). Mirror of
+  // _addNotifBreadcrumb. User reported their Strength training and
+  // Daily walk habits weren't auto-checking despite Apple Health
+  // showing qualifying data. Static audit couldn't distinguish between:
+  //   (a) workout type classification mismatch (Health says "Workouts
+  //       3h 12min" but the underlying workoutActivityName/Id isn't one
+  //       of our STRENGTH_KEYWORDS_NORM allowlist)
+  //   (b) auto-verify trigger not firing at all
+  //   (c) cache staleness
+  //   (d) per-habit gates (wasUncheckedToday, isChecked, etc.)
+  //
+  // The existing _hkDebug() console log requires
+  //   localStorage.hb_debug_healthkit === '1'
+  // AND console access — which is unreadable on App Store-signed
+  // TestFlight builds. This breadcrumb ring surfaces the same
+  // diagnostic via Copy Debug Info → payload.healthVerify.debug.
+  //
+  // Cap 60 entries (per-render fires multiple breadcrumbs).
+  function _addHealthVerifyBreadcrumb(step, data) {
+    try {
+      const key = 'hb_health_verify_debug_v1';
+      let existing;
+      try { existing = JSON.parse(localStorage.getItem(key) || '[]'); }
+      catch (_) { existing = []; }
+      if (!Array.isArray(existing)) existing = [];
+      const entry = { t: Date.now(), step: String(step) };
+      if (data !== undefined && data !== null) {
+        try { entry.data = JSON.parse(JSON.stringify(data)); } catch (_) {}
+      }
+      existing.push(entry);
+      if (existing.length > 60) existing.splice(0, existing.length - 60);
+      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+    } catch (_) {}
+    try { console.log('[hk-verify-debug]', step, data || ''); } catch (_) {}
+  }
+
   // v3 Phase 1z.96 — notification permission auto-recovery.
   //
   // Problem: iOS can silently drop an app's notification permission
@@ -16144,6 +16181,23 @@
         catch (_) { payload.duels.debugRaw = raw.slice(0, 4000); }
       } else {
         payload.duels.debug = [];
+      }
+    } catch (_) {}
+
+    // ── 1z.104 — HealthKit auto-verify breadcrumbs ───────────
+    // Surfaces the per-call breadcrumb trail for autoVerifyWalk /
+    // autoVerifySleep / autoVerifyStrengthTraining. Lets us diagnose
+    // why a habit didn't seal despite Apple Health showing qualifying
+    // data — without needing Safari Web Inspector (which is disabled
+    // on App Store-signed TestFlight builds).
+    payload.healthVerify = {};
+    try {
+      const raw = localStorage.getItem('hb_health_verify_debug_v1');
+      if (raw) {
+        try { payload.healthVerify.debug = JSON.parse(raw); }
+        catch (_) { payload.healthVerify.debugRaw = raw.slice(0, 4000); }
+      } else {
+        payload.healthVerify.debug = [];
       }
     } catch (_) {}
 
@@ -28569,10 +28623,15 @@
   // completes (or short-circuits). Never throws — auto-verify is a
   // silent enhancement.
   async function autoVerifyWalk() {
-    if (!Health.isAvailable()) return;          // web / non-iOS
+    _addHealthVerifyBreadcrumb('walk-entry');
+    if (!Health.isAvailable()) {                // web / non-iOS
+      _addHealthVerifyBreadcrumb('walk-bail-not-available');
+      return;
+    }
 
     const walk = findWalkHabit();
     const status = Health.permissionStatus();
+    _addHealthVerifyBreadcrumb('walk-perm-status', { status, hasHabit: !!walk });
 
     // First-encounter path: show pre-prompt only when the user has the
     // walk habit (the prompt's whole purpose is to enable auto-verify
@@ -28581,9 +28640,13 @@
       if (walk && localStorage.getItem('hb_healthkit_prompted') !== '1') {
         showHealthKitPreprompt();
       }
+      _addHealthVerifyBreadcrumb('walk-bail-unknown-perm');
       return;
     }
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      _addHealthVerifyBreadcrumb('walk-bail-perm', { status });
+      return;
+    }
 
     // Fetch steps once. Used by:
     //   1. Leaderboard recording — passive, ignores pause toggle and
@@ -28592,9 +28655,11 @@
     //   2. Habit auto-verify — gated on habit presence + pause +
     //      already-checked + opted-out.
     const steps = await Health.getStepsToday();
+    _addHealthVerifyBreadcrumb('walk-steps', { steps: steps == null ? null : Number(steps) });
     if (steps == null) {
       // v3 Phase 1z.8 — still backfill yesterday even if today's
       // fetch failed (yesterday uses its own getStepsBetween query).
+      _addHealthVerifyBreadcrumb('walk-bail-steps-null');
       try { _backfillWalkYesterday(); } catch (_) {}
       return;
     }
@@ -28625,13 +28690,16 @@
     // guard `skip` rather than `return`.
     let didTodaySeal = false;
     if (isAutoVerifyDisabled() || !walk) {
-      // skip today
+      _addHealthVerifyBreadcrumb('walk-skip', {
+        reason: isAutoVerifyDisabled() ? 'auto-verify-paused' : 'habit-not-in-list'
+      });
     } else if (isChecked(walk.id)) {
-      // skip today
+      _addHealthVerifyBreadcrumb('walk-skip', { reason: 'already-checked' });
     } else if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) {
-      // skip today
+      _addHealthVerifyBreadcrumb('walk-skip', { reason: 'user-unchecked-today' });
     } else {
       const threshold = getHabitStepGoal(walk);
+      _addHealthVerifyBreadcrumb('walk-threshold-check', { steps, threshold, meets: steps >= threshold });
       if (steps >= threshold) {
         AUTO_VERIFY.recordAutoVerify(walk.id, {
           source: 'healthkit-steps',
@@ -28642,6 +28710,7 @@
         toggleHabit(walk.id, li, { silent: true });
         console.log('[Health] auto-verified Daily walk:', steps, 'steps');
         didTodaySeal = true;
+        _addHealthVerifyBreadcrumb('walk-sealed', { steps, threshold });
       }
     }
 
@@ -28824,19 +28893,47 @@
     })();
     const log = (...args) => { if (_dbg) { try { console.log('[HK/autoVerifyStrength]', ...args); } catch (_) {} } };
 
-    if (!Health.isAvailable()) { log('bail: HealthKit not available'); return; }
+    // v3 Phase 1z.104 — persistent breadcrumb instrumentation. Same
+    // logging info as _hkDebug, but persisted to localStorage so we
+    // can read it via Copy Debug Info on App Store-signed builds.
+    _addHealthVerifyBreadcrumb('strength-entry');
+    if (!Health.isAvailable()) {
+      _addHealthVerifyBreadcrumb('strength-bail-not-available');
+      log('bail: HealthKit not available'); return;
+    }
 
     const status = Health.permissionStatus();
+    _addHealthVerifyBreadcrumb('strength-perm-status', { status });
     // The walk auto-verify path already drives the first-time
     // pre-prompt. If status is 'unknown', let walk handle it and
     // bail here without prompting.
-    if (status !== 'granted') { log('bail: permission status =', status); return; }
+    if (status !== 'granted') {
+      _addHealthVerifyBreadcrumb('strength-bail-perm', { status });
+      log('bail: permission status =', status); return;
+    }
 
     // Fetch workout data ONCE — used by both the Iron Warden
     // evaluator (passive, ignores habit presence + pause toggle)
     // AND the Strength training habit auto-verify below (gated).
     // Single roundtrip via the 5-min workout cache.
     const data = await Health.getStrengthWorkoutsToday();
+    _addHealthVerifyBreadcrumb('strength-data', {
+      isNull: !data,
+      count: data ? data.count : null,
+      totalMinutes: data ? Number((data.totalMinutes || 0).toFixed(1)) : null,
+      // Include first 5 workout samples' classification info if available.
+      // Lets us see whether the user's workouts were classified as strength
+      // (and if not, what activity name/id was on them so we can extend
+      // the allowlist). Privacy-safe: only the activity classification,
+      // not workout duration history or source app.
+      sampleClassification: (data && Array.isArray(data.workouts))
+        ? data.workouts.slice(0, 5).map(w => ({
+            name: (w && w.workoutActivityName) || null,
+            id: (w && typeof w.workoutActivityId === 'number') ? w.workoutActivityId : null,
+            duration_min: (w && typeof w.duration_min === 'number') ? Number(w.duration_min.toFixed(1)) : null,
+          }))
+        : null,
+    });
     if (data) {
       log('data:', data.count, 'qualifying workout(s),', (data.totalMinutes || 0).toFixed(1), 'min');
 
@@ -28858,14 +28955,23 @@
     // case where TODAY has no workout but yesterday did.
     let didTodaySeal = false;
     if (!data || isAutoVerifyDisabled()) {
+      _addHealthVerifyBreadcrumb('strength-skip', { reason: !data ? 'data-null' : 'auto-verify-paused' });
       log('skip today: data null or auto-verify paused');
     } else {
       const strength = findStrengthHabit();
-      if (!strength)                                       log('skip today: habit not in list');
-      else if (isChecked(strength.id))                     log('skip today: already checked');
-      else if (AUTO_VERIFY.wasUncheckedToday('Strength training')) log('skip today: user un-checked');
-      else if (data.count < 1)                             log('skip today: 0 qualifying workouts');
-      else {
+      if (!strength) {
+        _addHealthVerifyBreadcrumb('strength-skip', { reason: 'habit-not-in-list' });
+        log('skip today: habit not in list');
+      } else if (isChecked(strength.id)) {
+        _addHealthVerifyBreadcrumb('strength-skip', { reason: 'already-checked' });
+        log('skip today: already checked');
+      } else if (AUTO_VERIFY.wasUncheckedToday('Strength training')) {
+        _addHealthVerifyBreadcrumb('strength-skip', { reason: 'user-unchecked-today' });
+        log('skip today: user un-checked');
+      } else if (data.count < 1) {
+        _addHealthVerifyBreadcrumb('strength-skip', { reason: 'zero-qualifying-workouts', count: data.count });
+        log('skip today: 0 qualifying workouts');
+      } else {
         AUTO_VERIFY.recordAutoVerify(strength.id, {
           source:        'healthkit-strength-workout',
           value:         data.totalMinutes,
@@ -28877,6 +28983,7 @@
         log('SEALED Strength training:', data.count, 'workout(s),', (data.totalMinutes || 0).toFixed(0), 'min');
         console.log('[Health] auto-verified Strength training:',
                     data.count, 'workout(s),', data.totalMinutes.toFixed(0), 'min');
+        _addHealthVerifyBreadcrumb('strength-sealed', { count: data.count, totalMinutes: Number(data.totalMinutes.toFixed(1)) });
         didTodaySeal = true;
       }
     }
