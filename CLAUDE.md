@@ -49,8 +49,8 @@ Debug-signing warnings in Xcode are expected and irrelevant — Archive uses Rel
 
 - ✅ Local Xcode archive succeeds.
 - ✅ Manual App Store signing succeeds.
-- ✅ App Store Connect upload reach succeeds (the build was accepted at the upload step).
-- ✅ Build 91 of the 2.2.2 train uploaded all the way through. Then ASC rejected at the **submission** layer because the version train is closed — see next section.
+- ✅ Xcode upload transport reaches App Store Connect validation.
+- ⚠️ **Build 91 was NOT an accepted TestFlight build.** ASC rejected it during validation because marketing version `2.2.2` is closed — see next section. Build 91 should be treated as a successful local archive / signing / upload-transport proof only. It did not become a TestFlight build and did not reach any tester.
 
 ### ⚠️ Version-train rule (CRITICAL — read before any new upload)
 
@@ -435,14 +435,16 @@ After the night of freeze-debug arc (1z.85 → 1z.102) consumed more Codemagic b
 - Internal disk: ~11 GiB free post-migration (was ~0.5 GiB pre-migration).
 - SSD: ~921 GiB free.
 
-**Proven working:**
+**Proven working (pipeline only — NOT a TestFlight ship):**
 - Local Xcode archive succeeds.
 - Manual App Store signing succeeds using:
   - Provisioning Profile: `Awakened App Store 2026-05-19`
   - Certificate: `Apple Distribution: Richmond Campano`
-- App Store Connect upload reach succeeds (build 91 of the 2.2.2 train uploaded all the way through to ASC).
+- Xcode upload transport reaches App Store Connect validation (build 91 of the 2.2.2 train traveled from the local machine to ASC's validation layer).
 
-**Version-train discovery:** Build 91 (2.2.2) was rejected at the ASC submission layer with:
+**Build 91 did NOT become an accepted TestFlight build.** ASC rejected it during validation, before it could appear under TestFlight → iOS Builds and before any tester could install it. Build 91 is a "the pipeline works" milestone, not a "we shipped to testers" milestone.
+
+**Version-train discovery:** ASC's rejection of build 91 read:
 > "Invalid Pre-Release Train. The train version '2.2.2' is closed for new build submissions."
 
 Cause: a prior 2.2.2 build was approved, which closed the train. Future uploads require **marketing version ≥ 2.2.3** and **build number ≥ 92** (or latest TestFlight + 1).
