@@ -420,6 +420,71 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
 
+### Workout habit broadened from strength-only to any Apple Health workout (v3 Phase 1z.105)
+
+**Product decision.** Following the 1z.104 diagnostic instrumentation, the user confirmed the issue was as anticipated for Hypothesis (A): Apple Health logged the user's workouts as HIIT + Walking, neither of which was in the strength-only allowlist. The fix could either extend the allowlist (still strength-leaning) or broaden the habit to accept ANY workout type. **Decision: broaden + rename.**
+
+**Habit rename.** Canonical habit `Strength training` → `Workout`. The displayed card label changes from "Strength training 30 min" to "Workout 30 min".
+
+**Verification rule change.** Habit auto-verifies when the user's total daily Apple Health workout minutes (sum across ALL workout types: HIIT, walking, running, cycling, strength, yoga, sports, anything) meets `HEALTHKIT_WORKOUT_DAILY_TARGET_MIN = 30` minutes. Per-sample floor: `HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN = 1` minute (filters zero-length junk only).
+
+**Iron Warden boss kept strength-only.** Iron Warden's kill condition copy explicitly reads "verified strength workout of at least 10 minutes today." Per the user's explicit guardrail ("do not silently change Duels scoring without explicit review" — same principle for boss kill conditions), Iron Warden continues to call `Health.getStrengthWorkoutsToday()` which retains the strength-only filter. The new generic habit and Iron Warden now use **different data sources** within the same `autoVerifyStrengthTraining` function call.
+
+**Strength Duel kept strength-only.** `duel_type === 'strength'` copy reads "Most Apple Health strength workouts wins." Untouched. If the strength duel type is ever broadened, it should be renamed "Workout Duel" with explicit UI copy changes.
+
+**Files touched (1z.105):** only `app.js`.
+
+Code surfaces changed:
+1. New constants `HEALTHKIT_WORKOUT_DAILY_TARGET_MIN` (30), `HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN` (1).
+2. `DEFAULT_HABITS[4]` renamed: `name: 'Workout'` (emoji 🏋️ kept).
+3. `MEASURABLE_HABITS['Strength training']` key → `'Workout'` (def 30 / min 20 / step 5 unchanged — user can still configure goal display).
+4. `STATS.STR.habits[]` membership updated.
+5. `HABIT_PRIMARY_STAT['Workout'] = 'STR'`.
+6. `HABIT_ICONS['Workout']` → `assets/habit-icons/icon-strength.png` (asset kept; dumbbells still represent workout generically).
+7. `HABIT_DESCRIPTIONS['Workout']` updated to neutral "Movement is metabolic armor" framing.
+8. `HABIT_NOTIF_COPY['Workout']` body + title updated.
+9. `isStrengthWorkoutHabit(habit)` now matches `'Workout'` (function name kept for caller stability; semantics are generic workout now).
+10. `isReadOnlyAutoVerifyHabit(habit)` references updated.
+11. `findStrengthHabit()` now looks up `'Workout'` (name kept for caller stability).
+12. Notes-modal explainer copy (line ~6527) rewritten — no longer says "Cardio sessions, HIIT, and yoga don't count." Now says any workout type counts.
+13. `autoVerifyStrengthTraining()` restructured: fetches BOTH strength-only data (for Iron Warden) AND any-workout data (for habit), checks against the new daily-target threshold.
+14. New `Health.getAnyWorkoutsToday()` + `Health.getAnyWorkoutsBetween()` + `Health.clearAnyWorkoutCache()` exported. Separate cache (`_anyWorkoutCache`).
+15. Visibility-resume handler clears both strength + any-workout caches.
+16. `_backfillStrengthYesterday()` reworked: uses `getAnyWorkoutsBetween` + 30-min total threshold; toast text now "Workout sealed for yesterday — N verified min".
+17. `wasUncheckedToday` / `wasUncheckedOnDate` lookups check BOTH `'Workout'` AND `'Strength training'` for backwards-compat with users who unchecked the habit prior to the rename.
+18. `countCompletionsByName` achievement counter sums both names for the same backwards-compat reason.
+19. New rename migration in `init()`: `if (!localStorage.getItem('hb_strength_to_workout_rename_v1'))` finds non-custom habits named "Strength training" and renames in-place. Preserves `habit.id`, so all completions/streaks/per-id metadata carries forward unchanged. Idempotent.
+20. Health-verify breadcrumbs (1z.104) updated: emit `target: HEALTHKIT_WORKOUT_DAILY_TARGET_MIN`, distinguish `strength.*` (Iron Warden data) from `workout.*` (habit data) in the `strength-data` payload, and report `below-daily-target` skip reason with totalMinutes + target.
+
+**Hypothesis disposition (from 1z.104 audit):**
+- (A) Workout type classification — CONFIRMED as the cause. Fix: accept any type.
+- (B) Auto-verify trigger not firing — NOT the cause (1z.104 breadcrumbs would have shown missing entry breadcrumbs).
+- (C) Stale cache — NOT the cause.
+- (D) Per-habit gates — NOT the cause.
+
+**Files touched (1z.105 only):**
+- `app.js` — all 20 surface changes above. `APP_BUILD_TAG` unchanged at `2.2.2-w15`.
+- `CLAUDE.md` — this section.
+
+**No version-knob bumps.** This ships piggyback on the next 2.2.3+ build whenever the user is ready.
+
+**Verification:**
+- `node --check app.js` → OK
+- `npm run test:e2e` → 8/8 pass.
+- `git diff --name-only` → `app.js`, `CLAUDE.md` only.
+
+**Known non-goals:**
+- Iron Warden boss kill condition NOT changed — still strength-only per explicit decision.
+- Strength Duel NOT changed — still strength-only per explicit decision.
+- No backend / D1 / HealthKit permission wording / Notification permission wording changes.
+- Codemagic NOT triggered. No upload, no archive, no deploy.
+
+**Migration safety:**
+- Existing users' "Strength training" habits are renamed in-place. Habit.id preserved → all completions/streaks/XP/per-id metadata carries forward unchanged.
+- Idempotent via `hb_strength_to_workout_rename_v1` localStorage flag.
+- Won't duplicate the habit. Won't reset any data.
+- Pre-rename `wasUncheckedToday`/`wasUncheckedOnDate` history under `'Strength training'` is still honored (dual lookup).
+
 ### HealthKit auto-verify breadcrumb instrumentation (v3 Phase 1z.104)
 
 **Trigger.** User reported on May 20 evening that the "Strength training 30 min" habit didn't auto-check even though Apple Health showed 3h 12min of workouts on the same day. Daily walk also unchecked despite Apple Health showing 9,153 steps over the 8,000-step threshold.

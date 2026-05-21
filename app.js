@@ -289,7 +289,27 @@
   // identifier (see _isStrengthWorkoutSample) AND (b) its duration
   // is at least this many minutes. 10 minutes filters out accidental
   // / failed workouts without locking out genuinely short sessions.
+  //
+  // v3 Phase 1z.105 — this constant is now used ONLY by the Iron
+  // Warden boss evaluator (strength-only kill condition). The
+  // "Workout 30 min" habit (renamed from "Strength training 30 min")
+  // uses HEALTHKIT_WORKOUT_DAILY_TARGET_MIN below for its own
+  // threshold and accepts ANY workout activity type.
   const HEALTHKIT_STRENGTH_MIN_MINUTES = 10;
+
+  // v3 Phase 1z.105 — generic Workout habit auto-verify config.
+  //
+  // The "Workout 30 min" habit verifies when the user's total daily
+  // workout duration (across ALL Apple Health workout types — HIIT,
+  // walking, running, cycling, strength, yoga, sports, anything)
+  // meets HEALTHKIT_WORKOUT_DAILY_TARGET_MIN minutes.
+  //
+  // HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN is a per-sample floor that
+  // filters out zero-length junk samples some apps occasionally
+  // emit (e.g. a stopped-then-restarted workout). Set low (1 min)
+  // so very short walks/HIIT bursts still contribute.
+  const HEALTHKIT_WORKOUT_DAILY_TARGET_MIN = 30;
+  const HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN   = 1;
 
   // Pure helper: filters HealthKit sleep samples to the strict bedtime
   // window — qualifying asleep samples (≥30 min) whose startDate is in
@@ -6395,15 +6415,27 @@
     if (habit.name !== 'Sleep before midnight') return false;
     return true;
   }
-  // v3 Phase 1u — canonical "Strength training" habit. Verified by
-  // HealthKit workout samples (HKWorkoutType, strength-category
-  // identifiers, ≥ 10 min duration). Binary auto-verify habit (no
-  // goal control) — meetsMinimum() short-circuits via the
-  // isHealthAutoVerifiableHabit gate below.
+  // v3 Phase 1u — canonical workout habit. Verified by HealthKit
+  // workout samples; auto-verify gate uses isHealthAutoVerifiableHabit
+  // below.
+  //
+  // v3 Phase 1z.105 — renamed from "Strength training" to "Workout"
+  // and broadened to accept ANY Apple Health workout type (HIIT,
+  // walking, running, cycling, strength, yoga, etc.) — not just
+  // strength-category samples. Threshold is now total daily workout
+  // minutes ≥ HEALTHKIT_WORKOUT_DAILY_TARGET_MIN (30). The old
+  // strength-only filter is preserved separately for Iron Warden
+  // boss kill-condition (which is STR-themed and explicitly says
+  // "verified strength workout"). Strength Duels still use the
+  // strength-only filter too.
+  //
+  // For backwards compatibility, the function name keeps the
+  // historical "Strength" prefix, but its semantics are now generic
+  // workout. Callers are unchanged.
   function isStrengthWorkoutHabit(habit) {
     if (!habit) return false;
     if (habit.custom) return false;
-    if (habit.name !== 'Strength training') return false;
+    if (habit.name !== 'Workout') return false;
     return true;
   }
   // Single gate that aggregates all habits with HealthKit auto-verify.
@@ -6499,7 +6531,7 @@
     return habit.name === 'Daily walk'
         || habit.name === 'Sleep'
         || habit.name === 'Sleep before midnight'
-        || habit.name === 'Strength training';
+        || habit.name === 'Workout';
   }
 
   // Per-habit "SYSTEM-MANAGED" body copy shown in the Notes modal
@@ -6524,10 +6556,10 @@
       case 'Sleep before midnight':
         middle = "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>";
         break;
-      case 'Strength training':
+      case 'Workout':
         middle =
-          "<p>Strength training is sealed only when Apple Health records a qualifying strength workout (10+ minutes) for today. The system is checking for real training data, not a manual tap. Connect Apple Health and put in the work. If the data shows it, your hunter earns it.</p>" +
-          "<p><strong>Workout type matters.</strong> Awakened looks for Traditional Strength Training, Functional Strength Training, Weight Training, or Resistance Training. Cardio sessions, HIIT, and yoga don't count — log those in their own habit. If your gym session didn't seal, open Apple Health → Workouts and confirm today's workout is saved under one of those categories.</p>";
+          "<p>Workout is sealed when Apple Health records at least " + HEALTHKIT_WORKOUT_DAILY_TARGET_MIN + " total minutes of workouts for today. The system is checking for real training data, not a manual tap. Connect Apple Health and put in the work. If the data shows it, your hunter earns it.</p>" +
+          "<p><strong>Any workout type counts.</strong> HIIT, walking, running, cycling, strength training, yoga, swimming, sports — whatever Apple Health logs as a workout, Awakened counts it. Workout minutes sum across the day, so a 20-min walk + 15-min HIIT session would qualify. If your session didn't seal, open Apple Health → Workouts and confirm today's session is saved as a workout.</p>";
         break;
       default:
         middle = '<p>Awakened auto-checks this habit when Apple Health verifies the conditions. Manual completion is not available.</p>';
@@ -6735,7 +6767,7 @@
     'Hydrate':                            { unit: 'glasses', def: 6,   step: 1,   min: 6  },
     'Sleep':                              { unit: 'hrs',     def: 7,   step: 0.5, min: 7  },
     'Cardio workout':                     { unit: 'min',     def: 30,  step: 5,   min: 20 },
-    'Strength training':                  { unit: 'min',     def: 30,  step: 5,   min: 20 },
+    'Workout':                            { unit: 'min',     def: 30,  step: 5,   min: 20 },
     'Sprint session':                     { unit: 'min',     def: 15,  step: 5,   min: 10 },
     'Daily walk':                         { unit: 'min',     def: 30,  step: 5,   min: 15 },
     'Ice bath or cold plunge':            { unit: 'min',     def: 5,   step: 1,   min: 5  },
@@ -7109,7 +7141,7 @@
   const STATS = [
     { id: 'STR',   icon: '⚔️',  iconImg: 'assets/stat-icons/stat-str.png',   label: 'STR',   name: 'Strength',     color: '#ef4444',
       habits: [
-        'Strength training', 'Cardio workout', 'Sprint session', 'Daily walk', 'Protein goal',
+        'Workout', 'Cardio workout', 'Sprint session', 'Daily walk', 'Protein goal',
       ] },
     { id: 'VIT',   icon: '❤️',  iconImg: 'assets/stat-icons/stat-vit.png',   label: 'VIT',   name: 'Vitality',     color: '#22c55e',
       habits: [
@@ -7943,7 +7975,7 @@
     { emoji: '😴', name: 'Sleep',                                     difficulty: 'medium'              },  // 1
     { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium'              },  // 2
     { emoji: '🏃', name: 'Cardio workout',                            difficulty: 'medium'              },  // 3
-    { emoji: '🏋️', name: 'Strength training',                        difficulty: 'hard'                },  // 4
+    { emoji: '🏋️', name: 'Workout',                                  difficulty: 'hard'                },  // 4
     { emoji: '⚡', name: 'Sprint session',                            difficulty: 'hard'                },  // 5
     { emoji: '🚶', name: 'Daily walk',                                difficulty: 'easy'                },  // 6
     { emoji: '🧊', name: 'Ice bath or cold plunge',                   difficulty: 'hard'                },  // 7
@@ -8014,7 +8046,7 @@
   // derived from this map at startup.
   const HABIT_PRIMARY_STAT = {
     // STR (red)
-    'Strength training': 'STR', 'Sprint session': 'STR', 'Mobility & Stretching': 'STR',
+    'Workout': 'STR', 'Sprint session': 'STR', 'Mobility & Stretching': 'STR',
     'Cardio workout': 'STR', 'Cold shower': 'STR', 'Ice bath or cold plunge': 'STR',
     // VIT (pink)
     'Hydrate': 'VIT', 'Sleep': 'VIT', 'Sleep before midnight': 'VIT',
@@ -8061,7 +8093,7 @@
     'Sleep':                                'assets/habit-icons/icon-sleep.png',
     'Sleep before midnight':                'assets/habit-icons/icon-sleep.png',
     'Cardio workout':                       'assets/habit-icons/icon-cardio.png',
-    'Strength training':                    'assets/habit-icons/icon-strength.png',
+    'Workout':                              'assets/habit-icons/icon-strength.png',
     'Sprint session':                       'assets/habit-icons/icon-sprint.png',
     'Daily walk':                           'assets/habit-icons/icon-walk.png',
     'Ice bath or cold plunge':              'assets/habit-icons/icon-cold.png',
@@ -8423,7 +8455,7 @@
     'Sleep':                    'Recovery happens here. Skipping sleep is borrowing energy from tomorrow with high interest.',
     'Sleep before midnight':    'It all starts the night before. Quality sleep before midnight sets the foundation for everything.',
     'Cardio workout':           'Get your heart rate up. Sustained effort — run, bike, row, swim — for 20+ minutes. Real session, not a stroll.',
-    'Strength training':        'You build your body like a fortress. Muscle is metabolic armor — protect what you build.',
+    'Workout':                  'You build your body like a fortress. Movement is metabolic armor — protect what you build.',
     'Sprint session':           'Maximum effort, minimum time. Sprints train explosiveness and remind you what 100% feels like.',
     'Daily walk':               'Background movement matters. Hit your step goal anywhere, any pace. This is the work that compounds without you noticing.',
     'Ice bath or cold plunge':  'The cold reveals who you really are. Discomfort by choice is power.',
@@ -9374,7 +9406,14 @@
       activeDays:    Object.keys(completions).filter(d => (completions[d] || []).length > 0).length,
       coldCount:     countCompletionsByName('Cold shower') + countCompletionsByName('Ice bath or cold plunge'),
       readCount:     countCompletionsByName('Read'),
-      strengthCount: countCompletionsByName('Strength training'),
+      // v3 Phase 1z.105 — sum across both old + new name to preserve
+      // achievement progress through the rename migration. Existing
+      // users' historical "Strength training" completions remain in
+      // completions[] under the old habit id which mapped to that
+      // name; new completions land under the renamed "Workout" habit.
+      // countCompletionsByName resolves by name string per the
+      // habit-identity convention, so we add both buckets.
+      strengthCount: countCompletionsByName('Workout') + countCompletionsByName('Strength training'),
       meditateCount: countCompletionsByName('Meditate & Breathwork'),
       phoneOffCount: countCompletionsByName('No phone or social media after waking'),
     };
@@ -25970,7 +26009,7 @@
         'Daily walk':                         'Background movement matters. Hit your step goal — anywhere, any pace. Walks while on calls, errands, anywhere it fits in your day.',
         'Vitamins and minerals':              'Your body cannot perform without the right fuel. Non negotiable.',
         'Meditate & Breathwork':              'Stillness is a skill. 10 minutes of presence builds the focus that trading and life demand.',
-        'Strength training':                  'The body you build reflects the discipline you practice. Show up for it daily.',
+        'Workout':                            'The body you build reflects the discipline you practice. Show up for it daily.',
         'Whole foods diet':                   'You are what you eat. Real food builds a real body and a sharp mind.',
       };
       habits.forEach(h => {
@@ -26310,7 +26349,7 @@
       'Sleep':                              { title: 'Sleep.',            body: 'Recovery is the upgrade.' },
       'Sleep before midnight':              { title: 'Bed before midnight.', body: 'Tomorrow starts tonight.' },
       'Cardio workout':                     { title: 'Cardio.',           body: 'Move before the day owns you.' },
-      'Strength training':                  { title: 'Train.',            body: 'Strength is built one session at a time.' },
+      'Workout':                            { title: 'Train.',            body: 'A session is built one set at a time.' },
       'Sprint session':                     { title: 'Sprint.',           body: 'Speed is earned in the burn.' },
       'Daily walk':                         { title: 'Walk.',             body: 'Clear the static. Stack the steps.' },
       'Ice bath or cold plunge':            { title: 'Cold plunge.',      body: 'Step in before the mind negotiates.' },
@@ -27545,6 +27584,78 @@
       }
     }
 
+    // v3 Phase 1z.105 — generic "any workout type" query for the
+    // renamed "Workout 30 min" habit. Returns ALL Apple Health
+    // workout samples for today (HIIT, walking, running, cycling,
+    // strength, yoga, sports, etc.) with a per-sample floor of
+    // HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN to filter zero-length junk.
+    //
+    // Distinct from getStrengthWorkoutsToday (above), which is now
+    // used ONLY by the Iron Warden boss kill condition (strength-
+    // category-filtered, per-sample ≥ 10 min).
+    //
+    // Returns: { count, totalMinutes, workouts: [...], fetchedAt }
+    // or null. Same shape as getStrengthWorkoutsToday. Separate
+    // cache (_anyWorkoutCache) — does not collide with workoutCache.
+    // Never throws.
+    let _anyWorkoutCache = null;
+    function isAnyWorkoutCacheFresh() {
+      return _anyWorkoutCache && (Date.now() - _anyWorkoutCache.fetchedAt) < WORKOUT_CACHE_TTL_MS;
+    }
+    function clearAnyWorkoutCache() { _anyWorkoutCache = null; }
+    async function getAnyWorkoutsToday() {
+      if (!isAvailable()) { _hkDebug('any-workout query: HealthKit not available (web/non-iOS)'); return null; }
+      if (isAnyWorkoutCacheFresh()) {
+        _hkDebug('any-workout query: returning cache (' + (_anyWorkoutCache && _anyWorkoutCache.count) +
+                 ' samples, age <' + (WORKOUT_CACHE_TTL_MS / 1000) + 's)');
+        return _anyWorkoutCache;
+      }
+      const p = plugin();
+      if (!p) { _hkDebug('any-workout query: plugin handle missing'); return null; }
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') {
+        _hkDebug('any-workout query: permission status =', status, '— short-circuit');
+        return null;
+      }
+      try {
+        const todayLocal = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate()
+          : new Date().toISOString().slice(0, 10);
+        const start = new Date(todayLocal + 'T00:00:00');
+        const end = new Date();
+        _hkDebug('any-workout query window:', start.toISOString(), '→', end.toISOString(),
+                 '(device-local today =', todayLocal + ')');
+        const result = await p.queryHKitSampleType({
+          sampleName: 'workoutType',
+          startDate:  start.toISOString(),
+          endDate:    end.toISOString(),
+          limit:      0,
+        });
+        const samples = (result && result.resultData) || [];
+        _hkDebug('any-workout query result: ' + samples.length + ' raw workout sample(s) for today');
+        // Apply per-sample floor only — accept any activity type.
+        const qualifying = samples.filter(s => {
+          const minutes = _workoutDurationMinutes(s);
+          return minutes >= HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN;
+        });
+        const totalMinutes = qualifying.reduce((sum, s) => sum + _workoutDurationMinutes(s), 0);
+        _anyWorkoutCache = {
+          count:        qualifying.length,
+          totalMinutes: totalMinutes,
+          workouts:     qualifying,
+          fetchedAt:    Date.now(),
+        };
+        setStatus('granted');
+        console.log('[Health] any workouts today:', qualifying.length,
+                    '(' + totalMinutes.toFixed(0) + ' min, samples scanned:', samples.length + ')');
+        return _anyWorkoutCache;
+      } catch (e) {
+        console.warn('[Health] any-workout query failed', e);
+        _hkDebug('any-workout query EXCEPTION:', e && e.message);
+        return null;
+      }
+    }
+
     // Verified Duel Scoring Engine v1 (v3 Phase 1z). Range-based sleep
     // query — generalization of getSleepLastNight() over an arbitrary
     // [start, end] ISO window. Used by the duel-event submitter to
@@ -27679,6 +27790,42 @@
         return qualifying;
       } catch (e) {
         console.warn('[Health] workout range query failed', e);
+        return null;
+      }
+    }
+
+    // v3 Phase 1z.105 — range-based "any workout type" query. Mirrors
+    // getStrengthWorkoutsBetween but accepts ANY activity type. Used
+    // by the yesterday-backfill path for the renamed "Workout 30 min"
+    // habit. Per-sample floor: HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN
+    // (filter zero-length junk only).
+    async function getAnyWorkoutsBetween(startISO, endISO) {
+      if (!isAvailable()) return null;
+      const status = permissionStatus();
+      if (status === 'denied' || status === 'unknown') return null;
+      if (typeof startISO !== 'string' || typeof endISO !== 'string') return null;
+      const p = plugin();
+      if (!p) return null;
+      try {
+        const result = await p.queryHKitSampleType({
+          sampleName: 'workoutType',
+          startDate:  startISO,
+          endDate:    endISO,
+          limit:      0,
+        });
+        const samples = (result && result.resultData) || [];
+        const qualifying = samples.filter(s => _workoutDurationMinutes(s) >= HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN).map(s => ({
+          uuid:         (s && (s.uuid || s.UUID)) || null,
+          startDate:    s && s.startDate || null,
+          duration_min: _workoutDurationMinutes(s),
+          activityName: (s && s.workoutActivityName) || null,
+          activityId:   (s && typeof s.workoutActivityId === 'number') ? s.workoutActivityId : null,
+          raw:          s,
+        }));
+        setStatus('granted');
+        return qualifying;
+      } catch (e) {
+        console.warn('[Health] any-workout range query failed', e);
         return null;
       }
     }
@@ -28002,6 +28149,8 @@
       getSleepBetween,       // Verified Duel Scoring Engine v1 (v3 Phase 1z)
       getStrengthWorkoutsToday,
       getStrengthWorkoutsBetween, // Verified Duel Scoring Engine v1 (v3 Phase 1z)
+      getAnyWorkoutsToday,        // v3 Phase 1z.105 — generic Workout habit
+      getAnyWorkoutsBetween,      // v3 Phase 1z.105 — backfill
       getFlightsClimbedToday,    // v3 Phase 1z.61
       getFlightsClimbedBetween,  // v3 Phase 1z.61
       getActiveEnergyToday,      // v3 Phase 1z.62 (kcal)
@@ -28009,7 +28158,8 @@
       permissionStatus,
       clearCache,            // step cache
       clearSleepCache,       // sleep cache
-      clearWorkoutCache,     // workout cache
+      clearWorkoutCache,     // strength workout cache
+      clearAnyWorkoutCache,  // any-workout cache (v3 Phase 1z.105)
       clearFlightsCache,     // flights cache (v3 Phase 1z.61)
       clearActiveEnergyCache,// active energy cache (v3 Phase 1z.62)
     };
@@ -28462,36 +28612,46 @@
       const yesterday = getDeviceLocalYesterday();
       if (!yesterday) return;
       if (completions[yesterday] && completions[yesterday].includes(habit.id)) return;
+      // v3 Phase 1z.105 — habit was renamed from 'Strength training' to
+      // 'Workout'. Honor prior uncheck history under both names.
       if (AUTO_VERIFY.wasUncheckedOnDate &&
-          AUTO_VERIFY.wasUncheckedOnDate(habit.name, yesterday)) return;
-      // Query workouts in yesterday's device-local day window.
+          (AUTO_VERIFY.wasUncheckedOnDate(habit.name, yesterday) ||
+           AUTO_VERIFY.wasUncheckedOnDate('Strength training', yesterday))) return;
+      // v3 Phase 1z.105 — query ALL workout types in yesterday's window
+      // (HIIT, walking, running, cycling, strength, yoga, etc.) and
+      // require total ≥ HEALTHKIT_WORKOUT_DAILY_TARGET_MIN. Matches
+      // the live-path rule from autoVerifyStrengthTraining.
       const start = new Date(yesterday + 'T00:00:00').toISOString();
       const end   = new Date(yesterday + 'T23:59:59.999').toISOString();
       let workouts = null;
-      try { workouts = await Health.getStrengthWorkoutsBetween(start, end); }
-      catch (_) { return; }
+      try {
+        workouts = (typeof Health.getAnyWorkoutsBetween === 'function')
+          ? await Health.getAnyWorkoutsBetween(start, end)
+          : null;
+      } catch (_) { return; }
       if (!Array.isArray(workouts) || workouts.length < 1) return;
       const totalMinutes = workouts.reduce((sum, w) => sum + (Number(w.duration_min) || 0), 0);
+      if (totalMinutes < HEALTHKIT_WORKOUT_DAILY_TARGET_MIN) return;
       const did = _markHistoricalAutoVerify(habit, yesterday, {
-        source: 'healthkit-strength-workout-backfill',
+        source: 'healthkit-any-workout-backfill',
         value: totalMinutes,
-        threshold: HEALTHKIT_STRENGTH_MIN_MINUTES,
+        threshold: HEALTHKIT_WORKOUT_DAILY_TARGET_MIN,
         workoutCount: workouts.length,
       });
       if (!did) return;
       try {
-        showHabitToast('Strength training sealed for yesterday — ' +
-          workouts.length + ' verified workout' +
-          (workouts.length === 1 ? '' : 's') + '.');
+        showHabitToast('Workout sealed for yesterday — ' +
+          totalMinutes.toFixed(0) + ' verified min across ' +
+          workouts.length + ' session' + (workouts.length === 1 ? '' : 's') + '.');
       } catch (_) {}
       // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
       if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
       if (currentTab === 'profile' && typeof renderProfile === 'function') {
         try { renderProfile(); } catch (_) {}
       }
-      console.log('[Health] backfilled Strength training for', yesterday,
+      console.log('[Health] backfilled Workout for', yesterday,
                   '—', workouts.length, 'workout(s),', totalMinutes.toFixed(0), 'min');
-    } catch (e) { console.warn('[Health] strength backfill failed', e); }
+    } catch (e) { console.warn('[Health] workout backfill failed', e); }
   }
 
   async function _backfillWalkYesterday() {
@@ -28884,7 +29044,10 @@
   // No new HealthKit auth category — 'activity' in requestAuthorization
   // already covers HKWorkoutType per the plugin's friendly-alias mapping.
   function findStrengthHabit() {
-    return habits.find(h => h.name === 'Strength training' && !h.custom) || null;
+    // v3 Phase 1z.105 — habit renamed from 'Strength training' to
+    // 'Workout'. Look for the new name. The function name is kept
+    // for call-site stability across the codebase.
+    return habits.find(h => h.name === 'Workout' && !h.custom) || null;
   }
   async function autoVerifyStrengthTraining() {
     const _dbg = (() => {
@@ -28912,51 +29075,73 @@
       log('bail: permission status =', status); return;
     }
 
-    // Fetch workout data ONCE — used by both the Iron Warden
-    // evaluator (passive, ignores habit presence + pause toggle)
-    // AND the Strength training habit auto-verify below (gated).
-    // Single roundtrip via the 5-min workout cache.
-    const data = await Health.getStrengthWorkoutsToday();
+    // v3 Phase 1z.105 — fetch BOTH strength-only and any-workout data.
+    //
+    // - `strengthData` is strength-category-filtered (Traditional /
+    //   Functional / Strength / Weight / Resistance Training only,
+    //   per-sample ≥ HEALTHKIT_STRENGTH_MIN_MINUTES). Drives the
+    //   Iron Warden boss kill condition (which is STR-themed and
+    //   explicitly says "verified strength workout" in its copy).
+    //
+    // - `workoutData` accepts ANY Apple Health workout type (HIIT,
+    //   walking, running, cycling, strength, yoga, sports, etc.)
+    //   with a tiny per-sample floor (HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN
+    //   = 1 min, filters zero-length junk). Drives the "Workout 30
+    //   min" habit auto-verify (renamed from "Strength training 30
+    //   min" — user reported HIIT not counting was confusing).
+    //
+    // Both call the same HKWorkout query under the hood; the second
+    // fetch hits the 5-min workout cache (raw samples cached) so the
+    // network/native cost is one roundtrip per 5 min.
+    const strengthData = await Health.getStrengthWorkoutsToday();
+    const workoutData  = (typeof Health.getAnyWorkoutsToday === 'function')
+      ? await Health.getAnyWorkoutsToday()
+      : null;
     _addHealthVerifyBreadcrumb('strength-data', {
-      isNull: !data,
-      count: data ? data.count : null,
-      totalMinutes: data ? Number((data.totalMinutes || 0).toFixed(1)) : null,
-      // Include first 5 workout samples' classification info if available.
-      // Lets us see whether the user's workouts were classified as strength
-      // (and if not, what activity name/id was on them so we can extend
-      // the allowlist). Privacy-safe: only the activity classification,
-      // not workout duration history or source app.
-      sampleClassification: (data && Array.isArray(data.workouts))
-        ? data.workouts.slice(0, 5).map(w => ({
-            name: (w && w.workoutActivityName) || null,
-            id: (w && typeof w.workoutActivityId === 'number') ? w.workoutActivityId : null,
-            duration_min: (w && typeof w.duration_min === 'number') ? Number(w.duration_min.toFixed(1)) : null,
-          }))
-        : null,
+      strength: {
+        isNull: !strengthData,
+        count: strengthData ? strengthData.count : null,
+        totalMinutes: strengthData ? Number((strengthData.totalMinutes || 0).toFixed(1)) : null,
+      },
+      workout: {
+        isNull: !workoutData,
+        count: workoutData ? workoutData.count : null,
+        totalMinutes: workoutData ? Number((workoutData.totalMinutes || 0).toFixed(1)) : null,
+        // First 5 raw workout samples — activity classification only.
+        // Used to extend the strength-allowlist if needed, and to
+        // visualise what Apple Health actually returned for the day.
+        sampleClassification: (workoutData && Array.isArray(workoutData.workouts))
+          ? workoutData.workouts.slice(0, 5).map(w => ({
+              name: (w && w.workoutActivityName) || null,
+              id: (w && typeof w.workoutActivityId === 'number') ? w.workoutActivityId : null,
+              duration_min: (w && typeof w.duration_min === 'number') ? Number(w.duration_min.toFixed(1)) : null,
+            }))
+          : null,
+      },
+      targetMin: HEALTHKIT_WORKOUT_DAILY_TARGET_MIN,
     });
-    if (data) {
-      log('data:', data.count, 'qualifying workout(s),', (data.totalMinutes || 0).toFixed(1), 'min');
 
-      // ── Boss evaluation (Iron Warden, D-rank) ──────────────
-      // Mirrors the Insomniac/Carouser/Steel Wolf pattern: bosses
-      // ignore the pause toggle + habit presence. The shared-data
-      // principle from CLAUDE.md applies — a single ≥10 min strength
-      // workout drives BOTH the boss kill AND the habit auto-check.
+    // ── Boss evaluation (Iron Warden, D-rank) — STRENGTH-ONLY ──
+    // Iron Warden's killCondLong explicitly reads "verified strength
+    // workout of at least 10 minutes today" — strength-only kept per
+    // explicit product decision. Habit verify (below) is separate and
+    // accepts any workout type.
+    if (strengthData) {
+      log('strength-data:', strengthData.count, 'qualifying workout(s),', (strengthData.totalMinutes || 0).toFixed(1), 'min');
       try {
-        evaluateIronWardenForDay(data, getDeviceLocalDate());
+        evaluateIronWardenForDay(strengthData, getDeviceLocalDate());
       } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
     } else {
-      log('bail (today only): getStrengthWorkoutsToday returned null');
+      log('strength-data: null');
     }
 
-    // ── Today habit auto-verify ────────────────────────────
-    // Each guard `goto skip` rather than `return` so that backfill
-    // still fires below. The whole reason backfill exists is the
-    // case where TODAY has no workout but yesterday did.
+    // ── Today habit auto-verify (ANY workout, 30-min daily total) ──
+    // Each guard `goto skip` rather than `return` so backfill still
+    // fires below.
     let didTodaySeal = false;
-    if (!data || isAutoVerifyDisabled()) {
-      _addHealthVerifyBreadcrumb('strength-skip', { reason: !data ? 'data-null' : 'auto-verify-paused' });
-      log('skip today: data null or auto-verify paused');
+    if (!workoutData || isAutoVerifyDisabled()) {
+      _addHealthVerifyBreadcrumb('strength-skip', { reason: !workoutData ? 'workout-data-null' : 'auto-verify-paused' });
+      log('skip today: workout data null or auto-verify paused');
     } else {
       const strength = findStrengthHabit();
       if (!strength) {
@@ -28965,25 +29150,36 @@
       } else if (isChecked(strength.id)) {
         _addHealthVerifyBreadcrumb('strength-skip', { reason: 'already-checked' });
         log('skip today: already checked');
-      } else if (AUTO_VERIFY.wasUncheckedToday('Strength training')) {
+      } else if (AUTO_VERIFY.wasUncheckedToday('Workout') ||
+                 AUTO_VERIFY.wasUncheckedToday('Strength training')) {
+        // v3 Phase 1z.105 — check both names so prior 'Strength training'
+        // uncheck history is honored after the rename migration.
         _addHealthVerifyBreadcrumb('strength-skip', { reason: 'user-unchecked-today' });
         log('skip today: user un-checked');
-      } else if (data.count < 1) {
-        _addHealthVerifyBreadcrumb('strength-skip', { reason: 'zero-qualifying-workouts', count: data.count });
-        log('skip today: 0 qualifying workouts');
+      } else if ((workoutData.totalMinutes || 0) < HEALTHKIT_WORKOUT_DAILY_TARGET_MIN) {
+        _addHealthVerifyBreadcrumb('strength-skip', {
+          reason: 'below-daily-target',
+          totalMinutes: Number((workoutData.totalMinutes || 0).toFixed(1)),
+          target: HEALTHKIT_WORKOUT_DAILY_TARGET_MIN,
+        });
+        log('skip today: total workout minutes', (workoutData.totalMinutes || 0).toFixed(1),
+            '< target', HEALTHKIT_WORKOUT_DAILY_TARGET_MIN);
       } else {
         AUTO_VERIFY.recordAutoVerify(strength.id, {
-          source:        'healthkit-strength-workout',
-          value:         data.totalMinutes,
-          threshold:     HEALTHKIT_STRENGTH_MIN_MINUTES,
-          workoutCount:  data.count,
+          source:        'healthkit-any-workout',
+          value:         workoutData.totalMinutes,
+          threshold:     HEALTHKIT_WORKOUT_DAILY_TARGET_MIN,
+          workoutCount:  workoutData.count,
         });
         const li = document.querySelector('.habit-item[data-id="' + strength.id + '"]');
         toggleHabit(strength.id, li, { silent: true });
-        log('SEALED Strength training:', data.count, 'workout(s),', (data.totalMinutes || 0).toFixed(0), 'min');
-        console.log('[Health] auto-verified Strength training:',
-                    data.count, 'workout(s),', data.totalMinutes.toFixed(0), 'min');
-        _addHealthVerifyBreadcrumb('strength-sealed', { count: data.count, totalMinutes: Number(data.totalMinutes.toFixed(1)) });
+        log('SEALED Workout:', workoutData.count, 'workout(s),', (workoutData.totalMinutes || 0).toFixed(0), 'min');
+        console.log('[Health] auto-verified Workout:',
+                    workoutData.count, 'workout(s),', workoutData.totalMinutes.toFixed(0), 'min');
+        _addHealthVerifyBreadcrumb('strength-sealed', {
+          count: workoutData.count,
+          totalMinutes: Number(workoutData.totalMinutes.toFixed(1)),
+        });
         didTodaySeal = true;
       }
     }
@@ -29698,6 +29894,34 @@
       if (didRename) save();
       localStorage.setItem('hb_cardio_renamed', '1');
     }
+    // ── v3 Phase 1z.105 — "Strength training" → "Workout" rename ──
+    //
+    // Canonical habit renamed because the auto-verify rule was
+    // broadened from strength-only (Traditional / Functional /
+    // Strength / Weight / Resistance Training only) to ANY Apple
+    // Health workout type (HIIT, walking, running, cycling,
+    // strength, yoga, sports, etc.). Calling it "Strength training"
+    // when HIIT now counts was misleading — "Workout" matches what
+    // it actually verifies.
+    //
+    // Migration finds non-custom 'Strength training' habits in the
+    // user's habits[] and renames in-place. Preserves habit.id, so
+    // all completions / streaks / per-id auto-verify metadata are
+    // carried forward unchanged.
+    //
+    // Idempotent via hb_strength_to_workout_rename_v1 flag.
+    if (!localStorage.getItem('hb_strength_to_workout_rename_v1')) {
+      let didRename = false;
+      habits.forEach(h => {
+        if (h && !h.custom && h.name === 'Strength training') {
+          h.name = 'Workout';
+          didRename = true;
+        }
+      });
+      if (didRename) save();
+      localStorage.setItem('hb_strength_to_workout_rename_v1', '1');
+    }
+
     // ── v2.0.2 Daily walk step-target migration (v2.1 patch) ────
     // The legacy default for Daily walk's stepGoal was 3000 (set
     // during an earlier dev cycle). HEALTHKIT_WALK_DEFAULT_THRESHOLD
@@ -30123,6 +30347,8 @@
       try { Health.clearCache         && Health.clearCache();         } catch (_) {}
       try { Health.clearSleepCache    && Health.clearSleepCache();    } catch (_) {}
       try { Health.clearWorkoutCache  && Health.clearWorkoutCache();  } catch (_) {}
+      // v3 Phase 1z.105 — any-workout cache too (parallel to strength).
+      try { Health.clearAnyWorkoutCache && Health.clearAnyWorkoutCache(); } catch (_) {}
       try { autoVerifyWalk();              } catch (_) {}
       try { autoVerifySleep();             } catch (_) {}
       try { autoVerifyStrengthTraining();  } catch (_) {}
