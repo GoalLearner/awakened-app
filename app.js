@@ -27660,6 +27660,47 @@
               hint: 'Both primary and fallback queries returned zero rows. Most likely Apple Health does NOT have HKCategoryTypeIdentifier.sleepAnalysis samples for this user — Sleep Score in the Health app can come from derived metrics that do not write category samples. Verify by opening Health → Browse → Sleep → Show All Data; if the list is empty, no HK-readable sleep data exists.',
             });
           } catch (_) {}
+
+          // v3 Phase 1z.113 — entitlement-vs-data smoke test. When BOTH
+          // the 36h primary and 72h fallback sleep queries return zero
+          // rows, the plugin / iOS HealthKit layer is either (a)
+          // missing the com.apple.developer.healthkit entitlement
+          // wiring (silent zero-row failure mode — patch via
+          // scripts/verify-ios-entitlements.sh) or (b) genuinely
+          // returning zero because the user has no readable sleep
+          // data. Probe stepCount with the SAME wide window. If
+          // stepCount also returns zero rows, the entitlement OR the
+          // entire HK auth grant is broken (one-shot diagnostic
+          // signal). If stepCount returns data but sleep doesn't,
+          // sleep is type-specific. Rate-limited by the sleepCache
+          // miss path so this only fires when sleep auto-verify
+          // actually re-runs and hits the empty case.
+          try {
+            const probeStart = new Date(now.getTime() - HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS * 3600 * 1000);
+            const probeResult = await p.queryHKitSampleType({
+              sampleName: 'stepCount',
+              startDate: probeStart.toISOString(),
+              endDate: now.toISOString(),
+              limit: 0,
+            });
+            const probeSamples = (probeResult && probeResult.resultData) || [];
+            _bc('sleep-deep-diag-steps-probe', {
+              probeWindowHours: HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS,
+              probeStepCount: probeSamples.length,
+              probeCountReturn: probeResult && (typeof probeResult.countReturn === 'number' ? probeResult.countReturn : null),
+              probeResultIsNull: !probeResult,
+              hint: (probeSamples.length === 0)
+                ? 'BOTH sleepAnalysis AND stepCount queries returned zero rows over 72h. This points at the HealthKit entitlement (com.apple.developer.healthkit) being unwired in the Xcode project — perm prompts work but no data is actually readable. Run scripts/verify-ios-entitlements.sh on the MacBook before the next archive.'
+                : 'sleepAnalysis returned zero but stepCount returned ' + probeSamples.length + ' rows. Sleep is type-specific; the entitlement is fine, the user just may not have HK-readable sleep category samples (third-party sleep app not writing to HKCategoryTypeIdentifier.sleepAnalysis).',
+            });
+          } catch (probeErr) {
+            try {
+              _bc('sleep-deep-diag-steps-probe-threw', {
+                err: String(probeErr && probeErr.message || probeErr),
+              });
+            } catch (_) {}
+          }
+
           console.log('[Health] sleep: no samples in last', HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS, 'h');
           return null;
         }

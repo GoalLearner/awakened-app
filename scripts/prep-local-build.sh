@@ -283,8 +283,19 @@ echo ""
 # Hash-compares the ship-side 1024 marketing icon to the canonical
 # resources/ios/AppIcon.appiconset/AppIcon-1024.png. Mismatch =
 # default Capacitor icon (or other wrong art) in place → exit 1.
-echo "── [11/11] Verify iOS AppIcon is the canonical Awakened icon ──"
+echo "── [11/12] Verify iOS AppIcon is the canonical Awakened icon ──"
 bash "$SCRIPT_DIR/verify-ios-app-icon.sh"
+echo ""
+
+# ── 12. Verify HealthKit + Sign in with Apple entitlements (1z.113) ─
+# Guards against the build-93/94/95 'HealthKit queries return zero
+# rows despite permission prompts working' failure mode. Without
+# the com.apple.developer.healthkit entitlement wired into
+# CODE_SIGN_ENTITLEMENTS, iOS shows the perm sheet, the user grants,
+# the JS call resolves 'granted', and every HKSampleQuery silently
+# returns 0. Steps 7-9 above set + wire these — this gate confirms.
+echo "── [12/12] Verify iOS entitlements are wired ──"
+bash "$SCRIPT_DIR/verify-ios-entitlements.sh"
 echo ""
 
 echo "════════════════════════════════════════════════════════════"

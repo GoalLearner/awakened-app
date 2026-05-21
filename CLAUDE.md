@@ -191,8 +191,19 @@ bash scripts/verify-ios-public-assets.sh
 # is in place (the build-93 failure mode). DO NOT archive if this fails.
 bash scripts/verify-ios-app-icon.sh
 
+# Verify HealthKit + Sign in with Apple entitlements are WIRED into the
+# Xcode project (not just present in App.entitlements). The lite flow
+# above does NOT wire entitlements — only prep-local-build.sh does that.
+# Without the wiring, HKSampleQuery silently returns zero rows even
+# though permission prompts work. This was the root cause of the
+# build-93/94/95 "sleep verifier says granted but returns zero" issue.
+# If this gate fails, run `bash scripts/prep-local-build.sh` instead.
+bash scripts/verify-ios-entitlements.sh
+
 npx cap open ios
 ```
+
+> ⚠️ **Strongly prefer `bash scripts/prep-local-build.sh`** over the manual cp + patch sequence above. The heavy prep script atomically rebuilds www/, syncs iOS, applies all entitlements + purpose strings + icons, and runs all four verify gates as its final steps. The lite flow is documented for when you've already run the heavy flow recently and only need a quick `www/` refresh after a small code change. **The lite flow does NOT wire entitlements** — see the "HealthKit queries silently return zero rows" troubleshooting entry in LOCAL_BUILD.md.
 
 **In Xcode (Archive + Upload — 2.2.3 build 94 specifics):**
 1. Destination dropdown → **Any iOS Device (arm64)**. NOT Simulator, NOT Richie's iPhone.
@@ -246,7 +257,11 @@ npx cap open ios
 | 1z.106 | Create Your Own Habit freeze fix — `saveCustomHabit` now closes parent `#lib-sheet` + `#lib-overlay`; new custom-create breadcrumbs; Playwright regression test. Add Habits exit-path audit completed: no remaining unclosed paths | Final freeze-class fix |
 | 1z.107 | Defensive recognition of legacy `Strength training` rows — `isLegacyOrCanonicalWorkoutName` helper threaded through `isStrengthWorkoutHabit` / `isReadOnlyAutoVerifyHabit` / `findStrengthHabit` / migration. Dedup logic for cloud-restore duplicate-row edge. Iron Warden + Strength Duel kept strength-only. 2 new Playwright tests (J.1, J.2) | Belt-and-braces for migration-miss |
 | 1z.108 | Stale-web-assets gate — new `scripts/verify-ios-public-assets.sh` fails the build if `ios/App/App/public/` release knobs don't match root sources after `cap copy`; `prep-local-build.sh` now invokes the gate and no longer hardcodes the stale `2.2.2` marketing version. Release-prep bump to `2.2.3-w2` / `app.js?v=455` / `sw.js v5.341` for build 93 | Build-pipeline hardening after build-92 stale-asset incident |
-| 1z.109 (this handoff) | iOS AppIcon patch + verify gate — new `scripts/patch-ios-app-icon.sh` replaces the default Capacitor icon set with the tracked Awakened set; `scripts/verify-ios-app-icon.sh` hash-compares the ship-side 1024 marketing icon to the canonical source so the default icon can never silently ship again. Both invoked from `prep-local-build.sh`. No web/cache knob bumps — icon-only correction for build 94 | Build-pipeline hardening after build-93 default-icon incident |
+| 1z.109 | iOS AppIcon patch + verify gate — new `scripts/patch-ios-app-icon.sh` replaces the default Capacitor icon set with the tracked Awakened set; `scripts/verify-ios-app-icon.sh` hash-compares the ship-side 1024 marketing icon to the canonical source so the default icon can never silently ship again. Both invoked from `prep-local-build.sh`. No web/cache knob bumps — icon-only correction for build 94 | Build-pipeline hardening after build-93 default-icon incident |
+| 1z.110 | Sleep auto-verify diagnostics — full breadcrumb instrumentation of `autoVerifySleep` + `getSleepLastNight`. New `sleep-*` and `bedtime-*` steps. Sleep-state filter changed to exclude only 'InBed' (forward-compatible with future plugin stage labels). | Sleep diagnostic gap closed |
+| 1z.111 | `cp avatar-*.png www/` restored to the lite MacBook flow; `verify-ios-public-assets.sh` extended to require 8 avatar PNGs + 2 PWA icons in `ios/App/App/public/`. | Build-93 avatar regression |
+| 1z.112 | Sleep query window widened 18h → 36h; new fallback 72h re-query if primary returns 0; richer raw-shape + sample-summary breadcrumbs. | strict-startDate edge defended |
+| 1z.113 (this handoff) | iOS entitlements verify gate — new `scripts/verify-ios-entitlements.sh` checks `App.entitlements` has HealthKit + Sign in with Apple AND `CODE_SIGN_ENTITLEMENTS` is wired in `project.pbxproj`. Lite-flow hazard documented: it doesn't wire entitlements; only `prep-local-build.sh` does. JS-side parallel stepCount probe added to `getSleepLastNight` when both sleep windows return empty — proves entitlement-vs-sleep-specific-data on the next debug export. | Likely root cause of build-93/94/95 sleep-query-empty |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 

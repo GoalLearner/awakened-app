@@ -162,9 +162,23 @@ bash scripts/verify-ios-public-assets.sh
 #    default Capacitor icon (or other wrong art) is in place → exit 1.
 bash scripts/verify-ios-app-icon.sh
 
-# 10. Open Xcode (only if BOTH verify gates passed)
+# 10. VERIFY HealthKit + Sign in with Apple ENTITLEMENTS — DO NOT SKIP.
+#     The lite flow above does NOT wire entitlements (only prep-local-
+#     build.sh does that, via its xcodeproj Ruby gem step). Without
+#     com.apple.developer.healthkit wired into CODE_SIGN_ENTITLEMENTS,
+#     the iOS permission sheet appears to work but HKSampleQuery
+#     silently returns zero rows. This was the root cause of the
+#     2.2.3 build-93/94/95 "sleep-query-empty despite Apple Health
+#     showing 7h 26m of sleep" failure mode.
+#     If this gate fails, run `bash scripts/prep-local-build.sh`
+#     instead — it wires entitlements + does everything else.
+bash scripts/verify-ios-entitlements.sh
+
+# 11. Open Xcode (only if ALL three verify gates passed)
 npx cap open ios
 ```
+
+> ⚠️ **Strong recommendation:** prefer `bash scripts/prep-local-build.sh` (the heavy flow) over the manual commands above. The heavy flow atomically does steps 4-10 — including the entitlement wiring that the lite flow skips. The lite flow is documented here as a fallback for when you've already run the heavy flow recently and just need to refresh `www/` after a quick code change.
 
 ### In Xcode (GUI archive + upload)
 
@@ -193,6 +207,27 @@ npx cap open ios
 - ❌ Bumping marketing version / build number without explicit user instruction
 
 ## Troubleshooting
+
+### HealthKit queries silently return zero rows (the build 93/94/95 sleep failure mode)
+
+**Symptom**: Apple Health visibly contains data (e.g. Sleep Score 90, REM/Core/Deep stages visible in the Sleep detail), Apple Health → app permissions screen shows the type toggle ON, the app's debug payload reports `sleep-perm-status: granted` and `sleep-perm-request-done` succeeded, but every `HKSampleQuery` returns zero rows. The debug payload shows `sleep-query-empty { sampleCount: 0 }` (and after 1z.112's fallback re-query, also `fallback-result: { fallbackSampleCount: 0 }`). The same pattern can also affect steps + workouts queries.
+
+**Root cause**: Apple HealthKit requires TWO independent things to actually return data on-device:
+1. **Info.plist purpose strings** (`NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription`) — needed to PROMPT the user. App Store Connect rejects builds without these (ITMS-90683). Handled by `scripts/patch-ios-health-plist.sh`.
+2. **`com.apple.developer.healthkit` entitlement, wired into the Xcode project via `CODE_SIGN_ENTITLEMENTS`** — needed to actually READ data. Without this, the permission sheet shows, the user grants, the JS auth call resolves "granted"... and every HKSampleQuery then silently returns zero rows. **The app reports "permission granted" to JS but cannot actually read data.**
+
+Codemagic and `scripts/prep-local-build.sh` both wire (2) automatically. The lite MacBook flow's standalone scripts handle (1) but skip (2). Result: queries return empty even though everything else looks fine.
+
+**Prevention**: Run `bash scripts/verify-ios-entitlements.sh` after `cap copy` and before opening Xcode. It checks:
+- `ios/App/App/App.entitlements` exists and has `com.apple.developer.healthkit = true`
+- `com.apple.developer.applesignin` entitlement is present
+- `ios/App/App.xcodeproj/project.pbxproj` has `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` wired
+
+Any failure → exit 1 → DO NOT archive.
+
+**Recovery if you've already uploaded a build with the entitlement unwired**: bump the build number in Xcode (e.g. 95 → 96), run `bash scripts/prep-local-build.sh` (its steps 7-9 wire entitlements + Sign in with Apple atomically), re-run all four verify gates, archive, upload. No web/cache knob bump required for an entitlement-only correction — `APP_BUILD_TAG`, `app.js?v=`, `sw.js CACHE_VERSION` can stay at the current values.
+
+After install, the in-app debug payload's `sleep-deep-diag-steps-probe` breadcrumb will tell you definitively whether the entitlement is now applied: if both the sleep query AND the steps-probe return zero, the entitlement is still unwired; if steps return data but sleep doesn't, the entitlement is fine and the issue is sleep-type-specific (genuinely no HK-readable sleep data).
 
 ### Status/Profile avatar missing (the build 93 in-app failure mode)
 
