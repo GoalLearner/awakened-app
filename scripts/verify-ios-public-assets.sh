@@ -135,6 +135,44 @@ report "app.js?v="       "$ROOT_APPJS_V"        "$IOS_APPJS_V"
 report "sw.js CACHE_VER" "$ROOT_CACHE_VERSION"  "$IOS_CACHE_VERSION"
 
 echo ""
+
+# ── Required root-bundled image assets ──────────────────────────────
+# v3 Phase 1z.111 — guard against the build-93 avatar-missing class
+# of bug. These assets live at the repo root (NOT under assets/),
+# are referenced from app.js as bare filenames (e.g.
+# `'avatar-paladin.png'`), and must land in `ios/App/App/public/`
+# at the same bare-filename location after `cap copy`. The lite
+# MacBook flow used to omit `cp avatar-*.png www/` and ship a
+# blank Status/Profile avatar on the user's iPhone. Verify every
+# required bare-filename image is present.
+echo "── Required root-bundled image assets in iOS public/ ──"
+REQUIRED_IMAGES=(
+  "avatar-base.png"
+  "avatar-warrior.png"
+  "avatar-ranger.png"
+  "avatar-mage.png"
+  "avatar-assassin.png"
+  "avatar-paladin.png"
+  "avatar-merchant.png"
+  "avatar-sage.png"
+  "icon-192.png"
+  "icon-512.png"
+)
+images_missing=()
+for img in "${REQUIRED_IMAGES[@]}"; do
+  if [ ! -f "ios/App/App/public/$img" ]; then
+    images_missing+=("$img")
+    fail=1
+  fi
+done
+if [ "${#images_missing[@]}" -gt 0 ]; then
+  echo "  ❌ Missing required images in ios/App/App/public/:"
+  for img in "${images_missing[@]}"; do echo "      - $img"; done
+else
+  echo "  ✓ All ${#REQUIRED_IMAGES[@]} required root-bundled images present"
+fi
+
+echo ""
 if [ "$fail" -ne 0 ]; then
   echo "❌ FAIL — iOS public/ assets do NOT match root sources."
   echo ""
@@ -146,11 +184,14 @@ if [ "$fail" -ne 0 ]; then
   echo "    rm -rf www && mkdir -p www"
   echo "    cp index.html app.js styles.css sw.js auth.js \\"
   echo "       simulated-leaderboard.js manifest.json www/"
+  echo "    cp avatar-*.png www/                          # 8 class silhouettes"
   echo "    cp icon-192.png icon-512.png app-icon-source.png www/ 2>/dev/null || true"
   echo "    cp -R assets www/assets 2>/dev/null || true"
   echo "    npx cap copy ios"
   echo "    bash scripts/patch-ios-health-plist.sh"
+  echo "    bash scripts/patch-ios-app-icon.sh"
   echo "    bash scripts/verify-ios-public-assets.sh    # re-run me"
+  echo "    bash scripts/verify-ios-app-icon.sh"
   echo ""
   echo "  Or run the full prep: bash scripts/prep-local-build.sh"
   echo ""

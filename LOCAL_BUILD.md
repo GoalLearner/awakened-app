@@ -119,6 +119,7 @@ npm install --no-audit --no-fund
 rm -rf www
 mkdir -p www
 cp index.html app.js styles.css sw.js auth.js simulated-leaderboard.js manifest.json www/
+cp avatar-*.png www/                           # 8 class silhouettes — REQUIRED, see build-93 avatar incident
 cp icon-192.png icon-512.png app-icon-source.png www/ 2>/dev/null || true
 cp -R assets www/assets 2>/dev/null || true
 cp -R docs www/docs 2>/dev/null || true
@@ -192,6 +193,16 @@ npx cap open ios
 - ❌ Bumping marketing version / build number without explicit user instruction
 
 ## Troubleshooting
+
+### Status/Profile avatar missing (the build 93 in-app failure mode)
+
+**Awakened 2.2.3 build 93 shipped to a tester's iPhone with the Status/Profile tab's class-avatar tile blank** (broken-image placeholder where Paladin's portrait should render). Symptom: TestFlight installs the right native shell, Copy Debug Info confirms `2.2.3-w2`, the web bundle is otherwise fine — but the avatar image at the top-left of the Status hero card 404s.
+
+**Root cause.** The 8 class-avatar PNGs at the repo root (`avatar-base.png`, `avatar-warrior.png`, `avatar-ranger.png`, `avatar-mage.png`, `avatar-assassin.png`, `avatar-paladin.png`, `avatar-merchant.png`, `avatar-sage.png`) are referenced from `app.js` as bare filenames (e.g. `'avatar-paladin.png'`), so they're expected at the bundle root. `codemagic.yaml` line 130 and `scripts/prep-local-build.sh` step 1 both copy them with `cp avatar-*.png www/`. The lite MacBook flow documented above used to omit that line entirely — the build proceeded, `cap copy ios` happily mirrored an avatar-less `www/` into `ios/App/App/public/`, the IPA shipped without the assets, and the rendered `<img src="avatar-paladin.png">` 404s on-device.
+
+**Prevention.** Always run `cp avatar-*.png www/` as part of the rebuild step (added to the canonical flow above), then run `bash scripts/verify-ios-public-assets.sh`. The gate now also checks every required root-bundled image (`avatar-*.png`, `icon-192.png`, `icon-512.png`) actually landed in `ios/App/App/public/` after `cap copy`. Any missing → exit 1.
+
+**Recovery if you already uploaded a build with the avatar missing.** No web-code change needed — the assets exist, the cp just wasn't done. Re-run the full rebuild (with `cp avatar-*.png www/`), `cap copy`, both verify gates, then archive the next build number. The web bundle hash will change but the release knobs (`APP_BUILD_TAG`, `app.js?v=`, `sw.js CACHE_VERSION`) do not need to bump for an asset-only correction unless you want the in-app fingerprint to differ from the previous attempt.
 
 ### Default blue Capacitor app icon on the home screen (the build 93 failure mode)
 

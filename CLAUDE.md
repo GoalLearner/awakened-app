@@ -159,6 +159,7 @@ npm install --no-audit --no-fund
 rm -rf www
 mkdir -p www
 cp index.html app.js styles.css sw.js auth.js simulated-leaderboard.js manifest.json www/
+cp avatar-*.png www/                             # 8 class silhouettes — REQUIRED (build-93 avatar incident)
 cp icon-192.png icon-512.png app-icon-source.png www/ 2>/dev/null || true
 cp -R assets www/assets 2>/dev/null || true
 cp -R docs www/docs 2>/dev/null || true
