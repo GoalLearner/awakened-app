@@ -15547,13 +15547,17 @@
   }
 
   function saveCustomHabit() {
+    try { _addHabitBreadcrumb('custom-create-click'); } catch (_) {}
     const name = (document.getElementById('custom-name-input').value || '').trim();
     const errEl = document.getElementById('custom-error');
-    const showErr = (msg) => { errEl.textContent = msg; errEl.classList.remove('hidden'); };
+    const showErr = (msg) => {
+      try { _addHabitBreadcrumb('custom-create-validation-failed', { reason: msg }); } catch (_) {}
+      errEl.textContent = msg; errEl.classList.remove('hidden');
+    };
 
     if (!name)            return showErr('Give your habit a name.');
     if (!_customStatId)   return showErr('Pick the stat this habit trains.');
-    if (habits.some(h => h.name.toLowerCase() === name.toLowerCase())) {
+    if (habits.some(h => h && typeof h.name === 'string' && h.name.toLowerCase() === name.toLowerCase())) {
       return showErr('You already have a habit with that name.');
     }
     if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) {
@@ -15569,17 +15573,59 @@
       primaryStat: _customStatId,
       custom:      true,
     };
+    try {
+      _addHabitBreadcrumb('custom-create-validated', {
+        nameLen: name.length,
+        stat: _customStatId,
+        customCount: habits.filter(h => h.custom).length + 1,
+      });
+    } catch (_) {}
+
     habits.push(newH);
     // v3 Phase 1z.34 -- close BEFORE rendering. Same iOS post-save
     // freeze pattern as commitEdit: a thrown render exception would
     // otherwise strand the Add Custom Habit overlay.
-    try { save(); } catch (e) { try { console.warn('[custom] save failed', e); } catch (_) {} }
-    closeCustomHabitModal();
+    try { _addHabitBreadcrumb('custom-create-persist-start'); } catch (_) {}
+    let saveOK = false;
+    try { save(); saveOK = true; } catch (e) {
+      try { console.warn('[custom] save failed', e); } catch (_) {}
+      try { _addHabitBreadcrumb('custom-create-persist-threw', { err: String(e && e.message || e) }); } catch (_) {}
+    }
+    try { _addHabitBreadcrumb('custom-create-persist-ok', { saveOK }); } catch (_) {}
+
+    // v3 Phase 1z.106 — close the parent Add Habits library sheet
+    // too, mirroring the 1z.89 preset-add UX. Previous bug: the
+    // custom-overlay closed cleanly, but lib-sheet + lib-overlay
+    // stayed mounted, intercepting pointer events on the tab bar
+    // and reading as a "freeze" to the user. Each close is wrapped
+    // independently so a throw in one doesn't strand the others.
+    try { closeCustomHabitModal(); } catch (e) { try { console.warn('[custom] close custom modal failed', e); } catch (_) {} }
+    try { closeLibrary(); } catch (e) { try { console.warn('[custom] close library failed', e); } catch (_) {} }
+    try { _addHabitBreadcrumb('custom-create-close-modal'); } catch (_) {}
+
     // v3 Phase 1z.97 — skipSideEffects to avoid HealthKit native-bridge
     // cascade. Same root cause as the Add Habits freeze (1z.95) — every
     // user-mutation render path was vulnerable, this is custom-habit save.
-    try { renderHabits({ skipSideEffects: true });  } catch (e) { try { console.warn('[custom] post-save renderHabits failed', e); } catch (_) {} }
-    try { renderLibrary(); } catch (e) { try { console.warn('[custom] post-save renderLibrary failed', e); } catch (_) {} }
+    try { _addHabitBreadcrumb('custom-create-render-start'); } catch (_) {}
+    try {
+      renderHabits({ skipSideEffects: true });
+      try { _addHabitBreadcrumb('custom-create-render-ok'); } catch (_) {}
+    } catch (e) {
+      try { console.warn('[custom] post-save renderHabits failed', e); } catch (_) {}
+      try { _addHabitBreadcrumb('custom-create-render-threw', { err: String(e && e.message || e) }); } catch (_) {}
+    }
+    // renderLibrary still runs so the "X left" counter / "Full" state
+    // is correct the next time the sheet opens.
+    try { renderLibrary(); } catch (e) {
+      try { console.warn('[custom] post-save renderLibrary failed', e); } catch (_) {}
+      try { _addHabitBreadcrumb('custom-create-render-library-threw', { err: String(e && e.message || e) }); } catch (_) {}
+    }
+
+    // Toast confirms the add so the user has unambiguous feedback
+    // (mirrors confirmPackAdd's pattern). Non-blocking.
+    try { showHabitToast('"' + name + '" added'); } catch (_) {}
+
+    try { _addHabitBreadcrumb('custom-create-complete'); } catch (_) {}
     // Per-habit reminder offers were removed in v1.1.3 — Awakened sends
     // ONE morning digest by default, no per-habit prompts. Power users
     // can still set per-habit reminders via Edit Habit.

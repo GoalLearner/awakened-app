@@ -546,3 +546,86 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     expect(steps).not.toContain('side-effects-complete');
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// I. Create Your Own Habit — custom add freeze regression (Phase 1z.106)
+// ─────────────────────────────────────────────────────────────
+// Regression for the "tap Create Habit → app freezes" report. Root
+// cause: saveCustomHabit closed the custom-overlay but left lib-sheet
+// + lib-overlay mounted, intercepting pointer events on the tab bar.
+// 1z.106 mirrors confirmPackAdd's 1z.89 fix — closes the library too.
+test.describe('I · Create Your Own Habit (1z.106)', () => {
+  test('custom habit save closes both modals, drops overlay, app stays responsive', async ({ page }) => {
+    await freshApp(page);
+
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#tab-habits.active')).toBeVisible();
+    await page.locator('#add-habit-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+
+    // Open Create Your Own modal.
+    await page.locator('.lib-pack-entry--custom').click();
+    await expect(page.locator('#custom-overlay')).toBeVisible();
+
+    // Fill the name.
+    await page.locator('#custom-name-input').fill('Run');
+
+    // Pick the STR stat (first card in the grid).
+    await page.locator('.custom-stat-btn').first().click();
+
+    // Save button must be enabled now.
+    await expect(page.locator('#custom-save-btn')).toBeEnabled();
+    await page.locator('#custom-save-btn').click();
+
+    // Custom modal closes.
+    await expect(page.locator('#custom-overlay')).toBeHidden({ timeout: 3_000 });
+    // 1z.106 — parent Add Habits sheet + overlay must ALSO close.
+    await expect(page.locator('#lib-sheet')).toBeHidden({ timeout: 3_000 });
+    await expect(page.locator('#lib-overlay')).toBeHidden();
+
+    // Habit landed in storage with the right shape.
+    const stored = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_habits');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    });
+    expect(Array.isArray(stored)).toBe(true);
+    const found = (stored || []).find((h: { name?: string }) => h.name === 'Run');
+    expect(found).toBeTruthy();
+    expect(found.custom).toBe(true);
+    expect(found.primaryStat).toBe('STR');
+    expect(found.difficulty).toBe('medium');
+
+    // Toast confirms the add.
+    await expect(page.locator('.habit-toast').first()).toContainText(/run/i);
+
+    // App stays responsive — tab switch works (this was the freeze
+    // symptom: lib-overlay was intercepting the tab-bar tap).
+    await page.locator('#tab-profile').click();
+    await expect(page.locator('#tab-profile.active')).toBeVisible();
+
+    // Breadcrumb assertions — the 1z.106 custom-create breadcrumb
+    // sequence must trace the happy path end to end.
+    const crumbs = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_add_habit_debug_v1');
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) { return []; }
+    });
+    const steps = (crumbs as Array<{ step: string }>).map(c => c.step);
+    expect(steps).toContain('custom-create-click');
+    expect(steps).toContain('custom-create-validated');
+    expect(steps).toContain('custom-create-persist-start');
+    expect(steps).toContain('custom-create-persist-ok');
+    expect(steps).toContain('custom-create-close-modal');
+    expect(steps).toContain('custom-create-render-start');
+    expect(steps).toContain('custom-create-render-ok');
+    expect(steps).toContain('custom-create-complete');
+    // No throws on the happy path.
+    expect(steps).not.toContain('custom-create-persist-threw');
+    expect(steps).not.toContain('custom-create-render-threw');
+    expect(steps).not.toContain('custom-create-render-library-threw');
+    expect(steps).not.toContain('custom-create-validation-failed');
+  });
+});
