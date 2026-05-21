@@ -6432,11 +6432,33 @@
   // For backwards compatibility, the function name keeps the
   // historical "Strength" prefix, but its semantics are now generic
   // workout. Callers are unchanged.
+  // v3 Phase 1z.107 — defensive workout-habit name identity.
+  // Recognizes both the new canonical 'Workout' and the legacy
+  // 'Strength training' (pre-1z.105) name, plus tolerated trim /
+  // case variants and the "X min" display suffix forms. This is
+  // the belt-and-braces guard: even if the 1z.105 rename migration
+  // never fires on a given device (race, partial restore, app
+  // never relaunched after the binary swap, etc.), the auto-verify
+  // path must still recognize the legacy row so the habit isn't
+  // orphaned.
+  //
+  // Iron Warden + Strength Duel intentionally do NOT use this
+  // helper — they remain strength-only by product decision.
+  function isLegacyOrCanonicalWorkoutName(name) {
+    if (typeof name !== 'string') return false;
+    const n = name.trim().toLowerCase();
+    return n === 'workout' ||
+           n === 'workout 30 min' ||
+           n === 'strength training' ||
+           n === 'strength training 30 min';
+  }
+
   function isStrengthWorkoutHabit(habit) {
     if (!habit) return false;
     if (habit.custom) return false;
-    if (habit.name !== 'Workout') return false;
-    return true;
+    // v3 Phase 1z.107 — match both 'Workout' and legacy 'Strength
+    // training' so a missed rename migration cannot strand auto-verify.
+    return isLegacyOrCanonicalWorkoutName(habit.name);
   }
   // Single gate that aggregates all habits with HealthKit auto-verify.
   // Used by meetsMinimum() to bypass the legacy MEASURABLE_HABITS minimum
@@ -6528,10 +6550,13 @@
   function isReadOnlyAutoVerifyHabit(habit) {
     if (!habit) return false;
     if (habit.custom) return false;
+    // v3 Phase 1z.107 — workout match uses the legacy-aware helper so
+    // a pre-1z.105 'Strength training' row that never got renamed is
+    // still treated as system-managed (no manual toggle).
     return habit.name === 'Daily walk'
         || habit.name === 'Sleep'
         || habit.name === 'Sleep before midnight'
-        || habit.name === 'Workout';
+        || isLegacyOrCanonicalWorkoutName(habit.name);
   }
 
   // Per-habit "SYSTEM-MANAGED" body copy shown in the Notes modal
@@ -29093,7 +29118,18 @@
     // v3 Phase 1z.105 — habit renamed from 'Strength training' to
     // 'Workout'. Look for the new name. The function name is kept
     // for call-site stability across the codebase.
-    return habits.find(h => h.name === 'Workout' && !h.custom) || null;
+    //
+    // v3 Phase 1z.107 — defensive fallback: if no row matches the
+    // new canonical name but a legacy 'Strength training' row still
+    // exists (migration miss / partial restore / pre-rename install),
+    // return THAT so auto-verify can still seal it. The migration
+    // will rename it in-place on next init() cycle once it runs.
+    // Prefer the canonical row when both exist so we never return the
+    // dead legacy duplicate.
+    const canonical = habits.find(h => h && !h.custom && h.name === 'Workout');
+    if (canonical) return canonical;
+    const legacy = habits.find(h => h && !h.custom && isLegacyOrCanonicalWorkoutName(h.name));
+    return legacy || null;
   }
   async function autoVerifyStrengthTraining() {
     const _dbg = (() => {
@@ -29190,6 +29226,18 @@
       log('skip today: workout data null or auto-verify paused');
     } else {
       const strength = findStrengthHabit();
+      if (strength) {
+        // v3 Phase 1z.107 — record which name actually matched. If
+        // isLegacyName is true, the 1z.105 rename migration didn't
+        // (or hasn't yet) rewritten this row, and findStrengthHabit's
+        // defensive fallback is what found it.
+        try {
+          _addHealthVerifyBreadcrumb('strength-habit-matched', {
+            name: strength.name,
+            isLegacyName: strength.name !== 'Workout',
+          });
+        } catch (_) {}
+      }
       if (!strength) {
         _addHealthVerifyBreadcrumb('strength-skip', { reason: 'habit-not-in-list' });
         log('skip today: habit not in list');
@@ -29956,16 +30004,72 @@
     // carried forward unchanged.
     //
     // Idempotent via hb_strength_to_workout_rename_v1 flag.
+    //
+    // v3 Phase 1z.107 — strengthened. Matches via
+    // isLegacyOrCanonicalWorkoutName (trim + case-insensitive +
+    // tolerates the "30 min" display-suffix variants). Also handles
+    // the duplicate-row edge case: if BOTH 'Workout' and a legacy
+    // 'Strength training' row exist (e.g., partial cloud-restore),
+    // keep the canonical row and drop the legacy duplicate so the
+    // habits list doesn't end up with two workout cards. Custom
+    // habits with the same string name are never touched.
     if (!localStorage.getItem('hb_strength_to_workout_rename_v1')) {
-      let didRename = false;
-      habits.forEach(h => {
-        if (h && !h.custom && h.name === 'Strength training') {
-          h.name = 'Workout';
-          didRename = true;
+      let didChange = false;
+      const canonicalAlready = habits.some(h => h && !h.custom && h.name === 'Workout');
+      const renamedNames = [];
+      const droppedIds = [];
+
+      if (canonicalAlready) {
+        // Canonical row already exists — drop any legacy duplicates so
+        // the habit grid doesn't show two workout cards.
+        for (let i = habits.length - 1; i >= 0; i--) {
+          const h = habits[i];
+          if (h && !h.custom && h.name !== 'Workout' &&
+              isLegacyOrCanonicalWorkoutName(h.name)) {
+            droppedIds.push(h.id);
+            habits.splice(i, 1);
+            didChange = true;
+          }
         }
-      });
-      if (didRename) save();
+      } else {
+        // No canonical row yet — rename the first legacy match in
+        // place (preserving id + completions + streaks). Any
+        // additional legacy rows after that get dropped to avoid
+        // duplicates.
+        let renamedOne = false;
+        for (let i = 0; i < habits.length; i++) {
+          const h = habits[i];
+          if (h && !h.custom && isLegacyOrCanonicalWorkoutName(h.name) &&
+              h.name !== 'Workout') {
+            if (!renamedOne) {
+              renamedNames.push(h.name);
+              h.name = 'Workout';
+              renamedOne = true;
+              didChange = true;
+            } else {
+              droppedIds.push(h.id);
+              habits.splice(i, 1);
+              i--;
+              didChange = true;
+            }
+          }
+        }
+      }
+
+      if (didChange) save();
       localStorage.setItem('hb_strength_to_workout_rename_v1', '1');
+      // Diagnostic breadcrumb — surfaces in Copy Debug Info so we can
+      // prove the migration ran (or that it ran but found nothing).
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('rename-migration-1z105', {
+            canonicalAlreadyExisted: canonicalAlready,
+            renamedFrom: renamedNames,
+            droppedDuplicateIds: droppedIds,
+            didChange,
+          });
+        }
+      } catch (_) {}
     }
 
     // ── v2.0.2 Daily walk step-target migration (v2.1 patch) ────
@@ -30128,7 +30232,13 @@
     // Idempotent via the flag.
     if (!localStorage.getItem('hb_strength_readonly_migration_v1')) {
       try {
-        const strengthHabit = habits.find(h => h && h.name === 'Strength training' && !h.custom);
+        // v3 Phase 1z.107 — match the canonical 'Workout' name too,
+        // since the 1z.105 rename may have already moved this row by
+        // the time this migration runs. findStrengthHabit prefers the
+        // canonical row when both exist.
+        const strengthHabit = (typeof findStrengthHabit === 'function')
+          ? findStrengthHabit()
+          : habits.find(h => h && !h.custom && isLegacyOrCanonicalWorkoutName(h.name));
         if (strengthHabit &&
             Array.isArray(completions[today]) &&
             completions[today].indexOf(strengthHabit.id) >= 0 &&

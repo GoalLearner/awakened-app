@@ -629,3 +629,172 @@ test.describe('I · Create Your Own Habit (1z.106)', () => {
     expect(steps).not.toContain('custom-create-validation-failed');
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// J. Legacy "Strength training" → "Workout" rename migration (1z.107)
+// ─────────────────────────────────────────────────────────────
+// Defensive regression for the 1z.107 fix. A pre-1z.105 device that
+// still has `name: "Strength training"` in localStorage must:
+//   1. Be recognized by isStrengthWorkoutHabit / findStrengthHabit
+//      via the legacy-aware helper, AND
+//   2. Have the row renamed in-place to 'Workout' by the migration
+//      so the UI label catches up.
+// Also asserts the migration does NOT rename custom user habits
+// that happen to share the legacy name.
+test.describe('J · Legacy Strength training → Workout migration (1z.107)', () => {
+  test('renames non-custom legacy row, preserves id, leaves custom habits alone, no duplicates', async ({ page }) => {
+    // Seed BEFORE app boot: a legacy 'Strength training' default habit
+    // plus a custom user habit that happens to share the legacy name.
+    // Migration should rename the default but NOT the custom.
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_onboarding_seen_v2', '1');
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+
+        // Ensure the migration flag is NOT set so we exercise the
+        // rename path.
+        localStorage.removeItem('hb_strength_to_workout_rename_v1');
+
+        const seeded = [
+          {
+            id: 'legacy-str-id-1',
+            name: 'Strength training',
+            emoji: '🏋️',
+            difficulty: 'hard',
+            type: 'build',
+            primaryStat: 'STR',
+          },
+          {
+            id: 'custom-str-id-1',
+            name: 'Strength training',
+            emoji: '💪',
+            difficulty: 'medium',
+            type: 'build',
+            primaryStat: 'STR',
+            custom: true,
+          },
+          {
+            id: 'unrelated-id-1',
+            name: 'Hydrate',
+            emoji: '💧',
+            difficulty: 'easy',
+            type: 'build',
+            primaryStat: 'VIT',
+          },
+        ];
+        localStorage.setItem('hb_habits', JSON.stringify(seeded));
+      } catch (_) {}
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+
+    // Wait briefly so init() + migrations have committed to localStorage.
+    await page.waitForTimeout(500);
+
+    const habitsAfter = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_habits');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    });
+
+    expect(Array.isArray(habitsAfter)).toBe(true);
+
+    // 1. Default 'Strength training' row was renamed to 'Workout',
+    //    id preserved.
+    const renamed = (habitsAfter || []).find((h: { id?: string }) => h.id === 'legacy-str-id-1');
+    expect(renamed).toBeTruthy();
+    expect(renamed.name).toBe('Workout');
+    expect(renamed.custom).toBeFalsy();
+
+    // 2. Custom user habit with the legacy name string is UNTOUCHED.
+    const customUntouched = (habitsAfter || []).find((h: { id?: string }) => h.id === 'custom-str-id-1');
+    expect(customUntouched).toBeTruthy();
+    expect(customUntouched.name).toBe('Strength training');
+    expect(customUntouched.custom).toBe(true);
+
+    // 3. No duplicate 'Workout' habit was created — exactly one
+    //    non-custom Workout row exists.
+    const nonCustomWorkouts = (habitsAfter || []).filter(
+      (h: { name?: string; custom?: boolean }) => !h.custom && h.name === 'Workout'
+    );
+    expect(nonCustomWorkouts).toHaveLength(1);
+
+    // 4. Unrelated habits are untouched.
+    const hydrate = (habitsAfter || []).find((h: { id?: string }) => h.id === 'unrelated-id-1');
+    expect(hydrate).toBeTruthy();
+    expect(hydrate.name).toBe('Hydrate');
+
+    // 5. Migration flag is now set so subsequent boots are no-op.
+    const flag = await page.evaluate(() => localStorage.getItem('hb_strength_to_workout_rename_v1'));
+    expect(flag).toBe('1');
+  });
+
+  test('drops legacy duplicate when canonical Workout already exists', async ({ page }) => {
+    // Edge case: cloud-restore brought back BOTH a renamed canonical
+    // 'Workout' row AND the pre-rename 'Strength training' row. The
+    // migration should keep the canonical and drop the legacy
+    // duplicate so the habit grid doesn't show two workout cards.
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_onboarding_seen_v2', '1');
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        localStorage.removeItem('hb_strength_to_workout_rename_v1');
+
+        const seeded = [
+          {
+            id: 'canonical-workout-id',
+            name: 'Workout',
+            emoji: '🏋️',
+            difficulty: 'hard',
+            type: 'build',
+            primaryStat: 'STR',
+          },
+          {
+            id: 'legacy-strength-id',
+            name: 'Strength training',
+            emoji: '🏋️',
+            difficulty: 'hard',
+            type: 'build',
+            primaryStat: 'STR',
+          },
+        ];
+        localStorage.setItem('hb_habits', JSON.stringify(seeded));
+      } catch (_) {}
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(500);
+
+    const habitsAfter = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_habits');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    });
+    expect(Array.isArray(habitsAfter)).toBe(true);
+
+    // Canonical row preserved.
+    const canonical = (habitsAfter || []).find((h: { id?: string }) => h.id === 'canonical-workout-id');
+    expect(canonical).toBeTruthy();
+    expect(canonical.name).toBe('Workout');
+
+    // Legacy duplicate dropped entirely.
+    const legacyStill = (habitsAfter || []).find((h: { id?: string }) => h.id === 'legacy-strength-id');
+    expect(legacyStill).toBeFalsy();
+
+    // No duplicate Workout cards.
+    const nonCustomWorkouts = (habitsAfter || []).filter(
+      (h: { name?: string; custom?: boolean }) => !h.custom && h.name === 'Workout'
+    );
+    expect(nonCustomWorkouts).toHaveLength(1);
+  });
+});
