@@ -6,7 +6,16 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ## 📌 Session handoff — May 20, 2026 (read this first; supersedes the May 19 section below)
 
-### 🛠 STATUS: Local MacBook Air archive pipeline is now the canonical upload path
+### 🛠 STATUS: Repo is staged for the next 2.2.3+ local archive — pending explicit user approval to bump versions and ship
+
+The MacBook Air + SSD `AwakenedDev` local archive pipeline is canonical (proved on May 20). Three additional fixes landed on `main` the same day and will piggyback on whichever upload the user next approves:
+
+- **1z.104** (`5e787f9`) — HealthKit auto-verify diagnostics (`hb_health_verify_debug_v1` ring + `payload.healthVerify.debug` Copy Debug Info export). No behaviour change.
+- **1z.105** (`e7bdf5a`) — "Strength training" canonical habit broadened/renamed to "Workout"; verifies from ANY Apple Health workout totaling 30+ min daily. Idempotent rename migration via `hb_strength_to_workout_rename_v1`. Iron Warden boss and Strength Duel intentionally remain strength-only.
+- **1z.106** (`9f62001`) — Create Your Own Habit freeze fix. `saveCustomHabit` now closes the parent `#lib-sheet` + `#lib-overlay` after the custom modal so the library overlay can't intercept pointer events on the tab bar. New custom-create breadcrumbs in `hb_add_habit_debug_v1`. Playwright regression test `I · Create Your Own Habit (1z.106)` covers it. Full e2e: **9/9 passing**.
+- **Add Habits exit-path audit** — performed after 1z.106; every documented exit path for `lib-sheet`, `lib-overlay`, `custom-overlay`, `hd-sheet`, and `mr-overlay` was traced. **No remaining real unclosed paths.** 1z.106 closed the only real stranded-overlay surface. No further code changes warranted from the audit.
+
+**Nothing has been uploaded since the May 20 morning local-archive proof (build 91).** Build 91 was a transport/signing proof only — App Store Connect rejected it during validation because marketing version `2.2.2` is closed (see Version-train rule below). All work since 1z.103 ships piggyback on the next real upload.
 
 **Migrated off Codemagic.** Build cost per Codemagic run was acceptable per-build (~$0.40) but the cumulative iteration cost during heavy debugging sessions added up faster than budgeted. The MacBook Air now does local Xcode archives directly, with the project + Xcode caches living on an external Samsung SSD named `AwakenedDev`. **This is the canonical path going forward.** Codemagic stays in the repo as a documented fallback but must not be triggered without explicit user approval.
 
@@ -98,6 +107,52 @@ npx cap open ios
 
 Full details + troubleshooting: see `LOCAL_BUILD.md`.
 
+### ✅ Before the next upload — release prep checklist
+
+Run this checklist **only after the user has explicitly approved preparing and uploading a new TestFlight/App Store build.** Do not bump knobs speculatively. Until that explicit approval, the version knobs documented further down stay frozen.
+
+**Desktop (ClaudeCode) — release prep commit:**
+1. Confirm with the user that they want a new upload prepared. Wait for explicit yes.
+2. Bump `APP_VERSION` from `2.2.2` → `2.2.3` (or higher; must be strictly greater than `2.2.2`).
+3. Bump `APP_BUILD_TAG` accordingly (e.g. `2.2.3-w1`).
+4. Bump `app.js?v=` in `index.html` (last value `453` → `454+`).
+5. Bump `sw.js` `CACHE_VERSION` (last value `v5.339` → next `v5.340+`).
+6. Confirm `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+7. Update the version-knobs table in this CLAUDE.md to match.
+8. `node --check app.js && node --check sw.js && npm run test:e2e` — must be 9/9 green.
+9. Commit `chore: bump to 2.2.3 build N for TestFlight` and push to `origin/main`.
+
+**MacBook Air — local archive + upload:**
+```bash
+cd /Volumes/AwakenedDev/repos/awakened-app   # or use the ~/Documents symlink
+git fetch origin
+git pull origin main
+git log --oneline -3                          # confirm HEAD matches the bump commit
+# Only if package.json changed since last build:
+npm install --no-audit --no-fund
+# Rebuild www/ from root sources (or use scripts/prep-local-build.sh)
+npx cap copy ios                              # web-only updates — fast
+# Only when native deps changed: npx cap sync ios
+npx cap open ios
+```
+
+**In Xcode (Archive + Upload):**
+1. Destination dropdown → **Any iOS Device (arm64)**. NOT Simulator, NOT Richie's iPhone.
+2. App target → Signing & Capabilities → confirm **Release** uses **Manual** signing with profile `Awakened App Store 2026-05-19` + certificate `Apple Distribution: Richmond Campano`. (Debug-signing warnings can be ignored — Archive is Release-only.)
+3. App target → General → Identity → set Marketing Version `2.2.3` (or whichever was bumped) + Build `92` (or `latest TestFlight + 1`).
+4. Product → **Clean Build Folder** (⇧⌘K).
+5. Product → **Archive**. ~5–15 min.
+6. Organizer auto-opens → select the new archive → **Distribute App** → **App Store Connect** → **Upload**.
+7. Wait for **Upload Successful**. ASC ingestion is 5–15 min before the build shows up under TestFlight → iOS Builds.
+
+**Forbidden during release prep + upload:**
+- ❌ Do NOT trigger Codemagic.
+- ❌ Do NOT select Simulator as the Xcode destination.
+- ❌ Do NOT select Richie's iPhone as the destination.
+- ❌ Do NOT press the Play (▶) button in Xcode — Archive only.
+- ❌ Do NOT use Codemagic unless the user explicitly approves the fallback path.
+- ❌ Do NOT bump versions or upload without explicit user instruction.
+
 ### Hard guardrails for any future ClaudeCode session
 
 - ❌ Do NOT trigger Codemagic without explicit user instruction.
@@ -126,7 +181,10 @@ Full details + troubleshooting: see `LOCAL_BUILD.md`.
 | 1z.97 | skipSideEffects rolled out to all user-mutation render paths | Class-wide freeze fix |
 | 1z.98 → 1z.101 | Discipline Duels rendering — challenge discovery, in-flight guard, request-token pattern, total-timeout safety net + duels breadcrumbs | Iterative |
 | 1z.102 | `esc()` defensive type coercion | Root cause of "Loading duels…" stuck state. Real fix. |
-| 1z.103 (this handoff) | MacBook Air + SSD local archive pipeline confirmed working; version train 2.2.2 closed; canonical workflow documented | Migration milestone |
+| 1z.103 | MacBook Air + SSD local archive pipeline confirmed working; version train 2.2.2 closed; canonical workflow documented | Migration milestone |
+| 1z.104 | HealthKit auto-verify diagnostics — `hb_health_verify_debug_v1` ring + `payload.healthVerify.debug` Copy Debug Info export | Diagnostic instrumentation, no behaviour change |
+| 1z.105 | "Strength training" → "Workout"; verifies from ANY Apple Health workout totaling 30+ min daily. Iron Warden + Strength Duel kept strength-only | Product spec change + idempotent rename migration |
+| 1z.106 (this handoff) | Create Your Own Habit freeze fix — `saveCustomHabit` now closes parent `#lib-sheet` + `#lib-overlay`; new custom-create breadcrumbs; Playwright regression test. Add Habits exit-path audit completed: no remaining unclosed paths | Final freeze-class fix |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 
@@ -419,6 +477,84 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 - **Habit drag-reorder.** Stay disabled for 2.2.1. Do not re-enable without the explicit edit-mode redesign.
 - **Codemagic.** Trigger only when intentional. Do not auto-trigger on every commit. (At the time of writing, `6fc7acf` was the queued target — historical only; check the May 19 handoff for the current target.)
 - **Worker rollback.** If a Worker deploy regresses, `wrangler rollback` is available. The 1z.36 → 1z.41 Worker versions (`712ff1c5`, `9593f398`, `b97990ad`, `761b6392`) are all in the version history and any can be re-deployed.
+
+### Create Your Own Habit freeze fix + Add Habits exit-path audit (v3 Phase 1z.106)
+
+**Reproduced repeatably on iPhone/TestFlight.** User typed a custom habit name (`Run`, `Jump`), picked the STR stat, tapped Create Habit — modal appeared to dismiss but the app became unresponsive. Confirmed in Playwright before the fix: post-save tap on `#tab-profile` was rejected because `<div class="lib-pack-entry--lockedin"> from #lib-sheet subtree intercepts pointer events`.
+
+**Root cause.** `saveCustomHabit` closed `#custom-overlay` cleanly but never closed the parent `#lib-sheet` / `#lib-overlay`. The library overlay then intercepted pointer events on the bottom tab bar, reading to the user as a freeze after the modal dismissed.
+
+**Fix (surgical).** Mirrors the 1z.89 preset-add UX (`confirmPackAdd`):
+- `saveCustomHabit` now calls `closeLibrary()` after `closeCustomHabitModal()`, each wrapped in its own try/catch so a throw in one cannot strand the others.
+- Order preserved (matches the proven safe pattern): `push → save → close modals → renderHabits(skipSideEffects) → renderLibrary → toast`.
+- Duplicate-name check is now null-safe (was `h.name.toLowerCase()` on a possibly-undefined name; defensive only).
+- A confirmation toast `"<name>" added` fires post-save so the user gets unambiguous feedback.
+
+**Diagnostics.** New custom-create breadcrumb sequence added to the existing `hb_add_habit_debug_v1` ring (so Copy Debug Info captures the path on TestFlight without a new ring):
+- `custom-create-click`, `custom-create-validated`, `custom-create-persist-start` / `-ok` / `-threw`, `custom-create-close-modal`, `custom-create-render-start` / `-ok` / `-threw`, `custom-create-render-library-threw`, `custom-create-validation-failed`, `custom-create-complete`.
+- Privacy-safe: logs name length and stat id only — not the habit name string itself.
+
+**Regression test.** `tests/e2e/smoke.spec.ts` gained `I · Create Your Own Habit (1z.106)` which:
+- Opens Add Habits → Create Your Own → fills `Run` → selects STR (first stat card) → clicks Create Habit.
+- Asserts BOTH the custom overlay AND the parent `#lib-sheet` + `#lib-overlay` are hidden after save (the regression assertion).
+- Asserts the habit lands in `hb_habits` with `custom: true`, `primaryStat: 'STR'`, `difficulty: 'medium'`.
+- Asserts the toast renders.
+- Asserts `#tab-profile` is tappable post-save (this is the freeze symptom — was failing before the fix).
+- Asserts the breadcrumb sequence is intact and no error breadcrumbs fired on the happy path.
+
+**Files touched (1z.106 only):**
+- `app.js` — `saveCustomHabit` reworked + breadcrumbs.
+- `tests/e2e/smoke.spec.ts` — new test `I`.
+- `CLAUDE.md` — this section and the handoff updates.
+
+**Verification:**
+- `node --check app.js` → OK
+- `node --check sw.js` → OK
+- `npm run test:e2e` → **9/9 pass** (~58s)
+- Version knobs unchanged: `APP_VERSION 2.2.2`, `APP_BUILD_TAG 2.2.2-w15`, `app.js?v=453`, `sw.js v5.339`, `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**No version-knob bumps. No Codemagic. No upload.** Ships piggyback on the next 2.2.3+ build.
+
+#### Add Habits exit-path audit (post-1z.106)
+
+After the 1z.106 fix landed, every documented exit path for the Add Habits overlay stack was traced end-to-end. Result: **no real unclosed paths remain.** 1z.106 closed the only real stranded-overlay surface. No additional code changes warranted.
+
+**`lib-sheet` + `lib-overlay` — 9 exit paths, all close cleanly:**
+1. `#lib-close-btn` → `closeLibrary`.
+2. `#lib-overlay` backdrop click → `closeLibrary`.
+3. Swipe-down dismiss via `attachSheetDismissGesture` — also clears inline `transform/transition/opacity` in its `transitionend` cleanup.
+4. Preset-add success → `forceCloseAddHabitsStack('add-success')` (closes hd-sheet + lib-sheet + lib-overlay + clears inline residue).
+5. Preset dup-guard → `forceCloseAddHabitsStack('dup-guard')`.
+6. Preset outer-catch → `forceCloseAddHabitsStack('outer-throw')`.
+7. Post-add watchdog (500ms) → `forceCloseAddHabitsStack('watchdog-500ms')` — idempotent belt-and-braces.
+8. Pack-add success (`confirmPackAdd`) → closes mr-overlay + lib-sheet + lib-overlay, each in own try/catch.
+9. Custom-habit save (1z.106) → closes custom-overlay + lib-sheet + lib-overlay, each in own try/catch.
+
+**`custom-overlay` — 3 exit paths, all close cleanly:**
+1. `#custom-cancel-btn` → `closeCustomHabitModal` (lib-sheet remains open — intentional, returns user to library).
+2. `#custom-overlay` backdrop click → `closeCustomHabitModal`.
+3. `#custom-save-btn` → `saveCustomHabit` → closes custom-overlay + lib-sheet + lib-overlay (1z.106).
+
+**`hd-sheet` — 7 exit paths, all close cleanly:**
+1. `#hd-back` → `closeHabitDetail` (sets `display:none !important` + `pointer-events:none` belt-and-braces; lib-sheet remains — intentional, returns to library).
+2. Swipe-down → `closeHabitDetail`.
+3. `addBtn` success / dup-guard / outer-catch / watchdog → `forceCloseAddHabitsStack` (all four).
+4. Onboarding "Remove from list" (line 17216): `opts.onRemove(); closeHabitDetail();` — `opts.onRemove` is `obDeselect` (Set.delete + DOM toggle, very low throw risk); no lib-sheet behind in onboarding context, so even a theoretical throw wouldn't deadlock interaction. **Not actionable.**
+
+**`mr-overlay` (pack confirm) — 4 exit paths, all close cleanly:**
+1. `#mr-cancel-btn` → `closeMorningPackModal` (mr-overlay only; lib-sheet remains — intentional, returns to library).
+2. `#mr-overlay` backdrop → `closeMorningPackModal`.
+3. `#mr-confirm-btn` (missing > 0) → `confirmPackAdd` → closes mr-overlay + lib-sheet + lib-overlay.
+4. `confirmPackAdd` early return when `missing.length === 0` (line 15663) — closes mr-overlay only. Safe because the button is disabled when `missing===0` (line 15481); this is a defense-in-depth branch only.
+
+**Cross-cutting protections verified:**
+- `forceCloseAddHabitsStack` (16533) wraps `closeHabitDetail` + `closeLibrary` + `resetAddHabitsInteractionState`, each in independent try; called from 4 sites in the preset path.
+- `resetAddHabitsInteractionState` (16490) per-id clears inline `transform/transition/opacity/pointer-events` on `hd-sheet`, `lib-sheet`, `lib-overlay` so gesture-handler residue can't strand the next open.
+- Inline `display:none !important` + `pointer-events:none` on `closeHabitDetail` (17249-17251) belt-and-braces against stale style attributes.
+- `attachSheetDismissGesture` `transitionend` callback (24566-24571) clears its own inline `transform/transition/opacity` after dismiss.
+- `switchTab` does NOT close Add Habits overlays — safe because lib-overlay sits over the tab bar (modal z-index), so the user can't accidentally switch tabs from inside Add Habits; they must use one of the documented exit paths.
+
+**Conclusion.** The 1z.106 fix closed the last real strand path in the Add Habits surface. No further code changes are warranted from the audit.
 
 ### Workout habit broadened from strength-only to any Apple Health workout (v3 Phase 1z.105)
 
