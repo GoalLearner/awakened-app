@@ -282,7 +282,24 @@
   const HEALTHKIT_SLEEP_GOAL_MAX_HOURS = 14;
   const HEALTHKIT_SLEEP_PRESETS = [6, 7, 8, 9];
   const HEALTHKIT_SLEEP_NAP_MIN_MINUTES = 30; // sample duration < this = nap
-  const HEALTHKIT_SLEEP_LOOKBACK_HOURS = 18;  // query window backwards from now
+  // v3 Phase 1z.112 — widened from 18h to 36h after build-93 diagnostics
+  // showed `sleep-query-empty { sampleCount: 0 }` despite Apple Health
+  // displaying 7h 26m of sleep. The plugin uses HKQueryOptions
+  // .strictStartDate (see CapacitorHealthkitPlugin.swift line 550), so
+  // samples whose startDate lands even slightly outside the window are
+  // silently excluded. 18h was edge-of-coverage for early-evening
+  // wrapper samples and any pre-midnight inBed/asleep starts. 36h
+  // gives a full extra night of slack with no functional downside —
+  // duplicate samples are deduplicated by the existing per-id auto-
+  // verify guard, and totalAsleepHours summing is idempotent over
+  // the same sample.
+  const HEALTHKIT_SLEEP_LOOKBACK_HOURS = 36;
+  // v3 Phase 1z.112 — fallback re-query window. If the primary 36h
+  // query returns zero rows, retry once with this wider window so
+  // debug exports can distinguish "data exists but startDate is
+  // unusually old" from "no data in HealthKit at all". 72h covers
+  // up to ~3 nights of sleep history.
+  const HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS = 72;
 
   // v3 Phase 1u — Strength training auto-verify. A workout sample
   // qualifies if (a) its activity type matches a strength-training
@@ -27550,14 +27567,67 @@
           });
         } catch (_) {}
 
-        const result = await p.queryHKitSampleType({
+        let result = await p.queryHKitSampleType({
           sampleName: 'sleepAnalysis',
           startDate: start.toISOString(),
           endDate: now.toISOString(),
           limit: 0,
         });
 
-        const samples = (result && result.resultData) || [];
+        let samples = (result && result.resultData) || [];
+
+        // v3 Phase 1z.112 — diagnostic shape probe + one-shot fallback.
+        // If the primary 36h window returned zero rows, retry once with
+        // a 72h window so the debug export can distinguish "no data
+        // at all" from "data exists but startDate is older than 36h".
+        // Also log the plugin's countReturn (its own count) + any
+        // unexpected top-level keys so we can spot a plugin response-
+        // shape regression instantly.
+        try {
+          _bc('sleep-query-raw-shape', {
+            resultIsNull: !result,
+            resultKeys: result ? Object.keys(result) : [],
+            countReturn: result && (typeof result.countReturn === 'number' ? result.countReturn : null),
+            resultDataIsArray: !!(result && Array.isArray(result.resultData)),
+            resultDataLength: (result && Array.isArray(result.resultData)) ? result.resultData.length : null,
+          });
+        } catch (_) {}
+
+        if (samples.length === 0) {
+          try {
+            _bc('sleep-query-fallback-start', {
+              fallbackLookbackHours: HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS,
+            });
+          } catch (_) {}
+          try {
+            const fbStart = new Date(now.getTime() - HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS * 3600 * 1000);
+            const fbResult = await p.queryHKitSampleType({
+              sampleName: 'sleepAnalysis',
+              startDate: fbStart.toISOString(),
+              endDate: now.toISOString(),
+              limit: 0,
+            });
+            const fbSamples = (fbResult && fbResult.resultData) || [];
+            try {
+              _bc('sleep-query-fallback-result', {
+                fallbackStartISO: fbStart.toISOString(),
+                fallbackSampleCount: fbSamples.length,
+                fallbackCountReturn: fbResult && (typeof fbResult.countReturn === 'number' ? fbResult.countReturn : null),
+              });
+            } catch (_) {}
+            // Adopt the fallback samples if they exist. The primary
+            // query may have hit the strictStartDate edge case; the
+            // wider window covers it.
+            if (fbSamples.length > 0) {
+              result = fbResult;
+              samples = fbSamples;
+            }
+          } catch (fbErr) {
+            try {
+              _bc('sleep-query-fallback-threw', { err: String(fbErr && fbErr.message || fbErr) });
+            } catch (_) {}
+          }
+        }
 
         // v3 Phase 1z.110 — distinct sleep-state inventory. The
         // plugin (@perfood/capacitor-healthkit 1.3.2) currently
@@ -27576,12 +27646,42 @@
 
         if (samples.length === 0) {
           // Empty result = no signal (iPhone-only with no data, or genuinely
-          // no sleep). Return null — auto-verify treats this as silent skip,
-          // not a failed habit.
-          try { _bc('sleep-query-empty', { sampleCount: 0 }); } catch (_) {}
-          console.log('[Health] sleep: no samples in last', HEALTHKIT_SLEEP_LOOKBACK_HOURS, 'h');
+          // no sleep, or HealthKit doesn't expose sleepAnalysis samples
+          // for whatever Sleep data the user sees in the Health app —
+          // e.g. third-party app writing only to its own surface, iOS
+          // Sleep Schedule with no underlying category samples, etc.).
+          // Return null — auto-verify treats this as silent skip, not
+          // a failed habit.
+          try {
+            _bc('sleep-query-empty', {
+              sampleCount: 0,
+              primaryLookbackHours: HEALTHKIT_SLEEP_LOOKBACK_HOURS,
+              fallbackLookbackHours: HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS,
+              hint: 'Both primary and fallback queries returned zero rows. Most likely Apple Health does NOT have HKCategoryTypeIdentifier.sleepAnalysis samples for this user — Sleep Score in the Health app can come from derived metrics that do not write category samples. Verify by opening Health → Browse → Sleep → Show All Data; if the list is empty, no HK-readable sleep data exists.',
+            });
+          } catch (_) {}
+          console.log('[Health] sleep: no samples in last', HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS, 'h');
           return null;
         }
+
+        // v3 Phase 1z.112 — privacy-safe sample summary. Log shape +
+        // timing of the first 5 returned samples (sleepState, duration
+        // hours, start ISO, sourceBundleId) so debug exports can prove
+        // exactly what the plugin returned. No raw HKSample payloads,
+        // no UUIDs, no device serial — only what's needed to diagnose.
+        try {
+          const sampleSummary = samples.slice(0, 5).map(s => ({
+            sleepState: s && s.sleepState,
+            durationHours: s && typeof s.duration === 'number' ? Number(s.duration.toFixed(2)) : null,
+            startISO: s && s.startDate,
+            endISO: s && s.endDate,
+            sourceBundleId: s && s.sourceBundleId,
+          }));
+          _bc('sleep-query-sample-summary', {
+            totalSampleCount: samples.length,
+            samples: sampleSummary,
+          });
+        } catch (_) {}
 
         // v3 Phase 1z.110 — defensive sleep-state matching. Was
         // `s.sleepState === 'Asleep'` (exact match). Plugin source
