@@ -6,16 +6,28 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ## 📌 Session handoff — May 20, 2026 (read this first; supersedes the May 19 section below)
 
-### 🛠 STATUS: Repo is staged for the next 2.2.3+ local archive — pending explicit user approval to bump versions and ship
+### 🛠 STATUS: 2.2.3 release-prep is committed to `main` — ready for the MacBook to pull and archive
 
-The MacBook Air + SSD `AwakenedDev` local archive pipeline is canonical (proved on May 20). Three additional fixes landed on `main` the same day and will piggyback on whichever upload the user next approves:
+Version knobs bumped on `origin/main` for the 2.2.3 train. The MacBook Air + SSD `AwakenedDev` local archive pipeline is canonical (proved on May 20). The MacBook can pull tonight, run `npx cap copy ios`, open Xcode, set Marketing Version `2.2.3` + Build `92` (or latest TestFlight + 1), Clean → Archive → Distribute → Upload.
+
+**Current knobs on `main` (post release-prep commit):**
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w1` |
+| `app.js?v=` | `454` |
+| `sw.js CACHE_VERSION` | `v5.340` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+
+**This 2.2.3 build bundles:**
 
 - **1z.104** (`5e787f9`) — HealthKit auto-verify diagnostics (`hb_health_verify_debug_v1` ring + `payload.healthVerify.debug` Copy Debug Info export). No behaviour change.
 - **1z.105** (`e7bdf5a`) — "Strength training" canonical habit broadened/renamed to "Workout"; verifies from ANY Apple Health workout totaling 30+ min daily. Idempotent rename migration via `hb_strength_to_workout_rename_v1`. Iron Warden boss and Strength Duel intentionally remain strength-only.
 - **1z.106** (`9f62001`) — Create Your Own Habit freeze fix. `saveCustomHabit` now closes the parent `#lib-sheet` + `#lib-overlay` after the custom modal so the library overlay can't intercept pointer events on the tab bar. New custom-create breadcrumbs in `hb_add_habit_debug_v1`. Playwright regression test `I · Create Your Own Habit (1z.106)` covers it. Full e2e: **9/9 passing**.
 - **Add Habits exit-path audit** — performed after 1z.106; every documented exit path for `lib-sheet`, `lib-overlay`, `custom-overlay`, `hd-sheet`, and `mr-overlay` was traced. **No remaining real unclosed paths.** 1z.106 closed the only real stranded-overlay surface. No further code changes warranted from the audit.
 
-**Nothing has been uploaded since the May 20 morning local-archive proof (build 91).** Build 91 was a transport/signing proof only — App Store Connect rejected it during validation because marketing version `2.2.2` is closed (see Version-train rule below). All work since 1z.103 ships piggyback on the next real upload.
+**Nothing has been uploaded since the May 20 morning local-archive proof (build 91).** Build 91 was a transport/signing proof only — App Store Connect rejected it during validation because marketing version `2.2.2` is closed (see Version-train rule below). The 2.2.3 release-prep commit is the first valid post-`2.2.2` train upload candidate — the MacBook needs to archive + upload it.
 
 **Migrated off Codemagic.** Build cost per Codemagic run was acceptable per-build (~$0.40) but the cumulative iteration cost during heavy debugging sessions added up faster than budgeted. The MacBook Air now does local Xcode archives directly, with the project + Xcode caches living on an external Samsung SSD named `AwakenedDev`. **This is the canonical path going forward.** Codemagic stays in the repo as a documented fallback but must not be triggered without explicit user approval.
 
@@ -109,20 +121,18 @@ Full details + troubleshooting: see `LOCAL_BUILD.md`.
 
 ### ✅ Before the next upload — release prep checklist
 
-Run this checklist **only after the user has explicitly approved preparing and uploading a new TestFlight/App Store build.** Do not bump knobs speculatively. Until that explicit approval, the version knobs documented further down stay frozen.
-
-**Desktop (ClaudeCode) — release prep commit:**
+**Desktop (ClaudeCode) — release prep commit: ✅ DONE for 2.2.3-w1.** The next desktop bump is for whichever future train comes after this one. For reference (and for the next future train), the desktop steps are:
 1. Confirm with the user that they want a new upload prepared. Wait for explicit yes.
-2. Bump `APP_VERSION` from `2.2.2` → `2.2.3` (or higher; must be strictly greater than `2.2.2`).
-3. Bump `APP_BUILD_TAG` accordingly (e.g. `2.2.3-w1`).
-4. Bump `app.js?v=` in `index.html` (last value `453` → `454+`).
-5. Bump `sw.js` `CACHE_VERSION` (last value `v5.339` → next `v5.340+`).
+2. Bump `APP_VERSION` (must be strictly greater than the last approved marketing version).
+3. Bump `APP_BUILD_TAG` accordingly (e.g. `2.2.X-w1`).
+4. Bump `app.js?v=` in `index.html`.
+5. Bump `sw.js` `CACHE_VERSION`.
 6. Confirm `QA_UNLOCK_C_RANK_DUNGEONS = false`.
 7. Update the version-knobs table in this CLAUDE.md to match.
-8. `node --check app.js && node --check sw.js && npm run test:e2e` — must be 9/9 green.
-9. Commit `chore: bump to 2.2.3 build N for TestFlight` and push to `origin/main`.
+8. `node --check app.js && node --check sw.js && npm run test:e2e` — must be green.
+9. Commit `chore: prepare X.Y.Z local archive build` and push to `origin/main`.
 
-**MacBook Air — local archive + upload:**
+**MacBook Air — local archive + upload (THIS IS THE ACTIVE STEP FOR 2.2.3):**
 ```bash
 cd /Volumes/AwakenedDev/repos/awakened-app   # or use the ~/Documents symlink
 git fetch origin
@@ -136,10 +146,10 @@ npx cap copy ios                              # web-only updates — fast
 npx cap open ios
 ```
 
-**In Xcode (Archive + Upload):**
+**In Xcode (Archive + Upload — 2.2.3 specifics):**
 1. Destination dropdown → **Any iOS Device (arm64)**. NOT Simulator, NOT Richie's iPhone.
 2. App target → Signing & Capabilities → confirm **Release** uses **Manual** signing with profile `Awakened App Store 2026-05-19` + certificate `Apple Distribution: Richmond Campano`. (Debug-signing warnings can be ignored — Archive is Release-only.)
-3. App target → General → Identity → set Marketing Version `2.2.3` (or whichever was bumped) + Build `92` (or `latest TestFlight + 1`).
+3. App target → General → Identity → set **Marketing Version: `2.2.3`** and **Build: `92`** (or whichever is `latest TestFlight + 1` — confirm in App Store Connect → TestFlight → iOS Builds before archiving).
 4. Product → **Clean Build Folder** (⇧⌘K).
 5. Product → **Archive**. ~5–15 min.
 6. Organizer auto-opens → select the new archive → **Distribute App** → **App Store Connect** → **Upload**.
