@@ -27504,18 +27504,51 @@
     //
     // Never throws.
     async function getSleepLastNight() {
-      if (!isAvailable()) return null;
-      if (isSleepCacheFresh()) return sleepCache;
+      // v3 Phase 1z.110 — breadcrumb-instrumented. Mirrors the
+      // 1z.104 walk/strength pattern. Every bail point is now
+      // logged so a debug export can prove where sleep auto-verify
+      // is failing.
+      const _bc = (typeof _addHealthVerifyBreadcrumb === 'function')
+        ? _addHealthVerifyBreadcrumb
+        : function () {};
+
+      if (!isAvailable()) {
+        try { _bc('sleep-query-bail-not-available'); } catch (_) {}
+        return null;
+      }
+      if (isSleepCacheFresh()) {
+        try {
+          _bc('sleep-query-cache-hit', {
+            hasData: !!sleepCache,
+            totalAsleepHours: sleepCache ? Number((sleepCache.totalAsleepHours || 0).toFixed(2)) : null,
+            ageSec: sleepCache ? Math.round((Date.now() - (sleepCache.fetchedAt || 0)) / 1000) : null,
+          });
+        } catch (_) {}
+        return sleepCache;
+      }
 
       const p = plugin();
-      if (!p) return null;
+      if (!p) {
+        try { _bc('sleep-query-bail-no-plugin'); } catch (_) {}
+        return null;
+      }
 
       const status = permissionStatus();
-      if (status === 'denied' || status === 'unknown') return null;
+      if (status === 'denied' || status === 'unknown') {
+        try { _bc('sleep-query-bail-perm', { status }); } catch (_) {}
+        return null;
+      }
 
       try {
         const now = new Date();
         const start = new Date(now.getTime() - HEALTHKIT_SLEEP_LOOKBACK_HOURS * 3600 * 1000);
+        try {
+          _bc('sleep-query-start', {
+            startISO: start.toISOString(),
+            endISO: now.toISOString(),
+            lookbackHours: HEALTHKIT_SLEEP_LOOKBACK_HOURS,
+          });
+        } catch (_) {}
 
         const result = await p.queryHKitSampleType({
           sampleName: 'sleepAnalysis',
@@ -27525,16 +27558,41 @@
         });
 
         const samples = (result && result.resultData) || [];
+
+        // v3 Phase 1z.110 — distinct sleep-state inventory. The
+        // plugin (@perfood/capacitor-healthkit 1.3.2) currently
+        // bucketizes every non-InBed value as "Asleep" (verified
+        // in CapacitorHealthkitPlugin.swift). Future plugin
+        // versions may surface modern stage labels (asleepCore /
+        // asleepDeep / asleepREM / asleepUnspecified). Logging
+        // the distinct strings the plugin actually returned lets
+        // us spot a label-mapping regression instantly.
+        const stateCounts = {};
+        for (let i = 0; i < samples.length; i++) {
+          const s = samples[i];
+          const k = (s && typeof s.sleepState === 'string' && s.sleepState) || '<missing>';
+          stateCounts[k] = (stateCounts[k] || 0) + 1;
+        }
+
         if (samples.length === 0) {
           // Empty result = no signal (iPhone-only with no data, or genuinely
           // no sleep). Return null — auto-verify treats this as silent skip,
           // not a failed habit.
+          try { _bc('sleep-query-empty', { sampleCount: 0 }); } catch (_) {}
           console.log('[Health] sleep: no samples in last', HEALTHKIT_SLEEP_LOOKBACK_HOURS, 'h');
           return null;
         }
 
-        // Filter to 'Asleep' samples (excluded: 'InBed' wrappers).
-        const asleepSamples = samples.filter(s => s && s.sleepState === 'Asleep');
+        // v3 Phase 1z.110 — defensive sleep-state matching. Was
+        // `s.sleepState === 'Asleep'` (exact match). Plugin source
+        // confirms today that any non-InBed sample is labeled
+        // "Asleep", so the new exclude-only filter is semantically
+        // identical RIGHT NOW. But if the plugin ever emits modern
+        // stage labels (asleepCore / asleepDeep / asleepREM /
+        // asleepUnspecified) the exact-equals check would silently
+        // return 0 samples and orphan the Sleep habit. Excluding
+        // only 'InBed' is forward-compatible.
+        const asleepSamples = samples.filter(s => s && s.sleepState && s.sleepState !== 'InBed');
 
         // Total — sum durations (already in hours from plugin).
         const totalAsleepHours = asleepSamples.reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
@@ -27555,11 +27613,22 @@
           fetchedAt: Date.now(),
         };
         setStatus('granted');
+        try {
+          _bc('sleep-query-result', {
+            sampleCount: samples.length,
+            asleepSampleCount: asleepSamples.length,
+            stateCounts,
+            totalAsleepHours: Number(totalAsleepHours.toFixed(2)),
+            earliestSleepStartISO: earliestSleepStart && earliestSleepStart.toISOString(),
+            qualifyingNapPlusCount: qualifying.length,
+          });
+        } catch (_) {}
         console.log('[Health] sleep last night:', totalAsleepHours.toFixed(2), 'h asleep,',
           'earliest:', earliestSleepStart && earliestSleepStart.toISOString(),
           '(samples:', samples.length, 'asleep:', asleepSamples.length, ')');
         return sleepCache;
       } catch (e) {
+        try { _bc('sleep-query-threw', { err: String(e && e.message || e) }); } catch (_) {}
         console.warn('[Health] sleep query failed', e);
         return null;
       }
@@ -28976,12 +29045,22 @@
   }
 
   async function autoVerifySleep() {
-    if (!Health.isAvailable()) return;
+    // v3 Phase 1z.110 — breadcrumb-instrumented. Mirrors the
+    // 1z.104 walk/strength pattern. Every bail point is logged.
+    _addHealthVerifyBreadcrumb('sleep-entry');
+    if (!Health.isAvailable()) {
+      _addHealthVerifyBreadcrumb('sleep-bail-not-available');
+      return;
+    }
 
     const status = Health.permissionStatus();
+    _addHealthVerifyBreadcrumb('sleep-perm-status', { status });
     // Don't trigger the pre-prompt from the sleep path — autoVerifyWalk
     // already handles that. If status is 'unknown', let walk handle it.
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      _addHealthVerifyBreadcrumb('sleep-bail-perm', { status });
+      return;
+    }
 
     // Upgrade-path: existing v1.1.5 step-grant users granted Steps
     // before sleep was added to the auth array. iOS doesn't auto-prompt
@@ -28989,15 +29068,24 @@
     // requestAuthorization with the new type. Idempotent + flagged in
     // localStorage so it only fires once per device. Fresh installs
     // pass through immediately (flag set during the bundled request).
+    _addHealthVerifyBreadcrumb('sleep-perm-request-start');
     await Health.requestSleepPermissionIfNeeded();
+    _addHealthVerifyBreadcrumb('sleep-perm-request-done');
 
     const data = await Health.getSleepLastNight();
     if (!data) {
+      _addHealthVerifyBreadcrumb('sleep-bail-no-data');
       // v3 Phase 1z.8 — still backfill yesterday even if today's
       // sleep fetch failed (backfill uses its own range query).
       try { _backfillSleepYesterday(); } catch (_) {}
       return;
     }
+    _addHealthVerifyBreadcrumb('sleep-data', {
+      totalAsleepHours: Number((data.totalAsleepHours || 0).toFixed(2)),
+      sampleCount: Array.isArray(data.samples) ? data.samples.length : null,
+      earliestSleepStartISO: data.earliestSleepStart && data.earliestSleepStart.toISOString
+        ? data.earliestSleepStart.toISOString() : null,
+    });
 
     // ── Boss evaluation (v1.1.7+) ───────────────────────────
     // Runs independently of habit presence + pause toggle. The
@@ -29036,12 +29124,38 @@
     // block instead of early returns; backfill always runs.
     const sleep = findSleepHabit();
     const bedtime = findSleepBeforeMidnightHabit();
-    if (!isAutoVerifyDisabled() && (sleep || bedtime)) {
+    const autoVerifyDisabled = isAutoVerifyDisabled();
+    _addHealthVerifyBreadcrumb('sleep-habit-lookup', {
+      sleepHabitFound: !!sleep,
+      bedtimeHabitFound: !!bedtime,
+      autoVerifyDisabled,
+    });
+    if (!autoVerifyDisabled && (sleep || bedtime)) {
 
     // ── Path A: Sleep duration ──────────────────────────────
-    if (sleep && !isChecked(sleep.id) && !AUTO_VERIFY.wasUncheckedToday('Sleep')) {
-      const goalHours = getSleepGoalHours(sleep);
-      if (data.totalAsleepHours >= goalHours) {
+    if (sleep) {
+      const alreadyChecked = isChecked(sleep.id);
+      const wasUnchecked   = AUTO_VERIFY.wasUncheckedToday('Sleep');
+      const goalHours      = getSleepGoalHours(sleep);
+      const meets          = data.totalAsleepHours >= goalHours;
+      _addHealthVerifyBreadcrumb('sleep-threshold-check', {
+        totalAsleepHours: Number((data.totalAsleepHours || 0).toFixed(2)),
+        goalHours,
+        meets,
+        alreadyChecked,
+        wasUncheckedToday: wasUnchecked,
+      });
+      if (alreadyChecked) {
+        _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'already-checked' });
+      } else if (wasUnchecked) {
+        _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'user-unchecked-today' });
+      } else if (!meets) {
+        _addHealthVerifyBreadcrumb('sleep-skip', {
+          reason: 'below-goal',
+          totalAsleepHours: Number((data.totalAsleepHours || 0).toFixed(2)),
+          goalHours,
+        });
+      } else {
         // Re-check completion (async race with manual tap).
         if (!isChecked(sleep.id)) {
           AUTO_VERIFY.recordAutoVerify(sleep.id, {
@@ -29051,9 +29165,17 @@
           });
           const li = document.querySelector('.habit-item[data-id="' + sleep.id + '"]');
           toggleHabit(sleep.id, li, { silent: true });
+          _addHealthVerifyBreadcrumb('sleep-sealed', {
+            totalAsleepHours: Number((data.totalAsleepHours || 0).toFixed(2)),
+            goalHours,
+          });
           console.log('[Health] auto-verified Sleep:', data.totalAsleepHours.toFixed(2), 'h');
+        } else {
+          _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'race-checked-during-eval' });
         }
       }
+    } else {
+      _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'habit-not-in-list' });
     }
 
     // ── Path B: Sleep before midnight ────────────────────────
@@ -29082,10 +29204,16 @@
         });
         const li = document.querySelector('.habit-item[data-id="' + bedtime.id + '"]');
         toggleHabit(bedtime.id, li, { silent: true });
+        _addHealthVerifyBreadcrumb('bedtime-sealed', { earliestISO: earliest.toISOString() });
         console.log('[Health] auto-verified Sleep before midnight:', earliest.toISOString());
       } else {
+        _addHealthVerifyBreadcrumb('bedtime-skip', { reason: 'no-qualifying-onset-in-window' });
         console.log('[Health] Sleep before midnight: no qualifying onset in [20:00, 24:00) window');
       }
+    } else if (bedtime) {
+      _addHealthVerifyBreadcrumb('bedtime-skip', {
+        reason: isChecked(bedtime.id) ? 'already-checked' : 'user-unchecked-today',
+      });
     }
 
     // Single re-render after both paths — buildItem() picks up new pills,
@@ -29093,6 +29221,10 @@
     // v3 Phase 1z.97 — skipSideEffects to break the HealthKit cascade.
     if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
 
+    } else {
+      _addHealthVerifyBreadcrumb('sleep-skip', {
+        reason: autoVerifyDisabled ? 'auto-verify-paused' : 'no-sleep-or-bedtime-habit',
+      });
     } // end if (!isAutoVerifyDisabled() && (sleep || bedtime))
 
     // v3 Phase 1z.8 — yesterday backfill. Sleep + bedtime share one
