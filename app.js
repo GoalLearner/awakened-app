@@ -300,6 +300,27 @@
   // unusually old" from "no data in HealthKit at all". 72h covers
   // up to ~3 nights of sleep history.
   const HEALTHKIT_SLEEP_FALLBACK_LOOKBACK_HOURS = 72;
+  // v3 Phase 1z.114 — session-grouping constants. The 36h/72h
+  // windows are diagnostic — they prove data exists. For habit
+  // verification we must select the MAIN sleep session ending
+  // today, not sum every asleep sample in the window. Oura writes
+  // 100+ small stage segments per night; without sessionization,
+  // totalAsleepHours conflates the previous night, last night, and
+  // any naps into one number (the build-96 test reported 15.53h
+  // when the actual main session was ~7.5h).
+  //
+  // Two asleep fragments within SLEEP_SESSION_MAX_GAP_MINUTES of
+  // each other are considered part of the same session. 90 min
+  // accommodates Apple's "Awake" mid-night periods (which the
+  // plugin currently buckets as 'Asleep' — see plugin source
+  // caveat) and Oura's stage-transition gaps without merging two
+  // genuinely-separate nights.
+  const SLEEP_SESSION_MAX_GAP_MINUTES = 90;
+  // Sessions below this are considered naps and not eligible as
+  // the "main sleep session" for Sleep 7 hours verification.
+  // Fallback selection still considers them if no other session
+  // qualifies.
+  const SLEEP_MAIN_SESSION_MIN_HOURS = 3;
 
   // v3 Phase 1u — Strength training auto-verify. A workout sample
   // qualifies if (a) its activity type matches a strength-training
@@ -27485,6 +27506,106 @@
       }
     }
 
+    // ── Sleep session helpers (v3 Phase 1z.114) ────────────────────
+    // Group raw asleep samples into discrete sessions, then select
+    // the main session "ending today". Without this, summing every
+    // non-InBed sample across a 36h/72h diagnostic window conflates
+    // multiple nights and any naps into one inflated total.
+
+    function _endsOnLocalDay(session, now) {
+      if (!session || !session.end) return false;
+      return session.end.getFullYear() === now.getFullYear() &&
+             session.end.getMonth() === now.getMonth() &&
+             session.end.getDate() === now.getDate();
+    }
+
+    function _groupSleepSamplesIntoSessions(asleepSamples, maxGapMinutes) {
+      const maxGapMs = maxGapMinutes * 60 * 1000;
+      // Normalize + parse dates + drop bad entries.
+      const normalized = (asleepSamples || [])
+        .map(s => {
+          const start = new Date(s && s.startDate);
+          const end   = new Date(s && s.endDate);
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+          if (end <= start) return null;
+          return {
+            start,
+            end,
+            durationMs: end.getTime() - start.getTime(),
+            sourceBundleId: (s && s.sourceBundleId) || '<unknown>',
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.start - b.start);
+
+      const sessions = [];
+      for (let i = 0; i < normalized.length; i++) {
+        const s = normalized[i];
+        if (sessions.length === 0) {
+          sessions.push({
+            start: s.start,
+            end: s.end,
+            asleepMs: s.durationMs,
+            sampleCount: 1,
+            sources: { [s.sourceBundleId]: 1 },
+          });
+          continue;
+        }
+        const cur = sessions[sessions.length - 1];
+        const gap = s.start.getTime() - cur.end.getTime();
+        if (gap <= maxGapMs) {
+          // Merge into current session.
+          if (s.end > cur.end) cur.end = s.end;
+          cur.asleepMs += s.durationMs;
+          cur.sampleCount += 1;
+          cur.sources[s.sourceBundleId] = (cur.sources[s.sourceBundleId] || 0) + 1;
+        } else {
+          // Start a new session.
+          sessions.push({
+            start: s.start,
+            end: s.end,
+            asleepMs: s.durationMs,
+            sampleCount: 1,
+            sources: { [s.sourceBundleId]: 1 },
+          });
+        }
+      }
+      return sessions;
+    }
+
+    function _selectMainSleepSession(sessions, now) {
+      if (!sessions || sessions.length === 0) return null;
+      const minMs = SLEEP_MAIN_SESSION_MIN_HOURS * 3600 * 1000;
+
+      // Priority 1: largest session ending on today's local date,
+      //             at or above the main-session minimum (3h).
+      //             This is the canonical "last night ending today".
+      const todayQualifying = sessions
+        .filter(s => _endsOnLocalDay(s, now) && s.asleepMs >= minMs);
+      if (todayQualifying.length > 0) {
+        todayQualifying.sort((a, b) => b.asleepMs - a.asleepMs);
+        const winner = todayQualifying[0];
+        return Object.assign({}, winner, { reason: 'largest-ending-target-day' });
+      }
+
+      // Priority 2: largest session anywhere in the window above the
+      //             min. Logged with a fallback reason so we can spot
+      //             timing weirdness (debug ring captures this).
+      const anyQualifying = sessions.filter(s => s.asleepMs >= minMs);
+      if (anyQualifying.length > 0) {
+        anyQualifying.sort((a, b) => b.asleepMs - a.asleepMs);
+        const winner = anyQualifying[0];
+        return Object.assign({}, winner, { reason: 'fallback-largest-window' });
+      }
+
+      // Priority 3: nothing meets the 3h floor — return the largest
+      //             session anyway. Habit threshold (7h) will still
+      //             reject it, but consumers see a real onset for
+      //             diagnostics.
+      const allSorted = sessions.slice().sort((a, b) => b.asleepMs - a.asleepMs);
+      return Object.assign({}, allSorted[0], { reason: 'fallback-below-min-hours' });
+    }
+
     // ── Sleep query ──────────────────────────────────────
     // Returns last night's main sleep block summary, or null. Window:
     // [now − 18h, now]. Caller decides what to do with the return.
@@ -27735,22 +27856,62 @@
         // only 'InBed' is forward-compatible.
         const asleepSamples = samples.filter(s => s && s.sleepState && s.sleepState !== 'InBed');
 
-        // Total — sum durations (already in hours from plugin).
-        const totalAsleepHours = asleepSamples.reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
+        // v3 Phase 1z.114 — sessionize samples into discrete sleep
+        // sessions, then select the main session ending today. This
+        // replaces the prior "sum every non-InBed sample in the
+        // window" behavior that caused build 96 to overcount Oura's
+        // 167-fragment night (the actual main session was ~7.5h but
+        // the unsessioned sum was 15.53h).
+        const sessions = _groupSleepSamplesIntoSessions(asleepSamples, SLEEP_SESSION_MAX_GAP_MINUTES);
+        const mainSession = _selectMainSleepSession(sessions, now);
 
-        // Earliest qualifying asleep sample = first sample whose duration
-        // exceeds the nap floor. Sort by startDate ascending.
-        const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
-        const qualifying = asleepSamples
-          .filter(s => Number(s.duration) >= napFloorHours)
-          .map(s => ({ ...s, _start: new Date(s.startDate) }))
-          .sort((a, b) => a._start - b._start);
-        const earliestSleepStart = qualifying.length ? qualifying[0]._start : null;
+        // totalAsleepHours = MAIN session asleep total (not 36h sum).
+        // The four downstream consumers (Sleep 7 hours threshold,
+        // Insomniac/Carouser/Dream Tyrant bosses, leaderboard) all
+        // want "last night's sleep ending today" — this is that.
+        const totalAsleepHours = mainSession ? (mainSession.asleepMs / 3600000) : 0;
+        // earliestSleepStart = the main session's start (the natural
+        // sleep onset for today's habit, not an arbitrary first sample
+        // 30+ hours back). Bedtime path is independent — it uses
+        // getBedtimeSamplesInWindow(data.samples) and runs its own
+        // [20:00, 24:00) filter on the full sample list.
+        const earliestSleepStart = mainSession ? mainSession.start : null;
+
+        // Diagnostics — session inventory + selection reasoning.
+        try {
+          const sessionSummary = sessions.slice(0, 5).map(s => ({
+            startISO: s.start && s.start.toISOString(),
+            endISO: s.end && s.end.toISOString(),
+            asleepHours: Number((s.asleepMs / 3600000).toFixed(2)),
+            sampleCount: s.sampleCount,
+            sources: s.sources,
+            endsOnTargetLocalDay: _endsOnLocalDay(s, now),
+          }));
+          _bc('sleep-session-summary', {
+            sessionCount: sessions.length,
+            sessionsPreview: sessionSummary,
+          });
+        } catch (_) {}
+        try {
+          _bc('sleep-session-selected', {
+            selected: mainSession ? {
+              startISO: mainSession.start && mainSession.start.toISOString(),
+              endISO: mainSession.end && mainSession.end.toISOString(),
+              asleepHours: Number((mainSession.asleepMs / 3600000).toFixed(2)),
+              sampleCount: mainSession.sampleCount,
+              sources: mainSession.sources,
+              reason: mainSession.reason,
+            } : null,
+            sessionCount: sessions.length,
+          });
+        } catch (_) {}
 
         sleepCache = {
           totalAsleepHours,
           earliestSleepStart,
-          samples: asleepSamples,
+          samples: asleepSamples,       // unsessioned — bedtime path needs the full list
+          mainSession: mainSession,     // exposed for downstream consumers / diagnostics
+          sessions,                     // full session inventory
           fetchedAt: Date.now(),
         };
         setStatus('granted');
@@ -27759,14 +27920,19 @@
             sampleCount: samples.length,
             asleepSampleCount: asleepSamples.length,
             stateCounts,
+            // totalAsleepHours now reflects the MAIN session only (1z.114).
             totalAsleepHours: Number(totalAsleepHours.toFixed(2)),
             earliestSleepStartISO: earliestSleepStart && earliestSleepStart.toISOString(),
-            qualifyingNapPlusCount: qualifying.length,
+            sessionCount: sessions.length,
+            // Renamed semantic — was "samples ≥ nap floor across the window";
+            // now "sessions ≥ nap-floor min duration". Kept the field name
+            // for breadcrumb-ring backwards compat.
+            qualifyingNapPlusCount: sessions.filter(s => s.asleepMs >= HEALTHKIT_SLEEP_NAP_MIN_MINUTES * 60000).length,
           });
         } catch (_) {}
-        console.log('[Health] sleep last night:', totalAsleepHours.toFixed(2), 'h asleep,',
-          'earliest:', earliestSleepStart && earliestSleepStart.toISOString(),
-          '(samples:', samples.length, 'asleep:', asleepSamples.length, ')');
+        console.log('[Health] sleep main session:', totalAsleepHours.toFixed(2), 'h asleep,',
+          'start:', earliestSleepStart && earliestSleepStart.toISOString(),
+          '(sessions:', sessions.length, 'samples:', samples.length, ')');
         return sleepCache;
       } catch (e) {
         try { _bc('sleep-query-threw', { err: String(e && e.message || e) }); } catch (_) {}
@@ -28443,6 +28609,12 @@
       clearAnyWorkoutCache,  // any-workout cache (v3 Phase 1z.105)
       clearFlightsCache,     // flights cache (v3 Phase 1z.61)
       clearActiveEnergyCache,// active energy cache (v3 Phase 1z.62)
+      // v3 Phase 1z.114 — exposed for Playwright regression tests so
+      // the session-grouping + main-selection logic can be exercised
+      // without a real HealthKit roundtrip. Not used by production
+      // code paths; the prefix marks them as test surfaces.
+      __test_groupSleepSamplesIntoSessions: _groupSleepSamplesIntoSessions,
+      __test_selectMainSleepSession:        _selectMainSleepSession,
     };
   })();
 

@@ -798,3 +798,234 @@ test.describe('J · Legacy Strength training → Workout migration (1z.107)', ()
     expect(nonCustomWorkouts).toHaveLength(1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// K. Sleep session grouping + main-session selection (1z.114)
+// ─────────────────────────────────────────────────────────────
+// Regression for the build-96 over-count: getSleepLastNight used to
+// sum every non-InBed sample across the 36h/72h diagnostic window,
+// reporting totalAsleepHours = 15.53h when Oura wrote 167 fragments
+// across two nights. 1z.114 groups fragments into sessions (≤90 min
+// gap) and selects the largest session ending today.
+test.describe('K · Sleep session selection (1z.114)', () => {
+  test('groups Oura fragments into one session and selects the main session ending today', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_onboarding_seen_v2', '1');
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+      } catch (_) {}
+    });
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+
+    type Sample = { startDate: string; endDate: string; duration: number; sleepState: string; sourceBundleId?: string };
+
+    // Fabricate samples for two nights:
+    //   Night A: 7.4h spread across 16 fragments ending TODAY ~07:00 local
+    //   Night B: 7.0h spread across 12 fragments ending YESTERDAY ~07:00 local
+    //   Plus a 1h nap ending today ~14:00 local (should NOT merge with night A)
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Health?: {
+        __test_groupSleepSamplesIntoSessions?: (samples: unknown[], maxGapMinutes: number) => unknown[];
+        __test_selectMainSleepSession?: (sessions: unknown[], now: Date) => unknown;
+      } };
+      if (!w.Health || !w.Health.__test_groupSleepSamplesIntoSessions || !w.Health.__test_selectMainSleepSession) {
+        return { error: 'Health test surface not exposed' };
+      }
+
+      // Build "now" anchored to a known local date so we can assert
+      // "ends today" without depending on real clock. We use the
+      // current device clock — sessions are constructed relative to
+      // it so the test is timezone-agnostic.
+      const now = new Date();
+
+      // Helper: make N fragments back-to-back from startMs covering
+      // a total span of spanMs, all marked 'Asleep'. Fragments have
+      // small 1-min gaps between them to exercise the merge logic.
+      const makeFragments = (startMs: number, spanMs: number, count: number, src: string) => {
+        const samples: { startDate: string; endDate: string; duration: number; sleepState: string; sourceBundleId: string }[] = [];
+        const fragMs = Math.floor((spanMs - (count - 1) * 60_000) / count);
+        let cursor = startMs;
+        for (let i = 0; i < count; i++) {
+          const fragStart = cursor;
+          const fragEnd = cursor + fragMs;
+          samples.push({
+            startDate: new Date(fragStart).toISOString(),
+            endDate: new Date(fragEnd).toISOString(),
+            duration: fragMs / 3_600_000, // hours
+            sleepState: 'Asleep',
+            sourceBundleId: src,
+          });
+          cursor = fragEnd + 60_000; // 1-min gap to next fragment
+        }
+        return samples;
+      };
+
+      // Night A — ends today at 07:00 local. 7.4h * 3600000ms ≈ 26,640,000 ms.
+      const nightAEnd = new Date(now);
+      nightAEnd.setHours(7, 0, 0, 0);
+      const nightAStart = nightAEnd.getTime() - 7.4 * 3_600_000;
+      const nightASamples = makeFragments(nightAStart, 7.4 * 3_600_000, 16, 'com.ouraring.oura');
+
+      // Night B — ends yesterday at 07:00 local.
+      const nightBEnd = new Date(now);
+      nightBEnd.setDate(nightBEnd.getDate() - 1);
+      nightBEnd.setHours(7, 0, 0, 0);
+      const nightBStart = nightBEnd.getTime() - 7.0 * 3_600_000;
+      const nightBSamples = makeFragments(nightBStart, 7.0 * 3_600_000, 12, 'com.ouraring.oura');
+
+      // Nap — today at 14:00 local. 1h. Should NOT merge with Night A
+      // (gap to night A's end at 07:00 is 7 hours, way beyond 90 min).
+      const napEnd = new Date(now);
+      napEnd.setHours(14, 0, 0, 0);
+      const napStart = napEnd.getTime() - 1 * 3_600_000;
+      const napSamples = makeFragments(napStart, 1 * 3_600_000, 3, 'com.apple.health');
+
+      const allSamples = [...nightBSamples, ...nightASamples, ...napSamples];
+      // Group ordering shouldn't matter — the helper sorts by startDate.
+
+      const sessions = w.Health.__test_groupSleepSamplesIntoSessions!(allSamples, 90) as Array<{
+        start: Date; end: Date; asleepMs: number; sampleCount: number; sources: Record<string, number>;
+      }>;
+      const selected = w.Health.__test_selectMainSleepSession!(sessions, now) as {
+        start: Date; end: Date; asleepMs: number; sampleCount: number; reason: string;
+      } | null;
+
+      return {
+        sessionCount: sessions.length,
+        sessionHours: sessions.map(s => Number((s.asleepMs / 3_600_000).toFixed(2))),
+        selectedHours: selected ? Number((selected.asleepMs / 3_600_000).toFixed(2)) : null,
+        selectedReason: selected ? selected.reason : null,
+        selectedSampleCount: selected ? selected.sampleCount : null,
+        selectedEndsHourLocal: selected ? selected.end.getHours() : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { sessionCount: number; sessionHours: number[]; selectedHours: number | null; selectedReason: string | null; selectedSampleCount: number | null; selectedEndsHourLocal: number | null };
+
+    // Three discrete sessions (Night B, Night A, Nap).
+    expect(r.sessionCount).toBe(3);
+
+    // Main selection: Night A (largest ending today; ~7.4h, NOT the nap).
+    expect(r.selectedHours).toBeGreaterThan(7.0);
+    expect(r.selectedHours).toBeLessThan(8.0);
+    expect(r.selectedReason).toBe('largest-ending-target-day');
+    expect(r.selectedSampleCount).toBe(16);
+    expect(r.selectedEndsHourLocal).toBe(7);
+
+    // Critically: total is NOT the sum of all three (~15.4h). The
+    // pre-1z.114 bug produced exactly that overcount.
+    expect(r.selectedHours).toBeLessThan(9);
+  });
+
+  test('falls back to largest-in-window when no session ends today', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_onboarding_seen_v2', '1');
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+      } catch (_) {}
+    });
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Health?: {
+        __test_groupSleepSamplesIntoSessions?: (samples: unknown[], maxGapMinutes: number) => unknown[];
+        __test_selectMainSleepSession?: (sessions: unknown[], now: Date) => unknown;
+      } };
+      if (!w.Health || !w.Health.__test_groupSleepSamplesIntoSessions || !w.Health.__test_selectMainSleepSession) {
+        return { error: 'Health test surface not exposed' };
+      }
+      const now = new Date();
+
+      // Single 7.5h session that ended YESTERDAY morning. No data today.
+      const sessionEnd = new Date(now);
+      sessionEnd.setDate(sessionEnd.getDate() - 1);
+      sessionEnd.setHours(7, 0, 0, 0);
+      const sessionStart = sessionEnd.getTime() - 7.5 * 3_600_000;
+      const samples = [{
+        startDate: new Date(sessionStart).toISOString(),
+        endDate: new Date(sessionEnd).toISOString(),
+        duration: 7.5,
+        sleepState: 'Asleep',
+        sourceBundleId: 'com.apple.health',
+      }];
+
+      const sessions = w.Health.__test_groupSleepSamplesIntoSessions!(samples, 90) as Array<{ asleepMs: number }>;
+      const selected = w.Health.__test_selectMainSleepSession!(sessions, now) as { reason: string; asleepMs: number } | null;
+
+      return {
+        sessionCount: sessions.length,
+        selectedReason: selected ? selected.reason : null,
+        selectedHours: selected ? Number((selected.asleepMs / 3_600_000).toFixed(2)) : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { sessionCount: number; selectedReason: string | null; selectedHours: number | null };
+    expect(r.sessionCount).toBe(1);
+    expect(r.selectedReason).toBe('fallback-largest-window');
+    expect(r.selectedHours).toBeGreaterThan(7.0);
+  });
+
+  test('rejects a nap-only window — no session above 3h selects below-min reason', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_onboarding_seen_v2', '1');
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+      } catch (_) {}
+    });
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Health?: {
+        __test_groupSleepSamplesIntoSessions?: (samples: unknown[], maxGapMinutes: number) => unknown[];
+        __test_selectMainSleepSession?: (sessions: unknown[], now: Date) => unknown;
+      } };
+      if (!w.Health || !w.Health.__test_groupSleepSamplesIntoSessions || !w.Health.__test_selectMainSleepSession) {
+        return { error: 'Health test surface not exposed' };
+      }
+      const now = new Date();
+
+      // Two 1h naps, neither >= 3h.
+      const nap1End = new Date(now);
+      nap1End.setHours(13, 0, 0, 0);
+      const nap1Start = nap1End.getTime() - 1 * 3_600_000;
+      const nap2End = new Date(now);
+      nap2End.setHours(16, 0, 0, 0);
+      const nap2Start = nap2End.getTime() - 1 * 3_600_000;
+
+      const samples = [
+        { startDate: new Date(nap1Start).toISOString(), endDate: new Date(nap1End).toISOString(), duration: 1, sleepState: 'Asleep', sourceBundleId: 'a' },
+        { startDate: new Date(nap2Start).toISOString(), endDate: new Date(nap2End).toISOString(), duration: 1, sleepState: 'Asleep', sourceBundleId: 'a' },
+      ];
+
+      const sessions = w.Health.__test_groupSleepSamplesIntoSessions!(samples, 90) as Array<{ asleepMs: number }>;
+      const selected = w.Health.__test_selectMainSleepSession!(sessions, now) as { reason: string; asleepMs: number } | null;
+
+      return {
+        sessionCount: sessions.length,
+        selectedReason: selected ? selected.reason : null,
+        selectedHours: selected ? Number((selected.asleepMs / 3_600_000).toFixed(2)) : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { sessionCount: number; selectedReason: string | null; selectedHours: number | null };
+    expect(r.sessionCount).toBe(2);
+    expect(r.selectedReason).toBe('fallback-below-min-hours');
+    // Selected nap is 1h — habit threshold of 7h will correctly reject.
+    expect(r.selectedHours).toBeLessThan(2);
+  });
+});
