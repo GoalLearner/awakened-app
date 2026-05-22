@@ -4,7 +4,64 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.123 Sleep false-positive auto-verification fix verified (read this first)
+## 📌 Session handoff — May 22, 2026 — Workout Streak real-user leaderboard verified with second real user (read this first)
+
+### ✅ STATUS: Workout Streak backend leaderboard path is verified working end-to-end with two real users
+
+**Issue summary**: After 1z.121 enabled the backend-backed Workout Streak leaderboard, Richie's modal still looked mostly simulated. Production D1 showed only one `workout_streak` snapshot row (Richie). We hypothesized "friend's on-device bundle is stale" rather than backend failure, parked the investigation, and waited for friend debug.
+
+**Investigation summary**:
+- Production D1 audit (read-only `wrangler d1 execute --remote`): 11 users, 7/7/7 rows for step_total/sleep_streak/bedtime_streak, **1 row for workout_streak** (Richie).
+- Backend `leaderboard-submit` accepts `current_value >= 0` (verified via 20/20 vitest pass + endpoint smoke).
+- Backend `leaderboard-top` returns 0-value rows in the JOIN result (no `WHERE current_value > 0` filter).
+- Therefore: missing users had simply never written a `workout_streak` snapshot row. Most users in the table updated their `sleep_streak` row AFTER the backend deploy at 20:20 UTC May 22 — including Melvin who updated 8 minutes AFTER Richie's first workout submit — but NONE of them wrote a workout_streak row. Only possible explanation: their on-device web bundle was still `2.2.3-w2` where `LEADERBOARD_WORKOUT_BACKEND_ENABLED = false` and `lbSubmitAllMetrics` did not include workout_streak in the submit array.
+
+**Friend verification**:
+After updating TestFlight and force-quitting + cold-launching Awakened, Richie's friend reported back. Friend's Copy Debug Info confirms:
+- `"version": "2.2.3"`, `"build": "2.2.3-w4"`
+- `leaderboard-submit-metric-attempt { metric: "workout_streak", value: 1, backendEnabled: true, submitted: true }`
+- `leaderboard-backend-fetch-success { metric: "workout_streak", realRowCount: 2, hasMeRow: true, meCurrentValue: 1, meRank: 2 }`
+- `leaderboard-modal-render-final { metric: "workout_streak", dataSource: "mixed", finalRowCount: 12, realRowCount: 2, simulatedRowCount: 10, currentUserIncluded: true, currentUserValue: 1, backendEnabled: true }`
+
+Real-device UI confirms the path end-to-end:
+- Richie's Workout Streak modal now shows **Richie at #5 with value 2 AND rendiesel at #11 with value 1** — both real users, surrounded by the sim filler.
+- Friend's own Workout Streak modal shows the same two real rows.
+- The simulated bots (shadowmonarch_k=17, ascendantnova=13, ghostlift=7, etc.) are expected filler until more real users update and submit.
+
+**Root cause**: stale on-device web bundle / friend had not actually updated or cold-launched the `2.2.3-w4` IPA. Once forced to swap (force-quit → cold-launch from home screen), the friend's app loaded the w4 bundle whose `LEADERBOARD_WORKOUT_BACKEND_ENABLED = true` triggered the workout_streak submit. **Not a backend issue, not a frontend code issue, not an auth issue.** Pure deployment-lag in TestFlight bundle swap.
+
+**Status**:
+- ✅ Workout Streak real-user leaderboard path is verified working.
+- ✅ Backend writes/reads correctly for `workout_streak`.
+- ✅ Frontend submit + fetch + merge + render all wired and instrumented.
+- ✅ Sim fallback (1z.121) preserved for sparse boards.
+- ✅ Diagnostic breadcrumbs (1z.122) are decisive — they were what let us classify the friend's report in seconds.
+- Population grows organically from here as testers update to ≥ w4 and cold-launch.
+
+**Operational note for future sessions** — if a tester claims to be on the latest TestFlight build but their submit appears missing on the backend:
+1. Have them open Awakened and 5-tap the version line → Copy Debug Info.
+2. Confirm top-level `"build"` matches the expected value (e.g. `"2.2.3-w4"`).
+3. If the build tag is older than expected, the TestFlight IPA may be installed but the running web bundle hasn't swapped yet. Native version (visible in TestFlight app and in iOS Settings → General → iPhone Storage) does NOT guarantee the bundled web bundle on-disk has been cold-loaded. Capacitor reads the bundled `public/` folder at process start; an app that was already running when the IPA was replaced keeps executing the OLD bundle until force-quit + cold-launch.
+4. Have them force-quit Awakened (swipe up + flick the card off-screen) and reopen from the **home-screen icon** (not TestFlight's "Open" button). Then re-pull Copy Debug Info and confirm the build tag.
+
+This same root cause produced the build-92 stale-web-assets incident, the build-93/94/95 sleep-query-empty incident, and now this leaderboard incident. Forced cold-launch is the universal first-check.
+
+**Version knobs (unchanged — confirmed)**:
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w4` |
+| `app.js?v=` | `457` |
+| `sw.js CACHE_VERSION` | `v5.343` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` |
+
+No Codemagic. No archive. No upload. No backend deploy. No code change required.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.123 Sleep false-positive auto-verification fix verified (historical — superseded by Workout Streak verification above)
 
 ### ✅ STATUS: Sleep auto-verify correctness regression closed and verified on-device
 

@@ -249,6 +249,30 @@ After install, the in-app debug payload's `sleep-deep-diag-steps-probe` breadcru
 
 **Recovery if you already uploaded a default-icon build.** Bump the build number in Xcode (e.g. 93 → 94), run the patch + both verify gates, archive, upload. No web/cache knob bump is required for an icon-only correction — `APP_BUILD_TAG`, `app.js?v=`, and `sw.js CACHE_VERSION` can stay at the current values if no web code changed. (Ask before bumping web/cache knobs.)
 
+### Tester is "on the latest TestFlight" but their app still behaves like the prior build
+
+**Recurring pattern across this debug arc** (build-92 stale-web-assets, build-93 default-icon, build-93/94/95 sleep-query-empty, and the Workout Streak missing-friend-row leaderboard incident).
+
+**Symptom**: Tester confirms they tapped "Update" in TestFlight (or see "Open" on the Awakened row). They open Awakened. The app behaves identically to the prior build — old web bundle running, old breadcrumbs, old behavior, no new diagnostics, no new features.
+
+**Root cause**: iOS replaces the IPA on disk when TestFlight finishes installing, but **Capacitor reads the bundled `public/` folder once at process start**. If Awakened was already running when the install finished, the in-memory JS keeps executing until the process is fully killed and cold-launched. The TestFlight app's "Open" button can also relaunch the still-running process rather than spawn a fresh one.
+
+**Verification**: Have the tester open Settings → 5-tap the version line within 3 seconds → tap **Copy Debug Info**. Paste the top of the JSON. Look at `"build"`:
+- If it matches the expected new build tag (e.g. `"2.2.3-w4"`), the cold-launch already happened. The behavior they're seeing is real.
+- If it shows an older build tag (e.g. `"2.2.3-w2"` when you expected `"-w4"`), the new bundle isn't actually loaded yet.
+
+**Fix**: walk the tester through:
+1. Swipe up from the bottom of the screen and hold (or double-tap home on older iPhones) to enter the app switcher.
+2. Find Awakened's card.
+3. **Flick Awakened's card up off the top of the screen.** This is the actual process kill. Tapping outside the app switcher does not.
+4. Wait 2 seconds.
+5. Tap the **Awakened icon on the home screen** (not the TestFlight "Open" button — that can re-attach to a stale process).
+6. Repeat the Copy Debug Info check.
+
+If `"build"` STILL shows the old tag after a confirmed force-quit + home-screen tap, the IPA install itself didn't swap. Delete the Awakened app entirely, re-install from TestFlight, cold-launch. iOS keeps the app's container (localStorage, sign-in state, habit data) across delete-and-reinstall via TestFlight.
+
+This single check resolves the majority of "but I'm on the new build" tester reports.
+
 ### Stale web assets inside a fresh native shell (the build 92 failure mode)
 
 **This class of bug uploaded 2.2.3 build 92 with old JS inside.** Symptom: TestFlight shows the new build/version (e.g. `2.2.3 (92)`) and Copy Debug Info inside the running app reports an OLDER build tag (e.g. `2.2.2-w15`). Xcode's `agvtool` / Info.plist controls the native shell version, but the bundled JavaScript bundle lives in `ios/App/App/public/` and is only updated when you (a) refresh `www/` from root sources AND (b) run `npx cap copy ios`. Skipping (a) and only doing (b) is a silent no-op — `cap copy` just copies whatever was already in `www/`.
