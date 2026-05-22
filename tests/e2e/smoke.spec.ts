@@ -1750,6 +1750,27 @@ test.describe('P · Workout streak modal loads from sim (1z.119)', () => {
     expect(r.hasError).toBe(false);
     // Bots + the user — sim merge typically produces 10+ rows.
     expect(r.rowCount).toBeGreaterThan(3);
+
+    // v3 Phase 1z.122 — verify the decisive breadcrumb sequence
+    // landed. Proves the new instrumentation captures the route
+    // workout_streak actually takes, regardless of which branch
+    // (backend success / fallback) ends up rendering rows.
+    const crumbs = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_health_verify_debug_v1');
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) { return []; }
+    });
+    const steps = (crumbs as Array<{ step: string; data?: Record<string, unknown> }>)
+      .filter(c => c && c.data && c.data.metric === 'workout_streak')
+      .map(c => c.step);
+    expect(steps).toContain('leaderboard-modal-route');
+    // Either path is valid: backend success, or backend fail → sim fallback.
+    // In Playwright with the dev-stub 401, the fallback path is what fires.
+    expect(steps).toContain('leaderboard-modal-render-final');
+    // Critical: the OLD client-only breadcrumb must NOT fire with
+    // the flag flipped. If it does, the route regressed.
+    expect(steps).not.toContain('leaderboard-modal-client-only');
   });
 
   test('step_total modal still routes through the backend path (not the client-only short-circuit)', async ({ page }) => {

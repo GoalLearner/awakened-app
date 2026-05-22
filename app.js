@@ -6639,10 +6639,35 @@
         try { console.log('[Leaderboard] submit skipped — all metrics zero'); } catch (_) {}
         return;
       }
-      await Promise.all(metrics.map(([m, v]) =>
-        window.Auth.submitLeaderboardSnapshot(m, lbSanitizeValue(m, v))
-          .catch(() => null) // never let a single failure poison the others
-      ));
+      // v3 Phase 1z.122 — per-metric submit breadcrumbs. Proves on
+      // TestFlight whether workout_streak (and the other metrics)
+      // actually leave the device. Logged for every metric in the
+      // submit array, including the new workout_streak entry that
+      // 1z.121 gated behind LEADERBOARD_WORKOUT_BACKEND_ENABLED.
+      const _bcSubmit = (typeof _addHealthVerifyBreadcrumb === 'function')
+        ? _addHealthVerifyBreadcrumb
+        : function () {};
+      const flagOn = (typeof LEADERBOARD_WORKOUT_BACKEND_ENABLED !== 'undefined') &&
+                     !!LEADERBOARD_WORKOUT_BACKEND_ENABLED;
+      await Promise.all(metrics.map(async ([m, v]) => {
+        const sanitized = lbSanitizeValue(m, v);
+        try {
+          _bcSubmit('leaderboard-submit-metric-attempt', {
+            metric: m,
+            value: sanitized,
+            backendEnabled: m === 'workout_streak' ? flagOn : true,
+            submitted: true,
+          });
+        } catch (_) {}
+        try {
+          await window.Auth.submitLeaderboardSnapshot(m, sanitized);
+        } catch (_) {
+          try {
+            _bcSubmit('leaderboard-submit-metric-failed', { metric: m });
+          } catch (_) {}
+          return null;
+        }
+      }));
       // v3 Phase 1z.27 — if the just-submitted step_total crossed
       // 100K, refresh accolades so the just-earned step_100k_club
       // row paints without waiting for the next visibility-change.
@@ -21381,23 +21406,52 @@
     }
     if (blurbEl) blurbEl.textContent = blurbText;
 
+    // v3 Phase 1z.122 — decisive route breadcrumb at modal open.
+    // Records exactly which branch the rendering will take so
+    // Copy Debug Info proves the on-device flag state matched
+    // expectations.
+    const _bcLB = (typeof _addHealthVerifyBreadcrumb === 'function')
+      ? _addHealthVerifyBreadcrumb
+      : function () {};
+    const cached = lbCacheRead(metric);
+    const flagWorkoutBackend = (typeof LEADERBOARD_WORKOUT_BACKEND_ENABLED !== 'undefined')
+      && !!LEADERBOARD_WORKOUT_BACKEND_ENABLED;
+    const clientOnly = _LB_CLIENT_ONLY_METRICS.has(metric);
+    try {
+      _bcLB('leaderboard-modal-route', {
+        metric,
+        backendEnabled: metric === 'workout_streak' ? flagWorkoutBackend : true,
+        clientOnly,
+        hasCache: !!cached,
+        simSupported: !!_LB_SIM_METRICS[metric],
+      });
+    } catch (_) {}
+
     // v3 Phase 1z.119 — client-only metrics short-circuit before
     // the backend fetch. workout_streak is derived from the local
     // completion ledger and the backend has no route for it; the
     // sim merge alone produces the full ranked list (bots + the
     // user's row pulled from lbGetSnapshot.current_workout_streak).
-    if (_LB_CLIENT_ONLY_METRICS.has(metric)) {
-      try {
-        if (typeof _addHealthVerifyBreadcrumb === 'function') {
-          _addHealthVerifyBreadcrumb('leaderboard-modal-client-only', { metric });
-        }
-      } catch (_) {}
+    // 1z.121 lifted workout_streak out of this set when the flag
+    // is true — modal routes through the backend fetch + sim merge
+    // path below.
+    if (clientOnly) {
+      try { _bcLB('leaderboard-modal-client-only', { metric }); } catch (_) {}
       const sim = _lbMaybeSimulate(metric, [], null);
+      try {
+        _bcLB('leaderboard-modal-render-final', {
+          metric,
+          dataSource: 'client-only-sim',
+          finalRowCount: (sim.top || []).length,
+          currentUserIncluded: !!(sim.me && typeof sim.me.rank === 'number'),
+          currentUserValue: (sim.me && sim.me.current_value) || 0,
+          backendEnabled: false,
+        });
+      } catch (_) {}
       listEl.innerHTML = lbBuildRankList(metric, sim.top, sim.me);
       return;
     }
 
-    const cached = lbCacheRead(metric);
     if (cached) {
       const staleNote = 'Last updated ' + lbFormatRelativeTime(cached.fetched_at);
       const sim1 = _lbMaybeSimulate(metric, cached.top, cached.me);
@@ -21406,6 +21460,7 @@
       listEl.innerHTML = lbBuildLoadingSkeleton();
     }
 
+    try { _bcLB('leaderboard-backend-fetch-start', { metric, kind: 'top', limit: 50 }); } catch (_) {}
     let result;
     try {
       result = await window.Auth.fetchLeaderboardTop(metric);
@@ -21418,23 +21473,42 @@
     if (_lbCurrentOpenMetric !== metric || _lbCurrentTab !== 'this-week') return;
 
     if (result && result.ok) {
+      const realRowCount = Array.isArray(result.top) ? result.top.length : 0;
+      try {
+        _bcLB('leaderboard-backend-fetch-success', {
+          metric,
+          realRowCount,
+          hasMeRow: !!(result.me && typeof result.me.current_value === 'number'),
+          meCurrentValue: (result.me && typeof result.me.current_value === 'number') ? result.me.current_value : null,
+          meRank: (result.me && typeof result.me.rank === 'number') ? result.me.rank : null,
+        });
+      } catch (_) {}
       lbCacheWrite(metric, result.top, result.me);
       const sim2 = _lbMaybeSimulate(metric, result.top, result.me);
+      const finalRowCount = (sim2.top || []).length;
+      try {
+        _bcLB('leaderboard-modal-render-final', {
+          metric,
+          dataSource: realRowCount > 0 ? 'mixed' : 'simulated',
+          finalRowCount,
+          realRowCount,
+          simulatedRowCount: Math.max(0, finalRowCount - realRowCount),
+          currentUserIncluded: !!(sim2.me && typeof sim2.me.rank === 'number'),
+          currentUserValue: (sim2.me && sim2.me.current_value) || 0,
+          backendEnabled: metric === 'workout_streak' ? flagWorkoutBackend : true,
+        });
+      } catch (_) {}
       listEl.innerHTML = lbBuildRankList(metric, sim2.top, sim2.me);
       if (metric === 'step_total') {
         try { updateStepsCard(); } catch (_) {}
       }
     } else if (result && result.code === 'EXPIRED') {
+      try { _bcLB('leaderboard-backend-fetch-fail', { metric, code: 'EXPIRED' }); } catch (_) {}
       window.location.reload();
     } else if (!cached) {
-      try {
-        if (typeof _addHealthVerifyBreadcrumb === 'function') {
-          _addHealthVerifyBreadcrumb('leaderboard-modal-load-error', {
-            metric,
-            code: (result && result.code) || 'UNKNOWN',
-          });
-        }
-      } catch (_) {}
+      const failCode = (result && result.code) || 'UNKNOWN';
+      try { _bcLB('leaderboard-backend-fetch-fail', { metric, code: failCode }); } catch (_) {}
+      try { _bcLB('leaderboard-modal-load-error', { metric, code: failCode }); } catch (_) {}
       // v3 Phase 1z.121 — sim-supported metrics fall back to a
       // sim-merged render when the backend errors AND no cache
       // exists. Without this, a first-load-on-flaky-network user
@@ -21444,12 +21518,27 @@
       // of the populated board. Metrics without sim support still
       // fall through to the error state.
       if (_LB_SIM_METRICS[metric]) {
-        try {
-          if (typeof _addHealthVerifyBreadcrumb === 'function') {
-            _addHealthVerifyBreadcrumb('leaderboard-modal-sim-fallback', { metric });
-          }
-        } catch (_) {}
         const simFallback = _lbMaybeSimulate(metric, [], null);
+        const fallbackCount = (simFallback.top || []).length;
+        try {
+          _bcLB('leaderboard-modal-sim-fallback', {
+            metric,
+            reason: 'backend-error-no-cache',
+            realRowCount: 0,
+            simulatedRowCount: fallbackCount,
+            currentUserValue: (simFallback.me && simFallback.me.current_value) || 0,
+          });
+          _bcLB('leaderboard-modal-render-final', {
+            metric,
+            dataSource: 'fallback',
+            finalRowCount: fallbackCount,
+            realRowCount: 0,
+            simulatedRowCount: fallbackCount,
+            currentUserIncluded: !!(simFallback.me && typeof simFallback.me.rank === 'number'),
+            currentUserValue: (simFallback.me && simFallback.me.current_value) || 0,
+            backendEnabled: metric === 'workout_streak' ? flagWorkoutBackend : true,
+          });
+        } catch (_) {}
         listEl.innerHTML = lbBuildRankList(metric, simFallback.top, simFallback.me);
       } else {
         listEl.innerHTML = lbBuildErrorState(result && result.code);
