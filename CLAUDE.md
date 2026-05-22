@@ -372,6 +372,76 @@ Asked during the 1z.118 patch whether a **Most Flights Climbed** leaderboard cou
 
 No archive / upload / deploy needed for either this patch or the follow-up — both live entirely in the web bundle.
 
+### 🌐 Real-user leaderboard — audit memo + activation runbook (1z.120)
+
+**Asked**: How do we get the leaderboard off the simulated-only state and surface real users alongside Richie? **Audit finding**: The backend is far more mature than the question implied. We're 1 backend deploy + 1 frontend flag flip away from real workout_streak users. step_total / sleep_streak / bedtime_streak ALREADY support real users — the leaderboard just looks sim-heavy because the user base is small.
+
+#### What already works (production today)
+
+| Layer | What's live |
+|---|---|
+| **Auth** | Apple Sign In + JWT (backend/src/handlers/auth-verify.ts) — every iOS user has a stable user_id + display_name (alias). |
+| **DB schema** | `leaderboard_snapshots` table is **metric-agnostic** — one row per `(user_id, metric)` pair. No schema migration needed to add a metric. `weekly_step_records` table backs the Hall of Fame for step_total. 9 migrations applied to remote D1. |
+| **Submit route** | `POST /v1/leaderboard/submit { metric, current_value }` — authenticated, rate-limited via `RL_LEADERBOARD_SUBMIT`. Upserts user's row. |
+| **Top route** | `GET /v1/leaderboard/top?metric=X&limit=N` — returns top + caller's row. Rate-limited via `RL_LEADERBOARD_TOP`. |
+| **Hall of Fame** | `GET /v1/leaderboard/hall-of-fame?metric=step_total&limit=N` — for step_total only. |
+| **Frontend submit** | `lbSubmitAllMetrics()` (app.js:6607) submits step_total + sleep_streak + bedtime_streak on every app open + visibility change. |
+| **Frontend fetch** | `_lbRenderThisWeekTab` fetches via `Auth.fetchLeaderboardTop` and merges with simulated rows for sparse boards. |
+| **Sanity caps** | step_total: 200,000; streaks: 365. Server-side enforced. |
+| **Weekly scoping** | step_total filtered by `week_start = $currentSundayUTC`. Streaks carry forward (no weekly reset). |
+
+#### Why the board looks sim-heavy today
+
+- The user base is small (only the actual test/dev users — Richie + maybe a few others — are submitting). Sim merge fills the gap from `simulated-leaderboard.js`.
+- The "Richie" row is real (Apple Sign In → backend submit). Every name like `shadowmonarch_k`, `ascendantnova`, `ghostlift`, etc. is a deterministic sim bot.
+- As real users sign up and submit, they'll naturally appear and bots will get pushed down by the sort.
+- workout_streak (1z.118) was shipped as **client-only** intentionally — backend wasn't updated yet.
+
+#### What's missing for workout_streak specifically
+
+The 1z.118 commit marked workout_streak client-only because the backend's `METRICS` whitelist didn't include it. The fix is mechanical (no schema change — table is metric-agnostic):
+
+1. **Backend** (`backend/src/lib/metrics.ts`): add `'workout_streak'` to METRICS array + METRIC_CAPS map. → Done in this commit (code change only; not deployed).
+2. **Backend handlers** error strings updated (cosmetic, validation already goes through `isValidMetric`). → Done.
+3. **Backend tests**: pass. `npx vitest run` shows 20/20 in leaderboard-submit + leaderboard-top.
+4. **Backend deploy**: required. `cd backend && npx wrangler deploy`. **NOT done in this commit** — deploy is a separate explicit step.
+5. **Frontend flag flip**: `LEADERBOARD_WORKOUT_BACKEND_ENABLED = false` → `true`. When true: workout_streak drops out of `_LB_CLIENT_ONLY_METRICS`, AND `lbSubmitAllMetrics` includes it in the submit array. Default stays FALSE in this commit so behavior is unchanged.
+6. **Frontend archive + upload**: the flag flip needs to land on TestFlight. Same heavy-prep flow as prior patches.
+
+#### Activation runbook (when ready to ship real workout_streak)
+
+```bash
+# 1. Backend deploy
+cd backend
+npx wrangler deploy          # pushes the workout_streak whitelist
+npx vitest run               # confirm 20/20 pass
+
+# 2. Flip the frontend flag (this commit's repo state has it at false)
+#    Edit app.js:21319 → LEADERBOARD_WORKOUT_BACKEND_ENABLED = true
+#    Commit: "chore: enable workout_streak backend leaderboard"
+
+# 3. Archive + upload (MacBook)
+bash scripts/prep-local-build.sh   # all four verify gates
+npx cap open ios                   # Marketing 2.2.3, Build = next, Archive → Upload
+```
+
+The backend is forward-compatible: even with the new METRICS entry, no existing client behavior changes until a client actually submits workout_streak (which only happens with the flag flipped).
+
+#### Other metrics already real-user-capable today
+
+- `step_total` — already submitting + fetching live. World Rank #2 visible to Richie is computed from real submissions (with sim filler).
+- `sleep_streak` — same. The 1z.116 floor (>= 3 nights) gates which real users appear.
+- `bedtime_streak` — backend still accepts it; UI card was retired in 1z.118 but the metric continues to support potential future surfaces (e.g. a Bedtime Duel view).
+
+#### Decision: chose Path D-lite (Path B + C combined, no deploy)
+
+- Path A (docs only) — leaves the workout_streak path unwired forever.
+- Path B (frontend adapter scaffold) — overkill; `_lbMaybeSimulate` is already the abstraction.
+- Path C (backend route scaffold) — routes already exist for every metric; just needs the whitelist entry.
+- **Path D-lite** — minimal backend code change (1 array entry + 1 cap entry + cosmetic error-string updates), feature-flagged frontend gate, no deploy. The actual flip-the-switch step is a documented runbook.
+
+The patch is forward-safe: a future session that wants to ship real workout_streak follows the 3-step runbook above. The system stays in its current proven state until that explicit decision.
+
 ---
 
 ## 📌 Session handoff — May 19, 2026 morning (historical — superseded by the May 20 section above)

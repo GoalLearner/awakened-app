@@ -6616,6 +6616,16 @@
         ['sleep_streak',   snap.current_sleep_streak],
         ['bedtime_streak', snap.current_bedtime_streak],
       ];
+      // v3 Phase 1z.120 — workout_streak joins the backend submit
+      // list when the feature flag is on AND the backend has been
+      // redeployed with the workout_streak entry in metrics.ts.
+      // Until then, workout_streak stays a client-only metric and
+      // the leaderboard modal renders the sim merge against the
+      // local snap.current_workout_streak (no backend roundtrip).
+      if (typeof LEADERBOARD_WORKOUT_BACKEND_ENABLED !== 'undefined' &&
+          LEADERBOARD_WORKOUT_BACKEND_ENABLED) {
+        metrics.push(['workout_streak', snap.current_workout_streak]);
+      }
       // v3 Phase 1w.1 defensive guard — refuse to submit if ALL three
       // metrics are zero. A wipe-zero submit overwrites the backend's
       // current_value (preserved best_value). Genuinely-zero users
@@ -21308,6 +21318,22 @@
   // _lbCurrentOpenMetric and _lbCurrentTab.
   let _lbCurrentTab = 'this-week';
 
+  // v3 Phase 1z.120 — feature flag for the workout_streak backend
+  // migration. Backend metrics registry now whitelists
+  // 'workout_streak' (see backend/src/lib/metrics.ts) and the
+  // leaderboard_snapshots table is metric-agnostic — no schema
+  // change required. When this flag flips true AFTER the backend
+  // is redeployed:
+  //   1. workout_streak drops out of _LB_CLIENT_ONLY_METRICS, so
+  //      the modal load path hits Auth.fetchLeaderboardTop and
+  //      real users surface alongside the sim merge.
+  //   2. lbSubmitAllMetrics includes workout_streak in its submit
+  //      array, so the user's row reaches the backend.
+  // Default stays FALSE until both halves ship together. Flipping
+  // the flag without the backend deploy would re-introduce the
+  // 1z.119 "Couldn't load rankings" failure mode.
+  const LEADERBOARD_WORKOUT_BACKEND_ENABLED = false;
+
   // v3 Phase 1z.119 — client-only metrics never hit the backend.
   // workout_streak (added in 1z.118) is fully derived from the
   // local completion ledger — the backend has no /v1/leaderboard
@@ -21316,7 +21342,14 @@
   // / 404 response, find no cache, and render lbBuildErrorState's
   // "Couldn't load rankings" — exactly the bug reported on the
   // TestFlight build that followed 1z.118.
-  const _LB_CLIENT_ONLY_METRICS = new Set(['workout_streak']);
+  //
+  // v3 Phase 1z.120 — gated by LEADERBOARD_WORKOUT_BACKEND_ENABLED.
+  // When the flag flips true, workout_streak is removed from this
+  // set and routed through the standard backend fetch path, which
+  // simulated-rows-merge fills around for sparse boards.
+  const _LB_CLIENT_ONLY_METRICS = LEADERBOARD_WORKOUT_BACKEND_ENABLED
+    ? new Set([])
+    : new Set(['workout_streak']);
 
   // Renders the "This Week" view (current-weekly ranking with sim
   // merge). Extracted from openLeaderboardRanking so the same flow

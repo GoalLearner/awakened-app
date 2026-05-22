@@ -58,7 +58,7 @@ export async function handleLeaderboardTop(
     return jsonError(
       400,
       'INVALID_METRIC',
-      'Query param "metric" must be one of: step_total, sleep_streak, bedtime_streak.',
+      'Query param "metric" must be one of: step_total, sleep_streak, bedtime_streak, workout_streak.',
     );
   }
   const metric: Metric = metricParam;

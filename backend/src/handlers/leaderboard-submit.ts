@@ -70,7 +70,7 @@ export async function handleLeaderboardSubmit(
     return jsonError(
       400,
       'INVALID_METRIC',
-      'metric must be one of: step_total, sleep_streak, bedtime_streak.',
+      'metric must be one of: step_total, sleep_streak, bedtime_streak, workout_streak.',
     );
   }
   const metric: Metric = body.metric;

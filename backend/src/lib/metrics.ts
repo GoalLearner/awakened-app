@@ -16,7 +16,16 @@
  * obvious data corruption (steps as milliseconds, etc.) is caught.
  */
 
-export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak'] as const;
+// v3 Phase 1z.120 — workout_streak added to the metric registry.
+// The leaderboard_snapshots table is metric-agnostic (one row per
+// (user_id, metric) pair) so no migration is needed — the storage
+// layer already supports any metric string. Submit + top endpoints
+// route through isValidMetric() against this list, so adding it
+// here unlocks both routes simultaneously. Frontend default keeps
+// workout_streak in `_LB_CLIENT_ONLY_METRICS` until a deploy lands
+// AND the LEADERBOARD_WORKOUT_BACKEND_ENABLED flag flips true;
+// behavior is unchanged on production today.
+export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak'] as const;
 export type Metric = (typeof METRICS)[number];
 
 export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
@@ -29,6 +38,10 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
   /** Consecutive nights bedtime < midnight local time. Same cap as
    * sleep_streak for the same reason. */
   bedtime_streak: 365,
+  /** Consecutive days with a verified Apple Health workout ≥30 min.
+   * 365 = full year; same protect-against-garbage rationale as
+   * sleep/bedtime. v3 Phase 1z.120. */
+  workout_streak: 365,
 };
 
 export function isValidMetric(value: unknown): value is Metric {
