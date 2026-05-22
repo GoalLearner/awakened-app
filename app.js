@@ -28399,17 +28399,22 @@
         const sessions = _groupSleepSamplesIntoSessions(asleepSamples, SLEEP_SESSION_MAX_GAP_MINUTES);
         const mainSession = _selectMainSleepSession(sessions, now);
 
-        // totalAsleepHours = MAIN session asleep total (not 36h sum).
-        // The four downstream consumers (Sleep 7 hours threshold,
-        // Insomniac/Carouser/Dream Tyrant bosses, leaderboard) all
-        // want "last night's sleep ending today" — this is that.
-        const totalAsleepHours = mainSession ? (mainSession.asleepMs / 3600000) : 0;
-        // earliestSleepStart = the main session's start (the natural
-        // sleep onset for today's habit, not an arbitrary first sample
-        // 30+ hours back). Bedtime path is independent — it uses
+        // v3 Phase 1z.123 — gate downstream consumers on the session
+        // ACTUALLY ending today, not the fallback-largest-window. The
+        // earlier behavior used yesterday's 7.5h session to seal
+        // today's Sleep habit when Oura hadn't yet written today's
+        // session (false-positive seal). Now: totalAsleepHours
+        // reflects today's session ONLY. If no session ends today,
+        // it's 0 — habit stays unsealed, bosses see "didn't sleep
+        // enough yet", leaderboard records 0 (re-records on next
+        // open when data arrives).
+        const sessionEndsToday = !!(mainSession && mainSession.reason === 'largest-ending-target-day');
+        const totalAsleepHours = sessionEndsToday ? (mainSession.asleepMs / 3600000) : 0;
+        // earliestSleepStart = the main session's start ONLY if it
+        // ends today. Bedtime path is independent — it uses
         // getBedtimeSamplesInWindow(data.samples) and runs its own
         // [20:00, 24:00) filter on the full sample list.
-        const earliestSleepStart = mainSession ? mainSession.start : null;
+        const earliestSleepStart = sessionEndsToday ? mainSession.start : null;
 
         // Diagnostics — session inventory + selection reasoning.
         try {
@@ -28446,6 +28451,7 @@
           samples: asleepSamples,       // unsessioned — bedtime path needs the full list
           mainSession: mainSession,     // exposed for downstream consumers / diagnostics
           sessions,                     // full session inventory
+          sessionEndsToday,             // 1z.123 — true iff main session ends today
           fetchedAt: Date.now(),
         };
         setStatus('granted');
@@ -28454,13 +28460,22 @@
             sampleCount: samples.length,
             asleepSampleCount: asleepSamples.length,
             stateCounts,
-            // totalAsleepHours now reflects the MAIN session only (1z.114).
+            // totalAsleepHours now reflects the MAIN session that
+            // ends TODAY (1z.123). If no session ends today, this is
+            // 0 — even when the broader fallback found a yesterday
+            // session in the window.
             totalAsleepHours: Number(totalAsleepHours.toFixed(2)),
             earliestSleepStartISO: earliestSleepStart && earliestSleepStart.toISOString(),
             sessionCount: sessions.length,
-            // Renamed semantic — was "samples ≥ nap floor across the window";
-            // now "sessions ≥ nap-floor min duration". Kept the field name
-            // for breadcrumb-ring backwards compat.
+            sessionEndsToday,
+            // Diagnostic-only: the session that WOULD have been
+            // used pre-1z.123 (could be yesterday via fallback).
+            // Helps spot timing weirdness without resurrecting the
+            // false-positive seal.
+            selectedSessionAsleepHours: mainSession
+              ? Number((mainSession.asleepMs / 3600000).toFixed(2))
+              : null,
+            selectedSessionReason: mainSession ? mainSession.reason : null,
             qualifyingNapPlusCount: sessions.filter(s => s.asleepMs >= HEALTHKIT_SLEEP_NAP_MIN_MINUTES * 60000).length,
           });
         } catch (_) {}
@@ -29993,7 +30008,46 @@
         wasUncheckedToday: wasUnchecked,
       });
       if (alreadyChecked) {
-        _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'already-checked' });
+        // v3 Phase 1z.123 — downward correction for stale auto-verify.
+        // If the habit was auto-verified earlier today (e.g., from a
+        // provisional fallback-largest-window seal that grabbed
+        // yesterday's session) AND the current Health data no longer
+        // meets the threshold AND this completion was an auto-verify
+        // (not a manual tap), uncheck it. This prevents the
+        // permanent false-positive class where Oura/Health refines
+        // the day's data downward after the first seal.
+        //
+        // Uses uncheck(id) + clearAutoVerify(id) DIRECTLY rather than
+        // toggleHabit, because toggleHabit's auto-verified-uncheck
+        // branch calls markUnchecked which would PERMANENTLY block
+        // auto-verify for the rest of today. We want the opposite:
+        // if Health data later improves above threshold, auto-verify
+        // SHOULD re-seal. markUnchecked is for user-intent rejection;
+        // this path is system data correction.
+        if (!meets && AUTO_VERIFY.isAutoVerifiedToday(sleep.id)) {
+          try {
+            uncheck(sleep.id);
+            AUTO_VERIFY.clearAutoVerify(sleep.id);
+            const li = document.querySelector('.habit-item[data-id="' + sleep.id + '"]');
+            if (li) {
+              li.classList.remove('completed');
+              const cb = li.querySelector('.habit-cb');
+              if (cb) cb.classList.remove('checked');
+            }
+            _addHealthVerifyBreadcrumb('sleep-unsealed-stale-auto', {
+              currentTotalAsleepHours: Number((data.totalAsleepHours || 0).toFixed(2)),
+              goalHours,
+              sessionEndsToday: !!data.sessionEndsToday,
+              selectedSessionReason: (data.mainSession && data.mainSession.reason) || null,
+            });
+          } catch (e) {
+            _addHealthVerifyBreadcrumb('sleep-unseal-threw', {
+              err: String(e && e.message || e),
+            });
+          }
+        } else {
+          _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'already-checked' });
+        }
       } else if (wasUnchecked) {
         _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'user-unchecked-today' });
       } else if (!meets) {
@@ -30082,6 +30136,15 @@
     try { _backfillSleepYesterday(); } catch (_) {}
   }
   try { window.autoVerifySleep = autoVerifySleep; } catch (_) {}
+  // v3 Phase 1z.123 — test surface for the downward-correction
+  // regression. Exposes AUTO_VERIFY + uncheck so the Q tests can
+  // simulate the exact pre-state (sealed + auto-verified) and
+  // verify the unseal primitives operate without the user-intent
+  // markUnchecked side-effect.
+  try {
+    window.__test_AUTO_VERIFY = AUTO_VERIFY;
+    window.__test_uncheck     = uncheck;
+  } catch (_) {}
 
   // ── Strength training auto-verify (v3 Phase 1u) ──────────
   // Read-only system-managed habit. Auto-completes when Apple Health
