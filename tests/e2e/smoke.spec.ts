@@ -1204,3 +1204,184 @@ test.describe('L · Sleep streak derived from completion ledger (1z.115)', () =>
     expect(r.best).toBe(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// M. Sleep streak leaderboard 3-night qualification floor (1z.116)
+// ─────────────────────────────────────────────────────────────
+// Regression for the build-97 follow-up: a "7+ hour sleep streak"
+// global leaderboard showing rows with 0, 1, or 2 nights reads as
+// unearned noise. 1z.116 applies a 3-night minimum filter to the
+// merged list AFTER simulated-leaderboard injection and re-ranks
+// the survivors. Users below the floor are also hidden from the
+// "your rank" pinned row.
+type LbSim = LbTest & {
+  __test_getMinQualifyingScore: (metric: string) => number | undefined;
+  __test_maybeSimulate: (metric: string, top: Array<{ alias: string; current_value: number; rank?: number }> | null, me: { rank: number; current_value: number } | null) => { top: Array<{ alias: string; current_value: number; rank: number }>; me: { rank: number; current_value: number } | null; _belowMinScore?: boolean } | null;
+};
+
+test.describe('M · Sleep streak 3-night qualification floor (1z.116)', () => {
+  test('sleep_streak filters out rows below 3 and re-ranks survivors', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as {
+        Leaderboard: LbSim;
+        SimulatedLeaderboard?: { SIMULATE_USERS: boolean; merge: (top: unknown[], myAlias: string, myValue: number, dateKey: string, metric: string) => Array<{ alias: string; current_value: number; rank: number }> };
+        Auth?: { getUserAlias?: () => string };
+      };
+      if (!w.SimulatedLeaderboard) return { error: 'SimulatedLeaderboard not exposed' };
+
+      // Stub SimulatedLeaderboard.merge to return a controlled list
+      // mixing scores above and below the 3-night floor. The Richie
+      // row sits at score 5 (above the floor); fakes at 20, 12, 9,
+      // 1, 1, 0 mimic the build-97 modal screenshot.
+      const originalMerge = w.SimulatedLeaderboard.merge;
+      const auth = (window as unknown as { Auth?: { getCurrentUser?: () => { alias?: string } | null } }).Auth;
+      const cur = auth && auth.getCurrentUser && auth.getCurrentUser();
+      const myAlias = (cur && cur.alias) || 'devuser';
+      w.SimulatedLeaderboard.merge = function () {
+        return [
+          { alias: 'fakeA', current_value: 20, rank: 1 },
+          { alias: 'fakeB', current_value: 12, rank: 2 },
+          { alias: 'fakeC', current_value:  9, rank: 3 },
+          { alias: myAlias, current_value:  5, rank: 4 },
+          { alias: 'fakeD', current_value:  3, rank: 5 },  // exactly at floor — qualifies
+          { alias: 'fakeE', current_value:  2, rank: 6 },  // below — must filter
+          { alias: 'fakeF', current_value:  1, rank: 7 },  // below — must filter
+          { alias: 'fakeG', current_value:  0, rank: 8 },  // below — must filter
+        ];
+      };
+
+      const sim = w.Leaderboard.__test_maybeSimulate('sleep_streak', [], null);
+
+      // Restore the original merge so other tests aren't affected.
+      w.SimulatedLeaderboard.merge = originalMerge;
+
+      return {
+        floor: w.Leaderboard.__test_getMinQualifyingScore('sleep_streak'),
+        topAliases: sim && sim.top ? sim.top.map(r => r.alias) : null,
+        topRanks:   sim && sim.top ? sim.top.map(r => r.rank) : null,
+        topValues:  sim && sim.top ? sim.top.map(r => r.current_value) : null,
+        meRank:     sim && sim.me ? sim.me.rank : null,
+        meValue:    sim && sim.me ? sim.me.current_value : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { floor: number; topAliases: string[]; topRanks: number[]; topValues: number[]; meRank: number | null; meValue: number | null };
+
+    // Floor is exactly 3.
+    expect(r.floor).toBe(3);
+
+    // Below-floor rows are filtered out — values 2, 1, 0 are gone.
+    expect(r.topValues).not.toContain(2);
+    expect(r.topValues).not.toContain(1);
+    expect(r.topValues).not.toContain(0);
+
+    // The exactly-at-floor row (3) is retained.
+    expect(r.topValues).toContain(3);
+
+    // Ranks re-numbered 1..N over visible rows.
+    expect(r.topRanks).toEqual([1, 2, 3, 4, 5]);
+    expect(r.topAliases.length).toBe(5);
+
+    // Richie (myAlias) is in the merged list at rank 4 (between
+    // fakeC=9 and fakeD=3).
+    const myIdx = r.topAliases.findIndex(a => a !== 'fakeA' && a !== 'fakeB' && a !== 'fakeC' && a !== 'fakeD');
+    expect(myIdx).toBe(3);
+    expect(r.meValue).toBe(5);
+    expect(r.meRank).toBe(4);
+  });
+
+  test('Richie below 3 → hidden from board (no me row)', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as {
+        Leaderboard: LbSim;
+        SimulatedLeaderboard?: { SIMULATE_USERS: boolean; merge: (top: unknown[], myAlias: string, myValue: number, dateKey: string, metric: string) => Array<{ alias: string; current_value: number; rank: number }> };
+        Auth?: { getUserAlias?: () => string };
+      };
+      if (!w.SimulatedLeaderboard) return { error: 'SimulatedLeaderboard not exposed' };
+
+      const originalMerge = w.SimulatedLeaderboard.merge;
+      const auth = (window as unknown as { Auth?: { getCurrentUser?: () => { alias?: string } | null } }).Auth;
+      const cur = auth && auth.getCurrentUser && auth.getCurrentUser();
+      const myAlias = (cur && cur.alias) || 'devuser';
+      // Richie at score 1 (below floor). Plus three qualifying fakes.
+      w.SimulatedLeaderboard.merge = function () {
+        return [
+          { alias: 'fakeA', current_value: 20, rank: 1 },
+          { alias: 'fakeB', current_value: 12, rank: 2 },
+          { alias: 'fakeC', current_value:  4, rank: 3 },
+          { alias: myAlias, current_value:  1, rank: 4 },
+        ];
+      };
+
+      const sim = w.Leaderboard.__test_maybeSimulate('sleep_streak', [], null);
+      w.SimulatedLeaderboard.merge = originalMerge;
+
+      return {
+        topAliases:  sim && sim.top ? sim.top.map(r => r.alias) : null,
+        topCount:    sim && sim.top ? sim.top.length : null,
+        meIsNull:    sim ? sim.me === null : null,
+        belowMinScore: sim ? sim._belowMinScore : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { topAliases: string[]; topCount: number; meIsNull: boolean; belowMinScore: boolean };
+
+    // Three fakes survive; Richie is filtered out (his row had value=1).
+    expect(r.topCount).toBe(3);
+    expect(r.topAliases).toEqual(['fakeA', 'fakeB', 'fakeC']);
+    // me is null because Richie didn't make the floor.
+    expect(r.meIsNull).toBe(true);
+    expect(r.belowMinScore).toBe(true);
+  });
+
+  test('step_total leaderboard has no floor — all rows pass through', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as {
+        Leaderboard: LbSim;
+        SimulatedLeaderboard?: { SIMULATE_USERS: boolean; merge: (top: unknown[], myAlias: string, myValue: number, dateKey: string, metric: string) => Array<{ alias: string; current_value: number; rank: number }> };
+        Auth?: { getUserAlias?: () => string };
+      };
+      if (!w.SimulatedLeaderboard) return { error: 'SimulatedLeaderboard not exposed' };
+
+      const originalMerge = w.SimulatedLeaderboard.merge;
+      const auth = (window as unknown as { Auth?: { getCurrentUser?: () => { alias?: string } | null } }).Auth;
+      const cur = auth && auth.getCurrentUser && auth.getCurrentUser();
+      const myAlias = (cur && cur.alias) || 'devuser';
+      w.SimulatedLeaderboard.merge = function () {
+        return [
+          { alias: 'fakeA', current_value: 50000, rank: 1 },
+          { alias: myAlias, current_value:  1000, rank: 2 },
+          { alias: 'fakeB', current_value:    50, rank: 3 },  // very low — must remain (no floor for step_total)
+          { alias: 'fakeC', current_value:     0, rank: 4 },
+        ];
+      };
+
+      const sim = w.Leaderboard.__test_maybeSimulate('step_total', [], null);
+      w.SimulatedLeaderboard.merge = originalMerge;
+
+      return {
+        floor:      w.Leaderboard.__test_getMinQualifyingScore('step_total'),
+        topCount:   sim && sim.top ? sim.top.length : null,
+        topValues:  sim && sim.top ? sim.top.map(r => r.current_value) : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { floor: number | undefined; topCount: number; topValues: number[] };
+
+    // No floor defined for step_total.
+    expect(r.floor).toBeUndefined();
+    // All 4 rows survive — no filter applied.
+    expect(r.topCount).toBe(4);
+    expect(r.topValues).toContain(50);
+    expect(r.topValues).toContain(0);
+  });
+});

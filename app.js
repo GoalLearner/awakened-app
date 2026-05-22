@@ -6448,6 +6448,16 @@
       _state:           loadLeaderboardState, // dev-only: full raw state
       // v3 Phase 1z.115 — exposed for Playwright regression tests.
       __test_computeSleepStreakFromCompletions: _lbComputeSleepStreakFromCompletions,
+      // v3 Phase 1z.116 — min-qualifying-score table + simulate filter
+      // surfaces for Playwright regression tests.
+      __test_getMinQualifyingScore: function (metric) {
+        try { return (typeof _LB_MIN_QUALIFYING_SCORE !== 'undefined') ? _LB_MIN_QUALIFYING_SCORE[metric] : undefined; }
+        catch (_) { return undefined; }
+      },
+      __test_maybeSimulate: function (metric, top, me) {
+        try { return (typeof _lbMaybeSimulate === 'function') ? _lbMaybeSimulate(metric, top, me) : null; }
+        catch (_) { return null; }
+      },
       // Getters returning live references to the outer-scope habits +
       // completions so test code can read what state the helper sees
       // and seed scenarios deterministically. Returns null if the
@@ -20879,14 +20889,36 @@
       }
     } else if (!me) {
       // me === null → user hasn't submitted this metric yet (or
-      // lbSubmitAllMetrics hasn't fired since sign-in)
-      yourRankLine =
-        '<div class="lb-rank-row lb-rank-row--me lb-rank-row--pending">' +
-          '<span class="lb-rank-pos">—</span>' +
-          '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + ' <em class="lb-rank-name-sub">· submitting…</em></span>' +
-          '<span class="lb-rank-value">—</span>' +
-        '</div>' +
-        '<div class="lb-rank-divider" aria-hidden="true"></div>';
+      // lbSubmitAllMetrics hasn't fired since sign-in).
+      //
+      // v3 Phase 1z.116 — for metrics with a min-qualifying-score
+      // (currently sleep_streak >= 3), suppress the pending
+      // placeholder when the user's local snapshot is below the
+      // floor. The board is meant to show only earned entries; a
+      // "submitting…" row for someone with 0 verified nights reads
+      // as the same noise we're filtering out from the top-N.
+      let suppressPending = false;
+      try {
+        const _floor = (typeof _LB_MIN_QUALIFYING_SCORE !== 'undefined') && _LB_MIN_QUALIFYING_SCORE[metric];
+        if (typeof _floor === 'number') {
+          const _snap = lbGetSnapshot();
+          let _myLocal = 0;
+          if (metric === 'sleep_streak')        _myLocal = (_snap && _snap.current_sleep_streak)   || 0;
+          else if (metric === 'bedtime_streak') _myLocal = (_snap && _snap.current_bedtime_streak) || 0;
+          else if (metric === 'step_total')     _myLocal = (_snap && _snap.steps_last_7_days)      || 0;
+          if (_myLocal < _floor) suppressPending = true;
+        }
+      } catch (_) {}
+
+      if (!suppressPending) {
+        yourRankLine =
+          '<div class="lb-rank-row lb-rank-row--me lb-rank-row--pending">' +
+            '<span class="lb-rank-pos">—</span>' +
+            '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + ' <em class="lb-rank-name-sub">· submitting…</em></span>' +
+            '<span class="lb-rank-value">—</span>' +
+          '</div>' +
+          '<div class="lb-rank-divider" aria-hidden="true"></div>';
+      }
     }
 
     // Build display aliases for the top-N list — lowercase + no
@@ -21080,6 +21112,14 @@
   // for sleep / bedtime). Flip SIMULATE_USERS in
   // simulated-leaderboard.js to disable.
   const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, bedtime_streak: 1 };
+  // v3 Phase 1z.116 — per-metric minimum-score filter applied AFTER
+  // simulated-leaderboard merge but BEFORE the rank list renders.
+  // Rationale: a "7+ hour sleep streak" leaderboard showing entries
+  // with 0/1/2 nights looks unearned. Force a 3-night floor so the
+  // board only shows users who've actually started a streak. Other
+  // metrics (step_total, bedtime_streak) keep the default of 0 — no
+  // floor — until a product decision changes that.
+  const _LB_MIN_QUALIFYING_SCORE = { sleep_streak: 3 };
   function _lbMaybeSimulate(metric, top, me) {
     if (!_LB_SIM_METRICS[metric]) return { top: top, me: me };
     if (typeof window.SimulatedLeaderboard === 'undefined') return { top: top, me: me };
@@ -21102,7 +21142,18 @@
       } catch (_) {}
     }
     const dateKey = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
-    const merged = window.SimulatedLeaderboard.merge(top || [], myAlias, myValue, dateKey, metric);
+    let merged = window.SimulatedLeaderboard.merge(top || [], myAlias, myValue, dateKey, metric);
+
+    // v3 Phase 1z.116 — apply the min-qualifying-score filter for
+    // metrics with a configured floor. Re-rank the filtered list so
+    // ranks are 1..N over visible rows.
+    const minScore = _LB_MIN_QUALIFYING_SCORE[metric];
+    if (typeof minScore === 'number' && Array.isArray(merged)) {
+      merged = merged
+        .filter(r => r && typeof r.current_value === 'number' && r.current_value >= minScore)
+        .map((r, i) => Object.assign({}, r, { rank: i + 1 }));
+    }
+
     // Recompute the `me` view-model from the merged list so the
     // "out-of-top-N" row in lbBuildRankList correctly suppresses
     // when the user is now visible inside the merged board.
@@ -21110,10 +21161,17 @@
     const myIdx = merged.findIndex(r => r && r.alias === myAlias);
     if (myIdx >= 0) {
       newMe = { rank: myIdx + 1, current_value: merged[myIdx].current_value };
+    } else if (me && typeof minScore === 'number' && myValue < minScore) {
+      // v3 Phase 1z.116 — user is below the qualifying floor. Hide
+      // their out-of-top pinned row entirely (no rank, no value).
+      // lbBuildRankList sees newMe = null and would normally show a
+      // "submitting…" placeholder; we tag the meta below to suppress
+      // even that for below-floor users.
+      newMe = null;
     } else if (me) {
       newMe = me;
     }
-    return { top: merged, me: newMe };
+    return { top: merged, me: newMe, _belowMinScore: (typeof minScore === 'number' && myValue < minScore) };
   }
 
   // v3 Phase 1z.36 — tracks the active tab inside the sheet for
