@@ -1385,3 +1385,109 @@ test.describe('M · Sleep streak 3-night qualification floor (1z.116)', () => {
     expect(r.topValues).toContain(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// N. Dungeon rank filter preserved after boss kill (1z.117)
+// ─────────────────────────────────────────────────────────────
+// Regression for the build-99 dungeon corruption screenshot:
+// after defeating a D-rank boss, the D-RANK DUNGEON view showed
+// E-rank + D-rank + C-rank preview cards mixed together. Root
+// cause: 8 boss kill / streak-update / hunt-failed paths called
+// renderBossesPanel() with no rankFilter arg. !rankFilter passes
+// every boss through the filter. 1z.117 changes the function to
+// default to the in-app currentDungeonRank when no explicit rank
+// is passed, AND updates every caller to be explicit.
+test.describe('N · Dungeon rank filter preserved (1z.117)', () => {
+  test('renderBossesPanel() with no arg falls back to currentDungeonRank, not all bosses', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    // Wait for the dungeon test surfaces to be exposed.
+    await page.waitForFunction(() => {
+      const w = window as unknown as { __test_renderBossesPanel?: unknown; __test_setDungeonRank?: unknown };
+      return typeof w.__test_renderBossesPanel === 'function' && typeof w.__test_setDungeonRank === 'function';
+    }, { timeout: 8_000 });
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as {
+        __test_renderBossesPanel: (rank?: string) => void;
+        __test_setDungeonRank: (r: string) => void;
+        __test_getDungeonRank: () => string;
+      };
+
+      // Force the in-app rank to 'D' (the D-rank dungeon view).
+      w.__test_setDungeonRank('D');
+
+      // Call renderBossesPanel with NO argument — exactly what the
+      // pre-1z.117 kill/streak paths did. Post-fix, the function
+      // must default to the current dungeon rank.
+      w.__test_renderBossesPanel();
+
+      // Read the rendered DOM and collect the visible ranks. Each
+      // card carries the rank in its header — buildBossCardHTML
+      // includes a small rank-letter glyph and the boss's rank in a
+      // data attribute / heading. We scrape the cards via the
+      // `.bcard` selector and read the rank chip.
+      const list = document.getElementById('bosses-list');
+      if (!list) return { error: 'bosses-list element missing' };
+      const cards = Array.from(list.querySelectorAll('.bcard'));
+      const ranksSeen = new Set<string>();
+      for (const card of cards) {
+        const chip = card.querySelector('.bcard-rank-letter, [data-rank], .bcard-rank, .rank-pill');
+        const txt = (chip && chip.textContent && chip.textContent.trim()) || '';
+        // Rank letters are single uppercase characters E/D/C/B/A/S.
+        if (txt && /^[EDCBAS]\+?$/.test(txt)) ranksSeen.add(txt[0]);
+      }
+
+      return {
+        rank: w.__test_getDungeonRank(),
+        cardCount: cards.length,
+        ranksSeen: Array.from(ranksSeen).sort(),
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { rank: string; cardCount: number; ranksSeen: string[] };
+
+    expect(r.rank).toBe('D');
+    // At least one D-rank boss should be visible (Iron Warden, Steel
+    // Wolf in some configs); the EXACT count varies with content but
+    // the critical assertion is the RANK PURITY.
+    expect(r.cardCount).toBeGreaterThan(0);
+    // No E-rank, no C-rank, no B/A/S leakage — only D.
+    expect(r.ranksSeen).toEqual(['D']);
+  });
+
+  test('explicit rank override still works', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+    await page.waitForFunction(() => {
+      const w = window as unknown as { __test_renderBossesPanel?: unknown; __test_setDungeonRank?: unknown };
+      return typeof w.__test_renderBossesPanel === 'function' && typeof w.__test_setDungeonRank === 'function';
+    }, { timeout: 8_000 });
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as {
+        __test_renderBossesPanel: (rank?: string) => void;
+        __test_setDungeonRank: (r: string) => void;
+      };
+      // currentDungeonRank = 'D', but explicit call passes 'E'.
+      // Explicit argument must win.
+      w.__test_setDungeonRank('D');
+      w.__test_renderBossesPanel('E');
+      const list = document.getElementById('bosses-list');
+      const cards = Array.from((list && list.querySelectorAll('.bcard')) || []);
+      const ranksSeen = new Set<string>();
+      for (const card of cards) {
+        const chip = card.querySelector('.bcard-rank-letter, [data-rank], .bcard-rank, .rank-pill');
+        const txt = (chip && chip.textContent && chip.textContent.trim()) || '';
+        if (txt && /^[EDCBAS]\+?$/.test(txt)) ranksSeen.add(txt[0]);
+      }
+      return { cardCount: cards.length, ranksSeen: Array.from(ranksSeen).sort() };
+    });
+
+    const r = result as { cardCount: number; ranksSeen: string[] };
+    expect(r.cardCount).toBeGreaterThan(0);
+    // Only E-rank should be visible — the override took precedence
+    // over the current dungeon rank.
+    expect(r.ranksSeen).toEqual(['E']);
+  });
+});

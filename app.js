@@ -950,7 +950,7 @@
         hunt_started_at: huntStartedAt,
       });
     } catch (_) {}
-    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
     try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
   }
 
@@ -5706,7 +5706,7 @@
         announceKillAndDrop(cfg, reward, dropped);
         // Re-render the Quests panel so the streak progress + kill
         // count update if user is currently looking at it.
-        try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
         try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
       }
@@ -5719,7 +5719,7 @@
       setBossState(id, state);
     }
     // Re-render Quests panel for streak progress visibility.
-    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
   }
 
   // Init-time missed-night detection. If the user skipped opening the
@@ -5836,7 +5836,7 @@
         if (reward > 0) earnSouls(reward, 'kill_' + id);
         const dropped = rollBossDrop(id);
         announceKillAndDrop(cfg, reward, dropped);
-        try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
         try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
       }
@@ -5847,7 +5847,7 @@
       state.last_eval_date = nightDate;
       setBossState(id, state);
     }
-    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
   }
 
   // Init-time: if state references a past weekend, clear stale streak
@@ -5926,7 +5926,7 @@
         if (reward > 0) earnSouls(reward, 'kill_' + id);
         const dropped = rollBossDrop(id);
         announceKillAndDrop(cfg, reward, dropped);
-        try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+        try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
         try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
       }
@@ -5938,7 +5938,7 @@
       state.last_eval_date = dayDate;
       setBossState(id, state);
     }
-    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
   }
 
   // Init-time missed-day check. Mirrors checkMissedNightForInsomniac
@@ -5992,7 +5992,7 @@
     if (reward > 0) earnSouls(reward, 'kill_' + id);
     const dropped = rollBossDrop(id);
     announceKillAndDrop(cfg, reward, dropped);
-    try { if (currentTab === 'quests') renderBossesPanel(); } catch (_) {}
+    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
     try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
   }
 
@@ -21754,9 +21754,29 @@
   function renderBossesPanel(rankFilter) {
     const list = document.getElementById('bosses-list');
     if (!list) return;
+    // v3 Phase 1z.117 — guard against the kill/streak paths leaking
+    // an unfiltered render (rankFilter === undefined). That used to
+    // dump every boss across every rank into the active dungeon's
+    // body, producing the "E + D + C bosses under D-RANK DUNGEON"
+    // bug after defeating a boss. Default to the in-app
+    // currentDungeonRank when no explicit filter is passed.
+    const effectiveRank = (typeof rankFilter === 'string' && rankFilter)
+      ? rankFilter
+      : ((typeof currentDungeonRank === 'string' && currentDungeonRank) ? currentDungeonRank : null);
     const bossIds = Object.keys(BOSSES).filter(id =>
-      !rankFilter || BOSSES[id].rank === rankFilter
+      !effectiveRank || BOSSES[id].rank === effectiveRank
     );
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('dungeon-render', {
+          rankFilterArg: rankFilter || null,
+          effectiveRank,
+          visibleBossCount: bossIds.length,
+          visibleRanks: Array.from(new Set(bossIds.map(id => BOSSES[id] && BOSSES[id].rank))).sort(),
+          totalBossCount: Object.keys(BOSSES).length,
+        });
+      }
+    } catch (_) {}
     if (bossIds.length === 0) {
       list.innerHTML = '<p class="dungeon-empty">No bosses await yet. Check back as more dungeons fill.</p>';
       list.classList.remove('bosses-list--cards');
@@ -22527,6 +22547,14 @@
     }
   }
   try { window.renderQuestsPanel = renderQuestsPanel; } catch (_) {}
+  // v3 Phase 1z.117 — test surfaces for the dungeon rank-filter
+  // regression (renderBossesPanel called without a rank from boss
+  // kill/streak paths dumping every boss into the active dungeon).
+  try {
+    window.__test_renderBossesPanel = renderBossesPanel;
+    window.__test_setDungeonRank    = function (r) { currentDungeonRank = r; };
+    window.__test_getDungeonRank    = function () { return currentDungeonRank; };
+  } catch (_) {}
 
   function setupQuestsGate() {
     const grid    = document.getElementById('quests-gate-grid');
