@@ -6304,6 +6304,89 @@
     if (mutated) saveLeaderboardState(state);
   }
 
+  // v3 Phase 1z.115 — derive sleep streak from the habit completion
+  // ledger instead of the standalone state.current_sleep_streak field.
+  //
+  // ROOT CAUSE: lbRecordSleepNight's gap-reset rule (line ~6266) sees
+  // any day where the user didn't open the app as a streak break,
+  // even though HealthKit has data for that night. The habit
+  // completion ledger (completions[dateStr] containing the Sleep id)
+  // is the user-visible source-of-truth — it shows every night Sleep
+  // was sealed, including via _backfillSleepYesterday on the next-day
+  // open. By deriving the leaderboard streak from completions, we
+  // always agree with the weekly ledger UI.
+  //
+  // Sleep is read-only (isReadOnlyAutoVerifyHabit('Sleep') === true).
+  // Manual checking is impossible. So every Sleep entry in completions
+  // got there via autoVerifySleep → toggleHabit, which means each
+  // entry is HK-verified by construction. The "Verified by Apple
+  // Health" leaderboard copy is preserved.
+  function _lbComputeSleepStreakFromCompletions() {
+    try {
+      if (typeof habits === 'undefined' || !Array.isArray(habits)) return null;
+      if (typeof completions === 'undefined' || !completions) return null;
+      if (typeof today !== 'string' || !today) return null;
+      const sleepHabit = habits.find(h => h && !h.custom && h.name === 'Sleep');
+      if (!sleepHabit) return null;
+      const sleepId = sleepHabit.id;
+
+      // Current streak: walk backwards from today. If today's Sleep
+      // hasn't been recorded yet (user pulls leaderboard at noon
+      // before tonight's auto-verify), start from yesterday so the
+      // streak isn't artificially zeroed by a not-yet-evaluated day.
+      const start = new Date(today + 'T00:00:00');
+      const todayList = completions[today];
+      const todayDone = Array.isArray(todayList) && todayList.includes(sleepId);
+      const startOffset = todayDone ? 0 : 1;
+
+      let current = 0;
+      for (let j = 0; j < 365; j++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() - startOffset - j);
+        const ds = d.getFullYear() + '-' +
+                   String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(d.getDate()).padStart(2, '0');
+        const dayList = completions[ds];
+        const done = Array.isArray(dayList) && dayList.includes(sleepId);
+        if (done) current++;
+        else break;
+      }
+
+      // Best streak: iterate over all dates where Sleep was completed,
+      // sort, find the longest consecutive run.
+      const allDates = Object.keys(completions || {})
+        .filter(d => Array.isArray(completions[d]) && completions[d].includes(sleepId))
+        .sort();
+      let best = current;
+      if (allDates.length > 0) {
+        let run = 1;
+        let longest = 1;
+        for (let i = 1; i < allDates.length; i++) {
+          const prev = new Date(allDates[i - 1] + 'T00:00:00');
+          const cur  = new Date(allDates[i]     + 'T00:00:00');
+          const diffDays = Math.round((cur - prev) / 86400000);
+          if (diffDays === 1) {
+            run++;
+            if (run > longest) longest = run;
+          } else {
+            run = 1;
+          }
+        }
+        if (longest > best) best = longest;
+      }
+
+      return {
+        current: current,
+        best:    best,
+        completionDateCount: allDates.length,
+        sleepHabitId: sleepId,
+        startedFromYesterday: !todayDone,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Read-only snapshot for UI + leaderboard submit. Computes the
   // current-week step sum on demand (Sunday 00:00 → today inclusive,
   // resets every Sunday at device-local midnight). The field name
@@ -6311,12 +6394,47 @@
   // semantics are now "current calendar-week step total."
   function lbGetSnapshot() {
     const state = loadLeaderboardState();
+
+    // v3 Phase 1z.115 — prefer ledger-derived sleep streak. Falls
+    // back to state.current_sleep_streak if completions/habits are
+    // not yet initialized (defensive — shouldn't happen in practice).
+    let currentSleepStreak = state.current_sleep_streak;
+    let bestSleepStreak    = state.best_sleep_streak;
+    let ledgerStreakInfo   = null;
+    try {
+      const fromLedger = _lbComputeSleepStreakFromCompletions();
+      if (fromLedger && typeof fromLedger.current === 'number') {
+        ledgerStreakInfo  = fromLedger;
+        // Prefer the LARGER value — the ledger catches retroactive
+        // _backfillSleepYesterday completions and any nights where
+        // lbRecordSleepNight's gap-reset zeroed the standalone
+        // counter despite HK data being present.
+        currentSleepStreak = Math.max(currentSleepStreak || 0, fromLedger.current);
+        bestSleepStreak    = Math.max(bestSleepStreak    || 0, fromLedger.best);
+      }
+    } catch (_) {}
+
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('leaderboard-sleep-streak-result', {
+          stateCurrent:  state.current_sleep_streak,
+          stateBest:     state.best_sleep_streak,
+          ledgerCurrent: ledgerStreakInfo ? ledgerStreakInfo.current : null,
+          ledgerBest:    ledgerStreakInfo ? ledgerStreakInfo.best : null,
+          ledgerCompletionDateCount: ledgerStreakInfo ? ledgerStreakInfo.completionDateCount : null,
+          ledgerStartedFromYesterday: ledgerStreakInfo ? ledgerStreakInfo.startedFromYesterday : null,
+          finalCurrent:  currentSleepStreak,
+          finalBest:     bestSleepStreak,
+        });
+      }
+    } catch (_) {}
+
     return {
       steps_last_7_days:         lbSumCurrentWeekSteps(state.steps_daily),
       best_7day_step_total:      state.best_7day_step_total,
       best_7day_step_window_end: state.best_7day_step_window_end,
-      current_sleep_streak:      state.current_sleep_streak,
-      best_sleep_streak:         state.best_sleep_streak,
+      current_sleep_streak:      currentSleepStreak,
+      best_sleep_streak:         bestSleepStreak,
       current_bedtime_streak:    state.current_bedtime_streak,
       best_bedtime_streak:       state.best_bedtime_streak,
     };
@@ -6328,6 +6446,25 @@
       recordStepsToday: lbRecordStepsToday,
       recordSleepNight: lbRecordSleepNight,
       _state:           loadLeaderboardState, // dev-only: full raw state
+      // v3 Phase 1z.115 — exposed for Playwright regression tests.
+      __test_computeSleepStreakFromCompletions: _lbComputeSleepStreakFromCompletions,
+      // Getters returning live references to the outer-scope habits +
+      // completions so test code can read what state the helper sees
+      // and seed scenarios deterministically. Returns null if the
+      // outer-scope vars aren't initialized yet (e.g. test runs before
+      // the app's load() finished).
+      __test_getHabits: function () {
+        try { return (typeof habits !== 'undefined') ? habits : null; }
+        catch (_) { return null; }
+      },
+      __test_getCompletions: function () {
+        try { return (typeof completions !== 'undefined') ? completions : null; }
+        catch (_) { return null; }
+      },
+      __test_getToday: function () {
+        try { return (typeof today !== 'undefined') ? today : null; }
+        catch (_) { return null; }
+      },
     };
   } catch (_) {}
 

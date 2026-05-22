@@ -1029,3 +1029,178 @@ test.describe('K · Sleep session selection (1z.114)', () => {
     expect(r.selectedHours).toBeLessThan(2);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// L. Sleep streak leaderboard derives from completion ledger (1z.115)
+// ─────────────────────────────────────────────────────────────
+// Regression for the build-97 Richie-stuck-at-1 issue:
+// lbRecordSleepNight's gap-reset rule zeros state.current_sleep_streak
+// any time the user misses opening the app for a morning, even though
+// HealthKit has data and the habit completion ledger shows the night
+// completed. The fix derives the leaderboard sleep streak from the
+// completion ledger (the source-of-truth the user sees in the weekly
+// ledger UI) — auto-verified completions in `completions[dateStr]`
+// count toward the streak whether or not lbRecordSleepNight fired.
+type LbTest = {
+  __test_computeSleepStreakFromCompletions: () => { current: number; best: number; completionDateCount: number; sleepHabitId: string; startedFromYesterday: boolean } | null;
+  __test_getHabits: () => Array<{ id: string; name: string; custom?: boolean }> | null;
+  __test_getCompletions: () => Record<string, string[]> | null;
+  __test_getToday: () => string | null;
+  getSnapshot: () => { current_sleep_streak?: number; best_sleep_streak?: number };
+};
+
+async function freshAppForLedgerTest(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('hb_onboarding_seen_v2', '1');
+      localStorage.setItem('hb_welcomed', '1');
+      localStorage.setItem('hb_hunter_name_claimed', '1');
+      localStorage.setItem('hb_cloud_restore_dismissed', '1');
+      localStorage.setItem('hb_whats_new_seen', '99.99.99');
+      // Seed habits[] BEFORE load() runs. Without this, a fresh install
+      // sets needsOnboarding=true and habits stays empty, blocking the
+      // ledger helper's Sleep lookup. We include just the Sleep default
+      // (and one filler) with explicit ids so the test is deterministic.
+      localStorage.setItem('hb_habits', JSON.stringify([
+        { id: 'test-sleep-id', name: 'Sleep', emoji: '😴', difficulty: 'medium', type: 'build', primaryStat: 'VIT' },
+        { id: 'test-filler-id', name: 'Hydrate', emoji: '💧', difficulty: 'easy',   type: 'build', primaryStat: 'VIT' },
+      ]));
+    } catch (_) {}
+  });
+  await page.goto('/');
+  await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+  // Wait for the IIFE-scoped habits + completions to be initialized via load().
+  await page.waitForFunction(() => {
+    const w = window as unknown as { Leaderboard?: { __test_getHabits?: () => unknown[] | null; __test_getCompletions?: () => Record<string, unknown> | null; __test_getToday?: () => string | null } };
+    if (!w.Leaderboard || !w.Leaderboard.__test_getHabits) return false;
+    const habits = w.Leaderboard.__test_getHabits();
+    const completions = w.Leaderboard.__test_getCompletions ? w.Leaderboard.__test_getCompletions() : null;
+    const today = w.Leaderboard.__test_getToday ? w.Leaderboard.__test_getToday() : null;
+    return Array.isArray(habits) && habits.length > 0 && !!completions && typeof today === 'string' && today.length > 0;
+  }, { timeout: 10_000 });
+}
+
+test.describe('L · Sleep streak derived from completion ledger (1z.115)', () => {
+  test('5 consecutive Sleep completions → streak = 5 even when state.current_sleep_streak = 1', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Leaderboard: LbTest };
+      const habits = w.Leaderboard.__test_getHabits();
+      const completions = w.Leaderboard.__test_getCompletions();
+      const today = w.Leaderboard.__test_getToday();
+      if (!habits || !completions || !today) return { error: 'globals not ready' };
+      const sleepHabit = habits.find(h => h && !h.custom && h.name === 'Sleep');
+      if (!sleepHabit) return { error: 'Sleep habit not found in defaults' };
+
+      // Seed 5 consecutive days ending today directly into the closure-
+      // owned completions object. The helper reads the same reference.
+      const fmt = (d: Date) => d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      // Use the in-app `today` string as the anchor so seeded dates
+      // match the helper's local-date boundary exactly.
+      const anchor = new Date(today + 'T00:00:00');
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - i);
+        const ds = fmt(d);
+        if (!Array.isArray(completions[ds])) completions[ds] = [];
+        if (!completions[ds].includes(sleepHabit.id)) {
+          completions[ds].push(sleepHabit.id);
+        }
+      }
+
+      const fromLedger = w.Leaderboard.__test_computeSleepStreakFromCompletions();
+      const snap = w.Leaderboard.getSnapshot();
+
+      return {
+        fromLedgerCurrent: fromLedger ? fromLedger.current : null,
+        fromLedgerBest:    fromLedger ? fromLedger.best : null,
+        fromLedgerCompletionDateCount: fromLedger ? fromLedger.completionDateCount : null,
+        snapCurrent: snap.current_sleep_streak,
+        snapBest:    snap.best_sleep_streak,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { fromLedgerCurrent: number; fromLedgerBest: number; fromLedgerCompletionDateCount: number; snapCurrent: number | undefined; snapBest: number | undefined };
+    expect(r.fromLedgerCurrent).toBe(5);
+    expect(r.fromLedgerBest).toBeGreaterThanOrEqual(5);
+    expect(r.fromLedgerCompletionDateCount).toBe(5);
+    // Snapshot prefers ledger when larger.
+    expect(r.snapCurrent).toBe(5);
+    expect(r.snapBest).toBeGreaterThanOrEqual(5);
+  });
+
+  test('streak with a gap stops at the gap (current = days after gap only)', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Leaderboard: LbTest };
+      const habits = w.Leaderboard.__test_getHabits();
+      const completions = w.Leaderboard.__test_getCompletions();
+      const today = w.Leaderboard.__test_getToday();
+      if (!habits || !completions || !today) return { error: 'globals not ready' };
+      const sleepHabit = habits.find(h => h && !h.custom && h.name === 'Sleep');
+      if (!sleepHabit) return { error: 'Sleep habit not found' };
+
+      // Seed days at offsets {0, 1, 3, 4, 5} relative to today (gap at 2).
+      // Current streak ending today should be 2. Best run = 3 (older block).
+      const fmt = (d: Date) => d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      const anchor = new Date(today + 'T00:00:00');
+      const seedOffsets = [0, 1, 3, 4, 5];
+      for (const off of seedOffsets) {
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - off);
+        const ds = fmt(d);
+        if (!Array.isArray(completions[ds])) completions[ds] = [];
+        if (!completions[ds].includes(sleepHabit.id)) {
+          completions[ds].push(sleepHabit.id);
+        }
+      }
+
+      const fromLedger = w.Leaderboard.__test_computeSleepStreakFromCompletions();
+      return {
+        current: fromLedger ? fromLedger.current : null,
+        best:    fromLedger ? fromLedger.best    : null,
+      };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { current: number; best: number };
+    expect(r.current).toBe(2); // today + yesterday
+    expect(r.best).toBe(3);    // the older 3-day block (offsets 3,4,5)
+  });
+
+  test('no completions → current and best are both 0', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Leaderboard: LbTest };
+      const habits = w.Leaderboard.__test_getHabits();
+      const completions = w.Leaderboard.__test_getCompletions();
+      const today = w.Leaderboard.__test_getToday();
+      if (!habits || !completions || !today) return { error: 'globals not ready' };
+      const sleepHabit = habits.find(h => h && !h.custom && h.name === 'Sleep');
+      if (!sleepHabit) return { error: 'Sleep habit not found' };
+
+      // Defensive: scrub any pre-existing Sleep completions from the
+      // fresh-install seed (shouldn't be any, but be explicit).
+      for (const key of Object.keys(completions)) {
+        completions[key] = completions[key].filter(id => id !== sleepHabit.id);
+        if (completions[key].length === 0) delete completions[key];
+      }
+
+      const fromLedger = w.Leaderboard.__test_computeSleepStreakFromCompletions();
+      return { current: fromLedger ? fromLedger.current : null, best: fromLedger ? fromLedger.best : null };
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    const r = result as { current: number; best: number };
+    expect(r.current).toBe(0);
+    expect(r.best).toBe(0);
+  });
+});
