@@ -4,7 +4,59 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — Workout Streak backend leaderboard activated (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.123 Sleep false-positive auto-verification fix verified (read this first)
+
+### ✅ STATUS: Sleep auto-verify correctness regression closed and verified on-device
+
+**Bug summary**: Awakened sealed the "Sleep 7 hours" habit on Friday May 22 even though Apple Health showed only 5h 52m Time Asleep (Sleep Score 40 / Very Low — clearly below the 7h goal). Dashboard incorrectly showed `1/46 habits today`.
+
+**Root cause**: two stacked correctness bugs in `autoVerifySleep` / `_selectMainSleepSession`:
+
+1. `_selectMainSleepSession`'s Priority-2 fallback (`reason: 'fallback-largest-window'`) returned **yesterday's 7.5h session** for today's habit when Oura/Health hadn't yet written today's session. `getSleepLastNight` promoted that fallback value into `data.totalAsleepHours` and `autoVerifySleep` sealed the habit against yesterday's data.
+2. The `alreadyChecked` short-circuit then preserved the sealed state forever — when Oura/Health later refined the day's data downward (Awake interruptions detected → 6.77h → 5.87h), `autoVerifySleep` skipped re-evaluation entirely and the habit stayed sealed.
+
+The user's prior debug from build 2.2.3-w3 captured the exact pattern: `sleep-threshold-check { meets: false, alreadyChecked: true } → sleep-skip { reason: 'already-checked' }` while today's session was already known to be only 6.77h.
+
+**Fix shipped — commit `3f53c6b` (`fix: prevent false-positive sleep auto verification`)**:
+
+1. `getSleepLastNight`: `totalAsleepHours` and `earliestSleepStart` are now gated on the selected session ENDING today (new `sessionEndsToday` flag is true only when `_selectMainSleepSession` returned reason `'largest-ending-target-day'`). Fallback paths still surface the session via `data.mainSession` for diagnostics, but `totalAsleepHours` reflects 0 when no session ends today. Insomniac / Carouser / Dream Tyrant bosses and the sleep leaderboard all consume the same gated value — no more yesterday-bleeding-into-today.
+2. `autoVerifySleep` `alreadyChecked` branch now checks `meets` AND `AUTO_VERIFY.isAutoVerifiedToday(sleep.id)`. If the current selected session does NOT meet threshold AND the completion was auto-verified (not manual), it calls `uncheck(sleep.id)` + `AUTO_VERIFY.clearAutoVerify(id)` directly. **NOT** `toggleHabit` — that would call `AUTO_VERIFY.markUnchecked` which permanently blocks auto-reseal for the rest of the day. The downward-correction path intentionally avoids that side-effect so if Oura/Health later improves above threshold, `autoVerifySleep` SHOULD re-seal.
+3. New `sleep-unsealed-stale-auto` breadcrumb logs the correction with current value, threshold, and selected session reason. `sleep-query-result` enriched with `sessionEndsToday`, `selectedSessionAsleepHours`, `selectedSessionReason`.
+
+**Real TestFlight verification** (this device, post-install of the build containing `3f53c6b`):
+- App opened → `autoVerifySleep` fired on visibility-change.
+- The downward-correction path detected the false-positive state (sealed + meets=false + auto-verified) and unsealed.
+- **Sleep card changed from sealed/checkmarked to unsealed/locked.**
+- **Dashboard count decremented** — Sleep no longer counted as complete for May 22.
+- The false-positive Sleep auto-verification bug is **confirmed fixed on-device**.
+
+**Status after this fix**:
+- ✅ Yesterday's qualifying sleep session cannot seal today's Sleep habit.
+- ✅ A stale auto-sealed Sleep habit self-corrects downward when current Health/Oura data is below 7h.
+- ✅ The unseal path only touches AUTO-verified completions (manual completions, if they ever existed, would not be touched).
+- ✅ The unseal path avoids `markUnchecked`, so if Oura/Health later updates above 7h, Sleep can re-seal automatically the same day.
+- ✅ Sleep auto-verification is trustworthy again for below-threshold days.
+- ✅ Tests: `npm run test:e2e` → 29/29 pass (was 27; +2 group Q regressions covering both the Priority-2 fallback gate and the downward-correction primitives).
+
+**Known caveat (out of scope for this fix — flagged for a future patch)**:
+
+If boss state for Insomniac / Carouser / Dream Tyrant was already incremented from yesterday's leaked session being evaluated as today's progress (`state.streak += 1`, `last_eval_date = today`), that boss state is sticky and was NOT rolled back by 1z.123. The fix focused on user-visible Sleep habit correctness. Boss state will reset on day rollover when `last_eval_date != today` triggers fresh evaluation. A future patch can add per-night boss re-eval if needed.
+
+**Version knobs (unchanged — confirmed)**:
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w4` |
+| `app.js?v=` | `457` |
+| `sw.js CACHE_VERSION` | `v5.343` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+
+No Codemagic. No archive. No upload. No deploy. No backend changes.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — Workout Streak backend leaderboard activated (historical — superseded by 1z.123 status above)
 
 ### 🚀 STATUS: workout_streak backend is LIVE — 2.2.3-w3 release-prep committed; MacBook needs to archive next build
 
@@ -373,7 +425,8 @@ npx cap open ios
 | 1z.115 (`f8e2ef1`) | Sleep streak leaderboard derives current/best from `completions[dateStr]` containing the Sleep habit id (the user-visible Weekly Ledger source-of-truth), not the standalone `state.current_sleep_streak` counter whose gap-reset rule fired any time the user missed opening the app for a morning. `lbGetSnapshot()` returns `Math.max(state-tracked, ledger-derived)` — never reduces. Diagnostics: `leaderboard-sleep-streak-result` breadcrumb. | Verified on build 98+ device: Richie's row lifted from stuck-at-1 to his real 5-night streak. |
 | 1z.116 (`6a2017e`) | Sleep streak leaderboard 3-night qualification floor. New `_LB_MIN_QUALIFYING_SCORE = { sleep_streak: 3 }` config table; `_lbMaybeSimulate` filters and re-ranks merged rows; `lbBuildRankList` suppresses the "submitting…" placeholder for below-floor users. `step_total` and `bedtime_streak` unaffected. | Verified on TestFlight: modal stops at awakenedren = 3; rendiesel/priyan (=1) and immortalshadow/galilea/melvin/jesserawdawg (=0) no longer visible. |
 | 1z.117 (`cad15ec`) | Dungeon rank-filter preserved after boss defeat. `renderBossesPanel(rankFilter)` now defaults to `currentDungeonRank` when called without an argument (8 kill/streak/hunt-failed paths leaked unfiltered renders). 2 new Playwright tests (N.1, N.2) + dungeon-render breadcrumb. | Fixes build-99 corruption screenshot (E + D + C cards under D-RANK DUNGEON header). |
-| 1z.118 (this handoff) | Leaderboard preview metric swap — bedtime streak retired, **Workout Streak** card added in its place. New `_lbComputeWorkoutStreakFromCompletions` helper mirrors the 1z.115 sleep ledger derivation; canonical 'Workout' habit + legacy 'Strength training' both recognized. `lbGetSnapshot()` exposes `current_workout_streak` / `best_workout_streak`. `_LB_SIM_METRICS` swapped (`bedtime_streak` → `workout_streak`); simulated-leaderboard.js bot streak generator accepts both. Underlying `bedtime_streak` state tracking is left in place (the **Sleep before midnight habit** auto-verify still uses it; only the leaderboard card was retired). 3 new Playwright tests (group O). **Flights Climbed investigated** — see audit notes below. | Workout Streak source = `completions[date].includes(workoutId)` ledger, same as the Workout habit's "SEALED" badge. No fake data. |
+| 1z.123 (this handoff) (`3f53c6b`) | Sleep false-positive auto-verification fix. `getSleepLastNight` now gates `totalAsleepHours` on the selected session ENDING today (new `sessionEndsToday` flag tied to reason `'largest-ending-target-day'`) — fallback paths still surface the session for diagnostics but don't seal habits with yesterday's data. `autoVerifySleep`'s `alreadyChecked` branch now revalidates against current data and unsealed via `uncheck()` + `clearAutoVerify()` (NOT `toggleHabit`, which would call `markUnchecked` and permanently block re-seal). New `sleep-unsealed-stale-auto` breadcrumb. 2 new Playwright tests (group Q). | **Verified on TestFlight**: false-positive Sleep card auto-unsealed on next visibility-change; dashboard count decremented. Tests 29/29. Known caveat: Insomniac / Carouser / Dream Tyrant boss state still sticky for today if pre-fix yesterday-leak already incremented it; will reset on day rollover. |
+| 1z.118 | Leaderboard preview metric swap — bedtime streak retired, **Workout Streak** card added in its place. New `_lbComputeWorkoutStreakFromCompletions` helper mirrors the 1z.115 sleep ledger derivation; canonical 'Workout' habit + legacy 'Strength training' both recognized. `lbGetSnapshot()` exposes `current_workout_streak` / `best_workout_streak`. `_LB_SIM_METRICS` swapped (`bedtime_streak` → `workout_streak`); simulated-leaderboard.js bot streak generator accepts both. Underlying `bedtime_streak` state tracking is left in place (the **Sleep before midnight habit** auto-verify still uses it; only the leaderboard card was retired). 3 new Playwright tests (group O). **Flights Climbed investigated** — see audit notes below. | Workout Streak source = `completions[date].includes(workoutId)` ledger, same as the Workout habit's "SEALED" badge. No fake data. |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 
