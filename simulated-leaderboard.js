@@ -208,6 +208,12 @@
   // Streaks barely change day-to-day in real life, so we roll
   // once per week per (bot, metric) and hold steady.
   function rollBotStreak(weekStartKey, bot, metricKey) {
+    // v3 Phase 1z.118 — workout_streak replaces bedtime_streak. Both
+    // are small-integer streak metrics with the same jitter shape;
+    // reuse the bedtime base/jitter slots so the BOTS table doesn't
+    // need to grow. (The slots are personality-archetype-driven and
+    // were never tied to the "before midnight" semantics — they just
+    // produce realistic small-integer streak values.)
     const base = metricKey === 'sleep_streak' ? bot.sleepBase    : bot.bedtimeBase;
     const jit  = metricKey === 'sleep_streak' ? bot.sleepJitter  : bot.bedtimeJitter;
     const seed = hashKey(weekStartKey + '|' + bot.name + '|' + metricKey);
@@ -249,7 +255,8 @@
       let val;
       if (metric === 'step_total') {
         val = botStepsThroughDay(weekStartKey, bot, dow);
-      } else if (metric === 'sleep_streak' || metric === 'bedtime_streak') {
+      } else if (metric === 'sleep_streak' || metric === 'bedtime_streak' || metric === 'workout_streak') {
+        // v3 Phase 1z.118 — workout_streak joins the streak family.
         val = rollBotStreak(weekStartKey, bot, metric);
       } else {
         // Unknown metric — skip simulation, return real only.

@@ -50,6 +50,15 @@ async function freshApp(page: Page) {
       // against the live APP_VERSION. Set far ahead of any future
       // bump so the modal never paints during tests.
       localStorage.setItem('hb_whats_new_seen', '99.99.99');
+      // Friday "Weekend Challenge" banner suppression. On Fridays
+      // setupFridayBanner() spawns a modal that intercepts pointer
+      // events on the tab bar; gate it by seeding the per-day flag
+      // so the banner short-circuits at its localStorage check.
+      const d = new Date();
+      const ymd = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      localStorage.setItem('hb_fri_banner_' + ymd, '1');
     } catch (_) {}
   });
   await page.goto('/');
@@ -69,7 +78,7 @@ async function freshApp(page: Page) {
   // intercepted. Belt-and-suspenders on top of the localStorage
   // seeds above.
   await page.evaluate(() => {
-    const ids = ['awakened-splash', 'wn-overlay', 'wn-modal', 'modal-overlay', 'welcome-overlay'];
+    const ids = ['awakened-splash', 'wn-overlay', 'wn-modal', 'modal-overlay', 'welcome-overlay', 'fri-challenge-modal'];
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
@@ -653,6 +662,12 @@ test.describe('J · Legacy Strength training → Workout migration (1z.107)', ()
         localStorage.setItem('hb_hunter_name_claimed', '1');
         localStorage.setItem('hb_cloud_restore_dismissed', '1');
         localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        // 1z.118 hygiene — also gate the Friday Weekend Challenge banner.
+        const _d = new Date();
+        const _ymd = _d.getFullYear() + '-' +
+          String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(_d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
 
         // Ensure the migration flag is NOT set so we exercise the
         // rename path.
@@ -746,6 +761,12 @@ test.describe('J · Legacy Strength training → Workout migration (1z.107)', ()
         localStorage.setItem('hb_hunter_name_claimed', '1');
         localStorage.setItem('hb_cloud_restore_dismissed', '1');
         localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        // 1z.118 hygiene — also gate the Friday Weekend Challenge banner.
+        const _d = new Date();
+        const _ymd = _d.getFullYear() + '-' +
+          String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(_d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
         localStorage.removeItem('hb_strength_to_workout_rename_v1');
 
         const seeded = [
@@ -816,6 +837,12 @@ test.describe('K · Sleep session selection (1z.114)', () => {
         localStorage.setItem('hb_hunter_name_claimed', '1');
         localStorage.setItem('hb_cloud_restore_dismissed', '1');
         localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        // 1z.118 hygiene — also gate the Friday Weekend Challenge banner.
+        const _d = new Date();
+        const _ymd = _d.getFullYear() + '-' +
+          String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(_d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
       } catch (_) {}
     });
     await page.goto('/');
@@ -930,6 +957,12 @@ test.describe('K · Sleep session selection (1z.114)', () => {
         localStorage.setItem('hb_hunter_name_claimed', '1');
         localStorage.setItem('hb_cloud_restore_dismissed', '1');
         localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        // 1z.118 hygiene — also gate the Friday Weekend Challenge banner.
+        const _d = new Date();
+        const _ymd = _d.getFullYear() + '-' +
+          String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(_d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
       } catch (_) {}
     });
     await page.goto('/');
@@ -983,6 +1016,12 @@ test.describe('K · Sleep session selection (1z.114)', () => {
         localStorage.setItem('hb_hunter_name_claimed', '1');
         localStorage.setItem('hb_cloud_restore_dismissed', '1');
         localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        // 1z.118 hygiene — also gate the Friday Weekend Challenge banner.
+        const _d = new Date();
+        const _ymd = _d.getFullYear() + '-' +
+          String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(_d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
       } catch (_) {}
     });
     await page.goto('/');
@@ -1489,5 +1528,139 @@ test.describe('N · Dungeon rank filter preserved (1z.117)', () => {
     // Only E-rank should be visible — the override took precedence
     // over the current dungeon rank.
     expect(r.ranksSeen).toEqual(['E']);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// O. Leaderboard preview — bedtime retired, workout streak in (1z.118)
+// ─────────────────────────────────────────────────────────────
+// Asserts the three cards in the dashboard's leaderboard preview
+// strip after the 1z.118 metric swap: step_total, sleep_streak,
+// workout_streak. The retired "bedtime_streak" / "Before-midnight
+// bedtime streak" card must NOT be present. Also exercises the
+// _lbComputeWorkoutStreakFromCompletions helper with seeded
+// completion data to confirm it derives current/best correctly.
+test.describe('O · Workout streak leaderboard card (1z.118)', () => {
+  test('leaderboard preview shows step_total + sleep_streak + workout_streak; bedtime card gone', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+    // The leaderboard preview is a global; call it directly so we
+    // don't depend on Profile-tab activation timing in CI.
+    await page.evaluate(() => {
+      const w = window as unknown as { renderLeaderboardPreview?: () => void };
+      if (typeof w.renderLeaderboardPreview === 'function') {
+        try { w.renderLeaderboardPreview(); } catch (_) {}
+      }
+    });
+    await page.waitForFunction(() => {
+      const list = document.getElementById('lb-preview-list');
+      return !!list && list.querySelectorAll('[data-lb-metric]').length >= 3;
+    }, { timeout: 8_000 });
+
+    const metrics = await page.evaluate(() => {
+      const list = document.getElementById('lb-preview-list');
+      if (!list) return null;
+      return Array.from(list.querySelectorAll('[data-lb-metric]'))
+        .map(el => el.getAttribute('data-lb-metric') || '');
+    });
+
+    expect(metrics).not.toBeNull();
+    expect(metrics).toContain('step_total');
+    expect(metrics).toContain('sleep_streak');
+    expect(metrics).toContain('workout_streak');
+    expect(metrics).not.toContain('bedtime_streak');
+  });
+
+  test('_lbComputeWorkoutStreakFromCompletions derives streak from completion ledger', async ({ page }) => {
+    // Mirrors the L pattern: boot with freshAppForLedgerTest (Sleep
+    // + Hydrate seeded), then push a Workout habit into the IIFE's
+    // mutable `habits` reference via __test_getHabits(), then mutate
+    // `completions` keyed off the in-app `today` so dates match the
+    // helper's PT-anchored streak walk exactly.
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Leaderboard: LbTest & {
+        __test_computeWorkoutStreakFromCompletions: () => { current: number; best: number; completionDateCount: number } | null;
+      } };
+      const habits = w.Leaderboard.__test_getHabits();
+      const completions = w.Leaderboard.__test_getCompletions();
+      const today = w.Leaderboard.__test_getToday();
+      if (!habits || !completions || !today) return { error: 'globals not ready' };
+
+      // Inject a Workout habit into the live habits array (same
+      // reference the helper reads from).
+      const workoutHabit = { id: 'test-workout-id', name: 'Workout', emoji: '🏋️',
+                             difficulty: 'hard', type: 'build', primaryStat: 'STR' };
+      habits.push(workoutHabit);
+
+      // Seed 4 consecutive completions ending today, anchored on
+      // the in-app `today` so PT/local timezone mismatch can't
+      // produce an off-by-one.
+      const fmt = (d: Date) => d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      const anchor = new Date(today + 'T00:00:00');
+      for (let i = 0; i < 4; i++) {
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - i);
+        const ds = fmt(d);
+        if (!Array.isArray(completions[ds])) completions[ds] = [];
+        if (!completions[ds].includes(workoutHabit.id)) {
+          completions[ds].push(workoutHabit.id);
+        }
+      }
+
+      return w.Leaderboard.__test_computeWorkoutStreakFromCompletions();
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    expect(result).not.toBeNull();
+    const s = result as { current: number; best: number; completionDateCount: number };
+    expect(s.current).toBe(4);
+    expect(s.best).toBe(4);
+    expect(s.completionDateCount).toBe(4);
+  });
+
+  test('legacy Strength training habit also counts toward workout streak', async ({ page }) => {
+    // Same pattern as the previous test, but the injected habit
+    // uses the legacy pre-1z.105 name 'Strength training'. The
+    // helper's defensive name match must still find it.
+    await freshAppForLedgerTest(page);
+
+    const result = await page.evaluate(() => {
+      const w = window as unknown as { Leaderboard: LbTest & {
+        __test_computeWorkoutStreakFromCompletions: () => { current: number; best: number } | null;
+      } };
+      const habits = w.Leaderboard.__test_getHabits();
+      const completions = w.Leaderboard.__test_getCompletions();
+      const today = w.Leaderboard.__test_getToday();
+      if (!habits || !completions || !today) return { error: 'globals not ready' };
+
+      const legacyHabit = { id: 'legacy-strength-id', name: 'Strength training', emoji: '🏋️',
+                            difficulty: 'hard', type: 'build', primaryStat: 'STR' };
+      habits.push(legacyHabit);
+
+      const fmt = (d: Date) => d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      const anchor = new Date(today + 'T00:00:00');
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - i);
+        const ds = fmt(d);
+        if (!Array.isArray(completions[ds])) completions[ds] = [];
+        if (!completions[ds].includes(legacyHabit.id)) {
+          completions[ds].push(legacyHabit.id);
+        }
+      }
+
+      return w.Leaderboard.__test_computeWorkoutStreakFromCompletions();
+    });
+
+    expect((result as { error?: string }).error).toBeUndefined();
+    expect(result).not.toBeNull();
+    const s = result as { current: number; best: number };
+    expect(s.current).toBe(3);
+    expect(s.best).toBe(3);
   });
 });

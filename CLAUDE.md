@@ -334,9 +334,43 @@ npx cap open ios
 | 1z.113 | iOS entitlements verify gate — new `scripts/verify-ios-entitlements.sh` checks `App.entitlements` has HealthKit + Sign in with Apple AND `CODE_SIGN_ENTITLEMENTS` is wired in `project.pbxproj`. Lite-flow hazard documented: it doesn't wire entitlements; only `prep-local-build.sh` does. JS-side parallel stepCount probe added to `getSleepLastNight` when both sleep windows return empty. | **Confirmed root cause of build-93/94/95 sleep-query-empty** on the next archive — the heavy prep wired the entitlement and HealthKit started returning real data. |
 | 1z.114 | Sleep session grouping — `getSleepLastNight` now groups Oura/Apple-Health stage fragments into discrete sleep sessions (≤90-min gap merge) and selects the session ending today as `totalAsleepHours`, instead of summing all 36h-window non-InBed samples. | Verified on build 97 device: 167 fragments → 2 sessions → main session 8.04h ending today (vs prior bug's 15.53h). |
 | 1z.115 (`f8e2ef1`) | Sleep streak leaderboard derives current/best from `completions[dateStr]` containing the Sleep habit id (the user-visible Weekly Ledger source-of-truth), not the standalone `state.current_sleep_streak` counter whose gap-reset rule fired any time the user missed opening the app for a morning. `lbGetSnapshot()` returns `Math.max(state-tracked, ledger-derived)` — never reduces. Diagnostics: `leaderboard-sleep-streak-result` breadcrumb. | Verified on build 98+ device: Richie's row lifted from stuck-at-1 to his real 5-night streak. |
-| 1z.116 (`6a2017e`, this handoff) | Sleep streak leaderboard 3-night qualification floor. New `_LB_MIN_QUALIFYING_SCORE = { sleep_streak: 3 }` config table; `_lbMaybeSimulate` filters and re-ranks merged rows; `lbBuildRankList` suppresses the "submitting…" placeholder for below-floor users. `step_total` and `bedtime_streak` unaffected. | Verified on TestFlight: modal stops at awakenedren = 3; rendiesel/priyan (=1) and immortalshadow/galilea/melvin/jesserawdawg (=0) no longer visible. |
+| 1z.116 (`6a2017e`) | Sleep streak leaderboard 3-night qualification floor. New `_LB_MIN_QUALIFYING_SCORE = { sleep_streak: 3 }` config table; `_lbMaybeSimulate` filters and re-ranks merged rows; `lbBuildRankList` suppresses the "submitting…" placeholder for below-floor users. `step_total` and `bedtime_streak` unaffected. | Verified on TestFlight: modal stops at awakenedren = 3; rendiesel/priyan (=1) and immortalshadow/galilea/melvin/jesserawdawg (=0) no longer visible. |
+| 1z.117 (`cad15ec`) | Dungeon rank-filter preserved after boss defeat. `renderBossesPanel(rankFilter)` now defaults to `currentDungeonRank` when called without an argument (8 kill/streak/hunt-failed paths leaked unfiltered renders). 2 new Playwright tests (N.1, N.2) + dungeon-render breadcrumb. | Fixes build-99 corruption screenshot (E + D + C cards under D-RANK DUNGEON header). |
+| 1z.118 (this handoff) | Leaderboard preview metric swap — bedtime streak retired, **Workout Streak** card added in its place. New `_lbComputeWorkoutStreakFromCompletions` helper mirrors the 1z.115 sleep ledger derivation; canonical 'Workout' habit + legacy 'Strength training' both recognized. `lbGetSnapshot()` exposes `current_workout_streak` / `best_workout_streak`. `_LB_SIM_METRICS` swapped (`bedtime_streak` → `workout_streak`); simulated-leaderboard.js bot streak generator accepts both. Underlying `bedtime_streak` state tracking is left in place (the **Sleep before midnight habit** auto-verify still uses it; only the leaderboard card was retired). 3 new Playwright tests (group O). **Flights Climbed investigated** — see audit notes below. | Workout Streak source = `completions[date].includes(workoutId)` ledger, same as the Workout habit's "SEALED" badge. No fake data. |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
+
+### 🔍 Flights Climbed leaderboard — audit memo (1z.118)
+
+Asked during the 1z.118 patch whether a **Most Flights Climbed** leaderboard could be added. Findings:
+
+**Native + HealthKit layer**: ✅ READY. No native work required.
+- `Health.getFlightsClimbedToday()` and `Health.getFlightsClimbedBetween(startISO, endISO)` already exposed and battle-tested via the C-rank boss **Ascendant Colossus** ("Climb 10+ verified flights"). See `app.js` line 28779 / 28811 + the `_queryFlightsInRange` helper at 28824.
+- Authorization is bundled into the `'stairs'` alias inside `requestAuthorization` (see plugin source line 90-91: `'stairs'` maps to `HKQuantityTypeIdentifierFlightsClimbed`). Already in the existing request set on every fresh install and on the v3 Phase 1z.61 upgrade-path.
+- `requestFlightsPermissionIfNeeded()` upgrade-path helper exists and is already wired.
+- HealthKit entitlement (`com.apple.developer.healthkit`) covers FlightsClimbed — same entitlement that gates Steps + Sleep + Workouts. No new entitlement key needed.
+- Info.plist purpose strings (`NSHealthShareUsageDescription`) already declare what we read — generic enough to cover stairs. No new App Review copy needed.
+- `flightsCache` (TTL'd) at line 27541 already exists.
+
+**Leaderboard layer**: NOT YET WIRED.
+- `LB_METRICS_META` (line ~20783) doesn't have a `flights_climbed_weekly` entry.
+- `_LB_SIM_METRICS` (line ~21237) doesn't enable simulated rows for flights.
+- `_LB_WEEKLY_METRICS` (line ~20621) doesn't include flights — backend submission isn't wired.
+- `lbGetSnapshot()` doesn't expose current/best weekly flights.
+- `renderLeaderboardPreview` (line 18609) renders exactly 3 cards — adding a 4th changes the strip layout.
+- `simulated-leaderboard.js` `BOTS` table has no `flightsBase`/`flightsJitter` archetype slots.
+
+**Decision deferred**. Adding flights would be a clean follow-up patch — the data layer is in place and the metric registry pattern is well-established. But this patch's scope was the bedtime → workout swap; adding a 4th leaderboard card on top of that would change the 3-card strip layout (the user explicitly said "Do NOT redesign the rankings area"). When the user is ready to ship it as 1z.119, the punch list is:
+
+1. Add `flights_climbed_weekly: 3` (or chosen floor) to `_LB_MIN_QUALIFYING_SCORE` if it should require a minimum.
+2. Add `flights_climbed_weekly: 1` to `_LB_SIM_METRICS` and `LB_WEEKLY_METRICS`.
+3. Add the metric to `LB_METRICS_META` with title "Most flights climbed this week" + blurb.
+4. Extend `lbGetSnapshot()` with `current_flights_weekly` (sum via `Health.getFlightsClimbedBetween` over the Sunday-PT-anchored window) + `best_flights_weekly` (persist alongside `best_7day_step_total`).
+5. Extend `_lbMaybeSimulate` and the bot table to generate plausible flight totals.
+6. Either add a 4th card to `renderLeaderboardPreview` (layout change — needs design pass) OR expose flights only through the full Top-50 sheet via a new entry point.
+7. Tests mirror Group O / M patterns.
+
+No archive / upload / deploy needed for either this patch or the follow-up — both live entirely in the web bundle.
 
 ---
 

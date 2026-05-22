@@ -6304,6 +6304,87 @@
     if (mutated) saveLeaderboardState(state);
   }
 
+  // v3 Phase 1z.118 — derive workout streak from the habit completion
+  // ledger. Mirrors _lbComputeSleepStreakFromCompletions exactly,
+  // but for the canonical Workout habit (read-only HK-verified;
+  // every entry in completions[date] for the Workout id was sealed
+  // by autoVerifyStrengthTraining → toggleHabit). Also recognizes
+  // the legacy 'Strength training' habit name (pre-1z.105) so a
+  // device that hasn't run the rename migration yet still counts
+  // those days. Returns { current, best, completionDateCount,
+  // workoutHabitId, startedFromYesterday } or null on bad inputs.
+  function _lbComputeWorkoutStreakFromCompletions() {
+    try {
+      if (typeof habits === 'undefined' || !Array.isArray(habits)) return null;
+      if (typeof completions === 'undefined' || !completions) return null;
+      if (typeof today !== 'string' || !today) return null;
+      // Defensive: recognize both 'Workout' (canonical post-1z.105)
+      // and 'Strength training' (legacy pre-1z.105) on non-custom
+      // habits. 1z.107 ships the same dual-name guard in
+      // findStrengthHabit / isStrengthWorkoutHabit.
+      const workoutHabit = habits.find(h =>
+        h && !h.custom && (h.name === 'Workout' || h.name === 'Strength training')
+      );
+      if (!workoutHabit) return null;
+      const workoutId = workoutHabit.id;
+
+      // Current streak: walk backwards from today. If today's Workout
+      // hasn't been recorded yet (user pulls leaderboard at noon
+      // before a workout), start from yesterday so the streak isn't
+      // artificially zeroed by a not-yet-evaluated day.
+      const start = new Date(today + 'T00:00:00');
+      const todayList = completions[today];
+      const todayDone = Array.isArray(todayList) && todayList.includes(workoutId);
+      const startOffset = todayDone ? 0 : 1;
+
+      let current = 0;
+      for (let j = 0; j < 365; j++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() - startOffset - j);
+        const ds = d.getFullYear() + '-' +
+                   String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(d.getDate()).padStart(2, '0');
+        const dayList = completions[ds];
+        const done = Array.isArray(dayList) && dayList.includes(workoutId);
+        if (done) current++;
+        else break;
+      }
+
+      // Best streak: longest consecutive run across all completion
+      // dates for this id.
+      const allDates = Object.keys(completions || {})
+        .filter(d => Array.isArray(completions[d]) && completions[d].includes(workoutId))
+        .sort();
+      let best = current;
+      if (allDates.length > 0) {
+        let run = 1;
+        let longest = 1;
+        for (let i = 1; i < allDates.length; i++) {
+          const prev = new Date(allDates[i - 1] + 'T00:00:00');
+          const cur  = new Date(allDates[i]     + 'T00:00:00');
+          const diffDays = Math.round((cur - prev) / 86400000);
+          if (diffDays === 1) {
+            run++;
+            if (run > longest) longest = run;
+          } else {
+            run = 1;
+          }
+        }
+        if (longest > best) best = longest;
+      }
+
+      return {
+        current: current,
+        best:    best,
+        completionDateCount: allDates.length,
+        workoutHabitId: workoutId,
+        startedFromYesterday: !todayDone,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
   // v3 Phase 1z.115 — derive sleep streak from the habit completion
   // ledger instead of the standalone state.current_sleep_streak field.
   //
@@ -6437,6 +6518,23 @@
       best_sleep_streak:         bestSleepStreak,
       current_bedtime_streak:    state.current_bedtime_streak,
       best_bedtime_streak:       state.best_bedtime_streak,
+      // v3 Phase 1z.118 — workout streak derived from completion
+      // ledger only. Not persisted to state, not submitted to
+      // backend (workout_streak metric is client-only in this
+      // patch). The leaderboard preview card + sheet read these
+      // fields the same way they read sleep_streak.
+      current_workout_streak:    (function () {
+        try {
+          const fromLedger = _lbComputeWorkoutStreakFromCompletions();
+          return (fromLedger && typeof fromLedger.current === 'number') ? fromLedger.current : 0;
+        } catch (_) { return 0; }
+      })(),
+      best_workout_streak:       (function () {
+        try {
+          const fromLedger = _lbComputeWorkoutStreakFromCompletions();
+          return (fromLedger && typeof fromLedger.best === 'number') ? fromLedger.best : 0;
+        } catch (_) { return 0; }
+      })(),
     };
   }
 
@@ -6448,6 +6546,9 @@
       _state:           loadLeaderboardState, // dev-only: full raw state
       // v3 Phase 1z.115 — exposed for Playwright regression tests.
       __test_computeSleepStreakFromCompletions: _lbComputeSleepStreakFromCompletions,
+      // v3 Phase 1z.118 — workout streak ledger derivation, exposed
+      // for Playwright regression tests.
+      __test_computeWorkoutStreakFromCompletions: _lbComputeWorkoutStreakFromCompletions,
       // v3 Phase 1z.116 — min-qualifying-score table + simulate filter
       // surfaces for Playwright regression tests.
       __test_getMinQualifyingScore: function (metric) {
@@ -6492,6 +6593,10 @@
     step_total:     200000,  // 200k steps in 7 days — far beyond any human
     sleep_streak:   365,
     bedtime_streak: 365,
+    // v3 Phase 1z.118 — workout_streak cap used by sim merge clamps
+    // and (future) backend submission. The backend does NOT yet
+    // accept workout_streak; this cap is client-side only.
+    workout_streak: 365,
   };
   function lbSanitizeValue(metric, raw) {
     const n = Number(raw);
@@ -18556,9 +18661,13 @@
       '</button>';
     }
 
-    const walkIcon  = '<img src="assets/habit-icons/icon-walk.png" alt="" draggable="false" loading="lazy" decoding="async">';
-    const sleepIcon = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
-    const moonIcon  = '<span class="lb-stat-icon-glyph" aria-hidden="true">🌙</span>';
+    const walkIcon    = '<img src="assets/habit-icons/icon-walk.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    const sleepIcon   = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    // v3 Phase 1z.118 — workout streak card uses the same icon as
+    // the Workout habit (icon-strength.png, kept after the 1z.105
+    // rename). Replaces the moonIcon previously used by the
+    // before-midnight bedtime streak card.
+    const workoutIcon = '<img src="assets/habit-icons/icon-strength.png" alt="" draggable="false" loading="lazy" decoding="async">';
 
     // Card 1 — Steps this calendar week (Sunday 00:00 → Saturday
     // 23:59:59 device-local, resets every Sunday). The
@@ -18574,15 +18683,23 @@
       '<span class="lb-stat-value-unit">sleep streak · 7+ hr</span>';
     const sleepMeta  = 'Best: <b>' + snap.best_sleep_streak + ' ' + nightWord(snap.best_sleep_streak) + '</b>';
 
-    // Card 3 — Before-midnight bedtime streak
-    const bedtimeValue = snap.current_bedtime_streak +
-      '<span class="lb-stat-value-unit">bedtime streak · before midnight</span>';
-    const bedtimeMeta  = 'Best: <b>' + snap.best_bedtime_streak + ' ' + nightWord(snap.best_bedtime_streak) + '</b>';
+    // Card 3 — Workout Streak (v3 Phase 1z.118)
+    // Replaces the prior "Before-midnight bedtime streak" card. Source
+    // is the completion ledger via _lbComputeWorkoutStreakFromCompletions
+    // (already folded into snap.current_workout_streak /
+    // .best_workout_streak by lbGetSnapshot). Workout is read-only
+    // HK-verified (autoVerifyStrengthTraining sealed) so every
+    // streak day is verified by construction — the "Verified by
+    // Apple Health" leaderboard copy stays accurate.
+    const workoutDayWord = n => n === 1 ? 'day' : 'days';
+    const workoutValue = snap.current_workout_streak +
+      '<span class="lb-stat-value-unit">workout streak · 30+ min</span>';
+    const workoutMeta  = 'Best: <b>' + snap.best_workout_streak + ' ' + workoutDayWord(snap.best_workout_streak) + '</b>';
 
     list.innerHTML =
-      buildCard('step_total',   walkIcon,  stepsValue,   stepsMeta) +
-      buildCard('sleep_streak', sleepIcon, sleepValue,   sleepMeta) +
-      buildCard('bedtime_streak', moonIcon, bedtimeValue, bedtimeMeta);
+      buildCard('step_total',     walkIcon,    stepsValue,   stepsMeta) +
+      buildCard('sleep_streak',   sleepIcon,   sleepValue,   sleepMeta) +
+      buildCard('workout_streak', workoutIcon, workoutValue, workoutMeta);
   }
   try { window.renderLeaderboardPreview = renderLeaderboardPreview; } catch (_) {}
 
@@ -20666,10 +20783,15 @@
       unit:  'nights',
       formatValue: n => (n || 0).toString(),
     },
-    bedtime_streak: {
-      title: 'Before-midnight bedtime streak',
-      blurb: 'Longest current run of consecutive nights asleep before midnight. Verified by Apple Health.',
-      unit:  'nights',
+    // v3 Phase 1z.118 — bedtime_streak metric retired from the
+    // leaderboard UI. The underlying state (lbRecordSleepNight's
+    // bedtime-before-midnight tracking) is left in place because the
+    // Sleep before midnight HABIT auto-verify reads it — but the
+    // leaderboard card + metric meta entry are removed.
+    workout_streak: {
+      title: 'Workout streak · 30+ min',
+      blurb: 'Longest current run of consecutive days with a verified Apple Health workout totaling 30+ minutes.',
+      unit:  'days',
       formatValue: n => (n || 0).toString(),
     },
   };
@@ -20904,7 +21026,8 @@
           const _snap = lbGetSnapshot();
           let _myLocal = 0;
           if (metric === 'sleep_streak')        _myLocal = (_snap && _snap.current_sleep_streak)   || 0;
-          else if (metric === 'bedtime_streak') _myLocal = (_snap && _snap.current_bedtime_streak) || 0;
+          // v3 Phase 1z.118 — workout_streak replaces bedtime_streak.
+          else if (metric === 'workout_streak') _myLocal = (_snap && _snap.current_workout_streak) || 0;
           else if (metric === 'step_total')     _myLocal = (_snap && _snap.steps_last_7_days)      || 0;
           if (_myLocal < _floor) suppressPending = true;
         }
@@ -21111,7 +21234,10 @@
   // shapes values per-metric (continuous for steps, integer streak
   // for sleep / bedtime). Flip SIMULATE_USERS in
   // simulated-leaderboard.js to disable.
-  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, bedtime_streak: 1 };
+  // v3 Phase 1z.118 — bedtime_streak removed from sim metrics (the
+  // leaderboard card was retired); workout_streak takes its place
+  // with the same simulated-merge shape (small integer, ±jitter).
+  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1 };
   // v3 Phase 1z.116 — per-metric minimum-score filter applied AFTER
   // simulated-leaderboard merge but BEFORE the rank list renders.
   // Rationale: a "7+ hour sleep streak" leaderboard showing entries
@@ -21137,7 +21263,9 @@
         if (snap) {
           if (metric === 'step_total')          myValue = snap.steps_last_7_days  || 0;
           else if (metric === 'sleep_streak')   myValue = snap.current_sleep_streak   || 0;
-          else if (metric === 'bedtime_streak') myValue = snap.current_bedtime_streak || 0;
+          // v3 Phase 1z.118 — workout_streak replaces bedtime_streak
+          // as the third client-side simulated metric.
+          else if (metric === 'workout_streak') myValue = snap.current_workout_streak || 0;
         }
       } catch (_) {}
     }
