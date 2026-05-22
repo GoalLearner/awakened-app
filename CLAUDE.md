@@ -4,7 +4,44 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 21, 2026 — Sleep HealthKit + leaderboard fixes verified on TestFlight (read this first)
+## 📌 Session handoff — May 22, 2026 — Workout Streak backend leaderboard activated (read this first)
+
+### 🚀 STATUS: workout_streak backend is LIVE — 2.2.3-w3 release-prep committed; MacBook needs to archive next build
+
+**Backend Worker deployed**: version `c9c943d9-4e03-4b69-91fd-a02d8d8e837c` at `https://awakened-backend.richmondcampano93.workers.dev`. The `workout_streak` metric is now whitelisted in `backend/src/lib/metrics.ts`, accepted by `POST /v1/leaderboard/submit`, and returned by `GET /v1/leaderboard/top?metric=workout_streak`. No D1 migration was needed — the `leaderboard_snapshots` table is metric-agnostic.
+
+**Frontend flag flipped to true** (`LEADERBOARD_WORKOUT_BACKEND_ENABLED = true`). On the next TestFlight build:
+- `lbSubmitAllMetrics` now submits `workout_streak` on every app open + visibility change.
+- The Workout Streak modal load path now hits `Auth.fetchLeaderboardTop('workout_streak')` and merges real users with the sim filler.
+- 1z.121 also adds a **simulated-fallback safety net**: if the backend errors AND no cache exists for any sim-supported metric, the modal renders a sim-merged board instead of "Couldn't load rankings". The error state is reserved for non-sim metrics or unrecoverable codes.
+
+**Knob bumps for the next archive (2.2.3-w3):**
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w3` |
+| `app.js?v=` | `456` |
+| `sw.js CACHE_VERSION` | `v5.342` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (unchanged) |
+
+**Initial visible behavior**: at first the Workout Streak modal will still look mostly simulated — only Richie's row is real, plus any other backend-submitted real users (currently zero, no one else has submitted yet). As real users sign up + submit on subsequent builds, bots get pushed down by sort. The pipeline is now live; population grows from here.
+
+**MacBook commands for build 103 (or `latest TestFlight + 1`)**:
+
+```bash
+cd /Volumes/AwakenedDev/repos/awakened-app
+git fetch origin && git pull origin main           # expect the 1z.121 commit
+bash scripts/prep-local-build.sh                   # atomic prep + all four verify gates
+npx cap open ios
+# Xcode: Marketing 2.2.3, Build = latest TestFlight + 1, Clean, Archive, Distribute, Upload
+```
+
+After install on the phone, 5-tap version → Copy Debug Info — confirm `"build": "2.2.3-w3"`. Tap Workout Streak — modal should populate (sim-fallback OR real backend rows, depending on what the backend returns). No "Couldn't load rankings."
+
+---
+
+## 📌 Session handoff — May 21, 2026 — Sleep HealthKit + leaderboard fixes verified on TestFlight (historical — superseded by May 22 above)
 
 ### ✅ STATUS: Sleep system is fully fixed and verified end-to-end on a real TestFlight build
 

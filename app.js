@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w2';
+  const APP_BUILD_TAG = '2.2.3-w3';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21332,7 +21332,16 @@
   // Default stays FALSE until both halves ship together. Flipping
   // the flag without the backend deploy would re-introduce the
   // 1z.119 "Couldn't load rankings" failure mode.
-  const LEADERBOARD_WORKOUT_BACKEND_ENABLED = false;
+  // v3 Phase 1z.121 — flipped to true after backend Worker version
+  // c9c943d9-4e03-4b69-91fd-a02d8d8e837c deployed with the
+  // workout_streak metric whitelist entry. Frontend now submits
+  // workout_streak via lbSubmitAllMetrics and the modal load path
+  // hits Auth.fetchLeaderboardTop (no longer in
+  // _LB_CLIENT_ONLY_METRICS). Simulated rows still fill sparse
+  // boards via _lbMaybeSimulate, exactly as they do for step_total
+  // and sleep_streak. Richie's local row continues to pull from
+  // snap.current_workout_streak via the snapshot path.
+  const LEADERBOARD_WORKOUT_BACKEND_ENABLED = true;
 
   // v3 Phase 1z.119 — client-only metrics never hit the backend.
   // workout_streak (added in 1z.118) is fully derived from the
@@ -21426,7 +21435,25 @@
           });
         }
       } catch (_) {}
-      listEl.innerHTML = lbBuildErrorState(result && result.code);
+      // v3 Phase 1z.121 — sim-supported metrics fall back to a
+      // sim-merged render when the backend errors AND no cache
+      // exists. Without this, a first-load-on-flaky-network user
+      // (or a newly-deployed metric whose first writes haven't
+      // landed in cache yet — e.g. workout_streak right after the
+      // 1z.121 flag flip) sees "Couldn't load rankings" instead
+      // of the populated board. Metrics without sim support still
+      // fall through to the error state.
+      if (_LB_SIM_METRICS[metric]) {
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('leaderboard-modal-sim-fallback', { metric });
+          }
+        } catch (_) {}
+        const simFallback = _lbMaybeSimulate(metric, [], null);
+        listEl.innerHTML = lbBuildRankList(metric, simFallback.top, simFallback.me);
+      } else {
+        listEl.innerHTML = lbBuildErrorState(result && result.code);
+      }
     }
   }
 
