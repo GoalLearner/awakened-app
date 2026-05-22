@@ -1664,3 +1664,124 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     expect(s.best).toBe(3);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// P. Workout streak modal loads from sim (no backend) (1z.119)
+// ─────────────────────────────────────────────────────────────
+// Regression for the TestFlight build that followed 1z.118: the
+// Workout Streak preview card rendered correctly, but tapping it
+// opened the rankings modal stuck on "Couldn't load rankings.
+// Check your connection." Root cause: _lbRenderThisWeekTab
+// unconditionally called Auth.fetchLeaderboardTop(metric); the
+// backend has no /v1/leaderboard route for workout_streak (it's
+// client-only, per the 1z.118 commit's own comment), so the fetch
+// errored, there was no cache, and the empty-state branch
+// rendered the error copy.
+//
+// 1z.119 adds _LB_CLIENT_ONLY_METRICS = new Set(['workout_streak']);
+// when the metric is in the set, the load path short-circuits
+// before the fetch and renders sim-merged rows directly.
+test.describe('P · Workout streak modal loads from sim (1z.119)', () => {
+  test('opening workout_streak does not render "Couldn\'t load" error', async ({ page }) => {
+    await freshAppForLedgerTest(page);
+
+    // Inject a Workout habit + a few completions so the user's row
+    // has a real value to surface alongside the bots. Mirrors the
+    // O.2 setup pattern.
+    await page.evaluate(() => {
+      const w = window as unknown as { Leaderboard: LbTest };
+      const habits = w.Leaderboard.__test_getHabits();
+      const completions = w.Leaderboard.__test_getCompletions();
+      const today = w.Leaderboard.__test_getToday();
+      if (!habits || !completions || !today) return;
+      habits.push({ id: 'p-workout-id', name: 'Workout', emoji: '🏋️',
+                    difficulty: 'hard', type: 'build', primaryStat: 'STR' });
+      const fmt = (d: Date) => d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      const anchor = new Date(today + 'T00:00:00');
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - i);
+        const ds = fmt(d);
+        if (!Array.isArray(completions[ds])) completions[ds] = [];
+        if (!completions[ds].includes('p-workout-id')) {
+          completions[ds].push('p-workout-id');
+        }
+      }
+    });
+
+    // Open the workout_streak modal via the existing in-app helper
+    // (same path the preview-card tap takes after this fix).
+    await page.evaluate(() => {
+      const w = window as unknown as { openLeaderboardRanking?: (m: string) => unknown };
+      if (typeof w.openLeaderboardRanking === 'function') {
+        try { w.openLeaderboardRanking('workout_streak'); } catch (_) {}
+      }
+    });
+
+    // The list element should populate with real rows, NOT the
+    // "Couldn't load rankings" empty-state.
+    await page.waitForFunction(() => {
+      const list = document.getElementById('lb-rank-list');
+      if (!list) return false;
+      const txt = (list.textContent || '').trim();
+      // Loading-skeleton has lb-skel-block; final renders have row data.
+      const hasRealRows = list.querySelectorAll('.lb-rank-row:not(.lb-rank-row--skeleton)').length > 0;
+      const hasError = /couldn.t load|check your connection/i.test(txt);
+      return hasRealRows && !hasError;
+    }, { timeout: 6_000 });
+
+    const result = await page.evaluate(() => {
+      const list = document.getElementById('lb-rank-list');
+      if (!list) return null;
+      const txt = (list.textContent || '');
+      const rows = Array.from(list.querySelectorAll('.lb-rank-row:not(.lb-rank-row--skeleton)'));
+      return {
+        rowCount: rows.length,
+        hasError: /couldn.t load|check your connection/i.test(txt),
+        // Did Richie's row land somewhere in the visible list?
+        hasMyAlias: /Richie|DevUser|me/i.test(txt),
+      };
+    });
+
+    expect(result).not.toBeNull();
+    const r = result as { rowCount: number; hasError: boolean };
+    expect(r.hasError).toBe(false);
+    // Bots + the user — sim merge typically produces 10+ rows.
+    expect(r.rowCount).toBeGreaterThan(3);
+  });
+
+  test('step_total modal still routes through the backend path (not the client-only short-circuit)', async ({ page }) => {
+    // Negative regression — make sure the client-only branch doesn't
+    // accidentally swallow non-client-only metrics. The dev stub may
+    // 401 the backend fetch and timing varies, so we just assert
+    // step_total ISN'T short-circuited via the new client-only path
+    // (which would emit a `leaderboard-modal-client-only` breadcrumb
+    // for step_total — that must not happen).
+    await freshAppForLedgerTest(page);
+    await page.evaluate(() => {
+      const w = window as unknown as { openLeaderboardRanking?: (m: string) => unknown };
+      if (typeof w.openLeaderboardRanking === 'function') {
+        try { w.openLeaderboardRanking('step_total'); } catch (_) {}
+      }
+    });
+    // Brief wait so async branches settle.
+    await page.waitForTimeout(500);
+
+    const crumbs = await page.evaluate(() => {
+      try {
+        const raw = localStorage.getItem('hb_health_verify_debug_v1');
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) { return []; }
+    });
+    const clientOnlyHits = (crumbs as Array<{ step?: string; data?: { metric?: string } }>)
+      .filter(c => c.step === 'leaderboard-modal-client-only')
+      .map(c => c.data && c.data.metric);
+
+    // workout_streak being short-circuited is fine (the prior test
+    // exercised that). step_total being short-circuited would be the
+    // bug — never happens.
+    expect(clientOnlyHits).not.toContain('step_total');
+  });
+});

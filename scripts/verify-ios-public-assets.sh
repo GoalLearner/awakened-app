@@ -40,13 +40,21 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # ── Required files ──────────────────────────────────────────────────
+# v3 Phase 1z.119 — simulated-leaderboard.js is now release-critical.
+# The workout_streak leaderboard (1z.118) is client-only — if the iOS
+# bundle ships a stale simulated-leaderboard.js, the modal renders
+# either the empty error state or the wrong bot values. We compare its
+# SHA256 to the root copy via the same per-file hash check that protects
+# app.js / index.html / sw.js.
 REQUIRED=(
   "app.js"
   "index.html"
   "sw.js"
+  "simulated-leaderboard.js"
   "ios/App/App/public/app.js"
   "ios/App/App/public/index.html"
   "ios/App/App/public/sw.js"
+  "ios/App/App/public/simulated-leaderboard.js"
 )
 missing=0
 for f in "${REQUIRED[@]}"; do
@@ -133,6 +141,31 @@ report "APP_VERSION"     "$ROOT_VERSION"        "$IOS_VERSION"
 report "APP_BUILD_TAG"   "$ROOT_BUILD_TAG"      "$IOS_BUILD_TAG"
 report "app.js?v="       "$ROOT_APPJS_V"        "$IOS_APPJS_V"
 report "sw.js CACHE_VER" "$ROOT_CACHE_VERSION"  "$IOS_CACHE_VERSION"
+
+# v3 Phase 1z.119 — hash-compare simulated-leaderboard.js root vs iOS
+# copy. There's no release knob inside this file to extract, so we
+# fall back to SHA256. Any drift (e.g. stale lite-flow cap copy left
+# the iOS bundle's sim module behind a newer root) → exit 1, blocking
+# the workout_streak leaderboard regression we just fixed.
+SHA_CMD=""
+if command -v shasum >/dev/null 2>&1; then SHA_CMD="shasum -a 256"
+elif command -v sha256sum >/dev/null 2>&1; then SHA_CMD="sha256sum"
+fi
+if [ -n "$SHA_CMD" ]; then
+  SIM_ROOT_HASH="$($SHA_CMD simulated-leaderboard.js 2>/dev/null | awk '{print $1}')"
+  SIM_IOS_HASH="$($SHA_CMD ios/App/App/public/simulated-leaderboard.js 2>/dev/null | awk '{print $1}')"
+  if [ -z "$SIM_ROOT_HASH" ] || [ -z "$SIM_IOS_HASH" ]; then
+    printf "%-18s  %-20s  %-20s  %s\n" "sim-leaderboard"   "<missing>" "<missing>" "MISSING"
+    fail=1
+  elif [ "$SIM_ROOT_HASH" = "$SIM_IOS_HASH" ]; then
+    printf "%-18s  %-20s  %-20s  %s\n" "sim-leaderboard"   "${SIM_ROOT_HASH:0:12}…" "${SIM_IOS_HASH:0:12}…" "OK"
+  else
+    printf "%-18s  %-20s  %-20s  %s\n" "sim-leaderboard"   "${SIM_ROOT_HASH:0:12}…" "${SIM_IOS_HASH:0:12}…" "MISMATCH"
+    fail=1
+  fi
+else
+  echo "  WARN: no shasum/sha256sum — skipping simulated-leaderboard.js hash compare"
+fi
 
 echo ""
 

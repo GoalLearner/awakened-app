@@ -21308,6 +21308,16 @@
   // _lbCurrentOpenMetric and _lbCurrentTab.
   let _lbCurrentTab = 'this-week';
 
+  // v3 Phase 1z.119 — client-only metrics never hit the backend.
+  // workout_streak (added in 1z.118) is fully derived from the
+  // local completion ledger — the backend has no /v1/leaderboard
+  // route for it. Without this set, the modal load path would
+  // call Auth.fetchLeaderboardTop('workout_streak'), get a NETWORK
+  // / 404 response, find no cache, and render lbBuildErrorState's
+  // "Couldn't load rankings" — exactly the bug reported on the
+  // TestFlight build that followed 1z.118.
+  const _LB_CLIENT_ONLY_METRICS = new Set(['workout_streak']);
+
   // Renders the "This Week" view (current-weekly ranking with sim
   // merge). Extracted from openLeaderboardRanking so the same flow
   // can be triggered on tab switch without re-opening the sheet.
@@ -21328,6 +21338,22 @@
       if (range) blurbText = range + ' · resets Sunday 12:00 AM UTC. Apple Health is the only source.';
     }
     if (blurbEl) blurbEl.textContent = blurbText;
+
+    // v3 Phase 1z.119 — client-only metrics short-circuit before
+    // the backend fetch. workout_streak is derived from the local
+    // completion ledger and the backend has no route for it; the
+    // sim merge alone produces the full ranked list (bots + the
+    // user's row pulled from lbGetSnapshot.current_workout_streak).
+    if (_LB_CLIENT_ONLY_METRICS.has(metric)) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('leaderboard-modal-client-only', { metric });
+        }
+      } catch (_) {}
+      const sim = _lbMaybeSimulate(metric, [], null);
+      listEl.innerHTML = lbBuildRankList(metric, sim.top, sim.me);
+      return;
+    }
 
     const cached = lbCacheRead(metric);
     if (cached) {
@@ -21359,6 +21385,14 @@
     } else if (result && result.code === 'EXPIRED') {
       window.location.reload();
     } else if (!cached) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('leaderboard-modal-load-error', {
+            metric,
+            code: (result && result.code) || 'UNKNOWN',
+          });
+        }
+      } catch (_) {}
       listEl.innerHTML = lbBuildErrorState(result && result.code);
     }
   }
