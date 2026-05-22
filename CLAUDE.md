@@ -4,7 +4,77 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 20, 2026 (read this first; supersedes the May 19 section below)
+## 📌 Session handoff — May 21, 2026 — Sleep HealthKit + leaderboard fixes verified on TestFlight (read this first)
+
+### ✅ STATUS: Sleep system is fully fixed and verified end-to-end on a real TestFlight build
+
+The multi-day sleep-debug arc that started with the build 92/93/94/95 HealthKit-queries-return-zero failure is closed. A real TestFlight install on iPhone confirms every piece of the pipeline works:
+
+| Surface | Status |
+|---|---|
+| HealthKit entitlement wiring | ✅ wired via `scripts/prep-local-build.sh` step 7-9 |
+| HealthKit sleep query returns real samples | ✅ Oura ring writes ~145 stage fragments per night; plugin returns them |
+| Sleep session grouping + main-session selection | ✅ correctly picks the night ending today (~8h) instead of summing 36h |
+| Sleep 7 hours habit auto-seals | ✅ verified on-device |
+| Daily walk 8,000 steps auto-seals | ✅ verified on-device |
+| Sleep streak in the global leaderboard matches the weekly Ledger | ✅ Richie reads 5 — same as Ledger |
+| Sleep streak leaderboard hides users below 3 nights | ✅ rows with 0/1/2 are gone; board stops at awakenedren = 3 |
+| iOS AppIcon is the canonical Awakened logo (not default Capacitor) | ✅ |
+| Class-avatar PNGs ship in the iOS bundle | ✅ |
+| iOS Info.plist HealthKit purpose strings present | ✅ |
+| Web bundle release knobs match root (`2.2.3-w2`, `app.js?v=455`, `sw.js v5.341`) | ✅ |
+| Custom Habit save freeze | ✅ fixed in 1z.106 |
+
+**The mandatory MacBook archive command is now:**
+
+```bash
+bash scripts/prep-local-build.sh
+```
+
+The heavy prep is atomic: rebuilds `www/`, syncs iOS, applies HealthKit Info.plist + entitlements + Sign in with Apple wiring, replaces the default Capacitor AppIcon with the tracked Awakened set, and runs all four verify gates as its final steps (public assets, app icon, HealthKit purpose strings, entitlements). The lite flow is documented in `LOCAL_BUILD.md` as a quick-refresh fallback only; for any HealthKit-related change, **use the heavy flow**. The build-92/93/94/95 incidents were all traceable to the lite flow skipping one of these steps.
+
+**Real TestFlight verification of the leaderboard floor (1z.116):**
+
+After 1z.115 (`f8e2ef1`) lifted Richie's row from 1 to his real 5-night streak, 1z.116 (`6a2017e`) hid sub-3-night entries. The on-device modal now shows:
+
+```
+#1  shadowmonarch_k   20
+#2  ascendantnova     12
+#3  ghostlift          9
+#4  marcust.           7
+#5  siennak.           6
+#6  jordanf.           6
+#7  Richie             5     ← actual user, matches Weekly Ledger
+#8  voidwalker_88      4
+#9  awakenedren        3     ← lowest visible row (exactly at floor)
+```
+
+No 0/1/2 rows visible. Ledger and leaderboard agree.
+
+**Suggested next steps (no longer Sleep-related):**
+
+The sleep + entitlement + leaderboard work is done. Open targets going forward:
+
+1. Broader TestFlight QA across tabs — Habits / Quests / Items / Social / Duels / Stats / History — looking for any UI regressions introduced by the 1z.108-1z.116 changes.
+2. Workout 30 min auto-verification (1z.105) on-device — needs a real Apple Health workout of any type ≥30 min daily total to fire. Should now work end-to-end since the entitlement is wired.
+3. Sleep before midnight on-device — bedtime path uses `getBedtimeSamplesInWindow` with a strict `[20:00, 24:00)` window. Untouched by the sleep arc but never specifically re-verified on the post-entitlement build. A late-bedtime night would exercise it.
+4. The two untracked preview HTMLs (`preview-duels-polish.html`, `preview-morning-briefing.html`) — either commit or `.gitignore`. Housekeeping only.
+
+**Knobs unchanged across the entire arc** (1z.108 → 1z.116):
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w2` |
+| `app.js?v=` | `455` |
+| `sw.js CACHE_VERSION` | `v5.341` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+
+A `2.2.3-w3` / `app.js?v=456` / `sw.js v5.342` bump is appropriate when a NEW user-facing change ships. The 1z.108-1z.116 series rode on the same web-bundle fingerprint deliberately — each fix shipped piggyback on whatever TestFlight build was archived next.
+
+---
+
+## 📌 Session handoff — May 20, 2026 (historical — superseded by the May 21 status above)
 
 ### 🛠 STATUS: 2.2.3 build 94 — MacBook needs to archive with the icon patch + verify gates
 
@@ -261,7 +331,10 @@ npx cap open ios
 | 1z.110 | Sleep auto-verify diagnostics — full breadcrumb instrumentation of `autoVerifySleep` + `getSleepLastNight`. New `sleep-*` and `bedtime-*` steps. Sleep-state filter changed to exclude only 'InBed' (forward-compatible with future plugin stage labels). | Sleep diagnostic gap closed |
 | 1z.111 | `cp avatar-*.png www/` restored to the lite MacBook flow; `verify-ios-public-assets.sh` extended to require 8 avatar PNGs + 2 PWA icons in `ios/App/App/public/`. | Build-93 avatar regression |
 | 1z.112 | Sleep query window widened 18h → 36h; new fallback 72h re-query if primary returns 0; richer raw-shape + sample-summary breadcrumbs. | strict-startDate edge defended |
-| 1z.113 (this handoff) | iOS entitlements verify gate — new `scripts/verify-ios-entitlements.sh` checks `App.entitlements` has HealthKit + Sign in with Apple AND `CODE_SIGN_ENTITLEMENTS` is wired in `project.pbxproj`. Lite-flow hazard documented: it doesn't wire entitlements; only `prep-local-build.sh` does. JS-side parallel stepCount probe added to `getSleepLastNight` when both sleep windows return empty — proves entitlement-vs-sleep-specific-data on the next debug export. | Likely root cause of build-93/94/95 sleep-query-empty |
+| 1z.113 | iOS entitlements verify gate — new `scripts/verify-ios-entitlements.sh` checks `App.entitlements` has HealthKit + Sign in with Apple AND `CODE_SIGN_ENTITLEMENTS` is wired in `project.pbxproj`. Lite-flow hazard documented: it doesn't wire entitlements; only `prep-local-build.sh` does. JS-side parallel stepCount probe added to `getSleepLastNight` when both sleep windows return empty. | **Confirmed root cause of build-93/94/95 sleep-query-empty** on the next archive — the heavy prep wired the entitlement and HealthKit started returning real data. |
+| 1z.114 | Sleep session grouping — `getSleepLastNight` now groups Oura/Apple-Health stage fragments into discrete sleep sessions (≤90-min gap merge) and selects the session ending today as `totalAsleepHours`, instead of summing all 36h-window non-InBed samples. | Verified on build 97 device: 167 fragments → 2 sessions → main session 8.04h ending today (vs prior bug's 15.53h). |
+| 1z.115 (`f8e2ef1`) | Sleep streak leaderboard derives current/best from `completions[dateStr]` containing the Sleep habit id (the user-visible Weekly Ledger source-of-truth), not the standalone `state.current_sleep_streak` counter whose gap-reset rule fired any time the user missed opening the app for a morning. `lbGetSnapshot()` returns `Math.max(state-tracked, ledger-derived)` — never reduces. Diagnostics: `leaderboard-sleep-streak-result` breadcrumb. | Verified on build 98+ device: Richie's row lifted from stuck-at-1 to his real 5-night streak. |
+| 1z.116 (`6a2017e`, this handoff) | Sleep streak leaderboard 3-night qualification floor. New `_LB_MIN_QUALIFYING_SCORE = { sleep_streak: 3 }` config table; `_lbMaybeSimulate` filters and re-ranks merged rows; `lbBuildRankList` suppresses the "submitting…" placeholder for below-floor users. `step_total` and `bedtime_streak` unaffected. | Verified on TestFlight: modal stops at awakenedren = 3; rendiesel/priyan (=1) and immortalshadow/galilea/melvin/jesserawdawg (=0) no longer visible. |
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 
