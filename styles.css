@@ -144,33 +144,74 @@ header.header--compact #lockedin-nudge {
   overflow: hidden;
   transition: max-height 160ms ease, opacity 120ms ease;
 }
-/* Manual collapse/expand chevron button (1z.135). Lives inside
-   .header-top next to the settings gear. Subtle violet accent
-   matching the World Rank card affordance from 1z.130. */
+/* v3 Phase 1z.136 — compact mode now also slims the today-strip
+   into a thin HUD pill. Instead of hiding the row (which would
+   lose live habits-today + souls visibility), we drop the verbose
+   "HABITS TODAY" label, the 2X XP banner, and the SOULS word,
+   then shrink padding/margin. Net: keeps "1/46" + the souls
+   number visible while reclaiming another ~25-30px on top of
+   the existing collapses (total ~110-130px space gain). */
+header.header--compact .today-strip {
+  padding: 4px 10px !important;
+  margin-bottom: 4px !important;
+  min-height: 0 !important;
+  gap: 6px;
+  background: rgba(139, 92, 246, 0.04);
+  border-color: rgba(139, 92, 246, 0.20);
+  transition: padding 160ms ease, margin 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+header.header--compact .today-strip-label,
+header.header--compact .today-strip-chevron,
+header.header--compact #double-xp-banner {
+  display: none !important;
+}
+header.header--compact .souls-label {
+  display: none !important;
+}
+header.header--compact .souls-badge {
+  padding: 2px 6px !important;
+  gap: 3px !important;
+}
+header.header--compact .souls-icon {
+  width: 14px;
+  height: 14px;
+}
+/* Squeeze the metric-strip margins slightly in compact mode so
+   the strip + the slimmed today-strip + tab-bar pack tighter. */
+header.header--compact .metric-strip {
+  margin-bottom: 6px !important;
+  transition: margin 160ms ease;
+}
+/* Manual collapse/expand chevron button (1z.135, restyled 1z.136).
+   Sibling control to #settings-btn — same 34px square frame so they
+   read as a matched pair in the top-right of .header-top. Brighter
+   violet border + soft glow so testers don't miss it. */
 .header-collapse-btn {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   background: rgba(167,139,250,0.08);
-  border: 1px solid rgba(167,139,250,0.30);
-  color: #c4b5fd;
+  border: 1px solid rgba(167,139,250,0.45);
+  color: #d4c4ff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
   margin-left: 6px;
-  transition: background 120ms ease, border-color 120ms ease, transform 160ms ease;
+  box-shadow: 0 0 8px rgba(167,139,250,0.18);
+  transition: background 120ms ease, border-color 120ms ease, transform 160ms ease, box-shadow 160ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 .header-collapse-btn:active {
-  background: rgba(167,139,250,0.18);
-  border-color: rgba(167,139,250,0.55);
+  background: rgba(167,139,250,0.22);
+  border-color: rgba(167,139,250,0.70);
+  box-shadow: 0 0 12px rgba(167,139,250,0.30);
 }
 .header-collapse-btn svg {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   transition: transform 160ms ease;
 }
 /* When compact, rotate the chevron 180° so its up/down meaning
@@ -7408,19 +7449,32 @@ footer {
 }
 
 .settings-btn {
-  background: transparent;
-  border: none;
-  font-size: 19px;
+  /* v3 Phase 1z.136 — matched-pair styling with #header-collapse-btn.
+     Was a bare 19px emoji with opacity 0.6; now a 34px squared icon
+     button with a faint violet frame so the two controls (settings +
+     compact toggle) read as a sibling pair in the top-right. */
+  background: rgba(167, 139, 250, 0.06);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  font-size: 17px;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
   border-radius: 8px;
   -webkit-tap-highlight-color: transparent;
-  opacity: 0.6;
-  transition: opacity 0.15s;
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s, border-color 0.15s;
   flex-shrink: 0;
 }
-.settings-btn:active { opacity: 1; }
+.settings-btn:active {
+  opacity: 1;
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(167, 139, 250, 0.45);
+}
 
 /* ── Settings sheet (bottom sheet) ── */
 .settings-overlay {

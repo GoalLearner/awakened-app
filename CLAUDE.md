@@ -55,7 +55,89 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.135 Manual compact-header toggle + dead-space fix (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.136 Matched-pair toggle + today-strip slim HUD (read this first)
+
+### ✅ STATUS: Compact-header v3. Toggle button is now visually paired with the settings gear (both 34px squared icon buttons), and compact mode now also slims the today-strip into a thin HUD pill — total reclaim ≈ 110–130px (≈ 1.5 extra habit rows visible).
+
+**Tester feedback on `2.2.3-w14` (1z.135)**:
+1. Manual toggle is "10x better" than the scroll version — keep the manual approach.
+2. The chevron button is hard to find — it visually disappears next to the settings emoji.
+3. The today-strip (`1/46 HABITS TODAY · 2X XP · 900 SOULS`) still takes ~50px in compact mode. Habit grid doesn't move up as much as desired.
+
+### Fix (1z.136) — three changes
+
+**1. Settings + chevron become a matched pair**:
+- `.settings-btn`: was a 19px transparent emoji at opacity 0.6 — now a 34×34 squared icon button with a faint violet frame (`rgba(167,139,250,0.22)` border, `rgba(167,139,250,0.06)` background). Active state intensifies both. The ⚙ emoji renders at 17px inside the frame.
+- `.header-collapse-btn`: was a 28×28 button with a thin border — now matches at 34×34. Stronger violet border (`rgba(167,139,250,0.45)` vs prior 0.30), `0 0 8px rgba(167,139,250,0.18)` soft glow, brighter chevron stroke (`#d4c4ff` vs prior `#c4b5fd`), 16px SVG (vs prior 14px). 44×44 invisible tap target preserved via `::before` pseudo from 1z.135.
+- Both controls now read as sibling square icon buttons sitting next to the date in `.header-top`.
+
+**2. Today-strip slim HUD in compact mode**:
+Instead of collapsing the entire today-strip and losing live habits/souls visibility, 1z.136 transforms it into a thin pill on the same row footprint:
+- Hide the verbose `"HABITS TODAY"` label, the trailing chevron, the 2X XP banner, and the `"SOULS"` word.
+- Shrink padding `10px 12px → 4px 10px`, margin-bottom `10px → 4px`, gap `10px → 6px`, souls badge padding `default → 2px 6px`, souls icon `20px → 14px`.
+- Background fades to `rgba(139, 92, 246, 0.04)` and border to `rgba(139, 92, 246, 0.20)` — visually deferential to the metric-strip above it.
+- Result: `1 / 46` count + souls number remain visible and live; row height drops from ~50px to ~22px.
+
+**3. Metric-strip margin-bottom in compact mode** trimmed `10px → 6px` for a slightly tighter pack.
+
+### Total space reclaim by phase
+
+| Phase | What collapses | Estimated px |
+|---|---|---|
+| 1z.134 (scroll, retired) | rune + quote + status-pills + nudges + padding (with dead-zone bug) | 30–40 effective |
+| 1z.135 (manual, dead-zone fix) | rune + quote + status-pills + nudges + padding | **80–100** |
+| **1z.136 (this)** | + today-strip slim + metric-strip margin | **110–130** |
+| (deferred) Option B full mini-HUD | + metric-strip → mini bar | 200–240 |
+
+### What's still preserved in compact mode
+
+- `.header-top` — wordmark + date + **paired controls (settings + chevron)**.
+- `.metric-strip` — Rank / **WORLD RANK** (Global Rankings Hub trigger, unmoved) / XP·30D.
+- `.today-strip` (slimmed) — `1 / 46` count + souls number, both live-updated by existing JS render-targets.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w14` | `2.2.3-w15` |
+| `app.js?v=` | `467` | `468` |
+| `sw.js CACHE_VERSION` | `v5.353` | `v5.354` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 24/29 first run, same 5 browser-context flakes that have hit every train (all pass on isolated retry, none header-related).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No HealthKit / dungeon / economy / sim / leaderboard logic changes. World Rank tap target unmoved. Habit card taps unaffected. No new overlays.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Copy Debug Info shows `"build": "2.2.3-w15"`.
+2. Habits tab — settings gear and the compact-toggle chevron now read as two sibling square buttons in the top-right (both 34×34 with violet frames; chevron has a soft glow so it's noticeably present).
+3. Tap the chevron — header collapses smoothly. Quote/rune/status pills/nudges drop to zero, AND the today-strip slims to a thin pill showing `1 / 46  ⚡900` (no labels, no chevron). Metric-strip stays visible. Habit grid moves up by ~110–130px (~1.5 extra rows).
+4. Tap again — header expands back to full state.
+5. While compact: World Rank still opens Global Rankings Hub; settings still opens; habit cards still tappable.
+6. Debug breadcrumbs: `header-compact-on { source: "manual" }` / `header-compact-off { source: "manual" }`.
+
+### Rollback knob
+
+If the matched-pair styling on settings doesn't feel right on real hardware, revert just the `.settings-btn` block to the prior transparent emoji style; the chevron stands fine on its own. `window.__setHeaderCompact(false)` still forces expanded mode.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.135 Manual compact-header toggle + dead-space fix (historical — superseded by 1z.136 above)
 
 ### ✅ STATUS: Replaces 1z.134's scroll-triggered compact header with a manual chevron button and fixes the `.daily-quote` min-height dead-zone bug that made 1z.134 visually pointless.
 
