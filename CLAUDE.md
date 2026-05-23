@@ -4,7 +4,77 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.130 Global Rankings moved to header hub; Stats tab is Character Stats only (read this first)
+## 📌 Session handoff — May 22, 2026 — Flights Climbed real-user propagation verified with rendiesel (read this first)
+
+### ✅ STATUS: Flights Climbed backend propagation is verified working end-to-end with two real users
+
+**Previous symptom**: After build 109 (`2.2.3-w8`) + 110 (`2.2.3-w10`) shipped, rendiesel's screenshot showed him at #1 with value 75 on his own device, but Richie's app continued to show only Richie's row (no rendiesel). Looked like a Richie-side cache/merge bug.
+
+**Initial D1 finding**: Production D1 had only ONE `flights_climbed` row — Richie's (`ede751e6…`, value=38, week_start=2026-05-17). rendiesel had **no** backend row. He had a `workout_streak` row (from 1z.122), so his account/auth was healthy.
+
+**Explanation**: rendiesel's app was rendering an **optimistic local self row** via the 1z.127 `_lbMaybeSimulate` local-me override. The merge codepath:
+1. `lbRefreshFlightsThisWeekFromHealth` populated his local snapshot with `flights_this_week=75`.
+2. Backend `fetchLeaderboardTop` returned `realRowCount: 1` (Richie only).
+3. `_lbMaybeSimulate` saw `localSnapValue=75 > backendMeValue=0` → applied override.
+4. `mergeWithSimulated` injected `{ alias: 'rendiesel', current_value: 75, _injectedSelf: true }` (alias not in `realAliases`).
+5. Sort descending → rendiesel(75), ShadowMonarch_K(50), AscendantNova(~48), Richie(38), …
+
+That was his **local-only view**. The backend never received his submit because his bundle was pre-`2.2.3-w7` (no awaited submit on modal open) — `lbSubmitAllMetricsDebounced` short-circuited his flights submit when another metric had submitted within the prior 5 min.
+
+**Richie's app was correctly showing backend truth — no Richie-side bug.** Same pattern as the 1z.122 workout_streak / build-w4 incident.
+
+### Final verification — rendiesel on `2.2.3-w10`
+
+After rendiesel updated TestFlight and force-quit + cold-launched, his Copy Debug Info confirmed the decisive breadcrumbs:
+
+| Breadcrumb | Field | Value |
+|---|---|---|
+| top-level | `version` | `2.2.3` |
+| top-level | `build` | `2.2.3-w10` |
+| `leaderboard-flights-week-refresh-success` | `flightsThisWeek` | `77` |
+| `leaderboard-flights-week-refresh-success` | `previousSnapshotValue` | `75` |
+| `leaderboard-flights-week-refresh-success` | `storedValue` | `77` |
+| `leaderboard-flights-week-refresh-success` | `source` | `"healthkit-range"` |
+| `leaderboard-submit-metric-attempt` | `metric / value / backendEnabled / submitted` | `"flights_climbed" / 77 / true / true` |
+| **`leaderboard-submit-metric-result`** | **`metric / value / ok`** | **`"flights_climbed" / 77 / true`** |
+
+The `submit-metric-result { ok: true }` breadcrumb (added in 1z.127) is the **decisive signal** — it fires *after* `Auth.submitLeaderboardSnapshot` returns, so `ok: true` means the row reached D1.
+
+**UI confirmation**: rendiesel now appears on Richie's Flights Climbed leaderboard. Full propagation path verified end-to-end:
+
+> friend device → HealthKit weekly flights read → backend submit → D1 row → backend top route → Richie's modal.
+
+The screenshot earlier showed 75; debug shows 77 because HealthKit refreshed between snapshots and picked up an additional 2 flights for today. Expected — the weekly total ratchets up through the day as Apple Health backfills more samples.
+
+### Status
+
+**Closed / verified.** Flights Climbed real-user backend propagation works for the second real user as designed. No code change needed.
+
+### Operational lesson — preserved for future debugging
+
+If a tester reports "I see myself on the leaderboard but my friend doesn't see me," the first thing to check is whether their Copy Debug Info contains `leaderboard-submit-metric-result { metric: "<metric>", ok: true }`. If it does, the row should be in D1; if it doesn't, the user is being shown the **optimistic local-me override** from 1z.127 and the backend has never received their submit. Cold-launch from the home-screen icon + open the metric sheet to fire the awaited submit (1z.127). Copy Debug Info is the source of truth — screenshots can be misleading because of the local override.
+
+The whole optimistic-local pattern is a feature, not a bug — it surfaces the user's most recent local snapshot when the backend is stale or hasn't received the submit yet. But it can mask propagation issues during inter-user verification.
+
+### Flights Climbed multi-phase arc — final reference
+
+| Phase | Build | What landed |
+|---|---|---|
+| 1z.125 | `2.2.3-w5` | Backend registry + feature flag flipped true; sheet-only v1 "More rankings · Flights climbed" link in Stats. |
+| 1z.126 | `2.2.3-w6` | Full-week HealthKit range backfill so the weekly total isn't stuck at today-only on first launch. |
+| 1z.127 | `2.2.3-w7` | Optimistic local-me override + awaited immediate submit on modal open + `leaderboard-submit-metric-result` breadcrumb. |
+| 1z.128 | `2.2.3-w8` | Simulated rows capped at 50/week (was 1000); bot bases retuned to realistic ranges. |
+| 1z.129 | `2.2.3-w9` | Iron Warden broadened to any Apple Health workout (unrelated to flights, same train). |
+| 1z.130 | `2.2.3-w10` | Global Rankings moved to header hub; Stats tab is Character Stats only. |
+| Verification | `2.2.3-w10` | **rendiesel real-user propagation verified.** D1 confirms 2 real flights_climbed rows. Both users see both rows. |
+
+### Future low-priority copy polish (NOT implemented in this docs-only update)
+
+The Flights Climbed modal subtitle currently reads `… resets Sunday 12:00 AM UTC`. Debug shows weekStart ISO like `2026-05-16T14:00:00.000Z` which is local Sunday midnight expressed in UTC, not literal UTC midnight. Product behavior is correct; copy is slightly confusing. A future polish could change to `… resets Sunday at midnight.` Not changed here — documented for a later task.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.130 Global Rankings moved to header hub; Stats tab is Character Stats only (historical — superseded by verification note above)
 
 ### ✅ STATUS: Global Rankings now lives in a dedicated bottom-sheet hub opened from the header World Rank card. Stats tab is single-purpose Character Stats.
 
