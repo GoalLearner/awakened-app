@@ -487,35 +487,130 @@ npx cap open ios
 
 The freeze-debug arc (1z.85 → 1z.102) was a single bug class: a microtask cascade where HealthKit native-bridge Promise callbacks chained recursively, starving the JS event loop on every user-mutation render. The fix was a one-line `esc()` type guard plus skipSideEffects in every user-mutation path, plus breadcrumb infrastructure to diagnose iOS-only bugs without Safari Web Inspector. Full per-phase detail in the sections further down this file.
 
-### 🔍 Flights Climbed leaderboard — audit memo (1z.118)
+### 🔍 Flights Climbed leaderboard — re-audited post-1z.121
 
-Asked during the 1z.118 patch whether a **Most Flights Climbed** leaderboard could be added. Findings:
+Re-audited after `workout_streak` shipped as a backend-backed leaderboard (1z.120/1z.121/1z.122) and we now have a proven template for adding a new backend-backed metric. The 1z.118 memo (replaced by this) was conservative; with `workout_streak` shipped end-to-end and verified with two real users, the path for Flights is well-defined.
 
 **Native + HealthKit layer**: ✅ READY. No native work required.
-- `Health.getFlightsClimbedToday()` and `Health.getFlightsClimbedBetween(startISO, endISO)` already exposed and battle-tested via the C-rank boss **Ascendant Colossus** ("Climb 10+ verified flights"). See `app.js` line 28779 / 28811 + the `_queryFlightsInRange` helper at 28824.
-- Authorization is bundled into the `'stairs'` alias inside `requestAuthorization` (see plugin source line 90-91: `'stairs'` maps to `HKQuantityTypeIdentifierFlightsClimbed`). Already in the existing request set on every fresh install and on the v3 Phase 1z.61 upgrade-path.
-- `requestFlightsPermissionIfNeeded()` upgrade-path helper exists and is already wired.
-- HealthKit entitlement (`com.apple.developer.healthkit`) covers FlightsClimbed — same entitlement that gates Steps + Sleep + Workouts. No new entitlement key needed.
-- Info.plist purpose strings (`NSHealthShareUsageDescription`) already declare what we read — generic enough to cover stairs. No new App Review copy needed.
-- `flightsCache` (TTL'd) at line 27541 already exists.
+- `Health.getFlightsClimbedToday()` (app.js line 28977) and `Health.getFlightsClimbedBetween(startISO, endISO)` (line 29009) already exposed and battle-tested via the C-rank boss **Ascendant Colossus** ("Climb 10+ verified flights"). See also `_queryFlightsInRange`.
+- Authorization bundled into the `'stairs'` alias inside `requestAuthorization` — plugin maps `'stairs'` → `HKQuantityTypeIdentifierFlightsClimbed`. Already in the FIRST permission sheet for every fresh install since 1z.61.
+- `requestFlightsPermissionIfNeeded()` upgrade-path helper (line 27898) wired and tested.
+- HealthKit entitlement (`com.apple.developer.healthkit`) covers FlightsClimbed — same key as Steps/Sleep/Workouts.
+- Info.plist purpose strings already cover this read scope. **No new App Review copy needed.**
+- `flightsCache` (5-min TTL, line 27724) already in place.
+- `clearFlightsCache` exported (line 28659).
 
-**Leaderboard layer**: NOT YET WIRED.
-- `LB_METRICS_META` (line ~20783) doesn't have a `flights_climbed_weekly` entry.
-- `_LB_SIM_METRICS` (line ~21237) doesn't enable simulated rows for flights.
-- `_LB_WEEKLY_METRICS` (line ~20621) doesn't include flights — backend submission isn't wired.
-- `lbGetSnapshot()` doesn't expose current/best weekly flights.
-- `renderLeaderboardPreview` (line 18609) renders exactly 3 cards — adding a 4th changes the strip layout.
-- `simulated-leaderboard.js` `BOTS` table has no `flightsBase`/`flightsJitter` archetype slots.
+**Recommended metric definition**: **Weekly Flights Climbed** (Sunday-UTC scoped, matches Steps).
 
-**Decision deferred**. Adding flights would be a clean follow-up patch — the data layer is in place and the metric registry pattern is well-established. But this patch's scope was the bedtime → workout swap; adding a 4th leaderboard card on top of that would change the 3-card strip layout (the user explicitly said "Do NOT redesign the rankings area"). When the user is ready to ship it as 1z.119, the punch list is:
+Why:
+- Step Total is already weekly; Flights would mirror that semantic — "this week's total" is the natural cadence for stair-climbing.
+- A daily metric would change too often to be a meaningful leaderboard (people don't climb on rest days).
+- A streak metric would punish users who don't have stairs in their daily routine.
+- A best-week-ever metric is good for prestige but bad for current engagement.
 
-1. Add `flights_climbed_weekly: 3` (or chosen floor) to `_LB_MIN_QUALIFYING_SCORE` if it should require a minimum.
-2. Add `flights_climbed_weekly: 1` to `_LB_SIM_METRICS` and `LB_WEEKLY_METRICS`.
-3. Add the metric to `LB_METRICS_META` with title "Most flights climbed this week" + blurb.
-4. Extend `lbGetSnapshot()` with `current_flights_weekly` (sum via `Health.getFlightsClimbedBetween` over the Sunday-PT-anchored window) + `best_flights_weekly` (persist alongside `best_7day_step_total`).
-5. Extend `_lbMaybeSimulate` and the bot table to generate plausible flight totals.
-6. Either add a 4th card to `renderLeaderboardPreview` (layout change — needs design pass) OR expose flights only through the full Top-50 sheet via a new entry point.
-7. Tests mirror Group O / M patterns.
+Proposed knobs:
+- Metric key: `flights_climbed`
+- Cap (`METRIC_CAPS`): **1000 flights/week** (~3-5× world-class human max, matching the existing caps doctrine — Empire State race-up day ≈ 500 flights, so 1000 covers two-event weeks)
+- Weekly scoping: include in `WEEKLY_METRICS` (Sunday-UTC week key, same as `step_total`)
+- Frontend display name: "Flights climbed"
+- Frontend card subtitle/unit: "flights this week"
+- Modal title: "Flights climbed"
+- Modal blurb: "Most flights climbed this week. Verified by Apple Health."
+
+**Backend changes required** (single file, `backend/src/lib/metrics.ts`):
+
+```ts
+export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak', 'flights_climbed'] as const;
+export const METRIC_CAPS = { ..., flights_climbed: 1000 };
+export const WEEKLY_METRICS: ReadonlySet<Metric> = new Set(['step_total', 'flights_climbed']);
+```
+
+No D1 migration — `leaderboard_snapshots` is metric-agnostic. Submit + top handlers route through `isValidMetric()` and `isWeeklyMetric()`. Adding to the registry unlocks both routes simultaneously (proven by the 1z.120 `workout_streak` deploy).
+
+Tests in `backend/src/handlers/leaderboard-submit.test.ts` + `leaderboard-top.test.ts` need 2-3 minor extensions to cover the new metric — same pattern as 1z.120.
+
+**Frontend changes required**:
+
+| Site | Change | Pattern |
+|---|---|---|
+| `lbGetSnapshot()` | Add `flights_this_week` field (sum from `state.flights_daily` via new `lbSumCurrentWeekFlights` helper, mirroring `lbSumCurrentWeekSteps`) + `best_flights_week` | Mirror `steps_last_7_days` |
+| New helper `lbRecordFlightsToday(flights)` | Idempotent daily flat-map writer with weekly-best update | Mirror `lbRecordStepsToday` (line 6230) |
+| `lbSubmitAllMetrics` | Add `['flights_climbed', snap.flights_this_week]` gated on new `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` flag | Mirror `workout_streak` (line 6627) |
+| New autoVerify hook | Wire a `Health.getFlightsClimbedToday()` fetch alongside the existing walk/workout cycle (or piggyback on `autoVerifyWalk`'s end-of-render tick) → `lbRecordFlightsToday(total)` | New small function |
+| `LB_METRICS_META` | Add `flights_climbed: { title, blurb, unit, formatValue }` | Mirror `step_total` entry |
+| `_LB_SIM_METRICS` | Add `flights_climbed: 1` | Mirror `step_total` |
+| `_LB_WEEKLY_METRICS` (in app.js, line 20621) | Add `flights_climbed` | Mirror `step_total` |
+| `lbSanitizeValue` cap | Add `flights_climbed: 1000` (matches backend) | Mirror existing caps |
+| `_lbMaybeSimulate` me-value fallback (line ~21294) | Add `else if (metric === 'flights_climbed') myValue = snap.flights_this_week \|\| 0` | Mirror `step_total` |
+| `renderLeaderboardPreview` (line 18609) | **UI decision** — add 4th card OR keep flights sheet-only | See "UI/layout concerns" below |
+
+**Simulated fallback changes** (`simulated-leaderboard.js`):
+
+Flights uses a continuous distribution like Steps (not a small-integer streak like sleep/workout). Mirror the `botStepsThroughDay` pattern:
+
+- Add `flightsBase` / `flightsJitter` per-archetype slots to `BOTS` table:
+  - Sedentary archetypes: base 5, jitter 10 (0–15 flights/week)
+  - Casual: base 25, jitter 30 (range 0–55)
+  - Active: base 80, jitter 60 (range 20–140)
+  - Athletes: base 200, jitter 150 (range 50–350)
+- New `botFlightsThisWeek(weekStartKey, bot, dow)` function (mirror `botStepsThroughDay`, scaled-down values).
+- Update `mergeWithSimulated` `metric === 'flights_climbed'` branch (1-line addition to the existing switch).
+- Cap re-clamp to 1000 in the merge path (defense-in-depth).
+
+**UI/layout concerns — the real friction**
+
+The current Global Rankings preview strip on the Status tab is **three cards** (Steps, Sleep Streak, Workout Streak). Adding a 4th card changes the strip's vertical density. The user's 1z.118 guardrail was explicit: **"Do NOT redesign the rankings area."**
+
+Three options for the 4th-card decision:
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Add as 4th card** | Most discoverable; immediate visibility | Changes strip layout; pushes quote + tab bar down; technically violates the 1z.118 redesign-rule |
+| **Sheet-only** (no preview card; accessible via a "See more leaderboards" link in the modal) | Preserves Status tab layout exactly | Less discoverable; users may never find it |
+| **Replace one of the three** | No layout change | Aggressive — workout_streak just shipped, and steps/sleep are foundational |
+
+Recommended: **sheet-only** for the first iteration (path of least UI risk), with the option to promote to a 4th card later if user data shows engagement. Product decision required before implementing.
+
+**Risks / edge cases**
+
+1. **Device dependency**: Flights Climbed needs the iPhone's barometric altimeter (all iPhones since iPhone 6) or an Apple Watch. Users without altimeter-bearing devices get 0. **Acceptable** — same edge case as steps.
+2. **Stair availability**: Some users live in single-floor homes and genuinely never climb stairs. Permanently at 0. If this feels too punishing, add a `_LB_MIN_QUALIFYING_SCORE = { flights_climbed: 5 }` floor (mirroring `sleep_streak: 3`) so users below 5 flights/week are hidden — they don't appear and don't see themselves on the board.
+3. **Privacy**: Apple Health flights count is not sensitive in the way sleep/heart-rate data is. Same purpose strings already cover it.
+4. **Backend abuse**: Cap at 1000 weekly. No anti-cheat beyond cap (same as steps). Real anti-cheat (server-side HealthKit verification) is deferred to v2.2+ per backend metric registry doctrine.
+5. **Submit cadence**: Flights count goes UP through the day. Same pattern as steps — `lbRecordStepsToday` overwrites with the latest figure each call. Apply same pattern for flights.
+
+**Recommended implementation path: PATH C (frontend scaffold behind flag, no deploy yet)**
+
+Rationale:
+- Backend was deployed once already for 1z.120 — adding another metric is a single-file change + a redeploy, low risk but does require approval (Path B).
+- Frontend code is mostly mechanical mirror of `step_total` patterns.
+- UI strip decision is the actual blocker. Adding the frontend behind `LEADERBOARD_FLIGHTS_BACKEND_ENABLED = false` lets us land all the wiring + tests + sim filler without changing user-visible behavior. When the product decision is made (4th card or sheet-only), flip the flag + ship.
+
+**Decision deferred**. Not implementing in this audit pass. Code changes: none. Commit: docs only.
+
+The 8-step punch list for the next implementer:
+
+1. **Backend** (Path B, requires deploy approval):
+   - `backend/src/lib/metrics.ts`: add `flights_climbed` to `METRICS`, `METRIC_CAPS` (= 1000), `WEEKLY_METRICS`.
+   - `backend/src/handlers/leaderboard-submit.test.ts` + `leaderboard-top.test.ts`: extend with `flights_climbed` cases (mirror `workout_streak` patterns from 1z.120).
+   - `npx wrangler deploy` to production.
+2. **Frontend behind flag** (Path C, no deploy yet):
+   - Add `const LEADERBOARD_FLIGHTS_BACKEND_ENABLED = false;` near the workout flag.
+   - Add `lbRecordFlightsToday(flights)` mirroring `lbRecordStepsToday`.
+   - Extend `lbGetSnapshot()` with `flights_this_week` + `best_flights_week`.
+   - Add `flights_climbed` to `lbSubmitAllMetrics` gated on the new flag.
+   - Wire a `Health.getFlightsClimbedToday()` fetch on render or visibility-change.
+   - Add metric to `LB_METRICS_META`, `_LB_SIM_METRICS`, `_LB_WEEKLY_METRICS`, `lbSanitizeValue`, `_lbMaybeSimulate` me-value branch.
+3. **Sim filler**: extend `simulated-leaderboard.js` `BOTS` table + `mergeWithSimulated` switch.
+4. **UI decision** (Path E gate): sheet-only vs 4th card vs replace.
+5. **Test coverage** (group R): mirror group O patterns — preview card presence (if 4th card), helper computes weekly sum correctly, submit metric attempt, backend fetch behavior, sim fallback.
+6. **Diagnostic breadcrumbs**: mirror 1z.122 — `leaderboard-submit-metric-attempt`, `-modal-route`, `-backend-fetch-start`, `-backend-fetch-success/fail`, `-modal-render-final` already work generically — no new code needed if the metric is registered.
+7. **Flip flag**: `LEADERBOARD_FLIGHTS_BACKEND_ENABLED = true`, bump `APP_BUILD_TAG` + `app.js?v=` + `sw.js CACHE_VERSION`.
+8. **Archive + upload** (manual MacBook step, requires user approval).
+
+Time estimate: 1-2 hours of focused implementation work + 30 min of test extension + a MacBook archive cycle.
+
+Risk assessment: LOW (mechanical mirror of well-tested workout_streak path). MEDIUM if UI strip is changed (4th card option). NEGLIGIBLE if sheet-only (no Status tab layout change).
 
 No archive / upload / deploy needed for either this patch or the follow-up — both live entirely in the web bundle.
 
