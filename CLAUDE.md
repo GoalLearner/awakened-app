@@ -55,7 +55,102 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.136 Matched-pair toggle + today-strip slim HUD (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.137 Compact metric-strip cards (read this first)
+
+### ✅ STATUS: Compact mode now also shrinks the 3 dashboard cards (Rank / World Rank / XP) from ~95px to ~55px each by hiding secondaries and tightening padding. Total compact-mode reclaim: ≈ 150–180px vs full expanded.
+
+**Tester feedback on `2.2.3-w15` (1z.136)**:
+- Compact header is cleaner and chevron/settings are discoverable.
+- Today-strip slim HUD works well.
+- "Can we get a little more space — shrink the top 3 cards too?"
+
+**Audit findings**:
+- Each `.metric-card` currently is ~95px tall: head (~14px) + bar/sparkline (4–22px) + body (min-height 18px) + sub (~12px) + padding (~19px) + internal gaps (~18px).
+- Compact-only changes can drop each card to ~55px without losing the "headline" of each card (D / #2 / 412).
+- Pure CSS-only path. Risk: LOW. World Rank tap target (`<button id="steps-card">`) unaffected — we only hide an inner subline.
+
+### Fix (1z.137) — CSS-only
+
+Compact-mode rules added under `header.header--compact`:
+
+| Card | Kept | Hidden in compact |
+|---|---|---|
+| **Rank** (`.metric-card--rank`) | Big `D` badge + RANK label | `PALADIN` reset, 4px progress bar, "1797 to C" sub |
+| **Steps** (`#steps-card`) | "WORLD RANK ›" head + "#2" rank row | "82.9K STEPS" total subline |
+| **XP** (`.metric-card--spark`) | "412 TOTAL XP" value + label | "+376/-" delta chip, 22px sparkline |
+
+Plus:
+- `.metric-card` padding `9px 10px 10px → 6px 8px 7px`.
+- `.metric-card` internal gap `6px → 3px`.
+- `.metric-card-body` `min-height: 18px → 0`.
+- `.metric-strip` margin `10px 0 12px → 4px 0 6px`, gap `6px → 5px`.
+- Slight head-label font-size trim `0.60rem → 0.56rem`.
+- All under 160ms transitions for the smooth fold/unfold.
+
+Expanded header completely unchanged.
+
+### Total space reclaim by phase
+
+| Phase | Reclaim |
+|---|---|
+| 1z.134 (scroll, retired) | 30–40px effective (dead-zone bug) |
+| 1z.135 (manual + min-height fix) | 80–100px |
+| 1z.136 (today-strip slim + matched buttons) | 110–130px |
+| **1z.137 (this — compact metric cards)** | **150–180px (~2 extra habit rows)** |
+
+### What's preserved
+
+- `.header-top` unchanged (matched-pair settings + chevron from 1z.136).
+- `.metric-strip` visible — World Rank `#steps-card` still tappable, opens Global Rankings Hub.
+- `.today-strip` slim HUD (live `1 / 46` + souls number).
+- All sheets/modals untouched.
+- No new DOM, no JS changes.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w15` | `2.2.3-w16` |
+| `app.js?v=` | `468` | `469` |
+| `sw.js CACHE_VERSION` | `v5.354` | `v5.355` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 26/29 first run, same 3 browser-context flakes from prior trains (all pass on isolated retry).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No HealthKit / dungeon / economy / sim / leaderboard logic changes. World Rank tap target unmoved. Habit card taps unaffected. No new overlays.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w16"`.
+2. Habits tab — full expanded header looks **exactly** as in w15 (rank card with PALADIN + progress bar + 1797 to C; steps card with #2 + 82.9K STEPS; XP card with sparkline + delta + 412 TOTAL XP).
+3. Tap chevron — header collapses. The metric strip cards now shrink alongside the today-strip:
+   - **Rank**: just `RANK` label + big `D` badge.
+   - **Steps**: `WORLD RANK ›` + `#2`.
+   - **XP**: `XP · 30D` + `412 TOTAL XP`.
+4. Total compact header is roughly half the expanded height. Habit grid visibly shows ~2 extra rows.
+5. Tap World Rank `#2` card — Global Rankings Hub opens normally.
+6. Tap any habit card under the compact header — opens normally.
+7. Tap chevron again — full cards restored smoothly (160ms).
+
+### Rollback knob
+
+If the shrunken cards look cramped on real hardware, revert just the 1z.137 CSS block in `styles.css` (the changes are clearly fenced inside the `v3 Phase 1z.137 — compact metric cards` comment) and the rest of the compact-mode behaviour (rune/quote/status/nudges/today-strip + matched buttons) stays intact.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.136 Matched-pair toggle + today-strip slim HUD (historical — superseded by 1z.137 above)
 
 ### ✅ STATUS: Compact-header v3. Toggle button is now visually paired with the settings gear (both 34px squared icon buttons), and compact mode now also slims the today-strip into a thin HUD pill — total reclaim ≈ 110–130px (≈ 1.5 extra habit rows visible).
 

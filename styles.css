@@ -179,8 +179,62 @@ header.header--compact .souls-icon {
 /* Squeeze the metric-strip margins slightly in compact mode so
    the strip + the slimmed today-strip + tab-bar pack tighter. */
 header.header--compact .metric-strip {
-  margin-bottom: 6px !important;
-  transition: margin 160ms ease;
+  margin: 4px 0 6px !important;
+  gap: 5px !important;
+  transition: margin 160ms ease, gap 160ms ease;
+}
+
+/* v3 Phase 1z.137 — compact metric cards. Shrinks each of the
+   three dashboard cards from ~95px to ~55px by hiding the
+   secondary content (resets / progress bar / sparkline / sub
+   lines / steps-total row) and tightening padding + gaps.
+   Keeps the "headline" of each card visible:
+     RANK card  → big "D" badge
+     STEPS card → "#2" world rank (steps subline hidden)
+     XP card    → "412 XP" (sparkline + delta hidden)
+   World Rank card stays fully tappable — the steps-card root
+   button is unchanged in size handling; we only hide an inner
+   subline. ~35-45px additional gain on top of 1z.136 (~150-180px
+   total in compact mode). */
+header.header--compact .metric-card {
+  padding: 6px 8px 7px !important;
+  gap: 3px !important;
+  transition: padding 160ms ease, gap 160ms ease;
+}
+/* Rank card: keep the big D badge; drop PALADIN reset, the
+   progress bar, and the "1797 to C" sub line. */
+header.header--compact .metric-card--rank .metric-card-reset,
+header.header--compact .metric-card--rank .metric-card-bar,
+header.header--compact .metric-card--rank .metric-card-sub {
+  display: none !important;
+}
+/* Steps card: keep the "#2" rank row + WORLD RANK label + chev;
+   drop the "82.9K STEPS" total subline. The whole card remains
+   a single button so the tap target stays comfortable. */
+header.header--compact #steps-card .steps-card__totalrow {
+  display: none !important;
+}
+/* XP card: keep the "412 TOTAL XP" value; drop the 30D delta
+   chip and the sparkline chart. */
+header.header--compact .metric-card--spark .metric-card-reset,
+header.header--compact .metric-card--spark .metric-spark {
+  display: none !important;
+}
+/* Body min-height was 18px — let it shrink in compact so the
+   reduced padding actually pays out. */
+header.header--compact .metric-card-body {
+  min-height: 0 !important;
+}
+/* Slightly trim the head font size so the labels don't dominate
+   the now-shorter card. */
+header.header--compact .metric-card-label,
+header.header--compact .steps-card__label-text {
+  font-size: 0.56rem;
+}
+/* Steps card head padding tightens with the card; preserve the
+   chevron readability. */
+header.header--compact .steps-card__head {
+  margin-bottom: 0 !important;
 }
 /* Manual collapse/expand chevron button (1z.135, restyled 1z.136).
    Sibling control to #settings-btn — same 34px square frame so they
