@@ -4,7 +4,95 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.127 Flights modal renders fresh local me value, races backend (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.128 Simulated Flights Climbed capped at 50/week (read this first)
+
+### ✅ STATUS: Fake Flights Climbed leaderboard values now top out at 50/week — realistic against Apple Health data, leaving real users competitive at the top of the board
+
+**Issue summary**: After 1z.127 the Flights Climbed leaderboard rendered correctly (Richie's real value of 38 surfaced), but the board felt fake: `shadowmonarch_k=336`, `ascendantnova=226`, `siennak.=117`, etc. Realistic weekly flights climbed for active humans sits in the 20-50 range, so 300+ bot values made the board look like a different metric entirely.
+
+**Root cause**: The 1z.125 archetype tuning set `flightsBase` ranges 5–280 with jitter ±8–80, intended as analogues of the step ranges. Steps weekly cap is 45,555 (~5800 daily × 7), so a 280-flights base seemed proportional, but real-world flights are dramatically lower than steps — typical climbers do 20-50 a week, not 250. The merge clamp was `FLIGHTS_WEEKLY_CAP = 1000` which matched the backend anti-corruption cap but did nothing to constrain bot values to realistic ranges.
+
+**Fix (1z.128)** in `simulated-leaderboard.js`:
+
+1. **Lowered `flightsBase` / `flightsJitter` for all 10 archetypes**. New targets land naturally on a `{49, 43, 36, 29, 22, 16, 11, 7, 3, 0}` style distribution by Saturday. Bases chosen so the seeded deterministic Friday (dow=5) values roughly match.
+
+| Archetype | Old base±jit | New base±jit |
+|---|---|---|
+| ShadowMonarch_K | 280 ± 80 | 52 ± 6 |
+| AscendantNova | 220 ± 70 | 42 ± 6 |
+| ghostlift | 150 ± 50 | 33 ± 6 |
+| Marcus T. | 110 ± 40 | 26 ± 5 |
+| Sienna K. | 95 ± 35 | 20 ± 5 |
+| voidwalker_88 | 60 ± 25 | 14 ± 4 |
+| Jordan F. | 45 ± 20 | 10 ± 3 |
+| AwakenedRen | 30 ± 15 | 6 ± 3 |
+| Priya N. | 15 ± 10 | 3 ± 2 |
+| nightowl | 5 ± 8 | 1 ± 2 |
+
+2. **Sim-only weekly cap**. `botFlightsThroughDay` now clamps to `FLIGHTS_SIM_WEEKLY_CAP = 50` (was `FLIGHTS_WEEKLY_CAP = 1000`). The legacy `FLIGHTS_WEEKLY_CAP` symbol now aliases to the new cap for backwards compat with any external reference. The backend cap for real submissions (1000) lives in `backend/src/lib/metrics.ts` and `LB_CLIENT_CAPS` and is unchanged — real users with 80+ flights stay 80+.
+
+**Verification** via headless module load:
+- 14,000-sample stress test (200 weeks × 7 days × 10 bots): `max=50, min=1`, all values ≤ 50. Cap holds.
+- Sample Friday-of-current-week merge with Richie=38:
+  ```
+  1  ShadowMonarch_K  50
+  2  AscendantNova    41
+  3  Richie           38   ← real, uncapped
+  4  Sienna K.        23
+  5  ghostlift        22
+  6  Marcus T.        17
+  7  voidwalker_88     9
+  8  Jordan F.         8
+  9  AwakenedRen       5
+ 10  Priya N.          4
+ 11  nightowl          0
+  ```
+
+Real users are NOT subject to the 50 cap — only the bot generator. A real user with `flights_this_week=80` still renders as 80; backend's 1000-cap covers anti-corruption defense.
+
+**Real user values: unchanged**. Step/Sleep/Workout simulated rows: unchanged. HealthKit logic: unchanged. Submit / fetch / merge ordering: unchanged. Optimistic me-row override (1z.127): unchanged. `scripts/verify-ios-public-assets.sh` already includes `simulated-leaderboard.js` in its hash-compare allowlist — no script change needed.
+
+**Backend**: not touched.
+
+**Version knobs**:
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w7` | `2.2.3-w8` |
+| `app.js?v=` | `460` | `461` |
+| `simulated-leaderboard.js?v=` | `6` | `7` |
+| `sw.js CACHE_VERSION` | `v5.346` | `v5.347` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+
+**Verification**:
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- 14k-sample sim stress test: max=50, min=1, cap holds.
+- Playwright e2e: 27/29 first run; 2 transient browser-context flakes (different tests each run, all pass on isolated retry — never the same test twice).
+- Backend tests: not run (no backend changes).
+
+**Hard guardrails respected**: No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No real-user values capped. No HealthKit logic changes. No weekly backfill logic changes. No submit/fetch changes. Step/Sleep/Workout simulated values unchanged. Sim fallback preserved. UI unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+**MacBook build instructions**:
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace` in Xcode.
+4. Bump iOS native build number for TestFlight push.
+5. Archive → TestFlight.
+6. Force-quit + cold-launch on device.
+
+**Expected TestFlight verification**:
+1. Confirm Copy Debug Info shows `"build": "2.2.3-w8"`.
+2. Open Flights Climbed leaderboard.
+3. All fake/sim rows show values ≤ 50.
+4. Top of board likely shows `ShadowMonarch_K ≈ 50`, `AscendantNova ≈ 35-48`.
+5. Richie's real value (~38, varies by HealthKit data) ranks #3-#4 naturally among the bots.
+6. No row exceeds 50 unless Richie himself climbs more than 50 (which is allowed — real users are uncapped on the client; backend caps at 1000).
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.127 Flights modal renders fresh local me value, races backend (historical — superseded by 1z.128 above)
 
 ### ✅ STATUS: Flights Climbed modal now shows the fresh local weekly HealthKit total immediately, even if the backend top fetch races the submit and returns a stale me row
 

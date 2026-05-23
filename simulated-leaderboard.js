@@ -96,33 +96,34 @@
   // top-tier bots so they can never exceed 45,555 even on a
   // luckiest-week-ever roll.
   // v3 Phase 1z.125 — flightsBase / flightsJitter slots added to
-  // each archetype. Continuous-distribution metric like steps (not
-  // a small-integer streak). Per-archetype weekly ranges chosen to
-  // be plausible without hitting the 1000-cap:
-  //   athletes  ≈ 250 ± 80   (170–330)
-  //   active    ≈ 80–160     (within cap, leaves headroom)
-  //   normal    ≈ 30–80
-  //   light     ≈ 5–25
-  //   sedentary ≈ 0–10
-  // The cap re-clamp in mergeWithSimulated catches any tail rolls.
+  // each archetype.
+  // v3 Phase 1z.128 — retuned DOWN to match realistic Apple Health
+  // flights-climbed data. Old ranges (athletes ≈ 250 ± 80) made the
+  // top of the board show 300+ flights/week, dwarfing real users
+  // whose Health-recorded totals sit in the 20-50 range. New ranges
+  // keep the cast competitive with real users while never exceeding
+  // the FLIGHTS_SIM_WEEKLY_CAP of 50 flights/week. Bases chosen so
+  // the deterministic Sat-of-week (full-progress) value lands near
+  // the target distribution { 49, 43, 36, 29, 22, 16, 11, 7, 3, 0 }
+  // with natural wobble. Backend cap remains 1000 for real users.
   const BOTS = [
-    // High but realistic (36,000–45,555)
-    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 280, flightsJitter: 80 },
-    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 220, flightsJitter: 70 },
+    // Top tier — competitive with high-real-user weeks (40-50)
+    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 52, flightsJitter: 6 },
+    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 42, flightsJitter: 6 },
 
-    // Active (22,000–36,000)
-    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 150, flightsJitter: 50 },
-    { name: 'Marcus T.',       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2, flightsBase: 110, flightsJitter: 40 },
-    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase:  95, flightsJitter: 35 },
+    // Active — stairs-heavy week but not extreme (25-40)
+    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 33, flightsJitter: 6 },
+    { name: 'Marcus T.',       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2, flightsBase: 26, flightsJitter: 5 },
+    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase: 20, flightsJitter: 5 },
 
-    // Normal (8,000–22,000)
-    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase:  60, flightsJitter: 25 },
-    { name: 'Jordan F.',       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1, flightsBase:  45, flightsJitter: 20 },
-    { name: 'AwakenedRen',     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  30, flightsJitter: 15 },
+    // Normal — moderate stair use (10-25)
+    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase: 14, flightsJitter: 4 },
+    { name: 'Jordan F.',       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1, flightsBase: 10, flightsJitter: 3 },
+    { name: 'AwakenedRen',     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  6, flightsJitter: 3 },
 
-    // Light (2,000–8,000)
-    { name: 'Priya N.',        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  15, flightsJitter: 10 },
-    { name: 'nightowl',        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1, flightsBase:   5, flightsJitter:  8 },
+    // Light / sedentary — minimal stair use (0-10)
+    { name: 'Priya N.',        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  3, flightsJitter: 2 },
+    { name: 'nightowl',        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1, flightsBase:  1, flightsJitter: 2 },
   ];
 
   // ─── PRNG ─────────────────────────────────────────────────
@@ -218,9 +219,20 @@
   // distribution like steps (not an integer streak). Uses the
   // (flightsBase, flightsJitter) archetype slots. Weekly total
   // ramps proportionally with the day-of-week index (Sun=0,
-  // Sat=6) so the leaderboard climbs through the week. Re-clamped
-  // to FLIGHTS_WEEKLY_CAP (1000) at the merge boundary.
-  const FLIGHTS_WEEKLY_CAP = 1000;
+  // Sat=6) so the leaderboard climbs through the week.
+  //
+  // v3 Phase 1z.128 — clamped to FLIGHTS_SIM_WEEKLY_CAP (50)
+  // INSTEAD of the backend metric cap (1000). The backend cap is
+  // anti-corruption defense for real values; the sim cap reflects
+  // realistic human stair-climbing in a week and keeps the
+  // leaderboard credible against real Apple Health data (which for
+  // most users sits at 20-50 flights/week even when active).
+  // Backend cap of 1000 still applies to real-user submits via
+  // app.js LB_CLIENT_CAPS / backend metrics.ts.
+  const FLIGHTS_SIM_WEEKLY_CAP = 50;
+  // Legacy export name retained for backwards compat — was the old
+  // backend-aligned cap. Now equals FLIGHTS_SIM_WEEKLY_CAP.
+  const FLIGHTS_WEEKLY_CAP = FLIGHTS_SIM_WEEKLY_CAP;
   function botFlightsThroughDay(weekStartKey, bot, dayIdx) {
     const seed = hashKey(weekStartKey + '|' + bot.name + '|flights');
     const rng = mulberry32(seed);
@@ -236,7 +248,7 @@
     const wobble = 0.85 + rng() * 0.3;
     let v = Math.round(weeklyTotal * progress * wobble);
     if (v < 0) v = 0;
-    if (v > FLIGHTS_WEEKLY_CAP) v = FLIGHTS_WEEKLY_CAP;
+    if (v > FLIGHTS_SIM_WEEKLY_CAP) v = FLIGHTS_SIM_WEEKLY_CAP;
     return v;
   }
 
