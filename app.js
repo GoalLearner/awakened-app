@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w10';
+  const APP_BUILD_TAG = '2.2.3-w11';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22132,9 +22132,16 @@
     }
   }
 
-  async function openLeaderboardRanking(metric) {
+  async function openLeaderboardRanking(metric, opts) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
+
+    // v3 Phase 1z.132 — track where the detail was opened from so
+    // closeLeaderboardRanking can route the X tap back to the hub
+    // when applicable. Resets to null on every open so a prior
+    // stale 'hub' value can't leak into a direct entry (e.g., the
+    // steps-card click handler, which doesn't pass opts).
+    _lbDetailReturnTarget = (opts && opts.returnTarget) || null;
     const sheet   = document.getElementById('lb-rank-sheet');
     const overlay = document.getElementById('lb-rank-overlay');
     const listEl  = document.getElementById('lb-rank-list');
@@ -22284,6 +22291,15 @@
       _lbHubBuildRow('workout_streak', workoutIcon, workoutVal, 'workout streak · 30+ min',  workoutSub) +
       _lbHubBuildRow('flights_climbed', flightsIcon, flightsVal, 'flights this week',         flightsSub);
   }
+  // v3 Phase 1z.132 — parent-aware close. When a detail leaderboard
+  // sheet is opened from a hub row tap, _lbDetailReturnTarget is set
+  // to 'hub'; closeLeaderboardRanking() reads it and, if 'hub',
+  // re-opens the Global Rankings Hub instead of exiting all the way
+  // to the dashboard. Direct entry points (steps card click handler,
+  // legacy lb-preview-list, deep links) leave the target null and
+  // get the original "close all" behaviour.
+  let _lbDetailReturnTarget = null; // null | 'hub'
+
   function openGlobalRankingsHub() {
     const sheet   = document.getElementById('lb-hub-sheet');
     const overlay = document.getElementById('lb-hub-overlay');
@@ -22325,6 +22341,22 @@
     const overlay = document.getElementById('lb-rank-overlay');
     if (sheet)   sheet.classList.add('hidden');
     if (overlay) overlay.classList.add('hidden');
+
+    // v3 Phase 1z.132 — if this detail was opened from the Global
+    // Rankings Hub, return to the hub instead of exiting all the way.
+    // Direct entry points (e.g. the steps card click handler) leave
+    // _lbDetailReturnTarget null and get the original "close all"
+    // behaviour. Consume the flag before re-opening so subsequent
+    // X-taps on the hub itself close cleanly.
+    if (_lbDetailReturnTarget === 'hub') {
+      _lbDetailReturnTarget = null;
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('leaderboard-detail-return-to-hub', {});
+        }
+      } catch (_) {}
+      try { openGlobalRankingsHub(); } catch (_) {}
+    }
   }
 
   function setupLeaderboardPreview() {
@@ -22352,8 +22384,14 @@
             _addHealthVerifyBreadcrumb('global-rankings-hub-row-tap', { metric });
           }
         } catch (_) {}
+        // v3 Phase 1z.132 — mark the detail open as a hub-child via
+        // opts.returnTarget so closeLeaderboardRanking() routes its
+        // X back to the hub instead of dumping the user to the
+        // dashboard. Direct entry points (steps card click handler,
+        // any legacy data-lb-metric paths) do not pass returnTarget
+        // and continue to get the original "close all" behaviour.
         try { closeGlobalRankingsHub(); } catch (_) {}
-        try { openLeaderboardRanking(metric); } catch (_) {}
+        try { openLeaderboardRanking(metric, { returnTarget: 'hub' }); } catch (_) {}
       });
     }
     const hubClose   = document.getElementById('lb-hub-close');

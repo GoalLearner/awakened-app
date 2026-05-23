@@ -4,7 +4,75 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.131 Weekly leaderboard regression fix DEPLOYED and D1 REPAIRED (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.132 Detail leaderboard X returns to Global Rankings Hub (read this first)
+
+### ✅ STATUS: Drill-down navigation fixed — X on a detail leaderboard now returns to the hub instead of dumping the user to the dashboard
+
+**Bug**: Tapping the World Rank card → Global Rankings Hub → a metric row → detail sheet opened correctly. But tapping the detail X closed everything (overlay + sheet) and returned the user all the way to the dashboard instead of restoring the hub. Felt like a back-stack regression — the drill-down lost its parent.
+
+**Root cause**: `closeLeaderboardRanking()` unconditionally hid both the detail sheet and overlay with no awareness of where the detail had been opened from. The hub row tap handler called `closeGlobalRankingsHub()` before opening the detail, so when detail X fired there was no hub still mounted to reveal — both surfaces were already in their "closed" state.
+
+**Fix** (commit on this train):
+1. New module-scoped flag `_lbDetailReturnTarget` (`null | 'hub'`).
+2. `openLeaderboardRanking(metric, opts)` now accepts an `opts.returnTarget` and resets the flag on every open. Direct entry points (the World Rank steps-card click) pass no opts → flag stays `null` → close-all behaviour preserved.
+3. Hub row tap handler now calls `openLeaderboardRanking(metric, { returnTarget: 'hub' })`.
+4. `closeLeaderboardRanking()` reads the flag: if `'hub'`, clears it, fires a new `leaderboard-detail-return-to-hub` breadcrumb, and re-opens the hub. Otherwise it closes as before.
+
+The flag is reset on every `openLeaderboardRanking` call so a partial/abandoned drill-down can't leak into a later direct entry (e.g., the steps-card always pops out of the detail straight to dashboard, regardless of any prior aborted hub flow).
+
+### Close-behaviour matrix
+
+| Flow | Detail X behaviour |
+|---|---|
+| World Rank card → Hub → Steps row → Detail X | ✅ Returns to hub |
+| World Rank card → Hub → Flights row → Detail X | ✅ Returns to hub |
+| World Rank card → Hub → Hub X (no drill-down) | ✅ Closes hub, returns to app |
+| Hub → Detail → return to hub → another row → Detail X | ✅ Returns to hub each time |
+| Direct steps-card click → Detail X | ✅ Closes to dashboard (no hub) |
+
+### Diagnostics
+
+New breadcrumb: `leaderboard-detail-return-to-hub` (no payload). Preserves all existing breadcrumbs: `global-rankings-hub-open` / `-close` / `-row-tap`, `leaderboard-modal-route`, `leaderboard-backend-fetch-start` / `-success` / `-fail`, `leaderboard-modal-render-final`, `leaderboard-submit-metric-attempt` / `-result`.
+
+### Tests
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: **29/29 pass, clean run, zero flakes.** (Existing Stats/Workout/Sleep/Flights tests cover the leaderboard plumbing this depends on; no new test added because the drill-down sequence requires sheet rendering which isn't currently in the e2e fixture matrix.)
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w10` | `2.2.3-w11` |
+| `app.js?v=` | `463` | `464` |
+| `sw.js CACHE_VERSION` | `v5.349` | `v5.350` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. No backend changes. No HealthKit/dungeon/economy/sim value changes. No simulated-leaderboard.js change. No ranking calculation change. World Rank card hub behaviour preserved. Existing direct-entry leaderboard close path preserved.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace` in Xcode, bump iOS native build number, Archive → TestFlight.
+4. Force-quit + cold-launch. Verify `"build": "2.2.3-w11"` in Copy Debug Info.
+
+### Expected TestFlight verification
+
+1. From dashboard, tap the middle World Rank card → Global Rankings Hub opens.
+2. Tap "Steps this week" row → Steps detail leaderboard sheet opens.
+3. Tap detail X → **hub re-appears** (not the dashboard).
+4. Tap "Flights climbed" row → Flights detail opens.
+5. Tap detail X → hub re-appears again.
+6. Tap hub X → hub closes, dashboard returns.
+7. Copy Debug Info should contain `leaderboard-detail-return-to-hub` breadcrumbs interleaved with `global-rankings-hub-open` on every drill-down round trip.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.131 Weekly leaderboard regression fix DEPLOYED and D1 REPAIRED (historical — superseded by 1z.132 above)
 
 ### ✅ STATUS: Backend Worker deployed. D1 repaired. 100K Club / Hall of Fame / This Week now agree.
 
