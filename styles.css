@@ -87,67 +87,106 @@ header {
   transition: padding 160ms ease;
 }
 
-/* ── HEADER · COMPACT MODE (v3 Phase 1z.134) ───────────────────────
-   Triggered by JS via `header.header--compact` once the tab-panel
-   scroll position passes the hysteresis threshold. Keeps the
-   metric-strip + today-strip visible so the World Rank → Global
-   Rankings Hub tap target stays where users learned it. Hides
-   decoration + nudges + quote + status pills to reclaim ~80–100px
-   for the habit grid below. */
+/* ── HEADER · COMPACT MODE (v3 Phase 1z.135, supersedes 1z.134) ────
+   Triggered MANUALLY by a chevron toggle in .header-top.
+   1z.134 shipped a scroll-triggered version that hid quote/status
+   visually but left a ~58px dead zone because .daily-quote has
+   min-height:58px — max-height:0 alone can't beat that. 1z.135
+   adds `min-height: 0 !important` to the compact overrides so the
+   elements truly collapse, and replaces the scroll trigger with
+   a visible chevron button per tester feedback.
+
+   Keeps metric-strip + today-strip visible so World Rank → Global
+   Rankings Hub tap target stays where users learned it. */
 header.header--compact {
   padding-top: calc(8px + var(--safe-top));
   padding-bottom: 6px;
 }
-/* Hide the gold rune divider entirely in compact mode (purely
-   decorative; safe to drop). The diamond+line collapse without
-   reflow because their parent collapses to zero height. */
 header.header--compact .aw-header__rune {
   max-height: 0;
+  min-height: 0 !important;
   margin: 0 !important;
   opacity: 0;
   overflow: hidden;
   transition: max-height 160ms ease, opacity 120ms ease, margin 160ms ease;
 }
-/* Daily quote row — collapses to zero height. The .hidden class
-   already exists on the element by default; this rule kicks in
-   when the quote is otherwise visible (daily-quote.hidden is
-   removed by JS once a quote is chosen). */
+/* Daily quote — 1z.135 fix: `.daily-quote` carries min-height:58px
+   which was the entire root cause of the 1z.134 dead-zone bug.
+   Forcing min-height:0 lets max-height:0 actually collapse it. */
 header.header--compact #daily-quote {
   max-height: 0;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  border-top: 0 !important;
   opacity: 0;
   overflow: hidden;
+  display: block !important; /* override the source .daily-quote display:flex column so transition is predictable */
   transition: max-height 160ms ease, opacity 120ms ease;
 }
-/* Status pill row (Hunting · active packs · class affinity).
-   Useful but secondary while scrolling — hidden in compact mode. */
 header.header--compact #status-pills {
   max-height: 0;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   opacity: 0;
   overflow: hidden;
   transition: max-height 160ms ease, opacity 120ms ease;
 }
-/* Conditional nudges (streak danger / morning nudge / locked-in
-   nudge). Each surfaces an urgent in-day reminder — but they're
-   secondary while the user is scanning habits, and the scroll
-   gesture itself signals the user has engaged with the list.
-   These re-show as soon as the user scrolls back to the top. */
 header.header--compact #streak-danger,
 header.header--compact #morning-nudge,
 header.header--compact #lockedin-nudge {
   max-height: 0;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   opacity: 0;
   overflow: hidden;
   transition: max-height 160ms ease, opacity 120ms ease;
 }
-/* Metric-strip + today-strip explicitly kept visible — they host
-   the World Rank tap target (Global Rankings Hub trigger) and the
-   habits-today summary which is the most-glanced stat in the app. */
+/* Manual collapse/expand chevron button (1z.135). Lives inside
+   .header-top next to the settings gear. Subtle violet accent
+   matching the World Rank card affordance from 1z.130. */
+.header-collapse-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(167,139,250,0.30);
+  color: #c4b5fd;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 6px;
+  transition: background 120ms ease, border-color 120ms ease, transform 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.header-collapse-btn:active {
+  background: rgba(167,139,250,0.18);
+  border-color: rgba(167,139,250,0.55);
+}
+.header-collapse-btn svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  transition: transform 160ms ease;
+}
+/* When compact, rotate the chevron 180° so its up/down meaning
+   stays intuitive without needing two icons. */
+header.header--compact .header-collapse-btn svg {
+  transform: rotate(180deg);
+}
+/* 44px-min tap target via expanded hit-area pseudo (the visible
+   button is 28px for aesthetics, but the pseudo extends the
+   tappable region). */
+.header-collapse-btn::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.header-collapse-btn { position: relative; }
 
 .header-top {
   display: flex;

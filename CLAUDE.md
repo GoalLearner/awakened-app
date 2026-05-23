@@ -55,7 +55,101 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.134 Compact collapsible header on scroll (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.135 Manual compact-header toggle + dead-space fix (read this first)
+
+### ✅ STATUS: Replaces 1z.134's scroll-triggered compact header with a manual chevron button and fixes the `.daily-quote` min-height dead-zone bug that made 1z.134 visually pointless.
+
+**Tester feedback on `2.2.3-w13` (1z.134)**:
+1. "Don't make me scroll to collapse it" — scroll-triggered toggle felt unintentional.
+2. Compact mode hid the quote/status content but left a giant black gap between the today-strip and the tab bar. The habit grid didn't actually move up.
+
+**Root cause of dead-zone bug (audit finding)**:
+`styles.css` defines `.daily-quote { min-height: 58px; display: flex; … }`. The 1z.134 compact rule set `max-height: 0; padding: 0` but **`min-height` always wins**. The quote element kept occupying 58px even though its content was clipped. That's the dead space testers saw.
+
+### Fix (1z.135) — two changes
+
+**1. CSS (`styles.css`)** — add `min-height: 0 !important` to every compact override:
+```css
+header.header--compact #daily-quote {
+  max-height: 0;
+  min-height: 0 !important;   /* ← THE FIX */
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: 0 !important;
+  display: block !important;
+  ...
+}
+```
+Same `min-height: 0 !important` belt-and-suspenders added to `.aw-header__rune`, `#status-pills`, `#streak-danger`, `#morning-nudge`, `#lockedin-nudge`. With this, the elements truly collapse to zero height; the flex `#app` shell gives the freed pixels to `.tab-panel` automatically. Visible space gain: **~80–100px**, fully reclaimed (no dead zone).
+
+**2. Manual chevron toggle replaces scroll listener**:
+- New `<button id="header-collapse-btn">` inside `.header-top`, next to the settings gear. 28×28px violet-accent button with `::before` pseudo-element extending the tap target to 44×44 (Apple HIG). SVG chevron points up when expanded ("tap to collapse") and rotates 180° via CSS when `header--compact` is active ("tap to expand").
+- `aria-label` and `aria-expanded` swap in lock-step with the state.
+- JS `setupCollapsibleHeader()` is now ~20 lines: wires the click handler, idempotent via `data-wired="1"`, toggles `_headerCompactState` and the class. **All scroll listeners removed.**
+- State is ephemeral — no localStorage. Each launch begins expanded.
+
+### What collapses in compact mode (unchanged from 1z.134)
+
+- `.aw-header__rune` (decorative gold divider)
+- `#daily-quote` (now actually zero-height — the 1z.134 fix)
+- `#status-pills` (Hunting / active packs / class affinity)
+- `#streak-danger`, `#morning-nudge`, `#lockedin-nudge` (conditional banners)
+- Header top/bottom padding (`calc(20px + safe-top) → calc(8px + safe-top)`; `12px → 6px` bottom)
+
+### What stays visible
+
+- `.header-top` — wordmark + date + ⚙ settings + new ⌃ chevron toggle.
+- `.metric-strip` — RANK / **WORLD RANK** / XP · 30D. (World Rank → Global Rankings Hub trigger preserved.)
+- `.today-strip` — `1/46 HABITS TODAY` + 2X XP + souls badge.
+
+### Diagnostics
+
+`header-compact-on` / `header-compact-off` breadcrumbs now carry `source: "manual"` so future tests can distinguish if a scroll fallback ever returns.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w13` | `2.2.3-w14` |
+| `app.js?v=` | `466` | `467` |
+| `sw.js CACHE_VERSION` | `v5.352` | `v5.353` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 25/29 first run with the same 4 browser-context flakes from prior trains (all pass on isolated retry, none related to the header).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No HealthKit / dungeon / economy / sim / leaderboard logic changes. World Rank tap target unmoved. Settings access preserved. Habit card taps preserved (no overlays, no `pointer-events` changes).
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Copy Debug Info shows `"build": "2.2.3-w14"`.
+2. Habits tab — full header renders unchanged: wordmark + rune + 3 metric cards + today-strip + (if active) hunting pills + quote. New chevron button visible in `.header-top` right side, between the date and the settings gear.
+3. Tap the chevron — header collapses smoothly (160ms transition). Quote, status pills, rune, padding all drop to zero. Habit grid moves up by ~80–100px (≈ one extra habit row visible). Chevron rotates 180° to indicate the next action will expand.
+4. Tap the chevron again — header expands back to full.
+5. While compact, World Rank still opens the Global Rankings Hub; settings gear still opens settings; habit cards still tap.
+6. Switch tabs while compact — compact state is per-session, not persisted. (Tab switch does not auto-expand — that was 1z.134 scroll behaviour, now removed.)
+7. Debug breadcrumbs include `header-compact-on { source: "manual" }` and `header-compact-off { source: "manual" }` on each chevron tap.
+
+### Rollback knob
+
+If the toggle misbehaves on real hardware, `window.__setHeaderCompact(false)` from the JS console (or via debug menu) forces the header back to expanded. The button itself can be hidden by adding `display:none` to `.header-collapse-btn` in CSS without removing the chevron HTML.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.134 Compact collapsible header on scroll (historical — superseded by 1z.135 above)
 
 ### ✅ STATUS: Option A shipped. Full RPG header stays at top; decoration + quote + status pills + nudges collapse once the user scrolls past 120px in the active tab panel. Estimated gain: ~80–100px (≈ one additional habit row visible).
 
