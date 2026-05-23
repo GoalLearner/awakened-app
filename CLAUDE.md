@@ -4,6 +4,57 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## 🚀 READY TO SHIP — TestFlight target `2.2.3-w12` (May 23, 2026)
+
+This train bundles **three customer-facing fixes** plus one already-deployed backend fix. All code is committed, pushed to `origin/main`, and verified. Ready for MacBook archive + TestFlight upload.
+
+| Layer | Phase | Status |
+|---|---|---|
+| Backend (`leaderboard-submit.ts` monotonic CASE) | **1z.131** | ✅ Deployed — Worker version `29113436-575f-4e44-92c2-a95a6b1076f6`. D1 repair executed (3 rows). |
+| Frontend hub drill-down close | **1z.132** | ✅ On `main`, ready to ship. |
+| Frontend walk false-positive correction | **1z.133** | ✅ On `main`, ready to ship. |
+
+**Ship-critical version knobs** (verified against source):
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w12` |
+| `app.js?v=` | `465` |
+| `sw.js CACHE_VERSION` | `v5.351` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` |
+
+**Git state**:
+- `origin/main` and local `HEAD` both at commit **`510fa84`** (the 1z.133 commit).
+- Working tree clean except for two untracked design preview HTMLs that are **not** part of the ship.
+
+**Customer-facing user stories shipping in `2.2.3-w12`**:
+1. Steps "This Week" leaderboard will no longer downgrade in-week when a partial/stale resubmit arrives (backend fix, already live since 1z.131 deploy). The repair restored rendiesel to 101,259 and Richie to 82,939 for week May 17–23. ALL views (This Week, 100K Club, Hall of Fame) now agree.
+2. Tapping the X on a detail leaderboard sheet **returns to the Global Rankings Hub** instead of dumping the user to the dashboard (1z.132).
+3. Daily Walk **never falsely shows as sealed when Apple Health says you haven't reached your goal today** — fixes the early-morning timezone-anchor mismatch reported on Saturday May 23 at 1:34 AM Eastern (1z.133).
+
+**MacBook archive instructions** (from `LOCAL_BUILD.md`'s per-build workflow):
+1. On the MacBook: `git pull origin main`. Verify HEAD = `510fa84`.
+2. Run the heavy prep flow: `bash scripts/prep-local-build.sh`. This atomically runs `cap sync ios`, the asset copies, the entitlement wiring, and the four verify gates.
+3. Open `ios/App/App.xcworkspace` in Xcode.
+4. Bump iOS native build number to **next-after-the-last-TestFlight** (the prior TestFlight train shipped `2.2.3-w10`, so this build should be the next number above whatever Xcode currently shows).
+5. Archive → Distribute → App Store Connect → Upload.
+6. After install on a device: 5-tap the version line → Copy Debug Info → confirm `"build": "2.2.3-w12"`.
+7. Force-quit + cold-launch from the home-screen icon (not TestFlight's "Open" button) so Capacitor swaps to the new bundled web bundle.
+
+**Hard rules carrying through this ship**:
+- No Codemagic. MacBook + Xcode only.
+- No backend deploy needed for this ship (1z.131 backend already deployed).
+- No version-train change (still `2.2.3`).
+- `QA_UNLOCK_C_RANK_DUNGEONS` stays `false`.
+
+**Per-train detail handoffs are below** (1z.133 first, then 1z.132, then 1z.131, then 1z.130 Global Rankings Hub IA, then the verified Flights propagation note, and everything before that).
+
+---
+
 ## 📌 Session handoff — May 23, 2026 — 1z.133 Daily Walk false-positive auto-seal correction (read this first)
 
 ### ✅ STATUS: Daily Walk now auto-unseals when current device-local HealthKit steps fall below the goal — mirrors the 1z.123 Sleep correction pattern
