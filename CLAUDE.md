@@ -4,9 +4,36 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.131 Backend monotonic current_value for weekly cumulative metrics (read this first — UNDEPLOYED)
+## 📌 Session handoff — May 23, 2026 — 1z.131 Weekly leaderboard regression fix DEPLOYED and D1 REPAIRED (read this first)
 
-### 🟡 STATUS: Backend fix landed on `main` but **NOT yet deployed**. Production D1 still has the regressed rows. Awaiting explicit deploy approval.
+### ✅ STATUS: Backend Worker deployed. D1 repaired. 100K Club / Hall of Fame / This Week now agree.
+
+**Deploy**:
+- Worker version `29113436-575f-4e44-92c2-a95a6b1076f6`
+- `https://awakened-backend.richmondcampano93.workers.dev`
+- Backend tests re-run pre-deploy: 23/23 pass.
+
+**D1 repair** — narrow-scope UPDATE, 3 rows affected, `week_start='2026-05-17'`, `metric IN ('step_total','flights_climbed')`, `current_value < best_value`:
+
+| uid | metric | current_value before | current_value after | best_value |
+|---|---|---|---|---|
+| `ca5b82df` (rendiesel) | step_total | 76,527 *(natural walk ticked up from the original 73,840)* | **101,259** | 101,259 |
+| `ede751e6` (Richie)    | step_total | 72,168 | **82,939**  | 82,939 |
+| `32c44456`             | step_total | 602    | **1,583**   | 1,583 |
+
+Post-repair `SELECT … WHERE current_value < best_value` returns **0 rows**. Flights unaffected (no flights regressions existed). best_value, weekly_step_records, and user_accolades untouched.
+
+**Top 10 step_total for the week** post-repair (current = best for every leader):
+```
+ca5b82df (rendiesel) 101,259
+ede751e6 (Richie)     82,939
+c1a7149d (galilea)    52,086
+c54a2feb              29,298
+7061cffe              11,528
+ff8534d9               5,501
+32c44456               1,583
+```
+This Week now matches the 100K Club view (rendiesel 101K) and the Hall of Fame view (Week of May 17–May 23 · 101K steps).
 
 **Bug observed**: rendiesel's `step_total` for the May 17–23 week showed `73,840` on the "This Week" leaderboard but `101K` on the 100K Club view AND on Hall of Fame's "Week of May 17–May 23" entry. Three views, same week, three different numbers for the same user. Richie's row was also regressed below his own best (current=72,168, best=82,939) — just less visibly because he hasn't crossed 100K.
 
@@ -72,13 +99,9 @@ WHERE metric IN ('step_total', 'flights_climbed')
 
 Without the repair, rendiesel/Richie/uid-32c4 will stay at the regressed values on This Week until their next submit ratchets them up via the new MAX clause. With the repair, the three rows snap back immediately. Repair is a separate D1 mutation; documented here but not executed per the "do not alter D1 data until root cause is known" guardrail (now known — awaiting approval).
 
-### Deploy gate
+### Deploy gate — CLEARED
 
-Per the user spec: "Deploy backend only if explicitly approved after tests." Tests pass. **Not deployed.** Next session needs:
-
-1. `cd backend && npx wrangler deploy` — applies the new submit handler.
-2. Run the one-off D1 repair above (or skip if the natural ratchet-up on next submits is acceptable).
-3. Confirm rendiesel + Richie's "This Week" rows snap back to their `best_value` (or higher) on their next foreground.
+Explicitly approved by Richie on May 23, 2026. Deploy + D1 repair both executed in this session per the approval prompt. Future weekly cumulative submits cannot downgrade `current_value` in-week from this point forward.
 
 ### Version knobs
 
