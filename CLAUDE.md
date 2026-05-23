@@ -55,7 +55,68 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.137 Compact metric-strip cards (read this first)
+## 📌 Session handoff — May 23, 2026 — Compact header v3 verified on real device; stop here (read this first)
+
+### ✅ STATUS: Compact header work is COMPLETE. `2.2.3-w16` confirmed on real device. Do not continue into a larger Option B / full mini-HUD redesign unless new tester feedback specifically asks for more.
+
+**Real-device result**: User installed and tested build `2.2.3-w16` (1z.137). Verdict: *"Fully functional and looks great."*
+
+### What was verified on-device
+
+- Manual chevron collapse/expand toggle works smoothly.
+- Today-strip slim HUD (`21 / 46` + `900 souls` chip) renders cleanly in compact mode.
+- Metric cards compact correctly:
+  - Rank: `RANK` + big `D` badge only.
+  - World Rank: `WORLD RANK ›` head + `#2` rank row.
+  - XP: `XP · 30D` label + `466 TOTAL XP`.
+- Habit grid gains meaningful vertical space (~2 extra rows visible compared to expanded).
+- World Rank `#steps-card` button still opens Global Rankings Hub from compact mode.
+- Settings gear still tappable.
+- No empty dead zone between the metric-strip and the tab bar.
+- Full expanded header still preserves the fantasy/RPG identity exactly as before.
+- Matched-pair settings + chevron controls in `.header-top` feel intentional, not bolted on.
+
+### Product decision
+
+Compact header is **complete for now**. The arc landed exactly where we wanted across four builds:
+
+| Phase | Build | Win |
+|---|---|---|
+| 1z.134 | (retired) | scroll experiment — taught us scroll-only feels unintuitive |
+| 1z.135 | w14 | manual toggle + `.daily-quote { min-height: 58px }` dead-space fix |
+| 1z.136 | w15 | matched settings/chevron + today-strip slim HUD |
+| 1z.137 | **w16** | compact metric-strip cards (~150–180px total reclaim) |
+
+**Do not pursue Option B (full mini-HUD redesign) unless new tester feedback specifically requests more space.** The premium-RPG identity, the World Rank Hub trigger, and the cinematic full-header feel are all intact — chasing more compaction risks breaking the "battle HUD" balance.
+
+### Current ship target (unchanged from 1z.137)
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w16` |
+| `app.js?v=` | `469` |
+| `sw.js CACHE_VERSION` | `v5.355` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` |
+
+### Rollback knob (preserved, not needed)
+
+If a future tester ever reports the compact cards feel cramped on a smaller iPhone, revert **only** the fenced `v3 Phase 1z.137 — compact metric cards` CSS block in `styles.css` to return to the 1z.136 behaviour (today-strip slim + matched buttons stay intact). Everything else in the compact arc stays put.
+
+### When to revisit compact header work
+
+- If two or more testers explicitly say they want more habit-grid space.
+- If a future season/event requires a permanent compact HUD (e.g. always-on for power-user mode).
+- If a settings toggle is added to default to compact on launch.
+
+Otherwise, leave it alone. This area is shipped.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.137 Compact metric-strip cards (historical — superseded by verification note above)
 
 ### ✅ STATUS: Compact mode now also shrinks the 3 dashboard cards (Rank / World Rank / XP) from ~95px to ~55px each by hiding secondaries and tightening padding. Total compact-mode reclaim: ≈ 150–180px vs full expanded.
 
