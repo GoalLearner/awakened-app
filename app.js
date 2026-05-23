@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w5';
+  const APP_BUILD_TAG = '2.2.3-w6';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6288,6 +6288,117 @@
     saveLeaderboardState(state);
   }
 
+  // v3 Phase 1z.126 — fixes "Richie shows 0 flights this week even
+  // though Apple Health has earlier-week flights" by backfilling the
+  // entire current week from HealthKit on every autoVerifyWalk tick
+  // (throttled) and whenever the Flights Climbed sheet opens.
+  //
+  // Why this is needed: lbRecordFlightsToday only writes today's value
+  // forward. On first launch after the 1z.125 update lands, the
+  // flights_daily map is empty and only today's bar is recorded —
+  // historical days from the current week (which Health has) never
+  // populate. lbSumCurrentWeekFlights then returns 0 → leaderboard
+  // submit value = 0 → modal renders Richie at 0.
+  //
+  // Fix: walk each day from this week's Sunday → today inclusive and
+  // query Health.getFlightsClimbedBetween for that day's [00:00, 23:59]
+  // window, populating flights_daily so the existing sum logic
+  // produces the correct weekly total. Per-day calls (instead of one
+  // range call) preserve the daily breakdown needed for best-week
+  // tracking and the future Stats-tab flights graph.
+  //
+  // Throttle: 5 minutes between non-forced refreshes (matches the
+  // cadence of autoVerifyWalk's visibility-change rhythm without
+  // hammering HealthKit). Forced refreshes (sheet open) bypass.
+  let _lbFlightsWeekRefreshAt = 0;
+  const _LB_FLIGHTS_WEEK_REFRESH_MIN_MS = 5 * 60 * 1000;
+
+  async function lbRefreshFlightsThisWeekFromHealth(opts) {
+    const force = !!(opts && opts.force);
+    try {
+      if (!force && (Date.now() - _lbFlightsWeekRefreshAt) < _LB_FLIGHTS_WEEK_REFRESH_MIN_MS) {
+        return { ok: false, reason: 'throttled' };
+      }
+      if (!window.Health || typeof Health.isAvailable !== 'function' || !Health.isAvailable()) {
+        return { ok: false, reason: 'health-unavailable' };
+      }
+      if (typeof Health.permissionStatus === 'function') {
+        const st = Health.permissionStatus();
+        if (st === 'denied' || st === 'unknown') return { ok: false, reason: 'permission-' + st };
+      }
+      if (typeof Health.getFlightsClimbedBetween !== 'function') {
+        return { ok: false, reason: 'no-range-query' };
+      }
+
+      // Build [Sunday, today] inclusive list of device-local dates.
+      const today = new Date();
+      const todayDow = today.getDay(); // 0=Sun, 6=Sat
+      const days = [];
+      let dateStr = getDeviceLocalDate();
+      for (let i = 0; i <= todayDow; i++) {
+        days.unshift(dateStr); // unshift so days[0] = Sunday
+        dateStr = lbPrevDate(dateStr);
+      }
+      const weekStartISO = new Date(days[0] + 'T00:00:00').toISOString();
+      const weekEndISO   = new Date().toISOString();
+
+      const state = loadLeaderboardState();
+      const previousSnapshotValue = lbSumCurrentWeekFlights(state.flights_daily);
+
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('leaderboard-flights-week-refresh-start', {
+            weekStartISO, weekEndISO, dayCount: days.length,
+          });
+        }
+      } catch (_) {}
+
+      // Per-day query so flights_daily keeps its day granularity.
+      let total = 0;
+      for (const day of days) {
+        const startISO = new Date(day + 'T00:00:00').toISOString();
+        const endISO   = new Date(day + 'T23:59:59.999').toISOString();
+        let flights = null;
+        try { flights = await Health.getFlightsClimbedBetween(startISO, endISO); }
+        catch (_) { flights = null; }
+        if (typeof flights === 'number' && Number.isFinite(flights) && flights >= 0) {
+          const rounded = Math.min(Math.round(flights), 1000);
+          state.flights_daily[day] = rounded;
+          total += rounded;
+        }
+      }
+      lbPruneDailyMap(state.flights_daily, LB_DAILY_RETENTION_DAYS);
+      const weekSum = lbSumCurrentWeekFlights(state.flights_daily);
+      if (weekSum > state.best_7day_flights_total) {
+        state.best_7day_flights_total = weekSum;
+        state.best_7day_flights_window_end = getDeviceLocalDate();
+      }
+      saveLeaderboardState(state);
+      _lbFlightsWeekRefreshAt = Date.now();
+
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('leaderboard-flights-week-refresh-success', {
+            flightsThisWeek: weekSum,
+            previousSnapshotValue: previousSnapshotValue,
+            storedValue: weekSum,
+            source: 'healthkit-range',
+          });
+        }
+      } catch (_) {}
+      return { ok: true, flightsThisWeek: weekSum };
+    } catch (e) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('leaderboard-flights-week-refresh-fail', {
+            reason: (e && e.message) ? String(e.message).slice(0, 80) : 'unknown',
+          });
+        }
+      } catch (_) {}
+      return { ok: false, reason: 'exception' };
+    }
+  }
+
   // Sleep recording — both metrics (hours + bedtime) in one call,
   // since they come from the same Health.getSleepLastNight() roundtrip.
   // Each metric tracks independently and is idempotent on nightDate.
@@ -6598,6 +6709,8 @@
       recordStepsToday: lbRecordStepsToday,
       // v3 Phase 1z.125 — flights climbed weekly recorder.
       recordFlightsToday: lbRecordFlightsToday,
+      // v3 Phase 1z.126 — full-week HealthKit backfill for flights.
+      refreshFlightsThisWeekFromHealth: lbRefreshFlightsThisWeekFromHealth,
       recordSleepNight: lbRecordSleepNight,
       _state:           loadLeaderboardState, // dev-only: full raw state
       // v3 Phase 1z.115 — exposed for Playwright regression tests.
@@ -21915,6 +22028,20 @@
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
 
+    // v3 Phase 1z.126 — opening the Flights Climbed sheet forces a
+    // fresh full-week HealthKit backfill so the user-row "me" value
+    // reflects every flight already in Health for this week (not just
+    // what's been recorded since feature install). Fire-and-forget —
+    // _lbRenderThisWeekTab below will read whatever's in the snapshot
+    // at render time, and any successful refresh also fires
+    // lbSubmitAllMetricsDebounced via the autoVerifyWalk path next
+    // tick. We await briefly when forced so the very first render
+    // can pick up the fresh value.
+    if (metric === 'flights_climbed' && typeof lbRefreshFlightsThisWeekFromHealth === 'function') {
+      try { await lbRefreshFlightsThisWeekFromHealth({ force: true }); } catch (_) {}
+      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+    }
+
     // Default tab is always This Week.
     await _lbRenderThisWeekTab(metric);
   }
@@ -29941,27 +30068,53 @@
     try { lbRecordStepsToday(steps); }
     catch (e) { console.warn('[Leaderboard] step record failed', e); }
 
-    // v3 Phase 1z.125 — flights climbed leaderboard recording.
+    // v3 Phase 1z.125 / 1z.126 — flights climbed leaderboard recording.
     // Piggybacks on the walk auto-verify rhythm (visibility-change
     // + render-tick) since flights and steps share the same data
     // source semantics (cumulative-through-day counter from
     // Apple Health). Independent of step threshold / habit /
     // pause toggle — same independence as steps. Fire-and-forget;
     // failures don't poison anything else.
+    //
+    // 1z.126: prefer a full-week HealthKit range refresh so the
+    // weekly snapshot reflects earlier-in-week flights even on the
+    // very first launch after install. Falls back to today-only
+    // recording if the range query is unavailable or fails — that
+    // way today's progressive flights still get recorded as the
+    // day continues even if the once-per-window backfill is
+    // throttled or unavailable.
     try {
-      Health.getFlightsClimbedToday().then(flights => {
-        if (typeof flights === 'number' && Number.isFinite(flights) && flights >= 0) {
-          try { lbRecordFlightsToday(flights); }
-          catch (e) { console.warn('[Leaderboard] flights record failed', e); }
-          try {
-            if (typeof _addHealthVerifyBreadcrumb === 'function') {
-              _addHealthVerifyBreadcrumb('leaderboard-flights-record', {
-                flightsToday: flights,
-                permissionStatus: 'granted',
-              });
+      lbRefreshFlightsThisWeekFromHealth().then(res => {
+        if (!res || !res.ok) {
+          // Fallback: today-only fetch, preserves 1z.125 behavior.
+          return Health.getFlightsClimbedToday().then(flights => {
+            if (typeof flights === 'number' && Number.isFinite(flights) && flights >= 0) {
+              try { lbRecordFlightsToday(flights); }
+              catch (e) { console.warn('[Leaderboard] flights record failed', e); }
+              try {
+                if (typeof _addHealthVerifyBreadcrumb === 'function') {
+                  _addHealthVerifyBreadcrumb('leaderboard-flights-record', {
+                    flightsToday: flights,
+                    permissionStatus: 'granted',
+                    fallback: true,
+                  });
+                }
+              } catch (_) {}
             }
-          } catch (_) {}
+          });
         }
+        // Range refresh already wrote today's bucket. Also stamp a
+        // generic record breadcrumb so the diagnostic trail mirrors
+        // steps/workout shape.
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('leaderboard-flights-record', {
+              flightsThisWeek: res.flightsThisWeek,
+              permissionStatus: 'granted',
+              source: 'healthkit-week-range',
+            });
+          }
+        } catch (_) {}
       }).catch(() => {});
     } catch (e) { console.warn('[Leaderboard] flights fetch failed', e); }
 

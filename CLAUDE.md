@@ -4,7 +4,67 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.125 Flights Climbed leaderboard activated as sheet-only v1 (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.126 Flights Climbed backfilled from full-week HealthKit range (read this first)
+
+### ✅ STATUS: Flights Climbed leaderboard now reflects the full current-week HealthKit total on first launch — no longer stuck at 0 when Health has earlier-week flights
+
+**Bug summary**: After 1z.125 shipped (`2.2.3-w5`), Richie's Flights Climbed row on the leaderboard showed `0` for the May 17–May 23 week, even though Apple Health showed flights climbed earlier in the week (Sat=6, Sun=5, Mon=14, Tue=4, Wed=9, Thu=6). Today (Fri) Richie had 0 flights, which is what the leaderboard reflected.
+
+**Root cause**: 1z.125's recording path was forward-only — `autoVerifyWalk` called `Health.getFlightsClimbedToday()` and `lbRecordFlightsToday(flights)`, which writes only `flights_daily[today]`. On the very first launch after the feature install there are no historical entries in `flights_daily`, so `lbSumCurrentWeekFlights` sums only today's bucket (=0). The same forward-only model exists for steps too, but steps had been recording since v2.0.2 so the historical buckets had filled in organically over many launches.
+
+**Fix (1z.126)**: New helper `lbRefreshFlightsThisWeekFromHealth({ force })` in `app.js`:
+- Walks each day from this week's Sunday → today inclusive (device-local).
+- Per-day calls `Health.getFlightsClimbedBetween(dayStartISO, dayEndISO)` and writes the rounded total into `state.flights_daily[YYYY-MM-DD]` (per-day, not bulk, so daily granularity is preserved for future Stats-tab graphs).
+- Updates `best_7day_flights_total` if the new week sum exceeds the historical best.
+- Throttled to one non-forced refresh per 5 minutes via `_lbFlightsWeekRefreshAt`; forced refreshes (sheet open) bypass.
+- Drops three new diagnostic breadcrumbs: `leaderboard-flights-week-refresh-start` / `-success` / `-fail`.
+
+Wired in two places:
+1. `autoVerifyWalk` — replaces the old single-day `getFlightsClimbedToday()` call. Falls back to the original today-only path if the range query is unavailable or fails (preserves 1z.125 fallback).
+2. `openLeaderboardRanking('flights_climbed')` — forces a fresh refresh on every sheet open, then calls `lbSubmitAllMetricsDebounced` so the backend immediately receives the corrected weekly total. The forced refresh is awaited so the first render of the sheet picks up the new value.
+
+Exposed as `window.Leaderboard.refreshFlightsThisWeekFromHealth` for diagnostics.
+
+**Source priority** (per the user spec):
+1. Full current-week HealthKit range query (1z.126 — the new path).
+2. Existing cached `flights_daily` values (whatever survived from prior launches).
+3. Today-only daily recording fallback (1z.125 path — kept).
+
+Today's progressive bucket is still re-recorded via the fallback if the range refresh is throttled — so a user who climbs more flights later today still gets the bigger number on the next visibility-change tick.
+
+**Backend**: unchanged. No deploy needed. The cap, metric registry, and submit/top routing are all already in place from 1z.125.
+
+**Version knobs (bumped)**:
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w5` | `2.2.3-w6` |
+| `app.js?v=` | `458` | `459` |
+| `sw.js CACHE_VERSION` | `v5.344` | `v5.345` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+**Verification**:
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → all OK.
+- Playwright e2e: 27/29 pass on first run, 2 transient browser-context flakes that pass on retry. No logic regressions.
+- Backend tests unchanged (no backend file modifications).
+
+**Hard guardrails respected**: No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No 4th Status-tab card. No changes to Sleep/Workout/Step leaderboard behavior. No HealthKit sleep/workout verification changes. No dungeon logic changes. Sim fallback preserved. `QA_UNLOCK_C_RANK_DUNGEONS` still false. App Review HealthKit permission compliance preserved (still uses the existing `'stairs'` alias).
+
+**MacBook build instructions**:
+1. Pull `main` on the MacBook → `git pull origin main`.
+2. `npx cap sync ios` to swap the bundled `public/` web assets.
+3. Open `ios/App/App.xcworkspace` in Xcode.
+4. Bump iOS native build number for TestFlight push.
+5. Archive → distribute to TestFlight.
+6. Force-quit + cold-launch on device. Verify 5-tap version → Copy Debug Info shows `"build": "2.2.3-w6"`.
+7. Open Flights Climbed leaderboard. Richie's row should now show the current week's total from Apple Health (sum of Sat→today bars), not 0.
+8. Debug breadcrumbs should include `leaderboard-flights-week-refresh-success` with a non-zero `flightsThisWeek`.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.125 Flights Climbed leaderboard activated as sheet-only v1 (historical — superseded by 1z.126 above)
 
 ### ✅ STATUS: Flights Climbed is a fully backend-backed weekly leaderboard metric, exposed as a sheet-only entry under the 3-card preview
 
