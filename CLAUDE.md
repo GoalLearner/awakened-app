@@ -4,7 +4,67 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.126 Flights Climbed backfilled from full-week HealthKit range (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.127 Flights modal renders fresh local me value, races backend (read this first)
+
+### ✅ STATUS: Flights Climbed modal now shows the fresh local weekly HealthKit total immediately, even if the backend top fetch races the submit and returns a stale me row
+
+**Bug summary**: After 1z.126 shipped (`2.2.3-w6`), Richie's Copy Debug Info confirmed the local HealthKit refresh was working — `leaderboard-flights-week-refresh-success { flightsThisWeek: 38, source: "healthkit-range" }` — and submit was attempted — `leaderboard-submit-metric-attempt { metric: "flights_climbed", value: 38, submitted: true }`. But the modal still rendered Richie=0 because `leaderboard-backend-fetch-success { meCurrentValue: 0, realRowCount: 1 }` returned a stale row before the submit had persisted, and the simulated-merge dedupe code preserved that stale row.
+
+**Root cause**: Two-part race + one merge bug.
+1. In `simulated-leaderboard.js → mergeWithSimulated`, when the real user's alias is ALREADY in `realTop` (which it was — backend returned 1 real row, Richie at 0), the local `realUserValue` is never injected. The dedupe-by-realAliases preserved the stale backend row at value 0.
+2. `openLeaderboardRanking('flights_climbed')` used `lbSubmitAllMetricsDebounced` (5-min throttle, fire-and-forget) instead of an awaited submit. Even when the throttle let the submit through, the backend `fetchLeaderboardTop` ran in parallel and could win the race, returning the pre-submit row.
+
+**Fix (1z.127)** — three layers:
+
+1. **Optimistic local-me override in `_lbMaybeSimulate`** (app.js): for sim-eligible metrics, compute the local snapshot value upfront. If it's strictly greater than the backend `me.current_value`, override BOTH `me` and the matching `top` row with the local value. One-way ratchet — never overrides downward. Applies uniformly to step_total / sleep_streak / workout_streak / flights_climbed (in practice steps/sleep/workout rarely trigger because their submits have historically kept backend ≥ local). Emits new `leaderboard-local-me-override { metric, backendValue, localValue, applied }` breadcrumb.
+
+2. **Awaited immediate submit on flights modal open** (app.js): `openLeaderboardRanking('flights_climbed')` now awaits `lbSubmitAllMetrics()` directly (bypasses the 5-min debounce) before `_lbRenderThisWeekTab` runs. Sets `hb_lb_last_submit` afterwards so subsequent autoVerifyWalk ticks still see the debounce. Combined with the override, this closes the race even if the backend round-trip is slow.
+
+3. **Submit result diagnostics** (app.js): new `leaderboard-submit-metric-result { metric, value, ok, status? }` breadcrumb fired AFTER the `submitLeaderboardSnapshot` await, distinguishing "attempted" from "persisted". The existing `-attempt` breadcrumb fired pre-await and only proved intent.
+
+**Backend**: unchanged. No deploy.
+
+**Version knobs**:
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w6` | `2.2.3-w7` |
+| `app.js?v=` | `459` | `460` |
+| `sw.js CACHE_VERSION` | `v5.345` | `v5.346` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+
+**Verification**:
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → all OK.
+- Playwright e2e: 25–27/29 first run, 100% pass on isolated retry. Failures are transient browser-context closures unique to the Windows chromium serial-run environment (not deterministic, never the same test twice).
+- Backend tests unchanged (no backend file modifications).
+
+**Hard guardrails respected**: No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No 4th Status-tab card. No changes to Sleep/Workout/Step modal UI (the optimistic override is a no-op for them in practice — local has never been > backend for those metrics in real-world traces). Sim fallback preserved. App Review HealthKit permission compliance preserved.
+
+**MacBook build instructions**:
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace` in Xcode.
+4. Bump iOS native build number for TestFlight push.
+5. Archive → TestFlight.
+6. Force-quit + cold-launch.
+
+**Expected TestFlight verification**:
+1. Confirm Copy Debug Info shows `"build": "2.2.3-w7"`.
+2. Open Flights Climbed leaderboard.
+3. Debug breadcrumb sequence should include:
+   - `leaderboard-flights-week-refresh-success { flightsThisWeek: 38 }`
+   - `leaderboard-submit-metric-attempt { metric: "flights_climbed", value: 38 }`
+   - `leaderboard-submit-metric-result { metric: "flights_climbed", value: 38, ok: true }` (NEW)
+   - `leaderboard-backend-fetch-success { meCurrentValue: ??? }` (may be 0 or 38 depending on backend timing)
+   - `leaderboard-local-me-override { metric: "flights_climbed", backendValue: 0, localValue: 38, applied: true }` (NEW — applied=true if backend was stale, applied=false if backend already had 38)
+   - `leaderboard-modal-render-final { metric: "flights_climbed", currentUserValue: 38 }`
+4. UI: Richie's row in the Flights Climbed sheet shows ~38, not 0.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.126 Flights Climbed backfilled from full-week HealthKit range (historical — superseded by 1z.127 above)
 
 ### ✅ STATUS: Flights Climbed leaderboard now reflects the full current-week HealthKit total on first launch — no longer stuck at 0 when Health has earlier-week flights
 

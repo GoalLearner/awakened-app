@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w6';
+  const APP_BUILD_TAG = '2.2.3-w7';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6840,10 +6840,27 @@
           });
         } catch (_) {}
         try {
-          await window.Auth.submitLeaderboardSnapshot(m, sanitized);
+          const resp = await window.Auth.submitLeaderboardSnapshot(m, sanitized);
+          // v3 Phase 1z.127 — post-await result breadcrumb. Distinguishes
+          // "attempted" (the existing -attempt event) from "persisted"
+          // so future race-condition debugging has a definitive signal.
+          try {
+            const ok = !!(resp && (resp.ok === true || resp.success === true || (typeof resp === 'object' && !resp.error)));
+            _bcSubmit('leaderboard-submit-metric-result', {
+              metric: m,
+              value: sanitized,
+              ok: ok,
+              status: (resp && (resp.status || resp.code)) || undefined,
+            });
+          } catch (_) {}
         } catch (_) {
           try {
             _bcSubmit('leaderboard-submit-metric-failed', { metric: m });
+          } catch (_) {}
+          try {
+            _bcSubmit('leaderboard-submit-metric-result', {
+              metric: m, value: sanitized, ok: false,
+            });
           } catch (_) {}
           return null;
         }
@@ -21501,21 +21518,77 @@
     // (already canonical), fall back to the local snapshot if the user
     // is mid-submit / has no server rank yet. Snapshot field varies by
     // metric.
-    let myValue = (me && typeof me.current_value === 'number') ? me.current_value : 0;
-    if (!myValue) {
-      try {
-        const snap = lbGetSnapshot();
-        if (snap) {
-          if (metric === 'step_total')          myValue = snap.steps_last_7_days  || 0;
-          else if (metric === 'sleep_streak')   myValue = snap.current_sleep_streak   || 0;
-          // v3 Phase 1z.118 — workout_streak replaces bedtime_streak
-          // as the third client-side simulated metric.
-          else if (metric === 'workout_streak') myValue = snap.current_workout_streak || 0;
-          // v3 Phase 1z.125 — flights_climbed me-value fallback.
-          else if (metric === 'flights_climbed') myValue = snap.flights_this_week || 0;
+    const backendMeValue = (me && typeof me.current_value === 'number') ? me.current_value : 0;
+    let myValue = backendMeValue;
+
+    // v3 Phase 1z.126 / 1z.127 — optimistic local override.
+    //
+    // Background: weekly Health metrics (step_total, flights_climbed)
+    // refresh local snapshot from HealthKit then submit to backend.
+    // The modal then fetches backend `top` for rendering. If submit
+    // and fetch race, the backend can return a stale me row with the
+    // pre-refresh value while the local snapshot already has the
+    // fresh number. Without this override, the modal renders the
+    // stale value (the 1z.125→1z.126 bug: local=38, backend=0,
+    // modal shows 0).
+    //
+    // Rule: if the local snapshot value is HIGHER than the backend
+    // value, prefer local. We never override DOWNWARD — a higher
+    // backend value reflects either another device's submit or a
+    // historical value the local snapshot hasn't loaded yet, and we
+    // don't want to clobber that with a smaller local number. This
+    // is a one-way ratchet: local wins only when it's strictly
+    // greater.
+    //
+    // Applies to all sim-eligible metrics uniformly so step/sleep/
+    // workout get the same race protection (in practice they almost
+    // never trigger because their submit cadence has historically
+    // kept backend ≥ local).
+    let localSnapValue = 0;
+    try {
+      const snap = lbGetSnapshot();
+      if (snap) {
+        if (metric === 'step_total')          localSnapValue = snap.steps_last_7_days  || 0;
+        else if (metric === 'sleep_streak')   localSnapValue = snap.current_sleep_streak   || 0;
+        else if (metric === 'workout_streak') localSnapValue = snap.current_workout_streak || 0;
+        else if (metric === 'flights_climbed') localSnapValue = snap.flights_this_week || 0;
+      }
+    } catch (_) {}
+
+    let overrideApplied = false;
+    if (localSnapValue > myValue) {
+      myValue = localSnapValue;
+      overrideApplied = true;
+      // Patch the row in `top` (if present) so the merged list sorts
+      // with the corrected value and the rendered current-user row
+      // doesn't visually disagree with `me`.
+      if (Array.isArray(top)) {
+        for (let i = 0; i < top.length; i++) {
+          if (top[i] && top[i].alias === myAlias) {
+            top[i] = Object.assign({}, top[i], { current_value: localSnapValue });
+            break;
+          }
         }
-      } catch (_) {}
+      }
+      // Also patch the `me` view-model so downstream renderers and
+      // breadcrumbs reflect the override.
+      if (me) {
+        me = Object.assign({}, me, { current_value: localSnapValue });
+      } else {
+        me = { rank: null, current_value: localSnapValue };
+      }
     }
+
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('leaderboard-local-me-override', {
+          metric: metric,
+          backendValue: backendMeValue,
+          localValue: localSnapValue,
+          applied: overrideApplied,
+        });
+      }
+    } catch (_) {}
     const dateKey = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
     let merged = window.SimulatedLeaderboard.merge(top || [], myAlias, myValue, dateKey, metric);
 
@@ -22028,18 +22101,26 @@
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
 
-    // v3 Phase 1z.126 — opening the Flights Climbed sheet forces a
-    // fresh full-week HealthKit backfill so the user-row "me" value
-    // reflects every flight already in Health for this week (not just
-    // what's been recorded since feature install). Fire-and-forget —
-    // _lbRenderThisWeekTab below will read whatever's in the snapshot
-    // at render time, and any successful refresh also fires
-    // lbSubmitAllMetricsDebounced via the autoVerifyWalk path next
-    // tick. We await briefly when forced so the very first render
-    // can pick up the fresh value.
+    // v3 Phase 1z.126 / 1z.127 — opening the Flights Climbed sheet
+    // forces a fresh full-week HealthKit backfill so the user-row
+    // "me" value reflects every flight already in Health for this
+    // week (not just what's been recorded since feature install).
+    //
+    // 1z.127 update: switch from `lbSubmitAllMetricsDebounced` (5-min
+    // throttle, fire-and-forget) to a non-debounced AWAITED submit
+    // so backend persists the refreshed value before the modal's
+    // backend top fetch. Combined with the optimistic local-me
+    // override in _lbMaybeSimulate, this closes the race that left
+    // the modal rendering Richie=0 even though the local snapshot
+    // already had the corrected weekly total.
     if (metric === 'flights_climbed' && typeof lbRefreshFlightsThisWeekFromHealth === 'function') {
       try { await lbRefreshFlightsThisWeekFromHealth({ force: true }); } catch (_) {}
-      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      try {
+        if (typeof lbSubmitAllMetrics === 'function') {
+          await lbSubmitAllMetrics();
+          try { localStorage.setItem('hb_lb_last_submit', String(Date.now())); } catch (_) {}
+        }
+      } catch (_) {}
     }
 
     // Default tab is always This Week.
