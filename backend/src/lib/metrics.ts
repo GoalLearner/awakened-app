@@ -25,7 +25,12 @@
 // workout_streak in `_LB_CLIENT_ONLY_METRICS` until a deploy lands
 // AND the LEADERBOARD_WORKOUT_BACKEND_ENABLED flag flips true;
 // behavior is unchanged on production today.
-export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak'] as const;
+// v3 Phase 1z.125 — flights_climbed added to the metric registry.
+// Weekly metric (Sunday-UTC scoped like step_total). Sourced from
+// Apple Health HKQuantityTypeIdentifierFlightsClimbed via the
+// existing 'stairs' auth alias (no new permission needed).
+// Storage shape unchanged — leaderboard_snapshots is metric-agnostic.
+export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak', 'flights_climbed'] as const;
 export type Metric = (typeof METRICS)[number];
 
 export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
@@ -42,6 +47,11 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
    * 365 = full year; same protect-against-garbage rationale as
    * sleep/bedtime. v3 Phase 1z.120. */
   workout_streak: 365,
+  /** Cumulative flights climbed over the current Sunday-UTC week.
+   * 1000 = ~3-5× world-class human max (Empire State race-up ≈ 500
+   * flights), catching obvious garbage without blocking elite
+   * stair-climbers. v3 Phase 1z.125. */
+  flights_climbed: 1000,
 };
 
 export function isValidMetric(value: unknown): value is Metric {
@@ -62,7 +72,7 @@ export function isValidMetric(value: unknown): value is Metric {
  * carry forward across weeks. Adding them here would force a daily
  * resubmit just to stay on the board.
  */
-export const WEEKLY_METRICS: ReadonlySet<Metric> = new Set<Metric>(['step_total']);
+export const WEEKLY_METRICS: ReadonlySet<Metric> = new Set<Metric>(['step_total', 'flights_climbed']);
 
 export function isWeeklyMetric(metric: Metric): boolean {
   return WEEKLY_METRICS.has(metric);

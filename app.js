@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w4';
+  const APP_BUILD_TAG = '2.2.3-w5';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6155,6 +6155,12 @@
         last_bedtime_eval_date:    raw.last_bedtime_eval_date    || null,
         best_7day_step_total:      raw.best_7day_step_total      || 0,
         best_7day_step_window_end: raw.best_7day_step_window_end || null,
+        // v3 Phase 1z.125 — flights climbed daily map + best-week
+        // total. Mirrors the steps_daily / best_7day_step_total
+        // pattern. flights_daily[YYYY-MM-DD] = integer count.
+        flights_daily:              raw.flights_daily              || {},
+        best_7day_flights_total:    raw.best_7day_flights_total    || 0,
+        best_7day_flights_window_end: raw.best_7day_flights_window_end || null,
       };
     } catch (_) {
       return {
@@ -6162,6 +6168,8 @@
         current_sleep_streak: 0, best_sleep_streak: 0, last_sleep_eval_date: null,
         current_bedtime_streak: 0, best_bedtime_streak: 0, last_bedtime_eval_date: null,
         best_7day_step_total: 0, best_7day_step_window_end: null,
+        flights_daily: {},
+        best_7day_flights_total: 0, best_7day_flights_window_end: null,
       };
     }
   }
@@ -6238,6 +6246,44 @@
     if (weekSum > state.best_7day_step_total) {
       state.best_7day_step_total = weekSum;
       state.best_7day_step_window_end = today;
+    }
+    saveLeaderboardState(state);
+  }
+
+  // v3 Phase 1z.125 — flights climbed weekly sum. Mirrors
+  // lbSumCurrentWeekSteps exactly (Sunday-anchored calendar week,
+  // walks back todayDow + 1 days). flights_climbed shares the
+  // Sunday-UTC weekly scoping with step_total at the backend layer
+  // (see WEEKLY_METRICS in backend/src/lib/metrics.ts).
+  function lbSumCurrentWeekFlights(flightsDaily) {
+    const today = new Date();
+    const todayDow = today.getDay();
+    let sum = 0;
+    let dateStr = getDeviceLocalDate();
+    for (let i = 0; i <= todayDow; i++) {
+      sum += (flightsDaily[dateStr] || 0);
+      dateStr = lbPrevDate(dateStr);
+    }
+    return sum;
+  }
+
+  // v3 Phase 1z.125 — flights climbed recording. Mirrors
+  // lbRecordStepsToday. Idempotent: re-calling with a larger value
+  // for the same day overwrites (HealthKit's flights counter
+  // increments through the day; we want the latest figure). Best
+  // peak updated when the current-week running sum exceeds the
+  // historical best.
+  function lbRecordFlightsToday(flights) {
+    if (typeof flights !== 'number' || !Number.isFinite(flights) || flights < 0) return;
+    const state = loadLeaderboardState();
+    const today = getDeviceLocalDate();
+    state.flights_daily[today] = Math.round(flights);
+    lbPruneDailyMap(state.flights_daily, LB_DAILY_RETENTION_DAYS);
+
+    const weekSum = lbSumCurrentWeekFlights(state.flights_daily);
+    if (weekSum > state.best_7day_flights_total) {
+      state.best_7day_flights_total = weekSum;
+      state.best_7day_flights_window_end = today;
     }
     saveLeaderboardState(state);
   }
@@ -6535,6 +6581,14 @@
           return (fromLedger && typeof fromLedger.best === 'number') ? fromLedger.best : 0;
         } catch (_) { return 0; }
       })(),
+      // v3 Phase 1z.125 — weekly flights climbed. Source-of-truth
+      // is the state.flights_daily map written by
+      // lbRecordFlightsToday(). The leaderboard preview card +
+      // sheet read these fields the same way they read
+      // steps_last_7_days / best_7day_step_total.
+      flights_this_week:         lbSumCurrentWeekFlights(state.flights_daily),
+      best_flights_week:         state.best_7day_flights_total,
+      best_flights_window_end:   state.best_7day_flights_window_end,
     };
   }
 
@@ -6542,6 +6596,8 @@
     window.Leaderboard = {
       getSnapshot:      lbGetSnapshot,
       recordStepsToday: lbRecordStepsToday,
+      // v3 Phase 1z.125 — flights climbed weekly recorder.
+      recordFlightsToday: lbRecordFlightsToday,
       recordSleepNight: lbRecordSleepNight,
       _state:           loadLeaderboardState, // dev-only: full raw state
       // v3 Phase 1z.115 — exposed for Playwright regression tests.
@@ -6597,6 +6653,10 @@
     // and (future) backend submission. The backend does NOT yet
     // accept workout_streak; this cap is client-side only.
     workout_streak: 365,
+    // v3 Phase 1z.125 — weekly flights climbed cap. Matches the
+    // backend cap in backend/src/lib/metrics.ts (1000 = ~3-5× the
+    // world-class human max).
+    flights_climbed: 1000,
   };
   function lbSanitizeValue(metric, raw) {
     const n = Number(raw);
@@ -6625,6 +6685,13 @@
       if (typeof LEADERBOARD_WORKOUT_BACKEND_ENABLED !== 'undefined' &&
           LEADERBOARD_WORKOUT_BACKEND_ENABLED) {
         metrics.push(['workout_streak', snap.current_workout_streak]);
+      }
+      // v3 Phase 1z.125 — flights_climbed joins the backend submit
+      // list when LEADERBOARD_FLIGHTS_BACKEND_ENABLED is true.
+      // Weekly Sunday-UTC scoped at the backend (matches step_total).
+      if (typeof LEADERBOARD_FLIGHTS_BACKEND_ENABLED !== 'undefined' &&
+          LEADERBOARD_FLIGHTS_BACKEND_ENABLED) {
+        metrics.push(['flights_climbed', snap.flights_this_week]);
       }
       // v3 Phase 1w.1 defensive guard — refuse to submit if ALL three
       // metrics are zero. A wipe-zero submit overwrites the backend's
@@ -18734,7 +18801,22 @@
     list.innerHTML =
       buildCard('step_total',     walkIcon,    stepsValue,   stepsMeta) +
       buildCard('sleep_streak',   sleepIcon,   sleepValue,   sleepMeta) +
-      buildCard('workout_streak', workoutIcon, workoutValue, workoutMeta);
+      buildCard('workout_streak', workoutIcon, workoutValue, workoutMeta) +
+      // v3 Phase 1z.125 — sheet-only "More rankings" link. Opens the
+      // Flights Climbed leaderboard modal without adding a 4th main
+      // Status card (preserves the 3-card layout per product guard).
+      // Styled as a subtle inline link, not a card. The button uses
+      // a distinct class so it doesn't pick up `.lb-stat-card` hover
+      // styling. data-lb-metric routes through the same click handler
+      // as the cards.
+      '<button type="button" class="lb-more-rankings" data-lb-metric="flights_climbed" ' +
+        'style="display:block; width:100%; margin-top:8px; padding:10px 14px; ' +
+        'background:transparent; border:1px dashed rgba(139,92,246,0.35); ' +
+        'border-radius:10px; color:var(--text-primary, #c4b5fd); ' +
+        'font-size:0.78rem; font-weight:600; letter-spacing:0.02em; ' +
+        'text-align:center; cursor:pointer;">' +
+        'More rankings · Flights climbed ›' +
+      '</button>';
   }
   try { window.renderLeaderboardPreview = renderLeaderboardPreview; } catch (_) {}
 
@@ -20770,7 +20852,10 @@
   //   2. invalidate the local step_total cache when the boundary rolls
   //      over so the World Rank card doesn't show last-week's rank
   // Format matches backend getAccoladeWeekStart(): 'YYYY-MM-DD'.
-  const LB_WEEKLY_METRICS = new Set(['step_total']);
+  // v3 Phase 1z.125 — flights_climbed joins step_total as a weekly
+  // Sunday-UTC-scoped metric. Backend WEEKLY_METRICS in
+  // backend/src/lib/metrics.ts mirrors this set.
+  const LB_WEEKLY_METRICS = new Set(['step_total', 'flights_climbed']);
   function lbGetCurrentWeekStartUTC(nowMs) {
     const ms = (typeof nowMs === 'number') ? nowMs : Date.now();
     const d = new Date(ms);
@@ -20828,6 +20913,15 @@
       blurb: 'Longest current run of consecutive days with a verified Apple Health workout totaling 30+ minutes.',
       unit:  'days',
       formatValue: n => (n || 0).toString(),
+    },
+    // v3 Phase 1z.125 — flights_climbed weekly leaderboard.
+    // Sheet-only v1: no preview card on Status tab; accessible via
+    // the "More rankings" link below the 3 main cards.
+    flights_climbed: {
+      title: 'Flights climbed',
+      blurb: 'Most flights climbed this week. Resets every Sunday 12:00 AM UTC. Verified by Apple Health.',
+      unit:  'flights',
+      formatValue: n => (n || 0).toLocaleString('en-US'),
     },
   };
 
@@ -21063,6 +21157,8 @@
           if (metric === 'sleep_streak')        _myLocal = (_snap && _snap.current_sleep_streak)   || 0;
           // v3 Phase 1z.118 — workout_streak replaces bedtime_streak.
           else if (metric === 'workout_streak') _myLocal = (_snap && _snap.current_workout_streak) || 0;
+          // v3 Phase 1z.125 — flights_climbed local fallback.
+          else if (metric === 'flights_climbed') _myLocal = (_snap && _snap.flights_this_week) || 0;
           else if (metric === 'step_total')     _myLocal = (_snap && _snap.steps_last_7_days)      || 0;
           if (_myLocal < _floor) suppressPending = true;
         }
@@ -21272,7 +21368,8 @@
   // v3 Phase 1z.118 — bedtime_streak removed from sim metrics (the
   // leaderboard card was retired); workout_streak takes its place
   // with the same simulated-merge shape (small integer, ±jitter).
-  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1 };
+  // v3 Phase 1z.125 — flights_climbed joins the sim-eligible set.
+  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1 };
   // v3 Phase 1z.116 — per-metric minimum-score filter applied AFTER
   // simulated-leaderboard merge but BEFORE the rank list renders.
   // Rationale: a "7+ hour sleep streak" leaderboard showing entries
@@ -21301,6 +21398,8 @@
           // v3 Phase 1z.118 — workout_streak replaces bedtime_streak
           // as the third client-side simulated metric.
           else if (metric === 'workout_streak') myValue = snap.current_workout_streak || 0;
+          // v3 Phase 1z.125 — flights_climbed me-value fallback.
+          else if (metric === 'flights_climbed') myValue = snap.flights_this_week || 0;
         }
       } catch (_) {}
     }
@@ -21367,6 +21466,15 @@
   // and sleep_streak. Richie's local row continues to pull from
   // snap.current_workout_streak via the snapshot path.
   const LEADERBOARD_WORKOUT_BACKEND_ENABLED = true;
+  // v3 Phase 1z.125 — flights_climbed backend leaderboard. Backend
+  // Worker version 6c735ead-f187-4b45-bbe0-0c4521432df0 deployed
+  // with flights_climbed in the metric whitelist (cap 1000/week,
+  // Sunday-UTC scoped like step_total). When true, lbSubmitAll
+  // Metrics submits flights_climbed and the modal load path hits
+  // Auth.fetchLeaderboardTop. Sheet-only v1 — no preview card on
+  // the Status tab; access via the "More rankings" link below the
+  // 3 main cards.
+  const LEADERBOARD_FLIGHTS_BACKEND_ENABLED = true;
 
   // v3 Phase 1z.119 — client-only metrics never hit the backend.
   // workout_streak (added in 1z.118) is fully derived from the
@@ -29832,6 +29940,30 @@
     // habit auto-verify path below.
     try { lbRecordStepsToday(steps); }
     catch (e) { console.warn('[Leaderboard] step record failed', e); }
+
+    // v3 Phase 1z.125 — flights climbed leaderboard recording.
+    // Piggybacks on the walk auto-verify rhythm (visibility-change
+    // + render-tick) since flights and steps share the same data
+    // source semantics (cumulative-through-day counter from
+    // Apple Health). Independent of step threshold / habit /
+    // pause toggle — same independence as steps. Fire-and-forget;
+    // failures don't poison anything else.
+    try {
+      Health.getFlightsClimbedToday().then(flights => {
+        if (typeof flights === 'number' && Number.isFinite(flights) && flights >= 0) {
+          try { lbRecordFlightsToday(flights); }
+          catch (e) { console.warn('[Leaderboard] flights record failed', e); }
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('leaderboard-flights-record', {
+                flightsToday: flights,
+                permissionStatus: 'granted',
+              });
+            }
+          } catch (_) {}
+        }
+      }).catch(() => {});
+    } catch (e) { console.warn('[Leaderboard] flights fetch failed', e); }
 
     // ── Boss evaluation (Steel Wolf E-rank + Glass Strider D-rank) ─
     // Same independence rules as the Insomniac/Carouser evaluators

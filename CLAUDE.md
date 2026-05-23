@@ -4,7 +4,52 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — Workout Streak real-user leaderboard verified with second real user (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.125 Flights Climbed leaderboard activated as sheet-only v1 (read this first)
+
+### ✅ STATUS: Flights Climbed is a fully backend-backed weekly leaderboard metric, exposed as a sheet-only entry under the 3-card preview
+
+**Scope**: Adds a fifth metric (`flights_climbed`) to the Global Rankings system. Weekly (Sunday-UTC) scoped like `step_total`. Sourced from Apple Health `HKQuantityTypeIdentifierFlightsClimbed` via the existing `'stairs'` permission alias (already authorized for Ascendant Colossus boss — no new App Review HealthKit permission). **No 4th main card** — preserves the 1z.118 3-card layout. Entry is a small "More rankings · Flights climbed ›" inline button below the three Status-tab cards which opens the same modal sheet that the cards use.
+
+**Backend (deployed)**:
+- `backend/src/lib/metrics.ts` — added `'flights_climbed'` to `METRICS`, `flights_climbed: 1000` to `METRIC_CAPS`, `'flights_climbed'` to `WEEKLY_METRICS`. Table `leaderboard_snapshots` is metric-agnostic so **no D1 migration needed**.
+- Tests: `cd backend && npx vitest run leaderboard-submit.test.ts leaderboard-top.test.ts` → 20/20 pass. Submit accepts `current_value >= 0` and rejects `> 1000`. Top filters to current Sunday-UTC week.
+- Worker deployed via `npx wrangler deploy`. Version `6c735ead-f187-4b45-bbe0-0c4521432df0` at `https://awakened-backend.richmondcampano93.workers.dev`.
+
+**Frontend (activated)**:
+- `app.js` — `LEADERBOARD_FLIGHTS_BACKEND_ENABLED = true`. `lbSubmitAllMetrics` now pushes `['flights_climbed', snap.flights_this_week]` alongside steps/sleep/workout. `LB_CLIENT_CAPS.flights_climbed = 1000`, added to `LB_WEEKLY_METRICS`, `LB_METRICS_META.flights_climbed` (title "Flights climbed", subtitle "flights this week", modal blurb "Most flights climbed this week. Verified by Apple Health.", unit "flights"). `_LB_SIM_METRICS.flights_climbed = 1` so the sim-fallback safety net (1z.121) covers sparse boards. New helpers: `lbSumCurrentWeekFlights`, `lbRecordFlightsToday`, exposed as `window.Leaderboard.recordFlightsToday`. Daily flights are tallied in `loadLeaderboardState` (`flights_daily`, `best_7day_flights_total`, `best_7day_flights_window_end`). `autoVerifyWalk` calls `Health.getFlightsClimbedToday()` and records via `lbRecordFlightsToday` with `leaderboard-flights-record` breadcrumb.
+- UI: `renderLeaderboardPreview` keeps `step_total + sleep_streak + workout_streak` cards then appends a dashed-violet "More rankings · Flights climbed ›" button with `data-lb-metric="flights_climbed"`; clicks route through the existing card-click handler to open the same `#lb-rank-sheet`.
+- `simulated-leaderboard.js` — added `flightsBase` / `flightsJitter` to all 10 BOTS archetypes (range 5/8 sedentary → 280/80 elite athletes), new `botFlightsThroughDay` helper (continuous distribution mirroring steps, `FLIGHTS_WEEKLY_CAP = 1000`), and `mergeWithSimulated` switch branch for `flights_climbed`.
+
+**Activation bumps (web fingerprints — TestFlight cold-launch required)**:
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w4` | `2.2.3-w5` |
+| `app.js?v=` | `457` | `458` |
+| `sw.js CACHE_VERSION` | `v5.343` | `v5.344` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | n/a | `true` |
+
+**Verification**:
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → all OK.
+- Backend vitest 20/20.
+- Playwright e2e: existing 29-test suite passes (re-run resolved transient browser-context flakes; all logic-failing tests pass on retry). No new tests added for v1 — sim fallback uses generic paths and sheet entry reuses the existing `data-lb-metric` click handler.
+
+**Hard guardrails respected**: No Codemagic. No archive/upload. APP_VERSION not bumped. No Status-tab 4th main ranking card. No changes to Sleep/Workout/Step leaderboard behavior, HealthKit sleep/workout verification, dungeon logic, or `QA_UNLOCK_C_RANK_DUNGEONS`. Sim fallback preserved. App Review HealthKit permission compliance preserved (reused `'stairs'` alias).
+
+**MacBook build instructions** (Richie runs these — Windows ClaudeCode never archives/uploads):
+1. Pull `main` on the MacBook → `git pull origin main`.
+2. `npx cap sync ios` to swap the bundled `public/` web assets.
+3. Open `ios/App/App.xcworkspace` in Xcode.
+4. Bump iOS native build number if doing a TestFlight push (web fingerprints already bumped).
+5. Archive → distribute to TestFlight as usual.
+6. Force-quit + cold-launch on device to swap the bundled web bundle (per 1z.122 operational note).
+
+---
+
+## 📌 Session handoff — May 22, 2026 — Workout Streak real-user leaderboard verified with second real user (historical — superseded by 1z.125 above)
 
 ### ✅ STATUS: Workout Streak backend leaderboard path is verified working end-to-end with two real users
 

@@ -95,24 +95,34 @@
   // The hard SIM_STEP_WEEKLY_CAP clamp catches the high tail of
   // top-tier bots so they can never exceed 45,555 even on a
   // luckiest-week-ever roll.
+  // v3 Phase 1z.125 — flightsBase / flightsJitter slots added to
+  // each archetype. Continuous-distribution metric like steps (not
+  // a small-integer streak). Per-archetype weekly ranges chosen to
+  // be plausible without hitting the 1000-cap:
+  //   athletes  ≈ 250 ± 80   (170–330)
+  //   active    ≈ 80–160     (within cap, leaves headroom)
+  //   normal    ≈ 30–80
+  //   light     ≈ 5–25
+  //   sedentary ≈ 0–10
+  // The cap re-clamp in mergeWithSimulated catches any tail rolls.
   const BOTS = [
     // High but realistic (36,000–45,555)
-    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4 },
-    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3 },
+    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 280, flightsJitter: 80 },
+    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 220, flightsJitter: 70 },
 
     // Active (22,000–36,000)
-    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2 },
-    { name: 'Marcus T.',       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2 },
-    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2 },
+    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 150, flightsJitter: 50 },
+    { name: 'Marcus T.',       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2, flightsBase: 110, flightsJitter: 40 },
+    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase:  95, flightsJitter: 35 },
 
     // Normal (8,000–22,000)
-    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2 },
-    { name: 'Jordan F.',       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1 },
-    { name: 'AwakenedRen',     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1 },
+    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase:  60, flightsJitter: 25 },
+    { name: 'Jordan F.',       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1, flightsBase:  45, flightsJitter: 20 },
+    { name: 'AwakenedRen',     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  30, flightsJitter: 15 },
 
     // Light (2,000–8,000)
-    { name: 'Priya N.',        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1 },
-    { name: 'nightowl',        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1 },
+    { name: 'Priya N.',        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  15, flightsJitter: 10 },
+    { name: 'nightowl',        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1, flightsBase:   5, flightsJitter:  8 },
   ];
 
   // ─── PRNG ─────────────────────────────────────────────────
@@ -204,6 +214,32 @@
     return sum;
   }
 
+  // v3 Phase 1z.125 — bot weekly flights climbed. Continuous
+  // distribution like steps (not an integer streak). Uses the
+  // (flightsBase, flightsJitter) archetype slots. Weekly total
+  // ramps proportionally with the day-of-week index (Sun=0,
+  // Sat=6) so the leaderboard climbs through the week. Re-clamped
+  // to FLIGHTS_WEEKLY_CAP (1000) at the merge boundary.
+  const FLIGHTS_WEEKLY_CAP = 1000;
+  function botFlightsThroughDay(weekStartKey, bot, dayIdx) {
+    const seed = hashKey(weekStartKey + '|' + bot.name + '|flights');
+    const rng = mulberry32(seed);
+    // Weekly total this archetype would hit by Saturday — sample
+    // once per (bot, week). Symmetric jitter around flightsBase.
+    const base = bot.flightsBase || 0;
+    const jit  = bot.flightsJitter || 0;
+    const weeklyTotal = Math.max(0, Math.round(base + (rng() * 2 - 1) * jit));
+    // Scale by progress through the week. dayIdx 0 (Sunday) → 1/7;
+    // dayIdx 6 (Saturday) → full weekly total. Slight rng wobble
+    // so the ramp doesn't feel mechanical.
+    const progress = Math.max(1, dayIdx + 1) / 7;
+    const wobble = 0.85 + rng() * 0.3;
+    let v = Math.round(weeklyTotal * progress * wobble);
+    if (v < 0) v = 0;
+    if (v > FLIGHTS_WEEKLY_CAP) v = FLIGHTS_WEEKLY_CAP;
+    return v;
+  }
+
   // ─── Per-bot streak roll (week-stable) ────────────────────
   // Streaks barely change day-to-day in real life, so we roll
   // once per week per (bot, metric) and hold steady.
@@ -255,6 +291,9 @@
       let val;
       if (metric === 'step_total') {
         val = botStepsThroughDay(weekStartKey, bot, dow);
+      } else if (metric === 'flights_climbed') {
+        // v3 Phase 1z.125 — continuous-distribution weekly flights.
+        val = botFlightsThroughDay(weekStartKey, bot, dow);
       } else if (metric === 'sleep_streak' || metric === 'bedtime_streak' || metric === 'workout_streak') {
         // v3 Phase 1z.118 — workout_streak joins the streak family.
         val = rollBotStreak(weekStartKey, bot, metric);
