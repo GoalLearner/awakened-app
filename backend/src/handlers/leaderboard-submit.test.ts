@@ -127,6 +127,59 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(insert!.binds[5]).toBe(null);
   });
 
+  // ── v3 Phase 1z.131 — same-week monotonic current_value ──────────
+  // Bug repro: rendiesel submitted step_total=101,259 then later
+  // 73,840 same week. Previously current_value was overwritten to
+  // 73,840 even though best_value+weekly_step_records preserved 101K
+  // — producing the "100K Club shows 101K but This Week shows 73K"
+  // mismatch. Fix is a CASE in the ON CONFLICT clause that pins
+  // current_value to MAX(existing, new) when weeks match.
+  it('current_value is MAX-preserved within the same week for weekly metrics (step_total)', async () => {
+    const db = makeDb({ current_value: 5000, best_value: 35000 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 5000 }), env, session);
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // SQL must contain the same-week monotonic CASE for current_value.
+    // Match shape: CASE WHEN ... week_start IS NOT NULL ... = excluded.week_start
+    // THEN MAX(... current_value, excluded.current_value) ELSE excluded.current_value END
+    expect(insert.sql).toMatch(/current_value\s*=\s*CASE/i);
+    expect(insert.sql).toMatch(/excluded\.week_start\s+IS\s+NOT\s+NULL/i);
+    expect(insert.sql).toMatch(/leaderboard_snapshots\.week_start\s*=\s*excluded\.week_start/i);
+    expect(insert.sql).toMatch(/MAX\(leaderboard_snapshots\.current_value,\s*excluded\.current_value\)/i);
+    // ELSE branch must fall through to the new value (cross-week / NULL).
+    expect(insert.sql).toMatch(/ELSE\s+excluded\.current_value/i);
+  });
+
+  it('current_value MAX-preservation also applies to flights_climbed (weekly cumulative)', async () => {
+    const db = makeDb({ current_value: 50, best_value: 77 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(makeReq({ metric: 'flights_climbed', current_value: 50 }), env, session);
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // Same CASE clause covers flights_climbed because it's a weekly metric
+    // (week_start is non-NULL via WEEKLY_METRICS in metrics.ts).
+    expect(insert.sql).toMatch(/current_value\s*=\s*CASE/i);
+    expect(insert.sql).toMatch(/MAX\(leaderboard_snapshots\.current_value,\s*excluded\.current_value\)/i);
+  });
+
+  it('streak metrics (sleep_streak) hit the ELSE branch — current_value can decrease when streak breaks', async () => {
+    const db = makeDb({ current_value: 12, best_value: 22 });
+    const env = makeEnv(db);
+    // streak broke; client submits 0
+    await handleLeaderboardSubmit(makeReq({ metric: 'sleep_streak', current_value: 0 }), env, session);
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // week_start bound as NULL for non-weekly metrics — the
+    // `excluded.week_start IS NOT NULL` guard falls through to ELSE
+    // and current_value gets overwritten with the new (lower) value.
+    expect(insert.binds[5]).toBe(null);
+    expect(insert.sql).toMatch(/ELSE\s+excluded\.current_value/i);
+  });
+
   it('INSERT SQL preserves week_start on conflict so new-week resubmits overwrite the prior tag', async () => {
     const db = makeDb({ current_value: 5000, best_value: 35000 });
     const env = makeEnv(db);

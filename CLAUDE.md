@@ -4,7 +4,103 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — Flights Climbed real-user propagation verified with rendiesel (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.131 Backend monotonic current_value for weekly cumulative metrics (read this first — UNDEPLOYED)
+
+### 🟡 STATUS: Backend fix landed on `main` but **NOT yet deployed**. Production D1 still has the regressed rows. Awaiting explicit deploy approval.
+
+**Bug observed**: rendiesel's `step_total` for the May 17–23 week showed `73,840` on the "This Week" leaderboard but `101K` on the 100K Club view AND on Hall of Fame's "Week of May 17–May 23" entry. Three views, same week, three different numbers for the same user. Richie's row was also regressed below his own best (current=72,168, best=82,939) — just less visibly because he hasn't crossed 100K.
+
+**Root cause**: Backend `leaderboard-submit.ts` ON CONFLICT clause was:
+```sql
+current_value = excluded.current_value,
+best_value    = MAX(leaderboard_snapshots.best_value, excluded.current_value),
+```
+`current_value` was blindly overwritten on every submit, so a later partial / stale-cache / HealthKit-corrected submit with a lower value could downgrade the in-week leaderboard. Meanwhile `best_value`, `weekly_step_records.steps`, and `user_accolades.best_value` all already used `MAX(...)` so they preserved the peak. Three views read three different sources, but all three only mattered because `current_value` was allowed to regress.
+
+**Production D1 evidence** (read-only audit, `week_start=2026-05-17`, IDs truncated):
+
+| uid | current_value | best_value | regressed? |
+|---|---|---|---|
+| `ca5b82df` (rendiesel) | **73,840** | 101,259 | yes — 27K drop |
+| `ede751e6` (Richie)    | **72,168** | 82,939  | yes — 11K drop |
+| `c1a7149d` (galilea)   | 52,086        | 52,086  | no |
+| `c54a2feb`             | 29,298        | 29,298  | no |
+| `7061cffe`             | 11,528        | 11,528  | no |
+| `ff8534d9`             | 5,501         | 5,501   | no |
+| `32c44456`             | 602           | 1,583   | yes — 981 drop |
+
+3 of 7 weekly step rows have regressed `current_value` below `best_value`. The submit upsert was unsafe.
+
+### Fix (1z.131) — backend ON CONFLICT CASE
+
+```sql
+current_value = CASE
+  WHEN excluded.week_start IS NOT NULL
+       AND leaderboard_snapshots.week_start = excluded.week_start
+    THEN MAX(leaderboard_snapshots.current_value, excluded.current_value)
+  ELSE excluded.current_value
+END,
+```
+
+- **Same week, weekly metric**: `MAX(existing, new)`. `step_total` and `flights_climbed` (both in `WEEKLY_METRICS`) can't downgrade in-week.
+- **Cross-week** (new `week_start` ≠ stored): falls through to ELSE → overwrite. Sunday rollover resets the counter from the new week's value, even if it's lower than last week's peak. Intended — that's what "this week" means.
+- **NULL `week_start`** (streak metrics — `sleep_streak`, `bedtime_streak`, `workout_streak`): falls through to ELSE → overwrite. Streaks can decrease legitimately when they break.
+
+`best_value` already used `MAX(...)` — unchanged.
+
+### Tests
+
+Three new vitest cases in `leaderboard-submit.test.ts`:
+- step_total: SQL contains the CASE + MAX + ELSE excluded.current_value shape.
+- flights_climbed: same SQL shape (covered by the same INSERT).
+- sleep_streak with NULL `week_start`: ELSE branch path verified.
+
+`cd backend && npx vitest run leaderboard-submit.test.ts leaderboard-top.test.ts` → **23/23 pass**.
+
+### Production data repair (NOT YET RUN)
+
+After the Worker is deployed, a one-off D1 repair should run to lift the existing regressed `current_value` rows back to their preserved `best_value` for the current week. Proposed SQL (read-only audit until approved):
+
+```sql
+UPDATE leaderboard_snapshots
+SET current_value = best_value,
+    updated_at = ?  -- now
+WHERE metric IN ('step_total', 'flights_climbed')
+  AND week_start = '2026-05-17'
+  AND current_value < best_value;
+```
+
+Without the repair, rendiesel/Richie/uid-32c4 will stay at the regressed values on This Week until their next submit ratchets them up via the new MAX clause. With the repair, the three rows snap back immediately. Repair is a separate D1 mutation; documented here but not executed per the "do not alter D1 data until root cause is known" guardrail (now known — awaiting approval).
+
+### Deploy gate
+
+Per the user spec: "Deploy backend only if explicitly approved after tests." Tests pass. **Not deployed.** Next session needs:
+
+1. `cd backend && npx wrangler deploy` — applies the new submit handler.
+2. Run the one-off D1 repair above (or skip if the natural ratchet-up on next submits is acceptable).
+3. Confirm rendiesel + Richie's "This Week" rows snap back to their `best_value` (or higher) on their next foreground.
+
+### Version knobs
+
+**Unchanged from 1z.130**. This is a backend-only fix; client bundles continue to submit the same payload, and the contract is wire-compatible.
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w10` |
+| `app.js?v=` | `463` |
+| `sw.js CACHE_VERSION` | `v5.349` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` |
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. **No backend deploy.** No D1 mutation. No app code change. No version/cache bump. No HealthKit/dungeon/economy changes. Frontend behavior unaltered; backend fix is wire-compatible.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — Flights Climbed real-user propagation verified with rendiesel (historical — superseded by 1z.131 above)
 
 ### ✅ STATUS: Flights Climbed backend propagation is verified working end-to-end with two real users
 

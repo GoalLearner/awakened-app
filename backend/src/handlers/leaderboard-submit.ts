@@ -4,10 +4,30 @@
  * Authenticated endpoint. Upserts the calling user's snapshot for
  * a single metric:
  *
- *   - current_value is overwritten with the new value (this is the
- *     user's latest measurement)
+ *   - current_value:
+ *       * For WEEKLY CUMULATIVE metrics (step_total, flights_climbed)
+ *         within the SAME week_start, monotonic non-decreasing:
+ *         MAX(existing, new). Once a user has earned a higher
+ *         cumulative weekly value, later partial / stale-cache /
+ *         HealthKit-corrected resubmits cannot downgrade the
+ *         leaderboard within that week. Cross-week (new week_start
+ *         vs the stored one) always REPLACES, so Sunday rollover
+ *         starts the counter from the new week's value (could be
+ *         lower than last week, that's intended).
+ *       * For NON-WEEKLY metrics (streaks) and when week_start is
+ *         NULL (cross-week / no-week path), current_value is
+ *         overwritten with the new value — streaks can legitimately
+ *         decrease when a streak breaks.
  *   - best_value is MAX(existing_best, new_current) — best is sticky
  *     and never decreases. Powers "personal record" surfaces in client.
+ *
+ * v3 Phase 1z.131 — adds the weekly-monotonic clause for current_value.
+ * Bug fix: rendiesel earlier submitted step_total=101,259 (qualifying
+ * for the 100K Club accolade + Hall of Fame record), then a later
+ * partial submit of 73,840 overwrote current_value back below the
+ * earlier peak, producing the screenshot mismatch where the 100K Club
+ * + Hall of Fame views still showed 101K while This Week showed 73,840.
+ * Streaks intentionally not affected (NULL week_start short-circuits).
  *
  * Body: { metric, current_value }
  * Response: { current_value, best_value } reflecting actual DB state
@@ -99,16 +119,32 @@ export async function handleLeaderboardSubmit(
     ? getAccoladeWeekStart(now)
     : null;
 
-  // UPSERT with MAX preservation on best_value. SQLite (D1) supports
-  // ON CONFLICT...DO UPDATE syntax. excluded.<col> refers to the values
-  // we tried to insert. week_start is also updated on conflict so a
-  // user submitting in a new week overwrites their prior-week tag.
+  // UPSERT with MAX preservation on best_value AND same-week
+  // monotonic MAX on current_value for weekly cumulative metrics.
+  // SQLite (D1) supports ON CONFLICT...DO UPDATE syntax;
+  // excluded.<col> refers to the values we tried to insert.
+  //
+  // current_value CASE:
+  //   - excluded.week_start NOT NULL                  → weekly metric
+  //     AND existing.week_start = excluded.week_start → same week
+  //       → MAX(existing.current_value, new) — never downgrade in-week
+  //   - otherwise (NULL week_start, OR different week_start)
+  //       → excluded.current_value — overwrite (streaks can decrease,
+  //         new-week rollover resets the counter)
+  //
+  // week_start is also updated on conflict so a user submitting in a
+  // new week overwrites their prior-week tag.
   await env.DB.prepare(
     `INSERT INTO leaderboard_snapshots
        (user_id, metric, current_value, best_value, updated_at, week_start)
      VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, metric) DO UPDATE SET
-       current_value = excluded.current_value,
+       current_value = CASE
+         WHEN excluded.week_start IS NOT NULL
+              AND leaderboard_snapshots.week_start = excluded.week_start
+           THEN MAX(leaderboard_snapshots.current_value, excluded.current_value)
+         ELSE excluded.current_value
+       END,
        best_value = MAX(leaderboard_snapshots.best_value, excluded.current_value),
        updated_at = excluded.updated_at,
        week_start = excluded.week_start`,
