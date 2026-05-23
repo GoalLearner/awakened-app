@@ -55,7 +55,82 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.133 Daily Walk false-positive auto-seal correction (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.134 Compact collapsible header on scroll (read this first)
+
+### ✅ STATUS: Option A shipped. Full RPG header stays at top; decoration + quote + status pills + nudges collapse once the user scrolls past 120px in the active tab panel. Estimated gain: ~80–100px (≈ one additional habit row visible).
+
+**Background**: Two testers asked for more habit-grid visibility while scrolling. The audit confirmed the `#app` flex shell already lets a CSS-only collapse work — `<header>` is `flex-shrink:0` and the `.tab-panel` is `flex:1; overflow-y:auto`, so any header shrink automatically grows the scroll viewport. No JS layout math needed.
+
+**Approach** — Option A (low-risk, no DOM redesign):
+- Adds `header.header--compact { … }` CSS rules in `styles.css`. Compact mode collapses to zero height:
+  - `.aw-header__rune` (gold divider, decorative)
+  - `#daily-quote`
+  - `#status-pills` (hunting row + active packs)
+  - `#streak-danger`, `#morning-nudge`, `#lockedin-nudge` (conditional banners)
+  - Reduces header top/bottom padding (calc(20px + safe-top) → calc(8px + safe-top); bottom 12px → 6px).
+- **Preserves** `.metric-strip` (which hosts the World Rank `#steps-card` — the only Global Rankings Hub trigger) and `.today-strip` (HABITS TODAY counter + souls).
+- 160ms ease transitions on padding/max-height/opacity so the toggle feels intentional, not abrupt.
+
+**JS** — `setupCollapsibleHeader()` in `app.js`:
+- Attaches a passive `scroll` listener to every `#main-scroll` and `.tab-panel`. Idempotent via `data-header-compact-wired="1"` so re-calls don't double-attach.
+- Hysteresis: compact at `scrollTop > 120`, expand at `< 40`. Single shared `_headerCompactState` + `_headerCompactRafQueued` to coalesce rapid scroll events through one `requestAnimationFrame` per frame.
+- Tab-switch handler at capture phase resets the compact state based on the newly-active panel's `scrollTop` (so jumping from a scrolled-down Habits tab to a fresh Stats tab doesn't leave the header collapsed).
+- New diagnostic breadcrumbs: `header-compact-on` / `header-compact-off` (state-change only, not per scroll event).
+
+**Deferred (Option B)**: A full mini-HUD strip (`AWAKENED · WORLD #2 · 1/46 · ⚙`) replacing the metric-strip + today-strip entirely was scoped during audit but **not implemented**. Option B would gain ~200–240px but requires a new DOM block, click-handler rewiring for the World Rank tap target, and a design pass to keep the RPG identity. Tabled for a future 1z.135 design-led iteration.
+
+**What's preserved**:
+- ✅ Full header unchanged at the top of every tab (scrollTop = 0).
+- ✅ World Rank → Global Rankings Hub still works (the `#steps-card` element doesn't move in compact mode — it stays inside `.metric-strip`).
+- ✅ Settings gear remains accessible in `.header-top` (always visible).
+- ✅ Habit card taps unaffected (no overlays, no `pointer-events` changes).
+- ✅ Tab bar untouched (it lives outside the header).
+- ✅ Sheets/modals (`#lb-rank-sheet`, `#lb-hub-sheet`, etc.) all use `position: fixed` at higher z-index — unaffected.
+- ✅ Safe-area top still respected via `calc(Npx + var(--safe-top))`.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w12` | `2.2.3-w13` |
+| `app.js?v=` | `465` | `466` |
+| `sw.js CACHE_VERSION` | `v5.351` | `v5.352` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 26/29 first run with the same 3 browser-context flakes that have hit every train since 1z.128 (all pass on isolated retry). No regressions; new header behaviour is not asserted by e2e (would need viewport scroll automation — added to backlog).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No HealthKit / dungeon / economy / sim / leaderboard logic changes. No Global Rankings Hub logic changes. World Rank trigger unmoved. Settings access preserved. Habit card taps preserved.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Force-quit + cold-launch. Copy Debug Info shows `"build": "2.2.3-w13"`.
+2. On the Habits tab at the top, full header renders as before — wordmark, rune, 3-card metric strip, today-strip, status pills (if engaged), quote.
+3. Scroll the habit grid down past ~120px. Header collapses: rune + quote + status-pills + nudges fade to zero height with a 160ms transition. Metric-strip and today-strip stay visible. Approximately one extra habit row enters the viewport.
+4. Scroll back to top (under ~40px). Header expands smoothly back to full state.
+5. While compact, tap the World Rank card → Global Rankings Hub opens normally.
+6. Tap the settings gear → settings sheet opens normally.
+7. Switch tabs — the header always renders full at the start of each new panel (no stuck-collapsed state).
+8. Debug breadcrumbs include `header-compact-on` and `header-compact-off` entries on scroll state changes (one each per cross, not per event).
+
+If the visual feels off on real hardware (jank, content overlap, wrong-feeling transition speed), roll back the CSS class trigger by editing one constant — `_HEADER_COMPACT_ON_PX = 99999` effectively disables the compact mode without removing the rules.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.133 Daily Walk false-positive auto-seal correction (historical — superseded by 1z.134 above)
 
 ### ✅ STATUS: Daily Walk now auto-unseals when current device-local HealthKit steps fall below the goal — mirrors the 1z.123 Sleep correction pattern
 

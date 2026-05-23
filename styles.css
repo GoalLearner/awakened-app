@@ -79,7 +79,75 @@ header {
   border-bottom: 1px solid var(--border);
   position: relative;
   z-index: 10;
+  /* v3 Phase 1z.134 — compact-mode collapse. The flex shell already
+     gives the freed pixels to .tab-panel automatically, so we only
+     need to shrink header content + padding via CSS. Transitions
+     run on max-height/opacity/padding/margin so the visual feels
+     intentional rather than abrupt. */
+  transition: padding 160ms ease;
 }
+
+/* ── HEADER · COMPACT MODE (v3 Phase 1z.134) ───────────────────────
+   Triggered by JS via `header.header--compact` once the tab-panel
+   scroll position passes the hysteresis threshold. Keeps the
+   metric-strip + today-strip visible so the World Rank → Global
+   Rankings Hub tap target stays where users learned it. Hides
+   decoration + nudges + quote + status pills to reclaim ~80–100px
+   for the habit grid below. */
+header.header--compact {
+  padding-top: calc(8px + var(--safe-top));
+  padding-bottom: 6px;
+}
+/* Hide the gold rune divider entirely in compact mode (purely
+   decorative; safe to drop). The diamond+line collapse without
+   reflow because their parent collapses to zero height. */
+header.header--compact .aw-header__rune {
+  max-height: 0;
+  margin: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 160ms ease, opacity 120ms ease, margin 160ms ease;
+}
+/* Daily quote row — collapses to zero height. The .hidden class
+   already exists on the element by default; this rule kicks in
+   when the quote is otherwise visible (daily-quote.hidden is
+   removed by JS once a quote is chosen). */
+header.header--compact #daily-quote {
+  max-height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 160ms ease, opacity 120ms ease;
+}
+/* Status pill row (Hunting · active packs · class affinity).
+   Useful but secondary while scrolling — hidden in compact mode. */
+header.header--compact #status-pills {
+  max-height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 160ms ease, opacity 120ms ease;
+}
+/* Conditional nudges (streak danger / morning nudge / locked-in
+   nudge). Each surfaces an urgent in-day reminder — but they're
+   secondary while the user is scanning habits, and the scroll
+   gesture itself signals the user has engaged with the list.
+   These re-show as soon as the user scrolls back to the top. */
+header.header--compact #streak-danger,
+header.header--compact #morning-nudge,
+header.header--compact #lockedin-nudge {
+  max-height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 160ms ease, opacity 120ms ease;
+}
+/* Metric-strip + today-strip explicitly kept visible — they host
+   the World Rank tap target (Global Rankings Hub trigger) and the
+   habits-today summary which is the most-glanced stat in the app. */
 
 .header-top {
   display: flex;

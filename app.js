@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w12';
+  const APP_BUILD_TAG = '2.2.3-w13';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14998,6 +14998,88 @@
       try { openGlobalRankingsHub(); } catch (_) {}
     });
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // v3 Phase 1z.134 — Compact collapsible header on scroll.
+  //
+  // The header is the flex-shrink:0 first child of the #app shell;
+  // tab panels (#main-scroll + every .tab-panel sibling) are flex:1
+  // with their own overflow-y. Shrinking the header via CSS class
+  // automatically grows the scrollable area below it — no JS layout
+  // math needed. We toggle `header--compact` on the <header> element
+  // based on the active tab-panel's scrollTop.
+  //
+  // Hysteresis: compact when scrollTop > 120, expand when < 40.
+  // Prevents flicker around the boundary. Passive listener + single
+  // rAF coalesce → touch perf untouched.
+  //
+  // Two testers asked for more habit-grid visibility. Option A here
+  // keeps the full RPG header on top + the metric-strip (World Rank
+  // tap target) intact, collapsing only decoration + quote + status
+  // pills + nudges + padding. Estimated gain ~80-100px (≈ one extra
+  // habit row). Full mini-HUD (Option B) is deferred to a separate
+  // design pass.
+  // ─────────────────────────────────────────────────────────────
+  const _HEADER_COMPACT_ON_PX  = 120;
+  const _HEADER_COMPACT_OFF_PX = 40;
+  let _headerCompactRafQueued = false;
+  let _headerCompactState = false;
+
+  function _updateHeaderCompactState(scrollTop) {
+    const headerEl = document.querySelector('header');
+    if (!headerEl) return;
+    let next = _headerCompactState;
+    if (!_headerCompactState && scrollTop > _HEADER_COMPACT_ON_PX) next = true;
+    else if (_headerCompactState && scrollTop < _HEADER_COMPACT_OFF_PX) next = false;
+    if (next === _headerCompactState) return;
+    _headerCompactState = next;
+    headerEl.classList.toggle('header--compact', next);
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb(next ? 'header-compact-on' : 'header-compact-off', {});
+      }
+    } catch (_) {}
+  }
+
+  function _attachHeaderCompactToPanel(panel) {
+    if (!panel || panel.getAttribute('data-header-compact-wired') === '1') return;
+    panel.setAttribute('data-header-compact-wired', '1');
+    panel.addEventListener('scroll', () => {
+      if (_headerCompactRafQueued) return;
+      _headerCompactRafQueued = true;
+      requestAnimationFrame(() => {
+        _headerCompactRafQueued = false;
+        try { _updateHeaderCompactState(panel.scrollTop); } catch (_) {}
+      });
+    }, { passive: true });
+  }
+
+  function setupCollapsibleHeader() {
+    // Wire every existing scroll container. data-attr guard keeps
+    // it idempotent so a future re-call (e.g. after dynamic panel
+    // creation) doesn't double-attach.
+    const panels = document.querySelectorAll('#main-scroll, .tab-panel');
+    panels.forEach(_attachHeaderCompactToPanel);
+    // Reset on tab switch so a previously-scrolled panel doesn't
+    // leave the header collapsed when the user jumps to a fresh
+    // panel sitting at scrollTop 0. Single delegated listener at
+    // capture phase so we run before the tab switch handler.
+    if (typeof window !== 'undefined' && !window.__headerCompactTabSwitchWired) {
+      window.__headerCompactTabSwitchWired = true;
+      document.addEventListener('click', (e) => {
+        const tabBtn = e.target && e.target.closest && e.target.closest('.tab-btn');
+        if (!tabBtn) return;
+        // Defer one rAF so the tab switch DOM has settled before we
+        // read scrollTop of the newly-active panel.
+        requestAnimationFrame(() => {
+          const activePanel = document.querySelector('.tab-panel:not(.hidden), #main-scroll:not(.hidden)');
+          const st = activePanel ? activePanel.scrollTop : 0;
+          try { _updateHeaderCompactState(st); } catch (_) {}
+        });
+      }, { capture: true });
+    }
+  }
+  try { window.setupCollapsibleHeader = setupCollapsibleHeader; } catch (_) {}
 
   // Renders the status pill row: active habit packs (Morning Routine,
   // Locked-In) + class affinity lean. Hides the row entirely when
@@ -32104,6 +32186,8 @@
     // on every habit toggle, but we paint here too so the card is
     // not stuck in 'is-loading' before the first habit interaction.
     try { setupStepsCard(); updateStepsCard(); } catch (_) {}
+    // v3 Phase 1z.134 — compact collapsible header on scroll.
+    try { setupCollapsibleHeader(); } catch (_) {}
     // v3 Phase 1z.27 — 100K Step Club accolade init + cache prime.
     // Wires the prestige-frame tap handler + the bottom sheet, then
     // kicks off a cache-warm fetch. Both calls are idempotent.
