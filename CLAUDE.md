@@ -4,7 +4,84 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.128 Simulated Flights Climbed capped at 50/week (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.129 Iron Warden broadened to any Apple Health workout (read this first)
+
+### ✅ STATUS: Iron Warden (D-rank, STR) now defeats on any Apple Health workout type, matching the 1z.105 "Workout 30 min" habit semantics
+
+**Bug summary**: User completed a workout but Iron Warden hunt stayed at `0 / 1 day`. The boss copy said "verified strength workout of at least 10 minutes today" but the user's workout was either non-strength (HIIT/run/cycle/yoga/etc.) or was logged yesterday (Iron Warden is strictly today-scoped, no backfill).
+
+**Root cause**: Iron Warden's `evaluateIronWardenForDay` was fed by `Health.getStrengthWorkoutsToday()`, which filters through a strength-only allowlist (Traditional/Functional/Strength/Weight/Resistance Training keywords + numeric type IDs). Non-strength workouts were rejected entirely. This was the pre-1z.105 design — at that time the "Strength training 30 min" habit was also strength-only. When 1z.105 broadened the habit to any-workout, Iron Warden was intentionally left strength-only. The result: habit copy says "Workout", boss copy still says "strength workout", and the two semantically diverged.
+
+**Fix (1z.129) — Path B**: Iron Warden now uses `getAnyWorkoutsToday()` (the same data source as the broadened Workout habit) and checks `totalMinutes >= cfg.workoutMinutes` (10). Any workout activity type counts (HIIT, running, cycling, strength, yoga, sports, etc.). Stat domain stays STR — that's boss theme, not a HealthKit-type filter.
+
+**Strength Duel stays strength-only** (intentional, untouched). Strength Duel scoring is a competitive metric where the strength-only filter is the whole point of the duel.
+
+### Copy changes
+
+| Field | Old | New |
+|---|---|---|
+| `killCondShort` | "Verified strength workout (10+ min) today" | "Verified workout (10+ min) today" |
+| `killCondLong` | "Complete one Apple Health–verified strength workout of at least 10 minutes today. Any qualifying workout defeats the boss for that day." | "Complete at least 10 minutes of Apple Health–verified workout today. Any qualifying workout activity counts toward defeating the boss for that day." |
+| boss-result-toast | "Strength workout verified" | "Workout verified (10+ min)" |
+
+### Rule semantics
+
+- **Source**: `Health.getAnyWorkoutsToday()` (any workout activity type, per-sample ≥ 1 min floor to filter zero-length junk samples).
+- **Threshold**: `cfg.workoutMinutes = 10` minutes of cumulative daily workout time.
+- **Decision**: total daily minutes ≥ 10 → defeat. Not "single workout ≥ 10 min" — total today, because real-world workouts are sometimes split (10-min HIIT + 5-min walk + 8-min stretch), and the boss philosophy is "any day with meaningful workout time."
+- **Today-scoped**: no yesterday-backfill (same as Glass Strider / Dream Tyrant). Hunt window still resets at midnight device-local.
+
+### Diagnostics (new breadcrumbs)
+
+- `iron-warden-eval { dayDate, mode: "any-workout", totalMinutes, threshold, qualifyingCount }` — fires every visibility-change tick once the hunt is engaged.
+- `iron-warden-defeated { dayDate, totalMinutes, threshold, mode }` — fires on the defeat write.
+- `iron-warden-skip { reason: "not-engaged" | "below-threshold", ... }` — fires on the skip path so future "boss didn't trigger" reports have a clear breadcrumb trail.
+
+### Backend
+
+Unchanged. Boss state lives in client localStorage (`hb_boss_*`), no backend writes for boss defeats.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w8` | `2.2.3-w9` |
+| `app.js?v=` | `461` | `462` |
+| `sw.js CACHE_VERSION` | `v5.347` | `v5.348` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (none Iron Warden related — pass on isolated retry).
+- Backend tests: not run (no backend changes).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. Strength Duel unchanged. Workout 30 min habit unchanged. Sleep/Steps/Flights leaderboard behavior unchanged. Dungeon rank filtering unchanged. Rewards / drop rates / economy unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false. App Review HealthKit permission compliance preserved (no new permission surface — reuses existing workout read auth).
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+4. Force-quit + cold-launch on device.
+
+### Expected TestFlight verification
+
+1. Copy Debug Info shows `"build": "2.2.3-w9"`.
+2. Engage Iron Warden hunt (Engage Boss button on the boss detail screen).
+3. Complete any Apple Health workout activity totaling ≥ 10 minutes today (HIIT, run, cycle, yoga, walk, strength — any type).
+4. Re-open Awakened (foreground triggers `autoVerifyStrengthTraining`).
+5. Iron Warden progress should flip to `1 / 1 day` and the boss-defeated toast should appear.
+6. Debug should include `iron-warden-eval { mode: "any-workout", totalMinutes: ≥10 }` followed by `iron-warden-defeated`.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.128 Simulated Flights Climbed capped at 50/week (historical — superseded by 1z.129 above)
 
 ### ✅ STATUS: Fake Flights Climbed leaderboard values now top out at 50/week — realistic against Apple Health data, leaving real users competitive at the top of the board
 

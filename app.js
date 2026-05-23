@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w8';
+  const APP_BUILD_TAG = '2.2.3-w9';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -444,8 +444,14 @@
       rank:             'D',
       flavorShort:      'Steel remembers what flesh forgets.',
       flavorLong:       'He stands at the threshold of the forge, and the price of passage is iron lifted. Skip the work and the gate seals. Earn the work, and the way opens — for today.',
-      killCondShort:    'Verified strength workout (10+ min) today',
-      killCondLong:     'Complete one Apple Health–verified strength workout of at least 10 minutes today. Any qualifying workout defeats the boss for that day.',
+      // v3 Phase 1z.129 — broadened from strength-only to any
+      // Apple Health workout type. Mirrors the 1z.105 habit
+      // broadening ("Strength training 30 min" → "Workout 30 min").
+      // Threshold: total daily workout minutes ≥ 10. Stat domain
+      // stays STR — that's boss theme, not a HealthKit-type filter.
+      // Strength Duel remains strength-only (unchanged).
+      killCondShort:    'Verified workout (10+ min) today',
+      killCondLong:     'Complete at least 10 minutes of Apple Health–verified workout today. Any qualifying workout activity counts toward defeating the boss for that day.',
       streakTarget:     1,
       workoutMinutes:   10,
       cadence:          'daily',
@@ -4340,7 +4346,7 @@
     the_insomniac:     'Sleep goal achieved: 7+ hours',
     the_carouser:      'Sober streak protected',
     the_steel_wolf:    'Strength session sealed',
-    the_iron_warden:   'Strength workout verified',
+    the_iron_warden:   'Workout verified (10+ min)',
     the_glass_strider: '7,500 verified steps',
     the_dream_tyrant:  '7.5 hours of sleep',
   };
@@ -5996,29 +6002,74 @@
     try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
   }
 
-  // ── Iron Warden — verified strength workout ──────────────────
-  // Fed by Health.getStrengthWorkoutsToday() in autoVerifyStrengthTraining.
-  // Shares the same data source as the Strength training habit's
-  // auto-verify — a single qualifying workout drives both, matching
-  // the Insomniac/Carouser ↔ Sleep auto-verify shared-data pattern.
-  function evaluateIronWardenForDay(strengthData, dayDate) {
+  // ── Iron Warden — verified workout ───────────────────────────
+  // v3 Phase 1z.129 — broadened from strength-only to any Apple
+  // Health workout. Fed by Health.getAnyWorkoutsToday() in
+  // autoVerifyStrengthTraining. Shares the any-workout data source
+  // with the "Workout 30 min" habit auto-verify; same per-sample
+  // ≥1 min filter to drop zero-length junk samples. Kill rule:
+  // total daily Apple Health workout minutes ≥ cfg.workoutMinutes
+  // (10). Any activity type counts (HIIT, running, cycling,
+  // strength, yoga, sports, etc.) — same rule as the Workout habit.
+  // Strength Duel remains strength-only (intentionally).
+  function evaluateIronWardenForDay(workoutData, dayDate) {
     if (!dayDate) return;
     const id = 'the_iron_warden';
     const cfg = BOSSES[id];
     if (!cfg) return;
     const state = getBossState(id);
     if (state.last_eval_date === dayDate) return;   // idempotent
-    if (state.engaged !== true) return;             // engagement gate
+    if (state.engaged !== true) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('iron-warden-skip', {
+            reason: 'not-engaged', dayDate,
+          });
+        }
+      } catch (_) {}
+      return;                                       // engagement gate
+    }
 
-    const qualifyingCount = (strengthData && typeof strengthData.count === 'number')
-      ? strengthData.count : 0;
+    const totalMinutes = (workoutData && typeof workoutData.totalMinutes === 'number')
+      ? workoutData.totalMinutes : 0;
+    const threshold = (typeof cfg.workoutMinutes === 'number') ? cfg.workoutMinutes : 10;
 
-    if (qualifyingCount >= 1) {
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('iron-warden-eval', {
+          dayDate,
+          mode: 'any-workout',
+          totalMinutes: Number(totalMinutes.toFixed(1)),
+          threshold,
+          qualifyingCount: (workoutData && typeof workoutData.count === 'number') ? workoutData.count : 0,
+        });
+      }
+    } catch (_) {}
+
+    if (totalMinutes >= threshold) {
       _awardSingleShotKill(id, cfg, dayDate, state);
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('iron-warden-defeated', {
+            dayDate, totalMinutes: Number(totalMinutes.toFixed(1)), threshold,
+            mode: 'any-workout',
+          });
+        }
+      } catch (_) {}
     } else {
-      // No qualifying workout YET today — don't write a "no-kill"
+      // Below threshold YET today — don't write a "no-kill"
       // last_eval_date because that would block a later check after
-      // the user finishes a workout. Stay silent until the day rolls.
+      // the user finishes more workout time. Stay silent until the
+      // day rolls.
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('iron-warden-skip', {
+            reason: 'below-threshold', dayDate,
+            totalMinutes: Number(totalMinutes.toFixed(1)),
+            threshold,
+          });
+        }
+      } catch (_) {}
     }
   }
   function checkMissedDayForIronWarden() {
@@ -30611,18 +30662,19 @@
       targetMin: HEALTHKIT_WORKOUT_DAILY_TARGET_MIN,
     });
 
-    // ── Boss evaluation (Iron Warden, D-rank) — STRENGTH-ONLY ──
-    // Iron Warden's killCondLong explicitly reads "verified strength
-    // workout of at least 10 minutes today" — strength-only kept per
-    // explicit product decision. Habit verify (below) is separate and
-    // accepts any workout type.
-    if (strengthData) {
-      log('strength-data:', strengthData.count, 'qualifying workout(s),', (strengthData.totalMinutes || 0).toFixed(1), 'min');
+    // ── Boss evaluation (Iron Warden, D-rank) — ANY WORKOUT ──
+    // v3 Phase 1z.129 — broadened from strength-only to any Apple
+    // Health workout type to match the 1z.105 "Workout 30 min"
+    // habit. Iron Warden's kill condition is now: total daily Apple
+    // Health workout minutes ≥ 10. Strength Duel remains
+    // strength-only (intentionally, untouched).
+    if (workoutData) {
+      log('workout-data (iron warden):', workoutData.count, 'qualifying workout(s),', (workoutData.totalMinutes || 0).toFixed(1), 'min');
       try {
-        evaluateIronWardenForDay(strengthData, getDeviceLocalDate());
+        evaluateIronWardenForDay(workoutData, getDeviceLocalDate());
       } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
     } else {
-      log('strength-data: null');
+      log('workout-data (iron warden): null');
     }
 
     // ── Today habit auto-verify (ANY workout, 30-min daily total) ──
