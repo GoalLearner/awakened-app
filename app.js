@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w16';
+  const APP_BUILD_TAG = '2.2.3-w17';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12379,7 +12379,34 @@
       const progress = totalPoints - rank.min;
       const range    = rank.next - rank.min;
       bar.style.width = Math.min(100, (progress / range) * 100) + '%';
-      next.textContent = (rank.next - totalPoints) + ' to ' + RANKS[RANKS.indexOf(rank) + 1].id;
+      // v3 Phase 1z.138 — show XP to the next IMMEDIATE sub-rank
+      // (D III → D II → D I → C) instead of jumping straight to
+      // the next major rank. Reuses getRankDivisionInfo() — the
+      // same helper that powers the rank detail modal — so the
+      // card and the modal can never drift.
+      //
+      // Label rule:
+      //   - divisionIndex 0/1 (III or II) → next sub-rank label
+      //     (e.g. "D II", "D I").
+      //   - divisionIndex 2 (I → about to promote) → just the
+      //     next major letter (e.g. "C"), matching the user's
+      //     preference for the cross-major hop. xpToNextDivision
+      //     already collapses to the major-rank delta in this
+      //     case so the number stays correct.
+      try {
+        const divInfo = getRankDivisionInfo(totalPoints);
+        const label = (divInfo && divInfo.divisionIndex === 2 && divInfo.nextMajorRank)
+          ? divInfo.nextMajorRank
+          : (divInfo && divInfo.nextDivisionLabel) || RANKS[RANKS.indexOf(rank) + 1].id;
+        const xpToNext = (divInfo && Number.isFinite(divInfo.xpToNextDivision))
+          ? divInfo.xpToNextDivision
+          : (rank.next - totalPoints);
+        next.textContent = xpToNext.toLocaleString() + ' to ' + label;
+      } catch (_) {
+        // Defensive fallback to the original behaviour if the
+        // division helper ever throws.
+        next.textContent = (rank.next - totalPoints) + ' to ' + RANKS[RANKS.indexOf(rank) + 1].id;
+      }
       next.className = 'rank-next';
     }
     // v2.1.0 — refresh the redesigned header's dependent cards.

@@ -55,7 +55,93 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — Compact header v3 verified on real device; stop here (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.138 Rank card shows XP to next sub-rank (read this first)
+
+### ✅ STATUS: Header Rank card progress text now reads `356 to D II` instead of `1689 to C`. Modal still shows both the sub-rank line ("356 XP to D II") and the major-rank line ("1,689 XP to C Rank"). No XP/threshold/economy logic changed.
+
+**Tester feedback on `2.2.3-w16`**:
+- Rank card showed `1689 to C` — too far away, demotivating for a dashboard glance.
+- Modal correctly showed `356 XP to D II` as the next sub-rank target.
+- Card should mirror the modal's closer target.
+
+**Audit findings**:
+- Modal text comes from `getRankDivisionInfo(totalXp)` (added in 1z.59) which already returns `xpToNextDivision`, `nextDivisionLabel`, `nextMajorRank`, `divisionIndex`, etc. Single source of truth.
+- Rank card (`renderRank()`) was computing `rank.next - totalPoints` directly and labelling with the next major rank id — skipping the sub-rank ladder entirely.
+- Fix is one focused edit in `renderRank()`: call the same helper and pick a label.
+
+### Fix (1z.138) — reuse `getRankDivisionInfo`
+
+In `renderRank()` (line ~12378):
+```js
+const divInfo = getRankDivisionInfo(totalPoints);
+const label = (divInfo.divisionIndex === 2 && divInfo.nextMajorRank)
+  ? divInfo.nextMajorRank             // D I → "C"
+  : divInfo.nextDivisionLabel;        // D III → "D II", D II → "D I", C III → "C II"
+const xpToNext = divInfo.xpToNextDivision;
+next.textContent = xpToNext.toLocaleString() + ' to ' + label;
+```
+
+Wrapped in `try/catch` with a defensive fallback to the original behaviour if `getRankDivisionInfo` ever throws.
+
+**Label rule rationale**: when the user is in division `I` (about to promote, `divisionIndex === 2`), the next stop *is* the next major rank — so show just the major letter (`C`) per user spec, not `C III`. In `xpToNextDivision`, the helper already caps the delta at the major-rank threshold for division `I`, so the number stays correct.
+
+### Mapping examples (current ladder)
+
+| Current | Old card text | New card text |
+|---|---|---|
+| D III | `1689 to C` | **`356 to D II`** ← this user's case |
+| D II  | `≈1300 to C` | `≈800 to D I` |
+| D I   | `≈500 to C` | `≈500 to C` (unchanged — already same as major) |
+| C III | `≈3500 to B` | `≈1200 to C II` |
+| C I   | `≈1000 to B` | `≈1000 to B` (cross-major → just letter) |
+| S+    | `MAX RANK` | `MAX RANK` (unchanged) |
+
+`xp.toLocaleString()` adds the thousands separator so the card shows `1,200 to C II` etc. — matches the modal's formatting.
+
+### What's NOT changed
+
+- `RANKS` thresholds untouched.
+- `getRank()` untouched.
+- XP earning / accrual untouched.
+- `getRankDivisionInfo()` helper untouched (already correct).
+- Rank detail modal copy untouched (still shows both lines).
+- Compact mode: `.metric-card--rank .metric-card-sub` is hidden in 1z.137 already, so compact view still shows just the big `D` badge. New text only appears in expanded mode.
+- Backend / D1 / HealthKit / leaderboard / dungeon / economy: all unchanged.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w16` | `2.2.3-w17` |
+| `app.js?v=` | `469` | `470` |
+| `sw.js CACHE_VERSION` | `v5.355` | `v5.356` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 28/29 first run, 1 transient browser-context flake (pass on isolated retry, unrelated to rank logic).
+
+### MacBook build
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w17"`.
+2. Habits tab — expanded Rank card now reads **`356 to D II`** (not `1689 to C`).
+3. Tap the Rank card → detail modal opens, still shows `1,689 XP to C Rank` AND `356 XP to D II`. Both lines correct.
+4. Compact mode (chevron) — Rank card still shows only the big `D` badge (1z.137 behaviour preserved).
+5. If the user crosses into D II, card flips to `~800 to D I` automatically on next `renderRank()` tick.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — Compact header v3 verified on real device; stop here (historical — superseded by 1z.138 above)
 
 ### ✅ STATUS: Compact header work is COMPLETE. `2.2.3-w16` confirmed on real device. Do not continue into a larger Option B / full mini-HUD redesign unless new tester feedback specifically asks for more.
 
