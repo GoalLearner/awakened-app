@@ -4,7 +4,84 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.132 Detail leaderboard X returns to Global Rankings Hub (read this first)
+## 📌 Session handoff — May 23, 2026 — 1z.133 Daily Walk false-positive auto-seal correction (read this first)
+
+### ✅ STATUS: Daily Walk now auto-unseals when current device-local HealthKit steps fall below the goal — mirrors the 1z.123 Sleep correction pattern
+
+**Bug observed on device**: Saturday May 23 at 1:34 AM Eastern. Apple Health Steps screen showed 366 steps today. Awakened showed "Daily walk 8,000 steps ✅ SEALED" with 1/46 habits today on the dashboard. The walk had been sealed but Apple Health unambiguously says the user has not yet walked their goal today.
+
+**Root cause**: Asymmetric timezone anchoring across two parts of the walk verification path.
+
+- `today` (module state, line 8108) = `getPTDate()` → Pacific Time anchored for global streak fairness.
+- `Health.getStepsToday()` → uses `getDeviceLocalDate()` for the query window.
+
+For any user east of Pacific Time (Eastern, Central, Europe, Asia), there is a daily window between PT-midnight and device-local-midnight where the two date keys disagree. During that window:
+
+1. The previous PT-day's walk completion (correctly sealed when steps crossed 8,000 in that PT day) is still indexed at `completions[today_PT]` because `today` hasn't rolled over to the new PT date yet.
+2. The streak/check display reads `completions[today_PT]` and shows the walk as sealed.
+3. Apple Health queried for "today device-local" returns the freshly-started new day's tiny step count (366).
+4. Old `autoVerifyWalk` flow: `isChecked(walk.id)` → true → bail with `'already-checked'`. No revalidation. **UI now lies about today's progress** until PT-midnight rolls over.
+
+Crucially, the existing `isChecked` early-bail is the same short-circuit pattern that 1z.123 fixed for Sleep (Oura downward corrections during the night). Same root pattern, same fix shape.
+
+**Fix (1z.133)**: Walk now revalidates against the current step count when it's already-checked. If the walk was auto-verified (not manually checked) AND current `Health.getStepsToday()` is below the habit threshold, the seal is treated as stale-auto: `uncheck(walk.id)` + `AUTO_VERIFY.clearAutoVerify(walk.id)`. Uses the underlying `uncheck()` directly rather than `toggleHabit`'s `markUnchecked` path — that way the habit can naturally re-seal later in the day if the user actually crosses the threshold. `markUnchecked` is for user-intent rejection; this path is system data correction.
+
+Manual completions are not affected (the `isAutoVerifiedToday` check gates the unseal).
+
+### Diagnostics
+
+- `walk-unsealed-stale-auto { steps, threshold, source: "auto-verify-revalidate" }` — fires on every revalidation that triggers an unseal.
+- `walk-unseal-threw { err }` — fires only if the underlying `uncheck()` throws.
+- `walk-skip { reason: "already-checked", isAutoVerified, steps, threshold }` — the existing skip breadcrumb now carries the revalidation context so future "why didn't walk unseal" reports have full visibility.
+
+Existing breadcrumbs preserved: `walk-entry`, `walk-perm-status`, `walk-steps`, `walk-bail-*`, `walk-threshold-check`, `walk-sealed`.
+
+### What was NOT changed (preserved per guardrails)
+
+- Sleep / Workout / Flights / Steps leaderboard behaviour: untouched.
+- `Health.getStepsToday()` / `getStepsBetween()` query windows: untouched.
+- `today` anchor for streaks: still PT (global fairness).
+- Bosses (Steel Wolf, Glass Strider): use their own `evaluate…ForDay(steps, getDeviceLocalDate())` calls, which are device-local-day and independent of this fix.
+- `lbRecordStepsToday`: untouched — still writes today's bucket using device-local-today.
+- Manual completion path: untouched (only auto-verified seals can be revalidated and unsealed).
+- Yesterday backfill (`_backfillWalkYesterday`): untouched.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w11` | `2.2.3-w12` |
+| `app.js?v=` | `464` | `465` |
+| `sw.js CACHE_VERSION` | `v5.350` | `v5.351` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+
+### Tests
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 28/29 first run, 1 transient flake (1z.130 hub-renders-4-rows test, unrelated to walk) — 100% pass on isolated retry.
+- Backend tests: not run (no backend changes).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. No backend changes. No HealthKit query / privacy / permission surface changed. No sim/dungeon/economy/leaderboard changes. App Review HealthKit compliance preserved.
+
+### MacBook build
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Xcode → bump iOS native build number → Archive → TestFlight.
+4. Force-quit + cold-launch. Verify `"build": "2.2.3-w12"` in Copy Debug Info.
+
+### Expected TestFlight verification
+
+1. On any day where Apple Health shows < 8,000 steps for the current device-local-day, the Daily walk habit must remain unchecked even if it was previously sealed (e.g. during the PT/device-local mismatch window early in the morning for users east of Pacific Time).
+2. As the user walks past 8,000 steps later in the day, the walk re-seals normally (the unseal path uses `uncheck` not `markUnchecked`, so re-seal is unblocked).
+3. Copy Debug Info should include `walk-unsealed-stale-auto { steps: <small number>, threshold: 8000 }` for any visibility-change tick where the correction fires.
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.132 Detail leaderboard X returns to Global Rankings Hub (historical — superseded by 1z.133 above)
 
 ### ✅ STATUS: Drill-down navigation fixed — X on a detail leaderboard now returns to the hub instead of dumping the user to the dashboard
 

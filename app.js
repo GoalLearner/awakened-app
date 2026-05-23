@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w11';
+  const APP_BUILD_TAG = '2.2.3-w12';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30449,7 +30449,59 @@
         reason: isAutoVerifyDisabled() ? 'auto-verify-paused' : 'habit-not-in-list'
       });
     } else if (isChecked(walk.id)) {
-      _addHealthVerifyBreadcrumb('walk-skip', { reason: 'already-checked' });
+      // v3 Phase 1z.133 — stale auto-verification correction.
+      // Mirrors the 1z.123 Sleep false-positive fix. If walk is
+      // currently checked via auto-verify AND current device-local
+      // today's HealthKit step count is below the threshold, unseal
+      // so the user is never shown a sealed walk while Apple Health
+      // says they only walked 366 steps today.
+      //
+      // Why this can happen: the streak/check anchor (`today`,
+      // line 8108) is PT-aligned for global streak fairness, but
+      // Health.getStepsToday() uses device-local-today. For users
+      // east of PT (Eastern, Central, Europe, etc.), between PT
+      // midnight and device-local midnight there's a window where
+      // a prior seal (recorded under PT-Friday) is still indexed
+      // as `completions[today]` but the device-local Saturday only
+      // has a handful of steps. Symptom from TestFlight: 1:34 AM
+      // Eastern Saturday → app shows "Daily walk 8,000 steps ✅"
+      // even though Apple Health shows 366 steps for Saturday.
+      //
+      // Fix: revalidate against the same step count we already
+      // fetched above. If walk was auto-verified (not manually
+      // checked) AND current steps < threshold → uncheck +
+      // clearAutoVerify. Uses uncheck() + clearAutoVerify() directly
+      // (NOT toggleHabit's markUnchecked path) so the habit can
+      // re-seal later if the user actually walks past their goal.
+      // markUnchecked is for user-intent rejection; this path is
+      // system data correction.
+      const threshold = getHabitStepGoal(walk);
+      const isAutoVerified = AUTO_VERIFY.isAutoVerifiedToday(walk.id);
+      if (isAutoVerified && steps < threshold) {
+        try {
+          uncheck(walk.id);
+          AUTO_VERIFY.clearAutoVerify(walk.id);
+          const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+          if (li) {
+            li.classList.remove('completed');
+            const cb = li.querySelector('.habit-cb');
+            if (cb) cb.classList.remove('checked');
+          }
+          _addHealthVerifyBreadcrumb('walk-unsealed-stale-auto', {
+            steps, threshold, source: 'auto-verify-revalidate',
+          });
+          if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
+        } catch (e) {
+          _addHealthVerifyBreadcrumb('walk-unseal-threw', {
+            err: String(e && e.message || e),
+          });
+        }
+      } else {
+        _addHealthVerifyBreadcrumb('walk-skip', {
+          reason: 'already-checked',
+          isAutoVerified, steps, threshold,
+        });
+      }
     } else if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) {
       _addHealthVerifyBreadcrumb('walk-skip', { reason: 'user-unchecked-today' });
     } else {
