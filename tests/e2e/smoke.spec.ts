@@ -200,10 +200,20 @@ test.describe('D · Edit Habit modal', () => {
 test.describe('E · Leaderboard sheet', () => {
   test('opens via Steps card, tabs visible, scroll keeps open, X closes', async ({ page }) => {
     await freshApp(page);
-    // World Rank · Steps card is on the Status (default) tab.
+    // v3 Phase 1z.130 — World Rank card now opens the Global Rankings
+    // Hub (chooser sheet), not the Steps leaderboard directly. The
+    // hub Steps row is the new entry into #lb-rank-sheet.
     const stepsCard = page.locator('#steps-card');
     await expect(stepsCard).toBeVisible();
     await stepsCard.click();
+
+    // Hub opens first.
+    const hubSheet = page.locator('#lb-hub-sheet');
+    await expect(hubSheet).toBeVisible();
+    // Hub contains 4 metric rows.
+    await expect(page.locator('#lb-hub-list [data-lb-metric="step_total"]')).toBeVisible();
+    // Tap the Steps row to drill into the per-metric leaderboard.
+    await page.locator('#lb-hub-list [data-lb-metric="step_total"]').click();
 
     const sheet = page.locator('#lb-rank-sheet');
     await expect(sheet).toBeVisible();
@@ -1541,23 +1551,24 @@ test.describe('N · Dungeon rank filter preserved (1z.117)', () => {
 // _lbComputeWorkoutStreakFromCompletions helper with seeded
 // completion data to confirm it derives current/best correctly.
 test.describe('O · Workout streak leaderboard card (1z.118)', () => {
-  test('leaderboard preview shows step_total + sleep_streak + workout_streak; bedtime card gone', async ({ page }) => {
+  test('global rankings hub shows step_total + sleep_streak + workout_streak + flights_climbed; bedtime card gone', async ({ page }) => {
     await freshAppForLedgerTest(page);
-    // The leaderboard preview is a global; call it directly so we
-    // don't depend on Profile-tab activation timing in CI.
+    // v3 Phase 1z.130 — Global Rankings moved out of the Stats tab
+    // into a dedicated hub sheet opened from the World Rank card.
+    // The hub list is `#lb-hub-list` and contains 4 metric rows.
     await page.evaluate(() => {
-      const w = window as unknown as { renderLeaderboardPreview?: () => void };
-      if (typeof w.renderLeaderboardPreview === 'function') {
-        try { w.renderLeaderboardPreview(); } catch (_) {}
+      const w = window as unknown as { openGlobalRankingsHub?: () => void };
+      if (typeof w.openGlobalRankingsHub === 'function') {
+        try { w.openGlobalRankingsHub(); } catch (_) {}
       }
     });
     await page.waitForFunction(() => {
-      const list = document.getElementById('lb-preview-list');
-      return !!list && list.querySelectorAll('[data-lb-metric]').length >= 3;
+      const list = document.getElementById('lb-hub-list');
+      return !!list && list.querySelectorAll('[data-lb-metric]').length >= 4;
     }, { timeout: 8_000 });
 
     const metrics = await page.evaluate(() => {
-      const list = document.getElementById('lb-preview-list');
+      const list = document.getElementById('lb-hub-list');
       if (!list) return null;
       return Array.from(list.querySelectorAll('[data-lb-metric]'))
         .map(el => el.getAttribute('data-lb-metric') || '');
@@ -1567,7 +1578,12 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     expect(metrics).toContain('step_total');
     expect(metrics).toContain('sleep_streak');
     expect(metrics).toContain('workout_streak');
+    expect(metrics).toContain('flights_climbed');
     expect(metrics).not.toContain('bedtime_streak');
+
+    // Stats tab should NOT contain the legacy `#lb-preview-list`.
+    const hasLegacy = await page.evaluate(() => !!document.getElementById('lb-preview-list'));
+    expect(hasLegacy).toBe(false);
   });
 
   test('_lbComputeWorkoutStreakFromCompletions derives streak from completion ledger', async ({ page }) => {

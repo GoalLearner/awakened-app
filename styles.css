@@ -23436,3 +23436,173 @@ body.habit-drag-active * {
     animation: none !important;
   }
 }
+
+/* ─── Global Rankings Hub (v3 Phase 1z.130) ─────────────────────────
+   Bottom-sheet chooser opened from the header World Rank card. Houses
+   the four ranking entry points (steps / sleep / workout / flights).
+   Uses the shared `.vn-sheet` + `.vn-overlay` shell so drag and
+   stacking behavior match every other sheet in the app. Per-metric
+   leaderboard sheet (#lb-rank-sheet) is unchanged — the hub just
+   hands off via openLeaderboardRanking(metric).
+   ─────────────────────────────────────────────────────────────── */
+.lb-hub-header {
+  position: relative;
+  padding: 4px 18px 0;
+  flex-shrink: 0;
+}
+.lb-hub-eyebrow {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #a78bfa;
+  margin-bottom: 6px;
+}
+.lb-hub-title {
+  margin: 0;
+  font-family: 'Cinzel', 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-primary, #f5b842);
+  text-shadow: 0 0 14px rgba(245, 184, 66, 0.35);
+  line-height: 1.05;
+  padding-right: 44px;
+}
+.lb-hub-sub {
+  margin: 8px 0 0;
+  padding-right: 8px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.68));
+}
+#lb-hub-close {
+  position: absolute;
+  top: 0;
+  right: 18px;
+}
+
+.lb-hub-body {
+  padding: 14px 18px 6px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-hub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lb-hub-row {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  color: inherit;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 80ms ease, background 80ms ease, transform 80ms ease;
+}
+.lb-hub-row:active {
+  border-color: rgba(167, 139, 250, 1);
+  background: rgba(167, 139, 250, 0.18);
+  transform: scale(0.995);
+}
+
+.lb-hub-row-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 30%, rgba(167, 139, 250, 0.25), #050513 75%);
+  border: 1px solid rgba(167, 139, 250, 0.75);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.30);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lb-hub-row-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(245, 184, 66, 0.35));
+}
+.lb-hub-row-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.lb-hub-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lb-hub-row-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.lb-hub-row-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary, #fff);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lb-hub-row-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.68));
+}
+.lb-hub-row-sub {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+.lb-hub-row-sub b {
+  color: #f5b842;
+  font-weight: 800;
+}
+.lb-hub-row-chev {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding-left: 4px;
+}
+
+.lb-hub-footer {
+  margin-top: 14px;
+  padding: 10px 0 2px;
+  text-align: center;
+  font-size: 0.68rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* World Rank card affordance — violet glow + chevron in header row.
+   The chevron already exists in markup (.steps-card__chev). We just
+   tighten the border treatment so the card reads "tap me" against
+   its plainer sibling cards. */
+#steps-card.steps-card {
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 80ms ease, background 80ms ease, box-shadow 80ms ease;
+}
+#steps-card.steps-card:active {
+  border-color: rgba(167, 139, 250, 1);
+  background: rgba(167, 139, 250, 0.18);
+}

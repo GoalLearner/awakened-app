@@ -273,7 +273,7 @@
              The XP · 30D sparkline (Card 3) is untouched. -->
         <button type="button" id="steps-card"
                 class="metric-card metric-card--steps steps-card is-loading"
-                aria-label="Open global steps leaderboard">
+                aria-label="Open Global Rankings">
           <div class="steps-card__head">
             <span class="steps-card__label">
               <svg class="steps-card__icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -429,26 +429,13 @@
     </div>
 
     <!-- Stats panel -->
+    <!-- v3 Phase 1z.130 — Stats tab is now Character Stats ONLY.
+         The Global Rankings section was removed here and moved into the
+         standalone Global Rankings Hub (#lb-hub-sheet) opened from the
+         header World Rank card (#steps-card). Per-metric leaderboard
+         sheets are unchanged — only the entry point moved. -->
     <div id="stats-panel" class="tab-panel hidden" data-panel="stats">
       <div id="stats-content" class="stats-content"></div>
-
-      <!-- Global Rankings (relocated v3 Phase 1x.2) — moved out of the
-           Duels tab so Duels stays focused on competitive interaction.
-           The leaderboard fits thematically under "your stats vs every
-           hunter." Reuses the existing .lb-preview markup + render
-           function so no JS rewrite needed. -->
-      <section class="stats-rankings">
-        <div class="lb-preview">
-          <div class="lb-preview-header">
-            <div class="lb-preview-eyebrow">LEADERBOARD · LIVE</div>
-            <h2 class="lb-preview-title">GLOBAL RANKINGS</h2>
-            <p class="lb-preview-sub">Tracked from your Apple Health data. Real-time rankings against every hunter on the leaderboard.</p>
-          </div>
-          <div id="lb-preview-empty" class="lb-preview-empty hidden"></div>
-          <div id="lb-preview-list" class="lb-preview-list"></div>
-          <div class="lb-preview-footer">Only Apple Health-verifiable stats — the only stats that don't lie.</div>
-        </div>
-      </section>
     </div>
 
     <!-- Habits panel -->
@@ -1261,6 +1248,28 @@
         </div>
       </div>
       <p class="acc-sheet-footer">Apple Health verifies every step on the leaderboard. The Club is permanent &mdash; once earned, always yours.</p>
+    </div>
+  </div>
+
+  <!-- Global Rankings Hub (v3 Phase 1z.130).
+       Bottom-sheet hub opened from the header World Rank card
+       (#steps-card). Houses the four ranking entry points (steps,
+       sleep, workout, flights). Each row hands off to the existing
+       per-metric leaderboard sheet (#lb-rank-sheet) via
+       openLeaderboardRanking(metric). Reuses the .vn-sheet shell so
+       drag/dismiss + overlay behavior matches every other sheet. -->
+  <div id="lb-hub-overlay" class="vn-overlay hidden" aria-hidden="true"></div>
+  <div id="lb-hub-sheet"   class="vn-sheet   hidden" role="dialog" aria-modal="true" aria-labelledby="lb-hub-title">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-hub-header">
+      <div class="lb-hub-eyebrow">GLOBAL · STANDINGS</div>
+      <h2 id="lb-hub-title" class="lb-hub-title">Global Rankings</h2>
+      <p class="lb-hub-sub">Tracked from your Apple Health data. Real-time rankings against every hunter on the leaderboard.</p>
+      <button id="lb-hub-close" class="vn-close-btn" aria-label="Close global rankings">✕</button>
+    </div>
+    <div class="lb-hub-body">
+      <div id="lb-hub-list" class="lb-hub-list"></div>
+      <div class="lb-hub-footer">Only Apple Health–verifiable stats are ranked.</div>
     </div>
   </div>
 
@@ -2228,7 +2237,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=462"></script>
+  <script src="app.js?v=463"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

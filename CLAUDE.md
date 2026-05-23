@@ -4,7 +4,92 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## 📌 Session handoff — May 22, 2026 — 1z.129 Iron Warden broadened to any Apple Health workout (read this first)
+## 📌 Session handoff — May 22, 2026 — 1z.130 Global Rankings moved to header hub; Stats tab is Character Stats only (read this first)
+
+### ✅ STATUS: Global Rankings now lives in a dedicated bottom-sheet hub opened from the header World Rank card. Stats tab is single-purpose Character Stats.
+
+**Context**: The Stats tab previously contained both Character Stats AND a "Global Rankings" preview list (with the 1z.125 "More rankings · Flights climbed ›" inline link tacked on). The leaderboard preview was the ONLY way to reach per-metric leaderboards from inside Stats. The result: Stats meant two different things on the same tab, and the World Rank card on the header took users to the Steps leaderboard exclusively (skipping the others). Product direction: **Stats tab = character progression. World Rank card = single rankings hub trigger.** Sourced from the `Global Rankings Hub.html` design (Variation A · Bottom Sheet, recommended).
+
+### What changed
+
+**Stats tab** (`index.html`): the entire `<section class="stats-rankings">` block (Global Rankings heading + `#lb-preview-list` + `#lb-preview-empty` + footer line) is **removed**. `#stats-panel` now contains only `#stats-content`. The `setActiveTab('stats')` switch no longer calls `renderLeaderboardPreview()`.
+
+**World Rank card** (`#steps-card`, `app.js:setupStepsCard`): previously called `openLeaderboardRanking('step_total')` on click. Now calls `openGlobalRankingsHub()`. `aria-label` updated to "Open Global Rankings" (was "Open global steps leaderboard"). Visual affordance preserved by the existing chevron + violet border treatment (now reinforced in CSS to match the design's pressed/idle states).
+
+**Global Rankings Hub sheet** (new): `#lb-hub-sheet` + `#lb-hub-overlay` added to `index.html`, sibling to `#lb-rank-sheet`. Reuses the shared `.vn-sheet` / `.vn-overlay` shell so drag/dismiss + stacking match every other sheet in the app. Content:
+- Eyebrow: `GLOBAL · STANDINGS` (violet, JetBrains Mono, +1.8 LS)
+- Title: `Global Rankings` (Cinzel 22pt gold + soft glow)
+- Subtitle: "Tracked from your Apple Health data. Real-time rankings against every hunter on the leaderboard."
+- 4 rows (`#lb-hub-list`), each a `<button data-lb-metric="…">`:
+  1. `step_total` — "steps this week" + best week sub
+  2. `sleep_streak` — "sleep streak · 7+ hr" + best sub
+  3. `workout_streak` — "workout streak · 30+ min" + best sub
+  4. `flights_climbed` — "flights this week" + best week sub
+- Footer: "Only Apple Health–verifiable stats are ranked."
+
+Each row icon is a 44×44 disc with violet ring + radial-gradient glow matching the design. Tapping a row fires `global-rankings-hub-row-tap { metric }`, closes the hub, and calls `openLeaderboardRanking(metric)` — the existing per-metric sheet path is untouched (backend fetch / sim fallback / local-me override all preserved).
+
+**Hub paints from local snapshot only** (`lbGetSnapshot()`). No backend round-trips on open — instant render. The per-metric sheet still handles fetch + submit + render exactly as before.
+
+### Diagnostics (new)
+
+- `global-rankings-hub-open` — fires when the hub opens.
+- `global-rankings-hub-close` — fires when the hub closes.
+- `global-rankings-hub-row-tap { metric }` — fires before the metric drill-down.
+
+Preserved: `leaderboard-modal-route`, `leaderboard-backend-fetch-start/success/fail`, `leaderboard-modal-render-final`, `leaderboard-submit-metric-attempt/result`, `leaderboard-local-me-override`, `leaderboard-flights-week-refresh-*`. The 1z.127 race-protection logic is fully intact — only the entry point moved.
+
+### Tests updated
+
+- Test **E** ("opens via Steps card, tabs visible, scroll keeps open, X closes") — updated to expect the hub sheet first, then click the Steps row to reach `#lb-rank-sheet`.
+- Test **O.1** renamed to "global rankings hub shows step_total + sleep_streak + workout_streak + flights_climbed; bedtime card gone". Switched from inspecting `#lb-preview-list` to `#lb-hub-list`, asserts 4 metric rows including `flights_climbed`, and explicitly asserts the legacy `#lb-preview-list` no longer exists in the DOM.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w9` | `2.2.3-w10` |
+| `app.js?v=` | `462` | `463` |
+| `sw.js CACHE_VERSION` | `v5.348` | `v5.349` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` (unchanged) |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run after the test updates landed (2 transient browser-context flakes that pass on isolated retry — `N · Dungeon rank filter` and `P · Workout streak modal`, neither hub-related).
+- Backend tests: not run (no backend changes).
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. `APP_VERSION` unchanged. No leaderboard backend/submit/fetch logic changes (the hub hands off to the existing path). HealthKit logic unchanged. Simulated leaderboard values unchanged. Sleep/Workout/Flights calculations unchanged. Dungeon logic unchanged. Reward economy unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false. All existing leaderboard diagnostics preserved. The per-metric detail modal behavior is identical — only the entry point moved.
+
+### What's retained but now unused
+
+`renderLeaderboardPreview()` still exists in `app.js`. It's now a no-op (the `#lb-preview-list` element it writes to was removed). Kept to avoid breaking any third-party callers or future migrations. Safe to delete in a follow-up cleanup if desired.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+4. Force-quit + cold-launch on device.
+
+### Expected TestFlight verification
+
+1. Copy Debug Info shows `"build": "2.2.3-w10"`.
+2. Stats tab — confirm Character Stats render and there is NO "Global Rankings" heading, NO ranking rows, NO "More rankings · Flights climbed" link below them.
+3. Tap the World Rank card in the header → Global Rankings Hub sheet rises with kicker `GLOBAL · STANDINGS`, title "Global Rankings", subtitle, 4 metric rows, footer "Only Apple Health–verifiable stats are ranked."
+4. Debug shows `global-rankings-hub-open`.
+5. Tap any row (e.g. Flights climbed) → existing per-metric sheet opens.
+6. Debug shows `global-rankings-hub-row-tap { metric: "flights_climbed" }` then the existing `leaderboard-modal-route` / `leaderboard-backend-fetch-*` sequence.
+7. Close hub by X or overlay tap. Debug shows `global-rankings-hub-close`.
+
+---
+
+## 📌 Session handoff — May 22, 2026 — 1z.129 Iron Warden broadened to any Apple Health workout (historical — superseded by 1z.130 above)
 
 ### ✅ STATUS: Iron Warden (D-rank, STR) now defeats on any Apple Health workout type, matching the 1z.105 "Workout 30 min" habit semantics
 

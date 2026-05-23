@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w9';
+  const APP_BUILD_TAG = '2.2.3-w10';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14989,8 +14989,13 @@
     // Idempotent guard against double-wiring.
     if (card.getAttribute('data-wired') === '1') return;
     card.setAttribute('data-wired', '1');
+    // v3 Phase 1z.130 — World Rank card is now the entry point for
+    // the Global Rankings Hub (a 4-metric chooser sheet), not a
+    // direct shortcut to the Steps leaderboard. Per-metric sheets
+    // are reached via the hub's row taps.
+    try { card.setAttribute('aria-label', 'Open Global Rankings'); } catch (_) {}
     card.addEventListener('click', () => {
-      try { openLeaderboardRanking('step_total'); } catch (_) {}
+      try { openGlobalRankingsHub(); } catch (_) {}
     });
   }
 
@@ -15941,7 +15946,14 @@
     footer.style.display = tab === 'habits' ? '' : 'none';
 
     if (tab === 'profile')      renderProfile();
-    if (tab === 'stats')      { renderStats(); renderLeaderboardPreview(); }
+    // v3 Phase 1z.130 — Stats tab is Character Stats only.
+    // renderLeaderboardPreview() previously painted the Global
+    // Rankings list inside Stats; that section is gone (moved to
+    // the standalone Global Rankings Hub opened from the header
+    // World Rank card). Calling the preview-render here would now
+    // be a no-op anyway (the #lb-preview-list element was removed
+    // from index.html), but skipping the call keeps the path clean.
+    if (tab === 'stats')        renderStats();
     if (tab === 'history')      renderHistory();
     // Quests tab: always re-greet the user with the gate. Reset the
     // expansion flag on every tab activation so re-entering the
@@ -22205,6 +22217,102 @@
     }
   }
 
+  // ── Global Rankings Hub (v3 Phase 1z.130) ─────────────────────
+  // Bottom-sheet chooser opened from the header World Rank card
+  // (#steps-card). Houses the four ranking entry points (steps,
+  // sleep, workout, flights). Tapping a row hands off to the
+  // existing per-metric leaderboard sheet (#lb-rank-sheet) via
+  // openLeaderboardRanking(metric). Hub paints from the local
+  // snapshot only (lbGetSnapshot) so it opens instantly — no
+  // backend round-trips here; those happen inside the per-metric
+  // sheet on row tap, preserving the established fetch / sim
+  // fallback / local-me override paths unchanged.
+  function _lbHubFmt(n) {
+    return (Number(n) || 0).toLocaleString('en-US');
+  }
+  function _lbHubBuildRow(metric, iconHtml, value, label, subHtml) {
+    return '<button type="button" class="lb-hub-row" data-lb-metric="' + metric + '">' +
+      '<span class="lb-hub-row-icon" aria-hidden="true">' + iconHtml + '</span>' +
+      '<span class="lb-hub-row-body">' +
+        '<span class="lb-hub-row-headline">' +
+          '<span class="lb-hub-row-value">' + value + '</span>' +
+          '<span class="lb-hub-row-label">' + label + '</span>' +
+        '</span>' +
+        (subHtml ? '<span class="lb-hub-row-sub">' + subHtml + '</span>' : '') +
+      '</span>' +
+      '<span class="lb-hub-row-chev" aria-hidden="true">›</span>' +
+    '</button>';
+  }
+  function _lbHubRender() {
+    const list = document.getElementById('lb-hub-list');
+    if (!list) return;
+    let snap;
+    try { snap = lbGetSnapshot(); } catch (_) { snap = null; }
+    snap = snap || {};
+    const nightWord   = n => n === 1 ? 'night' : 'nights';
+    const workoutWord = n => n === 1 ? 'day' : 'days';
+
+    const walkIcon    = '<img src="assets/habit-icons/icon-walk.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    const sleepIcon   = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    const workoutIcon = '<img src="assets/habit-icons/icon-strength.png" alt="" draggable="false" loading="lazy" decoding="async">';
+    // Flights uses an inline SVG matching the design's BootIcon —
+    // existing assets don't include a stair/flight glyph and we
+    // want the hub to ship without an asset roundtrip.
+    const flightsIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
+      '<path d="M3 19 H8 V14 H13 V9 H18 V4 H21 V19 H3 Z" fill="none" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/>' +
+    '</svg>';
+
+    const stepsVal    = _lbHubFmt(snap.steps_last_7_days);
+    const stepsSub    = (snap.best_7day_step_total > 0)
+      ? 'Best week: <b>' + _lbHubFmt(snap.best_7day_step_total) + '</b>'
+      : 'Best week: —';
+
+    const sleepVal    = (snap.current_sleep_streak || 0);
+    const sleepSub    = 'Best: <b>' + (snap.best_sleep_streak || 0) + ' ' + nightWord(snap.best_sleep_streak || 0) + '</b>';
+
+    const workoutVal  = (snap.current_workout_streak || 0);
+    const workoutSub  = 'Best: <b>' + (snap.best_workout_streak || 0) + ' ' + workoutWord(snap.best_workout_streak || 0) + '</b>';
+
+    const flightsVal  = _lbHubFmt(snap.flights_this_week);
+    const flightsSub  = (snap.best_flights_week > 0)
+      ? 'Best week: <b>' + _lbHubFmt(snap.best_flights_week) + '</b>'
+      : 'Best week: —';
+
+    list.innerHTML =
+      _lbHubBuildRow('step_total',     walkIcon,    stepsVal,   'steps this week',           stepsSub) +
+      _lbHubBuildRow('sleep_streak',   sleepIcon,   sleepVal,   'sleep streak · 7+ hr',      sleepSub) +
+      _lbHubBuildRow('workout_streak', workoutIcon, workoutVal, 'workout streak · 30+ min',  workoutSub) +
+      _lbHubBuildRow('flights_climbed', flightsIcon, flightsVal, 'flights this week',         flightsSub);
+  }
+  function openGlobalRankingsHub() {
+    const sheet   = document.getElementById('lb-hub-sheet');
+    const overlay = document.getElementById('lb-hub-overlay');
+    if (!sheet || !overlay) return;
+    try { _lbHubRender(); } catch (_) {}
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('global-rankings-hub-open', {});
+      }
+    } catch (_) {}
+  }
+  function closeGlobalRankingsHub() {
+    const sheet   = document.getElementById('lb-hub-sheet');
+    const overlay = document.getElementById('lb-hub-overlay');
+    if (sheet)   sheet.classList.add('hidden');
+    if (overlay) overlay.classList.add('hidden');
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('global-rankings-hub-close', {});
+      }
+    } catch (_) {}
+  }
+  try {
+    window.openGlobalRankingsHub  = openGlobalRankingsHub;
+    window.closeGlobalRankingsHub = closeGlobalRankingsHub;
+  } catch (_) {}
+
   function closeLeaderboardRanking() {
     // v3 Phase 1z.36 — reset both metric + tab so concurrent fetches
     // that land after the sheet closes drop on the floor cleanly,
@@ -22227,6 +22335,36 @@
         if (!card) return;
         openLeaderboardRanking(card.getAttribute('data-lb-metric'));
       });
+    }
+    // v3 Phase 1z.130 — Global Rankings Hub wiring. The hub list
+    // uses the same data-lb-metric attribute convention so taps
+    // route through the same openLeaderboardRanking() path that
+    // the (now-removed) Stats-tab preview list used.
+    const hubList = document.getElementById('lb-hub-list');
+    if (hubList && hubList.getAttribute('data-wired') !== '1') {
+      hubList.setAttribute('data-wired', '1');
+      hubList.addEventListener('click', e => {
+        const row = e.target.closest('[data-lb-metric]');
+        if (!row) return;
+        const metric = row.getAttribute('data-lb-metric');
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('global-rankings-hub-row-tap', { metric });
+          }
+        } catch (_) {}
+        try { closeGlobalRankingsHub(); } catch (_) {}
+        try { openLeaderboardRanking(metric); } catch (_) {}
+      });
+    }
+    const hubClose   = document.getElementById('lb-hub-close');
+    const hubOverlay = document.getElementById('lb-hub-overlay');
+    if (hubClose && hubClose.getAttribute('data-wired') !== '1') {
+      hubClose.setAttribute('data-wired', '1');
+      hubClose.addEventListener('click', closeGlobalRankingsHub);
+    }
+    if (hubOverlay && hubOverlay.getAttribute('data-wired') !== '1') {
+      hubOverlay.setAttribute('data-wired', '1');
+      hubOverlay.addEventListener('click', closeGlobalRankingsHub);
     }
     const overlay = document.getElementById('lb-rank-overlay');
     const sheet   = document.getElementById('lb-rank-sheet');
