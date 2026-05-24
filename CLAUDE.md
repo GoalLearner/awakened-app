@@ -55,7 +55,141 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 23, 2026 — 1z.138 Rank card shows XP to next sub-rank (read this first)
+## 📌 Session handoff — May 24, 2026 — 1z.139 Weekly step/flight sum anchored to Sunday-UTC (read this first)
+
+### ✅ STATUS: Frontend fix shipped. **D1 has one stuck row** (Richie step_total = 80,886 for week 2026-05-24) that needs a narrow repair — SQL prepared below, NOT executed.
+
+**Symptom on Sunday May 24**: Richie's Global Rankings Hub correctly showed `steps this week: 5,879`, but the Steps detailed leaderboard for the same week (May 24–May 30) showed `#1 Richie 80,886`. Two contradictory values for the same user in the same week.
+
+**Production D1 evidence** (read-only audit, sorted by `current_value DESC`):
+
+| uid | current | best | week_start | observation |
+|---|---|---|---|---|
+| `ede751e6` (Richie) | **80,886** | 82,939 | 2026-05-24 | ← stale carryover bug |
+| `c1a7149d` (galilea) | 53,654 | 53,654 | 2026-05-24 | plausible real Sunday walk |
+| `ca5b82df` (rendiesel) | 3,573 | 101,259 | 2026-05-24 | reset correctly |
+| `32c44456`, `7061cffe` | low | preserved best | 2026-05-24 | reset correctly |
+
+**Other users reset correctly. Only Richie's row carries last week's full total under the new `week_start`.** Not a backend or top-route issue.
+
+**Root cause**: `lbSumCurrentWeekSteps` walked back `today.getDay()` days using **device-local DOW** while the submit was tagged with the backend's **Sunday-UTC** `week_start` (via `getAccoladeWeekStart` server / `lbGetCurrentWeekStartUTC` client). During the gap window where device-local is still Saturday but UTC has already crossed into Sunday:
+- `getDeviceLocalDate()` returns `"2026-05-23"`, `todayDow` = 6 (Sat) → loop walks back 7 days → sums Sat May 23 + Fri May 22 + ... + Sun May 17 = ~80,886.
+- `lbSubmitAllMetrics` tags the submit with `week_start = lbGetCurrentWeekStartUTC()` = `"2026-05-24"` (new UTC week).
+- Backend correctly stores `current_value: 80886` under `week_start: "2026-05-24"` — but the input was wrong.
+- 1z.131 monotonic max then protects the stale high value all week.
+
+Same bug class existed in `lbSumCurrentWeekFlights`.
+
+### Fix (1z.139) — anchor sum to Sunday-UTC
+
+Both `lbSumCurrentWeekSteps` and `lbSumCurrentWeekFlights` rewritten to walk back from `getDeviceLocalDate()` while the date string `>= lbGetCurrentWeekStartUTC()`. Lexicographic compare on `YYYY-MM-DD` is safe. Hard-capped at 8 iterations as a defensive guard.
+
+```js
+function lbSumCurrentWeekSteps(stepsDaily) {
+  const weekStartUTC = lbGetCurrentWeekStartUTC();
+  let dateStr = getDeviceLocalDate();
+  let sum = 0;
+  for (let i = 0; i < 8 && dateStr >= weekStartUTC; i++) {
+    sum += (stepsDaily[dateStr] || 0);
+    const prev = lbPrevDate(dateStr);
+    if (prev === dateStr) break;
+    dateStr = prev;
+  }
+  return sum;
+}
+```
+
+### Behaviour in each window
+
+| Scenario | weekStartUTC | todayLocal | Loop iterations | Sum |
+|---|---|---|---|---|
+| Normal Saturday (UTC also Sat) | `"2026-05-17"` | `"2026-05-23"` | 7 | full week |
+| Gap window: local Sat, UTC already Sun | `"2026-05-24"` | `"2026-05-23"` | **0** (date < weekStart) | **0** ← bug fix |
+| Local Sunday morning, UTC Sunday | `"2026-05-24"` | `"2026-05-24"` | 1 | today only |
+| Mid-week Wed | `"2026-05-24"` | `"2026-05-27"` | 4 | Sun→Wed |
+
+The 0-sum in the gap window is the right answer — the new UTC week just started and the user has no confirmed steps in it yet. Backend stores 0, then 1z.131 monotonic max ratchets up naturally on subsequent submits as `steps_daily` fills in.
+
+### NOT changed
+
+- `lbRecordStepsToday` / `lbRecordFlightsToday` — still key `steps_daily[date]` / `flights_daily[date]` by device-local date. That's correct because HealthKit's `getStepsToday()` returns the user's local day's count.
+- `lbRefreshFlightsThisWeekFromHealth` — still walks local days for per-day HealthKit queries. Writes are local-keyed; the new UTC-anchored sum naturally excludes any local days that fall outside the UTC week.
+- Backend `leaderboard-submit.ts` — unchanged. 1z.131 monotonic max still does the right thing once the input is correct.
+- `lbGetCurrentWeekStartUTC` — unchanged (was already correct).
+
+### Proposed D1 repair (NOT executed — awaiting explicit approval)
+
+Richie's stuck row will sit at 80,886 until either:
+1. A natural fresh submit (after enough new-week steps accumulate to exceed 80,886) — unlikely this week.
+2. A narrow D1 UPDATE.
+
+Proposed narrow repair SQL — affects ONLY the one verified stuck row:
+
+```sql
+UPDATE leaderboard_snapshots
+SET current_value = 5879,
+    updated_at    = strftime('%s','now')*1000
+WHERE user_id = 'ede751e6-...-FULL-UUID'
+  AND metric  = 'step_total'
+  AND week_start = '2026-05-24'
+  AND current_value = 80886;
+```
+
+(The full `user_id` for the bind would be looked up from `users WHERE alias='Richie'` at repair time — kept off this doc per the no-full-IDs guardrail.)
+
+The `current_value = 80886` match clause makes the UPDATE strictly idempotent — if Richie's next submit naturally fixes it before we run the repair, the UPDATE matches 0 rows and nothing happens. `best_value` stays at 82,939 (untouched — that's the all-time best, correctly preserved).
+
+After deploy of w18 + cold-launch, Richie's next foreground will submit `5,879` (or whatever the true current-week sum is). 1z.131 monotonic max will pin `current_value` at `MAX(80886, 5879) = 80886` — meaning **the repair is necessary** to actually unstick the row. Without it, Richie's row will read 80,886 for the rest of the week.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w17` | `2.2.3-w18` |
+| `app.js?v=` | `470` | `471` |
+| `sw.js CACHE_VERSION` | `v5.356` | `v5.357` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+
+### Verification
+
+- `node --check app.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 28/29 first run, 1 transient browser-context flake (pass on isolated retry, unrelated to weekly sum logic).
+- No backend changes → backend vitest not re-run.
+
+### Hard guardrails respected
+
+- ✅ Audit before fix.
+- ✅ Read-only D1 queries to confirm scope.
+- ✅ No backend deploy (no backend changes).
+- ✅ No D1 mutation (repair SQL documented + scoped, NOT executed).
+- ✅ No Codemagic / archive / upload.
+- ✅ No HealthKit / dungeon / economy / sim changes.
+- ✅ Truncated IDs in report.
+
+### Next actions for Richie
+
+1. **MacBook archive + TestFlight upload** of `2.2.3-w18`.
+2. **Cold-launch on device** — confirm `"build": "2.2.3-w18"`.
+3. **Explicit approval** for the D1 repair UPDATE (one-row, idempotent, narrow). Without the repair, Richie's row stays at 80,886 the rest of the week; with it, drops to current real value and 1z.131 monotonic max protects it correctly from there.
+4. Future Sunday rollovers should now show **no carryover bug** — both Steps and Flights weekly sums are UTC-anchored, matching the backend `week_start` exactly.
+
+### MacBook build
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch → `"build": "2.2.3-w18"`.
+2. Open Hub → Steps detail. Local hub value and detail "me row" should match exactly (assuming D1 repair has run; otherwise detail still shows 80,886 — that's the stuck row, unrelated to the new code).
+3. On the next Sunday rollover, the new week should report current week's actual local sum (not last week's full total).
+
+---
+
+## 📌 Session handoff — May 23, 2026 — 1z.138 Rank card shows XP to next sub-rank (historical — superseded by 1z.139 above)
 
 ### ✅ STATUS: Header Rank card progress text now reads `356 to D II` instead of `1689 to C`. Modal still shows both the sub-rank line ("356 XP to D II") and the major-rank line ("1,689 XP to C Rank"). No XP/threshold/economy logic changed.
 

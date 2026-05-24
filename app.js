@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w17';
+  const APP_BUILD_TAG = '2.2.3-w18';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6241,25 +6241,38 @@
       String(d.getDate()).padStart(2, '0');
   }
 
-  // Sums the step_daily entries from the most-recent Sunday 00:00
-  // (device-local) through today inclusive — the calendar-week
-  // window for the leaderboard. Resets every Sunday automatically:
-  // on Sunday, the loop runs exactly once and returns Sunday's
-  // count. By Saturday, the loop runs 7 times. This replaced the
-  // earlier "trailing 7 days inclusive of today" rolling window
-  // — leaderboard is now a weekly competition that resets globally
-  // each Sunday at midnight in each user's local time.
+  // v3 Phase 1z.139 — anchor the weekly sum to the SAME Sunday-UTC
+  // boundary the backend uses (see getAccoladeWeekStart() server-side
+  // and lbGetCurrentWeekStartUTC() in this file). Prior implementation
+  // walked back `today.getDay()` days using device-local DOW, then
+  // lbSubmitAllMetrics tagged the submit with the backend's Sunday-UTC
+  // `week_start`. During the gap window where device-local is still
+  // Saturday but UTC has already rolled to Sunday, that produced a
+  // catastrophic mismatch: the client summed 7 device-local days of
+  // last week and tagged them with the new UTC week_start, so the
+  // backend stored last week's total as the user's first submit of the
+  // new week. Same bug class fixed for flights below.
+  //
+  // New behaviour: walk from today's device-local date backward as
+  // long as the date string is >= the current Sunday-UTC week start
+  // (lexicographic compare of 'YYYY-MM-DD' strings is safe). On a
+  // normal Saturday this gives Sun→Sat = 7 days. In the
+  // local-Saturday/UTC-Sunday gap window the loop body never runs and
+  // we report 0 — correct for "the new UTC week just started, no
+  // confirmed steps in it yet". Subsequent submits ratchet up via
+  // 1z.131 backend monotonic max once HealthKit refreshes the new
+  // week's daily buckets.
   function lbSumCurrentWeekSteps(stepsDaily) {
-    const today = new Date();
-    const todayDow = today.getDay(); // 0=Sun, 6=Sat
-    let sum = 0;
+    const weekStartUTC = lbGetCurrentWeekStartUTC();   // 'YYYY-MM-DD' Sunday-UTC
     let dateStr = getDeviceLocalDate();
-    // Walk back todayDow + 1 days: today + every day since Sunday.
-    // todayDow=0 (Sunday) → loop once. todayDow=6 (Saturday) → loop
-    // 7 times.
-    for (let i = 0; i <= todayDow; i++) {
+    let sum = 0;
+    // Hard cap of 8 iterations as a defensive guard against an
+    // unexpected date-string compare anomaly.
+    for (let i = 0; i < 8 && dateStr >= weekStartUTC; i++) {
       sum += (stepsDaily[dateStr] || 0);
-      dateStr = lbPrevDate(dateStr);
+      const prev = lbPrevDate(dateStr);
+      if (prev === dateStr) break;
+      dateStr = prev;
     }
     return sum;
   }
@@ -6301,19 +6314,21 @@
     saveLeaderboardState(state);
   }
 
-  // v3 Phase 1z.125 — flights climbed weekly sum. Mirrors
-  // lbSumCurrentWeekSteps exactly (Sunday-anchored calendar week,
-  // walks back todayDow + 1 days). flights_climbed shares the
-  // Sunday-UTC weekly scoping with step_total at the backend layer
-  // (see WEEKLY_METRICS in backend/src/lib/metrics.ts).
+  // v3 Phase 1z.125 / 1z.139 — flights climbed weekly sum.
+  // Mirrors lbSumCurrentWeekSteps exactly. 1z.139 fixes the
+  // device-local-vs-UTC week boundary bug that allowed last week's
+  // total to be submitted under the new UTC week_start during the
+  // local-Saturday/UTC-Sunday gap window. Same Sunday-UTC anchor
+  // as the backend WEEKLY_METRICS scope.
   function lbSumCurrentWeekFlights(flightsDaily) {
-    const today = new Date();
-    const todayDow = today.getDay();
-    let sum = 0;
+    const weekStartUTC = lbGetCurrentWeekStartUTC();
     let dateStr = getDeviceLocalDate();
-    for (let i = 0; i <= todayDow; i++) {
+    let sum = 0;
+    for (let i = 0; i < 8 && dateStr >= weekStartUTC; i++) {
       sum += (flightsDaily[dateStr] || 0);
-      dateStr = lbPrevDate(dateStr);
+      const prev = lbPrevDate(dateStr);
+      if (prev === dateStr) break;
+      dateStr = prev;
     }
     return sum;
   }
