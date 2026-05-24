@@ -332,7 +332,7 @@
   // snapshot. Backend computes best_value via MAX preservation.
   // Returns the backend's response on success so the caller can log
   // the current/best for diagnostics.
-  async function submitLeaderboardSnapshot(metric, currentValue) {
+  async function submitLeaderboardSnapshot(metric, currentValue, opts) {
     const u = readUser();
     const gate = _stubGate(u);
     if (gate) return gate;
@@ -343,6 +343,19 @@
       return { ok: false, code: 'INVALID_VALUE', detail: 'value must be non-neg integer' };
     }
 
+    // v3 Phase 1z.140 — optional `weeklySumSource` tag. When the
+    // client passes a recognised source identifier (e.g.
+    // 'client_sunday_utc_v2' for the w19+ Sunday-UTC-anchored weekly
+    // sum), the backend uses it as a self-heal signal to override
+    // 1z.131 monotonic MAX on the FIRST trusted submit for a
+    // (user, metric) row — repairing rollover-contaminated values
+    // automatically. Subsequent submits with the same tag use MAX.
+    const body = { metric: metric, current_value: currentValue };
+    const src = opts && opts.weeklySumSource;
+    if (typeof src === 'string' && src.length > 0) {
+      body.weekly_sum_source = src;
+    }
+
     let res;
     try {
       res = await fetch(BACKEND_URL + '/v1/leaderboard/submit', {
@@ -351,7 +364,7 @@
           'Authorization': 'Bearer ' + u.jwt,
           'Content-Type':  'application/json',
         },
-        body: JSON.stringify({ metric: metric, current_value: currentValue }),
+        body: JSON.stringify(body),
       });
     } catch (e) {
       return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };

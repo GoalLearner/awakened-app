@@ -127,6 +127,82 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(insert!.binds[5]).toBe(null);
   });
 
+  // ── v3 Phase 1z.140 — trusted-source self-heal CASE ─────────────
+  // Bug repro: Sunday-rollover device-local/UTC mismatch (pre-w18)
+  // submitted last week's step total under the new Sunday-UTC
+  // week_start. 1z.131 monotonic MAX then protected the contaminated
+  // value all week. Fix: trusted w19+ clients send weekly_sum_source
+  // = 'client_sunday_utc_v2'; the FIRST trusted submit for a
+  // (user, metric) row whose stored source is NULL overrides MAX
+  // and accepts the trusted lower value, then subsequent submits
+  // revert to MAX (the trust marker is sticky).
+  it('SQL contains the 1z.140 trusted-source self-heal CASE branch before the MAX branch', async () => {
+    const db = makeDb({ current_value: 80886, best_value: 82939 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 7308, weekly_sum_source: 'client_sunday_utc_v2' }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // Insert column list must include weekly_sum_source (1z.140 column).
+    expect(insert.sql).toMatch(/INSERT INTO leaderboard_snapshots[\s\S]+weekly_sum_source/i);
+    // Trusted self-heal branch: excluded.weekly_sum_source IS NOT NULL
+    // AND existing.weekly_sum_source IS NULL AND same week → trust new.
+    expect(insert.sql).toMatch(/excluded\.weekly_sum_source\s+IS\s+NOT\s+NULL/i);
+    expect(insert.sql).toMatch(/leaderboard_snapshots\.weekly_sum_source\s+IS\s+NULL/i);
+    // Self-heal branch must precede MAX branch so it fires first.
+    const heal = insert.sql.search(/leaderboard_snapshots\.weekly_sum_source\s+IS\s+NULL/i);
+    const max  = insert.sql.search(/MAX\(leaderboard_snapshots\.current_value/i);
+    expect(heal).toBeGreaterThan(-1);
+    expect(max).toBeGreaterThan(heal);
+    // Trust marker persisted via COALESCE so NULL submits cannot wipe it.
+    expect(insert.sql).toMatch(/weekly_sum_source\s*=\s*COALESCE\(excluded\.weekly_sum_source,\s*leaderboard_snapshots\.weekly_sum_source\)/i);
+    // 7th bind arg = weekly_sum_source value.
+    expect(insert.binds[6]).toBe('client_sunday_utc_v2');
+  });
+
+  it('unrecognised weekly_sum_source values are persisted as NULL (untrusted)', async () => {
+    const db = makeDb({ current_value: 5000, best_value: 35000 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 5000, weekly_sum_source: 'totally_made_up_tag' }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    expect(insert.binds[6]).toBe(null);
+  });
+
+  it('missing weekly_sum_source persists NULL (back-compat for pre-w19 clients)', async () => {
+    const db = makeDb({ current_value: 5000, best_value: 35000 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 5000 }), env, session);
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    expect(insert.binds[6]).toBe(null);
+  });
+
+  it('weekly_step_records also has the 1z.140 self-heal CASE branch', async () => {
+    const db = makeDb({ current_value: 80886, best_value: 82939 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 7308, weekly_sum_source: 'client_sunday_utc_v2' }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const wsrInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
+    expect(wsrInsert).toBeDefined();
+    // Hall of Fame insert now writes 7 cols (incl. weekly_sum_source).
+    expect(wsrInsert!.sql).toMatch(/INSERT INTO weekly_step_records[\s\S]+weekly_sum_source/i);
+    expect(wsrInsert!.sql).toMatch(/excluded\.weekly_sum_source\s+IS\s+NOT\s+NULL/i);
+    expect(wsrInsert!.sql).toMatch(/weekly_step_records\.weekly_sum_source\s+IS\s+NULL/i);
+    // Trust marker persisted via COALESCE.
+    expect(wsrInsert!.sql).toMatch(/weekly_sum_source\s*=\s*COALESCE\(excluded\.weekly_sum_source,\s*weekly_step_records\.weekly_sum_source\)/i);
+    // Trust tag is the 7th bind arg on this insert too.
+    expect(wsrInsert!.binds[6]).toBe('client_sunday_utc_v2');
+  });
+
   // ── v3 Phase 1z.131 — same-week monotonic current_value ──────────
   // Bug repro: rendiesel submitted step_total=101,259 then later
   // 73,840 same week. Previously current_value was overwritten to
@@ -231,8 +307,12 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
     const wsrInsert = calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'));
     expect(wsrInsert).toBeDefined();
-    // ON CONFLICT clause must use MAX(weekly_step_records.steps, excluded.steps)
-    expect(wsrInsert!.sql).toMatch(/ON CONFLICT[\s\S]+steps\s*=\s*MAX\(weekly_step_records\.steps,\s*excluded\.steps\)/i);
+    // ON CONFLICT clause must use MAX(weekly_step_records.steps, excluded.steps).
+    // 1z.140 added a trusted-source self-heal CASE around this so the MAX
+    // lives in the ELSE branch — same monotonic protection for untrusted /
+    // legacy submits, which is the path this test exercises (no
+    // weekly_sum_source on the submit body → treated as untrusted).
+    expect(wsrInsert!.sql).toMatch(/ELSE\s+MAX\(weekly_step_records\.steps,\s*excluded\.steps\)/i);
   });
 
   it('does NOT write weekly_step_records for sleep_streak or bedtime_streak', async () => {

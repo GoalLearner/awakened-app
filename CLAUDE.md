@@ -55,7 +55,121 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 24, 2026 — sweep audit of all users for Sunday-rollover contamination; Galilea AMBIGUOUS pending approval (read this first)
+## 📌 Session handoff — May 24, 2026 — 1z.140 Backend self-heal for Sunday-rollover contamination (read this first — DEPLOY PENDING)
+
+### 🟡 STATUS: Backend self-heal + frontend trust tag implemented and tested. **Migration + Worker deploy + Galilea repair all awaiting your explicit approval.** `2.2.3-w19` web bundle ready for TestFlight whenever the backend is live.
+
+**Why this exists**: 1z.139 / w18 fixed the client-side weekly-sum bug going forward, but real users had already submitted contaminated current-week step totals from pre-w18 bundles during the local-Sat/UTC-Sun rollover. 1z.131's monotonic MAX then protected those bad values all week — no natural ratchet-up could fix them. Galilea is the second confirmed casualty after Richie (who we manually repaired). Without a backend defense, every future Sunday rollover risks the same class of bug from any pre-w19 client still in the wild.
+
+### Design — trusted-source self-heal
+
+New nullable column `weekly_sum_source` on both `leaderboard_snapshots` and `weekly_step_records`. Frontend w19+ tags every weekly cumulative submit (`step_total`, `flights_climbed`) with `weekly_sum_source: 'client_sunday_utc_v2'`. Backend whitelists that identifier and uses it as a **first-trusted-submit override** of the 1z.131 MAX clause:
+
+```
+ON CONFLICT(user_id, metric) DO UPDATE SET
+  current_value = CASE
+    -- 1z.140 self-heal: first trusted submit overrides MAX
+    WHEN excluded.weekly_sum_source IS NOT NULL
+         AND leaderboard_snapshots.weekly_sum_source IS NULL
+         AND excluded.week_start IS NOT NULL
+         AND leaderboard_snapshots.week_start = excluded.week_start
+      THEN excluded.current_value
+    -- 1z.131 same-week monotonic MAX
+    WHEN excluded.week_start IS NOT NULL
+         AND leaderboard_snapshots.week_start = excluded.week_start
+      THEN MAX(leaderboard_snapshots.current_value, excluded.current_value)
+    -- streaks / cross-week / NULL week_start: overwrite
+    ELSE excluded.current_value
+  END,
+  best_value = MAX(leaderboard_snapshots.best_value, excluded.current_value),
+  updated_at = excluded.updated_at,
+  week_start = excluded.week_start,
+  weekly_sum_source = COALESCE(excluded.weekly_sum_source, leaderboard_snapshots.weekly_sum_source)
+```
+
+Same shape applied to `weekly_step_records` (Hall of Fame).
+
+### Why this is safe
+
+- **Trust marker is sticky**: once a row has a non-NULL source, all subsequent trusted submits go through the 1z.131 MAX branch. A legitimately progressing user can never be downgraded by a stale lower submit.
+- **Only recognised tags trust**: `TRUSTED_WEEKLY_SUM_SOURCES = {'client_sunday_utc_v2'}`. Anything else (missing / empty / wrong type / unknown string) is persisted as NULL → no trust.
+- **COALESCE preserves trust**: a streak metric submit or a NULL submit from a legacy client cannot wipe an established trust marker.
+- **One-shot per (user, metric)**: the heal only fires once. After that, MAX resumes. No way for an attacker (or buggy client) to ping-pong a row down repeatedly.
+- **Streaks unaffected**: weekly_sum_source is meaningless on `sleep_streak` / `workout_streak` / `bedtime_streak` (NULL week_start short-circuits both new and existing branches), and the CASE still falls through to the streak-overwrite ELSE.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `backend/migrations/0010_leaderboard_weekly_sum_source.sql` | NEW — adds nullable column to both tables |
+| `backend/src/handlers/leaderboard-submit.ts` | TRUSTED_WEEKLY_SUM_SOURCES constant + body validation + CASE branches on both upserts + COALESCE |
+| `backend/src/handlers/leaderboard-submit.test.ts` | 4 new vitest cases for the self-heal SQL shape + back-compat |
+| `auth.js` | `submitLeaderboardSnapshot(metric, value, opts)` — optional `weeklySumSource` in body |
+| `app.js` | `lbSubmitAllMetrics` tags weekly metrics with `'client_sunday_utc_v2'` (gated on `LB_WEEKLY_METRICS` set) |
+| `index.html`, `sw.js` | knob bumps |
+
+### Tests
+
+- `cd backend && npx vitest run leaderboard-submit.test.ts leaderboard-top.test.ts` → **27/27 pass** (4 new + 23 existing).
+- `node --check` on app.js + auth.js + sw.js + simulated-leaderboard.js → OK.
+- Playwright e2e → 27/29 first run, 2 transient browser-context flakes (pass on isolated retry, unrelated to leaderboard logic).
+
+### Version knobs (web bundle ready, awaiting backend deploy before TestFlight upload makes sense)
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w18` | `2.2.3-w19` |
+| `app.js?v=` | `471` | `472` |
+| `auth.js?v=` | `16` | `17` |
+| `sw.js CACHE_VERSION` | `v5.357` | `v5.358` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Three follow-up actions awaiting your approval
+
+**1. Apply migration 0010 to production D1.**
+```bash
+cd backend && npx wrangler d1 execute awakened-db --remote --file=migrations/0010_leaderboard_weekly_sum_source.sql
+```
+Adds the nullable `weekly_sum_source` column to both tables. Non-destructive (NULL default).
+
+**2. Deploy the Worker.**
+```bash
+cd backend && npx wrangler deploy
+```
+Wire-compatible with all existing clients — old clients keep submitting with no `weekly_sum_source` (NULL persisted, treated as untrusted). The self-heal only fires for w19+ submits.
+
+**3. Galilea row.** Once the Worker is deployed + Galilea cold-launches w19+, **her next foreground will self-heal her D1 row automatically**. No D1 sweep needed. If she can't update soon, we have three options:
+- **Option A** — wait for natural self-heal once she updates.
+- **Option B [verified value]** — Galilea sends her true current-week steps; we run a narrow UPDATE + DELETE like the 1bf8ad7 Richie repair.
+- **Option C** — conservative wipe: UPDATE `current_value` to 0 and DELETE the HoF row. Removes her from #1 immediately, she ratchets back up on her next w19 submit via the trust marker (which would then be set).
+
+My recommendation: **Option A.** Backend defense + frontend tag is the systemic fix; manual sweeps don't scale. Once both ship, Galilea heals herself the next time she opens the app.
+
+### What's NOT changed
+
+- No app behavior change visible to users on w19 vs w18 (only metadata added to submit payloads).
+- No backend Worker deploy executed.
+- No D1 migration applied.
+- No D1 data mutations.
+- No Codemagic / archive / upload.
+- HealthKit / dungeon / economy / sim values / 100K accolade behavior / top route filtering — all untouched.
+
+### Order of operations once approved
+
+1. Apply migration 0010 (column add — safe, non-destructive).
+2. Deploy the Worker (immediately reads/writes the new column).
+3. MacBook archive + upload `2.2.3-w19` to TestFlight.
+4. Galilea + any other affected tester cold-launches w19 → their first foreground self-heals their row.
+5. Watch for `leaderboard-submit-metric-result { metric: "step_total", ok: true }` breadcrumbs from w19+ devices to confirm the heal landed.
+
+Skipping step 1 will cause every submit to fail with "no such column: weekly_sum_source" until the migration runs. **Always migrate before deploy.**
+
+---
+
+## 📌 Session handoff — May 24, 2026 — sweep audit of all users for Sunday-rollover contamination; Galilea AMBIGUOUS pending approval (historical — superseded by 1z.140 above)
 
 ### 🟡 STATUS: Audit complete. Richie already repaired. Galilea row is **likely contaminated but unverified** — awaiting explicit approval before any mutation. No other users affected. Flights unaffected.
 

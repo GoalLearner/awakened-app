@@ -52,9 +52,29 @@ const STEP_100K_ACCOLADE_TYPE = 'step_100k_club';
 // 'sim_test_bravo' (see backend/scripts/seed-sim-users.ts).
 const SIM_APPLE_SUB_PREFIX = 'sim_test_';
 
+// v3 Phase 1z.140 — trusted weekly-sum sources. Submits tagged with
+// one of these source identifiers come from a client whose weekly
+// sum is anchored to Sunday-UTC (the same boundary the backend uses
+// for week_start). The 1z.131 same-week monotonic MAX clause has a
+// targeted exception: the FIRST trusted submit for a (user, metric)
+// row can override MAX and bring a contaminated pre-w18 value down
+// to the trusted reality. After that, MAX resumes (the trust marker
+// is sticky, so arbitrary lower submits can never downgrade it).
+//
+// Bumping the list requires adding the new identifier here AND in
+// the client (see auth.js submitLeaderboardSnapshot caller in app.js
+// lbSubmitAllMetrics). Unknown / empty / unrecognised values are
+// treated as untrusted (NULL persisted) for safety.
+const TRUSTED_WEEKLY_SUM_SOURCES: ReadonlySet<string> = new Set([
+  'client_sunday_utc_v2',
+]);
+
 interface SubmitBody {
   metric?: unknown;
   current_value?: unknown;
+  /** v3 Phase 1z.140 — optional client tag identifying the algorithm
+   *  used to compute weekly cumulative sums. See TRUSTED_WEEKLY_SUM_SOURCES. */
+  weekly_sum_source?: unknown;
 }
 
 interface SnapshotRow {
@@ -108,6 +128,19 @@ export async function handleLeaderboardSubmit(
     );
   }
 
+  // v3 Phase 1z.140 — trusted weekly-sum source tag. Optional. If
+  // the client sends a recognised identifier we persist it; anything
+  // else (missing, wrong type, unknown string) is treated as
+  // untrusted and stored as NULL. The trust marker is only meaningful
+  // for weekly cumulative metrics (step_total / flights_climbed); we
+  // still accept and persist it on streak metrics for forward
+  // compatibility but the self-heal CASE below ignores it on streaks.
+  const rawSource = body.weekly_sum_source;
+  const weeklySumSource: string | null =
+    (typeof rawSource === 'string' && TRUSTED_WEEKLY_SUM_SOURCES.has(rawSource))
+      ? rawSource
+      : null;
+
   const now = Date.now();
 
   // v3 Phase 1z.33 -- weekly scoping. For weekly metrics (step_total),
@@ -125,21 +158,40 @@ export async function handleLeaderboardSubmit(
   // excluded.<col> refers to the values we tried to insert.
   //
   // current_value CASE:
-  //   - excluded.week_start NOT NULL                  → weekly metric
-  //     AND existing.week_start = excluded.week_start → same week
-  //       → MAX(existing.current_value, new) — never downgrade in-week
-  //   - otherwise (NULL week_start, OR different week_start)
+  //   - v3 Phase 1z.140 SELF-HEAL FIRST-TRUSTED-SUBMIT:
+  //       excluded.weekly_sum_source is a recognised trusted tag
+  //       AND existing stored source is NULL (pre-w19 client)
+  //       AND same week
+  //         → excluded.current_value  (trust the new corrected value;
+  //           overrides MAX so pre-w18 rollover-contaminated rows
+  //           heal as soon as the user's w19+ client submits)
+  //   - 1z.131 SAME-WEEK MONOTONIC MAX:
+  //       excluded.week_start NOT NULL
+  //       AND existing.week_start = excluded.week_start
+  //         → MAX(existing.current_value, new) — never downgrade in-week
+  //   - OTHERWISE (NULL week_start, OR different week_start, OR
+  //     trust marker already established):
   //       → excluded.current_value — overwrite (streaks can decrease,
-  //         new-week rollover resets the counter)
+  //         new-week rollover resets the counter, subsequent trusted
+  //         submits ratchet via the MAX branch above)
+  //
+  // weekly_sum_source persistence: COALESCE on incoming so a
+  // submission without the tag (legacy client, streak metric, etc.)
+  // does not wipe an existing trust marker.
   //
   // week_start is also updated on conflict so a user submitting in a
   // new week overwrites their prior-week tag.
   await env.DB.prepare(
     `INSERT INTO leaderboard_snapshots
-       (user_id, metric, current_value, best_value, updated_at, week_start)
-     VALUES (?, ?, ?, ?, ?, ?)
+       (user_id, metric, current_value, best_value, updated_at, week_start, weekly_sum_source)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, metric) DO UPDATE SET
        current_value = CASE
+         WHEN excluded.weekly_sum_source IS NOT NULL
+              AND leaderboard_snapshots.weekly_sum_source IS NULL
+              AND excluded.week_start IS NOT NULL
+              AND leaderboard_snapshots.week_start = excluded.week_start
+           THEN excluded.current_value
          WHEN excluded.week_start IS NOT NULL
               AND leaderboard_snapshots.week_start = excluded.week_start
            THEN MAX(leaderboard_snapshots.current_value, excluded.current_value)
@@ -147,9 +199,10 @@ export async function handleLeaderboardSubmit(
        END,
        best_value = MAX(leaderboard_snapshots.best_value, excluded.current_value),
        updated_at = excluded.updated_at,
-       week_start = excluded.week_start`,
+       week_start = excluded.week_start,
+       weekly_sum_source = COALESCE(excluded.weekly_sum_source, leaderboard_snapshots.weekly_sum_source)`,
   )
-    .bind(session.userId, metric, value, value, now, weekStart)
+    .bind(session.userId, metric, value, value, now, weekStart, weeklySumSource)
     .run();
 
   // Read back the row to return DB-authoritative values. Cheap (PK
@@ -197,15 +250,30 @@ export async function handleLeaderboardSubmit(
       // submit (same-week MAX-preserve semantics handle the gap).
       try {
         const recordId = crypto.randomUUID();
+        // v3 Phase 1z.140 — same self-heal CASE on Hall of Fame.
+        // First trusted submit for a (user, week_start) row whose
+        // stored source is NULL overrides the MAX clause and writes
+        // the trusted value (which may be lower than the pre-w18
+        // rollover-contaminated number). Subsequent submits use MAX.
+        // Trust marker COALESCEd so streak/legacy submits never wipe
+        // an established trust. The Hall of Fame table only stores
+        // step_total totals, so weekly_sum_source semantics are
+        // identical to the snapshot table.
         await env.DB.prepare(
           `INSERT INTO weekly_step_records
-             (id, user_id, week_start, steps, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?)
+             (id, user_id, week_start, steps, created_at, updated_at, weekly_sum_source)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(user_id, week_start) DO UPDATE SET
-             steps      = MAX(weekly_step_records.steps, excluded.steps),
-             updated_at = excluded.updated_at`,
+             steps = CASE
+               WHEN excluded.weekly_sum_source IS NOT NULL
+                    AND weekly_step_records.weekly_sum_source IS NULL
+                 THEN excluded.steps
+               ELSE MAX(weekly_step_records.steps, excluded.steps)
+             END,
+             updated_at        = excluded.updated_at,
+             weekly_sum_source = COALESCE(excluded.weekly_sum_source, weekly_step_records.weekly_sum_source)`,
         )
-          .bind(recordId, session.userId, weekStart, value, now, now)
+          .bind(recordId, session.userId, weekStart, value, now, now, weeklySumSource)
           .run();
       } catch (e) {
         const detail = e instanceof Error ? (e.message || String(e)) : String(e);

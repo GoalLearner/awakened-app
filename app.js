@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w18';
+  const APP_BUILD_TAG = '2.2.3-w19';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6906,7 +6906,19 @@
           });
         } catch (_) {}
         try {
-          const resp = await window.Auth.submitLeaderboardSnapshot(m, sanitized);
+          // v3 Phase 1z.140 — tag weekly cumulative submits with the
+          // trusted source identifier so the backend can self-heal
+          // pre-w18 Sunday-rollover-contaminated rows on the first
+          // trusted submit. Streak metrics get no tag (untrusted) —
+          // streaks already use the ELSE branch in the backend CASE
+          // and don't benefit from the self-heal. Tag value must
+          // match the TRUSTED_WEEKLY_SUM_SOURCES allowlist in
+          // backend/src/handlers/leaderboard-submit.ts.
+          const isWeeklyCumulative = (typeof LB_WEEKLY_METRICS !== 'undefined') && LB_WEEKLY_METRICS.has(m);
+          const submitOpts = isWeeklyCumulative
+            ? { weeklySumSource: 'client_sunday_utc_v2' }
+            : undefined;
+          const resp = await window.Auth.submitLeaderboardSnapshot(m, sanitized, submitOpts);
           // v3 Phase 1z.127 — post-await result breadcrumb. Distinguishes
           // "attempted" (the existing -attempt event) from "persisted"
           // so future race-condition debugging has a definitive signal.
