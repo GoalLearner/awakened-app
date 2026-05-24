@@ -55,7 +55,100 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 24, 2026 — repaired bad current-week step carryover after w18 timezone fix (read this first)
+## 📌 Session handoff — May 24, 2026 — sweep audit of all users for Sunday-rollover contamination; Galilea AMBIGUOUS pending approval (read this first)
+
+### 🟡 STATUS: Audit complete. Richie already repaired. Galilea row is **likely contaminated but unverified** — awaiting explicit approval before any mutation. No other users affected. Flights unaffected.
+
+### Read-only D1 audit
+
+`leaderboard_snapshots` step_total week `2026-05-24` joined with each user's prior-week record:
+
+| alias | uid | cur | best | prev_wk | updated (UTC) | classification |
+|---|---|---|---|---|---|---|
+| Galilea | `c1a7149d` | **53,654** | **53,654** | 53,192 | 20:11 May 24 | 🟡 likely contaminated |
+| Richie | `ede751e6` | 7,308 | 82,939 | 82,939 | 23:13 May 24 | ✅ post-repair |
+| RenDIESEL | `ca5b82df` | 3,573 | 101,259 | 101,259 | 10:45 May 24 | ✅ clean reset |
+| Melvin | `32c44456` | 1,225 | 1,583 | 1,583 | 03:54 May 24 | ✅ clean reset |
+| LLCoolJulian | `7061cffe` | 176 | 11,528 | 11,528 | 16:22 May 24 | ✅ clean |
+
+`weekly_step_records` (HoF source) for week `2026-05-24`:
+
+| alias | uid | steps | created (UTC) | updated (UTC) |
+|---|---|---|---|---|
+| Galilea | `c1a7149d` | 53,654 | **06:21 May 24** | 20:11 May 24 |
+| RenDIESEL | `ca5b82df` | 3,573 | 07:03 May 24 | 10:45 May 24 |
+| Melvin | `32c44456` | 1,225 | 02:04 May 24 | 03:54 May 24 |
+| LLCoolJulian | `7061cffe` | 176 | 16:22 May 24 | 16:22 May 24 |
+
+(Richie's false HoF current-week row was deleted in the prior 1bf8ad7 repair; not re-created since.)
+
+`leaderboard_snapshots` flights_climbed week `2026-05-24`:
+
+| alias | uid | cur | best | updated |
+|---|---|---|---|---|
+| Richie | `ede751e6` | 41 | 41 | 23:05 May 24 |
+| RenDIESEL | `ca5b82df` | 16 | 79 | 13:44 May 24 |
+
+**No flights contamination.** Both rows look like clean new-week values; Richie's `best=cur=41` is plausibly his first-time peak this week (legitimate).
+
+### Galilea classification — likely contaminated, AMBIGUOUS, NOT repaired
+
+**Three signals pointing to contamination:**
+
+1. **`cur == best == 53,654`** — backend MAX peg matches the same shape Richie's pre-repair row had (Richie was 80,886 == best from the bug-pegged value before we repaired). When a brand new week's first submit equals the new all-time best, it's structurally consistent with the bug firing on the rollover edge.
+
+2. **HoF row `created_at = 2026-05-24 06:21 UTC`** = the local-Sat / UTC-Sun gap window in US timezones:
+   - PDT (UTC-7): Sat May 23 23:21 → **in gap**
+   - MDT (UTC-6): Sun May 24 00:21 → just past local midnight, edge case
+   - CDT (UTC-5): Sun May 24 01:21 → past local midnight
+   - EDT (UTC-4): Sun May 24 02:21 → past local midnight
+   
+   The bug specifically fires when device-local DOW returns Saturday (`today.getDay() === 6`) AT the moment of submit. If Galilea is on Pacific time, the 06:21 UTC submit was definitively in the gap window. **And w18 hadn't been published to testers at that time** — she was running w17 or earlier, which had the bug.
+
+3. **`cur` (53,654) ≈ `prev_wk_record` (53,192)** — close but not exact (Δ = 462). Matches the bug's pattern of summing 7 local-day buckets where today's bucket carries a small HealthKit tick added since the prior week's final submit. Pure carryover would be exact; this small delta fits "stale week sum + a little new data."
+
+**Why we can't be 100% sure:** Galilea could legitimately have walked ~53,654 steps in the new week — a Sunday with shopping + errands can plausibly hit 50K+ for some users. The 462-step delta vs prior week could be coincidence. Without her Apple Health data or Copy Debug Info, the row is structurally ambiguous.
+
+### Repair options for Galilea — awaiting Richie's explicit approval
+
+Per the task guardrails ("Do NOT repair ambiguous rows without explicit approval"), nothing has been mutated for Galilea. Four options:
+
+| Option | Action | Result |
+|---|---|---|
+| **A** | Leave the row. Wait for Galilea's app to resubmit a w18-correct value. | If contaminated, MAX clause protects 53,654 all week. She stays #1 until she walks > 53,654 (unlikely this week). If legitimate, no harm. |
+| **B** | UPDATE `current_value` to a conservative low value (e.g. 0) + DELETE the HoF row. | Cleans the leaderboard if contaminated; if legitimate, robs her of a real ranking. |
+| **C** | Ask Galilea to send Copy Debug Info → use her local `steps_this_week` as the true value, then UPDATE + DELETE accordingly. | Highest confidence repair. Requires reaching her. |
+| **D** | DELETE only the HoF current-week row (`weekly_step_records 2026-05-24 / 53,654`) but leave the snapshot. | Cleans the HoF visual mismatch but keeps her at #1 on This Week. Inconsistent state. |
+
+**Recommendation**: **Option C** if Galilea is reachable today, otherwise **Option A** (wait one or two days; if her next submits stay flat at 53,654, that's strong evidence of contamination and we can repair retroactively). Option B is invasive and risks zeroing a legitimate top-ranker. Option D leaves the data in an inconsistent state.
+
+### Flights — clean
+
+Neither Richie's (41/41) nor RenDIESEL's (16/79) flights row shows contamination. No HoF table exists for flights, so nothing to clean there.
+
+### Hard guardrails respected
+
+- ✅ Read-only D1 queries only.
+- ✅ No backend deploy.
+- ✅ No app code change.
+- ✅ No version/cache knob bump.
+- ✅ No mutations for ambiguous rows.
+- ✅ rendiesel's 101K and all other legitimate prior-week records untouched.
+- ✅ Aliases + truncated IDs only.
+
+### Next decision
+
+Reply with one of:
+- **`Option A`** — leave Galilea, wait & watch.
+- **`Option B [value]`** — set Galilea's current_value to `[value]` (e.g. `0` for conservative) and delete the HoF row.
+- **`Option C [value]`** — Galilea verified her true current-week is `[value]`; UPDATE snapshot to that and either UPDATE or DELETE the HoF row.
+- **`Option D`** — delete only the HoF row.
+
+Then I'll prepare narrow idempotent SQL, run it, verify, and document. Without your reply, nothing else changes.
+
+---
+
+## 📌 Session handoff — May 24, 2026 — repaired bad current-week step carryover after w18 timezone fix (historical — superseded by sweep audit above)
 
 ### ✅ STATUS: D1 repair complete. Richie's `step_total` and Hall of Fame for week `2026-05-24` are now clean. `2.2.3-w18` continues to prevent recurrence.
 
