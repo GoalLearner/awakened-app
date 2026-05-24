@@ -55,7 +55,104 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 24, 2026 — 1z.139 Weekly step/flight sum anchored to Sunday-UTC (read this first)
+## 📌 Session handoff — May 24, 2026 — repaired bad current-week step carryover after w18 timezone fix (read this first)
+
+### ✅ STATUS: D1 repair complete. Richie's `step_total` and Hall of Fame for week `2026-05-24` are now clean. `2.2.3-w18` continues to prevent recurrence.
+
+**Context**: After `2.2.3-w18` shipped (1z.139 — weekly sum anchored to Sunday-UTC), Richie's local app correctly reported `steps this week: 7,308`. But the bad D1 row from before the fix still sat at `80,886` for `week_start=2026-05-24`, and 1z.131's monotonic max protected it from natural ratchet-up. Hall of Fame inherited the false 80.9K record for the current week.
+
+### Read-only audit findings
+
+| Table | Row | Status |
+|---|---|---|
+| `leaderboard_snapshots` (Richie, step_total, 2026-05-24) | `current=80,886 / best=82,939` | bad — repair needed |
+| `weekly_step_records` (Richie, 2026-05-24) | `steps=80,886` | false current-week HoF record — repair needed |
+| `weekly_step_records` (Richie, 2026-05-17) | `steps=82,939` | last week's real record — untouched |
+| `user_accolades` (Richie) | empty (no 100K row) | nothing to clean |
+
+### Repair SQL executed
+
+**1. `leaderboard_snapshots` — UPDATE to true value (1 row affected)**:
+```sql
+UPDATE leaderboard_snapshots
+SET current_value = 7308,
+    updated_at    = strftime('%s','now')*1000
+WHERE user_id    = (SELECT id FROM users WHERE alias='Richie')
+  AND metric     = 'step_total'
+  AND week_start = '2026-05-24'
+  AND current_value = 80886;       -- idempotent guard
+-- changes: 1 ✓
+```
+`best_value=82,939` deliberately untouched.
+
+**2. `weekly_step_records` — DELETE false current-week row (1 row affected)**:
+```sql
+DELETE FROM weekly_step_records
+WHERE user_id    = (SELECT id FROM users WHERE alias='Richie')
+  AND week_start = '2026-05-24'
+  AND steps      = 80886;
+-- changes: 1 ✓
+```
+DELETE chosen over UPDATE per HoF semantics ("Highest verified weekly totals ever recorded"). With nothing real recorded yet for the current week, no row should exist — Richie's next foreground submit will INSERT a fresh row at the true value, and `MAX(steps, excluded.steps)` will ratchet it up correctly from there.
+
+### Post-repair verification
+
+`leaderboard_snapshots` top of week `2026-05-24` after repair:
+
+| uid | current | best |
+|---|---|---|
+| `c1a7149d` (galilea) | 53,654 | 53,654 |
+| `ede751e6` (Richie) | **7,308** | 82,939 |
+| `ca5b82df` (rendiesel) | 3,573 | 101,259 |
+| `32c44456` | 1,225 | 1,583 |
+| `7061cffe` | 176 | 11,528 |
+
+Richie now correctly ranks #2 behind galilea for the current week. `best_value` (all-time peak) preserved.
+
+`weekly_step_records` for Richie post-repair:
+
+| week_start | steps |
+|---|---|
+| `2026-05-17` | 82,939 |
+
+Only the legitimate prior-week record remains. Hall of Fame "Week of May 24–May 30 · Richie 80.9K" entry will no longer appear once the leaderboard sheet re-fetches.
+
+### What's NOT changed
+
+- ✅ No app code changes — pure data repair.
+- ✅ No version/cache knob bumps — w18 bundle is unchanged and still ships next.
+- ✅ No backend Worker deploy.
+- ✅ No Codemagic / archive / upload.
+- ✅ rendiesel's 101,259 Hall of Fame record untouched.
+- ✅ Last week (`2026-05-17`) leaderboard + HoF entries untouched.
+- ✅ All other users' rows untouched.
+- ✅ Flights / sleep / workout rows untouched.
+- ✅ user_accolades untouched (Richie had no row; no other user touched).
+
+### What the user should see
+
+Tester just needs to **re-open the Steps leaderboard sheet** (no force-quit / cold-launch required — the modal force-refreshes the backend top via `fetchLeaderboardTop` every open):
+
+- **This Week**: Richie at `#2 · 7,308 steps` (or higher if he's walked more since the audit), galilea still `#1 · 53,654`. The 80,886 row is gone.
+- **Hall of Fame**: only the genuine `Week of May 17–23 · 82.9K steps` Richie row remains. The false `Week of May 24–30 · 80.9K steps` Richie entry is deleted.
+- **Hub row** (`7,308 steps this week`) and **Steps detail "me" row** now agree.
+
+`2.2.3-w18` continues to prevent this bug class from recurring on the next Sunday rollover and beyond.
+
+### Hard guardrails respected
+
+- ✅ Read-only D1 queries first.
+- ✅ No backend code deploy.
+- ✅ No app code change.
+- ✅ Narrow scope: 2 rows total across 2 tables (1 UPDATE + 1 DELETE), both idempotently guarded.
+- ✅ `best_value` of repaired row untouched.
+- ✅ Last week records untouched.
+- ✅ rendiesel + galilea + all other users untouched.
+- ✅ Aliases / truncated IDs only in this report.
+
+---
+
+## 📌 Session handoff — May 24, 2026 — 1z.139 Weekly step/flight sum anchored to Sunday-UTC (historical — superseded by repair note above)
 
 ### ✅ STATUS: Frontend fix shipped. **D1 has one stuck row** (Richie step_total = 80,886 for week 2026-05-24) that needs a narrow repair — SQL prepared below, NOT executed.
 
