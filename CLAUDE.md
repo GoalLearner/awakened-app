@@ -55,7 +55,100 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.143 Souls Ledger sheet is X-only close (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.144 Souls Ledger "Show older" UX cap (read this first)
+
+### ✅ STATUS: Souls Ledger modal now renders the newest 30 transactions on open and shows a "Show older · N" reveal button at the bottom when there's more history. Tapping reveals the rest (up to the storage cap of 250). Pure UX polish — storage unchanged, no backend involvement.
+
+**Why this exists**: even though storage is capped at 250 entries and ~55 KB per device (which is fine), rendering 250 DOM rows on every open is unnecessary work. The user typically wants to glance at recent activity, not scroll through weeks of history. The "Show older" button keeps the modal opening snappy and adds an intentional "drill into history" affordance for the few moments the user wants the full list.
+
+### Design — same pattern as the 1z.141 HoF cap
+
+| Concern | Decision |
+|---|---|
+| **Storage** | Unchanged. `SOULS_LEDGER_MAX = 250` still truncates on write. |
+| **Initial render** | Newest 30 entries (`SOULS_LEDGER_INITIAL_DISPLAY`). |
+| **Reveal mechanism** | Single "Show older · N" button below the list. One tap → re-render with all entries. |
+| **Reveal direction** | One-way per session. Close + reopen to collapse back. (Simpler than a toggle; matches user mental model.) |
+| **Per-open state reset** | `_soulsLedgerShowAll = false` reset in `openSoulsLedger` so every fresh open starts collapsed. |
+| **Empty state** | Still fires when there are zero entries. |
+| **Render path** | Single funnel `_renderSoulsLedger`. No alternate path. |
+| **Click wiring** | Delegated handler on `#souls-ledger-list` (not the button), so `innerHTML` re-renders don't leak listeners. |
+
+### Why 30 entries
+
+- Covers ~2-6 days of typical activity (most users generate 5-15 transactions/day).
+- ~2.5 iPhone screens of scroll — feels "recent."
+- Well under any render-cost threshold.
+- One tap reveals the rest (up to 250).
+
+### What's preserved
+
+- `SOULS_LEDGER_MAX = 250` storage cap unchanged.
+- All entry shapes/fields unchanged.
+- `recordSoulsTransaction` unchanged.
+- `openSoulsLedger` / `closeSoulsLedger` semantics preserved (added one-line state reset on open).
+- 1z.143 X-only close behavior preserved.
+- No backend involvement.
+- No D1 mutation, no migration, no deploy.
+
+### Code touched
+
+| File | Change |
+|---|---|
+| `app.js` | `SOULS_LEDGER_INITIAL_DISPLAY = 30` + `_soulsLedgerShowAll` flag + `_renderSoulsLedger` slice + button HTML + `openSoulsLedger` reset + `setupSoulsLedger` delegated click handler + idempotent wired guard |
+| `styles.css` | New `.souls-ledger-show-older` rule (dashed violet border, hover/active states, matches the existing fantasy/RPG palette) |
+| `index.html`, `sw.js` | Knob bumps only |
+
+### Safety notes
+
+- **Idempotent wiring guard** added to `setupSoulsLedger` (`data-wired` attribute on the sheet element) so double-init doesn't double-fire X clicks. Pre-existed as a latent bug; fixed-in-flight.
+- **Delegated event listener** on the list element survives `innerHTML` re-renders. No memory leak, no orphaned listeners.
+- **State is in-memory only** (`_soulsLedgerShowAll` is a module-local `let`). Not persisted across app reloads — intentional.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w22` | `2.2.3-w23` |
+| `app.js?v=` | `475` | `476` |
+| `auth.js?v=` | `17` | `17` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.361` | `v5.362` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (both pass on isolated retry, neither ledger-related).
+- Backend: untouched, no tests re-run, no deploy.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No HealthKit / dungeon / economy / sim / leaderboard logic changes. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. `bash scripts/verify-ios-public-assets.sh`.
+4. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w23"`.
+2. Open Souls Ledger (tap the souls pill).
+3. List renders fast (≤30 rows).
+4. If you have more than 30 historical entries, "Show older · N" button appears below the last row.
+5. Tap the button → list expands to show all entries (up to 250).
+6. Scroll the list — sheet stays open (1z.143 behavior preserved).
+7. Tap X → sheet closes.
+8. Reopen — list is back to top-30 collapsed view.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.143 Souls Ledger sheet is X-only close (historical — superseded by 1z.144 above)
 
 ### ✅ STATUS: Souls Ledger / Transactions sheet now closes ONLY via the X button. Drag-down and overlay-tap close paths are both intentionally removed. Scoped fix — no other sheet affected.
 

@@ -2064,6 +2064,37 @@ footer {
   flex-direction: column;
   gap: 6px;
 }
+/* v3 Phase 1z.144 — "Show older" reveal button. Appears below the
+   list when entries.length > SOULS_LEDGER_INITIAL_DISPLAY (30) and
+   the user hasn't tapped it yet this session. Styled to match the
+   fantasy/RPG palette: dashed violet border + violet-tinted text,
+   matching the "More rankings" link from the Status tab era. */
+.souls-ledger-show-older {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px dashed rgba(139, 92, 246, 0.35);
+  border-radius: 10px;
+  color: var(--text-primary, #c4b5fd);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.souls-ledger-show-older:hover {
+  background: rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.55);
+}
+.souls-ledger-show-older:active {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.75);
+  transform: scale(0.997);
+}
 .souls-ledger-row {
   display: flex;
   align-items: flex-start;

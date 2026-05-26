@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w22';
+  const APP_BUILD_TAG = '2.2.3-w23';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2474,6 +2474,24 @@
   // can fold it into the existing user_state_snapshots payload.
   const SOULS_LEDGER_KEY = 'hb_souls_ledger';
   const SOULS_LEDGER_MAX = 250;
+  // v3 Phase 1z.144 — render-layer cap for the visible Souls Ledger
+  // list. Storage stays at SOULS_LEDGER_MAX (250 entries); we only
+  // paint the newest N rows on open to keep the modal snappy. A
+  // "Show older" button appears below the list when there are more
+  // entries available, and tapping it re-renders the full slice.
+  // No storage change, no backend involvement. Pure UX polish.
+  //
+  // 30 chosen because:
+  //   - covers ~2-6 days of typical activity (5-15 txns/day)
+  //   - ~2.5 screens of scroll on iPhone, enough to feel "recent"
+  //   - well under any render-cost threshold
+  //   - tapping "Show older" once reveals the rest (up to 250)
+  const SOULS_LEDGER_INITIAL_DISPLAY = 30;
+  // Per-open state. Reset to false in openSoulsLedger so every fresh
+  // open starts collapsed — most opens, the user wants recent
+  // activity, not a 250-row dump. Tapping "Show older" within an
+  // open session flips this true until close.
+  let _soulsLedgerShowAll = false;
 
   function _readSoulsLedger() {
     try {
@@ -2574,7 +2592,16 @@
         '</div>';
       return;
     }
-    const rows = entries.map(function(e) {
+    // v3 Phase 1z.144 — visible-slice cap. Entries are newest-first
+    // (unshift on every record). _soulsLedgerShowAll flips true when
+    // the user taps "Show older"; openSoulsLedger resets it false.
+    const totalCount   = entries.length;
+    const showAll      = !!_soulsLedgerShowAll;
+    const visible      = showAll
+      ? entries
+      : entries.slice(0, SOULS_LEDGER_INITIAL_DISPLAY);
+    const hiddenCount  = totalCount - visible.length;
+    const rows = visible.map(function(e) {
       const isGain = (e.delta || 0) > 0;
       const sign   = isGain ? '+' : '−';
       const abs    = Math.abs(e.delta || 0).toLocaleString('en-US');
@@ -2597,13 +2624,31 @@
         '</div>'
       );
     }).join('');
-    listEl.innerHTML = rows;
+    // v3 Phase 1z.144 — append "Show older" button when collapsed
+    // and there are more entries to reveal. Click handler is wired
+    // once on the list element (delegation) in setupSoulsLedger,
+    // so re-renders don't leak listeners. Button text shows the
+    // hidden count so the user knows what they're getting.
+    const showOlderBtn = (!showAll && hiddenCount > 0)
+      ? (
+          '<button type="button" class="souls-ledger-show-older" ' +
+                  'data-action="show-older" ' +
+                  'aria-label="Show ' + hiddenCount + ' older soul transactions">' +
+            'Show older · ' + hiddenCount.toLocaleString('en-US') +
+          '</button>'
+        )
+      : '';
+    listEl.innerHTML = rows + showOlderBtn;
   }
 
   function openSoulsLedger() {
     const overlay = document.getElementById('souls-ledger-overlay');
     const sheet   = document.getElementById('souls-ledger-sheet');
     if (!overlay || !sheet) return;
+    // v3 Phase 1z.144 — every fresh open starts collapsed. Most
+    // opens, the user wants to glance at recent activity; the few
+    // who want full history can tap "Show older" once.
+    _soulsLedgerShowAll = false;
     _renderSoulsLedger();
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
@@ -2624,7 +2669,13 @@
     const overlay = document.getElementById('souls-ledger-overlay');
     const sheet   = document.getElementById('souls-ledger-sheet');
     const close   = document.getElementById('souls-ledger-close');
+    const listEl  = document.getElementById('souls-ledger-list');
     if (!sheet || !overlay) return;
+    // Idempotent guard — setupSoulsLedger may run more than once
+    // during the app lifetime (e.g., welcome→main transition); a
+    // second wiring pass would double-fire close on a single tap.
+    if (sheet.getAttribute('data-wired') === '1') return;
+    sheet.setAttribute('data-wired', '1');
     if (close) close.addEventListener('click', closeSoulsLedger);
     // v3 Phase 1z.143 — X-only close. TestFlight repro: scrolling
     // the transactions list down accidentally triggered the
@@ -2638,6 +2689,19 @@
     // the same wiring template keep their gestures unless they
     // get their own scoped fix.
     void overlay;
+    // v3 Phase 1z.144 — delegated click handler for the "Show
+    // older" reveal button. Wired on the list element (not the
+    // button) so re-renders via innerHTML don't leak listeners
+    // or require re-attachment. Button only exists inside the
+    // listEl, so the closest() match is unambiguous.
+    if (listEl) {
+      listEl.addEventListener('click', function (e) {
+        const btn = e.target && e.target.closest && e.target.closest('.souls-ledger-show-older');
+        if (!btn) return;
+        _soulsLedgerShowAll = true;
+        _renderSoulsLedger();
+      });
+    }
   }
 
   function killRewardSouls(rank) {
