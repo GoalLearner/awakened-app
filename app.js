@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w20';
+  const APP_BUILD_TAG = '2.2.3-w21';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22109,11 +22109,28 @@
     });
     merged.forEach((r, i) => { r.rank = i + 1; });
 
+    // v3 Phase 1z.142 — belt-and-suspenders top-N cap at the data
+    // boundary, mirroring the render-layer cap in lbBuildHofList.
+    // Two caps so any future renderer (or test fixture) that
+    // consumes merged.records is also limited to the top 10 — no
+    // way for a code path to leak #11+ into the visible UI.
+    // Capping AFTER rank assignment so rank labels still read
+    // 1..10 (not 1..25 truncated to 1..10 with some 5..14 mix).
+    // Capping BEFORE me_best-displayed lookup so the lookup is
+    // against the same visible window — if the user's record falls
+    // off the top 10 the lookup falls back to backend rank (which
+    // is what we want for the Your Best pinned card).
+    const cappedMerged = merged.slice(0, HOF_DISPLAY_LIMIT);
+
     // Recompute the displayed rank for the pinned YOUR BEST card.
     // Match by (alias, week_start) so a user with multiple records
     // gets the correct rank for their *best* week. Falls back to
     // the backend rank if for some reason the row isn't found
     // (shouldn't happen after the injection above, but defensive).
+    // Look up against the FULL merged array, not the capped slice —
+    // a user whose best falls outside the top 10 still gets their
+    // true rank shown on the Your Best card (it just won't appear
+    // in the visible top-10 list, which is the intended UX).
     let meBestDisplayed = null;
     if (realMeBest) {
       const myRow = myAlias
@@ -22127,7 +22144,7 @@
       };
     }
 
-    return { records: merged, me_best_displayed: meBestDisplayed };
+    return { records: cappedMerged, me_best_displayed: meBestDisplayed };
   }
 
   // v3 Phase 1z.36/37 — Hall of Fame tab renderer.
@@ -22158,6 +22175,7 @@
         meBestEl.classList.remove('hidden');
       }
       listEl.innerHTML = lbBuildHofList(m.records);
+      _bcHofRender('cached', cached.records, m.records);
     } else {
       if (meBestEl) meBestEl.classList.add('hidden');
       listEl.innerHTML = lbBuildLoadingSkeleton();
@@ -22182,6 +22200,7 @@
         meBestEl.classList.remove('hidden');
       }
       listEl.innerHTML = lbBuildHofList(m.records);
+      _bcHofRender('fresh', result.records, m.records);
     } else if (result && result.code === 'EXPIRED') {
       window.location.reload();
     } else if (!cached) {
@@ -22195,10 +22214,37 @@
           meBestEl.classList.remove('hidden');
         }
         listEl.innerHTML = lbBuildHofList(m.records);
+        _bcHofRender('sim-fallback', [], m.records);
       } else {
         listEl.innerHTML = lbBuildErrorState(result && result.code);
       }
     }
+  }
+
+  // v3 Phase 1z.142 — single-shot diagnostic breadcrumb for the
+  // Hall of Fame render path. Fires once per render (not per row).
+  // Decisive signal for the "HoF still shows >10 rows" class of
+  // bug: payload shows the cap, the actual displayed count, the
+  // build tag (so we can tell a stale TestFlight binary from a
+  // logic bug), and which render path fired (cached vs fresh vs
+  // sim-fallback). Privacy-safe: no aliases or step counts.
+  function _bcHofRender(path, incoming, displayed) {
+    try {
+      if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
+      const incomingCount  = Array.isArray(incoming)  ? incoming.length  : 0;
+      const displayedCount = Array.isArray(displayed) ? displayed.length : 0;
+      const lastRank = (displayed && displayed.length) ? (displayed[displayed.length - 1].rank || displayed.length) : 0;
+      _addHealthVerifyBreadcrumb('leaderboard-hof-render', {
+        path: path,
+        incomingCount: incomingCount,
+        displayedCount: displayedCount,
+        displayLimit: HOF_DISPLAY_LIMIT,
+        firstRank: (displayed && displayed.length) ? (displayed[0].rank || 1) : 0,
+        lastRank: lastRank,
+        builder: 'lbBuildHofList',
+        build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+      });
+    } catch (_) {}
   }
 
   // v3 Phase 1z.52 — 100K Step Club tab renderer.

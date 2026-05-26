@@ -55,7 +55,103 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — App Store 2.2.3 approved; public leaderboard self-heal verified end-to-end (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.142 HoF cap belt-and-suspenders + decisive diagnostic (read this first)
+
+### 🟡 STATUS: Audit confirmed the 1z.141 cap is correctly placed in the only HoF builder. The most likely root cause of the "HoF still shows >10 rows" report is that the device is on a stale TestFlight binary (w19, which predates the cap) — not a logic bug. 1z.142 adds a second cap at the data layer (`_lbMergeHofRecords`) for belt-and-suspenders defense, plus a one-shot `leaderboard-hof-render` diagnostic breadcrumb that will be decisive on the next Copy Debug Info pull.
+
+### Audit findings
+
+Searched every HoF DOM touch point in `app.js`:
+
+| Path | Builder | Cap status |
+|---|---|---|
+| `_lbRenderHofTab` cached branch | `lbBuildHofList` | ✅ slice 0..10 (1z.141) |
+| `_lbRenderHofTab` fresh branch | `lbBuildHofList` | ✅ slice 0..10 (1z.141) |
+| `_lbRenderHofTab` sim-fallback branch | `lbBuildHofList` | ✅ slice 0..10 (1z.141) |
+| `_lbMergeHofRecords` data output | data layer | ✅ slice 0..10 added 1z.142 |
+| Any other innerHTML / append to `#lb-rank-list` for HoF context | none found | n/a |
+
+The cap is correctly placed. There is no alternate HoF render path. **Strongest hypothesis**: the device tested was on `2.2.3-w19` (or earlier) TestFlight build, which predates 1z.141. The MacBook archive + upload of w20 may not have happened yet.
+
+### 1z.142 changes
+
+**1. Belt-and-suspenders data-layer cap** in `_lbMergeHofRecords`:
+```js
+merged.forEach((r, i) => { r.rank = i + 1; });
+const cappedMerged = merged.slice(0, HOF_DISPLAY_LIMIT);
+// ...
+return { records: cappedMerged, me_best_displayed: meBestDisplayed };
+```
+- Rank labels still read `#1..#10` (capped AFTER rank assignment).
+- `me_best_displayed` lookup runs against the FULL `merged` array — the Your Best pinned card correctly shows the caller's true rank even if they fall outside the top 10.
+- Any future code path (existing or new) that consumes `m.records` is now structurally limited to 10 rows. **No way for a code path to leak #11+ into the visible UI.**
+
+**2. Decisive `leaderboard-hof-render` diagnostic breadcrumb** (`_bcHofRender`):
+```
+{ path: 'cached' | 'fresh' | 'sim-fallback',
+  incomingCount, displayedCount, displayLimit: 10,
+  firstRank, lastRank,
+  builder: 'lbBuildHofList',
+  build: APP_BUILD_TAG }
+```
+Fires once per render (not per row). Privacy-safe — no aliases or step counts.
+
+Next time someone reports "HoF showing #11+", Copy Debug Info will reveal in one breadcrumb:
+- If `build` is older than `2.2.3-w21` → **stale binary** → upload latest TestFlight.
+- If `build` is current AND `displayedCount > 10` → real logic bug → escalate.
+- If `displayedCount === 10` AND user still sees more rows → DOM injection from outside our renderer → escalate.
+
+### Files changed
+
+- `app.js` — `_lbMergeHofRecords` cap + `_lbRenderHofTab` breadcrumb calls + new `_bcHofRender` helper.
+- `index.html`, `sw.js` — knob bumps only.
+- `CLAUDE.md` — 1z.142 handoff.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w20` | `2.2.3-w21` |
+| `app.js?v=` | `473` | `474` |
+| `auth.js?v=` | `17` | `17` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.359` | `v5.360` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 26/29 first run, same 3 transient browser-context flakes that hit prior trains (all pass on isolated retry; none HoF-related).
+- Backend: untouched, no tests re-run, no deploy.
+
+### MacBook build — REQUIRED for this fix to land on TestFlight
+
+The user's TestFlight device is almost certainly on a binary older than w20, so the 1z.141 cap was never actually shipped. To resolve this:
+
+1. `git pull origin main` on the MacBook (will pick up w21).
+2. `npx cap sync ios`.
+3. **Run `bash scripts/verify-ios-public-assets.sh`** before opening Xcode — this checks that `ios/App/App/public/app.js`, `index.html`, and `sw.js` all carry the new knobs (w21 / app.js?v=474 / v5.360). The gate catches stale-asset bugs before they reach TestFlight.
+4. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+5. On device: force-quit + cold-launch. Open Steps leaderboard → Hall of Fame.
+6. **5-tap version line → Copy Debug Info → confirm `"build": "2.2.3-w21"`** AND look for the `leaderboard-hof-render` breadcrumb with `displayedCount: 10`. If both check out, the visible list will show only #1–#10.
+
+If after the build the list still shows >10 rows AND the breadcrumb confirms `displayedCount: 10` and `build: '2.2.3-w21'`, we have a real logic bug to chase. Until then, the most likely explanation is the stale-binary one.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No HealthKit / dungeon / economy / sim values / 100K Club / This Week / submit / self-heal logic changes. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### Why the diagnostic + double cap is the right move regardless
+
+Even if today's report turns out to be stale-binary, this train hardens the surface:
+- A future contributor cannot accidentally add a new HoF render path that bypasses the cap — the merge function is the single funnel for HoF data and it now caps too.
+- A future tester report can be classified in one Copy Debug Info dump.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — App Store 2.2.3 approved; public leaderboard self-heal verified end-to-end (historical — superseded by 1z.142 above)
 
 ### 🎉 STATUS: Apple App Review approved `Awakened: Habit RPG` version `2.2.3 for iOS`. Public Steps leaderboard verified on-device after the App Store update. Galilea — the canonical "App Store, not TestFlight" verification case — now shows the corrected current-week value `24,090`. The Sunday-rollover bug class is closed across both TestFlight and the App Store.
 
