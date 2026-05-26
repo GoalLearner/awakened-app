@@ -55,7 +55,110 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.145 XP progress chart starts at user's first XP date (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.146 XP chart visually rises from 0 (read this first)
+
+### ✅ STATUS: The XP cumulative chart now begins at zero on the user's first XP date and rises diagonally into their first-day total. Pure visual refinement — no data, stats, or XP totals changed.
+
+**Tester feedback on w24**: chart starts at the right *date* (May 13 instead of Apr 27) but the first plotted point is already elevated because day 1 cumulative ≠ 0. User wanted the line to begin at 0 for a cleaner "journey begins here" feel.
+
+### Fix (1z.146)
+
+Always prepend a synthetic `0` to `chartCumulative` before rendering:
+
+```js
+const renderCumulative = [0].concat(chartCumulative);
+const renderLen = renderCumulative.length;
+```
+
+The baseline `0` sits at x=0 on the chart. The first real cumulative point (e.g. `23` for a 23-XP first day) appears at the next x-stop. The line rises diagonally from origin to first-day total, then continues cumulative through today.
+
+### What this changes
+
+| Aspect | Before (w24) | After (w25) |
+|---|---|---|
+| Leftmost y | First-day cumulative (e.g. `23`) | **`0`** |
+| Line shape | Starts elevated, rises right | Starts at origin, rises diagonally into first day |
+| Axis labels | Personal start / mid / today | Unchanged (still personal start / mid / today) |
+| Date range | personalStart → today | Unchanged |
+| Stats cards | Unchanged | Unchanged |
+| XP totals / earning logic | Unchanged | Unchanged |
+
+The synthetic point is **purely visual** — it lives only inside the SVG path generator. It doesn't enter any stat computation, doesn't affect `totalAllTime` / `dailyXP` / `weekXP` / `monthlyXP` / `daysActive` / `bestDay`, and doesn't change the date axis labels.
+
+### Why same-date-as-start, not previous-day
+
+The synthetic point conceptually represents "**start of personal-start-day**" (i.e. midnight before any XP earned). Two alternatives considered + rejected:
+
+| Option | Why rejected |
+|---|---|
+| Prepend previous-day point at 0 | Pushes the leftmost x-axis label one day backward, contradicting "journey starts on first XP day." |
+| Replace first real point with 0 (drop first-day XP from visual) | Hides actual day-1 effort. Bad storytelling. |
+| Two real points at same x | SVG path with duplicate x renders as a vertical line + no diagonal. Looks broken. |
+
+The chosen approach keeps the leftmost label as the personal start date AND shows the diagonal rise — both stated user requirements.
+
+### Degenerate-range guard now redundant
+
+The 1z.145 special-case for `chartLen < 2` (single-day user) is no longer needed — `[0].concat([anything])` always produces ≥2 points, so the line + area always have something to render. Removed in this train; comment in the new code explains.
+
+### Diagnostic breadcrumb updated
+
+`xp-progress-render` now includes `renderPointCount` (= `chartLen + 1`) and `zeroBaseline: true`. The `true` flag is a 1z.146 marker — if a future debug shows `zeroBaseline: false` we'll know somebody reverted.
+
+### Files changed
+
+| File | What |
+|---|---|
+| `app.js` | Replaced the 1z.145 degenerate-range guard with the unconditional `[0].concat(chartCumulative)` baseline. Updated breadcrumb payload. |
+| `index.html`, `sw.js` | Knob bumps only |
+| `CLAUDE.md` | 1z.146 handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w24` | `2.2.3-w25` |
+| `app.js?v=` | `477` | `478` |
+| `auth.js?v=` | `17` | `17` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.363` | `v5.364` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (both pass on isolated retry, neither XP-related).
+- Backend: untouched, no tests re-run, no deploy.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No XP earning / rank / leaderboard / HealthKit / dungeon / economy / sim logic changes. Modal design unchanged. Summary card values unchanged. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. `bash scripts/verify-ios-public-assets.sh`.
+4. Open `ios/App/App.xcworkspace`, bump iOS native build, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w25"`.
+2. Tap the XP·30D card → "Your Progress" modal.
+3. **Leftmost y position = 0** (line touches the baseline at the left edge).
+4. Line rises diagonally from origin into the first-day cumulative value.
+5. Continues cumulative through today.
+6. **Leftmost x-axis label** = personal start date (unchanged from w24).
+7. **Rightmost x-axis label** = today (unchanged).
+8. **All summary cards** show identical values to w24.
+9. Tier-1 line draw-in animation still plays on open.
+10. Debug Info contains `xp-progress-render` with `zeroBaseline: true` and `renderPointCount = chartLen + 1`.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.145 XP progress chart starts at user's first XP date (historical — superseded by 1z.146 above)
 
 ### ✅ STATUS: The XP cumulative chart in the "Your Progress" modal now starts at the user's first XP date instead of a hard-coded 30-day window. No long flat dead zone before the user's journey begins. Stats cards unchanged. Frontend-only fix.
 

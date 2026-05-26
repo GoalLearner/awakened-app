@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w24';
+  const APP_BUILD_TAG = '2.2.3-w25';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15643,17 +15643,25 @@
     }
     const chartTotal = chartCumulative[chartLen - 1] || 0;
 
-    // Degenerate-range guard: a 1-day range collapses the line to a
-    // single point. Synthesize a (0, 0) baseline anchor at index -1
-    // so the line rises diagonally from origin to today, instead of
-    // rendering as a dot/zero-width path. Has no effect on the dot
-    // endpoint or the dates array (those still reference today).
-    let renderCumulative = chartCumulative;
-    let renderLen = chartLen;
-    if (renderLen < 2) {
-      renderCumulative = [0, chartCumulative[0] || 0];
-      renderLen = 2;
-    }
+    // v3 Phase 1z.146 — always prepend a synthetic zero baseline
+    // point. This makes the chart visually start at 0 on the user's
+    // first XP day and rise into their first-day total, instead of
+    // starting already-elevated. "Journey begins here" UX.
+    //
+    // The baseline point is purely visual — it does NOT change any
+    // stat (Total/Weekly/Daily/Monthly XP, Days Active, Best Day)
+    // because those still read from the 30-day perDay or the
+    // lifetime totalPoints. The axis labels still anchor to real
+    // dates (chartDates[0] = personal start, chartDates[last] = today);
+    // the prepended 0 conceptually represents "start of personal-
+    // start-day" rather than a day before the user's journey, so
+    // we don't push the leftmost label backward.
+    //
+    // As a side effect this also collapses the prior degenerate-
+    // range guard: [0].concat([x]) always produces ≥2 points so the
+    // line + area always have something to render even when chartLen = 1.
+    const renderCumulative = [0].concat(chartCumulative);
+    const renderLen = renderCumulative.length;
 
     // Big chart paths (viewBox 400×140; reserve 1px floor at top)
     const W = 400, H = 140;
@@ -15745,12 +15753,14 @@
     try {
       if (typeof _addHealthVerifyBreadcrumb === 'function') {
         _addHealthVerifyBreadcrumb('xp-progress-render', {
-          startDate:    personalStartIso,
-          endDate:      todayIso,
-          pointCount:   chartLen,
-          firstXpDate:  firstXpIso || null,
-          totalXp:      (typeof totalAllTime === 'number') ? totalAllTime : 0,
-          build:        (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          startDate:       personalStartIso,
+          endDate:         todayIso,
+          pointCount:      chartLen,
+          renderPointCount: renderLen,    // +1 from chartLen because of 1z.146 zero baseline
+          zeroBaseline:    true,           // 1z.146 marker — flips false would mean someone reverted
+          firstXpDate:     firstXpIso || null,
+          totalXp:         (typeof totalAllTime === 'number') ? totalAllTime : 0,
+          build:           (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
         });
       }
     } catch (_) {}
