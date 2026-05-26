@@ -55,7 +55,134 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.144 Souls Ledger "Show older" UX cap (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.145 XP progress chart starts at user's first XP date (read this first)
+
+### ✅ STATUS: The XP cumulative chart in the "Your Progress" modal now starts at the user's first XP date instead of a hard-coded 30-day window. No long flat dead zone before the user's journey begins. Stats cards unchanged. Frontend-only fix.
+
+**Tester feedback**: chart shows `APR 27 → MAY 26` with a long flat early section before the user's actual activity. The leftmost label looked like an app-creation date but was actually `today - 29 days`.
+
+### Root cause
+
+`populateXpDetail()` hard-coded a 30-element array (`new Array(30).fill(0)` at line ~15480) and walked back 29 days from today. Not "app creation date" — just always 30 days. New users see ~3 weeks of zeros at the start of their chart.
+
+### Fix (1z.145)
+
+Compute `personalStartIso` from the `completions` map (earliest YYYY-MM-DD key with any habit completion). Fall back to today if the user has never earned XP. Build a variable-length `chartPerDay` / `chartCumulative` from `personalStart → today` inclusive, then render the line + area + dot + axis labels from those.
+
+```js
+let firstXpIso = null;
+for (const iso in completions) {
+  if (Array.isArray(completions[iso]) && completions[iso].length > 0) {
+    if (!firstXpIso || iso < firstXpIso) firstXpIso = iso;
+  }
+}
+const personalStartIso = firstXpIso || todayIso;
+```
+
+### Degenerate-range guard
+
+If the user only has XP today (`chartLen === 1`), the line collapses to a single point. We synthesize a `(0, 0)` baseline anchor at index −1 so the line rises diagonally from origin to today's value instead of rendering as a degenerate dot. No effect on the endpoint dot or the date labels (those still reference today).
+
+### Axis labels follow the personal range
+
+- **Start label**: first XP date (e.g. `MAY 18`).
+- **Mid label**: floor((chartLen − 1) / 2) date.
+- **End label**: today.
+
+For very short ranges (1–3 days), the start/mid/end may collapse to the same date — that's correct, not a bug.
+
+### Stats unchanged — keep their 30-day windowing
+
+| Stat | Source | Behavior |
+|---|---|---|
+| **Total XP** | `totalPoints` (lifetime running total) | unchanged |
+| **Weekly XP** | `perDay.slice(29 - dow)` (30-day perDay, Sun→today) | unchanged |
+| **Daily XP** | `perDay[29]` (today's slot in the 30-day perDay) | unchanged |
+| **Monthly XP** | Walks `completions` directly from month-1 → today | unchanged |
+| **Days Active** | `perDay.filter(x => x > 0).length` — explicitly "last 30d" per sub-label | unchanged |
+| **Best Day** | Max in the 30-day `perDay` window | unchanged |
+
+The pre-existing 30-day `perDay` array still powers all of those — only the **chart rendering arrays** are now personal-range. Two parallel computations in one function; they don't interfere.
+
+### Diagnostic breadcrumb (new)
+
+Each render fires once:
+```
+xp-progress-render {
+  startDate, endDate, pointCount,
+  firstXpDate, totalXp, build: APP_BUILD_TAG
+}
+```
+Privacy-safe — no habit names, no completion lists. Next "XP graph window looks wrong" report classifies in one Copy Debug Info pull.
+
+### What's preserved
+
+- `_lbGetSnapshot`, all leaderboard/HealthKit/Boss/dungeon/economy logic — untouched.
+- XP earning logic, rank thresholds, totalPoints — untouched.
+- Modal styling — unchanged.
+- All other sheets — unchanged.
+- 30-day perDay window for stats — explicitly preserved.
+- Tier-1 line draw-in animation + tier-2 sweep — both work with the new variable-length path (uses `line.getTotalLength()` which is path-length-agnostic).
+
+### Files changed
+
+| File | What |
+|---|---|
+| `app.js` | `populateXpDetail` — added personal-range computation (~50 lines), swapped chart rendering inputs, swapped axis labels, added breadcrumb |
+| `index.html`, `sw.js` | Knob bumps only |
+| `CLAUDE.md` | 1z.145 handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w23` | `2.2.3-w24` |
+| `app.js?v=` | `476` | `477` |
+| `auth.js?v=` | `17` | `17` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.362` | `v5.363` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 26/29 first run, 3 transient browser-context flakes (all pass on isolated retry, none XP-related).
+- Backend: untouched, no tests re-run, no deploy.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No XP earning / rank / leaderboard / HealthKit / dungeon / economy / sim logic changes. Modal design unchanged. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. `bash scripts/verify-ios-public-assets.sh`.
+4. Open `ios/App/App.xcworkspace`, bump iOS native build, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w24"`.
+2. Tap the XP·30D card on the dashboard → "Your Progress" modal opens.
+3. **Leftmost x-axis label** = your first XP date (e.g. `MAY 18` for Richie), **not** `APR 27`.
+4. **Rightmost x-axis label** = today.
+5. Cumulative line rises from your first day with XP, no flat dead zone.
+6. **Total XP / Weekly XP / Daily XP / Monthly XP / Days Active / Best Day** all show the same values as in w23.
+7. Tier-1 line draw-in animation still plays on open.
+8. Debug Info contains `xp-progress-render { startDate, endDate, pointCount, firstXpDate, totalXp, build: "2.2.3-w24" }` once per modal open.
+
+### Edge cases tested via code review
+
+- **New user, zero XP**: `firstXpIso` is null → `personalStartIso = todayIso` → `chartLen = 1` → degenerate-range guard synthesizes a 2-point path → chart renders cleanly as a flat baseline at the bottom.
+- **First XP today**: chart shows one day of cumulative XP rising from origin.
+- **First XP yesterday**: 2-point chart, line rises across the full width.
+- **First XP 90 days ago**: 91-point chart, more detail than the prior 30-day view, still renders cleanly in a 400px-wide viewBox.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.144 Souls Ledger "Show older" UX cap (historical — superseded by 1z.145 above)
 
 ### ✅ STATUS: Souls Ledger modal now renders the newest 30 transactions on open and shows a "Show older · N" reveal button at the bottom when there's more history. Tapping reveals the rest (up to the storage cap of 250). Pure UX polish — storage unchanged, no backend involvement.
 

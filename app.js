@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w23';
+  const APP_BUILD_TAG = '2.2.3-w24';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15576,11 +15576,91 @@
       }
     }
 
+    // v3 Phase 1z.145 — personal-range chart window. The chart now
+    // starts at the user's first XP date (earliest completion day in
+    // the local ledger) instead of the fixed 30-day window. The 30-
+    // day perDay array above still drives the "Days Active" and
+    // "Best Day" stats — those sub-labels read "last 30d" and remain
+    // 30-day windowed by design. Only the chart shape changes.
+    //
+    // Personal start date priority:
+    //   1. Earliest YYYY-MM-DD key in `completions` that has any
+    //      habit entries. (First day the user earned XP.)
+    //   2. Today, if the user has never completed a habit.
+    //
+    // Output: chartCumulative + chartDates arrays spanning
+    // [personalStart, today] inclusive. Same shape as the prior
+    // 30-day cumulative arrays, just variable length.
+    let firstXpIso = null;
+    try {
+      for (const iso in completions) {
+        if (!Object.prototype.hasOwnProperty.call(completions, iso)) continue;
+        const arr = completions[iso];
+        if (!Array.isArray(arr) || arr.length === 0) continue;
+        if (!firstXpIso || iso < firstXpIso) firstXpIso = iso;
+      }
+    } catch (_) { firstXpIso = null; }
+
+    const todayIso =
+      today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+    const personalStartIso = firstXpIso || todayIso;
+    const personalStart = new Date(personalStartIso + 'T00:00:00');
+    personalStart.setHours(0, 0, 0, 0);
+
+    // Inclusive day count from personalStart through today. Clamp to
+    // ≥1 so a single-day range still renders.
+    const oneDayMs = 86400000;
+    let chartLen = Math.max(1, Math.round((today.getTime() - personalStart.getTime()) / oneDayMs) + 1);
+
+    const chartDates  = new Array(chartLen).fill('');
+    const chartPerDay = new Array(chartLen).fill(0);
+    for (let i = 0; i < chartLen; i++) {
+      const d = new Date(personalStart);
+      d.setDate(personalStart.getDate() + i);
+      const iso =
+        d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      chartDates[i] = iso;
+      const ids = completions[iso] || [];
+      let dayXP = 0;
+      ids.forEach(id => {
+        const h = habitIndex[id];
+        if (!h) return;
+        const diff = h.difficulty || 'medium';
+        const pts = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 3;
+        dayXP += pts;
+      });
+      chartPerDay[i] = dayXP;
+    }
+    const chartCumulative = new Array(chartLen).fill(0);
+    let chartCum = 0;
+    for (let i = 0; i < chartLen; i++) {
+      chartCum += chartPerDay[i];
+      chartCumulative[i] = chartCum;
+    }
+    const chartTotal = chartCumulative[chartLen - 1] || 0;
+
+    // Degenerate-range guard: a 1-day range collapses the line to a
+    // single point. Synthesize a (0, 0) baseline anchor at index -1
+    // so the line rises diagonally from origin to today, instead of
+    // rendering as a dot/zero-width path. Has no effect on the dot
+    // endpoint or the dates array (those still reference today).
+    let renderCumulative = chartCumulative;
+    let renderLen = chartLen;
+    if (renderLen < 2) {
+      renderCumulative = [0, chartCumulative[0] || 0];
+      renderLen = 2;
+    }
+
     // Big chart paths (viewBox 400×140; reserve 1px floor at top)
     const W = 400, H = 140;
-    const maxY = Math.max(1, total30);
-    const points = cumulative.map((v, i) => {
-      const x = (i / 29) * W;
+    const maxY = Math.max(1, chartTotal);
+    const denom = Math.max(1, renderLen - 1);
+    const points = renderCumulative.map((v, i) => {
+      const x = (i / denom) * W;
       const y = H - (v / maxY) * (H - 1);
       return [x, y];
     });
@@ -15643,7 +15723,9 @@
       } catch (_) {}
     }
 
-    // Axis labels — start, midpoint, end of the 30-day window
+    // Axis labels — start, midpoint, end of the personal range
+    // (v3 Phase 1z.145). Uses chartDates so the leftmost label
+    // tracks the user's first XP date, not the global 30-day window.
     const fmtAxis = (iso) => {
       const d = new Date(iso + 'T12:00:00');
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
@@ -15651,9 +15733,27 @@
     const startEl = document.getElementById('xp-detail-axis-start');
     const midEl   = document.getElementById('xp-detail-axis-mid');
     const endEl   = document.getElementById('xp-detail-axis-end');
-    if (startEl) startEl.textContent = fmtAxis(dates[0]);
-    if (midEl)   midEl.textContent   = fmtAxis(dates[14]);
-    if (endEl)   endEl.textContent   = fmtAxis(dates[29]);
+    const midIdx  = Math.floor((chartLen - 1) / 2);
+    if (startEl) startEl.textContent = fmtAxis(chartDates[0]);
+    if (midEl)   midEl.textContent   = fmtAxis(chartDates[midIdx] || chartDates[0]);
+    if (endEl)   endEl.textContent   = fmtAxis(chartDates[chartLen - 1]);
+
+    // Diagnostic breadcrumb — one shot per render. Privacy-safe
+    // (no habit details, no completion lists). Makes any future
+    // "graph window looks wrong" report classifiable in one Copy
+    // Debug Info pull.
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('xp-progress-render', {
+          startDate:    personalStartIso,
+          endDate:      todayIso,
+          pointCount:   chartLen,
+          firstXpDate:  firstXpIso || null,
+          totalXp:      (typeof totalAllTime === 'number') ? totalAllTime : 0,
+          build:        (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      }
+    } catch (_) {}
   }
   function setupXpDetail() {
     const card    = document.querySelector('.metric-card--spark');
