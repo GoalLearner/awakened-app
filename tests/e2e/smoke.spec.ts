@@ -304,10 +304,12 @@ test.describe('F · Boss detail Souls readout', () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// G. Duels picker — Boss Race deferred; 5 verified types only
+// G. Duels picker — Steps-only MVP (1z.148); non-steps types
+// hidden via selectable=false until the Steps Duel pipeline
+// is fully proven end-to-end with real users.
 // ─────────────────────────────────────────────────────────────
 test.describe('G · Duels picker', () => {
-  test('Boss Race is hidden; 5 selectable types render in the picker', async ({ page }) => {
+  test('Steps-only MVP — only the Steps card renders in the picker', async ({ page }) => {
     await freshApp(page);
     // Step 1 — open the Duels tab so the picker's wiring
     // (`setupDuelTypePicker`) has run and event listeners are
@@ -332,27 +334,24 @@ test.describe('G · Duels picker', () => {
     expect(opened, 'openDuelTypePicker must be exposed on window for in-app dispatch').toBe(true);
 
     // Step 3 — the picker mounts a grid of cards; each carries
-    // `data-duel-type="<id>"`. Boss Race is `selectable: false`
-    // in DUEL_TYPES and is filtered out by `_renderDuelTypeCards`,
-    // so its card never reaches the DOM. We assert against UI text
-    // / DOM attributes only — no runtime globals.
+    // `data-duel-type="<id>"`. 1z.148 flipped four types to
+    // `selectable: false` in DUEL_TYPES (sleep / bedtime / strength
+    // / verified_objectives) so only `steps` reaches the DOM.
+    // Boss Race remains hidden too (`selectable: false` since 1x.6).
+    // We assert against UI text / DOM attributes only — no runtime
+    // globals.
     const cards = page.locator('#duel-type-grid [data-duel-type]');
-    await expect(cards).toHaveCount(5);
+    await expect(cards).toHaveCount(1);
 
     const ids = await cards.evaluateAll(els =>
       els.map(el => (el as HTMLElement).getAttribute('data-duel-type') || '')
     );
+    expect(ids).toEqual(['steps']);
     expect(ids).not.toContain('boss_race');
-    // The five v2.2.1 verified types — order is governed by the
-    // `order` array in `_renderDuelTypeCards`. Assert the SET (not
-    // the order) so a future re-ordering doesn't break the test.
-    expect(new Set(ids)).toEqual(new Set([
-      'verified_objectives',
-      'steps',
-      'sleep',
-      'bedtime',
-      'strength',
-    ]));
+    expect(ids).not.toContain('sleep');
+    expect(ids).not.toContain('bedtime');
+    expect(ids).not.toContain('strength');
+    expect(ids).not.toContain('verified_objectives');
 
     // Step 4 — close cleanly so the next test doesn't inherit a
     // body class lock (`body.duel-type-locked`).

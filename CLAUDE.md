@@ -55,7 +55,111 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.147 Short-duration duels + Phase B duel diagnostics (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.148 Discipline Duels limited to Steps-only MVP (read this first)
+
+### ✅ STATUS: Challenge modal shows only one option — Steps Duel. All non-steps types (`sleep`, `bedtime`, `strength`, `verified_objectives`) are hidden via `selectable: false` in `DUEL_TYPES`. Default `DEFAULT_DUEL_TYPE` flipped from `verified_objectives` → `steps`. Frontend-only change. Backend unchanged.
+
+### Audit findings
+
+| Surface | Before | After |
+|---|---|---|
+| `DUEL_TYPES.sleep.selectable` | `true` | `false` |
+| `DUEL_TYPES.bedtime.selectable` | `true` | `false` |
+| `DUEL_TYPES.strength.selectable` | `true` | `false` |
+| `DUEL_TYPES.verified_objectives.selectable` | `true` | `false` |
+| `DUEL_TYPES.steps.selectable` | `true` | `true` (unchanged) |
+| `DUEL_TYPES.boss_race.selectable` | `false` | `false` (unchanged from 1z.16) |
+| `DEFAULT_DUEL_TYPE` | `'verified_objectives'` | `'steps'` |
+
+`_renderDuelTypeCards` already filters by `selectable`, so flipping the flag is enough — no DOM rewrite required.
+
+### Modal copy refresh
+
+`openDuelTypePicker` now overwrites the title / subtitle / footnote on every open:
+
+- **Title**: "Choose Verified Duel" → **"Steps Duel"**
+- **Subtitle**: "Every duel is decided by data, not manual check-ins." → **"Every duel is decided by Apple Health data."**
+- **Footnote**: "3-day duel · 25 souls stake · 40 souls reward" → **`formatDuelDuration(DEFAULT_DUEL_DURATION_SECONDS) + ' duel · 25 souls stake · 40 souls reward'`** → renders as `"1 hour duel · 25 souls stake · 40 souls reward"` while DEFAULT_DUEL_DURATION_SECONDS = 3600.
+
+Source of truth for copy now lives in JS, not static HTML — when a duration picker comes back, this layer flips cleanly to the user-selected value.
+
+### One static label fix
+
+Duel detail overlay (`#ddo-*`) had a hardcoded `<div class="bfs-rank-label">3-DAY DUEL</div>` that JS doesn't currently overwrite. Changed to `STEPS DUEL` so it doesn't render the stale "3-DAY" string on real-device overlays.
+
+### Create payload guaranteed
+
+`_submitDuelChallenge(alias, duelType)` reads from `_duelTypeChoice.selectedType` which is set to `DEFAULT_DUEL_TYPE = 'steps'` on every modal open. Even if the user somehow bypassed the picker, the fallback in `openDuelTypePicker` calls `_submitDuelChallenge(opponentAlias, DEFAULT_DUEL_TYPE)` which is now `'steps'`. Backend receives `duel_type: 'steps'` consistently.
+
+### Backend unchanged
+
+`ALLOWED_DUEL_TYPES` on backend still includes all 5 verified types + `boss_race` so legacy duels of those types from D1 still round-trip correctly. Only the UI picker is restricted. The 1z.147 `duration_seconds` infrastructure is preserved.
+
+### Test updates (`tests/e2e/smoke.spec.ts`)
+
+The "G · Duels picker" test previously asserted 5 selectable cards. Updated to assert **exactly 1 card** (`steps`) with explicit `not.toContain` checks for `boss_race`, `sleep`, `bedtime`, `strength`, `verified_objectives`. Test description and step-3 comments updated to reflect the 1z.148 Steps-only MVP scope.
+
+### What's preserved
+
+- All other duel UI (active hero card, incoming/outgoing card lists, detail overlay) renders unchanged.
+- Active duel display still shows opponent / Steps Duel / Most Apple Health steps wins / duration via `formatDuelDuration` / stake / reward / you-vs-rival / View Duel button.
+- All 1z.147 Phase B diagnostic breadcrumbs still fire identically.
+- 1-hour duel duration from 1z.147 preserved.
+- Legacy non-steps duels created via API or older clients still render in detail/list UIs without crashing (metadata kept).
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w26` | `2.2.3-w27` |
+| `app.js?v=` | `479` | `480` |
+| `auth.js?v=` | `18` | `18` (unchanged — auth.js not touched) |
+| `sw.js CACHE_VERSION` | `v5.365` | `v5.366` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: G picker test updated and passes; 25/29 first run otherwise, 3 transient browser-context flakes (all pass on isolated retry, none duel-related).
+- Backend tests: not re-run (no backend changes); 37/37 still applicable from w26.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No HealthKit logic / souls logic / leaderboard / dungeon / XP / rank changes. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### Files changed
+
+- `app.js` — 4× `selectable: true → false`, default constant, `openDuelTypePicker` title/subtitle/footnote rewrite.
+- `index.html` — 1× static label "3-DAY DUEL" → "STEPS DUEL".
+- `sw.js` — knob bump.
+- `tests/e2e/smoke.spec.ts` — G picker test updated for Steps-only assertion.
+- `CLAUDE.md` — 1z.148 handoff.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. `bash scripts/verify-ios-public-assets.sh`.
+4. Open `ios/App/App.xcworkspace`, bump iOS native build, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w27"`.
+2. Duels tab → Friends → tap Challenge on a friend.
+3. Picker opens — see **only one card**: "Steps Duel · Most Apple Health steps wins."
+4. Title reads **"Steps Duel"**. Subtitle reads **"Every duel is decided by Apple Health data."**.
+5. Footnote reads **"1 hour duel · 25 souls stake · 40 souls reward"**.
+6. Tap "Challenge Hunter" → backend receives `{ duel_type: 'steps', duration_seconds: 3600, stake_souls: 25 }`.
+7. Opponent sees incoming challenge card — sub label reads "Steps Duel · challenged you · 1 hour duel".
+8. Accept → active hero card shows the Steps Duel.
+9. All 1z.147 diagnostic breadcrumbs fire normally on each device.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.147 Short-duration duels + Phase B duel diagnostics (historical — superseded by 1z.148 above)
 
 ### ✅ STATUS: Backend supports `duration_seconds` (60s floor, 14-day ceiling). Frontend defaults new duels to **1 hour** for MVP testing. Six Phase B diagnostic breadcrumbs added across the duel pipeline. Migration applied, Worker deployed.
 

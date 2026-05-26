@@ -673,7 +673,12 @@
       </div>
       <div class="bfs-body">
         <h2 id="ddo-title" class="bfs-name">DISCIPLINE DUEL</h2>
-        <div class="bfs-rank-label">3-DAY DUEL</div>
+        <!-- v3 Phase 1z.148 — neutral label since MVP only ships
+             Steps duels at 1-hour duration. JS doesn't currently
+             overwrite this node; leaving it generic prevents the
+             stale "3-DAY" string from appearing on real-device
+             overlays. -->
+        <div class="bfs-rank-label">STEPS DUEL</div>
         <div id="ddo-opponent" class="bfs-flavor">vs —</div>
         <div class="bfs-stats-grid">
           <div class="bfs-stat-cell">
@@ -2246,7 +2251,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=479"></script>
+  <script src="app.js?v=480"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

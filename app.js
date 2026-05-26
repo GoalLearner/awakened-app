@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w26';
+  const APP_BUILD_TAG = '2.2.3-w27';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19366,33 +19366,40 @@
       source:'Apple Health steps',
       selectable: true,
     },
+    // v3 Phase 1z.148 — Steps-only MVP. Non-steps duel types are
+    // hidden from the picker (`selectable: false`) so the Challenge
+    // flow can only create a Steps Duel. Metadata + glyphs + verbs
+    // are kept for back-compat with any legacy rows of these types
+    // already in D1 — they still render in detail/list UIs without
+    // crashing. To re-enable a type later, flip its `selectable`
+    // back to true and ship a TestFlight build.
     sleep: {
       id: 'sleep', label: 'Sleep Duel',
       short: 'Most 7+ hour sleep nights wins.',
       win:   'Most verified nights with at least 7 hours of sleep wins.',
       source:'Apple Health sleep',
-      selectable: true,
+      selectable: false,
     },
     bedtime: {
       id: 'bedtime', label: 'Bedtime Duel',
       short: 'Most nights asleep before midnight wins.',
       win:   'Most verified before-midnight bedtimes wins.',
       source:'Apple Health sleep',
-      selectable: true,
+      selectable: false,
     },
     strength: {
       id: 'strength', label: 'Strength Duel',
       short: 'Most verified strength workouts wins.',
       win:   'Most Apple Health strength workouts during the duel window wins.',
       source:'Apple Health workouts',
-      selectable: true,
+      selectable: false,
     },
     verified_objectives: {
       id: 'verified_objectives', label: 'Verified Discipline Duel',
       short: 'Only system-verified objectives count.',
       win:   'Most verified objectives during the duel window wins.',
       source:'System-verified objectives',
-      selectable: true,
+      selectable: false,
     },
     boss_race: {
       // Deferred in v1. Hidden from the picker; meta + glyph + verb
@@ -19459,7 +19466,13 @@
   function getDuelTypeGlyphSvg(type) {
     return DUEL_TYPE_GLYPH_SVG[type] || DUEL_TYPE_GLYPH_SVG.verified_objectives;
   }
-  const DEFAULT_DUEL_TYPE = 'verified_objectives';
+  // v3 Phase 1z.148 — default flipped from 'verified_objectives' to
+  // 'steps' so the MVP Steps-only picker pre-selects the only option
+  // and the create payload sends `duel_type: 'steps'` without
+  // requiring a user tap. Older clients still send their own default,
+  // and backend ALLOWED_DUEL_TYPES still includes all 5 + boss_race
+  // so legacy duels of other types continue to round-trip.
+  const DEFAULT_DUEL_TYPE = 'steps';
   // v3 Phase 1z.147 — sub-day duel duration. Backend accepts the
   // `duration_seconds` field (60s floor, 14-day ceiling). 3600s = 1
   // hour, the MVP testing target so the create→accept→progress→
@@ -21006,6 +21019,21 @@
     const oppDisp = _socialDisplayAlias(opponentAlias);
     const oppEl = document.getElementById('duel-type-opp');
     if (oppEl) oppEl.textContent = 'vs ' + oppDisp;
+    // v3 Phase 1z.148 — single-source-of-truth modal copy. Title +
+    // subtitle + footnote are owned by JS so they stay in sync with
+    // DEFAULT_DUEL_DURATION_SECONDS and the Steps-only MVP scope.
+    // When a duration picker comes back, this rebuild swaps to the
+    // user-selected duration cleanly.
+    const titleEl = document.getElementById('duel-type-title');
+    if (titleEl) titleEl.textContent = 'Steps Duel';
+    const subEl = sheet.querySelector('.duel-type-sub');
+    if (subEl) subEl.textContent = 'Every duel is decided by Apple Health data.';
+    const footEl = sheet.querySelector('.duel-type-footnote');
+    if (footEl) {
+      footEl.textContent =
+        formatDuelDuration(DEFAULT_DUEL_DURATION_SECONDS) +
+        ' duel · 25 souls stake · 40 souls reward';
+    }
     _renderDuelTypeCards();
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
