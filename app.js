@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w21';
+  const APP_BUILD_TAG = '2.2.3-w22';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2625,15 +2625,19 @@
     const sheet   = document.getElementById('souls-ledger-sheet');
     const close   = document.getElementById('souls-ledger-close');
     if (!sheet || !overlay) return;
-    if (close)   close.addEventListener('click', closeSoulsLedger);
-    if (overlay) overlay.addEventListener('click', closeSoulsLedger);
-    if (typeof attachSheetDismissGesture === 'function') {
-      try {
-        attachSheetDismissGesture(sheet, overlay, closeSoulsLedger, {
-          scrollTarget: '.souls-ledger-list',
-        });
-      } catch (_) {}
-    }
+    if (close) close.addEventListener('click', closeSoulsLedger);
+    // v3 Phase 1z.143 — X-only close. TestFlight repro: scrolling
+    // the transactions list down accidentally triggered the
+    // drag-dismiss gesture and closed the sheet mid-scroll
+    // (same failure mode as the 1z.40 Hall of Fame fix). User
+    // explicitly asked for X-only on this sheet, so the overlay
+    // tap close and the drag gesture are both intentionally
+    // dropped here — only the X button at the top closes it.
+    // Voiding the `overlay` reference keeps lint quiet and
+    // signals intent to future readers. Other sheets that share
+    // the same wiring template keep their gestures unless they
+    // get their own scoped fix.
+    void overlay;
   }
 
   function killRewardSouls(rank) {

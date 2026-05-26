@@ -55,7 +55,87 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.142 HoF cap belt-and-suspenders + decisive diagnostic (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.143 Souls Ledger sheet is X-only close (read this first)
+
+### ✅ STATUS: Souls Ledger / Transactions sheet now closes ONLY via the X button. Drag-down and overlay-tap close paths are both intentionally removed. Scoped fix — no other sheet affected.
+
+**Tester feedback on real device**: Pulling the transaction list to scroll up was triggering the bottom-sheet drag-dismiss gesture and closing the sheet mid-scroll. Same failure mode as the 1z.40 Hall of Fame fix (scrollable content vs. drag-dismiss conflict).
+
+**Audit findings**: `setupSoulsLedger()` (app.js ~line 2623) wired three close paths:
+1. ✅ `close.addEventListener('click', closeSoulsLedger)` — X button (kept).
+2. ❌ `overlay.addEventListener('click', closeSoulsLedger)` — overlay tap (removed).
+3. ❌ `attachSheetDismissGesture(sheet, overlay, closeSoulsLedger, { scrollTarget: '.souls-ledger-list' })` — drag-down (removed).
+
+User asked for "**only** press the X" — strict interpretation, so overlay-tap close was also dropped. Other sheets that use `attachSheetDismissGesture` are unaffected (per-sheet wiring, no shared global).
+
+### Fix (1z.143)
+
+```js
+function setupSoulsLedger() {
+  const overlay = document.getElementById('souls-ledger-overlay');
+  const sheet   = document.getElementById('souls-ledger-sheet');
+  const close   = document.getElementById('souls-ledger-close');
+  if (!sheet || !overlay) return;
+  if (close) close.addEventListener('click', closeSoulsLedger);
+  // X-only close: overlay tap + drag-dismiss intentionally dropped.
+  void overlay;
+}
+```
+
+Mirrors the 1z.40 pattern (HoF sheet is also X-only for the same scrollable-content reason).
+
+### What's preserved
+
+- X button closes the sheet (only close path now).
+- Transaction list scrolls normally — no CSS change needed; the list was already scrollable, the drag listener was just hijacking the touch events.
+- `closeSoulsLedger()` itself unchanged — still hides both `#souls-ledger-overlay` and `#souls-ledger-sheet`.
+- `openSoulsLedger()` unchanged.
+- All other bottom sheets (`#lb-rank-sheet`, `#lb-hub-sheet`, `#xp-detail-sheet`, etc.) keep their existing close gestures.
+- No global drag-dismiss change — fix is scoped to `setupSoulsLedger`.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w21` | `2.2.3-w22` |
+| `app.js?v=` | `474` | `475` |
+| `auth.js?v=` | `17` | `17` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.360` | `v5.361` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (both pass on isolated retry, neither ledger-related).
+- Backend: untouched, no tests re-run, no deploy.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No HealthKit / dungeon / economy values / sim values / leaderboard logic changes. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. `bash scripts/verify-ios-public-assets.sh`.
+4. Open `ios/App/App.xcworkspace`, bump iOS native build, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w22"`.
+2. Open Souls Ledger / Transactions sheet (tap the souls pill in the today-strip).
+3. Drag the sheet downward → **does not close**.
+4. Tap the dimmed area outside the sheet → **does not close**.
+5. Scroll the transaction list up/down freely → sheet stays open.
+6. Tap the X button → sheet closes cleanly.
+7. Other bottom sheets (Rankings Hub, Steps leaderboard, XP detail) still close via their existing gestures (X + drag where intended).
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.142 HoF cap belt-and-suspenders + decisive diagnostic (historical — superseded by 1z.143 above)
 
 ### 🟡 STATUS: Audit confirmed the 1z.141 cap is correctly placed in the only HoF builder. The most likely root cause of the "HoF still shows >10 rows" report is that the device is on a stale TestFlight binary (w19, which predates the cap) — not a logic bug. 1z.142 adds a second cap at the data layer (`_lbMergeHofRecords`) for belt-and-suspenders defense, plus a one-shot `leaderboard-hof-render` diagnostic breadcrumb that will be decisive on the next Copy Debug Info pull.
 
