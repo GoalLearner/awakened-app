@@ -55,7 +55,82 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.140 backend self-heal DEPLOYED + Galilea repaired (Option C) (read this first)
+## 📌 Session handoff — May 26, 2026 — w19 leaderboard self-heal verified on-device; Galilea conservative reset confirmed (read this first)
+
+### ✅ STATUS: `2.2.3-w19` passed through TestFlight and is verified on real device. Public Steps leaderboard + Hall of Fame are clean. Galilea's `0` is the intentional conservative state until App Store w19+ ships.
+
+**Real-device verification after w19 install + cold-launch**
+
+This Week leaderboard (week 2026-05-24):
+
+| Rank | alias | steps |
+|---|---|---|
+| #1 | RenDIESEL | 55,146 |
+| #2 | Richie | 23,823 |
+| … | … | … |
+| #16 | Galilea | **0** (intentional, see below) |
+
+Hall of Fame (highest verified weekly totals ever):
+
+| alias | steps | week |
+|---|---|---|
+| RenDIESEL | 101K | May 17–May 23 |
+| Richie    | 82.9K | May 17–May 23 |
+| RenDIESEL | 55.1K | May 24–May 30 |
+| Galilea   | 53.2K | May 17–May 23 |
+
+The previously-false Galilea `53.7K` row for "Week of May 24–May 30" is **gone** from HoF. Public leaderboard trust is restored.
+
+### Why Galilea shows `0` — intentional conservative state
+
+She was on a public App Store build (pre-w19) when the Sunday rollover bug fired, so her contaminated current-week submit cannot self-heal until App Store w19+ ships. The backend cannot reconstruct her true current-week Apple Health value — `leaderboard_snapshots` only stores submitted totals, not raw HealthKit history.
+
+The Option C conservative repair (this session, May 26 ~11:00 PT) chose `0` over leaving a known-false `53,654` at #1. Showing `0` for one user is a smaller integrity cost than knowingly showing a false leader. The `0` will lift as soon as either:
+1. Galilea sends a verified Apple Health weekly-steps value → run a narrow targeted UPDATE.
+2. App Store w19+ reaches her device → her first foreground submit carries `weekly_sum_source='client_sunday_utc_v2'`, the backend self-heal CASE fires once for the (user, metric) row, and she ratchets up from the true current-week reality.
+
+### Deployed backend state (recap)
+
+| Component | Status |
+|---|---|
+| Migration `0010_leaderboard_weekly_sum_source.sql` | ✅ Applied to prod D1 — `weekly_sum_source TEXT` column present on both `leaderboard_snapshots` and `weekly_step_records` (verified via `PRAGMA table_info`) |
+| Worker | ✅ Deployed — version `9e9b78c6-a5de-44c0-9af7-b745849d4cb5` at `https://awakened-backend.richmondcampano93.workers.dev` |
+| Backend tests | ✅ 27/27 pre-deploy |
+| Wire-compat | ✅ Old clients keep submitting with no tag → NULL `weekly_sum_source` → 1z.131 MAX path |
+| Self-heal | ✅ Active — fires on first trusted submit per (user, metric) row whose stored source is NULL |
+
+### Current ship target (unchanged this session — docs-only update)
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w19` |
+| `app.js?v=` | `472` |
+| `auth.js?v=` | `17` |
+| `sw.js CACHE_VERSION` | `v5.358` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` |
+
+### Recommended next steps (not gated on this session)
+
+1. **Ship `2.2.3-w19` to App Store as soon as practical.** Until App Store approval lands, every public user (Galilea is the canonical example) remains exposed to the same Sunday-rollover bug on every Sunday until they install w19+. TestFlight users are already protected.
+
+2. **Future hardening (not in this train — backlog item)**: backend-only "first-of-week sanity reject" that detects a fresh-week submit suspiciously close to the user's prior-week total when the stored `weekly_sum_source` is NULL (untrusted). This would defend the public leaderboard even when the client cannot be updated quickly. Low priority once App Store w19+ is live — but worth keeping in the design notes for future rollovers if real-user scale grows before w19+ is deployable.
+
+3. **Monitor next Sunday rollover (Sun May 31 → Mon Jun 1).** If Galilea's snapshot or HoF row repopulates with another contaminated value pre-App-Store-w19, repeat Option C. Watch the `leaderboard_snapshots` row for `metric='step_total'`, `week_start='2026-05-31'`, `src=NULL`, where `current_value > 0.5 * best_value` immediately after the rollover window.
+
+### Docs-only confirmation
+
+- Files changed this session: **`CLAUDE.md` only**.
+- No app code, backend code, migration, deploy, or D1 mutation in this update.
+- No Codemagic / archive / upload from ClaudeCode.
+- No version/cache knob changes.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.140 backend self-heal DEPLOYED + Galilea repaired (Option C) (historical — superseded by verification note above)
 
 ### ✅ STATUS: Migration 0010 applied. Worker deployed. Galilea repaired (Option C — conservative wipe). Backend now defends against Sunday-rollover contamination for any w19+ client that lands on prod.
 
