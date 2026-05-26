@@ -24,6 +24,20 @@ const DEFAULT_BURN = 10;
 const DEFAULT_DURATION_DAYS = 3;
 const MAX_DURATION_DAYS = 14;
 const MIN_DURATION_DAYS = 1;
+
+// v3 Phase 1z.147 — sub-day duel duration support. The existing
+// `duration_days INTEGER NOT NULL DEFAULT 3` column stays for
+// backward compatibility (legacy clients keep submitting it). New
+// clients send `duration_seconds` instead — accept handler prefers
+// the seconds value when set, otherwise falls back to days*86400.
+//
+// 1 minute floor protects against accidental zero-second duels
+// (would resolve immediately on accept). 14-day ceiling matches
+// the existing days max so the overall range can't widen via the
+// seconds path.
+const DEFAULT_DURATION_SECONDS = 86400;       // 24 hours — production target
+const MIN_DURATION_SECONDS     = 60;          // 1 minute — sanity floor
+const MAX_DURATION_SECONDS     = 14 * 86400;  // 14 days — matches existing max
 const MAX_STAKE = 500;
 
 // Verified-Only Duel Types (v3 Phase 1x.6). Metadata only in this pass —
@@ -247,6 +261,9 @@ interface DuelRow {
   reward_souls: number;
   burn_souls: number;
   duration_days: number;
+  // v3 Phase 1z.147 — optional sub-day duration override. NULL on
+  // legacy rows + on submissions that didn't pass duration_seconds.
+  duration_seconds?: number | null;
   duel_type: string;
   starts_at: string | null;
   ends_at: string | null;
@@ -380,6 +397,10 @@ function serializeDuel(
     reward_souls: row.reward_souls,
     burn_souls: row.burn_souls,
     duration_days: row.duration_days,
+    // v3 Phase 1z.147 — surface seconds alongside days. Clients
+    // that understand the new field render the accurate label
+    // (e.g. "1 hour"); legacy clients keep reading duration_days.
+    duration_seconds: row.duration_seconds ?? null,
     duel_type: row.duel_type || DEFAULT_DUEL_TYPE,
     starts_at: row.starts_at,
     ends_at: row.ends_at,
@@ -485,6 +506,7 @@ export async function handleDuelsCreate(
   let body: {
     opponent_alias?: unknown;
     duration_days?: unknown;
+    duration_seconds?: unknown;
     stake_souls?: unknown;
     duel_type?: unknown;
   };
@@ -499,9 +521,43 @@ export async function handleDuelsCreate(
     return jsonError(400, 'ALIAS_INVALID', aliasCheck.reason);
   }
 
-  // Optional duration_days. Default 3.
+  // v3 Phase 1z.147 — dual duration parsing. Both fields are
+  // optional but mutually exclusive (rejecting both removes any
+  // ambiguity about which one the accept handler should use).
+  // - If neither: default to DEFAULT_DURATION_SECONDS (24h).
+  //   duration_days is derived for legacy NOT NULL constraint.
+  // - If only duration_days: legacy path. duration_seconds = NULL.
+  // - If only duration_seconds: new path. duration_days derived
+  //   via Math.max(1, Math.ceil(seconds/86400)) so the NOT NULL
+  //   constraint is satisfied with a sensible-looking value.
+  // - If both: 400 CONFLICTING_DURATION.
+  const hasDays    = body?.duration_days !== undefined && body?.duration_days !== null;
+  const hasSeconds = body?.duration_seconds !== undefined && body?.duration_seconds !== null;
+  if (hasDays && hasSeconds) {
+    return jsonError(
+      400,
+      'CONFLICTING_DURATION',
+      'Provide either duration_days or duration_seconds, not both.',
+    );
+  }
+
   let durationDays = DEFAULT_DURATION_DAYS;
-  if (body?.duration_days !== undefined && body?.duration_days !== null) {
+  let durationSeconds: number | null = null;
+  if (hasSeconds) {
+    if (!Number.isInteger(body.duration_seconds)) {
+      return jsonError(400, 'INVALID_DURATION', 'duration_seconds must be an integer.');
+    }
+    const s = body.duration_seconds as number;
+    if (s < MIN_DURATION_SECONDS || s > MAX_DURATION_SECONDS) {
+      return jsonError(
+        400,
+        'INVALID_DURATION',
+        `duration_seconds must be between ${MIN_DURATION_SECONDS} and ${MAX_DURATION_SECONDS}.`,
+      );
+    }
+    durationSeconds = s;
+    durationDays = Math.max(1, Math.ceil(s / 86400));
+  } else if (hasDays) {
     if (!Number.isInteger(body.duration_days)) {
       return jsonError(400, 'INVALID_DURATION', 'duration_days must be an integer.');
     }
@@ -514,6 +570,12 @@ export async function handleDuelsCreate(
       );
     }
     durationDays = d;
+    durationSeconds = null;
+  } else {
+    // Neither — fall to new default (24h). Days derived for legacy
+    // NOT NULL constraint.
+    durationSeconds = DEFAULT_DURATION_SECONDS;
+    durationDays = Math.max(1, Math.ceil(DEFAULT_DURATION_SECONDS / 86400));
   }
 
   // Optional stake_souls override. Default 25.
@@ -580,11 +642,15 @@ export async function handleDuelsCreate(
   }
 
   const id = crypto.randomUUID();
+  // v3 Phase 1z.147 — also persists duration_seconds (nullable).
+  // Legacy clients sending duration_days alone get NULL here, which
+  // the accept handler treats as "fall back to days*86400".
   await env.DB.prepare(
     `INSERT INTO duels (
        id, challenger_user_id, opponent_user_id, status,
-       stake_souls, reward_souls, burn_souls, duration_days, duel_type
-     ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+       stake_souls, reward_souls, burn_souls, duration_days,
+       duration_seconds, duel_type
+     ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -594,6 +660,7 @@ export async function handleDuelsCreate(
       DEFAULT_REWARD,
       DEFAULT_BURN,
       durationDays,
+      durationSeconds,
       duelType,
     )
     .run();
@@ -640,7 +707,11 @@ export async function handleDuelsAccept(
 
   const now = new Date();
   const startsAt = now.toISOString();
-  const ends = new Date(now.getTime() + row.duration_days * 24 * 60 * 60 * 1000);
+  // v3 Phase 1z.147 — prefer duration_seconds when set; otherwise
+  // fall back to the legacy days field. Multiplication by 1000
+  // gives milliseconds for Date arithmetic.
+  const durationMs = ((row.duration_seconds ?? row.duration_days * 86400) as number) * 1000;
+  const ends = new Date(now.getTime() + durationMs);
   const endsAt = ends.toISOString();
 
   await env.DB.prepare(

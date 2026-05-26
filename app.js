@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w25';
+  const APP_BUILD_TAG = '2.2.3-w26';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15273,6 +15273,21 @@
     try {
       const res = await Auth.fetchDuels();
       _headerDuelState.fetchedAt = Date.now();
+      // v3 Phase 1z.147 — Phase B diagnostics on the header-pill
+      // polling path (the canonical UI-facing fetchDuels caller).
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          const ok = !!(res && res.ok);
+          _addHealthVerifyBreadcrumb('duel-fetch-result', {
+            ok: ok,
+            activeCount:          ok && Array.isArray(res.active)            ? res.active.length            : 0,
+            pendingSentCount:     ok && Array.isArray(res.pending_sent)      ? res.pending_sent.length      : 0,
+            pendingReceivedCount: ok && Array.isArray(res.pending_received)  ? res.pending_received.length  : 0,
+            status:               ok ? undefined : (res && (res.code || res.detail)) || 'unknown',
+            build:                (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
       if (res && res.ok) {
         const active = Array.isArray(res.active) ? res.active.slice() : [];
         // Most recently started first
@@ -15285,8 +15300,16 @@
       } else {
         _headerDuelState.active = null;
       }
-    } catch (_) {
+    } catch (e) {
       // Network or auth error — leave previous state (best effort).
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-fetch-result', {
+            ok: false,
+            error: (e && e.message) ? String(e.message).slice(0, 80) : 'network-error',
+          });
+        }
+      } catch (_) {}
     }
     // Repaint the pill row so the new state shows up immediately.
     try { updateStatusPills(); } catch (_) {}
@@ -19437,6 +19460,43 @@
     return DUEL_TYPE_GLYPH_SVG[type] || DUEL_TYPE_GLYPH_SVG.verified_objectives;
   }
   const DEFAULT_DUEL_TYPE = 'verified_objectives';
+  // v3 Phase 1z.147 — sub-day duel duration. Backend accepts the
+  // `duration_seconds` field (60s floor, 14-day ceiling). 3600s = 1
+  // hour, the MVP testing target so the create→accept→progress→
+  // resolve→souls loop can be exercised in a single session.
+  // Production target later: 86400 (24h) or a user picker.
+  const DEFAULT_DUEL_DURATION_SECONDS = 3600;
+
+  // v3 Phase 1z.147 — render the duel duration label from whichever
+  // backend field is more accurate. Prefers `duration_seconds` (post-
+  // 1z.147 rows), falls back to `duration_days * 86400` (legacy
+  // rows). Outputs human-readable strings: "1 hour", "12 hours",
+  // "1 day", "3 days". Replaces six hardcoded "3 days" / "3-day"
+  // strings throughout the duels UI.
+  function formatDuelDuration(duelOrSeconds) {
+    let secs;
+    if (typeof duelOrSeconds === 'number' && Number.isFinite(duelOrSeconds)) {
+      secs = duelOrSeconds;
+    } else if (duelOrSeconds && typeof duelOrSeconds === 'object') {
+      if (Number.isFinite(duelOrSeconds.duration_seconds)) {
+        secs = duelOrSeconds.duration_seconds;
+      } else if (Number.isFinite(duelOrSeconds.duration_days)) {
+        secs = duelOrSeconds.duration_days * 86400;
+      }
+    }
+    if (!Number.isFinite(secs) || secs <= 0) return '3 days'; // ultra-defensive fallback
+    if (secs >= 86400) {
+      const days = Math.round(secs / 86400);
+      return days === 1 ? '1 day' : days + ' days';
+    }
+    if (secs >= 3600) {
+      const hours = Math.round(secs / 3600);
+      return hours === 1 ? '1 hour' : hours + ' hours';
+    }
+    const mins = Math.max(1, Math.round(secs / 60));
+    return mins === 1 ? '1 minute' : mins + ' minutes';
+  }
+  try { window.formatDuelDuration = formatDuelDuration; } catch (_) {}
   const DUEL_TYPE_SHORT_CODES = {
     steps: 'STEPS',
     sleep: 'SLEEP',
@@ -19608,12 +19668,71 @@
         if (!isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) continue;
         const startISO = new Date(startMs).toISOString();
         const endISO   = new Date(endMs).toISOString();
+
+        // v3 Phase 1z.147 — Phase B diagnostics. Privacy-safe
+        // (truncated duel id, no aliases, no full user IDs).
+        const duelIdShort = String(duel.id || '').slice(0, 8);
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-progress-health-range-start', {
+              duelId: duelIdShort,
+              duelType: duel.duel_type,
+              metric: 'steps',
+              windowStart: startISO,
+              windowEnd: endISO,
+              build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+            });
+          }
+        } catch (_) {}
+
         let steps;
         try { steps = await Health.getStepsBetween(startISO, endISO); }
-        catch (_) { continue; }
-        if (steps == null || steps < 0) continue;
+        catch (e) {
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('duel-progress-health-range-fail', {
+                duelId: duelIdShort,
+                metric: 'steps',
+                error: (e && e.message) ? String(e.message).slice(0, 80) : 'unknown',
+              });
+            }
+          } catch (_) {}
+          continue;
+        }
+        if (steps == null || steps < 0) {
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('duel-progress-health-range-fail', {
+                duelId: duelIdShort,
+                metric: 'steps',
+                error: steps == null ? 'null-result' : 'negative-value',
+              });
+            }
+          } catch (_) {}
+          continue;
+        }
+
         try {
-          await Auth.submitDuelProgress(duel.id, {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-progress-health-range-success', {
+              duelId: duelIdShort,
+              metric: 'steps',
+              value: Math.round(steps),
+              windowStart: startISO,
+              windowEnd: endISO,
+            });
+            _addHealthVerifyBreadcrumb('duel-progress-submit-attempt', {
+              duelId: duelIdShort,
+              metric: 'steps',
+              value: Math.round(steps),
+              windowStart: duel.starts_at,
+              windowEnd: duel.ends_at,
+            });
+          }
+        } catch (_) {}
+
+        try {
+          const resp = await Auth.submitDuelProgress(duel.id, {
             duel_type: 'steps',
             metric: 'steps',
             value: Math.round(steps),
@@ -19621,7 +19740,30 @@
             window_end: duel.ends_at,
             client_updated_at: new Date().toISOString(),
           });
-        } catch (_) { /* network noise — try again next trigger */ }
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              const ok = !!(resp && (resp.ok === true || resp.success === true || (typeof resp === 'object' && !resp.error)));
+              _addHealthVerifyBreadcrumb('duel-progress-submit-result', {
+                duelId: duelIdShort,
+                ok: ok,
+                status: (resp && (resp.status || resp.code)) || undefined,
+                you: (resp && typeof resp.you === 'number') ? resp.you : undefined,
+                rival: (resp && typeof resp.rival === 'number') ? resp.rival : (resp && resp.rival === null ? null : undefined),
+                error: (resp && resp.detail) || undefined,
+              });
+            }
+          } catch (_) {}
+        } catch (e) {
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('duel-progress-submit-result', {
+                duelId: duelIdShort,
+                ok: false,
+                error: (e && e.message) ? String(e.message).slice(0, 80) : 'network-error',
+              });
+            }
+          } catch (_) {}
+        }
       } catch (_) { /* per-duel isolation — never let one bad duel kill the loop */ }
     }
     _lastDuelProgressSubmitAt = Date.now();
@@ -19965,10 +20107,46 @@
     const endsMs = Date.parse(duel.ends_at);
     if (!isFinite(endsMs) || Date.now() < endsMs) return null;
     if (!window.Auth || typeof Auth.resolveDuel !== 'function') return null;
+    const duelIdShort = String(duel.id || '').slice(0, 8);
+    // v3 Phase 1z.147 — Phase B resolve diagnostics. Privacy-safe.
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-resolve-attempt', {
+          duelId: duelIdShort,
+          duelType: duel.duel_type,
+          endsAt: duel.ends_at,
+        });
+      }
+    } catch (_) {}
     try {
       const res = await Auth.resolveDuel(duel.id);
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          const ok = !!(res && res.ok);
+          const d2 = res && res.duel;
+          _addHealthVerifyBreadcrumb('duel-resolve-result', {
+            duelId: duelIdShort,
+            ok: ok,
+            result: d2 ? d2.result : null,
+            winnerSelf: (d2 && d2.winner_user_id != null) ? (d2.role === 'challenger' ? d2.winner_user_id === d2.challenger.user_id : d2.winner_user_id === d2.opponent.user_id) : null,
+            youScore: d2 ? (d2.challenger_progress_value != null ? d2.challenger_progress_value : d2.opponent_progress_value) : null,
+            rivalScore: d2 ? (d2.challenger_progress_value != null ? d2.opponent_progress_value : d2.challenger_progress_value) : null,
+            status: ok ? undefined : (res && (res.code || res.detail)) || 'unknown',
+          });
+        }
+      } catch (_) {}
       if (res && res.ok && res.duel) return res.duel;
-    } catch (_) {}
+    } catch (e) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-resolve-result', {
+            duelId: duelIdShort,
+            ok: false,
+            error: (e && e.message) ? String(e.message).slice(0, 80) : 'network-error',
+          });
+        }
+      } catch (_) {}
+    }
     return null;
   }
 
@@ -20213,6 +20391,24 @@
     const mount = document.getElementById('duels-hero');
     if (!mount) return;
     const duel = _pickActiveHeroDuel(active);
+    // v3 Phase 1z.147 — Phase B diagnostics. One breadcrumb per
+    // render so Copy Debug Info can prove the hero is reading
+    // the current backend state (or not). Privacy-safe.
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-active-hero-render', {
+          duelId:           duel ? String(duel.id || '').slice(0, 8) : null,
+          status:           duel ? duel.status : 'no-active',
+          duelType:         duel ? duel.duel_type : null,
+          youScore:         duel ? (duel.challenger_progress_value != null ? duel.challenger_progress_value : duel.opponent_progress_value) : null,
+          rivalScore:       duel ? (duel.challenger_progress_value != null ? duel.opponent_progress_value : duel.challenger_progress_value) : null,
+          timeRemainingMs:  duel ? duel.time_remaining_ms : null,
+          startsAt:         duel ? duel.starts_at : null,
+          endsAt:           duel ? duel.ends_at : null,
+          build:            (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      }
+    } catch (_) {}
     if (!duel) {
       // Empty state — compact status card (v3 Phase 1x.8). No CTA;
       // the Friends section directly below is the canonical entry
@@ -20222,7 +20418,7 @@
         '<div class="duels-hero duels-hero--empty duels-hero--compact">' +
           '<div class="duels-hero-icon">' + _DUEL_CREST_SVG + '</div>' +
           '<div class="duels-hero-title">No active duel</div>' +
-          '<div class="duels-hero-body">Add a hunter below to begin a verified 3-day challenge. Data decides the winner.</div>' +
+          '<div class="duels-hero-body">Add a hunter below to begin a verified ' + formatDuelDuration(DEFAULT_DUEL_DURATION_SECONDS) + ' challenge. Data decides the winner.</div>' +
         '</div>';
       return;
     }
@@ -20264,7 +20460,7 @@
           '</div>' +
         '</div>' +
         '<div class="duels-hero-meta-strip">' +
-          '<div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">3 days</div></div>' +
+          '<div class="duels-meta-cell"><div class="duels-meta-label">DURATION</div><div class="duels-meta-value">' + esc(formatDuelDuration(duel)) + '</div></div>' +
           '<div class="duels-meta-cell"><div class="duels-meta-label">STAKE</div><div class="duels-meta-value">' + esc(stake) + ' souls</div></div>' +
           '<div class="duels-meta-cell"><div class="duels-meta-label">REWARD</div><div class="duels-meta-value duels-meta-value--gold">' + esc(reward) + ' souls</div></div>' +
         '</div>' +
@@ -20635,7 +20831,7 @@
         const opp = _socialDisplayAlias(d.opponent_alias || (d.challenger && d.challenger.alias) || '—');
         const stake  = (d.stake_souls  != null) ? d.stake_souls  : 25;
         const reward = (d.reward_souls != null) ? d.reward_souls : 40;
-        const duration = (d.duration_days || 3) + ' days';
+        const duration = formatDuelDuration(d);
         const typeLabel = formatDuelTypeLabel(d.duel_type);
         parts.push(
           '<div class="duel-card duel-card--incoming" data-duel-id="' + esc(d.id) + '">' +
@@ -20643,7 +20839,7 @@
               _friendAvatarHtml(opp, 'rival') +
               '<div class="duel-card-main">' +
                 '<div class="duel-card-opp">' + esc(opp) + '</div>' +
-                '<div class="duel-card-sub duel-card-sub--gold">' + esc(typeLabel) + ' · challenged you · 3-day duel</div>' +
+                '<div class="duel-card-sub duel-card-sub--gold">' + esc(typeLabel) + ' · challenged you · ' + esc(duration) + ' duel</div>' +
               '</div>' +
               '<span class="duels-pill duels-pill--incoming">Incoming</span>' +
             '</div>' +
@@ -20663,7 +20859,7 @@
         const opp = _socialDisplayAlias(d.opponent_alias || '—');
         const stake  = (d.stake_souls  != null) ? d.stake_souls  : 25;
         const reward = (d.reward_souls != null) ? d.reward_souls : 40;
-        const duration = (d.duration_days || 3) + ' days';
+        const duration = formatDuelDuration(d);
         const typeLabel = formatDuelTypeLabel(d.duel_type);
         parts.push(
           '<div class="duel-card duel-card--outgoing" data-duel-id="' + esc(d.id) + '">' +
@@ -20830,7 +21026,12 @@
     let res;
     try {
       res = await Auth.createDuel(alias, {
-        duration_days: 3,
+        // v3 Phase 1z.147 — MVP testing: 1-hour duels by default so
+        // the create → accept → progress → resolve → souls loop can
+        // be exercised in a single session. Production target is
+        // 24h (DEFAULT_DURATION_SECONDS on backend); a duration
+        // picker UI will replace this constant in a future train.
+        duration_seconds: DEFAULT_DUEL_DURATION_SECONDS,
         stake_souls: 25,
         duel_type: duelType || DEFAULT_DUEL_TYPE,
       });
@@ -20969,7 +21170,7 @@
     setText('ddo-opponent', 'vs ' + opp);
     setText('ddo-stake',  d.stake_souls + ' souls');
     setText('ddo-reward', d.reward_souls + ' souls');
-    setText('ddo-duration', d.duration_days + ' days');
+    setText('ddo-duration', formatDuelDuration(d));
     setText('ddo-status-cell', d.status.charAt(0).toUpperCase() + d.status.slice(1));
     // Verified duel type readout (v3 Phase 1x.6).
     const typeMeta = getDuelTypeMeta(d.duel_type);

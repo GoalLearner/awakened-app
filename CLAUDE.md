@@ -55,7 +55,120 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.146 XP chart visually rises from 0 (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.147 Short-duration duels + Phase B duel diagnostics (read this first)
+
+### ✅ STATUS: Backend supports `duration_seconds` (60s floor, 14-day ceiling). Frontend defaults new duels to **1 hour** for MVP testing. Six Phase B diagnostic breadcrumbs added across the duel pipeline. Migration applied, Worker deployed.
+
+### Deploy + migration
+
+- **Migration 0011** applied to prod D1: `ALTER TABLE duels ADD COLUMN duration_seconds INTEGER;`. Confirmed via `PRAGMA table_info(duels)` — column present alongside legacy `duration_days`.
+- **Worker version**: `4ef40e7d-5f16-4aa2-97e6-23f607bc14dd`.
+- **Backend tests**: 37/37 pass (10 new duel tests + 27 existing leaderboard/top).
+
+### Backend changes (`backend/src/handlers/duels.ts`)
+
+| Constant | Value |
+|---|---|
+| `DEFAULT_DURATION_SECONDS` | 86400 (24h — production target) |
+| `MIN_DURATION_SECONDS` | 60 (1 min — sanity floor) |
+| `MAX_DURATION_SECONDS` | 1,209,600 (14 days — matches existing max) |
+
+`handleDuelsCreate` accepts the new `duration_seconds` body field:
+
+| Payload shape | Behavior |
+|---|---|
+| Only `duration_seconds` | Persist it. `duration_days` derived as `ceil(seconds / 86400)` to satisfy the legacy NOT NULL column. |
+| Only `duration_days` | Legacy path. `duration_seconds` persists as NULL. |
+| Both | Rejected with `400 CONFLICTING_DURATION`. |
+| Neither | Defaults to 86400s. |
+
+`handleDuelsAccept` uses `duration_seconds ?? duration_days * 86400` for the end-time math, so legacy rows with NULL `duration_seconds` fall back cleanly.
+
+`serializeDuel` now exposes BOTH `duration_days` and `duration_seconds` so old + new clients both work.
+
+### Frontend changes
+
+- **`auth.js`**: `createDuel` forwards `options.duration_seconds` when present (seconds wins if both are set, matching the backend rejection rule).
+- **`app.js`**:
+  - New constant `DEFAULT_DUEL_DURATION_SECONDS = 3600` (1 hour) — MVP testing default.
+  - New `_submitDuelChallenge` sends `duration_seconds: 3600` instead of `duration_days: 3`.
+  - New `formatDuelDuration(duelOrSeconds)` helper picks the right field and renders human-readable strings ("1 hour", "12 hours", "1 day", "3 days").
+  - 5 hardcoded "3 days" / "3-day" / `(d.duration_days || 3) + ' days'` strings replaced with the formatter (no-active hero body, active card meta strip, incoming card sub, outgoing card meta, detail sheet duration label).
+- No duration picker UI yet — that's a future train. Every new duel is 1 hour until you change it.
+
+### Phase B diagnostic breadcrumbs
+
+All privacy-safe (truncated duel ID, no aliases, no full user IDs). One shot per occurrence — no per-tick spam.
+
+| Breadcrumb | Where | Payload |
+|---|---|---|
+| `duel-progress-health-range-start` | start of HK steps query in `submitActiveStepsDuelProgress` | `duelId, duelType, metric, windowStart, windowEnd, build` |
+| `duel-progress-health-range-success` | HK query returned a valid steps count | `duelId, metric, value, windowStart, windowEnd` |
+| `duel-progress-health-range-fail` | HK query threw or returned null/negative | `duelId, metric, error` |
+| `duel-progress-submit-attempt` | just before POST /v1/duels/:id/progress | `duelId, metric, value, windowStart, windowEnd` |
+| `duel-progress-submit-result` | after POST returns | `duelId, ok, status, you, rival, error` |
+| `duel-active-hero-render` | every `renderActiveDuelHero` call | `duelId, status, duelType, youScore, rivalScore, timeRemainingMs, startsAt, endsAt, build` |
+| `duel-fetch-result` | every `_headerDuelState` polling fetch | `ok, activeCount, pendingSentCount, pendingReceivedCount, status, build` |
+| `duel-resolve-attempt` | start of resolve call | `duelId, duelType, endsAt` |
+| `duel-resolve-result` | resolve returned | `duelId, ok, result, winnerSelf, youScore, rivalScore, status` |
+
+When you do the next Richie vs Rendiesel TestFlight test, Copy Debug Info will produce a decisive end-to-end trail showing which stage breaks.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w25` | `2.2.3-w26` |
+| `app.js?v=` | `478` | `479` |
+| `auth.js?v=` | `17` | `18` |
+| `sw.js CACHE_VERSION` | `v5.364` | `v5.365` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `cd backend && npx vitest run duels.test.ts leaderboard-submit.test.ts leaderboard-top.test.ts` → **37/37 pass** (10 new duel tests).
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (both pass on isolated retry, neither duel-related).
+
+### What's preserved
+
+- Legacy clients (anyone NOT on w26+) still POST `duration_days: 3` — backend accepts it, sets `duration_seconds = NULL`, accept handler falls back to days × 86400. No regression for App Store users on older builds.
+- Stake / reward / souls economy unchanged — stake still not deducted; reward still auto-settled via `user_souls_ledger`. No economy change in this train.
+- All leaderboards untouched.
+- HealthKit step range query unchanged: `Health.getStepsBetween(starts_at, min(now, ends_at))` — just gets called more often when duels are 1h instead of 3d.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No D1 data mutation (migration is schema-only, additive). No HealthKit logic change. No stake enforcement. No leaderboard / dungeon / XP / rank changes. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### MacBook build instructions
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. `bash scripts/verify-ios-public-assets.sh` (confirms w26 knobs landed in `ios/App/App/public/`).
+4. Open `ios/App/App.xcworkspace`, bump iOS native build number, Archive → TestFlight.
+
+### Manual QA plan — Richie vs Rendiesel duel (real-device)
+
+1. Both install w26 + cold-launch. Each user 5-taps the version line; Copy Debug Info must read `"build": "2.2.3-w26"`.
+2. Richie taps Duels tab → challenges Rendiesel via existing flow.
+3. Backend creates duel with `duration_seconds=3600` (verify via debug breadcrumb `duel-fetch-result { activeCount: 0, pendingSentCount: 1 }` on Richie's device).
+4. Rendiesel's device: `duel-fetch-result { pendingReceivedCount: 1 }`. He accepts.
+5. Both devices flip to active. `duel-active-hero-render { status: "active", duelType: "steps", … }` fires for both.
+6. Both walk a different number of steps.
+7. Both foreground the app within the 1-hour window. `duel-progress-health-range-start` → `-success` → `duel-progress-submit-attempt` → `duel-progress-submit-result { ok: true, you: <N>, rival: <M> }` should appear in each device's breadcrumb trail.
+8. Active hero countdown ticks down minutes (then "Xh Ym left" → "Ym left" → "<1m").
+9. After `ends_at` passes: `duel-resolve-attempt` → `duel-resolve-result { ok: true, result: "challenger_win" | "opponent_win" | "draw" }`.
+10. Winner sees the soul reward toast (note: client-side `hb_souls` does NOT yet reconcile from `user_souls_ledger` — that's Phase E in the plan).
+
+If any stage doesn't fire, the breadcrumb trail tells us exactly which one. That's the whole point of Phase B.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.146 XP chart visually rises from 0 (historical — superseded by 1z.147 above)
 
 ### ✅ STATUS: The XP cumulative chart now begins at zero on the user's first XP date and rises diagonally into their first-day total. Pure visual refinement — no data, stats, or XP totals changed.
 

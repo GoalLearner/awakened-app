@@ -1086,7 +1086,15 @@
   function createDuel(opponentAlias, options) {
     const body = { opponent_alias: opponentAlias };
     if (options && typeof options === 'object') {
-      if (Number.isInteger(options.duration_days)) body.duration_days = options.duration_days;
+      // v3 Phase 1z.147 — accept duration_seconds (preferred, MVP
+      // testing) OR duration_days (legacy). Backend rejects payloads
+      // that contain both, so we forward only one even if both are
+      // somehow set in options (seconds wins).
+      if (Number.isInteger(options.duration_seconds)) {
+        body.duration_seconds = options.duration_seconds;
+      } else if (Number.isInteger(options.duration_days)) {
+        body.duration_days = options.duration_days;
+      }
       if (Number.isInteger(options.stake_souls))   body.stake_souls   = options.stake_souls;
       // Verified-Only Duel Types (v3 Phase 1x.6). Default applied at the
       // backend (`verified_objectives`) — only forward when explicitly

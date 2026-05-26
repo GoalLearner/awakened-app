@@ -1,0 +1,27 @@
+-- 0011_duel_duration_seconds.sql
+--
+-- v3 Phase 1z.147 — adds a nullable `duration_seconds` column to the
+-- `duels` table so MVP testing can use short (1-hour) duels and
+-- future product can ship 12-hour / 24-hour durations without the
+-- 3-day floor.
+--
+-- The existing `duration_days INTEGER NOT NULL DEFAULT 3` column
+-- stays for backward compatibility — legacy clients (and the row's
+-- own NOT NULL constraint) keep working. When `duration_seconds`
+-- is non-NULL, the accept handler uses it; otherwise it falls back
+-- to `duration_days * 86400`.
+--
+-- Why not change the existing column type to REAL: would break the
+-- NOT NULL contract for existing rows and require a data migration
+-- across the duels table. A nullable sibling column with a clear
+-- fallback rule is the smallest correct change.
+--
+-- Apply to remote:
+--   wrangler d1 execute awakened-db --remote \
+--     --file=migrations/0011_duel_duration_seconds.sql
+--
+-- Local dry-run:
+--   wrangler d1 execute awakened-db --local \
+--     --file=migrations/0011_duel_duration_seconds.sql
+
+ALTER TABLE duels ADD COLUMN duration_seconds INTEGER;
