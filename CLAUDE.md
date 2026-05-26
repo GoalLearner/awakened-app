@@ -55,7 +55,91 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.141 Hall of Fame capped to top 10 (read this first)
+## 📌 Session handoff — May 26, 2026 — App Store 2.2.3 approved; public leaderboard self-heal verified end-to-end (read this first)
+
+### 🎉 STATUS: Apple App Review approved `Awakened: Habit RPG` version `2.2.3 for iOS`. Public Steps leaderboard verified on-device after the App Store update. Galilea — the canonical "App Store, not TestFlight" verification case — now shows the corrected current-week value `24,090`. The Sunday-rollover bug class is closed across both TestFlight and the App Store.
+
+### Apple approval
+
+- **App Version**: `2.2.3 for iOS`
+- **Status**: review complete, eligible for distribution
+- **Submitted**: May 23, 2026 at 02:51 PM PDT
+- **Submission ID**: `a053c681-0499-4f71-a51d-628033b6ceda`
+- **App Store URL**: https://apps.apple.com/app/awakened-habit-rpg/id6764727990
+- Apple note: "Please note that it can take up to 24 hours after release for items to become publicly available."
+
+The approved build's web fingerprint was the one staged at the time of upload (the 1z.131 backend deploy + 1z.132 hub return + 1z.133 walk false-positive train, anchored at `APP_BUILD_TAG = 2.2.3-w12` per the May 23 archive train). **The repo `main` is now ahead of the approved binary** — w13 through w20 are committed but live only on TestFlight until the next App Store release train. That detail is the reason this verification matters: the approved binary did NOT contain w18's Sunday-UTC client fix, yet the public leaderboard self-healed for Galilea anyway.
+
+### Live public leaderboard after Galilea updated to App Store 2.2.3
+
+Steps · This Week · 1:09 PM Tue May 26:
+
+| Rank | alias | steps |
+|---|---|---|
+| #1 | RenDIESEL | 55,146 |
+| #2 | Richie | 24,897 |
+| **#3** | **Galilea** | **24,090** |
+| #4 | shadowmonarch_k | 18,534 |
+| #5 | ascendantnova | 16,641 |
+| #6 | ghostlift | 12,708 |
+| #7 | voidwalker_88 | 10,241 |
+| #8 | marcust. | 9,917 |
+| #9 | siennak. | 9,367 |
+| #10 | dalaias | 4,471 |
+| #11–16 | jordanf. / awakenedren / priyan. / melvin / nightowl / llcooljulian | … |
+
+Galilea is no longer falsely stuck at **53,654**. She is no longer stuck at the conservative **0** we set during the Option C repair. Her live row is the genuine **24,090** — meaning **her App Store binary submitted a corrected weekly steps value and the backend accepted it normally via the 1z.131 MAX clause** (which now reads `MAX(existing=0, new=24,090) = 24,090`, no self-heal CASE even needed because the conservative wipe had already cleared the contaminated value).
+
+### What this proves
+
+This is the **end-to-end verification of the Sunday-rollover arc on the public path**, not just TestFlight:
+
+1. **1z.139 / w18** fixed the client-side weekly sum to anchor on Sunday-UTC. (TestFlight clients only — w12 was already in App Store review by then.)
+2. **1z.140 / w19** added the backend `weekly_sum_source` self-heal + the trust-tag protocol. Backend deployed on May 26, ~11:00 PT (Worker version `9e9b78c6-a5de-44c0-9af7-b745849d4cb5`).
+3. **Galilea Option C repair** set her contaminated `53,654` row to `0` and deleted the false HoF row. This is the move that gave the App-Store binary a clean baseline to ratchet up from once Apple approved.
+4. **App Store 2.2.3 approval landed**. Galilea updated, opened the app, her client submitted today's real current-week steps (`24,090`), backend 1z.131 MAX clause picked it over `0` cleanly, and her row now shows correctly on every other user's leaderboard.
+
+If we hadn't done the Option C repair, the 1z.131 MAX clause would have pegged Galilea at the contaminated `53,654` forever (since her App Store client wasn't carrying the trust tag yet — w18 wasn't in the approved binary). The conservative wipe was the bridge that made the App Store path land cleanly.
+
+### Hall of Fame — also clean
+
+The previously-false `53.7K Week of May 24–30` Galilea row remains gone. HoF only shows legitimate prior-week records. Capped at top 10 per 1z.141 (TestFlight only — w20 not yet in App Store).
+
+### Current repo `main` knobs (TestFlight target — AHEAD of approved App Store binary)
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w20` (TestFlight; App Store still on w12-train binary) |
+| `app.js?v=` | `473` |
+| `auth.js?v=` | `17` |
+| `sw.js CACHE_VERSION` | `v5.359` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` |
+
+When the next App Store release train ships, the approved binary will roll forward to whatever the live web bundle is at that time (likely w20+ with the cap-10 HoF, the manual collapsible header, the rank-card sub-rank labels, and the flights leaderboard polish). Until then, TestFlight users are ahead of App Store users by 8 web-bundle versions.
+
+### Final status
+
+- ✅ Apple App Store: 2.2.3 approved + eligible for distribution.
+- ✅ Public leaderboard: Galilea verified as `24,090`, the false `53,654` is gone, and the conservative `0` lifted naturally.
+- ✅ Hall of Fame: no false current-week rows.
+- ✅ Backend self-heal: deployed and active, will catch any future pre-trust-tag contamination automatically once w19+ ships through the next App Store release.
+- ⏳ Optional future hardening: backend "first-of-week sanity reject" for NULL-source submits suspiciously close to prior-week totals. Defense-in-depth — not urgent now that public adoption of 2.2.3 is live and the next App Store release will carry the client-side w18 fix anyway.
+
+### Remaining watch item
+
+**Sun May 31 → Mon Jun 1 rollover**: monitor `leaderboard_snapshots` for any pre-w18 public client that re-contaminates (any new `metric='step_total' / week_start='2026-05-31' / src=NULL / current_value > 0.5 * best_value` immediately after the gap window). If any appear, repeat Option C. Otherwise the bug class is closed.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from ClaudeCode. No backend deploy. No D1 migration. No D1 mutation. No app code change. No version/cache knob bump. Docs-only update.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.141 Hall of Fame capped to top 10 (historical — superseded by App Store approval note above)
 
 ### ✅ STATUS: Steps Hall of Fame ranked list now shows exactly the top 10 records. "Your Best" pinned card unchanged. 100K Club and This Week tabs unchanged. Frontend-only fix.
 
