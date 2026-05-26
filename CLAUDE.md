@@ -55,7 +55,84 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — w19 leaderboard self-heal verified on-device; Galilea conservative reset confirmed (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.141 Hall of Fame capped to top 10 (read this first)
+
+### ✅ STATUS: Steps Hall of Fame ranked list now shows exactly the top 10 records. "Your Best" pinned card unchanged. 100K Club and This Week tabs unchanged. Frontend-only fix.
+
+**Tester feedback on `2.2.3-w19`**: HoF tab scrolls past #10. User wants the board to feel exclusive — top 10 only.
+
+**Audit findings**:
+- HoF rendered via `_lbRenderHofTab` → `lbBuildHofList(records)` in `app.js`.
+- Backend `Auth.fetchLeaderboardHallOfFame(metric, 50)` returns up to 50 records; client merges with sim filler via `_lbMergeHofRecords`, then passes the merged array to `lbBuildHofList`.
+- `lbBuildHofList` previously mapped over the entire array (no cap).
+- "Your Best" is rendered by a separate function `lbBuildHofMeBest(meBest)` writing to a different DOM element (`#lb-rank-mebest`), so capping the list cannot hide the caller's own best.
+- 100K Club uses `lbBuild100kClubList` (different builder).
+- This Week uses `lbBuildList` (different builder).
+- Safest fix: render-layer slice inside `lbBuildHofList`. One line. Backend untouched. Cache shape unchanged.
+
+### Fix (1z.141)
+
+```js
+const HOF_DISPLAY_LIMIT = 10;
+function lbBuildHofList(records) {
+  if (!Array.isArray(records) || records.length === 0) return /* empty state */;
+  const myAlias = lbGetMyAlias();
+  return records.slice(0, HOF_DISPLAY_LIMIT).map(rec => /* row HTML */).join('');
+}
+```
+
+Applies to all three render paths (cached, fresh, sim fallback) since they all go through `lbBuildHofList`. Backend still returns up to 50 records — the merge + sim filler can keep using the wider window, but the user only ever sees the top 10 ranked rows.
+
+### What's preserved
+
+- `lbBuildHofMeBest` ("Your Best" pinned card) renders independently to `#lb-rank-mebest`. Out-of-top-10 users still see their own best above the list.
+- `_lbMergeHofRecords` merge logic (sim filler + real merge + me_best rank recompute) unchanged — slice is at the render boundary, not the data boundary.
+- 100K Club tab: `lbBuild100kClubList` untouched. Still shows all 100K members.
+- This Week tab: `lbBuildList` untouched.
+- Empty state: still fires when 0 records.
+- Backend `Auth.fetchLeaderboardHallOfFame(metric, 50)`: unchanged.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_VERSION` | `2.2.3` | `2.2.3` (unchanged) |
+| `APP_BUILD_TAG` | `2.2.3-w19` | `2.2.3-w20` |
+| `app.js?v=` | `472` | `473` |
+| `auth.js?v=` | `17` | `17` (unchanged — auth.js not touched) |
+| `sw.js CACHE_VERSION` | `v5.358` | `v5.359` |
+| `simulated-leaderboard.js?v=` | `7` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | `false` |
+| `LEADERBOARD_*_BACKEND_ENABLED` | `true` | `true` (unchanged) |
+
+### Verification
+
+- `node --check app.js && node --check auth.js && node --check sw.js && node --check simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run, same 2 transient browser-context flakes that hit prior trains (both pass on isolated retry, neither HoF-related).
+- Backend: untouched, no tests re-run, no deploy.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload. No backend deploy. No D1 migration. No D1 mutation. No HealthKit / dungeon / economy / sim values / 100K Club / This Week / leaderboard-submit / self-heal logic changes. `APP_VERSION` unchanged. `QA_UNLOCK_C_RANK_DUNGEONS` still false.
+
+### MacBook build
+
+1. `git pull origin main`.
+2. `npx cap sync ios`.
+3. Open `ios/App/App.xcworkspace`, bump iOS native build, Archive → TestFlight.
+
+### Expected TestFlight verification
+
+1. Cold-launch. Debug shows `"build": "2.2.3-w20"`.
+2. Tap World Rank card → Global Rankings Hub → Steps row → detail sheet → tap "Hall of Fame" tab.
+3. Ranked list shows exactly **#1–#10** with no #11 or below.
+4. "Your Best" pinned card above the list still visible (shows the caller's best, or empty state if no record).
+5. Tap "100K Club" tab → all 100K members still listed normally.
+6. Tap "This Week" tab → full current-week leaderboard still listed normally (not capped at 10).
+
+---
+
+## 📌 Session handoff — May 26, 2026 — w19 leaderboard self-heal verified on-device; Galilea conservative reset confirmed (historical — superseded by 1z.141 above)
 
 ### ✅ STATUS: `2.2.3-w19` passed through TestFlight and is verified on real device. Public Steps leaderboard + Hall of Fame are clean. Galilea's `0` is the intentional conservative state until App Store w19+ ships.
 

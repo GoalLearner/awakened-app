@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w19';
+  const APP_BUILD_TAG = '2.2.3-w20';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21511,6 +21511,16 @@
   // and the same real user can appear multiple times under their
   // canonical alias). Empty state explicitly references the
   // "set a weekly record" framing instead of "be the first to rank".
+  //
+  // v3 Phase 1z.141 — capped to the top 10 ranked records. HoF is
+  // meant to feel exclusive and clean ("highest verified weekly
+  // totals ever") so #11+ is dropped at the render layer. The
+  // backend can keep returning a larger window (currently `limit=50`)
+  // without harm — the slice happens here only for the ranked list.
+  // "Your Best" stays visible via lbBuildHofMeBest even when the
+  // caller's best falls outside the top 10. 100K Club and This Week
+  // tabs use different builders and are not affected.
+  const HOF_DISPLAY_LIMIT = 10;
   function lbBuildHofList(records) {
     if (!Array.isArray(records) || records.length === 0) {
       return (
@@ -21522,7 +21532,7 @@
       );
     }
     const myAlias = lbGetMyAlias();
-    return records.map(rec => {
+    return records.slice(0, HOF_DISPLAY_LIMIT).map(rec => {
       const isMe = myAlias && rec.alias === myAlias;
       const aliasDisplay = lbNormalizeAliasForDisplay(rec.alias);
       const weekLabel = lbFormatWeekRangeFromIso(rec.week_start, rec.week_end);
