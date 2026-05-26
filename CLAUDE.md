@@ -55,7 +55,84 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 24, 2026 — 1z.140 Backend self-heal for Sunday-rollover contamination (read this first — DEPLOY PENDING)
+## 📌 Session handoff — May 26, 2026 — 1z.140 backend self-heal DEPLOYED + Galilea repaired (Option C) (read this first)
+
+### ✅ STATUS: Migration 0010 applied. Worker deployed. Galilea repaired (Option C — conservative wipe). Backend now defends against Sunday-rollover contamination for any w19+ client that lands on prod.
+
+**Execution sequence (May 26 ~11:00 PT):**
+
+1. **Repo verified**: HEAD at `9a1a995` (1z.140 commit). Backend vitest re-run pre-deploy → **27/27 pass**.
+
+2. **Migration 0010 applied** to prod D1:
+   ```
+   Total queries executed: 2
+   success: true
+   ```
+   `PRAGMA table_info` confirms `weekly_sum_source TEXT` column now present on both `leaderboard_snapshots` and `weekly_step_records`. No data loss.
+
+3. **Worker deployed**:
+   - Version ID: `9e9b78c6-a5de-44c0-9af7-b745849d4cb5`
+   - URL: `https://awakened-backend.richmondcampano93.workers.dev`
+   - Wire-compatible with all existing clients (NULL `weekly_sum_source` from old clients → persisted as NULL, treated as untrusted, 1z.131 MAX path).
+
+4. **Galilea audit confirmed contamination state**:
+   - Snapshot: `current_value=53,654`, `best_value=53,654`, `week_start='2026-05-24'`, `src=NULL`, last updated 2026-05-26 03:51 UTC (her App Store client kept re-submitting and MAX-preserving the bad value).
+   - HoF: row at `2026-05-24 / steps=53,654 / src=NULL`, created 2026-05-24 06:21 UTC.
+   - Prior week 2026-05-17 / 53,192 record intact below.
+
+5. **Option C executed**:
+   ```sql
+   UPDATE leaderboard_snapshots SET current_value=0, updated_at=NOW
+   WHERE user_id=(Galilea) AND metric='step_total'
+     AND week_start='2026-05-24' AND current_value=53654;  -- changes: 1
+
+   DELETE FROM weekly_step_records
+   WHERE user_id=(Galilea) AND week_start='2026-05-24' AND steps=53654;  -- changes: 1
+   ```
+   `best_value=53,654` and prior-week 53,192 record both preserved per task spec.
+
+### Post-repair leaderboard state (week 2026-05-24)
+
+| Rank | alias | cur | best | src |
+|---|---|---|---|---|
+| 1 | RenDIESEL | 55,146 | 101,259 | NULL |
+| 2 | Richie | 20,403 | 82,939 | NULL |
+| 3 | Dalaias | 4,471 | 4,471 | NULL |
+| 4 | Melvin | 1,225 | 1,583 | NULL |
+| 5 | LLCoolJulian | 176 | 11,528 | NULL |
+| - | Galilea | **0** | 53,654 | NULL |
+
+HoF current week now has 5 clean rows (Richie's earlier-deleted row regenerated from his latest submit at 20,403). Galilea's prior-week 2026-05-17 / 53,192 untouched.
+
+### All `src` values are NULL — expected
+
+No w19+ clients have submitted yet (w19 web bundle is staged for TestFlight but not yet uploaded; Galilea is on App Store so won't get w19 until next release approval). The self-heal CASE is dormant until a trusted submit arrives, at which point any contaminated row's first trusted submit heals it automatically.
+
+### Risk: Galilea could re-contaminate before w19 reaches App Store
+
+Her App Store client is still on a pre-w18 bundle and still actively submits during rollover windows. The next Sunday rollover (Sun May 31 → Mon Jun 1) could re-create the same contamination if she opens the app during the local-Sat / UTC-Sun gap window.
+
+**Mitigation options when that happens:**
+- **Watch + repeat Option C** until App Store w19 lands.
+- **Accelerate App Store approval of w19+** so her client gets the trust tag and auto-heals.
+- **Add a backend-only sanity reject** that drops "first-of-week" submits that closely match the user's prior-week total (more complex; not in this train).
+
+### Files changed this session
+
+- `CLAUDE.md` — this handoff (next commit).
+- No app code changed.
+- No version/cache knob bumps.
+- No Codemagic / archive / upload.
+
+### MacBook build status
+
+The w19 web bundle (`APP_BUILD_TAG=2.2.3-w19`, `app.js?v=472`, `auth.js?v=17`, `sw.js v5.358`) is committed at `9a1a995` and ready for MacBook archive whenever you want to ship it. With the backend now live, w19 clients will trust-tag their weekly submits and heal contaminated rows on first foreground.
+
+**Recommended cadence**: archive + upload w19 to TestFlight today so any TestFlight tester whose row gets contaminated next Sunday auto-heals. Galilea remains the only known App-Store-only contamination risk until the next public release.
+
+---
+
+## 📌 Session handoff — May 24, 2026 — 1z.140 Backend self-heal for Sunday-rollover contamination (historical — superseded by deploy + repair note above)
 
 ### 🟡 STATUS: Backend self-heal + frontend trust tag implemented and tested. **Migration + Worker deploy + Galilea repair all awaiting your explicit approval.** `2.2.3-w19` web bundle ready for TestFlight whenever the backend is live.
 
