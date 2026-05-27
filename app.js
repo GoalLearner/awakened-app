@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w27';
+  const APP_BUILD_TAG = '2.2.3-w28';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20107,10 +20107,146 @@
   }
   try { window.submitVerifiedEventsForDuels = submitVerifiedEventsForDuels; } catch (_) {}
 
+  // v3 Phase 1z.149 — Patch A1 final-sync state. Per-duel in-flight
+  // guard prevents a flurry of foreground/render ticks from each
+  // firing a duplicate final-sync + resolve cycle. Keyed by duel id;
+  // value is the in-flight promise so a concurrent caller can await
+  // the same one. Cleared when the cycle completes (success or fail).
+  const _duelFinalSyncInFlight = new Map();
+
+  // v3 Phase 1z.149 — Patch A1 final-sync helper.
+  // When the current device sees an active duel whose ends_at <= now,
+  // force a HealthKit query for the EXACT [starts_at, ends_at] window
+  // and submit it BEFORE calling /resolve. Closes the freshness gap
+  // observed on TestFlight: the loser submitted 13 min before end,
+  // never recapped, resolver used stale snapshot.
+  //
+  // Behavior:
+  //   - Steps duel only (mirrors submitActiveStepsDuelProgress scope).
+  //   - Health unavailable / permission denied → skip submit, allow
+  //     resolve to proceed with whatever snapshot already exists.
+  //   - Range query null/negative → skip submit, allow resolve.
+  //   - Submit success or failure → emit breadcrumb, then resolve.
+  //   - Idempotent: existing snapshot UPSERT handles re-submits.
+  //
+  // Returns: { attempted, ok, value } where attempted=true means
+  // we actually called Health.getStepsBetween + submitDuelProgress.
+  async function _finalSyncEndedDuel(duel) {
+    const duelIdShort = String(duel.id || '').slice(0, 8);
+    const skip = (reason) => {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-final-sync-skip', {
+            duelId: duelIdShort,
+            reason,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
+      return { attempted: false, ok: false, value: null };
+    };
+    if (!duel || duel.duel_type !== 'steps') return skip('not-steps');
+    if (!duel.starts_at || !duel.ends_at) return skip('no-window');
+    if (!window.Health || typeof Health.isAvailable !== 'function' || !Health.isAvailable()) {
+      return skip('health-unavailable');
+    }
+    if (typeof Health.permissionStatus === 'function' && Health.permissionStatus() !== 'granted') {
+      return skip('permission-not-granted');
+    }
+    if (typeof Health.getStepsBetween !== 'function') return skip('no-range-query');
+    if (!window.Auth || typeof Auth.submitDuelProgress !== 'function') return skip('no-submit');
+
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-final-sync-start', {
+          duelId: duelIdShort,
+          windowStart: duel.starts_at,
+          windowEnd: duel.ends_at,
+          build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      }
+    } catch (_) {}
+
+    let steps = null;
+    try { steps = await Health.getStepsBetween(duel.starts_at, duel.ends_at); }
+    catch (_) { steps = null; }
+    if (steps == null || steps < 0) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-final-sync-complete', {
+            duelId: duelIdShort,
+            ok: false,
+            error: steps == null ? 'null-result' : 'negative-value',
+          });
+        }
+      } catch (_) {}
+      return { attempted: true, ok: false, value: null };
+    }
+    const rounded = Math.round(steps);
+    // Reuse the existing -submit-attempt / -submit-result breadcrumbs
+    // tagged with the post-end-resync trigger so the diagnostic trail
+    // shows BOTH the final-sync start (above) AND the standard submit
+    // events with provenance.
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-progress-submit-attempt', {
+          duelId: duelIdShort,
+          metric: 'steps',
+          value: rounded,
+          windowStart: duel.starts_at,
+          windowEnd: duel.ends_at,
+          trigger: 'post-end-resync',
+        });
+      }
+    } catch (_) {}
+    let resp = null;
+    let submitOk = false;
+    try {
+      resp = await Auth.submitDuelProgress(duel.id, {
+        duel_type: 'steps',
+        metric: 'steps',
+        value: rounded,
+        window_start: duel.starts_at,
+        window_end: duel.ends_at,
+        client_updated_at: new Date().toISOString(),
+      });
+      submitOk = !!(resp && (resp.ok === true || resp.success === true || (typeof resp === 'object' && !resp.error)));
+    } catch (e) {
+      submitOk = false;
+      resp = { ok: false, error: (e && e.message) ? String(e.message).slice(0, 80) : 'network-error' };
+    }
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-progress-submit-result', {
+          duelId: duelIdShort,
+          ok: submitOk,
+          you: (resp && typeof resp.you === 'number') ? resp.you : undefined,
+          rival: (resp && typeof resp.rival === 'number') ? resp.rival : (resp && resp.rival === null ? null : undefined),
+          trigger: 'post-end-resync',
+          error: (resp && resp.detail) || (resp && resp.error) || undefined,
+        });
+        _addHealthVerifyBreadcrumb('duel-final-sync-complete', {
+          duelId: duelIdShort,
+          ok: submitOk,
+          value: rounded,
+        });
+      }
+    } catch (_) {}
+    return { attempted: true, ok: submitOk, value: rounded };
+  }
+
   // Steps Duel Scoring v1 — server-authoritative resolution. Called
   // when the Duels tab loads and there's an active duel past its
   // ends_at, OR when the user opens a specific past-ends_at duel.
   // Backend is idempotent on already-completed duels.
+  //
+  // v3 Phase 1z.149 — Patch A1: final-sync the current user's
+  // HealthKit steps for the exact duel window BEFORE calling
+  // /resolve. Prevents stale snapshots from determining outcomes
+  // in close duels where the loser's app was backgrounded near
+  // the end. Per-duel in-flight guard collapses concurrent
+  // triggers (foreground + render-tick + detail-open) into one
+  // sync cycle.
   async function maybeResolveDuelIfEnded(duel) {
     if (!duel || duel.status !== 'active') return null;
     if (!duel.ends_at) return null;
@@ -20120,17 +20256,36 @@
     const endsMs = Date.parse(duel.ends_at);
     if (!isFinite(endsMs) || Date.now() < endsMs) return null;
     if (!window.Auth || typeof Auth.resolveDuel !== 'function') return null;
-    const duelIdShort = String(duel.id || '').slice(0, 8);
-    // v3 Phase 1z.147 — Phase B resolve diagnostics. Privacy-safe.
-    try {
-      if (typeof _addHealthVerifyBreadcrumb === 'function') {
-        _addHealthVerifyBreadcrumb('duel-resolve-attempt', {
-          duelId: duelIdShort,
-          duelType: duel.duel_type,
-          endsAt: duel.ends_at,
-        });
-      }
-    } catch (_) {}
+    // Per-duel in-flight guard. If another tick already started a
+    // final-sync+resolve cycle for this duel, await its promise
+    // instead of double-firing.
+    if (_duelFinalSyncInFlight.has(duel.id)) {
+      try { return await _duelFinalSyncInFlight.get(duel.id); }
+      catch (_) { return null; }
+    }
+    const cyclePromise = (async () => {
+      const duelIdShort = String(duel.id || '').slice(0, 8);
+
+      // Patch A1 — final-sync this user's steps before resolve.
+      // Best-effort: failures don't block resolve since the server
+      // can still resolve with whatever snapshot already exists.
+      let finalSync = { attempted: false, ok: false, value: null };
+      try { finalSync = await _finalSyncEndedDuel(duel); }
+      catch (_) { finalSync = { attempted: false, ok: false, value: null }; }
+
+      // v3 Phase 1z.147 — Phase B resolve diagnostics. Privacy-safe.
+      // 1z.148 — extended with afterFinalSync / finalSyncOk.
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-resolve-attempt', {
+            duelId: duelIdShort,
+            duelType: duel.duel_type,
+            endsAt: duel.ends_at,
+            afterFinalSync: !!finalSync.attempted,
+            finalSyncOk: !!finalSync.ok,
+          });
+        }
+      } catch (_) {}
     try {
       const res = await Auth.resolveDuel(duel.id);
       try {
@@ -20160,7 +20315,13 @@
         }
       } catch (_) {}
     }
-    return null;
+      return null;
+    })();
+    // Register the cycle so concurrent callers can await the same
+    // promise instead of double-firing the final-sync + resolve.
+    _duelFinalSyncInFlight.set(duel.id, cyclePromise);
+    try { return await cyclePromise; }
+    finally { _duelFinalSyncInFlight.delete(duel.id); }
   }
 
   // Verified Duel Scoring Engine v1 (v3 Phase 1z). Per-type display
@@ -20400,6 +20561,69 @@
     return mins + 'm left';
   }
 
+  // v3 Phase 1z.149 — Patch A2 helpers.
+  // Pulls the server_updated_at for whichever participant (challenger
+  // vs opponent) corresponds to the viewer's "you" or "rival" slot.
+  // Returns null when the backend doesn't expose timestamps (pre-
+  // 1z.148 worker) — caller treats null as "omit chip."
+  function _duelProgressUpdatedAtForViewer(duel, side /* 'you' | 'rival' */) {
+    if (!duel) return null;
+    const isChallenger = duel.role === 'challenger';
+    if (side === 'you') {
+      return isChallenger
+        ? (duel.challenger_progress_updated_at || null)
+        : (duel.opponent_progress_updated_at   || null);
+    }
+    return isChallenger
+      ? (duel.opponent_progress_updated_at   || null)
+      : (duel.challenger_progress_updated_at || null);
+  }
+  // Returns the age of an ISO timestamp in seconds, or null when
+  // input is missing/unparseable.
+  function _ageSecOrNull(iso) {
+    if (typeof iso !== 'string') return null;
+    // Backend may emit either "2026-05-26 23:44:21" (D1 CURRENT_TIMESTAMP
+    // style, UTC, no T) or full ISO "...T...Z". Date.parse handles
+    // both, but the bare form is treated as UTC ONLY on engines that
+    // honor SQLite's space-separated UTC convention. Normalize by
+    // appending Z if no timezone indicator is present.
+    const normalized = (iso.indexOf('T') < 0 && iso.indexOf('Z') < 0 && iso.indexOf('+') < 0)
+      ? iso.replace(' ', 'T') + 'Z'
+      : iso;
+    const ms = Date.parse(normalized);
+    if (!isFinite(ms)) return null;
+    return Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  }
+  // Returns { text, tone } for the freshness chip, or null when
+  // no chip should render (e.g. backend pre-1z.148 → no timestamp).
+  // Tones map to subtle color classes in styles.css (.duels-hero-
+  // score-freshness--{fresh|stale|missing}).
+  //
+  //   < 60s                       → "· just now"      tone fresh
+  //   60s-300s                    → "· N min ago"     tone neutral
+  //   > 300s AND status=active    → "· syncing…"      tone stale
+  //   > 300s AND status=completed → "· N min ago"     tone neutral
+  //   no timestamp AND status=active → "· not synced yet" tone missing
+  //   no timestamp AND value present (legacy bg) → null (omit chip)
+  function _fmtDuelFreshness(iso, status, value) {
+    if (!iso) {
+      if (status === 'active' && (value == null || value === 0)) {
+        return { text: '· not synced yet', tone: 'missing' };
+      }
+      return null;
+    }
+    const ageSec = _ageSecOrNull(iso);
+    if (ageSec == null) return null;
+    if (ageSec < 60)   return { text: '· just now', tone: 'fresh' };
+    if (ageSec < 300) {
+      const mins = Math.max(1, Math.floor(ageSec / 60));
+      return { text: '· ' + mins + ' min ago', tone: 'neutral' };
+    }
+    if (status === 'active') return { text: '· syncing…', tone: 'stale' };
+    const minsOld = Math.max(1, Math.floor(ageSec / 60));
+    return { text: '· ' + minsOld + ' min ago', tone: 'neutral' };
+  }
+
   function renderActiveDuelHero(active) {
     const mount = document.getElementById('duels-hero');
     if (!mount) return;
@@ -20451,12 +20675,42 @@
       const { you, rival } = _duelStepsForViewer(duel);
       const youDisp   = (you   == null) ? '—' : formatDuelScoreValue(duel.duel_type, you);
       const rivalDisp = (rival == null) ? 'awaiting data' : formatDuelScoreValue(duel.duel_type, rival);
+      // v3 Phase 1z.149 — Patch A2 freshness chip.
+      // Per-user `· just now` / `· N min ago` / `· syncing…` /
+      // `· not synced yet` label tied to the backend's
+      // server_updated_at timestamp for each participant's latest
+      // duel_progress_snapshot row. Removes the "0 = didn't walk
+      // vs 0 = didn't sync" ambiguity that surfaced in the 1-hour
+      // test. Backend must be on 1z.148+ for the timestamps to
+      // appear; if absent, _fmtDuelFreshness returns null and the
+      // chip is omitted (graceful legacy degradation).
+      const youUpdatedAt   = _duelProgressUpdatedAtForViewer(duel, 'you');
+      const rivalUpdatedAt = _duelProgressUpdatedAtForViewer(duel, 'rival');
+      const youFreshness   = _fmtDuelFreshness(youUpdatedAt,   duel.status, you);
+      const rivalFreshness = _fmtDuelFreshness(rivalUpdatedAt, duel.status, rival);
+      const youFreshHtml   = youFreshness   ? '<span class="duels-hero-score-freshness duels-hero-score-freshness--' + youFreshness.tone   + '">' + esc(youFreshness.text)   + '</span>' : '';
+      const rivalFreshHtml = rivalFreshness ? '<span class="duels-hero-score-freshness duels-hero-score-freshness--' + rivalFreshness.tone + '">' + esc(rivalFreshness.text) + '</span>' : '';
       scoreHtml =
         '<div class="duels-hero-score-row">' +
-          '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">You</span><span class="duels-hero-score-value">' + esc(youDisp) + '</span></span>' +
+          '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">You</span><span class="duels-hero-score-value">' + esc(youDisp) + '</span>' + youFreshHtml + '</span>' +
           '<span class="duels-hero-score-sep">·</span>' +
-          '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">Rival</span><span class="duels-hero-score-value">' + esc(rivalDisp) + '</span></span>' +
+          '<span class="duels-hero-score-cell"><span class="duels-hero-score-label">Rival</span><span class="duels-hero-score-value">' + esc(rivalDisp) + '</span>' + rivalFreshHtml + '</span>' +
         '</div>';
+      // Extend the per-render breadcrumb with freshness payload so
+      // future debug dumps include the snapshot-age picture without
+      // a separate D1 audit.
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-active-hero-freshness', {
+            duelId:           String(duel.id || '').slice(0, 8),
+            youSnapshotAgeSec:   _ageSecOrNull(youUpdatedAt),
+            rivalSnapshotAgeSec: _ageSecOrNull(rivalUpdatedAt),
+            youFreshnessLabel:   youFreshness   ? youFreshness.text   : null,
+            rivalFreshnessLabel: rivalFreshness ? rivalFreshness.text : null,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
     }
     mount.innerHTML =
       '<div class="duels-hero duels-hero--active" data-duel-id="' + esc(duel.id) + '">' +

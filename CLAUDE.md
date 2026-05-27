@@ -55,7 +55,119 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.148 Discipline Duels limited to Steps-only MVP (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.149 Patch A1 final-sync + A2 freshness chip for Steps Duel (read this first — BACKEND DEPLOY PENDING)
+
+### 🟡 STATUS: Code committed on `main`. Backend serializer change NOT yet deployed. Frontend `2.2.3-w28` web bundle ready. Awaiting explicit approval to deploy Worker. Wire-compatible: chip omits gracefully if frontend ships before backend.
+
+### Why this train
+
+The 1-hour Steps Duel test (1z.147+1z.148 in TestFlight) confirmed the lifecycle works end-to-end (create → accept → HealthKit range → snapshot → resolve → toast). But audit revealed the loser's last snapshot landed 13 min before `ends_at`, and the system had no mechanism to force a fresh capture before resolve. Anthony-Edwards (Richie's QA account on a 2nd iPhone) was idle so the 0 was plausible — but for any future close duel with two active walkers, the freshness gap could decide the wrong winner. Patch A1 closes that gap. Patch A2 makes freshness visible so a `0` reading is no longer ambiguous.
+
+### Patch A1 — Final-sync before resolve
+
+`maybeResolveDuelIfEnded(duel)` now runs:
+1. New `_finalSyncEndedDuel(duel)` helper queries `Health.getStepsBetween(starts_at, ends_at)` and POSTs the result to `/v1/duels/:id/progress`.
+2. Awaits the submit (tolerant failure: Health unavailable / no perm / null result → skip, log breadcrumb, allow resolve to proceed with existing snapshot).
+3. THEN calls `Auth.resolveDuel(duel.id)`.
+
+Per-duel in-flight Map (`_duelFinalSyncInFlight`) collapses concurrent triggers (foreground + render tick + detail open) into one cycle — concurrent callers `await` the in-flight promise instead of double-firing. Cleared in `finally`. Fires for whichever participant's app foregrounds first after `ends_at` — so both Richie's and the opponent's devices each get their own final capture when they open.
+
+### Patch A2 — Score freshness chip
+
+Active hero card now renders a one-line label under each `You` / `Rival` score:
+
+| Snapshot age | Label | Tone (CSS) |
+|---|---|---|
+| `< 60s` | `· just now` | mint `#6ee7b7` |
+| `60–300s` | `· N min ago` | muted text-tertiary |
+| `> 300s` + active duel | `· syncing…` | amber `#f5b842` @ 0.85 opacity |
+| `> 300s` + completed | `· N min ago` | muted |
+| no snapshot + value 0 + active | `· not synced yet` | amber |
+| no snapshot + completed / value present | (chip omitted) | — |
+
+Neutral language — never blames the user; just states the timestamp.
+
+### Backend serializer extension
+
+`/v1/duels` (list) and `/v1/duels/:id` (detail) now expose two new fields per duel:
+
+| Field | Type | Source |
+|---|---|---|
+| `challenger_progress_updated_at` | ISO string \| null | `duel_progress_snapshots.server_updated_at` |
+| `opponent_progress_updated_at` | ISO string \| null | same |
+
+New helper `getDuelProgressTimestamps(env, duelId)` runs alongside `getDuelEffectiveScores` in the list handler. Per-duel failure is isolated — freshness chip degrades to "no chip" rather than 500'ing the whole response.
+
+**No schema migration.** Data already lives in `duel_progress_snapshots.server_updated_at` (migration 0005). This is pure read-path enrichment.
+
+### Diagnostics
+
+Existing breadcrumbs get new fields:
+- `duel-progress-submit-attempt` / `-result` payloads include `trigger: 'post-end-resync'` when fired by `_finalSyncEndedDuel`. Existing foreground submitter sets no `trigger`, so debug pulls can distinguish.
+- `duel-resolve-attempt` adds `afterFinalSync: boolean` and `finalSyncOk: boolean`.
+
+New breadcrumbs:
+- `duel-final-sync-start { duelId, windowStart, windowEnd, build }`
+- `duel-final-sync-complete { duelId, ok, value }`
+- `duel-final-sync-skip { duelId, reason, build }` — reasons: `not-steps` / `no-window` / `health-unavailable` / `permission-not-granted` / `no-range-query` / `no-submit`
+- `duel-active-hero-freshness { duelId, youSnapshotAgeSec, rivalSnapshotAgeSec, youFreshnessLabel, rivalFreshnessLabel, build }`
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `backend/src/handlers/duels.ts` | +44 lines (helper + serializer arg + list/detail enrichment) |
+| `app.js` | +200 lines (A1 final-sync + in-flight map + maybeResolve rework; A2 helpers + chip injection) |
+| `styles.css` | +24 lines (chip + 4 tone classes) |
+| `index.html`, `sw.js` | knob bumps |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w27` | `2.2.3-w28` |
+| `app.js?v=` | `480` | `481` |
+| `auth.js?v=` | `18` | `18` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.366` | `v5.367` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- Backend `npx vitest run duels` → **10/10 pass**.
+- Frontend `node --check` on app.js + auth.js + sw.js + simulated-leaderboard.js → OK.
+- Playwright e2e: 28/29 first run, 1 transient browser-context flake (passes on isolated retry, unrelated).
+
+### Deploy gate — three follow-ups awaiting explicit approval
+
+1. **`cd backend && npx wrangler deploy`** — applies the serializer extension. Wire-compatible: pre-w28 clients ignore new fields; w28+ frontend gracefully omits chip when fields absent.
+2. **MacBook archive + upload `2.2.3-w28`** to TestFlight.
+3. **Order**: either is safe to do first. Deploying backend first lights up the chip the instant w28 cold-launches; uploading w28 first leaves chip omitted until backend deploys. Either works.
+
+### TestFlight QA checklist for next 1-hour duel
+
+1. Both devices on w28. Confirm `"build": "2.2.3-w28"` via Copy Debug Info.
+2. Start 1-hour Steps Duel between Richie and Anthony's QA iPhone.
+3. Walk on Richie's phone; leave Anthony idle (control).
+4. Mid-duel, open Duels tab on both. Chip should read `· just now` on the device that just synced, `· N min ago` on the other.
+5. Past `ends_at`, foreground LOSER's app first. Copy Debug Info should show: `duel-final-sync-start` → `duel-progress-submit-attempt { trigger: 'post-end-resync' }` → `duel-progress-submit-result { ok: true }` → `duel-resolve-attempt { afterFinalSync: true, finalSyncOk: true }`.
+6. Verify D1 snapshot rows show `server_updated_at` close to or after `ends_at` for both users.
+7. Result toast should match freshly-synced scores.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from this machine. **No backend deploy yet.** No D1 mutation. No migration. No HealthKit permission change. No souls / stake / economy change. No leaderboard / dungeon / rank logic change. `QA_UNLOCK_C_RANK_DUNGEONS = false`. App Review HealthKit compliance preserved.
+
+### Rollback knobs
+
+- A2 off → delete 5 lines in `renderActiveDuelHero` (the `youFreshHtml` / `rivalFreshHtml` injection). The chip vanishes; rest of hero unchanged.
+- A1 off → make `_finalSyncEndedDuel` return `skip('disabled')` immediately. Resolve path stays; final-sync layer becomes a no-op.
+
+Both rollbacks are independent.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.148 Discipline Duels limited to Steps-only MVP (historical — superseded by 1z.149 above)
 
 ### ✅ STATUS: Challenge modal shows only one option — Steps Duel. All non-steps types (`sleep`, `bedtime`, `strength`, `verified_objectives`) are hidden via `selectable: false` in `DUEL_TYPES`. Default `DEFAULT_DUEL_TYPE` flipped from `verified_objectives` → `steps`. Frontend-only change. Backend unchanged.
 

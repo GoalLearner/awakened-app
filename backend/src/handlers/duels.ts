@@ -300,6 +300,31 @@ async function getDuelProgress(
   return out;
 }
 
+// v3 Phase 1z.149 — A2 freshness signal. Returns the per-user
+// server_updated_at ISO string from duel_progress_snapshots so the
+// frontend can render "· just now" / "· N min ago" / "· syncing…"
+// next to each score on the active hero card. Steps metric only
+// (matches getDuelProgress scope). Missing user → no entry in the
+// map → frontend renders "· not synced yet".
+async function getDuelProgressTimestamps(
+  env: Env,
+  duelId: string,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const rows = await env.DB.prepare(
+    `SELECT user_id, server_updated_at FROM duel_progress_snapshots
+       WHERE duel_id = ? AND metric = 'steps'`,
+  )
+    .bind(duelId)
+    .all<{ user_id: string; server_updated_at: string }>();
+  for (const r of rows.results ?? []) {
+    if (r && typeof r.server_updated_at === 'string') {
+      out.set(r.user_id, r.server_updated_at);
+    }
+  }
+  return out;
+}
+
 /**
  * Verified Duel Scoring Engine v1 (v3 Phase 1z). Resolve the
  * authoritative score map for a duel:
@@ -358,6 +383,12 @@ function serializeDuel(
   aliasMap: Map<string, string>,
   viewerUserId: string,
   progressByUserId?: Map<string, number>,
+  // v3 Phase 1z.149 — A2 freshness map. Optional; when supplied,
+  // exposes per-user server_updated_at ISO strings so the client
+  // can compute "snapshot age" for the score-freshness chip on
+  // the active duel hero. Legacy callers that omit this argument
+  // get null timestamps in the serialized output — harmless.
+  progressUpdatedByUserId?: Map<string, string>,
 ): Record<string, unknown> {
   const isChallenger = row.challenger_user_id === viewerUserId;
   const opponentId = isChallenger ? row.opponent_user_id : row.challenger_user_id;
@@ -415,6 +446,13 @@ function serializeDuel(
     // Steps Duel Scoring v1 (v3 Phase 1y).
     challenger_progress_value: challengerProgress,
     opponent_progress_value: opponentProgress,
+    // v3 Phase 1z.149 — A2 freshness signal. Null when no snapshot
+    // exists for that participant yet (frontend renders "· not
+    // synced yet"). Otherwise an ISO datetime string the client
+    // diffs against Date.now() to render "· just now" / "· N min
+    // ago" / "· syncing…".
+    challenger_progress_updated_at: progressUpdatedByUserId?.get(row.challenger_user_id) ?? null,
+    opponent_progress_updated_at: progressUpdatedByUserId?.get(row.opponent_user_id) ?? null,
     resolved_at: row.resolved_at ?? null,
     result: row.result ?? null,
     // Verified Duel Scoring Engine v1 (v3 Phase 1z).
@@ -459,6 +497,11 @@ export async function handleDuelsList(
   // snapshots fallback). Per-duel queries — v1 acceptable load, can
   // batch later via a single JOIN if it ever matters.
   const progressByDuelId = new Map<string, Map<string, number>>();
+  // v3 Phase 1z.149 — per-user snapshot timestamps for the A2
+  // freshness chip on the active hero card. Only fetched for
+  // active/completed duels (where a chip might render). Pending /
+  // declined / cancelled duels have no scores to label.
+  const progressUpdatedByDuelId = new Map<string, Map<string, string>>();
   for (const r of allRows) {
     if (r.status !== 'active' && r.status !== 'completed') continue;
     try {
@@ -466,6 +509,13 @@ export async function handleDuelsList(
       progressByDuelId.set(r.id, m);
     } catch (_) {
       // Defensive — one bad row shouldn't kill the list.
+    }
+    try {
+      const tm = await getDuelProgressTimestamps(env, r.id);
+      progressUpdatedByDuelId.set(r.id, tm);
+    } catch (_) {
+      // Defensive — freshness chip is decorative; never break the
+      // list if the timestamp lookup fails.
     }
   }
 
@@ -475,7 +525,13 @@ export async function handleDuelsList(
   const recent: Record<string, unknown>[] = [];
 
   for (const row of allRows) {
-    const serialized = serializeDuel(row, aliasMap, session.userId, progressByDuelId.get(row.id));
+    const serialized = serializeDuel(
+      row,
+      aliasMap,
+      session.userId,
+      progressByDuelId.get(row.id),
+      progressUpdatedByDuelId.get(row.id),
+    );
     if (row.status === 'pending') {
       if (row.opponent_user_id === session.userId) incoming.push(serialized);
       else outgoing.push(serialized);
@@ -856,7 +912,17 @@ export async function handleDuelsDetail(
     row.opponent_user_id,
   ]);
   const progress = await getDuelEffectiveScores(env, row);
-  return jsonOk({ ok: true, duel: serializeDuel(row, aliasMap, session.userId, progress) });
+  // v3 Phase 1z.149 — enrich detail GET with snapshot timestamps so
+  // a direct-open of the duel detail sheet also shows the A2
+  // freshness chip. List endpoint already enriches; this keeps the
+  // two surfaces consistent.
+  let progressUpdated: Map<string, string> | undefined;
+  try { progressUpdated = await getDuelProgressTimestamps(env, row.id); }
+  catch (_) { progressUpdated = undefined; }
+  return jsonOk({
+    ok: true,
+    duel: serializeDuel(row, aliasMap, session.userId, progress, progressUpdated),
+  });
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -21068,6 +21068,26 @@ body.ddo-locked { overflow: hidden; }
   color: var(--text-tertiary);
   font-weight: 400;
 }
+/* v3 Phase 1z.149 — Patch A2 score freshness chip. Subtle one-line
+   label sitting beneath the You / Rival score values. Communicates
+   snapshot age without competing with the gold value text. Four
+   tones tied to the JS classifier in _fmtDuelFreshness().
+   Sized small (0.62rem) and lightly tinted so it reads as metadata,
+   not a primary score element. */
+.duels-hero-score-freshness {
+  display: block;
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  line-height: 1.1;
+}
+.duels-hero-score-freshness--fresh   { color: #6ee7b7; }            /* mint  — just synced */
+.duels-hero-score-freshness--neutral { color: var(--text-tertiary); } /* muted — N min ago */
+.duels-hero-score-freshness--stale   { color: #f5b842; opacity: 0.85; } /* amber — syncing... */
+.duels-hero-score-freshness--missing { color: #f5b842; opacity: 0.85; } /* amber — not synced yet */
 /* Duel detail overlay — in-flight + completed score blocks. */
 .ddo-score-row {
   display: flex;
