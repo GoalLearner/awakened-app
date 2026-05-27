@@ -55,7 +55,144 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 27, 2026 — 1z.157 Phase γ duel souls now visible in app (read this first)
+## 📌 Session handoff — May 27, 2026 — 1z.158 CRITICAL fix — duel settlement no longer overwrites local souls with backend partial balance (read this first)
+
+### 🔴 STATUS: Critical balance-corruption bug introduced by 1z.157 is fixed. Backend `your_balance` is now intentionally ignored on the frontend. Local `hb_souls` is mutated only via `+= your_delta`, with idempotency guard.
+
+**Real-device bug from `2.2.3-w34` (1z.157)**:
+- Richie's local `hb_souls` was ~995 (boss kills + daily logins, accumulated locally over weeks).
+- First Steps Duel win → backend returned `souls: { your_delta: +40, your_balance: 160, settled_at: ... }`.
+- 1z.157 did `_souls.balance = your_balance` → balance collapsed from 995 to 160. **~835 souls of legitimate local history destroyed.**
+- Souls Ledger row showed the correct `+40 souls · Duel victory vs RenDIESEL` with `Balance: 160`, masking the loss.
+- Subsequent `+15 Daily login` brought balance to 175 (still ~875 short of where it should have been).
+
+**Root cause**: I assumed backend `your_balance` was authoritative. It's not — it's a *partial* ledger sum. `user_souls_ledger` only contains rows the backend writes (currently just Phase α duel-win/duel-loss). The user's historical souls from boss kills, daily login bonuses, engage costs, etc. live entirely in localStorage `hb_souls` and have never been mirrored to D1. So `your_balance` is the partial duel-only backend total, not the full balance.
+
+### Fix (1z.158)
+
+New rule: **apply `your_delta` to LOCAL balance. Never overwrite. Backend `your_balance` is logged in diagnostics but discarded.**
+
+```js
+// OLD (1z.157 — wrong):
+_souls.balance = resp.souls.your_balance;
+
+// NEW (1z.158):
+_souls.balance += resp.souls.your_delta;   // only when not already applied
+```
+
+The idempotency guard (`hb_duel_souls_settled_ids`) is now load-bearing — it's the only thing preventing the same +40 / -25 delta from being applied twice when resolve runs again (which it does on detail-open after auto-resolve). Without the guard, replays would corrupt the balance.
+
+`recordSoulsTransaction` runs after the delta is applied so the ledger row's `Balance:` field reflects the new local total (e.g., 995 + 40 = 1035, not the discarded backend 160).
+
+### Recovery for Richie
+
+A console-callable repair helper is now exposed on `window`:
+
+```js
+window.__repairLocalSoulsBalance(1050)
+```
+
+- Sets `_souls.balance = newValue`, persists, refreshes display.
+- **Does NOT write a ledger row** — this is a repair, not a transaction.
+- Returns `{ before, after }`.
+- Available on any `2.2.3-w35` device via the Capacitor WebView debugger console.
+
+**For Richie's specific corruption**: pre-duel balance was 995 + duel win +40 = 1035. If any daily login/boss kills happened after, add those. Recommended:
+```js
+// On the iPhone, open Capacitor WebView debugger → Console:
+window.__repairLocalSoulsBalance(1050)
+// Or whatever the actual desired post-recovery value is. The
+// Souls Ledger UI rows themselves are correct — only the
+// _souls.balance counter was overwritten.
+```
+
+**Do NOT push an automatic repair for all users** — only Richie's local device hit this on w34. Anthony's account (the loser) wasn't affected the same way because his `_souls.balance` was always tiny (50) and the backend-replace happened to match. Other testers haven't been on w34 yet.
+
+### Updated diagnostics
+
+`duel-souls-settlement-apply` payload now includes:
+- `yourDelta`
+- `backendBalance` — the discarded backend value, logged for forensic visibility.
+- `ignoredBackendBalance: true` — explicit signal that 1z.158 chose to discard.
+- `localBalanceBefore` — pre-delta-apply.
+- `localBalanceAfter` — post-delta-apply.
+- `appliedTransaction` — true only on first apply for this duel.
+- `reason` — `duel_win` | `duel_loss` | `draw_or_zero`.
+
+`duel-souls-settlement-skip` clearly identifies skip reasons:
+- `missing_response` — `resp.souls` was undefined.
+- `invalid_delta` — `your_delta` was not a finite number.
+- `already_applied` — settled-set guard caught a replay.
+- `exception` — unexpected throw.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | helper rewritten (~110 lines net change — delta-apply + idempotency-load-bearing comment + new repair hook) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w34` | `2.2.3-w35` |
+| `app.js?v=` | `487` | `488` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.373` | `v5.374` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e → 28/29 first run, 1 transient sleep-streak flake (pass on isolated retry, unrelated).
+- Backend tests not re-run — backend unchanged.
+
+### What's NOT changed
+
+- ✅ Backend Phase α + β untouched (still live on Worker `8fe22b85`).
+- ✅ D1: no schema, no migration, no mutation.
+- ✅ Backend resolve response shape unchanged — we just stopped consuming `your_balance` on the frontend.
+- ✅ Backend ledger is still source of truth for *backend-tracked* events (duel settlements). Local `hb_souls` is still source of truth for *local-tracked* events (boss kills, daily logins, engage costs).
+- ✅ HealthKit, sync cadence, duel scoring, leaderboard, dungeon, XP, rank, sim values: untouched.
+- ✅ Transaction labels (`Duel victory vs <alias>` / `Duel loss vs <alias>`) preserved.
+- ✅ Idempotency guard preserved (and now load-bearing).
+
+### Smoke test (w35 post-archive)
+
+1. Force-quit + cold-launch on both phones. `5-tap → Copy Debug Info` → confirm `"build": "2.2.3-w35"`.
+2. Record both balances + Souls Ledger top rows.
+3. Run Richie's recovery: open WebView debugger → `window.__repairLocalSoulsBalance(<correct_value>)`. Visible balance immediately corrects. NO new ledger row.
+4. Fresh Steps Duel. Walk + sync + resolve.
+5. **Winner**: counter should go from `pre-balance` to `pre-balance + 40`. Ledger row's `Balance:` field shows `pre-balance + 40`. NOT 160 or any backend partial value.
+6. **Loser**: counter goes from `pre-balance` to `pre-balance - 25`. Ledger row shows `pre-balance - 25`.
+7. Force-quit + cold-launch. Reopen Souls Ledger. **No duplicate rows. Balance stable.**
+8. Reopen the resolved duel detail. Settled-set guard fires — `duel-souls-settlement-skip { reason: 'already_applied', ignoredBackendBalance: true }` breadcrumb. Balance and ledger unchanged.
+9. Draw test on a new duel (both submit equal). Counter unchanged. No ledger row. `reason: 'draw_or_zero'` breadcrumb.
+
+### Future migration note
+
+When backend grows to track all souls events (boss kills, daily logins, etc.), backend `your_balance` will become authoritative and the frontend can switch back to balance-replace. Until then, **discard it**. This decision is documented in the helper's comment block so the next dev sees it clearly.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / sim / sync-cadence changes.
+- ✅ Backend Phase α/β behavior preserved.
+- ✅ w30, w31, w32, w33, w34 preserved (1z.158 is a targeted fix, not a revert).
+
+### Rollback
+
+Revert the `applyDuelSoulsSettlementFromResolve` body to the 1z.157 shape. Re-introduces the balance-overwrite bug. **Do not do this.** If 1z.158 needs to be removed for any reason, the safer revert is to remove the wiring calls entirely (return to pre-1z.157 behavior — no visible duel souls, but no corruption either).
+
+---
+
+## 📌 Session handoff — May 27, 2026 — 1z.157 Phase γ duel souls now visible in app (historical — superseded by 1z.158 critical fix above)
 
 ### ✅ STATUS: Duel souls economy is now USER-VISIBLE. Phase γ frontend consumes the Phase β `souls` payload on resolve, replaces local `hb_souls` with backend-authoritative balance, and writes a local ledger row that appears in the Souls Ledger UI. `2.2.3-w34` web bundle ready for TestFlight.
 

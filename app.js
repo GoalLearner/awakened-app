@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w34';
+  const APP_BUILD_TAG = '2.2.3-w35';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2639,6 +2639,40 @@
     _writeDuelSettledSet(list);
   }
 
+  // v3 Phase 1z.158 — CRITICAL FIX after 1z.157.
+  //
+  // 1z.157 replaced local `_souls.balance` with backend
+  // `resp.souls.your_balance` on the assumption that backend was
+  // authoritative. That assumption was WRONG: backend's
+  // user_souls_ledger only contains rows the backend wrote
+  // (currently just duel-win / duel-loss settlements). The user's
+  // historical balance from boss kills, daily logins, engage
+  // costs, etc. lives entirely in localStorage `hb_souls` and was
+  // never mirrored to the backend ledger. So `your_balance` is a
+  // PARTIAL backend balance, not an authoritative total.
+  //
+  // Real-device bug: Richie's local balance was ~995 souls (from
+  // boss kills + logins). His first duel win returned
+  // your_balance=160 (= sum of his only-ever ledger rows on backend).
+  // The replace collapsed his visible balance from 995 to 160,
+  // destroying ~835 souls of legitimate local history.
+  //
+  // Fix: apply backend `your_delta` to existing LOCAL balance.
+  // Never overwrite. Log `your_balance` only as a diagnostic; mark
+  // `ignoredBackendBalance: true` so future audits can see that
+  // we deliberately discarded it.
+  //
+  // The idempotency guard (hb_duel_souls_settled_ids) is now
+  // load-bearing — it's the only thing preventing the same +40
+  // or -25 delta from being applied twice if resolve runs again
+  // (which it does on detail-open after auto-resolve). Without
+  // the guard, replays would corrupt the balance.
+  //
+  // Backend behavior is unchanged. Once a future train migrates
+  // historical local souls into the backend ledger (or replaces
+  // hb_souls entirely with a backend-authoritative balance read),
+  // we can revisit using `your_balance`. Until then it's
+  // discarded by the frontend.
   function applyDuelSoulsSettlementFromResolve(resp, duel) {
     const _bc = (typeof _addHealthVerifyBreadcrumb === 'function')
       ? _addHealthVerifyBreadcrumb
@@ -2657,62 +2691,81 @@
       const yourBalance = (typeof resp.souls.your_balance === 'number') ? resp.souls.your_balance : null;
       const settledAt   = resp.souls.settled_at || null;
       const duelIdShort = duel ? String(duel.id || '').slice(0, 8) : null;
+      const reasonKey   = yourDelta > 0 ? 'duel_win'
+                        : yourDelta < 0 ? 'duel_loss'
+                        : 'draw_or_zero';
 
-      // 1. Backend-authoritative balance replace. Always safe — the
-      //    backend value is a fresh SUM, not a delta-apply. If the
-      //    user opens an already-resolved duel from another device
-      //    and the local balance is out of date, this corrects it.
-      if (yourBalance != null && Number.isFinite(yourBalance)) {
-        if (!_souls) loadSouls();
-        const before = _souls.balance;
-        if (before !== yourBalance) {
-          _souls.balance = yourBalance;
-          persistSouls();
-          try { refreshSoulsDisplay(); } catch (_) {}
-        }
-      } else {
+      if (yourDelta == null || !Number.isFinite(yourDelta)) {
         _bc('duel-souls-settlement-skip', {
           duelId: duelIdShort,
-          reason: 'invalid_balance',
+          reason: 'invalid_delta',
+          backendBalance: yourBalance,
           build: build,
         });
         return;
       }
 
-      // 2. Local ledger row — only on a non-zero delta (winner or
-      //    loser path). Draws skip. Idempotency guarded by the
-      //    settled-set so reopening a completed duel detail doesn't
-      //    write a duplicate visible row.
-      const reasonKey = yourDelta > 0 ? 'duel_win'
-                      : yourDelta < 0 ? 'duel_loss'
-                      : 'draw_or_zero';
+      if (!_souls) loadSouls();
+      const localBalanceBefore = _souls.balance;
+
+      // Idempotency: if this duel's settlement was already applied
+      // locally, skip both the delta-apply AND the ledger row.
+      const alreadyApplied = duel && duel.id && _isDuelSoulsSettled(duel.id, reasonKey);
       let appliedTransaction = false;
-      if (duel && duel.id && yourDelta !== 0) {
-        const alreadyApplied = _isDuelSoulsSettled(duel.id, reasonKey);
-        if (!alreadyApplied) {
-          const hint = (yourDelta > 0 ? 'duel_win:' : 'duel_loss:') + duel.id;
-          const opponentAlias = (duel.opponent_alias && typeof duel.opponent_alias === 'string')
-            ? duel.opponent_alias
-            : null;
-          try {
-            recordSoulsTransaction(yourDelta, hint, { opponentAlias });
-            _markDuelSoulsSettled(duel.id, reasonKey);
-            appliedTransaction = true;
-          } catch (_) { /* never let ledger UI failure break resolve */ }
-        }
-      } else if (duel && duel.id && yourDelta === 0) {
-        // Mark draw so a re-open doesn't keep evaluating it.
+      let localBalanceAfter = localBalanceBefore;
+
+      if (alreadyApplied) {
+        _bc('duel-souls-settlement-skip', {
+          duelId: duelIdShort,
+          reason: 'already_applied',
+          yourDelta: yourDelta,
+          backendBalance: yourBalance,
+          ignoredBackendBalance: true,
+          localBalance: localBalanceBefore,
+          build: build,
+        });
+        return;
+      }
+
+      // Apply delta to LOCAL balance only. Backend `your_balance`
+      // is intentionally ignored — it's a partial ledger sum, not
+      // authoritative for legacy users.
+      if (yourDelta !== 0 && duel && duel.id) {
+        const hint = (yourDelta > 0 ? 'duel_win:' : 'duel_loss:') + duel.id;
+        const opponentAlias = (duel.opponent_alias && typeof duel.opponent_alias === 'string')
+          ? duel.opponent_alias
+          : null;
+        try {
+          // earnSouls / spendSouls would also call recordSoulsTransaction,
+          // but they ALSO modify _souls.balance. We replicate the same
+          // delta-apply + persist + display-refresh + ledger-row chain
+          // explicitly so the relationship between balance change and
+          // ledger-row balance_after stays atomic and traceable.
+          _souls.balance += yourDelta;
+          persistSouls();
+          recordSoulsTransaction(yourDelta, hint, { opponentAlias });
+          try { refreshSoulsDisplay(); } catch (_) {}
+          _markDuelSoulsSettled(duel.id, reasonKey);
+          appliedTransaction = true;
+          localBalanceAfter = _souls.balance;
+        } catch (_) { /* never let ledger UI failure break resolve */ }
+      } else if (yourDelta === 0 && duel && duel.id) {
+        // Draw — no balance change, no ledger row. Mark settled so
+        // re-opens skip cleanly.
         _markDuelSoulsSettled(duel.id, reasonKey);
       }
 
       _bc('duel-souls-settlement-apply', {
-        duelId:              duelIdShort,
-        yourDelta:           yourDelta,
-        yourBalance:         yourBalance,
-        settledAt:           settledAt,
-        appliedTransaction:  appliedTransaction,
-        reason:              reasonKey,
-        build:               build,
+        duelId:                duelIdShort,
+        yourDelta:             yourDelta,
+        backendBalance:        yourBalance,
+        ignoredBackendBalance: true,
+        localBalanceBefore:    localBalanceBefore,
+        localBalanceAfter:     localBalanceAfter,
+        settledAt:             settledAt,
+        appliedTransaction:    appliedTransaction,
+        reason:                reasonKey,
+        build:                 build,
       });
     } catch (e) {
       try {
@@ -2727,6 +2780,30 @@
   }
   try {
     window.applyDuelSoulsSettlementFromResolve = applyDuelSoulsSettlementFromResolve;
+  } catch (_) {}
+
+  // v3 Phase 1z.158 — one-shot debug repair hook for the 1z.157
+  // balance-overwrite bug. Setting a value here does NOT write a
+  // ledger row (it's a repair, not a transaction). Call from the
+  // browser/iOS WebView console:
+  //   window.__repairLocalSoulsBalance(1050)
+  // Returns { before, after }. No backend involvement. Use ONLY
+  // when a tester's hb_souls was corrupted by 1z.157 — never as
+  // a normal balance setter. Not exposed in the Settings UI.
+  try {
+    window.__repairLocalSoulsBalance = function (newBalance) {
+      if (typeof newBalance !== 'number' || !Number.isFinite(newBalance) || newBalance < 0) {
+        console.warn('[souls-repair] invalid value, expected non-negative number, got:', newBalance);
+        return null;
+      }
+      if (!_souls) loadSouls();
+      const before = _souls.balance;
+      _souls.balance = Math.round(newBalance);
+      persistSouls();
+      try { refreshSoulsDisplay(); } catch (_) {}
+      console.log('[souls-repair] hb_souls', before, '->', _souls.balance);
+      return { before: before, after: _souls.balance };
+    };
   } catch (_) {}
 
   // Format epoch ms as "May 18, 1:32 PM" for ledger rows. Avoids
