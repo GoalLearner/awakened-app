@@ -55,7 +55,139 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session sign-off — May 27, 2026 — w35 stable on real device, Steps Duel two-device MVP test deferred to next session (read this first)
+## 📌 Session handoff — May 27, 2026 — 1z.159 SAFETY + SECURITY — remove public souls repair hook + lock anti-overwrite guard (read this first)
+
+### ✅ STATUS: Console exploit closed. Anti-overwrite contract documented in load-bearing comment. Frontend-only. `2.2.3-w36` web bundle ready for TestFlight.
+
+### Why this train
+
+Two concerns surfaced at the end of the May 27 session:
+1. **Console exploit**: `window.__repairLocalSoulsBalance(value)` was exposed globally in 1z.158 as a one-shot recovery hook for the 1z.157 corruption. Any technical user could set their souls to any value with a single console call. Not appropriate to leave in TestFlight/App Store builds.
+2. **Anti-overwrite contract**: The 1z.158 fix correctly applies `your_delta` only, but the load-bearing rule ("never assign backend `your_balance` to local `hb_souls`") was only explained in a short comment. With multiple future developers (human or LLM) potentially touching this file, the contract needs to be impossible to miss.
+
+Product decision: stop spending time repairing old corrupted ledger rows or worrying about Richie's exact pre-bug balance. Just lock the system so it cannot corrupt balances again, and remove the console exploit.
+
+### What changed in 1z.159
+
+**1. Repair hook deleted entirely** (`app.js:~2792`).
+
+The entire `try { window.__repairLocalSoulsBalance = function (newBalance) { ... }; }` block is gone. Replaced with a 14-line comment that explains why it was there, why it's gone, and what to do if a future bug ever requires a repair path again (gate behind a dev-only condition that's false in production, OR ship as a proper backend-authoritative reconciliation endpoint — never a public window hook).
+
+**Runtime acceptance:**
+```js
+typeof window.__repairLocalSoulsBalance  // → "undefined"
+```
+
+Confirmed: only two references to the symbol remain in `app.js`, and both are inside the removal-rationale comment block — no executable code path assigns it.
+
+**2. Anti-overwrite comment promoted to a box-drawn load-bearing block** (`app.js:~2730`).
+
+The existing 3-line comment above `_souls.balance += yourDelta` is now a 26-line boxed comment:
+
+```
+╔════════════════════════════════════════════════════════╗
+║ LOAD-BEARING — DO NOT REGRESS (v3 Phase 1z.159).      ║
+╠════════════════════════════════════════════════════════╣
+║ Do NOT assign `resp.souls.your_balance` to             ║
+║ `_souls.balance`. Backend `your_balance` is currently  ║
+║ SUM(delta) over `user_souls_ledger` — a partial ledger ║
+║ that only contains duel rows from Phase α onward. It   ║
+║ does NOT include the user's historical local economy   ║
+║ (boss kills, engage costs, daily login, starter        ║
+║ grant). Overwriting `hb_souls` with this value         ║
+║ corrupts every legacy user's balance — see the 1z.157  ║
+║ incident where Richie dropped from ~995 to 160.        ║
+║                                                        ║
+║ Duel settlement applies ONLY `resp.souls.your_delta`   ║
+║ to the existing local balance. `your_balance` is read  ║
+║ for diagnostics (ignoredBackendBalance: true in        ║
+║ breadcrumbs) but NEVER assigned.                       ║
+║                                                        ║
+║ If a future product surface needs the backend balance  ║
+║ to BECOME authoritative, that requires:                ║
+║   1. A backend migration that backfills every          ║
+║      historical local transaction (boss kills, etc.)   ║
+║      into `user_souls_ledger`, OR                      ║
+║   2. A backend `GET /v1/users/me/souls/balance`        ║
+║      endpoint that returns a number that includes the  ║
+║      historical economy.                               ║
+║ Either way, that's a deliberate train — never an       ║
+║ inline overwrite in the duel settlement path.          ║
+╚════════════════════════════════════════════════════════╝
+```
+
+This is now impossible to miss when editing the settlement helper. Any future regression that tries to assign `your_balance` to `_souls.balance` would have to delete this box explicitly — an intentional act, not an accident.
+
+### Behaviour preserved (no regressions)
+
+- ✅ Winner: `+reward_souls` applied to local balance (`_souls.balance += +40`).
+- ✅ Loser: `-stake_souls` applied (`_souls.balance += -25`).
+- ✅ Draw: no delta, no ledger row, no balance change.
+- ✅ Local ledger row written with correct `balance_after` (matches `pre + delta`).
+- ✅ Idempotency guard (`hb_duel_souls_settled_ids`) intact — replays don't double-apply.
+- ✅ Breadcrumbs include `backendBalance`, `ignoredBackendBalance: true`, `localBalanceBefore`, `localBalanceAfter`.
+
+### What's NOT changed
+
+- ✅ Backend: not touched. Phase α + Phase β still live on prod.
+- ✅ D1: no schema, no migration, no mutation.
+- ✅ HealthKit, duel scoring, sync cadence, leaderboard, dungeon, XP, rank, sim values: all untouched.
+- ✅ Boss `kill_*` / `engage_*` souls flows: still use `earnSouls`/`spendSouls` with local arithmetic — unchanged.
+- ✅ Daily login bonus: unchanged.
+- ✅ All sheets/modals/overlay logic: unchanged.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | -23 lines (repair hook + try/catch wrapper deleted), +37 lines (load-bearing comment + removal-rationale doc block) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w35` | `2.2.3-w36` |
+| `app.js?v=` | `488` | `489` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.374` | `v5.375` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- `grep -c "__repairLocalSoulsBalance" app.js` → 2 (both inside the removal-rationale comment; zero executable references).
+- Playwright e2e: 27/29 first run, 2 transient sleep-streak / workout-streak flakes (pass on isolated retry, unrelated to souls economy).
+
+### TestFlight QA for w36
+
+1. Cold-launch on both phones. Confirm `"build": "2.2.3-w36"`.
+2. Open Safari Web Inspector / Capacitor WebView console.
+3. Run: `typeof window.__repairLocalSoulsBalance` — must return `"undefined"`.
+4. Confirm souls balance is unchanged from sign-off state (this train doesn't touch balances).
+5. Optional: complete a 1-hour Steps Duel and confirm winner +40 / loser -25 still applies via delta-only path. Souls Ledger row's `balance_after` should equal `pre-balance + delta`.
+6. Force-quit + cold-launch. Souls Ledger has no duplicate rows. Balance stable.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / sim / sync-cadence changes.
+- ✅ Souls economy values unchanged. No new auto-repair for legacy rows.
+- ✅ Phase α / β / γ duel-souls behaviour preserved.
+
+### Recovery if a future bug needs a repair hook
+
+The rationale comment at `app.js:~2792` documents the path: gate behind a strict dev-only condition false in production, OR ship as a proper backend reconciliation endpoint. Never a public `window.*` hook in shipping builds.
+
+---
+
+## 📌 Session sign-off — May 27, 2026 — w35 stable on real device, Steps Duel two-device MVP test deferred to next session (historical — superseded by 1z.159 above)
 
 ### ✅ STATUS: Session ends in a stable place. Code shipped through `2.2.3-w35` (commit `dd9d26e`). No new feature work pending. Next session = clean two-device Steps Duel verification.
 

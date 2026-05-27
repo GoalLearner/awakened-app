@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w35';
+  const APP_BUILD_TAG = '2.2.3-w36';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2727,9 +2727,35 @@
         return;
       }
 
-      // Apply delta to LOCAL balance only. Backend `your_balance`
-      // is intentionally ignored — it's a partial ledger sum, not
-      // authoritative for legacy users.
+      // ╔════════════════════════════════════════════════════════╗
+      // ║ LOAD-BEARING — DO NOT REGRESS (v3 Phase 1z.159).      ║
+      // ╠════════════════════════════════════════════════════════╣
+      // ║ Do NOT assign `resp.souls.your_balance` to             ║
+      // ║ `_souls.balance`. Backend `your_balance` is currently  ║
+      // ║ SUM(delta) over `user_souls_ledger` — a partial ledger ║
+      // ║ that only contains duel rows from Phase α onward. It   ║
+      // ║ does NOT include the user's historical local economy   ║
+      // ║ (boss kills, engage costs, daily login, starter        ║
+      // ║ grant). Overwriting `hb_souls` with this value         ║
+      // ║ corrupts every legacy user's balance — see the 1z.157  ║
+      // ║ incident where Richie dropped from ~995 to 160.        ║
+      // ║                                                        ║
+      // ║ Duel settlement applies ONLY `resp.souls.your_delta`   ║
+      // ║ to the existing local balance. `your_balance` is read  ║
+      // ║ for diagnostics (ignoredBackendBalance: true in        ║
+      // ║ breadcrumbs) but NEVER assigned.                       ║
+      // ║                                                        ║
+      // ║ If a future product surface needs the backend balance  ║
+      // ║ to BECOME authoritative, that requires:                ║
+      // ║   1. A backend migration that backfills every          ║
+      // ║      historical local transaction (boss kills, etc.)   ║
+      // ║      into `user_souls_ledger`, OR                      ║
+      // ║   2. A backend `GET /v1/users/me/souls/balance`        ║
+      // ║      endpoint that returns a number that includes the  ║
+      // ║      historical economy.                               ║
+      // ║ Either way, that's a deliberate train — never an       ║
+      // ║ inline overwrite in the duel settlement path.          ║
+      // ╚════════════════════════════════════════════════════════╝
       if (yourDelta !== 0 && duel && duel.id) {
         const hint = (yourDelta > 0 ? 'duel_win:' : 'duel_loss:') + duel.id;
         const opponentAlias = (duel.opponent_alias && typeof duel.opponent_alias === 'string')
@@ -2782,29 +2808,20 @@
     window.applyDuelSoulsSettlementFromResolve = applyDuelSoulsSettlementFromResolve;
   } catch (_) {}
 
-  // v3 Phase 1z.158 — one-shot debug repair hook for the 1z.157
-  // balance-overwrite bug. Setting a value here does NOT write a
-  // ledger row (it's a repair, not a transaction). Call from the
-  // browser/iOS WebView console:
-  //   window.__repairLocalSoulsBalance(1050)
-  // Returns { before, after }. No backend involvement. Use ONLY
-  // when a tester's hb_souls was corrupted by 1z.157 — never as
-  // a normal balance setter. Not exposed in the Settings UI.
-  try {
-    window.__repairLocalSoulsBalance = function (newBalance) {
-      if (typeof newBalance !== 'number' || !Number.isFinite(newBalance) || newBalance < 0) {
-        console.warn('[souls-repair] invalid value, expected non-negative number, got:', newBalance);
-        return null;
-      }
-      if (!_souls) loadSouls();
-      const before = _souls.balance;
-      _souls.balance = Math.round(newBalance);
-      persistSouls();
-      try { refreshSoulsDisplay(); } catch (_) {}
-      console.log('[souls-repair] hb_souls', before, '->', _souls.balance);
-      return { before: before, after: _souls.balance };
-    };
-  } catch (_) {}
+  // v3 Phase 1z.159 — removed. The one-shot debug repair hook
+  // (`window.__repairLocalSoulsBalance`) was added in 1z.158 to
+  // recover from the 1z.157 balance-overwrite bug. With 1z.159's
+  // permanent anti-overwrite guard above, no future code path can
+  // corrupt `hb_souls` from the duel settlement layer, so the
+  // recovery hook is no longer needed. Removing it also closes the
+  // console exploit where any technical user could set their souls
+  // balance to any value with one call. If a future bug ever
+  // requires a repair hook again, gate it behind a strict dev-only
+  // condition that's false in production builds, OR ship it as a
+  // proper backend-authoritative reconciliation endpoint.
+  //
+  // Acceptance check at runtime in production:
+  //   typeof window.__repairLocalSoulsBalance === 'undefined'
 
   // Format epoch ms as "May 18, 1:32 PM" for ledger rows. Avoids
   // pulling a date lib — same toLocaleString call style used
