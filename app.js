@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w33';
+  const APP_BUILD_TAG = '2.2.3-w34';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2510,9 +2510,33 @@
   // Convert a `source`/`sink` string from earnSouls/spendSouls into
   // a typed, user-friendly transaction record. Unknown strings fall
   // through to a generic 'system' entry rather than dropping data.
-  function _classifySoulsEvent(amount, hint) {
+  //
+  // v3 Phase 1z.157 — `opts` is an optional 3rd argument. Currently
+  // only the `opponentAlias` field is consumed (duel-win/duel-loss
+  // labels). All other call sites still pass two args and get the
+  // legacy behavior unchanged.
+  function _classifySoulsEvent(amount, hint, opts) {
     const h = String(hint || '');
     const isGain = amount > 0;
+    // v3 Phase 1z.157 — duel souls settlement labels.
+    // Hint shape: 'duel_win:<duelId>' / 'duel_loss:<duelId>'.
+    // opponentAlias arrives via opts so we don't have to encode it
+    // into the hint string.
+    if (h.indexOf('duel_win:') === 0 || h.indexOf('duel_loss:') === 0) {
+      const isWin = h.indexOf('duel_win:') === 0;
+      const id    = h.slice(isWin ? 9 : 10);     // 'duel_win:' = 9 chars
+      const alias = opts && typeof opts.opponentAlias === 'string' && opts.opponentAlias
+        ? opts.opponentAlias
+        : null;
+      return {
+        type:   isWin ? 'duel_win' : 'duel_loss',
+        label:  alias
+          ? (isWin ? 'Duel victory vs ' + alias : 'Duel loss vs ' + alias)
+          : (isWin ? 'Duel victory' : 'Duel loss'),
+        detail: isWin ? 'Verified duel reward' : 'Verified duel stake',
+        ref_id: id || null,
+      };
+    }
     if (h.indexOf('kill_') === 0) {
       const id  = h.slice(5);
       const cfg = (typeof BOSSES === 'object' && BOSSES) ? BOSSES[id] : null;
@@ -2547,10 +2571,10 @@
     };
   }
 
-  function recordSoulsTransaction(delta, hint) {
+  function recordSoulsTransaction(delta, hint, opts) {
     if (typeof delta !== 'number' || delta === 0) return;
     if (!_souls) loadSouls();
-    const meta = _classifySoulsEvent(delta, hint);
+    const meta = _classifySoulsEvent(delta, hint, opts);
     const now = Date.now();
     const entry = {
       id:            String(now) + '_' + Math.random().toString(36).slice(2, 8),
@@ -2567,6 +2591,143 @@
     if (log.length > SOULS_LEDGER_MAX) log.length = SOULS_LEDGER_MAX;
     _writeSoulsLedger(log);
   }
+
+  // ─── v3 Phase 1z.157 — duel souls settlement (Phase γ) ───────
+  //
+  // Phase α (1z.155) wrote winner +reward / loser -stake rows to
+  // backend user_souls_ledger. Phase β (1z.156) attached a
+  // `souls: { your_delta, your_balance, settled_at }` payload to
+  // /v1/duels/:id/resolve. Phase γ — this — finally moves that
+  // backend truth into the visible app: replaces hb_souls with
+  // backend-authoritative balance, writes a local ledger row, and
+  // resists duplicates if the same response is replayed.
+  //
+  // Backend is primary idempotency (UNIQUE constraint on
+  // user_souls_ledger). The frontend guard here exists ONLY to
+  // prevent a duplicate visible row in the local ledger UI when
+  // the response is replayed (e.g., reopening an already-resolved
+  // duel detail). Balance authoritative-replace is always safe
+  // because backend's SUM never double-counts.
+  const SOULS_DUEL_SETTLED_KEY = 'hb_duel_souls_settled_ids';
+  const SOULS_DUEL_SETTLED_MAX = 200;
+  function _readDuelSettledSet() {
+    try {
+      const raw = localStorage.getItem(SOULS_DUEL_SETTLED_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+  function _writeDuelSettledSet(arr) {
+    try {
+      const trimmed = arr.length > SOULS_DUEL_SETTLED_MAX
+        ? arr.slice(arr.length - SOULS_DUEL_SETTLED_MAX)
+        : arr;
+      localStorage.setItem(SOULS_DUEL_SETTLED_KEY, JSON.stringify(trimmed));
+    } catch (_) { /* quota — silent, backend is still source of truth */ }
+  }
+  function _isDuelSoulsSettled(duelId, reason) {
+    if (!duelId || !reason) return false;
+    return _readDuelSettledSet().indexOf(duelId + ':' + reason) !== -1;
+  }
+  function _markDuelSoulsSettled(duelId, reason) {
+    if (!duelId || !reason) return;
+    const list = _readDuelSettledSet();
+    const key = duelId + ':' + reason;
+    if (list.indexOf(key) !== -1) return;
+    list.push(key);
+    _writeDuelSettledSet(list);
+  }
+
+  function applyDuelSoulsSettlementFromResolve(resp, duel) {
+    const _bc = (typeof _addHealthVerifyBreadcrumb === 'function')
+      ? _addHealthVerifyBreadcrumb
+      : function () {};
+    const build = (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown';
+    try {
+      if (!resp || !resp.souls || typeof resp.souls !== 'object') {
+        _bc('duel-souls-settlement-skip', {
+          duelId: duel ? String(duel.id || '').slice(0, 8) : null,
+          reason: 'missing_response',
+          build: build,
+        });
+        return;
+      }
+      const yourDelta   = (typeof resp.souls.your_delta === 'number')   ? resp.souls.your_delta   : null;
+      const yourBalance = (typeof resp.souls.your_balance === 'number') ? resp.souls.your_balance : null;
+      const settledAt   = resp.souls.settled_at || null;
+      const duelIdShort = duel ? String(duel.id || '').slice(0, 8) : null;
+
+      // 1. Backend-authoritative balance replace. Always safe — the
+      //    backend value is a fresh SUM, not a delta-apply. If the
+      //    user opens an already-resolved duel from another device
+      //    and the local balance is out of date, this corrects it.
+      if (yourBalance != null && Number.isFinite(yourBalance)) {
+        if (!_souls) loadSouls();
+        const before = _souls.balance;
+        if (before !== yourBalance) {
+          _souls.balance = yourBalance;
+          persistSouls();
+          try { refreshSoulsDisplay(); } catch (_) {}
+        }
+      } else {
+        _bc('duel-souls-settlement-skip', {
+          duelId: duelIdShort,
+          reason: 'invalid_balance',
+          build: build,
+        });
+        return;
+      }
+
+      // 2. Local ledger row — only on a non-zero delta (winner or
+      //    loser path). Draws skip. Idempotency guarded by the
+      //    settled-set so reopening a completed duel detail doesn't
+      //    write a duplicate visible row.
+      const reasonKey = yourDelta > 0 ? 'duel_win'
+                      : yourDelta < 0 ? 'duel_loss'
+                      : 'draw_or_zero';
+      let appliedTransaction = false;
+      if (duel && duel.id && yourDelta !== 0) {
+        const alreadyApplied = _isDuelSoulsSettled(duel.id, reasonKey);
+        if (!alreadyApplied) {
+          const hint = (yourDelta > 0 ? 'duel_win:' : 'duel_loss:') + duel.id;
+          const opponentAlias = (duel.opponent_alias && typeof duel.opponent_alias === 'string')
+            ? duel.opponent_alias
+            : null;
+          try {
+            recordSoulsTransaction(yourDelta, hint, { opponentAlias });
+            _markDuelSoulsSettled(duel.id, reasonKey);
+            appliedTransaction = true;
+          } catch (_) { /* never let ledger UI failure break resolve */ }
+        }
+      } else if (duel && duel.id && yourDelta === 0) {
+        // Mark draw so a re-open doesn't keep evaluating it.
+        _markDuelSoulsSettled(duel.id, reasonKey);
+      }
+
+      _bc('duel-souls-settlement-apply', {
+        duelId:              duelIdShort,
+        yourDelta:           yourDelta,
+        yourBalance:         yourBalance,
+        settledAt:           settledAt,
+        appliedTransaction:  appliedTransaction,
+        reason:              reasonKey,
+        build:               build,
+      });
+    } catch (e) {
+      try {
+        _bc('duel-souls-settlement-skip', {
+          duelId: duel ? String(duel.id || '').slice(0, 8) : null,
+          reason: 'exception',
+          error:  (e && e.message) ? String(e.message).slice(0, 80) : 'unknown',
+          build:  build,
+        });
+      } catch (_) {}
+    }
+  }
+  try {
+    window.applyDuelSoulsSettlementFromResolve = applyDuelSoulsSettlementFromResolve;
+  } catch (_) {}
 
   // Format epoch ms as "May 18, 1:32 PM" for ledger rows. Avoids
   // pulling a date lib — same toLocaleString call style used
@@ -20577,6 +20738,15 @@
           });
         }
       } catch (_) {}
+      // v3 Phase 1z.157 — Phase γ. Backend now returns
+      // `souls: { your_delta, your_balance, settled_at }` (Phase β,
+      // 1z.156). Sync visible balance + write a local ledger row
+      // so the user actually sees the duel result reflected in
+      // their souls counter. Idempotent — replays don't dup-write.
+      if (res && res.ok && res.duel) {
+        try { applyDuelSoulsSettlementFromResolve(res, res.duel); }
+        catch (_) { /* settlement UI must never block resolve return */ }
+      }
       if (res && res.ok && res.duel) return res.duel;
     } catch (e) {
       try {
@@ -22105,7 +22275,18 @@
       if (isFinite(endsMs) && Date.now() >= endsMs && typeof Auth.resolveDuel === 'function') {
         try {
           const rr = await Auth.resolveDuel(duelId);
-          if (rr && rr.ok && rr.duel) d = rr.duel;
+          if (rr && rr.ok && rr.duel) {
+            d = rr.duel;
+            // v3 Phase 1z.157 — Phase γ. Apply souls settlement
+            // from the resolve response on the detail-open path
+            // too. Idempotent: the maybeResolveDuelIfEnded path
+            // (called from list/hero render) may have already
+            // applied this settlement, in which case the
+            // settled-set guard suppresses the duplicate local
+            // ledger row. Balance authoritative-replace is always
+            // safe and self-correcting.
+            try { applyDuelSoulsSettlementFromResolve(rr, d); } catch (_) {}
+          }
         } catch (_) {}
       }
     }

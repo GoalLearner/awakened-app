@@ -55,7 +55,117 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.154 Steps Duel debug payload clarity (read this first)
+## 📌 Session handoff — May 27, 2026 — 1z.157 Phase γ duel souls now visible in app (read this first)
+
+### ✅ STATUS: Duel souls economy is now USER-VISIBLE. Phase γ frontend consumes the Phase β `souls` payload on resolve, replaces local `hb_souls` with backend-authoritative balance, and writes a local ledger row that appears in the Souls Ledger UI. `2.2.3-w34` web bundle ready for TestFlight.
+
+### The three-phase arc (now complete)
+
+| Phase | Build | What it ships | User-visible? |
+|---|---|---|---|
+| α (1z.155) | backend `8c651d1` deployed (Worker `5e554646`) | Loser stake deduction row in `user_souls_ledger` | No (data only) |
+| β (1z.156) | backend `02237e0` deployed (Worker `8fe22b85`) | `souls: { your_delta, your_balance, settled_at }` on resolve response | No (wire only) |
+| **γ (1z.157, this train)** | frontend `2.2.3-w34` | Frontend reads the payload → updates `hb_souls` + writes local ledger row | **YES** |
+
+### What changes for the user
+
+Once a duel resolves on a w34 device:
+
+| Outcome | Souls counter | Souls Ledger UI |
+|---|---|---|
+| Win  | jumps +40 (backend-authoritative `your_balance`) | new row: `+40 souls · Duel victory vs <alias>` |
+| Loss | drops -25 | new row: `-25 souls · Duel loss vs <alias>` |
+| Draw | unchanged | no row |
+
+### Implementation summary
+
+**Helper (new):** `applyDuelSoulsSettlementFromResolve(resp, duel)` at `app.js:~2595`.
+- Reads `resp.souls.your_delta`, `your_balance`, `settled_at`.
+- **Balance replace is backend-authoritative**: `_souls.balance = resp.souls.your_balance`, then `persistSouls()` + `refreshSoulsDisplay()`. Never delta-applies — backend's SUM is truth, so drift is structurally impossible.
+- **Local ledger row** via `recordSoulsTransaction(delta, 'duel_win:<id>' | 'duel_loss:<id>', { opponentAlias })` for non-zero delta.
+- **Idempotency** via `hb_duel_souls_settled_ids` localStorage set, capped at 200 entries FIFO. Prevents duplicate visible ledger rows if the same response is replayed (reopening an already-resolved duel detail). Backend is primary idempotency (UNIQUE constraint); this is paranoia.
+- Wrapped in try/catch — UI failure can NEVER block the resolve return path.
+
+**`_classifySoulsEvent` extended:** new `duel_win:<id>` and `duel_loss:<id>` hint paths produce labels `Duel victory vs <alias>` / `Duel loss vs <alias>` (alias from `opts.opponentAlias`). Backward compatible — every existing call site still passes two args.
+
+**`recordSoulsTransaction` extended:** optional third `opts` parameter forwarded to the classifier. Existing two-arg calls unchanged.
+
+**Wired into both resolve call sites:**
+1. `maybeResolveDuelIfEnded` (line ~20741) — called from list render / hero auto-resolve when `now >= ends_at`.
+2. `_ddoPopulate` detail-open path (line ~22277) — called when the user opens a detail sheet on an ended-but-active duel.
+
+Both sites call `applyDuelSoulsSettlementFromResolve(rr, rr.duel)` after a successful resolve, including the `already_resolved: true` idempotent path. The settled-set guard ensures the local ledger row is written exactly once per (duel, outcome).
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +160 lines (helper + classifier extension + 2 call-site wirings + idempotency guard) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w33` | `2.2.3-w34` |
+| `app.js?v=` | `486` | `487` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.372` | `v5.373` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e → **29/29 pass first run, no flakes**.
+- Backend tests not re-run — no backend changes in this train.
+
+### What's NOT changed
+
+- ✅ Backend: not touched in this train (Phase α + β already live).
+- ✅ D1: no schema, no migration, no mutation.
+- ✅ HealthKit, sync cadence, duel scoring, leaderboard, dungeon, XP, rank, sim values: untouched.
+- ✅ `_souls.balance` is the same storage shape — only the source of writes (backend-authoritative replace vs local +/-) changed for the duel-resolve path.
+- ✅ Boss `kill_*` / `engage_*` souls flows: untouched (still use `earnSouls`/`spendSouls` with local arithmetic — they're authoritative because backend doesn't track them yet).
+- ✅ Daily login bonus: untouched.
+
+### Smoke test (post-MacBook archive)
+
+1. Both Richie + Anthony phones on `2.2.3-w34`. Cold-launch. Confirm via 5-tap version → Copy Debug Info → `"build": "2.2.3-w34"`.
+2. Record both balances (UI) and Souls Ledger state.
+3. Start fresh 1-hour Steps Duel (Richie challenges, Anthony accepts).
+4. Walk on both phones, sync.
+5. Let duel resolve (or wait + Sync Now).
+6. **Winner**: counter jumps +40 instantly. Souls Ledger top row reads `+40 souls · Duel victory vs <loser>`.
+7. **Loser**: counter drops -25. Souls Ledger top row reads `-25 souls · Duel loss vs <winner>`.
+8. Force-quit + cold-launch. Reopen Souls Ledger. **No duplicate rows.** Balance stable.
+9. Reopen the resolved duel detail. Settled-set guard fires — no duplicate row.
+10. **Draw test**: trigger a draw (both submit same value). Counter unchanged. No ledger row.
+
+If steps 6 + 8 both pass on TestFlight, the duel souls arc (α + β + γ) is officially complete and user-visible.
+
+### TestFlight build needed
+
+**Yes.** This is the first user-visible train in the duel-economy arc. MacBook archive + TestFlight upload required.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / sim / sync-cadence changes.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+- ✅ w30, w31, w32, w33, Patch A1, Patch A2 all preserved.
+
+### Rollback
+
+Revert the `applyDuelSoulsSettlementFromResolve` calls at both call sites (2 lines each). Helper + classifier extension can stay — dormant unless wired. Or revert the entire 1z.157 block atomically. Either way, the previous behavior (local `hb_souls` untouched by duels) is restored without affecting Phase α/β backend.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.154 Steps Duel debug payload clarity (historical — superseded by 1z.157 above)
 
 ### ✅ STATUS: Diagnostic-only train. **No UI bug.** Audit confirmed UI is correct; only the legacy `duel-active-hero-render` breadcrumb payload was misleading. Code committed on `main`. Frontend `2.2.3-w33` web bundle ready. No backend deploy needed.
 
