@@ -55,7 +55,103 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.153 Steps Duel stale-score serializer fix (read this first — BACKEND DEPLOY PENDING)
+## 📌 Session handoff — May 26, 2026 — 1z.154 Steps Duel debug payload clarity (read this first)
+
+### ✅ STATUS: Diagnostic-only train. **No UI bug.** Audit confirmed UI is correct; only the legacy `duel-active-hero-render` breadcrumb payload was misleading. Code committed on `main`. Frontend `2.2.3-w33` web bundle ready. No backend deploy needed.
+
+### Audit verdict — Classification A (debug-only mismatch)
+
+Three sites mapping (challenger_score, opponent_score) → (You, Rival):
+
+| Site | Mapping | Verdict |
+|---|---|---|
+| `_duelStepsForViewer(duel)` line 20724 — used by **all UI surfaces** (hero, list rows, detail screen, freshness chips) | `const isChall = duel.role === 'challenger'; you = isChall ? challenger_progress_value : opponent_progress_value` | ✅ correct viewer perspective |
+| `duel-score-source-render` breadcrumb (1z.153) | `duel.role === 'challenger' ? challenger : opponent` | ✅ correct viewer perspective |
+| **`duel-active-hero-render` breadcrumb (1z.147 legacy)** | `challenger_progress_value != null ? challenger : opponent` (presence check, not role check) | ❌ logged raw `challenger_progress_value` regardless of viewer |
+
+Real-device evidence from w32 debug for Anthony-vs-Richie (Richie = opponent):
+- UI: `You: 42, Rival: 71` ← correct
+- `duel-score-source-render`: `youScore: 42, rivalScore: 71` ← correct
+- `duel-active-hero-render`: `youScore: 71, rivalScore: 42` ← misleading payload (logged Anthony's `challenger_progress_value` as `youScore`)
+
+The third row never affected what users saw — it was always a diagnostic-only mismatch. `_duelStepsForViewer` is the canonical helper for every UI surface and was never broken.
+
+### Fix — diagnostic field clarity only
+
+Both breadcrumbs (`duel-active-hero-render` and `duel-score-source-render`) now emit a consistent, explicit payload shape:
+
+```
+viewerRole              (challenger | opponent | null)
+viewerYouScore          (viewer-perspective)
+viewerRivalScore        (viewer-perspective)
+rawChallengerScore      (raw row value — never role-transformed)
+rawOpponentScore        (raw row value — never role-transformed)
+viewerYouUpdatedAt      (only on score-source-render)
+viewerRivalUpdatedAt    (only on score-source-render)
+youScore / rivalScore   (legacy aliases — now point to viewer values for back-compat)
+youUpdatedAt / rivalUpdatedAt (legacy aliases — viewer perspective)
+duelId, status, duelType, source, build, timeRemainingMs, startsAt, endsAt
+```
+
+Key change: `youScore` / `rivalScore` legacy fields are now **always viewer-perspective** in both breadcrumbs (was raw in the pre-1z.154 `active-hero-render` payload). Any existing debug dashboard or filter reading `youScore` will now read correctly across the entire breadcrumb history going forward.
+
+### What's NOT changed
+
+- ✅ Visual UI: untouched. `_duelStepsForViewer` was already correct.
+- ✅ Backend: untouched. No deploy needed.
+- ✅ D1: no schema, no migration, no mutation.
+- ✅ Souls / stake / reward / economy: untouched.
+- ✅ w30 day-anchored delta scoring: preserved.
+- ✅ w31 sync loop + Sync Now + freshness chip: preserved.
+- ✅ w32 snapshot-effective source: preserved.
+- ✅ Patches A1 + A2: preserved.
+- ✅ HealthKit permissions: untouched.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +60 lines (two breadcrumb payloads rewritten with explicit fields + comment explaining the audit) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w32` | `2.2.3-w33` |
+| `app.js?v=` | `485` | `486` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.371` | `v5.372` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 27/29 first run, 2 transient sleep-streak/dungeon-rank flakes (pass on isolated retry, unrelated).
+- Backend tests not re-run (no backend changes).
+
+### TestFlight QA for w33
+
+Pure diagnostic train — no user-visible change. Verify only that Copy Debug Info contains the new field shape:
+
+1. Cold-launch w33 on both phones. Confirm `"build": "2.2.3-w33"`.
+2. Open any active duel + sync.
+3. Search Copy Debug Info for `duel-active-hero-render`. Payload should include `viewerRole`, `viewerYouScore`, `viewerRivalScore`, `rawChallengerScore`, `rawOpponentScore`. Legacy `youScore`/`rivalScore` should now match the viewer-perspective values (not the raw challenger row).
+4. For a duel where Richie is opponent: `viewerYouScore` should match what the UI shows for "You", and `rawChallengerScore` should be the opponent's UI "Rival" value.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from this machine. No backend deploy needed. No D1 mutation. No migration. No HealthKit / souls / economy / leaderboard / dungeon / rank changes. w30, w31, w32, Patch A1, Patch A2 all preserved.
+
+### Rollback
+
+Revert the rewritten `try` block in `renderActiveDuelHero` (≈75 lines back to ≈40 lines of the prior shape). UI stays identical either way — this is diagnostic-only.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.153 Steps Duel stale-score serializer fix (historical — superseded by 1z.154 above)
 
 ### 🟡 STATUS: Code committed on `main`. Backend `getDuelEffectiveScores` changed (serializer-only, no schema). Frontend `2.2.3-w32` web bundle ready. Awaiting explicit approval to deploy Worker + MacBook archive.
 

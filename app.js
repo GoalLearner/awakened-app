@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w32';
+  const APP_BUILD_TAG = '2.2.3-w33';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21177,44 +21177,93 @@
     // v3 Phase 1z.147 — Phase B diagnostics. One breadcrumb per
     // render so Copy Debug Info can prove the hero is reading
     // the current backend state (or not). Privacy-safe.
+    // v3 Phase 1z.154 — diagnostic field clarity pass.
+    //
+    // Audit of w32 debug pulls showed two breadcrumbs disagreeing on
+    // what `youScore` meant:
+    //   - duel-active-hero-render logged RAW challenger_progress_value
+    //     as `youScore` (legacy 1z.147 shape — broken by design, the
+    //     field was never viewer-perspective). For Anthony-vs-Richie
+    //     where Richie was opponent, this logged Anthony's 71 as
+    //     `youScore` while the actual UI correctly showed Richie's 42.
+    //   - duel-score-source-render (added in 1z.153) logged the
+    //     correct viewer-perspective values via duel.role check.
+    //
+    // No UI bug — _duelStepsForViewer drives all UI surfaces and
+    // already handles viewer perspective correctly. Only the
+    // breadcrumb payload field names were misleading. Fix is to
+    // expose BOTH raw and viewer-perspective values explicitly so
+    // future audits never have to guess which axis a field is on.
     try {
-      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+      if (typeof _addHealthVerifyBreadcrumb === 'function' && duel) {
+        const isChall = duel.role === 'challenger';
+        const rawChallengerScore = (duel.challenger_progress_value != null) ? duel.challenger_progress_value : null;
+        const rawOpponentScore   = (duel.opponent_progress_value   != null) ? duel.opponent_progress_value   : null;
+        const viewerYouScore     = isChall ? rawChallengerScore : rawOpponentScore;
+        const viewerRivalScore   = isChall ? rawOpponentScore   : rawChallengerScore;
+        const viewerYouUpdated   = isChall ? duel.challenger_progress_updated_at : duel.opponent_progress_updated_at;
+        const viewerRivalUpdated = isChall ? duel.opponent_progress_updated_at   : duel.challenger_progress_updated_at;
         _addHealthVerifyBreadcrumb('duel-active-hero-render', {
-          duelId:           duel ? String(duel.id || '').slice(0, 8) : null,
-          status:           duel ? duel.status : 'no-active',
-          duelType:         duel ? duel.duel_type : null,
-          youScore:         duel ? (duel.challenger_progress_value != null ? duel.challenger_progress_value : duel.opponent_progress_value) : null,
-          rivalScore:       duel ? (duel.challenger_progress_value != null ? duel.opponent_progress_value : duel.challenger_progress_value) : null,
-          timeRemainingMs:  duel ? duel.time_remaining_ms : null,
-          startsAt:         duel ? duel.starts_at : null,
-          endsAt:           duel ? duel.ends_at : null,
-          build:            (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          duelId:             String(duel.id || '').slice(0, 8),
+          status:             duel.status,
+          duelType:           duel.duel_type,
+          viewerRole:         duel.role || null,
+          // Viewer-perspective (matches what the UI actually paints).
+          viewerYouScore,
+          viewerRivalScore,
+          // Raw row scores (no viewer transform — useful when the bug
+          // report comes from a screenshot of the OTHER participant).
+          rawChallengerScore,
+          rawOpponentScore,
+          // Legacy field name kept for backward-compat with existing
+          // debug filters/dashboards. NOW set to the viewer-perspective
+          // value so old consumers also read correct data. The
+          // `viewerYouScore` / `viewerRivalScore` fields above are
+          // canonical.
+          youScore:           viewerYouScore,
+          rivalScore:         viewerRivalScore,
+          timeRemainingMs:    duel.time_remaining_ms,
+          startsAt:           duel.starts_at,
+          endsAt:             duel.ends_at,
+          build:              (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
         });
-        // v3 Phase 1z.153 — source-of-truth signal. Helps next
-        // audit prove which path produced the rendered scores.
-        // Steps duels on w32+ backend should always render from
-        // duel_progress_snapshots; other duel types from verified
-        // events. Frontend can't directly see which backend source
-        // was used, so it logs the fields it consumed.
-        if (duel) {
-          _addHealthVerifyBreadcrumb('duel-score-source-render', {
-            duelId:     String(duel.id || '').slice(0, 8),
-            duelType:   duel.duel_type,
-            status:     duel.status,
-            // The progress_value fields are populated by the
-            // serializer from getDuelEffectiveScores (1z.153 prefers
-            // snapshots for steps duels). progress_updated_at is
-            // pulled directly from duel_progress_snapshots — its
-            // presence confirms snapshot path.
-            youScore:                duel.role === 'challenger' ? duel.challenger_progress_value : duel.opponent_progress_value,
-            rivalScore:              duel.role === 'challenger' ? duel.opponent_progress_value   : duel.challenger_progress_value,
-            youUpdatedAt:            duel.role === 'challenger' ? duel.challenger_progress_updated_at : duel.opponent_progress_updated_at,
-            rivalUpdatedAt:          duel.role === 'challenger' ? duel.opponent_progress_updated_at   : duel.challenger_progress_updated_at,
-            // For steps duels on w32+ backend we expect 'snapshot_effective'.
-            source:    (duel.duel_type === 'steps') ? 'snapshot_effective' : 'verified_events_or_fallback',
-            build:     (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
-          });
-        }
+        // v3 Phase 1z.153 → 1z.154 — source-of-truth signal with the
+        // same field-naming discipline. The progress_value fields are
+        // populated by the serializer from getDuelEffectiveScores
+        // (1z.153 prefers snapshots for steps duels). progress_updated_at
+        // is pulled directly from duel_progress_snapshots — its presence
+        // confirms snapshot path.
+        _addHealthVerifyBreadcrumb('duel-score-source-render', {
+          duelId:             String(duel.id || '').slice(0, 8),
+          duelType:           duel.duel_type,
+          status:             duel.status,
+          viewerRole:         duel.role || null,
+          viewerYouScore,
+          viewerRivalScore,
+          rawChallengerScore,
+          rawOpponentScore,
+          viewerYouUpdatedAt:   viewerYouUpdated || null,
+          viewerRivalUpdatedAt: viewerRivalUpdated || null,
+          // Legacy field names retained for backward-compat. Both now
+          // carry the viewer-perspective value (was raw in 1z.153).
+          youScore:           viewerYouScore,
+          rivalScore:         viewerRivalScore,
+          youUpdatedAt:       viewerYouUpdated || null,
+          rivalUpdatedAt:     viewerRivalUpdated || null,
+          // For steps duels on w32+ backend we expect 'snapshot_effective'.
+          source:             (duel.duel_type === 'steps') ? 'snapshot_effective' : 'verified_events_or_fallback',
+          build:              (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      } else if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        // No active duel — keep the empty-render breadcrumb so absence
+        // is still observable in debug pulls.
+        _addHealthVerifyBreadcrumb('duel-active-hero-render', {
+          duelId:    null,
+          status:    'no-active',
+          duelType:  null,
+          viewerRole: null,
+          build:     (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
       }
     } catch (_) {}
     if (!duel) {
