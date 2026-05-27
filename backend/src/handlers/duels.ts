@@ -343,6 +343,32 @@ async function getDuelEffectiveScores(
   const out = new Map<string, number>();
   out.set(duel.challenger_user_id, 0);
   out.set(duel.opponent_user_id, 0);
+
+  // v3 Phase 1z.153 — for steps duels, the canonical live store is
+  // `duel_progress_snapshots`. The /v1/duels/:id/progress endpoint
+  // writes there directly with the w30 day-anchored delta value
+  // (correct), and the /progress endpoint returns from there too —
+  // so submits and reads agree at the snapshot layer.
+  //
+  // `verified_events` is ALSO written for steps duels (by
+  // submitVerifiedEventsForDuels on the client) but for legacy
+  // reasons that path used the pre-w30 narrow-window step query,
+  // which silently returns 0. A stale verified_events row would
+  // win the MAX() aggregation and overwrite the fresh snapshot,
+  // producing the submit-vs-list inconsistency observed on w31:
+  // submit returned {you: 285, rival: 97} while the list refetch
+  // returned 146/0.
+  //
+  // Fix: read snapshots first for steps duels. Verified events
+  // remain the source of truth for the OTHER scorable duel types
+  // (sleep, bedtime, strength, verified_objectives) where the
+  // snapshot table is not used.
+  if (duel.duel_type === 'steps') {
+    const legacy = await getDuelProgress(env, duel.id);
+    legacy.forEach((v, k) => out.set(k, v));
+    return out;
+  }
+
   const cfg = DUEL_SCORING_CFG[duel.duel_type];
   if (cfg && cfg.aggregate !== 'unsupported') {
     const hasEvents = await hasAnyVerifiedEventForDuel(env, duel.id);
@@ -351,11 +377,6 @@ async function getDuelEffectiveScores(
       m.forEach((v, k) => out.set(k, v));
       return out;
     }
-  }
-  // Fallback: legacy steps snapshot (only useful for steps duels).
-  if (duel.duel_type === 'steps') {
-    const legacy = await getDuelProgress(env, duel.id);
-    legacy.forEach((v, k) => out.set(k, v));
   }
   return out;
 }

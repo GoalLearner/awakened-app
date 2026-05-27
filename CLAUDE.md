@@ -55,7 +55,139 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.152 Steps Duel live sync loop + Sync Now (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.153 Steps Duel stale-score serializer fix (read this first — BACKEND DEPLOY PENDING)
+
+### 🟡 STATUS: Code committed on `main`. Backend `getDuelEffectiveScores` changed (serializer-only, no schema). Frontend `2.2.3-w32` web bundle ready. Awaiting explicit approval to deploy Worker + MacBook archive.
+
+### Root cause — three stores, two stale paths
+
+w31 TestFlight test showed:
+- Submit response: `{ ok: true, you: 285, rival: 97, trigger: 'sync-loop-manual' }` ← fresh
+- Immediately after, active hero render: `youScore: 146, rivalScore: 0` ← stale
+
+Audit identified three duel-score stores with three read patterns:
+
+| Store | Written by | Read by |
+|---|---|---|
+| `duel_progress_snapshots` | `Auth.submitDuelProgress` (legacy + w30/w31 day-anchored delta) | submit response (`getDuelProgress`) |
+| `verified_events` | `submitVerifiedEventsForDuels` → `_buildEventsForActiveDuel` **using the broken narrow query** | list/detail (`getDuelEffectiveScores` prefers this when ANY events exist) |
+| `duels.challenger_score/opponent_score` | Only on resolve | N/A while active |
+
+Path flow:
+1. `_buildEventsForActiveDuel` was still calling `Health.getStepsBetween(starts_at, ends_at)` directly (pre-w30 bug). It writes stale `steps_total` events into `verified_events`.
+2. `getDuelEffectiveScores` checks `hasAnyVerifiedEventForDuel(duelId)` first. Once verified_events has any row, it uses `getDuelVerifiedScores` (MAX over rows) which returns the stale 146.
+3. Snapshot path with fresh 285 is bypassed.
+
+So `submit` returned fresh `{285, 97}` from the snapshot path, while `/v1/duels` list refetch returned stale `{146, 0}` from the verified-events MAX. The user saw the inconsistency immediately after Sync Now.
+
+### Fix — three layers
+
+**1. Backend (durable, primary):** for steps duels, `getDuelEffectiveScores` now **reads `duel_progress_snapshots` directly** without consulting `verified_events`. Snapshot is the canonical live store for steps; verified events were a redundant secondary write. Other duel types (sleep / bedtime / strength / verified_objectives) keep their existing verified-events-first path — they don't use snapshots.
+
+```ts
+if (duel.duel_type === 'steps') {
+  const legacy = await getDuelProgress(env, duel.id);
+  legacy.forEach((v, k) => out.set(k, v));
+  return out;
+}
+// non-steps: verified events first, fallback to nothing (no snapshot for those types).
+```
+
+No schema change. No migration. No data mutation. Just a read-path branch reorder.
+
+**2. Frontend (write-side hardening):** `_buildEventsForActiveDuel` for steps duels now uses `_getStepsForDuelWindow` (the w30 day-anchored delta helper) instead of the broken `Health.getStepsBetween`. From this point forward, any new `steps_total` event written to `verified_events` will carry the correct value. Belt-and-suspenders — the backend already ignores verified_events for steps in 1z.153, so this is hardening for any future change that reads from them.
+
+**3. Frontend (UX, optimistic):** after `Auth.submitDuelProgress` returns `{ ok: true, you, rival }`, the sync cycle now immediately patches `_duelsCache.active[i]` for the matching duel id with the fresh `you`/`rival` values + stamps `*_progress_updated_at` to now, then re-renders the hero card synchronously. The trailing `fetchDuels` refetch still confirms backend truth and wins on disagreement (last write back). Effect: Sync Now feels instant.
+
+### Diagnostic
+
+New `duel-score-source-render` breadcrumb stamped on every active hero render alongside the existing `duel-active-hero-render`. Payload includes `source: 'snapshot_effective'` for steps duels (post-1z.153 backend) or `'verified_events_or_fallback'` for non-steps. Next debug pull will prove the rendered scores came from the snapshot path.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `backend/src/handlers/duels.ts` | +20 lines (`getDuelEffectiveScores` steps-first branch + comment) |
+| `app.js` | +80 lines (`_buildEventsForActiveDuel` helper swap + optimistic cache patch + render-source breadcrumb) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w31` | `2.2.3-w32` |
+| `app.js?v=` | `484` | `485` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.370` | `v5.371` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- Backend: `cd backend && npx vitest run duels` → **10/10 pass** post-change.
+- Frontend: `node --check` on all four JS files → OK.
+- Playwright e2e: 26/29 first run, 3 transient flakes (all sleep-streak / workout-streak tests, unrelated to duels). All pass on isolated retry.
+
+### What's NOT changed
+
+- ✅ Schema: untouched. No migration.
+- ✅ D1 data: no mutation.
+- ✅ Souls / stake / reward / economy: untouched.
+- ✅ w30 day-anchored delta scoring: preserved (sync loop + _buildEventsForActiveDuel both use `_getStepsForDuelWindow` now).
+- ✅ w31 sync loop + Sync Now + freshness chip: preserved.
+- ✅ Patch A1 (final-sync timing): preserved.
+- ✅ Patch A2 (freshness chip): preserved.
+- ✅ Non-steps duel types: their `verified_events`-based scoring untouched — they don't use snapshots.
+- ✅ Completed duel resolve / final score writes: untouched (still write `duels.challenger_score / opponent_score`).
+- ✅ HealthKit permission: no new auth.
+
+### Deploy gate — two follow-ups awaiting explicit approval
+
+1. **`cd backend && npx wrangler deploy`** — applies the `getDuelEffectiveScores` snapshot-first rule for steps duels.
+2. **MacBook archive + upload `2.2.3-w32`** to TestFlight.
+
+Order: backend first, then upload. Backend can ship without w32 (existing clients still work, they'll just read fresh snapshots without the optimistic frontend boost). Without backend deploy, the bug persists — frontend optimistic patch helps for the moment of Sync Now but the trailing refetch overwrites with stale.
+
+### TestFlight QA — what to do with w32
+
+1. Cold-launch w32 on both phones. Confirm `"build": "2.2.3-w32"` via Copy Debug Info.
+2. Start a 1-hour Steps Duel. Walk on both phones.
+3. Mid-duel: tap Sync Now. Expect:
+   - Submit response in debug: `you: N, rival: M` with N+M > 0.
+   - Hero card immediately shows N / M.
+   - Trailing refetch confirms; chip flips to `· just now` both rows.
+4. Search debug for `duel-score-source-render`: should show `source: 'snapshot_effective'` for the steps duel.
+5. Wait 30s. Auto-cycle fires; numbers update again without manual tap.
+6. Backend confirmation (read-only D1 audit):
+   ```sql
+   SELECT user_id, value, server_updated_at FROM duel_progress_snapshots WHERE duel_id = ?;
+   ```
+   Should match what the UI shows.
+
+### Hard guardrails respected
+
+- ✅ No Codemagic.
+- ✅ No archive/upload from this machine.
+- ✅ **No backend deploy yet.** Awaiting explicit approval.
+- ✅ No D1 mutation. No migration.
+- ✅ No HealthKit permission change.
+- ✅ No souls/stake/reward/economy/leaderboard/dungeon/XP/rank changes.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS=false`.
+- ✅ w30 / w31 / Patch A1 / Patch A2 all preserved.
+
+### Rollback knobs (independent)
+
+- **Backend**: revert the steps-first branch in `getDuelEffectiveScores` (~12 lines). Falls back to verified-events-first behavior.
+- **`_buildEventsForActiveDuel` swap**: revert to direct `Health.getStepsBetween` (~10 lines). Verified events go back to stale, but with backend 1z.153 deployed the snapshot path doesn't care.
+- **Optimistic cache patch**: remove the `_duelsCache.active[idx]` patch block in `_runDuelSyncCycle` (~25 lines). Sync Now still works; just less instant.
+- **Render-source breadcrumb**: remove the second `_addHealthVerifyBreadcrumb('duel-score-source-render', ...)` block (~15 lines). Diagnostic only.
+
+All four rollbacks independent.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.152 Steps Duel live sync loop + Sync Now (historical — superseded by 1z.153 above)
 
 ### ✅ STATUS: Code committed on `main`. Frontend `2.2.3-w31` web bundle ready. No backend deploy needed. Awaiting MacBook archive + TestFlight upload for verification.
 

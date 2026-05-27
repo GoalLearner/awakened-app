@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w31';
+  const APP_BUILD_TAG = '2.2.3-w32';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20031,9 +20031,27 @@
 
     // ── Steps surface ──
     if (dt === 'steps' || dt === 'verified_objectives') {
+      // v3 Phase 1z.153 — write-side hardening. The narrow-window
+      // Health.getStepsBetween query silently returns 0 on real
+      // device (fix shipped in w30 / _getStepsForDuelWindow). The
+      // verified-events submit path was still using the broken
+      // query, producing stale 0/146-style events that then won
+      // the MAX() aggregation in getDuelVerifiedScores. Switching
+      // to the day-anchored delta keeps verified_events in sync
+      // with duel_progress_snapshots. Belt-and-suspenders with
+      // the 1z.153 backend fix that already prefers snapshots
+      // for steps duels — either change alone closes the bug,
+      // but both together harden the data layer.
       let steps = null;
-      try { steps = await Health.getStepsBetween(startISO, endISO); }
-      catch (_) { steps = null; }
+      if (dt === 'steps' && typeof _getStepsForDuelWindow === 'function') {
+        try {
+          const dw = await _getStepsForDuelWindow(duel);
+          if (dw && Number.isFinite(dw.value)) steps = dw.value;
+        } catch (_) { steps = null; }
+      } else {
+        try { steps = await Health.getStepsBetween(startISO, endISO); }
+        catch (_) { steps = null; }
+      }
       if (typeof steps === 'number' && steps >= 0) {
         if (dt === 'steps') {
           events.push({
@@ -20952,6 +20970,43 @@
           if (ok) {
             successCount++;
             _clearDuelSyncFailure(duel.id);
+            // v3 Phase 1z.153 — optimistic in-memory update. The
+            // submit response carries authoritative `you` / `rival`
+            // values. Patch _duelsCache.active for THIS duel so the
+            // next render reflects fresh numbers without waiting
+            // for the trailing fetchDuels() roundtrip. Refetch
+            // below still confirms backend truth and wins on
+            // disagreement (last write-back).
+            try {
+              if (_duelsCache && Array.isArray(_duelsCache.active)) {
+                const idx = _duelsCache.active.findIndex(d => d && d.id === duel.id);
+                if (idx >= 0 && resp && (typeof resp.you === 'number' || typeof resp.rival === 'number')) {
+                  const patched = Object.assign({}, _duelsCache.active[idx]);
+                  const isChall = patched.role === 'challenger';
+                  if (typeof resp.you === 'number') {
+                    if (isChall) patched.challenger_progress_value = resp.you;
+                    else         patched.opponent_progress_value   = resp.you;
+                  }
+                  if (typeof resp.rival === 'number') {
+                    if (isChall) patched.opponent_progress_value   = resp.rival;
+                    else         patched.challenger_progress_value = resp.rival;
+                  } else if (resp.rival === null) {
+                    if (isChall) patched.opponent_progress_value   = null;
+                    else         patched.challenger_progress_value = null;
+                  }
+                  // Stamp our own snapshot updated_at so the
+                  // freshness chip flips to "· just now" immediately.
+                  const nowIso = new Date().toISOString();
+                  if (isChall) patched.challenger_progress_updated_at = nowIso;
+                  else         patched.opponent_progress_updated_at   = nowIso;
+                  _duelsCache.active[idx] = patched;
+                  // Re-render the hero immediately for the optimistic
+                  // value — the trailing refetch+render in the
+                  // outer cycle will overwrite if backend disagrees.
+                  try { if (typeof renderActiveDuelHero === 'function') renderActiveDuelHero(_duelsCache.active); } catch (_) {}
+                }
+              }
+            } catch (_) {}
           } else {
             failCount++;
             _noteDuelSyncFailure(duel.id, (resp && (resp.detail || resp.code)) || 'submit-not-ok');
@@ -21135,6 +21190,31 @@
           endsAt:           duel ? duel.ends_at : null,
           build:            (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
         });
+        // v3 Phase 1z.153 — source-of-truth signal. Helps next
+        // audit prove which path produced the rendered scores.
+        // Steps duels on w32+ backend should always render from
+        // duel_progress_snapshots; other duel types from verified
+        // events. Frontend can't directly see which backend source
+        // was used, so it logs the fields it consumed.
+        if (duel) {
+          _addHealthVerifyBreadcrumb('duel-score-source-render', {
+            duelId:     String(duel.id || '').slice(0, 8),
+            duelType:   duel.duel_type,
+            status:     duel.status,
+            // The progress_value fields are populated by the
+            // serializer from getDuelEffectiveScores (1z.153 prefers
+            // snapshots for steps duels). progress_updated_at is
+            // pulled directly from duel_progress_snapshots — its
+            // presence confirms snapshot path.
+            youScore:                duel.role === 'challenger' ? duel.challenger_progress_value : duel.opponent_progress_value,
+            rivalScore:              duel.role === 'challenger' ? duel.opponent_progress_value   : duel.challenger_progress_value,
+            youUpdatedAt:            duel.role === 'challenger' ? duel.challenger_progress_updated_at : duel.opponent_progress_updated_at,
+            rivalUpdatedAt:          duel.role === 'challenger' ? duel.opponent_progress_updated_at   : duel.challenger_progress_updated_at,
+            // For steps duels on w32+ backend we expect 'snapshot_effective'.
+            source:    (duel.duel_type === 'steps') ? 'snapshot_effective' : 'verified_events_or_fallback',
+            build:     (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
       }
     } catch (_) {}
     if (!duel) {
