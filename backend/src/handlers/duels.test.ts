@@ -17,6 +17,7 @@ import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import {
   handleDuelsCreate,
   handleDuelsAccept,
+  settleDuelEconomy,
 } from './duels';
 import type { Env } from '../env';
 
@@ -340,5 +341,180 @@ describe('POST /v1/duels/:id/accept — duration_seconds end-time math (1z.147)'
     const endsAt   = update.binds[1] as string;
     const deltaMs = Date.parse(endsAt) - Date.parse(startsAt);
     expect(deltaMs).toBe(3 * 86400 * 1000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// v3 Phase 1z.155 — duel economy settlement (settleDuelEconomy)
+//
+// Verifies the upgraded settle function:
+//   - decisive duel: winner +reward / duel_win  AND  loser -stake / duel_loss
+//   - draw:          no ledger inserts, but reward_settled_at still set
+//   - idempotency:   re-call writes nothing new (UNIQUE index)
+// ─────────────────────────────────────────────────────────────
+describe('settleDuelEconomy — duel souls ledger (1z.155)', () => {
+  // Capture-only DB: every prepare().bind().run() records the SQL +
+  // binds, no row state changes. The UNIQUE index that protects
+  // re-resolve idempotency lives in D1 — at the application layer
+  // we just emit INSERT OR IGNORE statements, and SQLite handles the
+  // rest. So the unit test asserts SHAPE (correct INSERTs emitted)
+  // rather than D1 behaviour (which is its own integration concern).
+  function makeCaptureDb() {
+    const calls: CapturedCall[] = [];
+    return {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          calls.push({ sql, binds: args });
+          return {
+            all:   async () => ({ results: [], success: true, meta: {} }),
+            first: async () => null,
+            run:   async () => ({ success: true, meta: { changes: 1 } }),
+          };
+        },
+      }),
+      _calls: () => calls,
+    } as unknown as D1Database & { _calls: () => CapturedCall[] };
+  }
+
+  function makeDuel(overrides: Partial<{
+    id: string;
+    challenger_user_id: string;
+    opponent_user_id: string;
+    winner_user_id: string | null;
+    stake_souls: number;
+    reward_souls: number;
+    duel_type: string;
+    result: string | null;
+  }> = {}) {
+    return {
+      id: 'duel-test-1',
+      challenger_user_id: 'user-chall',
+      opponent_user_id: 'user-opp',
+      status: 'completed',
+      stake_souls: 25,
+      reward_souls: 40,
+      burn_souls: 10,
+      duration_days: 1,
+      duration_seconds: 3600,
+      duel_type: 'steps',
+      starts_at: '2026-05-26T18:00:00.000Z',
+      ends_at: '2026-05-26T19:00:00.000Z',
+      winner_user_id: 'user-chall',
+      challenger_score: 5000,
+      opponent_score: 3000,
+      challenger_verified_score: 0,
+      opponent_verified_score: 0,
+      challenger_xp_score: 0,
+      opponent_xp_score: 0,
+      created_at: '2026-05-26T17:00:00Z',
+      updated_at: '2026-05-26T19:00:00Z',
+      resolved_at: '2026-05-26T19:00:01Z',
+      result: 'challenger_win',
+      reward_settled_at: null,
+      ...overrides,
+    } as Parameters<typeof settleDuelEconomy>[1];
+  }
+
+  it('challenger win: inserts +reward/duel_win for winner AND -stake/duel_loss for loser', async () => {
+    const db = makeCaptureDb();
+    const env = makeEnv(db);
+    await settleDuelEconomy(env, makeDuel({ winner_user_id: 'user-chall', result: 'challenger_win' }));
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const ledgerInserts = calls.filter(c => c.sql.includes('INSERT OR IGNORE INTO user_souls_ledger'));
+    expect(ledgerInserts).toHaveLength(2);
+
+    // Bind layout: (id, user_id, delta, reason, ref_id, metadata_json)
+    const winnerRow = ledgerInserts.find(c => c.binds[3] === 'duel_win');
+    const loserRow  = ledgerInserts.find(c => c.binds[3] === 'duel_loss');
+    expect(winnerRow).toBeDefined();
+    expect(loserRow).toBeDefined();
+    expect(winnerRow!.binds[1]).toBe('user-chall');
+    expect(winnerRow!.binds[2]).toBe(40);
+    expect(winnerRow!.binds[4]).toBe('duel-test-1');
+    expect(loserRow!.binds[1]).toBe('user-opp');
+    expect(loserRow!.binds[2]).toBe(-25);   // negative — loser stake deduction
+    expect(loserRow!.binds[4]).toBe('duel-test-1');
+
+    // reward_settled_at marked.
+    const settleUpdate = calls.find(c => c.sql.includes('UPDATE duels SET reward_settled_at'));
+    expect(settleUpdate).toBeDefined();
+    expect(settleUpdate!.sql).toMatch(/WHERE id = \? AND reward_settled_at IS NULL/);
+  });
+
+  it('opponent win: loser is challenger (correct direction)', async () => {
+    const db = makeCaptureDb();
+    const env = makeEnv(db);
+    await settleDuelEconomy(env, makeDuel({ winner_user_id: 'user-opp', result: 'opponent_win' }));
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const ledgerInserts = calls.filter(c => c.sql.includes('INSERT OR IGNORE INTO user_souls_ledger'));
+    expect(ledgerInserts).toHaveLength(2);
+
+    const winnerRow = ledgerInserts.find(c => c.binds[3] === 'duel_win');
+    const loserRow  = ledgerInserts.find(c => c.binds[3] === 'duel_loss');
+    expect(winnerRow!.binds[1]).toBe('user-opp');
+    expect(winnerRow!.binds[2]).toBe(40);
+    expect(loserRow!.binds[1]).toBe('user-chall');
+    expect(loserRow!.binds[2]).toBe(-25);
+  });
+
+  it('draw: zero ledger inserts, but reward_settled_at IS marked', async () => {
+    const db = makeCaptureDb();
+    const env = makeEnv(db);
+    await settleDuelEconomy(env, makeDuel({ winner_user_id: null, result: 'draw' }));
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const ledgerInserts = calls.filter(c => c.sql.includes('INSERT OR IGNORE INTO user_souls_ledger'));
+    expect(ledgerInserts).toHaveLength(0);
+
+    const settleUpdate = calls.find(c => c.sql.includes('UPDATE duels SET reward_settled_at'));
+    expect(settleUpdate).toBeDefined();
+  });
+
+  it('idempotency: emits INSERT OR IGNORE so D1 UNIQUE index can dedupe re-resolves', async () => {
+    const db = makeCaptureDb();
+    const env = makeEnv(db);
+    await settleDuelEconomy(env, makeDuel({ winner_user_id: 'user-chall', result: 'challenger_win' }));
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const ledgerInserts = calls.filter(c => c.sql.includes('INSERT OR IGNORE INTO user_souls_ledger'));
+    expect(ledgerInserts).toHaveLength(2);
+    // Both inserts MUST be INSERT OR IGNORE — if a future refactor
+    // drops the `OR IGNORE`, re-resolve would 500 on the UNIQUE
+    // constraint and the whole resolve handler would fail.
+    for (const c of ledgerInserts) {
+      expect(c.sql).toMatch(/INSERT OR IGNORE/i);
+    }
+    // reward_settled_at update must also guard with `IS NULL` so a
+    // second settle pass doesn't bump the timestamp.
+    const settleUpdate = calls.find(c => c.sql.includes('UPDATE duels SET reward_settled_at'));
+    expect(settleUpdate!.sql).toMatch(/reward_settled_at IS NULL/);
+  });
+
+  it('reward=0 skips winner insert (defensive against misconfigured duels)', async () => {
+    const db = makeCaptureDb();
+    const env = makeEnv(db);
+    await settleDuelEconomy(env, makeDuel({ reward_souls: 0, winner_user_id: 'user-chall', result: 'challenger_win' }));
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const inserts = calls.filter(c => c.sql.includes('INSERT OR IGNORE INTO user_souls_ledger'));
+    const winnerRow = inserts.find(c => c.binds[3] === 'duel_win');
+    const loserRow  = inserts.find(c => c.binds[3] === 'duel_loss');
+    expect(winnerRow).toBeUndefined();   // skipped
+    expect(loserRow).toBeDefined();      // still deducts
+  });
+
+  it('stake=0 skips loser insert (defensive against misconfigured duels)', async () => {
+    const db = makeCaptureDb();
+    const env = makeEnv(db);
+    await settleDuelEconomy(env, makeDuel({ stake_souls: 0, winner_user_id: 'user-chall', result: 'challenger_win' }));
+
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const inserts = calls.filter(c => c.sql.includes('INSERT OR IGNORE INTO user_souls_ledger'));
+    const winnerRow = inserts.find(c => c.binds[3] === 'duel_win');
+    const loserRow  = inserts.find(c => c.binds[3] === 'duel_loss');
+    expect(winnerRow).toBeDefined();
+    expect(loserRow).toBeUndefined();    // skipped
   });
 });

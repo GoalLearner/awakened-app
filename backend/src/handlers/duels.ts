@@ -94,6 +94,12 @@ const ALLOWED_EVENT_SOURCES = new Set([
 ]);
 const MAX_EVENTS_PER_BATCH = 25;
 const DUEL_REWARD_REASON = 'duel_win';
+// v3 Phase 1z.155 — loser stake deduction reason. Pairs with the
+// winner-side DUEL_REWARD_REASON above; both inserts share the
+// UNIQUE(user_id, ref_type, ref_id, reason) index on
+// user_souls_ledger, so re-resolve of the same duel can never
+// double-award or double-deduct. Draws insert NEITHER row.
+const DUEL_LOSS_REASON = 'duel_loss';
 
 type Aggregate =
   | 'max'
@@ -223,34 +229,98 @@ async function hasAnyVerifiedEventForDuel(env: Env, duelId: string): Promise<boo
 }
 
 /**
- * Insert the duel-win reward into user_souls_ledger. Idempotent via the
- * UNIQUE(user_id, ref_type, ref_id, reason) index — re-calls are no-ops.
- * Local hb_souls is NOT modified by v1; the ledger is the eventual
- * reconciliation target.
+ * v3 Phase 1z.155 — full duel economy settlement (winner reward +
+ * loser stake deduction).
+ *
+ * On a non-draw resolved duel, INSERT (idempotent) TWO rows into
+ * user_souls_ledger:
+ *   - winner: delta = +reward_souls, reason = 'duel_win'
+ *   - loser:  delta = -stake_souls,  reason = 'duel_loss'
+ *
+ * Draws (winner_user_id IS NULL) insert NEITHER row — neither side
+ * was charged a stake at challenge/accept time (no escrow yet in
+ * MVP), so there's nothing to refund and no reward to issue. Draw
+ * duels still set reward_settled_at so subsequent reads can
+ * distinguish "settled-as-draw" from "settled-pending".
+ *
+ * Idempotency is guaranteed by the UNIQUE(user_id, ref_type, ref_id,
+ * reason) index on user_souls_ledger. Re-resolve hits both INSERTs
+ * but both fail silently via INSERT OR IGNORE. The reward_settled_at
+ * UPDATE has its own `WHERE reward_settled_at IS NULL` guard.
+ *
+ * Local hb_souls is STILL not modified by this phase — Phase β will
+ * add a response payload exposing the per-user delta + running
+ * balance, and Phase γ will sync that into the frontend display.
+ * This phase is backend-only: ledger rows accumulate correctly so
+ * future reconciliation has the right data to draw from.
+ *
+ * Failures here are swallowed by the resolve handler (try/catch
+ * around the call site) so a flaky ledger insert can't 500 the
+ * core resolve. Same isolation pattern as the 1z.38 Hall of Fame
+ * write isolation.
  */
-async function settleDuelReward(env: Env, duel: DuelRow): Promise<void> {
-  if (!duel.winner_user_id) return;
+export async function settleDuelEconomy(env: Env, duel: DuelRow): Promise<void> {
   const reward = Number(duel.reward_souls) || 0;
-  if (reward <= 0) return;
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO user_souls_ledger (id, user_id, delta, reason, ref_type, ref_id, metadata_json)
-     VALUES (?, ?, ?, ?, 'duel', ?, ?)`,
-  )
-    .bind(
-      crypto.randomUUID(),
-      duel.winner_user_id,
-      reward,
-      DUEL_REWARD_REASON,
-      duel.id,
-      JSON.stringify({ duel_type: duel.duel_type, result: duel.result }),
+  const stake  = Number(duel.stake_souls)  || 0;
+  const isDraw = !duel.winner_user_id;
+
+  if (!isDraw && reward > 0) {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO user_souls_ledger (id, user_id, delta, reason, ref_type, ref_id, metadata_json)
+       VALUES (?, ?, ?, ?, 'duel', ?, ?)`,
     )
-    .run();
+      .bind(
+        crypto.randomUUID(),
+        duel.winner_user_id,
+        reward,
+        DUEL_REWARD_REASON,
+        duel.id,
+        JSON.stringify({ duel_type: duel.duel_type, result: duel.result }),
+      )
+      .run();
+  }
+
+  if (!isDraw && stake > 0) {
+    // Derive the loser id from the winner id + the two participants.
+    // Defensive: if winner_user_id matches neither participant (should
+    // be impossible after a successful resolve), bail without writing
+    // a loser row — better to skip than to debit the wrong person.
+    const loserUserId =
+      duel.winner_user_id === duel.challenger_user_id ? duel.opponent_user_id :
+      duel.winner_user_id === duel.opponent_user_id   ? duel.challenger_user_id :
+      null;
+    if (loserUserId) {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO user_souls_ledger (id, user_id, delta, reason, ref_type, ref_id, metadata_json)
+         VALUES (?, ?, ?, ?, 'duel', ?, ?)`,
+      )
+        .bind(
+          crypto.randomUUID(),
+          loserUserId,
+          -stake,
+          DUEL_LOSS_REASON,
+          duel.id,
+          JSON.stringify({ duel_type: duel.duel_type, result: duel.result }),
+        )
+        .run();
+    }
+  }
+
+  // Mark settled regardless of draw vs decisive — this guards a future
+  // cron/sweeper from re-processing the same duel forever. The UPDATE
+  // is self-idempotent via the `IS NULL` guard.
   await env.DB.prepare(
     `UPDATE duels SET reward_settled_at = CURRENT_TIMESTAMP WHERE id = ? AND reward_settled_at IS NULL`,
   )
     .bind(duel.id)
     .run();
 }
+
+// Legacy alias — preserved so existing call sites and any unforeseen
+// import paths keep working without churn. Points at the same
+// implementation. Future cleanup can remove this once direct callers
+// are migrated.
+const settleDuelReward = settleDuelEconomy;
 
 interface DuelRow {
   id: string;
@@ -1197,10 +1267,13 @@ export async function handleDuelsResolve(
     return jsonError(500, 'INTERNAL', 'Failed to read back resolved duel.');
   }
 
-  // Auto-settle the reward into user_souls_ledger. UNIQUE constraint
-  // prevents double-pay if resolve fires twice (network retry, etc).
-  // Draws skip — winner_user_id is null.
-  try { await settleDuelReward(env, refreshed); } catch (_) { /* don't block resolve on settle failure */ }
+  // v3 Phase 1z.155 — auto-settle the full duel economy into
+  // user_souls_ledger: winner +reward_souls (duel_win), loser
+  // -stake_souls (duel_loss). UNIQUE(user_id, ref_type, ref_id,
+  // reason) prevents double-pay/double-deduct if resolve fires
+  // twice (network retry, etc). Draws skip both inserts but still
+  // set reward_settled_at.
+  try { await settleDuelEconomy(env, refreshed); } catch (_) { /* don't block resolve on settle failure */ }
 
   // Re-read so the response carries reward_settled_at.
   const finalRow = await env.DB.prepare('SELECT * FROM duels WHERE id = ?')
