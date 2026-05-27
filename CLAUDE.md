@@ -55,7 +55,113 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 27, 2026 — 1z.158 CRITICAL fix — duel settlement no longer overwrites local souls with backend partial balance (read this first)
+## 📌 Session sign-off — May 27, 2026 — w35 stable on real device, Steps Duel two-device MVP test deferred to next session (read this first)
+
+### ✅ STATUS: Session ends in a stable place. Code shipped through `2.2.3-w35` (commit `dd9d26e`). No new feature work pending. Next session = clean two-device Steps Duel verification.
+
+### Real-device debug snapshot from sign-off pull
+
+**Build / device**:
+- Version `2.2.3`, build `2.2.3-w35`, iOS Capacitor. Confirms the newer web bundle is actually mounted on-device, not a stale-cache holdover.
+
+**App stability**:
+- Alive and interactive. `forceClose-complete`, `render-tick-ok`, `watchdog-complete`, `alive-10000` all present.
+- No stuck Add-Habit freeze class.
+- All blocking overlays (`hd-sheet`, `lib-sheet`, `lib-overlay`, `modal-overlay`, `edit-modal`, `mr-overlay`) are hidden. No pointer-interception bug.
+
+**HealthKit auto-verification — all anti-false-positive paths confirmed**:
+- Sleep: Oura session of 6.45h ENDED on the prior local target day → `totalAsleepHours` treated as 0 → Sleep correctly DID NOT seal. The 1z.123 Sleep fix is doing its job.
+- Daily Walk: 1,255 steps < 8,000 threshold → correctly DID NOT seal. 1z.133 false-positive guard intact.
+- Workout: 0 workout minutes < 30-min target → correctly DID NOT seal.
+- Flights Climbed: weekly range refresh active, returned 11 flights from HealthKit. 1z.126 + 1z.139 day-anchored math working.
+
+**Leaderboards**:
+- Step leaderboard local-me override fired: backend `27,392`, local HealthKit `28,630`, override applied `true`. 1z.127 stale-row protection working as designed.
+
+**Duels (w35 snapshot)**:
+- No active duel, no pending sent, no pending received at sign-off.
+- Earlier in the debug stream: an active duel existed, resolve loop ran, refetch succeeded, `activeCount` returned to 0. Lifecycle reached completion technically.
+- **But this snapshot does NOT prove the full fresh two-device Steps Duel MVP on w35 end-to-end.**
+
+### What's still unverified for next session
+
+The Steps Duel MVP needs a clean, deliberate two-device walkthrough:
+
+1. Device A creates a fresh Steps Duel.
+2. Device B sees the incoming challenge.
+3. Device B accepts.
+4. Both devices show the active duel hero with correct viewer-perspective scores.
+5. Both walk; steps progress updates correctly via day-anchored delta (1z.139) + sync loop (1z.151) + Sync Now path.
+6. Viewer-perspective `You / Rival` labels stay correct on both devices (1z.154 diagnostic clarity).
+7. 1-hour expiration triggers final-sync + resolve.
+8. Winner +40 / loser -25 souls applied via 1z.158 delta-apply (no balance overwrite, ledger row balance matches `pre + delta`).
+9. Force-quit + cold-launch shows no duplicate ledger rows and stable balance (idempotency guard load-bearing in 1z.158).
+
+If a Richie device still shows the 1z.157 corruption (balance much lower than expected), the recovery hook is in w35:
+```js
+// Capacitor WebView debugger console:
+window.__repairLocalSoulsBalance(<correct_value>)
+```
+Returns `{ before, after }`. Sets balance, persists, refreshes display. No ledger row written.
+
+### Product / testing stance
+
+- **Keep Duels as Steps-only MVP.** Do not re-enable sleep / strength / bedtime / mixed-objective / multi-metric duels yet.
+- Brick-by-brick verification mode. The next session's job is to prove the full Steps loop with two real devices — not add code.
+- No new features. No backend changes. No D1 work. Codemagic still off-limits unless explicitly requested.
+
+### Where the version knobs sit at sign-off
+
+| Knob | Value |
+|---|---|
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w35` |
+| `app.js?v=` | `488` |
+| `auth.js?v=` | `18` |
+| `sw.js CACHE_VERSION` | `v5.374` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+| `LEADERBOARD_FLIGHTS_BACKEND_ENABLED` | `true` |
+| `LEADERBOARD_WORKOUT_BACKEND_ENABLED` | `true` |
+
+Worker on production: `8fe22b85` (Phase β — duel souls settlement payload). Phase α (`5e554646`) was the prior loser-stake-deduction deploy. No deploy pending.
+
+### Repo state at sign-off
+
+- `main` at `dd9d26e`. Pushed.
+- Working tree clean except two untracked preview files (`preview-duels-polish.html`, `preview-morning-briefing.html`) — design scratch, not part of the app, intentionally untracked.
+- No staged changes. No uncommitted work.
+
+### Exact next recommended test (tomorrow's session)
+
+**Two-device Steps Duel MVP walkthrough on w35:**
+
+1. Both phones cold-launch → 5-tap version → confirm `"build": "2.2.3-w35"`.
+2. If Richie's local balance still looks corrupted from the w34 incident, run `window.__repairLocalSoulsBalance(<value>)` first.
+3. Record both balances + top Souls Ledger row.
+4. Device A creates a fresh 1-hour Steps Duel against Device B's alias.
+5. Device B opens the Duels tab, sees the incoming challenge, taps Accept.
+6. Both screens should show the active duel hero with both aliases, 1-hour countdown, `0 steps · 0 steps · not synced yet`.
+7. Both walk for a few minutes. Tap Sync Now on each. Confirm both `You` and `Rival` scores update on both devices and stay correct (no swap).
+8. Let the duel expire (or fast-forward via test phone).
+9. Confirm winner counter += 40, loser counter -= 25. Souls Ledger top row matches.
+10. Force-quit both apps. Cold-launch. Reopen Souls Ledger. **No duplicate rows. Balance stable.**
+11. Reopen the resolved duel detail on both phones. Confirm settled-set guard fires (`duel-souls-settlement-skip { reason: 'already_applied' }` breadcrumb) — no second delta, no second ledger row.
+
+If steps 6 + 7 + 9 + 10 all pass cleanly, the Steps Duel MVP is officially trustworthy and we can move to the next product surface. Failure on any of those steps becomes the focused next-session task.
+
+### Hard guardrails respected for this sign-off
+
+- ✅ Docs-only. No code changes.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No version/cache knob bumps.
+- ✅ No Codemagic. No archive/upload.
+- ✅ No new feature work.
+
+---
+
+## 📌 Session handoff — May 27, 2026 — 1z.158 CRITICAL fix — duel settlement no longer overwrites local souls with backend partial balance (historical — superseded by sign-off note above)
 
 ### 🔴 STATUS: Critical balance-corruption bug introduced by 1z.157 is fixed. Backend `your_balance` is now intentionally ignored on the frontend. Local `hb_souls` is mutated only via `+= your_delta`, with idempotency guard.
 
