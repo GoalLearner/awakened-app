@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w30';
+  const APP_BUILD_TAG = '2.2.3-w31';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16290,9 +16290,14 @@
       if (typeof renderDuelsSection === 'function')   renderDuelsSection();
       // v3 Phase 1z.2 — live 60s tick for active duel hero + countdown.
       try { if (typeof startDuelsLiveTick === 'function') startDuelsLiveTick(); } catch (_) {}
+      // v3 Phase 1z.152 — network sync loop for active steps duels.
+      // Fires an immediate submit+refetch on tab open then every 30s
+      // while the tab stays visible.
+      try { if (typeof startDuelsNetworkSync === 'function') startDuelsNetworkSync(); } catch (_) {}
     } else {
-      // Stop ticking when not on the Duels tab — avoids needless renders.
-      try { if (typeof stopDuelsLiveTick === 'function') stopDuelsLiveTick(); } catch (_) {}
+      // Stop ticking when not on the Duels tab — avoids needless renders + network.
+      try { if (typeof stopDuelsLiveTick === 'function')   stopDuelsLiveTick(); } catch (_) {}
+      try { if (typeof stopDuelsNetworkSync === 'function') stopDuelsNetworkSync(); } catch (_) {}
     }
     // Render the Pokédex when the Items tab is opened (v2.0.1 DROPS).
     if (tab === 'items') {
@@ -20791,6 +20796,241 @@
   }
   try { window.startDuelsLiveTick = startDuelsLiveTick; window.stopDuelsLiveTick = stopDuelsLiveTick; } catch (_) {}
 
+  // v3 Phase 1z.152 — Steps Duel live sync loop. Fires every 30s
+  // while the Duels tab is visible AND at least one active steps
+  // duel exists. Submits per-duel progress via _getStepsForDuelWindow
+  // (the w30 day-anchored delta path) then refetches and re-renders
+  // so opponent scores update without manual interaction.
+  //
+  // Distinct from the existing 60s _duelsLiveTickHandle (which only
+  // ticks down `time_remaining_ms` locally). This loop is the network
+  // refresher; the local tick stays for snappy countdown UX.
+  //
+  // Per-duel failure tracking lets the freshness chip render a
+  // `· sync failed` variant when a submit returns ok=false. Failure
+  // entries auto-expire after 5 minutes so stale red chips don't
+  // linger after a network blip resolves.
+  let   _duelsNetworkSyncHandle    = null;
+  let   _duelsSyncCycleInFlight    = false;
+  const _DUEL_SYNC_INTERVAL_MS     = 30 * 1000;
+  const _DUEL_SYNC_FAIL_TTL_MS     = 5 * 60 * 1000;
+  const _duelSyncFailureByDuelId   = new Map(); // duelId -> { ts, error }
+
+  function _noteDuelSyncFailure(duelId, error) {
+    if (!duelId) return;
+    _duelSyncFailureByDuelId.set(duelId, { ts: Date.now(), error: String(error || 'unknown').slice(0, 80) });
+  }
+  function _clearDuelSyncFailure(duelId) {
+    if (!duelId) return;
+    _duelSyncFailureByDuelId.delete(duelId);
+  }
+  function _hasRecentDuelSyncFailure(duelId) {
+    if (!duelId) return false;
+    const entry = _duelSyncFailureByDuelId.get(duelId);
+    if (!entry) return false;
+    if (Date.now() - entry.ts > _DUEL_SYNC_FAIL_TTL_MS) {
+      _duelSyncFailureByDuelId.delete(duelId);
+      return false;
+    }
+    return true;
+  }
+  try { window._hasRecentDuelSyncFailure = _hasRecentDuelSyncFailure; } catch (_) {}
+
+  // Core cycle. Submits + refetches + rerenders. `reason` is one
+  // of 'tab-open' / 'foreground' / 'interval' / 'manual' / 'accept'
+  // and gets stamped on the diagnostic breadcrumbs so debug pulls
+  // can tell why each cycle fired.
+  async function _runDuelSyncCycle(reason) {
+    if (_duelsSyncCycleInFlight) {
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-sync-skip', {
+            reason:  'in-flight',
+            trigger: reason,
+            build:   (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
+      return { ok: false, skipped: 'in-flight' };
+    }
+    _duelsSyncCycleInFlight = true;
+    let attemptedCount = 0;
+    let successCount   = 0;
+    let failCount      = 0;
+    try {
+      if (!window.Auth || typeof Auth.fetchDuels !== 'function') {
+        return { ok: false, skipped: 'no-auth' };
+      }
+      let listRes;
+      try { listRes = await Auth.fetchDuels(); }
+      catch (_) { listRes = null; }
+      if (!listRes || !listRes.ok || !Array.isArray(listRes.active)) {
+        return { ok: false, skipped: 'fetch-failed' };
+      }
+      const nowMs = Date.now();
+      // Only mid-duel active steps duels in this loop. Post-end
+      // resolution is owned by _finalSyncEndedDuel via
+      // maybeResolveDuelIfEnded (which renderDuelsSection already
+      // wires) — racing with that path would double-submit.
+      const eligibles = listRes.active.filter(d => {
+        if (!d || d.duel_type !== 'steps' || d.status !== 'active') return false;
+        if (!d.starts_at || !d.ends_at) return false;
+        const endsMs = Date.parse(d.ends_at);
+        if (!Number.isFinite(endsMs)) return false;
+        return endsMs > nowMs; // mid-duel only
+      });
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-sync-loop-start', {
+            activeCount: eligibles.length,
+            reason,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
+      if (eligibles.length === 0) {
+        return { ok: true, attempted: 0, success: 0, fail: 0 };
+      }
+      // HealthKit / auth gates — same as the legacy submitter.
+      if (!window.Health || typeof Health.isAvailable !== 'function' || !Health.isAvailable()) {
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-sync-skip', { reason: 'health-unavailable', trigger: reason });
+          }
+        } catch (_) {}
+        return { ok: false, skipped: 'health-unavailable' };
+      }
+      if (typeof Health.permissionStatus === 'function' && Health.permissionStatus() !== 'granted') {
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-sync-skip', { reason: 'permission-not-granted', trigger: reason });
+          }
+        } catch (_) {}
+        return { ok: false, skipped: 'permission-not-granted' };
+      }
+      if (typeof Auth.submitDuelProgress !== 'function') {
+        return { ok: false, skipped: 'no-submit' };
+      }
+
+      // Per-duel submit. Failures tracked individually so one
+      // duel's network blip doesn't poison the others.
+      await Promise.all(eligibles.map(async (duel) => {
+        attemptedCount++;
+        const duelIdShort = String(duel.id || '').slice(0, 8);
+        let dw;
+        try { dw = await _getStepsForDuelWindow(duel); }
+        catch (e) {
+          failCount++;
+          _noteDuelSyncFailure(duel.id, (e && e.message) || 'helper-failed');
+          return;
+        }
+        const value = (dw && Number.isFinite(dw.value)) ? dw.value : 0;
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-progress-submit-attempt', {
+              duelId: duelIdShort,
+              metric: 'steps',
+              value,
+              windowStart: duel.starts_at,
+              windowEnd:   duel.ends_at,
+              trigger:     'sync-loop-' + reason,
+              method:      (dw && dw.method) || 'unknown',
+              computedDuelSteps: value,
+            });
+          }
+        } catch (_) {}
+        try {
+          const resp = await Auth.submitDuelProgress(duel.id, {
+            duel_type:         'steps',
+            metric:            'steps',
+            value,
+            window_start:      duel.starts_at,
+            window_end:        duel.ends_at,
+            client_updated_at: new Date().toISOString(),
+          });
+          const ok = !!(resp && (resp.ok === true || resp.success === true || (typeof resp === 'object' && !resp.error)));
+          if (ok) {
+            successCount++;
+            _clearDuelSyncFailure(duel.id);
+          } else {
+            failCount++;
+            _noteDuelSyncFailure(duel.id, (resp && (resp.detail || resp.code)) || 'submit-not-ok');
+          }
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('duel-progress-submit-result', {
+                duelId: duelIdShort,
+                ok,
+                you:    (resp && typeof resp.you === 'number')   ? resp.you   : undefined,
+                rival:  (resp && typeof resp.rival === 'number') ? resp.rival : (resp && resp.rival === null ? null : undefined),
+                trigger: 'sync-loop-' + reason,
+                error:   ok ? undefined : ((resp && (resp.detail || resp.code)) || 'unknown'),
+              });
+            }
+          } catch (_) {}
+        } catch (e) {
+          failCount++;
+          _noteDuelSyncFailure(duel.id, (e && e.message) || 'network-error');
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('duel-progress-submit-result', {
+                duelId: duelIdShort,
+                ok: false,
+                trigger: 'sync-loop-' + reason,
+                error: (e && e.message) ? String(e.message).slice(0, 80) : 'network-error',
+              });
+            }
+          } catch (_) {}
+        }
+      }));
+
+      // Refetch after submits + re-render so the UI reflects the
+      // freshly-stored rival scores. _duelsCache is the source for
+      // both renderActiveDuelHero and renderDuelsSection.
+      try {
+        const refetched = await Auth.fetchDuels();
+        if (refetched && refetched.ok) {
+          try { _duelsCache = refetched; } catch (_) {}
+          try { if (typeof renderActiveDuelHero === 'function') renderActiveDuelHero(refetched.active); } catch (_) {}
+          try { if (typeof renderDuelsSection   === 'function' && currentTab === 'social') renderDuelsSection(); } catch (_) {}
+        }
+      } catch (_) {}
+
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-sync-loop-result', {
+            attemptedCount,
+            successCount,
+            failCount,
+            reason,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
+      return { ok: true, attempted: attemptedCount, success: successCount, fail: failCount };
+    } finally {
+      _duelsSyncCycleInFlight = false;
+    }
+  }
+  try { window._runDuelSyncCycle = _runDuelSyncCycle; } catch (_) {}
+
+  function startDuelsNetworkSync() {
+    stopDuelsNetworkSync();
+    // First sync immediately when starting (tab-open trigger),
+    // then every 30s.
+    try { _runDuelSyncCycle('tab-open'); } catch (_) {}
+    _duelsNetworkSyncHandle = setInterval(() => {
+      try { _runDuelSyncCycle('interval'); } catch (_) {}
+    }, _DUEL_SYNC_INTERVAL_MS);
+  }
+  function stopDuelsNetworkSync() {
+    if (_duelsNetworkSyncHandle) {
+      try { clearInterval(_duelsNetworkSyncHandle); } catch (_) {}
+      _duelsNetworkSyncHandle = null;
+    }
+  }
+  try { window.startDuelsNetworkSync = startDuelsNetworkSync; window.stopDuelsNetworkSync = stopDuelsNetworkSync; } catch (_) {}
+
   function _pickActiveHeroDuel(active) {
     if (!Array.isArray(active) || active.length === 0) return null;
     const sorted = active.slice().sort((a, b) => {
@@ -20937,7 +21177,15 @@
       // chip is omitted (graceful legacy degradation).
       const youUpdatedAt   = _duelProgressUpdatedAtForViewer(duel, 'you');
       const rivalUpdatedAt = _duelProgressUpdatedAtForViewer(duel, 'rival');
-      const youFreshness   = _fmtDuelFreshness(youUpdatedAt,   duel.status, you);
+      // v3 Phase 1z.152 — if the most recent sync attempt for THIS
+      // duel failed (network blip, backend error, throttled, etc.),
+      // surface `· sync failed` on the YOUR row regardless of how
+      // fresh the snapshot itself is. The rival row stays
+      // unaffected — their failure surface is their own device.
+      const youSyncFailed = _hasRecentDuelSyncFailure(duel.id);
+      const youFreshness   = youSyncFailed
+        ? { text: '· sync failed', tone: 'failed' }
+        : _fmtDuelFreshness(youUpdatedAt,   duel.status, you);
       const rivalFreshness = _fmtDuelFreshness(rivalUpdatedAt, duel.status, rival);
       const youFreshHtml   = youFreshness   ? '<span class="duels-hero-score-freshness duels-hero-score-freshness--' + youFreshness.tone   + '">' + esc(youFreshness.text)   + '</span>' : '';
       const rivalFreshHtml = rivalFreshness ? '<span class="duels-hero-score-freshness duels-hero-score-freshness--' + rivalFreshness.tone + '">' + esc(rivalFreshness.text) + '</span>' : '';
@@ -20985,12 +21233,49 @@
         scoreHtml +
         '<div class="duels-hero-actions">' +
           '<button id="duels-hero-view" class="duels-btn duels-btn--gold" type="button" data-duel-id="' + esc(duel.id) + '">View Duel</button>' +
+          // v3 Phase 1z.152 — manual Sync Now. Tiny text-link button
+          // tucked under the gold CTA so it stays subtle but is
+          // discoverable when a tester wants to force a refresh
+          // (e.g. opponent's score looks stuck). On tap: trigger
+          // the same cycle the 30s loop runs, with reason="manual".
+          // Steps duels only — other duel types use a different
+          // submit path that this MVP doesn't cover.
+          (duel.duel_type === 'steps'
+            ? '<button id="duels-hero-sync" class="duels-hero-sync-link" type="button" data-duel-id="' + esc(duel.id) + '">↻ Sync now</button>'
+            : ''
+          ) +
         '</div>' +
       '</div>';
     const viewBtn = document.getElementById('duels-hero-view');
     if (viewBtn) {
       viewBtn.addEventListener('click', () => {
         openDuelDetail(duel.id);
+      });
+    }
+    const syncBtn = document.getElementById('duels-hero-sync');
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        const original = syncBtn.textContent;
+        syncBtn.textContent = 'Syncing…';
+        let res = null;
+        try { res = await _runDuelSyncCycle('manual'); }
+        catch (_) { res = { ok: false }; }
+        // Restore label after the cycle; render path will normally
+        // have already redrawn the hero, but the button-id-targeted
+        // DOM node may have been replaced. Defensive lookup:
+        const liveBtn = document.getElementById('duels-hero-sync');
+        if (liveBtn) {
+          liveBtn.disabled = false;
+          liveBtn.textContent = original || '↻ Sync now';
+        }
+        if (res && res.ok && (res.fail === 0 || res.fail == null)) {
+          try { showHabitToast('Duel synced.'); } catch (_) {}
+        } else if (res && res.skipped === 'in-flight') {
+          try { showHabitToast('Already syncing…'); } catch (_) {}
+        } else {
+          try { showHabitToast('Sync failed — check connection.'); } catch (_) {}
+        }
       });
     }
   }
@@ -33312,6 +33597,11 @@
       // Steps Duel Scoring v1 (v3 Phase 1y) — push fresh step total
       // for any active steps duels (debounced to 5 min).
       try { submitActiveStepsDuelProgress(); } catch (_) {}
+      // v3 Phase 1z.152 — force a sync cycle on foreground too so the
+      // active duel hero score doesn't show stale rival values after
+      // a multi-minute background. Bypasses the legacy 5-min throttle
+      // via the new sync loop's own per-duel attempt path.
+      try { if (currentTab === 'social' && typeof _runDuelSyncCycle === 'function') _runDuelSyncCycle('foreground'); } catch (_) {}
       // Verified Duel Scoring Engine v1 (v3 Phase 1z) — same, all types.
       try { submitVerifiedEventsForDuels(); } catch (_) {}
       // v3 Phase 1z.1 — drain any queued verified events from prior

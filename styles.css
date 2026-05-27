@@ -21088,6 +21088,46 @@ body.ddo-locked { overflow: hidden; }
 .duels-hero-score-freshness--neutral { color: var(--text-tertiary); } /* muted — N min ago */
 .duels-hero-score-freshness--stale   { color: #f5b842; opacity: 0.85; } /* amber — syncing... */
 .duels-hero-score-freshness--missing { color: #f5b842; opacity: 0.85; } /* amber — not synced yet */
+/* v3 Phase 1z.152 — sync-failure tone. Slightly stronger red than
+   the amber stale tone so a tester immediately notices the
+   difference between "syncing..." (transient, expected) and
+   "sync failed" (manual retry recommended). */
+.duels-hero-score-freshness--failed  { color: #ef4444; opacity: 0.9; }
+
+/* v3 Phase 1z.152 — manual Sync Now link button under the
+   gold View Duel CTA. Intentionally text-only / subtle so it
+   reads as a secondary action; uses the gold-glyph chevron
+   convention from elsewhere in the duels strip. */
+.duels-hero-sync-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed rgba(167, 139, 250, 0.40);
+  border-radius: 8px;
+  color: var(--text-secondary, #c4b5fd);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+.duels-hero-sync-link:hover,
+.duels-hero-sync-link:active {
+  border-color: rgba(167, 139, 250, 0.75);
+  color: #d8caff;
+  background: rgba(167, 139, 250, 0.06);
+}
+.duels-hero-sync-link:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
 /* Duel detail overlay — in-flight + completed score blocks. */
 .ddo-score-row {
   display: flex;

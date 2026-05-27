@@ -55,7 +55,157 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.151 Steps Duel day-anchored delta fix (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.152 Steps Duel live sync loop + Sync Now (read this first)
+
+### ✅ STATUS: Code committed on `main`. Frontend `2.2.3-w31` web bundle ready. No backend deploy needed. Awaiting MacBook archive + TestFlight upload for verification.
+
+### Why this train
+
+w30 fixed Steps Duel scoring (day-anchored delta — Richie's row went from `0` → `146` steps in real test). But opponent score stayed `0` mid-duel because the only submit paths were 5-min-throttled and there was no auto-refetch after submit. Sync felt slow / felt broken even when the math was right.
+
+### Current cadence before this patch
+
+| Trigger | Behavior |
+|---|---|
+| Cold launch | Force-submit + verified events |
+| visibility → foreground | Submit (5-min throttled) + render |
+| Duels tab render | Submit (5-min throttled) |
+| Accept duel | Force-submit |
+| Periodic while Duels visible | **None** ← gap |
+| After submit | **No refetch** ← gap |
+
+### New cadence (1z.152)
+
+| Trigger | Behavior |
+|---|---|
+| Duels tab open | `_runDuelSyncCycle('tab-open')` — submit all active steps duels + refetch + rerender |
+| Duels tab visible | New `_duelsNetworkSyncHandle` setInterval, **every 30s** while tab visible AND active duel exists, runs `_runDuelSyncCycle('interval')` |
+| Duels tab switch away | Sync interval stops |
+| App foreground (any tab) | `_runDuelSyncCycle('foreground')` if `currentTab === 'social'` |
+| Manual Sync Now button | `_runDuelSyncCycle('manual')` + toast |
+| Cold launch / accept | Preserved (legacy force-submit path) |
+| Post-end resolve | Preserved (Patch A1 `_finalSyncEndedDuel`) — sync loop skips ended duels |
+
+The 5-min throttle on `submitActiveStepsDuelProgress` is **preserved**. The new loop is a separate path with its own in-flight guard.
+
+### Architecture
+
+New module-scoped state in `app.js`:
+
+```js
+let   _duelsNetworkSyncHandle    = null;       // setInterval handle
+let   _duelsSyncCycleInFlight    = false;      // re-entrancy guard
+const _DUEL_SYNC_INTERVAL_MS     = 30 * 1000;  // 30s base cadence
+const _DUEL_SYNC_FAIL_TTL_MS     = 5 * 60 * 1000;
+const _duelSyncFailureByDuelId   = new Map();  // failure tracking
+```
+
+New functions:
+
+- `_runDuelSyncCycle(reason)` — full submit + refetch + rerender pipeline. Skips if a cycle is already in-flight (collapses overlapping triggers). Returns `{ok, attempted, success, fail, skipped?}`.
+- `startDuelsNetworkSync()` — fires immediate cycle (reason `'tab-open'`) then starts the 30s interval.
+- `stopDuelsNetworkSync()` — clears the interval cleanly.
+- `_noteDuelSyncFailure(duelId, error)` / `_clearDuelSyncFailure(duelId)` / `_hasRecentDuelSyncFailure(duelId)` — per-duel failure ledger with 5-min TTL so transient errors expire automatically.
+
+### Per-duel failure tracking → freshness chip variant
+
+If a sync cycle for a specific duel returns `ok=false` (network error, backend rejected, etc.), the duel id is stamped with a failure entry. The freshness chip (A2, 1z.149) reads `_hasRecentDuelSyncFailure(duel.id)` and renders **`· sync failed`** on the "You" row instead of the normal age label. Stronger red tone (`#ef4444`) than the amber `· syncing…` so a tester can immediately distinguish transient stale from active failure. Failure auto-expires after 5 min — a successful subsequent submit clears it immediately.
+
+The Rival row stays unaffected by your-device's failure (their freshness is their own device's responsibility — they have their own ledger).
+
+### Sync Now button (manual override)
+
+Tiny dashed-violet text button under the gold "View Duel" CTA on the active hero card, steps-duel-only. Tap fires `_runDuelSyncCycle('manual')` which:
+
+1. Disables button + shows "Syncing…".
+2. Awaits the full cycle.
+3. Re-renders the hero (button gets re-created → defensive DOM lookup restores label).
+4. Toasts one of:
+   - `Duel synced.` — success
+   - `Already syncing…` — in-flight collision
+   - `Sync failed — check connection.` — any failure
+
+### Race condition avoidance
+
+- **Loop skips ended duels** (`ends_at > now` filter). Post-end resolution is owned by `_finalSyncEndedDuel` via the `maybeResolveDuelIfEnded` path. The loop never races the final-sync.
+- **`_duelsSyncCycleInFlight` boolean** prevents overlapping cycles. If interval fires while a manual sync is mid-flight, the interval call breadcrumb-logs `duel-sync-skip { reason: 'in-flight' }` and returns instantly.
+- **Per-duel submit promises run in `Promise.all`** so one duel's network blip doesn't serialize the rest. One failure isolated to its own entry.
+
+### Diagnostics
+
+New breadcrumbs:
+
+- `duel-sync-loop-start { activeCount, reason, build }` — fires at cycle start.
+- `duel-sync-loop-result { attemptedCount, successCount, failCount, reason, build }` — fires at end.
+- `duel-sync-skip { reason, trigger, duelId?, build }` — fires when cycle is skipped (`in-flight` / `no-active-duels` / `health-unavailable` / `permission-not-granted` / `no-submit` / `no-auth` / `fetch-failed`).
+
+Extended existing breadcrumbs:
+
+- `duel-progress-submit-attempt` / `duel-progress-submit-result` now include `trigger: 'sync-loop-' + reason` (e.g. `'sync-loop-interval'`, `'sync-loop-manual'`) so debug pulls can tell which path produced each submit.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +220 lines (sync loop + start/stop + cycle function + Sync Now button + failure ledger + chip variant + foreground hook) |
+| `styles.css` | +35 lines (`.duels-hero-sync-link` button + `.duels-hero-score-freshness--failed` tone) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w30` | `2.2.3-w31` |
+| `app.js?v=` | `483` | `484` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.369` | `v5.370` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (pass on isolated retry, unrelated — sleep streak tests, not duels).
+- Backend tests: not re-run (no backend changes).
+
+### What's NOT changed
+
+- ✅ Backend: untouched. No deploy needed.
+- ✅ D1: untouched. No migration.
+- ✅ Souls / stake / reward / economy: untouched.
+- ✅ Patch A1 (final-sync timing): preserved.
+- ✅ Patch A2 (freshness chip): preserved + extended with new failure variant.
+- ✅ w30 day-anchored delta scoring: preserved (sync loop reuses `_getStepsForDuelWindow`).
+- ✅ Existing `submitActiveStepsDuelProgress` 5-min throttle: preserved (the new loop is a separate path).
+- ✅ Verified events engine path: preserved.
+
+### TestFlight QA — what to do with w31
+
+1. Cold-launch w31 on both phones. Confirm `"build": "2.2.3-w31"` via Copy Debug Info.
+2. Both phones: open iOS Health → Steps → confirm non-zero today.
+3. Start a 1-hour Steps Duel.
+4. Walk on Richie's phone. Leave Duels tab open. **Within 30s** Anthony's phone (also on Duels tab) should refetch and show Richie's nonzero steps.
+5. Manual test: tap **↻ Sync now** on either device. Button shows "Syncing…" briefly, then toasts "Duel synced." and chip flips to `· just now`.
+6. Disconnect WiFi briefly on one phone. Tap Sync Now. Toast: "Sync failed — check connection." Freshness chip on YOUR row reads `· sync failed` (red). Reconnect WiFi, next auto-cycle clears it.
+7. Switch off Duels tab. Wait 60s. Switch back. The 30s loop restarts immediately (tab-open trigger).
+8. Background the app while a duel is active. Wait. Foreground. `duel-sync-loop-start { reason: 'foreground' }` should appear in Copy Debug Info.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from this machine. No backend deploy. No D1 mutation. No migration. No HealthKit permission change. No souls/stake/economy change. No leaderboard/dungeon/rank logic change. `QA_UNLOCK_C_RANK_DUNGEONS=false`. w30 day-anchored delta scoring, Patches A1 + A2, all preserved.
+
+### Rollback knobs (independent)
+
+- **Sync loop off**: in the tab-switch handler, comment out `startDuelsNetworkSync()` / `stopDuelsNetworkSync()`. Manual Sync Now still works.
+- **Sync Now button off**: remove the conditional `'<button id="duels-hero-sync" ...>'` line and its event listener block (~25 lines).
+- **Failure chip off**: revert the `youSyncFailed` conditional inside `renderActiveDuelHero` (~5 lines). Chip falls back to normal age-based tones.
+
+All three rollbacks are independent — disable any one without breaking the others.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.151 Steps Duel day-anchored delta fix (historical — superseded by 1z.152 above)
 
 ### ✅ STATUS: Code committed on `main`. Frontend `2.2.3-w30` web bundle ready. No backend deploy needed. Awaiting MacBook archive + TestFlight upload for verification.
 
