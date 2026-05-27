@@ -18,6 +18,8 @@ import {
   handleDuelsCreate,
   handleDuelsAccept,
   settleDuelEconomy,
+  getDuelSoulsDeltaForUser,
+  getUserSoulsBalance,
 } from './duels';
 import type { Env } from '../env';
 
@@ -516,5 +518,123 @@ describe('settleDuelEconomy — duel souls ledger (1z.155)', () => {
     const loserRow  = inserts.find(c => c.binds[3] === 'duel_loss');
     expect(winnerRow).toBeDefined();
     expect(loserRow).toBeUndefined();    // skipped
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// v3 Phase 1z.156 — Phase β helpers (resolve response payload)
+//
+// Verifies the two pure helpers that build the new `souls` payload
+// on the resolve response: getDuelSoulsDeltaForUser (no I/O, pure
+// function) and getUserSoulsBalance (single SUM read).
+// ─────────────────────────────────────────────────────────────
+describe('getDuelSoulsDeltaForUser — viewer-perspective duel delta (1z.156)', () => {
+  function makeResolvedDuel(winner: 'challenger' | 'opponent' | 'draw') {
+    return {
+      id: 'duel-abc',
+      challenger_user_id: 'user-chall',
+      opponent_user_id: 'user-opp',
+      stake_souls: 25,
+      reward_souls: 40,
+      winner_user_id:
+        winner === 'challenger' ? 'user-chall' :
+        winner === 'opponent'   ? 'user-opp'   :
+        null,
+    } as Parameters<typeof getDuelSoulsDeltaForUser>[0];
+  }
+
+  it('returns +reward_souls for the winner', () => {
+    const duel = makeResolvedDuel('challenger');
+    expect(getDuelSoulsDeltaForUser(duel, 'user-chall')).toBe(40);
+  });
+
+  it('returns -stake_souls for the loser', () => {
+    const duel = makeResolvedDuel('challenger');
+    expect(getDuelSoulsDeltaForUser(duel, 'user-opp')).toBe(-25);
+  });
+
+  it('returns +reward when opponent wins (for opponent)', () => {
+    const duel = makeResolvedDuel('opponent');
+    expect(getDuelSoulsDeltaForUser(duel, 'user-opp')).toBe(40);
+  });
+
+  it('returns -stake when opponent wins (for challenger as loser)', () => {
+    const duel = makeResolvedDuel('opponent');
+    expect(getDuelSoulsDeltaForUser(duel, 'user-chall')).toBe(-25);
+  });
+
+  it('returns 0 on draw', () => {
+    const duel = makeResolvedDuel('draw');
+    expect(getDuelSoulsDeltaForUser(duel, 'user-chall')).toBe(0);
+    expect(getDuelSoulsDeltaForUser(duel, 'user-opp')).toBe(0);
+  });
+
+  it('returns 0 for a third-party (non-participant) caller', () => {
+    const duel = makeResolvedDuel('challenger');
+    expect(getDuelSoulsDeltaForUser(duel, 'user-bystander')).toBe(0);
+  });
+
+  it('returns 0 when userId is empty/falsy', () => {
+    const duel = makeResolvedDuel('challenger');
+    expect(getDuelSoulsDeltaForUser(duel, '')).toBe(0);
+  });
+});
+
+describe('getUserSoulsBalance — backend-authoritative ledger sum (1z.156)', () => {
+  function makeBalanceDb(returnedBalance: number | null) {
+    return {
+      prepare: (sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          all:   async () => ({ results: [], success: true, meta: {} }),
+          first: async () => {
+            if (sql.includes('FROM user_souls_ledger')) {
+              return returnedBalance == null ? null : { balance: returnedBalance };
+            }
+            return null;
+          },
+          run:   async () => ({ success: true, meta: { changes: 0 } }),
+        }),
+      }),
+    } as unknown as D1Database;
+  }
+
+  it('returns the SUM(delta) from user_souls_ledger', async () => {
+    const env = makeEnv(makeBalanceDb(125));
+    const balance = await getUserSoulsBalance(env, 'user-chall');
+    expect(balance).toBe(125);
+  });
+
+  it('returns 0 when the SUM is NULL (no rows yet for this user)', async () => {
+    const env = makeEnv(makeBalanceDb(0));
+    const balance = await getUserSoulsBalance(env, 'user-newbie');
+    expect(balance).toBe(0);
+  });
+
+  it('returns 0 when the row is missing entirely (defensive)', async () => {
+    const env = makeEnv(makeBalanceDb(null));
+    const balance = await getUserSoulsBalance(env, 'user-chall');
+    expect(balance).toBe(0);
+  });
+
+  it('returns 0 immediately for empty userId without hitting the DB', async () => {
+    let queried = false;
+    const env = makeEnv({
+      prepare: () => ({
+        bind: () => ({
+          all:   async () => ({ results: [], success: true, meta: {} }),
+          first: async () => { queried = true; return null; },
+          run:   async () => ({ success: true, meta: { changes: 0 } }),
+        }),
+      }),
+    } as unknown as D1Database);
+    const balance = await getUserSoulsBalance(env, '');
+    expect(balance).toBe(0);
+    expect(queried).toBe(false);
+  });
+
+  it('handles negative cumulative balance (loser-heavy history)', async () => {
+    const env = makeEnv(makeBalanceDb(-50));
+    const balance = await getUserSoulsBalance(env, 'user-loser');
+    expect(balance).toBe(-50);
   });
 });

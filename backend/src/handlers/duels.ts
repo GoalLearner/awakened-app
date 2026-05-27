@@ -322,6 +322,54 @@ export async function settleDuelEconomy(env: Env, duel: DuelRow): Promise<void> 
 // are migrated.
 const settleDuelReward = settleDuelEconomy;
 
+/**
+ * v3 Phase 1z.156 — Phase β helpers for the resolve response payload.
+ *
+ * `getUserSoulsBalance` is backend-authoritative: it sums every row in
+ * user_souls_ledger for the caller and returns the result. Frontend
+ * Phase γ will replace its local `hb_souls` with this value instead
+ * of trying to delta-apply, so drift is impossible — backend is truth.
+ *
+ * `getDuelSoulsDeltaForUser` is a pure function that derives the
+ * viewer-perspective delta from a resolved duel row + the caller's
+ * user id. Returns:
+ *   - +reward_souls when caller is the winner
+ *   - -stake_souls  when caller is the loser
+ *   -  0            when draw, or when caller is not a participant
+ *
+ * Both helpers are read-only; they emit no INSERTs/UPDATEs and never
+ * touch the duels table. Idempotent by construction — calling either
+ * a second time returns the same value as long as the underlying rows
+ * haven't changed.
+ */
+export async function getUserSoulsBalance(env: Env, userId: string): Promise<number> {
+  if (!userId) return 0;
+  const row = await env.DB.prepare(
+    `SELECT COALESCE(SUM(delta), 0) AS balance
+       FROM user_souls_ledger
+      WHERE user_id = ?`,
+  )
+    .bind(userId)
+    .first<{ balance: number }>();
+  return Number(row?.balance ?? 0);
+}
+
+export function getDuelSoulsDeltaForUser(duel: DuelRow, userId: string): number {
+  if (!userId) return 0;
+  if (!duel.winner_user_id) return 0;        // draw
+  if (duel.winner_user_id === userId) {
+    return Number(duel.reward_souls) || 0;
+  }
+  // Caller is the loser only if they are the OTHER participant.
+  const isLoser =
+    (duel.winner_user_id === duel.challenger_user_id && userId === duel.opponent_user_id) ||
+    (duel.winner_user_id === duel.opponent_user_id   && userId === duel.challenger_user_id);
+  if (isLoser) {
+    return -(Number(duel.stake_souls) || 0);
+  }
+  return 0;                                  // caller is not a participant
+}
+
 interface DuelRow {
   id: string;
   challenger_user_id: string;
@@ -1177,13 +1225,23 @@ export async function handleDuelsResolve(
     return jsonError(403, 'FORBIDDEN', 'You are not a participant in this duel.');
   }
 
-  // Idempotent return path.
+  // Idempotent return path. v3 Phase 1z.156 — also returns the
+  // viewer-perspective souls payload so a stale client opening a
+  // duel that was resolved by another device still gets the
+  // up-to-date balance + delta without an extra round-trip.
   if (row.status === 'completed') {
     const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.opponent_user_id]);
     const progress = await getDuelEffectiveScores(env, row);
+    const yourDelta = getDuelSoulsDeltaForUser(row, session.userId);
+    const yourBalance = await getUserSoulsBalance(env, session.userId);
     return jsonOk({
       ok: true,
       duel: serializeDuel(row, aliasMap, session.userId, progress),
+      souls: {
+        your_delta:   yourDelta,
+        your_balance: yourBalance,
+        settled_at:   row.reward_settled_at ?? null,
+      },
       already_resolved: true,
     });
   }
@@ -1283,9 +1341,21 @@ export async function handleDuelsResolve(
     refreshed.challenger_user_id,
     refreshed.opponent_user_id,
   ]);
+  // v3 Phase 1z.156 — Phase β. Settlement above already wrote the
+  // ledger row(s) (or skipped on draw). Read the caller's balance
+  // back as SUM(delta) so the response is backend-authoritative.
+  // Phase γ frontend will replace local hb_souls with this value.
+  const finalForPayload = finalRow || refreshed;
+  const yourDelta = getDuelSoulsDeltaForUser(finalForPayload, session.userId);
+  const yourBalance = await getUserSoulsBalance(env, session.userId);
   return jsonOk({
     ok: true,
-    duel: serializeDuel(finalRow || refreshed, aliasMap, session.userId, progress),
+    duel: serializeDuel(finalForPayload, aliasMap, session.userId, progress),
+    souls: {
+      your_delta:   yourDelta,
+      your_balance: yourBalance,
+      settled_at:   finalForPayload.reward_settled_at ?? null,
+    },
     resolved: true,
   });
 }
