@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w29';
+  const APP_BUILD_TAG = '2.2.3-w30';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19657,6 +19657,145 @@
   const _DUEL_PROGRESS_MIN_MS = 5 * 60 * 1000; // 5min between submits
   let _lastDuelProgressSubmitAt = 0;
 
+  // v3 Phase 1z.151 — Steps Duel root-cause fix.
+  //
+  // Symptom (w28): Steps Duel submissions returned 0 even when the
+  // device had ~5,000 steps today and Apple Health permissions worked
+  // (leaderboard's full-day query was simultaneously returning the
+  // correct 25.2K weekly total).
+  //
+  // Diagnostic (w29) `duel-steps-crosscheck` confirmed:
+  //   rangeSteps     = 0       (the direct narrow query)
+  //   todaySteps     = 5,376   (full-day query, working)
+  //   dayAnchorSteps = 5,376   (day-anchored midnight→now query, working)
+  //
+  // Conclusion: @perfood/capacitor-healthkit `queryHKitSampleType`
+  // with sub-day windows like [duel.starts_at, duel.ends_at] silently
+  // returns 0 for narrow recent ranges, while day-anchored windows
+  // starting from local midnight return correct cumulative counts.
+  //
+  // Fix: compute duel steps as the DELTA of two day-anchored queries:
+  //   endCum   = getStepsBetween(localMidnight, clampedEnd)
+  //   startCum = getStepsBetween(localMidnight, duel.starts_at)
+  //   duelSteps = max(0, endCum - startCum)
+  //
+  // Both inputs to those queries start at local midnight (proven
+  // reliable), so the delta is the user's step count contributed
+  // during the duel window. clampedEnd = min(now, duel.ends_at) so
+  // mid-duel ticks count progress so far, and post-end final-sync
+  // uses the full duel window.
+  //
+  // Cross-midnight (rare for 1-hour MVP duels): the helper detects
+  // when starts_at and clampedEnd fall on different local days and
+  // falls back to the legacy direct range query while logging the
+  // `crossMidnightFallback: true` flag in the diagnostic breadcrumb.
+  // Multi-day-bucket aggregation is deferred until any longer-
+  // duration duel type requires it.
+  //
+  // Returns:
+  //   {
+  //     value:              integer ≥ 0       — submit this
+  //     method:             'day_anchored_delta' | 'direct_fallback'
+  //     startCumSteps:      integer | null
+  //     endCumSteps:        integer | null
+  //     directRangeSteps:   integer | null    — for crosscheck only
+  //     localMidnightISO:   string
+  //     clampedEndISO:      string
+  //     sameLocalDay:       boolean
+  //     crossMidnightFallback: boolean
+  //   }
+  async function _getStepsForDuelWindow(duel) {
+    const startMs = Date.parse(duel.starts_at);
+    const endMs   = Date.parse(duel.ends_at);
+    const clampedEndMs = Math.min(Date.now(), endMs);
+
+    // Local-midnight ISO for the day containing duel.starts_at.
+    const startDate = new Date(startMs);
+    const startLocalDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const localMidnightISO = startLocalDay.toISOString();
+
+    // sameLocalDay check uses device-local calendar day, not UTC.
+    const endDate = new Date(clampedEndMs);
+    const sameLocalDay =
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getMonth()    === endDate.getMonth() &&
+      startDate.getDate()     === endDate.getDate();
+
+    const clampedEndISO = new Date(clampedEndMs).toISOString();
+    const startISO      = new Date(startMs).toISOString();
+
+    // Direct range result captured for diagnostic comparison even
+    // when the delta path is the submitted value.
+    let directRangeSteps = null;
+    try {
+      const dr = await Health.getStepsBetween(startISO, clampedEndISO);
+      if (typeof dr === 'number' && Number.isFinite(dr) && dr >= 0) {
+        directRangeSteps = Math.round(dr);
+      }
+    } catch (_) { directRangeSteps = null; }
+
+    if (!sameLocalDay) {
+      // Cross-midnight fallback — log it and use direct range as the
+      // best-effort value. 1-hour MVP duels rarely hit this branch.
+      return {
+        value:                  (directRangeSteps != null) ? directRangeSteps : 0,
+        method:                 'direct_fallback',
+        startCumSteps:          null,
+        endCumSteps:            null,
+        directRangeSteps:       directRangeSteps,
+        localMidnightISO:       localMidnightISO,
+        clampedEndISO:          clampedEndISO,
+        sameLocalDay:           false,
+        crossMidnightFallback:  true,
+      };
+    }
+
+    // Same-day day-anchored delta path.
+    let endCum   = null;
+    let startCum = null;
+    try {
+      const ec = await Health.getStepsBetween(localMidnightISO, clampedEndISO);
+      if (typeof ec === 'number' && Number.isFinite(ec) && ec >= 0) {
+        endCum = Math.round(ec);
+      }
+    } catch (_) { endCum = null; }
+    try {
+      const sc = await Health.getStepsBetween(localMidnightISO, startISO);
+      if (typeof sc === 'number' && Number.isFinite(sc) && sc >= 0) {
+        startCum = Math.round(sc);
+      }
+    } catch (_) { startCum = null; }
+
+    // If either day-anchored query failed, fall back to direct range
+    // rather than submitting an unreliable delta.
+    if (endCum == null || startCum == null) {
+      return {
+        value:                  (directRangeSteps != null) ? directRangeSteps : 0,
+        method:                 'direct_fallback',
+        startCumSteps:          startCum,
+        endCumSteps:            endCum,
+        directRangeSteps:       directRangeSteps,
+        localMidnightISO:       localMidnightISO,
+        clampedEndISO:          clampedEndISO,
+        sameLocalDay:           true,
+        crossMidnightFallback:  false,
+      };
+    }
+
+    const duelSteps = Math.max(0, endCum - startCum);
+    return {
+      value:                  duelSteps,
+      method:                 'day_anchored_delta',
+      startCumSteps:          startCum,
+      endCumSteps:            endCum,
+      directRangeSteps:       directRangeSteps,
+      localMidnightISO:       localMidnightISO,
+      clampedEndISO:          clampedEndISO,
+      sameLocalDay:           true,
+      crossMidnightFallback:  false,
+    };
+  }
+
   async function submitActiveStepsDuelProgress(opts) {
     const force = !!(opts && opts.force);
     if (!force && Date.now() - _lastDuelProgressSubmitAt < _DUEL_PROGRESS_MIN_MS) return;
@@ -19698,8 +19837,15 @@
           }
         } catch (_) {}
 
-        let steps;
-        try { steps = await Health.getStepsBetween(startISO, endISO); }
+        // v3 Phase 1z.151 — switch to day-anchored delta. The direct
+        // narrow-window query (preserved inside _getStepsForDuelWindow
+        // as directRangeSteps for diagnostic comparison) returned 0
+        // on real device while day-anchored midnight→now queries
+        // returned the correct cumulative. The helper picks the
+        // delta path when both sub-queries succeed, falls back to
+        // the direct range otherwise.
+        let dw;
+        try { dw = await _getStepsForDuelWindow(duel); }
         catch (e) {
           try {
             if (typeof _addHealthVerifyBreadcrumb === 'function') {
@@ -19712,6 +19858,7 @@
           } catch (_) {}
           continue;
         }
+        const steps = (dw && Number.isFinite(dw.value)) ? dw.value : 0;
         // v3 Phase 1z.150 — Steps Duel root-cause diagnostic.
         // Symptom on w28: both Richie + RenDIESEL submitted value=0
         // for a 1-hour duel even though leaderboard shows ~25K weekly
@@ -19747,16 +19894,27 @@
           } catch (_) { _dayDelta = null; }
           if (typeof _addHealthVerifyBreadcrumb === 'function') {
             _addHealthVerifyBreadcrumb('duel-steps-crosscheck', {
-              duelId: duelIdShort,
-              rangeSteps:        (typeof steps      === 'number') ? Math.round(steps)      : null,
-              todaySteps:        (typeof _today     === 'number') ? Math.round(_today)     : null,
-              dayAnchorSteps:    (typeof _dayDelta  === 'number') ? Math.round(_dayDelta)  : null,
-              startISO:          startISO,
-              endISO:            endISO,
-              nowISO:            new Date().toISOString(),
-              timezoneOffsetMin: new Date().getTimezoneOffset(),
-              trigger:           'foreground-submit',
-              build:             (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+              duelId:                duelIdShort,
+              // v3 Phase 1z.151 — full diagnostic picture. directRangeSteps
+              // is the OLD calculation (kept for comparison); computedDuelSteps
+              // is the NEW day-anchored delta value actually submitted.
+              directRangeSteps:      (dw && dw.directRangeSteps != null) ? dw.directRangeSteps : null,
+              todaySteps:            (typeof _today    === 'number') ? Math.round(_today)    : null,
+              dayAnchorSteps:        (typeof _dayDelta === 'number') ? Math.round(_dayDelta) : null,
+              startCumulativeSteps:  (dw && dw.startCumSteps != null) ? dw.startCumSteps : null,
+              endCumulativeSteps:    (dw && dw.endCumSteps   != null) ? dw.endCumSteps   : null,
+              computedDuelSteps:     (dw && Number.isFinite(dw.value)) ? dw.value : null,
+              method:                (dw && dw.method) || 'unknown',
+              sameLocalDay:          !!(dw && dw.sameLocalDay),
+              crossMidnightFallback: !!(dw && dw.crossMidnightFallback),
+              localMidnightISO:      (dw && dw.localMidnightISO) || null,
+              startISO:              startISO,
+              endISO:                endISO,
+              clampedEndISO:         (dw && dw.clampedEndISO) || null,
+              nowISO:                new Date().toISOString(),
+              timezoneOffsetMin:     new Date().getTimezoneOffset(),
+              trigger:               'foreground-submit',
+              build:                 (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
             });
           }
         } catch (_) { /* diagnostic never blocks the pipeline */ }
@@ -20215,9 +20373,14 @@
       }
     } catch (_) {}
 
-    let steps = null;
-    try { steps = await Health.getStepsBetween(duel.starts_at, duel.ends_at); }
-    catch (_) { steps = null; }
+    // v3 Phase 1z.151 — switch final-sync to day-anchored delta too.
+    // Mirrors the foreground submit path so the resolved score uses
+    // the proven-reliable cumulative-delta math instead of the
+    // narrow-window query that returned 0 in TestFlight.
+    let dw = null;
+    try { dw = await _getStepsForDuelWindow(duel); }
+    catch (_) { dw = null; }
+    const steps = (dw && Number.isFinite(dw.value)) ? dw.value : null;
     // v3 Phase 1z.150 — same cross-check at the final-sync site.
     // The end-of-duel submit is the most important value (it sets
     // the resolved score), so we want the diagnostic here too. The
@@ -20237,16 +20400,24 @@
       } catch (_) { _dayDelta = null; }
       if (typeof _addHealthVerifyBreadcrumb === 'function') {
         _addHealthVerifyBreadcrumb('duel-steps-crosscheck', {
-          duelId: duelIdShort,
-          rangeSteps:        (typeof steps     === 'number') ? Math.round(steps)     : null,
-          todaySteps:        (typeof _today    === 'number') ? Math.round(_today)    : null,
-          dayAnchorSteps:    (typeof _dayDelta === 'number') ? Math.round(_dayDelta) : null,
-          startISO:          duel.starts_at,
-          endISO:            duel.ends_at,
-          nowISO:            new Date().toISOString(),
-          timezoneOffsetMin: new Date().getTimezoneOffset(),
-          trigger:           'post-end-resync',
-          build:             (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          duelId:                duelIdShort,
+          directRangeSteps:      (dw && dw.directRangeSteps != null) ? dw.directRangeSteps : null,
+          todaySteps:            (typeof _today    === 'number') ? Math.round(_today)    : null,
+          dayAnchorSteps:        (typeof _dayDelta === 'number') ? Math.round(_dayDelta) : null,
+          startCumulativeSteps:  (dw && dw.startCumSteps != null) ? dw.startCumSteps : null,
+          endCumulativeSteps:    (dw && dw.endCumSteps   != null) ? dw.endCumSteps   : null,
+          computedDuelSteps:     (dw && Number.isFinite(dw.value)) ? dw.value : null,
+          method:                (dw && dw.method) || 'unknown',
+          sameLocalDay:          !!(dw && dw.sameLocalDay),
+          crossMidnightFallback: !!(dw && dw.crossMidnightFallback),
+          localMidnightISO:      (dw && dw.localMidnightISO) || null,
+          startISO:              duel.starts_at,
+          endISO:                duel.ends_at,
+          clampedEndISO:         (dw && dw.clampedEndISO) || null,
+          nowISO:                new Date().toISOString(),
+          timezoneOffsetMin:     new Date().getTimezoneOffset(),
+          trigger:               'post-end-resync',
+          build:                 (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
         });
       }
     } catch (_) { /* diagnostic never blocks the pipeline */ }

@@ -55,7 +55,132 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.150 Steps Duel zero-value diagnostic (read this first)
+## 📌 Session handoff — May 26, 2026 — 1z.151 Steps Duel day-anchored delta fix (read this first)
+
+### ✅ STATUS: Code committed on `main`. Frontend `2.2.3-w30` web bundle ready. No backend deploy needed. Awaiting MacBook archive + TestFlight upload for verification.
+
+### Root cause confirmed by w29 diagnostic
+
+Real-device `duel-steps-crosscheck` breadcrumb on TestFlight w29 produced:
+```
+rangeSteps:     0
+todaySteps:     5,376
+dayAnchorSteps: 5,376
+build:          2.2.3-w29
+duelId:         f229e987
+```
+
+This is the **first decision-matrix row** from 1z.150's plan: `todaySteps ≥ 1000 AND dayAnchorSteps ≥ 100 AND rangeSteps = 0` → plugin narrow-window bug. The @perfood `queryHKitSampleType` for `stepCount` with sub-day windows like `[duel.starts_at, duel.ends_at]` (a 1h mid-day slice) silently returns 0 even when:
+- Apple Health permissions are granted.
+- The leaderboard's full-day query returns the correct number.
+- Day-anchored midnight→now queries (covering the same period) return the correct number.
+
+### Fix — day-anchored delta
+
+New helper `_getStepsForDuelWindow(duel)`. For same-local-day duels:
+
+```
+endCum    = Health.getStepsBetween(localMidnight, clampedEnd)
+startCum  = Health.getStepsBetween(localMidnight, duel.starts_at)
+duelSteps = max(0, endCum - startCum)
+```
+
+Both sub-queries are **day-anchored** (proven reliable). Their delta is the user's contribution during the duel window. `clampedEnd = min(now, duel.ends_at)` so mid-duel ticks report progress-so-far and final-sync uses the full window.
+
+`localMidnight` is **device-local** (not PT-anchored like `getStepsToday`) — built via `new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())` for the day containing `duel.starts_at`. This sidesteps the leaderboard's PT-specific quirk and treats every device's calendar day correctly.
+
+### Cross-midnight handling
+
+For duels that span a local-midnight boundary (1-hour duels at 11:30 PM → 12:30 AM), `_getStepsForDuelWindow` detects `sameLocalDay === false` and falls back to the legacy direct narrow-range query, logging `crossMidnightFallback: true` in the diagnostic. Multi-day-bucket aggregation deferred until any longer-duration duel type lands.
+
+If either day-anchored sub-query fails (Health returns null), the helper also falls back to the direct narrow range (logged with `method: 'direct_fallback'`) so an outright sub-query failure can't produce a worse value than w28 already had.
+
+### Diagnostic enrichment
+
+`duel-steps-crosscheck` now logs the full picture for both submit sites (foreground + final-sync):
+
+| Field | Meaning |
+|---|---|
+| `directRangeSteps` | OLD calculation — `getStepsBetween(starts_at, ends_at)` (the broken one) |
+| `todaySteps` | `getStepsToday()` |
+| `dayAnchorSteps` | `getStepsBetween(localMidnight, ends_at)` |
+| `startCumulativeSteps` | new — `getStepsBetween(localMidnight, starts_at)` |
+| `endCumulativeSteps` | new — `getStepsBetween(localMidnight, clampedEnd)` |
+| `computedDuelSteps` | new — the value submitted (delta) |
+| `method` | `'day_anchored_delta'` or `'direct_fallback'` |
+| `sameLocalDay` | bool |
+| `crossMidnightFallback` | bool |
+| `localMidnightISO`, `startISO`, `endISO`, `clampedEndISO`, `nowISO`, `timezoneOffsetMin`, `trigger`, `build` | context |
+
+Next walk-test breadcrumb should show `directRangeSteps: 0, computedDuelSteps: > 0, method: 'day_anchored_delta'`.
+
+### Sites updated
+
+- `submitActiveStepsDuelProgress` (foreground / render-tick submitter): replaced `Health.getStepsBetween(startISO, endISO)` with `_getStepsForDuelWindow(duel).value`.
+- `_finalSyncEndedDuel` (Patch A1 post-end resync, from 1z.149): same swap.
+
+Both sites compute identically so foreground and final-sync submits agree. Backend payload shape unchanged (`metric: 'steps', value: <delta>, window_start: starts_at, window_end: ends_at`). Backend resolution math unchanged.
+
+### What's NOT changed
+
+- ✅ Backend: untouched. Wire-compatible. No deploy needed.
+- ✅ D1 schema: untouched. No migration.
+- ✅ Patch A1 (final-sync timing) preserved.
+- ✅ Patch A2 (freshness chip) preserved.
+- ✅ Soul economy, stake/reward logic: untouched.
+- ✅ Leaderboard helpers: untouched (the day-anchored delta uses the SAME plugin path that powers the leaderboard, just composed differently).
+- ✅ `formatDuelDuration` "1 hour" label preserved.
+- ✅ `_formatDuelTimeLeft` / `_fmtDuelHeroCountdown` confirmed correct via audit — no `24h left` source found. Time label fix skipped per spec's "low-risk and clearly related" gate (no actual `24h left` visible in any of Richie's screenshots; only `59M`, `48M`, `47m`, `10M LEFT` etc).
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +140 lines (new `_getStepsForDuelWindow` helper + swap at two submit sites + enriched cross-check fields) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w29` | `2.2.3-w30` |
+| `app.js?v=` | `482` | `483` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.368` | `v5.369` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: **29/29 pass first run** (no flake this train).
+- Backend tests not re-run (no backend changes).
+
+### TestFlight QA — what to do with w30
+
+1. Cold-launch w30 on Richie's phone + Anthony's QA iPhone. Confirm `"build": "2.2.3-w30"` via Copy Debug Info.
+2. Open iOS Health → Steps. Confirm both phones show non-zero today.
+3. Start a 1-hour Steps Duel.
+4. **Walk at least 100 steps on each device during the duel.**
+5. Mid-duel: open Duels tab. Expect:
+   - Active hero card: `You: N steps` where N > 0
+   - Freshness chip: `· just now` after the tab open submit
+6. Wait for duel to end. Open Duels tab to fire final-sync.
+7. Copy Debug Info. Search for `duel-steps-crosscheck` — should show `method: "day_anchored_delta"`, `computedDuelSteps: > 0`, `directRangeSteps: 0` (proving the new path is correct AND the old path is still broken — diagnostic confirms the fix).
+8. Result toast should match the freshly-synced nonzero steps.
+
+### Rollback knob
+
+To revert to direct narrow query: in the two submit sites, replace `_getStepsForDuelWindow(duel)` calls with the prior `Health.getStepsBetween(startISO, endISO)` direct calls. The helper itself can stay unused. ~15 lines.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from this machine. No backend deploy. No D1 mutation. No migration. No HealthKit permission change. No souls/stake/economy change. No leaderboard/dungeon/rank logic change. `QA_UNLOCK_C_RANK_DUNGEONS=false`. Patches A1 (final-sync) and A2 (freshness chip) preserved.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.150 Steps Duel zero-value diagnostic (historical — superseded by 1z.151 above)
 
 ### 🟡 STATUS: Diagnostic-only. NO behavior fix yet. We need real-device breadcrumb data from the next 1-hour walk-test to choose between two competing root-cause hypotheses before patching the step pipeline.
 
