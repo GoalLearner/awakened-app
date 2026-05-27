@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w36';
+  const APP_BUILD_TAG = '2.2.3-w37';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21350,16 +21350,99 @@
   }
   try { window.startDuelsNetworkSync = startDuelsNetworkSync; window.stopDuelsNetworkSync = stopDuelsNetworkSync; } catch (_) {}
 
+  // v3 Phase 1z.160 — multi-active-duel hero selection.
+  //
+  // With two active Steps Duels at once (e.g. Richie vs RenDIESEL +
+  // Richie vs Anthony), the hero card previously always pinned to
+  // the newest-created duel by default and had no way to switch.
+  // The active list row tap opened the detail screen, so users
+  // couldn't promote the other duel into the hero from the main UI.
+  //
+  // Fix: a module-level _selectedActiveDuelId is set when the user
+  // taps an active list row. _pickActiveHeroDuel honors it; falls
+  // back to soonest-ending if the selection is stale (duel ended,
+  // was resolved, or otherwise dropped from active[]). Default
+  // hero is now soonest-ending (was newest), matching user intent
+  // — the one about to expire is the one you care about most.
+  let _selectedActiveDuelId = null;
+
   function _pickActiveHeroDuel(active) {
-    if (!Array.isArray(active) || active.length === 0) return null;
+    if (!Array.isArray(active) || active.length === 0) {
+      if (_selectedActiveDuelId !== null) {
+        try {
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-hero-selected', {
+              duelId:      null,
+              reason:      'selected-stale-fallback',
+              activeCount: 0,
+              build:       (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+            });
+          }
+        } catch (_) {}
+        _selectedActiveDuelId = null;
+      }
+      return null;
+    }
+    // Honor user-selected duel if it's still in the active list.
+    if (_selectedActiveDuelId) {
+      const selected = active.find(d => d && d.id === _selectedActiveDuelId);
+      if (selected) return selected;
+      // Selection went stale (duel ended/resolved/cancelled between
+      // ticks). Reset and fall through to soonest-ending default.
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('duel-hero-selected', {
+            duelId:      String(_selectedActiveDuelId).slice(0, 8),
+            reason:      'selected-stale-fallback',
+            activeCount: active.length,
+            build:       (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
+      _selectedActiveDuelId = null;
+    }
+    // Default: soonest-ending first. ends_at ASC, then id ASC as
+    // deterministic tiebreaker.
     const sorted = active.slice().sort((a, b) => {
-      const at = a && a.starts_at ? Date.parse(a.starts_at) : 0;
-      const bt = b && b.starts_at ? Date.parse(b.starts_at) : 0;
-      if (bt !== at) return bt - at;
-      return String(b && b.id || '').localeCompare(String(a && a.id || ''));
+      const ae = a && a.ends_at ? Date.parse(a.ends_at) : Infinity;
+      const be = b && b.ends_at ? Date.parse(b.ends_at) : Infinity;
+      if (ae !== be) return ae - be;
+      return String(a && a.id || '').localeCompare(String(b && b.id || ''));
     });
     return sorted[0] || null;
   }
+
+  // v3 Phase 1z.160 — invoked by the active duel list row click
+  // handler when the user has 2+ active duels and taps a non-hero
+  // row. Sets selection, rerenders the hero + the active list
+  // (so the .duel-card--selected class moves with the choice).
+  // Single-active-duel case keeps the existing detail-open behavior
+  // — promotion is meaningless when there's only one.
+  function _selectActiveDuelHero(duelId) {
+    if (!duelId) return false;
+    const active = (_duelsCache && Array.isArray(_duelsCache.active)) ? _duelsCache.active : [];
+    if (active.length < 2) return false; // nothing to promote
+    if (!active.some(d => d && d.id === duelId)) return false;
+    if (_selectedActiveDuelId === duelId) {
+      // Already selected — no change, no rerender, no breadcrumb spam.
+      return true;
+    }
+    _selectedActiveDuelId = duelId;
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-hero-selected', {
+          duelId:      String(duelId).slice(0, 8),
+          reason:      'row-tap',
+          activeCount: active.length,
+          build:       (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      }
+    } catch (_) {}
+    try { if (typeof renderActiveDuelHero === 'function') renderActiveDuelHero(active); } catch (_) {}
+    try { if (typeof renderDuelsSection   === 'function') renderDuelsSection(); } catch (_) {}
+    return true;
+  }
+  try { window._selectActiveDuelHero = _selectActiveDuelHero; } catch (_) {}
 
   function _fmtDuelHeroCountdown(ms) {
     if (typeof ms !== 'number' || ms <= 0) return 'ending soon';
@@ -22097,8 +22180,18 @@
             '<div class="duel-card-scores">You: <span class="duel-card-scores-you">' + esc(youDisp) +
             '</span> · Rival: <span class="duel-card-scores-rival">' + esc(rivalDisp) + '</span></div>';
         }
+        // v3 Phase 1z.160 — mark the row whose duel is currently
+        // promoted to the hero card. CSS .duel-card--selected adds
+        // a violet ring; the rest of the row styling is unchanged.
+        const isHeroSelected = (active.length >= 2)
+          && ((_selectedActiveDuelId && _selectedActiveDuelId === d.id)
+              || (!_selectedActiveDuelId && (() => {
+                   const hero = _pickActiveHeroDuel(active);
+                   return hero && hero.id === d.id;
+                 })()));
+        const selectedClass = isHeroSelected ? ' duel-card--selected' : '';
         parts.push(
-          '<div class="duel-card duel-card--active" data-duel-id="' + esc(d.id) + '" data-duel-action="view" role="button" tabindex="0">' +
+          '<div class="duel-card duel-card--active' + selectedClass + '" data-duel-id="' + esc(d.id) + '" data-duel-action="view" role="button" tabindex="0">' +
             '<div class="duel-card-head">' +
               _friendAvatarHtml(opp, 'rival') +
               '<div class="duel-card-main">' +
@@ -22642,6 +22735,25 @@
         }
         if (!did) return;
         if (action === 'view') {
+          // v3 Phase 1z.160 — multi-active-duel hero promotion.
+          // When the user has 2+ active duels and taps a non-hero
+          // active list row, promote it into the hero card instead
+          // of opening detail. The hero's explicit "View Duel"
+          // button remains the unambiguous detail entry. Single
+          // active duel (or non-active card types) keep the
+          // existing direct-to-detail behavior — promotion would
+          // be a no-op there.
+          //
+          // The card needs to actually BE an .duel-card--active row;
+          // pending/incoming/outgoing cards still go straight to
+          // detail because there's only one of each in the picture.
+          const isActiveCard = !!(row && row.classList && row.classList.contains('duel-card--active'));
+          if (isActiveCard
+              && _duelsCache && Array.isArray(_duelsCache.active)
+              && _duelsCache.active.length >= 2) {
+            const promoted = _selectActiveDuelHero(did);
+            if (promoted) return; // promotion happened; don't open detail
+          }
           openDuelDetail(did);
           return;
         }

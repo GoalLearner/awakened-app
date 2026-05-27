@@ -20718,6 +20718,34 @@ body.reveal-locked { overflow: hidden; }
   cursor: pointer;
 }
 .duel-card--active:hover { filter: brightness(1.05); }
+/* v3 Phase 1z.160 — selected active duel (the one promoted into
+   the hero card). Stronger violet ring + small "in hero" marker.
+   Only applied when there are 2+ active duels, so single-duel
+   users never see it (would be visual noise). */
+.duel-card--active.duel-card--selected {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 1px var(--gold) inset,
+    0 0 14px rgba(245, 158, 11, 0.30),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.duel-card--active.duel-card--selected::after {
+  content: 'IN HERO';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  color: var(--gold);
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 3px;
+  padding: 2px 5px;
+  pointer-events: none;
+}
+.duel-card--active { position: relative; }
 .duel-card-head {
   display: flex;
   align-items: center;

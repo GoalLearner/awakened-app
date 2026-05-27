@@ -55,7 +55,145 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 27, 2026 — 1z.159 SAFETY + SECURITY — remove public souls repair hook + lock anti-overwrite guard (read this first)
+## 📌 Session handoff — May 27, 2026 — 1z.160 Multi-active duel hero selection + soonest-ending default (read this first)
+
+### ✅ STATUS: User with 2+ active Steps Duels can now promote either duel into the hero card by tapping its row. Default hero is the soonest-ending duel (was newest). Manual Sync Now and the automatic sync loop already sync all active duels — that path was working at the network layer; only the UI selection was blocked. Frontend-only. `2.2.3-w37` web bundle ready.
+
+### Audit findings
+
+| Surface | Status before patch |
+|---|---|
+| `_runDuelSyncCycle('manual')` and `('interval')` | ✅ **Already syncs ALL active Steps Duels** via `Promise.all(eligibles.map(...))` at line 21199. Multi-duel sync at the network layer was working since 1z.151. |
+| `_pickActiveHeroDuel(active)` | ❌ Always picked newest (`starts_at DESC`). No way to switch. |
+| Active list row tap (`data-duel-action="view"`) | ❌ Opened detail directly. No promotion path. |
+| Visible "which duel is in the hero" indicator | ❌ Missing. |
+
+The actual issue was purely UI: the second active duel was syncing correctly (debug breadcrumbs prove it), but the user had no way to see/select it as the hero, and no way to verify the sync was working without seeing the score update in the hero.
+
+### Fix — 1z.160
+
+**1. New module-level state** (`app.js:~21353`):
+```js
+let _selectedActiveDuelId = null;
+```
+
+**2. `_pickActiveHeroDuel` rewritten**:
+- If `_selectedActiveDuelId` matches an active duel → return it.
+- If selection is stale (duel ended/resolved/cancelled between ticks) → reset to null, emit `duel-hero-selected { reason: 'selected-stale-fallback' }` breadcrumb, fall through to default.
+- Default sort: **`ends_at ASC` (soonest-ending first)**, then `id ASC` as deterministic tiebreaker.
+
+Rationale for soonest-ending default: the duel about to expire is the one the user cares about most — they want to see it before it resolves to know whether to walk harder.
+
+**3. New `_selectActiveDuelHero(duelId)` helper**:
+- Only fires when there are 2+ active duels (single-duel case = no-op; nothing to promote to).
+- Validates the id is in `_duelsCache.active`.
+- Sets selection, emits `duel-hero-selected { reason: 'row-tap' }` breadcrumb, rerenders both `renderActiveDuelHero(active)` and `renderDuelsSection()` so the gold ring moves with the choice.
+- Exposed as `window._selectActiveDuelHero` for diagnostic console use.
+
+**4. Active card render**:
+- Adds `.duel-card--selected` class when the duel is the one currently in the hero (only when 2+ active duels exist — solo users never see the marker).
+- Same `data-duel-action="view"` attribute kept for backward compat.
+
+**5. Active card click handler** (`app.js:~22644`):
+- When `action === 'view'` AND the row is `.duel-card--active` AND `_duelsCache.active.length >= 2` → call `_selectActiveDuelHero(did)` and short-circuit. No detail-open.
+- Otherwise → existing `openDuelDetail(did)` behavior (single active duel, pending/incoming/outgoing cards).
+- The hero's explicit `View Duel` button remains the unambiguous detail entry.
+
+**6. CSS** (`styles.css:~20720`):
+- `.duel-card--active.duel-card--selected` — gold border + soft amber glow + 1px inset ring.
+- `::after` pseudo "IN HERO" pill in the top-right corner of the selected row. Pointer-events: none so it doesn't intercept taps.
+- `.duel-card--active { position: relative }` to anchor the pill.
+
+### Sync behavior verification
+
+The sync code path was already correct. Confirmed by re-reading `_runDuelSyncCycle`:
+
+- Line 21157: `const eligibles = listRes.active.filter(d => d.duel_type === 'steps' && d.status === 'active' && endsMs > nowMs)` — filters to all mid-duel active steps duels for the current user.
+- Line 21199: `await Promise.all(eligibles.map(async (duel) => { ... }))` — submits progress for each in parallel.
+- Manual Sync Now (Sync Now button at line ~21655) calls `_runDuelSyncCycle('manual')` — same path, same behavior.
+- Interval sync (line ~21342) calls `_runDuelSyncCycle('interval')` every 30s when Duels tab is visible.
+
+**No sync-loop changes needed.** The user's perception of "second duel can't be synced" was because the hero card never showed it — so the user had no visual confirmation that the other duel's score was updating. With 1z.160, tapping the second row promotes it into the hero, and the existing sync loop's already-fresh score becomes visible.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation, migration.
+- ✅ HealthKit math (day-anchored delta), duel scoring, leaderboard, dungeon, XP, rank, sim values, souls economy — all untouched.
+- ✅ w30, w31, w32, w35, w36, Patch A1, Patch A2, 1z.157→159 souls arc — all preserved.
+- ✅ `_runDuelSyncCycle` itself — only `_pickActiveHeroDuel` and the click handler changed.
+- ✅ Existing detail-open flow for non-active cards (incoming/outgoing/pending) — unchanged.
+- ✅ `View Duel` button on the hero — still opens detail.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +90 lines (`_selectedActiveDuelId` state, `_pickActiveHeroDuel` rewrite, `_selectActiveDuelHero` helper, active card render `duel-card--selected` class, click handler promotion branch) |
+| `styles.css` | +28 lines (selected ring + IN HERO pill) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Diagnostics
+
+| Breadcrumb | When |
+|---|---|
+| `duel-hero-selected { duelId, reason, activeCount, build }` | New — fires on `row-tap`, `selected-stale-fallback`, or default |
+| `duel-sync-loop-start { activeCount, reason, build }` | Unchanged — already emits on every cycle |
+| `duel-sync-loop-result { attemptedCount, successCount, failCount, reason, build }` | Unchanged |
+| `duel-progress-submit-attempt { duelId, ... }` per duel | Unchanged — already per-active-duel |
+
+`reason` values for `duel-hero-selected`: `row-tap` | `selected-stale-fallback`.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w36` | `2.2.3-w37` |
+| `app.js?v=` | `489` | `490` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.375` | `v5.376` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → **OK**.
+- Playwright e2e: 27/29 first run, 2 transient sleep-streak / global-rankings-hub flakes (pass on isolated retry, unrelated to duel logic).
+- Backend tests not re-run — no backend changes.
+
+### TestFlight QA for w37
+
+1. Both phones cold-launch. Confirm `"build": "2.2.3-w37"`.
+2. Create TWO Steps Duels from the same device (e.g. Richie → Anthony, then Richie → RenDIESEL). Both accepted.
+3. On Duels tab, hero should show the **soonest-ending** duel. Both active rows visible below.
+4. The hero's selected row in the active list should carry the gold ring + `IN HERO` pill.
+5. Tap the **other** active row.
+6. Hero swaps to that duel; ring + pill move to the new selected row. Hero countdown, opponent, scores update to match.
+7. Walk on the test phone. Tap **Sync Now**. Confirm both duels' scores update in the active list (check the row that's NOT in the hero — its `You: N steps · Rival: M steps` line should also refresh).
+8. Tap the hero's **View Duel** button. Detail screen opens for the selected duel.
+9. Let one duel expire/resolve. Confirm selection stays on the remaining duel (or falls back to soonest-ending if the selected one was the resolved one).
+10. Single-active-duel state: only one duel running → no IN HERO pill (would be noise), no row-tap promotion (tapping still opens detail directly).
+
+If steps 5–7 + 9 all behave correctly, multi-active-duel UX is officially trustworthy.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / duel scoring / souls / leaderboard / dungeon / XP / rank / sim / sync-cadence changes.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+- ✅ w30/w31/w32/w35/w36 + Patches A1/A2 + Phase α/β/γ souls arc all preserved.
+
+### Rollback
+
+Three reverts cleanly: (1) `_pickActiveHeroDuel` body, (2) the click-handler `isActiveCard + length ≥ 2` branch, (3) the `.duel-card--selected` CSS block. State variable `_selectedActiveDuelId` and helper `_selectActiveDuelHero` can stay dormant — they're harmless without the wiring. Default behavior reverts to "always pick newest, tap = open detail."
+
+---
+
+## 📌 Session handoff — May 27, 2026 — 1z.159 SAFETY + SECURITY — remove public souls repair hook + lock anti-overwrite guard (historical — superseded by 1z.160 above)
 
 ### ✅ STATUS: Console exploit closed. Anti-overwrite contract documented in load-bearing comment. Frontend-only. `2.2.3-w36` web bundle ready for TestFlight.
 
