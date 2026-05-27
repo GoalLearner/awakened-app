@@ -55,7 +55,116 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 26, 2026 — 1z.149 Patch A1 final-sync + A2 freshness chip for Steps Duel (read this first — BACKEND DEPLOY PENDING)
+## 📌 Session handoff — May 26, 2026 — 1z.150 Steps Duel zero-value diagnostic (read this first)
+
+### 🟡 STATUS: Diagnostic-only. NO behavior fix yet. We need real-device breadcrumb data from the next 1-hour walk-test to choose between two competing root-cause hypotheses before patching the step pipeline.
+
+### Why this train
+
+`2.2.3-w28` shipped Patches A1 (final-sync) + A2 (freshness chip). The plumbing works — D1 confirms both Patch A1 (final-sync fires 11s after `ends_at`) and the resolve path are wiring correctly. But the **data is broken**: both Richie's AND RenDIESEL's clients are submitting `value=0` for 1-hour Steps Duels.
+
+### D1 evidence (read-only audit)
+
+Completed duel `99eca366` (Richie vs RenDIESEL, ended 27 May 01:59Z, draw):
+
+| user | value | window | server_updated_at |
+|---|---|---|---|
+| `ca5b82df` (RenDIESEL) | **0** | `[00:59:30Z, 01:59:30Z]` | 01:54:34Z |
+| `ede751e6` (Richie)    | **0** | `[00:59:30Z, 01:59:30Z]` | 01:59:41Z (Patch A1 post-end-resync ✅) |
+
+`verified_events` has **0 step_total rows** in the last 6 hours. Active duel `f229e987` also shows `value=0` for Richie 8 min in. Both pipelines (legacy snapshots + verified events) returning 0.
+
+### Critical comparison
+
+Same `_queryStepsInRange` helper. Same plugin call. Different results:
+
+| Caller | Window passed | Result |
+|---|---|---|
+| `getStepsToday` (leaderboard) | `[device-local midnight, now]` (full-day anchor) | ✅ Works → feeds the live 25.2K weekly steps |
+| `getStepsBetween` (duels) | `[duel.starts_at, duel.ends_at]` (1h mid-day slice) | ❌ Returns 0 |
+
+### Two hypotheses to disambiguate
+
+1. **Plugin behavior**: `@perfood/capacitor-healthkit` `queryHKitSampleType` for `stepCount` with sub-day windows returns empty even when full-day windows succeed. Apple Health pedometer samples bucket into ~5-15 min aggregates, and recent buckets may not be query-visible or may be excluded by the plugin's default `NSPredicate` options.
+2. **Tester behavior**: Both testers genuinely walked 0 steps during the indoor desk-test 1-hour window. Plausible — Anthony is a 2nd iPhone on a desk (Richie's QA account), RenDIESEL may have also been stationary.
+
+We cannot distinguish these from D1 alone. **Don't fix blind. Get evidence first.**
+
+### Diagnostic added (this train)
+
+New breadcrumb `duel-steps-crosscheck` fires every time `submitActiveStepsDuelProgress` or `_finalSyncEndedDuel` runs. It logs THREE parallel HealthKit queries:
+
+| Field | What it queries |
+|---|---|
+| `rangeSteps` | `Health.getStepsBetween(duel.starts_at, duel.ends_at)` — the value about to be submitted |
+| `todaySteps` | `Health.getStepsToday()` — proven-working full-day query |
+| `dayAnchorSteps` | `Health.getStepsBetween(localMidnightISO, duel.ends_at)` — day-anchored window covering the duel period |
+
+Plus `startISO`, `endISO`, `nowISO`, `timezoneOffsetMin`, `trigger` (`foreground-submit` vs `post-end-resync`), `build`. Privacy-safe (integers + window timestamps only). Never blocks the submit pipeline.
+
+### Decision matrix once next test produces breadcrumbs
+
+| Breadcrumb pattern | Root cause | Next fix |
+|---|---|---|
+| `todaySteps ≥ 1000` AND `dayAnchorSteps ≥ 100` AND `rangeSteps = 0` | **Plugin narrow-window bug confirmed.** | w30: replace sub-day query with day-anchored DELTA (`Health.getStepsBetween(midnight, end) − Health.getStepsBetween(midnight, start)`) |
+| `todaySteps ≥ 1000` AND `dayAnchorSteps = 0` | Less likely — would suggest day-anchored queries silently fail mid-day too. Investigate plugin further. | Plugin-level investigation, likely native fix |
+| `todaySteps = 0` AND testers actually walked | Plugin permission / availability regression on real device. | Re-check `permissionStatus()` and `isAvailable()` in field |
+| `todaySteps = 0` AND testers were stationary | Not a bug. Tester behavior. | Re-run with actual movement (≥ 50 steps confirmed in Apple Health app first) |
+
+### What was NOT done
+
+- ✅ No behavior change. Submit pipeline still calls `Health.getStepsBetween(duel.starts_at, duel.ends_at)` exactly as before.
+- ✅ No backend change. No deploy needed.
+- ✅ No D1 mutation. No migration.
+- ✅ No Patch A1 / A2 regression. Final-sync + freshness chip still wired identically.
+- ✅ Diagnostic is fire-and-forget; failures inside the cross-check are swallowed and never block the submit.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +60 lines (two cross-check blocks, one in each submit site) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w28` | `2.2.3-w29` |
+| `app.js?v=` | `481` | `482` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.367` | `v5.368` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+
+### Tests
+
+- `node --check` on app.js / auth.js / sw.js / simulated-leaderboard.js → OK.
+- Playwright e2e: 28/29 first run, 1 transient browser-context flake (passes on isolated retry, unrelated).
+- Backend tests not re-run — no backend changes.
+
+### TestFlight QA — what to do with w29
+
+1. Cold-launch w29 on Richie's phone + Anthony's QA iPhone. Confirm `"build": "2.2.3-w29"` via Copy Debug Info.
+2. **Before starting the duel: verify Apple Health shows step counts.** Open the iOS Health app → Steps → confirm both phones are recording today's steps (any non-zero number). If either is at 0 in Health itself, the test is invalid before it begins.
+3. Start a 1-hour Steps Duel.
+4. **Actively walk during the duel** — at least 200-500 steps to make the test definitive. Walk around the room, do a short loop, anything HealthKit will register.
+5. Mid-duel: open Duels tab on both devices.
+6. Wait for duel to end. Open Duels tab again on both to fire the final-sync.
+7. **Copy Debug Info on both devices.** Search for `duel-steps-crosscheck` breadcrumbs. Match against the decision matrix above.
+
+### Hard guardrails respected
+
+No Codemagic. No archive/upload from this machine. No backend deploy. No D1 mutation. No migration. No HealthKit permission change. No souls/stake change. No leaderboard logic change. No dungeon/economy/rank change. `QA_UNLOCK_C_RANK_DUNGEONS=false`. Patch A1 (final-sync) and Patch A2 (freshness chip) preserved intact.
+
+### Rollback
+
+Diagnostic-only train. If for any reason it ever feels noisy, delete the two `duel-steps-crosscheck` blocks (one in `submitActiveStepsDuelProgress`, one in `_finalSyncEndedDuel`). Everything else stays.
+
+---
+
+## 📌 Session handoff — May 26, 2026 — 1z.149 Patch A1 final-sync + A2 freshness chip for Steps Duel (historical — superseded by 1z.150 above)
 
 ### 🟡 STATUS: Code committed on `main`. Backend serializer change NOT yet deployed. Frontend `2.2.3-w28` web bundle ready. Awaiting explicit approval to deploy Worker. Wire-compatible: chip omits gracefully if frontend ships before backend.
 

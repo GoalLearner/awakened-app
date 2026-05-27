@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w28';
+  const APP_BUILD_TAG = '2.2.3-w29';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19712,6 +19712,54 @@
           } catch (_) {}
           continue;
         }
+        // v3 Phase 1z.150 — Steps Duel root-cause diagnostic.
+        // Symptom on w28: both Richie + RenDIESEL submitted value=0
+        // for a 1-hour duel even though leaderboard shows ~25K weekly
+        // steps. Hypothesis: HKSampleQuery for sub-day windows can
+        // return empty when full-day windows succeed. Cross-check
+        // logs three parallel queries so the breadcrumb dump
+        // disambiguates "plugin behavior" vs "user didn't walk":
+        //
+        //   rangeSteps  = Health.getStepsBetween(duel window)
+        //                 — same value we're about to submit.
+        //   todaySteps  = Health.getStepsToday()
+        //                 — proven-working full-day query.
+        //   dayDelta    = Health.getStepsBetween(local midnight, endISO)
+        //                 — day-anchored query covering the duel window.
+        //                 If this is > 0 while rangeSteps is 0, the
+        //                 narrow-window path is the failure mode.
+        //
+        // Privacy-safe: only the duel id prefix + integer step counts +
+        // window timestamps. No user IDs or aliases. Fire-and-forget;
+        // failure of any sub-query stays null in the payload, never
+        // blocks the submit pipeline.
+        try {
+          const _today = (Health && typeof Health.getStepsToday === 'function')
+            ? await Health.getStepsToday().catch(() => null)
+            : null;
+          let _dayDelta = null;
+          try {
+            const _localDate = (typeof getDeviceLocalDate === 'function')
+              ? getDeviceLocalDate()
+              : new Date().toISOString().slice(0, 10);
+            const _dayStartISO = new Date(_localDate + 'T00:00:00').toISOString();
+            _dayDelta = await Health.getStepsBetween(_dayStartISO, endISO).catch(() => null);
+          } catch (_) { _dayDelta = null; }
+          if (typeof _addHealthVerifyBreadcrumb === 'function') {
+            _addHealthVerifyBreadcrumb('duel-steps-crosscheck', {
+              duelId: duelIdShort,
+              rangeSteps:        (typeof steps      === 'number') ? Math.round(steps)      : null,
+              todaySteps:        (typeof _today     === 'number') ? Math.round(_today)     : null,
+              dayAnchorSteps:    (typeof _dayDelta  === 'number') ? Math.round(_dayDelta)  : null,
+              startISO:          startISO,
+              endISO:            endISO,
+              nowISO:            new Date().toISOString(),
+              timezoneOffsetMin: new Date().getTimezoneOffset(),
+              trigger:           'foreground-submit',
+              build:             (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+            });
+          }
+        } catch (_) { /* diagnostic never blocks the pipeline */ }
         if (steps == null || steps < 0) {
           try {
             if (typeof _addHealthVerifyBreadcrumb === 'function') {
@@ -20170,6 +20218,38 @@
     let steps = null;
     try { steps = await Health.getStepsBetween(duel.starts_at, duel.ends_at); }
     catch (_) { steps = null; }
+    // v3 Phase 1z.150 — same cross-check at the final-sync site.
+    // The end-of-duel submit is the most important value (it sets
+    // the resolved score), so we want the diagnostic here too. The
+    // `trigger: 'post-end-resync'` tag distinguishes this breadcrumb
+    // from the mid-duel foreground submitter cross-check.
+    try {
+      const _today = (Health && typeof Health.getStepsToday === 'function')
+        ? await Health.getStepsToday().catch(() => null)
+        : null;
+      let _dayDelta = null;
+      try {
+        const _localDate = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate()
+          : new Date().toISOString().slice(0, 10);
+        const _dayStartISO = new Date(_localDate + 'T00:00:00').toISOString();
+        _dayDelta = await Health.getStepsBetween(_dayStartISO, duel.ends_at).catch(() => null);
+      } catch (_) { _dayDelta = null; }
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        _addHealthVerifyBreadcrumb('duel-steps-crosscheck', {
+          duelId: duelIdShort,
+          rangeSteps:        (typeof steps     === 'number') ? Math.round(steps)     : null,
+          todaySteps:        (typeof _today    === 'number') ? Math.round(_today)    : null,
+          dayAnchorSteps:    (typeof _dayDelta === 'number') ? Math.round(_dayDelta) : null,
+          startISO:          duel.starts_at,
+          endISO:            duel.ends_at,
+          nowISO:            new Date().toISOString(),
+          timezoneOffsetMin: new Date().getTimezoneOffset(),
+          trigger:           'post-end-resync',
+          build:             (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      }
+    } catch (_) { /* diagnostic never blocks the pipeline */ }
     if (steps == null || steps < 0) {
       try {
         if (typeof _addHealthVerifyBreadcrumb === 'function') {
