@@ -23992,6 +23992,115 @@ body.habit-drag-active * {
   max-width: 28em;
 }
 
+/* v3 Phase 1z.173 — Guild Hall Command Panel (Variation B from
+   ClaudeDesign Social Tab Polish). Wraps the page header, friend
+   avatar stack, and three summary tiles into a single gold→violet
+   gradient-rimmed hero so the title area reads as one Guild Hall
+   surface. Inner navy with a radial gold glow at top edge to
+   reinforce the "command" feel. */
+.guildhall-command-panel {
+  margin: 8px 14px 18px;
+  padding: 1px; /* makes room for the gradient rim below */
+  background: linear-gradient(135deg,
+    rgba(167,139,250,0.55) 0%,
+    rgba(245,184,66,0.65) 50%,
+    rgba(167,139,250,0.55) 100%);
+  border-radius: 16px;
+  box-shadow: 0 0 18px rgba(167,139,250,0.20);
+}
+.guildhall-command-panel-inner {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(245,184,66,0.12), transparent 55%),
+    linear-gradient(180deg, rgba(16,18,38,0.95), rgba(16,18,38,0.85));
+  border-radius: 15px;
+  padding: 14px 14px 12px;
+}
+.guildhall-command-panel-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* In Command Panel mode the page-header internal margins relax so
+   the kicker + title align flush with the panel's top-left edge.
+   The standalone page-header layout (pre-1z.173) is no longer used
+   on the Social tab — the rules below scope to the new wrapper. */
+.guildhall-command-panel .guildhall-page-header {
+  margin: 0;
+  padding: 0;
+}
+.guildhall-command-panel .guildhall-page-sub {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #b1b4cf);
+  line-height: 1.45;
+}
+.guildhall-command-panel-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-top: 12px;
+}
+/* Hero-mode chips: align to the top-right of the panel header.
+   Stack rules already defined below (margin-left negative) carry
+   forward — only positioning/sizing differs. */
+.guildhall-summary-chips--hero {
+  flex: 0 0 auto;
+  margin-left: 0;
+  align-self: flex-start;
+}
+
+/* v3 Phase 1z.173 — Per-tile accent colors per ClaudeDesign spec.
+   Each tile gets a 2px gradient line on its top edge in the tile's
+   color, and the Cinzel value picks up the same color with a soft
+   matching glow. Empty values (.is-empty added by renderer when
+   the count is 0) render as text-tertiary "—" — never a fully
+   colored 0, which would make a fresh install look broken. */
+.guildhall-summary-tile {
+  position: relative;
+  overflow: hidden;
+}
+.guildhall-summary-tile-accent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  pointer-events: none;
+  opacity: 0.7;
+}
+.guildhall-summary-tile--hunters .guildhall-summary-tile-accent {
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.95), transparent);
+}
+.guildhall-summary-tile--feats .guildhall-summary-tile-accent {
+  background: linear-gradient(90deg, transparent, rgba(245,184,66,0.95), transparent);
+}
+.guildhall-summary-tile--bosses .guildhall-summary-tile-accent {
+  background: linear-gradient(90deg, transparent, rgba(239,68,68,0.95), transparent);
+}
+/* Color-coded value (grows in the hero card; same Cinzel face). */
+.guildhall-command-panel-tiles .guildhall-summary-tile {
+  padding: 10px 11px 11px;
+}
+.guildhall-command-panel-tiles .guildhall-summary-tile-value {
+  font-size: 1.40rem;
+}
+.guildhall-summary-tile--hunters .guildhall-summary-tile-value {
+  color: rgba(167,139,250,1);
+  text-shadow: 0 0 10px rgba(167,139,250,0.40);
+}
+.guildhall-summary-tile--feats .guildhall-summary-tile-value {
+  color: var(--gold, #f5b842);
+  text-shadow: 0 0 10px rgba(245,184,66,0.40);
+}
+.guildhall-summary-tile--bosses .guildhall-summary-tile-value {
+  color: #ef4444;
+  text-shadow: 0 0 10px rgba(239,68,68,0.40);
+}
+/* Empty-state muting — overrides all three color rules above. */
+.guildhall-summary-tile-value.is-empty {
+  color: var(--text-tertiary, #6b7280) !important;
+  text-shadow: none !important;
+}
+
 /* v3 Phase 1z.167 — Guild Hall summary card.
    Three local tiles + up to 3 accepted-friend initial chips on the
    right. Sits between the page header and the activity feed.
@@ -24531,4 +24640,106 @@ body.duels-challenge-hidden .social-row [data-friend-action="challenge"] {
    element is no longer rendered. */
 body.social-hub-on .duels-page-header {
   display: none !important;
+}
+
+/* v3 Phase 1z.173 — Social Tab Polish · panel treatment for the
+   Recent Feats + Your Hunters sections (Variation B from
+   ClaudeDesign). Section heads stay outside the panel; the panel
+   itself is a single bordered card with hairline dividers between
+   rows (no per-row borders or gaps — visually distinct from the
+   pre-1z.173 "stacked bordered rows" look). */
+.guildhall-section--activity .guildhall-activity-body,
+.guildhall-section--friends .guildhall-friend-body {
+  background: rgba(20, 22, 50, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  padding: 0;
+}
+/* Hairline divider between rows inside the activity panel. The
+   row component itself (.guildhall-activity-row) is unchanged — we
+   add the border at the panel level via :not(:last-child). */
+.guildhall-section--activity .guildhall-activity-body > .guildhall-activity-row {
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 10px 14px;
+}
+.guildhall-section--activity .guildhall-activity-body > .guildhall-activity-row + .guildhall-activity-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Friends panel — same hairline-divided look. Wraps both the
+   accepted friend rows and the empty/loading states inside the
+   single bordered card. */
+.guildhall-section--friends .guildhall-friend-body > .social-row,
+.guildhall-section--friends .guildhall-friend-body > .friend-row {
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 12px 14px;
+}
+.guildhall-section--friends .guildhall-friend-body > .social-row + .social-row,
+.guildhall-section--friends .guildhall-friend-body > .friend-row + .friend-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.guildhall-section--friends .guildhall-friend-body > .social-section-subhead {
+  display: none;
+}
+.guildhall-section--friends .guildhall-friend-body > .social-empty,
+.guildhall-section--friends .guildhall-friend-body > .social-error {
+  padding: 16px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+}
+
+/* Embed the Add Friend input row as the panel's first divider-
+   separated row, matching the design's "input is the first row
+   inside Your Hunters panel" rule. */
+.guildhall-section--friends .guildhall-friend-add {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px 14px 0 0;
+  border-bottom: 0;
+}
+/* When the Add Friend row sits directly above the friends body
+   panel, kill the body's top corner radius + top border to let
+   them read as one continuous card. */
+.guildhall-section--friends .guildhall-friend-add + .guildhall-friend-body {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 0 14px 14px;
+}
+
+/* v3 Phase 1z.173 — REMOVE button is now an outlined red ghost
+   (per Variation B spec) instead of the older filled danger
+   variant. Scoped to friend rows so the .social-btn--danger class
+   used elsewhere keeps its original treatment. */
+.guildhall-section--friends .friend-row--accepted .social-btn--danger {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 11px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.guildhall-section--friends .friend-row--accepted .social-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.75);
+  filter: none;
+}
+.guildhall-section--friends .friend-row--accepted .social-btn--danger:active {
+  background: rgba(239, 68, 68, 0.16);
+  transform: scale(0.97);
 }

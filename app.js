@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w48';
+  const APP_BUILD_TAG = '2.2.3-w49';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3502,7 +3502,23 @@
       ? _friendsCache.friends
       : [];
     huntersCount = acceptedFriends.length;
-    if (huntersEl) huntersEl.textContent = String(huntersCount);
+    // v3 Phase 1z.173 — ClaudeDesign Social Tab Polish rule:
+    // empty stats render as "—" in the muted text-tertiary color
+    // (handled in CSS via .guildhall-summary-tile-value:empty-stat
+    // semantics), never as a fully-colored "0". We toggle the
+    // .is-empty class on the value element so CSS can dim the
+    // glow without re-wiring the renderer.
+    function _setTileValue(el, n) {
+      if (!el) return;
+      if (n > 0) {
+        el.textContent = String(n);
+        el.classList.remove('is-empty');
+      } else {
+        el.textContent = '—';
+        el.classList.add('is-empty');
+      }
+    }
+    _setTileValue(huntersEl, huntersCount);
 
     // TODAY tile: count feats from the dedicated activity store
     // whose timestamp falls on the device-local calendar day.
@@ -3521,7 +3537,7 @@
         if (eKey === todayKey) featsToday++;
       }
     } catch (_) { /* defensive — tile reads 0 */ }
-    if (todayEl) todayEl.textContent = String(featsToday);
+    _setTileValue(todayEl, featsToday);
 
     // v3 Phase 1z.168 — BOSSES SLAIN tile: cumulative all-time
     // kill count across all bosses. Reads kill_count from each
@@ -3543,7 +3559,7 @@
         }
       }
     } catch (_) { /* defensive — tile reads 0 */ }
-    if (bossesEl) bossesEl.textContent = String(bossesSlain);
+    _setTileValue(bossesEl, bossesSlain);
 
     // Up to 3 friend initial chips. If fewer than 3 friends, fill
     // the remaining slots with subtle ghost chips so the card never

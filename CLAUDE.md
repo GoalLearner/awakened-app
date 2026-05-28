@@ -55,7 +55,115 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.172 Split tile taps into three sheets (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.173 Social Tab Polish — Command Panel + per-tile color (read this first)
+
+### ✅ STATUS: Implemented Variation B (recommended) from ClaudeDesign Social Tab Polish. Frontend-only. `2.2.3-w49` web bundle ready.
+
+### Design source
+
+ClaudeDesign bundle `NPwX-acGIwGOq3tPKpkM0A` — `social-polish.jsx`. Three variations spec'd; **Variation B — Guild Hall Command Panel** marked RECOMMENDED. Implemented faithfully within hard guardrails: zero fake data (no rank pills for friends — `Auth.fetchFriends` doesn't return rank), zero changes to data sources or routing.
+
+### Implementation
+
+**1. Command Panel hero** (new `.guildhall-command-panel` wrapper):
+
+- 1px outer gradient border (violet → gold → violet) achieved via padding + linear-gradient background.
+- Inner navy with radial gold glow at top edge.
+- Layout: kicker + title on left, friend avatar stack on right, subtitle below, then three big stat tiles in a row at the bottom.
+- Wraps the existing `.guildhall-page-header` content + the three tiles + the chips container. **All previous element IDs preserved** so `renderGuildhallSummary` keeps writing into the same nodes.
+
+**2. Per-tile color coding** (new `.guildhall-summary-tile-accent` 2px strip + color rules):
+
+| Tile | Accent + value color |
+|---|---|
+| `HUNTERS` | Violet (`rgba(167,139,250,*)`) |
+| `FEATS · 24H` | Gold (`var(--gold)`) |
+| `BOSSES SLAIN` | Red (`#ef4444`) |
+
+Cinzel value enlarged to 1.40rem inside the hero (was 1.05rem).
+
+**3. Empty-state rule**: `_setTileValue(el, n)` helper — when `n === 0`, renders `—` in muted text-tertiary instead of a fully-colored `0`. Per design rule "Empty stats show — never a colored 0." Adds/removes `.is-empty` class so CSS overrides the per-tile color rule.
+
+**4. Activity + Friends panel treatment**:
+
+- Both bodies now render as a single bordered card with hairline dividers between rows (no per-row borders / gaps).
+- `.guildhall-section--activity .guildhall-activity-body > .guildhall-activity-row + .guildhall-activity-row` adds the hairline.
+- Friends body normalized so accepted-friend rows + the `Friends` subhead + empty/error states all render edge-to-edge inside the single card.
+
+**5. Add Friend embedded as the first row** of the Hunters panel:
+
+- `.guildhall-friend-add` styled as a divider-separated first row inside the panel surface (rounded top corners, the body below picks up rounded bottoms with a continuous hairline divider).
+
+**6. REMOVE button → outlined red ghost** (scoped to `.guildhall-section--friends .friend-row--accepted .social-btn--danger` so `.social-btn--danger` elsewhere keeps its existing treatment).
+
+### What was NOT implemented (and why)
+
+| Design element | Reason omitted |
+|---|---|
+| Rank pill on friend row (`D IV`, `C III`) | `Auth.fetchFriends` returns only `{id, alias, status}`. Inventing rank values would violate the "no fake friend stats" rule from 1z.166 onward. |
+| Per-friend color-coded avatar glow (Anthony violet, rendiesel green) | The existing `_friendAvatarHtml` uses a single accent palette. Adding deterministic per-alias color hashing is a 1-line follow-up but would touch 1z.166 friend-row JS — scoped out for this design-only polish train. |
+| Variations A and C | Recommended was B. Shipping all three would be wasted code. |
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | Restructured: removed standalone summary card, added `.guildhall-command-panel` wrapper that embeds page header + 3 tiles + chips. All element IDs preserved. |
+| `app.js` | `renderGuildhallSummary` — added `_setTileValue(el, n)` helper that emits `—` + `.is-empty` for zero values. Three tile assignments routed through the helper. |
+| `styles.css` | +100 lines: Command Panel hero rim + inner glow, per-tile accent strips + color rules, empty-state muting, activity panel + hairline dividers, friends panel + Add Friend embedded row + outlined REMOVE ghost button. |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### What's NOT changed (regression guardrails)
+
+- ✅ Tile routing (1z.172): `data-roster-open` attrs preserved, all three sheets open from their own tiles.
+- ✅ Sheet DOM IDs (`#guild-roster-sheet`, `#guild-feats-sheet`, `#guild-bosses-sheet`) untouched.
+- ✅ `renderGuildhallSummary` element-id lookups (`#guildhall-summary-hunters`, `-today`, `-bosses`, `-chips`) — all preserved.
+- ✅ `renderFriendsSection` render targets (`#social-friends-body`, `#social-friend-input`, `#social-friend-send`) — all preserved.
+- ✅ `recordGuildActivity`, `_guildhallReadStore`, the 7-type feat system — untouched.
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ No public Duel/Arena/Challenge language anywhere.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w48` | `2.2.3-w49` |
+| `app.js?v=` | `501` | `502` |
+| `sw.js CACHE_VERSION` | `v5.387` | `v5.388` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run, 2 transient flakes (dungeon-rank-filter + workout-streak-modal, both unrelated to Social), pass on isolated retry.
+
+### TestFlight QA for w49
+
+1. Cold-launch w49. Confirm `"build": "2.2.3-w49"`.
+2. Open Social tab. Top area is now a single gold/violet gradient-rimmed Command Panel hero with kicker → title → avatar stack (top-right) → subtitle → three color-coded tiles.
+3. HUNTERS value = violet. FEATS · 24H value = gold. BOSSES SLAIN value = red. Each tile has a faint top accent line in its color.
+4. With zero data, all three tiles show muted `—` (not bright `0`).
+5. Recent Feats and Your Hunters render as continuous bordered panels with hairline dividers between rows.
+6. Add Friend input is the top divider-separated row of the Hunters panel.
+7. REMOVE button on friend rows is now an outlined red ghost (not filled).
+8. **Regression checks**: tap HUNTERS tile → Guild Members opens. Tap FEATS · 24H → Today's Feats opens. Tap BOSSES SLAIN → Kill Log opens. Add Friend still sends. Remove still removes.
+
+### Rollback
+
+Five independent reverts:
+1. Restore the standalone `<div class="guildhall-page-header">` + `<section id="guildhall-summary">` in `index.html`; delete the Command Panel wrapper.
+2. Restore the original three tile value lines in `_setTileValue`-callers (3 `el.textContent = String(n)` lines).
+3. Delete the 1z.173 CSS block (Command Panel + per-tile colors + empty muting).
+4. Delete the 1z.173 panel/border/REMOVE ghost CSS appended at end of styles.css.
+5. Revert `<script src="app.js?v=502">` / `v5.388` / `w49` knobs.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.172 Split tile taps into three sheets (historical — superseded by 1z.173 above)
 
 ### ✅ STATUS: Fixed the 1z.171 routing bug where all three Guild Hall summary tiles opened the friends-style roster sheet. Each tile now opens its own dedicated sheet. Frontend-only. `2.2.3-w48` web bundle ready.
 

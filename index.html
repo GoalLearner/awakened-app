@@ -606,53 +606,60 @@
          elsewhere; just not invoked from the social-tab branch). -->
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
 
-      <!-- v3 Phase 1z.164 — Guild Hall hub header (Variation A from
-           ClaudeDesign Social Hub Guild Hall.html). Replaces the
-           legacy "DISCIPLINE DUELS" page header. Kicker mono gold,
-           title Cinzel + gold glow, italic subtitle. -->
-      <div class="guildhall-page-header">
-        <div class="guildhall-kicker">· GUILD HALL ·</div>
-        <h2 class="guildhall-page-title">Social</h2>
-        <p class="guildhall-page-sub">Hunters bound to your guild. See their progress, climb together.</p>
+      <!-- v3 Phase 1z.173 — Guild Hall Command Panel (Variation B
+           from ClaudeDesign Social Tab Polish). Binds the page
+           header, avatar stack, and three summary tiles into one
+           gradient-rimmed hero so the title area reads as a single
+           Guild Hall surface instead of two stacked rows.
+           Preserves the 1z.172 tile routing (data-roster-open attrs
+           and #guildhall-summary-* ids are untouched). -->
+      <div class="guildhall-command-panel">
+        <div class="guildhall-command-panel-inner">
+          <div class="guildhall-command-panel-top">
+            <div class="guildhall-page-header">
+              <div class="guildhall-kicker">· GUILD HALL ·</div>
+              <h2 class="guildhall-page-title">Social</h2>
+            </div>
+            <div id="guildhall-summary-chips" class="guildhall-summary-chips guildhall-summary-chips--hero" aria-hidden="true"></div>
+          </div>
+          <p class="guildhall-page-sub">Hunters bound to your guild. See their progress, climb together.</p>
+          <div class="guildhall-command-panel-tiles">
+            <button type="button"
+                    class="guildhall-summary-tile guildhall-summary-tile--hunters"
+                    data-roster-open="hunters" data-roster-sort="alias"
+                    aria-label="Open Guild Members roster">
+              <div class="guildhall-summary-tile-accent"></div>
+              <div class="guildhall-summary-tile-label">HUNTERS</div>
+              <div id="guildhall-summary-hunters" class="guildhall-summary-tile-value">—</div>
+            </button>
+            <button type="button"
+                    class="guildhall-summary-tile guildhall-summary-tile--feats"
+                    data-roster-open="feats24h" data-roster-sort="feats24h"
+                    aria-label="Open guild feats roster">
+              <div class="guildhall-summary-tile-accent"></div>
+              <div class="guildhall-summary-tile-label">FEATS · 24H</div>
+              <div id="guildhall-summary-today" class="guildhall-summary-tile-value">—</div>
+            </button>
+            <button type="button"
+                    class="guildhall-summary-tile guildhall-summary-tile--bosses"
+                    data-roster-open="bosses" data-roster-sort="bosses"
+                    aria-label="Open bosses slain roster">
+              <div class="guildhall-summary-tile-accent"></div>
+              <div class="guildhall-summary-tile-label">BOSSES SLAIN</div>
+              <div id="guildhall-summary-bosses" class="guildhall-summary-tile-value">—</div>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- v3 Phase 1z.167 — Guild Hall summary card. Three local
-           tiles + up to 3 accepted-friend initial chips on the
-           right. All data is read locally:
-             HUNTERS  = _friendsCache.friends.length (accepted)
-             FEATS·24H = count of hb_guild_activity entries with
-                        ts > now - 86400000
-             TODAY    = count of hb_guild_activity entries whose
-                        ts falls on device-local today
-           No fake online presence — that's the "LIVE NOW" tile in
-           the design that we explicitly avoid in Phase 1. -->
-      <section id="guildhall-summary" class="guildhall-summary">
-        <!-- v3 Phase 1z.171 — tiles are now buttons that open the
-             Guild Members roster sheet. data-roster-sort hints the
-             initial column ordering. Single shared sheet so the
-             three triggers don't fragment into separate surfaces. -->
-        <div class="guildhall-summary-tiles">
-          <button type="button" class="guildhall-summary-tile"
-                  data-roster-open="hunters" data-roster-sort="alias"
-                  aria-label="Open Guild Members roster">
-            <div class="guildhall-summary-tile-label">HUNTERS</div>
-            <div id="guildhall-summary-hunters" class="guildhall-summary-tile-value">0</div>
-          </button>
-          <button type="button" class="guildhall-summary-tile"
-                  data-roster-open="feats24h" data-roster-sort="feats24h"
-                  aria-label="Open guild feats roster">
-            <div class="guildhall-summary-tile-label">FEATS · 24H</div>
-            <div id="guildhall-summary-today" class="guildhall-summary-tile-value">0</div>
-          </button>
-          <button type="button" class="guildhall-summary-tile"
-                  data-roster-open="bosses" data-roster-sort="bosses"
-                  aria-label="Open bosses slain roster">
-            <div class="guildhall-summary-tile-label">BOSSES SLAIN</div>
-            <div id="guildhall-summary-bosses" class="guildhall-summary-tile-value">0</div>
-          </button>
-        </div>
-        <div id="guildhall-summary-chips" class="guildhall-summary-chips" aria-hidden="true"></div>
-      </section>
+      <!-- v3 Phase 1z.173 — legacy Guild Hall summary card removed.
+           The HUNTERS / FEATS · 24H / BOSSES SLAIN tiles + the
+           friend avatar chips are now folded into the
+           .guildhall-command-panel above. All element IDs were
+           preserved so renderGuildhallSummary() keeps writing into
+           the right nodes (#guildhall-summary-hunters / -today /
+           -bosses / -chips). Tile routing semantics (data-roster-
+           open) are unchanged. -->
 
       <!-- v3 Phase 1z.164 — Guild Activity section (local-only feed
            from hb_souls_ledger). Phase 1 reads on-device events only;
@@ -2389,7 +2396,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=501"></script>
+  <script src="app.js?v=502"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
