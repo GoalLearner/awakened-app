@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w37';
+  const APP_BUILD_TAG = '2.2.3-w38';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2807,6 +2807,161 @@
   try {
     window.applyDuelSoulsSettlementFromResolve = applyDuelSoulsSettlementFromResolve;
   } catch (_) {}
+
+  // v3 Phase 1z.161 — completed-duel souls reconciliation.
+  //
+  // Bug repro: Richie won a duel vs Anthony and lost a duel vs
+  // RenDIESEL today. Anthony's phone showed `-25 souls · Duel
+  // loss vs Richie` correctly. Richie's phone showed NEITHER his
+  // +40 win row NOR his -25 loss row.
+  //
+  // Root cause: `applyDuelSoulsSettlementFromResolve` only ran
+  // when the LOCAL device called `Auth.resolveDuel`. The two
+  // resolve call sites both early-return on duels whose status
+  // is already 'completed':
+  //   - maybeResolveDuelIfEnded (line ~20780):
+  //       if (duel.status !== 'active') return null;
+  //   - _ddoPopulate (line ~22459):
+  //       if (d.status === 'active' && ...) { resolve }
+  // If Anthony's phone triggered the resolve first, the backend
+  // marks the duel completed. When Richie's app fetches
+  // /v1/duels later, the duel arrives in the `recent` bucket
+  // with status='completed' — both gates miss it, no resolve
+  // call, no settlement.
+  //
+  // Backend `Auth.resolveDuel` is fully idempotent: re-calling
+  // on a completed duel returns the viewer-perspective souls
+  // payload without writing anything new (INSERT OR IGNORE on
+  // user_souls_ledger). So we can safely call it on each
+  // completed duel to fetch the viewer's `your_delta` and apply
+  // it locally.
+  //
+  // This helper runs on every duels fetch + detail open. The
+  // local idempotency guard (`hb_duel_souls_settled_ids`) skips
+  // any duel that's already been settled locally, so the
+  // network cost is bounded to first-encounter-per-device.
+  function _isAnyDuelSoulsSettled(duelId) {
+    if (!duelId) return false;
+    return _isDuelSoulsSettled(duelId, 'duel_win')
+        || _isDuelSoulsSettled(duelId, 'duel_loss')
+        || _isDuelSoulsSettled(duelId, 'draw_or_zero');
+  }
+
+  // Per-duel in-flight guard so two concurrent reconcile calls
+  // (e.g., duels-tab-open + detail-open arriving in the same
+  // frame) don't double-resolve the same duel.
+  const _duelReconcileInFlight = new Set();
+  // Module-level cap: how many completed duels to reconcile per
+  // call. Recent backend bucket is capped at 20; we further cap
+  // network calls so a long backlog after a long-quiet period
+  // doesn't fan out too many resolve calls at once. Subsequent
+  // fetches naturally drain the rest because settled-set entries
+  // suppress already-handled ones.
+  const DUEL_SOULS_RECONCILE_PER_CALL_LIMIT = 10;
+
+  async function reconcileDuelSoulsForCompletedDuels(duels, reason) {
+    const _bc = (typeof _addHealthVerifyBreadcrumb === 'function')
+      ? _addHealthVerifyBreadcrumb
+      : function () {};
+    const build = (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown';
+    if (!Array.isArray(duels) || duels.length === 0) return;
+    if (!window.Auth || typeof Auth.resolveDuel !== 'function') return;
+
+    // Filter to completed duels with a sensible status that the
+    // backend resolves cleanly. Boss-race is deferred — backend
+    // rejects resolve on it. Skip duels we already settled.
+    const candidates = [];
+    for (const d of duels) {
+      if (!d || !d.id) continue;
+      if (d.status !== 'completed') continue;
+      if (d.duel_type === 'boss_race') continue;
+      // Defensive: only reconcile duels where the viewer is a
+      // participant. The backend filters its query by user_id so
+      // every duel in this response should already pass, but
+      // belt-and-suspenders.
+      if (d.role !== 'challenger' && d.role !== 'opponent') continue;
+      if (_isAnyDuelSoulsSettled(d.id)) continue;
+      if (_duelReconcileInFlight.has(d.id)) continue;
+      candidates.push(d);
+      if (candidates.length >= DUEL_SOULS_RECONCILE_PER_CALL_LIMIT) break;
+    }
+
+    try {
+      _bc('duel-souls-reconcile-start', {
+        candidateCount: candidates.length,
+        totalCompleted: duels.filter(d => d && d.status === 'completed').length,
+        reason: reason || 'unknown',
+        build: build,
+      });
+    } catch (_) {}
+
+    if (candidates.length === 0) return;
+
+    let attemptedCount = 0;
+    let appliedCount   = 0;
+    let skippedCount   = 0;
+    let failCount      = 0;
+
+    await Promise.all(candidates.map(async (duel) => {
+      const duelIdShort = String(duel.id || '').slice(0, 8);
+      _duelReconcileInFlight.add(duel.id);
+      attemptedCount++;
+      try {
+        try {
+          _bc('duel-souls-reconcile-candidate', {
+            duelId:        duelIdShort,
+            status:        duel.status,
+            duelType:      duel.duel_type,
+            role:          duel.role,
+            localSettled:  false,
+            reason:        reason || 'unknown',
+          });
+        } catch (_) {}
+
+        let resp;
+        try { resp = await Auth.resolveDuel(duel.id); }
+        catch (_) { resp = null; }
+        if (!resp || !resp.ok) {
+          failCount++;
+          return;
+        }
+        // The settlement helper is responsible for idempotency,
+        // delta-apply, balance authoritative-NOT-overwrite, and
+        // local ledger row. Same path the fresh-resolve sites use.
+        // If souls payload is missing/malformed it no-ops; if the
+        // duel is already locally settled (e.g., another tab fired
+        // it between candidate scan and apply), it skips with
+        // `already_applied`.
+        try {
+          applyDuelSoulsSettlementFromResolve(resp, resp.duel || duel);
+          // Was something actually applied? Re-check the settled
+          // set. If still not settled, the response was missing
+          // souls — count it as skipped, not applied.
+          if (_isAnyDuelSoulsSettled(duel.id)) {
+            appliedCount++;
+          } else {
+            skippedCount++;
+          }
+        } catch (_) {
+          failCount++;
+        }
+      } finally {
+        _duelReconcileInFlight.delete(duel.id);
+      }
+    }));
+
+    try {
+      _bc('duel-souls-reconcile-result', {
+        attemptedCount,
+        appliedCount,
+        skippedCount,
+        failCount,
+        reason: reason || 'unknown',
+        build:  build,
+      });
+    } catch (_) {}
+  }
+  try { window.reconcileDuelSoulsForCompletedDuels = reconcileDuelSoulsForCompletedDuels; } catch (_) {}
 
   // v3 Phase 1z.159 — removed. The one-shot debug repair hook
   // (`window.__repairLocalSoulsBalance`) was added in 1z.158 to
@@ -22069,6 +22224,26 @@
       _addDuelsBreadcrumb('inner-post-refetch', { token: myToken, refetchOk: !!(res2 && res2.ok) });
     }
 
+    // v3 Phase 1z.161 — participant-side completed-duel souls
+    // reconciliation. For each completed duel where the viewer
+    // hasn't yet applied a local settlement (e.g., the OTHER
+    // participant's device triggered resolve and Richie's device
+    // never got the souls payload), call resolve idempotently and
+    // apply the souls.your_delta locally. Settled-set guard makes
+    // this no-op on subsequent fetches.
+    //
+    // Fire-and-forget: we don't await here because the result
+    // updates _souls + the ledger asynchronously, and the duel
+    // section render below doesn't depend on it. If a stale-call
+    // guard kicks in mid-reconcile, the in-flight set still
+    // prevents duplicate resolve calls.
+    try {
+      reconcileDuelSoulsForCompletedDuels(
+        Array.isArray(res.recent) ? res.recent : [],
+        'duels-fetch'
+      );
+    } catch (_) { /* never block rendering on reconcile */ }
+
     const incoming = Array.isArray(res.incoming) ? res.incoming : [];
     const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
     const active   = Array.isArray(res.active)   ? res.active   : [];
@@ -22480,6 +22655,14 @@
     // Fire one-shot result toast on completed duels seen here too.
     if (d.status === 'completed') {
       try { _maybeFireDuelResultToast(d); } catch (_) {}
+      // v3 Phase 1z.161 — participant-side reconciliation on
+      // detail-open. If the viewer opens a completed duel whose
+      // souls haven't been settled locally (because the OTHER
+      // participant resolved it first), reconcile now. Helper
+      // self-guards against already-settled duels.
+      try {
+        reconcileDuelSoulsForCompletedDuels([d], 'detail-open');
+      } catch (_) { /* never block detail render */ }
     }
     const opp = _socialDisplayAlias(d.opponent_alias || '—');
     setText('ddo-opponent', 'vs ' + opp);

@@ -55,7 +55,130 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 27, 2026 — 1z.160 Multi-active duel hero selection + soonest-ending default (read this first)
+## 📌 Session handoff — May 27, 2026 — 1z.161 Participant-side completed-duel souls reconciliation (read this first)
+
+### ✅ STATUS: Completed duels now reconcile locally on whichever device opens the Duels tab or detail — not only on the device that triggered resolve. Frontend-only, fully idempotent, no backend deploy. `2.2.3-w38` web bundle ready.
+
+### Root cause of the missing rows
+
+User report (May 27 evening):
+- Richie WON a duel vs Anthony, LOST a duel vs RenDIESEL.
+- **Anthony's phone**: `-25 souls · Duel loss vs Richie`, balance updated to 40. ✅
+- **RenDIESEL's phone**: presumed `+40 souls · Duel victory vs Richie` (implied by `Auth.resolveDuel`'s idempotent backend).
+- **Richie's phone**: NEITHER his `+40` win NOR his `-25` loss row appeared.
+
+Audit found the gap: `applyDuelSoulsSettlementFromResolve` only ran when the LOCAL device called `Auth.resolveDuel`. Both call sites had `status === 'active'` gates:
+
+| Call site | Gate (line) | Effect |
+|---|---|---|
+| `maybeResolveDuelIfEnded(duel)` (app.js:~20780) | `if (duel.status !== 'active') return null;` | Duels arriving in the `recent` bucket as already-completed are skipped → no resolve call → no settlement |
+| `_ddoPopulate(duelId)` (app.js:~22637) | `if (d.status === 'active' && ...)` | Same gate — completed duels on detail-open are skipped |
+
+So if Anthony's phone triggered resolve first, the backend marked the duel `completed`. When Richie's app fetched `/v1/duels` later, the duel arrived in the `recent` bucket. Both gates rejected it. No resolve call ever fired on Richie's device. Never reconciled.
+
+The backend `user_souls_ledger` is correct (Phase α writes `+reward_souls` and `-stake_souls` atomically when resolve fires server-side, regardless of which device triggered it). The data was always right — it just never reached Richie's local store.
+
+### Fix — 1z.161 (frontend only)
+
+New helper `reconcileDuelSoulsForCompletedDuels(duels, reason)` calls the idempotent backend resolve on each unsettled completed duel and feeds the response through the existing settlement helper.
+
+**Why this works**: `Auth.resolveDuel` is server-idempotent. The backend `settleDuelEconomy` uses `INSERT OR IGNORE` against `user_souls_ledger`'s `UNIQUE(user_id, ref_type, ref_id, reason)` constraint — re-calling on a completed duel returns the viewer-perspective `souls.your_delta` and writes nothing new. The response is the same one the device that triggered the original resolve received.
+
+**Idempotency**: 
+- New `_isAnyDuelSoulsSettled(duelId)` checks all three reason keys (`duel_win` / `duel_loss` / `draw_or_zero`). If any is set in `hb_duel_souls_settled_ids`, the candidate is skipped — settled locally already.
+- New `_duelReconcileInFlight` Set keyed on `duel.id` prevents two concurrent reconcile calls (e.g., duels-tab-open and detail-open arriving in the same frame).
+- `applyDuelSoulsSettlementFromResolve` itself has the `_isDuelSoulsSettled` early-return path from 1z.158, so even a race past the in-flight guard would be safe.
+
+**Scope cap**: `DUEL_SOULS_RECONCILE_PER_CALL_LIMIT = 10`. Bounds network fan-out for users returning after a long quiet period. Settled-set entries accumulate as each fetch drains the backlog.
+
+**Wiring**: two call sites, both fire-and-forget so they never block render:
+1. **Duels tab fetch** (`_renderDuelsSectionInner` line ~22072): after `_duelsCache = res` and the resolve loop / refetch step, immediately call `reconcileDuelSoulsForCompletedDuels(res.recent, 'duels-fetch')`. Backend `recent` bucket caps at 20 entries.
+2. **Detail open** (`_ddoPopulate` line ~22660): for any completed duel opened in the detail screen, call `reconcileDuelSoulsForCompletedDuels([d], 'detail-open')`. Helper self-skips if already settled.
+
+### What's preserved (no regressions)
+
+- ✅ w35/w36 souls safety: still applies only `souls.your_delta`, NEVER assigns `souls.your_balance` to local `hb_souls`. Load-bearing comment intact.
+- ✅ Public `window.__repairLocalSoulsBalance` hook remains REMOVED.
+- ✅ 1z.158 idempotency guard (`hb_duel_souls_settled_ids`) intact and reused.
+- ✅ 1z.160 multi-active-duel hero selection: untouched. `_selectedActiveDuelId`, `_selectActiveDuelHero`, `.duel-card--selected` ring, IN HERO pill all preserved.
+- ✅ w30 day-anchored delta, w31 sync loop, w32 snapshot-effective source: untouched.
+- ✅ Phase α (loser stake) + Phase β (souls payload) + Phase γ (frontend reconciliation) souls arc: all preserved.
+
+### What's NOT changed
+
+- ✅ Backend untouched. `Auth.resolveDuel` already idempotent — no new endpoint, no migration.
+- ✅ D1: no schema, no migration, no mutation.
+- ✅ HealthKit math, duel scoring, sync cadence, leaderboard, dungeon, XP, rank, sim values, souls economy formulas: all untouched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +160 lines (`_isAnyDuelSoulsSettled` helper, `_duelReconcileInFlight` Set, `reconcileDuelSoulsForCompletedDuels` helper, two wiring sites in `_renderDuelsSectionInner` and `_ddoPopulate`) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Diagnostics
+
+| Breadcrumb | When | Payload |
+|---|---|---|
+| `duel-souls-reconcile-start` | Each helper invocation | `candidateCount, totalCompleted, reason, build` |
+| `duel-souls-reconcile-candidate` | Per candidate before resolve call | `duelId, status, duelType, role, localSettled, reason` |
+| `duel-souls-reconcile-result` | After helper finishes | `attemptedCount, appliedCount, skippedCount, failCount, reason, build` |
+
+`reason` values: `duels-fetch` | `detail-open`.
+
+Existing `duel-souls-settlement-apply` and `duel-souls-settlement-skip` from 1z.157 continue to fire from inside `applyDuelSoulsSettlementFromResolve` — the reconcile breadcrumbs are wrappers above them.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w37` | `2.2.3-w38` |
+| `app.js?v=` | `490` | `491` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.376` | `v5.377` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → **OK**.
+- Playwright e2e: 28/29 first run, 1 transient dungeon-rank flake (pass on isolated retry, unrelated).
+- Backend tests not re-run — no backend changes.
+
+### TestFlight QA for w38
+
+1. Both phones cold-launch. Confirm `"build": "2.2.3-w38"`.
+2. Optional: clear duels backlog by completing any pending resolves — start clean.
+3. Create + complete a fresh duel where the OTHER phone triggers resolve first. (E.g., Anthony's phone backgrounds, Richie's phone is active, Anthony's phone foregrounds and tap-resolves.)
+4. On Richie's phone, open Duels tab. **Within ~1 tab-fetch**, Richie's Souls Ledger should show the new `Duel victory vs <opp>` or `Duel loss vs <opp>` row, and balance should reflect `pre + delta` (NOT backend's `your_balance`).
+5. Force-quit + cold-launch Richie's phone. Reopen Souls Ledger. **No duplicate rows.** Balance stable.
+6. Open the completed duel detail. Confirm no second ledger row appears (settled-set guard).
+7. Verify `window.__repairLocalSoulsBalance === undefined` (from 1z.159).
+8. Verify backend `your_balance` is NOT assigned to `_souls.balance` — check debug log `duel-souls-settlement-apply` for `ignoredBackendBalance: true` field.
+9. Multi-active hero switching (1z.160) still works: two active duels visible, tap to switch, gold IN HERO pill moves.
+
+If steps 4 + 5 + 6 all pass, participant-side reconciliation is officially trustworthy.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / duel scoring / sync cadence / leaderboard / dungeon / XP / rank / sim changes.
+- ✅ w30/w31/w32/w35/w36/w37 + Patches A1/A2 + Phase α/β/γ + 1z.158-160 all preserved.
+
+### Rollback
+
+Two reverts cleanly: (1) the `reconcileDuelSoulsForCompletedDuels` call at the two wiring sites (3 lines each), (2) the entire helper + `_isAnyDuelSoulsSettled` + `_duelReconcileInFlight` block can stay dormant. Default behavior reverts to "settlement only fires on local resolve trigger" — which was the bug, but is at least stable.
+
+---
+
+## 📌 Session handoff — May 27, 2026 — 1z.160 Multi-active duel hero selection + soonest-ending default (historical — superseded by 1z.161 above)
 
 ### ✅ STATUS: User with 2+ active Steps Duels can now promote either duel into the hero card by tapping its row. Default hero is the soonest-ending duel (was newest). Manual Sync Now and the automatic sync loop already sync all active duels — that path was working at the network layer; only the UI selection was blocked. Frontend-only. `2.2.3-w37` web bundle ready.
 
