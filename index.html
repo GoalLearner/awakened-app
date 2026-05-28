@@ -620,12 +620,17 @@
            from hb_souls_ledger). Phase 1 reads on-device events only;
            backend-backed friend activity is deferred to Phase 3. -->
       <section id="guildhall-activity-section" class="guildhall-section guildhall-section--activity">
+        <!-- v3 Phase 1z.166 — LIVE pill removed. Activity is a
+             local/personal feed of the current user's own actions in
+             Phase 1; "LIVE" implied an online friend feed that does
+             not exist yet. Kicker stays "GUILD ACTIVITY" for the
+             RPG framing — the events ARE the user's guild activity,
+             just sourced locally for now. -->
         <div class="guildhall-section-head">
           <div class="guildhall-section-headtxt">
             <div class="guildhall-section-kicker">· GUILD ACTIVITY ·</div>
             <div class="guildhall-section-title">Recent feats</div>
           </div>
-          <span class="guildhall-section-meta">LIVE</span>
         </div>
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
       </section>
@@ -681,31 +686,27 @@
           </div>
         </button>
         <div class="social-section-collapsible-body">
-          <div class="social-section-sub">Verified 1v1 challenges. Apple Health decides the winner.</div>
+          <!-- v3 Phase 1z.166 — duels-centric sub copy removed.
+               Section is already CSS-hidden via .duels-public-hidden
+               when DUELS_PUBLIC_TAB_VISIBLE=false (the default), so
+               normal users do not see this DOM. The render target
+               #social-duels-body stays so the passive resolve/
+               reconcile paths can still render here when an internal
+               QA override re-enables the section. No visible duel
+               language reachable from the public Guild Hall. -->
           <div id="social-duels-body" class="social-section-body">
             <div class="social-empty">Loading duels…</div>
           </div>
         </div>
       </section>
 
-      <!-- v3 Phase 1z.164 — Arena Sealed panel from ClaudeDesign.
-           Duels are intentionally de-emphasized — this panel gives
-           the feature a respectful, intentional "being reforged"
-           resting state. Always renders. -->
-      <section class="guildhall-arena-sealed" id="guildhall-arena-sealed">
-        <div class="guildhall-arena-glyph" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 16 16">
-            <circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
-            <path d="M5 9 L11 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-            <path d="M8 4 L8 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="guildhall-arena-text">
-          <div class="guildhall-arena-title">The Arena is being reforged</div>
-          <div class="guildhall-arena-sub">Verified challenges will return when they are fair, stable, and worthy.</div>
-        </div>
-        <span class="guildhall-arena-pill">SEALED</span>
-      </section>
+      <!-- v3 Phase 1z.166 — Arena Sealed panel removed.
+           Per product decision, Duels are no longer surfaced in any
+           public form (not even as "being reforged"). The Guild Hall
+           is now Friends + Recent Feats only. Passive internal duel
+           settlement still runs untouched — it has no public DOM
+           presence. Restoring the Arena panel later (if a future
+           pivot brings Duels back) is a re-add of this <section>. -->
     </div>
 
     <!-- Duel detail full-screen overlay (v3 Phase 1x) — mirrors the
@@ -2296,7 +2297,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=494"></script>
+  <script src="app.js?v=495"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

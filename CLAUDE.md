@@ -55,6 +55,133 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
+## 📌 Session handoff — May 28, 2026 — 1z.166 Remove all public Duel/Arena language from Guild Hall (read this first)
+
+### ✅ STATUS: Guild Hall is now Friends + Recent Feats only. Zero public Duel/Arena/Challenge surface. Backend Duel code + tables untouched. Passive resolve/reconcile still running. Frontend-only. `2.2.3-w42` web bundle ready.
+
+### Why this train
+
+Real-device w41 screenshot showed three residual public-Duel surfaces that survived the 1z.164 Guild Hall pivot:
+
+1. Friend rows displayed `"ready to duel"` subtitle + a gold `Challenge` button. Even with `DUELS_PUBLIC_CHALLENGE_ENABLED=false` the row's visual identity still implied Duels were a feature.
+2. `Recent Feats` header carried a `LIVE` meta pill in the top right, implying an online/friend activity feed that doesn't exist yet.
+3. The "Arena is being reforged · SEALED" panel was visible at the bottom of the Guild Hall, keeping Duels alive as a "coming back" narrative.
+
+Product decision: cleanly remove every public surface that names or implies Duels. Backend code stays. Passive settlement stays. No public hint remains.
+
+### Visible Duel/Arena references — audit summary
+
+| Surface | Location | Action |
+|---|---|---|
+| `"ready to duel"` friend row subtitle | `app.js:22551` | **Replaced** with `"Guild member"` |
+| `Challenge` button in friend row | `app.js:22554` | **Removed entirely** (not flag-gated) |
+| `LIVE` pill on Recent Feats | `index.html:628` | **Removed** |
+| `Verified 1v1 challenges. Apple Health decides the winner.` sub copy | `index.html:684` | **Removed** (section already CSS-hidden via `.duels-public-hidden`; sub copy is dead code in the public bundle) |
+| Arena Sealed panel ("The Arena is being reforged" + glyph + `SEALED` pill) | `index.html:691-708` | **Removed entirely** |
+| `social-section--duels` block | `index.html:667-689` | Kept in DOM (CSS-hidden by `.duels-public-hidden`) — render target #social-duels-body preserved so passive duel resolution can still render here if a QA override flips it back. No visible duel language reachable from the public Guild Hall. |
+
+### Internal Duel code untouched
+
+Per the load-bearing comment at `_runDuelSyncCycle`: passive resolve/reconcile keeps running so old TestFlight duels can close safely. Confirmed intact:
+- `Auth.fetchDuels()`
+- `_runDuelSyncCycle('interval')` / `('tab-open')` / `('foreground')`
+- `maybeResolveDuelIfEnded()`
+- `reconcileDuelSoulsForCompletedDuels()`
+- `applyDuelSoulsSettlementFromResolve()`
+- Backend `/v1/duels/*` routes, `duels` + `duel_progress_snapshots` + `user_souls_ledger` tables — all live.
+
+### Friends section behavior
+
+| Before | After |
+|---|---|
+| Avatar + alias + `"ready to duel"` subtitle + gold `Challenge` button + red `Remove` button | Avatar + alias + `"Guild member"` subtitle + red `Remove` button |
+
+No fake `View Profile`. No invented hover/tap behavior. Clean alias + neutral subtitle + Remove — that's the surface.
+
+The friend-request flow (Add Friend by alias, incoming/outgoing/accepted states, accept/decline/remove) all remain intact and visible.
+
+### Recent Feats clarification
+
+Empty-state subtitle was:
+> "Victories, milestones, and progress will appear here."
+
+Now reads:
+> "Your recent victories and milestones will appear here."
+
+The "Your" makes it clear that Phase 1 is a personal/local feed — not an online friend stream. Backend friend activity remains a future train (no work done in this pass).
+
+`LIVE` pill removed for the same reason — it falsely implied an online updating feed.
+
+### What's NOT changed
+
+- ✅ Backend: untouched. No deploy. No D1 mutation, migration.
+- ✅ HealthKit math, leaderboard scoring, dungeon, XP, rank, souls economy, sim values: untouched.
+- ✅ Passive duel settlement code: untouched.
+- ✅ Friend request flow (Add Friend / Accept / Decline / Remove): untouched.
+- ✅ Guild Activity local event store + recording paths from 1z.165: untouched.
+- ✅ All other tabs (Habits, Stats, Quests, History, Achievements): untouched.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | -3 lines (Challenge button row), 1 line edited (subtitle `ready to duel` → `Guild member`), +14 lines (block comment), 4 lines edited (empty-state sub) |
+| `index.html` | -22 lines (Arena Sealed panel + LIVE pill + Duels-section sub copy), +14 lines (block comments documenting the removals) |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w41` | `2.2.3-w42` |
+| `app.js?v=` | `494` | `495` |
+| `sw.js CACHE_VERSION` | `v5.380` | `v5.381` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+Flags `SOCIAL_HUB_ENABLED=true`, `DUELS_PUBLIC_CHALLENGE_ENABLED=false`, `DUELS_PUBLIC_TAB_VISIBLE=false`, `DUELS_QA_OVERRIDE_ENABLED=false` — all unchanged. The Challenge-button removal is now hardcoded rather than flag-gated; the flag remains in place but no longer guards anything visible (passive duel code still consults it where relevant).
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: **29/29 pass first run**, no flakes.
+
+### TestFlight QA for w42
+
+1. Cold-launch both phones. Confirm `"build": "2.2.3-w42"`.
+2. Open the Social tab (Guild Hall icon).
+3. Confirm header reads **`GUILD HALL · Social`** with subtitle "Hunters bound to your guild. See their progress, climb together."
+4. Recent Feats section: **no `LIVE` pill** in the top right. Empty state reads "The board is quiet. Your recent victories and milestones will appear here."
+5. Your Hunters section: friend rows show avatar + alias + **`Guild member`** subtitle + only a **`Remove`** button. No `Challenge` button.
+6. Scroll to the bottom of the Guild Hall — **no Arena Sealed panel**. The Hall ends with the friends list.
+7. Anywhere in the public app: search-test for the strings "duel", "Arena", "challenge", "stake", "reward" — none should appear in user-facing copy.
+8. Internal validation: in the Capacitor WebView console, `typeof window._runDuelSyncCycle` should still be `"function"`. `typeof Auth.fetchDuels` should still be `"function"`. Passive cleanup of any in-flight pre-w42 duels continues silently.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ Friends fully usable.
+- ✅ Guild Activity (1z.165) untouched.
+- ✅ Reversible — restore the Arena panel `<section>` from 1z.165 and re-add the `LIVE` pill / `Challenge` button if Duels ever come back as a public feature.
+
+### Rollback
+
+1. Restore the deleted `<section class="guildhall-arena-sealed">` block (22 lines in `index.html`).
+2. Restore `<span class="guildhall-section-meta">LIVE</span>` on Recent Feats.
+3. Restore `Verified 1v1 challenges. Apple Health decides the winner.` sub on the Duels section.
+4. Restore the `Challenge` button + `ready to duel` subtitle in the friend row renderer.
+
+Each is reversible independently. Backend stays the entire time.
+
+---
+
 ## 📌 Session handoff — May 28, 2026 — 1z.165 Guild Activity feed is feats-only (boss kills, milestones, streaks, rank-ups, ultra-rare drops) (read this first)
 
 ### ✅ STATUS: Souls / duel transactions removed from the Guild Hall Activity feed per product direction. Replaces souls-ledger pull (1z.164) with a dedicated `hb_guild_activity` event store. Six emitter sites wired across the codebase. Frontend-only. `2.2.3-w41` web bundle ready.

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w41';
+  const APP_BUILD_TAG = '2.2.3-w42';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3441,9 +3441,13 @@
     let entries = [];
     try { entries = _guildhallReadStore(); } catch (_) { entries = []; }
     if (!Array.isArray(entries) || entries.length === 0) {
+      // v3 Phase 1z.166 — empty-state copy clarifies that Recent
+      // Feats is a personal/local feed for now, not an online
+      // friend activity stream. Backend-backed friend activity is
+      // a future train (no work done in this pass).
       body.innerHTML =
         '<div class="guildhall-activity-empty">The board is quiet.' +
-          '<div class="guildhall-activity-empty-sub">Victories, milestones, and progress will appear here.</div>' +
+          '<div class="guildhall-activity-empty-sub">Your recent victories and milestones will appear here.</div>' +
         '</div>';
       return;
     }
@@ -22543,15 +22547,23 @@
       parts.push('<div class="social-section-subhead">Friends</div>');
       for (const f of friends) {
         const aliasDisp = _socialDisplayAlias(f.alias);
+        // v3 Phase 1z.166 — public Duel surface fully removed.
+        // Friend row no longer says "ready to duel" or shows a
+        // Challenge button. Subtitle is the neutral guild copy
+        // ("Guild member"); the row stops at Remove. The Challenge
+        // button is gone entirely (not flag-gated) so there is no
+        // path from the public Guild Hall into Duel creation.
+        // Internal duel code (passive resolve, ledger reconcile)
+        // still runs untouched per the load-bearing comment at
+        // _runDuelSyncCycle — it just no longer has a public UI.
         parts.push(
           '<div class="social-row friend-row friend-row--accepted" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
             _friendAvatarHtml(aliasDisp, 'accent') +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
-              '<div class="social-row-meta">ready to duel</div>' +
+              '<div class="social-row-meta">Guild member</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
-              '<button class="social-btn social-btn--gold" data-friend-action="challenge">Challenge</button>' +
               '<button class="social-btn social-btn--danger"  data-friend-action="remove">Remove</button>' +
             '</div>' +
           '</div>'
