@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w47';
+  const APP_BUILD_TAG = '2.2.3-w48';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3719,21 +3719,210 @@
     window.closeGuildRosterSheet = closeGuildRosterSheet;
   } catch (_) {}
 
-  // Delegated tile click + sheet close wiring. Idempotent guard so
-  // a second setup pass doesn't double-fire close on a single tap.
+  // v3 Phase 1z.172 — three separate sheets behind three tiles.
+  //
+  // Bug from 1z.171: all three summary tiles routed to the SAME
+  // Guild Members roster sheet. That sheet is structurally the
+  // friends list — alias + "Guild member" placeholder stats. So
+  // tapping FEATS · 24H or BOSSES SLAIN opened the friends list,
+  // which was wrong product behavior.
+  //
+  // Fix: split into three independent sheets / render fns:
+  //   - HUNTERS      → openGuildRosterSheet      (existing, unchanged)
+  //   - FEATS · 24H  → openFeats24hSheet          (NEW)
+  //   - BOSSES SLAIN → openBossesSlainSheet       (NEW)
+  //
+  // Each sheet reads from the data source its tile actually
+  // represents. No fake data; empty states are explicit.
+
+  // ── FEATS · 24H sheet ───────────────────────────────────────
+  // Reads hb_guild_activity entries whose ts lands on device-local
+  // today. Matches the math used by the tile counter so the
+  // displayed list always equals the tile value.
+  function _guildFeatsTodayEntries() {
+    let entries = [];
+    try { entries = _guildhallReadStore(); }
+    catch (_) { entries = []; }
+    const todayKey = (typeof getDeviceLocalDate === 'function')
+      ? getDeviceLocalDate()
+      : new Date().toISOString().slice(0, 10);
+    return entries.filter(e => {
+      if (!e || typeof e.ts !== 'number') return false;
+      const d = new Date(e.ts);
+      const k = d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+      return k === todayKey;
+    });
+  }
+  function renderFeats24hSheet() {
+    const list  = document.getElementById('guild-feats-list');
+    const empty = document.getElementById('guild-feats-empty');
+    if (!list) return;
+    const entries = _guildFeatsTodayEntries();
+    if (entries.length === 0) {
+      list.innerHTML = '';
+      if (empty) {
+        empty.classList.remove('hidden');
+        empty.textContent = 'No feats completed in the last 24 hours.';
+      }
+      return;
+    }
+    if (empty) { empty.classList.add('hidden'); empty.textContent = ''; }
+    // Reuse the existing Guild Activity row renderer so the visual
+    // language matches Recent Feats exactly. No new HTML shape to
+    // maintain in two places.
+    list.innerHTML = entries.map(_guildhallRowHtml).join('');
+  }
+  function openFeats24hSheet() {
+    const overlay = document.getElementById('guild-feats-overlay');
+    const sheet   = document.getElementById('guild-feats-sheet');
+    if (!overlay || !sheet) return;
+    try { renderFeats24hSheet(); } catch (_) {}
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeFeats24hSheet() {
+    const overlay = document.getElementById('guild-feats-overlay');
+    const sheet   = document.getElementById('guild-feats-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+  try {
+    window.openFeats24hSheet  = openFeats24hSheet;
+    window.closeFeats24hSheet = closeFeats24hSheet;
+  } catch (_) {}
+
+  // ── BOSSES SLAIN sheet ──────────────────────────────────────
+  // Reads loadBosses() (hb_bosses) and joins with the BOSSES{}
+  // config map for name + rank. Sorted by kill_count DESC, ties
+  // broken by last_killed_at DESC if available.
+  function _guildBossesSlainRows() {
+    let state = {};
+    try { if (typeof loadBosses === 'function') state = loadBosses() || {}; }
+    catch (_) { state = {}; }
+    const rows = [];
+    for (const id in state) {
+      if (!Object.prototype.hasOwnProperty.call(state, id)) continue;
+      const s = state[id];
+      const cnt = (s && typeof s.kill_count === 'number') ? s.kill_count : 0;
+      if (cnt <= 0) continue;
+      const cfg = (typeof BOSSES === 'object' && BOSSES && BOSSES[id]) ? BOSSES[id] : null;
+      rows.push({
+        id:          id,
+        name:        (cfg && cfg.name) ? cfg.name : id,
+        rank:        (cfg && cfg.rank) ? cfg.rank : '',
+        statDomain:  (cfg && cfg.statDomain) ? cfg.statDomain : '',
+        kill_count:  cnt,
+        last_killed_at: (s && s.last_killed_at) ? s.last_killed_at : null,
+      });
+    }
+    rows.sort((a, b) => {
+      if (b.kill_count !== a.kill_count) return b.kill_count - a.kill_count;
+      const at = a.last_killed_at ? Date.parse(a.last_killed_at) : 0;
+      const bt = b.last_killed_at ? Date.parse(b.last_killed_at) : 0;
+      return bt - at;
+    });
+    return rows;
+  }
+  function _bossesSlainRowHtml(row) {
+    const rankBadge = row.rank
+      ? '<span class="guild-bosses-rank">' + esc(row.rank) + '</span>'
+      : '';
+    const lastTxt = row.last_killed_at
+      ? _guildhallFormatRelativeTs(Date.parse(row.last_killed_at))
+      : '';
+    const countTxt = row.kill_count === 1 ? '1 slain' : (row.kill_count + ' slain');
+    const subline = lastTxt
+      ? '<div class="guild-bosses-sub">Last: ' + esc(lastTxt) + '</div>'
+      : '';
+    return (
+      '<div class="guild-bosses-row">' +
+        rankBadge +
+        '<div class="guild-bosses-name">' +
+          '<div class="guild-bosses-title">' + esc(row.name) + '</div>' +
+          subline +
+        '</div>' +
+        '<span class="guild-bosses-count">' + esc(countTxt) + '</span>' +
+      '</div>'
+    );
+  }
+  function renderBossesSlainSheet() {
+    const list  = document.getElementById('guild-bosses-list');
+    const empty = document.getElementById('guild-bosses-empty');
+    if (!list) return;
+    const rows = _guildBossesSlainRows();
+    if (rows.length === 0) {
+      list.innerHTML = '';
+      if (empty) {
+        empty.classList.remove('hidden');
+        empty.textContent = 'No bosses slain yet.';
+      }
+      return;
+    }
+    if (empty) { empty.classList.add('hidden'); empty.textContent = ''; }
+    list.innerHTML = rows.map(_bossesSlainRowHtml).join('');
+  }
+  function openBossesSlainSheet() {
+    const overlay = document.getElementById('guild-bosses-overlay');
+    const sheet   = document.getElementById('guild-bosses-sheet');
+    if (!overlay || !sheet) return;
+    try { renderBossesSlainSheet(); } catch (_) {}
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeBossesSlainSheet() {
+    const overlay = document.getElementById('guild-bosses-overlay');
+    const sheet   = document.getElementById('guild-bosses-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+  try {
+    window.openBossesSlainSheet  = openBossesSlainSheet;
+    window.closeBossesSlainSheet = closeBossesSlainSheet;
+  } catch (_) {}
+
+  // ── Tile routing ────────────────────────────────────────────
+  // Idempotent guard so a second setup pass doesn't double-wire
+  // close handlers. Routes by data-roster-open: each tile opens a
+  // DIFFERENT sheet (1z.172 fix).
   function setupGuildRosterSheet() {
     const sheet = document.getElementById('guild-roster-sheet');
     if (!sheet || sheet.getAttribute('data-wired') === '1') return;
     sheet.setAttribute('data-wired', '1');
-    const closeBtn = document.getElementById('guild-roster-close');
-    const overlay  = document.getElementById('guild-roster-overlay');
-    if (closeBtn) closeBtn.addEventListener('click', closeGuildRosterSheet);
-    if (overlay)  overlay.addEventListener('click', closeGuildRosterSheet);
+
+    // Hunters / roster sheet close wiring.
+    const rosterClose = document.getElementById('guild-roster-close');
+    const rosterOver  = document.getElementById('guild-roster-overlay');
+    if (rosterClose) rosterClose.addEventListener('click', closeGuildRosterSheet);
+    if (rosterOver)  rosterOver.addEventListener('click', closeGuildRosterSheet);
+
+    // Feats sheet close wiring.
+    const featsClose = document.getElementById('guild-feats-close');
+    const featsOver  = document.getElementById('guild-feats-overlay');
+    if (featsClose) featsClose.addEventListener('click', closeFeats24hSheet);
+    if (featsOver)  featsOver.addEventListener('click', closeFeats24hSheet);
+
+    // Bosses sheet close wiring.
+    const bossesClose = document.getElementById('guild-bosses-close');
+    const bossesOver  = document.getElementById('guild-bosses-overlay');
+    if (bossesClose) bossesClose.addEventListener('click', closeBossesSlainSheet);
+    if (bossesOver)  bossesOver.addEventListener('click', closeBossesSlainSheet);
+
+    // Tile router: data-roster-open dispatches to the right sheet.
     const tiles = document.querySelectorAll('#guildhall-summary [data-roster-open]');
     tiles.forEach(t => {
       t.addEventListener('click', () => {
-        const sort = t.getAttribute('data-roster-sort') || 'alias';
-        openGuildRosterSheet(sort);
+        const which = t.getAttribute('data-roster-open');
+        if (which === 'feats24h') {
+          openFeats24hSheet();
+        } else if (which === 'bosses') {
+          openBossesSlainSheet();
+        } else {
+          // 'hunters' (default) — the existing roster / friends-style sheet.
+          const sort = t.getAttribute('data-roster-sort') || 'alias';
+          openGuildRosterSheet(sort);
+        }
       });
     });
   }

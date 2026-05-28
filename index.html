@@ -1674,11 +1674,9 @@
     </div>
   </div>
 
-  <!-- v3 Phase 1z.171 — Guild Members stats sheet. Opens from any
-       of the three Guild Hall summary tiles (HUNTERS / FEATS · 24H
-       / BOSSES SLAIN). Reuses the .vn-sheet shell + .lb-rank-*
-       header classes so visual language matches the existing
-       leaderboard / souls-ledger sheets. -->
+  <!-- v3 Phase 1z.171 — Guild Members roster sheet. Opens ONLY
+       from the HUNTERS tile (1z.172 routing fix). Reuses the
+       .vn-sheet shell + .lb-rank-* header classes. -->
   <div id="guild-roster-overlay" class="vn-overlay hidden"></div>
   <div id="guild-roster-sheet" class="vn-sheet hidden">
     <div class="vn-drag-handle"></div>
@@ -1691,6 +1689,42 @@
       <p class="lb-rank-blurb">Your guild and the feats they've recorded.</p>
       <div id="guild-roster-list" class="guild-roster-list"></div>
       <div id="guild-roster-empty" class="guild-roster-empty hidden"></div>
+    </div>
+  </div>
+
+  <!-- v3 Phase 1z.172 — Feats · Last 24h sheet. Opens from the
+       FEATS · 24H tile. Reads hb_guild_activity filtered to
+       device-local today (matches the tile counter). -->
+  <div id="guild-feats-overlay" class="vn-overlay hidden"></div>
+  <div id="guild-feats-sheet" class="vn-sheet hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">FEATS · LAST 24H</div>
+      <h2 class="lb-rank-title">Today's Feats</h2>
+      <button id="guild-feats-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p class="lb-rank-blurb">Victories and milestones recorded since midnight.</p>
+      <div id="guild-feats-list" class="guild-feats-list"></div>
+      <div id="guild-feats-empty" class="guild-roster-empty hidden"></div>
+    </div>
+  </div>
+
+  <!-- v3 Phase 1z.172 — Bosses Slain sheet. Opens from the
+       BOSSES SLAIN tile. Reads hb_bosses via loadBosses() and
+       joins per-boss config from BOSSES{} for name/rank. -->
+  <div id="guild-bosses-overlay" class="vn-overlay hidden"></div>
+  <div id="guild-bosses-sheet" class="vn-sheet hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">BOSSES SLAIN</div>
+      <h2 class="lb-rank-title">Kill Log</h2>
+      <button id="guild-bosses-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p class="lb-rank-blurb">Every boss you've put down, with kill counts.</p>
+      <div id="guild-bosses-list" class="guild-bosses-list"></div>
+      <div id="guild-bosses-empty" class="guild-roster-empty hidden"></div>
     </div>
   </div>
 
@@ -2355,7 +2389,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=500"></script>
+  <script src="app.js?v=501"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

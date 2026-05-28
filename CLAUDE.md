@@ -55,7 +55,111 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.171 Guild Members roster sheet from clickable summary tiles (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.172 Split tile taps into three sheets (read this first)
+
+### ✅ STATUS: Fixed the 1z.171 routing bug where all three Guild Hall summary tiles opened the friends-style roster sheet. Each tile now opens its own dedicated sheet. Frontend-only. `2.2.3-w48` web bundle ready.
+
+### Root cause
+
+In 1z.171 the three summary tiles (HUNTERS / FEATS · 24H / BOSSES SLAIN) were all wired to `openGuildRosterSheet(sort)` — same sheet, different `data-roster-sort` hint. That sheet is structurally a friends list (alias + "Guild member" placeholder rows), so tapping FEATS · 24H or BOSSES SLAIN was opening the friends list. The "Phase 1 simplicity" rationale didn't survive contact with real users — three tiles look like three distinct destinations.
+
+### Fix — three independent sheets
+
+| Tile | Opens | DOM root | Data source |
+|---|---|---|---|
+| `HUNTERS` | `openGuildRosterSheet('alias')` *(unchanged from 1z.171)* | `#guild-roster-sheet` | `_friendsCache.friends` (accepted) |
+| `FEATS · 24H` | **NEW** `openFeats24hSheet()` | `#guild-feats-sheet` | `hb_guild_activity` filtered to device-local today |
+| `BOSSES SLAIN` | **NEW** `openBossesSlainSheet()` | `#guild-bosses-sheet` | `loadBosses()` joined with `BOSSES{}` config |
+
+The tile router lives in `setupGuildRosterSheet` (kept the existing name for diff continuity), reading `data-roster-open` from the clicked tile:
+
+```js
+if (which === 'feats24h')      openFeats24hSheet();
+else if (which === 'bosses')   openBossesSlainSheet();
+else /* 'hunters' default */   openGuildRosterSheet(sort);
+```
+
+### FEATS · 24H sheet behaviour
+
+- **Header**: `FEATS · LAST 24H` / "Today's Feats" / *Victories and milestones recorded since midnight.*
+- **Rows**: rendered via the **existing** `_guildhallRowHtml` so visual language matches Recent Feats exactly. No new row HTML shape to maintain in two places.
+- **Filter**: device-local calendar day key matches the FEATS · 24H tile counter — list count always equals tile value.
+- **Empty state**: *"No feats completed in the last 24 hours."*
+- Includes all six feat types: boss kill, ultra-rare relic, rank up, 10K step day, 7+ hour sleep, habit streak milestone.
+
+### BOSSES SLAIN sheet behaviour
+
+- **Header**: `BOSSES SLAIN` / "Kill Log" / *Every boss you've put down, with kill counts.*
+- **Rows**: rank badge (E/D/C/B/A/S/S+) + boss name + "Last: 2h ago" subline + "N slain" count chip.
+- **Sort**: `kill_count` DESC, ties broken by `last_killed_at` DESC.
+- **Filter**: excludes bosses with `kill_count === 0` (engaged-but-never-killed bosses are noise).
+- **Empty state**: *"No bosses slain yet."*
+- Joins `loadBosses()` (per-user kill state) with `BOSSES{}` config (name + rank + statDomain).
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | +30 lines: two new sheet shells (`#guild-feats-sheet`, `#guild-bosses-sheet`) |
+| `app.js` | +180 lines: `_guildFeatsTodayEntries`, `renderFeats24hSheet`, `openFeats24hSheet`, `closeFeats24hSheet`, `_guildBossesSlainRows`, `_bossesSlainRowHtml`, `renderBossesSlainSheet`, `openBossesSlainSheet`, `closeBossesSlainSheet` + tile router dispatch + 3 close-handler wiring blocks |
+| `styles.css` | +80 lines: `.guild-feats-list`, `.guild-bosses-row` + rank badge + name col + count chip |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### What's NOT changed
+
+- ✅ HUNTERS tile behaviour identical to 1z.171 — still opens the Guild Members roster sheet.
+- ✅ Recent Feats 7-type system (boss_kill, ultra_rare_drop, rank_up, step_milestone_10k, sleep_quality_7h, habit_streak, friend_added) unchanged.
+- ✅ Boss kill detection / `_awardSingleShotKill` / rewards untouched.
+- ✅ HealthKit, leaderboard, dungeon, XP, rank, souls economy, sim values, sync cadence — all untouched.
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w47` | `2.2.3-w48` |
+| `app.js?v=` | `500` | `501` |
+| `sw.js CACHE_VERSION` | `v5.386` | `v5.387` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Tests
+
+- `node --check` on all four JS files → OK.
+- Playwright e2e: 28/29 first run, 1 transient flake (step_total modal routing, unrelated), pass on isolated retry.
+
+### TestFlight QA for w48
+
+1. Cold-launch w48. Confirm `"build": "2.2.3-w48"`.
+2. Open Social tab.
+3. **Tap HUNTERS tile** → "Guild Members · Roster" sheet opens (friends list with alias rows). ✓ Same as w47.
+4. **Tap FEATS · 24H tile** → **NEW** "Feats · Last 24h · Today's Feats" sheet opens. List shows each feat row recorded since device-local midnight, matching the tile counter exactly.
+5. **Tap BOSSES SLAIN tile** → **NEW** "Bosses Slain · Kill Log" sheet opens. Rows show per-boss name + rank badge + last-killed timestamp + "N slain" count, sorted highest count first.
+6. Each sheet has its own X button + overlay tap close. Closing one and opening another works cleanly (no stuck overlays).
+7. Empty states render without crash: tap FEATS · 24H on a day with no feats yet → "No feats completed in the last 24 hours." Tap BOSSES SLAIN before defeating any boss → "No bosses slain yet."
+8. Verify no "duel" / "arena" / "challenge" text appears in any of the three sheets.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ Friends list still opens only from the HUNTERS tile.
+- ✅ All shown data is real local truth — no fake stats.
+- ✅ Recent Feats system / boss kill economy / rewards all unchanged.
+
+### Rollback
+
+Three independent reverts:
+1. Remove the two new sheet shells from `index.html` (`#guild-feats-sheet`, `#guild-bosses-sheet`).
+2. Remove the 1z.172 block in `app.js` (8 functions) and restore the original `setupGuildRosterSheet` router that called `openGuildRosterSheet(sort)` for every tile.
+3. Remove the `.guild-feats-list` + `.guild-bosses-*` CSS blocks.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.171 Guild Members roster sheet from clickable summary tiles (historical — superseded by 1z.172 above)
 
 ### ✅ STATUS: The three summary tiles (HUNTERS / FEATS · 24H / BOSSES SLAIN) are now buttons that open a polished Guild Members roster sheet showing the current user with real local stats + accepted friends as alias-only placeholder rows. Frontend-only. `2.2.3-w47` web bundle ready.
 
