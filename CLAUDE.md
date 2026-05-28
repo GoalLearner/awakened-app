@@ -55,7 +55,152 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.164 Guild Hall pivot — Social tab is now a Social Hub; Duels frozen behind SEALED panel (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.165 Guild Activity feed is feats-only (boss kills, milestones, streaks, rank-ups, ultra-rare drops) (read this first)
+
+### ✅ STATUS: Souls / duel transactions removed from the Guild Hall Activity feed per product direction. Replaces souls-ledger pull (1z.164) with a dedicated `hb_guild_activity` event store. Six emitter sites wired across the codebase. Frontend-only. `2.2.3-w41` web bundle ready.
+
+### Product direction (from real-device feedback on w40)
+
+> "No souls or duels should be in this activity… I think more boss defeats and high milestones like 10K steps in a day, Slept 7+ hours, Streaks, Rank ups, Ultra rare item drops…for now"
+
+Souls transactions and duel outcomes belong to the Souls Ledger (the existing transactions sheet). The Guild Hall feed should celebrate **feats** — verified accomplishments worth being proud of in front of a guild.
+
+### What Activity now shows
+
+| Feat type | Trigger | Idempotency key | Glyph |
+|---|---|---|---|
+| **Boss defeated** | `_awardSingleShotKill` (any rank) | `boss_kill_<bossId>_<killCount>` | ⚔ gold |
+| **10K-step day** | `autoVerifyWalk` when daily steps ≥ 10,000 | `steps_10k_<localDate>` | ⇈ gold |
+| **7+ hour sleep night** | `autoVerifySleep` when `totalAsleepHours ≥ 7` | `sleep_7h_<nightDate>` | ☾ violet |
+| **Streak milestone** | `lbGetSnapshot` band-cross (7/14/30/100/365 days) for Sleep + Workout | `streak_<habit>_<band>` | 🔥 gold |
+| **Rank-up** | `renderRank` detects `getRankDivisionInfo().fullLabel` change | `rank_up_<newFullLabel>` | ◆ violet |
+| **Ultra-rare drop** | `openCardRevealModal` when `card.rarity === 'ultra_rare'` | `ultra_rare_<cardId>` | ✦ gold |
+
+### What Activity no longer shows
+
+- ❌ Daily login bonus rows (lives in Souls Ledger).
+- ❌ Boss engage cost (`-100`) rows (lives in Souls Ledger).
+- ❌ Duel win/loss souls rows (lives in Souls Ledger).
+- ❌ Generic souls earn/spend (`system` type) rows (lives in Souls Ledger).
+- ❌ HealthKit raw step values (privacy / App Review).
+
+The Souls Ledger sheet still shows ALL of those — souls economy didn't change, just the Activity feed's view of it.
+
+### Architecture
+
+**New event store**: `hb_guild_activity` localStorage key. Entries are `{ id, ts, type, payload }`. FIFO-capped at 50.
+
+**New seen-marker namespace**: `hb_guild_activity_seen_<key>`. Each emitter writes a stable seen marker (e.g. `sleep_7h_2026-05-28`) so re-foregrounding / visibilitychange races never dup a row.
+
+**New helpers** (`app.js`):
+- `_guildhallReadStore()` / `_guildhallWriteStore(entries)` — localStorage IO.
+- `_guildhallSeen(key)` / `_guildhallMarkSeen(key)` — idempotency markers.
+- `recordGuildActivity(type, payload, seenKey)` — write a new event with optional idempotency. Auto-repaints the feed if Social tab is currently visible.
+- `_guildhallMaybeFireStreakMilestone(habitName, currentDays)` — band-cross detector for streak rows. Fires the highest band ≤ current days.
+
+**`renderGuildActivity()`** rewritten to read from the new store with feat-specific verb/target/glyph mapping. The legacy `_classifySoulsEvent` translation is gone.
+
+### Emitter sites
+
+| File:line | Function | Hook |
+|---|---|---|
+| `app.js:~6710` | `_awardSingleShotKill` | After `setBossState`, before `announceKillAndDrop`. |
+| `app.js:~33001` | `autoVerifyWalk` | Right after `lbRecordStepsToday(steps)`, gated on `steps >= 10000`. |
+| `app.js:~33260` | `autoVerifySleep` | Right after the existing `sleep-sealed` breadcrumb, gated on `totalAsleepHours >= 7`. |
+| `app.js:~7541` | `lbGetSnapshot` | Before the return — pulls current Sleep + Workout streaks, calls the band-cross detector. |
+| `app.js:~13180` | `renderRank` | After `prUpdate('highest_rank', rank.id)`. Compares against `hb_guild_last_rank_label` localStorage marker. |
+| `app.js:~5697` | `openCardRevealModal` | Right after `document.body.classList.add('reveal-locked')`. Gated on `card.rarity === 'ultra_rare'`. |
+
+### Idempotency design
+
+Each emitter passes a stable `seenKey` to `recordGuildActivity`. The helper checks `_guildhallSeen(key)` BEFORE writing — if marked, returns false (no write). On successful write, marks the key. This means:
+
+- **Boss kills**: per `(bossId, killCount)` — each individual kill emits once, but daily/repeated kills of the same boss each get their own row.
+- **10K steps**: per device-local date — only one row per day even if step total fluctuates above/below during refresh.
+- **7+ hour sleep**: per night date — only one row per night.
+- **Streaks**: per `(habit, band)` — crossing 7 days fires once; crossing 14 fires once; etc. Re-foregrounding never duplicates.
+- **Rank-up**: per full rank label (e.g. `D II`) — fires exactly once on first arrival at that label.
+- **Ultra-rare drop**: per card id — never duplicates even if reveal modal reopens.
+
+Seen markers persist across cold-launches (localStorage). They're per-device — uninstalling clears them, which means a brand-new device sees the first milestone rows fire even for old streaks. Acceptable; no backend backfill.
+
+### What's NOT changed
+
+- ✅ Souls economy untouched. `earnSouls` / `spendSouls` / `recordSoulsTransaction` / `hb_souls_ledger` all work exactly as before.
+- ✅ Souls Ledger sheet still shows daily login, boss engage, boss kill reward, duel win/loss, system. Nothing removed there.
+- ✅ Backend untouched. No deploy. No D1 mutation, migration.
+- ✅ HealthKit math, duel scoring, sync cadence, leaderboard, dungeon, XP, rank, sim values: untouched.
+- ✅ Phase α/β/γ + 1z.158/159/160/161/162/164 all preserved.
+- ✅ Guild Hall flags from 1z.164 still apply (Duels still sealed behind the Arena panel).
+- ✅ Friend API + UI lifecycle preserved.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +250 lines net (new event store, 6 emitter hooks, rewritten renderer with new glyphs/verbs, streak band detector) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w40` | `2.2.3-w41` |
+| `app.js?v=` | `493` | `494` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.379` | `v5.380` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `SOCIAL_HUB_ENABLED` | `true` | unchanged |
+| `DUELS_PUBLIC_CHALLENGE_ENABLED` | `false` | unchanged |
+| `DUELS_PUBLIC_TAB_VISIBLE` | `false` | unchanged |
+| `DUELS_QA_OVERRIDE_ENABLED` | `false` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → **OK**.
+- Playwright e2e: 25/29 first run, 4 transient browser-context flakes (sleep-streak, dungeon-rank, global-rankings-hub — all pass on isolated retry, all unrelated to Guild Activity).
+- Backend tests not re-run.
+
+### TestFlight QA for w41
+
+1. Cold-launch w41. Confirm `"build": "2.2.3-w41"`.
+2. Open Social tab. The "Recent feats" panel should be **empty** at first (no feats recorded yet under the new system). Empty state: *"The board is quiet. Victories, milestones, and progress will appear here."*
+3. Walk past 10,000 steps in a day → on next foreground / autoVerifyWalk, a `⇈ You crossed 10,234 steps today` row appears. Re-foregrounding doesn't duplicate.
+4. Sleep 7+ hours overnight → after morning auto-verify, `☾ You slept 7.4 hours last night` row appears. Per-night idempotent.
+5. Engage + defeat any boss → `⚔ You defeated The Iron Warden` row appears. Each kill gets its own row.
+6. Cross a streak milestone (7 / 14 / 30 / 100 / 365 days on Sleep or Workout) → `🔥 You reached 7-day Sleep streak` row appears. Each band fires once per habit.
+7. Cross a rank threshold → `◆ You reached D II` row appears.
+8. Receive an ultra-rare card from a boss drop → `✦ You looted Pendant of the Wakeful` row appears.
+9. Verify the Souls Ledger sheet still shows daily login / boss kill reward / engage cost / duel rows. Those are NOT removed from the souls system — only from the Guild Hall Activity feed.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / duel scoring / souls economy / leaderboard / dungeon / XP / rank / sim / sync-cadence formula changes.
+- ✅ Souls Ledger remains the canonical souls transaction history. Activity is a separate, feat-focused surface.
+- ✅ Passive duel resolve/reconcile loops still run.
+
+### Rollback
+
+If feats feel too sparse early-game, revert by restoring the 1z.164 souls-ledger pull in `renderGuildActivity`. The new event store + emitters can stay dormant (writes go to `hb_guild_activity` but the renderer ignores them). Or a single-line flag could gate which source the renderer reads from — happy to add a `GUILD_ACTIVITY_SOURCE` knob in a follow-up if you want hot-swappable.
+
+### Phase 2 / 3 / 4 deferred
+
+| Phase | Scope |
+|---|---|
+| Phase 2 | Standings · Among Friends from existing leaderboard data + client-side friend-graph filter. |
+| Phase 3 | Backend `user_events` table — friend feats interleaved with personal. |
+| Phase 4 | Friend profile cards, async ping/nudge, duels return decision. |
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.164 Guild Hall pivot — Social tab is now a Social Hub; Duels frozen behind SEALED panel (historical — superseded by 1z.165 above)
 
 ### ✅ STATUS: Public Social tab reframed from "DISCIPLINE DUELS" → "GUILD HALL". Friends remain the functional core. Local Guild Activity feed reads `hb_souls_ledger`. Public duel creation sealed behind flags. Passive duel resolve/reconcile loops untouched — existing in-flight duels still settle. Frontend-only. `2.2.3-w40` web bundle ready.
 

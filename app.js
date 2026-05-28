@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w40';
+  const APP_BUILD_TAG = '2.2.3-w41';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3232,18 +3232,114 @@
     return SOULS_ENGAGE_COSTS[rank] || 0;
   }
 
-  // ─── v3 Phase 1z.164 — Guild Activity (Phase 1 local feed) ─────
+  // ─── v3 Phase 1z.165 — Guild Activity (dedicated event store) ──
   //
-  // Reads top N entries from hb_souls_ledger and renders Guild Hall
-  // activity rows matching Variation A from ClaudeDesign
-  // (Social Hub Guild Hall.html / social-hub.jsx). Phase 1 is
-  // LOCAL ONLY — no backend `user_events` table, no friend-graph
-  // filter. Personal events from boss kills, engage costs, daily
-  // login, duel outcomes are all visible because they all live in
-  // hb_souls_ledger via recordSoulsTransaction().
+  // Replaces the 1z.164 souls-ledger pull. Per product direction,
+  // souls transactions / duel outcomes / daily login bonuses do NOT
+  // belong in the Guild Hall activity feed — that's a finance log,
+  // not a feat log. Activity should celebrate FEATS:
+  //   • Boss defeats
+  //   • 10K-step days
+  //   • 7+ hour sleep nights
+  //   • Habit streak milestones (7 / 14 / 30 / 100 days)
+  //   • Rank-ups (e.g. D III → D II)
+  //   • Ultra-rare item drops
   //
-  // Backend-backed friend activity is deferred to Phase 3.
+  // Stored in its own localStorage key `hb_guild_activity` so the
+  // souls ledger UI stays focused on souls and this feed stays
+  // focused on feats. FIFO-capped at 50 entries.
+  //
+  // Idempotency: most feat-emitter sites also write a small "seen"
+  // marker (e.g. `hb_guild_activity_10k_2026-05-28` for daily step
+  // milestones) so re-foregrounding the app doesn't push a
+  // duplicate row.
+  //
+  // Backend-backed friend activity (other users' feats showing up
+  // in your feed) is still deferred to Phase 3.
   const GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 4;
+  const GUILDHALL_ACTIVITY_KEY = 'hb_guild_activity';
+  const GUILDHALL_ACTIVITY_MAX = 50;
+  const GUILDHALL_SEEN_PREFIX  = 'hb_guild_activity_seen_';
+
+  function _guildhallReadStore() {
+    try {
+      const raw = localStorage.getItem(GUILDHALL_ACTIVITY_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  }
+  function _guildhallWriteStore(entries) {
+    try {
+      localStorage.setItem(GUILDHALL_ACTIVITY_KEY, JSON.stringify(entries));
+    } catch (_) { /* quota — silent, feed is not load-bearing */ }
+  }
+  function _guildhallSeen(key) {
+    try { return localStorage.getItem(GUILDHALL_SEEN_PREFIX + key) === '1'; }
+    catch (_) { return false; }
+  }
+  function _guildhallMarkSeen(key) {
+    try { localStorage.setItem(GUILDHALL_SEEN_PREFIX + key, '1'); }
+    catch (_) {}
+  }
+
+  // Push a new feat event onto the activity store. The `seenKey` is
+  // optional — when supplied, the event is only written if that key
+  // hasn't been marked seen yet. After a successful write, the
+  // seenKey is marked so subsequent calls are no-ops.
+  // v3 Phase 1z.165 — streak milestone bands. Fires ONE Guild Hall
+  // row per (habit, milestone). Bands chosen to feel like real
+  // checkpoints (1 week, 2 weeks, 1 month, 100 days, 1 year)
+  // without spamming every day. Caller passes the habit name
+  // ("Sleep" / "Workout") and the current streak day count; this
+  // function figures out whether a band was crossed and which.
+  const GUILDHALL_STREAK_BANDS = [7, 14, 30, 100, 365];
+  function _guildhallMaybeFireStreakMilestone(habitName, currentDays) {
+    if (!habitName || typeof currentDays !== 'number' || currentDays <= 0) return;
+    // Find the highest band <= currentDays. We only fire for that one
+    // (catches users who imported a long history). Each band has its
+    // own seen marker so a user who legitimately progresses 7→14→30
+    // gets three separate rows over time.
+    let band = 0;
+    for (let i = GUILDHALL_STREAK_BANDS.length - 1; i >= 0; i--) {
+      if (currentDays >= GUILDHALL_STREAK_BANDS[i]) {
+        band = GUILDHALL_STREAK_BANDS[i];
+        break;
+      }
+    }
+    if (band <= 0) return;
+    recordGuildActivity('habit_streak', {
+      habitName: habitName + ' streak',
+      days:      band,
+      currentDays: currentDays,
+    }, 'streak_' + habitName.toLowerCase() + '_' + band);
+  }
+
+  function recordGuildActivity(type, payload, seenKey) {
+    if (!type) return false;
+    if (seenKey && _guildhallSeen(seenKey)) return false;
+    const now = Date.now();
+    const entry = {
+      id:      String(now) + '_' + Math.random().toString(36).slice(2, 8),
+      ts:      now,
+      type:    String(type),
+      payload: payload || {},
+    };
+    const log = _guildhallReadStore();
+    log.unshift(entry); // newest-first
+    if (log.length > GUILDHALL_ACTIVITY_MAX) log.length = GUILDHALL_ACTIVITY_MAX;
+    _guildhallWriteStore(log);
+    if (seenKey) _guildhallMarkSeen(seenKey);
+    // Repaint if the Social tab is currently visible so the row
+    // appears immediately. Safe no-op when the tab isn't active.
+    try {
+      if (typeof currentTab !== 'undefined' && currentTab === 'social') {
+        if (typeof renderGuildActivity === 'function') renderGuildActivity();
+      }
+    } catch (_) {}
+    return true;
+  }
+  try { window.recordGuildActivity = recordGuildActivity; } catch (_) {}
   function _guildhallFormatRelativeTs(ms) {
     try {
       const delta = Date.now() - ms;
@@ -3263,64 +3359,70 @@
     } catch (_) { return ''; }
   }
   function _guildhallActivityIconHtml(type) {
-    // Single-purpose RPG glyphs mirroring social-hub.jsx
-    // ActivityIcon() exactly — boss, souls, check, rank, steps.
+    // Feat-focused RPG glyphs. Gold = personal victory / milestone,
+    // violet = progression / rare drop.
     switch (type) {
       case 'boss_kill':
         return '<span class="guildhall-activity-icon" aria-hidden="true">⚔</span>';
-      case 'boss_engage':
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◈</span>';
-      case 'daily_login':
+      case 'step_milestone_10k':
+        return '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
+      case 'sleep_quality_7h':
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">☾</span>';
+      case 'habit_streak':
+        return '<span class="guildhall-activity-icon" aria-hidden="true">🔥</span>';
+      case 'rank_up':
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
+      case 'ultra_rare_drop':
         return '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
-      case 'duel_win':
-        return '<span class="guildhall-activity-icon" aria-hidden="true">▲</span>';
-      case 'duel_loss':
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">▽</span>';
       default:
         return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
     }
   }
   function _guildhallRowHtml(entry) {
     if (!entry) return '';
-    const isGain   = (entry.delta || 0) > 0;
-    const abs      = Math.abs(entry.delta || 0).toLocaleString('en-US');
-    const sign     = isGain ? '+' : '−';
+    const p        = entry.payload || {};
     const time     = _guildhallFormatRelativeTs(entry.ts);
     const iconHtml = _guildhallActivityIconHtml(entry.type);
-    // Pick a verb + target that reads like the design's mixed feed
-    // even though every row is the local user's event. Future
-    // backend-feed Phase 3 will introduce friend rows alongside.
     let verb, target, targetCls;
     switch (entry.type) {
       case 'boss_kill':
         verb = 'defeated';
-        target = entry.label ? entry.label.replace(/^Defeated\s+/i, '') : 'a boss';
+        target = p.bossName || 'a boss';
         targetCls = 'guildhall-activity-target--gold';
         break;
-      case 'boss_engage':
-        verb = 'engaged';
-        target = entry.label ? entry.label.replace(/^Engaged\s+/i, '') : 'a boss';
-        targetCls = 'guildhall-activity-target--violet';
-        break;
-      case 'duel_win':
-        verb = 'won';
-        target = entry.label ? entry.label.replace(/^Duel victory\s*/i, '') || 'a duel' : 'a duel';
+      case 'step_milestone_10k':
+        verb = 'crossed';
+        target = (p.steps != null)
+          ? p.steps.toLocaleString('en-US') + ' steps today'
+          : '10,000 steps today';
         targetCls = 'guildhall-activity-target--gold';
         break;
-      case 'duel_loss':
-        verb = 'lost';
-        target = entry.label ? entry.label.replace(/^Duel loss\s*/i, '') || 'a duel' : 'a duel';
+      case 'sleep_quality_7h':
+        verb = 'slept';
+        target = (p.hours != null)
+          ? p.hours.toFixed(1) + ' hours last night'
+          : '7+ hours last night';
         targetCls = 'guildhall-activity-target--violet';
         break;
-      case 'daily_login':
-        verb = 'earned';
-        target = sign + abs + ' souls · daily';
+      case 'habit_streak':
+        verb = 'reached';
+        target = p.days + '-day ' + (p.habitName || 'streak');
+        targetCls = 'guildhall-activity-target--gold';
+        break;
+      case 'rank_up':
+        verb = 'reached';
+        target = (p.toRank || 'a new rank');
+        targetCls = 'guildhall-activity-target--violet';
+        break;
+      case 'ultra_rare_drop':
+        verb = 'looted';
+        target = (p.cardName || 'an ultra-rare relic');
         targetCls = 'guildhall-activity-target--gold';
         break;
       default:
-        verb = isGain ? 'earned' : 'spent';
-        target = sign + abs + ' souls';
-        targetCls = isGain ? 'guildhall-activity-target--gold' : 'guildhall-activity-target--violet';
+        verb = 'achieved';
+        target = 'a feat';
+        targetCls = 'guildhall-activity-target--gold';
     }
     return (
       '<div class="guildhall-activity-row">' +
@@ -3337,7 +3439,7 @@
     const body = document.getElementById('guildhall-activity-body');
     if (!body) return;
     let entries = [];
-    try { entries = _readSoulsLedger(); } catch (_) { entries = []; }
+    try { entries = _guildhallReadStore(); } catch (_) { entries = []; }
     if (!Array.isArray(entries) || entries.length === 0) {
       body.innerHTML =
         '<div class="guildhall-activity-empty">The board is quiet.' +
@@ -5620,6 +5722,18 @@
     if (!overlay) return;
     _revealActive = true;
     document.body.classList.add('reveal-locked');
+    // v3 Phase 1z.165 — Guild Hall feat row for ultra-rare drops.
+    // Per-card-id idempotent so re-opening the modal (debug, queue
+    // replay, etc.) doesn't dup. Only ultra-rare qualifies — common
+    // and rare drops are not feats by themselves at this scale.
+    try {
+      if (card && card.rarity === 'ultra_rare') {
+        recordGuildActivity('ultra_rare_drop', {
+          cardId:   card.id || null,
+          cardName: card.name || 'an ultra-rare relic',
+        }, 'ultra_rare_' + (card.id || ('anon_' + Date.now())));
+      }
+    } catch (_) {}
 
     // Populate fields.
     const slotIcon = SLOT_ICONS[card.slot] || '✦';
@@ -6705,6 +6819,18 @@
     if (reward > 0) earnSouls(reward, 'kill_' + id);
     const dropped = rollBossDrop(id);
     announceKillAndDrop(cfg, reward, dropped);
+    // v3 Phase 1z.165 — Guild Hall feat row. Boss kills are per-day
+    // idempotent on (boss_id, kill_count) so the same kill can't
+    // double-emit even if _awardSingleShotKill is called twice (e.g.
+    // visibilitychange race).
+    try {
+      recordGuildActivity('boss_kill', {
+        bossId:   id,
+        bossName: cfg && cfg.name ? cfg.name : id,
+        rank:     cfg && cfg.rank ? cfg.rank : null,
+        dayDate:  dayDate,
+      }, 'boss_kill_' + id + '_' + state.kill_count);
+    } catch (_) {}
     try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
     try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
   }
@@ -7438,6 +7564,21 @@
           finalBest:     bestSleepStreak,
         });
       }
+    } catch (_) {}
+
+    // v3 Phase 1z.165 — Guild Hall feat row for streak milestones.
+    // We're already inside lbGetSnapshot, which is called every time
+    // the leaderboard preview refreshes (i.e. on every habit toggle).
+    // Compare current sleep/workout streaks against milestone bands
+    // (7 / 14 / 30 / 100 / 365 days) and fire ONE row per habit per
+    // milestone crossing — idempotency key bakes the habit name +
+    // milestone into the seen-marker so each band fires at most once.
+    try {
+      const workoutFromLedger = _lbComputeWorkoutStreakFromCompletions();
+      const workoutCurrent = (workoutFromLedger && typeof workoutFromLedger.current === 'number')
+        ? workoutFromLedger.current : 0;
+      _guildhallMaybeFireStreakMilestone('Sleep',   currentSleepStreak);
+      _guildhallMaybeFireStreakMilestone('Workout', workoutCurrent);
     } catch (_) {}
 
     return {
@@ -13090,6 +13231,36 @@
     const rank = getRank(totalPoints);
     // PR hook — track highest rank ever reached (only goes up)
     prUpdate('highest_rank', rank.id);
+    // v3 Phase 1z.165 — Guild Hall feat row for rank-up. Detects
+    // both major (D → C) and sub-division (D III → D II)
+    // transitions via getRankDivisionInfo. Persists the last
+    // emitted full label in localStorage so we only push a row
+    // the first time we cross each rank — repeated renderRank
+    // calls (every habit toggle, every health refresh) are no-ops.
+    try {
+      let fullLabel = null;
+      if (typeof getRankDivisionInfo === 'function') {
+        const info = getRankDivisionInfo(totalPoints);
+        fullLabel = info && info.fullLabel ? info.fullLabel : rank.id;
+      } else {
+        fullLabel = rank.id;
+      }
+      const lastKey = 'hb_guild_last_rank_label';
+      let lastLabel = null;
+      try { lastLabel = localStorage.getItem(lastKey); } catch (_) {}
+      if (lastLabel && lastLabel !== fullLabel) {
+        // Order is "increasing" only when getRankIndex says so — we
+        // don't want a rank-up row for hot-reload edge cases that
+        // walk the rank backwards. getRank is monotonic in XP though,
+        // and totalPoints is monotonic, so any change here is a
+        // promotion. Defensive ordering check skipped for v1.
+        recordGuildActivity('rank_up', {
+          fromRank: lastLabel,
+          toRank:   fullLabel,
+        }, 'rank_up_' + fullLabel);
+      }
+      try { localStorage.setItem(lastKey, fullLabel); } catch (_) {}
+    } catch (_) {}
     const badge = document.getElementById('rank-badge');
     const label = document.getElementById('rank-label');
     const pts   = document.getElementById('rank-pts');
@@ -32893,6 +33064,24 @@
     try { lbRecordStepsToday(steps); }
     catch (e) { console.warn('[Leaderboard] step record failed', e); }
 
+    // v3 Phase 1z.165 — Guild Hall feat row for 10K-step days.
+    // Per-day idempotent on device-local date so visibility-change
+    // re-fires don't dup. Threshold is 10,000 steps; we capture the
+    // current step value at the moment the threshold first crosses
+    // for diagnostic richness (the displayed row shows that exact
+    // value, not a rounded 10K).
+    try {
+      if (typeof steps === 'number' && steps >= 10000) {
+        const dateKey = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate()
+          : new Date().toISOString().slice(0, 10);
+        recordGuildActivity('step_milestone_10k', {
+          steps: Math.round(steps),
+          dateKey: dateKey,
+        }, 'steps_10k_' + dateKey);
+      }
+    } catch (_) {}
+
     // v3 Phase 1z.125 / 1z.126 — flights climbed leaderboard recording.
     // Piggybacks on the walk auto-verify rhythm (visibility-change
     // + render-tick) since flights and steps share the same data
@@ -33233,6 +33422,22 @@
             goalHours,
           });
           console.log('[Health] auto-verified Sleep:', data.totalAsleepHours.toFixed(2), 'h');
+          // v3 Phase 1z.165 — Guild Hall feat row for ≥7h sleep.
+          // Per-night idempotent so re-foreground doesn't dup. We
+          // already know totalAsleepHours >= goalHours here; the
+          // user's goal is usually 7 but the milestone fires for
+          // anything ≥7 even if their personal goal is higher.
+          try {
+            if (data.totalAsleepHours >= 7) {
+              const nightDate = (typeof getDeviceLocalYesterday === 'function')
+                ? getDeviceLocalYesterday()
+                : new Date().toISOString().slice(0, 10);
+              recordGuildActivity('sleep_quality_7h', {
+                hours: Number((data.totalAsleepHours || 0).toFixed(2)),
+                nightDate: nightDate,
+              }, 'sleep_7h_' + nightDate);
+            }
+          } catch (_) {}
         } else {
           _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'race-checked-during-eval' });
         }
