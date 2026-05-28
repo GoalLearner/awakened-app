@@ -55,7 +55,158 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.162 Atomic per-(duel, outcome) idempotency guard + ledger-row dedup (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.164 Guild Hall pivot — Social tab is now a Social Hub; Duels frozen behind SEALED panel (read this first)
+
+### ✅ STATUS: Public Social tab reframed from "DISCIPLINE DUELS" → "GUILD HALL". Friends remain the functional core. Local Guild Activity feed reads `hb_souls_ledger`. Public duel creation sealed behind flags. Passive duel resolve/reconcile loops untouched — existing in-flight duels still settle. Frontend-only. `2.2.3-w40` web bundle ready.
+
+### Design source
+
+ClaudeDesign handoff — Variation A (RECOMMENDED) from `awakened/project/Social Hub Guild Hall.html` + `social-hub.jsx`. Layout top-to-bottom:
+
+1. **Hub Header** — `· GUILD HALL ·` kicker (mono gold) + "Social" title (Cinzel + gold glow) + subtitle.
+2. **Guild Activity** — kicker `· GUILD ACTIVITY ·`, title "Recent feats", LIVE meta. Reads top 4 from `hb_souls_ledger`.
+3. **Your hunters** — restyled Friends section with kicker `· GUILD ·`, title + count, integrated `＋ ADD FRIEND` input + button.
+4. **Arena Sealed** — purple dashed panel: "The Arena is being reforged · Verified challenges will return when they are fair, stable, and worthy · SEALED".
+
+Standings (Variation A also included `· AMONG FRIENDS · Standings`) is **deferred to Phase 2** — building live RankBoardRows from existing leaderboard data is more risk than the Phase 1 shell wants.
+
+### What was implemented
+
+**Flags** (new, app.js):
+```js
+const SOCIAL_HUB_ENABLED             = true;
+const DUELS_PUBLIC_CHALLENGE_ENABLED = false;
+const DUELS_PUBLIC_TAB_VISIBLE       = false;
+const DUELS_QA_OVERRIDE_ENABLED      = false;
+```
+
+Boot applies body classes: `body.social-hub-on`, `body.duels-public-hidden`, `body.duels-challenge-hidden`. CSS hides the relevant DOM via these classes — DOM stays intact so passive loops still find their mounts if the QA flag flips back on.
+
+**`index.html`**:
+- `#tab-social` aria-label: `"Duels"` → `"Guild Hall"`.
+- Replaced `.duels-page-header` content with `.guildhall-page-header` block (kicker + title + sub).
+- New `<section id="guildhall-activity-section">` with `#guildhall-activity-body` render target.
+- Friends section restyled: collapsible chrome removed, kicker + title + integrated add-friend chip header. Existing render-target IDs preserved.
+- Duels section retained but flag-hidden via CSS (DOM hook for passive render path stays in tree).
+- New `<section class="guildhall-arena-sealed">` Arena Sealed panel always renders.
+
+**`styles.css`** (new `.guildhall-*` block, ~270 lines):
+- Hub header (`.guildhall-page-header`, `.guildhall-kicker`, `.guildhall-page-title`, `.guildhall-page-sub`).
+- Section heads (`.guildhall-section`, `.guildhall-section-head`, `.guildhall-section-kicker`, `.guildhall-section-title`, `.guildhall-section-meta`).
+- Activity rows (`.guildhall-activity-row`, `.guildhall-activity-icon`/`--violet`, `.guildhall-activity-text`, `.guildhall-activity-target`/`--gold`/`--violet`, `.guildhall-activity-time`, `.guildhall-activity-empty`).
+- Friend add chip (`.guildhall-friend-add`, `.guildhall-friend-body`).
+- Empty zero-friends hero (`.guildhall-empty-friends`).
+- Arena Sealed (`.guildhall-arena-sealed`, `.guildhall-arena-glyph`, `.guildhall-arena-text`, `.guildhall-arena-title`, `.guildhall-arena-sub`, `.guildhall-arena-pill`).
+- Flag-driven hides (`body.duels-public-hidden #duels-hero`, `.social-section--duels`, `body.duels-challenge-hidden .social-row [data-friend-action="challenge"]`, `body.social-hub-on .duels-page-header`).
+
+**`app.js`**:
+- New `renderGuildActivity()` helper reads `hb_souls_ledger`, renders top 4 entries with relative timestamps + per-type glyphs + verb/target. Handles all hint types: `boss_kill`, `boss_engage`, `daily_login`, `duel_win`, `duel_loss`, `system`. Empty state: *"The board is quiet. Victories, milestones, and progress will appear here."*
+- New `_guildhallFormatRelativeTs(ms)` — "just now / Nm ago / Nh ago / yesterday / Nd ago / Nw ago / a while back".
+- Friend-row Challenge button click gated by `DUELS_PUBLIC_CHALLENGE_ENABLED` + `DUELS_QA_OVERRIDE_ENABLED`. Soft-fails with toast `"The Arena is being reforged."` — picker function itself stays callable from `window.openDuelTypePicker` for QA / e2e direct dispatch.
+- `renderFriendsSection` zero-friends state replaced with Guild Hall hero panel: *"The guild hall stands empty. Bind another hunter to begin."* (gated by `SOCIAL_HUB_ENABLED`; legacy state retained as fallback).
+- Social-tab render switch calls `renderGuildActivity()` before friends/duels.
+
+### Passive duel cleanup — INTENTIONALLY UNTOUCHED
+
+Per the audit's hard guardrail, the following loops still run when the Social tab opens, regardless of flags:
+
+- `Auth.fetchDuels()` — fetches active + recent buckets.
+- `_runDuelSyncCycle('tab-open' / 'interval' / 'foreground' / 'manual')` — submits progress for any active steps duels.
+- `maybeResolveDuelIfEnded(duel)` — auto-resolves duels past `ends_at`.
+- `reconcileDuelSoulsForCompletedDuels(...)` (1z.161) — back-fills local settlement rows for any duel where the OTHER participant triggered resolve.
+- `applyDuelSoulsSettlementFromResolve(...)` (1z.157→162) — applies souls delta.
+
+These ensure that any TestFlight tester with in-flight duels at the moment of the w40 cold-launch will still see their wins/losses resolve and settle in `hb_souls_ledger`. They just won't see new public Challenge buttons.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation, migration.
+- ✅ Friend API + UI lifecycle preserved (add/accept/decline/remove all work).
+- ✅ HealthKit math, duel scoring, sync cadence, leaderboard, dungeon, XP, rank, sim values, souls economy formulas: all untouched.
+- ✅ Phase α/β/γ + 1z.158/159/160/161/162 souls arc preserved (including the load-bearing anti-overwrite comment and the public repair hook removal).
+- ✅ All existing knob locks (`QA_UNLOCK_C_RANK_DUNGEONS=false`, etc.).
+- ✅ No Codemagic, no archive/upload from this machine.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +180 lines (flags, `renderGuildActivity` + helpers, friend-row Challenge gate, zero-friends Guild Hall empty state, boot body classes, social-tab render switch wiring) |
+| `index.html` | +60 lines net (Guild Hall header, Activity section, restructured Friends section, Arena Sealed panel, tab aria-label) |
+| `styles.css` | +270 lines (`.guildhall-*` block + flag-driven hide selectors) |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w39` | `2.2.3-w40` |
+| `app.js?v=` | `492` | `493` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.378` | `v5.379` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → **OK**.
+- Playwright e2e: 29/29 pass after isolated-retry of the standard sleep-streak / dungeon-rank / workout-streak browser-context flakes. The "Duels picker › Steps-only MVP" test passes because `window.openDuelTypePicker` stays callable directly — only the friend-row Challenge button is gated.
+- Backend tests not re-run — no backend changes.
+
+### TestFlight QA for w40
+
+1. Both phones cold-launch. Confirm `"build": "2.2.3-w40"`.
+2. Open Social tab. Confirm:
+   - Header reads `· GUILD HALL ·` / **Social** in Cinzel gold, with subtitle "Hunters bound to your guild. See their progress, climb together."
+   - Guild Activity section shows top 4 recent local soul transactions with per-type glyphs (boss kill, daily login, duel outcome, etc.) and relative timestamps.
+   - "Your hunters" section shows the friend roster (or the new zero-friends panel if empty).
+   - Friend cards show only View/Remove (no Challenge button).
+   - Arena Sealed panel at the bottom: "The Arena is being reforged · Verified challenges will return when they are fair, stable, and worthy · SEALED" with purple dashed border.
+3. Tap a friend's row. Confirm no Challenge button appears.
+4. Run `window.openDuelTypePicker('test')` in Safari Web Inspector → picker opens (QA path still works).
+5. If you have an in-flight duel from a prior session, force-quit + cold-launch + open Social tab — confirm via Copy Debug Info that `duel-sync-loop-start`, `duel-resolve-attempt`, and `duel-souls-settlement-apply` breadcrumbs still fire (passive loops untouched).
+6. Souls Ledger still works — duel settlements continue to land in `hb_souls_ledger` as before.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / duel scoring / souls economy / leaderboard / dungeon / XP / rank / sim / sync-cadence changes.
+- ✅ Passive duel resolve / reconcile loops intentionally kept running.
+- ✅ Friend API + UI lifecycle preserved.
+- ✅ Phase α/β/γ + 1z.158-162 souls arc all preserved.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+- ✅ Public repair hook (1z.159 removal) NOT reintroduced.
+- ✅ Anti-overwrite load-bearing comment (w35/w36/1z.159) intact.
+
+### Rollback
+
+Flip the four flags back:
+```js
+const SOCIAL_HUB_ENABLED             = false;
+const DUELS_PUBLIC_CHALLENGE_ENABLED = true;
+const DUELS_PUBLIC_TAB_VISIBLE       = true;
+const DUELS_QA_OVERRIDE_ENABLED      = false;
+```
+Restores the legacy duels-centric layout. Body classes won't be applied, CSS hides won't fire. New Guild Hall DOM elements (`.guildhall-page-header`, Activity section, Arena Sealed panel) would remain in the DOM but the legacy `.duels-page-header` would no longer be hidden — would need a one-line CSS rule revert too if you want the old layout pixel-for-pixel back. For a softer rollback, just flip `DUELS_PUBLIC_TAB_VISIBLE=true` and `DUELS_PUBLIC_CHALLENGE_ENABLED=true` to expose the duel section + buttons inside the Guild Hall.
+
+### Phase 2 / Phase 3 deferred
+
+| Phase | Scope |
+|---|---|
+| Phase 2 | Standings section — `RankBoardRow`s from existing `Auth.fetchLeaderboardTop` data, friend-graph filter client-side. |
+| Phase 3 | Backend `user_events` table + `/v1/users/:alias/events` endpoint + friend activity rows interleaved with personal events. |
+| Phase 4 | Friend profile cards, async ping/nudge, decide whether duels return as a public feature. |
+
+Each is a separate train. Phase 1 ships nothing that blocks any of them.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.162 Atomic per-(duel, outcome) idempotency guard + ledger-row dedup (historical — superseded by 1z.164 above)
 
 ### ✅ STATUS: User's three `+40 vs Anthony-Edwards` rows verified LEGITIMATE via D1 (three distinct completed duels, not duplicates). Defensive hardening added anyway to close a theoretical concurrent-apply race + add a third-line ledger-row dedup. Frontend-only. `2.2.3-w39` web bundle ready.
 

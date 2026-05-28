@@ -427,7 +427,7 @@
       <button id="tab-items"    class="tab-btn"        data-tab="items"    aria-label="Items">
         <img class="tab-icon" src="assets/tab-icons/tab-items.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
       </button>
-      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Duels">
+      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Guild Hall">
         <img class="tab-icon" src="assets/tab-icons/tab-social.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
       </button>
     </nav>
@@ -606,45 +606,71 @@
          elsewhere; just not invoked from the social-tab branch). -->
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
 
-      <!-- Page header — rune divider + gold title + italic subtitle -->
-      <div class="duels-page-header">
-        <div class="duels-rune-divider" aria-hidden="true">
-          <span class="duels-rune-line"></span>
-          <svg class="duels-rune-spark" width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4z" fill="currentColor" opacity="0.85"/></svg>
-          <span class="duels-rune-line"></span>
-        </div>
-        <h2 class="duels-page-title">DISCIPLINE DUELS</h2>
-        <p class="duels-page-sub">Challenge a hunter. Seal more objectives. Outlast your rival.</p>
+      <!-- v3 Phase 1z.164 — Guild Hall hub header (Variation A from
+           ClaudeDesign Social Hub Guild Hall.html). Replaces the
+           legacy "DISCIPLINE DUELS" page header. Kicker mono gold,
+           title Cinzel + gold glow, italic subtitle. -->
+      <div class="guildhall-page-header">
+        <div class="guildhall-kicker">· GUILD HALL ·</div>
+        <h2 class="guildhall-page-title">Social</h2>
+        <p class="guildhall-page-sub">Hunters bound to your guild. See their progress, climb together.</p>
       </div>
 
+      <!-- v3 Phase 1z.164 — Guild Activity section (local-only feed
+           from hb_souls_ledger). Phase 1 reads on-device events only;
+           backend-backed friend activity is deferred to Phase 3. -->
+      <section id="guildhall-activity-section" class="guildhall-section guildhall-section--activity">
+        <div class="guildhall-section-head">
+          <div class="guildhall-section-headtxt">
+            <div class="guildhall-section-kicker">· GUILD ACTIVITY ·</div>
+            <div class="guildhall-section-title">Recent feats</div>
+          </div>
+          <span class="guildhall-section-meta">LIVE</span>
+        </div>
+        <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
+      </section>
+
       <!-- Active duel hero — empty by default, rendered/swapped by
-           renderActiveDuelHero() during renderDuelsSection(). -->
+           renderActiveDuelHero() during renderDuelsSection(). v3 Phase
+           1z.164 — hidden via CSS when DUELS_PUBLIC_TAB_VISIBLE=false,
+           but the mount stays in the DOM so passive resolve/reconcile
+           paths that may render here still have a home. -->
       <div id="duels-hero" class="duels-hero-mount"></div>
 
-      <!-- FRIENDS section (collapsible — closed by default, v3 Phase 1x.4) -->
-      <section class="social-section social-section--friends social-section--collapsible social-section--collapsed">
-        <button class="social-section-toggle" type="button" aria-expanded="false" data-collapsible-target="friends">
-          <div class="social-section-header-row">
-            <div class="social-section-header">FRIENDS</div>
-            <div class="social-section-header-right">
-              <span id="social-friends-count" class="social-section-count"></span>
-              <span class="social-section-chevron" aria-hidden="true">▾</span>
+      <!-- v3 Phase 1z.164 — Guild Hall "Your hunters" section.
+           Restyles the Friends section to the Variation A card pattern.
+           Always-expanded (collapsible chrome removed; the section IS
+           the point of the tab now). Add-friend input + ＋ ADD FRIEND
+           chip live inside the section head. Render target IDs
+           (#social-friends-body, #social-friend-input,
+           #social-friend-send, #social-friends-count) are preserved so
+           existing renderFriendsSection JS keeps working. -->
+      <section class="social-section social-section--friends guildhall-section guildhall-section--friends">
+        <div class="guildhall-section-head">
+          <div class="guildhall-section-headtxt">
+            <div class="guildhall-section-kicker">· GUILD ·</div>
+            <div class="guildhall-section-title">Your hunters
+              <span id="social-friends-count" class="guildhall-section-count"></span>
             </div>
           </div>
-        </button>
-        <div class="social-section-collapsible-body">
-          <div class="social-friend-add">
-            <input id="social-friend-input" class="social-friend-input" type="text"
-                   placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-            <button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>
-          </div>
-          <div id="social-friends-body" class="social-section-body">
-            <div class="social-empty">Loading friends…</div>
-          </div>
+        </div>
+        <div class="guildhall-friend-add">
+          <input id="social-friend-input" class="social-friend-input" type="text"
+                 placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <button id="social-friend-send" class="social-btn social-btn--primary" type="button">＋ ADD FRIEND</button>
+        </div>
+        <div id="social-friends-body" class="social-section-body guildhall-friend-body">
+          <div class="social-empty">Loading friends…</div>
         </div>
       </section>
 
-      <!-- DISCIPLINE DUELS section (collapsible — closed by default, v3 Phase 1x.4) -->
+      <!-- v3 Phase 1z.164 — DISCIPLINE DUELS section hidden by CSS
+           when body carries .duels-public-hidden (set when
+           DUELS_PUBLIC_TAB_VISIBLE=false). The DOM hook
+           #social-duels-body remains so renderDuelsSection can still
+           render passively if the QA override flips it back on.
+           Existing in-flight duel resolve/reconcile loops run
+           independently of whether this section is visible. -->
       <section class="social-section social-section--duels social-section--collapsible social-section--collapsed">
         <button class="social-section-toggle" type="button" aria-expanded="false" data-collapsible-target="duels">
           <div class="social-section-header-row">
@@ -660,6 +686,25 @@
             <div class="social-empty">Loading duels…</div>
           </div>
         </div>
+      </section>
+
+      <!-- v3 Phase 1z.164 — Arena Sealed panel from ClaudeDesign.
+           Duels are intentionally de-emphasized — this panel gives
+           the feature a respectful, intentional "being reforged"
+           resting state. Always renders. -->
+      <section class="guildhall-arena-sealed" id="guildhall-arena-sealed">
+        <div class="guildhall-arena-glyph" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16">
+            <circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M5 9 L11 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M8 4 L8 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="guildhall-arena-text">
+          <div class="guildhall-arena-title">The Arena is being reforged</div>
+          <div class="guildhall-arena-sub">Verified challenges will return when they are fair, stable, and worthy.</div>
+        </div>
+        <span class="guildhall-arena-pill">SEALED</span>
       </section>
     </div>
 
@@ -2251,7 +2296,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=492"></script>
+  <script src="app.js?v=493"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w39';
+  const APP_BUILD_TAG = '2.2.3-w40';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3231,6 +3231,124 @@
   function engageCostSouls(rank) {
     return SOULS_ENGAGE_COSTS[rank] || 0;
   }
+
+  // ─── v3 Phase 1z.164 — Guild Activity (Phase 1 local feed) ─────
+  //
+  // Reads top N entries from hb_souls_ledger and renders Guild Hall
+  // activity rows matching Variation A from ClaudeDesign
+  // (Social Hub Guild Hall.html / social-hub.jsx). Phase 1 is
+  // LOCAL ONLY — no backend `user_events` table, no friend-graph
+  // filter. Personal events from boss kills, engage costs, daily
+  // login, duel outcomes are all visible because they all live in
+  // hb_souls_ledger via recordSoulsTransaction().
+  //
+  // Backend-backed friend activity is deferred to Phase 3.
+  const GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 4;
+  function _guildhallFormatRelativeTs(ms) {
+    try {
+      const delta = Date.now() - ms;
+      if (!Number.isFinite(delta) || delta < 0) return 'just now';
+      const sec = Math.floor(delta / 1000);
+      if (sec < 60)    return sec <= 5 ? 'just now' : sec + 's ago';
+      const min = Math.floor(sec / 60);
+      if (min < 60)    return min + 'm ago';
+      const hr  = Math.floor(min / 60);
+      if (hr  < 24)    return hr + 'h ago';
+      const day = Math.floor(hr / 24);
+      if (day === 1)   return 'yesterday';
+      if (day < 7)     return day + 'd ago';
+      const wk  = Math.floor(day / 7);
+      if (wk  < 5)     return wk + 'w ago';
+      return 'a while back';
+    } catch (_) { return ''; }
+  }
+  function _guildhallActivityIconHtml(type) {
+    // Single-purpose RPG glyphs mirroring social-hub.jsx
+    // ActivityIcon() exactly — boss, souls, check, rank, steps.
+    switch (type) {
+      case 'boss_kill':
+        return '<span class="guildhall-activity-icon" aria-hidden="true">⚔</span>';
+      case 'boss_engage':
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◈</span>';
+      case 'daily_login':
+        return '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
+      case 'duel_win':
+        return '<span class="guildhall-activity-icon" aria-hidden="true">▲</span>';
+      case 'duel_loss':
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">▽</span>';
+      default:
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
+    }
+  }
+  function _guildhallRowHtml(entry) {
+    if (!entry) return '';
+    const isGain   = (entry.delta || 0) > 0;
+    const abs      = Math.abs(entry.delta || 0).toLocaleString('en-US');
+    const sign     = isGain ? '+' : '−';
+    const time     = _guildhallFormatRelativeTs(entry.ts);
+    const iconHtml = _guildhallActivityIconHtml(entry.type);
+    // Pick a verb + target that reads like the design's mixed feed
+    // even though every row is the local user's event. Future
+    // backend-feed Phase 3 will introduce friend rows alongside.
+    let verb, target, targetCls;
+    switch (entry.type) {
+      case 'boss_kill':
+        verb = 'defeated';
+        target = entry.label ? entry.label.replace(/^Defeated\s+/i, '') : 'a boss';
+        targetCls = 'guildhall-activity-target--gold';
+        break;
+      case 'boss_engage':
+        verb = 'engaged';
+        target = entry.label ? entry.label.replace(/^Engaged\s+/i, '') : 'a boss';
+        targetCls = 'guildhall-activity-target--violet';
+        break;
+      case 'duel_win':
+        verb = 'won';
+        target = entry.label ? entry.label.replace(/^Duel victory\s*/i, '') || 'a duel' : 'a duel';
+        targetCls = 'guildhall-activity-target--gold';
+        break;
+      case 'duel_loss':
+        verb = 'lost';
+        target = entry.label ? entry.label.replace(/^Duel loss\s*/i, '') || 'a duel' : 'a duel';
+        targetCls = 'guildhall-activity-target--violet';
+        break;
+      case 'daily_login':
+        verb = 'earned';
+        target = sign + abs + ' souls · daily';
+        targetCls = 'guildhall-activity-target--gold';
+        break;
+      default:
+        verb = isGain ? 'earned' : 'spent';
+        target = sign + abs + ' souls';
+        targetCls = isGain ? 'guildhall-activity-target--gold' : 'guildhall-activity-target--violet';
+    }
+    return (
+      '<div class="guildhall-activity-row">' +
+        iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<strong>You</strong> ' + esc(verb) + ' ' +
+          '<span class="guildhall-activity-target ' + targetCls + '">' + esc(target) + '</span>' +
+        '</div>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>'
+    );
+  }
+  function renderGuildActivity() {
+    const body = document.getElementById('guildhall-activity-body');
+    if (!body) return;
+    let entries = [];
+    try { entries = _readSoulsLedger(); } catch (_) { entries = []; }
+    if (!Array.isArray(entries) || entries.length === 0) {
+      body.innerHTML =
+        '<div class="guildhall-activity-empty">The board is quiet.' +
+          '<div class="guildhall-activity-empty-sub">Victories, milestones, and progress will appear here.</div>' +
+        '</div>';
+      return;
+    }
+    const visible = entries.slice(0, GUILDHALL_ACTIVITY_DISPLAY_LIMIT);
+    body.innerHTML = visible.map(_guildhallRowHtml).join('');
+  }
+  try { window.renderGuildActivity = renderGuildActivity; } catch (_) {}
 
   // Daily login bonus. Idempotent on the device-local calendar day.
   // No rollover — skipped days are gone.
@@ -16807,7 +16925,18 @@
     // renderLeaderboardPreview function is preserved because the
     // ranking sheet (#lb-rank-sheet) modal still uses it from elsewhere.
     if (tab === 'social') {
+      // v3 Phase 1z.164 — Guild Activity (Phase 1 local-only feed)
+      // renders ahead of friends/duels so the Guild Hall has a
+      // visible "Recent feats" card the moment the tab opens, even
+      // if friends/duels fetches are still in flight.
+      if (typeof renderGuildActivity === 'function') renderGuildActivity();
       if (typeof renderFriendsSection === 'function') renderFriendsSection();
+      // renderDuelsSection still runs even when the public duels
+      // section is hidden — its Auth.fetchDuels() call is the
+      // pipeline that drives passive resolve + reconcile for any
+      // existing in-flight duels. The section's DOM body is hidden
+      // by .duels-public-hidden CSS, but the render path is
+      // intentionally untouched.
       if (typeof renderDuelsSection === 'function')   renderDuelsSection();
       // v3 Phase 1z.2 — live 60s tick for active duel hero + countdown.
       try { if (typeof startDuelsLiveTick === 'function') startDuelsLiveTick(); } catch (_) {}
@@ -20230,6 +20359,68 @@
   //     sameLocalDay:       boolean
   //     crossMidnightFallback: boolean
   //   }
+  // v3 Phase 1z.163 — manual Sync Now HealthKit freshness retry.
+  // Wraps _getStepsForDuelWindow with a short double-query + brief
+  // wait between attempts. Used ONLY by manual Sync Now (reason
+  // === 'manual'); interval / tab-open / foreground paths keep the
+  // single-query behaviour to avoid extra HealthKit roundtrips.
+  //
+  // Bug it addresses: testers reported that during a Steps Duel,
+  // steps didn't appear in Awakened until they manually opened
+  // Oura and/or Apple Health and came back. Apple Health
+  // publishes Oura/wearable step samples on a delay — Awakened's
+  // single-shot HealthKit query can land before the publish
+  // completes, see 0, and submit 0. A short retry lets the publish
+  // complete between queries and uses the higher value.
+  //
+  // Returns the same shape as _getStepsForDuelWindow plus a
+  // `freshness` field carrying { firstValue, secondValue,
+  // waitedMs, changedDuringRetry } so the caller can decide which
+  // user-facing toast to show.
+  //
+  // Wait window: 2500ms. Chosen because:
+  //   - Oura's Apple Health publish typically completes within
+  //     1-3s of the iPhone foregrounding the wearable's app, but
+  //     can be longer on cold cellular.
+  //   - 2500ms keeps the manual Sync Now interaction snappy. The
+  //     button shows "Syncing…" during this window so users see
+  //     the work happening.
+  //   - Scoring math is unchanged: we always use the HIGHER of
+  //     the two values, never the lower one. If Apple Health
+  //     never publishes, both values are equal and behaviour is
+  //     identical to the single-query path.
+  const _DUEL_HEALTH_FRESHNESS_WAIT_MS = 2500;
+  async function _getStepsForDuelWindowWithFreshnessRetry(duel) {
+    const first = await _getStepsForDuelWindow(duel);
+    const firstValue = (first && Number.isFinite(first.value)) ? first.value : 0;
+
+    // Brief wait — let Apple Health publish any pending samples.
+    await new Promise((resolve) => setTimeout(resolve, _DUEL_HEALTH_FRESHNESS_WAIT_MS));
+
+    let second;
+    try { second = await _getStepsForDuelWindow(duel); }
+    catch (_) { second = null; }
+    const secondValue = (second && Number.isFinite(second.value)) ? second.value : firstValue;
+
+    const usedValue = Math.max(firstValue, secondValue);
+    const changedDuringRetry = secondValue !== firstValue;
+    const result = second || first || { value: 0, method: 'unknown' };
+    return {
+      value:  usedValue,
+      method: (result && result.method) || 'unknown',
+      // Pass through diagnostic context from whichever query produced
+      // the higher value. Both queries cover the same duel window, so
+      // method / window math should match.
+      freshness: {
+        firstValue:           firstValue,
+        secondValue:          secondValue,
+        usedValue:            usedValue,
+        waitedMs:             _DUEL_HEALTH_FRESHNESS_WAIT_MS,
+        changedDuringRetry:   changedDuringRetry,
+      },
+    };
+  }
+
   async function _getStepsForDuelWindow(duel) {
     const startMs = Date.parse(duel.starts_at);
     const endMs   = Date.parse(duel.ends_at);
@@ -21460,19 +21651,66 @@
         return { ok: false, skipped: 'no-submit' };
       }
 
+      // v3 Phase 1z.163 — manual Sync Now uses freshness retry. All
+      // other triggers (interval / tab-open / foreground) keep the
+      // single-query path to avoid extra HealthKit roundtrips.
+      const useFreshnessRetry = (reason === 'manual');
+      // Aggregate freshness signal for the manual cycle so the
+      // Sync Now click handler can pick the right toast.
+      const manualFreshness = useFreshnessRetry
+        ? { anyChanged: false, anyZeroUsed: false, perDuel: [] }
+        : null;
+
       // Per-duel submit. Failures tracked individually so one
       // duel's network blip doesn't poison the others.
       await Promise.all(eligibles.map(async (duel) => {
         attemptedCount++;
         const duelIdShort = String(duel.id || '').slice(0, 8);
         let dw;
-        try { dw = await _getStepsForDuelWindow(duel); }
+        try {
+          dw = useFreshnessRetry
+            ? await _getStepsForDuelWindowWithFreshnessRetry(duel)
+            : await _getStepsForDuelWindow(duel);
+        }
         catch (e) {
           failCount++;
           _noteDuelSyncFailure(duel.id, (e && e.message) || 'helper-failed');
           return;
         }
         const value = (dw && Number.isFinite(dw.value)) ? dw.value : 0;
+        // v3 Phase 1z.163 — freshness diagnostic + aggregate signal.
+        if (useFreshnessRetry && dw && dw.freshness && manualFreshness) {
+          const f = dw.freshness;
+          if (f.changedDuringRetry) manualFreshness.anyChanged = true;
+          if (f.usedValue === 0)    manualFreshness.anyZeroUsed = true;
+          manualFreshness.perDuel.push({
+            duelId:             duelIdShort,
+            firstValue:         f.firstValue,
+            secondValue:        f.secondValue,
+            usedValue:          f.usedValue,
+            waitedMs:           f.waitedMs,
+            changedDuringRetry: f.changedDuringRetry,
+          });
+          try {
+            if (typeof _addHealthVerifyBreadcrumb === 'function') {
+              _addHealthVerifyBreadcrumb('duel-health-sync-freshness', {
+                duelId:             duelIdShort,
+                trigger:            reason,
+                queryStartISO:      duel.starts_at,
+                queryEndISO:        duel.ends_at,
+                firstSteps:         f.firstValue,
+                secondSteps:        f.secondValue,
+                usedSteps:          f.usedValue,
+                waitedMs:           f.waitedMs,
+                changedDuringRetry: f.changedDuringRetry,
+                healthFreshnessState: f.changedDuringRetry
+                  ? 'freshened'
+                  : (f.usedValue === 0 ? 'zero_or_unpublished' : 'unchanged'),
+                build:              (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+              });
+            }
+          } catch (_) {}
+        }
         try {
           if (typeof _addHealthVerifyBreadcrumb === 'function') {
             _addHealthVerifyBreadcrumb('duel-progress-submit-attempt', {
@@ -21484,6 +21722,12 @@
               trigger:     'sync-loop-' + reason,
               method:      (dw && dw.method) || 'unknown',
               computedDuelSteps: value,
+              healthRetryUsed:    useFreshnessRetry,
+              healthFreshnessState: useFreshnessRetry && dw && dw.freshness
+                ? (dw.freshness.changedDuringRetry
+                    ? 'freshened'
+                    : (dw.freshness.usedValue === 0 ? 'zero_or_unpublished' : 'unchanged'))
+                : 'not_manual',
             });
           }
         } catch (_) {}
@@ -21592,7 +21836,18 @@
           });
         }
       } catch (_) {}
-      return { ok: true, attempted: attemptedCount, success: successCount, fail: failCount };
+      // v3 Phase 1z.163 — manualFreshness summary surfaces back to
+      // the Sync Now click handler so it can pick a more specific
+      // toast (e.g., "Steps refreshed from Apple Health" when a
+      // retry produced new data, or the Apple-Health-hasn't-published
+      // hint when usedValue=0). Null on non-manual cycles.
+      return {
+        ok: true,
+        attempted: attemptedCount,
+        success: successCount,
+        fail: failCount,
+        manualFreshness: manualFreshness,
+      };
     } finally {
       _duelsSyncCycleInFlight = false;
     }
@@ -22012,7 +22267,20 @@
           liveBtn.textContent = original || '↻ Sync now';
         }
         if (res && res.ok && (res.fail === 0 || res.fail == null)) {
-          try { showHabitToast('Duel synced.'); } catch (_) {}
+          // v3 Phase 1z.163 — manualFreshness-aware toast. If
+          // Apple Health published new step data during the retry
+          // window, celebrate the freshness. If the retry returned
+          // 0 for at least one duel, hint that the wearable may
+          // need a moment to publish (without mentioning a
+          // specific brand). Otherwise, the standard "Duel synced."
+          const mf = res.manualFreshness;
+          if (mf && mf.anyChanged) {
+            try { showHabitToast('Steps refreshed from Apple Health.'); } catch (_) {}
+          } else if (mf && mf.anyZeroUsed) {
+            try { showHabitToast('Apple Health hasn’t published new steps yet. Try again in 30–60 seconds.'); } catch (_) {}
+          } else {
+            try { showHabitToast('Duel synced.'); } catch (_) {}
+          }
         } else if (res && res.skipped === 'in-flight') {
           try { showHabitToast('Already syncing…'); } catch (_) {}
         } else {
@@ -22120,12 +22388,26 @@
       }
     }
     if (parts.length === 0) {
-      parts.push(
-        '<div class="social-empty social-empty--rich">' +
-          '<div class="social-empty-title">No hunters added yet.</div>' +
-          '<div class="social-empty-sub">Add a hunter by name to start a duel.</div>' +
-        '</div>'
-      );
+      // v3 Phase 1z.164 — Guild Hall zero-friends empty state
+      // (Variation A EmptyZeroFriends from social-hub.jsx). Replaces
+      // the duels-centric "Add a hunter by name to start a duel" copy.
+      const socialHubOn = (typeof SOCIAL_HUB_ENABLED !== 'undefined') && !!SOCIAL_HUB_ENABLED;
+      if (socialHubOn) {
+        parts.push(
+          '<div class="guildhall-empty-friends">' +
+            '<div class="guildhall-empty-friends-icon">?</div>' +
+            '<div class="guildhall-empty-friends-title">The guild hall stands empty.</div>' +
+            '<div class="guildhall-empty-friends-sub">Bind another hunter to begin.</div>' +
+          '</div>'
+        );
+      } else {
+        parts.push(
+          '<div class="social-empty social-empty--rich">' +
+            '<div class="social-empty-title">No hunters added yet.</div>' +
+            '<div class="social-empty-sub">Add a hunter by name to start a duel.</div>' +
+          '</div>'
+        );
+      }
     }
     body.innerHTML = parts.join('');
   }
@@ -22568,6 +22850,13 @@
   }
 
   function openDuelTypePicker(opponentAlias) {
+    // v3 Phase 1z.164 — Picker function itself stays open for QA +
+    // direct console dispatch (and the e2e picker-content test that
+    // asserts only the Steps card renders). The PUBLIC entry point
+    // (Challenge button on a friend row) is gated at the click
+    // handler level so the picker can't reach the public UI while
+    // the Arena is "being reforged." See the friend-row click
+    // handler below for the gate.
     const overlay = document.getElementById('duel-type-overlay');
     const sheet   = document.getElementById('duel-type-sheet');
     if (!overlay || !sheet) {
@@ -22984,6 +23273,22 @@
           } else if (action === 'challenge') {
             const alias = row.getAttribute('data-alias') || '';
             if (!alias) { btn.disabled = false; return; }
+            // v3 Phase 1z.164 — Guild Hall pivot. Public duel
+            // challenge creation is sealed while the Arena is
+            // "being reforged." Show a fantasy toast and exit.
+            // QA override (DUELS_QA_OVERRIDE_ENABLED=true) bypasses
+            // the gate for internal testing. The picker function
+            // itself stays callable from window.openDuelTypePicker
+            // for direct dispatch / e2e tests.
+            const publicChallengeOn = (typeof DUELS_PUBLIC_CHALLENGE_ENABLED !== 'undefined')
+              && !!DUELS_PUBLIC_CHALLENGE_ENABLED;
+            const qaOverride = (typeof DUELS_QA_OVERRIDE_ENABLED !== 'undefined')
+              && !!DUELS_QA_OVERRIDE_ENABLED;
+            if (!publicChallengeOn && !qaOverride) {
+              btn.disabled = false;
+              try { showHabitToast('The Arena is being reforged.'); } catch (_) {}
+              return;
+            }
             // v3 Phase 1x.6 — open the Choose Verified Duel sheet
             // instead of confirm-prompting. _submitDuelChallenge fires
             // on the sheet's primary button.
@@ -23857,6 +24162,39 @@
   // the Status tab; access via the "More rankings" link below the
   // 3 main cards.
   const LEADERBOARD_FLIGHTS_BACKEND_ENABLED = true;
+
+  // ───────────────────────────────────────────────────────────────
+  // v3 Phase 1z.164 — Social Hub / Guild Hall pivot flags.
+  //
+  // The Social tab was previously "DISCIPLINE DUELS"-centric. We're
+  // reframing it as a Guild Hall / Hunter Network with Friends and
+  // local Guild Activity as the functional core, and Duels frozen
+  // behind a "SEALED" Arena panel. Duels code stays intact so
+  // existing in-flight duels can still resolve / reconcile / settle
+  // passively in the background — we only hide the public CREATE /
+  // CHALLENGE / hero affordances from the main UI.
+  //
+  // SOCIAL_HUB_ENABLED                = master switch for the new
+  //                                     Guild Hall styling + sections.
+  //                                     If false, the tab renders the
+  //                                     legacy duels-centric layout.
+  // DUELS_PUBLIC_CHALLENGE_ENABLED    = false → hide "Challenge"
+  //                                     button on friend rows + hide
+  //                                     duel type picker entry points.
+  // DUELS_PUBLIC_TAB_VISIBLE          = false → hide #duels-hero +
+  //                                     hide the .social-section--duels
+  //                                     section from the main render.
+  //                                     Passive backend fetch + resolve
+  //                                     + reconcile loops still run.
+  // DUELS_QA_OVERRIDE_ENABLED         = QA-only escape hatch. If true,
+  //                                     duel CTAs are restored for
+  //                                     internal testing without
+  //                                     flipping the public flags.
+  //                                     Default false in production.
+  const SOCIAL_HUB_ENABLED              = true;
+  const DUELS_PUBLIC_CHALLENGE_ENABLED  = false;
+  const DUELS_PUBLIC_TAB_VISIBLE        = false;
+  const DUELS_QA_OVERRIDE_ENABLED       = false;
 
   // v3 Phase 1z.119 — client-only metrics never hit the backend.
   // workout_streak (added in 1z.118) is fully derived from the
@@ -34285,6 +34623,28 @@
     try { setupStepsCard(); updateStepsCard(); } catch (_) {}
     // v3 Phase 1z.134 — compact collapsible header on scroll.
     try { setupCollapsibleHeader(); } catch (_) {}
+
+    // v3 Phase 1z.164 — Guild Hall body classes. CSS rules under
+    // body.social-hub-on / .duels-public-hidden / .duels-challenge-hidden
+    // do the visibility work; flipping any flag rebuilds the page on
+    // next reload without code changes.
+    try {
+      if ((typeof SOCIAL_HUB_ENABLED !== 'undefined') && SOCIAL_HUB_ENABLED) {
+        document.body.classList.add('social-hub-on');
+      }
+      const qaOverride = (typeof DUELS_QA_OVERRIDE_ENABLED !== 'undefined')
+        && !!DUELS_QA_OVERRIDE_ENABLED;
+      if ((typeof DUELS_PUBLIC_TAB_VISIBLE !== 'undefined')
+          && DUELS_PUBLIC_TAB_VISIBLE === false
+          && !qaOverride) {
+        document.body.classList.add('duels-public-hidden');
+      }
+      if ((typeof DUELS_PUBLIC_CHALLENGE_ENABLED !== 'undefined')
+          && DUELS_PUBLIC_CHALLENGE_ENABLED === false
+          && !qaOverride) {
+        document.body.classList.add('duels-challenge-hidden');
+      }
+    } catch (_) {}
     // v3 Phase 1z.27 — 100K Step Club accolade init + cache prime.
     // Wires the prestige-frame tap handler + the bottom sheet, then
     // kicks off a cache-warm fetch. Both calls are idempotent.

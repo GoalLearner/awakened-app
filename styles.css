@@ -23940,3 +23940,304 @@ body.habit-drag-active * {
   border-color: rgba(167, 139, 250, 1);
   background: rgba(167, 139, 250, 0.18);
 }
+
+/* ─────────────────────────────────────────────────────────────
+   v3 Phase 1z.164 — Social Hub / Guild Hall (Variation A from
+   ClaudeDesign Social Hub Guild Hall.html). Pivots the
+   duels-centric Social tab into a Guild Hall surface. The legacy
+   .duels-page-header is now replaced by .guildhall-page-header in
+   the markup; legacy CSS for the old header stays in place but is
+   no longer matched. Flag-driven hides live on body classes set
+   by app.js at boot:
+     body.social-hub-on            — master switch (Variation A
+                                     styling visible)
+     body.duels-public-hidden      — hides #duels-hero +
+                                     .social-section--duels
+     body.duels-challenge-hidden   — hides Challenge button on
+                                     friend rows (selector in app.js)
+   Color tokens come from the existing app palette (--gold,
+   --accent / violet, --bg-card, --border, --text-*).
+   ───────────────────────────────────────────────────────────── */
+
+/* Hub header — kicker mono gold, Cinzel title with gold glow,
+   muted subtitle. Mirrors HubHeader() in social-hub.jsx. */
+.guildhall-page-header {
+  padding: 14px 18px 10px;
+  text-align: left;
+}
+.guildhall-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.guildhall-page-title {
+  margin: 4px 0 0;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1.45rem;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+  line-height: 1;
+}
+.guildhall-page-sub {
+  margin: 6px 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  max-width: 28em;
+}
+
+/* Section shell — used by Guild Activity + Your hunters. */
+.guildhall-section {
+  margin: 0 14px 16px;
+}
+.guildhall-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+.guildhall-section-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent, #8b5cf6);
+  text-transform: uppercase;
+}
+.guildhall-section-title {
+  margin-top: 2px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.guildhall-section-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+}
+.guildhall-section-meta {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.18em;
+  align-self: flex-end;
+}
+
+/* Activity card — list of recent feats rendered by
+   renderGuildActivity() in app.js. */
+.guildhall-activity-body {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.guildhall-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+.guildhall-activity-row:first-child {
+  border-top: 0;
+}
+.guildhall-activity-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+.guildhall-activity-icon--violet {
+  background: rgba(139, 92, 246, 0.10);
+  border-color: rgba(139, 92, 246, 0.40);
+  color: var(--accent, #8b5cf6);
+}
+.guildhall-activity-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.guildhall-activity-text strong {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+.guildhall-activity-target {
+  font-weight: 800;
+}
+.guildhall-activity-target--gold   { color: var(--gold); }
+.guildhall-activity-target--violet { color: var(--accent, #8b5cf6); }
+.guildhall-activity-time {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.guildhall-activity-empty {
+  padding: 16px 16px;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 0.92rem;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.guildhall-activity-empty-sub {
+  margin-top: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* Friends — reuse existing .social-row internals; add a chip
+   header row inside the section head. */
+.guildhall-friend-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.guildhall-friend-add .social-friend-input {
+  flex: 1;
+}
+.guildhall-friend-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Zero-friends empty state — design hero panel. */
+.guildhall-empty-friends {
+  padding: 20px 16px;
+  border-radius: 12px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.12), transparent 60%),
+    rgba(255,255,255,0.02);
+  border: 1px dashed rgba(139, 92, 246, 0.40);
+}
+.guildhall-empty-friends-icon {
+  margin: 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 30%, rgba(139,92,246,0.30), #0a0a18);
+  border: 1px solid var(--accent, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent, #8b5cf6);
+}
+.guildhall-empty-friends-title {
+  margin-top: 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+.guildhall-empty-friends-sub {
+  margin-top: 4px;
+  font-family: Georgia, 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Arena Sealed panel — purple dashed border, glyph, title, SEALED
+   pill. Always-on Phase 1 placeholder. */
+.guildhall-arena-sealed {
+  margin: 0 14px 20px;
+  padding: 14px 14px;
+  background: linear-gradient(180deg, rgba(139,92,246,0.06), rgba(139,92,246,0.01));
+  border: 1px dashed rgba(139, 92, 246, 0.45);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.guildhall-arena-glyph {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: radial-gradient(circle at 50% 30%, rgba(139,92,246,0.30), #0a0a18);
+  border: 1px solid var(--accent, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent, #8b5cf6);
+}
+.guildhall-arena-text {
+  flex: 1;
+  min-width: 0;
+}
+.guildhall-arena-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--accent, #8b5cf6);
+  letter-spacing: 0.04em;
+}
+.guildhall-arena-sub {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+.guildhall-arena-pill {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--accent, #8b5cf6);
+  letter-spacing: 0.18em;
+  flex-shrink: 0;
+}
+
+/* Flag-driven hides. Applied to <body> at boot by app.js based on
+   DUELS_PUBLIC_TAB_VISIBLE / DUELS_PUBLIC_CHALLENGE_ENABLED /
+   DUELS_QA_OVERRIDE_ENABLED. Hiding via body class lets us keep
+   the DOM intact so passive resolve/reconcile loops still find
+   their mounts if QA flag flips back on. */
+body.duels-public-hidden #duels-hero,
+body.duels-public-hidden .social-section--duels {
+  display: none !important;
+}
+body.duels-challenge-hidden .social-row [data-friend-action="challenge"] {
+  display: none !important;
+}
+/* Hide legacy duels-page-header content when Social Hub is on so
+   the old "DISCIPLINE DUELS" title doesn't double-print above the
+   new Guild Hall header. The new header element
+   (.guildhall-page-header) is in markup directly; the legacy
+   element is no longer rendered. */
+body.social-hub-on .duels-page-header {
+  display: none !important;
+}
