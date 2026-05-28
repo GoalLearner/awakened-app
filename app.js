@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w38';
+  const APP_BUILD_TAG = '2.2.3-w39';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2673,6 +2673,64 @@
   // hb_souls entirely with a backend-authoritative balance read),
   // we can revisit using `your_balance`. Until then it's
   // discarded by the frontend.
+  // v3 Phase 1z.162 — atomic per-(duel, reasonKey) in-flight set.
+  // Sits beside _duelReconcileInFlight (which is a per-duel.id
+  // reconcile-layer guard). This one lives at the APPLY layer so
+  // concurrent applyDuelSoulsSettlementFromResolve calls for the
+  // same (duel, outcome) cannot both pass the `alreadyApplied`
+  // check before either marks settled.
+  //
+  // Race repro before this guard:
+  //   1. duels-fetch fires reconcileDuelSoulsForCompletedDuels.
+  //   2. SAME tick, detail-open fires it again.
+  //   3. Both filter loops synchronously see no in-flight reconcile,
+  //      both add the same duel.id, both await resolve in parallel.
+  //   4. Both apply calls hit alreadyApplied=false (settled hasn't
+  //      been written yet), both apply delta, both write a ledger
+  //      row. Two +40 rows for one win.
+  //
+  // With this set, the SECOND apply finds `inFlight = true` for
+  // (duel.id, reasonKey) and exits immediately. The first finishes
+  // its work and persists the settled key before clearing in-flight.
+  const _duelSoulsApplyInFlight = new Set();
+  function tryBeginLocalDuelSoulsSettlement(duelId, reasonKey) {
+    if (!duelId || !reasonKey) return false;
+    if (_isDuelSoulsSettled(duelId, reasonKey)) return false;
+    const key = duelId + ':' + reasonKey;
+    if (_duelSoulsApplyInFlight.has(key)) return false;
+    _duelSoulsApplyInFlight.add(key);
+    return true;
+  }
+  function endLocalDuelSoulsSettlement(duelId, reasonKey) {
+    if (!duelId || !reasonKey) return;
+    _duelSoulsApplyInFlight.delete(duelId + ':' + reasonKey);
+  }
+
+  // v3 Phase 1z.162 — belt-and-suspenders ledger-row dedup. Even if
+  // the in-flight set is bypassed somehow (different code path, hot
+  // reload, manual console call), scan the existing hb_souls_ledger
+  // for an entry matching this (type, ref_id, delta). If found, the
+  // settlement has already been recorded locally — skip the row
+  // write and the balance += step. Primary defense is the in-flight
+  // set + settled set; this is the third line.
+  function _hasExistingDuelLedgerRow(duelId, type, delta) {
+    if (!duelId || !type) return false;
+    try {
+      const ledger = _readSoulsLedger();
+      for (let i = 0; i < ledger.length; i++) {
+        const e = ledger[i];
+        if (!e) continue;
+        if (e.type === type && e.ref_id === duelId && e.delta === delta) {
+          return true;
+        }
+        // Most-recent-first array: if we've walked past entries from
+        // weeks ago, stop scanning.
+        if (i > 50) break;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function applyDuelSoulsSettlementFromResolve(resp, duel) {
     const _bc = (typeof _addHealthVerifyBreadcrumb === 'function')
       ? _addHealthVerifyBreadcrumb
@@ -2708,16 +2766,34 @@
       if (!_souls) loadSouls();
       const localBalanceBefore = _souls.balance;
 
-      // Idempotency: if this duel's settlement was already applied
-      // locally, skip both the delta-apply AND the ledger row.
-      const alreadyApplied = duel && duel.id && _isDuelSoulsSettled(duel.id, reasonKey);
+      // v3 Phase 1z.162 — atomic in-flight claim. tryBegin returns
+      // false if (a) this (duel, reasonKey) was already settled
+      // OR (b) another concurrent apply call is mid-flight for the
+      // same key. Either way, this call must skip. The claim is
+      // released in the finally block below — settled-set persists
+      // through that release if work succeeded.
+      const claimed = (duel && duel.id)
+        ? tryBeginLocalDuelSoulsSettlement(duel.id, reasonKey)
+        : false;
       let appliedTransaction = false;
       let localBalanceAfter = localBalanceBefore;
 
-      if (alreadyApplied) {
+      _bc('duel-souls-settlement-begin', {
+        duelId:         duelIdShort,
+        reasonKey:      reasonKey,
+        alreadySettled: duel && duel.id ? _isDuelSoulsSettled(duel.id, reasonKey) : null,
+        claimed:        claimed,
+        build:          build,
+      });
+
+      if (!claimed) {
         _bc('duel-souls-settlement-skip', {
           duelId: duelIdShort,
-          reason: 'already_applied',
+          reason: (duel && duel.id && _isDuelSoulsSettled(duel.id, reasonKey))
+            ? 'already_applied'
+            : (duel && duel.id)
+              ? 'in_flight'
+              : 'no_duel_id',
           yourDelta: yourDelta,
           backendBalance: yourBalance,
           ignoredBackendBalance: true,
@@ -2756,29 +2832,64 @@
       // ║ Either way, that's a deliberate train — never an       ║
       // ║ inline overwrite in the duel settlement path.          ║
       // ╚════════════════════════════════════════════════════════╝
-      if (yourDelta !== 0 && duel && duel.id) {
-        const hint = (yourDelta > 0 ? 'duel_win:' : 'duel_loss:') + duel.id;
-        const opponentAlias = (duel.opponent_alias && typeof duel.opponent_alias === 'string')
-          ? duel.opponent_alias
-          : null;
-        try {
-          // earnSouls / spendSouls would also call recordSoulsTransaction,
-          // but they ALSO modify _souls.balance. We replicate the same
-          // delta-apply + persist + display-refresh + ledger-row chain
-          // explicitly so the relationship between balance change and
-          // ledger-row balance_after stays atomic and traceable.
-          _souls.balance += yourDelta;
-          persistSouls();
-          recordSoulsTransaction(yourDelta, hint, { opponentAlias });
-          try { refreshSoulsDisplay(); } catch (_) {}
+      // v3 Phase 1z.162 — guarded apply block. The atomic claim
+      // above gave us exclusive ownership of this (duel, reasonKey)
+      // for the current device. The finally always releases the
+      // in-flight lock so a subsequent call can re-evaluate
+      // (settled-set will say "already_applied" if we succeeded).
+      try {
+        if (yourDelta !== 0 && duel && duel.id) {
+          const hint = (yourDelta > 0 ? 'duel_win:' : 'duel_loss:') + duel.id;
+          const ledgerType = (yourDelta > 0) ? 'duel_win' : 'duel_loss';
+          const opponentAlias = (duel.opponent_alias && typeof duel.opponent_alias === 'string')
+            ? duel.opponent_alias
+            : null;
+
+          // v3 Phase 1z.162 — belt-and-suspenders ledger dedup.
+          // Even past the in-flight + settled gates, if the same
+          // (type, ref_id, delta) row already exists in hb_souls_ledger
+          // (e.g., set-key cleared but ledger row persisted, or hot
+          // reload mid-apply), skip the write and the balance +=.
+          // Still mark settled so future calls drop early.
+          if (_hasExistingDuelLedgerRow(duel.id, ledgerType, yourDelta)) {
+            _bc('duel-souls-settlement-skip', {
+              duelId: duelIdShort,
+              reason: 'duplicate_ledger_ref',
+              yourDelta: yourDelta,
+              ledgerType: ledgerType,
+              build: build,
+            });
+            _markDuelSoulsSettled(duel.id, reasonKey);
+            // Don't apply delta or write row — already there.
+          } else {
+            try {
+              // earnSouls / spendSouls would also call recordSoulsTransaction,
+              // but they ALSO modify _souls.balance. We replicate the same
+              // delta-apply + persist + display-refresh + ledger-row chain
+              // explicitly so the relationship between balance change and
+              // ledger-row balance_after stays atomic and traceable.
+              _souls.balance += yourDelta;
+              persistSouls();
+              recordSoulsTransaction(yourDelta, hint, { opponentAlias });
+              try { refreshSoulsDisplay(); } catch (_) {}
+              _markDuelSoulsSettled(duel.id, reasonKey);
+              appliedTransaction = true;
+              localBalanceAfter = _souls.balance;
+            } catch (_) { /* never let ledger UI failure break resolve */ }
+          }
+        } else if (yourDelta === 0 && duel && duel.id) {
+          // Draw — no balance change, no ledger row. Mark settled so
+          // re-opens skip cleanly.
           _markDuelSoulsSettled(duel.id, reasonKey);
-          appliedTransaction = true;
-          localBalanceAfter = _souls.balance;
-        } catch (_) { /* never let ledger UI failure break resolve */ }
-      } else if (yourDelta === 0 && duel && duel.id) {
-        // Draw — no balance change, no ledger row. Mark settled so
-        // re-opens skip cleanly.
-        _markDuelSoulsSettled(duel.id, reasonKey);
+        }
+      } finally {
+        // ALWAYS release the in-flight claim, success or failure.
+        // The settled-set entry (if work succeeded) is the durable
+        // signal; the in-flight set is purely an intra-call race
+        // guard and must be cleared so future calls can proceed.
+        if (duel && duel.id) {
+          endLocalDuelSoulsSettlement(duel.id, reasonKey);
+        }
       }
 
       _bc('duel-souls-settlement-apply', {

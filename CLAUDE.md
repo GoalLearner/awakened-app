@@ -55,7 +55,132 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 27, 2026 — 1z.161 Participant-side completed-duel souls reconciliation (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.162 Atomic per-(duel, outcome) idempotency guard + ledger-row dedup (read this first)
+
+### ✅ STATUS: User's three `+40 vs Anthony-Edwards` rows verified LEGITIMATE via D1 (three distinct completed duels, not duplicates). Defensive hardening added anyway to close a theoretical concurrent-apply race + add a third-line ledger-row dedup. Frontend-only. `2.2.3-w39` web bundle ready.
+
+### D1 audit verdict — Richie's rows are NOT duplicates
+
+User saw three `+40 Duel victory vs Anthony-Edwards` rows and suspected a duplicate bug. Read-only D1 audit confirms three distinct legitimate duels:
+
+| duel_id | challenger | opponent | result | resolved (UTC) | Richie won as |
+|---|---|---|---|---|---|
+| `df1c5ec2` | **Richie** | Anthony-Edwards | challenger_win | 2026-05-27 03:57 | challenger |
+| `a905773f` | Anthony-Edwards | **Richie** | opponent_win | 2026-05-27 04:58 | opponent |
+| `16999461` | Anthony-Edwards | **Richie** | opponent_win | 2026-05-28 00:50 | opponent |
+
+Backend `user_souls_ledger` has exactly one `+40 duel_win` row per duel, three distinct `ref_id` values. **No duplicates.** The three UI ledger rows all timestamping at "May 27, 6:56 PM" simply means reconciliation fired for all three at the same wall-clock moment when Richie opened the Duels tab post-w38. The underlying duels were each resolved at distinct earlier times.
+
+### Theoretical race that was still worth fixing
+
+Despite the user's complaint being a misunderstanding, an actual race exists in 1z.161 under back-to-back fire-and-forget reconciliations:
+
+1. duels-tab-open fires `reconcileDuelSoulsForCompletedDuels(...)`, synchronously builds candidates.
+2. detail-open fires another call in the same JS tick, synchronously builds candidates.
+3. Both filter loops execute BEFORE either `await Auth.resolveDuel` resolves — both see `_duelReconcileInFlight` empty for the same duel and add it.
+4. Both await resolves in parallel.
+5. Both call `applyDuelSoulsSettlementFromResolve` with the same `(duel, reasonKey)`.
+6. Both pass the `alreadyApplied = _isDuelSoulsSettled(...)` check (settled-set hasn't been written yet by either).
+7. Both apply delta + write ledger row + mark settled.
+8. **Two `+40` rows for one duel.**
+
+This is a theoretical race — the 1z.161 in-flight set on `_duelReconcileInFlight` is at the reconcile layer, not the apply layer. With this hardening, the race window closes at the apply layer too.
+
+### Fix — 1z.162
+
+**Three defensive layers, in order:**
+
+1. **Atomic claim at the apply layer** (new `_duelSoulsApplyInFlight` Set + `tryBeginLocalDuelSoulsSettlement(duelId, reasonKey)` + `endLocalDuelSoulsSettlement`):
+   - Key shape: `${duelId}:${reasonKey}` — strictly more specific than the existing `_duelReconcileInFlight` (which is per-duel.id).
+   - `tryBegin` is atomic: checks settled set AND in-flight set, adds in-flight, returns bool.
+   - First caller through gets `true` and exclusive ownership; second concurrent caller gets `false` and exits with `reason: 'in_flight'` breadcrumb.
+   - Apply work is wrapped in `try { ... } finally { end... }` — claim is ALWAYS released, success or failure. The settled-set entry (written on success) is the durable signal; the in-flight set is purely an intra-call race guard.
+
+2. **Belt-and-suspenders ledger-row dedup** (new `_hasExistingDuelLedgerRow(duelId, type, delta)`):
+   - Before `recordSoulsTransaction`, scan the first ~50 entries of `hb_souls_ledger` for `{ type, ref_id, delta }` matching the incoming write.
+   - If found: skip the row write AND skip `_souls.balance += yourDelta`. Mark settled anyway so future calls drop early. Breadcrumb `reason: 'duplicate_ledger_ref'`.
+   - This catches cases the in-flight set can't — e.g., hot reload mid-apply, manual console call, settled-set cleared by a future cleanup but ledger row still present.
+
+3. **`_isDuelSoulsSettled` settled-set check** (preserved from 1z.158): permanent record. Once settled, every future call to apply this `(duel, reasonKey)` exits with `reason: 'already_applied'`.
+
+### New diagnostic
+
+`duel-souls-settlement-begin { duelId, reasonKey, alreadySettled, claimed, build }` fires on every apply attempt. `claimed: true` means this call owns the work; `claimed: false` means it was blocked by either the settled-set or the in-flight set.
+
+`duel-souls-settlement-skip` now has new `reason` values:
+- `'already_applied'` (settled-set hit — work is done)
+- `'in_flight'` (in-flight set hit — another call owns it now)
+- `'no_duel_id'` (malformed payload)
+- `'duplicate_ledger_ref'` (ledger scan hit — row already exists)
+
+### What's preserved (no regressions)
+
+- ✅ w35/w36 souls safety: still applies only `your_delta`, NEVER assigns `your_balance` to `_souls.balance`. Load-bearing box-comment intact.
+- ✅ 1z.158 settled-set idempotency.
+- ✅ 1z.159 public repair hook removed.
+- ✅ 1z.160 multi-active-duel hero selection.
+- ✅ 1z.161 participant-side reconciliation — the reconcile-layer in-flight set (`_duelReconcileInFlight`) and helper still operate normally; this train adds an INNER layer of protection.
+- ✅ All Phase α + β + γ behaviour preserved.
+- ✅ w30 day-anchored delta, w31 sync loop, w32 snapshot-effective source.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. `Auth.resolveDuel` already idempotent at the server.
+- ✅ D1: no schema, no migration, no mutation.
+- ✅ HealthKit math, duel scoring, sync cadence, leaderboard, dungeon, XP, rank, sim values: all untouched.
+- ✅ Souls economy formulas (winner +40, loser -25, draw 0) untouched.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +90 lines (atomic claim helpers, ledger-row dedup helper, begin breadcrumb, try/finally wrapping apply work) |
+| `index.html`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w38` | `2.2.3-w39` |
+| `app.js?v=` | `491` | `492` |
+| `auth.js?v=` | `18` | unchanged |
+| `sw.js CACHE_VERSION` | `v5.377` | `v5.378` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → **OK**.
+- Playwright e2e: 28/29 first run, 1 transient sleep-streak flake (pass on isolated retry, unrelated).
+- Backend tests not re-run — no backend changes.
+
+### TestFlight QA for w39
+
+1. Both phones cold-launch. Confirm `"build": "2.2.3-w39"`.
+2. Complete a fresh duel. Open Duels tab. Confirm exactly one local ledger row appears for the new outcome.
+3. Force-quit + cold-launch. Reopen Duels tab. **No duplicate row.** Confirm `duel-souls-settlement-skip { reason: 'already_applied' }` breadcrumb.
+4. Stress test: rapidly tap Duels tab + open detail + close + tap again. The new `duel-souls-settlement-begin` breadcrumb should appear, but `duel-souls-settlement-apply` with `appliedTransaction: true` should fire EXACTLY ONCE per duel. Subsequent attempts emit `skip { reason: 'in_flight' }` or `skip { reason: 'already_applied' }`.
+5. Verify `window.__repairLocalSoulsBalance === undefined` (1z.159 lock intact).
+6. Verify breadcrumb shows `ignoredBackendBalance: true` (w35/w36 lock intact).
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy.
+- ✅ No D1 mutation, no migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / duel scoring / sync cadence / leaderboard / dungeon / XP / rank / sim / souls-formula changes.
+- ✅ Phase α/β/γ + 1z.158/159/160/161 all preserved.
+
+### Rollback
+
+Revert: (1) `tryBegin/end` helpers + `_duelSoulsApplyInFlight` Set, (2) `_hasExistingDuelLedgerRow` helper, (3) the try/finally wrapper in `applyDuelSoulsSettlementFromResolve`, (4) the `duel-souls-settlement-begin` breadcrumb. Restore the pre-1z.162 `alreadyApplied` check shape. Reverts cleanly to 1z.161 behavior — still functional, just with the theoretical race window open.
+
+---
+
+## 📌 Session handoff — May 27, 2026 — 1z.161 Participant-side completed-duel souls reconciliation (historical — superseded by 1z.162 above)
 
 ### ✅ STATUS: Completed duels now reconcile locally on whichever device opens the Duels tab or detail — not only on the device that triggered resolve. Frontend-only, fully idempotent, no backend deploy. `2.2.3-w38` web bundle ready.
 
