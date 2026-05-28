@@ -24076,6 +24076,139 @@ body.habit-drag-active * {
   box-shadow: none;
 }
 
+/* v3 Phase 1z.171 — clickable summary tiles. Buttons inherit the
+   .guildhall-summary-tile look but get pointer + pressed feedback. */
+button.guildhall-summary-tile {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: filter 80ms ease, background 80ms ease, border-color 80ms ease;
+}
+button.guildhall-summary-tile:hover  { filter: brightness(1.06); }
+button.guildhall-summary-tile:active {
+  background: rgba(167,139,250,0.16);
+  border-color: rgba(167,139,250,0.45);
+  transform: scale(0.99);
+}
+
+/* v3 Phase 1z.171 — Guild Members roster sheet body. */
+.guild-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.guild-roster-row {
+  display: grid;
+  grid-template-columns: 32px 36px minmax(0, 1fr) 56px 64px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(16,18,38,0.55);
+  border: 1px solid rgba(167,139,250,0.18);
+  border-radius: 10px;
+}
+.guild-roster-row--head {
+  background: transparent;
+  border: 0;
+  padding: 4px 12px 2px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary, #8b8fab);
+}
+.guild-roster-row--self {
+  background: linear-gradient(180deg, rgba(245,184,66,0.08), rgba(16,18,38,0.55));
+  border-color: rgba(245,184,66,0.40);
+  box-shadow: 0 0 8px rgba(245,184,66,0.10);
+}
+.guild-roster-rank {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary, #8b8fab);
+  font-variant-numeric: tabular-nums;
+}
+.guild-roster-row--self .guild-roster-rank {
+  color: var(--gold, #f5b842);
+}
+.guild-roster-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(167,139,250,0.30), rgba(16,18,38,0.8));
+  border: 1.5px solid rgba(167,139,250,0.55);
+  color: var(--gold, #f5b842);
+  font-family: 'Cinzel', serif;
+  font-size: 0.80rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.guild-roster-avatar--self {
+  border-color: var(--gold, #f5b842);
+  box-shadow: 0 0 8px rgba(245,184,66,0.30);
+}
+.guild-roster-avatar--head {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.guild-roster-name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.guild-roster-alias {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary, #f3f4f6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.guild-roster-row--self .guild-roster-alias {
+  color: var(--gold, #f5b842);
+}
+.guild-roster-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary, #6b7280);
+  text-transform: uppercase;
+}
+.guild-roster-stat {
+  text-align: right;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary, #f3f4f6);
+  font-variant-numeric: tabular-nums;
+}
+.guild-roster-row--self .guild-roster-stat {
+  color: var(--gold, #f5b842);
+}
+.guild-roster-empty {
+  margin-top: 12px;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-secondary, #8b8fab);
+  background: rgba(167,139,250,0.04);
+  border: 1px dashed rgba(167,139,250,0.20);
+  border-radius: 10px;
+}
+.guild-roster-empty.hidden { display: none !important; }
+
 /* Section shell — used by Guild Activity + Your hunters. */
 .guildhall-section {
   margin: 0 14px 16px;

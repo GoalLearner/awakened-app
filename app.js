@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w46';
+  const APP_BUILD_TAG = '2.2.3-w47';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3563,6 +3563,181 @@
     }
   }
   try { window.renderGuildhallSummary = renderGuildhallSummary; } catch (_) {}
+
+  // ─── v3 Phase 1z.171 — Guild Members roster sheet ────────────
+  //
+  // Bottom sheet opened from any of the three Guild Hall summary
+  // tiles. Reuses the .vn-sheet shell + .lb-rank-* header classes
+  // from the existing leaderboard / souls-ledger sheets so the
+  // visual language stays consistent.
+  //
+  // Data sources:
+  //   - current user alias  → Auth.getCurrentUser().alias
+  //   - current user FEATS·24H → count of hb_guild_activity entries
+  //         whose ts is on device-local today
+  //   - current user BOSSES → sum of kill_count across hb_bosses
+  //   - accepted friend list → _friendsCache.friends
+  //
+  // Friend rows show alias + "—" for stats since backend friend
+  // activity doesn't exist yet. No fake numbers.
+  //
+  // initialSort is passed by the tile (alias / feats24h / bosses)
+  // but for Phase 1 we only have stats for the current user, so
+  // every sort effectively keeps the user at top with friends
+  // following in alphabetical order. The hint is recorded for a
+  // future train when friend stats land.
+  function _guildRosterCurrentUserStats() {
+    const alias = (window.Auth && typeof Auth.getCurrentUser === 'function')
+      ? ((Auth.getCurrentUser() || {}).alias || null)
+      : null;
+    let feats24h = 0;
+    try {
+      const entries = (typeof _guildhallReadStore === 'function') ? _guildhallReadStore() : [];
+      const todayKey = (typeof getDeviceLocalDate === 'function')
+        ? getDeviceLocalDate()
+        : new Date().toISOString().slice(0, 10);
+      for (const e of entries) {
+        if (!e || typeof e.ts !== 'number') continue;
+        const eDate = new Date(e.ts);
+        const eKey  = eDate.getFullYear() + '-' +
+                      String(eDate.getMonth() + 1).padStart(2, '0') + '-' +
+                      String(eDate.getDate()).padStart(2, '0');
+        if (eKey === todayKey) feats24h++;
+      }
+    } catch (_) {}
+    let bosses = 0;
+    try {
+      if (typeof loadBosses === 'function') {
+        const all = loadBosses();
+        for (const id in all) {
+          if (!Object.prototype.hasOwnProperty.call(all, id)) continue;
+          const s = all[id];
+          if (s && typeof s.kill_count === 'number' && s.kill_count > 0) {
+            bosses += s.kill_count;
+          }
+        }
+      }
+    } catch (_) {}
+    return { alias: alias, feats24h: feats24h, bosses: bosses };
+  }
+
+  function _guildRosterFriendStats() {
+    // No backend friend-stats endpoint exists yet, so this returns
+    // alias + `null` for every numeric column. The renderer paints
+    // null as "—". Adding fake numbers here would violate the
+    // explicit "no fake friend stats" product rule.
+    const friends = (typeof _friendsCache === 'object' && _friendsCache && Array.isArray(_friendsCache.friends))
+      ? _friendsCache.friends
+      : [];
+    return friends
+      .filter(f => f && typeof f.alias === 'string' && f.alias.length > 0)
+      .map(f => ({ alias: f.alias, friendshipId: f.id, feats24h: null, bosses: null }));
+  }
+
+  function _guildRosterAvatarHtml(alias, isSelf) {
+    const initial = alias && alias.length > 0 ? alias.charAt(0).toUpperCase() : '?';
+    const cls = isSelf ? 'guild-roster-avatar guild-roster-avatar--self' : 'guild-roster-avatar';
+    return '<span class="' + cls + '">' + esc(initial) + '</span>';
+  }
+
+  function _guildRosterRowHtml(row, rank, isSelf) {
+    const aliasDisp = (typeof _socialDisplayAlias === 'function')
+      ? _socialDisplayAlias(row.alias || (isSelf ? 'You' : '—'))
+      : (row.alias || (isSelf ? 'You' : '—'));
+    const feats = (row.feats24h == null) ? '—' : String(row.feats24h);
+    const boss  = (row.bosses   == null) ? '—' : String(row.bosses);
+    const subline = isSelf ? '' : '<div class="guild-roster-sub">Guild member</div>';
+    return (
+      '<div class="guild-roster-row' + (isSelf ? ' guild-roster-row--self' : '') + '">' +
+        '<span class="guild-roster-rank">#' + rank + '</span>' +
+        _guildRosterAvatarHtml(row.alias || '?', !!isSelf) +
+        '<div class="guild-roster-name">' +
+          '<div class="guild-roster-alias">' + esc(aliasDisp) + '</div>' +
+          subline +
+        '</div>' +
+        '<span class="guild-roster-stat guild-roster-stat--feats">' + esc(feats) + '</span>' +
+        '<span class="guild-roster-stat guild-roster-stat--bosses">' + esc(boss) + '</span>' +
+      '</div>'
+    );
+  }
+
+  function renderGuildRoster(initialSort) {
+    const list  = document.getElementById('guild-roster-list');
+    const empty = document.getElementById('guild-roster-empty');
+    if (!list) return;
+    void initialSort; // recorded by caller via aria; sort meaningful in a future train
+
+    const me = _guildRosterCurrentUserStats();
+    const friends = _guildRosterFriendStats();
+    const rows = [];
+    // Current user always pinned at #1 for Phase 1 because they
+    // are the only row with real numeric stats. Once backend
+    // friend stats exist, we'll rank-sort by the selected column.
+    rows.push({ row: { alias: me.alias, feats24h: me.feats24h, bosses: me.bosses }, isSelf: true });
+    // Friends sorted alphabetically by alias (case-insensitive).
+    friends.sort((a, b) => String(a.alias || '').toLowerCase().localeCompare(String(b.alias || '').toLowerCase()));
+    for (const f of friends) rows.push({ row: f, isSelf: false });
+
+    // Header row.
+    const headerHtml =
+      '<div class="guild-roster-row guild-roster-row--head">' +
+        '<span class="guild-roster-rank">#</span>' +
+        '<span class="guild-roster-avatar guild-roster-avatar--head"></span>' +
+        '<div class="guild-roster-name"><div class="guild-roster-alias">HUNTER</div></div>' +
+        '<span class="guild-roster-stat guild-roster-stat--feats">24H</span>' +
+        '<span class="guild-roster-stat guild-roster-stat--bosses">BOSSES</span>' +
+      '</div>';
+    list.innerHTML = headerHtml + rows.map((r, i) => _guildRosterRowHtml(r.row, i + 1, r.isSelf)).join('');
+
+    if (empty) {
+      if (friends.length === 0) {
+        empty.classList.remove('hidden');
+        empty.textContent = 'Add hunters to compare guild progress.';
+      } else {
+        empty.classList.add('hidden');
+        empty.textContent = '';
+      }
+    }
+  }
+
+  function openGuildRosterSheet(initialSort) {
+    const overlay = document.getElementById('guild-roster-overlay');
+    const sheet   = document.getElementById('guild-roster-sheet');
+    if (!overlay || !sheet) return;
+    try { renderGuildRoster(initialSort); } catch (_) {}
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+  function closeGuildRosterSheet() {
+    const overlay = document.getElementById('guild-roster-overlay');
+    const sheet   = document.getElementById('guild-roster-sheet');
+    if (overlay) overlay.classList.add('hidden');
+    if (sheet)   sheet.classList.add('hidden');
+  }
+  try {
+    window.openGuildRosterSheet  = openGuildRosterSheet;
+    window.closeGuildRosterSheet = closeGuildRosterSheet;
+  } catch (_) {}
+
+  // Delegated tile click + sheet close wiring. Idempotent guard so
+  // a second setup pass doesn't double-fire close on a single tap.
+  function setupGuildRosterSheet() {
+    const sheet = document.getElementById('guild-roster-sheet');
+    if (!sheet || sheet.getAttribute('data-wired') === '1') return;
+    sheet.setAttribute('data-wired', '1');
+    const closeBtn = document.getElementById('guild-roster-close');
+    const overlay  = document.getElementById('guild-roster-overlay');
+    if (closeBtn) closeBtn.addEventListener('click', closeGuildRosterSheet);
+    if (overlay)  overlay.addEventListener('click', closeGuildRosterSheet);
+    const tiles = document.querySelectorAll('#guildhall-summary [data-roster-open]');
+    tiles.forEach(t => {
+      t.addEventListener('click', () => {
+        const sort = t.getAttribute('data-roster-sort') || 'alias';
+        openGuildRosterSheet(sort);
+      });
+    });
+  }
+  try { window.setupGuildRosterSheet = setupGuildRosterSheet; } catch (_) {}
 
   function renderGuildActivity() {
     // v3 Phase 1z.167 — repaint summary tiles in lock-step with the
@@ -35009,6 +35184,10 @@
     setupSoulsInfoModal();
     // v3 Phase 1z.44 — Souls Ledger sheet wiring (drag-dismiss + X + overlay tap).
     try { setupSoulsLedger(); } catch (_) {}
+    // v3 Phase 1z.171 — Guild Members roster sheet wiring. Tile
+    // clicks open the sheet; overlay tap + X close it. Idempotent
+    // guard inside the function prevents double-wiring.
+    try { setupGuildRosterSheet(); } catch (_) {}
     // v2.0.1 DROPS Phase 1 — inventory + reveal + Pokédex wiring.
     try { loadInventory(); } catch (_) {}
     setupCardRevealModal();

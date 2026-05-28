@@ -627,26 +627,29 @@
            No fake online presence — that's the "LIVE NOW" tile in
            the design that we explicitly avoid in Phase 1. -->
       <section id="guildhall-summary" class="guildhall-summary">
+        <!-- v3 Phase 1z.171 — tiles are now buttons that open the
+             Guild Members roster sheet. data-roster-sort hints the
+             initial column ordering. Single shared sheet so the
+             three triggers don't fragment into separate surfaces. -->
         <div class="guildhall-summary-tiles">
-          <div class="guildhall-summary-tile">
+          <button type="button" class="guildhall-summary-tile"
+                  data-roster-open="hunters" data-roster-sort="alias"
+                  aria-label="Open Guild Members roster">
             <div class="guildhall-summary-tile-label">HUNTERS</div>
             <div id="guildhall-summary-hunters" class="guildhall-summary-tile-value">0</div>
-          </div>
-          <div class="guildhall-summary-tile">
-            <!-- v3 Phase 1z.169 — label-only swap from "TODAY" to
-                 "FEATS · 24H". The underlying counter still uses
-                 device-local calendar-day semantics (midnight to
-                 midnight) via getDeviceLocalDate(), NOT a rolling
-                 24-hour window. The DOM id (`guildhall-summary-today`)
-                 and internal variable names keep the calendar-day
-                 naming to reflect what the math actually does. -->
+          </button>
+          <button type="button" class="guildhall-summary-tile"
+                  data-roster-open="feats24h" data-roster-sort="feats24h"
+                  aria-label="Open guild feats roster">
             <div class="guildhall-summary-tile-label">FEATS · 24H</div>
             <div id="guildhall-summary-today" class="guildhall-summary-tile-value">0</div>
-          </div>
-          <div class="guildhall-summary-tile">
+          </button>
+          <button type="button" class="guildhall-summary-tile"
+                  data-roster-open="bosses" data-roster-sort="bosses"
+                  aria-label="Open bosses slain roster">
             <div class="guildhall-summary-tile-label">BOSSES SLAIN</div>
             <div id="guildhall-summary-bosses" class="guildhall-summary-tile-value">0</div>
-          </div>
+          </button>
         </div>
         <div id="guildhall-summary-chips" class="guildhall-summary-chips" aria-hidden="true"></div>
       </section>
@@ -1671,6 +1674,26 @@
     </div>
   </div>
 
+  <!-- v3 Phase 1z.171 — Guild Members stats sheet. Opens from any
+       of the three Guild Hall summary tiles (HUNTERS / FEATS · 24H
+       / BOSSES SLAIN). Reuses the .vn-sheet shell + .lb-rank-*
+       header classes so visual language matches the existing
+       leaderboard / souls-ledger sheets. -->
+  <div id="guild-roster-overlay" class="vn-overlay hidden"></div>
+  <div id="guild-roster-sheet" class="vn-sheet hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">GUILD MEMBERS</div>
+      <h2 class="lb-rank-title">Roster</h2>
+      <button id="guild-roster-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p class="lb-rank-blurb">Your guild and the feats they've recorded.</p>
+      <div id="guild-roster-list" class="guild-roster-list"></div>
+      <div id="guild-roster-empty" class="guild-roster-empty hidden"></div>
+    </div>
+  </div>
+
   <!-- Edit modal -->
   <div id="modal-overlay" class="modal-overlay hidden"></div>
   <div id="edit-modal" class="modal hidden">
@@ -2332,7 +2355,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=499"></script>
+  <script src="app.js?v=500"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

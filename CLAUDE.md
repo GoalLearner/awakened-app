@@ -55,7 +55,117 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.170 Guild Board adds friend_added events (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.171 Guild Members roster sheet from clickable summary tiles (read this first)
+
+### ✅ STATUS: The three summary tiles (HUNTERS / FEATS · 24H / BOSSES SLAIN) are now buttons that open a polished Guild Members roster sheet showing the current user with real local stats + accepted friends as alias-only placeholder rows. Frontend-only. `2.2.3-w47` web bundle ready.
+
+### Audit findings
+
+- Tiles were static `<div>`s. Replaced with `<button>` elements carrying `data-roster-open` + `data-roster-sort`. CSS retains the existing tile appearance and adds pressed/hover feedback.
+- Bottom sheet pattern reused `.vn-sheet` + `.vn-overlay` + `.lb-rank-*` header classes (same shell as Souls Ledger and the leaderboard ranking sheet). No new sheet engine.
+- Current user alias: `Auth.getCurrentUser()?.alias` — already used in app.js for the status card avatar; safe to reuse.
+- Friend stats: **no backend endpoint exists**. Friends API returns `{id, alias, status}` only. Per spec, friend rows show `—` for both stat columns. No fake numbers.
+- FEATS · 24H math: device-local calendar day via `getDeviceLocalDate()` (matches 1z.169 semantics).
+- BOSSES SLAIN math: sum of `kill_count` across `loadBosses()` rows (matches 1z.168 tile).
+
+### New sheet — `GUILD MEMBERS`
+
+DOM root: `#guild-roster-sheet` + `#guild-roster-overlay`. Body lays out a 5-column grid table:
+
+| # | avatar | HUNTER | 24H | BOSSES |
+|---|---|---|---|---|
+| #1 | (gold ring + initial) | Richie *(self row, gold-highlighted)* | 3 | 28 |
+| #2 | (violet ring + initial) | RenDIESEL · Guild member | — | — |
+| #3 | (violet ring + initial) | Anthony-Edwards · Guild member | — | — |
+
+**Row ordering rule for Phase 1**: current user pinned at #1 (only row with real stats); friends follow alphabetically. The `data-roster-sort` hint from the clicked tile is captured and passed to `renderGuildRoster()` but ignored for ranking until backend friend stats exist — recorded for the future train when sort actually means something.
+
+**Empty state** (zero friends): roster shows only the current user row, with a soft dashed-violet helper below: `Add hunters to compare guild progress.`
+
+### Three tile triggers, one sheet
+
+Each tile passes a different `data-roster-sort` value (`alias` / `feats24h` / `bosses`), but all three open the same sheet — Phase 1 keeps the surface simple. The aria-labels differ per tile:
+
+- HUNTERS → `Open Guild Members roster`
+- FEATS · 24H → `Open guild feats roster`
+- BOSSES SLAIN → `Open bosses slain roster`
+
+### Close behavior
+
+X button + overlay tap both close the sheet. Same pattern as the leaderboard ranking sheet. Idempotent `data-wired` guard inside `setupGuildRosterSheet` prevents double-wiring across renders.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | tiles → buttons (3) + new sheet markup |
+| `app.js` | +180 lines: `_guildRosterCurrentUserStats`, `_guildRosterFriendStats`, `_guildRosterAvatarHtml`, `_guildRosterRowHtml`, `renderGuildRoster`, `openGuildRosterSheet`, `closeGuildRosterSheet`, `setupGuildRosterSheet` + boot wiring |
+| `styles.css` | +130 lines: tile button states, roster grid, self-row gold highlight, head row, empty state |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### No fake data — verified
+
+| Surface | Source |
+|---|---|
+| Current user alias | `Auth.getCurrentUser().alias` (real) |
+| Current user FEATS · 24H | Count of `hb_guild_activity` entries on device-local today (real) |
+| Current user BOSSES | Sum of `kill_count` across `hb_bosses` (real) |
+| Friend alias | `_friendsCache.friends[].alias` (real) |
+| Friend FEATS · 24H | `null` → rendered as `—` (placeholder) |
+| Friend BOSSES | `null` → rendered as `—` (placeholder) |
+| Friend rank position | NOT claimed — table position is alphabetical only, no "#1 by feats" claim |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w46` | `2.2.3-w47` |
+| `app.js?v=` | `499` | `500` |
+| `sw.js CACHE_VERSION` | `v5.385` | `v5.386` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Tests
+
+- `node --check` on all four JS files → OK.
+- Playwright e2e: 27/29 first run, 2 transient flakes (sleep-streak + global-rankings-hub, both unrelated), pass on isolated retry.
+
+### TestFlight QA for w47
+
+1. Cold-launch w47. Confirm `"build": "2.2.3-w47"`.
+2. Open Social tab. The three tiles (HUNTERS / FEATS · 24H / BOSSES SLAIN) now show a subtle pressed state on tap.
+3. Tap any tile → bottom sheet rises with `GUILD MEMBERS` header and a "Roster" title.
+4. Sheet shows current user at #1 with **real** values for both stat columns (24H matches the tile, BOSSES matches the tile).
+5. Each accepted friend appears as a row showing alias + "Guild member" + `—` / `—`.
+6. Tap X or backdrop → sheet closes.
+7. Tap a different tile → same sheet reopens (no fragmenting of state).
+8. Zero-friends state: roster shows only the user row + dashed-violet helper "Add hunters to compare guild progress."
+9. No "duel" / "arena" / "challenge" text appears anywhere in the sheet.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim changes.
+- ✅ Recent Feats 7-type system unchanged.
+- ✅ No fake friend stats — all friend numeric columns show `—`.
+- ✅ No public Duel/Arena/Challenge language anywhere.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+### Rollback
+
+Five reverts:
+1. Revert the three tile `<button>` upgrades + the new sheet markup in `index.html`.
+2. Remove the `_guildRoster*` / `renderGuildRoster` / `open/close/setupGuildRosterSheet` functions from `app.js`.
+3. Remove the `setupGuildRosterSheet()` boot call.
+4. Remove the `.guild-roster-*` + `button.guildhall-summary-tile` CSS blocks.
+5. Restore the original tile `<div>` markup with no `data-roster-*` attrs.
+
+Each step independent — partial reverts work fine.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.170 Guild Board adds friend_added events (historical — superseded by 1z.171 above)
 
 ### ✅ STATUS: Local Guild Board now records when a friend joins your guild. Frontend-only. Still 100% local — no backend friend activity. `2.2.3-w46` web bundle ready.
 
