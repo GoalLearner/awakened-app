@@ -55,7 +55,56 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.168 Replace FEATS · 24H with BOSSES SLAIN (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.169 Rename TODAY tile to FEATS · 24H (label only, midnight-to-midnight kept) (read this first)
+
+### ✅ STATUS: One-line label swap. Frontend-only. `2.2.3-w45` web bundle ready.
+
+### What changed
+
+Summary card middle tile label: `TODAY` → `FEATS · 24H`.
+
+**Math unchanged.** The counter still uses device-local calendar-day semantics (midnight-to-midnight via `getDeviceLocalDate()`), NOT a rolling 24-hour window. Only the user-facing label changed.
+
+### Why the label keeps "24H" despite not being rolling
+
+Practical reason: most users in a single timezone perceive "since midnight" and "last 24h" as essentially the same — they only diverge in the few hours after midnight. The label `FEATS · 24H` reads cleaner and more RPG-flavorful than `TODAY` while the math stays the clean predictable midnight reset users expect.
+
+### Internal naming preserved
+
+DOM id (`guildhall-summary-today`) and JS variable (`featsToday`) intentionally keep the calendar-day naming so future readers see exactly what the math does. Only the user-facing label string changed.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | 1 label string + a doc comment explaining the calendar-day-not-rolling semantics |
+| `app.js`, `sw.js` | knob bumps |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w44` | `2.2.3-w45` |
+| `app.js?v=` | `497` | `498` |
+| `sw.js CACHE_VERSION` | `v5.383` | `v5.384` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No JS logic touched. Tile math behaves identically to w44.
+- ✅ Other tiles (`HUNTERS`, `BOSSES SLAIN`) unchanged.
+- ✅ Recent Feats feed unchanged.
+
+### Rollback
+
+Revert the label string in `index.html` back to `TODAY`. Single-line edit.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.168 Replace FEATS · 24H with BOSSES SLAIN (historical — superseded by 1z.169 above)
 
 ### ✅ STATUS: Third summary tile swapped. Frontend-only. `2.2.3-w44` web bundle ready.
 

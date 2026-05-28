@@ -633,7 +633,14 @@
             <div id="guildhall-summary-hunters" class="guildhall-summary-tile-value">0</div>
           </div>
           <div class="guildhall-summary-tile">
-            <div class="guildhall-summary-tile-label">TODAY</div>
+            <!-- v3 Phase 1z.169 — label-only swap from "TODAY" to
+                 "FEATS · 24H". The underlying counter still uses
+                 device-local calendar-day semantics (midnight to
+                 midnight) via getDeviceLocalDate(), NOT a rolling
+                 24-hour window. The DOM id (`guildhall-summary-today`)
+                 and internal variable names keep the calendar-day
+                 naming to reflect what the math actually does. -->
+            <div class="guildhall-summary-tile-label">FEATS · 24H</div>
             <div id="guildhall-summary-today" class="guildhall-summary-tile-value">0</div>
           </div>
           <div class="guildhall-summary-tile">
@@ -2325,7 +2332,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=497"></script>
+  <script src="app.js?v=498"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
