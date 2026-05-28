@@ -55,7 +55,133 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.169 Rename TODAY tile to FEATS · 24H (label only, midnight-to-midnight kept) (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.170 Guild Board adds friend_added events (read this first)
+
+### ✅ STATUS: Local Guild Board now records when a friend joins your guild. Frontend-only. Still 100% local — no backend friend activity. `2.2.3-w46` web bundle ready.
+
+### What's new
+
+Recent Feats / Guild Board accepts a **7th event type**: `friend_added`. Triggered when a friendship transitions to `accepted` status. Renders as a violet ⚭ glyph row:
+
+> ⚭ `Anthony-Edwards joined your Guild · just now`
+
+The summary tiles, idempotency model, store, and FIFO cap are unchanged.
+
+### Two firing paths
+
+| Path | When it fires | Why |
+|---|---|---|
+| **Immediate accept** | User taps Accept on an incoming request and `Auth.acceptFriendRequest(fid)` returns `ok`. | Instant feedback — row appears before the friends refetch round-trip completes. |
+| **Fetch reconciliation** | Every `renderFriendsSection` call loops over accepted friends and calls `recordGuildActivity('friend_added', ..., seenKey)`. | Catches the case where another device accepted, or the user accepted a request in a prior session that hadn't been logged. |
+
+Both paths use the same seenKey `friend_added_<friendshipId>`. Backend friendship id is stable, so duplicate writes are silently dropped — repeating either path is a no-op once logged.
+
+### What's NOT logged
+
+Per spec, only the `accepted` transition is celebrated:
+
+- ❌ Friend requests sent
+- ❌ Friend requests received
+- ❌ Friend requests declined
+- ❌ Friend removed
+
+Disconnect events aren't celebratory. Sent/received without an accept yet are noisier than they're worth.
+
+### Row shape
+
+`friend_added` uses a different subject template ("X joined your Guild" instead of "You did X"). The renderer detects this via the marker verb `'GUILD_JOIN_'` set in the type switch, then short-circuits the default "You <verb> <target>" template to render:
+
+```html
+<div class="guildhall-activity-row">
+  ⚭ <div class="guildhall-activity-text">
+    <span class="guildhall-activity-target guildhall-activity-target--violet">{alias}</span>
+    joined your Guild
+  </div>
+  <span class="guildhall-activity-time">just now</span>
+</div>
+```
+
+Same row container / icon / timestamp markup as the other 6 types so list density stays consistent.
+
+### Summary tile interaction
+
+The middle tile `FEATS · 24H` (renamed from `TODAY` in 1z.169, still device-local midnight-to-midnight) **counts friend_added events**. Adding a friend today increments the counter alongside boss kills, 10K days, sleep nights, etc. — matches the "things happened in the hall today" framing.
+
+`BOSSES SLAIN` and `HUNTERS` tiles are unaffected.
+
+### Recent Feats now includes 7 types
+
+| Type | Triggered by | Subject shape |
+|---|---|---|
+| `boss_kill` | `_awardSingleShotKill` | "You defeated <boss>" |
+| `step_milestone_10k` | `autoVerifyWalk` 10K crossing | "You crossed 10,000 steps today" |
+| `sleep_quality_7h` | `autoVerifySleep` ≥7h night | "You slept 7+ hours last night" |
+| `habit_streak` | `_guildhallMaybeFireStreakMilestone` 7/14/30/100/365 bands | "You reached 14-day Sleep streak" |
+| `rank_up` | `renderRank` rank ID change | "You reached D Rank" |
+| `ultra_rare_drop` | `openCardRevealModal` ultra-rare reveal | "You looted <card>" |
+| **`friend_added` (NEW)** | Accept path + fetch reconciliation | "{alias} joined your Guild" |
+
+Souls / daily login / duels / system grants / boss engage costs / common+rare drops / sub-rank progressions still excluded.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +50 lines (incoming row gets `data-alias`, accept handler fires `recordGuildActivity`, friends-fetch reconciliation loop, type switch case, icon case, special render template branch) |
+| `index.html` | knob bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+No CSS changes — reused existing `.guildhall-activity-row`, `.guildhall-activity-icon--violet`, `.guildhall-activity-target--violet` classes from 1z.165.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w45` | `2.2.3-w46` |
+| `app.js?v=` | `498` | `499` |
+| `sw.js CACHE_VERSION` | `v5.384` | `v5.385` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Tests
+
+- `node --check` on all four JS files → OK.
+- Playwright e2e: 27/29 first run, 2 transient flakes (sleep-streak + global-rankings-hub, both unrelated to Guild Hall), pass on isolated retry.
+
+### TestFlight QA for w46
+
+1. Cold-launch w46. Confirm `"build": "2.2.3-w46"`.
+2. **Accept path test**: Send friend request from one device, accept from the other. Within 1 second, accepting device shows `⚭ {alias} joined your Guild · just now` at the top of Recent Feats AND `FEATS · 24H` increments by 1.
+3. **Reconciliation path test**: Have a friendship accepted on device A. Open Social tab on device B. The friend should appear in the Recent Feats list (timestamp will reflect when device B first observed them as accepted, not when the actual accept happened — that's deferred to a future backend-backed pass).
+4. **Idempotency test**: Close and reopen Social tab repeatedly. The friend_added row should NOT duplicate. Refresh the friends list — still no duplicate.
+5. **Decline/remove test**: Decline a request OR remove an existing friend. NO row should appear in Recent Feats. Counter doesn't move.
+6. **Bond glyph**: Icon column shows ⚭ (ring sign) in violet for friend_added rows.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ Souls / daily login / duels / system grants still excluded from Recent Feats.
+- ✅ No public Duel/Arena/Challenge language reintroduced.
+- ✅ No fake friend activity — all rows fire from real `Auth.acceptFriendRequest` / `Auth.fetchFriends` data.
+- ✅ Decline/remove flows untouched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+### Rollback
+
+Revert the four code edits in `app.js`:
+1. The accept-path `recordGuildActivity` call (~line 23615).
+2. The reconciliation loop in `renderFriendsSection` (~line 22506).
+3. The `friend_added` case in the type switch (~line 3424).
+4. The `friend_added` case in the icon mapper (~line 3381).
+5. The special render template branch (~line 3443).
+
+The `data-alias` attribute on incoming rows is harmless if left in place — purely additive.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.169 Rename TODAY tile to FEATS · 24H (label only, midnight-to-midnight kept) (historical — superseded by 1z.170 above)
 
 ### ✅ STATUS: One-line label swap. Frontend-only. `2.2.3-w45` web bundle ready.
 

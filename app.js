@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w45';
+  const APP_BUILD_TAG = '2.2.3-w46';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3378,6 +3378,12 @@
         return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
       case 'ultra_rare_drop':
         return '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
+      case 'friend_added':
+        // v3 Phase 1z.170 — guild bond glyph. Two crossed
+        // chevrons ⟁ would be ideal but glyph support is uneven;
+        // ⛧/✧/✜ all RPG-friendly. Picked ⚭ (ring sign) for the
+        // "bond" semantic.
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">⚭</span>';
       default:
         return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
     }
@@ -3423,10 +3429,39 @@
         target = (p.cardName || 'an ultra-rare relic');
         targetCls = 'guildhall-activity-target--gold';
         break;
+      case 'friend_added':
+        // v3 Phase 1z.170 — friend event row. Different subject
+        // shape from the others ("X joined your Guild" vs
+        // "You did X"), so we short-circuit the default
+        // "<strong>You</strong> {verb} {target}" template below
+        // by overriding the whole text block. Detected by the
+        // renderer via the marker verb 'GUILD_JOIN_'.
+        verb = 'GUILD_JOIN_';
+        target = (p.alias || 'A new hunter');
+        targetCls = 'guildhall-activity-target--violet';
+        break;
       default:
         verb = 'achieved';
         target = 'a feat';
         targetCls = 'guildhall-activity-target--gold';
+    }
+    // v3 Phase 1z.170 — friend_added rows use a different subject
+    // shape ("Anthony-Edwards joined your Guild" instead of
+    // "You did X"). The 'GUILD_JOIN_' verb marker set by the
+    // switch above tells us to swap templates here. Keeps the
+    // same row container/icon/timestamp markup so list density
+    // stays consistent.
+    if (verb === 'GUILD_JOIN_') {
+      return (
+        '<div class="guildhall-activity-row">' +
+          iconHtml +
+          '<div class="guildhall-activity-text">' +
+            '<span class="guildhall-activity-target ' + targetCls + '">' + esc(target) + '</span>' +
+            ' joined your Guild' +
+          '</div>' +
+          '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+        '</div>'
+      );
     }
     return (
       '<div class="guildhall-activity-row">' +
@@ -22598,6 +22633,28 @@
     const incoming = Array.isArray(res.incoming) ? res.incoming : [];
     const outgoing = Array.isArray(res.outgoing) ? res.outgoing : [];
 
+    // v3 Phase 1z.170 — Guild Board reconciliation pass. Records
+    // a 'friend_added' event for every accepted friend that hasn't
+    // been seen yet. Catches the case where the friendship was
+    // accepted on a different device (or via a request the user
+    // accepted in a previous session) — without this pass, those
+    // friendships would silently never appear on the board.
+    // Idempotent: the seenKey 'friend_added_<friendshipId>' guards
+    // duplicates, so repeating this loop on every fetch is a
+    // no-op once each friendship has been logged once. Skip
+    // silently if recordGuildActivity isn't available (older
+    // bundle path).
+    try {
+      if (typeof recordGuildActivity === 'function') {
+        for (const f of friends) {
+          if (!f || !f.id || !f.alias) continue;
+          recordGuildActivity('friend_added',
+            { alias: f.alias, friendshipId: f.id },
+            'friend_added_' + f.id);
+        }
+      }
+    } catch (_) { /* defensive — board failure must not block the friends list */ }
+
     if (countEl) {
       const n = friends.length;
       countEl.textContent = n === 0 ? '' : n + (n === 1 ? ' hunter' : ' hunters');
@@ -22609,7 +22666,11 @@
       for (const f of incoming) {
         const alias = _socialDisplayAlias(f.alias);
         parts.push(
-          '<div class="social-row friend-row friend-row--incoming" data-friendship-id="' + esc(f.id) + '">' +
+          // v3 Phase 1z.170 — incoming rows now carry data-alias so
+          // the accept handler can record a 'friend_added' Guild Board
+          // event with the correct display name (without an extra
+          // backend roundtrip to look it up post-accept).
+          '<div class="social-row friend-row friend-row--incoming" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
             _friendAvatarHtml(alias, 'gold') +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(alias) + '</div>' +
@@ -23592,6 +23653,24 @@
           return;
         }
         if (action !== 'challenge') {
+          // v3 Phase 1z.170 — Guild Board friend event. Only the
+          // "accept" path fires a feed row: declined/removed
+          // friendships are intentionally NOT logged (decisions to
+          // disconnect aren't celebratory events). renderFriendsSection
+          // below will ALSO reconcile any accepted-from-another-device
+          // friendships via its own backfill loop, but firing here
+          // first gives an immediate row the moment the user taps
+          // Accept, before the fetch round-trip returns.
+          if (action === 'accept') {
+            try {
+              const alias = row.getAttribute('data-alias') || '';
+              if (alias && typeof recordGuildActivity === 'function') {
+                recordGuildActivity('friend_added',
+                  { alias: alias, friendshipId: fid },
+                  'friend_added_' + fid);
+              }
+            } catch (_) { /* board failure must not block the friend flow */ }
+          }
           showHabitToast(action === 'accept' ? 'Friend added.' : action === 'decline' ? 'Request declined.' : 'Friend removed.');
           renderFriendsSection();
         }
