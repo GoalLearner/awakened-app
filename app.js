@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w43';
+  const APP_BUILD_TAG = '2.2.3-w44';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3446,10 +3446,17 @@
   // is a no-op if the v2 markup isn't mounted).
   function renderGuildhallSummary() {
     const huntersEl  = document.getElementById('guildhall-summary-hunters');
-    const feats24hEl = document.getElementById('guildhall-summary-feats24h');
     const todayEl    = document.getElementById('guildhall-summary-today');
+    // v3 Phase 1z.168 — FEATS · 24H tile retired in favor of
+    // BOSSES SLAIN. The 24h rolling window overlapped almost
+    // entirely with TODAY (different only for late-night feats
+    // that already rolled off the local calendar day), making
+    // the two tiles confusingly redundant. BOSSES SLAIN is
+    // monotonic, RPG-flavorful, reinforces dungeon engagement,
+    // and never reads 0 once the user has any kill history.
+    const bossesEl   = document.getElementById('guildhall-summary-bosses');
     const chipsEl    = document.getElementById('guildhall-summary-chips');
-    if (!huntersEl && !feats24hEl && !todayEl && !chipsEl) return;
+    if (!huntersEl && !todayEl && !bossesEl && !chipsEl) return;
 
     // Friends count from the in-memory cache populated by the most
     // recent renderFriendsSection() call. We do NOT re-fetch here —
@@ -3462,29 +3469,46 @@
     huntersCount = acceptedFriends.length;
     if (huntersEl) huntersEl.textContent = String(huntersCount);
 
-    // Feat counts from the dedicated local store.
-    let feats24h = 0;
+    // TODAY tile: count feats from the dedicated activity store
+    // whose timestamp falls on the device-local calendar day.
     let featsToday = 0;
     try {
       const entries = _guildhallReadStore();
-      const now = Date.now();
-      const dayCutoff = now - 24 * 60 * 60 * 1000;
       const todayKey = (typeof getDeviceLocalDate === 'function')
         ? getDeviceLocalDate()
         : new Date().toISOString().slice(0, 10);
       for (const e of entries) {
         if (!e || typeof e.ts !== 'number') continue;
-        if (e.ts >= dayCutoff) feats24h++;
-        // Today (device-local calendar day).
         const eDate = new Date(e.ts);
         const eKey  = eDate.getFullYear() + '-' +
                       String(eDate.getMonth() + 1).padStart(2, '0') + '-' +
                       String(eDate.getDate()).padStart(2, '0');
         if (eKey === todayKey) featsToday++;
       }
-    } catch (_) { /* defensive — tiles just show 0 */ }
-    if (feats24hEl) feats24hEl.textContent = String(feats24h);
-    if (todayEl)    todayEl.textContent    = String(featsToday);
+    } catch (_) { /* defensive — tile reads 0 */ }
+    if (todayEl) todayEl.textContent = String(featsToday);
+
+    // v3 Phase 1z.168 — BOSSES SLAIN tile: cumulative all-time
+    // kill count across all bosses. Reads kill_count from each
+    // boss state row in hb_bosses (loadBosses) and sums. Always
+    // a monotonic non-decreasing number. Reads 0 on a fresh
+    // install; reads >= 1 after any boss kill ever. Reuses the
+    // same boss state localStorage that drives the boss UI —
+    // no new tracking code, no new storage key.
+    let bossesSlain = 0;
+    try {
+      if (typeof loadBosses === 'function') {
+        const all = loadBosses();
+        for (const id in all) {
+          if (!Object.prototype.hasOwnProperty.call(all, id)) continue;
+          const s = all[id];
+          if (s && typeof s.kill_count === 'number' && s.kill_count > 0) {
+            bossesSlain += s.kill_count;
+          }
+        }
+      }
+    } catch (_) { /* defensive — tile reads 0 */ }
+    if (bossesEl) bossesEl.textContent = String(bossesSlain);
 
     // Up to 3 friend initial chips. If fewer than 3 friends, fill
     // the remaining slots with subtle ghost chips so the card never

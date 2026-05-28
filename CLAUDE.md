@@ -55,7 +55,82 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.167 Guild Hall v2 — summary card + richer feat feed (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.168 Replace FEATS · 24H with BOSSES SLAIN (read this first)
+
+### ✅ STATUS: Third summary tile swapped. Frontend-only. `2.2.3-w44` web bundle ready.
+
+### Why
+
+`FEATS · 24H` (rolling 24h window) and `TODAY` (device-local calendar day) overlapped almost entirely — diverging only for feats that fired late yesterday but were still under 24h old. They confused testers ("what's the difference?") and both often read 0 on a fresh look.
+
+Product call: drop the 24h tile. Replace with `BOSSES SLAIN` — a monotonic all-time count that reinforces dungeon engagement (which is the in-app loop with the most replay value) and never reads 0 once the user has any kill history.
+
+### What changed
+
+| Tile (before) | Tile (after) |
+|---|---|
+| `HUNTERS` | `HUNTERS` (unchanged) |
+| `FEATS · 24H` | `TODAY` |
+| `TODAY` | `BOSSES SLAIN` |
+
+Tile order matches the screen flow now: who's in your guild → what you did today → what you've done forever.
+
+### Source of `BOSSES SLAIN`
+
+```js
+let bossesSlain = 0;
+const all = loadBosses(); // reads localStorage `hb_bosses`
+for (const id in all) {
+  const s = all[id];
+  if (s && typeof s.kill_count === 'number' && s.kill_count > 0) {
+    bossesSlain += s.kill_count;
+  }
+}
+```
+
+**Properties**:
+- Monotonic — `_awardSingleShotKill` only ever increments `kill_count`, never decrements.
+- Pure local — `loadBosses()` reads the same `hb_bosses` localStorage that drives the boss UI. No new tracking code, no new storage key, no backend.
+- Repaint is already wired: `_awardSingleShotKill` writes `kill_count` → `setBossState` persists → `recordGuildActivity('boss_kill', ...)` fires → `renderGuildActivity` → `renderGuildhallSummary` re-reads `loadBosses` and the tile increments in the same paint as the new feat row.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | swap `FEATS · 24H` tile DOM → `BOSSES SLAIN` |
+| `app.js` | replace `feats24h` accumulator with `loadBosses()` sum; preserve `TODAY` math; ~20 lines net |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w43` | `2.2.3-w44` |
+| `app.js?v=` | `496` | `497` |
+| `sw.js CACHE_VERSION` | `v5.382` | `v5.383` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 28/29 first run, 1 transient sleep-streak flake (passed on isolated retry, unrelated).
+
+### TestFlight QA
+
+1. Cold-launch w44 on a device with prior boss kills.
+2. Open Social tab.
+3. Summary card now reads `HUNTERS · N` / `TODAY · N` / `BOSSES SLAIN · N`.
+4. `BOSSES SLAIN` matches the sum of `kill_count` across every boss in your dungeon (E rank + D rank counted equally).
+5. Defeat a boss. Both `TODAY` and `BOSSES SLAIN` increment by 1 in the same paint cycle as the new boss-kill row in Recent Feats.
+
+### Rollback
+
+Three reverts cleanly: (1) restore the `FEATS · 24H` tile DOM in `index.html`, (2) restore the `feats24h` accumulator block in `renderGuildhallSummary`, (3) drop the `bossesSlain` block + the `BOSSES SLAIN` tile DOM. Or keep one and revert the other.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.167 Guild Hall v2 — summary card + richer feat feed (historical — superseded by 1z.168 above)
 
 ### ✅ STATUS: Social tab v2 ships a top summary card (HUNTERS / FEATS·24H / TODAY + friend initial chips) and a longer Recent Feats feed (8 rows). Frontend-only. **No fake data. No backend.** `2.2.3-w43` web bundle ready.
 
