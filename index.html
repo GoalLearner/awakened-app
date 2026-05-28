@@ -616,6 +616,34 @@
         <p class="guildhall-page-sub">Hunters bound to your guild. See their progress, climb together.</p>
       </div>
 
+      <!-- v3 Phase 1z.167 — Guild Hall summary card. Three local
+           tiles + up to 3 accepted-friend initial chips on the
+           right. All data is read locally:
+             HUNTERS  = _friendsCache.friends.length (accepted)
+             FEATS·24H = count of hb_guild_activity entries with
+                        ts > now - 86400000
+             TODAY    = count of hb_guild_activity entries whose
+                        ts falls on device-local today
+           No fake online presence — that's the "LIVE NOW" tile in
+           the design that we explicitly avoid in Phase 1. -->
+      <section id="guildhall-summary" class="guildhall-summary">
+        <div class="guildhall-summary-tiles">
+          <div class="guildhall-summary-tile">
+            <div class="guildhall-summary-tile-label">HUNTERS</div>
+            <div id="guildhall-summary-hunters" class="guildhall-summary-tile-value">0</div>
+          </div>
+          <div class="guildhall-summary-tile">
+            <div class="guildhall-summary-tile-label">FEATS · 24H</div>
+            <div id="guildhall-summary-feats24h" class="guildhall-summary-tile-value">0</div>
+          </div>
+          <div class="guildhall-summary-tile">
+            <div class="guildhall-summary-tile-label">TODAY</div>
+            <div id="guildhall-summary-today" class="guildhall-summary-tile-value">0</div>
+          </div>
+        </div>
+        <div id="guildhall-summary-chips" class="guildhall-summary-chips" aria-hidden="true"></div>
+      </section>
+
       <!-- v3 Phase 1z.164 — Guild Activity section (local-only feed
            from hb_souls_ledger). Phase 1 reads on-device events only;
            backend-backed friend activity is deferred to Phase 3. -->
@@ -2297,7 +2325,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=495"></script>
+  <script src="app.js?v=496"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

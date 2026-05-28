@@ -55,7 +55,130 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.166 Remove all public Duel/Arena language from Guild Hall (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.167 Guild Hall v2 — summary card + richer feat feed (read this first)
+
+### ✅ STATUS: Social tab v2 ships a top summary card (HUNTERS / FEATS·24H / TODAY + friend initial chips) and a longer Recent Feats feed (8 rows). Frontend-only. **No fake data. No backend.** `2.2.3-w43` web bundle ready.
+
+### Design audit findings before patching
+
+The dedicated 6-type feat system from 1z.165 was already in place and correct. Confirmed:
+
+| Surface | State |
+|---|---|
+| Feat store key | `hb_guild_activity` (NOT the souls ledger) |
+| Store cap | 50 entries FIFO |
+| Seen-key dedup | `hb_guild_activity_seen_<key>` markers |
+| Recorded types | `boss_kill`, `step_milestone_10k`, `sleep_quality_7h`, `habit_streak`, `rank_up`, `ultra_rare_drop` |
+| Excluded | souls earned/spent, daily login, duel win/loss, boss engage costs, system grants, starter grants |
+| Renderer | `_guildhallRowHtml` reads `entry.type` and dispatches one of the 6 verb/target mappings |
+| Old display limit | 4 rows |
+
+`renderGuildActivity` already iterates `_guildhallReadStore()` (the dedicated feat store) — there is no path from the souls ledger into Recent Feats. The 1z.165 system passes the spec's "do not pull from souls ledger" requirement structurally.
+
+### What 1z.167 adds
+
+**1. New top summary card** (`index.html:~621`, `app.js:~3438`, `styles.css:~24000`):
+
+| Tile | Source | Phase 1 safety |
+|---|---|---|
+| `HUNTERS` | `_friendsCache.friends.length` (in-memory cache populated by `renderFriendsSection`) | Real accepted-friend count. Zero if not signed in / no friends. |
+| `FEATS · 24H` | `_guildhallReadStore()` filtered to `ts >= now - 86400000` | Last 24h of dedicated feat events. |
+| `TODAY` | Same store filtered to device-local-today calendar key | **Replaces the design's `LIVE NOW` tile.** No fake online presence — `LIVE NOW` would require backend/presence work we explicitly defer. `TODAY` uses local truth only. |
+
+Right-aligned **avatar chips** — up to 3 accepted-friend initials (real aliases via `f.alias.charAt(0).toUpperCase()`). If fewer than 3 friends, remaining slots render as subtle ghost chips so the card never looks broken on fresh installs. **No invented names.**
+
+**2. Recent Feats display limit bumped 4 → 8.** Store cap stays at 50. 8 rows is roughly 2 days of typical engaged-user activity without forcing scroll on iPhone.
+
+**3. Summary repaint hooks**:
+- `renderGuildActivity()` now calls `renderGuildhallSummary()` first, so any new feat record triggers a tile refresh.
+- `renderFriendsSection()` final line now calls `renderGuildhallSummary()`, so the HUNTERS tile + chips stay in sync with the friends list.
+- Both repaints are cheap no-ops if the v2 summary DOM isn't mounted (gracefully degrades for older bundles served from cache).
+
+### What the screenshot wants but we explicitly DON'T implement
+
+The 1z.167 spec called out optional v2 enrichments that would require fake or absent data. None of them ship in this train:
+
+| Design element | Reason deferred |
+|---|---|
+| `LIVE NOW` tile (third tile in screenshot) | Would require backend presence/online-status tracking. **Used `TODAY` instead** — a local-truth substitute. |
+| Friend cards with rank badge / weekly steps / streak / "12m" last-active timestamps | `Auth.fetchFriends` returns only `{id, alias, status}`. Inventing `41.8K`, `6d`, online dots, etc. would be fake data. **Friend rows stay at alias + "Guild member" + Remove** per 1z.166. |
+| `Salute` / `View Profile` buttons on friend cards | No backend endpoint exists for salutes; no profile-view UI exists. **Buttons not added.** No fake action stubs. |
+| User's own alias `YOUR ALIAS · @<alias>` + `SHARE` row in Add Friend card | Defer to a future train. Clipboard share is safe but not load-bearing for v2; can layer in later without rework. |
+| Suggested friend chips | No "people you may know" data source. **Skipped.** |
+| Recent Feats key-phrase coloring per type | Already shipped in 1z.165 via `targetCls` (gold/violet). Confirmed intact. |
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | +28 lines (`<section id="guildhall-summary">` with 3 tile DOMs + chips container) |
+| `app.js` | +70 lines (`renderGuildhallSummary` function + display-limit constant comment + 2 repaint hook injections) |
+| `styles.css` | +80 lines (`.guildhall-summary*` rules — card, tiles, value typography, chip overlap stack, ghost-chip empty state) |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation/migration.
+- ✅ Existing `recordGuildActivity` and the 6 hook sites (boss kill, ultra-rare reveal, rank up, autoVerifyWalk 10K, autoVerifySleep 7h, habit streak bands) — all untouched.
+- ✅ Souls ledger still has its own separate Transactions sheet — unchanged.
+- ✅ HealthKit math, leaderboard scoring, dungeon, XP, rank, souls economy, sim values — untouched.
+- ✅ Public Duel/Arena removal from 1z.166 — preserved. No new Duel surface added.
+- ✅ Friends fetch + Add Friend + Accept / Decline / Remove flows — unchanged.
+- ✅ Internal duel passive code (`_runDuelSyncCycle`, `maybeResolveDuelIfEnded`, etc.) — untouched.
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w42` | `2.2.3-w43` |
+| `app.js?v=` | `495` | `496` |
+| `sw.js CACHE_VERSION` | `v5.381` | `v5.382` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (global-rankings-hub + sleep-verify), both pass on isolated retry. Unrelated to Guild Hall.
+
+### TestFlight QA for w43
+
+1. Cold-launch on both phones. Confirm `"build": "2.2.3-w43"`.
+2. Open Social tab. New summary card appears between the page header and Recent Feats.
+3. **HUNTERS** tile matches the count below it in Your Hunters.
+4. **FEATS · 24H** matches the number of Recent Feats rows whose timestamps fall in the last 24 hours (defeat a boss / log 10K steps / hit a habit streak band to test live increment).
+5. **TODAY** matches the number of Recent Feats with today's device-local calendar date.
+6. Friend initial chips show up to 3 real friend initials, ghost-chip fills any empty slot.
+7. Recent Feats feed shows up to 8 rows (was 4).
+8. No `LIVE` pill on Recent Feats. No `Challenge` button on friend rows. No Arena panel.
+9. Defeat a boss (or trigger any other feat type). The feat appears immediately in the feed AND the tile counters increment in the same paint cycle.
+
+### Hard guardrails respected
+
+- ✅ Frontend only.
+- ✅ No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ Recent Feats reads only `hb_guild_activity` — souls ledger never touched.
+- ✅ No public Duel/Arena/Challenge language reintroduced.
+- ✅ Zero fake data — friend chips show only real accepted friends.
+- ✅ Reversible — restore `GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 4` and delete the `<section id="guildhall-summary">` block to return to w42 visuals.
+
+### Rollback
+
+Three reverts, each independent:
+1. Remove `<section id="guildhall-summary">` from `index.html` (the summary card disappears; activity feed stays).
+2. Remove `renderGuildhallSummary` function + the two repaint hooks in `renderGuildActivity` and `renderFriendsSection` (the renderer becomes a no-op safely; can keep DOM if desired).
+3. Restore `GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 4` (feed length drops back to 4).
+
+Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.166 Remove all public Duel/Arena language from Guild Hall (historical — superseded by 1z.167 above)
 
 ### ✅ STATUS: Guild Hall is now Friends + Recent Feats only. Zero public Duel/Arena/Challenge surface. Backend Duel code + tables untouched. Passive resolve/reconcile still running. Frontend-only. `2.2.3-w42` web bundle ready.
 

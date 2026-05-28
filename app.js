@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w42';
+  const APP_BUILD_TAG = '2.2.3-w43';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3256,7 +3256,11 @@
   //
   // Backend-backed friend activity (other users' feats showing up
   // in your feed) is still deferred to Phase 3.
-  const GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 4;
+  // v3 Phase 1z.167 — bumped from 4 → 8 to fill the v2 feed.
+  // Store cap is still GUILDHALL_ACTIVITY_MAX (50); only the
+  // visible slice grows. 8 rows is ~2 days of typical activity
+  // for an engaged user without forcing scroll on iPhone.
+  const GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 8;
   const GUILDHALL_ACTIVITY_KEY = 'hb_guild_activity';
   const GUILDHALL_ACTIVITY_MAX = 50;
   const GUILDHALL_SEEN_PREFIX  = 'hb_guild_activity_seen_';
@@ -3435,7 +3439,77 @@
       '</div>'
     );
   }
+  // v3 Phase 1z.167 — Guild Hall summary card renderer. Reads the
+  // dedicated activity store (NOT the souls ledger) and the live
+  // friends cache. Three local tiles + up to 3 friend initial chips.
+  // No fake online state. Defensive against missing DOM (function
+  // is a no-op if the v2 markup isn't mounted).
+  function renderGuildhallSummary() {
+    const huntersEl  = document.getElementById('guildhall-summary-hunters');
+    const feats24hEl = document.getElementById('guildhall-summary-feats24h');
+    const todayEl    = document.getElementById('guildhall-summary-today');
+    const chipsEl    = document.getElementById('guildhall-summary-chips');
+    if (!huntersEl && !feats24hEl && !todayEl && !chipsEl) return;
+
+    // Friends count from the in-memory cache populated by the most
+    // recent renderFriendsSection() call. We do NOT re-fetch here —
+    // the tab-open path already triggers renderFriendsSection which
+    // also calls back into this renderer once the network returns.
+    let huntersCount = 0;
+    const acceptedFriends = (typeof _friendsCache === 'object' && _friendsCache && Array.isArray(_friendsCache.friends))
+      ? _friendsCache.friends
+      : [];
+    huntersCount = acceptedFriends.length;
+    if (huntersEl) huntersEl.textContent = String(huntersCount);
+
+    // Feat counts from the dedicated local store.
+    let feats24h = 0;
+    let featsToday = 0;
+    try {
+      const entries = _guildhallReadStore();
+      const now = Date.now();
+      const dayCutoff = now - 24 * 60 * 60 * 1000;
+      const todayKey = (typeof getDeviceLocalDate === 'function')
+        ? getDeviceLocalDate()
+        : new Date().toISOString().slice(0, 10);
+      for (const e of entries) {
+        if (!e || typeof e.ts !== 'number') continue;
+        if (e.ts >= dayCutoff) feats24h++;
+        // Today (device-local calendar day).
+        const eDate = new Date(e.ts);
+        const eKey  = eDate.getFullYear() + '-' +
+                      String(eDate.getMonth() + 1).padStart(2, '0') + '-' +
+                      String(eDate.getDate()).padStart(2, '0');
+        if (eKey === todayKey) featsToday++;
+      }
+    } catch (_) { /* defensive — tiles just show 0 */ }
+    if (feats24hEl) feats24hEl.textContent = String(feats24h);
+    if (todayEl)    todayEl.textContent    = String(featsToday);
+
+    // Up to 3 friend initial chips. If fewer than 3 friends, fill
+    // the remaining slots with subtle ghost chips so the card never
+    // looks broken on first launch.
+    if (chipsEl) {
+      const chipHtmls = [];
+      for (let i = 0; i < 3; i++) {
+        const f = acceptedFriends[i];
+        if (f && typeof f.alias === 'string' && f.alias.length > 0) {
+          const initial = f.alias.charAt(0).toUpperCase();
+          chipHtmls.push('<span class="guildhall-summary-chip" title="' + esc(f.alias) + '">' + esc(initial) + '</span>');
+        } else {
+          chipHtmls.push('<span class="guildhall-summary-chip guildhall-summary-chip--empty"></span>');
+        }
+      }
+      chipsEl.innerHTML = chipHtmls.join('');
+    }
+  }
+  try { window.renderGuildhallSummary = renderGuildhallSummary; } catch (_) {}
+
   function renderGuildActivity() {
+    // v3 Phase 1z.167 — repaint summary tiles in lock-step with the
+    // activity list. Cheap no-op when the v2 summary DOM isn't
+    // mounted (e.g. older bundles served from cache).
+    try { renderGuildhallSummary(); } catch (_) {}
     const body = document.getElementById('guildhall-activity-body');
     if (!body) return;
     let entries = [];
@@ -22593,6 +22667,14 @@
       }
     }
     body.innerHTML = parts.join('');
+    // v3 Phase 1z.167 — friends fetch is the canonical source for
+    // the HUNTERS tile and the friend initial chips. Repaint the
+    // Guild Hall summary card so the count + chips stay in sync
+    // with the just-rendered friends list. Cheap no-op if the v2
+    // summary DOM isn't present.
+    try {
+      if (typeof renderGuildhallSummary === 'function') renderGuildhallSummary();
+    } catch (_) {}
   }
 
   function _duelMetaStripHtml(stake, reward, duration) {
