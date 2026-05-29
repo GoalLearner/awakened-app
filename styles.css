@@ -24319,6 +24319,27 @@ button.guildhall-summary-tile:active {
   border: 0;
   box-shadow: none;
 }
+/* v3 Phase 1z.193 — tight rank-label variant for the Roster
+   sheet's 30px circles. Mirrors the lower Guild accordion's
+   .friend-avatar--rank treatment so "E III" / "D II" / "S+"
+   fit without overflow. Real backend labels stay intact; the
+   helper trims to 5 chars defensively before this style applies. */
+.guild-roster-avatar--rank {
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--gold, #f5b842);
+}
+/* v3 Phase 1z.193 — Roster rows no longer carry the "Guild member"
+   subtitle. Center the alias vertically inside the row so the
+   single-line layout reads balanced against the avatar + stats. */
+.guild-roster-row--no-sub .guild-roster-name {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 .guild-roster-name {
   min-width: 0;
   display: flex;

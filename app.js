@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w65';
+  const APP_BUILD_TAG = '2.2.3-w66';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3679,6 +3679,26 @@
     const alias = (window.Auth && typeof Auth.getCurrentUser === 'function')
       ? ((Auth.getCurrentUser() || {}).alias || null)
       : null;
+    // v3 Phase 1z.193 — enrich the self row with the same locally-
+    // derived rank the client submits via _publicRankSummary. This
+    // is NOT faked rank data — it's the exact local rank that drives
+    // the rank pill at the top of the app and the submit payload.
+    // When _publicRankSummary is missing (older bundle), the rank
+    // fields silently stay null and the avatar falls back to the
+    // alias initial.
+    let rankLabel = null;
+    let rankSortValue = null;
+    try {
+      if (typeof _publicRankSummary === 'function') {
+        const summary = _publicRankSummary(totalPoints);
+        if (summary && typeof summary.rankLabel === 'string') {
+          rankLabel = summary.rankLabel;
+          rankSortValue = Number.isFinite(summary.rankSortValue)
+            ? summary.rankSortValue
+            : null;
+        }
+      }
+    } catch (_) {}
     let feats24h = 0;
     try {
       const entries = (typeof _guildhallReadStore === 'function') ? _guildhallReadStore() : [];
@@ -3707,26 +3727,60 @@
         }
       }
     } catch (_) {}
-    return { alias: alias, feats24h: feats24h, bosses: bosses };
+    return {
+      alias: alias,
+      feats24h: feats24h,
+      bosses: bosses,
+      rankLabel: rankLabel,
+      rankSortValue: rankSortValue,
+    };
   }
 
   function _guildRosterFriendStats() {
-    // No backend friend-stats endpoint exists yet, so this returns
-    // alias + `null` for every numeric column. The renderer paints
-    // null as "—". Adding fake numbers here would violate the
-    // explicit "no fake friend stats" product rule.
+    // v3 Phase 1z.193 — preserve the rankLabel / rankSortValue /
+    // rankTier / rankDivision fields that /v1/friends now returns
+    // (1z.190 LEFT JOIN + 1z.191 client submit + 1z.192 CORS fix).
+    // Stats columns (feats24h / bosses) still null because no
+    // backend friend-stats endpoint exists yet — the renderer
+    // paints those as "—". Faking those numbers would violate the
+    // "no fake friend stats" product rule.
     const friends = (typeof _friendsCache === 'object' && _friendsCache && Array.isArray(_friendsCache.friends))
       ? _friendsCache.friends
       : [];
     return friends
       .filter(f => f && typeof f.alias === 'string' && f.alias.length > 0)
-      .map(f => ({ alias: f.alias, friendshipId: f.id, feats24h: null, bosses: null }));
+      .map(f => ({
+        alias:         f.alias,
+        friendshipId:  f.id,
+        feats24h:      null,
+        bosses:        null,
+        rankLabel:     (typeof f.rankLabel === 'string' && f.rankLabel) ? f.rankLabel : null,
+        rankSortValue: Number.isFinite(Number(f.rankSortValue)) ? Number(f.rankSortValue) : null,
+        rankTier:      (typeof f.rankTier === 'string' && f.rankTier) ? f.rankTier : null,
+        rankDivision:  (typeof f.rankDivision === 'string' && f.rankDivision) ? f.rankDivision : null,
+      }));
   }
 
-  function _guildRosterAvatarHtml(alias, isSelf) {
+  // v3 Phase 1z.193 — Roster avatar now mirrors the lower-Guild
+  // friend-list pattern from 1z.186: when a row carries a real
+  // backend (or locally-derived self) rank label, render it inside
+  // the circle with the `--rank` modifier; otherwise fall back to
+  // the alias initial. NEVER fabricates rank — `row.rankLabel` is
+  // either backend-trusted or the user's own local rank.
+  function _guildRosterAvatarHtml(alias, isSelf, row) {
+    const rankLabel = (row && typeof row.rankLabel === 'string' && row.rankLabel) ? row.rankLabel : null;
+    const showRank = !!rankLabel;
     const initial = alias && alias.length > 0 ? alias.charAt(0).toUpperCase() : '?';
-    const cls = isSelf ? 'guild-roster-avatar guild-roster-avatar--self' : 'guild-roster-avatar';
-    return '<span class="' + cls + '">' + esc(initial) + '</span>';
+    let cls = 'guild-roster-avatar';
+    if (isSelf)   cls += ' guild-roster-avatar--self';
+    if (showRank) cls += ' guild-roster-avatar--rank';
+    // Defensive truncation to 5 chars so an unexpectedly long
+    // backend string can't overflow the 30px circle. Real labels
+    // ("S+", "E III", "D II", "C I") all stay intact.
+    const rankTxt = showRank
+      ? (rankLabel.length > 5 ? rankLabel.slice(0, 5) : rankLabel)
+      : initial;
+    return '<span class="' + cls + '">' + esc(rankTxt) + '</span>';
   }
 
   function _guildRosterRowHtml(row, rank, isSelf) {
@@ -3735,14 +3789,15 @@
       : (row.alias || (isSelf ? 'You' : '—'));
     const feats = (row.feats24h == null) ? '—' : String(row.feats24h);
     const boss  = (row.bosses   == null) ? '—' : String(row.bosses);
-    const subline = isSelf ? '' : '<div class="guild-roster-sub">Guild member</div>';
+    // v3 Phase 1z.193 — drop the "Guild member" subtitle to match
+    // the lower Guild accordion's 1z.186 cleanup. The row now reads
+    // cleanly with just the alias.
     return (
-      '<div class="guild-roster-row' + (isSelf ? ' guild-roster-row--self' : '') + '">' +
+      '<div class="guild-roster-row guild-roster-row--no-sub' + (isSelf ? ' guild-roster-row--self' : '') + '">' +
         '<span class="guild-roster-rank">#' + rank + '</span>' +
-        _guildRosterAvatarHtml(row.alias || '?', !!isSelf) +
+        _guildRosterAvatarHtml(row.alias || '?', !!isSelf, row) +
         '<div class="guild-roster-name">' +
           '<div class="guild-roster-alias">' + esc(aliasDisp) + '</div>' +
-          subline +
         '</div>' +
         '<span class="guild-roster-stat guild-roster-stat--feats">' + esc(feats) + '</span>' +
         '<span class="guild-roster-stat guild-roster-stat--bosses">' + esc(boss) + '</span>' +
@@ -3762,9 +3817,30 @@
     // Current user always pinned at #1 for Phase 1 because they
     // are the only row with real numeric stats. Once backend
     // friend stats exist, we'll rank-sort by the selected column.
-    rows.push({ row: { alias: me.alias, feats24h: me.feats24h, bosses: me.bosses }, isSelf: true });
-    // Friends sorted alphabetically by alias (case-insensitive).
-    friends.sort((a, b) => String(a.alias || '').toLowerCase().localeCompare(String(b.alias || '').toLowerCase()));
+    rows.push({
+      row: {
+        alias: me.alias,
+        feats24h: me.feats24h,
+        bosses: me.bosses,
+        rankLabel: me.rankLabel,
+        rankSortValue: me.rankSortValue,
+      },
+      isSelf: true,
+    });
+    // v3 Phase 1z.193 — friend ordering:
+    //   • If every friend has a finite rankSortValue, sort
+    //     strongest-first (descending). Same gate the lower-Guild
+    //     accordion uses since 1z.191 so partial-data states
+    //     never produce a misleading order.
+    //   • Otherwise preserve the existing alphabetical sort. No
+    //     bosses-slain proxy. No alias-derived rank.
+    const rankSortReady = friends.length > 0
+      && friends.every(f => Number.isFinite(f && f.rankSortValue));
+    if (rankSortReady) {
+      friends.sort((a, b) => (b.rankSortValue - a.rankSortValue));
+    } else {
+      friends.sort((a, b) => String(a.alias || '').toLowerCase().localeCompare(String(b.alias || '').toLowerCase()));
+    }
     for (const f of friends) rows.push({ row: f, isSelf: false });
 
     // Header row.

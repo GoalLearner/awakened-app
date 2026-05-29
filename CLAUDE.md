@@ -4,7 +4,68 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.192 Fix public-rank submit NETWORK (CORS PUT) (read this first)
+## May 29, 2026 — 1z.193 Guild Members Roster real rank badges (read this first)
+
+**TL;DR.** The Roster sheet (HUNTERS tile) now mirrors the lower Guild accordion: real backend rank label in the avatar circle when available (`E III` / `D II` / `C I` / `S+`), alias initial fallback when not, and the `Guild member` subtitle is gone. The self row is enriched with the locally-derived rank from `_publicRankSummary(totalPoints)` — same value the user submits to backend; not faked. Friend ordering is now conditional: rank-sort strongest-first when every friend has rank data; otherwise preserve the existing alphabetical sort.
+
+**Files modified (frontend only).**
+- `app.js` —
+  - `_guildRosterCurrentUserStats` now also computes `rankLabel` + `rankSortValue` for the self row via the existing `_publicRankSummary(totalPoints)` builder. This is the user's own local rank; same source as the 1z.191 submit payload. Returns null if the builder is missing (older bundle).
+  - `_guildRosterFriendStats` now preserves `rankLabel`, `rankSortValue`, `rankTier`, `rankDivision` from the `/v1/friends` join (previously stripped — root cause of "Roster ignores backend rank"). Stats columns (feats24h / bosses) still null because no backend friend-stats endpoint exists.
+  - `_guildRosterAvatarHtml(alias, isSelf, row)` takes an optional row object; when `row.rankLabel` is present, renders it inside the circle with a `--rank` modifier class, otherwise falls back to the alias initial. Defensive 5-char truncation against unexpectedly long backend strings.
+  - `_guildRosterRowHtml` drops the `<div class="guild-roster-sub">Guild member</div>` block and adds the `guild-roster-row--no-sub` modifier class so CSS can re-center the alias vertically.
+  - `renderGuildRoster` keeps self pinned at #1 (existing product rule) and adds a conditional rank sort for friends: `friends.every(f => Number.isFinite(f.rankSortValue))` → `(b - a)` descending; else preserve the existing case-insensitive alphabetical sort. No bosses-slain proxy.
+- `styles.css` — `.guild-roster-avatar--rank` tightens font + spacing inside the 30px circle so `E III` / `D II` fits. `.guild-roster-row--no-sub .guild-roster-name` centers the alias vertically now that the subtitle is gone.
+- `index.html` — `app.js?v=519`.
+- `sw.js` — `CACHE_VERSION = 'v5.405'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w66`, `app.js?v=519`, `auth.js?v=19` (unchanged), `sw.js CACHE_VERSION v5.405`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Self row rank source — not faked.** The self row's rank fields come from `_publicRankSummary(totalPoints)`, which is the same deterministic function used to build the PUT payload in 1z.191 (which itself wraps the 1z.59 `getRankDivisionInfo`). The Roster sheet displays exactly the same label the user has submitted (or is about to submit) to the backend. No second source of truth, no client fabrication.
+
+**Sort behavior matrix.**
+
+| Friends with rank | Self row | Friend ordering |
+|---|---|---|
+| All have rankSortValue | Pinned at `#1` | rank-sort descending (S+ above S above A above ... above E III) |
+| Partial / none | Pinned at `#1` | Preserves the existing alphabetical sort |
+
+**Guard rails preserved.**
+- No backend deploy.
+- No D1 migration / schema change.
+- No fake rank data — friend ranks read backend-provided fields; self rank reads the local builder used for submission.
+- No bosses-slain proxy. The bosses column still shows `—` for friends (no backend friend-stats endpoint yet).
+- No alias-derived rank.
+- No `rank_points` leakage — `rank_points` was never added to friend payloads in 1z.190 and is still not used in any UI surface.
+- No friend add/remove behavior change.
+- No public-rank submit timing change.
+- No HealthKit / leaderboard / XP / rank threshold / Duel changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Four independent reverts:
+1. Restore the previous `_guildRosterRowHtml` body (re-add the subtitle and drop the `--no-sub` modifier).
+2. Restore the previous `_guildRosterAvatarHtml` body (drop the row argument).
+3. Restore the previous `_guildRosterFriendStats` body (strip rank fields).
+4. Restore the previous `_guildRosterCurrentUserStats` body (drop self rank fields) and the alphabetical-only sort.
+
+No DB or backend touched.
+
+**Manual QA (w66).**
+1. Cold-launch w66 signed in. Confirm `"build": "2.2.3-w66"`.
+2. Open Social → tap **HUNTERS** tile.
+3. Roster sheet opens. Self row (#1) shows the user's rank label (e.g. `D III`) in the gold-bordered circle instead of the alias initial.
+4. Subtitle `Guild member` is **gone** from every non-self row.
+5. Friends who have submitted public rank show their `E III` / `D II` / `S+` in the violet circle.
+6. Friends who have not submitted yet still show their alias initial.
+7. No fake rank text appears on unranked friends.
+8. Columns `#` / HUNTER / 24H / BOSSES still align.
+9. Lower Guild accordion still shows the same rank badges as before (1z.191 behavior preserved).
+10. Add Friend / Remove Friend still works.
+11. FEATS · 24H / BOSSES SLAIN tiles still open their respective sheets.
+
+---
+
+## May 29, 2026 — 1z.192 Fix public-rank submit NETWORK (CORS PUT)
 
 **TL;DR.** One-line CORS fix: add `PUT` to `Access-Control-Allow-Methods`. The 1z.190 `PUT /v1/users/me/public-profile-summary` endpoint is the first PUT route on the Worker; the existing allowlist `'GET, POST, OPTIONS'` caused Capacitor's WebView preflight to fail before the request reached the Worker, surfacing as the `NETWORK` error code observed in w65 device debug. All previously-shipped endpoints use GET/POST and are unaffected. Backend-only train — no frontend knobs bumped.
 
