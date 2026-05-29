@@ -74,13 +74,15 @@ async function findUserByAlias(
   return row ?? null;
 }
 
-/** Build the response shape for a single friend row from the perspective
- *  of `viewerUserId`. The "other" party's alias is fetched from users. */
-async function serializeFriendRow(
-  env: Env,
-  row: FriendRow,
-  viewerUserId: string,
-): Promise<{
+interface PublicProfileFriendRow {
+  rank_tier: string | null;
+  rank_division: string | null;
+  rank_label: string | null;
+  rank_sort_value: number | null;
+  server_updated_at: number | null;
+}
+
+interface SerializedFriendRow {
   id: string;
   user_id: string;
   alias: string;
@@ -88,7 +90,27 @@ async function serializeFriendRow(
   direction: 'incoming' | 'outgoing' | 'mutual';
   created_at: string;
   updated_at: string;
-} | null> {
+  // v3 Phase 1z.190 — optional friend rank badge fields, present
+  // only when the friend has submitted a public_profile_summary.
+  // rank_points is intentionally OMITTED here (privacy: hides
+  // exact XP magnitude). metadata_json is reserved for future
+  // achievement payloads and is also intentionally withheld.
+  rankTier?: string;
+  rankDivision?: string | null;
+  rankLabel?: string;
+  rankSortValue?: number;
+  rankUpdatedAt?: string;
+}
+
+/** Build the response shape for a single friend row from the perspective
+ *  of `viewerUserId`. The "other" party's alias is fetched from users
+ *  and optional rank fields are LEFT-JOINed from
+ *  public_profile_summary (v3 Phase 1z.190). */
+async function serializeFriendRow(
+  env: Env,
+  row: FriendRow,
+  viewerUserId: string,
+): Promise<SerializedFriendRow | null> {
   const otherId =
     row.requester_user_id === viewerUserId
       ? row.recipient_user_id
@@ -99,19 +121,47 @@ async function serializeFriendRow(
       : row.requester_user_id === viewerUserId
         ? 'outgoing'
         : 'incoming';
-  const other = await env.DB.prepare('SELECT alias FROM users WHERE id = ?')
+  // Single LEFT-JOIN-style read against users + public_profile_summary
+  // so the friend row carries optional rank fields when the friend
+  // has opted in. Joining via LEFT JOIN means a friend with no
+  // summary row still resolves cleanly (only alias is required).
+  const joined = await env.DB.prepare(
+    `SELECT u.alias            AS alias,
+            p.rank_tier        AS rank_tier,
+            p.rank_division    AS rank_division,
+            p.rank_label       AS rank_label,
+            p.rank_sort_value  AS rank_sort_value,
+            p.server_updated_at AS server_updated_at
+       FROM users u
+       LEFT JOIN public_profile_summary p ON p.user_id = u.id
+      WHERE u.id = ?`,
+  )
     .bind(otherId)
-    .first<{ alias: string }>();
-  if (!other) return null;
-  return {
+    .first<{ alias: string } & PublicProfileFriendRow>();
+  if (!joined) return null;
+  const out: SerializedFriendRow = {
     id: row.id,
     user_id: otherId,
-    alias: other.alias,
+    alias: joined.alias,
     status: row.status,
     direction,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+  // Merge optional rank fields only when the friend has a summary.
+  // rankLabel + rank_tier are NOT NULL on the summary row, so their
+  // presence is the gate. rank_points is NEVER returned to friends
+  // in v1.
+  if (joined.rank_label && joined.rank_tier) {
+    out.rankTier      = joined.rank_tier;
+    out.rankDivision  = joined.rank_division; // may be null for S+
+    out.rankLabel     = joined.rank_label;
+    out.rankSortValue = joined.rank_sort_value ?? 0;
+    if (typeof joined.server_updated_at === 'number' && Number.isFinite(joined.server_updated_at)) {
+      out.rankUpdatedAt = new Date(joined.server_updated_at).toISOString();
+    }
+  }
+  return out;
 }
 
 // ─────────────────────────────────────────────────────────────

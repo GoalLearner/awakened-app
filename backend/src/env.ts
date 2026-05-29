@@ -73,4 +73,9 @@ export interface Env {
   /** 100K Step Club roster (v3 Phase 1z.52) — guards
    *  GET /v1/leaderboard/step-100k-club. namespace_id 1013 in wrangler.toml. */
   RL_LEADERBOARD_STEP_100K_CLUB: RateLimit;
+  /** Friend rank badges MVP (v3 Phase 1z.190) — guards
+   *  PUT /v1/users/me/public-profile-summary. namespace_id 1014 in
+   *  wrangler.toml. Conservative: 6/min per user, since the client
+   *  debounces submits to label-change + daily heartbeat. */
+  RL_PUBLIC_PROFILE_WRITE: RateLimit;
 }

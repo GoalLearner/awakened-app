@@ -4,7 +4,68 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.188 Kill Log Monster Archive grouping (read this first)
+## May 29, 2026 — 1z.190 Backend MVP: public_profile_summary + friend rank LEFT JOIN (read this first)
+
+**Backend-only train.** Frontend untouched; no app/sw knob bumps. Adds the D1 table + authenticated PUT endpoint + LEFT JOIN extension needed to power the dormant 1z.186 friend rank badge / sort seams. The migration file exists but **has NOT been applied to production D1**, and the Worker **has NOT been deployed**. Both gates require explicit approval before running. The frontend client-side submit path is deliberately deferred to Phase 1z.191.
+
+**Files added.**
+- `backend/migrations/0012_public_profile_summary.sql` — table + DESC index on `rank_sort_value`. One row per user, FK to `users(id)` with `ON DELETE CASCADE`. Reserved `metadata_json` column for future achievement payloads (no migration needed to extend).
+- `backend/src/handlers/public-profile-summary.ts` — `handlePublicProfileSummaryPut`. Shape + range validation only; backend NEVER recomputes rank from XP / HealthKit / `user_state_snapshots.state_json`. Tier ∈ `{E, D, C, B, A, S, S+}`, division ∈ `{I, II, III, null}` with the S+ ↔ null constraint enforced, label cross-checked against tier/division, `rank_sort_value ∈ [0, 6_999_999_999]`, `rank_points ∈ [0, 999_999_999]`, `clientUpdatedAt` parses as ISO. UPSERT by `user_id`; `metadata_json` stays NULL in v1. Response: `{ ok, rankLabel, rankSortValue, rankUpdatedAt }`.
+- `backend/src/handlers/public-profile-summary.test.ts` — 14 tests covering rate-limit short-circuit, malformed JSON, every validation branch (invalid tier / S+ ↔ null / non-S+ ↔ I-II-III / label-mismatch / regex / non-integer sort / negative sort / above ceiling / negative points / bad timestamp), the happy D II path with exact bind shape assertions, and the S+ happy path with `null` division.
+
+**Files modified.**
+- `backend/src/env.ts` — added `RL_PUBLIC_PROFILE_WRITE: RateLimit` (namespace_id 1014, 6/min/user).
+- `backend/wrangler.toml` — added the matching `[[unsafe.bindings]]` block.
+- `backend/src/index.ts` — added `import { handlePublicProfileSummaryPut }` and the `PUT /v1/users/me/public-profile-summary` route inside the authenticated dispatcher.
+- `backend/src/handlers/friends.ts` — `serializeFriendRow` rewritten to do a single LEFT JOIN against `public_profile_summary` per friend row. When the join produces a row, optional fields `rankTier` / `rankDivision` / `rankLabel` / `rankSortValue` / `rankUpdatedAt` are merged onto the response. `rank_points` and `metadata_json` are intentionally withheld from friend responses in v1 (privacy: hides exact XP magnitude and reserves the future achievement payload). The return type is exported as `SerializedFriendRow`. Existing callers (`handleFriendsList`, `handleFriendsRequest`, `handleFriendsAccept`, `handleFriendsRemove`) unchanged — they continue to call `serializeFriendRow` the same way and receive the augmented shape automatically. Friend add/remove/accept/decline behavior unchanged.
+
+**Test results.** 144/144 tests pass across the full backend suite (11 files). 14 new tests in `public-profile-summary.test.ts`. Two pre-existing TypeScript fixture errors in `apple-jwks.test.ts` and `session-jwt.test.ts` (predate this train; baseline-confirmed via git stash) are still present but do not block test execution — vitest compiles & runs them via its own loader.
+
+**Knobs.** Backend-only train: `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w64`, `app.js?v=517`, `auth.js?v=18`, `sw.js CACHE_VERSION v5.403`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS = false` — **all unchanged**.
+
+**What this phase does NOT do.**
+- No client submit path. The frontend continues to send no `PUT /v1/users/me/public-profile-summary` requests. No friend will appear with rank fields until Phase 1z.191 wires the submit.
+- No friend list sort order change. The dormant 1z.186 rank sort branch only activates when **every** accepted friend's `_friendRankSortValue` is non-null. Today every friend's rank fields are absent → seam stays dormant → server order preserved.
+- No production D1 mutation. The migration file is committed but `wrangler d1 execute --remote` has NOT been run.
+- No Worker deploy. `wrangler deploy` has NOT been run.
+
+**Deploy commands for later (DO NOT RUN until approved).**
+
+```bash
+# 1. Local dry-run of the migration against the embedded D1
+cd backend
+npx wrangler d1 execute awakened-db --local \
+  --file=migrations/0012_public_profile_summary.sql
+
+# 2. Apply migration to production D1
+npx wrangler d1 execute awakened-db --remote \
+  --file=migrations/0012_public_profile_summary.sql
+
+# 3. Deploy the Worker (which now needs RL_PUBLIC_PROFILE_WRITE
+#    to be bound — wrangler.toml is already updated).
+npx wrangler deploy
+```
+
+**Rollback if production deploy happens.** Two reverts: (a) `npx wrangler rollback` to the previous worker, and (b) `wrangler d1 execute awakened-db --remote --command "DROP TABLE public_profile_summary"` after confirming no production data depends on it. The friends-list LEFT JOIN tolerates the table being absent — D1 raises an error at query time; if a rollback ever leaves the worker live without the table, swap back to the previous `serializeFriendRow` (one revert).
+
+**Guard rails preserved.**
+- No D1 mutation in production.
+- No Worker deploy.
+- Backend never parses `user_state_snapshots.state_json` (continues to be opaque).
+- Backend never recomputes rank from XP / HealthKit.
+- No bosses slain / leaderboard step proxy.
+- No fake rank data added — every row has to be client-submitted by an authenticated session and is range-validated.
+- Friend add/remove/accept/decline behavior unchanged.
+- HealthKit untouched.
+- Leaderboard metric logic untouched.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Next prompt.** Phase 1z.191: client `_publicRankSummary(totalPoints)` builder using existing `getRankDivisionInfo` + the 1z.189 `rankSortValue` formula, debounced `POST /v1/users/me/public-profile-summary` on label-change + daily heartbeat, friend list automatically sorting once all rows have data.
+
+---
+
+## May 29, 2026 — 1z.188 Kill Log Monster Archive grouping
 
 **TL;DR.** Switches the Kill Log row layout from Variation A (flat Codex Ledger panel, 1z.187) to **Variation C — Monster Archive** from the same Claude Design `Kill Log.html` bundle. Rows are now grouped by rank into E / D / C sections (S→E ordering when higher tiers exist), each with its own diamond crest header, per-group SLAIN total, fading rank-color rule, and a left-accent panel in the rank color. Compact 9px rows inside each group — small dot + Cinzel name + the same gold kill capsule from 1z.187. Ledger strip (TOTAL KILLS · BOSSES · TOP RANK) and italic Cormorant blurb above are preserved; the blurb copy updates to "Archived by rank. The deeper the rank, the rarer the kill."
 

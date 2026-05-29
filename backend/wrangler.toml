@@ -160,3 +160,14 @@ name = "RL_LEADERBOARD_STEP_100K_CLUB"
 type = "ratelimit"
 namespace_id = "1013"
 simple = { limit = 30, period = 60 }  # 30/min per user
+
+# Friend rank badges MVP (v3 Phase 1z.190). Authenticated upsert of
+# the caller's public_profile_summary row. The client debounces
+# submits to rank-label changes + a daily heartbeat, so 6/min is
+# comfortably above legit usage and far below abuse. Single D1
+# UPSERT per request.
+[[unsafe.bindings]]
+name = "RL_PUBLIC_PROFILE_WRITE"
+type = "ratelimit"
+namespace_id = "1014"
+simple = { limit = 6, period = 60 }   # 6/min per user

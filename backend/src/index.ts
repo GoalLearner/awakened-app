@@ -31,6 +31,7 @@ import { handleStep100kClub } from './handlers/step-100k-club';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
+import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import {
   handleFriendsList,
   handleFriendsRequest,
@@ -136,6 +137,11 @@ export default {
           } else if (path === '/v1/users/me/accolades' && method === 'GET') {
             // v3 Phase 1z.27 — 100K Step Club + future accolade types.
             response = await handleUserAccoladesGet(request, env, session);
+          } else if (path === '/v1/users/me/public-profile-summary' && method === 'PUT') {
+            // v3 Phase 1z.190 — Friend rank badges MVP. Upserts the
+            // caller's public_profile_summary row. Read path is the
+            // LEFT JOIN inside handleFriendsList.
+            response = await handlePublicProfileSummaryPut(request, env, session);
           }
           // ── Discipline Duels v1 (v3 Phase 1x) ──
           else if (path === '/v1/friends' && method === 'GET') {
