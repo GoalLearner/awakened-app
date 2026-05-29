@@ -4,7 +4,87 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.193 Guild Members Roster real rank badges (read this first)
+## May 29, 2026 — 1z.195 Backend MVP-A public achievement summary fields (read this first)
+
+**TL;DR.** Backend-only train. Extends 0012's `public_profile_summary` with four typed achievement columns (`bosses_slain_total`, `ultra_rare_drops_total`, `verified_streak_label`, `achievements_updated_at`), extends the existing PUT validation + UPSERT to accept an optional `achievements` block with strict per-field range + regex allowlists, and extends `/v1/friends` LEFT JOIN to surface the new fields when a friend has submitted them. **Reuses the existing PUT endpoint, rate limiter, and JOIN — no new endpoint, no new table, no new rate limiter, no new auth.** Migration committed but NOT applied to production. Worker NOT deployed. Frontend untouched.
+
+**Files added.**
+- `backend/migrations/0013_public_profile_achievements.sql` — four `ALTER TABLE … ADD COLUMN` statements. Two `INTEGER NOT NULL DEFAULT 0` count columns; `verified_streak_label TEXT` nullable; `achievements_updated_at INTEGER` nullable so existing rows migrate cleanly without backfill.
+
+**Files modified.**
+- `backend/src/handlers/public-profile-summary.ts` —
+  - New caps: `BOSSES_SLAIN_MAX = 999_999`, `ULTRA_RARE_DROPS_MAX = 9_999`, `STREAK_LABEL_RE = /^\d{1,4}-day (MR|LI|stat|habit) streak$/`.
+  - New `validateAchievements(raw)` returns per-field `{ set, value }` tuples so the handler can distinguish "omitted (preserve existing column)" from "explicit value (overwrite, including null for streak-label clear)".
+  - Header docstring rewritten to enumerate the achievement validation rules and the privacy posture ("verifiedStreakLabel uses streak TYPE + LENGTH only — never the user's private habit name").
+  - UPSERT extended to write the four achievement columns. INSERT path uses `COALESCE(?, 0)` for the integer counts so a first-time achievements-only submission still records cleanly. UPDATE path uses per-field `CASE WHEN ?=1 THEN ? ELSE existing END` patterns gated on the per-field "set" sentinel, so omitted achievement fields are preserved verbatim. `achievements_updated_at` is stamped only when `hasAny=true`; rank-only daily heartbeats stay invisible to the achievements surface.
+  - Response now includes `achievementsUpdatedAt: ISO | null`.
+  - New 400 error codes: `INVALID_ACHIEVEMENTS`, `INVALID_BOSSES_SLAIN_TOTAL`, `INVALID_ULTRA_RARE_DROPS_TOTAL`, `INVALID_VERIFIED_STREAK_LABEL`.
+- `backend/src/handlers/friends.ts` — `PublicProfileFriendRow` extended with the four columns; `serializeFriendRow` LEFT JOIN now selects them; merge gated on `achievements_updated_at` being non-null so "friend never submitted achievements" stays absent from the response while "friend submitted zero bosses" returns `0` honestly. New optional fields on the friend payload: `bossesSlainTotal`, `ultraRareDropsTotal`, `verifiedStreakLabel` (may be null), `achievementsUpdatedAt`. `rank_points` and `metadata_json` still NEVER returned (1z.190 posture preserved).
+- `backend/src/handlers/public-profile-summary.test.ts` — existing happy-path test asserts `achievementsUpdatedAt: null` for rank-only submits + verifies all four CASE WHEN sentinels are 0. 14 new tests cover the achievement validation matrix, partial-field upserts, empty-object no-op, explicit-null streak-label clear, zero-value bossesSlainTotal as a real submission, and the four-streak-type regex allowlist.
+
+**Tests run.** `npx vitest run` → **166/166 pass** (152 baseline + 14 new). No regressions.
+
+**Knobs.** Backend-only train: `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w66`, `app.js?v=519`, `auth.js?v=19`, `sw.js CACHE_VERSION v5.405`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS=false` — **all unchanged**.
+
+**Write semantics matrix.**
+
+| Client body | Existing rank columns | Existing achievement columns | `achievements_updated_at` |
+|---|---|---|---|
+| Rank fields only (no `achievements` key) | Overwrite | **Preserve verbatim** | **Preserve verbatim** |
+| Rank fields + `achievements: {}` | Overwrite | **Preserve verbatim** | **Preserve verbatim** |
+| Rank fields + `achievements: { bossesSlainTotal: 28 }` | Overwrite | Only `bosses_slain_total` overwrites | **Stamp** Date.now() |
+| Rank fields + `achievements: { verifiedStreakLabel: null }` | Overwrite | Only `verified_streak_label` overwrites (cleared) | **Stamp** Date.now() |
+| Rank fields + all three present | Overwrite | All three overwrite | **Stamp** Date.now() |
+
+**Privacy posture preserved.**
+- Backend NEVER recomputes rank or achievements from XP / HealthKit / `user_state_snapshots.state_json`.
+- `rank_points` and `metadata_json` NEVER returned to friends. (`metadata_json` stays unused in v1.)
+- `verified_streak_label` cannot leak habit names — regex allowlists streak TYPE only (`MR | LI | stat | habit`).
+- Boss / drop / streak counts are pure aggregates; no per-event timestamps, item identities, or boss IDs.
+- No PHI, no raw HealthKit, no daily step / sleep / workout samples.
+
+**What this phase does NOT do.**
+- No client submit path. The frontend continues to send only rank fields (1z.191 payload). Friend rows will not surface achievement fields until Phase 1z.196 wires the client builder + extends the PUT body.
+- No new UI. Roster sheet keeps its 1z.193 rank badge; new columns will land in 1z.196 once data flows.
+- No production D1 mutation. Migration file committed but `wrangler d1 execute --remote` has NOT been run.
+- No Worker deploy. `wrangler deploy` has NOT been run.
+
+**Deploy commands for later (DO NOT RUN until approved).**
+
+```bash
+cd backend
+# 1. Optional: local dry-run against embedded D1
+npx wrangler d1 execute awakened-db --local \
+  --file=migrations/0013_public_profile_achievements.sql
+
+# 2. Apply migration to production D1
+npx wrangler d1 execute awakened-db --remote \
+  --file=migrations/0013_public_profile_achievements.sql
+
+# 3. Deploy the Worker
+npx wrangler deploy
+```
+
+**Rollback (if production deploy happens).** Two reverts: (a) `npx wrangler rollback` to the previous worker, (b) optional `ALTER TABLE … DROP COLUMN` rollback per column or roll forward with a fixup migration. The handler tolerates missing columns gracefully ONLY if the SQL bindings are matched; production rollback should always revert the worker first, then the schema.
+
+**Guard rails preserved.**
+- No D1 mutation in production.
+- No Worker deploy.
+- Backend never parses `user_state_snapshots.state_json`.
+- Backend never recomputes rank or achievements from XP / HealthKit.
+- No bosses-slain / leaderboard step proxy.
+- No fake achievement data — every value requires authenticated client submission with range/regex validation.
+- Friend add/remove/accept/decline behavior unchanged.
+- HealthKit untouched.
+- Leaderboard metric logic untouched.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Next prompt.** Phase 1z.196: client `_publicAchievementsSummary()` builder reading `hb_bosses` totals + `hb_inventory` ultra-rare card count + highest active streak band from `PR_DEFS`. Extend the 1z.191 PUT payload with `achievements`. Surface new fields in the Roster sheet only when present; alias initials / `—` fallbacks when missing. No fake data.
+
+---
+
+## May 29, 2026 — 1z.193 Guild Members Roster real rank badges
 
 **TL;DR.** The Roster sheet (HUNTERS tile) now mirrors the lower Guild accordion: real backend rank label in the avatar circle when available (`E III` / `D II` / `C I` / `S+`), alias initial fallback when not, and the `Guild member` subtitle is gone. The self row is enriched with the locally-derived rank from `_publicRankSummary(totalPoints)` — same value the user submits to backend; not faked. Friend ordering is now conditional: rank-sort strongest-first when every friend has rank data; otherwise preserve the existing alphabetical sort.
 

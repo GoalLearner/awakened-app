@@ -239,16 +239,22 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
       rankLabel: string;
       rankSortValue: number;
       rankUpdatedAt: string;
+      achievementsUpdatedAt: string | null;
     };
     expect(json.ok).toBe(true);
     expect(json.rankLabel).toBe('D II');
     expect(json.rankSortValue).toBe(1_001_001_500);
     expect(json.rankUpdatedAt).toBe(new Date(Date.UTC(2026, 4, 29, 12, 0, 0)).toISOString());
+    // v3 Phase 1z.195 — rank-only submit must NOT churn the
+    // achievements timestamp; rank-only daily heartbeats stay
+    // invisible to the friend-achievements surface.
+    expect(json.achievementsUpdatedAt).toBeNull();
 
     const calls = db._calls();
     expect(calls.length).toBe(1);
     expect(calls[0]?.sql).toMatch(/INSERT INTO public_profile_summary/);
-    // binds: user_id, tier, division, label, sort, points, clientUpdatedAt, serverUpdatedAt
+    // INSERT binds 0-7: user_id, tier, division, label, sort,
+    // points, clientUpdatedAt, serverUpdatedAt.
     expect(calls[0]?.binds[0]).toBe('user-abc');
     expect(calls[0]?.binds[1]).toBe('D');
     expect(calls[0]?.binds[2]).toBe('II');
@@ -257,6 +263,20 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(calls[0]?.binds[5]).toBe(1500);
     expect(calls[0]?.binds[6]).toBe('2026-05-29T00:00:00.000Z');
     expect(calls[0]?.binds[7]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
+    // v3 Phase 1z.195 — achievement INSERT binds (8-11) are all
+    // null when no achievements are submitted, so the COALESCE on
+    // the int columns falls back to DEFAULT 0 and the streak label
+    // stores as NULL. achievements_updated_at stays NULL.
+    expect(calls[0]?.binds[8]).toBeNull();
+    expect(calls[0]?.binds[9]).toBeNull();
+    expect(calls[0]?.binds[10]).toBeNull();
+    expect(calls[0]?.binds[11]).toBeNull();
+    // ON CONFLICT CASE WHEN sentinels (12, 14, 16, 18) — all 0
+    // because no achievement fields were set.
+    expect(calls[0]?.binds[12]).toBe(0);
+    expect(calls[0]?.binds[14]).toBe(0);
+    expect(calls[0]?.binds[16]).toBe(0);
+    expect(calls[0]?.binds[18]).toBe(0);
   });
 
   it('upserts a valid S+ summary with null division', async () => {
@@ -280,5 +300,242 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(calls[0]?.binds[1]).toBe('S+');
     expect(calls[0]?.binds[2]).toBe(null);
     expect(calls[0]?.binds[3]).toBe('S+');
+  });
+});
+
+// v3 Phase 1z.195 — Global Friend Achievements MVP-A validation
+// + write semantics. The achievements block is optional; missing
+// achievements must preserve existing column values verbatim and
+// must NOT churn achievements_updated_at.
+describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2026, 4, 29, 12, 0, 0)));
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('rejects non-object achievements field', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: 'not-an-object' }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_ACHIEVEMENTS');
+  });
+
+  it('rejects array achievements field', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: [1, 2, 3] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_ACHIEVEMENTS');
+  });
+
+  it('rejects bossesSlainTotal out of range', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: { bossesSlainTotal: 1_000_000 } }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_BOSSES_SLAIN_TOTAL');
+  });
+
+  it('rejects non-integer bossesSlainTotal', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: { bossesSlainTotal: 28.5 } }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_BOSSES_SLAIN_TOTAL');
+  });
+
+  it('rejects ultraRareDropsTotal out of range', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: { ultraRareDropsTotal: 10_000 } }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_ULTRA_RARE_DROPS_TOTAL');
+  });
+
+  it('rejects malformed verifiedStreakLabel', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: { verifiedStreakLabel: '30-day Quit-Smoking streak' } }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_VERIFIED_STREAK_LABEL');
+  });
+
+  it('rejects verifiedStreakLabel with disallowed type', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: { verifiedStreakLabel: '30-day sleep streak' } }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('INVALID_VERIFIED_STREAK_LABEL');
+  });
+
+  it('accepts all four streak types via regex (MR / LI / stat / habit)', async () => {
+    const labels = ['7-day MR streak', '14-day LI streak', '30-day stat streak', '100-day habit streak'];
+    for (const label of labels) {
+      const db = makeDb();
+      const res = await handlePublicProfileSummaryPut(
+        makeReq({ ...validPayload, achievements: { verifiedStreakLabel: label } }),
+        makeEnv(db),
+        session,
+      );
+      expect(res.status).toBe(200);
+    }
+  });
+
+  it('upserts a full achievement payload and stamps achievementsUpdatedAt', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({
+        ...validPayload,
+        achievements: {
+          bossesSlainTotal:    28,
+          ultraRareDropsTotal: 1,
+          verifiedStreakLabel: '30-day MR streak',
+        },
+      }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json() as {
+      rankLabel: string;
+      achievementsUpdatedAt: string | null;
+    };
+    expect(json.rankLabel).toBe('D II');
+    expect(json.achievementsUpdatedAt).toBe(
+      new Date(Date.UTC(2026, 4, 29, 12, 0, 0)).toISOString(),
+    );
+
+    const calls = db._calls();
+    expect(calls[0]?.sql).toMatch(/INSERT INTO public_profile_summary/);
+    // INSERT binds 8-11: bosses, drops, streak label, ach ts.
+    expect(calls[0]?.binds[8]).toBe(28);
+    expect(calls[0]?.binds[9]).toBe(1);
+    expect(calls[0]?.binds[10]).toBe('30-day MR streak');
+    expect(calls[0]?.binds[11]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
+    // Sentinels (12, 14, 16, 18) — all 1 since all fields set.
+    expect(calls[0]?.binds[12]).toBe(1);
+    expect(calls[0]?.binds[14]).toBe(1);
+    expect(calls[0]?.binds[16]).toBe(1);
+    expect(calls[0]?.binds[18]).toBe(1);
+  });
+
+  it('partial achievement payload only marks present fields for update', async () => {
+    const db = makeDb();
+    await handlePublicProfileSummaryPut(
+      makeReq({
+        ...validPayload,
+        achievements: { bossesSlainTotal: 28 },
+      }),
+      makeEnv(db),
+      session,
+    );
+    const calls = db._calls();
+    // bossesSlainTotal set → sentinel 1, value 28
+    expect(calls[0]?.binds[12]).toBe(1);
+    expect(calls[0]?.binds[13]).toBe(28);
+    // ultraRareDropsTotal NOT set → sentinel 0
+    expect(calls[0]?.binds[14]).toBe(0);
+    // verifiedStreakLabel NOT set → sentinel 0
+    expect(calls[0]?.binds[16]).toBe(0);
+    // achievements_updated_at: hasAny=true → sentinel 1 + stamped ts
+    expect(calls[0]?.binds[18]).toBe(1);
+    expect(calls[0]?.binds[19]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
+  });
+
+  it('empty achievements object is treated as a no-op for the achievement surface', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, achievements: {} }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json() as { achievementsUpdatedAt: string | null };
+    expect(json.achievementsUpdatedAt).toBeNull();
+
+    const calls = db._calls();
+    // Every sentinel must be 0 → preserve every existing value.
+    expect(calls[0]?.binds[12]).toBe(0);
+    expect(calls[0]?.binds[14]).toBe(0);
+    expect(calls[0]?.binds[16]).toBe(0);
+    expect(calls[0]?.binds[18]).toBe(0);
+  });
+
+  it('explicit null verifiedStreakLabel marks the field for clear', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({
+        ...validPayload,
+        achievements: { verifiedStreakLabel: null },
+      }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    // verifiedStreakLabel set (explicit null) → sentinel 1 + null value
+    expect(calls[0]?.binds[16]).toBe(1);
+    expect(calls[0]?.binds[17]).toBeNull();
+    // Other counts NOT set → sentinel 0
+    expect(calls[0]?.binds[12]).toBe(0);
+    expect(calls[0]?.binds[14]).toBe(0);
+    // hasAny=true → ach timestamp stamped
+    expect(calls[0]?.binds[18]).toBe(1);
+  });
+
+  it('accepts zero bossesSlainTotal as a real submitted value (not a clear)', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({
+        ...validPayload,
+        achievements: { bossesSlainTotal: 0 },
+      }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    expect(calls[0]?.binds[12]).toBe(1);
+    expect(calls[0]?.binds[13]).toBe(0);
+  });
+
+  it('rank-only submit leaves CASE WHEN sentinels all zero (preserve existing achievement columns)', async () => {
+    const db = makeDb();
+    await handlePublicProfileSummaryPut(makeReq(validPayload), makeEnv(db), session);
+    const calls = db._calls();
+    expect(calls[0]?.binds[12]).toBe(0);
+    expect(calls[0]?.binds[14]).toBe(0);
+    expect(calls[0]?.binds[16]).toBe(0);
+    expect(calls[0]?.binds[18]).toBe(0);
   });
 });

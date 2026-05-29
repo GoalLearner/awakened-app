@@ -80,6 +80,14 @@ interface PublicProfileFriendRow {
   rank_label: string | null;
   rank_sort_value: number | null;
   server_updated_at: number | null;
+  // v3 Phase 1z.195 — Global Friend Achievements MVP-A.
+  // Cumulative count aggregates + a public-safe streak label.
+  // rank_points + metadata_json are still intentionally withheld
+  // from friend responses.
+  bosses_slain_total: number | null;
+  ultra_rare_drops_total: number | null;
+  verified_streak_label: string | null;
+  achievements_updated_at: number | null;
 }
 
 interface SerializedFriendRow {
@@ -100,6 +108,15 @@ interface SerializedFriendRow {
   rankLabel?: string;
   rankSortValue?: number;
   rankUpdatedAt?: string;
+  // v3 Phase 1z.195 — Global Friend Achievements MVP-A. Cumulative
+  // count aggregates + a public-safe verified streak label. Only
+  // present when the friend has submitted achievements.
+  // verifiedStreakLabel uses streak TYPE + LENGTH only ("30-day MR
+  // streak"); the user's private habit name is NEVER part of it.
+  bossesSlainTotal?: number;
+  ultraRareDropsTotal?: number;
+  verifiedStreakLabel?: string | null;
+  achievementsUpdatedAt?: string;
 }
 
 /** Build the response shape for a single friend row from the perspective
@@ -126,12 +143,16 @@ async function serializeFriendRow(
   // has opted in. Joining via LEFT JOIN means a friend with no
   // summary row still resolves cleanly (only alias is required).
   const joined = await env.DB.prepare(
-    `SELECT u.alias            AS alias,
-            p.rank_tier        AS rank_tier,
-            p.rank_division    AS rank_division,
-            p.rank_label       AS rank_label,
-            p.rank_sort_value  AS rank_sort_value,
-            p.server_updated_at AS server_updated_at
+    `SELECT u.alias                  AS alias,
+            p.rank_tier              AS rank_tier,
+            p.rank_division          AS rank_division,
+            p.rank_label             AS rank_label,
+            p.rank_sort_value        AS rank_sort_value,
+            p.server_updated_at      AS server_updated_at,
+            p.bosses_slain_total     AS bosses_slain_total,
+            p.ultra_rare_drops_total AS ultra_rare_drops_total,
+            p.verified_streak_label  AS verified_streak_label,
+            p.achievements_updated_at AS achievements_updated_at
        FROM users u
        LEFT JOIN public_profile_summary p ON p.user_id = u.id
       WHERE u.id = ?`,
@@ -159,6 +180,20 @@ async function serializeFriendRow(
     out.rankSortValue = joined.rank_sort_value ?? 0;
     if (typeof joined.server_updated_at === 'number' && Number.isFinite(joined.server_updated_at)) {
       out.rankUpdatedAt = new Date(joined.server_updated_at).toISOString();
+    }
+    // v3 Phase 1z.195 — achievement summary fields. Only surface
+    // them once the friend has actually submitted achievements
+    // (gated on achievements_updated_at being non-null). This
+    // distinguishes "friend has never submitted" (omit all) from
+    // "friend submitted zero bosses" (return 0 honestly). Streak
+    // label is intentionally allowed to be null (deliberate clear)
+    // even when other achievement fields are present.
+    if (typeof joined.achievements_updated_at === 'number'
+        && Number.isFinite(joined.achievements_updated_at)) {
+      out.bossesSlainTotal     = joined.bosses_slain_total ?? 0;
+      out.ultraRareDropsTotal  = joined.ultra_rare_drops_total ?? 0;
+      out.verifiedStreakLabel  = joined.verified_streak_label; // may be null
+      out.achievementsUpdatedAt = new Date(joined.achievements_updated_at).toISOString();
     }
   }
   return out;

@@ -1,16 +1,18 @@
 /**
- * Public profile summary handler (v3 Phase 1z.190).
+ * Public profile summary handler (v3 Phase 1z.190 + 1z.195).
  *
  *   PUT /v1/users/me/public-profile-summary
  *
  * Authenticated. Upserts the caller's row in `public_profile_summary`
- * with a preformatted public rank summary. The backend NEVER
- * recomputes rank from XP, HealthKit, or the opaque
- * `user_state_snapshots.state_json` blob — rank derivation lives
- * exclusively in the client `getRankDivisionInfo` helper (single
- * source of truth, locked in 1z.189).
+ * with a preformatted public rank summary AND optional public
+ * achievement summary fields (Global Friend Achievements MVP-A).
+ * The backend NEVER recomputes rank or achievements from XP,
+ * HealthKit, or the opaque `user_state_snapshots.state_json` blob —
+ * derivation lives exclusively in the client (rank via
+ * `getRankDivisionInfo`, achievement aggregates via locally-
+ * computed counts of inventory + bosses + streak bands).
  *
- * Validation is shape + range only:
+ * Rank validation (1z.190):
  *   - rankTier ∈ {E, D, C, B, A, S, S+}
  *   - rankDivision ∈ {I, II, III, null}
  *   - if rankTier === 'S+'  then rankDivision === null
@@ -20,11 +22,35 @@
  *   - rankPoints is a finite integer in [0, 999_999_999]
  *   - clientUpdatedAt parses as a finite Date
  *
+ * Achievements validation (1z.195) — optional `achievements`
+ * object on the body. When present:
+ *   - bossesSlainTotal     : optional integer in [0, 999_999]
+ *   - ultraRareDropsTotal  : optional integer in [0, 9_999]
+ *   - verifiedStreakLabel  : optional string matching
+ *       /^\d{1,4}-day (MR|LI|stat|habit) streak$/
+ * Streak label uses the streak TYPE + LENGTH only — NEVER the
+ * user's private habit name. Cumulative counts are aggregates;
+ * we never receive per-event timestamps or item identities.
+ *
  * Read path: handlers/friends.ts' serializeFriendRow LEFT JOINs
- * this table and merges optional rank fields onto the friend row.
- * `rank_points` is intentionally withheld from the friends payload
- * in v1 (privacy: hides exact XP magnitude); only rankLabel /
- * rankSortValue / rankTier / rankDivision / rankUpdatedAt leak out.
+ * this table and merges optional rank + achievement fields onto
+ * the friend row. `rank_points` and `metadata_json` are
+ * intentionally withheld from the friends payload (privacy:
+ * hides exact XP magnitude; metadata stays an opaque future
+ * seam). Achievement fields leak out as cumulative counts only.
+ *
+ * Write semantics for achievements:
+ *   - If the body omits `achievements` entirely, achievement
+ *     columns and `achievements_updated_at` are preserved
+ *     verbatim. The rank-only daily heartbeat is a true no-op
+ *     for the achievement surface.
+ *   - If the body contains `achievements: {}` (an empty object,
+ *     or one with all-undefined fields), nothing changes — same
+ *     preservation rule.
+ *   - If the body contains at least one defined achievement
+ *     field, ONLY those provided fields update; omitted ones
+ *     are preserved via COALESCE. `achievements_updated_at` is
+ *     set to Date.now().
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -43,6 +69,17 @@ const RANK_LABEL_RE = /^(E|D|C|B|A|S|S\+)(?: (I|II|III))?$/;
 const SORT_VALUE_MAX = 6_999_999_999;
 const RANK_POINTS_MAX = 999_999_999;
 
+// v3 Phase 1z.195 — public achievement summary caps. Tight enough
+// to defend against accidental client-side overflow without being
+// so tight that a legitimate hardcore user hits the wall.
+const BOSSES_SLAIN_MAX     = 999_999;
+const ULTRA_RARE_DROPS_MAX = 9_999;
+// Streak label allowlist: "<digits>-day <type> streak". Types are
+// the four streak kinds the client tracks (Morning Routine, Locked-
+// In, top stat, top habit). The user's private habit name is NEVER
+// part of this label.
+const STREAK_LABEL_RE = /^\d{1,4}-day (MR|LI|stat|habit) streak$/;
+
 interface PutBody {
   rankTier?: unknown;
   rankDivision?: unknown;
@@ -50,6 +87,21 @@ interface PutBody {
   rankSortValue?: unknown;
   rankPoints?: unknown;
   clientUpdatedAt?: unknown;
+  achievements?: unknown;
+}
+
+// Per-field "was this key present in the achievements object?"
+// distinguishes "omitted → preserve existing column" from
+// "explicit value supplied → overwrite". Crucial for the null
+// case: a null verifiedStreakLabel from the client is a deliberate
+// "clear my streak" signal, while omitting the key entirely
+// preserves whatever's already in D1.
+interface AchField<T> { set: boolean; value: T | null }
+interface ValidatedAchievements {
+  bossesSlainTotal:     AchField<number>;
+  ultraRareDropsTotal:  AchField<number>;
+  verifiedStreakLabel:  AchField<string>;
+  hasAny:               boolean;
 }
 
 interface Validated {
@@ -59,6 +111,7 @@ interface Validated {
   rankSortValue: number;
   rankPoints: number;
   clientUpdatedAt: string;
+  achievements: ValidatedAchievements;
 }
 
 function isAllowedTier(v: unknown): v is (typeof ALLOWED_TIERS)[number] {
@@ -77,6 +130,90 @@ function isSafeInt(v: unknown, min: number, max: number): v is number {
     v >= min &&
     v <= max
   );
+}
+
+// v3 Phase 1z.195 — validate the optional achievements object.
+// Returns:
+//   { ok: true, value }     — all present fields are valid;
+//                             value.hasAny=false means the object
+//                             was present but every field was
+//                             undefined (no-op for the upsert).
+//   { ok: false, code, ... }— at least one defined field failed
+//                             validation. We surface a 400 so the
+//                             client can fix the payload.
+//
+// Per spec: a missing `achievements` key entirely means "preserve
+// every achievement column verbatim, do NOT churn
+// achievements_updated_at". The caller decides what to do with
+// `hasAny=false` (treat it the same as a fully-missing object).
+function validateAchievements(raw: unknown):
+  | { ok: true; value: ValidatedAchievements }
+  | { ok: false; code: string; detail: string } {
+  const blank: ValidatedAchievements = {
+    bossesSlainTotal:    { set: false, value: null },
+    ultraRareDropsTotal: { set: false, value: null },
+    verifiedStreakLabel: { set: false, value: null },
+    hasAny:              false,
+  };
+  if (raw === undefined) return { ok: true, value: blank };
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {
+      ok: false,
+      code: 'INVALID_ACHIEVEMENTS',
+      detail: 'achievements must be an object when present.',
+    };
+  }
+  const obj = raw as Record<string, unknown>;
+  const out: ValidatedAchievements = {
+    bossesSlainTotal:    { set: false, value: null },
+    ultraRareDropsTotal: { set: false, value: null },
+    verifiedStreakLabel: { set: false, value: null },
+    hasAny:              false,
+  };
+
+  if ('bossesSlainTotal' in obj) {
+    if (!isSafeInt(obj.bossesSlainTotal, 0, BOSSES_SLAIN_MAX)) {
+      return {
+        ok: false,
+        code: 'INVALID_BOSSES_SLAIN_TOTAL',
+        detail: `bossesSlainTotal must be an integer in [0, ${BOSSES_SLAIN_MAX}].`,
+      };
+    }
+    out.bossesSlainTotal = { set: true, value: obj.bossesSlainTotal };
+    out.hasAny = true;
+  }
+
+  if ('ultraRareDropsTotal' in obj) {
+    if (!isSafeInt(obj.ultraRareDropsTotal, 0, ULTRA_RARE_DROPS_MAX)) {
+      return {
+        ok: false,
+        code: 'INVALID_ULTRA_RARE_DROPS_TOTAL',
+        detail: `ultraRareDropsTotal must be an integer in [0, ${ULTRA_RARE_DROPS_MAX}].`,
+      };
+    }
+    out.ultraRareDropsTotal = { set: true, value: obj.ultraRareDropsTotal };
+    out.hasAny = true;
+  }
+
+  if ('verifiedStreakLabel' in obj) {
+    // Null is a deliberate "clear my streak label" signal.
+    if (obj.verifiedStreakLabel === null) {
+      out.verifiedStreakLabel = { set: true, value: null };
+      out.hasAny = true;
+    } else if (typeof obj.verifiedStreakLabel === 'string'
+            && STREAK_LABEL_RE.test(obj.verifiedStreakLabel)) {
+      out.verifiedStreakLabel = { set: true, value: obj.verifiedStreakLabel };
+      out.hasAny = true;
+    } else {
+      return {
+        ok: false,
+        code: 'INVALID_VERIFIED_STREAK_LABEL',
+        detail: 'verifiedStreakLabel must match "<digits>-day (MR|LI|stat|habit) streak" or be null.',
+      };
+    }
+  }
+
+  return { ok: true, value: out };
 }
 
 function validate(body: PutBody):
@@ -166,6 +303,15 @@ function validate(body: PutBody):
     };
   }
 
+  // v3 Phase 1z.195 — validate the optional achievements block.
+  // A failure here surfaces as a 400 with the specific field code
+  // so the client can correct the payload without resubmitting
+  // the entire rank block.
+  const achCheck = validateAchievements(body.achievements);
+  if (!achCheck.ok) {
+    return { ok: false, code: achCheck.code, detail: achCheck.detail };
+  }
+
   return {
     ok: true,
     value: {
@@ -175,6 +321,7 @@ function validate(body: PutBody):
       rankSortValue: body.rankSortValue,
       rankPoints: body.rankPoints,
       clientUpdatedAt: body.clientUpdatedAt,
+      achievements: achCheck.value,
     },
   };
 }
@@ -207,16 +354,47 @@ export async function handlePublicProfileSummaryPut(
   const v = check.value;
 
   const serverUpdatedAt = Date.now();
+  const ach = v.achievements;
+  // v3 Phase 1z.195 — only stamp achievements_updated_at when the
+  // client actually submitted at least one defined achievement
+  // field. Rank-only daily heartbeats must NOT churn this column.
+  const achievementsUpdatedAt = ach.hasAny ? serverUpdatedAt : null;
 
-  // Upsert by user_id. metadata_json stays NULL in v1; reserved for
-  // future achievement payloads. The PRIMARY KEY conflict path
-  // updates every mutable field but never touches the FK.
+  // Upsert by user_id. The PRIMARY KEY conflict path updates rank
+  // fields verbatim. Achievement columns use COALESCE so:
+  //   - omitted achievement field → preserve existing row value
+  //   - present achievement field → overwrite with the new value
+  //     (null is also a valid "clear my streak label" signal)
+  // metadata_json stays NULL in v1; reserved for genuinely future-
+  // unstable fields. Backend NEVER recomputes any of these from
+  // XP / HealthKit / user_state_snapshots.state_json.
+  //
+  // INSERT path (first-ever submission for this user): the four
+  // new achievement columns fall back to the table's DEFAULT 0 /
+  // NULL when the client omitted them. The corresponding bind
+  // value is the validated number/null/null, so a first-time
+  // achievements-only submission still records correctly.
+  // Per-field "set" flags drive the CASE WHEN selectors on the
+  // ON CONFLICT path so omitted achievement fields preserve
+  // existing column values verbatim. On the INSERT path (first
+  // submission for this user) COALESCE falls back to DEFAULT 0
+  // for the integer counts and explicit NULL for the streak
+  // label. INSERT is straight from the bound values; UPDATE uses
+  // per-field CASE WHEN to honor preservation.
+  const bossesSet = ach.bossesSlainTotal.set ? 1 : 0;
+  const dropsSet  = ach.ultraRareDropsTotal.set ? 1 : 0;
+  const streakSet = ach.verifiedStreakLabel.set ? 1 : 0;
+  const achSet    = ach.hasAny ? 1 : 0;
+
   await env.DB.prepare(
     `INSERT INTO public_profile_summary (
         user_id, rank_tier, rank_division, rank_label,
         rank_sort_value, rank_points,
-        client_updated_at, server_updated_at, metadata_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+        client_updated_at, server_updated_at, metadata_json,
+        bosses_slain_total, ultra_rare_drops_total,
+        verified_streak_label, achievements_updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
@@ -224,9 +402,22 @@ export async function handlePublicProfileSummaryPut(
         rank_sort_value   = excluded.rank_sort_value,
         rank_points       = excluded.rank_points,
         client_updated_at = excluded.client_updated_at,
-        server_updated_at = excluded.server_updated_at`,
+        server_updated_at = excluded.server_updated_at,
+        bosses_slain_total      = CASE WHEN ? = 1
+                                       THEN ?
+                                       ELSE public_profile_summary.bosses_slain_total END,
+        ultra_rare_drops_total  = CASE WHEN ? = 1
+                                       THEN ?
+                                       ELSE public_profile_summary.ultra_rare_drops_total END,
+        verified_streak_label   = CASE WHEN ? = 1
+                                       THEN ?
+                                       ELSE public_profile_summary.verified_streak_label END,
+        achievements_updated_at = CASE WHEN ? = 1
+                                       THEN ?
+                                       ELSE public_profile_summary.achievements_updated_at END`,
   )
     .bind(
+      // INSERT bindings (positional with the VALUES clause)
       session.userId,
       v.rankTier,
       v.rankDivision,
@@ -235,6 +426,15 @@ export async function handlePublicProfileSummaryPut(
       v.rankPoints,
       v.clientUpdatedAt,
       serverUpdatedAt,
+      ach.bossesSlainTotal.value,
+      ach.ultraRareDropsTotal.value,
+      ach.verifiedStreakLabel.value,
+      achievementsUpdatedAt,
+      // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
+      bossesSet, ach.bossesSlainTotal.value,
+      dropsSet,  ach.ultraRareDropsTotal.value,
+      streakSet, ach.verifiedStreakLabel.value,
+      achSet,    achievementsUpdatedAt,
     )
     .run();
 
@@ -243,5 +443,8 @@ export async function handlePublicProfileSummaryPut(
     rankLabel: v.rankLabel,
     rankSortValue: v.rankSortValue,
     rankUpdatedAt: new Date(serverUpdatedAt).toISOString(),
+    achievementsUpdatedAt: achievementsUpdatedAt !== null
+      ? new Date(achievementsUpdatedAt).toISOString()
+      : null,
   });
 }
