@@ -55,7 +55,123 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.173 Social Tab Polish — Command Panel + per-tile color (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.174 Social Tab w50 — stronger Command Panel + collapsed Friends accordion (read this first)
+
+### ✅ STATUS: User-requested polish round. Header compacted, subtitle removed, Activity solo-titled, Friends now accordion-collapsed by default with friends ABOVE Add Friend when expanded. Stronger Command Panel rim. Frontend-only. `2.2.3-w50` web bundle ready.
+
+### Changes (six surgical adjustments per user feedback)
+
+**1. Compacted Guild Hall header** — kicker and title now share one line.
+- Was (stacked, three lines): `· GUILD HALL ·` / `Social` (big Cinzel) / `Hunters bound to your guild. See their progress, climb together.`
+- Now (one line): `· GUILD HALL · SOCIAL` rendered as `<span class="guildhall-kicker">` + `<span class="guildhall-page-title-inline">` inside a `.guildhall-page-header--inline` flex row.
+- Subtitle paragraph removed from DOM entirely.
+
+**2. Stronger Command Panel rim** — bumped gradient opacity and added secondary radial glow.
+- Was: gradient at 55–65% opacity, single radial gold glow.
+- Now: gradient at 95–100% opacity (`rgba(167,139,250,0.95)` → `rgba(245,184,66,1.00)` → `rgba(167,139,250,0.95)`), dual radial glows (gold top + violet bottom), additional `0 0 24px rgba(167,139,250,0.28)` outer shadow.
+- Should be **unmistakably** more visible on iPhone now.
+
+**3. Bigger, more card-like stat tiles** — taller padding, thicker accent line, brighter values.
+- Tile padding `10/11 → 12/12/13`.
+- Cinzel value size `1.40rem → 1.55rem`.
+- Accent line `2px @ 0.7 opacity → 2.5px @ 0.85 opacity`.
+- Tile border opacity `0.18 → 0.10` (subtler) plus a glass-light top-edge gradient.
+- BOSSES SLAIN color changed from harsh `#ef4444` to **ember `#ff7a46`** so it reads as "epic kill count" not "error state."
+- Pressed state: `transform: scale(0.98)` + brighter glass.
+
+**4. Activity title — "Recent feats" subtitle removed.**
+- Was: `· GUILD ACTIVITY ·` kicker + `Recent feats` subtitle.
+- Now: single big `GUILD ACTIVITY` heading via `.guildhall-section-title--solo` (Cinzel, gold, 1.10rem, 0.10em letter-spacing, gold glow).
+- Kicker DOM removed so the heading reads as the section title outright.
+
+**5. Friends section is now an accordion, collapsed by default.**
+- Header (`#guildhall-friends-toggle`) is a full-width `<button>` with the section kicker + title + chevron (▾).
+- Section starts with `.is-collapsed` class on `#guildhall-friends-section`.
+- CSS animates `.guildhall-friends-body-wrap { max-height }` between 0 and 1500px with a 220ms transition.
+- Chevron rotates `-90deg` when collapsed via `.is-collapsed .guildhall-friends-chevron`.
+- aria-expanded mirrors state for screen readers.
+- New `setupGuildFriendsAccordion()` function wires the toggle, with idempotent `data-wired` guard. Called from the existing boot sequence next to `setupGuildRosterSheet`.
+- **Session-only state** — no persistence yet. Cost of re-opening is one tap; persisting wasn't requested.
+
+**6. Friends list now renders ABOVE Add Friend input.**
+- Per user request: "friends above the add friends".
+- DOM order in the new body wrap: `#social-friends-body` first, `.guildhall-friend-add--bottom` second.
+- CSS corner radii flipped: friends body now rounds its TOP corners, Add Friend rounds its BOTTOM corners (1z.173 had the opposite layout).
+- Hairline divider sits between them via `border-top` on the Add Friend block.
+- The old 1z.173 "embed Add Friend on top" CSS is **explicitly hidden** with `.guildhall-friend-add:not(.guildhall-friend-add--bottom) { display: none }` — defensive against any stale Add Friend block landing in the wrong slot.
+
+### What was NOT changed (regression guardrails)
+
+- ✅ Tile routing (1z.172): `data-roster-open="hunters"|"feats24h"|"bosses"` intact. All three tile types still open their dedicated sheets.
+- ✅ `renderGuildhallSummary` lookup IDs (`#guildhall-summary-hunters`, `-today`, `-bosses`, `-chips`) — all preserved.
+- ✅ `renderFriendsSection` render targets (`#social-friends-body`, `#social-friend-input`, `#social-friend-send`, `#social-friends-count`) — all preserved.
+- ✅ Friend row markup, data-friend-action attrs, Accept/Decline/Remove flows — unchanged.
+- ✅ Add Friend submit handler (`#social-friend-send` click → `Auth.sendFriendRequest`) — unchanged.
+- ✅ `recordGuildActivity`, `_guildhallReadStore`, the 7-type feat system, Recent Feats row renderer — untouched.
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values — all untouched.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `index.html` | Inline header, removed subtitle `<p>`, solo Activity title, restructured Friends section into accordion with friends above Add Friend |
+| `app.js` | `setupGuildFriendsAccordion()` function + boot wiring |
+| `styles.css` | +160 lines: stronger Command Panel rim, inline header layout, solo title, taller tiles, ember BOSSES SLAIN color, accordion CSS (toggle button, chevron rotation, max-height transition), friends-above-add layout |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w49` | `2.2.3-w50` |
+| `app.js?v=` | `502` | `503` |
+| `sw.js CACHE_VERSION` | `v5.388` | `v5.389` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run, 2 transient flakes (sleep-streak gap test + dungeon-rank-filter, both unrelated to Social), pass on isolated retry.
+
+### TestFlight QA for w50
+
+1. Cold-launch w50. Confirm `"build": "2.2.3-w50"`.
+2. Open Social tab.
+3. **Header reads inline**: `· GUILD HALL · SOCIAL` on one line. No multi-line subtitle below.
+4. **Command Panel rim is unmistakable** — bright gold/violet gradient edge with a soft outer glow.
+5. Three tiles look more card-like: taller, brighter values, thicker accent lines. BOSSES SLAIN is now ember orange-red, not harsh red.
+6. Below the panel: single big `GUILD ACTIVITY` heading. No `Recent feats` subtitle.
+7. Below activity: Friends section is **collapsed**. Header shows `· GUILD · YOUR HUNTERS [count] ▾`.
+8. Tap the Friends header → section expands. Chevron rotates to ▾ pointing down. Friend rows appear FIRST, Add Friend input appears BELOW them.
+9. Tap header again → collapses cleanly.
+10. **Regression**: tap HUNTERS / FEATS · 24H / BOSSES SLAIN tiles → each opens its own sheet (1z.172). Add Friend send works. Remove still works.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim changes.
+- ✅ No fake friend stats. No invented features.
+- ✅ No public Duel/Arena/Challenge language reintroduced.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+### Rollback
+
+Six independent reverts:
+1. Restore stacked `.guildhall-page-header` block (kicker + h2 + subtitle p) in `index.html`.
+2. Restore "Recent feats" subtitle line in Activity section.
+3. Restore non-accordion Friends section with Add Friend on top.
+4. Delete `setupGuildFriendsAccordion()` + boot call.
+5. Delete the 1z.174 CSS block (Command Panel rim bump, inline header, solo title, accordion rules, friends-above-add layout).
+6. Revert knob bumps.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.173 Social Tab Polish — Command Panel + per-tile color (historical — superseded by 1z.174 above)
 
 ### ✅ STATUS: Implemented Variation B (recommended) from ClaudeDesign Social Tab Polish. Frontend-only. `2.2.3-w49` web bundle ready.
 

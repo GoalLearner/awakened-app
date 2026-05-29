@@ -615,14 +615,19 @@
            and #guildhall-summary-* ids are untouched). -->
       <div class="guildhall-command-panel">
         <div class="guildhall-command-panel-inner">
+          <!-- v3 Phase 1z.174 — title compaction. Kicker + title
+               now share a single line ("· GUILD HALL · SOCIAL") so
+               the Command Panel reads as one tighter header strip.
+               The standalone subtitle paragraph is removed — the
+               three color-coded tiles below carry the meaning
+               better than a sentence ever did. -->
           <div class="guildhall-command-panel-top">
-            <div class="guildhall-page-header">
-              <div class="guildhall-kicker">· GUILD HALL ·</div>
-              <h2 class="guildhall-page-title">Social</h2>
+            <div class="guildhall-page-header guildhall-page-header--inline">
+              <span class="guildhall-kicker">· GUILD HALL ·</span>
+              <span class="guildhall-page-title-inline">SOCIAL</span>
             </div>
             <div id="guildhall-summary-chips" class="guildhall-summary-chips guildhall-summary-chips--hero" aria-hidden="true"></div>
           </div>
-          <p class="guildhall-page-sub">Hunters bound to your guild. See their progress, climb together.</p>
           <div class="guildhall-command-panel-tiles">
             <button type="button"
                     class="guildhall-summary-tile guildhall-summary-tile--hunters"
@@ -671,10 +676,14 @@
              not exist yet. Kicker stays "GUILD ACTIVITY" for the
              RPG framing — the events ARE the user's guild activity,
              just sourced locally for now. -->
+        <!-- v3 Phase 1z.174 — "Recent feats" subtitle removed.
+             User feedback: the kicker + subtitle combo felt
+             over-titled. Single big "GUILD ACTIVITY" heading now
+             serves as the section title — Cinzel-styled in CSS so
+             it reads as prominent on its own. -->
         <div class="guildhall-section-head">
           <div class="guildhall-section-headtxt">
-            <div class="guildhall-section-kicker">· GUILD ACTIVITY ·</div>
-            <div class="guildhall-section-title">Recent feats</div>
+            <div class="guildhall-section-title guildhall-section-title--solo">GUILD ACTIVITY</div>
           </div>
         </div>
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
@@ -695,22 +704,40 @@
            (#social-friends-body, #social-friend-input,
            #social-friend-send, #social-friends-count) are preserved so
            existing renderFriendsSection JS keeps working. -->
-      <section class="social-section social-section--friends guildhall-section guildhall-section--friends">
-        <div class="guildhall-section-head">
+      <!-- v3 Phase 1z.174 — Friends section is now an accordion
+           that's COLLAPSED by default. Header acts as the toggle
+           (chevron + count). When expanded, the friend rows render
+           ABOVE the Add Friend input/button (per user request:
+           "friends above the add friends"). All render target IDs
+           preserved so renderFriendsSection JS works unchanged. -->
+      <section id="guildhall-friends-section"
+               class="social-section social-section--friends guildhall-section guildhall-section--friends is-collapsed">
+        <button type="button"
+                id="guildhall-friends-toggle"
+                class="guildhall-friends-toggle"
+                aria-expanded="false"
+                aria-controls="guildhall-friends-body-wrap">
           <div class="guildhall-section-headtxt">
             <div class="guildhall-section-kicker">· GUILD ·</div>
-            <div class="guildhall-section-title">Your hunters
+            <div class="guildhall-section-title">YOUR HUNTERS
               <span id="social-friends-count" class="guildhall-section-count"></span>
             </div>
           </div>
-        </div>
-        <div class="guildhall-friend-add">
-          <input id="social-friend-input" class="social-friend-input" type="text"
-                 placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <button id="social-friend-send" class="social-btn social-btn--primary" type="button">＋ ADD FRIEND</button>
-        </div>
-        <div id="social-friends-body" class="social-section-body guildhall-friend-body">
-          <div class="social-empty">Loading friends…</div>
+          <span class="guildhall-friends-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div id="guildhall-friends-body-wrap" class="guildhall-friends-body-wrap">
+          <!-- Friend rows render here FIRST (above Add Friend per
+               1z.174 reorder). -->
+          <div id="social-friends-body" class="social-section-body guildhall-friend-body">
+            <div class="social-empty">Loading friends…</div>
+          </div>
+          <!-- Add Friend input/button now lives BELOW the friend
+               list, divider-separated. -->
+          <div class="guildhall-friend-add guildhall-friend-add--bottom">
+            <input id="social-friend-input" class="social-friend-input" type="text"
+                   placeholder="hunter alias" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <button id="social-friend-send" class="social-btn social-btn--primary" type="button">＋ ADD FRIEND</button>
+          </div>
         </div>
       </section>
 
@@ -2396,7 +2423,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=502"></script>
+  <script src="app.js?v=503"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

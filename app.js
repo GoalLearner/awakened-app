@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w49';
+  const APP_BUILD_TAG = '2.2.3-w50';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3943,6 +3943,31 @@
     });
   }
   try { window.setupGuildRosterSheet = setupGuildRosterSheet; } catch (_) {}
+
+  // ─── v3 Phase 1z.174 — Friends accordion ───────────────────
+  //
+  // Header button toggles .is-collapsed on the friends section.
+  // Collapsed by default (CSS hides the body wrap when the class
+  // is present). aria-expanded mirrors the open state for screen
+  // readers. State is session-only — no persistence yet, since
+  // the section is single-purpose and the cost of re-opening is
+  // one tap.
+  //
+  // Idempotent guard via data-wired so a second setup pass (e.g.
+  // welcome → main mount) doesn't stack handlers.
+  function setupGuildFriendsAccordion() {
+    const toggle = document.getElementById('guildhall-friends-toggle');
+    const section = document.getElementById('guildhall-friends-section');
+    if (!toggle || !section) return;
+    if (toggle.getAttribute('data-wired') === '1') return;
+    toggle.setAttribute('data-wired', '1');
+    toggle.addEventListener('click', () => {
+      const collapsing = !section.classList.contains('is-collapsed');
+      section.classList.toggle('is-collapsed', collapsing);
+      toggle.setAttribute('aria-expanded', collapsing ? 'false' : 'true');
+    });
+  }
+  try { window.setupGuildFriendsAccordion = setupGuildFriendsAccordion; } catch (_) {}
 
   function renderGuildActivity() {
     // v3 Phase 1z.167 — repaint summary tiles in lock-step with the
@@ -35393,6 +35418,11 @@
     // clicks open the sheet; overlay tap + X close it. Idempotent
     // guard inside the function prevents double-wiring.
     try { setupGuildRosterSheet(); } catch (_) {}
+    // v3 Phase 1z.174 — Friends accordion wiring. Header acts as
+    // toggle for the friend rows + Add Friend block. Collapsed by
+    // default; opens on tap. Idempotent guard so a second boot
+    // pass doesn't double-fire.
+    try { setupGuildFriendsAccordion(); } catch (_) {}
     // v2.0.1 DROPS Phase 1 — inventory + reveal + Pokédex wiring.
     try { loadInventory(); } catch (_) {}
     setupCardRevealModal();
