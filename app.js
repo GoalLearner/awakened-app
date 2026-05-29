@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w52';
+  const APP_BUILD_TAG = '2.2.3-w53';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3474,6 +3474,39 @@
       '</div>'
     );
   }
+  // v3 Phase 1z.177 — single source of truth for "what counts as a
+  // personal feat" vs "what's a roster/social event."
+  //
+  // The dedicated hb_guild_activity store carries seven event types
+  // in one ledger. Six are the user's own achievements; the seventh
+  // (`friend_added`) is a roster event (a friend joined the guild).
+  // The Guild Hall surface needs two views:
+  //
+  //   - FEATS · 24H tile + Today's Feats sheet
+  //         "what the user accomplished" → personal feats only.
+  //
+  //   - GUILD ACTIVITY main feed
+  //         "what's happening in your hall" → everything, including
+  //         friend_added. Unchanged in 1z.177.
+  //
+  // Before 1z.177, `friend_added` rows were leaking into both the
+  // FEATS counter AND the Today's Feats sheet. User-visible bug:
+  // "Anthony-Edwards joined your Guild" showing up as a personal
+  // feat. The allowlist below makes the filter explicit and easy
+  // to extend when new feat types ship.
+  const _GUILDHALL_PERSONAL_FEAT_TYPES = new Set([
+    'boss_kill',
+    'ultra_rare_drop',
+    'rank_up',
+    'step_milestone_10k',
+    'sleep_quality_7h',
+    'habit_streak',
+  ]);
+  function _isPersonalFeatEntry(e) {
+    return !!(e && _GUILDHALL_PERSONAL_FEAT_TYPES.has(e.type));
+  }
+  try { window._isPersonalFeatEntry = _isPersonalFeatEntry; } catch (_) {}
+
   // v3 Phase 1z.167 — Guild Hall summary card renderer. Reads the
   // dedicated activity store (NOT the souls ledger) and the live
   // friends cache. Three local tiles + up to 3 friend initial chips.
@@ -3530,6 +3563,11 @@
         : new Date().toISOString().slice(0, 10);
       for (const e of entries) {
         if (!e || typeof e.ts !== 'number') continue;
+        // v3 Phase 1z.177 — FEATS · 24H counts personal feats
+        // only. friend_added (and any future roster event) is
+        // excluded so the tile reflects what the user themselves
+        // accomplished, matching the meaning of the label.
+        if (!_isPersonalFeatEntry(e)) continue;
         const eDate = new Date(e.ts);
         const eKey  = eDate.getFullYear() + '-' +
                       String(eDate.getMonth() + 1).padStart(2, '0') + '-' +
@@ -3764,6 +3802,12 @@
       : new Date().toISOString().slice(0, 10);
     return entries.filter(e => {
       if (!e || typeof e.ts !== 'number') return false;
+      // v3 Phase 1z.177 — Today's Feats sheet shows personal feats
+      // only. friend_added rows live in the main GUILD ACTIVITY
+      // feed; they don't belong here even though they share the
+      // same store. Filter applied at the entries-source level so
+      // the sheet count and the tile count are always identical.
+      if (!_isPersonalFeatEntry(e)) return false;
       const d = new Date(e.ts);
       const k = d.getFullYear() + '-' +
                 String(d.getMonth() + 1).padStart(2, '0') + '-' +

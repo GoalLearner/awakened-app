@@ -55,7 +55,126 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.176 Sheet close button top-right + Remove Friend safety (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.177 Separate personal feats from guild activity (read this first)
+
+### ✅ STATUS: `FEATS · 24H` tile and `Today's Feats` sheet now show **only personal feats**. `GUILD ACTIVITY` main feed still shows everything (personal + roster). Original wording fully preserved. Frontend-only. `2.2.3-w53` web bundle ready. **Verified live in the browser preview.**
+
+### Root cause
+
+The `hb_guild_activity` store carries 7 event types in one ledger. Six are personal achievements; the seventh (`friend_added`) is a roster event. Before 1z.177, every consumer of the store treated all 7 types uniformly. That made the FEATS · 24H tile counter and the Today's Feats sheet leak `friend_added` rows like *"Anthony-Edwards joined your Guild"* — a roster event masquerading as a personal feat.
+
+### Fix — single allowlist, applied at two consumer sites
+
+New module-level constant:
+
+```js
+const _GUILDHALL_PERSONAL_FEAT_TYPES = new Set([
+  'boss_kill',
+  'ultra_rare_drop',
+  'rank_up',
+  'step_milestone_10k',
+  'sleep_quality_7h',
+  'habit_streak',
+]);
+function _isPersonalFeatEntry(e) {
+  return !!(e && _GUILDHALL_PERSONAL_FEAT_TYPES.has(e.type));
+}
+```
+
+Applied at exactly **two** sites:
+
+1. **`renderGuildhallSummary`** — FEATS · 24H tile counter (`featsToday`). The loop now skips entries that aren't personal feats before counting today's matches.
+2. **`_guildFeatsTodayEntries`** — backing source for the Today's Feats sheet. Added `if (!_isPersonalFeatEntry(e)) return false;` to the filter.
+
+The `renderGuildActivity` main feed renderer is **untouched**. It continues to read the unfiltered store, so `GUILD ACTIVITY` still shows everything including `friend_added` rows.
+
+### Verified live in preview
+
+Seeded the store with 4 personal feats + 2 `friend_added` rows, all timestamped today, then evaluated via the preview MCP:
+
+| Surface | Result |
+|---|---|
+| `_isPersonalFeatEntry({type:'friend_added'})` → `false` | ✅ |
+| `_isPersonalFeatEntry({type:'boss_kill'})` → `true` | ✅ |
+| `FEATS · 24H` tile → renders `4` (not `6`) | ✅ |
+| Today's Feats sheet → 4 rows, none "joined your Guild" | ✅ |
+| GUILD ACTIVITY main feed → 6 rows, includes 2 "joined your Guild" | ✅ |
+
+Console: no errors. Test data cleaned from localStorage after verification.
+
+### Original wording preserved
+
+| Surface | Label | Status |
+|---|---|---|
+| Summary tile | `FEATS · 24H` | unchanged |
+| Sheet eyebrow | `FEATS · LAST 24H` | unchanged |
+| Sheet title | `Today's Feats` | unchanged |
+| Sheet subtitle | `Victories and milestones recorded since midnight.` | unchanged |
+| Main feed section | `GUILD ACTIVITY` | unchanged |
+
+No "My Feats" / "Your Feats" / "Guild Feats" introduced. Logic change only.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +35 lines: `_GUILDHALL_PERSONAL_FEAT_TYPES` allowlist, `_isPersonalFeatEntry` helper, exposed on `window` for tests/diagnostics, filter line in `renderGuildhallSummary` featsToday loop, filter line in `_guildFeatsTodayEntries` |
+| `index.html` | knob bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w52` | `2.2.3-w53` |
+| `app.js?v=` | `505` | `506` |
+| `sw.js CACHE_VERSION` | `v5.391` | `v5.392` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ `recordGuildActivity` call sites (boss kill, ultra-rare reveal, rank up, autoVerifyWalk 10K, autoVerifySleep 7h, habit streak bands, friend accept) — unchanged. Store schema unchanged.
+- ✅ GUILD ACTIVITY main feed continues to read the full store.
+- ✅ Tile routing (1z.172, repaired 1z.175) — unchanged.
+- ✅ Close-button positioning + Remove Friend safety (1z.176) — preserved.
+- ✅ HUNTERS and BOSSES SLAIN tiles — unchanged.
+
+### TestFlight QA for w53
+
+1. Cold-launch w53. Confirm `"build": "2.2.3-w53"`.
+2. Open Social tab. Note the FEATS · 24H tile value.
+3. From another session or test path, ensure at least one `friend_added` event is in the store (e.g., accept a friend request today).
+4. Confirm the FEATS · 24H tile does **NOT** increment when `friend_added` fires.
+5. Tap FEATS · 24H tile → Today's Feats sheet opens, displays only personal feat rows.
+6. Scroll GUILD ACTIVITY main feed — confirm "joined your Guild" rows still appear there.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ Original wording preserved (FEATS · 24H, Today's Feats, GUILD ACTIVITY).
+- ✅ No "My Feats" / "Your Feats" renames.
+- ✅ All seven feat record sites untouched — only the consumer filter changed.
+- ✅ No fake data.
+
+### Rollback
+
+Two reverts in `app.js`:
+1. Delete the `_GUILDHALL_PERSONAL_FEAT_TYPES` Set + `_isPersonalFeatEntry` helper block.
+2. Remove the `if (!_isPersonalFeatEntry(e)) continue;` line from `renderGuildhallSummary` and `if (!_isPersonalFeatEntry(e)) return false;` from `_guildFeatsTodayEntries`.
+
+Each independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.176 Sheet close button top-right + Remove Friend safety (historical — superseded by 1z.177 above)
 
 ### ✅ STATUS: Two surgical UX safety fixes following w51 verification. Sheet X buttons pinned top-right with 40×40 tap target. Friend rows now use `•••` overflow → inline Cancel/Remove confirm to prevent fat-finger destruction. Frontend-only. `2.2.3-w52` web bundle ready.
 
