@@ -24444,19 +24444,128 @@ button.guildhall-summary-tile:active {
   background: rgba(255,255,255,0.10);
 }
 
-/* Single navy codex panel wrapping the boss list. */
+/* v3 Phase 1z.188 — Variation C (Monster Archive) layout.
+   The single codex panel is neutralized; each rank group renders
+   its own left-accent panel inside the list. */
 .guild-bosses-codex {
   margin-top: 12px;
-  background: #14143a;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 .guild-bosses-codex[hidden] { display: none; }
 .guild-bosses-list {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+/* Per-rank group (header + left-accent panel). The rank palette
+   custom properties live on the group so both the header crest
+   and the panel border use the same color without duplication. */
+.guild-bosses-group {
+  --rank-color: #f5b842;
+  --rank-glow:  rgba(245,184,66,0.50);
+  --rank-soft:  rgba(245,184,66,0.14);
+  --rank-rule:  rgba(245,184,66,0.45);
+}
+.guild-bosses-group--rank-e { --rank-color: #a78bfa; --rank-glow: rgba(167,139,250,0.50); --rank-soft: rgba(167,139,250,0.16); --rank-rule: rgba(167,139,250,0.45); }
+.guild-bosses-group--rank-d { --rank-color: #f5b842; --rank-glow: rgba(245,184,66,0.50); --rank-soft: rgba(245,184,66,0.14); --rank-rule: rgba(245,184,66,0.45); }
+.guild-bosses-group--rank-c { --rank-color: #f97316; --rank-glow: rgba(249,115,22,0.50); --rank-soft: rgba(249,115,22,0.14); --rank-rule: rgba(249,115,22,0.45); }
+.guild-bosses-group--rank-b { --rank-color: #3b82f6; --rank-glow: rgba(59,130,246,0.50); --rank-soft: rgba(59,130,246,0.14); --rank-rule: rgba(59,130,246,0.45); }
+.guild-bosses-group--rank-a { --rank-color: #ec4899; --rank-glow: rgba(236,72,153,0.50); --rank-soft: rgba(236,72,153,0.14); --rank-rule: rgba(236,72,153,0.45); }
+.guild-bosses-group--rank-s { --rank-color: #ef4444; --rank-glow: rgba(239,68,68,0.55); --rank-soft: rgba(239,68,68,0.16); --rank-rule: rgba(239,68,68,0.50); }
+
+.guild-bosses-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.guild-bosses-group-crest {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: inline-block;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 4px var(--rank-glow));
+}
+.guild-bosses-group-crest svg { display: block; }
+.guild-bosses-group-crest-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.58rem;
+  color: var(--rank-color);
+  text-shadow: 0 0 4px var(--rank-glow);
+  line-height: 1;
+  pointer-events: none;
+}
+.guild-bosses-group-label {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rank-color);
+}
+.guild-bosses-group-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rank-rule), transparent);
+}
+.guild-bosses-group-total {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  color: var(--text-tertiary, #6b7280);
+  text-transform: uppercase;
+}
+.guild-bosses-group-panel {
+  background: #14143a;
+  border: 1px solid var(--rank-rule);
+  border-left-width: 2px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Compact archive row inside each group — small rank-color dot +
+   Cinzel name + gold kill capsule. Overrides the shield-row
+   layout from 1z.187 (the shield helper is preserved but unused
+   in this layout). */
+.guild-bosses-row--archive {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.guild-bosses-row--archive:last-child { border-bottom: 0; }
+.guild-bosses-row-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--rank-color);
+  box-shadow: 0 0 5px var(--rank-glow);
+  /* The dot inherits the row's rank-color via the parent group's
+     custom properties — no per-row modifier class needed. */
+}
+.guild-bosses-row--archive .guild-bosses-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+  color: var(--text-primary, #f3f4f6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .guild-bosses-row {
   display: grid;

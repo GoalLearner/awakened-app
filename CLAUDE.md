@@ -4,7 +4,31 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.187 Kill Log Codex Ledger redesign (read this first)
+## May 29, 2026 — 1z.188 Kill Log Monster Archive grouping (read this first)
+
+**TL;DR.** Switches the Kill Log row layout from Variation A (flat Codex Ledger panel, 1z.187) to **Variation C — Monster Archive** from the same Claude Design `Kill Log.html` bundle. Rows are now grouped by rank into E / D / C sections (S→E ordering when higher tiers exist), each with its own diamond crest header, per-group SLAIN total, fading rank-color rule, and a left-accent panel in the rank color. Compact 9px rows inside each group — small dot + Cinzel name + the same gold kill capsule from 1z.187. Ledger strip (TOTAL KILLS · BOSSES · TOP RANK) and italic Cormorant blurb above are preserved; the blurb copy updates to "Archived by rank. The deeper the rank, the rarer the kill."
+
+**Files touched (frontend only).**
+- `app.js` — added `_killLogDiamondCrestSvg`, `_killLogGroupBosses(rows)` (S→A→B→C→D→E→'?' ordering, skips empty buckets), `_killLogGroupHtml(group)`. Rewrote the inner `list.innerHTML` step inside `renderBossesSlainSheet` to render groups instead of flat rows. The 1z.187 `_killLogShieldSvg` + `_bossesSlainRowHtml` helpers are preserved (unused in this layout, kept for cheap rollback). All other Kill Log helpers + the ledger-strip population are unchanged.
+- `index.html` — blurb copy: "Every boss you've put down, with kill counts." → "Archived by rank. The deeper the rank, the rarer the kill." App bundle bump → `app.js?v=517`.
+- `styles.css` — neutralized `.guild-bosses-codex` (background / border / shadow removed; now a transparent wrapper) so each group can carry its own panel. `.guild-bosses-list` now flex column with 14px gap between groups. Added `.guild-bosses-group` (per-rank `--rank-color` / `--rank-glow` / `--rank-soft` / `--rank-rule` via modifier classes), `.guild-bosses-group-head` (flex row with crest + label + fading rule + total), `.guild-bosses-group-crest` (22px diamond SVG via the same path-class hooks the shield uses), `.guild-bosses-group-label` (Cinzel uppercase rank-color), `.guild-bosses-group-rule` (1px gradient to transparent), `.guild-bosses-group-total` (mono SLAIN total), `.guild-bosses-group-panel` (navy `#14143a` background, 2px rank-color left border, 1px rank-color border on other sides, 10px radius). New `.guild-bosses-row--archive` selector overrides the row layout for archive mode: compact 9px row with rank-color dot + Cinzel name + gold kill capsule. The 1z.187 shield-row CSS stays unused but in place for rollback.
+- `sw.js` — `CACHE_VERSION = 'v5.403'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w64`, `app.js?v=517`, `auth.js?v=18` (unchanged), `sw.js CACHE_VERSION v5.403`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Rank palette unchanged.** Same six-color set from 1z.187: E `#a78bfa`, D `#f5b842`, C `#f97316`, B `#3b82f6`, A `#ec4899`, S `#ef4444`. Color appears only on the group crest + label + fading rule + per-row dot + the ledger strip's TOP RANK glow.
+
+**Group ordering.** Highest tier first (`S → A → B → C → D → E → '?'`). With today's roster (E + D + C bosses), the display reads E first when there's no higher tier present? — no: the order array is the priority sequence, so groups appear in the order `S, A, B, C, D, E`. Today that's `C` then `D` then `E`. If the user wants newest/lowest-tier-first instead ("E rank at top, scaling up to C"), flip the array order in `_killLogGroupBosses`. See "Tweak point" below.
+
+**Tweak point.** The S→E ordering shown above matches the Variation C reference (highest tier at top). If you'd prefer the screenshot's E→C top-to-bottom feel (lowest tier first, scaling up), change the `order` constant inside `_killLogGroupBosses` from `['S','A','B','C','D','E','?']` to `['E','D','C','B','A','S','?']`. One-line change; nothing else needs to move.
+
+**Guard rails preserved.** No backend / D1 / migration / Codemagic / archive / upload. No HealthKit / leaderboard / dungeon / XP / rank / souls / drop odds / inventory / Guild Activity / Hunter Feed / friend add/remove / auth changes. No Duel surface touched. `QA_UNLOCK_C_RANK_DUNGEONS = false`. No new data fields. No fake values — every group total is computed from existing `hb_bosses` rows.
+
+**Rollback.** Three independent reverts: (1) restore the previous `renderBossesSlainSheet` inner step (`rows.map(_bossesSlainRowHtml).join('')`) and drop the three new helpers, (2) restore the previous blurb copy, (3) restore the previous `.guild-bosses-codex` background/border block + drop the new `.guild-bosses-group*` and `.guild-bosses-row--archive` styles. All three are cleanly isolated.
+
+---
+
+## May 29, 2026 — 1z.187 Kill Log Codex Ledger redesign
 
 **TL;DR.** Implements Variation A ("Codex Ledger") from Claude Design's `Kill Log.html` handoff bundle on the existing BOSSES SLAIN → Kill Log bottom sheet. Adds a gold-rimmed ledger strip (TOTAL KILLS · BOSSES · TOP RANK), wraps the row list in a single navy codex panel with hairline dividers, replaces the small rank chip with a 32px fantasy shield-crest SVG painted in the rank color, promotes boss names to Cinzel 0.92rem with mono `{RANK}-RANK BOSS` sublines, and replaces the bare "N slain" text with a gold capsule (crossed-swords glyph + Cinzel number + mono SLAIN). No data shape change, no new fields, no fake data.
 

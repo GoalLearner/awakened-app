@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w63';
+  const APP_BUILD_TAG = '2.2.3-w64';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3945,10 +3945,8 @@
     return best;
   }
   function _killLogShieldSvg(rank) {
-    // 32x35 viewBox 40x43 fantasy shield, single rank-colored fill
-    // + stroke. Letter centered with serif typography. CSS handles
-    // the per-rank color via the parent row's --rank-color custom
-    // property so all the rank palette logic stays in styles.css.
+    // Kept for potential reuse; the active layout is Variation C
+    // (Monster Archive) so rows use the small dot, not the shield.
     const r = esc(rank || '?');
     return (
       '<span class="guild-bosses-crest" aria-hidden="true">' +
@@ -3958,6 +3956,67 @@
         '</svg>' +
         '<span class="guild-bosses-crest-letter">' + r + '</span>' +
       '</span>'
+    );
+  }
+  // v3 Phase 1z.188 — Variation C (Monster Archive) diamond crest
+  // for the group headers. Same rank-palette painting as the shield
+  // (driven by parent group's --rank-color custom property).
+  function _killLogDiamondCrestSvg(rank) {
+    const r = esc(rank || '?');
+    return (
+      '<span class="guild-bosses-group-crest" aria-hidden="true">' +
+        '<svg viewBox="0 0 40 40" width="22" height="22" focusable="false">' +
+          '<path class="guild-bosses-crest-outer" d="M20 2 L38 20 L20 38 L2 20 Z"/>' +
+          '<path class="guild-bosses-crest-inner" d="M20 7 L33 20 L20 33 L7 20 Z"/>' +
+        '</svg>' +
+        '<span class="guild-bosses-group-crest-letter">' + r + '</span>' +
+      '</span>'
+    );
+  }
+  // v3 Phase 1z.188 — bucket rows by rank, ordered highest tier
+  // first (S → E). Empty buckets are skipped so an unranked legacy
+  // entry sinks into '?'  and a group is only emitted when bosses
+  // exist for it.
+  function _killLogGroupBosses(rows) {
+    const buckets = Object.create(null);
+    for (const r of rows) {
+      const k = (r && r.rank) ? r.rank : '?';
+      if (!buckets[k]) buckets[k] = [];
+      buckets[k].push(r);
+    }
+    const order = ['S', 'A', 'B', 'C', 'D', 'E', '?'];
+    const groups = [];
+    for (const k of order) {
+      const arr = buckets[k];
+      if (!arr || arr.length === 0) continue;
+      let total = 0;
+      for (const r of arr) total += (r.kill_count || 0);
+      groups.push({ rank: k, bosses: arr, total: total });
+    }
+    return groups;
+  }
+  function _killLogGroupHtml(group) {
+    const rank = group.rank;
+    const rankClass = rank ? (' guild-bosses-group--rank-' + esc(rank.toLowerCase())) : '';
+    const totalTxt = group.total.toLocaleString('en-US') + ' SLAIN';
+    const labelTxt = rank + ' Rank';
+    const rowsHtml = group.bosses.map(b => (
+      '<div class="guild-bosses-row guild-bosses-row--archive">' +
+        '<span class="guild-bosses-row-dot" aria-hidden="true"></span>' +
+        '<span class="guild-bosses-title">' + esc(b.name) + '</span>' +
+        _killLogKillCapsule(b.kill_count) +
+      '</div>'
+    )).join('');
+    return (
+      '<div class="guild-bosses-group' + rankClass + '">' +
+        '<div class="guild-bosses-group-head">' +
+          _killLogDiamondCrestSvg(rank) +
+          '<span class="guild-bosses-group-label">' + esc(labelTxt) + '</span>' +
+          '<span class="guild-bosses-group-rule" aria-hidden="true"></span>' +
+          '<span class="guild-bosses-group-total">' + esc(totalTxt) + '</span>' +
+        '</div>' +
+        '<div class="guild-bosses-group-panel">' + rowsHtml + '</div>' +
+      '</div>'
     );
   }
   function _killLogKillCapsule(count) {
@@ -4029,7 +4088,12 @@
     if (ledger) ledger.removeAttribute('hidden');
     if (codex)  codex.removeAttribute('hidden');
 
-    list.innerHTML = rows.map(_bossesSlainRowHtml).join('');
+    // v3 Phase 1z.188 — Variation C (Monster Archive). Replace the
+    // flat row map with rank-grouped sections (S→E ordering). Each
+    // group renders its own diamond crest header, per-group SLAIN
+    // total, and a rank-color left-accent panel.
+    const groups = _killLogGroupBosses(rows);
+    list.innerHTML = groups.map(_killLogGroupHtml).join('');
   }
   function openBossesSlainSheet() {
     const overlay = document.getElementById('guild-bosses-overlay');
