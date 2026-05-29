@@ -55,7 +55,131 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.175 Tile-click selector repair + GUILD heading (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.176 Sheet close button top-right + Remove Friend safety (read this first)
+
+### ✅ STATUS: Two surgical UX safety fixes following w51 verification. Sheet X buttons pinned top-right with 40×40 tap target. Friend rows now use `•••` overflow → inline Cancel/Remove confirm to prevent fat-finger destruction. Frontend-only. `2.2.3-w52` web bundle ready.
+
+### Fix 1 — Sheet close button moved to top-right
+
+**Root cause**: `.lb-rank-header` was `position: relative` but had no flexbox or absolute positioning for child elements. The `.vn-close-btn` rendered in natural block flow, which on the Kill Log / Feats · 24H / Guild Members sheets placed it below the title. On the Kill Log sheet specifically, it looked like the X was hidden under the title — hard to find.
+
+**Fix** (CSS only, scoped to `.lb-rank-header`):
+
+```css
+.lb-rank-header .vn-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;  /* tap-friendly target */
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(167, 139, 250, 0.35); /* subtle violet ring */
+  z-index: 2;
+}
+```
+
+Applies to **every sheet that uses `.lb-rank-header`** (souls ledger, leaderboard rank sheet, guild roster / feats / bosses sheets, XP detail, etc.) — consistent top-right close affordance across the entire bottom-sheet family. Hover/active states for visible press feedback. 40×40 hits the iOS tap-friendly threshold.
+
+### Fix 2 — Remove Friend two-step confirm
+
+**Root cause**: Friend rows rendered a solid red `Remove` button on the right side of every row. One tap = instant destructive action (gated only by `window.confirm()`, a native iOS alert that's easy to swipe past). Sitting flush with the row, it was easy to fat-finger when scrolling or tapping the avatar.
+
+**Fix** (markup + JS + CSS):
+
+**Markup change** (in `renderFriendsSection`):
+- Was: single `<button data-friend-action="remove">Remove</button>`.
+- Now: `<button data-friend-action="remove-init">•••</button>` + a hidden `<div class="social-row-confirm">` containing `Cancel` / `Remove` buttons.
+- Row carries `data-row-mode="idle"` initially.
+
+**JS change** (in the duels-body click handler):
+- `remove-init` → flips row to `data-row-mode="confirm"` (CSS reveals the Cancel/Remove pair, hides the `•••`). Starts a 6-second auto-reset timer per row stored in `data-row-confirm-timer`.
+- `remove-cancel` → flips back to `data-row-mode="idle"`, clears the timer.
+- `remove-confirm` → clears the timer, calls `Auth.removeFriend(fid)` (the actual remove). **No `window.confirm()` — the inline confirm IS the intentional gate.**
+- Legacy `remove` action kept as a defensive fallback for any external caller still emitting the old verb.
+
+**CSS change**:
+- `.social-btn--icon` for the `•••` overflow (36×36, muted neutral).
+- `.social-row-confirm` shown via `[data-row-mode="confirm"]` selector.
+- `.social-btn--ghost` for the Cancel button (subtle neutral outline).
+- Existing 1z.173 outlined red ghost styling applies to the inner `Remove` button.
+
+**Auto-reset rationale**: 6 seconds chosen because:
+- Long enough to read + intentionally confirm.
+- Short enough that a user who walks away from their phone doesn't come back to a primed destructive button.
+- Per-row timer ID stored in DOM (`data-row-confirm-timer`) so a re-render or second `remove-init` tap can clear the prior timer cleanly.
+
+### What's NOT changed
+
+- ✅ Backend `Auth.removeFriend(fid)` API call — same handler, same backend path.
+- ✅ Add Friend / Accept request / Decline request flows — unchanged.
+- ✅ Friends accordion behavior (1z.174 collapsed default + chevron + friends-above-Add-Friend) — intact.
+- ✅ Tile routing (1z.172, repaired in 1z.175) — unchanged.
+- ✅ Recent Feats system, sheet routing, sheet content — unchanged.
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | -1 / +66 — friend row markup (overflow + confirm) + three new action handlers (remove-init / remove-cancel / remove-confirm) with per-row auto-reset timer |
+| `index.html` | knob bump |
+| `styles.css` | +90 — `.lb-rank-header .vn-close-btn` top-right rules + overflow icon button + confirm row + Cancel ghost button |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w51` | `2.2.3-w52` |
+| `app.js?v=` | `504` | `505` |
+| `sw.js CACHE_VERSION` | `v5.390` | `v5.391` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 28/29 first run, 1 transient flake (sleep-streak gap test, unrelated), passes on isolated retry.
+
+### TestFlight QA for w52
+
+1. Cold-launch w52. Confirm `"build": "2.2.3-w52"`.
+2. Open Social tab. Tap any tile (HUNTERS / FEATS · 24H / BOSSES SLAIN). Each sheet opens with **X button visible top-right**, ~40×40 tap target with subtle violet ring.
+3. Tap X — sheet closes.
+4. Open Souls Ledger sheet, Leaderboard rank sheet, XP detail sheet — same top-right X treatment everywhere.
+5. Open the Guild accordion. Each friend row shows alias + "Guild member" on the left and a `•••` overflow icon on the right (no exposed Remove button).
+6. Tap `•••` on one row. It swaps to `Cancel | Remove` inline.
+7. Tap `Cancel` → row reverts to `•••`.
+8. Tap `•••` again, then wait 6 seconds without tapping anything. Row auto-resets to `•••`.
+9. Tap `•••`, then tap `Remove` → friend actually removed.
+10. Add Friend still works. Accept / Decline incoming request still works.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ `Auth.removeFriend` API unchanged — only the gating UX changed.
+- ✅ No public Duel/Arena/Challenge language reintroduced.
+
+### Rollback
+
+Three independent reverts:
+1. Delete the `.lb-rank-header .vn-close-btn` absolute-positioning block in `styles.css`.
+2. Restore the single `<button data-friend-action="remove">Remove</button>` in the friend row template + delete the three new action handlers (`remove-init`, `remove-cancel`, `remove-confirm`); the legacy `remove` branch stays as the working path.
+3. Delete the `.social-btn--icon` / `.social-row-confirm` / `.social-btn--ghost` CSS block.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.175 Tile-click selector repair + GUILD heading (historical — superseded by 1z.176 above)
 
 ### ✅ STATUS: Two surgical fixes to follow up w50. Stat tiles clickable again. Friends heading simplified to `GUILD`. Frontend-only. `2.2.3-w51` web bundle ready.
 

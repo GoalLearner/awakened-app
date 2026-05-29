@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w51';
+  const APP_BUILD_TAG = '2.2.3-w52';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -23127,15 +23127,27 @@
         // Internal duel code (passive resolve, ledger reconcile)
         // still runs untouched per the load-bearing comment at
         // _runDuelSyncCycle — it just no longer has a public UI.
+        // v3 Phase 1z.176 — accidental-tap safety. The exposed
+        // red Remove button on every friend row was easy to
+        // fat-finger. New pattern: a `•••` overflow icon that
+        // reveals an inline Cancel / Remove confirm row when
+        // tapped. Two intentional taps to destroy. Auto-resets
+        // back to the icon after 6s (handled in the row click
+        // handler) so a tester who walks away from the screen
+        // doesn't return to a primed destructive button.
         parts.push(
-          '<div class="social-row friend-row friend-row--accepted" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
+          '<div class="social-row friend-row friend-row--accepted" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle">' +
             _friendAvatarHtml(aliasDisp, 'accent') +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
               '<div class="social-row-meta">Guild member</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
-              '<button class="social-btn social-btn--danger"  data-friend-action="remove">Remove</button>' +
+              '<button class="social-btn social-btn--icon" data-friend-action="remove-init" aria-label="Remove friend">•••</button>' +
+              '<div class="social-row-confirm" hidden>' +
+                '<button class="social-btn social-btn--ghost" data-friend-action="remove-cancel">Cancel</button>' +
+                '<button class="social-btn social-btn--danger" data-friend-action="remove-confirm">Remove</button>' +
+              '</div>' +
             '</div>' +
           '</div>'
         );
@@ -24030,7 +24042,56 @@
           if (action === 'accept')        res = await Auth.acceptFriendRequest(fid);
           else if (action === 'decline')  res = await Auth.declineFriendRequest(fid);
           else if (action === 'remove') {
+            // Legacy fallback — direct Remove button. 1z.176 routes
+            // friend rows through remove-init/confirm/cancel
+            // instead; this branch only fires if some other call
+            // site still emits `remove`.
             if (!window.confirm('Remove this friend?')) { btn.disabled = false; return; }
+            res = await Auth.removeFriend(fid);
+          } else if (action === 'remove-init') {
+            // v3 Phase 1z.176 — two-step inline confirm. First
+            // tap of "•••" flips the row to confirm mode (CSS
+            // [data-row-mode="confirm"] reveals the Cancel /
+            // Remove buttons and hides the overflow icon). Auto-
+            // reset to idle after 6s in case the user walks away.
+            btn.disabled = false;
+            if (!row) return;
+            row.setAttribute('data-row-mode', 'confirm');
+            // Clear any prior pending timer for this row.
+            const priorTimerId = row.getAttribute('data-row-confirm-timer');
+            if (priorTimerId) {
+              try { clearTimeout(Number(priorTimerId)); } catch (_) {}
+            }
+            const t = setTimeout(() => {
+              if (row && row.getAttribute('data-row-mode') === 'confirm') {
+                row.setAttribute('data-row-mode', 'idle');
+                row.removeAttribute('data-row-confirm-timer');
+              }
+            }, 6000);
+            row.setAttribute('data-row-confirm-timer', String(t));
+            return;
+          } else if (action === 'remove-cancel') {
+            btn.disabled = false;
+            if (row) {
+              row.setAttribute('data-row-mode', 'idle');
+              const tid = row.getAttribute('data-row-confirm-timer');
+              if (tid) {
+                try { clearTimeout(Number(tid)); } catch (_) {}
+                row.removeAttribute('data-row-confirm-timer');
+              }
+            }
+            return;
+          } else if (action === 'remove-confirm') {
+            // Confirmed — clear the auto-reset timer and call the
+            // existing remove API. No native window.confirm needed
+            // since the inline confirm IS the intentional gate.
+            if (row) {
+              const tid = row.getAttribute('data-row-confirm-timer');
+              if (tid) {
+                try { clearTimeout(Number(tid)); } catch (_) {}
+                row.removeAttribute('data-row-confirm-timer');
+              }
+            }
             res = await Auth.removeFriend(fid);
           } else if (action === 'challenge') {
             const alias = row.getAttribute('data-alias') || '';

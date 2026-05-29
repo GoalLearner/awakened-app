@@ -9618,6 +9618,34 @@ footer {
   padding: 18px 20px 8px;
   border-bottom: 1px solid var(--border);
 }
+/* v3 Phase 1z.176 — pin the X button to the top-right corner of
+   any sheet that uses .lb-rank-header (souls ledger, leaderboard
+   rank sheet, guild roster / feats / bosses sheets). The button
+   was previously rendered in the natural block flow under the
+   title, which on the Kill Log sheet (and others) read as
+   "close hidden somewhere below the title." Absolute-positioning
+   with a tap-friendly 40×40 target makes it discoverable and
+   easy to hit on iPhone. */
+.lb-rank-header .vn-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.05rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(167, 139, 250, 0.35);
+  z-index: 2;
+}
+.lb-rank-header .vn-close-btn:hover {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.55);
+}
+.lb-rank-header .vn-close-btn:active {
+  background: rgba(167, 139, 250, 0.20);
+  transform: scale(0.96);
+}
 .lb-rank-eyebrow {
   font-size: 0.7rem;
   font-weight: 800;
@@ -24741,6 +24769,78 @@ body.social-hub-on .duels-page-header {
 }
 .guildhall-section--friends .friend-row--accepted .social-btn--danger:active {
   background: rgba(239, 68, 68, 0.16);
+  transform: scale(0.97);
+}
+
+/* v3 Phase 1z.176 — friend-row overflow + two-step confirm.
+   Row default state shows just a small "•••" icon button. Tapping
+   flips data-row-mode="confirm" on the row which swaps the icon
+   for an inline Cancel / Remove pair. Removes the fat-finger
+   destructive button that sat on every row pre-1z.176. */
+.guildhall-section--friends .friend-row--accepted .social-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.guildhall-section--friends .social-btn--icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary, #8b8fab);
+  font-size: 1.10rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.guildhall-section--friends .social-btn--icon:hover {
+  background: rgba(167, 139, 250, 0.10);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: var(--text-primary, #f3f4f6);
+}
+.guildhall-section--friends .social-btn--icon:active {
+  background: rgba(167, 139, 250, 0.18);
+  transform: scale(0.96);
+}
+
+/* Inline confirm row — hidden in idle mode, revealed in confirm
+   mode. Cancel is the ghost; Remove keeps the outlined red ghost
+   styling from 1z.173. */
+.guildhall-section--friends .social-row-confirm {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+.friend-row--accepted[data-row-mode="confirm"] .social-btn--icon {
+  display: none;
+}
+.friend-row--accepted[data-row-mode="confirm"] .social-row-confirm {
+  display: inline-flex;
+}
+.guildhall-section--friends .social-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary, #8b8fab);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+.guildhall-section--friends .social-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary, #f3f4f6);
+}
+.guildhall-section--friends .social-btn--ghost:active {
+  background: rgba(255, 255, 255, 0.10);
   transform: scale(0.97);
 }
 
