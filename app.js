@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w60';
+  const APP_BUILD_TAG = '2.2.3-w61';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4069,7 +4069,11 @@
     // v3 Phase 1z.182 — reset the expanded date group so switching
     // modes always lands on the newest available group for the new
     // mode (Hunter and Guild can have different newest days).
-    _guildActivityExpandedDate = null;
+    // v3 Phase 1z.185 — use `undefined` (the "auto-pick newest"
+    // sentinel) rather than `null` (the "user collapsed all"
+    // signal). Filter switch must NOT inherit an all-collapsed
+    // state from the previous mode.
+    _guildActivityExpandedDate = undefined;
     // v3 Phase 1z.183 — reset visible-group window back to the
     // default on every mode switch so the new mode lands compact.
     _guildActivityVisibleDateGroupCount = GUILDHALL_DATE_GROUP_INITIAL_VISIBLE;
@@ -4192,7 +4196,14 @@
   // visually rich, and the user can still drill back through a few
   // days of history with a tap.
   const GUILDHALL_GROUPED_FEED_CAP = 30;
-  let _guildActivityExpandedDate = null;
+  // v3 Phase 1z.185 — three-valued state for the expanded date:
+  //   undefined → "auto-pick newest visible group" (cold launch,
+  //               filter switch, expanded group fell out of view)
+  //   <dateKey> → that specific group is expanded
+  //   null      → user intentionally collapsed every group (do
+  //               not auto-re-expand on next render). The click
+  //               handler is the only writer that produces null.
+  let _guildActivityExpandedDate;
 
   // v3 Phase 1z.183 — limit the visible date-group headers so the
   // feed doesn't stack into a long ladder of dates. Show 3 newest

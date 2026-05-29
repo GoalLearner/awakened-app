@@ -4,7 +4,24 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.184 Hunter Feed card_drop events (read this first)
+## May 29, 2026 — 1z.185 Auto-expand newest activity date (read this first)
+
+**TL;DR.** Fixes a 1z.183 regression where Hunter and Guild date groups loaded fully collapsed. Root cause was state-value overload: both initial render and `setGuildActivityFilter` set `_guildActivityExpandedDate = null`, which the renderer interpreted as "user collapsed all" and refused to auto-expand. Switched both seeds to `undefined`, the existing "auto-pick newest" sentinel already wired into `_renderGuildActivityDateGroups`. The user-collapse path (same-key tap inside `setupGuildActivityDateGroups`) still sets `null`, so 1z.183 collapse behavior is preserved.
+
+**Files touched (frontend only).**
+- `app.js` — module-state declaration `let _guildActivityExpandedDate;` (was `= null`). `setGuildActivityFilter` resets to `undefined` (was `null`). Both changes carry inline comments documenting the three-valued state (`undefined` = auto-pick newest, `<dateKey>` = explicit, `null` = user-collapsed-all).
+- `index.html` — `app.js?v=514`.
+- `sw.js` — `CACHE_VERSION = 'v5.400'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w61`, `app.js?v=514`, `auth.js?v=18` (unchanged), `sw.js CACHE_VERSION v5.400`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Guardrails preserved.** No backend / D1 / migration / Codemagic / archive / upload. No HealthKit / leaderboard / dungeon / XP / rank / souls economy / drop odds / inventory ownership changes. `recordSoulsTransaction` and `recordGuildActivity` untouched. `hb_souls_ledger` and `hb_guild_activity` never mutated. No Duel surface. 1z.181 eligibility filter still excludes spends and legacy Duel rows. 1z.183 user-collapse-via-tap still works. 1z.184 `card_drop` Hunter-only routing unchanged.
+
+**Rollback.** Two reverts: (1) restore `let _guildActivityExpandedDate = null;`, (2) restore `_guildActivityExpandedDate = null;` inside `setGuildActivityFilter`. Plus knob bumps. No DB or backend touched.
+
+---
+
+## May 29, 2026 — 1z.184 Hunter Feed card_drop events
 
 **TL;DR.** Closes the deferred Phase B gap: non-ultra item/card drops now write a `card_drop` event into `hb_guild_activity` at first acquisition, surface in Hunter mode of the Social activity feed, and stay out of the public Guild mode via a curation filter. Ultra-rare drops continue to use the existing `ultra_rare_drop` write inside `openCardRevealModal` — that path is untouched.
 
