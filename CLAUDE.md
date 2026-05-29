@@ -55,7 +55,110 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.174 Social Tab w50 — stronger Command Panel + collapsed Friends accordion (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.175 Tile-click selector repair + GUILD heading (read this first)
+
+### ✅ STATUS: Two surgical fixes to follow up w50. Stat tiles clickable again. Friends heading simplified to `GUILD`. Frontend-only. `2.2.3-w51` web bundle ready.
+
+### Root cause — tile clicks broken in w50
+
+`setupGuildRosterSheet` (app.js) queried `document.querySelectorAll('#guildhall-summary [data-roster-open]')` to attach click listeners to the three summary tiles. **`#guildhall-summary` was deleted in 1z.173** when the standalone summary card was folded into the new `.guildhall-command-panel` hero. The selector started returning an empty NodeList, no click handler was bound to any tile, and taps silently no-op'd starting at w49.
+
+The tile DOM (`data-roster-open` attrs), the three open functions (`openGuildRosterSheet` / `openFeats24hSheet` / `openBossesSlainSheet`), the per-tile routing logic, the close handlers, and the close-button wiring were all intact and correct. Only the binding selector was stale.
+
+### Selector fix
+
+```js
+// Was (broken — #guildhall-summary deleted in 1z.173):
+const tiles = document.querySelectorAll('#guildhall-summary [data-roster-open]');
+
+// Now (new wrapper holds the tiles):
+const tiles = document.querySelectorAll('.guildhall-command-panel [data-roster-open]');
+```
+
+One line in `app.js` inside `setupGuildRosterSheet`. Restores HUNTERS → roster, FEATS · 24H → Today's Feats, BOSSES SLAIN → Kill Log behavior from 1z.172.
+
+### GUILD heading change
+
+Friends section header in `index.html`:
+
+| Element | Before | After |
+|---|---|---|
+| Kicker line | `· GUILD ·` (separate line above title) | **Removed** |
+| Section title | `YOUR HUNTERS` | `GUILD` |
+| Count span | `<span id="social-friends-count">2 hunters</span>` | unchanged |
+
+The kicker would have been redundant with the new title. Final header reads: `GUILD · 2 hunters · ▾`.
+
+### What's NOT changed
+
+- ✅ `#social-friends-count` span preserved — `renderFriendsSection` keeps writing into it.
+- ✅ Accordion behavior (1z.174): collapsed by default, toggle, chevron rotation, friends-above-Add-Friend layout — all intact.
+- ✅ Add Friend / Remove Friend / Accept / Decline flows — unchanged.
+- ✅ Tile DOM, `data-roster-open` attrs, open functions, close handlers — unchanged.
+- ✅ `renderGuildhallSummary` element-id lookups (`#guildhall-summary-hunters`, `-today`, `-bosses`, `-chips`) — unchanged.
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values — all untouched.
+- ✅ CSS unchanged. The w50 Command Panel polish stays.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | -1 / +7 — selector swap with explanatory comment + knob bump |
+| `index.html` | -2 / +6 — kicker removed, title renamed + comment + script-tag bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w50` | `2.2.3-w51` |
+| `app.js?v=` | `503` | `504` |
+| `sw.js CACHE_VERSION` | `v5.389` | `v5.390` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: **29/29 pass first run, no flakes.**
+
+### TestFlight QA for w51
+
+1. Cold-launch w51. Confirm `"build": "2.2.3-w51"`.
+2. Open Social tab.
+3. **Tap HUNTERS** → Guild Members roster sheet opens.
+4. **Tap FEATS · 24H** → Today's Feats sheet opens.
+5. **Tap BOSSES SLAIN** → Kill Log sheet opens.
+6. Below the Activity section, the lower header reads `GUILD · [count] hunters · ▾`. No `· GUILD ·` kicker above it.
+7. Tap GUILD header → accordion expands. Friend rows appear above Add Friend.
+8. Add Friend / Remove still work.
+9. Tap any sheet's X or backdrop → closes cleanly.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync-cadence changes.
+- ✅ No CSS changes (none needed).
+- ✅ No public Duel/Arena/Challenge language reintroduced.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+
+### Rollback
+
+Three independent reverts:
+1. Restore `#guildhall-summary [data-roster-open]` selector in `setupGuildRosterSheet` (would re-break tile clicks).
+2. Restore `· GUILD ·` kicker line + rename `GUILD` → `YOUR HUNTERS` in `index.html`.
+3. Revert knob bumps.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.174 Social Tab w50 — stronger Command Panel + collapsed Friends accordion (historical — superseded by 1z.175 above)
 
 ### ✅ STATUS: User-requested polish round. Header compacted, subtitle removed, Activity solo-titled, Friends now accordion-collapsed by default with friends ABOVE Add Friend when expanded. Stronger Command Panel rim. Frontend-only. `2.2.3-w50` web bundle ready.
 

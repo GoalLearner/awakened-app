@@ -717,9 +717,12 @@
                 class="guildhall-friends-toggle"
                 aria-expanded="false"
                 aria-controls="guildhall-friends-body-wrap">
+          <!-- v3 Phase 1z.175 — redundant "· GUILD ·" kicker
+               removed; the title itself is now "GUILD" so the
+               kicker would be a duplicate. Count span preserved
+               so renderFriendsSection keeps writing into it. -->
           <div class="guildhall-section-headtxt">
-            <div class="guildhall-section-kicker">· GUILD ·</div>
-            <div class="guildhall-section-title">YOUR HUNTERS
+            <div class="guildhall-section-title">GUILD
               <span id="social-friends-count" class="guildhall-section-count"></span>
             </div>
           </div>
@@ -2423,7 +2426,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=503"></script>
+  <script src="app.js?v=504"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

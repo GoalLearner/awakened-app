@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w50';
+  const APP_BUILD_TAG = '2.2.3-w51';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3926,7 +3926,14 @@
     if (bossesOver)  bossesOver.addEventListener('click', closeBossesSlainSheet);
 
     // Tile router: data-roster-open dispatches to the right sheet.
-    const tiles = document.querySelectorAll('#guildhall-summary [data-roster-open]');
+    // v3 Phase 1z.175 — selector repair. The #guildhall-summary
+    // wrapper was deleted in 1z.173 when the tiles moved into the
+    // .guildhall-command-panel hero. This query was still scoped
+    // to the old id, so it returned an empty NodeList after w49
+    // — no click listener bound to any tile, taps silently no-op.
+    // New selector targets the new wrapper while preserving the
+    // exact same data-roster-open contract.
+    const tiles = document.querySelectorAll('.guildhall-command-panel [data-roster-open]');
     tiles.forEach(t => {
       t.addEventListener('click', () => {
         const which = t.getAttribute('data-roster-open');
