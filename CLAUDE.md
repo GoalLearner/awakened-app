@@ -4,7 +4,29 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.183 Guild Activity collapse-toggle + See More pagination (read this first)
+## May 29, 2026 — 1z.184 Hunter Feed card_drop events (read this first)
+
+**TL;DR.** Closes the deferred Phase B gap: non-ultra item/card drops now write a `card_drop` event into `hb_guild_activity` at first acquisition, surface in Hunter mode of the Social activity feed, and stay out of the public Guild mode via a curation filter. Ultra-rare drops continue to use the existing `ultra_rare_drop` write inside `openCardRevealModal` — that path is untouched.
+
+**Files touched (frontend only).**
+- `app.js` — (a) new `'card_drop'` member of `_GUILDHALL_PERSONAL_FEAT_TYPES` so Hunter Feed renders it; (b) new `GUILDHALL_GUILD_HIDDEN_TYPES = new Set(['card_drop'])` filter applied in `renderGuildActivity`'s Guild branch so common/rare drops never reach the public stream; (c) `card_drop` icon case in `_guildhallActivityIconHtml` (violet ◈); (d) `card_drop` copy case in `_guildhallRowHtml` ("You found [Card] · [Boss]" or fallback "You found [Card] · [Rarity] drop"); (e) write call inside `rollBossDrop` gated on `wasFirstAcquisition && !wasCapped && dropped.rarity !== 'ultra_rare'`, with per-card-id idempotency key `'card_drop_' + dropped.id`; (f) mirrored write in `forceDrop` so QA debug paths surface in Hunter Feed identically.
+- `index.html` — `app.js?v=513`.
+- `sw.js` — `CACHE_VERSION = 'v5.399'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w60`, `app.js?v=513`, `auth.js?v=18` (unchanged), `sw.js CACHE_VERSION v5.399`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Behavior summary.**
+- Hunter mode: future first-acquisition common/rare drops show as `"You found [Card Name] · [Boss Name]"`. Date-grouped via 1z.182; visible-group cap of 3 from 1z.183 still applies; 1z.181 eligibility filter still excludes spend / Duel souls rows.
+- Guild mode: common/rare `card_drop` events filtered out before render. Ultra-rare drops continue to flow via existing `ultra_rare_drop` writes.
+- No backfill, no migration, no localStorage mutation beyond the normal `recordGuildActivity` FIFO write. Drops acquired before w60 will never retroactively produce `card_drop` events.
+
+**Guardrails preserved.** No backend / D1 / migration / Codemagic / archive / upload. No HealthKit / leaderboard / dungeon / XP / rank / souls economy / drop odds / inventory ownership changes. `recordGuildActivity`'s own dedup + FIFO caps unchanged. No Duel surface. `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Rollback.** (1) Remove `'card_drop'` from `_GUILDHALL_PERSONAL_FEAT_TYPES`. (2) Remove the `GUILDHALL_GUILD_HIDDEN_TYPES` filter from `renderGuildActivity`. (3) Remove the `card_drop` case from `_guildhallActivityIconHtml` and `_guildhallRowHtml`. (4) Remove the new `recordGuildActivity('card_drop', …)` block inside `rollBossDrop` and `forceDrop`. (5) Revert knob bumps. No DB/backend touched. Existing `hb_guild_activity` `card_drop` rows would be ignored by render after step 1; no cleanup write required.
+
+---
+
+## May 29, 2026 — 1z.183 Guild Activity collapse-toggle + See More pagination
 
 **TL;DR.** Refines the 1z.182 date-grouped GUILD ACTIVITY accordion: tapping the expanded header now collapses it, and only the 3 newest active date groups render by default. A compact "See N more" button reveals 3 more per tap; it disappears when nothing is hidden.
 

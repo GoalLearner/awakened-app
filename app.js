@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w59';
+  const APP_BUILD_TAG = '2.2.3-w60';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3378,6 +3378,12 @@
         return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
       case 'ultra_rare_drop':
         return '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
+      case 'card_drop':
+        // v3 Phase 1z.184 — non-ultra item/card drop (Hunter-only).
+        // Distinct from ultra_rare_drop's gold ✦; use a softer
+        // violet sigil so the row reads as "progress drop"
+        // rather than "rare flex."
+        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◈</span>';
       case 'friend_added':
         // v3 Phase 1z.170 — guild bond glyph. Two crossed
         // chevrons ⟁ would be ideal but glyph support is uneven;
@@ -3429,6 +3435,25 @@
         target = (p.cardName || 'an ultra-rare relic');
         targetCls = 'guildhall-activity-target--gold';
         break;
+      case 'card_drop': {
+        // v3 Phase 1z.184 — Hunter-mode first-acquisition row for
+        // non-ultra drops. Two-line shape via the standard target
+        // span; copy prefers boss name when known, else falls back
+        // to the rarity. Ultra-rare keeps its own dedicated row.
+        verb = 'found';
+        const bossName = p.sourceBossName
+          || (p.sourceBoss && typeof BOSSES === 'object' && BOSSES && BOSSES[p.sourceBoss] && BOSSES[p.sourceBoss].name)
+          || null;
+        const rarityTxt = (typeof RARITY_LABELS === 'object' && RARITY_LABELS && p.rarity && RARITY_LABELS[p.rarity])
+          ? RARITY_LABELS[p.rarity]
+          : (p.rarity || 'drop');
+        const cardName = p.cardName || 'an item';
+        target = bossName
+          ? (cardName + ' · ' + bossName)
+          : (cardName + ' · ' + rarityTxt + ' drop');
+        targetCls = 'guildhall-activity-target--violet';
+        break;
+      }
       case 'friend_added':
         // v3 Phase 1z.170 — friend event row. Different subject
         // shape from the others ("X joined your Guild" vs
@@ -3501,7 +3526,17 @@
     'step_milestone_10k',
     'sleep_quality_7h',
     'habit_streak',
+    // v3 Phase 1z.184 — non-ultra item/card drops. Hunter-only;
+    // Guild mode filters these out via GUILDHALL_GUILD_HIDDEN_TYPES
+    // so common drops never flood the public feed.
+    'card_drop',
   ]);
+  // v3 Phase 1z.184 — Guild-mode curation filter. card_drop is a
+  // personal-progress event; only ultra_rare_drop remains the
+  // public-flex variant. Keep this Set tightly scoped — additions
+  // hide events from the public Guild stream globally.
+  const GUILDHALL_GUILD_HIDDEN_TYPES = new Set(['card_drop']);
+  try { window.GUILDHALL_GUILD_HIDDEN_TYPES = GUILDHALL_GUILD_HIDDEN_TYPES; } catch (_) {}
   function _isPersonalFeatEntry(e) {
     return !!(e && _GUILDHALL_PERSONAL_FEAT_TYPES.has(e.type));
   }
@@ -4463,9 +4498,13 @@
       diagnostics = built.diagnostics;
     } else {
       // Guild view — normalize raw activity entries to {ts, html}.
+      // v3 Phase 1z.184 — drop curated types (e.g. non-ultra
+      // card_drop) before render so the public Guild stream
+      // stays signal-rich. Ultra-rare drops still flow through
+      // via the existing ultra_rare_drop type.
       const normalized = Array.isArray(entries)
         ? entries
-            .filter(e => e && typeof e.ts === 'number')
+            .filter(e => e && typeof e.ts === 'number' && !GUILDHALL_GUILD_HIDDEN_TYPES.has(e.type))
             .map(e => ({ ts: e.ts, html: _guildhallRowHtml(e) }))
         : [];
       normalized.sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -5477,6 +5516,24 @@
       if (!inv.reveal_queue.includes(dropped.id)) inv.reveal_queue.push(dropped.id);
     }
 
+    // v3 Phase 1z.184 — Hunter Feed card_drop write. Fires once
+    // per card lifetime (per-card-id idempotency key); skips
+    // ultra-rare to avoid colliding with the ultra_rare_drop
+    // write inside openCardRevealModal; skips capped rolls so
+    // we never log a drop that wasn't actually awarded.
+    if (wasFirstAcquisition && !wasCapped && dropped.rarity !== 'ultra_rare') {
+      try {
+        if (typeof recordGuildActivity === 'function') {
+          recordGuildActivity('card_drop', {
+            cardId:     dropped.id,
+            cardName:   dropped.name || 'an item',
+            rarity:     dropped.rarity || null,
+            sourceBoss: dropped.source_boss || bossId || null,
+          }, 'card_drop_' + dropped.id);
+        }
+      } catch (_) {}
+    }
+
     // Update pity counters for the realized outcome.
     resetDropPityAfterDrop(bossId, dropped.rarity);
 
@@ -5527,6 +5584,21 @@
     }
     if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
       if (!inv.reveal_queue.includes(card.id)) inv.reveal_queue.push(card.id);
+    }
+    // v3 Phase 1z.184 — mirror the rollBossDrop card_drop write so
+    // QA force-drops surface in Hunter Feed identically. Same
+    // idempotency key + ultra-rare exclusion.
+    if (wasFirstAcquisition && !wasCapped && card.rarity !== 'ultra_rare') {
+      try {
+        if (typeof recordGuildActivity === 'function') {
+          recordGuildActivity('card_drop', {
+            cardId:     card.id,
+            cardName:   card.name || 'an item',
+            rarity:     card.rarity || null,
+            sourceBoss: card.source_boss || bossId || null,
+          }, 'card_drop_' + card.id);
+        }
+      } catch (_) {}
     }
     // Pity counters update too on a forced drop so debug paths stay
     // consistent with the real RNG path.
