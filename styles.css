@@ -24431,6 +24431,53 @@ button.guildhall-summary-tile:active {
   margin-bottom: 8px;
   gap: 10px;
 }
+
+/* v3 Phase 1z.178 — Hunter / Guild segmented toggle. Sits inline
+   with the GUILD ACTIVITY title on the right. Dark glass surface
+   with violet active state to match the rest of the Guild Hall.
+   Default state is muted neutral so the title still leads the eye;
+   active button gains a violet glow + gold-tinged label. */
+.guildhall-activity-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 3px;
+  background: rgba(16, 18, 38, 0.55);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.guildhall-activity-filter-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary, #8b8fab);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.60rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease, box-shadow 80ms ease;
+  min-width: 56px;
+  text-align: center;
+}
+.guildhall-activity-filter-btn:hover {
+  color: var(--text-primary, #f3f4f6);
+}
+.guildhall-activity-filter-btn:active {
+  transform: scale(0.97);
+}
+.guildhall-activity-filter-btn[data-active="true"] {
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.30), rgba(167, 139, 250, 0.14));
+  color: var(--gold, #f5b842);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 8px rgba(167, 139, 250, 0.30);
+}
 .guildhall-section-kicker {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.62rem;

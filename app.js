@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w53';
+  const APP_BUILD_TAG = '2.2.3-w54';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4020,6 +4020,39 @@
   }
   try { window.setupGuildFriendsAccordion = setupGuildFriendsAccordion; } catch (_) {}
 
+  // v3 Phase 1z.178 — Guild Activity filter mode. Session-only state
+  // (no persistence) so a fresh tab open always starts on Guild,
+  // matching the section name. Two valid values:
+  //   - 'guild'  — full hb_guild_activity feed (default).
+  //   - 'hunter' — personal feats only (reuses 1z.177's allowlist).
+  let _guildActivityFilter = 'guild';
+
+  function setGuildActivityFilter(mode) {
+    const next = (mode === 'hunter') ? 'hunter' : 'guild';
+    if (_guildActivityFilter === next) return;
+    _guildActivityFilter = next;
+    // Sync the toggle DOM in case this was called programmatically
+    // (e.g. from tests). Active button carries data-active="true" +
+    // aria-pressed="true"; CSS keys off the data attr.
+    try {
+      const hunterBtn = document.getElementById('guildhall-filter-hunter');
+      const guildBtn  = document.getElementById('guildhall-filter-guild');
+      if (hunterBtn) {
+        if (next === 'hunter') { hunterBtn.setAttribute('data-active', 'true');  hunterBtn.setAttribute('aria-pressed', 'true'); }
+        else                   { hunterBtn.removeAttribute('data-active');       hunterBtn.setAttribute('aria-pressed', 'false'); }
+      }
+      if (guildBtn) {
+        if (next === 'guild')  { guildBtn.setAttribute('data-active', 'true');   guildBtn.setAttribute('aria-pressed', 'true'); }
+        else                   { guildBtn.removeAttribute('data-active');        guildBtn.setAttribute('aria-pressed', 'false'); }
+      }
+    } catch (_) {}
+    try { renderGuildActivity(); } catch (_) {}
+  }
+  try {
+    window.setGuildActivityFilter = setGuildActivityFilter;
+    window.getGuildActivityFilter = function () { return _guildActivityFilter; };
+  } catch (_) {}
+
   function renderGuildActivity() {
     // v3 Phase 1z.167 — repaint summary tiles in lock-step with the
     // activity list. Cheap no-op when the v2 summary DOM isn't
@@ -4029,14 +4062,28 @@
     if (!body) return;
     let entries = [];
     try { entries = _guildhallReadStore(); } catch (_) { entries = []; }
+    // v3 Phase 1z.178 — apply Hunter / Guild filter at the entries
+    // source. Hunter narrows to personal feats only via the 1z.177
+    // allowlist; Guild keeps the unfiltered feed (which is the
+    // pre-1z.178 behaviour, so existing tests/users see no change
+    // until they tap Hunter).
+    const filterMode = _guildActivityFilter;
+    if (Array.isArray(entries) && filterMode === 'hunter') {
+      entries = entries.filter(_isPersonalFeatEntry);
+    }
     if (!Array.isArray(entries) || entries.length === 0) {
-      // v3 Phase 1z.166 — empty-state copy clarifies that Recent
-      // Feats is a personal/local feed for now, not an online
-      // friend activity stream. Backend-backed friend activity is
-      // a future train (no work done in this pass).
+      // Mode-aware empty state. Stays RPG-flavoured, short, and
+      // tells the user what would fill this view if they did the
+      // right thing.
+      const emptyTitle = (filterMode === 'hunter')
+        ? 'No hunter feats yet.'
+        : 'The board is quiet.';
+      const emptySub = (filterMode === 'hunter')
+        ? 'Your victories and milestones will appear here.'
+        : 'Guild activity will appear here.';
       body.innerHTML =
-        '<div class="guildhall-activity-empty">The board is quiet.' +
-          '<div class="guildhall-activity-empty-sub">Your recent victories and milestones will appear here.</div>' +
+        '<div class="guildhall-activity-empty">' + esc(emptyTitle) +
+          '<div class="guildhall-activity-empty-sub">' + esc(emptySub) + '</div>' +
         '</div>';
       return;
     }
@@ -4044,6 +4091,23 @@
     body.innerHTML = visible.map(_guildhallRowHtml).join('');
   }
   try { window.renderGuildActivity = renderGuildActivity; } catch (_) {}
+
+  // v3 Phase 1z.178 — idempotent click wiring for the Hunter / Guild
+  // toggle. Buttons live inside the static Social tab markup so they
+  // exist at boot; the data-wired guard prevents double-binding if
+  // setup is called more than once.
+  function setupGuildActivityFilter() {
+    const group = document.querySelector('#guildhall-activity-section .guildhall-activity-filter');
+    if (!group || group.getAttribute('data-wired') === '1') return;
+    group.setAttribute('data-wired', '1');
+    group.addEventListener('click', function (e) {
+      const btn = e.target && e.target.closest && e.target.closest('[data-filter]');
+      if (!btn) return;
+      const mode = btn.getAttribute('data-filter');
+      if (mode === 'hunter' || mode === 'guild') setGuildActivityFilter(mode);
+    });
+  }
+  try { window.setupGuildActivityFilter = setupGuildActivityFilter; } catch (_) {}
 
   // Daily login bonus. Idempotent on the device-local calendar day.
   // No rollover — skipped days are gone.
@@ -35530,6 +35594,8 @@
     // clicks open the sheet; overlay tap + X close it. Idempotent
     // guard inside the function prevents double-wiring.
     try { setupGuildRosterSheet(); } catch (_) {}
+    // v3 Phase 1z.178 — Hunter / Guild filter toggle wiring.
+    try { setupGuildActivityFilter(); } catch (_) {}
     // v3 Phase 1z.174 — Friends accordion wiring. Header acts as
     // toggle for the friend rows + Add Friend block. Collapsed by
     // default; opens on tap. Idempotent guard so a second boot

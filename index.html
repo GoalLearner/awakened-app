@@ -681,9 +681,26 @@
              over-titled. Single big "GUILD ACTIVITY" heading now
              serves as the section title — Cinzel-styled in CSS so
              it reads as prominent on its own. -->
+        <!-- v3 Phase 1z.178 — Hunter / Guild filter toggle. Session
+             state lives on `_guildActivityFilter` in app.js. Default
+             active = Guild (matches the section name). Hunter reuses
+             the 1z.177 personal-feat allowlist so only the current
+             user's own feats show. Buttons carry aria-pressed for
+             screen readers; CSS keys off [data-active="true"]. -->
         <div class="guildhall-section-head">
           <div class="guildhall-section-headtxt">
             <div class="guildhall-section-title guildhall-section-title--solo">GUILD ACTIVITY</div>
+          </div>
+          <div class="guildhall-activity-filter" role="group" aria-label="Guild activity filter">
+            <button type="button" id="guildhall-filter-hunter"
+                    class="guildhall-activity-filter-btn"
+                    data-filter="hunter"
+                    aria-pressed="false">Hunter</button>
+            <button type="button" id="guildhall-filter-guild"
+                    class="guildhall-activity-filter-btn"
+                    data-filter="guild"
+                    data-active="true"
+                    aria-pressed="true">Guild</button>
           </div>
         </div>
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
@@ -2426,7 +2443,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=506"></script>
+  <script src="app.js?v=507"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

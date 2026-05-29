@@ -55,7 +55,121 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.177 Separate personal feats from guild activity (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.178 Hunter / Guild filter on GUILD ACTIVITY (read this first)
+
+### ✅ STATUS: GUILD ACTIVITY now has a `Hunter` / `Guild` segmented toggle. `Guild` is the default (full feed, including `friend_added`). `Hunter` narrows to personal feats only via the 1z.177 allowlist. FEATS · 24H tile + Today's Feats sheet unchanged. Frontend-only. **Verified live in browser preview.** `2.2.3-w54` web bundle ready.
+
+### What this adds
+
+A pill-shaped segmented toggle inline with the `GUILD ACTIVITY` title:
+
+```
+GUILD ACTIVITY        [ HUNTER | GUILD ]
+```
+
+| Mode | Active by default | Filter | Empty state |
+|---|---|---|---|
+| `Guild` | ✅ yes | full `hb_guild_activity` feed (personal feats + `friend_added`) | "The board is quiet." / "Guild activity will appear here." |
+| `Hunter` | no | personal feats only via `_isPersonalFeatEntry` (1z.177 allowlist) | "No hunter feats yet." / "Your victories and milestones will appear here." |
+
+State is **session-only**: a tab close + reopen always lands on `Guild` (matches the section name). No persistence.
+
+### Implementation
+
+**Markup** (`index.html`):
+- New `.guildhall-activity-filter` group containing two `<button data-filter="hunter|guild">` controls.
+- Buttons carry `aria-pressed` + `data-active` for accessibility and CSS state targeting.
+- Sits in the existing `.guildhall-section-head` flex row, right-aligned next to the title.
+
+**JS** (`app.js`):
+- `let _guildActivityFilter = 'guild';` module-level state.
+- `setGuildActivityFilter(mode)` — updates state, syncs button DOM (`data-active` + `aria-pressed`), re-renders the feed.
+- `getGuildActivityFilter()` — diagnostics/test accessor.
+- `renderGuildActivity()` — new filter line: `if (filterMode === 'hunter') entries = entries.filter(_isPersonalFeatEntry);`
+- Mode-aware empty state text.
+- `setupGuildActivityFilter()` — idempotent delegated click handler with `data-wired` guard.
+- Boot wired alongside `setupGuildRosterSheet()`.
+
+**CSS** (`styles.css`):
+- `.guildhall-activity-filter` — pill container, dark glass surface, violet border ring.
+- `.guildhall-activity-filter-btn[data-active="true"]` — violet gradient + gold label + subtle inset highlight + glow.
+- Active scale + transition keep the toggle feeling tactile.
+
+### Verified live in preview
+
+Seeded 3 personal feats (boss_kill, step_milestone_10k, rank_up) + 2 `friend_added` events. Results from the preview MCP:
+
+| State | Mode | Row count | Friend rows | Guild active | Hunter active |
+|---|---|---|---|---|---|
+| Default | `guild` | 5 | 2 | ✅ true | ❌ null |
+| After tap Hunter | `hunter` | **3** | **0** | ❌ null | ✅ true |
+| After tap Guild | `guild` | **5** | **2** | ✅ true | ❌ null |
+
+Preservation cross-check across mode switches:
+
+| Surface | Guild mode | Hunter mode | Back to Guild |
+|---|---|---|---|
+| FEATS · 24H tile | `3` | `3` | `3` |
+| Today's Feats sheet rows | 3 | n/a | 3 |
+| Today's Feats has `joined your Guild` row | `false` | n/a | `false` |
+
+Console: no errors. Test data cleaned afterward.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +75 — state var, setter/getter + window expose, setup function + window expose, filter line in `renderGuildActivity`, mode-aware empty state, boot wiring call |
+| `index.html` | +14 — segmented toggle markup inside `.guildhall-section-head` |
+| `styles.css` | +50 — `.guildhall-activity-filter*` pill container + active-state styling |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w53` | `2.2.3-w54` |
+| `app.js?v=` | `506` | `507` |
+| `sw.js CACHE_VERSION` | `v5.392` | `v5.393` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ FEATS · 24H tile + Today's Feats sheet (1z.177) — unchanged.
+- ✅ HUNTERS / BOSSES SLAIN tile routing — unchanged.
+- ✅ Friends accordion + Add Friend + Remove Friend two-step safety — unchanged.
+- ✅ Top-right close button positioning (1z.176) — unchanged.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync — untouched.
+- ✅ `_isPersonalFeatEntry` allowlist from 1z.177 — reused, not modified.
+- ✅ Recording sites (`recordGuildActivity` call sites) — unchanged.
+- ✅ Store schema (`hb_guild_activity`) — unchanged.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync changes.
+- ✅ Session-only state, no persistence side-effects.
+- ✅ No fake data.
+- ✅ No labels changed beyond the new `Hunter` / `Guild` buttons.
+
+### Rollback
+
+Three independent reverts:
+1. Delete the `.guildhall-activity-filter` div from `index.html`.
+2. Delete the `_guildActivityFilter` state + `setGuildActivityFilter` + `getGuildActivityFilter` + `setupGuildActivityFilter` block in `app.js`. Restore the original `renderGuildActivity` body (delete the filter line + the mode-aware empty state, restore single empty state).
+3. Delete the `.guildhall-activity-filter*` CSS block.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.177 Separate personal feats from guild activity (historical — superseded by 1z.178 above)
 
 ### ✅ STATUS: `FEATS · 24H` tile and `Today's Feats` sheet now show **only personal feats**. `GUILD ACTIVITY` main feed still shows everything (personal + roster). Original wording fully preserved. Frontend-only. `2.2.3-w53` web bundle ready. **Verified live in the browser preview.**
 
