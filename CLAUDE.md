@@ -4,7 +4,62 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.191 Client public-rank submit + friend rank activation (read this first)
+## May 29, 2026 — 1z.192 Fix public-rank submit NETWORK (CORS PUT) (read this first)
+
+**TL;DR.** One-line CORS fix: add `PUT` to `Access-Control-Allow-Methods`. The 1z.190 `PUT /v1/users/me/public-profile-summary` endpoint is the first PUT route on the Worker; the existing allowlist `'GET, POST, OPTIONS'` caused Capacitor's WebView preflight to fail before the request reached the Worker, surfacing as the `NETWORK` error code observed in w65 device debug. All previously-shipped endpoints use GET/POST and are unaffected. Backend-only train — no frontend knobs bumped.
+
+**Root cause.** `backend/src/lib/cors.ts`:`CORS_HEADERS['Access-Control-Allow-Methods']` was `'GET, POST, OPTIONS'`. Capacitor WebView sends an OPTIONS preflight before any PUT (PUT is not a "simple" CORS method). The Worker's global preflight handler returned the OPTIONS response with this header, the WebView saw PUT was not advertised as allowed, and rejected the actual PUT before it left the device. fetch() failed at the network layer, `_authedFetch` caught the exception and mapped it to `{ ok: false, code: 'NETWORK' }`, which is why the in-app breadcrumb shows `submit-error` immediately after `submit-start` with no intermediate Worker log line.
+
+**Files touched (backend only).**
+- `backend/src/lib/cors.ts` — `Access-Control-Allow-Methods` now reads `'GET, POST, PUT, OPTIONS'`. Comment added pointing at 1z.190/1z.192 history so future CORS extensions know to add new methods here.
+- `backend/src/lib/cors.test.ts` (new) — 8 tests locking in the preflight contract: 204 status, `*` origin, full method allowlist incl. PUT, Authorization + Content-Type advertised, 86400 max-age, and `withCors` preserving status + body while injecting headers on both success and error responses.
+
+**Tests run.** `npx vitest run` → **152/152 pass** (144 baseline + 8 new cors tests). No regressions.
+
+**Knobs.** **Unchanged.** Backend-only train: `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w65`, `app.js?v=518`, `auth.js?v=19`, `sw.js CACHE_VERSION v5.404`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Deploy command (DO NOT RUN until explicitly approved).**
+
+```bash
+cd backend
+npx wrangler deploy
+```
+
+No D1 migration required — schema unchanged. After deploy, w65 devices already in the field will pick up the fix on the next public-rank submit cycle (boot OR renderRank, debounced 8s). The 1z.191 client logic already retries on the next trigger; no client-side change needed.
+
+**Guard rails preserved.**
+
+- No D1 schema mutation.
+- No D1 migration.
+- No Codemagic / archive / upload.
+- No frontend changes (zero app/auth/index/sw edits).
+- No fake rank data.
+- No XP / rank threshold / HealthKit / leaderboard / friend add-remove / Duel changes.
+- Auth unchanged: PUT still requires authenticated session via the existing dispatcher gate; OPTIONS preflight remains auth-free as before.
+- `user_id` still derived from session JWT only.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Single revert: change `'GET, POST, PUT, OPTIONS'` back to `'GET, POST, OPTIONS'` and `wrangler deploy`. The new test file is independent and can stay (or be removed in the same revert).
+
+**Manual QA after deploy.**
+
+1. Re-deploy Worker.
+2. On a w65 device: force-quit Awakened, cold-launch signed-in.
+3. Within ~10 seconds, Copy Debug Info should contain a `public-rank-summary-submit-ok` breadcrumb (replacing the previous `-error / NETWORK`).
+4. Backend check:
+   ```sql
+   SELECT user_id, rank_tier, rank_division, rank_label,
+          rank_sort_value, server_updated_at
+     FROM public_profile_summary
+    ORDER BY server_updated_at DESC LIMIT 10;
+   ```
+   The current user's row should appear.
+5. From a second authed test account that's friended you: their friend list now shows your rank label inside your avatar circle.
+6. All other surfaces (Hunter Feed grouping/See More, friend list, FEATS · 24H, HUNTERS tile, Souls Ledger, header) still work exactly as before.
+
+---
+
+## May 29, 2026 — 1z.191 Client public-rank submit + friend rank activation
 
 **TL;DR.** Lights up the 1z.186 friend rank badge / sort seams now that the 1z.190 backend is deployed. The client builds a deterministic public rank summary from existing `getRankDivisionInfo(totalPoints)` and PUTs it on boot + on rank-label change + as a daily heartbeat. `_friendRankSortValue` now consumes the real `friend.rankSortValue` field returned by `/v1/friends`. Friend list sort direction flipped to descending (higher rank = higher in list) and only activates when every accepted friend has a non-null sort value. No mock rank data anywhere.
 

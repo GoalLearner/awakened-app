@@ -14,9 +14,16 @@
  * gets a web-side admin panel or marketing-site sign-in flow.
  */
 
+// v3 Phase 1z.192 — added PUT to the allowed-methods list. The
+// 1z.190 endpoint `PUT /v1/users/me/public-profile-summary` is
+// the first PUT route on the Worker; without PUT here, Capacitor's
+// WebView preflight check rejects the request at the browser
+// layer and the fetch() rejects with the generic NETWORK error
+// observed in w65 device debug. All previously-shipped endpoints
+// (GET/POST) remain unaffected.
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type',
   'Access-Control-Max-Age': '86400',
 };
