@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w67';
+  const APP_BUILD_TAG = '2.2.3-w68';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3531,11 +3531,29 @@
     // so common drops never flood the public feed.
     'card_drop',
   ]);
-  // v3 Phase 1z.184 — Guild-mode curation filter. card_drop is a
-  // personal-progress event; only ultra_rare_drop remains the
-  // public-flex variant. Keep this Set tightly scoped — additions
-  // hide events from the public Guild stream globally.
-  const GUILDHALL_GUILD_HIDDEN_TYPES = new Set(['card_drop']);
+  // v3 Phase 1z.197 — Hunter-feed visibility extends the personal-
+  // feat allowlist with roster/social events (currently just
+  // friend_added) that the user wants to see in their personal
+  // feed even though they aren't strictly "what I accomplished."
+  // FEATS · 24H tile + Today's Feats sheet still gate on
+  // _isPersonalFeatEntry so those surfaces stay accurate per
+  // 1z.177; only the Hunter Feed builder uses this superset.
+  const _HUNTER_FEED_EXTRA_TYPES = new Set(['friend_added']);
+  function _isHunterFeedEntry(e) {
+    if (!e || !e.type) return false;
+    return _GUILDHALL_PERSONAL_FEAT_TYPES.has(e.type)
+        || _HUNTER_FEED_EXTRA_TYPES.has(e.type);
+  }
+  try { window._isHunterFeedEntry = _isHunterFeedEntry; } catch (_) {}
+  // v3 Phase 1z.184 + 1z.197 — Guild-mode curation filter.
+  //   card_drop      (1z.184) — non-ultra drops are personal noise.
+  //   friend_added   (1z.197) — joined-Guild events read better as
+  //                              Hunter-side personal social log
+  //                              entries than as public flex.
+  // Both still display in Hunter mode via _isHunterFeedEntry.
+  // Keep this Set tightly scoped — additions hide events from the
+  // public Guild stream globally.
+  const GUILDHALL_GUILD_HIDDEN_TYPES = new Set(['card_drop', 'friend_added']);
   try { window.GUILDHALL_GUILD_HIDDEN_TYPES = GUILDHALL_GUILD_HIDDEN_TYPES; } catch (_) {}
   function _isPersonalFeatEntry(e) {
     return !!(e && _GUILDHALL_PERSONAL_FEAT_TYPES.has(e.type));
@@ -4734,7 +4752,11 @@
     let diagnostics = null;
 
     if (filterMode === 'hunter') {
-      const personalActivity = Array.isArray(entries) ? entries.filter(_isPersonalFeatEntry) : [];
+      // v3 Phase 1z.197 — Hunter Feed superset includes friend_added
+      // so joined-Guild rows surface here instead of in the Guild
+      // stream. _isPersonalFeatEntry stays unchanged so FEATS · 24H
+      // and Today's Feats sheet keep their 1z.177 semantics.
+      const personalActivity = Array.isArray(entries) ? entries.filter(_isHunterFeedEntry) : [];
       let soulsRows = [];
       try { soulsRows = _readSoulsLedger(); } catch (_) { soulsRows = []; }
       const built  = _buildHunterFeedEntries(personalActivity, soulsRows);

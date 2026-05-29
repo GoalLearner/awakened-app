@@ -4,7 +4,66 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.196 Client public-achievement submit + Roster BOSSES surfacing (read this first)
+## May 29, 2026 — 1z.197 Route joined-Guild events to Hunter feed (read this first)
+
+**TL;DR.** Frontend-only display-routing change. `friend_added` rows (currently rendered as "`<alias>` joined your Guild") move from Guild mode → Hunter mode. Existing historical rows reroute by filter alone; storage is untouched. FEATS · 24H tile + Today's Feats sheet preserve their 1z.177 semantics ("what the user themselves accomplished") — joined-Guild events do NOT count as personal feats; they're routed to Hunter via a new `_HUNTER_FEED_EXTRA_TYPES` superset.
+
+**Files modified (frontend only).**
+- `app.js` —
+  - Kept `_GUILDHALL_PERSONAL_FEAT_TYPES` exactly as it was (preserves 1z.177 counts for FEATS · 24H + Today's Feats sheet).
+  - Added new `_HUNTER_FEED_EXTRA_TYPES = new Set(['friend_added'])` and `_isHunterFeedEntry(e)` predicate. `_isHunterFeedEntry` returns true for any type in `_GUILDHALL_PERSONAL_FEAT_TYPES` OR `_HUNTER_FEED_EXTRA_TYPES`. This is the superset specifically used for the Hunter Feed display filter. Exposed on `window._isHunterFeedEntry`.
+  - Extended `GUILDHALL_GUILD_HIDDEN_TYPES` from `{ 'card_drop' }` → `{ 'card_drop', 'friend_added' }`. Guild mode's curation filter already drops these before render.
+  - `renderGuildActivity` Hunter branch now filters with `_isHunterFeedEntry` instead of `_isPersonalFeatEntry`. The Hunter feed builder + boss-kill collapse logic + 1z.181 souls eligibility filter are unchanged — they only special-case `boss_kill`, so `friend_added` falls through cleanly to `_guildhallRowHtml` which already renders the "`<alias>` joined your Guild" template via the 1z.170 `GUILD_JOIN_` marker.
+- `index.html` — `app.js?v=521`.
+- `sw.js` — `CACHE_VERSION = 'v5.407'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w68`, `app.js?v=521`, `auth.js?v=19` (unchanged), `sw.js CACHE_VERSION v5.407`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Critical: FEATS · 24H tile + Today's Feats sheet stay correct.** These surfaces gate on `_isPersonalFeatEntry`, which was deliberately NOT extended. Joined-Guild events are NOT counted as personal feats — they only surface in the Hunter Feed list via the new `_isHunterFeedEntry` superset. If we had added `friend_added` directly to `_GUILDHALL_PERSONAL_FEAT_TYPES`, the user-visible bug 1z.177 fixed (joined-Guild rows showing up as personal feats) would have returned. Separate predicates keep both semantics intact.
+
+**Row rendering.** No copy or template change. `_guildhallRowHtml` has handled `friend_added` since 1z.170 via the dedicated `GUILD_JOIN_` verb marker that swaps templates to "`<alias>` joined your Guild" with the violet `⚭` icon. Date grouping (1z.182), See More (1z.183), and newest-expanded auto-open (1z.185) all apply to the Hunter feed exactly the same way — no per-type logic.
+
+**Storage untouched.** `hb_guild_activity` is read-only on this train. No row deletions, no rewrites, no migrations, no cleanup scripts. The three friend_added rows currently visible in Guild mode in your screenshot will appear in Hunter mode on next render and disappear from Guild mode — purely by display classification.
+
+**Diagnostic surface.** Existing breadcrumbs (`guildhall-hunter-feed-render`, `guildhall-guild-feed-render`) continue to fire with all their 1z.180/181/182/183/185 fields. No new breadcrumbs in this train.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No storage mutation. `hb_guild_activity` read-only.
+- No fake events. No row deletion. No payload changes.
+- No friend add/remove backend behavior change.
+- No public rank / achievement submit changes.
+- No HealthKit / leaderboard / XP / rank threshold / boss / inventory / drop odds / auth changes.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+- `card_drop` still Hunter-only (not regressed). Spend rows still excluded. Duel rows still excluded.
+- FEATS · 24H tile + Today's Feats sheet semantics preserved (1z.177).
+
+**Rollback.** Three independent reverts:
+1. Restore `GUILDHALL_GUILD_HIDDEN_TYPES` back to `new Set(['card_drop'])` (re-shows joined-Guild in Guild mode).
+2. Revert the `renderGuildActivity` Hunter branch line from `_isHunterFeedEntry` back to `_isPersonalFeatEntry`.
+3. Delete `_HUNTER_FEED_EXTRA_TYPES`, `_isHunterFeedEntry`, and the `window._isHunterFeedEntry` export.
+
+Knobs revert to `w67 / 520 / v5.406`. No DB / backend / storage touched.
+
+**Manual QA (w68).**
+1. Cold-launch w68. Confirm `"build": "2.2.3-w68"`.
+2. Open Social tab → Guild Activity.
+3. **Guild mode**: joined-Guild rows (e.g. "Anthony-Edwards joined your Guild") are GONE. Date groups still render for ranked/boss-kill/ultra-rare events.
+4. Switch to **Hunter mode**: joined-Guild rows appear, grouped by date, with the violet ⚭ glyph and "`<alias>` joined your Guild" copy.
+5. Hunter Feed still excludes spend rows and legacy Duel rows.
+6. `card_drop` still appears in Hunter only.
+7. **FEATS · 24H tile** value matches what the user themselves accomplished today — joined-Guild events do NOT inflate the count.
+8. **Today's Feats sheet** lists only personal feats (no joined-Guild entries).
+9. Add a new friend / accept friend if practical → the new joined-Guild event appears in Hunter, not Guild.
+10. Date grouping, See More, and newest-expanded auto-open all still work.
+11. Roster (HUNTERS tile) still shows rank badges + BOSSES counts.
+12. Add Friend / Remove Friend still work.
+13. Hunter Feed positive-souls behavior + 1z.180 boss-kill+souls collapse still work.
+
+---
+
+## May 29, 2026 — 1z.196 Client public-achievement submit + Roster BOSSES surfacing
 
 **TL;DR.** Frontend-only train. Lights up the 1z.195 backend achievement columns: client builds a privacy-safe `_publicAchievementsSummary()` from local `hb_bosses` totals + `hb_inventory` ultra-rare card count, extends the existing 1z.191 PUT payload with an `achievements` block, and the Roster sheet now fills the BOSSES column from backend-provided `bossesSlainTotal` (falling back to local self-count or `—`). `verifiedStreakLabel` is intentionally deferred to a later phase per the 1z.196 prompt's "if unclear, return null" guidance.
 
