@@ -24659,6 +24659,44 @@ button.guildhall-summary-tile:active {
 .guildhall-activity-date-body .guildhall-activity-row:last-child {
   border-bottom: 0;
 }
+/* v3 Phase 1z.183 — See more button shown beneath the visible
+   date groups when the feed has older days hidden. Compact,
+   centered, dark-glass with a thin violet border so it reads
+   as part of the Guild Activity system. */
+.guildhall-activity-see-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+.guildhall-activity-see-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(16, 18, 38, 0.55);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 999px;
+  color: var(--gold, #f5b842);
+  font-family: 'Cinzel', serif;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+.guildhall-activity-see-more-btn:hover {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.45);
+}
+.guildhall-activity-see-more-btn:active {
+  transform: translateY(1px);
+}
+.guildhall-activity-see-more-chev {
+  font-size: 0.70rem;
+  line-height: 1;
+  color: var(--gold, #f5b842);
+}
 .guildhall-activity-time {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.60rem;

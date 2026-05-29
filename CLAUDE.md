@@ -4,6 +4,26 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 29, 2026 — 1z.183 Guild Activity collapse-toggle + See More pagination (read this first)
+
+**TL;DR.** Refines the 1z.182 date-grouped GUILD ACTIVITY accordion: tapping the expanded header now collapses it, and only the 3 newest active date groups render by default. A compact "See N more" button reveals 3 more per tap; it disappears when nothing is hidden.
+
+**Files touched (frontend only).**
+- `app.js` — new constants `GUILDHALL_DATE_GROUP_INITIAL_VISIBLE = 3`, `GUILDHALL_DATE_GROUP_INCREMENT = 3`, module state `_guildActivityVisibleDateGroupCount`. `_renderGuildActivityDateGroups` now slices groups to the visible window, honors a `null` expanded key (all-collapsed), and emits an optional See More button when groups are hidden. `setupGuildActivityDateGroups` delegated click handler now (a) routes See More taps to bump the visible count and (b) toggles the tapped header — same key collapses to `null`, different key swaps expanded state. `setGuildActivityFilter` resets `_guildActivityVisibleDateGroupCount` back to 3 on every Hunter ↔ Guild switch. Breadcrumbs extended with `totalGroupCount`, `visibleGroupCount`, `hiddenGroupCount`, `visibleDateGroupLimit`.
+- `styles.css` — added `.guildhall-activity-see-more` + `.guildhall-activity-see-more-btn` (compact pill, dark glass, thin violet border, gold Cinzel label).
+- `index.html` — `app.js?v=512`.
+- `sw.js` — `CACHE_VERSION = 'v5.398'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w59`, `app.js?v=512`, `auth.js?v=18` (unchanged), `sw.js CACHE_VERSION v5.398`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Guardrails preserved.** No backend / D1 / migration / Codemagic / archive / upload. No HealthKit / leaderboard / dungeon / XP / rank / souls economy changes. `recordSoulsTransaction` and `recordGuildActivity` untouched. `hb_souls_ledger` and `hb_guild_activity` never mutated. Duels remain fully removed; 1z.181 Hunter eligibility filter (positive delta + no Duel substring) still runs before grouping, so spent souls and legacy Duel rows cannot reappear in Hunter mode.
+
+**Rollback.** (1) Restore the pre-1z.183 `_renderGuildActivityDateGroups` (no slice, no See More). (2) Restore the simpler click handler (no See More routing; same-key tap = no-op). (3) Remove the new constants/state. (4) Remove the `setGuildActivityFilter` reset of the visible count. (5) Delete the `.guildhall-activity-see-more*` CSS. (6) Revert the knob bumps. Each step independent; no DB or backend touched.
+
+**TestFlight QA.** Open Social tab on w59. Confirm only 3 date groups show. Tap newest (expanded) header → collapses to `null`; tap again → expands. Tap a different date → it expands, prior collapses. Tap See More → 3 more date groups appear; button updates to next remaining count. See More vanishes when all groups visible. Switch Hunter/Guild → visible count resets to 3, newest visible group expands. Hunter mode must still exclude `−25 souls · Engaged The Insomniac` and any legacy Duel row. Souls Ledger / Transactions sheet still shows full accounting.
+
+---
+
 ## 🚀 READY TO SHIP — TestFlight target `2.2.3-w12` (May 23, 2026)
 
 This train bundles **three customer-facing fixes** plus one already-deployed backend fix. All code is committed, pushed to `origin/main`, and verified. Ready for MacBook archive + TestFlight upload.

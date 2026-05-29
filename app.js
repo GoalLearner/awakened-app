@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w58';
+  const APP_BUILD_TAG = '2.2.3-w59';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4035,6 +4035,9 @@
     // modes always lands on the newest available group for the new
     // mode (Hunter and Guild can have different newest days).
     _guildActivityExpandedDate = null;
+    // v3 Phase 1z.183 — reset visible-group window back to the
+    // default on every mode switch so the new mode lands compact.
+    _guildActivityVisibleDateGroupCount = GUILDHALL_DATE_GROUP_INITIAL_VISIBLE;
     // Sync the toggle DOM in case this was called programmatically
     // (e.g. from tests). Active button carries data-active="true" +
     // aria-pressed="true"; CSS keys off the data attr.
@@ -4156,6 +4159,14 @@
   const GUILDHALL_GROUPED_FEED_CAP = 30;
   let _guildActivityExpandedDate = null;
 
+  // v3 Phase 1z.183 — limit the visible date-group headers so the
+  // feed doesn't stack into a long ladder of dates. Show 3 newest
+  // active groups by default; "See more" reveals 3 more per tap.
+  // Session-only state — no localStorage.
+  const GUILDHALL_DATE_GROUP_INITIAL_VISIBLE = 3;
+  const GUILDHALL_DATE_GROUP_INCREMENT = 3;
+  let _guildActivityVisibleDateGroupCount = GUILDHALL_DATE_GROUP_INITIAL_VISIBLE;
+
   function _guildActivityDateKey(ts) {
     if (typeof ts !== 'number' || !Number.isFinite(ts) || ts <= 0) return 'unknown';
     const d = new Date(ts);
@@ -4216,15 +4227,36 @@
 
   function _renderGuildActivityDateGroups(groups) {
     if (!Array.isArray(groups) || groups.length === 0) return '';
+    // v3 Phase 1z.183 — slice to the visible window. The default is
+    // GUILDHALL_DATE_GROUP_INITIAL_VISIBLE (3); each See More tap
+    // bumps the count by GUILDHALL_DATE_GROUP_INCREMENT (3).
+    if (typeof _guildActivityVisibleDateGroupCount !== 'number'
+        || _guildActivityVisibleDateGroupCount < GUILDHALL_DATE_GROUP_INITIAL_VISIBLE) {
+      _guildActivityVisibleDateGroupCount = GUILDHALL_DATE_GROUP_INITIAL_VISIBLE;
+    }
+    const visibleLimit = Math.min(groups.length, _guildActivityVisibleDateGroupCount);
+    const visibleGroups = groups.slice(0, visibleLimit);
+
     // Decide expanded date: previously selected if it's still
-    // present, else default to the newest group. Stash the
-    // resolved value so subsequent renders agree.
+    // present in the visible window, else default to the newest
+    // visible group. null is a valid value — user may have
+    // collapsed every group manually (1z.183 allows that).
     let expandedKey = _guildActivityExpandedDate;
-    if (!expandedKey || !groups.some(g => g.dateKey === expandedKey)) {
-      expandedKey = groups[0].dateKey;
+    const expandedStillVisible = expandedKey && visibleGroups.some(g => g.dateKey === expandedKey);
+    if (expandedKey && !expandedStillVisible) {
+      // Previously expanded group fell out of the visible window
+      // (e.g. mode switch where filter resolved a different set).
+      // Re-anchor to the newest visible group.
+      expandedKey = visibleGroups[0].dateKey;
+      _guildActivityExpandedDate = expandedKey;
+    } else if (expandedKey === null) {
+      // Honor the user's "all collapsed" state — do not re-expand.
+    } else if (!expandedKey) {
+      expandedKey = visibleGroups[0].dateKey;
       _guildActivityExpandedDate = expandedKey;
     }
-    return groups.map(g => {
+
+    const groupsHtml = visibleGroups.map(g => {
       const isExpanded = g.dateKey === expandedKey;
       const countTxt = (g.count === 1) ? '1 activity' : (g.count.toLocaleString('en-US') + ' activities');
       const expandedAttr = isExpanded ? 'true' : 'false';
@@ -4241,6 +4273,23 @@
         '</div>'
       );
     }).join('');
+
+    // v3 Phase 1z.183 — See More button. Only rendered when hidden
+    // date groups exist; disappears once everything is revealed.
+    let seeMoreHtml = '';
+    const hidden = groups.length - visibleGroups.length;
+    if (hidden > 0) {
+      const nextStep = Math.min(hidden, GUILDHALL_DATE_GROUP_INCREMENT);
+      const label = 'See ' + nextStep + ' more';
+      seeMoreHtml =
+        '<div class="guildhall-activity-see-more">' +
+          '<button type="button" class="guildhall-activity-see-more-btn" data-activity-see-more="1">' +
+            '<span class="guildhall-activity-see-more-label">' + esc(label) + '</span>' +
+            '<span class="guildhall-activity-see-more-chev" aria-hidden="true">▾</span>' +
+          '</button>' +
+        '</div>';
+    }
+    return groupsHtml + seeMoreHtml;
   }
 
   // Delegated click wiring for the date-group toggle. Idempotent
@@ -4250,14 +4299,30 @@
     if (!body || body.getAttribute('data-wired-date-groups') === '1') return;
     body.setAttribute('data-wired-date-groups', '1');
     body.addEventListener('click', function (e) {
+      // v3 Phase 1z.183 — See More takes priority since the button
+      // can sit alongside the date toggles inside the same body.
+      const seeMore = e.target && e.target.closest && e.target.closest('[data-activity-see-more]');
+      if (seeMore) {
+        _guildActivityVisibleDateGroupCount =
+          (typeof _guildActivityVisibleDateGroupCount === 'number'
+            ? _guildActivityVisibleDateGroupCount
+            : GUILDHALL_DATE_GROUP_INITIAL_VISIBLE)
+          + GUILDHALL_DATE_GROUP_INCREMENT;
+        try { renderGuildActivity(); } catch (_) {}
+        return;
+      }
       const head = e.target && e.target.closest && e.target.closest('[data-date-toggle]');
       if (!head) return;
       const key = head.getAttribute('data-date-toggle');
       if (!key) return;
-      // Tap on the already-expanded group is a no-op — preserves
-      // the "feed never goes fully empty" rule.
-      if (key === _guildActivityExpandedDate) return;
-      _guildActivityExpandedDate = key;
+      // v3 Phase 1z.183 — tapping the currently-expanded header
+      // now collapses it (state → null). Tapping a different
+      // header expands that one and collapses any previous.
+      if (key === _guildActivityExpandedDate) {
+        _guildActivityExpandedDate = null;
+      } else {
+        _guildActivityExpandedDate = key;
+      }
       try { renderGuildActivity(); } catch (_) {}
     });
   }
@@ -4426,7 +4491,10 @@
     // gets a lighter shape since there's no eligibility filter.
     try {
       if (typeof _addHealthVerifyBreadcrumb === 'function') {
-        const collapsedGroupCount = Math.max(0, groups.length - 1);
+        const totalGroupCount   = groups.length;
+        const visibleGroupCount = Math.min(totalGroupCount, _guildActivityVisibleDateGroupCount);
+        const hiddenGroupCount  = Math.max(0, totalGroupCount - visibleGroupCount);
+        const collapsedGroupCount = Math.max(0, visibleGroupCount - (_guildActivityExpandedDate ? 1 : 0));
         if (filterMode === 'hunter' && diagnostics) {
           _addHealthVerifyBreadcrumb('guildhall-hunter-feed-render', {
             guildActivityCount:             diagnostics.guildActivityCount,
@@ -4437,17 +4505,25 @@
             mergedCount:                    diagnostics.mergedCount,
             displayedCount:                 visible.length,
             collapsedBossKillCount:         diagnostics.collapsedBossKillCount,
-            groupCount:                     groups.length,
+            groupCount:                     totalGroupCount,
             collapsedGroupCount:            collapsedGroupCount,
             expandedDateKey:                _guildActivityExpandedDate,
+            totalGroupCount:                totalGroupCount,
+            visibleGroupCount:              visibleGroupCount,
+            hiddenGroupCount:               hiddenGroupCount,
+            visibleDateGroupLimit:          _guildActivityVisibleDateGroupCount,
             build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
           });
         } else {
           _addHealthVerifyBreadcrumb('guildhall-guild-feed-render', {
             displayedCount:      visible.length,
-            groupCount:          groups.length,
+            groupCount:          totalGroupCount,
             collapsedGroupCount: collapsedGroupCount,
             expandedDateKey:     _guildActivityExpandedDate,
+            totalGroupCount:     totalGroupCount,
+            visibleGroupCount:   visibleGroupCount,
+            hiddenGroupCount:    hiddenGroupCount,
+            visibleDateGroupLimit: _guildActivityVisibleDateGroupCount,
             build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
           });
         }
