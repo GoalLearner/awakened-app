@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w66';
+  const APP_BUILD_TAG = '2.2.3-w67';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3758,6 +3758,14 @@
         rankSortValue: Number.isFinite(Number(f.rankSortValue)) ? Number(f.rankSortValue) : null,
         rankTier:      (typeof f.rankTier === 'string' && f.rankTier) ? f.rankTier : null,
         rankDivision:  (typeof f.rankDivision === 'string' && f.rankDivision) ? f.rankDivision : null,
+        // v3 Phase 1z.196 — preserve backend-provided achievement
+        // summary fields (1z.195) so the Roster sheet can fill the
+        // BOSSES column for friends without faking it from local
+        // state. Falls back to null when the friend hasn't
+        // submitted achievements; renderer paints null as "—".
+        bossesSlainTotal:    Number.isFinite(Number(f.bossesSlainTotal))    ? Number(f.bossesSlainTotal)    : null,
+        ultraRareDropsTotal: Number.isFinite(Number(f.ultraRareDropsTotal)) ? Number(f.ultraRareDropsTotal) : null,
+        verifiedStreakLabel: (typeof f.verifiedStreakLabel === 'string' && f.verifiedStreakLabel) ? f.verifiedStreakLabel : null,
       }));
   }
 
@@ -3788,7 +3796,21 @@
       ? _socialDisplayAlias(row.alias || (isSelf ? 'You' : '—'))
       : (row.alias || (isSelf ? 'You' : '—'));
     const feats = (row.feats24h == null) ? '—' : String(row.feats24h);
-    const boss  = (row.bosses   == null) ? '—' : String(row.bosses);
+    // v3 Phase 1z.196 — BOSSES column source precedence:
+    //   1. backend-provided bossesSlainTotal (friends — real
+    //      submitted aggregate; honors zero as a real value)
+    //   2. locally-computed bosses (self row — same source as the
+    //      Bosses Slain tile / Kill Log)
+    //   3. "—" fallback when neither exists
+    // We never paint a friend's column with our own local data;
+    // friends without submitted achievements stay "—" until they
+    // run w67+ themselves.
+    let boss = '—';
+    if (row.bossesSlainTotal != null) {
+      boss = String(row.bossesSlainTotal);
+    } else if (row.bosses != null) {
+      boss = String(row.bosses);
+    }
     // v3 Phase 1z.193 — drop the "Guild member" subtitle to match
     // the lower Guild accordion's 1z.186 cleanup. The row now reads
     // cleanly with just the alias.
@@ -11946,6 +11968,92 @@
   }
   try { window.__publicRankSummary = _publicRankSummary; } catch (_) {}
 
+  // ── v3 Phase 1z.196 — Public achievement summary builder ────
+  //
+  // Builds the optional `achievements` block for the existing
+  // 1z.191 PUT /v1/users/me/public-profile-summary payload. The
+  // backend (1z.195) accepts:
+  //   bossesSlainTotal    : int [0, 999_999]
+  //   ultraRareDropsTotal : int [0, 9_999]
+  //   verifiedStreakLabel : string matching the strict allowlist
+  //                         /^\d{1,4}-day (MR|LI|stat|habit) streak$/
+  //                         OR null
+  //
+  // Privacy posture (locked in 1z.194 + 1z.195):
+  //   - Aggregates only. Never per-boss / per-card / per-event.
+  //   - No card identities. We count ultra-rare cards by walking
+  //     hb_inventory + CARDS rarity tags, never submit names/ids.
+  //   - No habit names. verifiedStreakLabel encodes streak TYPE
+  //     + LENGTH only ("30-day MR streak").
+  //   - No HealthKit data, sleep duration, workout details, or
+  //     exact daily step counts.
+  //
+  // verifiedStreakLabel is INTENTIONALLY null in v1: mapping the
+  // existing PR_DEFS all-time records (longest_mr_streak etc.) to
+  // a "current active streak label" requires logic that isn't
+  // single-source-of-truth-clean today. Per the 1z.196 prompt's
+  // "if unclear, return null and defer streak labels to a later
+  // phase" guidance, we defer. The backend column will simply
+  // stay null for self until a clean streak source ships.
+  const _PA_BOSSES_CLAMP = 999999;
+  const _PA_DROPS_CLAMP  = 9999;
+  function _publicAchievementsSummary() {
+    let bossesSlainTotal = 0;
+    try {
+      if (typeof loadBosses === 'function') {
+        const all = loadBosses() || {};
+        for (const id in all) {
+          if (!Object.prototype.hasOwnProperty.call(all, id)) continue;
+          const s = all[id];
+          if (s && typeof s.kill_count === 'number' && s.kill_count > 0) {
+            bossesSlainTotal += s.kill_count;
+          }
+        }
+      }
+    } catch (_) { bossesSlainTotal = 0; }
+    bossesSlainTotal = Math.max(0, Math.min(_PA_BOSSES_CLAMP, Math.floor(bossesSlainTotal)));
+
+    let ultraRareDropsTotal = 0;
+    try {
+      if (typeof getInventory === 'function' && typeof CARDS === 'object' && CARDS) {
+        const inv = getInventory();
+        const cards = (inv && inv.cards) ? inv.cards : {};
+        for (const cardId in cards) {
+          if (!Object.prototype.hasOwnProperty.call(cards, cardId)) continue;
+          const entry = cards[cardId];
+          if (!entry || !entry.discovered) continue;
+          const def = CARDS[cardId];
+          if (def && def.rarity === 'ultra_rare') {
+            ultraRareDropsTotal += 1;
+          }
+        }
+      }
+    } catch (_) { ultraRareDropsTotal = 0; }
+    ultraRareDropsTotal = Math.max(0, Math.min(_PA_DROPS_CLAMP, Math.floor(ultraRareDropsTotal)));
+
+    // verifiedStreakLabel — deferred. See header comment.
+    const verifiedStreakLabel = null;
+
+    return {
+      bossesSlainTotal:    bossesSlainTotal,
+      ultraRareDropsTotal: ultraRareDropsTotal,
+      verifiedStreakLabel: verifiedStreakLabel,
+    };
+  }
+  try { window.__publicAchievementsSummary = _publicAchievementsSummary; } catch (_) {}
+
+  // Stable string signature so the submit gate can detect
+  // achievement-value changes without a structural compare. Null
+  // streak label becomes the empty string so future flips between
+  // null and a real label register as a change.
+  function _publicAchievementsSignature(ach) {
+    if (!ach) return '|||';
+    const b = (Number.isFinite(ach.bossesSlainTotal)    ? ach.bossesSlainTotal    : 0);
+    const u = (Number.isFinite(ach.ultraRareDropsTotal) ? ach.ultraRareDropsTotal : 0);
+    const s = (typeof ach.verifiedStreakLabel === 'string') ? ach.verifiedStreakLabel : '';
+    return b + '|' + u + '|' + s;
+  }
+
   // Submit gate. Two local keys track the last successful submit:
   //   hb_public_rank_last_label        — last rankLabel sent
   //   hb_public_rank_last_submitted_at — ISO timestamp of last OK
@@ -11958,6 +12066,12 @@
   // blocks.
   const _PRS_LAST_LABEL_KEY = 'hb_public_rank_last_label';
   const _PRS_LAST_AT_KEY    = 'hb_public_rank_last_submitted_at';
+  // v3 Phase 1z.196 — cached achievement signature so we can
+  // detect bosses-slain / ultra-rare-drops / streak-label changes
+  // and trigger a fresh submit without waiting for the next-day
+  // heartbeat. Signature is the same `b|u|s` shape built by
+  // _publicAchievementsSignature.
+  const _PRS_LAST_ACH_SIG_KEY = 'hb_public_achievements_last_signature';
   const _PRS_DEBOUNCE_MS    = 8000;
   let _prsPendingTimer = null;
   let _prsInflight     = false;
@@ -11967,12 +12081,14 @@
     try { _addHealthVerifyBreadcrumb(name, fields || {}); } catch (_) {}
   }
 
-  function _prsShouldSubmit(currentLabel) {
-    let lastLabel = null, lastAt = null;
-    try { lastLabel = localStorage.getItem(_PRS_LAST_LABEL_KEY); } catch (_) {}
-    try { lastAt    = localStorage.getItem(_PRS_LAST_AT_KEY); }    catch (_) {}
+  function _prsShouldSubmit(currentLabel, currentAchSig) {
+    let lastLabel = null, lastAt = null, lastAchSig = null;
+    try { lastLabel  = localStorage.getItem(_PRS_LAST_LABEL_KEY); }   catch (_) {}
+    try { lastAt     = localStorage.getItem(_PRS_LAST_AT_KEY); }      catch (_) {}
+    try { lastAchSig = localStorage.getItem(_PRS_LAST_ACH_SIG_KEY); } catch (_) {}
     if (!lastLabel || !lastAt) return { submit: true, why: 'no-prior' };
     if (lastLabel !== currentLabel) return { submit: true, why: 'label-change' };
+    if (lastAchSig !== currentAchSig) return { submit: true, why: 'achievements-change' };
     const today = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : null;
     if (today) {
       // lastAt is ISO; compare YYYY-MM-DD prefix vs device-local.
@@ -11990,7 +12106,21 @@
     if (!user || !user.jwt) return; // not authed → silent no-op
     const payload = _publicRankSummary(totalPoints);
     if (!payload) return;
-    const gate = _prsShouldSubmit(payload.rankLabel);
+    // v3 Phase 1z.196 — extend payload with the optional public
+    // achievement summary block. The backend (1z.195) accepts it
+    // as an optional top-level field; omitting it preserves the
+    // existing achievement columns verbatim. Including it here
+    // always (even for rank-only changes) is safe because the
+    // backend treats unchanged values as a no-op for the columns.
+    const achievements = _publicAchievementsSummary();
+    const achSig = _publicAchievementsSignature(achievements);
+    payload.achievements = achievements;
+    _prsLogBreadcrumb('public-achievements-summary-built', {
+      bossesSlainTotal:        achievements.bossesSlainTotal,
+      ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
+      hasVerifiedStreakLabel:  achievements.verifiedStreakLabel !== null,
+    });
+    const gate = _prsShouldSubmit(payload.rankLabel, achSig);
     if (!gate.submit) {
       _prsLogBreadcrumb('public-rank-summary-submit-skip', {
         reason: reason || 'unknown',
@@ -12004,18 +12134,25 @@
       reason: reason || 'unknown',
       why: gate.why,
       rankLabel: payload.rankLabel,
-      hasRankSortValue: Number.isFinite(payload.rankSortValue),
+      hasRankSortValue:        Number.isFinite(payload.rankSortValue),
+      bossesSlainTotal:        achievements.bossesSlainTotal,
+      ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
+      hasVerifiedStreakLabel:  achievements.verifiedStreakLabel !== null,
+      achievementSignatureChanged: gate.why === 'achievements-change',
     });
     let res;
     try { res = await Auth.submitPublicProfileSummary(payload); }
     catch (_) { res = { ok: false, code: 'NETWORK' }; }
     _prsInflight = false;
     if (res && res.ok) {
-      try { localStorage.setItem(_PRS_LAST_LABEL_KEY, payload.rankLabel); } catch (_) {}
-      try { localStorage.setItem(_PRS_LAST_AT_KEY, payload.clientUpdatedAt); } catch (_) {}
+      try { localStorage.setItem(_PRS_LAST_LABEL_KEY,   payload.rankLabel); }     catch (_) {}
+      try { localStorage.setItem(_PRS_LAST_AT_KEY,      payload.clientUpdatedAt); } catch (_) {}
+      try { localStorage.setItem(_PRS_LAST_ACH_SIG_KEY, achSig); }                catch (_) {}
       _prsLogBreadcrumb('public-rank-summary-submit-ok', {
         rankLabel: payload.rankLabel,
         why: gate.why,
+        bossesSlainTotal:    achievements.bossesSlainTotal,
+        ultraRareDropsTotal: achievements.ultraRareDropsTotal,
       });
       return;
     }

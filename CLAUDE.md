@@ -4,7 +4,95 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.195 Backend MVP-A public achievement summary fields (read this first)
+## May 29, 2026 — 1z.196 Client public-achievement submit + Roster BOSSES surfacing (read this first)
+
+**TL;DR.** Frontend-only train. Lights up the 1z.195 backend achievement columns: client builds a privacy-safe `_publicAchievementsSummary()` from local `hb_bosses` totals + `hb_inventory` ultra-rare card count, extends the existing 1z.191 PUT payload with an `achievements` block, and the Roster sheet now fills the BOSSES column from backend-provided `bossesSlainTotal` (falling back to local self-count or `—`). `verifiedStreakLabel` is intentionally deferred to a later phase per the 1z.196 prompt's "if unclear, return null" guidance.
+
+**Files modified.**
+- `app.js` —
+  - New `_publicAchievementsSummary()` builder right after `_publicRankSummary`. Walks `loadBosses()` summing `kill_count` for `bossesSlainTotal` (same source as the Bosses Slain tile / Kill Log); walks `getInventory().cards` cross-referencing `CARDS[id].rarity === 'ultra_rare'` and `entry.discovered === true` for `ultraRareDropsTotal`. Both clamped to backend caps (`[0, 999_999]`, `[0, 9_999]`). `verifiedStreakLabel` returns `null` — deferred. Exposed as `window.__publicAchievementsSummary` for debug.
+  - New `_publicAchievementsSignature(ach)` helper produces a stable `b|u|s` string used by the submit gate to detect achievement-value changes between submits.
+  - New localStorage key `hb_public_achievements_last_signature` stores the last successfully-submitted signature alongside the existing `hb_public_rank_last_label` / `hb_public_rank_last_submitted_at`.
+  - `_prsShouldSubmit(currentLabel, currentAchSig)` extended with a third trigger: `achievements-change`. Old triggers (no-prior, label-change, daily-heartbeat) preserved exactly. Order: no-prior → label-change → achievements-change → daily-heartbeat → skipped-same-day.
+  - `_doSubmitPublicRankSummary` now builds the achievements block on every call, attaches it to the PUT payload, and persists the new signature on success. Reuses the same 8s debounce + the same boot / `renderRank` triggers (no new trigger sites needed).
+  - Two new diagnostic breadcrumbs: `public-achievements-summary-built` (privacy-safe count fields + `hasVerifiedStreakLabel`); existing `public-rank-summary-submit-{start,ok,skip,error}` breadcrumbs extended with `bossesSlainTotal`, `ultraRareDropsTotal`, `hasVerifiedStreakLabel`, `achievementSignatureChanged`.
+  - `_guildRosterFriendStats` extended to preserve `bossesSlainTotal` / `ultraRareDropsTotal` / `verifiedStreakLabel` on each friend row (previously dropped — root cause of "friend rows show — even when backend has data").
+  - `_guildRosterRowHtml` BOSSES column now uses precedence `row.bossesSlainTotal → row.bosses → '—'`. Friends with backend submissions show their real aggregate; self continues to show its locally-computed count; friends without submissions stay `—`. **No local self-count ever leaks into a friend row.**
+- `index.html` — `app.js?v=520`.
+- `sw.js` — `CACHE_VERSION = 'v5.406'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w67`, `app.js?v=520`, `auth.js?v=19` (unchanged), `sw.js CACHE_VERSION v5.406`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Submit trigger matrix (post-1z.196).**
+
+| Trigger | Fires when |
+|---|---|
+| `no-prior` | First-ever submission on this device |
+| `label-change` | Rank label changed since last successful submit |
+| `achievements-change` | Boss/drop count or streak label changed since last successful submit |
+| `daily-heartbeat` | Last submit was on a different local date |
+| `skipped-same-day` | None of the above; submit is a no-op (logged as skip) |
+
+The achievements block is included on EVERY PUT — even rank-only triggers — because the backend 1z.195 logic treats unchanged values as a no-op for the columns AND because including the block lets the backend stamp `achievements_updated_at` for friends to read. The signature check just decides whether the *gate* fires; the payload always carries achievements.
+
+**verifiedStreakLabel — deferred.** Mapping the existing `PR_DEFS` all-time records (`longest_mr_streak`, `longest_li_streak`, etc.) to a "current active streak label" requires logic that isn't single-source-of-truth-clean today. Per the 1z.196 prompt's explicit "if unclear, return null" guidance, we submit `null`. The backend `verified_streak_label` column stays null for self until a clean streak source ships. Friends with a label show theirs; friends without show nothing. **No invented streaks.**
+
+**Roster surfacing — minimal.** Only the BOSSES column changed semantics. No new columns. No new chips. No new rows. No layout change. Self row still pulls from local `loadBosses()` (which is the same source as the Bosses Slain tile, so the number agrees with the tile). Friend rows fill from `bossesSlainTotal` when present, `—` otherwise.
+
+**Privacy posture preserved.**
+- Aggregates only. Never per-boss / per-card / per-event.
+- No card identities. We count ultra-rare cards by walking `hb_inventory` + `CARDS` rarity tags; we never submit names/ids.
+- No habit names. `verifiedStreakLabel` is null in v1; the backend regex would block any leakage anyway.
+- No HealthKit, sleep, workout, or exact daily step data.
+- No backend-recomputation of any field.
+- Backend `rank_points` and `metadata_json` still never leak to friends.
+
+**Guard rails preserved.**
+- No backend deploy / D1 migration / Codemagic / archive / upload.
+- No XP / rank threshold / HealthKit / leaderboard / boss kill / inventory / drop odds / friend add-remove / auth changes.
+- No `user_state_snapshots.state_json` parsing.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Five independent reverts:
+1. Restore the previous `_guildRosterRowHtml` BOSSES column body (`(row.bosses == null) ? '—' : String(row.bosses)`).
+2. Restore the previous `_guildRosterFriendStats` map (drop the three achievement fields).
+3. Restore the previous `_doSubmitPublicRankSummary` (drop achievements payload + breadcrumb fields).
+4. Restore the previous `_prsShouldSubmit` (drop `achievements-change` trigger + signature param).
+5. Drop `_publicAchievementsSummary` + `_publicAchievementsSignature` + the localStorage key constant.
+
+Then bump knobs back to `w66 / v=520 → v=519 / v5.406 → v5.405`. No DB / backend touched.
+
+**Manual QA (w67).**
+
+1. Cold-launch w67 signed-in. Confirm `"build": "2.2.3-w67"`.
+2. Wait ~10 seconds. Copy Debug Info shows:
+   - `public-achievements-summary-built` with `bossesSlainTotal: 28`, `ultraRareDropsTotal: 0` (or whatever your inventory holds), `hasVerifiedStreakLabel: false`.
+   - `public-rank-summary-submit-start` with the same fields + `achievementSignatureChanged: true` (first w67 boot).
+   - `public-rank-summary-submit-ok`.
+3. Backend verify:
+   ```sql
+   SELECT user_id, rank_label, bosses_slain_total,
+          ultra_rare_drops_total, verified_streak_label,
+          achievements_updated_at
+     FROM public_profile_summary
+    ORDER BY server_updated_at DESC LIMIT 10;
+   ```
+   The current user's row shows `bosses_slain_total` matching the in-app Bosses Slain tile, `ultra_rare_drops_total` matching the discovered ultra-rare count, `verified_streak_label = NULL`.
+4. Open Social → tap **HUNTERS** tile.
+5. Self row #1 still shows correct rank badge + correct local boss count.
+6. Friend rows (`anthony-edwards`, `rendiesel`): rows whose accounts have run w67+ show their real bosses count in the BOSSES column; rows whose accounts haven't yet show `—`.
+7. No friend ever shows the current user's local boss count.
+8. After a boss kill: within ~8 seconds the submit fires with `achievements-change` reason, the backend row updates.
+9. Same-day cold-launch with unchanged rank+achievements → submit skips with `why: skipped-same-day`.
+10. Cross-day cold-launch → daily heartbeat refreshes everything.
+11. Rank badges still work.
+12. Add Friend / Remove Friend still work.
+13. Hunter Feed / Guild Activity / Kill Log / Souls Ledger unchanged.
+
+---
+
+## May 29, 2026 — 1z.195 Backend MVP-A public achievement summary fields
 
 **TL;DR.** Backend-only train. Extends 0012's `public_profile_summary` with four typed achievement columns (`bosses_slain_total`, `ultra_rare_drops_total`, `verified_streak_label`, `achievements_updated_at`), extends the existing PUT validation + UPSERT to accept an optional `achievements` block with strict per-field range + regex allowlists, and extends `/v1/friends` LEFT JOIN to surface the new fields when a friend has submitted them. **Reuses the existing PUT endpoint, rate limiter, and JOIN — no new endpoint, no new table, no new rate limiter, no new auth.** Migration committed but NOT applied to production. Worker NOT deployed. Frontend untouched.
 
