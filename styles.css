@@ -24565,6 +24565,14 @@ button.guildhall-summary-tile:active {
 }
 .guildhall-activity-target--gold   { color: var(--gold); }
 .guildhall-activity-target--violet { color: var(--accent, #8b5cf6); }
+/* v3 Phase 1z.180 — souls-ledger / collapsed-boss-kill suffix.
+   Renders the "· +50 souls" or "· Daily login" tail in a muted
+   tone so the primary delta/target carries the eye, and the
+   suffix reads as context rather than noise. */
+.guildhall-activity-target-sub {
+  color: var(--text-secondary, #8b8fab);
+  font-weight: 600;
+}
 .guildhall-activity-time {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.60rem;

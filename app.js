@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w55';
+  const APP_BUILD_TAG = '2.2.3-w56';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4053,6 +4053,146 @@
     window.getGuildActivityFilter = function () { return _guildActivityFilter; };
   } catch (_) {}
 
+  // ─── v3 Phase 1z.180 — Hunter Feed Phase A ────────────────────
+  //
+  // The Hunter view of the Social activity feed now merges TWO
+  // existing read-only sources:
+  //   1. hb_guild_activity entries filtered to personal feat types
+  //      (the 1z.178 allowlist via _isPersonalFeatEntry).
+  //   2. hb_souls_ledger entries (every souls-changing event: daily
+  //      login, boss kill reward, boss engage cost, duel win/loss,
+  //      starter grant, etc.).
+  //
+  // Both stores already exist with their own dedup + FIFO caps. This
+  // merger is purely render-time — no writes, no mutation, no new
+  // storage. Sort newest-first, collapse same-window boss-kill
+  // duplicates, slice to the existing display limit, render.
+  //
+  // Guild view stays unchanged (full hb_guild_activity).
+  // FEATS · 24H tile + Today's Feats sheet stay unchanged.
+  // Souls Ledger sheet stays unchanged.
+  //
+  // Phase B (deferred): card_drop event writes for non-ultra drops
+  // and a tighter Guild-mode allowlist for the new bands.
+
+  const HUNTER_FEED_BOSS_COLLAPSE_WINDOW_MS = 10000; // 10 seconds
+
+  // Generate one .guildhall-activity-row for a souls ledger entry.
+  // Mirrors _guildhallRowHtml's structural shape so the merged feed
+  // looks visually homogeneous. The delta is the primary signal —
+  // gold for positive, violet for negative — and the label from the
+  // existing _classifySoulsEvent classification carries the "why."
+  function _hunterFeedSoulsRowHtml(entry) {
+    if (!entry || typeof entry.delta !== 'number') return '';
+    const time     = _guildhallFormatRelativeTs(entry.ts);
+    const iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◊</span>';
+    const isGain   = entry.delta > 0;
+    const sign     = isGain ? '+' : '−';
+    const abs      = Math.abs(entry.delta || 0).toLocaleString('en-US');
+    const deltaStr = sign + abs + ' souls';
+    const targetCls = isGain ? 'guildhall-activity-target--gold' : 'guildhall-activity-target--violet';
+    const labelTxt = entry.label || (isGain ? 'Souls earned' : 'Souls spent');
+    return (
+      '<div class="guildhall-activity-row">' +
+        iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<span class="guildhall-activity-target ' + targetCls + '">' + esc(deltaStr) + '</span>' +
+          ' <span class="guildhall-activity-target-sub">· ' + esc(labelTxt) + '</span>' +
+        '</div>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>'
+    );
+  }
+
+  // Collapse a boss_kill feat row + its matching souls reward row
+  // into a single line: "You defeated The Insomniac · +50 souls".
+  // Uses _guildhallRowHtml's structural shape so the row's icon,
+  // typography, and timestamp all match the rest of the feed.
+  function _hunterFeedCollapsedBossKillRow(activityEntry, soulsEntry) {
+    const ts        = Math.max(activityEntry.ts || 0, soulsEntry.ts || 0);
+    const time      = _guildhallFormatRelativeTs(ts);
+    const iconHtml  = _guildhallActivityIconHtml('boss_kill');
+    const bossName  = (activityEntry.payload && activityEntry.payload.bossName)
+      ? activityEntry.payload.bossName
+      : 'a boss';
+    const delta     = soulsEntry.delta || 0;
+    const sign      = delta > 0 ? '+' : '−';
+    const abs       = Math.abs(delta).toLocaleString('en-US');
+    const deltaStr  = sign + abs + ' souls';
+    return (
+      '<div class="guildhall-activity-row">' +
+        iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<strong>You</strong> defeated ' +
+          '<span class="guildhall-activity-target guildhall-activity-target--gold">' + esc(bossName) + '</span>' +
+          ' <span class="guildhall-activity-target-sub">· ' + esc(deltaStr) + '</span>' +
+        '</div>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>'
+    );
+  }
+
+  // Build the merged Hunter-mode entry list. Each merged entry is a
+  // { ts, html } pair; sorting happens after the build pass. Returns
+  // both the merged array and a diagnostics object so the renderer
+  // can emit a single breadcrumb with the per-source counts.
+  function _buildHunterFeedEntries(personalActivity, soulsRows) {
+    const merged = [];
+    const consumedSoulIds = new Set();
+    let collapsedBossKillCount = 0;
+
+    // First pass: personal feats. For boss_kill rows, search for a
+    // same-window souls boss_kill row and collapse.
+    for (const e of personalActivity) {
+      if (!e || typeof e.ts !== 'number') continue;
+      if (e.type === 'boss_kill') {
+        let matchIdx = -1;
+        for (let i = 0; i < soulsRows.length; i++) {
+          const s = soulsRows[i];
+          if (!s || consumedSoulIds.has(s.id)) continue;
+          if (s.type !== 'boss_kill') continue;
+          if (Math.abs((s.ts || 0) - (e.ts || 0)) > HUNTER_FEED_BOSS_COLLAPSE_WINDOW_MS) continue;
+          // Optional tighter match: if both carry a ref to the same
+          // boss id, prefer that exact pairing. The activity payload
+          // carries bossId; the souls hint is 'kill_<bossId>' which
+          // _classifySoulsEvent strips into entry.ref_id.
+          const eBossId = (e.payload && e.payload.bossId) || null;
+          if (eBossId && s.ref_id && s.ref_id !== eBossId) continue;
+          matchIdx = i;
+          break;
+        }
+        if (matchIdx >= 0) {
+          const match = soulsRows[matchIdx];
+          consumedSoulIds.add(match.id);
+          collapsedBossKillCount++;
+          merged.push({
+            ts:   Math.max(e.ts || 0, match.ts || 0),
+            html: _hunterFeedCollapsedBossKillRow(e, match),
+          });
+          continue;
+        }
+      }
+      merged.push({ ts: e.ts || 0, html: _guildhallRowHtml(e) });
+    }
+
+    // Second pass: souls rows not consumed by collapse.
+    for (const s of soulsRows) {
+      if (!s || typeof s.ts !== 'number') continue;
+      if (consumedSoulIds.has(s.id)) continue;
+      merged.push({ ts: s.ts || 0, html: _hunterFeedSoulsRowHtml(s) });
+    }
+
+    return {
+      merged: merged,
+      diagnostics: {
+        guildActivityCount:     personalActivity.length,
+        soulsLedgerCount:       soulsRows.length,
+        mergedCount:            merged.length,
+        collapsedBossKillCount: collapsedBossKillCount,
+      },
+    };
+  }
+
   function renderGuildActivity() {
     // v3 Phase 1z.167 — repaint summary tiles in lock-step with the
     // activity list. Cheap no-op when the v2 summary DOM isn't
@@ -4062,28 +4202,45 @@
     if (!body) return;
     let entries = [];
     try { entries = _guildhallReadStore(); } catch (_) { entries = []; }
-    // v3 Phase 1z.178 — apply Hunter / Guild filter at the entries
-    // source. Hunter narrows to personal feats only via the 1z.177
-    // allowlist; Guild keeps the unfiltered feed (which is the
-    // pre-1z.178 behaviour, so existing tests/users see no change
-    // until they tap Hunter).
     const filterMode = _guildActivityFilter;
-    if (Array.isArray(entries) && filterMode === 'hunter') {
-      entries = entries.filter(_isPersonalFeatEntry);
+
+    // ── Hunter view (1z.180 merged feed) ───────────────────────
+    if (filterMode === 'hunter') {
+      const personalActivity = Array.isArray(entries) ? entries.filter(_isPersonalFeatEntry) : [];
+      let soulsRows = [];
+      try { soulsRows = _readSoulsLedger(); } catch (_) { soulsRows = []; }
+      const built   = _buildHunterFeedEntries(personalActivity, soulsRows);
+      const merged  = built.merged;
+      merged.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const visible = merged.slice(0, GUILDHALL_ACTIVITY_DISPLAY_LIMIT);
+      try {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          _addHealthVerifyBreadcrumb('guildhall-hunter-feed-render', {
+            guildActivityCount:     built.diagnostics.guildActivityCount,
+            soulsLedgerCount:       built.diagnostics.soulsLedgerCount,
+            mergedCount:            built.diagnostics.mergedCount,
+            displayedCount:         visible.length,
+            collapsedBossKillCount: built.diagnostics.collapsedBossKillCount,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
+      if (visible.length === 0) {
+        body.innerHTML =
+          '<div class="guildhall-activity-empty">The board is quiet.' +
+            '<div class="guildhall-activity-empty-sub">Your rewards, drops, and milestones will appear here.</div>' +
+          '</div>';
+        return;
+      }
+      body.innerHTML = visible.map(v => v.html).join('');
+      return;
     }
+
+    // ── Guild view (unchanged from 1z.178) ─────────────────────
     if (!Array.isArray(entries) || entries.length === 0) {
-      // Mode-aware empty state. Stays RPG-flavoured, short, and
-      // tells the user what would fill this view if they did the
-      // right thing.
-      const emptyTitle = (filterMode === 'hunter')
-        ? 'No hunter feats yet.'
-        : 'The board is quiet.';
-      const emptySub = (filterMode === 'hunter')
-        ? 'Your victories and milestones will appear here.'
-        : 'Guild activity will appear here.';
       body.innerHTML =
-        '<div class="guildhall-activity-empty">' + esc(emptyTitle) +
-          '<div class="guildhall-activity-empty-sub">' + esc(emptySub) + '</div>' +
+        '<div class="guildhall-activity-empty">The board is quiet.' +
+          '<div class="guildhall-activity-empty-sub">Guild activity will appear here.</div>' +
         '</div>';
       return;
     }

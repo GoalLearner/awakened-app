@@ -55,7 +55,146 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.179 Header boots compact on every cold launch (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.180 Hunter Feed Phase A: merge Souls Ledger into Hunter view (read this first)
+
+### ✅ STATUS: Hunter mode on the Social tab now shows a merged feed of personal Guild Activity feats + every souls-changing event from the Souls Ledger. Boss-kill duplicates collapse cleanly into "Defeated The Insomniac · +50 souls". Guild view, Souls Ledger sheet, FEATS · 24H tile, and Today's Feats sheet are all untouched. Read-only — no writes, no mutation, no new storage. Frontend-only. `2.2.3-w56` web bundle ready.
+
+### Audit findings (no changes pre-edit)
+
+Two stores already cover ~95% of the spec:
+- `hb_souls_ledger` (250 FIFO) — every souls-changing event with `delta`, `balance_after`, `type`, `label`. The `_classifySoulsEvent` taxonomy already covers daily login, boss kill reward, boss engage cost, duel win/loss, starter/system, and arbitrary `{positive,negative}` fallbacks.
+- `hb_guild_activity` (50 FIFO) — 7 feat types with seenKey dedup. Hunter mode already filtered to personal feats via the 1z.177 allowlist; Guild mode showed the unfiltered ledger.
+
+Phase A only needed read-time merge + render. The Souls Ledger transaction sheet at `_readSoulsLedger`, the FEATS · 24H tile counter, and the Today's Feats sheet all keep their own paths.
+
+### Implementation — three helpers + a Hunter branch
+
+**`_hunterFeedSoulsRowHtml(entry)`**: renders one ledger row in the activity row shape:
+```
+[◊]  +15 souls · Daily login           2h ago
+[◊]  −25 souls · Engaged The Insomniac 1h ago
+[◊]  +40 souls · Duel victory vs anthony-edwards  3m ago
+```
+- Sign rendered as `+` / `−` (Unicode minus for readability).
+- `|delta|` formatted with `toLocaleString` so 1,200 reads cleanly.
+- Positive deltas use `--gold` target class; negative use `--violet`. No new color class needed.
+- Suffix label after `·` uses a new muted `target-sub` style (one CSS rule).
+- Reuses `_classifySoulsEvent`'s pre-stored `entry.label` for the "why" — no re-classification at render time.
+
+**`_hunterFeedCollapsedBossKillRow(activityEntry, soulsEntry)`**: when a `boss_kill` guild activity row has a matching `boss_kill` souls row within ±10 seconds AND the boss IDs agree (when both have one), collapse to a single line:
+```
+[⚔]  You defeated The Insomniac · +50 souls   2m ago
+```
+- Boss name from the activity payload (`bossName`).
+- Delta from the souls row.
+- Boss ID match is a tighter secondary check — if either row lacks the ID, the 10-second window is enough. Prevents wrong-pairing on rapid-fire kills of different bosses.
+
+**`_buildHunterFeedEntries(personalActivity, soulsRows)`**: two-pass build:
+1. Emit personal activity rows. On `boss_kill` rows, search souls for the same-window match; on hit, emit collapsed row and mark souls row as consumed.
+2. Emit any souls rows not already consumed by collapse.
+
+Returns `{ merged, diagnostics: {guildActivityCount, soulsLedgerCount, mergedCount, collapsedBossKillCount} }` so the renderer can emit a single breadcrumb.
+
+**Hunter branch in `renderGuildActivity`**: when `_guildActivityFilter === 'hunter'`:
+- Filter guild activity to `_isPersonalFeatEntry` (1z.177 allowlist).
+- Read souls ledger via `_readSoulsLedger`.
+- Build merge, sort by `ts` DESC, slice to `GUILDHALL_ACTIVITY_DISPLAY_LIMIT` (8).
+- Emit `guildhall-hunter-feed-render` breadcrumb with diagnostics.
+- Render `visible.map(v => v.html).join('')`.
+- Empty state: *"The board is quiet. Your rewards, drops, and milestones will appear here."* (slightly refined from 1z.178's empty copy).
+
+**Guild branch**: unchanged.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ Souls Ledger sheet (`openSoulsLedger`, `_readSoulsLedger`, `_writeSoulsLedger`, `recordSoulsTransaction`, `_classifySoulsEvent`) — all unchanged. The sheet still opens from the souls pill, shows the same Transactions list with the same balance line, X-only close, "Show older" reveal.
+- ✅ FEATS · 24H tile counter — still counts only `_isPersonalFeatEntry` matches from `hb_guild_activity`. Souls don't pollute this number.
+- ✅ Today's Feats sheet — still shows only personal Guild Activity entries from today. No souls injected.
+- ✅ Guild mode in the main feed — full `hb_guild_activity`, including `friend_added`.
+- ✅ `recordSoulsTransaction` write path — unchanged. Boss kill rewards, daily login, duel settlements all still write to `hb_souls_ledger` exactly as before.
+- ✅ `recordGuildActivity` write sites (boss_kill, ultra_rare_drop, rank_up, step_milestone_10k, sleep_quality_7h, habit_streak, friend_added) — all unchanged. No new event writes in Phase A.
+- ✅ Streak bands (`GUILDHALL_STREAK_BANDS = [7, 14, 30, 100, 365]`) — unchanged. Phase B will reconsider weekly increments per user spec.
+- ✅ Card drops for non-ultra rarities — still not feed events. Phase B will add `card_drop` writes.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ All tile routing, Friends accordion, Add Friend, Remove Friend two-step safety — unchanged.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +150 / −36 — three new helpers (`_hunterFeedSoulsRowHtml`, `_hunterFeedCollapsedBossKillRow`, `_buildHunterFeedEntries`) + Hunter branch rewrite in `renderGuildActivity` |
+| `styles.css` | +9 — `.guildhall-activity-target-sub` muted suffix style |
+| `index.html` | knob bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w55` | `2.2.3-w56` |
+| `app.js?v=` | `508` | `509` |
+| `sw.js CACHE_VERSION` | `v5.394` | `v5.395` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 27/29 first run, 2 transient flakes (sleep-streak gap + global-rankings-hub, both unrelated to Social), pass on isolated retry.
+- Backend tests not re-run — no backend changes.
+
+### TestFlight QA for w56
+
+1. Cold-launch w56. Confirm `"build": "2.2.3-w56"`.
+2. Open Social tab. Default filter = **Guild** (unchanged from 1z.178).
+3. Tap **Hunter**. Feed should now show interleaved rows:
+   - Existing personal feat rows (boss kills, rank ups, streaks, etc).
+   - **New** souls-ledger rows: "+15 souls · Daily login", "−25 souls · Engaged The Insomniac", "+40 souls · Duel victory vs <alias>", etc.
+4. Engage and defeat a boss right now. Switch to Hunter. The boss kill should appear as ONE collapsed row: "You defeated The Insomniac · +50 souls" (not two separate rows for the feat and the soul reward).
+5. Open Souls Ledger from the souls pill — full Transactions sheet still opens with every transaction, balance_after intact, no rows missing.
+6. Tap the **FEATS · 24H** tile — Today's Feats sheet still shows ONLY personal Guild Activity feat rows (no souls rows leaking in).
+7. Tap **Guild** filter — feed returns to the full Guild Activity view, no souls rows visible.
+8. Force-quit + cold-launch → Header collapsed (1z.179) + filter back to Guild (1z.178 default), Hunter feed re-renders cleanly when you tap Hunter again.
+9. Verify Copy Debug Info contains `guildhall-hunter-feed-render { guildActivityCount, soulsLedgerCount, mergedCount, displayedCount, collapsedBossKillCount, build: "2.2.3-w56" }` after viewing the Hunter feed.
+
+### Phase B (still pending — DO NOT IMPLEMENT YET)
+
+Per the spec these are separate trains:
+
+1. **Verified streak milestones every 7 days forever** — change `GUILDHALL_STREAK_BANDS` from `[7, 14, 30, 100, 365]` to a weekly-increment generator (`7, 14, 21, …` up to e.g. 70, then `100, 365`). One-line constant change.
+2. **`card_drop` event writes for non-ultra drops** — fire `recordGuildActivity('card_drop', { cardId, cardName, rarity, source_boss })` at the first-acquisition site (`_addCardToInventory` ~line 5081). Hunter shows all rarities; Guild allowlist limits to `ultra_rare_drop` only.
+3. **Tighten Guild allowlist for public-flex types** — if Phase B adds `card_drop`, also tighten Guild mode to show only `boss_kill`, `ultra_rare_drop` (special-cased), `rank_up`, `step_milestone_10k`, `sleep_quality_7h`, `habit_streak`, `friend_added`.
+
+Phase B is additive on the Phase A foundation. Each item independent — could ship as three small trains or bundled as one w57.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ Read-only on both stores. No `recordSoulsTransaction` or `recordGuildActivity` writes added in this phase.
+- ✅ No new feed entry writes. No fake events. No card_drop logic.
+- ✅ No streak band changes.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim / sync changes.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged.
+- ✅ Souls balance math untouched.
+- ✅ Boss reward values untouched.
+
+### Rollback
+
+Three independent reverts:
+1. Restore the original Hunter branch in `renderGuildActivity` (~30 lines back to the pre-1z.180 shape that just did `entries.filter(_isPersonalFeatEntry)`).
+2. Delete `_hunterFeedSoulsRowHtml`, `_hunterFeedCollapsedBossKillRow`, `_buildHunterFeedEntries`, and the `HUNTER_FEED_BOSS_COLLAPSE_WINDOW_MS` constant.
+3. Delete the `.guildhall-activity-target-sub` CSS rule.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.179 Header boots compact on every cold launch (historical — superseded by 1z.180 above)
 
 ### ✅ STATUS: Static top header (`<header>` block — AWAKENED logo + date + 3 metric cards + today-strip + quote + hunting strip + rune) now starts collapsed on every cold launch and force-quit. Chevron still toggles to expanded for the current session. State is ephemeral (no localStorage), so the next launch always lands compact again. Frontend-only. **Verified live in browser preview.** `2.2.3-w55` web bundle ready.
 
