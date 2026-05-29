@@ -4,7 +4,29 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.186 Clean Guild member rows + future rank seam (read this first)
+## May 29, 2026 — 1z.187 Kill Log Codex Ledger redesign (read this first)
+
+**TL;DR.** Implements Variation A ("Codex Ledger") from Claude Design's `Kill Log.html` handoff bundle on the existing BOSSES SLAIN → Kill Log bottom sheet. Adds a gold-rimmed ledger strip (TOTAL KILLS · BOSSES · TOP RANK), wraps the row list in a single navy codex panel with hairline dividers, replaces the small rank chip with a 32px fantasy shield-crest SVG painted in the rank color, promotes boss names to Cinzel 0.92rem with mono `{RANK}-RANK BOSS` sublines, and replaces the bare "N slain" text with a gold capsule (crossed-swords glyph + Cinzel number + mono SLAIN). No data shape change, no new fields, no fake data.
+
+**Sourced from.** `kill-log.jsx` (Variation A — recommended) inside `awakened/project/` of the Claude Design bundle. Per-rank palette: E violet `#a78bfa`, D gold `#f5b842`, C ember `#f97316`, B blue `#3b82f6`, A pink `#ec4899`, S red `#ef4444`. Color appears ONLY on the crest + rank subline + top-rank stat; boss names and kill capsules stay gold/white so the list never turns rainbow.
+
+**Files touched (frontend only).**
+- `app.js` — replaced `_bossesSlainRowHtml` with the Codex Ledger row anatomy (shield-crest SVG + Cinzel name + rank subline + gold capsule). Added `_killLogShieldSvg`, `_killLogKillCapsule`, `_killLogTopRank` helpers and `_KILL_LOG_RANK_ORDER = ['E','D','C','B','A','S']`. Extended `renderBossesSlainSheet` to compute TOTAL KILLS / BOSSES / TOP RANK and populate the ledger strip elements, plus toggle the ledger + codex panel between hidden/visible on empty-state. The "Last: <relative-ts>" subline from the previous design is dropped in favor of the rank subline — timestamps already live in the date-grouped Hunter Feed (1z.182). The `_guildBossesSlainRows` data path is unchanged: still reads `hb_bosses` via `loadBosses()` and joins per-boss config from `BOSSES{}`.
+- `index.html` — Kill Log sheet markup now includes `#guild-bosses-ledger` (3 stats: TOTAL KILLS, BOSSES, TOP RANK with rank-color `data-rank`) and a `#guild-bosses-codex` wrapper around the existing `#guild-bosses-list`. The blurb gets a `.guild-bosses-blurb` class so the italic Cormorant styling lands without affecting other sheets. Both new elements start with `hidden` and the renderer flips them visible only when rows exist. App bundle bump → `app.js?v=516`.
+- `styles.css` — replaced the entire `.guild-bosses-*` block with the Codex Ledger styles: `.guild-bosses-blurb` (italic Cormorant), `.guild-bosses-ledger` + stat / sep / val / val--rank / lbl (gold-rimmed strip with per-rank glow on TOP RANK via `data-rank` attribute), `.guild-bosses-codex` (single navy panel `#14143a` with inset top highlight), `.guild-bosses-row` (12px gap, 11px vertical padding, hairline divider, per-rank `--rank-color`/`--rank-glow`/`--rank-soft` custom properties driven by `--rank-{e|d|c|b|a|s}` modifier classes), `.guild-bosses-crest` (32px fantasy shield SVG painted via the custom properties), `.guild-bosses-capsule` (gold-rimmed pill with crossed-swords glyph + Cinzel number + mono SLAIN). All other surface CSS untouched.
+- `sw.js` — `CACHE_VERSION = 'v5.402'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w63`, `app.js?v=516`, `auth.js?v=18` (unchanged), `sw.js CACHE_VERSION v5.402`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Tile routing unchanged.** Tapping the BOSSES SLAIN tile still routes through `openBossesSlainSheet` (1z.172). Empty state still says "No bosses slain yet." Close / drag-to-dismiss / overlay tap behavior untouched.
+
+**Guard rails preserved.** No backend / D1 / migration / Codemagic / archive / upload. No HealthKit / leaderboard / dungeon / XP / rank / souls / drop odds / inventory / Guild Activity / Hunter Feed / friend add/remove / auth changes. No Duel surface touched. `QA_UNLOCK_C_RANK_DUNGEONS = false`. No new data fields. No fake values — TOTAL KILLS / BOSSES / TOP RANK are computed from existing `hb_bosses` only.
+
+**Rollback.** Three independent reverts: (1) restore the previous `_bossesSlainRowHtml` + `renderBossesSlainSheet` bodies (drop the helpers + ledger population), (2) restore the previous `index.html` Kill Log markup (drop the ledger + codex wrapper), (3) restore the previous `.guild-bosses-*` CSS block. No DB or backend touched.
+
+---
+
+## May 29, 2026 — 1z.186 Clean Guild member rows + future rank seam
 
 **TL;DR.** Removes the "Guild member" subtitle from accepted-friend rows in the Social tab's Guild accordion, and lays a dormant seam so future backend-provided friend rank labels (e.g. "D II", "C I", "S I") can populate the circular avatar — without faking any data today. No backend touched, no mock ranks introduced, no sort change.
 

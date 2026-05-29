@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w62';
+  const APP_BUILD_TAG = '2.2.3-w63';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3920,35 +3920,87 @@
     });
     return rows;
   }
+  // v3 Phase 1z.187 — Codex Ledger redesign for the Kill Log sheet
+  // (Claude Design "Kill Log.html" / Variation A). Row anatomy:
+  //   • Shield crest (32px) — fantasy SVG shield, fill+stroke+letter
+  //     all in the rank's color (E=violet, D=gold, C=ember, B=blue,
+  //     A=pink, S=red). Color appears ONLY on the crest + subline.
+  //   • Cinzel boss name as the dominant element.
+  //   • Mono "{RANK}-RANK BOSS" subline in rank color.
+  //   • Right side: gold kill capsule — crossed-swords glyph +
+  //     Cinzel number (the hero) + mono SLAIN label.
+  // Rows live in one navy codex panel with hairline dividers.
+  // The "Last: <time>" subline from the previous design is dropped
+  // in favor of the rank subline — the timestamp lives in the
+  // Hunter Feed (date-grouped) now.
+  const _KILL_LOG_RANK_ORDER = ['E', 'D', 'C', 'B', 'A', 'S'];
+  function _killLogTopRank(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    let bestIdx = -1, best = null;
+    for (const r of rows) {
+      if (!r || !r.rank) continue;
+      const idx = _KILL_LOG_RANK_ORDER.indexOf(r.rank);
+      if (idx > bestIdx) { bestIdx = idx; best = r.rank; }
+    }
+    return best;
+  }
+  function _killLogShieldSvg(rank) {
+    // 32x35 viewBox 40x43 fantasy shield, single rank-colored fill
+    // + stroke. Letter centered with serif typography. CSS handles
+    // the per-rank color via the parent row's --rank-color custom
+    // property so all the rank palette logic stays in styles.css.
+    const r = esc(rank || '?');
+    return (
+      '<span class="guild-bosses-crest" aria-hidden="true">' +
+        '<svg viewBox="0 0 40 43" width="32" height="35" focusable="false">' +
+          '<path class="guild-bosses-crest-outer" d="M20 2 L36 7 L36 22 Q36 34 20 41 Q4 34 4 22 L4 7 Z"/>' +
+          '<path class="guild-bosses-crest-inner" d="M20 6 L32 10 L32 22 Q32 31 20 37 Q8 31 8 22 L8 10 Z"/>' +
+        '</svg>' +
+        '<span class="guild-bosses-crest-letter">' + r + '</span>' +
+      '</span>'
+    );
+  }
+  function _killLogKillCapsule(count) {
+    const n = Number.isFinite(count) ? count : 0;
+    const num = n.toLocaleString('en-US');
+    return (
+      '<span class="guild-bosses-capsule">' +
+        '<svg class="guild-bosses-capsule-glyph" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false">' +
+          '<path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>' +
+        '</svg>' +
+        '<span class="guild-bosses-capsule-num">' + esc(num) + '</span>' +
+        '<span class="guild-bosses-capsule-lbl">SLAIN</span>' +
+      '</span>'
+    );
+  }
   function _bossesSlainRowHtml(row) {
-    const rankBadge = row.rank
-      ? '<span class="guild-bosses-rank">' + esc(row.rank) + '</span>'
-      : '';
-    const lastTxt = row.last_killed_at
-      ? _guildhallFormatRelativeTs(Date.parse(row.last_killed_at))
-      : '';
-    const countTxt = row.kill_count === 1 ? '1 slain' : (row.kill_count + ' slain');
-    const subline = lastTxt
-      ? '<div class="guild-bosses-sub">Last: ' + esc(lastTxt) + '</div>'
+    const rank      = row.rank || '';
+    const rankClass = rank ? (' guild-bosses-row--rank-' + esc(rank.toLowerCase())) : '';
+    const subline   = rank
+      ? '<div class="guild-bosses-sub">' + esc(rank) + '-RANK BOSS</div>'
       : '';
     return (
-      '<div class="guild-bosses-row">' +
-        rankBadge +
+      '<div class="guild-bosses-row' + rankClass + '">' +
+        _killLogShieldSvg(rank) +
         '<div class="guild-bosses-name">' +
           '<div class="guild-bosses-title">' + esc(row.name) + '</div>' +
           subline +
         '</div>' +
-        '<span class="guild-bosses-count">' + esc(countTxt) + '</span>' +
+        _killLogKillCapsule(row.kill_count) +
       '</div>'
     );
   }
   function renderBossesSlainSheet() {
-    const list  = document.getElementById('guild-bosses-list');
-    const empty = document.getElementById('guild-bosses-empty');
+    const list   = document.getElementById('guild-bosses-list');
+    const empty  = document.getElementById('guild-bosses-empty');
+    const ledger = document.getElementById('guild-bosses-ledger');
+    const codex  = document.getElementById('guild-bosses-codex');
     if (!list) return;
     const rows = _guildBossesSlainRows();
     if (rows.length === 0) {
       list.innerHTML = '';
+      if (ledger) ledger.setAttribute('hidden', '');
+      if (codex)  codex.setAttribute('hidden', '');
       if (empty) {
         empty.classList.remove('hidden');
         empty.textContent = 'No bosses slain yet.';
@@ -3956,6 +4008,27 @@
       return;
     }
     if (empty) { empty.classList.add('hidden'); empty.textContent = ''; }
+
+    // v3 Phase 1z.187 — ledger strip totals. TOTAL KILLS sums every
+    // kill_count; BOSSES is the unique boss count; TOP RANK is the
+    // highest tier on the kill list (E→S). The top-rank color is
+    // applied via a data-rank attribute so styles.css can paint it.
+    const totalKills = rows.reduce((acc, r) => acc + (r.kill_count || 0), 0);
+    const uniqueBosses = rows.length;
+    const topRank = _killLogTopRank(rows);
+    const totalEl  = document.getElementById('guild-bosses-ledger-total');
+    const uniqueEl = document.getElementById('guild-bosses-ledger-unique');
+    const trEl     = document.getElementById('guild-bosses-ledger-toprank');
+    if (totalEl)  totalEl.textContent  = totalKills.toLocaleString('en-US');
+    if (uniqueEl) uniqueEl.textContent = uniqueBosses.toLocaleString('en-US');
+    if (trEl) {
+      trEl.textContent = topRank || '—';
+      if (topRank) trEl.setAttribute('data-rank', topRank);
+      else trEl.removeAttribute('data-rank');
+    }
+    if (ledger) ledger.removeAttribute('hidden');
+    if (codex)  codex.removeAttribute('hidden');
+
     list.innerHTML = rows.map(_bossesSlainRowHtml).join('');
   }
   function openBossesSlainSheet() {

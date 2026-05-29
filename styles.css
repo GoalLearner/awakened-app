@@ -24380,46 +24380,154 @@ button.guildhall-summary-tile:active {
 }
 
 /* v3 Phase 1z.172 — Bosses Slain sheet rows. */
+/* v3 Phase 1z.187 — Kill Log Codex Ledger redesign.
+   Implements Variation A from Claude Design's "Kill Log.html"
+   bundle: ledger summary strip · single navy codex panel · shield
+   crests · dominant Cinzel boss names with mono rank sublines ·
+   gold kill capsules with crossed-swords glyph. Per-rank palette
+   lives entirely on the row via --rank-color custom property. */
+
+/* Italic-Cormorant blurb under the title. */
+.guild-bosses-blurb {
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--text-tertiary, #6b7280);
+  letter-spacing: 0.01em;
+}
+
+/* TOTAL KILLS · BOSSES · TOP RANK ledger strip. */
+.guild-bosses-ledger {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.08), rgba(245,184,66,0.02));
+  border: 1px solid rgba(245,184,66,0.32);
+}
+.guild-bosses-ledger[hidden] { display: none; }
+.guild-bosses-ledger-stat {
+  flex: 1;
+  text-align: center;
+}
+.guild-bosses-ledger-val {
+  font-family: 'Cinzel', serif;
+  font-size: 1.20rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--gold, #f5b842);
+  text-shadow: 0 0 8px rgba(245,184,66,0.30);
+  font-variant-numeric: tabular-nums;
+}
+.guild-bosses-ledger-val--rank[data-rank="E"] { color: #a78bfa; text-shadow: 0 0 8px rgba(167,139,250,0.50); }
+.guild-bosses-ledger-val--rank[data-rank="D"] { color: #f5b842; text-shadow: 0 0 8px rgba(245,184,66,0.50); }
+.guild-bosses-ledger-val--rank[data-rank="C"] { color: #f97316; text-shadow: 0 0 8px rgba(249,115,22,0.50); }
+.guild-bosses-ledger-val--rank[data-rank="B"] { color: #3b82f6; text-shadow: 0 0 8px rgba(59,130,246,0.50); }
+.guild-bosses-ledger-val--rank[data-rank="A"] { color: #ec4899; text-shadow: 0 0 8px rgba(236,72,153,0.50); }
+.guild-bosses-ledger-val--rank[data-rank="S"] { color: #ef4444; text-shadow: 0 0 8px rgba(239,68,68,0.55); }
+.guild-bosses-ledger-lbl {
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.50rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary, #6b7280);
+  text-transform: uppercase;
+}
+.guild-bosses-ledger-sep {
+  width: 1px;
+  height: 26px;
+  background: rgba(255,255,255,0.10);
+}
+
+/* Single navy codex panel wrapping the boss list. */
+.guild-bosses-codex {
+  margin-top: 12px;
+  background: #14143a;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+.guild-bosses-codex[hidden] { display: none; }
 .guild-bosses-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 10px;
 }
 .guild-bosses-row {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: rgba(16,18,38,0.55);
-  border: 1px solid rgba(167,139,250,0.18);
-  border-radius: 10px;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  /* Per-rank color is set by the modifier classes below. Defaults
+     to the gold accent so unranked legacy rows still render. */
+  --rank-color: #f5b842;
+  --rank-glow:  rgba(245,184,66,0.50);
+  --rank-soft:  rgba(245,184,66,0.14);
 }
-.guild-bosses-rank {
-  display: inline-flex;
+.guild-bosses-row:last-child { border-bottom: 0; }
+.guild-bosses-row--rank-e { --rank-color: #a78bfa; --rank-glow: rgba(167,139,250,0.50); --rank-soft: rgba(167,139,250,0.16); }
+.guild-bosses-row--rank-d { --rank-color: #f5b842; --rank-glow: rgba(245,184,66,0.50); --rank-soft: rgba(245,184,66,0.14); }
+.guild-bosses-row--rank-c { --rank-color: #f97316; --rank-glow: rgba(249,115,22,0.50); --rank-soft: rgba(249,115,22,0.14); }
+.guild-bosses-row--rank-b { --rank-color: #3b82f6; --rank-glow: rgba(59,130,246,0.50); --rank-soft: rgba(59,130,246,0.14); }
+.guild-bosses-row--rank-a { --rank-color: #ec4899; --rank-glow: rgba(236,72,153,0.50); --rank-soft: rgba(236,72,153,0.14); }
+.guild-bosses-row--rank-s { --rank-color: #ef4444; --rank-glow: rgba(239,68,68,0.55); --rank-soft: rgba(239,68,68,0.16); }
+
+/* Fantasy shield crest — SVG path painted entirely in --rank-color. */
+.guild-bosses-crest {
+  position: relative;
+  width: 32px;
+  height: 35px;
+  display: inline-block;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 4px var(--rank-glow));
+}
+.guild-bosses-crest svg { display: block; }
+.guild-bosses-crest-outer {
+  fill: var(--rank-soft);
+  stroke: var(--rank-color);
+  stroke-width: 1.4;
+}
+.guild-bosses-crest-inner {
+  fill: none;
+  stroke: var(--rank-color);
+  stroke-width: 0.5;
+  opacity: 0.45;
+}
+.guild-bosses-crest-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: rgba(167,139,250,0.16);
-  border: 1px solid rgba(167,139,250,0.45);
+  padding-bottom: 2px;
   font-family: 'Cinzel', serif;
-  font-size: 0.80rem;
   font-weight: 700;
-  color: var(--gold, #f5b842);
+  font-size: 0.80rem;
+  color: var(--rank-color);
+  text-shadow: 0 0 6px var(--rank-glow);
+  line-height: 1;
+  pointer-events: none;
 }
+
 .guild-bosses-name {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 .guild-bosses-title {
   font-family: 'Cinzel', serif;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.025em;
+  line-height: 1.15;
   color: var(--text-primary, #f3f4f6);
   white-space: nowrap;
   overflow: hidden;
@@ -24427,19 +24535,50 @@ button.guildhall-summary-tile:active {
 }
 .guild-bosses-sub {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
-  color: var(--text-tertiary, #6b7280);
+  font-size: 0.54rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--rank-color);
+  opacity: 0.85;
+  text-transform: uppercase;
 }
-.guild-bosses-count {
-  text-align: right;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-weight: 700;
-  font-size: 0.78rem;
-  color: var(--gold, #f5b842);
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
+
+/* Gold kill capsule — crossed-swords glyph + Cinzel number + mono SLAIN. */
+.guild-bosses-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.16), rgba(245,184,66,0.04));
+  border: 1px solid rgba(245,184,66,0.45);
+  box-shadow: 0 0 8px rgba(245,184,66,0.20);
+  flex: 0 0 auto;
   white-space: nowrap;
+  color: var(--gold, #f5b842);
+}
+.guild-bosses-capsule-glyph {
+  display: block;
+  color: var(--gold, #f5b842);
+}
+.guild-bosses-capsule-num {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--gold, #f5b842);
+  text-shadow: 0 0 6px rgba(245,184,66,0.30);
+  font-variant-numeric: tabular-nums;
+}
+.guild-bosses-capsule-lbl {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.50rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary, #6b7280);
+  align-self: flex-end;
+  padding-bottom: 1px;
+  text-transform: uppercase;
 }
 
 /* Section shell — used by Guild Activity + Your hunters. */

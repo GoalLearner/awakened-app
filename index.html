@@ -1776,8 +1776,31 @@
       <button id="guild-bosses-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
     </div>
     <div class="lb-rank-body">
-      <p class="lb-rank-blurb">Every boss you've put down, with kill counts.</p>
-      <div id="guild-bosses-list" class="guild-bosses-list"></div>
+      <!-- v3 Phase 1z.187 — Codex Ledger redesign (Claude Design
+           "Kill Log.html" / Variation A). Ledger strip = TOTAL KILLS
+           · BOSSES · TOP RANK in a gold-rimmed band. Subtitle moves
+           to italic Cormorant. Rows wrap in a single navy codex
+           panel with hairline dividers + shield crests. -->
+      <div id="guild-bosses-ledger" class="guild-bosses-ledger" hidden>
+        <div class="guild-bosses-ledger-stat">
+          <div id="guild-bosses-ledger-total" class="guild-bosses-ledger-val">0</div>
+          <div class="guild-bosses-ledger-lbl">TOTAL KILLS</div>
+        </div>
+        <div class="guild-bosses-ledger-sep" aria-hidden="true"></div>
+        <div class="guild-bosses-ledger-stat">
+          <div id="guild-bosses-ledger-unique" class="guild-bosses-ledger-val">0</div>
+          <div class="guild-bosses-ledger-lbl">BOSSES</div>
+        </div>
+        <div class="guild-bosses-ledger-sep" aria-hidden="true"></div>
+        <div class="guild-bosses-ledger-stat">
+          <div id="guild-bosses-ledger-toprank" class="guild-bosses-ledger-val guild-bosses-ledger-val--rank">—</div>
+          <div class="guild-bosses-ledger-lbl">TOP RANK</div>
+        </div>
+      </div>
+      <p class="lb-rank-blurb guild-bosses-blurb">Every boss you've put down, with kill counts.</p>
+      <div id="guild-bosses-codex" class="guild-bosses-codex" hidden>
+        <div id="guild-bosses-list" class="guild-bosses-list"></div>
+      </div>
       <div id="guild-bosses-empty" class="guild-roster-empty hidden"></div>
     </div>
   </div>
@@ -2443,7 +2466,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=515"></script>
+  <script src="app.js?v=516"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
