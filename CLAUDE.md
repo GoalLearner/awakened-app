@@ -4,7 +4,61 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.197 Route joined-Guild events to Hunter feed (read this first)
+## May 29, 2026 — 1z.198 Refresh friends cache when opening Roster (read this first)
+
+**TL;DR.** Frontend-only fix for the stale-cache bug. `openGuildRosterSheet` was reading `_friendsCache.friends` without ever triggering a fetch. The cache is only populated by `renderFriendsSection` (the lower Guild accordion), so opening the Roster sheet directly from the HUNTERS tile rendered against whatever was last cached — frequently null (cold launch) or stale (no refresh since the friend submitted achievements). Backend is already correct: SQL selects all four 1z.195 columns; serializer merges them when `achievements_updated_at` is finite. The bug lives entirely on the client read path.
+
+**Root cause.** `_friendsCache` is populated in exactly one place: `renderFriendsSection` (called from the Social accordion path). `_guildRosterFriendStats` reads from that cache, so opening the Roster sheet directly from the HUNTERS tile — which is the path in the screenshot from this train — produces a Roster rendered against a stale snapshot. Rendell submitting achievements on his device doesn't refresh Richie's cache; the only way Richie would see Rendell's updated count today is to scroll down, open the Guild accordion, wait for `renderFriendsSection` to fetch, then re-open the Roster sheet.
+
+**Files modified (frontend only).**
+- `app.js` —
+  - New `_refreshFriendsCacheForRoster()` async helper. Gates on auth + `Auth.fetchFriends` availability + an inflight flag so a fast double-tap on HUNTERS doesn't fire parallel fetches. Emits a privacy-safe `friends-fetch-achievements-summary` breadcrumb with counts only (friendCount, rankedFriendCount, achievementFriendCount, build). On success: updates `_friendsCache` and, if the Roster sheet is still open, re-renders it. On failure: emits a `guild-roster-fetch-error` breadcrumb with code only; UI stays on whatever rendered first.
+  - `openGuildRosterSheet` now renders immediately (so the user sees the sheet without a network wait) AND kicks off `_refreshFriendsCacheForRoster()` in the background. When the fetch completes, the Roster sheet — if still open — re-renders with the fresh fields. Both call paths are wrapped in try/catch so a failed fetch never blocks UI or surfaces an error toast.
+  - `renderGuildRoster` now emits a `guild-roster-achievements-render` breadcrumb with counts only (rowCount, friendRowCount, friendRowsWithRank, friendRowsWithAch, friendRowsWithBosses, build). Lets us see at a glance whether a fresh fetch actually surfaced achievement fields after the bug fix.
+- `index.html` — `app.js?v=522`.
+- `sw.js` — `CACHE_VERSION = 'v5.408'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w69`, `app.js?v=522`, `auth.js?v=19` (unchanged), `sw.js CACHE_VERSION v5.408`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Backend audit confirmed correct.** `serializeFriendRow` in `backend/src/handlers/friends.ts` already SELECTs `bosses_slain_total`, `ultra_rare_drops_total`, `verified_streak_label`, `achievements_updated_at`, and merges them onto the response when the friend has rank + a finite `achievements_updated_at`. Zero values are correctly preserved (`?? 0` only fires on actual NULL). `rank_points` + `metadata_json` continue to be withheld. **No backend change required. No deploy. No D1 mutation.**
+
+**Why this didn't surface in 1z.193.** 1z.193 shipped rank-badge display but ranks happened to populate via the same fetch path the user was already triggering (the lower Guild accordion was scrolled into view often enough that the cache was usually fresh when the Roster sheet opened). The 1z.196 BOSSES column join surfaced the latent bug because boss counts change more often than rank labels, making a stale-cache day more visible.
+
+**Privacy posture.** Breadcrumb fields are counts only. Never aliases. Never per-friend numeric values. Never user IDs, tokens, raw friend payload, `rank_points`, or `metadata_json`.
+
+**No new local-data-onto-friend leakage.** The 1z.196 BOSSES column precedence (`row.bossesSlainTotal → row.bosses → '—'`) is unchanged; `row.bosses` is only set for the self row in `_guildRosterCurrentUserStats`. A friend row that has no backend bossesSlainTotal still shows `—`, never inherits the self's local count.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No fake achievement data — refresh just resyncs what the backend already stores.
+- No card identity / habit name / HealthKit / sleep / step exposure.
+- No friend add/remove / public rank / public achievement submit behavior changes.
+- No HealthKit / leaderboard / XP / rank threshold / boss / inventory / drop odds / auth changes.
+- No `user_state_snapshots.state_json` parsing.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Three independent reverts: (1) drop `_refreshFriendsCacheForRoster` + the `openGuildRosterSheet` call site, (2) drop the `guild-roster-achievements-render` breadcrumb, (3) revert knob bumps. No DB / backend touched.
+
+**Manual QA (w69).**
+1. Cold-launch w69 signed-in. Confirm `"build": "2.2.3-w69"`.
+2. **Without scrolling down to the Guild accordion**, tap HUNTERS tile.
+3. Roster sheet opens immediately (rank badges / boss counts may briefly reflect last known cache, including possibly stale data — that's expected for the first frame).
+4. Within ~1 second the Roster re-renders. Friends with backend achievements (e.g. Rendell at `bosses_slain_total = 27`) show their real count in the BOSSES column.
+5. Self row still shows local boss count.
+6. Friends without submitted achievements still show `—` (no fake data).
+7. No friend ever shows the current user's local boss count.
+8. Copy Debug Info should contain:
+   - `friends-fetch-achievements-summary` with `friendCount`, `rankedFriendCount`, `achievementFriendCount`.
+   - `guild-roster-achievements-render` with `friendRowsWithBosses` matching the visible BOSSES counts.
+9. Rapid-tap HUNTERS twice → only one network fetch fires (inflight gate works).
+10. Rank badges still work (1z.193 preserved).
+11. Add Friend / Remove Friend still work.
+12. Lower Guild accordion still works.
+
+---
+
+## May 29, 2026 — 1z.197 Route joined-Guild events to Hunter feed
 
 **TL;DR.** Frontend-only display-routing change. `friend_added` rows (currently rendered as "`<alias>` joined your Guild") move from Guild mode → Hunter mode. Existing historical rows reroute by filter alone; storage is untouched. FEATS · 24H tile + Today's Feats sheet preserve their 1z.177 semantics ("what the user themselves accomplished") — joined-Guild events do NOT count as personal feats; they're routed to Hunter via a new `_HUNTER_FEED_EXTRA_TYPES` superset.
 

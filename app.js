@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w68';
+  const APP_BUILD_TAG = '2.2.3-w69';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3894,6 +3894,33 @@
       '</div>';
     list.innerHTML = headerHtml + rows.map((r, i) => _guildRosterRowHtml(r.row, i + 1, r.isSelf)).join('');
 
+    // v3 Phase 1z.198 — privacy-safe roster diagnostics. Counts
+    // only — no aliases, no per-friend numeric values, no tokens.
+    if (typeof _addHealthVerifyBreadcrumb === 'function') {
+      try {
+        let friendRowsWithBosses = 0, friendRowsWithAch = 0, friendRowsWithRank = 0;
+        for (const r of rows) {
+          if (r.isSelf) continue;
+          const row = r.row || {};
+          if (Number.isFinite(Number(row.bossesSlainTotal))) friendRowsWithBosses++;
+          if (Number.isFinite(Number(row.bossesSlainTotal))
+              || Number.isFinite(Number(row.ultraRareDropsTotal))
+              || (typeof row.verifiedStreakLabel === 'string' && row.verifiedStreakLabel)) {
+            friendRowsWithAch++;
+          }
+          if (typeof row.rankLabel === 'string' && row.rankLabel) friendRowsWithRank++;
+        }
+        _addHealthVerifyBreadcrumb('guild-roster-achievements-render', {
+          rowCount:                rows.length,
+          friendRowCount:          rows.length - 1, // self always #1
+          friendRowsWithRank:      friendRowsWithRank,
+          friendRowsWithAch:       friendRowsWithAch,
+          friendRowsWithBosses:    friendRowsWithBosses,
+          build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      } catch (_) {}
+    }
+
     if (empty) {
       if (friends.length === 0) {
         empty.classList.remove('hidden');
@@ -3905,13 +3932,81 @@
     }
   }
 
+  // v3 Phase 1z.198 — debounce flag so a fast double-tap on the
+  // HUNTERS tile doesn't fire two parallel /v1/friends fetches.
+  let _rosterFriendsRefreshInflight = false;
+  async function _refreshFriendsCacheForRoster() {
+    if (_rosterFriendsRefreshInflight) return;
+    if (!window.Auth || typeof Auth.fetchFriends !== 'function') return;
+    if (typeof Auth.getCurrentUser !== 'function') return;
+    const user = Auth.getCurrentUser();
+    if (!user || !user.jwt) return; // not authed → silent no-op
+    _rosterFriendsRefreshInflight = true;
+    let res = null;
+    try { res = await Auth.fetchFriends(); } catch (_) { res = null; }
+    _rosterFriendsRefreshInflight = false;
+    if (!res || !res.ok) {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        try {
+          _addHealthVerifyBreadcrumb('guild-roster-fetch-error', {
+            code: (res && res.code) || 'UNKNOWN',
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        } catch (_) {}
+      }
+      return;
+    }
+    _friendsCache = res;
+    // Privacy-safe summary breadcrumb so we can see at a glance
+    // how many friends have rank/achievements available on this
+    // fetch. NEVER includes user IDs, aliases, tokens, or per-
+    // friend numeric values — just counts.
+    if (typeof _addHealthVerifyBreadcrumb === 'function') {
+      try {
+        const friendsArr = Array.isArray(res.friends) ? res.friends : [];
+        let ranked = 0, achieved = 0;
+        for (const f of friendsArr) {
+          if (f && typeof f.rankLabel === 'string' && f.rankLabel) ranked++;
+          if (f && (Number.isFinite(Number(f.bossesSlainTotal))
+                 || Number.isFinite(Number(f.ultraRareDropsTotal))
+                 || (typeof f.verifiedStreakLabel === 'string' && f.verifiedStreakLabel)
+                 || typeof f.achievementsUpdatedAt === 'string')) achieved++;
+        }
+        _addHealthVerifyBreadcrumb('friends-fetch-achievements-summary', {
+          friendCount:           friendsArr.length,
+          rankedFriendCount:     ranked,
+          achievementFriendCount: achieved,
+          build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+        });
+      } catch (_) {}
+    }
+    // Re-render the Roster if it's still open. The sheet element
+    // carries `.hidden` when closed, so we check that before
+    // burning a render cycle.
+    const sheet = document.getElementById('guild-roster-sheet');
+    if (sheet && !sheet.classList.contains('hidden')) {
+      try { renderGuildRoster(); } catch (_) {}
+    }
+  }
+
   function openGuildRosterSheet(initialSort) {
     const overlay = document.getElementById('guild-roster-overlay');
     const sheet   = document.getElementById('guild-roster-sheet');
     if (!overlay || !sheet) return;
+    // v3 Phase 1z.198 — render immediately against whatever
+    // cache exists so the sheet isn't blocked behind a network
+    // round-trip, THEN kick off a background refresh and re-
+    // render once /v1/friends returns. Fixes the stale-cache
+    // bug where a friend's submitted achievements never reached
+    // the Roster because _friendsCache was only populated by
+    // renderFriendsSection (called from the lower Guild
+    // accordion). The Roster sheet can be opened from the
+    // HUNTERS tile directly without ever visiting the lower
+    // accordion, so the cache must be refreshed here.
     try { renderGuildRoster(initialSort); } catch (_) {}
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
+    try { _refreshFriendsCacheForRoster(); } catch (_) {}
   }
   function closeGuildRosterSheet() {
     const overlay = document.getElementById('guild-roster-overlay');
