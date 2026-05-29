@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w54';
+  const APP_BUILD_TAG = '2.2.3-w55';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16606,9 +16606,15 @@
   //     actually collapse. (rest of the CSS lives in styles.css.)
   //   - JS replaces the scroll listener with a manual chevron
   //     button wired in .header-top (#header-collapse-btn).
-  //   - State is ephemeral (no localStorage) so each launch begins
-  //     in expanded mode — matches the user's expectation that the
-  //     full RPG header is the default.
+  //   - State is ephemeral (no localStorage) — see 1z.179 update
+  //     below for the boot-default change.
+  //
+  // v3 Phase 1z.179 — boot default flipped to COMPACT. User wants
+  // the header to start collapsed on every cold launch + force-
+  // quit, so the habit grid + tab content claim the screen first.
+  // The chevron still toggles back to expanded on tap; state is
+  // still ephemeral so a fresh launch always lands compact. The
+  // expanded mode is now opt-in for the current session only.
   // ─────────────────────────────────────────────────────────────
   let _headerCompactState = false;
 
@@ -16638,12 +16644,17 @@
     const btn = document.getElementById('header-collapse-btn');
     if (!btn || btn.getAttribute('data-wired') === '1') return;
     btn.setAttribute('data-wired', '1');
-    btn.setAttribute('aria-expanded', 'true');
     btn.addEventListener('click', (e) => {
       try { e.preventDefault(); } catch (_) {}
       try { e.stopPropagation(); } catch (_) {}
       _setHeaderCompact(!_headerCompactState);
     });
+    // v3 Phase 1z.179 — boot the header in compact mode on every
+    // cold launch / force-quit. State is ephemeral (no
+    // localStorage), so this fires fresh every time the bundle
+    // mounts. The chevron still toggles to expanded for the
+    // current session if the user wants the full RPG dashboard.
+    try { _setHeaderCompact(true); } catch (_) {}
   }
   try {
     window.setupCollapsibleHeader = setupCollapsibleHeader;

@@ -55,7 +55,124 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.178 Hunter / Guild filter on GUILD ACTIVITY (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.179 Header boots compact on every cold launch (read this first)
+
+### ✅ STATUS: Static top header (`<header>` block — AWAKENED logo + date + 3 metric cards + today-strip + quote + hunting strip + rune) now starts collapsed on every cold launch and force-quit. Chevron still toggles to expanded for the current session. State is ephemeral (no localStorage), so the next launch always lands compact again. Frontend-only. **Verified live in browser preview.** `2.2.3-w55` web bundle ready.
+
+### Smallest possible change
+
+The collapse machinery from 1z.135 was already in place and working:
+- `_headerCompactState` module variable.
+- `_setHeaderCompact(next)` toggles the `header--compact` class on `<header>` + syncs aria.
+- `setupCollapsibleHeader()` wires the `#header-collapse-btn` chevron and runs at boot.
+- Intentionally no localStorage — each launch is a clean slate.
+
+The only thing missing for "boot compact" was an explicit `_setHeaderCompact(true)` call. Added one line at the end of `setupCollapsibleHeader()`:
+
+```js
+function setupCollapsibleHeader() {
+  // ... existing wiring ...
+
+  // v3 Phase 1z.179 — boot the header in compact mode on every
+  // cold launch / force-quit. State is ephemeral (no localStorage),
+  // so this fires fresh every time the bundle mounts. The chevron
+  // still toggles to expanded for the current session if the user
+  // wants the full RPG dashboard.
+  try { _setHeaderCompact(true); } catch (_) {}
+}
+```
+
+Also removed the redundant `btn.setAttribute('aria-expanded', 'true')` line from before the click wiring — `_setHeaderCompact(true)` immediately overwrites it to `"false"` anyway, and now the aria state is single-sourced through the setter.
+
+### Behaviour verified live in preview
+
+| Trigger | Header state | Chevron `aria-expanded` |
+|---|---|---|
+| Cold load | **compact** | `false` |
+| Tap chevron (1st time) | expanded | `true` |
+| Tap chevron (2nd time) | compact | `false` |
+| Hard reload (simulates cold launch) | **compact** | `false` |
+
+Screenshot confirms: rune divider, daily quote, hunting strip, and metric card detail rows all collapsed; today-strip in slim form; tab bar and Hunter Profile content pulled up significantly.
+
+Console: no errors.
+
+### What the user gets
+
+- Boot animation finishes → header is already compact → habit grid and tab content claim the screen first.
+- Want the full RPG dashboard? Tap the chevron in the top-right → expanded for the session.
+- Force-quit / cold relaunch → back to compact (state never persists).
+- Switch tabs / sleep the device / background the app → no effect on header state within the session.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ Header collapse class names + CSS (1z.135 / 1z.137 etc.) — unchanged.
+- ✅ Chevron button markup + position — unchanged.
+- ✅ Social tab filter toggle (1z.178) — unchanged.
+- ✅ All seven feat recording sites + GUILD ACTIVITY filter + sheet routing — unchanged.
+- ✅ Friends accordion + Add Friend + Remove Friend two-step safety — unchanged.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +9 / -1 — comment refresh + `_setHeaderCompact(true)` boot call + removed redundant aria-expanded set |
+| `index.html` | knob bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w54` | `2.2.3-w55` |
+| `app.js?v=` | `507` | `508` |
+| `sw.js CACHE_VERSION` | `v5.393` | `v5.394` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Live preview verification covered:
+  - Cold load → `header--compact` class applied, aria-expanded `false`.
+  - Chevron tap → class removed, aria `true`.
+  - Second tap → class re-added, aria `false`.
+  - Hard reload → class applied again (fresh cold-launch path).
+  - Screenshot confirms the visible layout matches compact mode.
+- Console: no errors.
+
+### TestFlight QA for w55
+
+1. Cold-launch w55 (force-quit prior session from app switcher first). Confirm `"build": "2.2.3-w55"`.
+2. App boots → **header is already compact** (no rune divider, no quote, no hunting strip, 3 metric cards in their compact form, today-strip slim).
+3. Tap the chevron in the top-right → header expands for the session.
+4. Switch tabs and come back → header stays expanded (session state).
+5. Tap the chevron again → header collapses.
+6. Background the app for a few minutes → bring back → header keeps whichever state was last (session preserved while alive).
+7. Force-quit and cold-launch again → **header back to compact** (every cold launch starts fresh).
+8. No content shifted, no janky reflow, no console errors.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ No HealthKit / leaderboard / dungeon / XP / rank / souls / sim / sync changes.
+- ✅ Session-only state, no persistence side-effects.
+- ✅ No new DOM elements. No CSS changes. No public API changes.
+- ✅ No labels changed.
+
+### Rollback
+
+One-line revert: delete the `try { _setHeaderCompact(true); } catch (_) {}` boot call from inside `setupCollapsibleHeader()`, and optionally restore the `btn.setAttribute('aria-expanded', 'true')` line that was removed. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.178 Hunter / Guild filter on GUILD ACTIVITY (historical — superseded by 1z.179 above)
 
 ### ✅ STATUS: GUILD ACTIVITY now has a `Hunter` / `Guild` segmented toggle. `Guild` is the default (full feed, including `friend_added`). `Hunter` narrows to personal feats only via the 1z.177 allowlist. FEATS · 24H tile + Today's Feats sheet unchanged. Frontend-only. **Verified live in browser preview.** `2.2.3-w54` web bundle ready.
 
