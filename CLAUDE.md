@@ -4,7 +4,29 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.185 Auto-expand newest activity date (read this first)
+## May 29, 2026 — 1z.186 Clean Guild member rows + future rank seam (read this first)
+
+**TL;DR.** Removes the "Guild member" subtitle from accepted-friend rows in the Social tab's Guild accordion, and lays a dormant seam so future backend-provided friend rank labels (e.g. "D II", "C I", "S I") can populate the circular avatar — without faking any data today. No backend touched, no mock ranks introduced, no sort change.
+
+**Files touched (frontend only).**
+- `app.js` — (a) new `_friendRankLabel(friend)` helper reads `rankLabel` / `rank_label` / `rankDivisionLabel` / `rank_division_label` / `currentRankLabel` / `current_rank_label` from the friend object and returns `null` until a real backend value lands; defensive 5-char cap so unexpectedly long strings can't overflow the 36px circle. (b) New `_friendRankSortValue(friend)` helper that returns `null` today; callers preserve existing order whenever the value is null. (c) `_friendAvatarHtml` extended with an optional third `friend` argument; when `_friendRankLabel(friend)` returns a real label, the circle renders the rank label with a new `.friend-avatar--rank` modifier class, otherwise it keeps the alias-initial fallback. (d) `renderFriendsSection` accepted-friend rows: dropped the `<div class="social-row-meta">Guild member</div>` element, added the `friend-row--no-sub` modifier class, and now pass `f` into `_friendAvatarHtml`. (e) Added a no-op rank-sort branch in the friends loop gated on `friends.every(f => _friendRankSortValue(f) !== null)` — today every value is null so the branch never fires and the server's order is preserved verbatim. No bosses-slain proxy, no alias-derived rank, no client-side fabrication.
+- `styles.css` — `.friend-avatar--rank` modifier with tighter font + letter-spacing so 3-5 char rank labels fit the 36px circle when they eventually arrive (dormant today). `.friend-row--no-sub .social-row-main` centers the alias vertically now that the subtitle is gone.
+- `index.html` — `app.js?v=515`.
+- `sw.js` — `CACHE_VERSION = 'v5.401'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w62`, `app.js?v=515`, `auth.js?v=18` (unchanged), `sw.js CACHE_VERSION v5.401`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Real rank fields today.** None. `Auth.fetchFriends()` returns no `rankLabel` / `rank_label` / `rankDivisionLabel` / `current_rank_label` properties. The two new helpers will silently activate the moment any of those fields ship from the backend; until then the avatar shows the existing alias initial and friend order matches the server's response.
+
+**Guard rails preserved.** No backend / D1 / migration / Codemagic / archive / upload. No HealthKit / leaderboard / dungeon / XP / rank / souls / drop odds / inventory / Guild Activity / Hunter Feed / friend-add / friend-remove changes. No Duel surface. `QA_UNLOCK_C_RANK_DUNGEONS = false`. No `bossesSlain` sort proxy. No mock rank labels in the UI.
+
+**Other "Guild member" copy intentionally untouched.** `_guildRosterRowHtml` (`app.js:3738`) renders "Guild member" inside the **separate** Guild Roster sheet (rank-based leaderboard surface). The user's feedback was scoped to the Friends accordion rows; the roster sheet copy is a separate concern and stays unchanged this train.
+
+**Rollback.** (1) Restore the `<div class="social-row-meta">Guild member</div>` line in the accepted-friend row. (2) Remove the `friend-row--no-sub` class. (3) Drop `_friendRankLabel`, `_friendRankSortValue`, the third `friend` parameter on `_friendAvatarHtml`, and the dormant sort branch. (4) Delete the `.friend-avatar--rank` and `.friend-row--no-sub` CSS rules. (5) Revert knob bumps. No DB or backend touched.
+
+---
+
+## May 29, 2026 — 1z.185 Auto-expand newest activity date
 
 **TL;DR.** Fixes a 1z.183 regression where Hunter and Guild date groups loaded fully collapsed. Root cause was state-value overload: both initial render and `setGuildActivityFilter` set `_guildActivityExpandedDate = null`, which the renderer interpreted as "user collapsed all" and refused to auto-expand. Switched both seeds to `undefined`, the existing "auto-pick newest" sentinel already wired into `_renderGuildActivityDateGroups`. The user-collapse path (same-key tap inside `setupGuildActivityDateGroups`) still sets `null`, so 1z.183 collapse behavior is preserved.
 

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w61';
+  const APP_BUILD_TAG = '2.2.3-w62';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -23653,10 +23653,54 @@
   }
   try { window.renderActiveDuelHero = renderActiveDuelHero; } catch (_) {}
 
-  function _friendAvatarHtml(alias, variant) {
+  // v3 Phase 1z.186 — future backend seam for friend rank labels.
+  // Returns a real backend-provided division label (e.g. "D II",
+  // "C I", "S I") when one exists on the friend object, else null.
+  // Do NOT fabricate rank from alias, bosses slain, or local state.
+  // When the backend lands a friend rank sync, prefer specific
+  // division labels (rank letter + roman tier) over broad letters.
+  function _friendRankLabel(friend) {
+    if (!friend || typeof friend !== 'object') return null;
+    const candidate = friend.rankLabel
+      || friend.rank_label
+      || friend.rankDivisionLabel
+      || friend.rank_division_label
+      || friend.currentRankLabel
+      || friend.current_rank_label
+      || null;
+    if (typeof candidate !== 'string') return null;
+    const trimmed = candidate.trim();
+    if (!trimmed) return null;
+    // Defensive cap so unexpectedly long backend strings can't
+    // overflow the avatar circle. The avatar is sized for ~4-5
+    // characters; anything longer is truncated rather than shown
+    // raw. Real labels ("S I", "A II", "D III") stay intact.
+    return trimmed.length > 5 ? trimmed.slice(0, 5) : trimmed;
+  }
+
+  // v3 Phase 1z.186 — future backend seam for friend rank sort
+  // order. Returns null today since no backend rank field exists
+  // on the friend payload yet; callers must preserve existing
+  // ordering whenever this returns null. When real rank fields
+  // ship, replace the body with a numeric comparator built from
+  // (rankLetter, division) — DO NOT derive sort weight from
+  // bosses slain or any other proxy metric.
+  function _friendRankSortValue(friend) {
+    void friend;
+    return null;
+  }
+
+  function _friendAvatarHtml(alias, variant, friend) {
+    // v3 Phase 1z.186 — accept an optional friend object so the
+    // circle can carry a real rank label like "D II" once the
+    // backend ships rank sync. Until then, _friendRankLabel
+    // returns null and we keep the original alias-initial.
+    const rankTxt = (friend ? _friendRankLabel(friend) : null);
+    const showRank = !!rankTxt;
     const initial = (alias && alias[0]) ? alias[0].toUpperCase() : '—';
-    const cls = 'friend-avatar' + (variant ? ' friend-avatar--' + variant : '');
-    return '<div class="' + cls + '">' + esc(initial) + '</div>';
+    const cls = 'friend-avatar' + (variant ? ' friend-avatar--' + variant : '')
+              + (showRank ? ' friend-avatar--rank' : '');
+    return '<div class="' + cls + '">' + esc(showRank ? rankTxt : initial) + '</div>';
   }
 
   async function renderFriendsSection() {
@@ -23758,6 +23802,16 @@
     }
     if (friends.length) {
       parts.push('<div class="social-section-subhead">Friends</div>');
+      // v3 Phase 1z.186 — future backend seam: when real friend
+      // rank fields ship, sort accepted friends by rank hierarchy
+      // here ("S I" above "A I"; "A I" above "A II"; "D II" above
+      // "D III"; etc.). Until then, _friendRankSortValue returns
+      // null for every friend and we preserve the server's order.
+      // DO NOT sort by bosses slain or any other proxy metric.
+      const rankSortReady = friends.every(f => _friendRankSortValue(f) !== null);
+      if (rankSortReady) {
+        friends.sort((a, b) => (_friendRankSortValue(a) - _friendRankSortValue(b)));
+      }
       for (const f of friends) {
         const aliasDisp = _socialDisplayAlias(f.alias);
         // v3 Phase 1z.166 — public Duel surface fully removed.
@@ -23778,11 +23832,14 @@
         // handler) so a tester who walks away from the screen
         // doesn't return to a primed destructive button.
         parts.push(
-          '<div class="social-row friend-row friend-row--accepted" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle">' +
-            _friendAvatarHtml(aliasDisp, 'accent') +
+          // v3 Phase 1z.186 — passed `f` into the avatar so the
+          // future rank label seam can populate the circle when
+          // backend rank data ships. "Guild member" subtitle
+          // removed; row now reads cleanly with just the alias.
+          '<div class="social-row friend-row friend-row--accepted friend-row--no-sub" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle">' +
+            _friendAvatarHtml(aliasDisp, 'accent', f) +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
-              '<div class="social-row-meta">Guild member</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
               '<button class="social-btn social-btn--icon" data-friend-action="remove-init" aria-label="Remove friend">•••</button>' +

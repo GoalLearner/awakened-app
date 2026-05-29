@@ -20714,12 +20714,34 @@ body.reveal-locked { overflow: hidden; }
   box-shadow: 0 0 10px rgba(239,68,68,0.35), inset 0 0 6px rgba(239,68,68,0.20);
 }
 .friend-avatar--accent { /* same as default */ }
+/* v3 Phase 1z.186 — future rank-label badge variant. The
+   alias-initial avatar uses 0.9rem for a single character;
+   a 3-5 char rank label like "D II" / "D III" needs a tighter
+   font + spacing to fit the 36px circle. Dormant today (the
+   class is only applied when _friendRankLabel returns a real
+   backend value) — applied automatically once rank sync lands. */
+.friend-avatar--rank {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 0 2px;
+}
 
 /* Friend rows extend .social-row with an avatar slot */
 .friend-row {
   gap: 12px;
 }
 .friend-row-meta--gold { color: var(--gold); font-weight: 700; }
+/* v3 Phase 1z.186 — accepted-friend rows no longer carry the
+   "Guild member" subtitle. Center the alias vertically inside
+   the row so the single-line layout reads balanced against the
+   avatar and the overflow button. */
+.friend-row--no-sub .social-row-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 
 /* Duel cards */
 .duel-card {
