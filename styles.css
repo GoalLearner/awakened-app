@@ -24573,6 +24573,92 @@ button.guildhall-summary-tile:active {
   color: var(--text-secondary, #8b8fab);
   font-weight: 600;
 }
+
+/* v3 Phase 1z.182 — date-grouped accordion for Guild Activity feed.
+   Each calendar day becomes a group with a tappable header. Only
+   one group is expanded at a time; the others render only their
+   slim header. Visual language matches the dark-fantasy Social tab:
+   thin violet border, gold date label, muted count, small chevron. */
+.guildhall-activity-date-group {
+  margin-top: 6px;
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(16, 18, 38, 0.40);
+}
+.guildhall-activity-date-group:first-child { margin-top: 0; }
+.guildhall-activity-date-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.guildhall-activity-date-head:hover {
+  background: rgba(167, 139, 250, 0.06);
+}
+.guildhall-activity-date-head:active {
+  background: rgba(167, 139, 250, 0.12);
+  transform: scale(0.998);
+}
+.guildhall-activity-date-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gold, #f5b842);
+  text-shadow: 0 0 6px rgba(245, 184, 66, 0.20);
+}
+.guildhall-activity-date-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary, #8b8fab);
+  text-transform: uppercase;
+  margin-left: auto;
+}
+.guildhall-activity-date-chev {
+  font-size: 0.78rem;
+  color: var(--text-tertiary, #6b7280);
+  transition: transform 140ms ease;
+  display: inline-block;
+}
+.guildhall-activity-date-group[data-expanded="true"] .guildhall-activity-date-chev {
+  transform: rotate(0deg);
+  color: var(--gold, #f5b842);
+}
+.guildhall-activity-date-group[data-expanded="false"] .guildhall-activity-date-chev {
+  transform: rotate(-90deg);
+}
+.guildhall-activity-date-body {
+  padding: 4px 8px 8px;
+  border-top: 1px solid rgba(167, 139, 250, 0.12);
+}
+.guildhall-activity-date-group[data-expanded="false"] .guildhall-activity-date-body {
+  display: none;
+}
+/* Loosen the row padding inside groups so the date-group border
+   itself supplies the outer card frame and rows feel like an
+   inline list rather than separately bordered cards. */
+.guildhall-activity-date-body .guildhall-activity-row {
+  border: 0;
+  border-radius: 0;
+  padding: 8px 4px;
+  background: transparent;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.08);
+}
+.guildhall-activity-date-body .guildhall-activity-row:last-child {
+  border-bottom: 0;
+}
 .guildhall-activity-time {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.60rem;

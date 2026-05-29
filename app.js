@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w57';
+  const APP_BUILD_TAG = '2.2.3-w58';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4031,6 +4031,10 @@
     const next = (mode === 'hunter') ? 'hunter' : 'guild';
     if (_guildActivityFilter === next) return;
     _guildActivityFilter = next;
+    // v3 Phase 1z.182 — reset the expanded date group so switching
+    // modes always lands on the newest available group for the new
+    // mode (Hunter and Guild can have different newest days).
+    _guildActivityExpandedDate = null;
     // Sync the toggle DOM in case this was called programmatically
     // (e.g. from tests). Active button carries data-active="true" +
     // aria-pressed="true"; CSS keys off the data attr.
@@ -4136,6 +4140,129 @@
   // { ts, html } pair; sorting happens after the build pass. Returns
   // both the merged array and a diagnostics object so the renderer
   // can emit a single breadcrumb with the per-source counts.
+  // v3 Phase 1z.182 — date-group rendering for Guild Activity. The
+  // flat feed list reads like a transaction log; grouping by local
+  // calendar day with the latest group expanded gives the feed a
+  // diary feel ("Today / Yesterday / Wed, May 27") without changing
+  // the row HTML, the eligibility rule, or storage.
+  //
+  // Module state is session-only — no localStorage. Every Social
+  // tab open / filter switch resets to "newest group expanded."
+  //
+  // Cap: bumped slice to GUILDHALL_GROUPED_FEED_CAP (30) since most
+  // rows live inside collapsed groups; the expanded group can stay
+  // visually rich, and the user can still drill back through a few
+  // days of history with a tap.
+  const GUILDHALL_GROUPED_FEED_CAP = 30;
+  let _guildActivityExpandedDate = null;
+
+  function _guildActivityDateKey(ts) {
+    if (typeof ts !== 'number' || !Number.isFinite(ts) || ts <= 0) return 'unknown';
+    const d = new Date(ts);
+    return d.getFullYear() + '-' +
+           String(d.getMonth() + 1).padStart(2, '0') + '-' +
+           String(d.getDate()).padStart(2, '0');
+  }
+
+  function _guildActivityDateLabel(dateKey) {
+    if (!dateKey || dateKey === 'unknown') return 'Unknown';
+    const todayKey = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : null;
+    if (todayKey && dateKey === todayKey) return 'Today';
+    const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return dateKey;
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    // Yesterday detection: build "yesterday" key in device-local terms
+    // by stepping the current date back one day. Handles month/year
+    // boundaries via the Date constructor's normalization.
+    const now = new Date();
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const yKey = yesterday.getFullYear() + '-' +
+                 String(yesterday.getMonth() + 1).padStart(2, '0') + '-' +
+                 String(yesterday.getDate()).padStart(2, '0');
+    if (dateKey === yKey) return 'Yesterday';
+    // Otherwise compact label: "Wed, May 27".
+    try {
+      const dt = new Date(y, mo - 1, d);
+      return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch (_) {
+      return dateKey;
+    }
+  }
+
+  function _groupGuildActivityEntriesByDate(entries) {
+    const buckets = Object.create(null);
+    for (const e of entries) {
+      if (!e || typeof e.ts !== 'number') continue;
+      const key = _guildActivityDateKey(e.ts);
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key].push(e);
+    }
+    const groups = Object.keys(buckets).map(key => ({
+      dateKey: key,
+      label:   _guildActivityDateLabel(key),
+      count:   buckets[key].length,
+      entries: buckets[key],
+    }));
+    // Newest-first ordering. 'unknown' bucket (entries with bad ts)
+    // sinks to the bottom so the real-date headers lead.
+    groups.sort((a, b) => {
+      if (a.dateKey === 'unknown' && b.dateKey === 'unknown') return 0;
+      if (a.dateKey === 'unknown') return 1;
+      if (b.dateKey === 'unknown') return -1;
+      return b.dateKey.localeCompare(a.dateKey);
+    });
+    return groups;
+  }
+
+  function _renderGuildActivityDateGroups(groups) {
+    if (!Array.isArray(groups) || groups.length === 0) return '';
+    // Decide expanded date: previously selected if it's still
+    // present, else default to the newest group. Stash the
+    // resolved value so subsequent renders agree.
+    let expandedKey = _guildActivityExpandedDate;
+    if (!expandedKey || !groups.some(g => g.dateKey === expandedKey)) {
+      expandedKey = groups[0].dateKey;
+      _guildActivityExpandedDate = expandedKey;
+    }
+    return groups.map(g => {
+      const isExpanded = g.dateKey === expandedKey;
+      const countTxt = (g.count === 1) ? '1 activity' : (g.count.toLocaleString('en-US') + ' activities');
+      const expandedAttr = isExpanded ? 'true' : 'false';
+      return (
+        '<div class="guildhall-activity-date-group" data-date-key="' + esc(g.dateKey) + '" data-expanded="' + expandedAttr + '">' +
+          '<button type="button" class="guildhall-activity-date-head" data-date-toggle="' + esc(g.dateKey) + '" aria-expanded="' + expandedAttr + '">' +
+            '<span class="guildhall-activity-date-label">' + esc(g.label) + '</span>' +
+            '<span class="guildhall-activity-date-count">' + esc(countTxt) + '</span>' +
+            '<span class="guildhall-activity-date-chev" aria-hidden="true">▾</span>' +
+          '</button>' +
+          '<div class="guildhall-activity-date-body">' +
+            g.entries.map(e => e.html).join('') +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // Delegated click wiring for the date-group toggle. Idempotent
+  // guard so re-rendering the feed doesn't re-attach listeners.
+  function setupGuildActivityDateGroups() {
+    const body = document.getElementById('guildhall-activity-body');
+    if (!body || body.getAttribute('data-wired-date-groups') === '1') return;
+    body.setAttribute('data-wired-date-groups', '1');
+    body.addEventListener('click', function (e) {
+      const head = e.target && e.target.closest && e.target.closest('[data-date-toggle]');
+      if (!head) return;
+      const key = head.getAttribute('data-date-toggle');
+      if (!key) return;
+      // Tap on the already-expanded group is a no-op — preserves
+      // the "feed never goes fully empty" rule.
+      if (key === _guildActivityExpandedDate) return;
+      _guildActivityExpandedDate = key;
+      try { renderGuildActivity(); } catch (_) {}
+    });
+  }
+  try { window.setupGuildActivityDateGroups = setupGuildActivityDateGroups; } catch (_) {}
+
   // v3 Phase 1z.181 — Hunter Feed eligibility rule.
   //
   // The Hunter Feed is a "things I earned" notification feed, not a
@@ -4251,51 +4378,81 @@
     try { entries = _guildhallReadStore(); } catch (_) { entries = []; }
     const filterMode = _guildActivityFilter;
 
-    // ── Hunter view (1z.180 merged feed) ───────────────────────
+    // v3 Phase 1z.182 — both modes normalize to a shared
+    // [{ts, html}] shape, slice to GUILDHALL_GROUPED_FEED_CAP, then
+    // group by local calendar date. The grouping render layer
+    // handles expanded/collapsed states + the date-toggle UI. The
+    // empty-state and 1z.181 eligibility rule are unchanged.
+
+    let visible = [];
+    let diagnostics = null;
+
     if (filterMode === 'hunter') {
       const personalActivity = Array.isArray(entries) ? entries.filter(_isPersonalFeatEntry) : [];
       let soulsRows = [];
       try { soulsRows = _readSoulsLedger(); } catch (_) { soulsRows = []; }
-      const built   = _buildHunterFeedEntries(personalActivity, soulsRows);
-      const merged  = built.merged;
+      const built  = _buildHunterFeedEntries(personalActivity, soulsRows);
+      const merged = built.merged;
       merged.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      const visible = merged.slice(0, GUILDHALL_ACTIVITY_DISPLAY_LIMIT);
-      try {
-        if (typeof _addHealthVerifyBreadcrumb === 'function') {
-          _addHealthVerifyBreadcrumb('guildhall-hunter-feed-render', {
-            guildActivityCount:           built.diagnostics.guildActivityCount,
-            soulsLedgerCount:             built.diagnostics.soulsLedgerCount,
-            soulsLedgerEligibleCount:     built.diagnostics.soulsLedgerEligibleCount,
-            soulsLedgerExcludedSpendCount: built.diagnostics.soulsLedgerExcludedSpendCount,
-            soulsLedgerExcludedDuelCount:  built.diagnostics.soulsLedgerExcludedDuelCount,
-            mergedCount:                  built.diagnostics.mergedCount,
-            displayedCount:               visible.length,
-            collapsedBossKillCount:       built.diagnostics.collapsedBossKillCount,
-            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
-          });
-        }
-      } catch (_) {}
-      if (visible.length === 0) {
-        body.innerHTML =
-          '<div class="guildhall-activity-empty">The board is quiet.' +
-            '<div class="guildhall-activity-empty-sub">Your rewards, drops, and milestones will appear here.</div>' +
-          '</div>';
-        return;
-      }
-      body.innerHTML = visible.map(v => v.html).join('');
-      return;
+      visible = merged.slice(0, GUILDHALL_GROUPED_FEED_CAP);
+      diagnostics = built.diagnostics;
+    } else {
+      // Guild view — normalize raw activity entries to {ts, html}.
+      const normalized = Array.isArray(entries)
+        ? entries
+            .filter(e => e && typeof e.ts === 'number')
+            .map(e => ({ ts: e.ts, html: _guildhallRowHtml(e) }))
+        : [];
+      normalized.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      visible = normalized.slice(0, GUILDHALL_GROUPED_FEED_CAP);
     }
 
-    // ── Guild view (unchanged from 1z.178) ─────────────────────
-    if (!Array.isArray(entries) || entries.length === 0) {
+    if (visible.length === 0) {
+      const emptySub = (filterMode === 'hunter')
+        ? 'Your rewards, drops, and milestones will appear here.'
+        : 'Guild activity will appear here.';
       body.innerHTML =
         '<div class="guildhall-activity-empty">The board is quiet.' +
-          '<div class="guildhall-activity-empty-sub">Guild activity will appear here.</div>' +
+          '<div class="guildhall-activity-empty-sub">' + esc(emptySub) + '</div>' +
         '</div>';
       return;
     }
-    const visible = entries.slice(0, GUILDHALL_ACTIVITY_DISPLAY_LIMIT);
-    body.innerHTML = visible.map(_guildhallRowHtml).join('');
+
+    const groups = _groupGuildActivityEntriesByDate(visible);
+    body.innerHTML = _renderGuildActivityDateGroups(groups);
+
+    // Diagnostic breadcrumb — extended with the 1z.182 grouping
+    // counts. Hunter keeps its 1z.181 eligibility fields; Guild
+    // gets a lighter shape since there's no eligibility filter.
+    try {
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        const collapsedGroupCount = Math.max(0, groups.length - 1);
+        if (filterMode === 'hunter' && diagnostics) {
+          _addHealthVerifyBreadcrumb('guildhall-hunter-feed-render', {
+            guildActivityCount:             diagnostics.guildActivityCount,
+            soulsLedgerCount:               diagnostics.soulsLedgerCount,
+            soulsLedgerEligibleCount:       diagnostics.soulsLedgerEligibleCount,
+            soulsLedgerExcludedSpendCount:  diagnostics.soulsLedgerExcludedSpendCount,
+            soulsLedgerExcludedDuelCount:   diagnostics.soulsLedgerExcludedDuelCount,
+            mergedCount:                    diagnostics.mergedCount,
+            displayedCount:                 visible.length,
+            collapsedBossKillCount:         diagnostics.collapsedBossKillCount,
+            groupCount:                     groups.length,
+            collapsedGroupCount:            collapsedGroupCount,
+            expandedDateKey:                _guildActivityExpandedDate,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        } else {
+          _addHealthVerifyBreadcrumb('guildhall-guild-feed-render', {
+            displayedCount:      visible.length,
+            groupCount:          groups.length,
+            collapsedGroupCount: collapsedGroupCount,
+            expandedDateKey:     _guildActivityExpandedDate,
+            build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      }
+    } catch (_) {}
   }
   try { window.renderGuildActivity = renderGuildActivity; } catch (_) {}
 
@@ -35814,6 +35971,9 @@
     try { setupGuildRosterSheet(); } catch (_) {}
     // v3 Phase 1z.178 — Hunter / Guild filter toggle wiring.
     try { setupGuildActivityFilter(); } catch (_) {}
+    // v3 Phase 1z.182 — delegated click wiring for date-group headers.
+    // Idempotent guard inside the function prevents double-wiring.
+    try { setupGuildActivityDateGroups(); } catch (_) {}
     // v3 Phase 1z.174 — Friends accordion wiring. Header acts as
     // toggle for the friend rows + Add Friend block. Collapsed by
     // default; opens on tap. Idempotent guard so a second boot

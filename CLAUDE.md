@@ -55,7 +55,162 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.181 Hunter Feed earnings-only filter (read this first)
+## 📌 Session handoff — May 29, 2026 — 1z.182 Guild Activity date-grouped accordion (read this first)
+
+### ✅ STATUS: Guild Activity feed (both Hunter and Guild modes) now renders as date-grouped accordion sections. Newest day expanded by default; older days collapsed under tappable headers ("Today / Yesterday / Wed, May 27"). Session-only expanded state — every Social tab open / filter switch resets to newest. Frontend-only. 1z.181 eligibility filter unchanged. `2.2.3-w58` web bundle ready.
+
+### Audit findings (1z.181 baseline before this train)
+
+- Hunter mode (line 4255) built `[{ts, html}]` via `_buildHunterFeedEntries`, sorted DESC, sliced to 8, rendered flat.
+- Guild mode (line 4289) read `_guildhallReadStore()` raw, sliced to 8, rendered with `_guildhallRowHtml`. **Different shape from Hunter — needed normalization for shared grouping path.**
+- `getDeviceLocalDate()` already produces `"YYYY-MM-DD"` device-local strings; reused as the date-key format.
+- `_guildhallFormatRelativeTs` exists for per-row "2h ago" / "Yesterday" times — kept in place; the date-group adds a header-level label above that.
+- No existing accordion patterns in the Social tab. Souls Ledger sheet has a "Show older" reveal but it's a one-shot expand, not multi-section. Built our own minimal pattern.
+
+### What 1z.182 ships
+
+**Three new helpers** (sit just above `_buildHunterFeedEntries`):
+
+1. `_guildActivityDateKey(ts)` → `"YYYY-MM-DD"` device-local. `'unknown'` for bad timestamps.
+2. `_guildActivityDateLabel(dateKey)` → `"Today"` / `"Yesterday"` / `"Wed, May 27"` (compact `toLocaleDateString` `{weekday: 'short', month: 'short', day: 'numeric'}` for older days).
+3. `_groupGuildActivityEntriesByDate(entries)` → returns `[{dateKey, label, count, entries}]` sorted newest-first. `'unknown'` bucket sinks to the bottom so real-date headers lead.
+
+**One render helper**: `_renderGuildActivityDateGroups(groups)`. Picks expanded group (previous selection if still present, else newest). Renders each group with a `<button class="guildhall-activity-date-head" data-date-toggle>` header + a `<div class="guildhall-activity-date-body">` containing the row HTMLs joined.
+
+**One delegated click handler**: `setupGuildActivityDateGroups()` on `#guildhall-activity-body`. Idempotent `data-wired-date-groups` guard. Tap on `[data-date-toggle]`: if it's NOT the currently expanded date, set as expanded + re-render. If it IS already expanded, no-op (preserves the "feed never goes fully empty" rule).
+
+**State**: module-level `let _guildActivityExpandedDate = null;` — session-only. **`setGuildActivityFilter` now resets it to `null` on every filter switch** so Hunter/Guild can land on their respective newest groups.
+
+### renderGuildActivity rewrite
+
+Both branches now normalize to a shared `[{ts, html}]` shape, slice to `GUILDHALL_GROUPED_FEED_CAP` (30 — bumped from the flat-feed 8), then call the same `_groupGuildActivityEntriesByDate` + `_renderGuildActivityDateGroups` path.
+
+- **Hunter branch**: same 1z.180 merge + 1z.181 eligibility filter. Cap raised from 8 → 30 because most rows now live inside collapsed groups; the expanded group can stay rich.
+- **Guild branch**: now normalizes raw `_guildhallReadStore` entries into `{ts, html}` via `_guildhallRowHtml`. Same 30-cap. No filter — the full unfiltered feed still surfaces in Guild mode.
+- **Empty state**: unchanged ("The board is quiet." + mode-specific sub).
+
+### Cap bump (8 → 30): rationale
+
+The flat 1z.180 feed showed 8 rows total. With grouping, only the expanded group is visible at any moment. If we kept the 8-cap, the newest group might only have 1-2 entries and the feed would feel sparse. 30 gives a few days of history with the latest group rich — total visible at any moment is still small because older groups collapse.
+
+`hb_souls_ledger` caps at 250 and `hb_guild_activity` at 50, so 30 sliced after merge is well within budget.
+
+### DOM structure per group
+
+```html
+<div class="guildhall-activity-date-group" data-date-key="2026-05-29" data-expanded="true">
+  <button class="guildhall-activity-date-head" data-date-toggle="2026-05-29" aria-expanded="true">
+    <span class="guildhall-activity-date-label">Today</span>
+    <span class="guildhall-activity-date-count">5 activities</span>
+    <span class="guildhall-activity-date-chev">▾</span>
+  </button>
+  <div class="guildhall-activity-date-body">
+    [row html joined]
+  </div>
+</div>
+```
+
+CSS hides `.guildhall-activity-date-body` when `[data-expanded="false"]`. Chevron rotates `-90deg` when collapsed, returns to `0deg` (with gold color tint) when expanded.
+
+### Diagnostic breadcrumbs
+
+Hunter mode keeps `guildhall-hunter-feed-render` with all 1z.181 fields plus three new:
+- `groupCount`
+- `collapsedGroupCount`
+- `expandedDateKey`
+
+Guild mode now emits its own `guildhall-guild-feed-render` breadcrumb with `{displayedCount, groupCount, collapsedGroupCount, expandedDateKey, build}`. (Previously Guild render emitted no breadcrumb at all — this fills the gap.)
+
+Privacy-safe: still no aliases, no raw labels, no private IDs.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ Hunter mode 1z.181 eligibility filter (positive delta, no Duel substring) — unchanged. The grouping layer sits AFTER eligibility filtering, so excluded rows never even reach the grouping stage.
+- ✅ Boss kill + souls reward collapse (1z.180) — unchanged. Still happens in `_buildHunterFeedEntries` before grouping.
+- ✅ `_hunterFeedSoulsRowHtml`, `_hunterFeedCollapsedBossKillRow`, `_guildhallRowHtml` — unchanged. Grouping only joins HTMLs into bodies.
+- ✅ `_guildhallReadStore` / `_guildhallWriteStore` / `recordGuildActivity` — unchanged.
+- ✅ Souls Ledger sheet (`_readSoulsLedger`, `openSoulsLedger`, `recordSoulsTransaction`, `_classifySoulsEvent`) — all unchanged.
+- ✅ FEATS · 24H tile / Today's Feats sheet / HUNTERS / BOSSES SLAIN tiles — all unchanged.
+- ✅ Add Friend / Remove Friend / Guild accordion — unchanged.
+- ✅ Header compact behavior (1z.179) — unchanged.
+- ✅ Storage shapes for `hb_souls_ledger` and `hb_guild_activity` — never mutated.
+- ✅ Boss reward values, balance math, streak band thresholds — untouched.
+- ✅ No Duel logic added / restored / referenced.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +160 / −45 — four new helpers (`_guildActivityDateKey`, `_guildActivityDateLabel`, `_groupGuildActivityEntriesByDate`, `_renderGuildActivityDateGroups`) + `setupGuildActivityDateGroups` click handler + `renderGuildActivity` rewrite to use shared `[{ts, html}]` shape + grouping + new diagnostic breadcrumbs + filter-switch reset |
+| `styles.css` | +90 — date-group accordion styles (group container, header button, label, count, chevron rotation, body, row padding overrides) |
+| `index.html` | knob bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w57` | `2.2.3-w58` |
+| `app.js?v=` | `510` | `511` |
+| `sw.js CACHE_VERSION` | `v5.396` | `v5.397` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → OK.
+- Playwright e2e: 28/29 first run, 1 transient sleep-streak flake (unrelated), passes on isolated retry.
+- Standalone Node sanity-check of `_guildActivityDateKey` + grouping order: produces correct `[2026-05-29, 2026-05-28, 2026-05-27, 2026-05-24]` newest-first buckets.
+
+### TestFlight QA for w58
+
+1. Cold-launch w58. Confirm `"build": "2.2.3-w58"`.
+2. Open Social tab. Default filter = Guild.
+3. **Guild Activity feed now shows date-group cards**:
+   - `Today · 3 activities` (expanded by default, showing today's rows).
+   - `Yesterday · 1 activity` (collapsed, just the header with right-pointing chevron).
+   - `Wed, May 27 · 2 activities` (collapsed).
+4. Tap `Yesterday` header → it expands, today collapses.
+5. Tap `Today` header → it expands again, yesterday collapses.
+6. Tap currently-expanded header → no-op (feed never goes fully empty).
+7. Switch to **Hunter** filter → date groups re-render with Hunter's eligible entries only; newest Hunter day is expanded.
+8. Switch back to **Guild** → date groups re-render with Guild's full entries; newest Guild day expanded.
+9. **1z.181 eligibility intact**: Hunter mode must NOT show "−25 souls · Engaged The Insomniac" or any legacy Duel rows in any date group.
+10. Tap souls pill → Souls Ledger / Transactions sheet still shows full accounting (every gain AND spend AND any legacy Duel rows). No grouping applied there.
+11. Tap FEATS · 24H tile → Today's Feats sheet unchanged.
+12. Tap HUNTERS / BOSSES SLAIN tiles → respective sheets unchanged.
+13. Force-quit + cold-launch → header still boots compact (1z.179), filter still defaults to Guild (1z.178), feed re-renders with newest group expanded.
+14. Copy Debug Info should contain `guildhall-hunter-feed-render` (in Hunter) OR `guildhall-guild-feed-render` (in Guild) with `groupCount` and `expandedDateKey` fields visible.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ Read-only on both stores. No writes added.
+- ✅ No Duel logic added/restored/referenced/tested.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ `recordSoulsTransaction` and `recordGuildActivity` write behavior unchanged.
+- ✅ `hb_souls_ledger` and `hb_guild_activity` storage shapes unchanged.
+- ✅ 1z.181 eligibility rule preserved structurally — grouping sits AFTER the filter.
+
+### Rollback
+
+Four independent reverts:
+1. Restore the original 1z.181 `renderGuildActivity` body (~50 lines back to the pre-1z.182 Hunter/Guild split with the 8-row slice and flat render).
+2. Delete the four helpers (`_guildActivityDateKey`, `_guildActivityDateLabel`, `_groupGuildActivityEntriesByDate`, `_renderGuildActivityDateGroups`), the constants (`GUILDHALL_GROUPED_FEED_CAP`, `_guildActivityExpandedDate`), `setupGuildActivityDateGroups`, and the new Guild breadcrumb.
+3. Remove the boot-time `setupGuildActivityDateGroups()` call.
+4. Delete the `.guildhall-activity-date-*` CSS block.
+
+Each step independent. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.181 Hunter Feed earnings-only filter (historical — superseded by 1z.182 above)
 
 ### ✅ STATUS: Hunter Feed now admits Souls Ledger rows ONLY when (a) `delta > 0` and (b) no Duel reference appears anywhere on the row (type / label / detail). Spends ("Engaged The Insomniac") and any legacy Duel rows that may still exist in `hb_souls_ledger` are silently filtered at render time. Souls Ledger / Transactions sheet untouched — still shows the full accounting. Frontend-only. `2.2.3-w57` web bundle ready.
 
