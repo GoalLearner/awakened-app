@@ -4,7 +4,79 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.190 Backend MVP: public_profile_summary + friend rank LEFT JOIN (read this first)
+## May 29, 2026 — 1z.191 Client public-rank submit + friend rank activation (read this first)
+
+**TL;DR.** Lights up the 1z.186 friend rank badge / sort seams now that the 1z.190 backend is deployed. The client builds a deterministic public rank summary from existing `getRankDivisionInfo(totalPoints)` and PUTs it on boot + on rank-label change + as a daily heartbeat. `_friendRankSortValue` now consumes the real `friend.rankSortValue` field returned by `/v1/friends`. Friend list sort direction flipped to descending (higher rank = higher in list) and only activates when every accepted friend has a non-null sort value. No mock rank data anywhere.
+
+**Files modified (frontend only).**
+- `auth.js` — added `submitPublicProfileSummary(payload)` thin wrapper around `_authedFetch('PUT', '/v1/users/me/public-profile-summary', payload)`. Exposed on `window.Auth`. Returns the same `{ ok, ... } / { ok: false, code, detail }` shape as the other Auth helpers. Bumped to `v=19`.
+- `app.js` — added the public-rank-summary subsystem after `getRankDivisionInfo`:
+  - `_publicRankSummary(totalXp)` builder: derives `{ rankTier, rankDivision, rankLabel, rankSortValue, rankPoints, clientUpdatedAt }` from `getRankDivisionInfo`. `rankSortValue` uses the 1z.189 formula: `TIER_WEIGHT[tier] * 1e9 + DIV_WEIGHT[division] * 1e6 + clamp(rankPoints, 0, 999_999)` with `S+` getting `divWeight = 3`. Exposed on `window.__publicRankSummary` for debug.
+  - `_maybeSubmitPublicRankSummary(reason)` 8-second debounced trigger. Coalesces multiple back-to-back XP/rank events into at most one submit per debounce window.
+  - `_doSubmitPublicRankSummary` gates on: (a) `Auth.getCurrentUser().jwt` exists, (b) submit-or-skip per `_prsShouldSubmit` — fires if no prior submit, label changed, or last submit was on a different local date.
+  - Two trigger sites: boot (after `setupGuildFriendsAccordion()`) and `renderRank` (after the rank-up activity log). All call sites are wrapped in `try { ... } catch (_) {}` so submit failures NEVER block UI.
+  - localStorage keys: `hb_public_rank_last_label`, `hb_public_rank_last_submitted_at` (ISO).
+  - Privacy-safe breadcrumbs via existing `_addHealthVerifyBreadcrumb`: `public-rank-summary-submit-start`, `public-rank-summary-submit-ok`, `public-rank-summary-submit-skip`, `public-rank-summary-submit-error`. Fields are restricted to rankLabel, reason, why, code — never raw user id, JWT, raw response, HealthKit data, or full localStorage.
+  - `_friendRankSortValue(friend)` now reads `Number(friend.rankSortValue)` and returns it when finite, else `null`. No bosses-slain / alias / leaderboard proxy.
+  - Friend list sort branch direction fixed: `(_friendRankSortValue(b) - _friendRankSortValue(a))` (descending — higher = higher in list). Still gated on `friends.every(...)` so partial-data states preserve server order. Bumped to `v=518`.
+- `index.html` — `app.js?v=518`, `auth.js?v=19`.
+- `sw.js` — `CACHE_VERSION = 'v5.404'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w65`, `app.js?v=518`, `auth.js?v=19`, `sw.js CACHE_VERSION v5.404`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Trigger matrix.**
+
+| Trigger | Where | Debounced? | Submit fires when |
+|---|---|---|---|
+| Boot | After `setupGuildFriendsAccordion()` | Yes (8s) | first run on device OR label changed OR new local day |
+| renderRank | After existing rank-up Guild Hall record | Yes (8s) | label changed OR new local day |
+| Manual debug | `window.__maybeSubmitPublicRankSummary('debug')` | Yes (8s) | per gate |
+
+`renderRank` runs on every habit toggle / health refresh, but the 8s debounce + per-day gate make at most one PUT per day unless the rank label actually crosses a boundary. Backend rate limit (`RL_PUBLIC_PROFILE_WRITE`: 6/min/user) is well above realistic legit submit volume.
+
+**Friend rank display + sort activation.**
+
+1. **Display** — `_friendAvatarHtml(alias, variant, friend)` already passes `friend` into `_friendRankLabel`, which now reads `friend.rankLabel`. When a friend has submitted, their avatar circle renders `D II` / `D III` / `S+` etc. via the `.friend-avatar--rank` CSS class (1z.186). When no rank field is present, the alias-initial fallback still wins.
+2. **Sort** — `_friendRankSortValue` now consumes the real `rankSortValue`. The sort branch only fires when **every** accepted friend has non-null data, so a half-populated friend list preserves the backend's `updated_at DESC` server order.
+
+**Guard rails preserved.**
+
+- No backend deploy. No D1 migration. No Codemagic. No archive/upload.
+- No fake rank data — every field is derived from local XP via `getRankDivisionInfo`.
+- No bosses-slain / steps / sleep proxy. Sort is the backend-trusted `rankSortValue`.
+- No HealthKit / leaderboard logic changes.
+- No friend add/remove behavior change.
+- No `user_state_snapshots.state_json` parsing.
+- No XP math / rank threshold change.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+- `rankPoints` never leaves backend → never shown in UI (privacy).
+
+**Rollback.** Five independent reverts:
+1. Revert the `renderRank` 1z.191 trigger insertion.
+2. Revert the boot 1z.191 trigger insertion.
+3. Revert `_friendRankSortValue` body back to `return null` + sort direction back to `(a - b)`.
+4. Revert the `_publicRankSummary` / `_maybeSubmitPublicRankSummary` block.
+5. Revert `submitPublicProfileSummary` in `auth.js` + the `window.Auth` export.
+
+No DB / backend changes touched. Knob bumps revert to w64 / 517 / 18 / v5.403.
+
+**Manual QA (w65).**
+
+1. Cold-launch w65 signed in. Confirm `"build": "2.2.3-w65"` in Copy Debug Info.
+2. Open Social tab → expand Guild. Friend list still loads. Add Friend + Remove Friend still work.
+3. After ~10 seconds, query D1 (or check the Worker logs / wrangler tail): a row should exist in `public_profile_summary` for this user with `rank_label` matching the user's current `D II` / `D III` / `S+` etc.
+4. Copy Debug Info should include `public-rank-summary-submit-ok` (or `-skip` if same day, same label).
+5. Force-quit and reopen the next day: a fresh PUT fires (daily heartbeat), `server_updated_at` advances. Same-day reopens skip.
+6. Cross a rank boundary (e.g. via XP gain in QA): trigger fires within ~8s; label updates on backend.
+7. From a second test account: add this user as friend; on that account's friend list, this user's avatar shows the rank label inside the circle.
+8. If the second account hasn't submitted yet, this user's friend list shows their alias initial (not a faked rank). Once they submit, refresh → avatar fills with their `D II`.
+9. Ordering only changes when both have data — partial-data lists still ordered by server `updated_at DESC`.
+10. Souls Ledger / FEATS · 24H / HUNTERS / BOSSES SLAIN tiles still open.
+
+---
+
+## May 29, 2026 — 1z.190 Backend MVP: public_profile_summary + friend rank LEFT JOIN
 
 **Backend-only train.** Frontend untouched; no app/sw knob bumps. Adds the D1 table + authenticated PUT endpoint + LEFT JOIN extension needed to power the dormant 1z.186 friend rank badge / sort seams. The migration file exists but **has NOT been applied to production D1**, and the Worker **has NOT been deployed**. Both gates require explicit approval before running. The frontend client-side submit path is deliberately deferred to Phase 1z.191.
 

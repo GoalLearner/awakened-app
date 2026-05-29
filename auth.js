@@ -1076,6 +1076,16 @@
     };
   }
 
+  // v3 Phase 1z.191 — Friend rank badges client submit path.
+  // PUTs the caller's preformatted public rank summary to the
+  // backend (shipped in 1z.190). Backend stores rankPoints but
+  // never returns it to friends. Callers must build the payload
+  // via app.js' _publicRankSummary(totalPoints) so the formula
+  // for rankSortValue stays in one place.
+  function submitPublicProfileSummary(payload) {
+    return _authedFetch('PUT', '/v1/users/me/public-profile-summary', payload);
+  }
+
   function fetchFriends()                       { return _authedFetch('GET',  '/v1/friends'); }
   function sendFriendRequest(alias)             { return _authedFetch('POST', '/v1/friends/request', { alias: alias }); }
   function acceptFriendRequest(friendshipId)    { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/accept'); }
@@ -1161,6 +1171,9 @@
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,
     uploadCloudState,
+    // Friend rank badges (v3 Phase 1z.191) — public profile summary
+    // submit. PUT /v1/users/me/public-profile-summary.
+    submitPublicProfileSummary,
     // Discipline Duels v1 (v3 Phase 1x)
     fetchFriends,
     sendFriendRequest,

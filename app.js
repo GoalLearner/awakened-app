@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w64';
+  const APP_BUILD_TAG = '2.2.3-w65';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11820,6 +11820,152 @@
   }
   try { window.__getRankDivisionInfo = getRankDivisionInfo; } catch (_) {}
 
+  // ── v3 Phase 1z.191 — Public rank summary builder + submit ──
+  //
+  // Builds the payload for PUT /v1/users/me/public-profile-summary
+  // (backend shipped in 1z.190). Reuses the existing deterministic
+  // getRankDivisionInfo() so display + sort + submit all agree on
+  // a single source of truth. NEVER fabricates rank — every field
+  // is derived from the user's local XP via existing helpers.
+  //
+  // Sort-value formula (locked in 1z.189):
+  //   tierWeight * 1_000_000_000
+  //   + divisionWeight * 1_000_000
+  //   + clamp(rankPoints, 0, 999_999)
+  //
+  //   TIER_WEIGHT: E=0, D=1, C=2, B=3, A=4, S=5, S+=6
+  //   DIV_WEIGHT:  III=0, II=1, I=2, null (S+) = 3
+  //
+  // Backend stores rankPoints but does NOT return it to friends
+  // (privacy: hides exact XP magnitude). Only rankLabel,
+  // rankSortValue, rankTier, rankDivision, rankUpdatedAt come
+  // back over the wire on /v1/friends.
+  const _PRS_TIER_WEIGHT = { 'E': 0, 'D': 1, 'C': 2, 'B': 3, 'A': 4, 'S': 5, 'S+': 6 };
+  const _PRS_DIV_WEIGHT  = { 'III': 0, 'II': 1, 'I': 2 };
+  const _PRS_RANK_POINTS_CLAMP = 999999;
+  function _publicRankSummary(totalXp) {
+    const points = Math.max(0, Math.floor(Number(totalXp) || 0));
+    if (typeof getRankDivisionInfo !== 'function') return null;
+    const info = getRankDivisionInfo(points);
+    if (!info) return null;
+    const tier = info.majorRank;
+    if (!tier || !(tier in _PRS_TIER_WEIGHT)) return null;
+    const division = info.isMax ? null : (info.division || null);
+    // Backend validates tier/division/label cross-consistency; build
+    // the label the same way the rank UI does so the cross-check
+    // never fires for a legitimate payload.
+    const label = info.isMax ? tier : (division ? (tier + ' ' + division) : tier);
+    const tierW = _PRS_TIER_WEIGHT[tier] | 0;
+    const divW  = (division == null) ? 3 : (_PRS_DIV_WEIGHT[division] | 0);
+    const clampedPoints = Math.min(points, _PRS_RANK_POINTS_CLAMP);
+    const rankSortValue = tierW * 1000000000 + divW * 1000000 + clampedPoints;
+    return {
+      rankTier:        tier,
+      rankDivision:    division,
+      rankLabel:       label,
+      rankSortValue:   rankSortValue,
+      rankPoints:      points,
+      clientUpdatedAt: new Date().toISOString(),
+    };
+  }
+  try { window.__publicRankSummary = _publicRankSummary; } catch (_) {}
+
+  // Submit gate. Two local keys track the last successful submit:
+  //   hb_public_rank_last_label        — last rankLabel sent
+  //   hb_public_rank_last_submitted_at — ISO timestamp of last OK
+  // The gate fires if:
+  //   1. no prior submission exists, OR
+  //   2. the current rankLabel differs from the cached one, OR
+  //   3. the cached submit's local date != today (daily heartbeat)
+  // No-op silently if not authed, missing Auth, missing helpers,
+  // or stub gate hits. All failures swallow so app boot never
+  // blocks.
+  const _PRS_LAST_LABEL_KEY = 'hb_public_rank_last_label';
+  const _PRS_LAST_AT_KEY    = 'hb_public_rank_last_submitted_at';
+  const _PRS_DEBOUNCE_MS    = 8000;
+  let _prsPendingTimer = null;
+  let _prsInflight     = false;
+
+  function _prsLogBreadcrumb(name, fields) {
+    if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
+    try { _addHealthVerifyBreadcrumb(name, fields || {}); } catch (_) {}
+  }
+
+  function _prsShouldSubmit(currentLabel) {
+    let lastLabel = null, lastAt = null;
+    try { lastLabel = localStorage.getItem(_PRS_LAST_LABEL_KEY); } catch (_) {}
+    try { lastAt    = localStorage.getItem(_PRS_LAST_AT_KEY); }    catch (_) {}
+    if (!lastLabel || !lastAt) return { submit: true, why: 'no-prior' };
+    if (lastLabel !== currentLabel) return { submit: true, why: 'label-change' };
+    const today = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : null;
+    if (today) {
+      // lastAt is ISO; compare YYYY-MM-DD prefix vs device-local.
+      const lastDate = String(lastAt).slice(0, 10);
+      if (lastDate !== today) return { submit: true, why: 'daily-heartbeat' };
+    }
+    return { submit: false, why: 'skipped-same-day' };
+  }
+
+  async function _doSubmitPublicRankSummary(reason) {
+    if (_prsInflight) return;
+    if (!window.Auth || typeof Auth.submitPublicProfileSummary !== 'function') return;
+    if (typeof Auth.getCurrentUser !== 'function') return;
+    const user = Auth.getCurrentUser();
+    if (!user || !user.jwt) return; // not authed → silent no-op
+    const payload = _publicRankSummary(totalPoints);
+    if (!payload) return;
+    const gate = _prsShouldSubmit(payload.rankLabel);
+    if (!gate.submit) {
+      _prsLogBreadcrumb('public-rank-summary-submit-skip', {
+        reason: reason || 'unknown',
+        why: gate.why,
+        rankLabel: payload.rankLabel,
+      });
+      return;
+    }
+    _prsInflight = true;
+    _prsLogBreadcrumb('public-rank-summary-submit-start', {
+      reason: reason || 'unknown',
+      why: gate.why,
+      rankLabel: payload.rankLabel,
+      hasRankSortValue: Number.isFinite(payload.rankSortValue),
+    });
+    let res;
+    try { res = await Auth.submitPublicProfileSummary(payload); }
+    catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    _prsInflight = false;
+    if (res && res.ok) {
+      try { localStorage.setItem(_PRS_LAST_LABEL_KEY, payload.rankLabel); } catch (_) {}
+      try { localStorage.setItem(_PRS_LAST_AT_KEY, payload.clientUpdatedAt); } catch (_) {}
+      _prsLogBreadcrumb('public-rank-summary-submit-ok', {
+        rankLabel: payload.rankLabel,
+        why: gate.why,
+      });
+      return;
+    }
+    _prsLogBreadcrumb('public-rank-summary-submit-error', {
+      code: (res && res.code) || 'UNKNOWN',
+      rankLabel: payload.rankLabel,
+      why: gate.why,
+    });
+  }
+
+  // Debounced public entry point. Multiple back-to-back XP changes
+  // coalesce into one submit. Safe to call from any event path —
+  // never throws, never blocks UI, fully gated on auth.
+  function _maybeSubmitPublicRankSummary(reason) {
+    const r = (typeof reason === 'string' && reason) ? reason : 'unknown';
+    if (_prsPendingTimer) {
+      try { clearTimeout(_prsPendingTimer); } catch (_) {}
+    }
+    _prsPendingTimer = setTimeout(function () {
+      _prsPendingTimer = null;
+      _doSubmitPublicRankSummary(r);
+    }, _PRS_DEBOUNCE_MS);
+  }
+  try { window.__maybeSubmitPublicRankSummary = _maybeSubmitPublicRankSummary; } catch (_) {}
+  // ── end public rank summary ────────────────────────────────
+
   // ── XP MIGRATION (v2.0.1 rank-scaling overhaul) ─────────────
   // The new RANKS thresholds are ~5-7× higher than the previous
   // values. Without migration, an existing user at S rank under the
@@ -14577,6 +14723,16 @@
         }, 'rank_up_' + fullLabel);
       }
       try { localStorage.setItem(lastKey, fullLabel); } catch (_) {}
+    } catch (_) {}
+    // v3 Phase 1z.191 — schedule a public rank summary submit on
+    // every renderRank. The submit is debounced 8s + gated by
+    // label-change-or-daily-heartbeat inside _doSubmitPublicRankSummary,
+    // so rapid habit toggles coalesce into at most one PUT per day
+    // unless the rank label actually crossed a boundary.
+    try {
+      if (typeof _maybeSubmitPublicRankSummary === 'function') {
+        _maybeSubmitPublicRankSummary('render-rank');
+      }
     } catch (_) {}
     const badge = document.getElementById('rank-badge');
     const label = document.getElementById('rank-label');
@@ -23815,16 +23971,17 @@
     return trimmed.length > 5 ? trimmed.slice(0, 5) : trimmed;
   }
 
-  // v3 Phase 1z.186 — future backend seam for friend rank sort
-  // order. Returns null today since no backend rank field exists
-  // on the friend payload yet; callers must preserve existing
-  // ordering whenever this returns null. When real rank fields
-  // ship, replace the body with a numeric comparator built from
-  // (rankLetter, division) — DO NOT derive sort weight from
-  // bosses slain or any other proxy metric.
+  // v3 Phase 1z.191 — friend rank sort seam, now consuming the
+  // real `rankSortValue` field returned by /v1/friends LEFT JOIN
+  // against public_profile_summary (1z.190). Returns null when
+  // the friend has not submitted a public summary yet, so the
+  // 1z.186 "preserve server order unless every friend has data"
+  // policy still holds. No bosses-slain proxy. No alias-derived
+  // rank. No client-side fabrication.
   function _friendRankSortValue(friend) {
-    void friend;
-    return null;
+    if (!friend) return null;
+    const v = Number(friend.rankSortValue);
+    return Number.isFinite(v) ? v : null;
   }
 
   function _friendAvatarHtml(alias, variant, friend) {
@@ -23947,7 +24104,11 @@
       // DO NOT sort by bosses slain or any other proxy metric.
       const rankSortReady = friends.every(f => _friendRankSortValue(f) !== null);
       if (rankSortReady) {
-        friends.sort((a, b) => (_friendRankSortValue(a) - _friendRankSortValue(b)));
+        // v3 Phase 1z.191 — higher rankSortValue = stronger rank,
+        // so descending order puts S+ on top and E III at the
+        // bottom. The 1z.189 formula is monotonic, so this is
+        // simply (b - a).
+        friends.sort((a, b) => (_friendRankSortValue(b) - _friendRankSortValue(a)));
       }
       for (const f of friends) {
         const aliasDisp = _socialDisplayAlias(f.alias);
@@ -36332,6 +36493,17 @@
     // default; opens on tap. Idempotent guard so a second boot
     // pass doesn't double-fire.
     try { setupGuildFriendsAccordion(); } catch (_) {}
+    // v3 Phase 1z.191 — schedule a public rank summary submit on
+    // boot. The debounce inside _maybeSubmitPublicRankSummary
+    // (8s) lets totalPoints settle after the boot-time XP load
+    // before firing. The submit itself self-gates on auth + on
+    // label-change-or-daily-heartbeat, so this is a safe no-op
+    // when not signed in.
+    try {
+      if (typeof _maybeSubmitPublicRankSummary === 'function') {
+        _maybeSubmitPublicRankSummary('boot');
+      }
+    } catch (_) {}
     // v2.0.1 DROPS Phase 1 — inventory + reveal + Pokédex wiring.
     try { loadInventory(); } catch (_) {}
     setupCardRevealModal();
