@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w56';
+  const APP_BUILD_TAG = '2.2.3-w57';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4136,19 +4136,63 @@
   // { ts, html } pair; sorting happens after the build pass. Returns
   // both the merged array and a diagnostics object so the renderer
   // can emit a single breadcrumb with the per-source counts.
+  // v3 Phase 1z.181 — Hunter Feed eligibility rule.
+  //
+  // The Hunter Feed is a "things I earned" notification feed, not a
+  // raw transaction ledger. Souls Ledger rows are admitted only when:
+  //   1. delta > 0  (positive earned souls only — spends like
+  //      "Engaged The Insomniac" stay in the Transactions sheet)
+  //   2. No Duel references anywhere on the row (type, label, or
+  //      detail). Duels were removed from the product; legacy rows
+  //      may still exist in hb_souls_ledger from older builds, and
+  //      must never resurface here even if positive.
+  //
+  // _classifySoulsEvent normalizes type to lowercase snake (e.g.
+  // 'duel_win' / 'duel_loss'); the type check alone catches the
+  // common case. The label/detail substring scan is a belt-and-
+  // suspenders guard against pre-classification legacy hints like
+  // 'duel_win:<duelId>' that may have leaked into older entries.
+  // Storage is never mutated — this is a render-time filter only.
+  //
+  // The eligibility logic is inlined into _buildHunterFeedEntries
+  // (partition step) so the spend / duel exclusion counts can ride
+  // out into the diagnostic breadcrumb without a second pass.
+
   function _buildHunterFeedEntries(personalActivity, soulsRows) {
     const merged = [];
     const consumedSoulIds = new Set();
     let collapsedBossKillCount = 0;
 
+    // v3 Phase 1z.181 — partition the souls ledger into eligible +
+    // excluded BEFORE the two-pass loops. The collapse step then
+    // only sees positive, non-Duel rows, so it can never collapse a
+    // boss_kill feat against a spend or a legacy duel row. Diagnostic
+    // counts of excluded categories ride along to the breadcrumb.
+    const eligibleSouls = [];
+    let excludedSpendCount = 0;
+    let excludedDuelCount  = 0;
+    for (const s of soulsRows) {
+      if (!s) continue;
+      const type   = String(s.type   || '').toLowerCase();
+      const label  = String(s.label  || '').toLowerCase();
+      const detail = String(s.detail || '').toLowerCase();
+      const isDuelish = (type.indexOf('duel')  !== -1)
+                     || (label.indexOf('duel') !== -1)
+                     || (detail.indexOf('duel')!== -1);
+      if (isDuelish) { excludedDuelCount++; continue; }
+      const delta = Number(s.delta);
+      if (!Number.isFinite(delta) || delta <= 0) { excludedSpendCount++; continue; }
+      eligibleSouls.push(s);
+    }
+
     // First pass: personal feats. For boss_kill rows, search for a
-    // same-window souls boss_kill row and collapse.
+    // same-window eligible souls boss_kill row and collapse.
     for (const e of personalActivity) {
       if (!e || typeof e.ts !== 'number') continue;
       if (e.type === 'boss_kill') {
         let matchIdx = -1;
-        for (let i = 0; i < soulsRows.length; i++) {
-          const s = soulsRows[i];
+        for (let i = 0; i < eligibleSouls.length; i++) {
+          const s = eligibleSouls[i];
           if (!s || consumedSoulIds.has(s.id)) continue;
           if (s.type !== 'boss_kill') continue;
           if (Math.abs((s.ts || 0) - (e.ts || 0)) > HUNTER_FEED_BOSS_COLLAPSE_WINDOW_MS) continue;
@@ -4162,7 +4206,7 @@
           break;
         }
         if (matchIdx >= 0) {
-          const match = soulsRows[matchIdx];
+          const match = eligibleSouls[matchIdx];
           consumedSoulIds.add(match.id);
           collapsedBossKillCount++;
           merged.push({
@@ -4175,8 +4219,8 @@
       merged.push({ ts: e.ts || 0, html: _guildhallRowHtml(e) });
     }
 
-    // Second pass: souls rows not consumed by collapse.
-    for (const s of soulsRows) {
+    // Second pass: eligible souls rows not consumed by collapse.
+    for (const s of eligibleSouls) {
       if (!s || typeof s.ts !== 'number') continue;
       if (consumedSoulIds.has(s.id)) continue;
       merged.push({ ts: s.ts || 0, html: _hunterFeedSoulsRowHtml(s) });
@@ -4185,10 +4229,13 @@
     return {
       merged: merged,
       diagnostics: {
-        guildActivityCount:     personalActivity.length,
-        soulsLedgerCount:       soulsRows.length,
-        mergedCount:            merged.length,
-        collapsedBossKillCount: collapsedBossKillCount,
+        guildActivityCount:           personalActivity.length,
+        soulsLedgerCount:             soulsRows.length,
+        soulsLedgerEligibleCount:     eligibleSouls.length,
+        soulsLedgerExcludedSpendCount: excludedSpendCount,
+        soulsLedgerExcludedDuelCount:  excludedDuelCount,
+        mergedCount:                  merged.length,
+        collapsedBossKillCount:       collapsedBossKillCount,
       },
     };
   }
@@ -4216,11 +4263,14 @@
       try {
         if (typeof _addHealthVerifyBreadcrumb === 'function') {
           _addHealthVerifyBreadcrumb('guildhall-hunter-feed-render', {
-            guildActivityCount:     built.diagnostics.guildActivityCount,
-            soulsLedgerCount:       built.diagnostics.soulsLedgerCount,
-            mergedCount:            built.diagnostics.mergedCount,
-            displayedCount:         visible.length,
-            collapsedBossKillCount: built.diagnostics.collapsedBossKillCount,
+            guildActivityCount:           built.diagnostics.guildActivityCount,
+            soulsLedgerCount:             built.diagnostics.soulsLedgerCount,
+            soulsLedgerEligibleCount:     built.diagnostics.soulsLedgerEligibleCount,
+            soulsLedgerExcludedSpendCount: built.diagnostics.soulsLedgerExcludedSpendCount,
+            soulsLedgerExcludedDuelCount:  built.diagnostics.soulsLedgerExcludedDuelCount,
+            mergedCount:                  built.diagnostics.mergedCount,
+            displayedCount:               visible.length,
+            collapsedBossKillCount:       built.diagnostics.collapsedBossKillCount,
             build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
           });
         }

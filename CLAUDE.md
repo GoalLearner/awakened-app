@@ -55,7 +55,134 @@ This train bundles **three customer-facing fixes** plus one already-deployed bac
 
 ---
 
-## 📌 Session handoff — May 28, 2026 — 1z.180 Hunter Feed Phase A: merge Souls Ledger into Hunter view (read this first)
+## 📌 Session handoff — May 28, 2026 — 1z.181 Hunter Feed earnings-only filter (read this first)
+
+### ✅ STATUS: Hunter Feed now admits Souls Ledger rows ONLY when (a) `delta > 0` and (b) no Duel reference appears anywhere on the row (type / label / detail). Spends ("Engaged The Insomniac") and any legacy Duel rows that may still exist in `hb_souls_ledger` are silently filtered at render time. Souls Ledger / Transactions sheet untouched — still shows the full accounting. Frontend-only. `2.2.3-w57` web bundle ready.
+
+### Why this tightens the product rule
+
+1z.180 merged souls ledger rows into the Hunter view 1:1. That meant a fresh boss engage cost ("−25 souls · Engaged The Insomniac") appeared right next to "Defeated The Insomniac · +50 souls" — and worse, if a user upgraded from an earlier build that wrote duel_win / duel_loss rows to the ledger, those rows would also bubble into the feed even though Duels are gone from the product.
+
+Product framing (per the spec):
+- **Hunter Feed** = "things I earned" / wins / positive personal progress.
+- **Souls Ledger / Transactions sheet** = full accounting, every gain and spend, including any legacy data.
+
+### The eligibility rule
+
+A Souls Ledger row is admitted to the Hunter Feed only when **both** are true:
+
+1. `Number(entry.delta) > 0` — strictly positive.
+2. None of `entry.type` / `entry.label` / `entry.detail` contains `"duel"` (case-insensitive substring check).
+
+Storage is never mutated. The filter is render-time only. The Transactions sheet and the underlying `hb_souls_ledger` data both keep every row.
+
+### Implementation — partition step inside `_buildHunterFeedEntries`
+
+The eligibility check is inlined as a partition step before the two existing passes (collapse + emit). One scan, two outputs:
+
+- `eligibleSouls[]` — rows that pass the rule. Fed to the collapse pass AND the emit pass.
+- `excludedSpendCount` — rows excluded because `delta <= 0`.
+- `excludedDuelCount` — rows excluded because `"duel"` appeared on any field.
+
+This means:
+- **Collapse can never pair a boss_kill feat with a negative or duel row** — the partition guarantees the only `boss_kill` souls candidates passed to the collapse loop are positive boss reward rows.
+- **Second-pass emit only sees eligible rows** — no need to re-check.
+- **Diagnostics count the excluded categories** — surfaced via the existing `guildhall-hunter-feed-render` breadcrumb.
+
+### Diagnostic breadcrumb additions
+
+`guildhall-hunter-feed-render` now includes:
+
+| Field | Meaning |
+|---|---|
+| `soulsLedgerCount` | total raw rows read from `hb_souls_ledger` |
+| `soulsLedgerEligibleCount` | rows that passed the 1z.181 filter |
+| `soulsLedgerExcludedSpendCount` | rows excluded because `delta <= 0` |
+| `soulsLedgerExcludedDuelCount` | rows excluded because they referenced `"duel"` |
+| `mergedCount` | total entries in the merged list (before slice) |
+| `displayedCount` | actually rendered after slice to 8 |
+| `collapsedBossKillCount` | how many boss kill pairs collapsed into one row |
+| (existing) `guildActivityCount`, `build` | unchanged |
+
+Privacy-safe: no aliases, no raw labels, no private IDs.
+
+### What's NOT changed
+
+- ✅ Backend untouched. No deploy. No D1 mutation. No migration.
+- ✅ Souls Ledger sheet (`openSoulsLedger`, `_readSoulsLedger`, `_writeSoulsLedger`, `recordSoulsTransaction`, `_classifySoulsEvent`) — all unchanged. The Transactions modal still shows the full ledger including spends and any legacy rows.
+- ✅ `hb_souls_ledger` storage — never mutated. Read-only filtering at render time.
+- ✅ FEATS · 24H tile counter — still personal feats only from `hb_guild_activity`. Souls don't pollute this number.
+- ✅ Today's Feats sheet — still personal Guild Activity entries only.
+- ✅ Guild filter mode — unchanged. Full `hb_guild_activity`, no souls injected.
+- ✅ `recordSoulsTransaction` write path — unchanged. Boss kill rewards, daily login, engage costs still write to `hb_souls_ledger` exactly as before.
+- ✅ Boss reward / engage cost values, balance math, streak band thresholds — all untouched.
+- ✅ `_hunterFeedSoulsRowHtml`, `_hunterFeedCollapsedBossKillRow` unchanged from 1z.180.
+- ✅ No Duel logic added / restored / referenced beyond the substring-exclude filter.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS` unchanged (false).
+
+### Files changed
+
+| File | Net |
+|---|---|
+| `app.js` | +45 / −5 — partition step in `_buildHunterFeedEntries`, 4 new diagnostic counts threaded through the breadcrumb, +20-line load-bearing comment block explaining the rule |
+| `index.html` | knob bump |
+| `sw.js` | knob bump |
+| `CLAUDE.md` | this handoff |
+
+### Version knobs
+
+| Knob | Old | New |
+|---|---|---|
+| `APP_BUILD_TAG` | `2.2.3-w56` | `2.2.3-w57` |
+| `app.js?v=` | `509` | `510` |
+| `sw.js CACHE_VERSION` | `v5.395` | `v5.396` |
+| `APP_VERSION` | `2.2.3` | unchanged |
+| `auth.js?v=` | `18` | unchanged |
+| `simulated-leaderboard.js?v=` | `7` | unchanged |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` | unchanged |
+
+### Tests
+
+- `node --check` on `app.js`, `auth.js`, `sw.js`, `simulated-leaderboard.js` → **OK**.
+- Playwright e2e: 27/29 first run, 2 transient browser-context flakes (workout-streak legacy + sleep-verify, both unrelated to Social), pass on isolated retry.
+
+### TestFlight QA for w57
+
+1. Cold-launch w57. Confirm `"build": "2.2.3-w57"`.
+2. Open Social tab. Tap **Hunter** filter.
+3. Feed shows only positive personal events:
+   - Personal Guild Activity feats (boss kills, rank ups, streaks, 10K days, 7+h sleep, ultra-rare drops).
+   - **+15 souls · Daily login** rows.
+   - **+50 souls · Defeated The Insomniac** rows (collapsed with boss kill feat).
+   - **+100 souls · Starter souls** (if grant is recent).
+4. Feed must NOT show:
+   - **−25 souls · Engaged The Insomniac** (spend → Transactions sheet only).
+   - Any negative delta row.
+   - Any legacy "Duel victory" / "Duel loss" row that might exist from earlier builds.
+5. Tap souls pill → Souls Ledger / Transactions sheet still shows the full ledger — every gain AND spend AND any legacy Duel rows. (The filter is Hunter-Feed-only.)
+6. Tap **FEATS · 24H** tile → Today's Feats sheet unchanged from w56.
+7. Tap **Guild** filter → full Guild Activity feed unchanged.
+8. Copy Debug Info should contain `guildhall-hunter-feed-render` with the new `soulsLedgerExcludedSpendCount` and `soulsLedgerExcludedDuelCount` fields.
+
+### Hard guardrails respected
+
+- ✅ Frontend only. No backend deploy. No D1 mutation. No migration.
+- ✅ Read-only filtering. `hb_souls_ledger` storage never mutated.
+- ✅ No new feed entry writes.
+- ✅ No Duel behavior added, restored, referenced, or tested.
+- ✅ No Codemagic. No archive/upload from this machine.
+- ✅ Souls balance math untouched.
+- ✅ Boss reward / engage cost values untouched.
+- ✅ HealthKit / leaderboard / dungeon / XP / rank / souls economy / sim values / sync cadence — all untouched.
+
+### Rollback
+
+One revert: restore the original loops in `_buildHunterFeedEntries` (~30 lines back to the pre-1z.181 shape that passed `soulsRows` directly to both passes), restore the original 4-field diagnostic object, and revert the breadcrumb payload to its 1z.180 shape. Backend untouched throughout.
+
+---
+
+## 📌 Session handoff — May 28, 2026 — 1z.180 Hunter Feed Phase A: merge Souls Ledger into Hunter view (historical — superseded by 1z.181 above)
 
 ### ✅ STATUS: Hunter mode on the Social tab now shows a merged feed of personal Guild Activity feats + every souls-changing event from the Souls Ledger. Boss-kill duplicates collapse cleanly into "Defeated The Insomniac · +50 souls". Guild view, Souls Ledger sheet, FEATS · 24H tile, and Today's Feats sheet are all untouched. Read-only — no writes, no mutation, no new storage. Frontend-only. `2.2.3-w56` web bundle ready.
 
