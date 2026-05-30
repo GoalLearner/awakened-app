@@ -20743,6 +20743,186 @@ body.reveal-locked { overflow: hidden; }
   justify-content: center;
 }
 
+/* ────────────────────────────────────────────────────────────
+   v3 Phase 1z.207 — Guild Roster redesign.
+   Rank-tier color palette: every accepted-friend avatar/chip/
+   sub-line/left-hairline reads its color from the SAME data-
+   rank-tier hook, so D glows cyan, C glows emerald, etc. All
+   tokens scoped to .guildhall-section--friends to avoid leaking
+   into the HUNTERS Roster modal or unrelated friend surfaces.
+   Canonical palette matches [data-rank] from styles.css:12681.
+   ──────────────────────────────────────────────────────────── */
+.guildhall-section--friends [data-rank-tier="E"]  { --rank-color: #8b5cf6; --rank-glow: rgba(139, 92,246,0.50); --rank-soft: rgba(139, 92,246,0.18); }
+.guildhall-section--friends [data-rank-tier="D"]  { --rank-color: #22d3ee; --rank-glow: rgba( 34,211,238,0.55); --rank-soft: rgba( 34,211,238,0.18); }
+.guildhall-section--friends [data-rank-tier="C"]  { --rank-color: #34d399; --rank-glow: rgba( 52,211,153,0.55); --rank-soft: rgba( 52,211,153,0.18); }
+.guildhall-section--friends [data-rank-tier="B"]  { --rank-color: #fbbf24; --rank-glow: rgba(251,191, 36,0.55); --rank-soft: rgba(251,191, 36,0.18); }
+.guildhall-section--friends [data-rank-tier="A"]  { --rank-color: #ef4444; --rank-glow: rgba(239, 68, 68,0.55); --rank-soft: rgba(239, 68, 68,0.18); }
+.guildhall-section--friends [data-rank-tier="S"]  { --rank-color: #e879f9; --rank-glow: rgba(232,121,249,0.60); --rank-soft: rgba(232,121,249,0.18); }
+.guildhall-section--friends [data-rank-tier="S+"] { --rank-color: #facc15; --rank-glow: rgba(250,204, 21,0.65); --rank-soft: rgba(250,204, 21,0.20); }
+
+/* Accepted-friend row in the lower Guild accordion: rank-color
+   accent hairline on the left edge + denser padding. Scoped so
+   the upper FRIENDS section + Duels rows stay untouched. */
+.guildhall-section--friends .friend-row--accepted {
+  position: relative;
+  padding: 12px 14px;
+  gap: 14px;
+}
+.guildhall-section--friends .friend-row--accepted[data-rank-tier]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--rank-color, var(--accent)), transparent);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+/* Avatar stack: circular ring + small chip below. Chip overlaps
+   the circle by translateY so the row's overall height grows by
+   only a few pixels vs the legacy single-circle markup. */
+.guildhall-section--friends .friend-avatar-stack {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  /* Reserve a tiny extra slot for the chip below; the chip
+     itself is absolutely positioned and overlaps the circle so
+     the row vertical rhythm stays close to the legacy size. */
+  padding-bottom: 8px;
+}
+.guildhall-section--friends .friend-avatar-stack .friend-avatar {
+  width: 46px;
+  height: 46px;
+  font-size: 1.05rem;
+  /* Rank-colored ring: thin border + soft outer glow + radial
+     fill biased toward the upper-left for depth. */
+  border: 1.5px solid var(--rank-color, var(--accent));
+  color: var(--rank-color, var(--accent));
+  background:
+    radial-gradient(circle at 35% 30%, var(--rank-soft, rgba(139,92,246,0.25)) 0%, transparent 60%),
+    #1d1d2e;
+  box-shadow: 0 0 12px var(--rank-glow, rgba(139,92,246,0.40));
+  text-shadow: 0 0 8px var(--rank-glow, rgba(139,92,246,0.50));
+}
+
+/* Tier chip ("D II") sitting just below the circle, overlapping
+   the bottom edge. Reads in mono so the rank+division stays
+   instantly legible at 8px without dropping the brand-serif
+   feel of the alias above. */
+.guildhall-section--friends .friend-avatar-rank-chip {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #0e0e2a;
+  border: 1px solid var(--rank-color, var(--accent));
+  color: var(--rank-color, var(--accent));
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.50rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 0 6px var(--rank-glow, rgba(139,92,246,0.35));
+}
+
+/* Mono "D-RANK" sub-line under the alias. Color via the row's
+   data-rank-tier so it agrees with the ring + chip. Drops to a
+   neutral gray fallback when no tier is present. */
+.guildhall-section--friends .friend-row--accepted .social-row-rank-sub {
+  margin-top: 3px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  color: var(--rank-color, var(--text-tertiary, #6b7280));
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Alias prominence per the design — slightly larger + heavier
+   so the alias is clearly the dominant element in each row.
+   Scoped to the accepted-friend rows in the Guild section so
+   incoming/outgoing/duel rows are unaffected. */
+.guildhall-section--friends .friend-row--accepted .social-row-alias {
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* v3 Phase 1z.207 — S+ animated conic-gold ring. Lightweight
+   keyframes (single rotate transform on the conic background),
+   gated by prefers-reduced-motion so anyone with motion
+   reduction enabled gets a static gold gradient. */
+.guildhall-section--friends .friend-avatar-stack[data-rank-tier="S+"] .friend-avatar {
+  border-color: transparent;
+  background:
+    conic-gradient(from 0deg, #f59e0b, #facc15, #fde68a, #facc15, #f59e0b) border-box,
+    radial-gradient(circle at 35% 30%, rgba(250,204,21,0.35) 0%, transparent 65%) padding-box,
+    #1d1d2e;
+  /* The conic sits behind the radial via background-clip; we
+     animate it via a wrapper instead to avoid repainting the
+     entire avatar at 60fps. Keep the simple animation here too
+     for browsers without nested background support. */
+  animation: roster-splus-rotate 6s linear infinite;
+}
+@keyframes roster-splus-rotate {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guildhall-section--friends .friend-avatar-stack[data-rank-tier="S+"] .friend-avatar {
+    animation: none;
+  }
+}
+
+/* Integrated Add Friend footer — gold CTA replaces the legacy
+   violet primary inside the lower Guild accordion only. Scoped
+   strictly to .guildhall-friend-add--bottom so the upper
+   FRIENDS section's Send Request button stays unchanged. */
+.guildhall-friend-add--bottom {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.20);
+}
+.guildhall-friend-add--bottom #social-friend-send {
+  /* Gold gradient CTA matching the brand fantasy palette. */
+  background: linear-gradient(180deg, #fde68a 0%, #f5b842 50%, #b97a07 100%);
+  border: 1px solid rgba(245,184,66,0.65);
+  color: #14143a;
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  box-shadow:
+    0 4px 14px rgba(245,184,66,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.40);
+  padding: 10px 16px;
+  border-radius: 10px;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.guildhall-friend-add--bottom #social-friend-send:hover {
+  box-shadow:
+    0 6px 18px rgba(245,184,66,0.40),
+    inset 0 1px 0 rgba(255,255,255,0.50);
+}
+.guildhall-friend-add--bottom #social-friend-send:active {
+  transform: translateY(1px);
+}
+.guildhall-friend-add--bottom #social-friend-send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* Duel cards */
 .duel-card {
   background: linear-gradient(180deg, #14143a 0%, #0e0e2a 100%);

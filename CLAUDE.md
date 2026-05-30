@@ -4,7 +4,99 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.206 Fix phantom rank_up public events (read this first)
+## May 29, 2026 — 1z.207 Lower Guild Roster redesign with rank-tier colors (read this first)
+
+**TL;DR.** Frontend-only train. Implements the Claude Design `Guild Roster Redesign.html` bundle for the lower Guild accordion: rank-tier-colored avatar ring + tier chip below the circle + "D-RANK" mono sub-line + left-edge accent hairline + integrated gold "+ ADD FRIEND" CTA. No fake online dots or last-active timestamps (explicit guardrail). HUNTERS / Roster modal untouched. Guild Activity feed untouched. Friend add/remove logic untouched.
+
+**Files modified.**
+- `app.js` —
+  - `_friendAvatarHtml(alias, variant, friend)` rewritten: when `friend` carries a rank label, returns a wrapper `<div class="friend-avatar-stack" data-rank-tier="<TIER>">` containing the legacy `.friend-avatar` circle (now always showing the alias initial, in the rank color) + a new `.friend-avatar-rank-chip` overlapping the circle's bottom edge with the exact `D II` / `E III` / `S+` label. Tier letter parsed from the label's first word; defensive 5-char truncation on the chip text. **Backward-compatible**: incoming/outgoing/duel callers that pass no `friend` still receive the legacy single-element `<div class="friend-avatar">` markup — Duels rows, incoming/outgoing requests, and the upper FRIENDS section all stay visually unchanged.
+  - Accepted-friend row HTML in `renderFriendsSection` gains a `data-rank-tier` attribute (parsed from `_friendRankLabel(f)`) and a new `<div class="social-row-rank-sub">D-RANK</div>` element inside `.social-row-main`. Remove-friend wiring + Cancel/Remove confirm flow + alias display + idempotency all preserved.
+- `styles.css` — large additive block scoped strictly to `.guildhall-section--friends` so the upper FRIENDS section + Duels + HUNTERS Roster modal are untouched:
+  - Per-tier `[data-rank-tier]` selectors expose `--rank-color`, `--rank-glow`, `--rank-soft` CSS variables. Palette matches the canonical `[data-rank]` set: `E #8b5cf6` · `D #22d3ee` · `C #34d399` · `B #fbbf24` · `A #ef4444` · `S #e879f9` · `S+ #facc15`.
+  - `.friend-row--accepted::before` paints a 2px rank-color hairline down the left edge (per the design's accent stripe).
+  - `.friend-avatar-stack`: positions the stack so the chip overlaps the circle bottom; the row's vertical rhythm grows by ~8px vs the legacy single-circle layout.
+  - `.friend-avatar-stack .friend-avatar`: 46px ring with a thin rank-color border + radial fill + outer glow + text-shadow on the initial.
+  - `.friend-avatar-rank-chip`: 8px mono chip in the rank color, centered below the circle.
+  - `.social-row-rank-sub`: 8.8px mono "D-RANK" sub-line in the rank color, sits below the alias.
+  - `.social-row-alias` (scoped): 15px/800 alias, ellipsis truncation for long names.
+  - **S+ animated conic gold**: `@keyframes roster-splus-rotate` applies a 6s linear `hue-rotate` filter to the conic-gold ring. Gated by `prefers-reduced-motion: reduce` — anyone with motion reduction enabled gets a static gold gradient.
+  - **Integrated gold "+ ADD FRIEND" CTA**: `.guildhall-friend-add--bottom #social-friend-send` swaps the legacy violet `social-btn--primary` for a brand-gold gradient with Cinzel typography, premium box-shadow, and disabled/hover states. Scoped to `.guildhall-friend-add--bottom` so the upper FRIENDS section's `Send Request` button stays unchanged.
+- `index.html` — `app.js?v=527`.
+- `sw.js` — `CACHE_VERSION = 'v5.413'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w74`, `app.js?v=527`, `auth.js?v=20` (unchanged), `sw.js CACHE_VERSION v5.413`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Rank color mapping table.**
+
+| Tier | `--rank-color` | Visual cue |
+|---|---|---|
+| E | `#8b5cf6` | purple — brand default |
+| D | `#22d3ee` | cyan — lightning haze |
+| C | `#34d399` | emerald — vegetation |
+| B | `#fbbf24` | amber — sandstone |
+| A | `#ef4444` | red — ember / flame |
+| S | `#e879f9` | fuchsia — cosmic apex |
+| S+ | `#facc15` (animated conic gold via `roster-splus-rotate`) | crown-tier shimmer |
+
+**Explicit NO-FAKE compliance.** Per the 1z.207 guardrail "Do NOT fake online status / last-active timestamps / 'online' dots unless backed by real data": the design called for an optional presence dot + timestamp on the right side. **Both omitted.** The right-side spacing is filled by the existing `•••` overflow button (Cancel / Remove confirm flow from 1z.176) — the only real interactive surface available today.
+
+**HUNTERS / Roster sheet modal NOT redesigned this train.** The Roster sheet uses `.guild-roster-row` / `.guild-roster-avatar` selectors; this train's CSS additions are scoped to `.guildhall-section--friends` and never touch `.guild-roster-*`. Rank badges in the Roster modal continue to use the 1z.193 inline-rank-label-inside-circle pattern. If you want the modal restyled to match the new accordion look, that's a separate phase.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No friend add/remove logic / API call changes.
+- No Roster modal redesign.
+- No Guild Activity feed changes.
+- No public event submit/fetch changes.
+- No rank math / rank threshold / `getRankDivisionInfo` changes.
+- No fake online status / last-active timestamps / presence dots.
+- No fake friend metrics.
+- No Duel surface touched (Duels rows + incoming/outgoing requests still use the legacy `.friend-avatar` single-element markup via the backward-compat path).
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Four independent reverts:
+1. Restore the previous `_friendAvatarHtml` body (legacy single-element rank-or-initial circle).
+2. Restore the previous accepted-friend row HTML in `renderFriendsSection` (drop `data-rank-tier` + the `social-row-rank-sub` element).
+3. Delete the new `styles.css` block (`/* v3 Phase 1z.207 — Guild Roster redesign */` through the `#social-friend-send` integrated CTA rules).
+4. Revert the knob bumps (`w74 → w73`, `v=527 → 526`, `v5.413 → v5.412`).
+
+No DB / backend / storage touched.
+
+**Manual QA (w74).**
+1. Cold-launch w74 signed-in. Confirm `"build": "2.2.3-w74"`.
+2. Open Social tab.
+3. Expand the lower **GUILD** accordion.
+4. Member rows render with the new redesign:
+   - Avatar circle has the alias initial in the rank-tier color.
+   - Tier chip below the circle shows the exact label (e.g. `D II`, `E III`).
+   - "D-RANK" mono sub-line under the alias, in the rank color.
+   - Left-edge accent hairline matches the rank color.
+5. **Color sanity check** — for each tier present:
+   - D = cyan ring/chip/hairline (`#22d3ee`)
+   - E = purple (`#8b5cf6`)
+   - C = emerald (`#34d399`)
+   - B = amber (`#fbbf24`)
+   - A = red (`#ef4444`)
+   - S = fuchsia (`#e879f9`)
+   - S+ = gold (animated conic, static under reduced-motion)
+6. Long aliases truncate with ellipsis instead of breaking the layout.
+7. `•••` overflow button still opens Cancel / Remove confirm row (1z.176 behavior preserved).
+8. Tap Cancel → row returns to idle. Tap Remove → friendship removed (unchanged backend call).
+9. **No fake online dots or timestamps appear anywhere.**
+10. Add Friend area:
+    - Input still says `hunter alias`.
+    - Button now reads `+ ADD FRIEND` in **gold Cinzel** with premium box-shadow (legacy violet button is gone).
+    - Tap → friend request fires (unchanged backend call).
+    - Loading/disabled states still work.
+11. **HUNTERS tile** opens the Roster modal — visually **unchanged** (still uses the 1z.193 inline-rank-inside-circle pattern; matches the older look).
+12. **Guild Activity feed** unchanged — date grouping, See More, Hunter/Guild filter, public friend events all still work.
+13. Incoming friend requests (if any) still use the legacy gold avatar (no rank chip, no sub-line) — backward-compat path verified.
+14. Outgoing friend requests (if any) still use the legacy muted avatar.
+
+---
+
+## May 29, 2026 — 1z.206 Fix phantom rank_up public events
 
 **TL;DR.** Frontend-only fix. Decouples the public `rank_up` event submit from the local Guild Hall toast gate that was producing phantom intermediate-rank events during XP-test transits. New behavior uses a dedicated `hb_public_rank_event_last_label` key and submits only the actual current rank label from `_publicRankSummary(totalPoints)`. First-ever observation on a device is a checkpoint (no queue) so existing users don't get a phantom rank-up on w73 cold launch. Stale bad rows on backend are identified but NOT deleted — cleanup query provided for explicit user approval.
 

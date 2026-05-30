@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w73';
+  const APP_BUILD_TAG = '2.2.3-w74';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24752,16 +24752,46 @@
   }
 
   function _friendAvatarHtml(alias, variant, friend) {
-    // v3 Phase 1z.186 — accept an optional friend object so the
-    // circle can carry a real rank label like "D II" once the
-    // backend ships rank sync. Until then, _friendRankLabel
-    // returns null and we keep the original alias-initial.
+    // v3 Phase 1z.207 — Guild Roster redesign. The circle now
+    // ALWAYS holds the alias initial; the exact rank label (e.g.
+    // "D II") sits in a separate chip BELOW the circle so the
+    // ring stays clean and the tier stays legible. The wrapper
+    // carries data-rank-tier so per-tier CSS variables can paint
+    // ring + chip + sub-line in the matching rank color. Tier
+    // letter is parsed from the label's first word ("D II" → "D",
+    // "S+" → "S+", anything else → safe fallback).
+    //
+    // Backward compat: incoming/outgoing/duel callers pass no
+    // `friend` argument → no chip rendered, no tier attribute,
+    // visual matches the original alias-initial circle.
     const rankTxt = (friend ? _friendRankLabel(friend) : null);
-    const showRank = !!rankTxt;
     const initial = (alias && alias[0]) ? alias[0].toUpperCase() : '—';
-    const cls = 'friend-avatar' + (variant ? ' friend-avatar--' + variant : '')
-              + (showRank ? ' friend-avatar--rank' : '');
-    return '<div class="' + cls + '">' + esc(showRank ? rankTxt : initial) + '</div>';
+    const variantCls = variant ? (' friend-avatar--' + variant) : '';
+
+    if (!rankTxt) {
+      // Legacy single-element path. Preserves all existing
+      // markup expectations (Duels rows, incoming/outgoing).
+      return '<div class="friend-avatar' + variantCls + '">' + esc(initial) + '</div>';
+    }
+
+    // Parse the tier letter for the data attribute. Real labels
+    // are "<tier>" or "<tier> <division>" (locked by the 1z.190
+    // public-profile-summary regex). We accept S+ as a tier.
+    let tier = 'E';
+    const m = String(rankTxt).match(/^(S\+|S|A|B|C|D|E)(?: (I|II|III))?$/);
+    if (m) tier = m[1];
+    const tierAttr = ' data-rank-tier="' + esc(tier) + '"';
+    // Defensive 5-char truncation against unexpectedly long
+    // backend strings; real labels all fit.
+    const chipTxt = (rankTxt.length > 5) ? rankTxt.slice(0, 5) : rankTxt;
+    return (
+      '<div class="friend-avatar-stack"' + tierAttr + '>' +
+        '<div class="friend-avatar friend-avatar--rank-ring' + variantCls + '">' +
+          esc(initial) +
+        '</div>' +
+        '<div class="friend-avatar-rank-chip">' + esc(chipTxt) + '</div>' +
+      '</div>'
+    );
   }
 
   async function renderFriendsSection() {
@@ -24896,15 +24926,28 @@
         // back to the icon after 6s (handled in the row click
         // handler) so a tester who walks away from the screen
         // doesn't return to a primed destructive button.
+        // v3 Phase 1z.207 — Guild Roster redesign. Per-row
+        // data-rank-tier hook drives the left-edge hairline
+        // accent, the avatar ring color, the rank chip, and
+        // the "D-RANK" mono sub-line. Parsed from the same
+        // _friendRankLabel source as the avatar so they always
+        // agree. Row markup + remove-friend wiring unchanged.
+        const rankLabelForRow = _friendRankLabel(f);
+        let tierForRow = null;
+        if (rankLabelForRow) {
+          const tm = String(rankLabelForRow).match(/^(S\+|S|A|B|C|D|E)(?: (I|II|III))?$/);
+          if (tm) tierForRow = tm[1];
+        }
+        const tierAttr = tierForRow ? ' data-rank-tier="' + esc(tierForRow) + '"' : '';
+        const rankSubHtml = tierForRow
+          ? ('<div class="social-row-rank-sub">' + esc(tierForRow) + '-RANK</div>')
+          : '';
         parts.push(
-          // v3 Phase 1z.186 — passed `f` into the avatar so the
-          // future rank label seam can populate the circle when
-          // backend rank data ships. "Guild member" subtitle
-          // removed; row now reads cleanly with just the alias.
-          '<div class="social-row friend-row friend-row--accepted friend-row--no-sub" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle">' +
+          '<div class="social-row friend-row friend-row--accepted friend-row--no-sub" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle"' + tierAttr + '>' +
             _friendAvatarHtml(aliasDisp, 'accent', f) +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
+              rankSubHtml +
             '</div>' +
             '<div class="social-row-actions">' +
               '<button class="social-btn social-btn--icon" data-friend-action="remove-init" aria-label="Remove friend">•••</button>' +
