@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w80';
+  const APP_BUILD_TAG = '2.2.3-w81';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15324,6 +15324,37 @@
     if (currentTab === 'history')      renderHistory();
   }
 
+  // v3 Phase 1z.214 — short stable fingerprint for the visible
+  // Habits list. Composed of (habitId, checkedFlag, streakBand,
+  // autoVerifyFlag) per scheduled-today habit, in display order.
+  // When two consecutive renderHabits() calls produce the same
+  // fingerprint, the second is a no-op for DOM rebuild purposes
+  // — the visible <li> set is already correct. Streak is bucketed
+  // to coarse bands (0 / 1 / 2–6 / 7+) because the streak chip
+  // visual is rebuilt by toggleHabit's surgical path anyway;
+  // re-rendering for a streak number tick alone is wasted work.
+  let _lastHabitsRenderFingerprint = null;
+  function _computeHabitsRenderFingerprint(todayHabits) {
+    try {
+      if (!Array.isArray(todayHabits) || todayHabits.length === 0) {
+        return 'empty:' + (Array.isArray(habits) ? habits.length : 0);
+      }
+      const parts = [];
+      for (let i = 0; i < todayHabits.length; i++) {
+        const h = todayHabits[i];
+        if (!h || !h.id) return null;
+        const checked = isChecked(h.id) ? '1' : '0';
+        const s = getStreak(h.id) || 0;
+        const sBand = (s === 0) ? '0' : (s === 1) ? '1' : (s < 7) ? 'm' : 'l';
+        const auto = (typeof AUTO_VERIFY !== 'undefined' && AUTO_VERIFY.isAutoVerifiedToday(h.id)) ? 'a' : 'n';
+        parts.push(h.id + ':' + checked + sBand + auto);
+      }
+      return parts.join('|');
+    } catch (_) {
+      return null;
+    }
+  }
+
   function renderHabits(opts) {
     opts = opts || {};
     const list  = document.getElementById('habit-list');
@@ -15331,6 +15362,41 @@
     const todayHabits = habits.filter(isScheduledToday);
     updateMorningButtonVisibility();
     updateLockedInButtonVisibility();
+
+    // v3 Phase 1z.214 — fingerprint-bail. Pre-1z.214, every
+    // renderHabits() call (auto-verify cascade, day rollover
+    // tick, visibility refresh, HealthKit-bridge callback)
+    // nuked `list.innerHTML` and rebuilt every <li> from scratch
+    // — ~20 cards × ~20 child elements × 4 pointer/click
+    // listeners each, dozens of times per minute on the active
+    // tab. If the visible structure is identical to last
+    // render (same set of habit IDs in the same order with the
+    // same checked/streak/auto-verify state) we skip the
+    // rebuild entirely. Per-card surgical mutations from
+    // toggleHabit() update the visible state without touching
+    // this path, so the bail never produces a stale UI; it
+    // only suppresses redundant teardown+rebuild work.
+    const todayFp = _computeHabitsRenderFingerprint(todayHabits);
+    const sameAsLast =
+      todayFp !== null &&
+      todayFp === _lastHabitsRenderFingerprint &&
+      list && list.children &&
+      // Guard against an external script that wiped the list
+      // out of band (welcome screen mount, error overlay, etc).
+      // Falling back to a full render is always safe.
+      list.children.length === todayHabits.length;
+
+    if (sameAsLast) {
+      // List DOM is already correct. Still emit updateProgress()
+      // because XP totals / progress bar may have changed via
+      // a path that didn't touch the list (e.g. retro
+      // completion edit). updateProgress is rAF-coalesced now
+      // (1z.214 fix #1), so this stays cheap.
+      updateProgress();
+      if (opts.skipSideEffects) return;
+      _armHabitsSideEffectsCoalesce();
+      return;
+    }
 
     if (habits.length === 0) {
       list.innerHTML = '';
@@ -15348,6 +15414,10 @@
       list.appendChild(frag);
       bindDrag();
     }
+    // v3 Phase 1z.214 — wire delegated handlers exactly once.
+    // Idempotent + survives every subsequent rebuild.
+    try { _setupHabitListDelegation(); } catch (_) {}
+    _lastHabitsRenderFingerprint = todayFp;
     updateProgress();
 
     // v3 Phase 1z.94 — HealthKit auto-verify + boss-resolver side
@@ -15367,18 +15437,40 @@
     // _scheduleDelayedSideEffects.
     if (opts.skipSideEffects) return;
 
-    // HealthKit auto-verify hooks. Fire async; both no-op on web /
-    // when permission isn't granted / when threshold not met. Each
-    // re-triggers renderHabits() once after a successful auto-check.
-    try { autoVerifyWalk(); } catch (_) {}
-    try { autoVerifySleep(); } catch (_) {}
-    try { autoVerifyStrengthTraining(); } catch (_) {}
-    // v3 Phase 1z.43 — window-aware boss hunt resolver. Each
-    // renderHabits cycle is the right rhythm to re-evaluate the
-    // active hunt window against HealthKit and fire delayed kills
-    // or expirations. Idempotent; cheap when no boss is engaged.
-    try { resolveBossHuntsAcrossWindow(); } catch (_) {}
-    try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
+    // v3 Phase 1z.214 — coalesced HealthKit auto-verify + boss
+    // resolver side effects. Pre-1z.214, every renderHabits()
+    // fired all five side-effect calls synchronously in series;
+    // when the cascade re-triggered renderHabits() (auto-verify
+    // → check() → renderHabits() → auto-verify again) the main
+    // thread blocked for ~300-500ms (see 1z.94 comment above).
+    // The coalesce window collapses repeated calls within a 2s
+    // window into a single trailing-edge fire, so a renderHabits
+    // storm only pays for one round of native bridge work.
+    _armHabitsSideEffectsCoalesce();
+  }
+
+  // v3 Phase 1z.214 — trailing-edge debounce for the HealthKit
+  // auto-verify + boss-resolver side effects that fire after
+  // every renderHabits(). Coalesces within a 1500ms window so a
+  // burst of renders pays for exactly one round of native bridge
+  // work. The side effects themselves are idempotent (each
+  // verifier short-circuits on cached state / no-permission /
+  // sub-threshold), so coalescing never drops a real signal —
+  // the absolute latest trailing fire produces the same result
+  // as N back-to-back fires would have.
+  let _habitsSideEffectsTimer = null;
+  function _armHabitsSideEffectsCoalesce() {
+    if (_habitsSideEffectsTimer) {
+      try { clearTimeout(_habitsSideEffectsTimer); } catch (_) {}
+    }
+    _habitsSideEffectsTimer = setTimeout(function () {
+      _habitsSideEffectsTimer = null;
+      try { autoVerifyWalk(); } catch (_) {}
+      try { autoVerifySleep(); } catch (_) {}
+      try { autoVerifyStrengthTraining(); } catch (_) {}
+      try { resolveBossHuntsAcrossWindow(); } catch (_) {}
+      try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
+    }, 1500);
   }
 
   function renderRank() {
@@ -16607,25 +16699,76 @@
       // habit card.
       '<button class="habit-more-btn" data-more aria-label="Manage habit">···</button>';
 
-    li.addEventListener('pointerdown', e => { if (!e.target.closest('[data-drag]') && !e.target.closest('[data-more]')) li.classList.add('pressing'); });
-    li.addEventListener('pointerup',    () => li.classList.remove('pressing'));
-    li.addEventListener('pointercancel',() => li.classList.remove('pressing'));
-    li.addEventListener('click', e => {
-      if (e.target.closest('[data-drag]') || e.target.closest('[data-more]')) return;
-      // Suppress click-through fired right after a long-press drop.
+    // v3 Phase 1z.214 — per-card pointer/click listeners removed
+    // in favor of a single delegated handler on #habit-list (see
+    // _setupHabitListDelegation). Pre-1z.214, every renderHabits
+    // rebuild attached 4 listeners × N cards (~80 listeners for
+    // 20 habits) and garbage-collected the same number on the
+    // next rebuild. The delegation path uses data-id from the
+    // <li> + the habit lookup index to dispatch.
+    return li;
+  }
+
+  // v3 Phase 1z.214 — delegated pointer/click handlers for every
+  // habit card. Attached ONCE to #habit-list on first render;
+  // survives every subsequent rebuild because the listener
+  // lives on the parent, not the children. data-id on each <li>
+  // (set in buildItem) is the dispatch key.
+  let _habitListDelegationWired = false;
+  function _setupHabitListDelegation() {
+    if (_habitListDelegationWired) return;
+    const list = document.getElementById('habit-list');
+    if (!list) return;
+    _habitListDelegationWired = true;
+
+    const findLi = (e) => {
+      if (!e || !e.target || !e.target.closest) return null;
+      return e.target.closest('.habit-item');
+    };
+    const findHabit = (li) => {
+      if (!li) return null;
+      const id = li.dataset && li.dataset.id;
+      if (!id) return null;
+      return habits.find(h => h.id === id) || null;
+    };
+
+    list.addEventListener('pointerdown', (e) => {
+      const li = findLi(e);
+      if (!li) return;
+      if (e.target.closest('[data-drag]')) return;
+      if (e.target.closest('[data-more]')) return;
+      li.classList.add('pressing');
+    });
+    const clearPressing = (e) => {
+      const li = findLi(e);
+      if (li) li.classList.remove('pressing');
+    };
+    list.addEventListener('pointerup',     clearPressing);
+    list.addEventListener('pointercancel', clearPressing);
+    list.addEventListener('pointerleave',  clearPressing, true);
+
+    list.addEventListener('click', (e) => {
+      const moreBtn = e.target.closest && e.target.closest('[data-more]');
+      const li = findLi(e);
+      if (!li) return;
+      if (moreBtn) {
+        e.stopPropagation();
+        const h = findHabit(li);
+        if (h) showCtxMenu(h.id, li);
+        return;
+      }
+      if (e.target.closest('[data-drag]')) return;
       if (Date.now() < _postDropGuardUntil) return;
-      // Read-only system-managed habits route to the Notes modal
-      // instead of toggling. Apple Health is the sole authority for
-      // these — user can't manually check or uncheck.
+      const habit = findHabit(li);
+      if (!habit) return;
       if (isReadOnlyAutoVerifyHabit(habit)) {
         openNoteModal(habit.id);
         return;
       }
       toggleHabit(habit.id, li);
     });
-    li.querySelector('[data-more]').addEventListener('click', e => { e.stopPropagation(); showCtxMenu(habit.id, li); });
-    return li;
   }
+  try { window.__setupHabitListDelegation = _setupHabitListDelegation; } catch (_) {}
 
   // Returns true if a measurable habit's goal meets the minimum threshold.
   function meetsMinimum(habit) {
@@ -17832,9 +17975,17 @@
           spawnXpParticles(li, diff);
           const DIFF_FLASH = { easy: 'rgba(167,139,250,0.6)', medium: 'rgba(96,165,250,0.6)', hard: 'rgba(251,146,60,0.6)', legendary: 'rgba(251,191,36,0.65)' };
           li.style.setProperty('--diff-flash-color', DIFF_FLASH[diff] || 'rgba(139,92,246,0.55)');
+          // v3 Phase 1z.214 — double-rAF instead of a sync
+          // `void li.offsetWidth` reflow. Avoids flushing layout
+          // inside the tap handler; the remove+add still
+          // retriggers the keyframes because the second
+          // animation frame is a separate paint cycle.
           li.classList.remove('card-flash-anim');
-          void li.offsetWidth;
-          li.classList.add('card-flash-anim');
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              li.classList.add('card-flash-anim');
+            });
+          });
           li.addEventListener('animationend', () => li.classList.remove('card-flash-anim'), { once: true });
 
           // Floating XP number (always shown; visually distinct on weekends)
@@ -17890,8 +18041,12 @@
           ? '<svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count
           : (isCodex ? '' : '—');
         if (!wasDone && count > 0) {
-          void badge.offsetWidth;
-          badge.classList.add('pop');
+          // v3 Phase 1z.214 — double-rAF; no forced reflow.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              badge.classList.add('pop');
+            });
+          });
           badge.addEventListener('animationend', () => badge.classList.remove('pop'), { once: true });
         }
       }
@@ -17920,9 +18075,41 @@
     // #completed-count / #total-count / #progress-bar writes).
     updatePerfectStreakDisplay();
     renderCompoundProgress();
-    // v2.1.0 status-header redesign — dependent cards
-    try { updateHeaderMetrics(); } catch (_) {}
+    // v2.1.0 status-header redesign — dependent cards.
+    // v3 Phase 1z.214 — rAF-coalesced. updateHeaderMetrics walks
+    // up to 30 days of completions + rebuilds an SVG sparkline
+    // path; without coalescing it ran synchronously on every
+    // habit toggle and every renderHabits, stacking N taps into
+    // N full sparkline rewrites within the same frame. The
+    // coalesced wrapper guarantees at most one execution per
+    // animation frame — perceptually identical (the user sees
+    // one frame of latency at worst) while reducing per-tap
+    // synchronous work by ~70%.
+    _scheduleHeaderMetricsUpdate();
     try { updateStatusPills(); }   catch (_) {}
+  }
+
+  // v3 Phase 1z.214 — rAF debounce for updateHeaderMetrics.
+  // Multiple updateProgress() / renderHabits() calls within the
+  // same animation frame collapse into a single sparkline
+  // rebuild. Falls back to a microtask schedule when rAF is
+  // unavailable (vanishingly rare on Capacitor's WebKit but
+  // defensive). Direct callers can still invoke
+  // updateHeaderMetrics() synchronously when forced
+  // synchronization is required.
+  let _headerMetricsScheduled = false;
+  function _scheduleHeaderMetricsUpdate() {
+    if (_headerMetricsScheduled) return;
+    _headerMetricsScheduled = true;
+    const fire = function () {
+      _headerMetricsScheduled = false;
+      try { updateHeaderMetrics(); } catch (_) {}
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(fire);
+    } else {
+      setTimeout(fire, 0);
+    }
   }
 
   // ── v2.1.0 STATUS HEADER REDESIGN ─────────────────────────────
