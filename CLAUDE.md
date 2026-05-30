@@ -4,7 +4,72 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.200 Backend MVP-B public friend activity events (read this first)
+## May 29, 2026 — 1z.201 Guild Roster rank-sort everyone (read this first)
+
+**TL;DR.** Frontend-only fix. Removed the hard self-pin from the Roster sheet. Self + accepted friends now go into one combined list and sort by `rankSortValue` descending when every row has rank data. With Rendiesel at D II (rankSortValue 1,001,002,xxx) and Richie at D III (1,000,001,xxx), Rendiesel correctly lands at #1 and Richie at #2. Self still carries the `guild-roster-row--self` modifier so the gold highlight + gold rank-stat color survive regardless of position.
+
+**Files modified (frontend only).**
+- `app.js` —
+  - `renderGuildRoster` no longer pushes self before sorting. Self and friends are combined into one `rows` array, then sorted by `rankSortValue` descending when `rows.every(r => Number.isFinite(r.row.rankSortValue))`. Self's rankSortValue comes from `_publicRankSummary(totalPoints)` (locally computed, same source as the 1z.191 submit payload). Friends' rankSortValue comes from `/v1/friends` LEFT JOIN (1z.190 + 1z.198 refresh).
+  - Fallback when any row is missing rank data: self first, friends alphabetical. Same shape as pre-1z.201 — no silent degradation to a confusing order.
+  - **No bosses-slain proxy.** `bossesSlainTotal` continues to be displayed in the BOSSES column only; never read by the sort comparator.
+  - **No alias-derived rank.** Alphabetical fallback only fires when rank data is partial; the moment everyone has rank data, alias is unused.
+  - `guild-roster-achievements-render` breadcrumb extended with `sortedBy` (`"rankSortValue"` / `"fallback"`), `rankedRowCount`, `selfRankLabel`, `selfPosition`, `topRankLabel`. Counts only; no aliases of others; no per-friend numeric values; no tokens.
+- `index.html` — `app.js?v=523`.
+- `sw.js` — `CACHE_VERSION = 'v5.409'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w70`, `app.js?v=523`, `auth.js?v=19` (unchanged), `sw.js CACHE_VERSION v5.409`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Sort matrix.**
+
+| Self rank known? | Every friend has rank? | Result |
+|---|---|---|
+| Yes | Yes | Combined list sorted by rankSortValue DESC (self in its true position) |
+| Yes | Partial | Self first, friends alphabetical (1z.193 fallback) |
+| No (rare — no auth) | Either | Self first, friends alphabetical |
+
+**Self stays visually identifiable.** The `guild-roster-row--self` class is applied based on `r.isSelf` (still set on row push, before sort). CSS rules at `styles.css:24337` (`.guild-roster-row--self .guild-roster-alias { color: var(--gold); }`) and 24355 (`.guild-roster-row--self .guild-roster-stat { color: var(--gold); }`) fire regardless of row position. Avatar's `--self` modifier also still applies. Position label `#2` in the screenshot above is correct for the screenshot's data.
+
+**Critical: no bosses-slain proxy.** Confirmed by grep: the only `bosses` / `bossesSlainTotal` reads inside the sort path are the display strings inside `_guildRosterRowHtml`. The sort comparator only touches `rankSortValue`. The audit's example data:
+
+| Hunter | Rank | rankSortValue | Bosses | Old order | New order |
+|---|---|---|---|---|---|
+| Rendiesel | D II | 1,001,002,xxx | 27 | #2 | **#1** ✓ |
+| Richie | D III | 1,000,001,xxx | 28 | #1 (pinned) | **#2** ✓ |
+| Anthony | E III | 0,000,000,xxx | 0 | #3 | **#3** ✓ |
+
+If Richie has more bosses than Rendiesel (28 vs 27), Richie still lands BELOW Rendiesel — bosses don't influence sort.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No fake rank data.
+- No bosses-slain proxy. No alias-derived rank. No rank-label string parsing in the sort path.
+- No rank math change. No public rank submit / public achievement submit change.
+- No friend add/remove behavior change.
+- No HealthKit / leaderboard / XP / rank threshold / boss / inventory / drop odds / auth changes.
+- No `user_state_snapshots.state_json` parsing.
+- No Duel surface touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Two-line revert: (1) re-add the self-pin push before the friends loop, (2) restore the friends-only sort. `git revert` the commit and the knobs revert with it. No DB / backend / storage touched.
+
+**Manual QA (w70).**
+1. Cold-launch w70 signed-in. Confirm `"build": "2.2.3-w70"`.
+2. Open Social → tap HUNTERS tile.
+3. Roster sheet opens. Within ~1s of the background refresh (1z.198), order settles to:
+   - `#1` Rendiesel (D II) — highest rankSortValue
+   - `#2` Richie (D III) — self, gold highlighted
+   - `#3` Anthony (E III)
+4. Self row at `#2` still glows gold (alias, rank stats, avatar border).
+5. BOSSES column unchanged: Rendiesel 27, Richie 28, Anthony 0. The fact that Richie has more bosses than Rendiesel does NOT push Richie above Rendiesel — confirms no bosses-slain proxy.
+6. Friend without rank submitted (if any) → fallback ordering applies; self at #1, friends alphabetical.
+7. Add Friend / Remove Friend still work.
+8. Lower Guild accordion friend ordering unchanged (already 1z.191 rank-sort).
+9. Copy Debug Info contains `guild-roster-achievements-render` with `sortedBy: "rankSortValue"`, `selfRankLabel: "D III"`, `selfPosition: 2`, `topRankLabel: "D II"`.
+
+---
+
+## May 29, 2026 — 1z.200 Backend MVP-B public friend activity events
 
 **TL;DR.** Backend-only train. Adds the chronological event-log foundation for the future Guild Activity → Guild mode "friend X just did Y" feed. New `public_achievement_events` table; `POST /v1/users/me/public-achievement-events` batch write (allowlisted types only); `GET /v1/friends/activity?limit=N` friend-scoped read with alias + rankLabel joined. **Migration committed but NOT applied. Worker NOT deployed.** Frontend untouched.
 

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w69';
+  const APP_BUILD_TAG = '2.2.3-w70';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3853,10 +3853,21 @@
 
     const me = _guildRosterCurrentUserStats();
     const friends = _guildRosterFriendStats();
+
+    // v3 Phase 1z.201 — combine self + accepted friends into one
+    // list and sort by rankSortValue descending. Self is no
+    // longer hard-pinned at #1; if a friend has a stronger rank,
+    // they appear above the viewer. Self continues to carry the
+    // gold highlight via row.isSelf so it stays visually
+    // identifiable regardless of position.
+    //
+    // Sort gate: only flip into rank order when EVERY row has a
+    // finite rankSortValue (self always does via the 1z.193 local
+    // builder; friends do once they've submitted via 1z.191).
+    // Partial-data states preserve a safe order: self first, then
+    // friends alphabetical. Never sort by bosses slain. Never
+    // sort by label string. Never sort by alias as a rank proxy.
     const rows = [];
-    // Current user always pinned at #1 for Phase 1 because they
-    // are the only row with real numeric stats. Once backend
-    // friend stats exist, we'll rank-sort by the selected column.
     rows.push({
       row: {
         alias: me.alias,
@@ -3867,21 +3878,26 @@
       },
       isSelf: true,
     });
-    // v3 Phase 1z.193 — friend ordering:
-    //   • If every friend has a finite rankSortValue, sort
-    //     strongest-first (descending). Same gate the lower-Guild
-    //     accordion uses since 1z.191 so partial-data states
-    //     never produce a misleading order.
-    //   • Otherwise preserve the existing alphabetical sort. No
-    //     bosses-slain proxy. No alias-derived rank.
-    const rankSortReady = friends.length > 0
-      && friends.every(f => Number.isFinite(f && f.rankSortValue));
-    if (rankSortReady) {
-      friends.sort((a, b) => (b.rankSortValue - a.rankSortValue));
-    } else {
-      friends.sort((a, b) => String(a.alias || '').toLowerCase().localeCompare(String(b.alias || '').toLowerCase()));
-    }
     for (const f of friends) rows.push({ row: f, isSelf: false });
+
+    const rankSortReady = rows.every(r => Number.isFinite(r.row && r.row.rankSortValue));
+    let sortedBy = 'fallback';
+    if (rankSortReady) {
+      rows.sort((a, b) => (b.row.rankSortValue - a.row.rankSortValue));
+      sortedBy = 'rankSortValue';
+    } else {
+      // Fallback: self first, then friends alphabetically. Same
+      // shape as pre-1z.201 so we never silently degrade to a
+      // confusing order when rank data is partial.
+      const selfRows  = rows.filter(r => r.isSelf);
+      const otherRows = rows.filter(r => !r.isSelf);
+      otherRows.sort((a, b) =>
+        String(a.row.alias || '').toLowerCase()
+          .localeCompare(String(b.row.alias || '').toLowerCase()));
+      rows.length = 0;
+      for (const r of selfRows)  rows.push(r);
+      for (const r of otherRows) rows.push(r);
+    }
 
     // Header row.
     const headerHtml =
@@ -3896,12 +3912,27 @@
 
     // v3 Phase 1z.198 — privacy-safe roster diagnostics. Counts
     // only — no aliases, no per-friend numeric values, no tokens.
+    // v3 Phase 1z.201 — extended with sort-decision fields so we
+    // can verify rank ordering on-device. selfRankLabel + topRankLabel
+    // are class strings ("D II", "S+") drawn from the same labels
+    // the user has already seen in the app; not new PII surface.
     if (typeof _addHealthVerifyBreadcrumb === 'function') {
       try {
         let friendRowsWithBosses = 0, friendRowsWithAch = 0, friendRowsWithRank = 0;
-        for (const r of rows) {
-          if (r.isSelf) continue;
-          const row = r.row || {};
+        let selfPosition = -1, selfRankLabel = null, topRankLabel = null;
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const row = (r && r.row) || {};
+          if (i === 0 && typeof row.rankLabel === 'string' && row.rankLabel) {
+            topRankLabel = row.rankLabel;
+          }
+          if (r.isSelf) {
+            selfPosition = i + 1;
+            if (typeof row.rankLabel === 'string' && row.rankLabel) {
+              selfRankLabel = row.rankLabel;
+            }
+            continue;
+          }
           if (Number.isFinite(Number(row.bossesSlainTotal))) friendRowsWithBosses++;
           if (Number.isFinite(Number(row.bossesSlainTotal))
               || Number.isFinite(Number(row.ultraRareDropsTotal))
@@ -3912,10 +3943,15 @@
         }
         _addHealthVerifyBreadcrumb('guild-roster-achievements-render', {
           rowCount:                rows.length,
-          friendRowCount:          rows.length - 1, // self always #1
+          friendRowCount:          rows.length - 1,
           friendRowsWithRank:      friendRowsWithRank,
           friendRowsWithAch:       friendRowsWithAch,
           friendRowsWithBosses:    friendRowsWithBosses,
+          rankedRowCount:          friendRowsWithRank + (selfRankLabel ? 1 : 0),
+          sortedBy:                sortedBy,
+          selfRankLabel:           selfRankLabel,
+          selfPosition:            selfPosition,
+          topRankLabel:            topRankLabel,
           build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
         });
       } catch (_) {}
