@@ -78,4 +78,15 @@ export interface Env {
    *  wrangler.toml. Conservative: 6/min per user, since the client
    *  debounces submits to label-change + daily heartbeat. */
   RL_PUBLIC_PROFILE_WRITE: RateLimit;
+  /** Public friend activity events MVP-B (v3 Phase 1z.200) — guards
+   *  POST /v1/users/me/public-achievement-events. namespace_id 1015
+   *  in wrangler.toml. 12/min per user — batch endpoint accepts up
+   *  to 10 events per request, so 12/min covers ~120 events/min of
+   *  legit usage while still capping abuse. */
+  RL_PUBLIC_EVENTS_WRITE: RateLimit;
+  /** Public friend activity events MVP-B (v3 Phase 1z.200) — guards
+   *  GET /v1/friends/activity. namespace_id 1016 in wrangler.toml.
+   *  30/min per user — matches the existing read budget for the
+   *  other friend-adjacent reads (RL_FRIENDS_READ, HoF, 100K Club). */
+  RL_PUBLIC_EVENTS_READ: RateLimit;
 }

@@ -171,3 +171,22 @@ name = "RL_PUBLIC_PROFILE_WRITE"
 type = "ratelimit"
 namespace_id = "1014"
 simple = { limit = 6, period = 60 }   # 6/min per user
+
+# Public friend activity events MVP-B (v3 Phase 1z.200). Batch
+# write of allowlisted public events (boss_kill, rank_up,
+# step_milestone_bucket). 12/min × up to 10 events per request =
+# 120 events/min sustained, well above legit play volume.
+[[unsafe.bindings]]
+name = "RL_PUBLIC_EVENTS_WRITE"
+type = "ratelimit"
+namespace_id = "1015"
+simple = { limit = 12, period = 60 }  # 12/min per user
+
+# Public friend activity events MVP-B (v3 Phase 1z.200). Friend-
+# scoped read for the Guild Activity feed. Matches the existing
+# read-budget convention for the other friend-adjacent reads.
+[[unsafe.bindings]]
+name = "RL_PUBLIC_EVENTS_READ"
+type = "ratelimit"
+namespace_id = "1016"
+simple = { limit = 30, period = 60 }  # 30/min per user

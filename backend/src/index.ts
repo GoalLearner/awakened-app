@@ -33,6 +33,10 @@ import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import {
+  handlePublicAchievementEventsPost,
+  handleFriendsActivityGet,
+} from './handlers/public-achievement-events';
+import {
   handleFriendsList,
   handleFriendsRequest,
   handleFriendsAccept,
@@ -142,6 +146,18 @@ export default {
             // caller's public_profile_summary row. Read path is the
             // LEFT JOIN inside handleFriendsList.
             response = await handlePublicProfileSummaryPut(request, env, session);
+          } else if (path === '/v1/users/me/public-achievement-events' && method === 'POST') {
+            // v3 Phase 1z.200 — Public friend activity events
+            // MVP-B. Batch write of allowlisted public events;
+            // duplicates collapse via UNIQUE (user_id,
+            // client_event_id). Read path is GET /v1/friends/
+            // activity.
+            response = await handlePublicAchievementEventsPost(request, env, session);
+          } else if (path === '/v1/friends/activity' && method === 'GET') {
+            // v3 Phase 1z.200 — Friend-scoped feed read. Returns
+            // newest events across accepted friends + self with
+            // alias + rankLabel joined for one-roundtrip render.
+            response = await handleFriendsActivityGet(request, env, session);
           }
           // ── Discipline Duels v1 (v3 Phase 1x) ──
           else if (path === '/v1/friends' && method === 'GET') {

@@ -4,7 +4,105 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.198 Refresh friends cache when opening Roster (read this first)
+## May 29, 2026 — 1z.200 Backend MVP-B public friend activity events (read this first)
+
+**TL;DR.** Backend-only train. Adds the chronological event-log foundation for the future Guild Activity → Guild mode "friend X just did Y" feed. New `public_achievement_events` table; `POST /v1/users/me/public-achievement-events` batch write (allowlisted types only); `GET /v1/friends/activity?limit=N` friend-scoped read with alias + rankLabel joined. **Migration committed but NOT applied. Worker NOT deployed.** Frontend untouched.
+
+**v1 event allowlist (locked by audit in 1z.199):**
+- `boss_kill` — `"defeated <bossName>"` (game fiction; rank tag = boss rank E/D/C/B/A/S/S+).
+- `rank_up` — `"reached <tier>[ <division>]"`.
+- `step_milestone_bucket` — **BUCKETED** to `10k/20k/…/100k` only. Exact daily step counts (`"15,319 steps"`) are HARD-REJECTED by the regex.
+
+**Hard-rejected in v1 (per audit):** `ultra_rare_drop`, `card_drop`, `sleep_quality_7h`, `habit_streak`, `friend_added`. All produce `400 INVALID_EVENT_TYPE`. Defer for separate product decisions; they'd leak loot identity / health / habit names / roster events.
+
+**Files added.**
+- `backend/migrations/0014_public_achievement_events.sql` — new table with `(user_id, client_event_id)` UNIQUE for dedupe; two indexes (`user_id + server_created_at DESC` for friend-feed reads; `event_type + server_created_at DESC` for future type-scoped surfaces). `metadata_json` column exists but stays unused in v1.
+- `backend/src/handlers/public-achievement-events.ts` — `handlePublicAchievementEventsPost` (batch validate, per-row `ON CONFLICT DO NOTHING` insert, returns `{ ok, insertedCount, duplicateCount }`) + `handleFriendsActivityGet` (friend-scoped read with alias + rankLabel JOIN). Strict per-type regex allowlists for `eventLabel`; per-type range allowlists for `eventValue`; rarity gated to boss ranks for `boss_kill` and forced null elsewhere.
+- `backend/src/handlers/public-achievement-events.test.ts` — 32 new tests covering rate-limit short-circuit, JSON shape, batch-size bounds, every banned event type (`ultra_rare_drop`/`card_drop`/`sleep_quality_7h`/`habit_streak`/`friend_added`), the exact-step rejection (`"crossed 15,319 steps today"`), bucket-value allowlist, label regex for each type, rarity gating, time bounds (>7d stale, >5min future), character-set checks on `eventKey` and `clientEventId`, arbitrary client metadata is ignored (no metadata bound), 1-event insert happy path with bind-position verification, duplicate insert returns `duplicateCount=1`, one-bad-event-in-batch rejects the whole batch with zero inserts, GET privacy guarantees (no `user_id`/`client_event_id`/`metadata_json`/`rank_points` leak), GET friend-scope SQL shape, GET newest-first ordering + bind positions, GET LEFT-JOIN-miss `rankLabel: null`.
+
+**Files modified.**
+- `backend/src/env.ts` — added `RL_PUBLIC_EVENTS_WRITE` (12/min) + `RL_PUBLIC_EVENTS_READ` (30/min). Aligns with the existing `RL_PUBLIC_PROFILE_WRITE` naming pattern.
+- `backend/wrangler.toml` — added matching `[[unsafe.bindings]]` blocks (namespace_ids 1015 + 1016).
+- `backend/src/index.ts` — added import + two routes (`POST /v1/users/me/public-achievement-events` + `GET /v1/friends/activity`).
+
+**Validation matrix (per event in the batch).**
+
+| Field | Rule |
+|---|---|
+| `eventType` | ∈ `{boss_kill, rank_up, step_milestone_bucket}` |
+| `eventKey` | 1–64 chars, `[A-Za-z0-9_\-]+` |
+| `eventLabel` | non-empty, ≤ 200 chars, matches per-type regex |
+| `eventValue` | per-type: boss_kill ∈ `[1, 999_999]`; rank_up null OR ∈ `[0, 6_999_999_999]`; step_milestone_bucket ∈ bucket allowlist |
+| `rarity` | boss_kill ∈ `{E,D,C,B,A,S,S+}`; rank_up + step_milestone_bucket: must be null |
+| `clientEventId` | 1–128 chars, `[A-Za-z0-9_:\-]+` |
+| `clientCreatedAt` | ISO, > now-7d, < now+5min |
+| `metadata_json` | server hardcodes NULL; client metadata silently dropped |
+
+**Per-type label regex** (anchored, strict):
+
+```
+boss_kill              → /^defeated [A-Za-z0-9 '\-]+$/
+rank_up                → /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/
+step_milestone_bucket  → /^crossed (10,000|20,000|30,000|40,000|50,000|60,000|70,000|80,000|90,000|100,000) steps today$/
+```
+
+**Friend scope (read endpoint).** `WHERE e.user_id = ? OR e.user_id IN (accepted-friend IDs)`. Self events are intentionally included so a solo user doesn't see an empty feed; this is a single-line product flip if you'd rather exclude self.
+
+**Response privacy guarantees (read endpoint).**
+
+| Returned | Hidden |
+|---|---|
+| `id`, `alias`, `rankLabel`, `eventType`, `eventKey`, `eventLabel`, `eventValue`, `rarity`, `createdAt` | `user_id` (event's owner), `client_event_id`, `metadata_json`, `rank_points`, `client_created_at` |
+
+Strangers, pending requests, declined requests, and removed users never appear in the feed (the SQL inner-JOIN filters `status = 'accepted'`).
+
+**Tests run.** `npx vitest run` → **198/198 pass** (166 baseline + 32 new). No regressions. Two pre-existing TS fixture errors (`apple-jwks.test.ts`, `session-jwt.test.ts`) baseline; don't block vitest.
+
+**Knobs.** Backend-only train: `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w69`, `app.js?v=522`, `auth.js?v=19`, `sw.js CACHE_VERSION v5.408`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS = false` — **all unchanged**.
+
+**What this phase does NOT do.**
+- No client submit path. The frontend never calls `POST /v1/users/me/public-achievement-events` yet. Friend Guild Activity feed will not show events until Phase 1z.201 wires the submit + merges into the Guild Activity render.
+- No production D1 mutation. Migration file committed; `wrangler d1 execute --remote` has NOT been run.
+- No Worker deploy. `wrangler deploy` has NOT been run.
+- No backfill of historical `hb_guild_activity` rows. When the client wires the submit, only events that fire after the user updates will be uploaded.
+
+**Deploy commands for later (DO NOT RUN until approved).**
+
+```bash
+cd backend
+# 1. Optional: local dry-run against embedded D1
+npx wrangler d1 execute awakened-db --local \
+  --file=migrations/0014_public_achievement_events.sql
+
+# 2. Apply migration to production D1
+npx wrangler d1 execute awakened-db --remote \
+  --file=migrations/0014_public_achievement_events.sql
+
+# 3. Deploy the Worker (two new rate-limit bindings will be
+#    picked up from wrangler.toml automatically)
+npx wrangler deploy
+```
+
+**Rollback (if production deploy happens).** (a) `npx wrangler rollback` to the previous worker, (b) optional `DROP TABLE public_achievement_events`. The friends-list LEFT JOIN does NOT touch this table; only the new POST/GET routes do, so worker rollback removes feature access without affecting any other surface.
+
+**Guard rails preserved.**
+- No D1 mutation in production.
+- No Worker deploy.
+- No fake events — every value requires authenticated client submission with shape + range validation.
+- No raw HealthKit, sleep, workout, exact step, or habit-name exposure.
+- No card identity exposure (`ultra_rare_drop`/`card_drop` excluded).
+- No backfill of historical events — only future submissions land.
+- No `user_state_snapshots.state_json` parsing.
+- No backend recomputation of any field.
+- No friend add/remove/auth/HealthKit/leaderboard/Duel/XP/rank changes.
+- `rank_points` and `metadata_json` still never leak to friends.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Next prompt.** Phase 1z.201: client `_submitPublicAchievementEvent` thin wrapper hooked into the existing `recordGuildActivity('boss_kill', ...)`, `recordGuildActivity('rank_up', ...)` write sites, plus a NEW step-bucket detector (post-1z.196 step writes). Guild Activity Guild-mode renderer fetches `/v1/friends/activity?limit=30` and merges into the existing date-grouped accordion. Hunter mode stays unchanged. **No backfill** of historical `hb_guild_activity` rows.
+
+---
+
+## May 29, 2026 — 1z.198 Refresh friends cache when opening Roster
 
 **TL;DR.** Frontend-only fix for the stale-cache bug. `openGuildRosterSheet` was reading `_friendsCache.friends` without ever triggering a fetch. The cache is only populated by `renderFriendsSection` (the lower Guild accordion), so opening the Roster sheet directly from the HUNTERS tile rendered against whatever was last cached — frequently null (cold launch) or stale (no refresh since the friend submitted achievements). Backend is already correct: SQL selects all four 1z.195 columns; serializer merges them when `achievements_updated_at` is finite. The bug lives entirely on the client read path.
 
