@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w74';
+  const APP_BUILD_TAG = '2.2.3-w75';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22671,7 +22671,7 @@
           '<div class="social-section-collapsible-body">' +
             '<div class="social-friend-add">' +
               '<input id="social-friend-input" class="social-friend-input" type="text" ' +
-                'placeholder="hunter alias" maxlength="20" autocomplete="off" ' +
+                'placeholder="find a hunter…" maxlength="20" autocomplete="off" ' +
                 'autocorrect="off" autocapitalize="off" spellcheck="false">' +
               '<button id="social-friend-send" class="social-btn social-btn--primary" type="button">Send Request</button>' +
             '</div>' +
