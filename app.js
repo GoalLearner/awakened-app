@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w70';
+  const APP_BUILD_TAG = '2.2.3-w71';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4758,6 +4758,94 @@
   }
   try { window.setupGuildActivityDateGroups = setupGuildActivityDateGroups; } catch (_) {}
 
+  // ── v3 Phase 1z.204 — Friend activity backend feed cache ────
+  //
+  // Guild mode renders backend events as the PRIMARY source when
+  // a successful fetch has populated this cache. The local
+  // hb_guild_activity store is used as the fallback only when the
+  // backend cache is null (never fetched / offline) AND local has
+  // Guild-eligible rows. This avoids the local-self / backend-self
+  // duplicate problem entirely — the backend has the canonical
+  // record for any event the viewer submitted in w71+.
+  //
+  // Cache is session-only; refreshes whenever Guild mode renders.
+  // 4s inflight gate prevents a rapid Hunter↔Guild filter flap
+  // from firing parallel fetches.
+  let _friendsActivityCache   = null; // null = never fetched; [] = empty result
+  let _friendsActivityInflight = false;
+  let _friendsActivityLastFetchMs = 0;
+  const _FRIENDS_ACTIVITY_REFRESH_MS = 4000;
+
+  async function _refreshFriendsActivityCache() {
+    if (_friendsActivityInflight) return;
+    const now = Date.now();
+    if ((now - _friendsActivityLastFetchMs) < _FRIENDS_ACTIVITY_REFRESH_MS) return;
+    if (!window.Auth || typeof Auth.fetchFriendsActivity !== 'function') return;
+    if (typeof Auth.getCurrentUser !== 'function') return;
+    const user = Auth.getCurrentUser();
+    if (!user || !user.jwt) return; // not authed → silent no-op
+    _friendsActivityInflight = true;
+    _friendsActivityLastFetchMs = now;
+    _paeLog('guild-friends-activity-fetch-start', {
+      build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+    });
+    let res = null;
+    try { res = await Auth.fetchFriendsActivity(30); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    _friendsActivityInflight = false;
+    if (res && res.ok && Array.isArray(res.events)) {
+      _friendsActivityCache = res.events;
+      _paeLog('guild-friends-activity-fetch-ok', {
+        backendEventCount: res.events.length,
+      });
+      try { if (_guildActivityFilter === 'guild') renderGuildActivity(); } catch (_) {}
+    } else {
+      _paeLog('guild-friends-activity-fetch-error', {
+        code: (res && res.code) || 'UNKNOWN',
+      });
+      // Leave _friendsActivityCache as-is so a transient failure
+      // doesn't wipe a previously-good fetch.
+    }
+  }
+
+  // Render one backend friend-activity row. Uses the same row
+  // markup as _guildhallRowHtml so date grouping / See More /
+  // newest-expanded continue to apply uniformly. Backend supplies
+  // a preformatted eventLabel + alias + (optional) rankLabel; we
+  // never inject any local data into a friend row.
+  function _friendActivityRowHtml(ev) {
+    if (!ev || typeof ev !== 'object') return '';
+    const alias    = (typeof ev.alias === 'string' && ev.alias) ? ev.alias : 'A hunter';
+    const label    = (typeof ev.eventLabel === 'string' && ev.eventLabel) ? ev.eventLabel : 'achieved a feat';
+    const ts       = ev.createdAt ? Date.parse(ev.createdAt) : 0;
+    const time     = (typeof _guildhallFormatRelativeTs === 'function' && Number.isFinite(ts) && ts > 0)
+      ? _guildhallFormatRelativeTs(ts)
+      : '';
+    // Pick an icon based on eventType — reuses the same glyphs as
+    // _guildhallActivityIconHtml for shape consistency.
+    let iconHtml;
+    if (ev.eventType === 'boss_kill') {
+      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⚔</span>';
+    } else if (ev.eventType === 'rank_up') {
+      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
+    } else if (ev.eventType === 'step_milestone_bucket') {
+      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
+    } else {
+      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
+    }
+    // "<alias> <eventLabel>" — alias prominent, eventLabel as the
+    // rest. eventLabel is regex-validated server-side, so it's
+    // safe to drop into the row.
+    return (
+      '<div class="guildhall-activity-row">' +
+        iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<strong>' + esc(alias) + '</strong> ' + esc(label) +
+        '</div>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>'
+    );
+  }
+
   // v3 Phase 1z.181 — Hunter Feed eligibility rule.
   //
   // The Hunter Feed is a "things I earned" notification feed, not a
@@ -4896,16 +4984,37 @@
       visible = merged.slice(0, GUILDHALL_GROUPED_FEED_CAP);
       diagnostics = built.diagnostics;
     } else {
-      // Guild view — normalize raw activity entries to {ts, html}.
-      // v3 Phase 1z.184 — drop curated types (e.g. non-ultra
-      // card_drop) before render so the public Guild stream
-      // stays signal-rich. Ultra-rare drops still flow through
-      // via the existing ultra_rare_drop type.
-      const normalized = Array.isArray(entries)
-        ? entries
-            .filter(e => e && typeof e.ts === 'number' && !GUILDHALL_GUILD_HIDDEN_TYPES.has(e.type))
-            .map(e => ({ ts: e.ts, html: _guildhallRowHtml(e) }))
-        : [];
+      // Guild view — v3 Phase 1z.204. Backend friend events from
+      // GET /v1/friends/activity are the PRIMARY source when a
+      // successful fetch has populated _friendsActivityCache. The
+      // local hb_guild_activity fallback (the original 1z.184
+      // path) is used only when the backend cache is null (never
+      // fetched / offline) so the user always sees SOMETHING when
+      // they have local rows but no network.
+      //
+      // Kick off a background refresh on every Guild render so
+      // newly-submitted events from the viewer or friends surface
+      // within the next render tick. The 4s inflight gate keeps
+      // rapid filter flaps from spamming the endpoint.
+      try { _refreshFriendsActivityCache(); } catch (_) {}
+
+      let normalized;
+      if (Array.isArray(_friendsActivityCache)) {
+        normalized = _friendsActivityCache
+          .filter(ev => ev && ev.createdAt)
+          .map(ev => {
+            const ts = Date.parse(ev.createdAt);
+            return { ts: Number.isFinite(ts) ? ts : 0, html: _friendActivityRowHtml(ev) };
+          });
+      } else {
+        // Local fallback (pre-w71 behaviour). Drops curated types
+        // (e.g. non-ultra card_drop, friend_added) before render.
+        normalized = Array.isArray(entries)
+          ? entries
+              .filter(e => e && typeof e.ts === 'number' && !GUILDHALL_GUILD_HIDDEN_TYPES.has(e.type))
+              .map(e => ({ ts: e.ts, html: _guildhallRowHtml(e) }))
+          : [];
+      }
       normalized.sort((a, b) => (b.ts || 0) - (a.ts || 0));
       visible = normalized.slice(0, GUILDHALL_GROUPED_FEED_CAP);
     }
@@ -4953,6 +5062,12 @@
             build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
           });
         } else {
+          // v3 Phase 1z.204 — add source-of-feed diagnostics so
+          // we can see at a glance which path filled the feed.
+          const backendEventCount = Array.isArray(_friendsActivityCache) ? _friendsActivityCache.length : null;
+          const localEventCount   = Array.isArray(entries)
+            ? entries.filter(e => e && typeof e.ts === 'number' && !GUILDHALL_GUILD_HIDDEN_TYPES.has(e.type)).length
+            : 0;
           _addHealthVerifyBreadcrumb('guildhall-guild-feed-render', {
             displayedCount:      visible.length,
             groupCount:          totalGroupCount,
@@ -4961,6 +5076,10 @@
             totalGroupCount:     totalGroupCount,
             visibleGroupCount:   visibleGroupCount,
             hiddenGroupCount:    hiddenGroupCount,
+            backendEventCount:   backendEventCount,
+            localEventCount:     localEventCount,
+            feedSource:          (backendEventCount === null) ? 'local-fallback' : 'backend',
+            mergedCount:         visible.length,
             visibleDateGroupLimit: _guildActivityVisibleDateGroupCount,
             build: (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
           });
@@ -8398,6 +8517,30 @@
         rank:     cfg && cfg.rank ? cfg.rank : null,
         dayDate:  dayDate,
       }, 'boss_kill_' + id + '_' + state.kill_count);
+    } catch (_) {}
+    // v3 Phase 1z.204 — public friend activity submit. Mirrors
+    // the same canonical boss data into the backend so accepted
+    // friends can see "<alias> defeated <bossName>" in their
+    // Guild Activity feed. Idempotent on (user_id, clientEventId)
+    // server-side; the killCount in the key means each kill is
+    // its own row. Boss names are canonical game fiction (no PHI).
+    try {
+      const bossName = (cfg && cfg.name) ? cfg.name : id;
+      const bossRank = (cfg && cfg.rank) ? cfg.rank : null;
+      // Only submit if the boss has a recognised rank — the
+      // backend regex requires one of {E,D,C,B,A,S,S+}. Defensive
+      // guard against malformed boss config.
+      if (bossRank && /^(E|D|C|B|A|S|S\+)$/.test(bossRank)) {
+        _queuePublicAchievementEvent({
+          eventType:       'boss_kill',
+          eventKey:        id,
+          eventLabel:      'defeated ' + bossName,
+          eventValue:      state.kill_count,
+          rarity:          bossRank,
+          clientEventId:   'boss_kill:' + id + ':' + state.kill_count,
+          clientCreatedAt: new Date().toISOString(),
+        });
+      }
     } catch (_) {}
     try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
     try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
@@ -12330,6 +12473,173 @@
     }, _PRS_DEBOUNCE_MS);
   }
   try { window.__maybeSubmitPublicRankSummary = _maybeSubmitPublicRankSummary; } catch (_) {}
+
+  // ── v3 Phase 1z.204 — Public friend activity event submit queue ──
+  //
+  // Thin client wrapper around the 1z.200 backend endpoint. Boss
+  // kills, rank-ups, and BUCKETED step milestones funnel through
+  // _queuePublicAchievementEvent → debounced 5s flush →
+  // Auth.submitPublicAchievementEvents(events). Backend dedupes
+  // on UNIQUE(user_id, client_event_id); resubmits are no-ops.
+  // Failures swallow silently (no toasts).
+  //
+  // Privacy posture (locked in 1z.199 + 1z.200):
+  //   - Allowlisted event types ONLY: boss_kill / rank_up /
+  //     step_milestone_bucket.
+  //   - Step counts NEVER leave the device raw. Bucket detector
+  //     emits 10000 / 20000 / ... / 100000 integers only.
+  //   - No card identities. No habit names. No sleep / workout
+  //     details. No HealthKit values.
+  //   - No backfill of historical hb_guild_activity rows. Only
+  //     events that fire after w71 land in the backend.
+  const _PAE_DEBOUNCE_MS    = 5000;
+  const _PAE_MAX_BATCH      = 10;
+  const _PAE_STEP_BUCKETS   = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000];
+  const _PAE_STEP_BUCKET_KEYS = { 10000: '10k', 20000: '20k', 30000: '30k', 40000: '40k', 50000: '50k', 60000: '60k', 70000: '70k', 80000: '80k', 90000: '90k', 100000: '100k' };
+  const _PAE_STEP_BUCKET_LABELS = {
+    10000:  'crossed 10,000 steps today',
+    20000:  'crossed 20,000 steps today',
+    30000:  'crossed 30,000 steps today',
+    40000:  'crossed 40,000 steps today',
+    50000:  'crossed 50,000 steps today',
+    60000:  'crossed 60,000 steps today',
+    70000:  'crossed 70,000 steps today',
+    80000:  'crossed 80,000 steps today',
+    90000:  'crossed 90,000 steps today',
+    100000: 'crossed 100,000 steps today',
+  };
+  let _paeQueue           = [];
+  let _paeFlushTimer      = null;
+  let _paeInflight        = false;
+
+  function _paeLog(name, fields) {
+    if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
+    try { _addHealthVerifyBreadcrumb(name, fields || {}); } catch (_) {}
+  }
+
+  function _queuePublicAchievementEvent(ev) {
+    if (!ev || !ev.eventType || !ev.eventLabel || !ev.clientEventId || !ev.clientCreatedAt) return;
+    // Defensive: never queue an event that would carry a raw step
+    // value or a free-text habit/card name. The backend rejects
+    // these too, but a client-side guard avoids a wasted POST
+    // and a noisy breadcrumb.
+    if (ev.eventType === 'step_milestone_bucket') {
+      if (!Number.isInteger(ev.eventValue) || !_PAE_STEP_BUCKETS.includes(ev.eventValue)) return;
+    }
+    if (ev.eventType !== 'boss_kill' && ev.eventType !== 'rank_up' && ev.eventType !== 'step_milestone_bucket') return;
+    // Coalesce same clientEventId in the pending queue so a
+    // double-call inside the same debounce window doesn't bloat
+    // the batch. Backend would dedupe anyway, but this keeps the
+    // batch tight.
+    if (_paeQueue.some(q => q.clientEventId === ev.clientEventId)) return;
+    _paeQueue.push(ev);
+    _paeLog('public-event-queued', {
+      eventType: ev.eventType,
+      eventKey:  ev.eventKey,
+      eventValue: ev.eventValue,
+      queueDepth: _paeQueue.length,
+    });
+    if (_paeQueue.length >= _PAE_MAX_BATCH) {
+      if (_paeFlushTimer) { try { clearTimeout(_paeFlushTimer); } catch (_) {} _paeFlushTimer = null; }
+      _flushPublicAchievementQueue('full-batch');
+      return;
+    }
+    if (_paeFlushTimer) return;
+    _paeFlushTimer = setTimeout(function () {
+      _paeFlushTimer = null;
+      _flushPublicAchievementQueue('debounce');
+    }, _PAE_DEBOUNCE_MS);
+  }
+
+  async function _flushPublicAchievementQueue(reason) {
+    if (_paeInflight) return;
+    if (_paeQueue.length === 0) return;
+    if (!window.Auth || typeof Auth.submitPublicAchievementEvents !== 'function') return;
+    if (typeof Auth.getCurrentUser !== 'function') return;
+    const user = Auth.getCurrentUser();
+    if (!user || !user.jwt) return; // not authed → silent no-op
+    const batch = _paeQueue.splice(0, _PAE_MAX_BATCH);
+    _paeInflight = true;
+    _paeLog('public-event-submit-start', {
+      reason: reason || 'unknown',
+      batchCount: batch.length,
+    });
+    let res = null;
+    try { res = await Auth.submitPublicAchievementEvents(batch); }
+    catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    _paeInflight = false;
+    if (res && res.ok) {
+      _paeLog('public-event-submit-ok', {
+        batchCount:     batch.length,
+        insertedCount:  Number.isFinite(Number(res.insertedCount))  ? Number(res.insertedCount)  : 0,
+        duplicateCount: Number.isFinite(Number(res.duplicateCount)) ? Number(res.duplicateCount) : 0,
+      });
+    } else {
+      _paeLog('public-event-submit-error', {
+        code: (res && res.code) || 'UNKNOWN',
+        batchCount: batch.length,
+      });
+    }
+    // If more events queued during the flush, schedule another.
+    if (_paeQueue.length > 0 && !_paeFlushTimer) {
+      _paeFlushTimer = setTimeout(function () {
+        _paeFlushTimer = null;
+        _flushPublicAchievementQueue('continuation');
+      }, _PAE_DEBOUNCE_MS);
+    }
+  }
+  try { window.__queuePublicAchievementEvent = _queuePublicAchievementEvent; } catch (_) {}
+
+  // Bucket detector for step milestones. Submits one
+  // step_milestone_bucket event per (date, bucket) crossing.
+  // Idempotency lives in localStorage so we never queue the
+  // same (date, bucket) twice across reloads. Raw step count
+  // is read here but NEVER included in any submitted payload
+  // or breadcrumb.
+  const _PAE_STEP_SEEN_KEY = 'hb_public_step_buckets_seen';
+  function _maybeQueueStepBucketEvents(steps, dateKey) {
+    if (typeof steps !== 'number' || !Number.isFinite(steps) || steps < 10000) return;
+    if (typeof dateKey !== 'string' || !dateKey) return;
+    let seen = {};
+    try {
+      const raw = localStorage.getItem(_PAE_STEP_SEEN_KEY);
+      if (raw) seen = JSON.parse(raw) || {};
+    } catch (_) { seen = {}; }
+    const seenForDay = (seen && typeof seen === 'object' && seen[dateKey] && typeof seen[dateKey] === 'object')
+      ? seen[dateKey]
+      : null;
+    const seenSet = new Set(Array.isArray(seenForDay) ? seenForDay : []);
+    let queued = 0;
+    for (const bucket of _PAE_STEP_BUCKETS) {
+      if (steps < bucket) break;
+      const key = _PAE_STEP_BUCKET_KEYS[bucket];
+      if (seenSet.has(key)) continue;
+      _queuePublicAchievementEvent({
+        eventType:       'step_milestone_bucket',
+        eventKey:        key,
+        eventLabel:      _PAE_STEP_BUCKET_LABELS[bucket],
+        eventValue:      bucket,
+        rarity:          null,
+        clientEventId:   'step_milestone_bucket:' + dateKey + ':' + key,
+        clientCreatedAt: new Date().toISOString(),
+      });
+      seenSet.add(key);
+      queued++;
+    }
+    if (queued > 0) {
+      try {
+        seen[dateKey] = Array.from(seenSet);
+        // Keep the seen map bounded — drop entries older than 7 days.
+        const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString().slice(0, 10);
+        for (const k of Object.keys(seen)) {
+          if (k < cutoff) delete seen[k];
+        }
+        localStorage.setItem(_PAE_STEP_SEEN_KEY, JSON.stringify(seen));
+      } catch (_) {}
+    }
+  }
+  try { window.__maybeQueueStepBucketEvents = _maybeQueueStepBucketEvents; } catch (_) {}
   // ── end public rank summary ────────────────────────────────
 
   // ── XP MIGRATION (v2.0.1 rank-scaling overhaul) ─────────────
@@ -15087,6 +15397,26 @@
           fromRank: lastLabel,
           toRank:   fullLabel,
         }, 'rank_up_' + fullLabel);
+        // v3 Phase 1z.204 — public friend activity submit. Use
+        // the existing _publicRankSummary builder for the
+        // monotonic rankSortValue so the formula stays in one
+        // place. eventKey replaces space with underscore so the
+        // backend [A-Za-z0-9_-] regex passes.
+        try {
+          const rs = (typeof _publicRankSummary === 'function') ? _publicRankSummary(totalPoints) : null;
+          if (rs && typeof rs.rankLabel === 'string' && rs.rankLabel) {
+            const keyForBackend = rs.rankLabel.replace(/\s+/g, '_');
+            _queuePublicAchievementEvent({
+              eventType:       'rank_up',
+              eventKey:        keyForBackend,
+              eventLabel:      'reached ' + rs.rankLabel,
+              eventValue:      Number.isFinite(rs.rankSortValue) ? rs.rankSortValue : null,
+              rarity:          null,
+              clientEventId:   'rank_up:' + keyForBackend,
+              clientCreatedAt: new Date().toISOString(),
+            });
+          }
+        } catch (_) {}
       }
       try { localStorage.setItem(lastKey, fullLabel); } catch (_) {}
     } catch (_) {}
@@ -35112,6 +35442,21 @@
           steps: Math.round(steps),
           dateKey: dateKey,
         }, 'steps_10k_' + dateKey);
+      }
+    } catch (_) {}
+    // v3 Phase 1z.204 — public friend activity submit (bucketed
+    // ONLY). The local hb_guild_activity row above stores the
+    // exact step count for the user's own Hunter Feed; the
+    // public submit below derives BUCKET integers (10k, 20k,
+    // ..., 100k) and emits one event per newly-crossed bucket.
+    // Raw step counts NEVER leave the device. localStorage
+    // idempotency prevents re-queueing on every walk-eval tick.
+    try {
+      if (typeof steps === 'number') {
+        const dateKey2 = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate()
+          : new Date().toISOString().slice(0, 10);
+        _maybeQueueStepBucketEvents(steps, dateKey2);
       }
     } catch (_) {}
 

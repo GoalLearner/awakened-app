@@ -1086,6 +1086,29 @@
     return _authedFetch('PUT', '/v1/users/me/public-profile-summary', payload);
   }
 
+  // v3 Phase 1z.204 — Public friend activity events MVP-B client
+  // submit path. POSTs a batch (1–10) of preformatted public
+  // events (boss_kill / rank_up / step_milestone_bucket) to the
+  // backend (shipped in 1z.200 / deployed 1z.203). Backend
+  // dedupes on UNIQUE(user_id, client_event_id); resubmits are
+  // a no-op. Caller builds the payload via app.js' public-event
+  // queue so per-type label/value/regex contracts stay in one
+  // place. Step milestones use BUCKETED values only (10000,
+  // 20000, ..., 100000); raw step counts are NEVER submitted.
+  function submitPublicAchievementEvents(events) {
+    return _authedFetch('POST', '/v1/users/me/public-achievement-events', { events: events });
+  }
+
+  // v3 Phase 1z.204 — Friend-scoped public event feed. Returns
+  // accepted-friend (+ self) public events sorted newest-first
+  // with alias + optional rankLabel joined. Used by the Guild
+  // Activity → Guild mode renderer. Backend never returns
+  // user_id, client_event_id, metadata_json, or rank_points.
+  function fetchFriendsActivity(limit) {
+    const n = (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) ? Math.floor(limit) : 30;
+    return _authedFetch('GET', '/v1/friends/activity?limit=' + encodeURIComponent(n));
+  }
+
   function fetchFriends()                       { return _authedFetch('GET',  '/v1/friends'); }
   function sendFriendRequest(alias)             { return _authedFetch('POST', '/v1/friends/request', { alias: alias }); }
   function acceptFriendRequest(friendshipId)    { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/accept'); }
@@ -1174,6 +1197,10 @@
     // Friend rank badges (v3 Phase 1z.191) — public profile summary
     // submit. PUT /v1/users/me/public-profile-summary.
     submitPublicProfileSummary,
+    // Public friend activity events MVP-B (v3 Phase 1z.204) —
+    // batch submit + friend-scoped feed read.
+    submitPublicAchievementEvents,
+    fetchFriendsActivity,
     // Discipline Duels v1 (v3 Phase 1x)
     fetchFriends,
     sendFriendRequest,

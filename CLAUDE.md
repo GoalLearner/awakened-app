@@ -4,7 +4,91 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.201 Guild Roster rank-sort everyone (read this first)
+## May 29, 2026 — 1z.204 Client public-event submit + Guild Activity merge (read this first)
+
+**TL;DR.** Frontend-only train. Wires the 1z.200/1z.203 backend public-event endpoints into the client. Boss kills, rank-ups, and BUCKETED step milestones now submit via a debounced 5s queue. Guild Activity → Guild mode fetches `/v1/friends/activity?limit=30` and renders accepted-friend events (with self) in the existing date-grouped accordion. Hunter mode unchanged. **Exact step counts never leave the device.**
+
+**Files modified.**
+- `auth.js` — added `submitPublicAchievementEvents(events)` (POST batch) + `fetchFriendsActivity(limit=30)` (GET feed). Both wired through `_authedFetch` so the existing 401/429/network handling applies uniformly. Registered on `window.Auth`. Bumped `auth.js?v=20`.
+- `app.js` —
+  - New public-event submit queue: `_queuePublicAchievementEvent(ev)` + `_flushPublicAchievementQueue(reason)`. Debounced 5s; batch up to 10; same-`clientEventId` coalescing inside the pending queue; full-batch fast-flush. Failures (`NETWORK` / `RATE_LIMITED` / etc.) swallow silently and emit a `public-event-submit-error` breadcrumb. Inflight gate prevents parallel POSTs.
+  - New step bucket detector `_maybeQueueStepBucketEvents(steps, dateKey)`: walks the bucket allowlist `[10000, 20000, ..., 100000]`, queues one event per newly-crossed bucket. Per-(date, bucket) idempotency in localStorage (`hb_public_step_buckets_seen`); 7-day TTL on the seen map. **Raw step count is read here but NEVER included in any submitted payload or breadcrumb.**
+  - **Submit hooks** (no logic changes to local writes):
+    - `boss_kill`: after the existing `recordGuildActivity('boss_kill', ...)` write, queues `{ eventType: 'boss_kill', eventKey: bossId, eventLabel: 'defeated <bossName>', eventValue: state.kill_count, rarity: bossRank, clientEventId: 'boss_kill:<id>:<killCount>', clientCreatedAt: now }`. Gated on `bossRank` matching the backend regex `{E,D,C,B,A,S,S+}`.
+    - `rank_up`: after the existing `recordGuildActivity('rank_up', ...)` write, queues `{ eventType: 'rank_up', eventKey: rankLabel.replace(/\s+/g,'_'), eventLabel: 'reached <rankLabel>', eventValue: rankSortValue, rarity: null, clientEventId: 'rank_up:<key>', clientCreatedAt: now }`. Pulls `rankLabel` + `rankSortValue` from the existing `_publicRankSummary(totalPoints)` builder so the formula stays in one place.
+    - `step_milestone_bucket`: at the existing `step_milestone_10k` write site, calls `_maybeQueueStepBucketEvents(steps, dateKey)`. The local exact-step row in `hb_guild_activity` is preserved unchanged for the user's own Hunter Feed.
+  - New friend-activity backend cache + renderer:
+    - `_friendsActivityCache` (session-only; `null` = never fetched, `[]` = empty result, `[...]` = fetched).
+    - `_refreshFriendsActivityCache()`: 4s inflight gate, debounce on rapid filter flaps. Fires `Auth.fetchFriendsActivity(30)`, stores `res.events` on success, leaves cache untouched on failure (so transient errors don't wipe a good fetch). Re-renders Guild mode if still selected.
+    - `_friendActivityRowHtml(ev)`: renders `<strong>alias</strong> eventLabel` using the same row markup + glyph palette as `_guildhallRowHtml`. eventLabel is backend-regex-validated; safe to inline. Uses backend `createdAt` for the timestamp.
+  - `renderGuildActivity` Guild branch now kicks off `_refreshFriendsActivityCache()` on every render and uses `_friendsActivityCache` as the PRIMARY source when populated. Falls back to local `hb_guild_activity` only when the cache is null (offline / never fetched). Date grouping (1z.182), See More (1z.183), and newest-expanded auto-open (1z.185) all continue to apply uniformly — no per-source branching in the grouping layer.
+  - `guildhall-guild-feed-render` breadcrumb extended with `backendEventCount`, `localEventCount`, `feedSource: 'backend' | 'local-fallback'`, `mergedCount`.
+- `index.html` — `app.js?v=524`, `auth.js?v=20`.
+- `sw.js` — `CACHE_VERSION = 'v5.410'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w71`, `app.js?v=524`, `auth.js?v=20`, `sw.js CACHE_VERSION v5.410`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Dedupe / merge strategy.** Backend-primary, local-fallback. Backend is the canonical record for any event the viewer submitted in w71+, so backend events cover their own past-w71 boss kills / rank-ups / step buckets without needing to merge against the local store. Local `hb_guild_activity` rows display only when `_friendsActivityCache` is `null` (never fetched / offline) — typically only before the first successful fetch on a cold launch, or in the unlikely case of a sustained network outage. This avoids the local-self / backend-self double-row entirely. **Old pre-w71 boss kills don't appear in Guild mode** because they were never submitted to the backend (no backfill).
+
+**Privacy posture.**
+- Allowlisted event types ONLY: `boss_kill` / `rank_up` / `step_milestone_bucket`.
+- **Exact step counts never leave the device.** `_maybeQueueStepBucketEvents` reads `steps` to decide which buckets crossed, but only the BUCKET integer (10000 / 20000 / ... / 100000) goes into the queue. No raw value in any breadcrumb either.
+- No card identities (`ultra_rare_drop`/`card_drop` not hooked).
+- No habit names (`habit_streak` not hooked).
+- No sleep / workout / HealthKit values (`sleep_quality_7h` not hooked).
+- No `friend_added` (Hunter-only via 1z.197).
+- No backfill of historical `hb_guild_activity` rows. Only events that fire after w71 land in the backend.
+
+**Failure semantics.**
+- `Auth.submitPublicAchievementEvents` returns `{ ok: false, code: 'NETWORK' }` on offline → silently logged, queue drops the batch (no aggressive retry).
+- `Auth.fetchFriendsActivity` returns `{ ok: false }` → `_friendsActivityCache` stays untouched (last-good-cache wins), Guild mode renders whatever's in cache or local fallback.
+- `RATE_LIMITED` from either endpoint → silent breadcrumb; no toast.
+- Backend dedupe via UNIQUE(user_id, client_event_id) means resubmitting an event after a transient failure is a server-side no-op.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No fake events. No fake friend rows.
+- No exposure of exact steps, sleep, workout, habit names, card names, or HealthKit data.
+- No backfill of historical events.
+- No changes to: public rank submit, public achievement submit, Roster rank/boss sorting, friend add/remove, boss kill rewards, step verification thresholds, HealthKit, leaderboard, XP, rank thresholds, inventory, drop odds, auth, Duels.
+- `user_state_snapshots.state_json` stays opaque.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Hunter mode preserved.** The Hunter branch of `renderGuildActivity` is untouched. `_isHunterFeedEntry` superset, `_buildHunterFeedEntries`, 1z.181 souls eligibility filter, boss-kill + souls collapse, 1z.197 `friend_added` routing, 1z.184 `card_drop` allow — all unchanged.
+
+**Rollback.** Five independent reverts:
+1. Drop the three submit hook blocks (boss_kill, rank_up, step bucket).
+2. Drop `_queuePublicAchievementEvent` + `_flushPublicAchievementQueue` + `_maybeQueueStepBucketEvents` + the constants + localStorage key.
+3. Restore the previous Guild branch of `renderGuildActivity` (local-only path).
+4. Drop the friend-activity cache + `_refreshFriendsActivityCache` + `_friendActivityRowHtml`.
+5. Drop `submitPublicAchievementEvents` + `fetchFriendsActivity` from auth.js (and remove from `window.Auth` registration).
+
+Knobs revert with `git revert`. No DB / backend / storage touched.
+
+**Manual QA (w71).**
+1. Cold-launch w71 signed-in. Confirm `"build": "2.2.3-w71"`.
+2. Open Social → Guild Activity → Guild mode. Within ~1s the backend fetch fires (Copy Debug Info shows `guild-friends-activity-fetch-start` + `guild-friends-activity-fetch-ok` with `backendEventCount: 0` on first fetch).
+3. Defeat a boss. After ~5s (queue debounce), Copy Debug Info shows `public-event-queued` + `public-event-submit-start` + `public-event-submit-ok` with `insertedCount: 1`.
+4. Backend verify on Cloudflare:
+   ```sql
+   SELECT event_type, event_key, event_label, event_value, rarity, server_created_at
+     FROM public_achievement_events
+    ORDER BY server_created_at DESC
+    LIMIT 20;
+   ```
+   Expected: row with `event_type='boss_kill'`, `event_label='defeated <Boss Name>'`, `event_value=<killCount>`, `rarity='<E|D|C|B|A|S|S+>'`.
+5. On the OTHER device (running w71), open Social → Guild mode. Within ~1s the feed shows `<your-alias> defeated <Boss Name>` grouped under Today.
+6. Cross 10K steps. Backend gets ONE row: `event_type='step_milestone_bucket'`, `event_label='crossed 10,000 steps today'`, `event_value=10000`. **No exact step value anywhere.**
+7. Cross 20K steps later same day. Backend gets a second row for `20000` bucket. The same-day 10K bucket doesn't re-submit (idempotency).
+8. Force-quit + cold-launch. Open Guild. The 10K + 20K rows from earlier today appear (backend is source of truth).
+9. Open Guild mode while offline (or kill the Worker temporarily). Existing local `hb_guild_activity` rows surface via the fallback. Once online again, backend fetch repopulates `_friendsActivityCache` and Guild mode swaps to the backend feed.
+10. Hunter mode: unchanged. Souls Ledger collapse, joined-Guild rows (1z.197), `card_drop` rows (1z.184) all still work.
+11. Roster, Add Friend, Remove Friend, public rank/achievement submit pipeline (1z.191/1z.196) all unchanged.
+12. **Crucially:** confirm `_maybeQueueStepBucketEvents` does NOT log raw steps in any breadcrumb — `public-event-queued` for a step bucket should show `eventValue: 10000` (bucket), never the raw int.
+
+---
+
+## May 29, 2026 — 1z.201 Guild Roster rank-sort everyone
 
 **TL;DR.** Frontend-only fix. Removed the hard self-pin from the Roster sheet. Self + accepted friends now go into one combined list and sort by `rankSortValue` descending when every row has rank data. With Rendiesel at D II (rankSortValue 1,001,002,xxx) and Richie at D III (1,000,001,xxx), Rendiesel correctly lands at #1 and Richie at #2. Self still carries the `guild-roster-row--self` modifier so the gold highlight + gold rank-stat color survive regardless of position.
 
