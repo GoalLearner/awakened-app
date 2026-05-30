@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w72';
+  const APP_BUILD_TAG = '2.2.3-w73';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15397,28 +15397,99 @@
           fromRank: lastLabel,
           toRank:   fullLabel,
         }, 'rank_up_' + fullLabel);
-        // v3 Phase 1z.204 — public friend activity submit. Use
-        // the existing _publicRankSummary builder for the
-        // monotonic rankSortValue so the formula stays in one
-        // place. eventKey replaces space with underscore so the
-        // backend [A-Za-z0-9_-] regex passes.
-        try {
-          const rs = (typeof _publicRankSummary === 'function') ? _publicRankSummary(totalPoints) : null;
-          if (rs && typeof rs.rankLabel === 'string' && rs.rankLabel) {
-            const keyForBackend = rs.rankLabel.replace(/\s+/g, '_');
-            _queuePublicAchievementEvent({
-              eventType:       'rank_up',
-              eventKey:        keyForBackend,
-              eventLabel:      'reached ' + rs.rankLabel,
-              eventValue:      Number.isFinite(rs.rankSortValue) ? rs.rankSortValue : null,
-              rarity:          null,
-              clientEventId:   'rank_up:' + keyForBackend,
-              clientCreatedAt: new Date().toISOString(),
-            });
-          }
-        } catch (_) {}
       }
       try { localStorage.setItem(lastKey, fullLabel); } catch (_) {}
+    } catch (_) {}
+    // v3 Phase 1z.206 — public rank-up event submit, decoupled from
+    // the local hb_guild_last_rank_label dedupe. Bug from w71: the
+    // public submit was nested inside the local toast gate above,
+    // which fires on every transit between division labels. During
+    // XP-test transits (E III → D III → D I → D II) the public feed
+    // gained D III + D I rows but the final D II row was silently
+    // rejected by backend ON CONFLICT — because clientEventId
+    // 'rank_up:D_II' was already taken by an earlier session.
+    //
+    // 1z.206 contract:
+    //   - Source of truth = _publicRankSummary(totalPoints).rankLabel.
+    //   - Public submit has its OWN last-submitted key:
+    //     hb_public_rank_event_last_label.
+    //   - First-ever observation on a device: initialize key WITHOUT
+    //     queueing. Treat the initial state as a checkpoint, not a
+    //     phantom rank-up. (Matches the local toast pattern.)
+    //   - Each subsequent transit queues exactly one event for the
+    //     CURRENT label and stores the new key.
+    //   - clientEventId stays formulaic 'rank_up:<label>' so backend
+    //     dedupe is a second safety net; same label re-emission is
+    //     silently a no-op (acceptable since rank label changes
+    //     monotonically increase in expected play; regressions only
+    //     happen during testing).
+    try {
+      const PUBLIC_RANK_LAST_KEY = 'hb_public_rank_event_last_label';
+      const rs = (typeof _publicRankSummary === 'function') ? _publicRankSummary(totalPoints) : null;
+      const currentRankLabel = (rs && typeof rs.rankLabel === 'string' && rs.rankLabel) ? rs.rankLabel : null;
+      const rankSortValueFinite = !!(rs && Number.isFinite(rs.rankSortValue));
+      let lastPublicLabel = null;
+      try { lastPublicLabel = localStorage.getItem(PUBLIC_RANK_LAST_KEY); } catch (_) {}
+      if (typeof _addHealthVerifyBreadcrumb === 'function') {
+        try {
+          _addHealthVerifyBreadcrumb('public-rank-event-eval', {
+            currentRankLabel:            currentRankLabel,
+            lastSubmittedRankEventLabel: lastPublicLabel,
+            rankSortValueFinite:         rankSortValueFinite,
+          });
+        } catch (_) {}
+      }
+      if (!currentRankLabel) {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          try { _addHealthVerifyBreadcrumb('public-rank-event-skip', { reason: 'no-current-label' }); } catch (_) {}
+        }
+      } else if (lastPublicLabel === currentRankLabel) {
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          try {
+            _addHealthVerifyBreadcrumb('public-rank-event-skip', {
+              reason: 'same-as-last',
+              currentRankLabel: currentRankLabel,
+            });
+          } catch (_) {}
+        }
+      } else if (!lastPublicLabel) {
+        // First-ever observation on this device. Initialize the
+        // key WITHOUT queueing so existing users don't get a
+        // phantom rank-up on the w73 cold launch. The very NEXT
+        // real division crossing will queue normally.
+        try { localStorage.setItem(PUBLIC_RANK_LAST_KEY, currentRankLabel); } catch (_) {}
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          try {
+            _addHealthVerifyBreadcrumb('public-rank-event-skip', {
+              reason: 'first-observation-checkpoint',
+              currentRankLabel: currentRankLabel,
+            });
+          } catch (_) {}
+        }
+      } else {
+        // Real division transit: queue exactly one event for the
+        // current label and update the key. Backend ON CONFLICT
+        // is the second safety net against in-flight re-submission.
+        const keyForBackend = currentRankLabel.replace(/\s+/g, '_');
+        _queuePublicAchievementEvent({
+          eventType:       'rank_up',
+          eventKey:        keyForBackend,
+          eventLabel:      'reached ' + currentRankLabel,
+          eventValue:      rankSortValueFinite ? rs.rankSortValue : null,
+          rarity:          null,
+          clientEventId:   'rank_up:' + keyForBackend,
+          clientCreatedAt: new Date().toISOString(),
+        });
+        try { localStorage.setItem(PUBLIC_RANK_LAST_KEY, currentRankLabel); } catch (_) {}
+        if (typeof _addHealthVerifyBreadcrumb === 'function') {
+          try {
+            _addHealthVerifyBreadcrumb('public-rank-event-queued', {
+              rankLabel:  currentRankLabel,
+              prevLabel:  lastPublicLabel,
+            });
+          } catch (_) {}
+        }
+      }
     } catch (_) {}
     // v3 Phase 1z.191 — schedule a public rank summary submit on
     // every renderRank. The submit is debounced 8s + gated by

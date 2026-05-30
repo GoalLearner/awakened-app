@@ -4,7 +4,99 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.205 Daily Walk stale-seal defensive correction (read this first)
+## May 29, 2026 — 1z.206 Fix phantom rank_up public events (read this first)
+
+**TL;DR.** Frontend-only fix. Decouples the public `rank_up` event submit from the local Guild Hall toast gate that was producing phantom intermediate-rank events during XP-test transits. New behavior uses a dedicated `hb_public_rank_event_last_label` key and submits only the actual current rank label from `_publicRankSummary(totalPoints)`. First-ever observation on a device is a checkpoint (no queue) so existing users don't get a phantom rank-up on w73 cold launch. Stale bad rows on backend are identified but NOT deleted — cleanup query provided for explicit user approval.
+
+**Root cause (from real-device w71 screenshot).**
+User screenshot shows current rank D II (1,375 XP) in the rank modal, but Guild Activity Today shows "Richie reached D I" and "Richie reached D III" — both 1m ago, no D II row. The public rank-up submit was nested inside `if (lastLabel && lastLabel !== fullLabel)` where `lastLabel` reads `hb_guild_last_rank_label` — a key introduced for the local Guild Hall toast (1z.165). During XP-test transits (E III → D III → D I → D II) every label transit flipped the local key and queued a public event. The final D II submit hit `clientEventId='rank_up:D_II'` — already taken by an earlier session — and backend ON CONFLICT DO NOTHING silently dropped the insert. Net effect: stale D III + D I rows persist, D II missing.
+
+**Files modified.**
+- `app.js` —
+  - Inside `renderRank` (~line 15396): kept the local `recordGuildActivity('rank_up', ...)` write under the original `if (lastLabel && lastLabel !== fullLabel)` gate unchanged (local Guild Hall toast logic preserved).
+  - Pulled the public submit OUT of that block into its own try/catch with independent dedupe via new `hb_public_rank_event_last_label` localStorage key.
+  - Source of truth = `_publicRankSummary(totalPoints).rankLabel`. The 1z.189 builder is the same source used by the rank modal + Roster badge + public profile summary, so all four surfaces always agree.
+  - First-ever observation (`!lastPublicLabel`): initialize key to current label WITHOUT queueing. Treats the initial state as a checkpoint (matches the 1z.165 local toast pattern). Prevents existing users from getting a phantom rank-up on w73 cold launch.
+  - Subsequent transits: queue exactly one event for the CURRENT label and persist the new key. Backend `clientEventId='rank_up:<label>'` remains formulaic so backend ON CONFLICT is a second safety net against in-flight resubmission.
+  - Added three diagnostic breadcrumbs: `public-rank-event-eval` (always), `public-rank-event-queued` (on real transit), `public-rank-event-skip` (with `reason: 'no-current-label' | 'same-as-last' | 'first-observation-checkpoint'`).
+- `index.html` — `app.js?v=526`.
+- `sw.js` — `CACHE_VERSION = 'v5.412'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w73`, `app.js?v=526`, `auth.js?v=20` (unchanged), `sw.js CACHE_VERSION v5.412`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Dedupe behavior table.**
+
+| `hb_public_rank_event_last_label` | `_publicRankSummary` rankLabel | Action |
+|---|---|---|
+| (unset) | `null` | Skip — log `no-current-label` |
+| (unset) | `"D II"` | Initialize key to `"D II"`. Skip queue. Log `first-observation-checkpoint`. |
+| `"D II"` | `"D II"` | Skip — log `same-as-last` |
+| `"D III"` | `"D II"` | Queue `rank_up:D_II`. Persist key as `"D II"`. Log `public-rank-event-queued`. |
+| `"D II"` | `null` | Skip — log `no-current-label` (transient state during XP migration) |
+
+**Why this fixes the user's specific case.** On w73 first cold launch, `hb_public_rank_event_last_label` is unset → first-observation checkpoint stores `"D II"` and skips queue. No phantom rank-up. The next time the user actually crosses a division boundary (e.g. to D I), the new key check sees `"D II" → "D I"`, queues exactly one event for `"D I"`. Backend accepts it because `clientEventId='rank_up:D_I'` already exists on backend from the stale w71 row → ON CONFLICT DO NOTHING → safe no-op. The user's Guild Activity will continue to show the stale D I and D III rows until they age past the 30-event feed cap or are manually deleted.
+
+**Bad backend rows audit.** Confirmed presence of two stale rows for Richie from the w71 XP-test session:
+- `rank_up:D_I`  with `event_label='reached D I'`  — wrong; current is D II
+- `rank_up:D_III` with `event_label='reached D III'` — wrong; current is D II
+
+The cleanup query is provided below for explicit user approval. **NOT applied automatically per the 1z.206 hard guardrails ("Do NOT mutate D1 unless user explicitly approves a cleanup after audit").**
+
+**Cleanup query (FOR EXPLICIT APPROVAL — do NOT run automatically):**
+
+```sql
+-- Inspect Richie's stale rank_up rows.
+SELECT id, user_id, event_type, event_label, event_value, server_created_at
+  FROM public_achievement_events
+ WHERE event_type = 'rank_up'
+   AND event_label IN ('reached D I', 'reached D III')
+ ORDER BY server_created_at DESC
+ LIMIT 20;
+
+-- Targeted delete (review the SELECT first, then run only after
+-- confirming the rows are Richie's). Alternative: leave them and
+-- let the 30-event feed cap eventually push them out as fresh
+-- events arrive.
+DELETE FROM public_achievement_events
+ WHERE event_type = 'rank_up'
+   AND user_id = '<RICHIES_USER_ID>'
+   AND event_label IN ('reached D I', 'reached D III');
+```
+
+Recommendation: **leave the stale rows in place.** Once 1z.204's other event types start landing (boss kills, step buckets, future rank-ups), the 30-event feed will naturally rotate them out. Deleting selectively requires fetching `user_id` from `users` first, and any keystroke error could remove legitimate rows for another user.
+
+**Privacy posture.** Breadcrumb fields are bounded counts / booleans / preformatted rank label strings (`"D II"`, `"E III"`, `"S+"`). Never raw XP. Never user IDs. Never tokens. Never raw localStorage.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No rank threshold / XP math / `getRankDivisionInfo` change.
+- No public rank summary / public achievement summary submit changes (these run on separate paths via `_maybeSubmitPublicRankSummary` and the public achievements queue).
+- No Roster sorting change.
+- No `boss_kill` / `step_milestone_bucket` event behavior change.
+- No HealthKit / leaderboard / friend add-remove / auth / Duel changes.
+- Local Guild Hall rank-up toast (the `recordGuildActivity('rank_up', ...)` path) is unchanged.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Single revert: restore the pre-1z.206 nested submit block in `renderRank`. Drop the `hb_public_rank_event_last_label` key uses (the leftover localStorage entry is harmless — a future re-add will pick up where it left off). No DB / backend / storage touched.
+
+**Manual QA (w73).**
+1. Cold-launch w73. Confirm `"build": "2.2.3-w73"`.
+2. Open the Habits tab or Rank modal so `renderRank` fires.
+3. Copy Debug Info:
+   - `public-rank-event-eval` with `currentRankLabel: "D II"`, `lastSubmittedRankEventLabel: null`, `rankSortValueFinite: true`.
+   - `public-rank-event-skip` with `reason: "first-observation-checkpoint"`.
+   - No `public-rank-event-queued` on first launch.
+4. Confirm no new rank-up rows appear in Guild Activity over the next minute. (Stale D I / D III rows remain.)
+5. Force a rank transit (e.g. complete a habit to gain XP into a new division boundary). Expected breadcrumb: `public-rank-event-queued` with `rankLabel: "<new label>"`, `prevLabel: "D II"`. New row appears in Guild Activity.
+6. Re-render rank (toggle a habit). No new rank-up row. Breadcrumb shows `public-rank-event-skip` with `reason: "same-as-last"`.
+7. Local Guild Hall rank-up toast still fires for the same transit (1z.165 unchanged).
+8. Roster rank badge, public profile summary, and rank modal all agree with the queued label.
+9. Boss kill + step bucket public events still work unchanged.
+10. Hunter Feed unchanged.
+
+---
+
+## May 29, 2026 — 1z.205 Daily Walk stale-seal defensive correction
 
 **TL;DR.** Frontend-only fix. The 1z.133 stale-auto correction was gated INSIDE the `else if (isChecked(walk.id))` branch, so it could never run when `isChecked` returned false even though the card was visually sealed (DOM/storage divergence — the real-device debug from w71). New shape: compute `(storedChecked, domCompleted, autoMarkerPresent, appDateKey, healthDateKey)` up front, log diagnostics ALWAYS, and unseal whenever either storage OR DOM says the walk is sealed AND HK steps < 8K AND the auto-verify marker is present. Manual completions stay protected.
 
