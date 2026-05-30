@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w78';
+  const APP_BUILD_TAG = '2.2.3-w79';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18975,6 +18975,14 @@
 
   // ─── Build summary renderer ─────────────────────────────────
   function renderHunterBuildSummary() {
+    // v3 Phase 1z.212 — BUILD SUMMARY card removed from the
+    // Armory modal. The function survives as the single trigger
+    // point for the chained EQUIPMENT BONUSES render so the five
+    // existing call sites (boot, equip, unequip, picker, modal
+    // open) all keep working without per-site changes. The
+    // summary DOM lookup early-returns silently when the
+    // container is absent.
+    try { renderHunterBuildBonuses(); } catch (_) {}
     const el = document.getElementById('hunter-build-summary');
     if (!el) return;
     const power      = aggregateBuildPower();
@@ -19009,12 +19017,10 @@
             '<span class="hbs-val hbs-val--muted">' + lockedCount + ' awaiting rank-up</span>' +
           '</div>'
         : '');
-    // v3 Phase 1z.211 — keep the EQUIPMENT BONUSES card in lock-
-    // step with the Build Summary card. The five existing
-    // renderHunterBuildSummary() call sites (boot, equip,
-    // unequip, build picker, build modal open) now also refresh
-    // the bonuses card without needing per-site changes.
-    try { renderHunterBuildBonuses(); } catch (_) {}
+    // v3 Phase 1z.212 — bonuses chain moved to the top of the
+    // function (above the summary-element early-return) so the
+    // EQUIPMENT BONUSES card still refreshes after the BUILD
+    // SUMMARY container was removed from the Armory modal.
   }
 
   // ─── v3 Phase 1z.211 — Equipment bonuses summary ────────────

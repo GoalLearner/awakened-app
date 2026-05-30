@@ -1575,18 +1575,19 @@
       <div id="hunter-build-grid" class="hunter-build-grid"></div>
     </section>
 
-    <!-- BUILD SUMMARY — power, dominant path, equipped count -->
-    <section class="hunter-build-section hunter-build-section--summary">
-      <h3 class="hunter-build-section-label">BUILD SUMMARY</h3>
-      <div id="hunter-build-summary" class="hunter-build-summary"></div>
-    </section>
+    <!-- v3 Phase 1z.212 — BUILD SUMMARY section removed per
+         product direction. Gear Power / Dominant Path / Equipped
+         count are no longer surfaced here; EQUIPMENT BONUSES
+         carries the entire build-state read-out now.
+         renderHunterBuildSummary() survives as the chain trigger
+         for renderHunterBuildBonuses() — it early-returns
+         silently when the summary DOM container is absent. -->
 
     <!-- v3 Phase 1z.211 — EQUIPMENT BONUSES. Read-only aggregation
          of structured stat bonuses (str/vit/int/focus/will/wlt)
          from currently equipped CARDS. Populated by
          renderHunterBuildBonuses() which is chained off
-         renderHunterBuildSummary() so every existing equip /
-         unequip / picker / boot path refreshes both cards. -->
+         renderHunterBuildSummary(). -->
     <section class="hunter-build-section hunter-build-section--bonuses">
       <h3 class="hunter-build-section-label">EQUIPMENT BONUSES</h3>
       <div id="hunter-build-bonuses" class="hunter-build-bonuses"></div>
@@ -2477,7 +2478,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=531"></script>
+  <script src="app.js?v=532"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
