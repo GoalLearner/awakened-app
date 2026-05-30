@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w81';
+  const APP_BUILD_TAG = '2.2.3-w82';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19265,6 +19265,14 @@
     } else if (kind === 'coin') {
       inner = '<circle cx="8" cy="8" r="5.5" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
               '<circle cx="8" cy="8" r="2" fill="' + stroke + '"/>';
+    } else if (kind === 'total') {
+      // v3 Phase 1z.215 — TOTAL cell sigil. Four-pointed gold
+      // crest with a central rune so it visually rhymes with
+      // the stat glyphs (rune diamond + coin circle) while
+      // staying distinct enough to read as "sum of all".
+      inner = '<path d="M8 1 L9.6 6.4 L15 8 L9.6 9.6 L8 15 L6.4 9.6 L1 8 L6.4 6.4 Z" ' +
+              'fill="none" stroke="' + stroke + '" stroke-width="1.3" stroke-linejoin="round"/>' +
+              '<circle cx="8" cy="8" r="1.5" fill="' + stroke + '"/>';
     } else {
       inner = '<circle cx="8" cy="8" r="2" fill="' + stroke + '"/>';
     }
@@ -19350,12 +19358,18 @@
     // the visible aggregate so a net-negative build (only
     // possible if any item ever ships with negative bonuses)
     // still reads correctly.
+    //
+    // v3 Phase 1z.215 — TOTAL now carries its own gold sigil
+    // chip + body in the same chip+body layout as the stat
+    // cells, so the value/label line up horizontally with
+    // their neighbours instead of floating center-only.
     const totalSign = (totalSum >= 0) ? '+' : '−';
     const totalAbs  = Math.abs(totalSum).toLocaleString('en-US');
     const totalTxt  = totalSign + totalAbs;
     cellsHtml +=
       '<div class="hbb-cell hbb-cell--total">' +
-        '<div class="hbb-cell-body hbb-cell-body--total">' +
+        '<div class="hbb-chip" aria-hidden="true">' + _bonusStatSigilSvg('total', '#f5b842') + '</div>' +
+        '<div class="hbb-cell-body">' +
           '<div class="hbb-cell-val">' + esc(totalTxt) + '</div>' +
           '<div class="hbb-cell-label">TOTAL</div>' +
         '</div>' +
