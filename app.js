@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w76';
+  const APP_BUILD_TAG = '2.2.3-w77';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22440,13 +22440,15 @@
     catch (_) { return String(raw || '—'); }
   }
 
-  // v3 Phase 1z.209 — strict lowercase alias display for the
-  // Social/Guild/Hunter surfaces. Unlike _socialDisplayAlias /
-  // lbNormalizeAliasForDisplay (which honors the
-  // LB_ALIAS_DISPLAY_OVERRIDES map for personalization like
-  // `richie → Richie`), this helper enforces the product rule
-  // that visible aliases are lowercase EVERYWHERE in the Social
-  // tab. Stored data is never touched — backend payloads, local
+  // v3 Phase 1z.209 — lowercase alias display for the Social/
+  // Guild/Hunter surfaces. The product rule is "visible aliases
+  // are lowercase everywhere" with ONE exception: the personal
+  // display override map (LB_ALIAS_DISPLAY_OVERRIDES). Today
+  // that map holds exactly { richie: 'Richie' } so the app's
+  // creator keeps their capitalized treatment app-wide. Any
+  // alias NOT in the override map is rendered strict lowercase.
+  //
+  // Stored data is never touched — backend payloads, local
   // hb_guild_activity rows, and friend objects retain their
   // original casing. This is a display-time normalization only.
   //
@@ -22454,11 +22456,25 @@
   // rows, lower Guild accordion friend rows, joined-Guild
   // template, and incoming/outgoing friend requests. Do NOT
   // pass rank labels, boss names, or event labels through here.
+  //
+  // Behaviour matches lbNormalizeAliasForDisplay (also defined
+  // in this file) — both helpers strip whitespace + lowercase +
+  // consult the override map. _displayAliasLower exists as a
+  // scoped re-entry point so future changes to Social/Guild
+  // casing rules can diverge from the leaderboard's helper
+  // without cross-impact.
   function _displayAliasLower(raw) {
     if (raw === undefined || raw === null) return '—';
     try {
-      const s = String(raw).replace(/\s+/g, '').toLowerCase();
-      return s.length ? s : '—';
+      const stripped = String(raw).replace(/\s+/g, '');
+      if (!stripped) return '—';
+      const lower = stripped.toLowerCase();
+      if (typeof LB_ALIAS_DISPLAY_OVERRIDES === 'object'
+          && LB_ALIAS_DISPLAY_OVERRIDES
+          && LB_ALIAS_DISPLAY_OVERRIDES[lower]) {
+        return LB_ALIAS_DISPLAY_OVERRIDES[lower];
+      }
+      return lower;
     } catch (_) {
       return '—';
     }
