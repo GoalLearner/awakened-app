@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w79';
+  const APP_BUILD_TAG = '2.2.3-w80';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19039,14 +19039,50 @@
   // Empty state (no items equipped or all bonuses zero) renders
   // a single muted line: "Equip gear to reveal your bonuses."
 
+  // v3 Phase 1z.213 — Sigil Grid stat palette + glyphs. Stat
+  // colors mirror the Awakened radar/stat-screen language so the
+  // Armory bonuses feel cohesive with the rest of the app. Each
+  // stat carries a static inline SVG sigil (no external assets,
+  // no icon library — small enough to embed once per cell).
+  // FOCUS uses silver/slate per the radar palette; a 0 0 8px
+  // glow keeps it readable on the navy ground.
   const HUNTER_BUILD_BONUS_STATS = [
-    { key: 'str',   label: 'STR'   },
-    { key: 'vit',   label: 'VIT'   },
-    { key: 'int',   label: 'INT'   },
-    { key: 'focus', label: 'FOCUS' },
-    { key: 'will',  label: 'WILL'  },
-    { key: 'wlt',   label: 'WLT'   },
+    { key: 'str',   label: 'STR',   color: '#ef4444', glyph: 'sword' },
+    { key: 'vit',   label: 'VIT',   color: '#22c55e', glyph: 'heart' },
+    { key: 'int',   label: 'INT',   color: '#3b82f6', glyph: 'rune'  },
+    { key: 'focus', label: 'FOCUS', color: '#9ca3af', glyph: 'eye'   },
+    { key: 'will',  label: 'WILL',  color: '#f97316', glyph: 'flame' },
+    { key: 'wlt',   label: 'WLT',   color: '#a78bfa', glyph: 'coin'  },
   ];
+
+  // Inline SVG sigils — static strings, no user-controlled data
+  // so safe to interpolate into innerHTML. Keep viewBox 0 0 16 16
+  // so the glyph scales cleanly inside the 28px chip.
+  function _bonusStatSigilSvg(kind, color) {
+    const stroke = (typeof color === 'string') ? color : '#a78bfa';
+    const head = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false" style="display:block">';
+    const tail = '</svg>';
+    let inner = '';
+    if (kind === 'sword') {
+      inner = '<path d="M12 2 L14 4 L7 11 L5 11 L5 9 Z M5 11 L3 13 M4 12 L2 14" stroke="' + stroke + '" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+    } else if (kind === 'heart') {
+      inner = '<path d="M8 14 C2 10 2 5 5 4 C6.5 3.4 8 4 8 5.5 C8 4 9.5 3.4 11 4 C14 5 14 10 8 14 Z" fill="' + stroke + '"/>';
+    } else if (kind === 'rune') {
+      inner = '<path d="M8 2 L13 8 L8 14 L3 8 Z" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
+              '<path d="M8 5 L8 11 M5.5 8 L10.5 8" stroke="' + stroke + '" stroke-width="1.1" stroke-linecap="round"/>';
+    } else if (kind === 'eye') {
+      inner = '<path d="M2 8 Q8 3 14 8 Q8 13 2 8 Z" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
+              '<circle cx="8" cy="8" r="2" fill="' + stroke + '"/>';
+    } else if (kind === 'flame') {
+      inner = '<path d="M8 2 C6 5 4 6 4 9 C4 11.5 6 13.5 8 13.5 C10 13.5 12 11.5 12 9 C12 6 10 5 8 2 Z" fill="' + stroke + '"/>';
+    } else if (kind === 'coin') {
+      inner = '<circle cx="8" cy="8" r="5.5" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
+              '<circle cx="8" cy="8" r="2" fill="' + stroke + '"/>';
+    } else {
+      inner = '<circle cx="8" cy="8" r="2" fill="' + stroke + '"/>';
+    }
+    return head + inner + tail;
+  }
 
   function _aggregateBuildBonuses() {
     const totals = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
@@ -19085,27 +19121,60 @@
     const el = document.getElementById('hunter-build-bonuses');
     if (!el) return; // DOM not mounted (older bundle) — silent no-op.
     const agg = _aggregateBuildBonuses();
-    // Build the visible non-zero rows in canonical stat order.
-    let rowsHtml = '';
+
+    // v3 Phase 1z.213 — Sigil Grid panel. Each visible non-zero
+    // stat becomes a 2-column-grid cell: stat-colored glyph chip
+    // + Cinzel value + mono label. A final gold TOTAL cell sums
+    // the displayed bonuses (NOT Gear Power; this is purely the
+    // visible aggregate so the TOTAL always agrees with the sum
+    // a user could compute by reading the cells).
+    let cellsHtml = '';
     let visible = 0;
+    let totalSum = 0;
     for (const s of HUNTER_BUILD_BONUS_STATS) {
       const v = agg.totals[s.key];
-      const formatted = _formatBuildBonusValue(v);
-      if (!formatted) continue;
+      if (!Number.isFinite(v) || v === 0) continue;
       visible++;
-      const valCls = (v > 0) ? ' hbb-val--pos' : ' hbb-val--neg';
-      rowsHtml +=
-        '<div class="hbb-row">' +
-          '<span class="hbb-label">' + esc(s.label) + '</span>' +
-          '<span class="hbb-val' + valCls + '">' + esc(formatted) + '</span>' +
+      totalSum += v;
+      const sign = (v > 0) ? '+' : '−';
+      const absStr = Math.abs(v).toLocaleString('en-US');
+      const valTxt = sign + absStr;
+      // Inline per-cell CSS variable carries the stat color so
+      // the scoped CSS can paint glow + tint without one rule
+      // per stat. Keeps the stylesheet single-purpose.
+      const styleAttr = ' style="--stat-color:' + s.color + '"';
+      cellsHtml +=
+        '<div class="hbb-cell hbb-cell--stat hbb-cell--' + s.key + '"' + styleAttr + '>' +
+          '<div class="hbb-chip" aria-hidden="true">' + _bonusStatSigilSvg(s.glyph, s.color) + '</div>' +
+          '<div class="hbb-cell-body">' +
+            '<div class="hbb-cell-val">' + esc(valTxt) + '</div>' +
+            '<div class="hbb-cell-label">' + esc(s.label) + '</div>' +
+          '</div>' +
         '</div>';
     }
+
     if (visible === 0) {
       el.innerHTML =
         '<div class="hbb-empty">Equip gear to reveal your bonuses.</div>';
       return;
     }
-    el.innerHTML = rowsHtml;
+
+    // Gold TOTAL cell. Sign mirrors the dominant direction of
+    // the visible aggregate so a net-negative build (only
+    // possible if any item ever ships with negative bonuses)
+    // still reads correctly.
+    const totalSign = (totalSum >= 0) ? '+' : '−';
+    const totalAbs  = Math.abs(totalSum).toLocaleString('en-US');
+    const totalTxt  = totalSign + totalAbs;
+    cellsHtml +=
+      '<div class="hbb-cell hbb-cell--total">' +
+        '<div class="hbb-cell-body hbb-cell-body--total">' +
+          '<div class="hbb-cell-val">' + esc(totalTxt) + '</div>' +
+          '<div class="hbb-cell-label">TOTAL</div>' +
+        '</div>' +
+      '</div>';
+
+    el.innerHTML = '<div class="hbb-grid">' + cellsHtml + '</div>';
   }
   try { window.renderHunterBuildBonuses = renderHunterBuildBonuses; } catch (_) {}
 
