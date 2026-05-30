@@ -4,7 +4,85 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.207 Lower Guild Roster redesign with rank-tier colors (read this first)
+## May 29, 2026 — 1z.209 Lowercase alias display across Social/Guild surfaces (read this first)
+
+**TL;DR.** Frontend display-only normalization. Visible aliases on every Social/Guild surface now render strictly lowercase (`rendiesel`, not `RenDIESEL`). Rank labels (`D I`, `S+`), boss names (`The Insomniac`), event labels, button copy, and the `find a hunter…` placeholder are untouched. Stored data — backend rows in `public_achievement_events` / `public_profile_summary`, local `hb_guild_activity`, and friend objects — keeps its original casing.
+
+**Root cause.** Two render paths bypassed the existing `_socialDisplayAlias` helper and printed raw mixed-case aliases:
+- `_friendActivityRowHtml(ev)` (Guild mode backend feed) used `ev.alias` directly.
+- `_guildhallRowHtml` `GUILD_JOIN_` template used `p.alias` directly.
+
+The other four alias-render surfaces (Roster sheet, lower Guild accordion accepted rows, incoming/outgoing friend requests) DID call `_socialDisplayAlias`, which lowercases — but the helper consults `LB_ALIAS_DISPLAY_OVERRIDES = { richie: 'Richie' }` to title-case the developer's own alias. The 1z.209 product rule is strict lowercase everywhere, so the override is bypassed at every Social/Guild alias call site.
+
+**Files modified.**
+- `app.js` —
+  - New `_displayAliasLower(raw)` helper next to `_socialDisplayAlias`. Strips whitespace, lowercases, returns `'—'` for empty/nullish input. Never consults the legacy override map.
+  - `_friendActivityRowHtml(ev)`: wraps `ev.alias` in `_displayAliasLower(...)`. `ev.eventLabel` left untouched so `"reached D I"` / `"defeated The Insomniac"` keep their casing.
+  - `_guildhallRowHtml` `GUILD_JOIN_` template: wraps `p.alias` (local `friend_added` payload) in `_displayAliasLower(...)`. "joined your Guild" copy unchanged.
+  - `_guildRosterRowHtml`: swapped `_socialDisplayAlias(row.alias)` → `_displayAliasLower(row.alias)`. Self-row fallback changed from `'You'` to `'you'`. The existing `text-transform: uppercase` CSS on `.guild-roster-alias` continues to visually titlecase all entries uniformly — data is lowercase under the hood.
+  - `renderFriendsSection`: all three alias call sites (incoming requests, outgoing requests, accepted-friend rows) swapped `_socialDisplayAlias` → `_displayAliasLower`.
+- `index.html` — `app.js?v=529`.
+- `sw.js` — `CACHE_VERSION = 'v5.415'`.
+
+**Files explicitly NOT touched.**
+- No backend handler / SQL / migration / wrangler config.
+- No `auth.js` (placeholder + Auth helpers unchanged → `auth.js?v=20` stays).
+- No `styles.css` (visual styling unchanged).
+- No `simulated-leaderboard.js`.
+- No public event submit/fetch path.
+- No friend add/remove logic.
+- No rank math, rank thresholds, `getRankDivisionInfo`, `rankSortValue`, `_publicRankSummary`.
+- No boss / inventory / souls / XP / HealthKit / leaderboard / Duel paths.
+- No `recordGuildActivity` write path or `hb_guild_activity` storage.
+- `LB_ALIAS_DISPLAY_OVERRIDES` map and `_socialDisplayAlias` / `lbNormalizeAliasForDisplay` are kept intact — they still serve other surfaces (e.g. leaderboard top-N rows, duel toasts) where the override is intentional product behavior.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w76`, `app.js?v=529`, `auth.js?v=20` (unchanged), `sw.js CACHE_VERSION v5.415`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Casing rule reference.**
+
+| Surface element | Casing | Source |
+|---|---|---|
+| Visible aliases (any Social/Guild surface) | strict lowercase | `_displayAliasLower` |
+| Rank labels (`D I`, `S+`) | as-emitted by `getRankDivisionInfo` | unchanged |
+| Boss names (`The Insomniac`) | as-emitted by `BOSSES[id].name` | unchanged |
+| Event labels (`"defeated The Insomniac"`) | as-emitted by the backend payload | unchanged |
+| Button labels (`+ ADD FRIEND`) | uppercase via Cinzel CSS | unchanged |
+| Add Friend placeholder | `find a hunter…` | unchanged from w75 |
+
+**Guard rails preserved.**
+- No backend / D1 / migration / Codemagic / archive / upload.
+- No stored-data rewrite.
+- No public event payload change.
+- No Add Friend behavior change.
+- No Roster rank sort / self-highlight change.
+- No Guild Activity grouping / filter / See More / newest-expanded change.
+- No fake presence / status / timestamps / friend metrics.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Three independent reverts:
+1. Restore each of the 6 alias call sites to its previous helper (`_socialDisplayAlias` for the four it covered + raw `.alias` for the two it didn't).
+2. Delete `_displayAliasLower`.
+3. Revert knob bumps (`w76 → w75`, `v=529 → 528`, `v5.415 → v5.414`).
+
+No DB / backend / storage touched.
+
+**Manual QA (w76).**
+1. Cold-launch w76. Confirm `"build": "2.2.3-w76"`.
+2. Open Social tab.
+3. **Guild Activity → Guild mode**: backend friend activity rows show lowercase alias. `RenDIESEL` is gone; the same user now reads as `rendiesel reached D I`. Rank label `D I` keeps its case. Boss name `The Insomniac` keeps its case.
+4. **Guild Activity → Hunter mode**: joined-Guild rows show lowercase. `Anthony-Edwards joined your Guild` → `anthony-edwards joined your Guild`.
+5. **Lower Guild accordion**: member rows still lowercase. `richie` no longer title-cased even when viewing your own row (consistent with the rest).
+6. **HUNTERS / Roster modal**: aliases lowercase under the hood; the existing Cinzel uppercase CSS still visually shows `RICHIE` / `RENDIESEL` — uniformly.
+7. **Incoming / outgoing friend requests** (when present): aliases lowercase.
+8. **Rank labels everywhere**: `D I`, `D II`, `E III`, `S+` all read correctly.
+9. **Boss names everywhere**: `The Insomniac`, `The Glass Strider` all read correctly.
+10. **Add Friend**: placeholder `find a hunter…`, button `+ ADD FRIEND`, submit + enter-key + loading + toasts all unchanged.
+11. **Guild Activity** date grouping, See More, Hunter/Guild filter, newest-expanded auto-open all unchanged.
+12. **Roster**: rank-sort and self-highlight unchanged.
+
+---
+
+## May 29, 2026 — 1z.207 Lower Guild Roster redesign with rank-tier colors
 
 **TL;DR.** Frontend-only train. Implements the Claude Design `Guild Roster Redesign.html` bundle for the lower Guild accordion: rank-tier-colored avatar ring + tier chip below the circle + "D-RANK" mono sub-line + left-edge accent hairline + integrated gold "+ ADD FRIEND" CTA. No fake online dots or last-active timestamps (explicit guardrail). HUNTERS / Roster modal untouched. Guild Activity feed untouched. Friend add/remove logic untouched.
 

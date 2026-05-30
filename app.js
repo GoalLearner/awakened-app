@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w75';
+  const APP_BUILD_TAG = '2.2.3-w76';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3462,7 +3462,10 @@
         // by overriding the whole text block. Detected by the
         // renderer via the marker verb 'GUILD_JOIN_'.
         verb = 'GUILD_JOIN_';
-        target = (p.alias || 'A new hunter');
+        // v3 Phase 1z.209 — visible alias lowercased to match
+        // the app-wide username display rule. Stored payload
+        // alias retains its original casing.
+        target = _displayAliasLower(p.alias || 'a new hunter');
         targetCls = 'guildhall-activity-target--violet';
         break;
       default:
@@ -3810,9 +3813,16 @@
   }
 
   function _guildRosterRowHtml(row, rank, isSelf) {
-    const aliasDisp = (typeof _socialDisplayAlias === 'function')
-      ? _socialDisplayAlias(row.alias || (isSelf ? 'You' : '—'))
-      : (row.alias || (isSelf ? 'You' : '—'));
+    // v3 Phase 1z.209 — strict-lowercase alias display so the
+    // Roster sheet matches the rest of the Social/Guild surface.
+    // The legacy LB_ALIAS_DISPLAY_OVERRIDES map (e.g.
+    // richie → Richie) is bypassed here on purpose; the
+    // text-transform: uppercase CSS on .guild-roster-alias still
+    // visually titlecases all entries uniformly.
+    const aliasFallback = isSelf ? 'you' : '—';
+    const aliasDisp = (typeof _displayAliasLower === 'function')
+      ? _displayAliasLower(row.alias || aliasFallback)
+      : (row.alias || aliasFallback);
     const feats = (row.feats24h == null) ? '—' : String(row.feats24h);
     // v3 Phase 1z.196 — BOSSES column source precedence:
     //   1. backend-provided bossesSlainTotal (friends — real
@@ -4814,7 +4824,12 @@
   // never inject any local data into a friend row.
   function _friendActivityRowHtml(ev) {
     if (!ev || typeof ev !== 'object') return '';
-    const alias    = (typeof ev.alias === 'string' && ev.alias) ? ev.alias : 'A hunter';
+    // v3 Phase 1z.209 — visible alias lowercased to match the
+    // app-wide username display rule. eventLabel is left
+    // unchanged so rank labels ("reached D I") and boss names
+    // ("defeated The Insomniac") keep their intended casing.
+    const aliasRaw = (typeof ev.alias === 'string' && ev.alias) ? ev.alias : 'a hunter';
+    const alias    = _displayAliasLower(aliasRaw);
     const label    = (typeof ev.eventLabel === 'string' && ev.eventLabel) ? ev.eventLabel : 'achieved a feat';
     const ts       = ev.createdAt ? Date.parse(ev.createdAt) : 0;
     const time     = (typeof _guildhallFormatRelativeTs === 'function' && Number.isFinite(ts) && ts > 0)
@@ -22425,6 +22440,30 @@
     catch (_) { return String(raw || '—'); }
   }
 
+  // v3 Phase 1z.209 — strict lowercase alias display for the
+  // Social/Guild/Hunter surfaces. Unlike _socialDisplayAlias /
+  // lbNormalizeAliasForDisplay (which honors the
+  // LB_ALIAS_DISPLAY_OVERRIDES map for personalization like
+  // `richie → Richie`), this helper enforces the product rule
+  // that visible aliases are lowercase EVERYWHERE in the Social
+  // tab. Stored data is never touched — backend payloads, local
+  // hb_guild_activity rows, and friend objects retain their
+  // original casing. This is a display-time normalization only.
+  //
+  // Use for: alias spans inside Guild Activity rows, Roster
+  // rows, lower Guild accordion friend rows, joined-Guild
+  // template, and incoming/outgoing friend requests. Do NOT
+  // pass rank labels, boss names, or event labels through here.
+  function _displayAliasLower(raw) {
+    if (raw === undefined || raw === null) return '—';
+    try {
+      const s = String(raw).replace(/\s+/g, '').toLowerCase();
+      return s.length ? s : '—';
+    } catch (_) {
+      return '—';
+    }
+  }
+
   // ── Verified-Only Duel Types (v3 Phase 1x.6) ──
   // Metadata + UI only. No scoring engine, no souls movement. When the
   // scoring engine ships, `duel.duel_type` decides which verified
@@ -24853,7 +24892,8 @@
     if (incoming.length) {
       parts.push('<div class="social-section-subhead">Incoming requests</div>');
       for (const f of incoming) {
-        const alias = _socialDisplayAlias(f.alias);
+        // v3 Phase 1z.209 — strict-lowercase alias display.
+        const alias = _displayAliasLower(f.alias);
         parts.push(
           // v3 Phase 1z.170 — incoming rows now carry data-alias so
           // the accept handler can record a 'friend_added' Guild Board
@@ -24876,7 +24916,8 @@
     if (outgoing.length) {
       parts.push('<div class="social-section-subhead">Outgoing</div>');
       for (const f of outgoing) {
-        const alias = _socialDisplayAlias(f.alias);
+        // v3 Phase 1z.209 — strict-lowercase alias display.
+        const alias = _displayAliasLower(f.alias);
         parts.push(
           '<div class="social-row friend-row friend-row--outgoing" data-friendship-id="' + esc(f.id) + '">' +
             _friendAvatarHtml(alias, 'muted') +
@@ -24908,7 +24949,8 @@
         friends.sort((a, b) => (_friendRankSortValue(b) - _friendRankSortValue(a)));
       }
       for (const f of friends) {
-        const aliasDisp = _socialDisplayAlias(f.alias);
+        // v3 Phase 1z.209 — strict-lowercase alias display.
+        const aliasDisp = _displayAliasLower(f.alias);
         // v3 Phase 1z.166 — public Duel surface fully removed.
         // Friend row no longer says "ready to duel" or shows a
         // Challenge button. Subtitle is the neutral guild copy
