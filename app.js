@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w71';
+  const APP_BUILD_TAG = '2.2.3-w72';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35527,81 +35527,138 @@
     // Restructured (v3 Phase 1z.8) so today's bail conditions don't
     // also kill the yesterday-backfill call at the bottom. Each
     // guard `skip` rather than `return`.
+    //
+    // v3 Phase 1z.205 — Stale-auto correction made DEFENSIVE.
+    // Real device debug confirmed a false-seal case where
+    // walk-threshold-check fired with meets:false (final else
+    // branch) but the Daily Walk card was visually sealed. That
+    // means isChecked(walk.id) returned false at eval time but the
+    // DOM still carried .completed — a DOM/storage divergence the
+    // 1z.133 path could never catch because its correction was
+    // gated INSIDE the `else if (isChecked)` branch.
+    //
+    // New shape: compute (storedChecked, domCompleted, autoMarker,
+    // appDateKey, healthDateKey) up front; log walk-date-key-state
+    // + walk-already-checked-eval ALWAYS; branch correction by the
+    // truth-table below. Manual completions stay protected (no
+    // marker → skip + log, no unseal).
     let didTodaySeal = false;
     if (isAutoVerifyDisabled() || !walk) {
       _addHealthVerifyBreadcrumb('walk-skip', {
         reason: isAutoVerifyDisabled() ? 'auto-verify-paused' : 'habit-not-in-list'
       });
-    } else if (isChecked(walk.id)) {
-      // v3 Phase 1z.133 — stale auto-verification correction.
-      // Mirrors the 1z.123 Sleep false-positive fix. If walk is
-      // currently checked via auto-verify AND current device-local
-      // today's HealthKit step count is below the threshold, unseal
-      // so the user is never shown a sealed walk while Apple Health
-      // says they only walked 366 steps today.
-      //
-      // Why this can happen: the streak/check anchor (`today`,
-      // line 8108) is PT-aligned for global streak fairness, but
-      // Health.getStepsToday() uses device-local-today. For users
-      // east of PT (Eastern, Central, Europe, etc.), between PT
-      // midnight and device-local midnight there's a window where
-      // a prior seal (recorded under PT-Friday) is still indexed
-      // as `completions[today]` but the device-local Saturday only
-      // has a handful of steps. Symptom from TestFlight: 1:34 AM
-      // Eastern Saturday → app shows "Daily walk 8,000 steps ✅"
-      // even though Apple Health shows 366 steps for Saturday.
-      //
-      // Fix: revalidate against the same step count we already
-      // fetched above. If walk was auto-verified (not manually
-      // checked) AND current steps < threshold → uncheck +
-      // clearAutoVerify. Uses uncheck() + clearAutoVerify() directly
-      // (NOT toggleHabit's markUnchecked path) so the habit can
-      // re-seal later if the user actually walks past their goal.
-      // markUnchecked is for user-intent rejection; this path is
-      // system data correction.
-      const threshold = getHabitStepGoal(walk);
-      const isAutoVerified = AUTO_VERIFY.isAutoVerifiedToday(walk.id);
-      if (isAutoVerified && steps < threshold) {
-        try {
-          uncheck(walk.id);
-          AUTO_VERIFY.clearAutoVerify(walk.id);
-          const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
-          if (li) {
-            li.classList.remove('completed');
-            const cb = li.querySelector('.habit-cb');
-            if (cb) cb.classList.remove('checked');
-          }
-          _addHealthVerifyBreadcrumb('walk-unsealed-stale-auto', {
-            steps, threshold, source: 'auto-verify-revalidate',
-          });
-          if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
-        } catch (e) {
-          _addHealthVerifyBreadcrumb('walk-unseal-threw', {
-            err: String(e && e.message || e),
-          });
-        }
-      } else {
-        _addHealthVerifyBreadcrumb('walk-skip', {
-          reason: 'already-checked',
-          isAutoVerified, steps, threshold,
-        });
-      }
-    } else if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) {
-      _addHealthVerifyBreadcrumb('walk-skip', { reason: 'user-unchecked-today' });
     } else {
       const threshold = getHabitStepGoal(walk);
-      _addHealthVerifyBreadcrumb('walk-threshold-check', { steps, threshold, meets: steps >= threshold });
-      if (steps >= threshold) {
-        AUTO_VERIFY.recordAutoVerify(walk.id, {
-          source: 'healthkit-steps',
-          value: steps,
-          threshold: threshold,
-        });
+      const meets     = steps >= threshold;
+      const storedChecked = isChecked(walk.id);
+      // DOM probe: card may visually show sealed even when storage
+      // disagrees (1z.205 root-cause vector). Both classes are
+      // checked because different render paths set different ones.
+      let domCompleted = false;
+      try {
         const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
-        toggleHabit(walk.id, li, { silent: true });
-        console.log('[Health] auto-verified Daily walk:', steps, 'steps');
-        didTodaySeal = true;
-        _addHealthVerifyBreadcrumb('walk-sealed', { steps, threshold });
+        if (li) {
+          domCompleted = li.classList.contains('completed')
+                      || !!li.querySelector('.habit-cb.checked');
+        }
+      } catch (_) { domCompleted = false; }
+      const autoMarkerPresent = AUTO_VERIFY.isAutoVerifiedToday(walk.id);
+      const appDateKey = today; // module-level PT-anchored anchor
+      const healthDateKey = (typeof getDeviceLocalDate === 'function')
+        ? getDeviceLocalDate()
+        : null;
+
+      // Date-key + already-checked diagnostics fire ALWAYS so we
+      // can explain any future below-threshold sealed state from
+      // device debug alone.
+      _addHealthVerifyBreadcrumb('walk-date-key-state', {
+        appDateKey:    appDateKey,
+        healthDateKey: healthDateKey,
+        dateKeyMatch:  (appDateKey === healthDateKey),
+      });
+      _addHealthVerifyBreadcrumb('walk-already-checked-eval', {
+        steps, threshold, meets,
+        storedChecked, domCompleted, autoMarkerPresent,
+      });
+
+      const appearsSealed = storedChecked || domCompleted;
+
+      if (appearsSealed && !meets) {
+        // Defensive unseal path. Runs whether storage OR DOM (or
+        // both) say the walk is sealed, since either alone can be
+        // the user-visible truth. Manual completions protected
+        // (no auto marker → diagnostic-only skip).
+        _addHealthVerifyBreadcrumb('walk-auto-marker-state', {
+          autoMarkerPresent, storedChecked, domCompleted,
+          source: appearsSealed ? (storedChecked ? 'storage' : 'dom-only') : 'none',
+        });
+        if (autoMarkerPresent) {
+          try {
+            if (storedChecked) {
+              uncheck(walk.id);
+            }
+            AUTO_VERIFY.clearAutoVerify(walk.id);
+            const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+            if (li) {
+              li.classList.remove('completed');
+              const cb = li.querySelector('.habit-cb');
+              if (cb) cb.classList.remove('checked');
+            }
+            _addHealthVerifyBreadcrumb('walk-unsealed-stale-auto', {
+              steps, threshold,
+              storedChecked, domCompleted,
+              source: storedChecked ? 'auto-verify-revalidate' : 'dom-only-divergence',
+            });
+            if (currentTab === 'habits') renderHabits({ skipSideEffects: true });
+          } catch (e) {
+            _addHealthVerifyBreadcrumb('walk-unseal-threw', {
+              err: String(e && e.message || e),
+            });
+          }
+        } else if (storedChecked) {
+          // Storage says checked + no auto marker = manual seal.
+          // NEVER auto-unseal a manual completion.
+          _addHealthVerifyBreadcrumb('walk-unseal-skip-manual', {
+            steps, threshold, storedChecked, domCompleted,
+          });
+        } else {
+          // DOM-only seal without storage AND without auto marker.
+          // Conservative: don't unseal storage (nothing to unseal),
+          // but log so we can see this case in future debug. Don't
+          // touch the DOM either — a renderHabits cycle should fix
+          // the visual on its own next paint.
+          _addHealthVerifyBreadcrumb('walk-unseal-skip-no-auto-marker', {
+            steps, threshold, storedChecked, domCompleted,
+            alreadyChecked: storedChecked,
+          });
+        }
+      } else if (appearsSealed && meets) {
+        // Already sealed AND steps still meet threshold — nothing
+        // to correct; log skip for symmetry with the not-sealed
+        // path below.
+        _addHealthVerifyBreadcrumb('walk-skip', {
+          reason: 'already-checked',
+          isAutoVerified: autoMarkerPresent,
+          storedChecked, domCompleted,
+          steps, threshold,
+        });
+      } else if (AUTO_VERIFY.wasUncheckedToday('Daily walk')) {
+        _addHealthVerifyBreadcrumb('walk-skip', { reason: 'user-unchecked-today' });
+      } else {
+        // Not sealed → standard threshold-check seal path.
+        _addHealthVerifyBreadcrumb('walk-threshold-check', { steps, threshold, meets });
+        if (meets) {
+          AUTO_VERIFY.recordAutoVerify(walk.id, {
+            source: 'healthkit-steps',
+            value: steps,
+            threshold: threshold,
+          });
+          const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+          toggleHabit(walk.id, li, { silent: true });
+          console.log('[Health] auto-verified Daily walk:', steps, 'steps');
+          didTodaySeal = true;
+          _addHealthVerifyBreadcrumb('walk-sealed-auto', { steps, threshold });
+        }
       }
     }
 

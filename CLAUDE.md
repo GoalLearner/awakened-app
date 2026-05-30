@@ -4,7 +4,84 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.204 Client public-event submit + Guild Activity merge (read this first)
+## May 29, 2026 — 1z.205 Daily Walk stale-seal defensive correction (read this first)
+
+**TL;DR.** Frontend-only fix. The 1z.133 stale-auto correction was gated INSIDE the `else if (isChecked(walk.id))` branch, so it could never run when `isChecked` returned false even though the card was visually sealed (DOM/storage divergence — the real-device debug from w71). New shape: compute `(storedChecked, domCompleted, autoMarkerPresent, appDateKey, healthDateKey)` up front, log diagnostics ALWAYS, and unseal whenever either storage OR DOM says the walk is sealed AND HK steps < 8K AND the auto-verify marker is present. Manual completions stay protected.
+
+**Root cause (from real-device w71 debug).**
+- `walk-steps: 4505` (Apple Health agrees user has not hit 8K).
+- `walk-threshold-check: { steps: 4505, threshold: 8000, meets: false }`.
+- That breadcrumb only fires from the **final `else` branch** in `autoVerifyWalk`, which means `isChecked(walk.id)` returned **false** at eval time.
+- But the card was visually sealed → DOM `.completed` class persisted from a previous render cycle without a matching storage row.
+- The 1z.133 stale-auto correction lived INSIDE the `else if (isChecked)` branch → it never ran for this divergence vector → seal persisted.
+
+**`today` anchoring confirmed PT-aligned.** `isChecked(id)` reads `completions[today]` where `today` is the module-level `let today = getPTDate()` (line 10694), set once at module load and reassigned once in `init()`. Apple Health date in the screenshot ("May 29") matches the user's local Friday and matches PT (user is on the West Coast → PT = device-local for this case), so date-key drift wasn't the trigger here. The DOM-side persistence WAS. New `walk-date-key-state` breadcrumb logs both keys + `dateKeyMatch` so future east-coast / Europe / midnight cases produce a self-explanatory debug.
+
+**Files modified.**
+- `app.js` — restructured the `else if (isChecked(walk.id))` block of `autoVerifyWalk` (~line 35535):
+  - Computes `storedChecked`, `domCompleted` (via `.habit-item[data-id="..."]` `.completed` class + `.habit-cb.checked`), `autoMarkerPresent`, `appDateKey`, `healthDateKey` up front.
+  - Emits `walk-date-key-state` + `walk-already-checked-eval` breadcrumbs ALWAYS, even when no correction action is needed.
+  - Treats `appearsSealed = storedChecked || domCompleted` as the gating predicate for the stale-auto path (was previously `storedChecked` only).
+  - When `appearsSealed && !meets`:
+    - `autoMarkerPresent` → uncheck (if stored) + clear marker + force DOM `.completed` off + log `walk-unsealed-stale-auto` with `source: 'auto-verify-revalidate' | 'dom-only-divergence'`.
+    - No marker + storedChecked → manual seal protected; log `walk-unseal-skip-manual` (NEVER auto-unseal manual).
+    - No marker + DOM-only → log `walk-unseal-skip-no-auto-marker` (conservative; don't unseal storage that doesn't exist, don't touch DOM — next `renderHabits` cleans it).
+  - When `appearsSealed && meets` → log `walk-skip reason: already-checked` (existing behavior).
+  - When not sealed → existing `walk-threshold-check` + `walk-sealed-auto` seal path (rename from `walk-sealed` for symmetry with the test-case names in the 1z.205 prompt).
+- `index.html` — `app.js?v=525`.
+- `sw.js` — `CACHE_VERSION = 'v5.411'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w72`, `app.js?v=525`, `auth.js?v=20` (unchanged), `sw.js CACHE_VERSION v5.411`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Truth table for the new correction.**
+
+| storedChecked | domCompleted | autoMarker | meets | Action | Breadcrumb |
+|---|---|---|---|---|---|
+| ✓ | ✓/✗ | ✓ | ✗ | uncheck + clear marker + clear DOM | `walk-unsealed-stale-auto` (`auto-verify-revalidate`) |
+| ✗ | ✓ | ✓ | ✗ | clear marker + clear DOM (no storage change) | `walk-unsealed-stale-auto` (`dom-only-divergence`) |
+| ✓ | ✓/✗ | ✗ | ✗ | **No unseal** (manual seal protected) | `walk-unseal-skip-manual` |
+| ✗ | ✓ | ✗ | ✗ | **No unseal** (no storage to clean; DOM left for next renderHabits) | `walk-unseal-skip-no-auto-marker` |
+| ✓/✗ | ✓/✗ | — | ✓ | No correction needed | `walk-skip reason:already-checked` |
+| ✗ | ✗ | — | ✓ | Seal | `walk-threshold-check` + `walk-sealed-auto` |
+| ✗ | ✗ | — | ✗ | No-op | `walk-threshold-check` |
+
+**Privacy posture.** All breadcrumb fields are bounded counts / booleans / fixed-shape date keys (`YYYY-MM-DD`). Steps + threshold are public per-user numerics (already used by existing 1z.133 breadcrumbs). No raw HealthKit samples. No user identifiers. No tokens. No card identities. No habit names beyond the fixed `'Daily walk'` token already used by `AUTO_VERIFY.wasUncheckedToday`.
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No Daily Walk threshold change (`getHabitStepGoal(walk)` still drives `threshold`).
+- No HealthKit permission string change.
+- No leaderboard step submission change.
+- No public event submit / public achievement summary changes.
+- No boss / rank / economy / reward / inventory / drop odds changes.
+- **Manual completions are NEVER auto-unsealed.** The `autoMarkerPresent` check is the manual/auto gate; missing marker → no storage change.
+- No friend add/remove / auth / Duel changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**What this fix does NOT do.**
+- Does NOT touch `today` reassignment / midnight rollover handler. The PT/device-local anchoring continues exactly as today. The new `walk-date-key-state` breadcrumb makes any future midnight-rollover regressions visible in debug at the first `autoVerifyWalk` tick.
+- Does NOT reach into completions storage to fabricate seals on behalf of older sessions.
+- Does NOT modify the `renderHabits` repaint cycle.
+
+**Rollback.** Single revert: restore the pre-1z.205 `else if (isChecked(walk.id))` body in `autoVerifyWalk`. The diagnostic breadcrumbs added in this train fall away with the same revert. No DB / backend / storage / other-surface touched.
+
+**Manual QA (w72).**
+1. Cold-launch w72. Confirm `"build": "2.2.3-w72"`.
+2. Open the Habits tab. The `autoVerifyWalk` tick fires.
+3. Copy Debug Info shows:
+   - `walk-entry`, `walk-perm-status`, `walk-steps`, `walk-date-key-state` with `appDateKey` and `healthDateKey` (should match for West Coast users; may differ for Europe / Eastern users near PT midnight).
+   - `walk-already-checked-eval` with `storedChecked`, `domCompleted`, `autoMarkerPresent`.
+4. Reproduce the original bug: with Daily Walk auto-sealed at 8K+ earlier, then steps don't climb further by the next eval (e.g. iPhone left at home): on the next walk eval, breadcrumb shows `walk-unsealed-stale-auto` and the card unseals.
+5. With Daily Walk manually sealed (long-press toggle by user) and steps < 8K: breadcrumb shows `walk-unseal-skip-manual`. Card stays sealed.
+6. With Daily Walk neither stored nor DOM-completed and steps < 8K: breadcrumb shows `walk-threshold-check meets:false`. No correction. No fake seal.
+7. With Daily Walk DOM-completed only (storage was wiped or migrated), steps < 8K, no auto marker: breadcrumb shows `walk-unseal-skip-no-auto-marker`. Next `renderHabits` cycle clears the DOM `.completed` class on its own.
+8. With Daily Walk auto-sealed AND steps still >= 8K: breadcrumb shows `walk-skip reason:already-checked`. No unseal.
+9. Hit 8K steps fresh: breadcrumb shows `walk-threshold-check meets:true` then `walk-sealed-auto`. Card seals.
+10. Hunter Feed / public-rank submit / public achievement submit / Guild Activity / Roster / Sleep auto-verify / Bedtime / Boss eval — all unchanged.
+
+---
+
+## May 29, 2026 — 1z.204 Client public-event submit + Guild Activity merge
 
 **TL;DR.** Frontend-only train. Wires the 1z.200/1z.203 backend public-event endpoints into the client. Boss kills, rank-ups, and BUCKETED step milestones now submit via a debounced 5s queue. Guild Activity → Guild mode fetches `/v1/friends/activity?limit=30` and renders accepted-friend events (with self) in the existing date-grouped accordion. Hunter mode unchanged. **Exact step counts never leave the device.**
 
