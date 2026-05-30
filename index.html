@@ -1581,6 +1581,17 @@
       <div id="hunter-build-summary" class="hunter-build-summary"></div>
     </section>
 
+    <!-- v3 Phase 1z.211 — EQUIPMENT BONUSES. Read-only aggregation
+         of structured stat bonuses (str/vit/int/focus/will/wlt)
+         from currently equipped CARDS. Populated by
+         renderHunterBuildBonuses() which is chained off
+         renderHunterBuildSummary() so every existing equip /
+         unequip / picker / boot path refreshes both cards. -->
+    <section class="hunter-build-section hunter-build-section--bonuses">
+      <h3 class="hunter-build-section-label">EQUIPMENT BONUSES</h3>
+      <div id="hunter-build-bonuses" class="hunter-build-bonuses"></div>
+    </section>
+
     <p class="equipment-modal-footer">Your gear reflects the discipline you have earned.</p>
   </div>
 
@@ -2466,7 +2477,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=530"></script>
+  <script src="app.js?v=531"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

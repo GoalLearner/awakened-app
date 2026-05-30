@@ -17807,6 +17807,68 @@ body.reveal-locked { overflow: hidden; }
   font-size: 1.2rem;
   filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.45));
 }
+
+/* ─── v3 Phase 1z.211 — Equipment bonuses block ─────────────
+   Mirrors the .hunter-build-summary card so the two panels
+   read as a pair under the EQUIPMENT BUILD grid. Two-column
+   grid lays out non-zero stat rows densely on mobile width;
+   long rosters drop to a single column gracefully. Positive
+   totals glow gold, negatives glow violet to match the
+   existing souls/spend palette. */
+.hunter-build-bonuses {
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  background: rgba(15, 15, 36, 0.85);
+  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 18px;
+}
+.hbb-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.74rem;
+  padding: 2px 0;
+}
+.hbb-label {
+  color: var(--text-secondary);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+.hbb-val {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.hbb-val--pos {
+  color: var(--gold-bright, var(--gold, #f5b842));
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.35);
+}
+.hbb-val--neg {
+  color: #a78bfa;
+  text-shadow: 0 0 6px rgba(167, 139, 250, 0.35);
+}
+.hbb-empty {
+  grid-column: 1 / -1;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #6b7280);
+  text-align: center;
+  padding: 4px 0 2px;
+}
+/* Single-column drop for narrow viewports where two stat
+   columns would crowd the labels. */
+@media (max-width: 360px) {
+  .hunter-build-bonuses {
+    grid-template-columns: 1fr;
+    gap: 4px 0;
+  }
+}
 .hbs-val--muted {
   color: var(--text-secondary);
   font-weight: 500;

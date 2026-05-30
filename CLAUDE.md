@@ -4,7 +4,80 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 29, 2026 — 1z.209 Lowercase alias display across Social/Guild surfaces (read this first)
+## May 29, 2026 — 1z.211 Equipment bonuses card in Armory (read this first)
+
+**TL;DR.** Frontend display-only addition. New **EQUIPMENT BONUSES** card sits below the Build Summary in the Armory modal and aggregates the six structured stat bonuses (`str`, `vit`, `int`, `focus`, `will`, `wlt`) already authored on every `CARDS[id].bonuses` entry. Only non-zero totals render. Updates automatically on every equip / unequip / boot pass. No item balance, drop rates, rewards, economy math, or schema changes.
+
+**Bonus aggregation source.** Same `CARDS[id].bonuses = { str, vit, int, focus, will, wlt }` schema that already powers `getBuildDominantPath()` (used by the Dominant Path row in Build Summary). No new fields, no recomputation — this is a render-time sum of existing authored values across the currently-equipped 8-slot Hunter Build.
+
+**Files modified (frontend only).**
+- `app.js` —
+  - New `HUNTER_BUILD_BONUS_STATS` ordered array (the six canonical stat keys + their uppercase mono labels).
+  - `_aggregateBuildBonuses()` walks `getHunterBuild().slots`, looks up each card in `CARDS`, sums numeric `card.bonuses[stat]` per stat. Safely ignores missing cards, missing `bonuses` blobs, non-finite values, and `0`s.
+  - `_formatBuildBonusValue(v)` returns `'+N'` for positives, `'−N'` for negatives, `null` for `0` / non-finite (so the renderer skips the row).
+  - `renderHunterBuildBonuses()` reads `#hunter-build-bonuses`, emits one `.hbb-row` per non-zero stat in canonical order, or a single italic empty state (`Equip gear to reveal your bonuses.`) when all six totals are zero / no items equipped. Exposed on `window.renderHunterBuildBonuses` for debug.
+  - `renderHunterBuildSummary()` now calls `renderHunterBuildBonuses()` at the end so the new card stays in lock-step with the existing summary card. **No new call sites** at any of the five existing equip / unequip / picker / boot triggers — the chaining handles it.
+- `index.html` — added `<section class="hunter-build-section hunter-build-section--bonuses">` with `<h3>EQUIPMENT BONUSES</h3>` and `<div id="hunter-build-bonuses">` between BUILD SUMMARY and the flavor footer. `app.js?v=531`.
+- `styles.css` — `.hunter-build-bonuses` mirrors `.hunter-build-summary` (navy card, 14px radius, subtle border). Two-column grid for non-zero stat rows; positive values glow gold (matching the Build Summary `hbs-val--power` palette), negative values glow violet (matching the souls-spend palette). Drops to single-column at ≤360px viewport. `.hbb-empty` is an italic muted line for the zero state.
+- `sw.js` — `CACHE_VERSION = 'v5.417'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w78`, `app.js?v=531`, `auth.js?v=20` (unchanged), `sw.js CACHE_VERSION v5.417`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Stat label table.**
+
+| Internal key | Display label | Tagline (for reference; not shown in this card) |
+|---|---|---|
+| `str` | `STR` | Strength |
+| `vit` | `VIT` | Vitality |
+| `int` | `INT` | Intellect |
+| `focus` | `FOCUS` | Focus |
+| `will` | `WILL` | Willpower |
+| `wlt` | `WLT` | Wealth |
+
+The Dominant Path row in BUILD SUMMARY already uses these same canonical labels, so the two cards read as a coherent pair.
+
+**Defensive behaviour.**
+- Missing card definition for an equipped id → skipped, counted in `skippedMalformed` (internal only; not surfaced).
+- Missing `bonuses` object on a card → skipped (no fake zeros injected).
+- Non-finite / NaN bonus values → ignored.
+- All zero totals → italic empty state.
+- DOM container not mounted (older bundle, no Armory open) → silent no-op.
+
+**What's NOT changed.**
+- No `CARDS[id].bonuses` values mutated. No item authored.
+- No `getHunterBuild` / equip / unequip logic touched.
+- No `aggregateBuildPower` / `getBuildDominantPath` / `countEquippedBuildItems` semantics changed.
+- No drop rates, ultra-rare odds, reward math, or souls economy.
+- No backend / D1 / migration / Codemagic / archive / upload.
+- No friend / Roster / Guild Activity / public event / rank / HealthKit / leaderboard / Duel paths touched.
+- `auth.js` unchanged → `auth.js?v=20` stays.
+- `simulated-leaderboard.js` unchanged → `?v=7` stays.
+
+**Rollback.** Four independent reverts:
+1. Drop the new `<section>` block from `index.html`.
+2. Remove `renderHunterBuildBonuses()`, `_aggregateBuildBonuses()`, `_formatBuildBonusValue()`, and `HUNTER_BUILD_BONUS_STATS` from `app.js`.
+3. Remove the trailing `renderHunterBuildBonuses()` call inside `renderHunterBuildSummary`.
+4. Delete the `.hunter-build-bonuses` / `.hbb-*` CSS block.
+
+Then revert the knob bumps (`w78 → w77`, `v=531 → 530`, `v5.417 → v5.416`). No DB / backend / storage touched.
+
+**Manual QA (w78).**
+1. Cold-launch w78 signed-in. Confirm `"build": "2.2.3-w78"`.
+2. Open the Armory modal.
+3. Existing **EQUIPMENT BUILD** grid renders unchanged (8 slots, same art, same locked / empty / equipped states).
+4. **BUILD SUMMARY** still shows Gear Power, Dominant Path, Equipped count, and the optional Locked Slots hint.
+5. New **EQUIPMENT BONUSES** card appears immediately below Build Summary.
+6. With nothing equipped: italic line `Equip gear to reveal your bonuses.`.
+7. Equip one item (e.g. Dream-Woven Hood, `vit +1, focus +1`): card refreshes to show `VIT +1` and `FOCUS +1` in gold.
+8. Equip more items: bonuses accumulate row-by-row across the six stats. Zero rows stay hidden.
+9. Unequip an item: bonus totals decrement; rows that hit zero disappear; layout settles without flicker.
+10. Resize / iPhone Mini width (≤360px): the card collapses to single-column gracefully.
+11. Tap close (`✕`) → reopen Armory → bonuses card rerenders correctly.
+12. Confirm no Social tab / Guild / Roster / Hunter Feed / public event / Habits / Bosses / Leaderboard / HealthKit / Add Friend behavior changed.
+
+---
+
+## May 29, 2026 — 1z.209 Lowercase alias display across Social/Guild surfaces
 
 **TL;DR.** Frontend display-only normalization. Visible aliases on every Social/Guild surface now render strictly lowercase (`rendiesel`, not `RenDIESEL`). Rank labels (`D I`, `S+`), boss names (`The Insomniac`), event labels, button copy, and the `find a hunter…` placeholder are untouched. Stored data — backend rows in `public_achievement_events` / `public_profile_summary`, local `hb_guild_activity`, and friend objects — keeps its original casing.
 

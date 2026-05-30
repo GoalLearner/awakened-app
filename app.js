@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w77';
+  const APP_BUILD_TAG = '2.2.3-w78';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19009,7 +19009,99 @@
             '<span class="hbs-val hbs-val--muted">' + lockedCount + ' awaiting rank-up</span>' +
           '</div>'
         : '');
+    // v3 Phase 1z.211 — keep the EQUIPMENT BONUSES card in lock-
+    // step with the Build Summary card. The five existing
+    // renderHunterBuildSummary() call sites (boot, equip,
+    // unequip, build picker, build modal open) now also refresh
+    // the bonuses card without needing per-site changes.
+    try { renderHunterBuildBonuses(); } catch (_) {}
   }
+
+  // ─── v3 Phase 1z.211 — Equipment bonuses summary ────────────
+  //
+  // Aggregates the six structured stat bonuses already authored
+  // on every CARDS entry (`bonuses: { str, vit, int, focus, will,
+  // wlt }`) across the currently equipped Hunter Build, and
+  // renders a compact mono stat table beneath the Build Summary.
+  // READ-ONLY. No card definitions / inventory / equip-state /
+  // economy / rewards / drop logic are touched.
+  //
+  // Stats with zero contribution are hidden so the panel stays
+  // signal-rich. The labels are uppercase-mono (`STR`, `VIT`,
+  // `INT`, `FOCUS`, `WILL`, `WLT`) — matching the Dominant Path
+  // copy in BUILD SUMMARY so the two panels read as a pair.
+  // Empty state (no items equipped or all bonuses zero) renders
+  // a single muted line: "Equip gear to reveal your bonuses."
+
+  const HUNTER_BUILD_BONUS_STATS = [
+    { key: 'str',   label: 'STR'   },
+    { key: 'vit',   label: 'VIT'   },
+    { key: 'int',   label: 'INT'   },
+    { key: 'focus', label: 'FOCUS' },
+    { key: 'will',  label: 'WILL'  },
+    { key: 'wlt',   label: 'WLT'   },
+  ];
+
+  function _aggregateBuildBonuses() {
+    const totals = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    let equippedCount = 0;
+    let skippedMalformed = 0;
+    try {
+      const build = getHunterBuild();
+      const slots = (build && Array.isArray(build.slots)) ? build.slots : [];
+      for (let i = 0; i < slots.length; i++) {
+        const cid = slots[i];
+        if (!cid) continue;
+        const card = CARDS[cid];
+        if (!card || !card.bonuses || typeof card.bonuses !== 'object') {
+          if (cid) skippedMalformed++;
+          continue;
+        }
+        equippedCount++;
+        for (const s of HUNTER_BUILD_BONUS_STATS) {
+          const v = Number(card.bonuses[s.key]);
+          if (!Number.isFinite(v) || v === 0) continue;
+          totals[s.key] += Math.trunc(v);
+        }
+      }
+    } catch (_) {
+      // Defensive: leave totals as zeros, render the empty state.
+    }
+    return { totals: totals, equippedCount: equippedCount, skippedMalformed: skippedMalformed };
+  }
+
+  function _formatBuildBonusValue(v) {
+    if (!Number.isFinite(v) || v === 0) return null;
+    return (v > 0 ? '+' : '−') + Math.abs(v).toLocaleString('en-US');
+  }
+
+  function renderHunterBuildBonuses() {
+    const el = document.getElementById('hunter-build-bonuses');
+    if (!el) return; // DOM not mounted (older bundle) — silent no-op.
+    const agg = _aggregateBuildBonuses();
+    // Build the visible non-zero rows in canonical stat order.
+    let rowsHtml = '';
+    let visible = 0;
+    for (const s of HUNTER_BUILD_BONUS_STATS) {
+      const v = agg.totals[s.key];
+      const formatted = _formatBuildBonusValue(v);
+      if (!formatted) continue;
+      visible++;
+      const valCls = (v > 0) ? ' hbb-val--pos' : ' hbb-val--neg';
+      rowsHtml +=
+        '<div class="hbb-row">' +
+          '<span class="hbb-label">' + esc(s.label) + '</span>' +
+          '<span class="hbb-val' + valCls + '">' + esc(formatted) + '</span>' +
+        '</div>';
+    }
+    if (visible === 0) {
+      el.innerHTML =
+        '<div class="hbb-empty">Equip gear to reveal your bonuses.</div>';
+      return;
+    }
+    el.innerHTML = rowsHtml;
+  }
+  try { window.renderHunterBuildBonuses = renderHunterBuildBonuses; } catch (_) {}
 
   // ─── Item picker ────────────────────────────────────────────
   // Opens when user taps an empty unlocked build slot. Shows
