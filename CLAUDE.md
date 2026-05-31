@@ -4,7 +4,70 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.223A Backend: generic public ultra-rare drop event (read this first)
+## May 31, 2026 — 1z.223C Frontend: ultra-rare public submit + Guild renderer (read this first)
+
+**TL;DR.** Frontend-only train. After the Hunter-mode local row writes `"You looted <cardName>"` privately, the client now also queues a generic privacy-safe public event to the backend (1z.223A/B), which surfaces in friends' Guild Activity as `<alias> looted an ultra-rare item`. **No card name, card id, slot, rarity tier, inventory identity, or pity counter state is ever transmitted.** Hunter mode is unchanged.
+
+**Backend dependency.** 1z.223A deployed in Phase 1z.223B (Worker version ID `d978f37b-02d4-4e1c-95ae-5cabcbe0d829`). The backend enforces the privacy contract at the validation layer; this train provides the only conformant client.
+
+**Files modified.**
+- `app.js` —
+  - **New helper `_publicUltraRareNonce(cardId)`**: generates a per-(device, card-acquisition) random nonce, persisted in `localStorage` under `hb_public_ultra_rare_nonce_map`. The `cardId` is used ONLY as a local lookup key; the nonce is `<base36 timestamp>-<base36 random>` with no semantic content. Re-opens of the same reveal modal coalesce server-side via `UNIQUE(user_id, client_event_id)`; distinct drops produce distinct nonces. FIFO-bounded at 200 entries.
+  - **Public submit hook at `openCardRevealModal`** (~line 7439, immediately after the existing `recordGuildActivity('ultra_rare_drop', ...)` local write): builds the payload `{ eventType: 'ultra_rare_drop', eventKey: 'ultra_rare', eventLabel: 'looted an ultra-rare item', eventValue: null, rarity: null, clientEventId: 'ultra_rare:' + nonce, clientCreatedAt: ISO }` and queues via `_queuePublicAchievementEvent`. No `card.id`, no `card.name`, no slot, no rarity tier transmitted. Wrapped in try/catch so any failure silently degrades to "local-only" — Hunter row still writes regardless.
+  - **`_friendActivityRowHtml` icon mapping**: added `'ultra_rare_drop'` case rendering ✦ (matches the local Hunter-mode glyph for visual consistency). Label always comes from `ev.eventLabel` (backend regex-validated to the canonical string).
+- `index.html` — `app.js?v=540`.
+- `sw.js` — `CACHE_VERSION = 'v5.426'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w87`, `app.js?v=540`, `auth.js?v=20` (unchanged), `styles.css?v=305` (unchanged — no CSS), `sw.js CACHE_VERSION v5.426`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Exact payload shape (transmitted to backend):**
+
+```js
+{
+  eventType:       'ultra_rare_drop',
+  eventKey:        'ultra_rare',
+  eventLabel:      'looted an ultra-rare item',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'ultra_rare:<base36ts>-<base36rand>',
+  clientCreatedAt: '<ISO timestamp>',
+}
+```
+
+**Privacy verification.** `grep` across all four `_queuePublicAchievementEvent` call sites in `app.js` confirms no payload contains `cardId`, `cardName`, `card.id`, `card.name`, `slot`, or `metadata`. The only `rarity:` values are `null`, `null`, `bossRank` (boss kill — not card rarity), `null` (the new ultra-rare branch).
+
+**Behavior preserved.**
+- Hunter Activity row `You looted Crown of Deep Rest` unchanged (local-only, displays exact `cardName` from `recordGuildActivity` payload).
+- `boss_kill`, `rank_up`, `step_milestone_bucket` public events unchanged.
+- Date grouping, See More, Hunter/Guild toggle, backend-primary feed strategy all unchanged.
+- Add Friend / Remove Friend / Roster / rank badges / Hunter Feed superset all unchanged.
+- 1z.214 Habits perf, 1z.220+1z.220B overscroll containment, 1z.213 Sigil Grid Armory all unchanged.
+
+**Guard rails preserved.**
+- No backend deploy.
+- No D1 mutation.
+- No migration.
+- No exact card name in public event.
+- No `cardId` / `cardName` / inventory identity transmitted.
+- No drop rate / item / boss / leaderboard / HealthKit / friend / auth / rank / XP / souls / Duel changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Three independent reverts: (1) drop the public submit block at `app.js:7440`, (2) drop the `_publicUltraRareNonce` helper, (3) drop the `'ultra_rare_drop'` icon case in `_friendActivityRowHtml`. Knobs revert to `w86 / app.js?v=539 / sw.js v5.425`. No DB / backend touched.
+
+**Manual QA (w87).**
+1. Cold-launch w87. Confirm `"build": "2.2.3-w87"`.
+2. Trigger an ultra-rare drop (or open the reveal modal for an existing ultra-rare via the inventory if the modal can be reopened).
+3. **Hunter mode** still shows `"You looted <exact card name>"` (e.g. `You looted Crown of Deep Rest`).
+4. **Guild mode** — after the next backend fetch (open Guild tab, wait for the submit queue's 5s debounce + the backend fetch to populate), the friend feed surfaces `<alias> looted an ultra-rare item` with the gold ✦ glyph. **No item name appears.**
+5. On a friend's device running w87, the same event surfaces in their Guild Activity within ~30s.
+6. Boss kill / rank-up / step bucket public events still work.
+7. Re-open the same reveal modal (debug path or queue replay): Copy Debug Info should show `public-event-queued` then `public-event-submit-ok` with `duplicateCount: 1` (backend deduped via UNIQUE).
+8. Force-quit + relaunch + re-trigger same card: same coalesced result.
+9. `localStorage.hb_public_ultra_rare_nonce_map` exists and maps `cardId → nonce`. No card name appears in localStorage — only the cardId (already on-device) and the random nonce.
+
+---
+
+## May 31, 2026 — 1z.223A Backend: generic public ultra-rare drop event
 
 **TL;DR.** Backend-only code+tests prep. New public event type `ultra_rare_drop` accepted by `POST /v1/users/me/public-achievement-events` with the strictest possible validation: every field is hard-pinned except `clientEventId` and `clientCreatedAt`. The only label that passes is the literal string **`"looted an ultra-rare item"`**. Card/item name, `cardId`, `metadata_json`, and any inventory identity are **NEVER** stored or returned. **No deploy. No D1 mutation. No migration (no schema change needed — `event_type` is already TEXT).** Frontend hook deferred to Phase 1z.223C.
 

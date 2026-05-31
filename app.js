@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w86';
+  const APP_BUILD_TAG = '2.2.3-w87';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4844,6 +4844,12 @@
       iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
     } else if (ev.eventType === 'step_milestone_bucket') {
       iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
+    } else if (ev.eventType === 'ultra_rare_drop') {
+      // v3 Phase 1z.223C — matches the local Hunter-mode ultra-rare
+      // ✦ glyph for visual consistency across the two surfaces. The
+      // label always comes from backend eventLabel ("looted an
+      // ultra-rare item") — never an exact card name.
+      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
     } else {
       iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
     }
@@ -7434,6 +7440,37 @@
           cardId:   card.id || null,
           cardName: card.name || 'an ultra-rare relic',
         }, 'ultra_rare_' + (card.id || ('anon_' + Date.now())));
+      }
+    } catch (_) {}
+
+    // v3 Phase 1z.223C — public friend activity submit (generic).
+    // The backend (1z.223A/B) accepts ultra_rare_drop ONLY with
+    // the strictly fixed privacy-safe shape: eventLabel "looted an
+    // ultra-rare item", eventKey "ultra_rare", eventValue null,
+    // rarity null. card.id, card.name, slot, rarity tier, pity
+    // counter state, and any inventory identity are NEVER
+    // forwarded — the Hunter-mode local row above retains the
+    // card name privately on this device only.
+    //
+    // clientEventId is built from a per-card-id LOCALSTORAGE nonce
+    // so repeat opens of the same reveal modal coalesce server-
+    // side via UNIQUE(user_id, client_event_id), while distinct
+    // ultra-rare drops produce distinct nonces. The card.id is
+    // used only as the LOCAL lookup key for the nonce map; the
+    // nonce itself is random and reveals no card identity.
+    try {
+      if (card && card.rarity === 'ultra_rare'
+          && typeof _queuePublicAchievementEvent === 'function') {
+        const nonce = _publicUltraRareNonce(card.id || null);
+        _queuePublicAchievementEvent({
+          eventType:       'ultra_rare_drop',
+          eventKey:        'ultra_rare',
+          eventLabel:      'looted an ultra-rare item',
+          eventValue:      null,
+          rarity:          null,
+          clientEventId:   'ultra_rare:' + nonce,
+          clientCreatedAt: new Date().toISOString(),
+        });
       }
     } catch (_) {}
 
@@ -12617,6 +12654,61 @@
     }
   }
   try { window.__queuePublicAchievementEvent = _queuePublicAchievementEvent; } catch (_) {}
+
+  // v3 Phase 1z.223C — privacy-safe per-card-id nonce for the
+  // public ultra-rare drop event. The nonce is generated once per
+  // (device, card-acquisition) pair and persisted in localStorage
+  // so re-opening the same reveal modal coalesces server-side via
+  // ON CONFLICT DO NOTHING (UNIQUE on user_id, client_event_id).
+  //
+  // The card.id is used ONLY as the LOCAL lookup key — it is
+  // never transmitted to the backend. The nonce itself is a
+  // random-ish string that reveals no card / item / inventory
+  // identity. Even if the localStorage map is exfiltrated, the
+  // backend-stored clientEventId is just `ultra_rare:<nonce>`
+  // with no semantic content.
+  const _PAE_ULTRA_RARE_NONCE_MAP_KEY = 'hb_public_ultra_rare_nonce_map';
+  function _publicUltraRareNonce(cardId) {
+    let map = null;
+    try {
+      const raw = localStorage.getItem(_PAE_ULTRA_RARE_NONCE_MAP_KEY);
+      if (raw) map = JSON.parse(raw);
+    } catch (_) { map = null; }
+    if (!map || typeof map !== 'object') map = {};
+    const lookupKey = (typeof cardId === 'string' && cardId) ? cardId : '__anon__';
+    if (typeof map[lookupKey] === 'string' && map[lookupKey].length > 0) {
+      return map[lookupKey];
+    }
+    // Fresh nonce. Format: <base36-timestamp>-<base36-random>
+    // Charset constraints: backend clientEventId regex is
+    // [A-Za-z0-9_:\-], and we already prefix `ultra_rare:`,
+    // so we only need to stay within [A-Za-z0-9-]. base36 +
+    // a single hyphen satisfies that.
+    const tsPart   = Date.now().toString(36);
+    const randPart = Math.floor(Math.random() * 0xffffffff).toString(36);
+    const nonce    = tsPart + '-' + randPart;
+    map[lookupKey] = nonce;
+    // Bound the map so it can't grow unbounded. 200 entries is
+    // far above any realistic per-device ultra-rare collection
+    // size, and the oldest entries are safe to drop because they
+    // only matter for backend dedupe of repeated reveal opens
+    // (and the backend has its own UNIQUE constraint as the
+    // second safety layer).
+    try {
+      const keys = Object.keys(map);
+      if (keys.length > 200) {
+        // FIFO trim: insertion order is preserved in JS object
+        // iteration for string keys, so dropping the first
+        // (keys.length - 200) keys removes the oldest entries.
+        for (let i = 0; i < keys.length - 200; i++) {
+          delete map[keys[i]];
+        }
+      }
+      localStorage.setItem(_PAE_ULTRA_RARE_NONCE_MAP_KEY, JSON.stringify(map));
+    } catch (_) {}
+    return nonce;
+  }
+  try { window.__publicUltraRareNonce = _publicUltraRareNonce; } catch (_) {}
 
   // Bucket detector for step milestones. Submits one
   // step_milestone_bucket event per (date, bucket) crossing.
