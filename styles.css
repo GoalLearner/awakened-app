@@ -431,6 +431,17 @@ h1 {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  /* v3 Phase 1z.220A — kill the iOS rubber-band at the top
+     and bottom boundaries of the Habits panel. Body has
+     `overscroll-behavior: none` already but that governs the
+     document scroller; iOS WebKit treats every overflow:auto
+     element as its own bounce surface, so the Habits panel
+     was still rubber-banding internally. `none` blocks the
+     inner bounce while `-webkit-overflow-scrolling: touch`
+     above preserves smooth momentum scrolling inside the
+     valid scroll range. Scoped to #main-scroll only — other
+     .tab-panel surfaces keep their current iOS-native feel. */
+  overscroll-behavior: none;
   padding: 14px 0 8px;
   scrollbar-width: none;
 }

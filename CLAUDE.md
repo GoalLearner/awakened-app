@@ -4,6 +4,76 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 30, 2026 — 1z.220A Habits panel overscroll lock (read this first)
+
+**TL;DR.** Frontend CSS-only fix. Kills the iOS rubber-band overscroll bounce at the top and bottom boundaries of the Habits scroll container (`#main-scroll`). Smooth momentum scrolling inside the valid range is preserved. Other tab panels keep their current iOS-native feel — change is scoped to Habits only.
+
+**Phase number choice.** Used `1z.220A` (subphase) to keep `1z.221` reserved for the later UTC weekly trust-tag retirement that follows the Pacific reset rollout.
+
+**Root cause.** Although `body` already has `overscroll-behavior: none`, that property governs the document-level scroller. iOS WebKit treats every `overflow: auto` element as its own bounce surface — and the Habits panel's `#main-scroll` had `-webkit-overflow-scrolling: touch` enabling momentum + rubber-band locally. Pulling down at the top or up past `+ Add Habits` revealed a large blank overscroll gap.
+
+**Fix.** One CSS property added to `#main-scroll`:
+
+```css
+overscroll-behavior: none;
+```
+
+This blocks the local rubber-band on iOS 16+ without removing the momentum-scroll feel inside the valid range. `-webkit-overflow-scrolling: touch` stays (preserves smooth scroll). Other tab panels (`.tab-panel` rule) are untouched.
+
+**Files modified.**
+- `styles.css` — `#main-scroll` rule gained `overscroll-behavior: none` (one property + comment block).
+- `app.js` — `APP_BUILD_TAG` bumped to `2.2.3-w85`.
+- `index.html` — `app.js?v=538`, `styles.css?v=304`.
+- `sw.js` — `CACHE_VERSION = 'v5.424'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w85`, `app.js?v=538`, `auth.js?v=20` (unchanged), `styles.css?v=304`, `sw.js CACHE_VERSION v5.424`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved.
+
+**Audited scroll container.** `<main id="main-scroll" class="tab-panel hidden" data-panel="habits">` at `index.html:451`. Contains `<ul id="habit-list" class="habit-list habit-list--codex">` and the empty state. The `#main-scroll` ID rule wins over the shared `.tab-panel` rule on the properties it overrides; adding `overscroll-behavior: none` here scopes the change to Habits.
+
+**Fix type.** **Pure CSS, one property.** No JS touch listener. No global body change. No tap-handler change.
+
+**Habits interactions preserved.**
+- Habit card taps (visual seal, XP float, card flash, streak pop) — unchanged.
+- Overflow `•••` menu — unchanged.
+- Auto-verify Notes modal route — unchanged.
+- `+ Add Habits` button + flow — unchanged.
+- 3-column habit grid, sealed/unsealed visuals, drag handles, manage button — all unchanged.
+- 1z.214 perf optimizations (rAF-coalesced metrics, fingerprint bail, HealthKit coalescing, delegated handlers, double-rAF animations) all intact.
+- Normal vertical scroll inside the valid range still works smoothly.
+
+**Other tabs preserved.**
+- Profile / Stats / History / Quests / Items / Social panels still scroll with iOS-native rubber-band at boundaries (current behavior).
+- 1z.220 tab-bar vertical lock remains intact.
+
+**Guard rails preserved.**
+- No backend / D1 / migration / Codemagic / archive / upload.
+- No `auth.js` / `simulated-leaderboard.js` change.
+- No habit toggle semantics, XP, streak, rank, class, particles, audio, HealthKit, boss, leaderboard, Social/Guild, Armory, inventory, auth, or public activity logic changes.
+- No JS touch listener added.
+- No global body or document-level CSS change.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Sequencing note.** w85 inherits the Pacific leaderboard frontend from 1z.219. **Do NOT TestFlight to production users until backend 1z.218 has deployed first.** 1z.221 (UTC tag retirement) follows ~2-3 weeks after the Pacific rollout.
+
+**Manual QA (w85).**
+1. Cold-launch w85. Confirm `"build": "2.2.3-w85"`.
+2. Open Habits tab.
+3. Scroll normally through the habit cards. Smooth momentum scroll works.
+4. At the top, pull downward firmly. No large blank gap. The grid stays anchored.
+5. At the bottom, scroll past `+ Add Habits` upward. No blank gap below the button.
+6. Tap a normal habit → visual seal, XP float, card flash, streak pop all fire.
+7. Rapid-tap 4–5 habits in quick succession → no lag, no missed taps (1z.214 perf intact).
+8. Tap `•••` overflow → context menu opens.
+9. Tap an auto-verify habit (Sleep / Daily walk / Workout) → Notes modal opens.
+10. Tap `+ Add Habits` → Add Habits flow opens.
+11. Switch to another tab (Stats, History, etc.) — that tab still scrolls with the original iOS-native feel.
+12. Return to Habits — overscroll lock still active.
+13. 1z.220 tab-bar vertical lock still works — the main icon rail does not bounce.
+
+**Rollback.** Single CSS revert: remove the `overscroll-behavior: none` line from `#main-scroll`. Plus knob bumps revert: `w85 → w84`, `app.js?v 538 → 537`, `styles.css?v 304 → 303`, `sw.js v5.424 → v5.423`. No DB / backend / storage touched.
+
+---
+
 ## May 30, 2026 — 1z.220 Tab bar vertical lock (read this first)
 
 **TL;DR.** Frontend CSS-only fix. Locks the main `<nav class="tab-bar">` icon rail so it can't be dragged vertically or rubber-band bounce on iOS WebKit. Tap behavior, active underline, icon order, icon art, and routing logic are all untouched.
