@@ -4,6 +4,70 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 30, 2026 — 1z.219 Frontend Pacific weekly reset helper (read this first)
+
+**TL;DR.** Frontend-only prep train. Mirrors the 1z.218 backend Pacific anchor on the client. New `lbGetCurrentWeekStartPT(nowMs)` computes Sunday-in-Pacific via `Intl.DateTimeFormat`. The four active call sites (two sum helpers, two cache invalidation reads, plus the leaderboard subhead copy generator) all swap to the Pacific helper. The submit path now tags weekly cumulative metrics with `'client_pacific_week_v1'` (matches the new backend trust allowlist). Subhead copy updates to "resets Sunday 12:00 AM Pacific Time." Knobs bumped to w83. **No deploy. No backend touch. No D1 mutation. Not shipped to TestFlight yet.**
+
+**Coordinated rollout still gated.** 1z.218 backend code is committed but undeployed (commit `55e9068`). 1z.219 frontend code is committed but unshipped (this train). Both must deploy in coordination — recommended sequence per the 1z.217 audit: deploy backend first, then ship the frontend release. The backend trust allowlist accepts BOTH the old (`client_sunday_utc_v2`) and new (`client_pacific_week_v1`) tags during the transition window, so a w82 client running against a 1z.218 backend keeps working, and a w83 client running against the pre-1z.218 backend would land its Pacific tag as untrusted (NULL) but still functional — the 1z.216 cross-week guard handles the safety. The clean order is still backend-first.
+
+**Files modified.**
+- `app.js` —
+  - New `_PT_DOW_BACK` constant + `_getPTDateParts()` lazy-cached `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', weekday: 'short', y/m/d: 2-digit })`. The formatter is constructed once at first call and reused for every subsequent call — constructing one per call is expensive on iOS WebKit.
+  - New `lbGetCurrentWeekStartPT(nowMs)` mirrors the backend `getAccoladeWeekStart` exactly: reads Pacific-local y/m/d/weekday via the cached formatter, walks back the matched DOW count, returns `'YYYY-MM-DD'` of the Pacific Sunday. Two layers of defensive UTC fallback (formatter unavailable + formatter returned unexpected parts) so the hot path never throws.
+  - Legacy `lbGetCurrentWeekStartUTC` rewritten as a thin alias that just calls `lbGetCurrentWeekStartPT`. No active call site uses the old name after this train, but the alias is kept as defense-in-depth in case a future merge resurrects the legacy reference.
+  - Four active call sites switched:
+    - `lbSumCurrentWeekSteps` — variable name `weekStartUTC` retained for git-blame continuity, value is now Pacific.
+    - `lbSumCurrentWeekFlights` — same swap.
+    - `lbCacheRead` weekly cross-week guard — both `fetchedWeek` and `currentWeek` reads switched.
+    - `_lbRenderThisWeekTab` blurb generator — `lbGetCurrentWeekStartPT()` for the range header.
+  - Submit path (`lbSubmitAllMetrics`) now tags weekly cumulative metrics with `'client_pacific_week_v1'` (was `'client_sunday_utc_v2'`).
+  - Subhead copy: `"resets Sunday 12:00 AM UTC"` → `"resets Sunday 12:00 AM Pacific Time"`. Never `PST`/`PDT` (those flip with DST).
+- `index.html` — `app.js?v=536`.
+- `sw.js` — `CACHE_VERSION = 'v5.422'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w83`, `app.js?v=536`, `auth.js?v=20` (unchanged), `sw.js CACHE_VERSION v5.422`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved.
+
+**Compatibility during transition.**
+
+| Client | Backend | Trust outcome |
+|---|---|---|
+| w82 (UTC sum + UTC tag) | pre-1z.218 (UTC anchor, UTC tag accepted) | Trusted. Current production. |
+| w82 (UTC sum + UTC tag) | post-1z.218 (Pacific anchor, BOTH tags accepted) | Trusted. Client computes UTC weekly sum; server stamps with Pacific period_key. The sum value is "wrong by up to 7 hours of steps" for non-Pacific times of day, but the trusted-source self-heal CASE accepts it. Next w83+ submit corrects it. |
+| **w83 (Pacific sum + Pacific tag)** | **pre-1z.218 (UTC anchor)** | Pacific tag NOT in trust set → persisted as NULL → 1z.216 cross-week guard fires if the Pacific period_key differs from the UTC server's stamped key. **Functional but the user's row may be zeroed during the gap** until the backend deploys. Recommend deploying backend FIRST. |
+| **w83 (Pacific sum + Pacific tag)** | **post-1z.218 (Pacific anchor, both tags accepted)** | Trusted. Client and server agree on the Pacific Sunday boundary; period_keys align perfectly. **Target end state.** |
+
+**Recommended deploy order (locked in 1z.217):** deploy backend 1z.218 → ship frontend w83 to TestFlight → after ~2-3 weeks, ship 1z.221 backend retirement of the legacy UTC tag.
+
+**Schema impact.** None. `week_start` columns unchanged. The visible reset moment shifts from "Saturday 5 PM PT (UTC midnight)" to "Sunday 12 AM PT (7 AM UTC)". One-time split week during the transition is expected per the audit.
+
+**Privacy posture.** No new tracking. The Pacific-anchored sum reads the same `state.steps_daily` localStorage map as before. No HealthKit query change, no new submission to the backend beyond the trust tag swap.
+
+**Guard rails preserved.**
+- No backend deploy / D1 mutation / migration / Codemagic / archive / upload.
+- No HealthKit / leaderboard scoring math / WEEKLY_METRICS set / Roster / Guild / public friend activity / Duel changes.
+- 1z.216 cross-week contamination guard still active and timezone-agnostic.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Three independent reverts:
+1. Switch the four active call sites back to `lbGetCurrentWeekStartUTC` (now an alias — has no effect; full rollback requires restoring the legacy function body too).
+2. Switch the submit tag back to `'client_sunday_utc_v2'`.
+3. Restore the subhead copy "resets Sunday 12:00 AM UTC".
+
+Plus knob bumps revert: `w83 → w82`, `app.js?v 536 → 535`, `sw.js v5.422 → v5.421`. No DB / backend touched.
+
+**Manual QA (w83, after coordinated deploy with 1z.218 backend).**
+1. Cold-launch w83. Confirm `"build": "2.2.3-w83"`.
+2. Open Global Rankings → Steps → This Week.
+3. Subhead reads "May 31–Jun 6 · resets Sunday 12:00 AM Pacific Time. Apple Health is the only source." (or the equivalent Pacific Sunday range).
+4. World Rank card shows real weekly step total for the Pacific week, not UTC.
+5. At 11:59 PM PT Saturday, the leaderboard is still on the current Pacific week (the UTC midnight that just passed at 5 PM PT does NOT cause a reset).
+6. At 12:00 AM PT Sunday, the leaderboard rolls into the new Pacific week.
+7. Copy Debug Info shows `leaderboard-submit-metric-attempt` with `metric: 'step_total'`, `submitted: true`. The next `leaderboard-submit-metric-result` is `ok: true`. Backend row's `weekly_sum_source` is `'client_pacific_week_v1'`.
+8. Hunter mode + Guild mode feeds, Roster, public friend activity all unchanged.
+9. Daily Walk auto-verify still works; no shift in HealthKit query window.
+
+---
+
 ## May 30, 2026 — 1z.218 Backend Pacific weekly reset helper (read this first)
 
 **TL;DR.** Backend-only train. Switches the global weekly leaderboard anchor from Sunday-UTC to Sunday in `America/Los_Angeles`. Single chokepoint helper change in `accolade-week.ts` — `leaderboard-submit.ts`, `leaderboard-top.ts`, and the 100K Club path pick up the new boundary automatically. Trust-source allowlist gains `'client_pacific_week_v1'` alongside the existing `'client_sunday_utc_v2'` for a ~2-3 week transition window. **Migration: none. Worker deploy: NOT executed; gated on explicit approval.** Frontend untouched (waits for 1z.219).

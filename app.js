@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w82';
+  const APP_BUILD_TAG = '2.2.3-w83';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8822,7 +8822,12 @@
   // 1z.131 backend monotonic max once HealthKit refreshes the new
   // week's daily buckets.
   function lbSumCurrentWeekSteps(stepsDaily) {
-    const weekStartUTC = lbGetCurrentWeekStartUTC();   // 'YYYY-MM-DD' Sunday-UTC
+    // v3 Phase 1z.219 — Pacific anchor. The variable name stays
+    // 'weekStartUTC' for git-blame continuity but the value is
+    // now the Pacific Sunday key. The dateStr >= weekStartPT
+    // compare still works because both sides are 'YYYY-MM-DD'
+    // strings and lexicographic compare is timezone-blind.
+    const weekStartUTC = lbGetCurrentWeekStartPT();
     let dateStr = getDeviceLocalDate();
     let sum = 0;
     // Hard cap of 8 iterations as a defensive guard against an
@@ -8880,7 +8885,8 @@
   // local-Saturday/UTC-Sunday gap window. Same Sunday-UTC anchor
   // as the backend WEEKLY_METRICS scope.
   function lbSumCurrentWeekFlights(flightsDaily) {
-    const weekStartUTC = lbGetCurrentWeekStartUTC();
+    // v3 Phase 1z.219 — Pacific anchor; mirrors lbSumCurrentWeekSteps.
+    const weekStartUTC = lbGetCurrentWeekStartPT();
     let dateStr = getDeviceLocalDate();
     let sum = 0;
     for (let i = 0; i < 8 && dateStr >= weekStartUTC; i++) {
@@ -9488,9 +9494,16 @@
           // and don't benefit from the self-heal. Tag value must
           // match the TRUSTED_WEEKLY_SUM_SOURCES allowlist in
           // backend/src/handlers/leaderboard-submit.ts.
+          // v3 Phase 1z.219 — Pacific anchor trust tag. Backend
+          // (1z.218) accepts both 'client_sunday_utc_v2' and
+          // 'client_pacific_week_v1' as trusted during the
+          // transition window. w83+ clients submit only the new
+          // Pacific tag because their weekly sum is computed
+          // against lbGetCurrentWeekStartPT(). After ~2-3 weeks
+          // of w83+ rollout, the UTC tag is retired in 1z.221.
           const isWeeklyCumulative = (typeof LB_WEEKLY_METRICS !== 'undefined') && LB_WEEKLY_METRICS.has(m);
           const submitOpts = isWeeklyCumulative
-            ? { weeklySumSource: 'client_sunday_utc_v2' }
+            ? { weeklySumSource: 'client_pacific_week_v1' }
             : undefined;
           const resp = await window.Auth.submitLeaderboardSnapshot(m, sanitized, submitOpts);
           // v3 Phase 1z.127 — post-await result breadcrumb. Distinguishes
@@ -26551,16 +26564,110 @@
   // Sunday-UTC-scoped metric. Backend WEEKLY_METRICS in
   // backend/src/lib/metrics.ts mirrors this set.
   const LB_WEEKLY_METRICS = new Set(['step_total', 'flights_climbed']);
-  function lbGetCurrentWeekStartUTC(nowMs) {
+
+  // v3 Phase 1z.219 — Pacific Time weekly reset helper.
+  // Mirrors the backend 1z.218 getAccoladeWeekStart() in
+  // backend/src/lib/accolade-week.ts: anchors the global
+  // leaderboard week boundary at Sunday 00:00 in
+  // America/Los_Angeles, computed via Intl.DateTimeFormat so
+  // DST transitions are handled natively (no fixed UTC-7/-8
+  // offset, no manual spring-forward/fall-back math).
+  //
+  // Format unchanged: 'YYYY-MM-DD' — the date of the Pacific-
+  // local Sunday that started the week containing nowMs. The
+  // backend stamps every weekly snapshot row with the same
+  // string under the Pacific anchor, so client-computed sums
+  // and server-stamped period_keys agree.
+  //
+  // Single chokepoint: the four call sites (lbSumCurrentWeekSteps,
+  // lbSumCurrentWeekFlights, the cache invalidation pair, and the
+  // leaderboard subhead copy generator) all read through here.
+  // The pre-1z.219 UTC helper is kept as an alias below so any
+  // legacy reference (none expected at the call-site level after
+  // 1z.219; included as defense-in-depth in case a future merge
+  // resurrects the old name) continues to work AND now returns
+  // the Pacific key transparently — there's no "mixed math" in
+  // the client.
+  const _PT_DOW_BACK = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  // Pre-allocated formatter; constructing one per call is
+  // expensive on iOS WebKit. Cached at module scope.
+  let _ptDateParts = null;
+  function _getPTDateParts() {
+    if (_ptDateParts) return _ptDateParts;
+    try {
+      _ptDateParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Los_Angeles',
+        year:    'numeric',
+        month:   '2-digit',
+        day:     '2-digit',
+        weekday: 'short',
+      });
+    } catch (_) {
+      _ptDateParts = null;
+    }
+    return _ptDateParts;
+  }
+  function lbGetCurrentWeekStartPT(nowMs) {
     const ms = (typeof nowMs === 'number') ? nowMs : Date.now();
-    const d = new Date(ms);
-    const dayOfWeek = d.getUTCDay(); // 0 = Sunday
-    const sundayMs = ms - dayOfWeek * 24 * 60 * 60 * 1000;
-    const s = new Date(sundayMs);
+    const fmt = _getPTDateParts();
+    if (!fmt) {
+      // Defensive fallback: Intl unavailable. Use the legacy UTC
+      // computation so the helper never throws. This branch is
+      // extremely unlikely on Capacitor's WebKit but keeps the
+      // hot path safe.
+      const d = new Date(ms);
+      const dayOfWeek = d.getUTCDay();
+      const sundayMs = ms - dayOfWeek * 24 * 60 * 60 * 1000;
+      const s = new Date(sundayMs);
+      const yyyy = s.getUTCFullYear();
+      const mm   = String(s.getUTCMonth() + 1).padStart(2, '0');
+      const dd   = String(s.getUTCDate()).padStart(2, '0');
+      return yyyy + '-' + mm + '-' + dd;
+    }
+    let y = 0, m = 0, d = 0, wk = '';
+    try {
+      const parts = fmt.formatToParts(new Date(ms));
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        if      (p.type === 'year')    y  = parseInt(p.value, 10);
+        else if (p.type === 'month')   m  = parseInt(p.value, 10);
+        else if (p.type === 'day')     d  = parseInt(p.value, 10);
+        else if (p.type === 'weekday') wk = p.value;
+      }
+    } catch (_) { /* fall through to fallback below */ }
+    const back = _PT_DOW_BACK[wk];
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || typeof back !== 'number') {
+      // Same UTC fallback as above if Intl parts came out
+      // unexpectedly.
+      const dd2 = new Date(ms);
+      const dayOfWeek = dd2.getUTCDay();
+      const sundayMs = ms - dayOfWeek * 24 * 60 * 60 * 1000;
+      const s = new Date(sundayMs);
+      const yyyy = s.getUTCFullYear();
+      const mm   = String(s.getUTCMonth() + 1).padStart(2, '0');
+      const dd   = String(s.getUTCDate()).padStart(2, '0');
+      return yyyy + '-' + mm + '-' + dd;
+    }
+    // Walk back `back` days from the Pacific-local Y-M-D to land
+    // on the Pacific Sunday's date. Using Date.UTC + ms math is
+    // safe because a fixed N-day step in ms equals exactly N days
+    // on the calendar regardless of timezone or DST — we're not
+    // crossing the DST transition with this arithmetic; we built
+    // the source y/m/d from a Pacific-aware formatter already.
+    const startMs = Date.UTC(y, m - 1, d) - back * 86400000;
+    const s = new Date(startMs);
     const yyyy = s.getUTCFullYear();
     const mm   = String(s.getUTCMonth() + 1).padStart(2, '0');
     const dd   = String(s.getUTCDate()).padStart(2, '0');
     return yyyy + '-' + mm + '-' + dd;
+  }
+  // v3 Phase 1z.219 — Transition alias. Old helper name now
+  // returns the Pacific key transparently so any merge that
+  // accidentally resurrects the old name still produces the
+  // current correct boundary. No active call site uses this
+  // name after 1z.219; kept as defense-in-depth.
+  function lbGetCurrentWeekStartUTC(nowMs) {
+    return lbGetCurrentWeekStartPT(nowMs);
   }
   // Render "May 17–May 23" given the Sunday-UTC start date string.
   // The Saturday end is Sunday + 6 days. Uses UTC for the format so the
@@ -26660,9 +26767,11 @@
       // last week's ranking. Reject any weekly cache whose fetched_at
       // falls in a prior UTC week so the World Rank card + sheet
       // never paint stale prior-week rank/values after the boundary.
+      // v3 Phase 1z.219 — Pacific anchor. Same cross-week guard,
+      // now keyed on Pacific Sunday boundaries.
       if (LB_WEEKLY_METRICS.has(metric)) {
-        const fetchedWeek = lbGetCurrentWeekStartUTC(parsed.fetched_at);
-        const currentWeek = lbGetCurrentWeekStartUTC();
+        const fetchedWeek = lbGetCurrentWeekStartPT(parsed.fetched_at);
+        const currentWeek = lbGetCurrentWeekStartPT();
         if (fetchedWeek !== currentWeek) return null;
       }
       return parsed;
@@ -27302,9 +27411,12 @@
     const meta = LB_METRIC_META[metric];
     let blurbText = meta.blurb;
     if (LB_WEEKLY_METRICS.has(metric)) {
-      const wk = lbGetCurrentWeekStartUTC();
+      // v3 Phase 1z.219 — Pacific anchor + Pacific-Time copy. The
+      // visible reset moment is "Sunday 12:00 AM Pacific Time"
+      // — independent of DST since we avoid PST/PDT shorthand.
+      const wk = lbGetCurrentWeekStartPT();
       const range = lbFormatWeekRange(wk);
-      if (range) blurbText = range + ' · resets Sunday 12:00 AM UTC. Apple Health is the only source.';
+      if (range) blurbText = range + ' · resets Sunday 12:00 AM Pacific Time. Apple Health is the only source.';
     }
     if (blurbEl) blurbEl.textContent = blurbText;
 
