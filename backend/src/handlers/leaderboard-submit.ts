@@ -169,18 +169,35 @@ export async function handleLeaderboardSubmit(
   //       excluded.week_start NOT NULL
   //       AND existing.week_start = excluded.week_start
   //         → MAX(existing.current_value, new) — never downgrade in-week
-  //   - OTHERWISE (NULL week_start, OR different week_start, OR
-  //     trust marker already established):
+  //   - v3 Phase 1z.216 CROSS-WEEK UNTRUSTED SUBMIT GUARD:
+  //       excluded.weekly_sum_source IS NULL (untrusted client)
+  //       AND existing.week_start <> excluded.week_start (boundary crossed)
+  //         → 0  (the new period enters empty. The next trusted submit
+  //           ratchets up via the SELF-HEAL branch above.)
+  //       Why: at the UTC Sunday rollover (5 PM PDT Saturday), a
+  //       pre-w19 / device-local-summing client computes its
+  //       weekly sum as the FULL previous 7 days of steps, then
+  //       the server stamps the submit with the NEW week_start.
+  //       Without this branch the ELSE below wrote that
+  //       contaminated cumulative total under the new period_key
+  //       — e.g. real user 'galilea' carrying 78,684 from
+  //       2026-05-24 into 2026-05-31 within minutes of rollover.
+  //       Forcing 0 means a contaminated cross-week submit is
+  //       neutralised; honest subsequent submits (in-week MAX or
+  //       trusted self-heal) populate normally.
+  //   - OTHERWISE (NULL week_start, OR same week with no other
+  //     branch matched, OR trust marker already established):
   //       → excluded.current_value — overwrite (streaks can decrease,
-  //         new-week rollover resets the counter, subsequent trusted
-  //         submits ratchet via the MAX branch above)
+  //         non-weekly metrics carry forward, etc.)
   //
   // weekly_sum_source persistence: COALESCE on incoming so a
   // submission without the tag (legacy client, streak metric, etc.)
   // does not wipe an existing trust marker.
   //
   // week_start is also updated on conflict so a user submitting in a
-  // new week overwrites their prior-week tag.
+  // new week overwrites their prior-week tag. (The 1z.216 guard
+  // above neutralises the *value*; the week_start pointer still
+  // advances so future same-week submits use the MAX branch.)
   await env.DB.prepare(
     `INSERT INTO leaderboard_snapshots
        (user_id, metric, current_value, best_value, updated_at, week_start, weekly_sum_source)
@@ -195,6 +212,11 @@ export async function handleLeaderboardSubmit(
          WHEN excluded.week_start IS NOT NULL
               AND leaderboard_snapshots.week_start = excluded.week_start
            THEN MAX(leaderboard_snapshots.current_value, excluded.current_value)
+         WHEN excluded.weekly_sum_source IS NULL
+              AND excluded.week_start IS NOT NULL
+              AND leaderboard_snapshots.week_start IS NOT NULL
+              AND excluded.week_start <> leaderboard_snapshots.week_start
+           THEN 0
          ELSE excluded.current_value
        END,
        best_value = MAX(leaderboard_snapshots.best_value, excluded.current_value),

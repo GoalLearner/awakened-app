@@ -4,6 +4,77 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 30, 2026 — 1z.216 Backend cross-week leaderboard contamination guard (read this first)
+
+**TL;DR.** Backend-only train. Closes the cross-week contamination hole in `leaderboard-submit.ts` that allowed untrusted clients to carry last-week's cumulative `step_total` into the new UTC week within minutes of the Sunday-UTC rollover. Real-device evidence on May 30 PDT: real user `galilea` showed `78,684` under `week_start='2026-05-31'` minutes after rollover while real user `Richie` correctly showed `0` (1z.139 client guard fired). **Migration: none. Worker deploy: gated on explicit approval.**
+
+**Root cause.** `leaderboard_snapshots` UPSERT's `current_value = CASE` block had three branches:
+1. Trusted self-heal (1z.140) — fires only on a trusted submit landing on a NULL-source same-week row.
+2. Same-week monotonic MAX (1z.131) — fires only when new + existing share `week_start`.
+3. ELSE → `excluded.current_value`.
+
+At the rollover instant, an untrusted client's submit (no `weekly_sum_source` tag) computed via the pre-w19 `today.getDay()` device-local week math = the FULL previous week's total. Server stamped it with the NEW `week_start`. Branches 1 + 2 both skipped (no trust tag; weeks didn't match). ELSE wrote the contaminated total under the new period_key. The `week_start = excluded.week_start` clause then advanced the pointer. Read endpoint dutifully served the corrupted row.
+
+**Fix.** One new WHEN clause inserted between branch 2 and the ELSE:
+
+```sql
+WHEN excluded.weekly_sum_source IS NULL
+     AND excluded.week_start IS NOT NULL
+     AND leaderboard_snapshots.week_start IS NOT NULL
+     AND excluded.week_start <> leaderboard_snapshots.week_start
+  THEN 0
+```
+
+Untrusted + crossing a week boundary → the new period enters empty. Honest in-week submits later in the same week use the same-week MAX branch and ratchet up; the next trusted submit lights up the self-heal branch. Trusted submits, same-week submits, NULL-week (streak) submits, and the Hall of Fame UPSERT path are all unaffected.
+
+**Files modified.**
+- `backend/src/handlers/leaderboard-submit.ts` — added the new WHEN clause to the snapshot UPSERT CASE; extended the surrounding doc-comment block with the 1z.216 contract.
+- `backend/src/handlers/leaderboard-submit.test.ts` — three new tests covering guard activation, trusted-submit bypass, and CASE branch ordering.
+- `backend/scripts/cleanup_contaminated_weekly_leaderboard_2026_05_31.sql` — new file with diagnostic SELECT + commented-out Option A (UPDATE-to-0) + Option B (DELETE) cleanup blocks. Do not run automatically.
+
+**Hall of Fame audit verdict.** `weekly_step_records` is keyed by `(user_id, week_start)` UNIQUE, so each week is its own row — there is no cross-week carry-forward bug to mirror. The existing 1z.140 self-heal CASE in the HoF UPSERT handles subsequent contamination on the next trusted submit. No HoF mirror needed.
+
+**user_accolades audit verdict.** Gated on `value >= 100000` (rare event) and uses `last_qualified_week_start` correctly. No contamination vector. Untouched.
+
+**Read endpoint verdict.** `leaderboard-top.ts` already filters `week_start = currentWeek`. Innocent.
+
+**Tests run.** `cd backend && npx vitest run` → **201/201 pass** (198 baseline + 3 new).
+
+**Frontend knobs unchanged.** `APP_BUILD_TAG 2.2.3-w82`, `app.js?v=535`, `auth.js?v=20`, `sw.js CACHE_VERSION v5.421`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS=false`. No frontend file touched.
+
+**Deploy commands (DO NOT RUN until approved).**
+
+```bash
+cd backend
+git pull --ff-only origin main
+npx wrangler deploy
+```
+
+**Cleanup commands (DO NOT RUN until deploy + diagnostic review).**
+
+```bash
+# 1. Review the diagnostic SELECT first
+cd backend
+npx wrangler d1 execute awakened-db --remote \
+  --command "SELECT u.alias, ls.user_id, ls.current_value, ls.week_start, ls.weekly_sum_source, ls.updated_at FROM leaderboard_snapshots ls JOIN users u ON u.id = ls.user_id WHERE ls.metric = 'step_total' AND ls.week_start = '2026-05-31' AND ls.weekly_sum_source IS NULL AND ls.current_value > 20000 ORDER BY ls.current_value DESC;"
+
+# 2. After confirming the suspect rows, edit the cleanup script
+#    to UNCOMMENT the desired UPDATE block, then apply:
+npx wrangler d1 execute awakened-db --remote \
+  --file=scripts/cleanup_contaminated_weekly_leaderboard_2026_05_31.sql
+```
+
+**Guard rails preserved.**
+- No production D1 mutation. No Worker deploy.
+- No frontend code change. App knobs unchanged.
+- No UTC weekly reset / period_key format / WEEKLY_METRICS set change.
+- No HealthKit / Daily Walk / public friend activity / Roster / Guild / simulated leaderboard / Duel changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback (if production deploy happens and needs to be undone).** `npx wrangler rollback` to the prior worker. The new WHEN clause is purely additive — older worker code still reads/writes the column. No schema change required.
+
+---
+
 ## May 29, 2026 — 1z.211 Equipment bonuses card in Armory (read this first)
 
 **TL;DR.** Frontend display-only addition. New **EQUIPMENT BONUSES** card sits below the Build Summary in the Armory modal and aggregates the six structured stat bonuses (`str`, `vit`, `int`, `focus`, `will`, `wlt`) already authored on every `CARDS[id].bonuses` entry. Only non-zero totals render. Updates automatically on every equip / unequip / boot pass. No item balance, drop rates, rewards, economy math, or schema changes.

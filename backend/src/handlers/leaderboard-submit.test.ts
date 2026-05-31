@@ -183,6 +183,85 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(insert.binds[6]).toBe(null);
   });
 
+  // v3 Phase 1z.216 — cross-week untrusted submit guard. Reproduces
+  // the May 30 contamination: an untrusted client at the UTC weekly
+  // rollover boundary submits its (device-local-computed) cumulative
+  // step total; server stamps the new week_start; without this guard
+  // the ELSE branch wrote last week's total under the new period_key.
+  // The new SQL CASE forces current_value=0 when (a) the submit
+  // carries no trusted source tag AND (b) the new submit's week_start
+  // differs from the existing row's week_start. Honest cross-week
+  // re-entry by trusted clients still ratchets up via the self-heal
+  // branch; same-week behavior unchanged.
+  it('untrusted cross-week submit zeroes current_value (1z.216 guard)', async () => {
+    const db = makeDb({ current_value: 78684, best_value: 82939 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 5000 }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // SQL must contain the guard WHEN clause that returns 0 for an
+    // untrusted cross-week submit.
+    expect(insert.sql).toMatch(/excluded\.weekly_sum_source\s+IS\s+NULL/i);
+    expect(insert.sql).toMatch(/excluded\.week_start\s*<>\s*leaderboard_snapshots\.week_start/i);
+    // The guard branch's THEN clause is literally `0` (not MAX/value).
+    // Pin its presence by searching for a `THEN 0` in the SQL body
+    // that follows the cross-week WHEN block.
+    const guardIdx = insert.sql.search(/excluded\.week_start\s*<>\s*leaderboard_snapshots\.week_start/i);
+    expect(guardIdx).toBeGreaterThan(-1);
+    const guardTail = insert.sql.slice(guardIdx);
+    expect(guardTail).toMatch(/THEN\s+0/i);
+  });
+
+  it('trusted cross-week submit is NOT zeroed by the 1z.216 guard', async () => {
+    // The guard's WHEN clause requires excluded.weekly_sum_source
+    // IS NULL. A submit carrying the trusted v2 tag must bypass the
+    // guard so honest cross-week values write normally — the next
+    // same-week submit then uses the existing MAX branch.
+    const db = makeDb({ current_value: 78684, best_value: 82939 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 5000, weekly_sum_source: 'client_sunday_utc_v2' }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // Sanity: the trusted-tag bind is in position 7.
+    expect(insert.binds[6]).toBe('client_sunday_utc_v2');
+    // The guard's NULL check makes a trusted submit ineligible for
+    // the zero branch. (Verified structurally — SQL still contains
+    // the IS NULL clause but the runtime never hits it.) The
+    // self-heal branch above the guard is what fires for trusted
+    // submits with NULL-stored existing source.
+    expect(insert.sql).toMatch(/excluded\.weekly_sum_source\s+IS\s+NOT\s+NULL\s+AND\s+leaderboard_snapshots\.weekly_sum_source\s+IS\s+NULL/i);
+  });
+
+  it('CASE ordering: cross-week guard sits AFTER same-week MAX and BEFORE the ELSE', async () => {
+    // Branch precedence matters. The guard must fire only when
+    // (a) source is null AND (b) weeks differ. Same-week MAX must
+    // still win when weeks match, even for untrusted clients. ELSE
+    // remains the catch-all for NULL-week / non-weekly metrics.
+    const db = makeDb({ current_value: 1000, best_value: 1000 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 1500 }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    const sql = insert.sql;
+    const sameWeekMax = sql.search(/MAX\(leaderboard_snapshots\.current_value/);
+    const guardWhen  = sql.search(/excluded\.week_start\s*<>\s*leaderboard_snapshots\.week_start/i);
+    const elseToken  = sql.search(/ELSE\s+excluded\.current_value/i);
+    expect(sameWeekMax).toBeGreaterThan(-1);
+    expect(guardWhen).toBeGreaterThan(-1);
+    expect(elseToken).toBeGreaterThan(-1);
+    expect(sameWeekMax).toBeLessThan(guardWhen);
+    expect(guardWhen).toBeLessThan(elseToken);
+  });
+
   it('weekly_step_records also has the 1z.140 self-heal CASE branch', async () => {
     const db = makeDb({ current_value: 80886, best_value: 82939 });
     const env = makeEnv(db);
