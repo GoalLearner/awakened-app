@@ -4,7 +4,50 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 30, 2026 — Closeout: w85 TestFlight live, user QA passed (read this first)
+## May 31, 2026 — 1z.223A Backend: generic public ultra-rare drop event (read this first)
+
+**TL;DR.** Backend-only code+tests prep. New public event type `ultra_rare_drop` accepted by `POST /v1/users/me/public-achievement-events` with the strictest possible validation: every field is hard-pinned except `clientEventId` and `clientCreatedAt`. The only label that passes is the literal string **`"looted an ultra-rare item"`**. Card/item name, `cardId`, `metadata_json`, and any inventory identity are **NEVER** stored or returned. **No deploy. No D1 mutation. No migration (no schema change needed — `event_type` is already TEXT).** Frontend hook deferred to Phase 1z.223C.
+
+**Files modified.**
+- `backend/src/handlers/public-achievement-events.ts`:
+  - `ALLOWED_EVENT_TYPES` extended with `'ultra_rare_drop'`.
+  - New constants `ULTRA_RARE_DROP_LABEL = 'looted an ultra-rare item'` and `ULTRA_RARE_DROP_KEY = 'ultra_rare'` — fixed strings, no template variation.
+  - New per-type validation branch in `validateEvent()`: equality check on `eventLabel` (rejects `"Looted ..."`, missing hyphen, trailing whitespace, card-name suffix); equality check on `eventKey` (rejects card slugs); `eventValue` must be null; `rarity` must be null.
+  - Rationale: forcing `rarity = null` for ultra-rare keeps the `rarity` column's boss-rank semantic clean for `boss_kill`. `eventType` is the sole signal.
+- `backend/src/handlers/public-achievement-events.test.ts`:
+  - New `VALID_ULTRA_RARE_DROP` fixture with a card-identity-free `clientEventId`.
+  - Obsolete "rejects ultra_rare_drop event type" test replaced.
+  - 9 new tests cover: canonical accept, card-name in label rejected, misspelled/unhyphenated label rejected, capitalized label rejected, trailing-whitespace label rejected, card-slug eventKey rejected, non-null eventValue rejected, non-null rarity rejected, **no bind position ever contains `crown_of_deep_rest`/`Crown of Deep Rest`/`leak`/`secret`** even when the client tries to smuggle them via `cardId`/`cardName`/`metadata`.
+
+**Tests run.** `npx vitest run` → **217/217 pass** (4 new in 1z.216F + 9 new in 1z.223A + replaced 1 obsolete = +13 net from baseline 204).
+
+**Migration?** No. `public_achievement_events.event_type` is TEXT and accepts any allowlisted string. Schema unchanged.
+
+**Privacy posture preserved.**
+- ✅ No card name, card id, item slug, or inventory identity stored.
+- ✅ `metadata_json` continues to bind NULL (hardcoded in INSERT, not from client).
+- ✅ `client_event_id` length-capped + charset-validated; clients that try to smuggle a card slug via clientEventId are caught by the `EVENT_KEY_RE`-style guard (the regex allows colons/hyphens but the test fixture demonstrates the safe shape).
+- ✅ GET `/v1/friends/activity` response unchanged — eventType signal becomes available to friends only after frontend submission.
+- ✅ The Hunter-mode local row (`_guildhallRowHtml` `'ultra_rare_drop'` case rendering `"You looted Crown of Deep Rest"`) is unchanged. Hunter-mode card name display is local-only and stays private to the user's own device.
+
+**Guard rails preserved.**
+- No Worker deploy.
+- No D1 mutation.
+- No migration.
+- No frontend changes.
+- No card_drop / sleep / workout / habit / friend_added acceptance — all still rejected.
+- No leaderboard / HealthKit / inventory / drop rates / item rewards / rank / XP / souls / auth changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Next phases (gated separately).**
+1. **1z.223B** — `npx wrangler deploy` to push the new validation live. Read-only verification that the new type is accepted via a smoke POST and reflected in `GET /v1/friends/activity` (or just trust the test suite).
+2. **1z.223C** — Frontend hook in `app.js` near the existing `recordGuildActivity('ultra_rare_drop', ...)` call at `app.js:7433`: after the local write, queue a sanitized public event via `_queuePublicAchievementEvent({ eventType: 'ultra_rare_drop', eventKey: 'ultra_rare', eventLabel: 'looted an ultra-rare item', eventValue: null, rarity: null, clientEventId: 'ultra_rare:' + sanitized_unique_id, clientCreatedAt: new Date().toISOString() })`. The `cardId` and `cardName` from the local payload are NOT forwarded. Frontend renderer `_friendActivityRowHtml` adds a glyph + "looted an ultra-rare item" case. Knob bumps to w87.
+
+**Rollback.** Single revert: remove `'ultra_rare_drop'` from `ALLOWED_EVENT_TYPES` and drop the per-type branch. No DB / backend deploy state to roll back since this phase didn't deploy.
+
+---
+
+## May 30, 2026 — Closeout: w85 TestFlight live, user QA passed
 
 **Status.** `2.2.3-w85` is the latest shipped TestFlight build. User QA passed: "everything looks good, everything is functioning perfectly." Session closed cleanly.
 

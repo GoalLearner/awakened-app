@@ -127,6 +127,22 @@ const VALID_STEP_BUCKET = {
   clientCreatedAt: NOW_ISO,
 };
 
+// v3 Phase 1z.223A — fixed canonical ultra-rare drop payload.
+// Every field except clientEventId/clientCreatedAt is hard-pinned.
+// Note: clientEventId intentionally does NOT contain a card slug
+// or card name. The real client builds it from a sanitized hash
+// or timestamp, never the item identity, so a card_id slug never
+// reaches the backend even via the idempotency key.
+const VALID_ULTRA_RARE_DROP = {
+  eventType:       'ultra_rare_drop',
+  eventKey:        'ultra_rare',
+  eventLabel:      'looted an ultra-rare item',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'ultra_rare:2026-05-31T19-28-00:n1',
+  clientCreatedAt: NOW_ISO,
+};
+
 describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -179,15 +195,133 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     expect(((await res.json()) as { error: string }).error).toBe('INVALID_BATCH_SIZE');
   });
 
-  it('rejects ultra_rare_drop event type', async () => {
+  // v3 Phase 1z.223A — ultra_rare_drop is now an ALLOWED type but
+  // with the strictest validation in the handler. Label, key,
+  // value, and rarity are all hard-pinned; only clientEventId and
+  // clientCreatedAt are free-form. The point of this event class
+  // is to surface "something rare happened" to the friend feed
+  // WITHOUT leaking item identity, pity counter state, or build
+  // direction. The card/item name MUST stay client-side only.
+  it('accepts a valid canonical ultra_rare_drop', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [VALID_ULTRA_RARE_DROP] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json() as { ok: boolean; insertedCount: number };
+    expect(json.ok).toBe(true);
+    expect(json.insertedCount).toBe(1);
+    const calls = db._calls();
+    expect(calls[0]?.sql).toMatch(/INSERT INTO public_achievement_events/);
+    // Bind position 4 = eventLabel; must be the exact canonical
+    // privacy-safe string. No card/item name leaked.
+    expect(calls[0]?.binds[4]).toBe('looted an ultra-rare item');
+    // Bind position 3 = eventKey; must be the fixed allowlist
+    // value, not a card_id or item slug.
+    expect(calls[0]?.binds[3]).toBe('ultra_rare');
+    // Bind position 5 = eventValue; null for this event type.
+    expect(calls[0]?.binds[5]).toBeNull();
+    // Bind position 6 = rarity; null for this event type so the
+    // existing boss-rank semantic on `rarity` stays clean.
+    expect(calls[0]?.binds[6]).toBeNull();
+  });
+
+  it('rejects ultra_rare_drop with an exact card/item name in the label', async () => {
     const db = makeDb();
     const res = await handlePublicAchievementEventsPost(
-      makeReq({ events: [{ ...VALID_BOSS_KILL, eventType: 'ultra_rare_drop' }] }),
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, eventLabel: 'looted Crown of Deep Rest' }] }),
       makeEnv(db),
       session,
     );
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_TYPE');
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects ultra_rare_drop with a misspelled / unhyphenated label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, eventLabel: 'looted an ultra rare item' }] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects ultra_rare_drop with a capitalized label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, eventLabel: 'Looted an ultra-rare item' }] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects ultra_rare_drop with trailing whitespace in the label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, eventLabel: 'looted an ultra-rare item ' }] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects ultra_rare_drop with a card_id in eventKey', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, eventKey: 'crown_of_deep_rest' }] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+  });
+
+  it('rejects ultra_rare_drop with a non-null eventValue', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, eventValue: 1 }] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  it('rejects ultra_rare_drop with a non-null rarity', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, rarity: 'S+' }] }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+  });
+
+  it('does not bind metadata_json or card/item identity for ultra_rare_drop', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ULTRA_RARE_DROP, cardId: 'crown_of_deep_rest', cardName: 'Crown of Deep Rest', metadata: { secret: 'leak' } }] }),
+      makeEnv(db),
+      session,
+    );
+    const calls = db._calls();
+    const insert = calls[0]!;
+    // 10 fixed binds — no slot ever holds card_id / card_name /
+    // arbitrary client metadata.
+    expect(insert.binds.length).toBe(10);
+    const joined = insert.binds.map(b => String(b)).join('|');
+    expect(joined).not.toContain('crown_of_deep_rest');
+    expect(joined).not.toContain('Crown of Deep Rest');
+    expect(joined).not.toContain('leak');
+    expect(joined).not.toContain('secret');
   });
 
   it('rejects card_drop event type', async () => {

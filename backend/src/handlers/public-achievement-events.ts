@@ -35,7 +35,20 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 
-const ALLOWED_EVENT_TYPES = ['boss_kill', 'rank_up', 'step_milestone_bucket'] as const;
+const ALLOWED_EVENT_TYPES = [
+  'boss_kill',
+  'rank_up',
+  'step_milestone_bucket',
+  // v3 Phase 1z.223A — generic public ultra-rare drop event.
+  // The eventLabel is hard-pinned to a single privacy-safe
+  // string ("looted an ultra-rare item"); we NEVER accept the
+  // card/item name, the cardId, the inventory identity, the
+  // pity counter state, or any free-text label. Hunter mode
+  // continues to render the local card_name surface privately
+  // via _guildhallRowHtml; this entry only powers Guild-mode
+  // friend feed visibility.
+  'ultra_rare_drop',
+] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
 const ALLOWED_BOSS_RANKS  = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
@@ -46,6 +59,17 @@ const ALLOWED_BOSS_RANKS  = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 const RE_BOSS_KILL_LABEL    = /^defeated [A-Za-z0-9 '\-]+$/;
 const RE_RANK_UP_LABEL      = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
 const RE_STEP_BUCKET_LABEL  = /^crossed (10,000|20,000|30,000|40,000|50,000|60,000|70,000|80,000|90,000|100,000) steps today$/;
+
+// v3 Phase 1z.223A — ultra-rare drop label is a single fixed
+// canonical string. Anchored equality — anything else (including
+// "looted Crown of Deep Rest", "looted an ultra rare item"
+// without the hyphen, "Looted ..." capitalized, trailing
+// whitespace, etc.) is rejected.
+const ULTRA_RARE_DROP_LABEL = 'looted an ultra-rare item';
+// v3 Phase 1z.223A — fixed eventKey for ultra-rare drops. Pinning
+// to a single string blocks the client from smuggling card_id
+// out via the key field.
+const ULTRA_RARE_DROP_KEY   = 'ultra_rare';
 
 const ALLOWED_STEP_BUCKETS = new Set([10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]);
 
@@ -222,8 +246,7 @@ function validateEvent(
       return { ok: false, code: 'INVALID_RARITY', detail: 'rank_up rarity must be null.' };
     }
     rarity = null;
-  } else {
-    // step_milestone_bucket
+  } else if (eventType === 'step_milestone_bucket') {
     if (!RE_STEP_BUCKET_LABEL.test(eventLabel)) {
       return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'step_milestone_bucket label must match the bucket allowlist.' };
     }
@@ -233,6 +256,44 @@ function validateEvent(
     eventValue = raw.eventValue;
     if (raw.rarity !== undefined && raw.rarity !== null) {
       return { ok: false, code: 'INVALID_RARITY', detail: 'step_milestone_bucket rarity must be null.' };
+    }
+    rarity = null;
+  } else {
+    // v3 Phase 1z.223A — ultra_rare_drop. Strict allowlist with
+    // ZERO degrees of freedom on label or key. The whole point
+    // of this event is "something rare just happened" without
+    // revealing what. eventKey, eventLabel, and rarity are
+    // fully fixed; eventValue must be null. The client can
+    // only vary the clientEventId (for idempotency) and the
+    // clientCreatedAt timestamp.
+    if (eventLabel !== ULTRA_RARE_DROP_LABEL) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `ultra_rare_drop label must be exactly "${ULTRA_RARE_DROP_LABEL}".`,
+      };
+    }
+    if (eventKey !== ULTRA_RARE_DROP_KEY) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: `ultra_rare_drop eventKey must be exactly "${ULTRA_RARE_DROP_KEY}".`,
+      };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'ultra_rare_drop eventValue must be null.',
+      };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'ultra_rare_drop rarity must be null.',
+      };
     }
     rarity = null;
   }
