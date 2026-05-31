@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w87';
+  const APP_BUILD_TAG = '2.2.3-w88';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6035,7 +6035,14 @@
     if (!wasCapped) {
       entry.discovered = true;
       entry.count = (entry.count || 0) + 1;
-      if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
+      if (wasFirstAcquisition) {
+        entry.first_acquired_date = getDeviceLocalDate();
+        // v3 Phase 1z.224 — stamp the relic in the rolling 24h
+        // "NEW" map so the header pill counts it. Idempotent
+        // and timestamped in ms so it expires precisely 24h
+        // after first acquisition (not at calendar-day boundary).
+        try { _stampRelicArchiveNew(dropped.id); } catch (_) {}
+      }
       inv.cards[dropped.id] = entry;
     }
 
@@ -6111,7 +6118,13 @@
     if (!wasCapped) {
       entry.discovered = true;
       entry.count = (entry.count || 0) + 1;
-      if (wasFirstAcquisition) entry.first_acquired_date = getDeviceLocalDate();
+      if (wasFirstAcquisition) {
+        entry.first_acquired_date = getDeviceLocalDate();
+        // v3 Phase 1z.224 — mirror the rollBossDrop stamp on the
+        // QA force-drop path so debug-spawned relics also surface
+        // in the rolling 24h header pill.
+        try { _stampRelicArchiveNew(card.id); } catch (_) {}
+      }
       inv.cards[card.id] = entry;
     }
     if (card.rarity === 'common' && !hasPulledFirstCommonForBoss(bossId)) {
@@ -7599,10 +7612,101 @@
       return Object.keys(CARDS).filter(_isRelicNew).length;
     } catch (_) { return 0; }
   }
+
+  // v3 Phase 1z.224 — Relic Archive header "NEW" badge with 24h
+  // expiration. Pre-1z.224 the header count called _countNewRelics()
+  // which counts every discovered relic that hasn't been viewed —
+  // growing forever for hoarders. Product rule is now: the header
+  // pill only counts relics acquired in the last 24 hours.
+  //
+  // Per-card NEW chips elsewhere (line ~7745) continue to use
+  // _isRelicNew so individual cards can keep their "unviewed"
+  // affordance; only the AGGREGATE badge is bounded.
+  //
+  // Storage: hb_relic_archive_new_since = { [cardId]: ms }. The
+  // cardId is already on-device in inventory, so this key reveals
+  // no new information. Timestamps are device-local ms. The map is
+  // pruned of expired entries on every count call, so it can't
+  // grow unbounded either.
+  //
+  // Legacy data migration: pre-1z.224 acquisitions have no
+  // timestamp in this map. Per spec, those items quietly drop out
+  // of the header count on first w88 render. Their seen-flag state
+  // is preserved, so per-card chips still behave normally. Net
+  // user-visible effect: stale "9 NEW" pill resets to 0 NEW on
+  // first w88 boot until the next fresh acquisition.
+  const _RELIC_NEW_SINCE_KEY  = 'hb_relic_archive_new_since';
+  const _RELIC_NEW_WINDOW_MS  = 24 * 60 * 60 * 1000;
+
+  function _readRelicArchiveNewSinceMap() {
+    try {
+      const raw = localStorage.getItem(_RELIC_NEW_SINCE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    } catch (_) { return {}; }
+  }
+  function _writeRelicArchiveNewSinceMap(map) {
+    try { localStorage.setItem(_RELIC_NEW_SINCE_KEY, JSON.stringify(map || {})); } catch (_) {}
+  }
+  // Stamp a relic as "newly acquired right now." Called from the
+  // two first-acquisition sites (rollBossDrop + forceDrop). No-op
+  // for missing cardId or for already-stamped ids whose timestamp
+  // is still inside the 24h window — avoids resetting a still-fresh
+  // entry if the same drop path runs twice in quick succession.
+  function _stampRelicArchiveNew(cardId) {
+    if (!cardId) return;
+    try {
+      const map = _readRelicArchiveNewSinceMap();
+      const now = Date.now();
+      const existing = map[cardId];
+      if (typeof existing === 'number' && (now - existing) < _RELIC_NEW_WINDOW_MS) return;
+      map[cardId] = now;
+      _writeRelicArchiveNewSinceMap(map);
+    } catch (_) {}
+  }
+  // Bounded-list helper. Returns the array of cardIds whose
+  // stamped time is within the 24h window. Also prunes stale
+  // entries from the persisted map so it doesn't accumulate
+  // forever even for unique-id collisions across long lifespans.
+  function _activeRelicArchiveNewIds() {
+    const map = _readRelicArchiveNewSinceMap();
+    const now = Date.now();
+    const fresh = [];
+    let expiredCount = 0;
+    let dirty = false;
+    for (const cardId of Object.keys(map)) {
+      const ts = map[cardId];
+      if (typeof ts !== 'number' || !Number.isFinite(ts) || (now - ts) >= _RELIC_NEW_WINDOW_MS) {
+        delete map[cardId];
+        dirty = true;
+        expiredCount++;
+        continue;
+      }
+      fresh.push(cardId);
+    }
+    if (dirty) _writeRelicArchiveNewSinceMap(map);
+    if (typeof _addHealthVerifyBreadcrumb === 'function' && expiredCount > 0) {
+      try {
+        _addHealthVerifyBreadcrumb('relic-archive-new-pruned', {
+          beforeCount:  fresh.length + expiredCount,
+          afterCount:   fresh.length,
+          expiredCount: expiredCount,
+        });
+      } catch (_) {}
+    }
+    return fresh;
+  }
+  // Header pill counter. Uses the rolling-24h window only.
+  function _countRelicArchiveNewLast24h() {
+    return _activeRelicArchiveNewIds().length;
+  }
   try {
     window._isRelicNew = _isRelicNew;
     window._markRelicSeen = _markRelicSeen;
     window._countNewRelics = _countNewRelics;
+    window._stampRelicArchiveNew = _stampRelicArchiveNew;
+    window._countRelicArchiveNewLast24h = _countRelicArchiveNewLast24h;
   } catch (_) {}
 
   function getCardDropSourceLabel(card) {
@@ -7655,12 +7759,15 @@
     if (discEl)  discEl.textContent  = discoveredCount;
     if (fillEl)  fillEl.style.width  = (totalCount > 0 ? (discoveredCount / totalCount * 100) : 0) + '%';
 
-    // v3 Phase 1z.7 — "1 NEW" header counter (gold pulse pill).
-    // Hidden when no relics carry NEW state.
+    // v3 Phase 1z.7 + 1z.224 — "1 NEW" header counter (gold pulse
+    // pill). 1z.224 swap: now counts only relics acquired within
+    // the last 24 hours via _countRelicArchiveNewLast24h, instead
+    // of the unbounded "discovered but unviewed" set. Hidden when
+    // no fresh relics qualify.
     try {
       const newCountEl = document.getElementById('archive-new-count');
       if (newCountEl) {
-        const n = _countNewRelics();
+        const n = _countRelicArchiveNewLast24h();
         if (n > 0) {
           newCountEl.textContent = n + ' NEW';
           newCountEl.classList.remove('hidden');

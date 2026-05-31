@@ -4,7 +4,76 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.223C Frontend: ultra-rare public submit + Guild renderer (read this first)
+## May 31, 2026 — 1z.224 Relic Archive "NEW" badge 24h expiration (read this first)
+
+**TL;DR.** Frontend-only. The Relic Archive header pill (`9 NEW`) was an unbounded "discovered but unviewed" count that grew forever. Now it counts only relics acquired within the last 24 hours, on a rolling window. Per-card NEW chips elsewhere in the archive keep their existing "unviewed" affordance — only the aggregate header pill is bounded.
+
+**Files modified.**
+- `app.js` —
+  - New `_RELIC_NEW_SINCE_KEY = 'hb_relic_archive_new_since'` localStorage map: `{ cardId: timestampMs }`. Bounded by self-pruning every read.
+  - New helpers `_readRelicArchiveNewSinceMap`, `_writeRelicArchiveNewSinceMap`, `_stampRelicArchiveNew(cardId)`, `_activeRelicArchiveNewIds()`, `_countRelicArchiveNewLast24h()`. All exposed on `window.*` for debug parity.
+  - `_stampRelicArchiveNew(cardId)` is idempotent — if the cardId is already stamped within the 24h window, the call is a no-op (avoids resetting a fresh entry if the drop path runs twice in quick succession).
+  - `_activeRelicArchiveNewIds()` prunes expired entries on every call AND emits a `relic-archive-new-pruned` breadcrumb when pruning occurred (privacy-safe counts only: `beforeCount`, `afterCount`, `expiredCount` — no cardIds, no card names).
+  - Header badge render at `renderPokedex` swapped from `_countNewRelics()` → `_countRelicArchiveNewLast24h()`.
+  - Acquisition hooks: `rollBossDrop` (line ~6038) + `forceDrop` (line ~6121) now call `_stampRelicArchiveNew(card.id)` inside the existing `wasFirstAcquisition` branch. One-line addition per site, wrapped in try/catch so it can never break the inventory write.
+- `index.html` — `app.js?v=541`.
+- `sw.js` — `CACHE_VERSION = 'v5.427'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w88`, `app.js?v=541`, `auth.js?v=20` (unchanged), `styles.css?v=305` (unchanged — no CSS), `sw.js CACHE_VERSION v5.427`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**24-hour expiration rule.**
+- A relic enters the new-since map at the moment of first acquisition with `Date.now()`.
+- Header badge counts the number of entries whose timestamp is within `[now − 24h, now]`.
+- Pruning happens on every render: expired entries are deleted from the persisted map AND excluded from the count. The map cannot grow unbounded.
+- When the count is 0, the pill is hidden entirely (existing 1z.7 behavior).
+
+**Legacy migration behavior.** Pre-1z.224 acquisitions have no entry in the new-since map. **On first w88 render, the header pill resets to 0** (the stale `9 NEW` clears). No item ownership / discovery / `first_acquired_date` data is touched. The per-card NEW chips (which still use the existing `hb_relic_seen_<cardId>` seen-flag map) continue to work as before — users who hadn't viewed an older relic still see the chip on that specific card, just not the aggregate pill in the header. This is intentional per the prompt: "It is acceptable for the legacy 9 NEW to reset if it cannot be tied to real item IDs/timestamps safely."
+
+**Why we didn't try to retroactively stamp legacy items.** `first_acquired_date` is a YYYY-MM-DD calendar-day string, not a millisecond timestamp, so it cannot drive a precise 24h rolling window. Even if we mass-stamped them to "now," every previously-discovered relic would briefly appear as NEW on first w88 open, polluting the badge worse than the bug it was fixing. The cleanest answer is to start fresh — the next real drop populates the badge correctly.
+
+**Preserved behavior (explicit).**
+- `_isRelicNew(cardId)` — unchanged. Per-card NEW chips behave exactly as before.
+- `_markRelicSeen(cardId)` — unchanged.
+- `_countNewRelics()` — kept around (exported on `window`) for any debug consumer that may still call it; the header badge no longer uses it.
+- `DISCOVERED X / Y` progress counter — unchanged.
+- Rarity category counts (ULTRA-RARE / RARE / COMMON) — unchanged.
+- `VIEW YOUR ARMORY` CTA — unchanged.
+- All other archive surfaces (per-card detail modal, NEW chip per card, Boss Defeated overlay) — unchanged.
+- Inventory `hb_inventory`, `first_acquired_date`, `discovered`, `count` — unchanged.
+
+**Guard rails preserved.**
+- No backend deploy.
+- No D1 mutation.
+- No migration.
+- No item ownership / drop rates / rewards / inventory mutation.
+- No equipment bonuses / Armory math / boss reward changes.
+- No public ultra-rare event submit behavior change (1z.223C intact).
+- No HealthKit / leaderboard / Social/Guild / habits / auth / rank changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Four independent reverts:
+1. Drop the two `_stampRelicArchiveNew(cardId)` calls in `rollBossDrop` and `forceDrop` (restores pre-1z.224 acquisition flow).
+2. Restore the header badge render to `_countNewRelics()` (restores pre-1z.224 unbounded count).
+3. Remove the new helpers and `_RELIC_NEW_SINCE_KEY` constant.
+4. Revert knob bumps (`w88 → w87`, `app.js?v=541 → 540`, `sw.js v5.427 → v5.426`).
+
+The leftover `hb_relic_archive_new_since` localStorage entry is harmless on rollback — it just becomes dead state.
+
+**Manual QA (w88).**
+1. Cold-launch w88. Confirm `"build": "2.2.3-w88"`.
+2. Open Items tab → Relic Archive header. **`NEW` pill is hidden** (stale 9 has cleared).
+3. Trigger or simulate a new relic discovery (boss kill that yields a first-acquisition card, or QA force-drop path). Open Relic Archive: pill reads `1 NEW`.
+4. Trigger another distinct first-acquisition: pill reads `2 NEW`.
+5. Tap a fresh-NEW card to view it: per-card chip clears (existing 1z.7 behavior), but header pill count is unchanged (header is time-based, not view-based).
+6. (Time-shift test) Force `hb_relic_archive_new_since` to contain an entry 25 hours old via DevTools: re-render archive → entry pruned, pill drops accordingly, `relic-archive-new-pruned` breadcrumb fires with privacy-safe counts.
+7. `DISCOVERED X / 45` counter unchanged.
+8. Rarity category headings (ULTRA-RARE 3/9, RARE 1/9, COMMON 12/27) unchanged.
+9. `VIEW YOUR ARMORY` link still navigates.
+10. Trigger a fresh ultra-rare drop: 1z.223C public event submit still fires (`public-event-queued` + `public-event-submit-ok` breadcrumbs); Guild Activity surfaces "looted an ultra-rare item" generically; Hunter Activity shows the exact card name privately.
+
+---
+
+## May 31, 2026 — 1z.223C Frontend: ultra-rare public submit + Guild renderer
 
 **TL;DR.** Frontend-only train. After the Hunter-mode local row writes `"You looted <cardName>"` privately, the client now also queues a generic privacy-safe public event to the backend (1z.223A/B), which surfaces in friends' Guild Activity as `<alias> looted an ultra-rare item`. **No card name, card id, slot, rarity tier, inventory identity, or pity counter state is ever transmitted.** Hunter mode is unchanged.
 
