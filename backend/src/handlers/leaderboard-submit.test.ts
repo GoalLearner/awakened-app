@@ -276,6 +276,106 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(guardWhen).toBeLessThan(elseToken);
   });
 
+  // v3 Phase 1z.216F — untrusted same-week NULL-source freeze guard.
+  // Reproduces the May 31 recontamination: ops cleaned Galilea's
+  // contaminated 78684 down to 0 with weekly_sum_source left NULL.
+  // Her untrusted client resubmitted 78684 against the same
+  // week_start; the 1z.131 same-week MAX branch fired (no source
+  // check) and MAX(0, 78684) restored the contamination. The new
+  // freeze branch closes the loop: when both incoming and existing
+  // rows have NULL weekly_sum_source AND the same week_start, the
+  // current_value is held constant. Only a trusted submit (handled
+  // by the self-heal branch above) can raise it.
+  it('untrusted same-week NULL-source submit cannot raise an existing NULL-source row (1z.216F freeze)', async () => {
+    const db = makeDb({ current_value: 0, best_value: 78684 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 78684 }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    const sql = insert.sql;
+    // The new branch must contain BOTH IS NULL clauses (incoming +
+    // stored) AND same-week predicate AND the THEN must reference
+    // leaderboard_snapshots.current_value (freeze), not MAX, not 0.
+    expect(sql).toMatch(
+      /WHEN\s+excluded\.weekly_sum_source\s+IS\s+NULL\s+AND\s+leaderboard_snapshots\.weekly_sum_source\s+IS\s+NULL\s+AND\s+excluded\.week_start\s+IS\s+NOT\s+NULL\s+AND\s+leaderboard_snapshots\.week_start\s*=\s*excluded\.week_start\s+THEN\s+leaderboard_snapshots\.current_value/i,
+    );
+  });
+
+  it('1z.216F freeze sits AFTER the self-heal branch and BEFORE the same-week MAX', async () => {
+    // Branch ordering: trusted self-heal must still beat the freeze
+    // (so trusted submits can raise a NULL-source cleaned row), and
+    // the freeze must beat the unconditional same-week MAX (so an
+    // untrusted re-submit cannot resurrect a contaminated value).
+    const db = makeDb({ current_value: 0, best_value: 78684 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 1500 }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    const sql = insert.sql;
+    const selfHeal = sql.search(/excluded\.weekly_sum_source\s+IS\s+NOT\s+NULL\s+AND\s+leaderboard_snapshots\.weekly_sum_source\s+IS\s+NULL/i);
+    const freeze   = sql.search(/excluded\.weekly_sum_source\s+IS\s+NULL\s+AND\s+leaderboard_snapshots\.weekly_sum_source\s+IS\s+NULL/i);
+    const maxIdx   = sql.search(/MAX\(leaderboard_snapshots\.current_value/);
+    expect(selfHeal).toBeGreaterThan(-1);
+    expect(freeze).toBeGreaterThan(-1);
+    expect(maxIdx).toBeGreaterThan(-1);
+    expect(selfHeal).toBeLessThan(freeze);
+    expect(freeze).toBeLessThan(maxIdx);
+  });
+
+  it('trusted same-week submit against NULL-source row STILL self-heals (freeze does not block trust)', async () => {
+    // The freeze must only fire for *untrusted* incoming submits.
+    // A w83+ client carrying client_pacific_week_v1 against a
+    // cleaned NULL-source row must heal the row via the self-heal
+    // branch sitting above the freeze.
+    const db = makeDb({ current_value: 0, best_value: 78684 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({
+        metric: 'step_total',
+        current_value: 2500,
+        weekly_sum_source: 'client_pacific_week_v1',
+      }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // Trusted source bind sits at position 7 (0-indexed 6). Confirms
+    // the trusted tag reached the SQL — the self-heal branch then
+    // wins over the freeze because it sits earlier in the CASE.
+    expect(insert.binds[6]).toBe('client_pacific_week_v1');
+  });
+
+  it('untrusted same-week submit against TRUSTED stored row still uses MAX (freeze only blocks NULL→NULL)', async () => {
+    // If the stored row already has a trust marker, the freeze
+    // condition `leaderboard_snapshots.weekly_sum_source IS NULL`
+    // is false and the freeze does not fire. The 1z.131 same-week
+    // MAX branch handles the value. (Same-week downward submits
+    // are protected by MAX; upward submits ratchet up.)
+    // Note: this scenario is rare in practice because trust marks
+    // persist forever, but locks the precedence definition.
+    // The makeDb helper only models current_value + best_value; the
+    // freeze branch ordering is locked structurally, so we don't
+    // need to vary the existing weekly_sum_source for this test.
+    const db = makeDb({ current_value: 5000, best_value: 5000 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 7000 }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // The SQL still emits the MAX branch — runtime path is what
+    // matters; we lock it structurally by ensuring the MAX clause
+    // remains in the CASE body.
+    expect(insert.sql).toMatch(/MAX\(leaderboard_snapshots\.current_value,\s*excluded\.current_value\)/i);
+  });
+
   it('weekly_step_records also has the 1z.140 self-heal CASE branch', async () => {
     const db = makeDb({ current_value: 80886, best_value: 82939 });
     const env = makeEnv(db);

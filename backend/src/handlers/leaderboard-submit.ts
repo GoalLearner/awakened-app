@@ -186,6 +186,27 @@ export async function handleLeaderboardSubmit(
   //         → excluded.current_value  (trust the new corrected value;
   //           overrides MAX so pre-w18 rollover-contaminated rows
   //           heal as soon as the user's w19+ client submits)
+  //   - v3 Phase 1z.216F UNTRUSTED SAME-WEEK NULL-SOURCE FREEZE:
+  //       excluded.weekly_sum_source IS NULL (untrusted client)
+  //       AND existing.weekly_sum_source IS NULL (existing row is
+  //           also untrusted — typically a row that was either
+  //           never reached by a trusted client, or was manually
+  //           cleaned by ops without a trust marker being set)
+  //       AND same week
+  //         → leaderboard_snapshots.current_value (FREEZE — refuse
+  //           to raise via the MAX branch below)
+  //       Why: the 1z.216 cross-week guard sets contaminated
+  //       cross-week submits to 0, but it does NOT protect against
+  //       an untrusted client re-uploading a same-week contaminated
+  //       value AFTER an ops cleanup. Without this guard, the
+  //       sequence: (1) ops UPDATE current_value=0, (2) untrusted
+  //       client submits 78684 again with same week_start →
+  //       Branch 1z.131 below fires, MAX(0, 78684) restores the
+  //       contamination. The freeze closes that loop: a NULL-source
+  //       row can only be raised by a TRUSTED submit (handled by
+  //       the self-heal branch above), never by another untrusted
+  //       submit. Trusted clients are unaffected because the
+  //       self-heal branch sits above this one.
   //   - 1z.131 SAME-WEEK MONOTONIC MAX:
   //       excluded.week_start NOT NULL
   //       AND existing.week_start = excluded.week_start
@@ -230,6 +251,11 @@ export async function handleLeaderboardSubmit(
               AND excluded.week_start IS NOT NULL
               AND leaderboard_snapshots.week_start = excluded.week_start
            THEN excluded.current_value
+         WHEN excluded.weekly_sum_source IS NULL
+              AND leaderboard_snapshots.weekly_sum_source IS NULL
+              AND excluded.week_start IS NOT NULL
+              AND leaderboard_snapshots.week_start = excluded.week_start
+           THEN leaderboard_snapshots.current_value
          WHEN excluded.week_start IS NOT NULL
               AND leaderboard_snapshots.week_start = excluded.week_start
            THEN MAX(leaderboard_snapshots.current_value, excluded.current_value)
