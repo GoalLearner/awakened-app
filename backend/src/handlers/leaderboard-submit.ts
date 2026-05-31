@@ -65,8 +65,29 @@ const SIM_APPLE_SUB_PREFIX = 'sim_test_';
 // the client (see auth.js submitLeaderboardSnapshot caller in app.js
 // lbSubmitAllMetrics). Unknown / empty / unrecognised values are
 // treated as untrusted (NULL persisted) for safety.
+// v3 Phase 1z.218 — dual-tag transition allowlist.
+//   'client_sunday_utc_v2'   — w19+ clients that sum the week
+//                              against Sunday-UTC. Legacy from
+//                              before the Pacific reset switch.
+//                              Will be retired in 1z.221 (~2-3
+//                              weeks after the Pacific deploy)
+//                              once TestFlight w83+ rollout
+//                              completes and breadcrumb telemetry
+//                              shows no residual UTC-tagged
+//                              traffic.
+//   'client_pacific_week_v1' — w83+ clients that sum the week
+//                              against Sunday in
+//                              America/Los_Angeles. Matches the
+//                              new backend Pacific anchor in
+//                              getAccoladeWeekStart (1z.218).
+// Both are accepted as trusted during the transition window so a
+// mixed-build user base can keep the 1z.140 self-heal CASE firing
+// correctly. After 1z.221 drops the UTC tag, an older client's
+// submit becomes untrusted (sourcePersisted = NULL) and the
+// 1z.216 cross-week guard zeroes any cross-period contamination.
 const TRUSTED_WEEKLY_SUM_SOURCES: ReadonlySet<string> = new Set([
   'client_sunday_utc_v2',
+  'client_pacific_week_v1',
 ]);
 
 interface SubmitBody {

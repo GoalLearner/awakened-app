@@ -4,6 +4,71 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 30, 2026 — 1z.218 Backend Pacific weekly reset helper (read this first)
+
+**TL;DR.** Backend-only train. Switches the global weekly leaderboard anchor from Sunday-UTC to Sunday in `America/Los_Angeles`. Single chokepoint helper change in `accolade-week.ts` — `leaderboard-submit.ts`, `leaderboard-top.ts`, and the 100K Club path pick up the new boundary automatically. Trust-source allowlist gains `'client_pacific_week_v1'` alongside the existing `'client_sunday_utc_v2'` for a ~2-3 week transition window. **Migration: none. Worker deploy: NOT executed; gated on explicit approval.** Frontend untouched (waits for 1z.219).
+
+**Root motivation.** Product decision from 1z.217 audit: Awakened global high scores should reset at Sunday midnight Pacific so the visible reset matches the operator's local intuition. The previous UTC anchor caused Pacific users to see the reset at 5 PM Saturday local, which was mathematically correct but confusing (the "Galilea showed 78,684 minutes after rollover" case was actually a separate contamination bug — fixed in 1z.216 — but the UTC anchor made it appear during a confusing window).
+
+**Files modified.**
+- `backend/src/lib/accolade-week.ts` — rewrote `getAccoladeWeekStart(nowMs)` to compute Sunday-in-PT via `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', weekday: 'short', year/month/day: ... })`. Pre-allocated formatter for hot-path reuse. Walks back the matched DOW count to land on the Pacific-local Sunday's date. Defensive UTC fallback in case Intl returns unexpected output (Worker never throws inside the UPSERT path). Format unchanged: `YYYY-MM-DD`.
+- `backend/src/lib/accolade-week.test.ts` — full rewrite. 9 test cases including:
+  1. Sunday 00:00 PT rolls the week forward (PDT, UTC-7).
+  2. Every PT day-of-week (Sun..Sat) maps to the correct Pacific Sunday.
+  3. PDT month boundary (May → June 2026).
+  4. PT year boundary (Dec 2025 → Jan 2026; PST = UTC-8).
+  5. **DST spring-forward (March 2026)**: PST → PDT mid-week, week_start unchanged.
+  6. **DST fall-back (November 2026)**: PDT → PST mid-week, week_start unchanged.
+  7. ISO format / zero padding.
+  8. Default to `Date.now()` when no arg passed.
+  9. Output is always a Sunday (round-trip check).
+- `backend/src/handlers/leaderboard-submit.ts` — extended `TRUSTED_WEEKLY_SUM_SOURCES` to `{ 'client_sunday_utc_v2', 'client_pacific_week_v1' }`. Both accepted as trusted during the transition window so mixed-build user bases keep the 1z.140 self-heal CASE firing correctly. After ~2-3 weeks of post-Pacific-deploy traffic, the UTC tag is retired in 1z.221.
+- `backend/src/handlers/leaderboard-submit.test.ts` — one new test: `client_pacific_week_v1 is also accepted as a trusted source (1z.218)`.
+
+**Tests run.** `cd backend && npx vitest run` → **205/205 pass** (201 baseline from 1z.216 + 4 new on accolade-week + 1 new on leaderboard-submit). No regressions.
+
+**Schema impact.** None. `week_start` columns in `leaderboard_snapshots`, `weekly_step_records`, and `user_accolades` continue to store `YYYY-MM-DD` strings. The *interpretation* shifts from "Sunday-UTC date" to "Sunday-Pacific date" — old UTC-stamped rows coexist with new Pacific-stamped rows because they're just different date strings on different rows.
+
+**Transition expectation.** After Worker deploy lands, the very next Pacific Sunday rollover will be the first natively-Pacific week. The current in-flight UTC week (`2026-05-31`) freezes as historical; the new Pacific week starts ~7 hours later than the corresponding UTC moment. One-time split is expected per the 1z.217 plan.
+
+**1z.216 cross-week guard interaction.** The 1z.216 guard fires on any `excluded.week_start <> existing.week_start` with no trust tag. After 1z.218 deploy, the same guard runs against Pacific period keys. Untrusted clients that submit during the transition still get zeroed safely; trusted clients (carrying either accepted tag) bypass the guard via the self-heal branch. The guard logic is timezone-agnostic and remains correct.
+
+**Frontend not touched.** `app.js` still uses `lbGetCurrentWeekStartUTC` and tags submits with `'client_sunday_utc_v2'`. That's intentional — 1z.219 ships the matching frontend Pacific helper + `'client_pacific_week_v1'` tag + UX copy update. During the gap between 1z.218 deploy and 1z.219 ship, clients tagged `client_sunday_utc_v2` still land as trusted and the 1z.131 same-week MAX branch keeps in-week submissions clean.
+
+**Frontend knobs unchanged.** `APP_BUILD_TAG 2.2.3-w82`, `app.js?v=535`, `auth.js?v=20`, `sw.js CACHE_VERSION v5.421`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS=false`.
+
+**Deploy commands (DO NOT RUN until approved).**
+
+```bash
+cd backend
+git pull --ff-only origin main
+npx wrangler deploy
+```
+
+After deploy, verify the new anchor with a single sanity SELECT (read-only):
+
+```bash
+npx wrangler d1 execute awakened-db --remote \
+  --command "SELECT 'helper-sanity' AS check, '<expected_pacific_sunday>' AS expected;"
+```
+
+(Optional — the test suite already covers this; a smoke SQL is just belt-and-suspenders for production verification.)
+
+**Guard rails preserved.**
+- No production D1 mutation. No Worker deploy. No migration.
+- No frontend code change. No HealthKit / public friend activity / Roster / Guild / simulated leaderboard / Duel changes.
+- 1z.216 cross-week contamination guard remains live and timezone-agnostic.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback (if production deploy happens and needs to be undone).** `npx wrangler rollback` to the previous worker version. The helper change is purely additive in semantics (same function signature, same return shape); rolling back just restores the UTC anchor. No schema rollback needed.
+
+**Next phases.**
+- **1z.219** — Frontend: rewrite `lbGetCurrentWeekStartUTC` to `lbGetCurrentWeekStartPT` using `Intl.DateTimeFormat` in the same shape, tag submits with `'client_pacific_week_v1'`, update the leaderboard subhead copy from `"resets Sunday 12:00 AM UTC"` to `"resets Sunday 12:00 AM Pacific Time"`. Bump knobs to `w83`. **No deploy.**
+- **1z.220** — Coordinated deploy: 1z.218 backend + 1z.219 TestFlight w83.
+- **1z.221** — After ~2-3 weeks: retire `client_sunday_utc_v2` from the trust allowlist.
+
+---
+
 ## May 30, 2026 — 1z.216 Backend cross-week leaderboard contamination guard (read this first)
 
 **TL;DR.** Backend-only train. Closes the cross-week contamination hole in `leaderboard-submit.ts` that allowed untrusted clients to carry last-week's cumulative `step_total` into the new UTC week within minutes of the Sunday-UTC rollover. Real-device evidence on May 30 PDT: real user `galilea` showed `78,684` under `week_start='2026-05-31'` minutes after rollover while real user `Richie` correctly showed `0` (1z.139 client guard fired). **Migration: none. Worker deploy: gated on explicit approval.**

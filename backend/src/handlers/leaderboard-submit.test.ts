@@ -162,6 +162,20 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(insert.binds[6]).toBe('client_sunday_utc_v2');
   });
 
+  it('client_pacific_week_v1 is also accepted as a trusted source (1z.218)', async () => {
+    const db = makeDb({ current_value: 5000, best_value: 35000 });
+    const env = makeEnv(db);
+    await handleLeaderboardSubmit(
+      makeReq({ metric: 'step_total', current_value: 7308, weekly_sum_source: 'client_pacific_week_v1' }),
+      env, session,
+    );
+    const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+    const insert = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!;
+    // 7th bind = weekly_sum_source value. Trusted tag must persist
+    // verbatim during the UTC -> Pacific transition window.
+    expect(insert.binds[6]).toBe('client_pacific_week_v1');
+  });
+
   it('unrecognised weekly_sum_source values are persisted as NULL (untrusted)', async () => {
     const db = makeDb({ current_value: 5000, best_value: 35000 });
     const env = makeEnv(db);
