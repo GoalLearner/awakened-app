@@ -4,7 +4,100 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.226A Backend: three new generic public Guild Notification events (read this first)
+## May 31, 2026 — 1z.226C Frontend: hooks + renderer for the three new Guild Notification events (read this first)
+
+**TL;DR.** Frontend-only. Lights up the 1z.226A/B backend by adding (a) three new public submit hooks with privacy-safe idempotency, (b) one helper-set per event type to build payloads without ever forwarding card identity / habit identity, and (c) three new icon cases in the Guild feed renderer. Hunter-mode local rows (which still carry exact card name / exact habit name / exact step counts privately) are unchanged.
+
+**Backend dependency.** 1z.226A code shipped + 1z.226B Worker deployed (version `030f6eaa-05ee-4e2d-8eb4-eaa2b1c848a9`). Backend enforces the privacy contract at the validation layer; this train provides the only conformant client.
+
+**Files modified.**
+- `app.js` —
+  - **`_publicRareNonce(cardId)`** — privacy-safe nonce for `rare_item_drop`. Per-cardId localStorage map under `hb_public_rare_drop_nonce_map`; nonce is `<base36ts>-<base36rand>`. Mirror of `_publicUltraRareNonce` from 1z.223C. 200-entry FIFO cap. `cardId` is used ONLY as the local lookup key — never transmitted.
+  - **`_queueVerifiedStreakPublicEvent(source, band)`** + **`_publicVerifiedStreakAlreadySent`/`_publicVerifiedStreakMarkSent`** — guards public submit on (a) band ∈ `{7,14,30,100,365}` and (b) per-(source, band) one-shot localStorage marker under `hb_public_verified_streak_bands_seen`. The `source` string (`"sleep"`/`"workout"`) is stored locally for dedupe only; **NEVER part of the public payload**.
+  - **`_queueStep100KClubPublicEvent()`** — one-shot localStorage marker under `hb_public_step_100k_submitted` so the event fires exactly once per device-lifetime. Backend's UNIQUE(user_id, client_event_id) is the second safety net.
+  - **Hook 1 — `rare_item_drop`** at `openCardRevealModal:7521` (right next to the 1z.223C ultra-rare hook). Gated on `card.rarity === 'rare'`. Mutually exclusive with the ultra-rare branch above it — common drops do not enter the reveal modal, so they never fire either branch.
+  - **Hook 2 — `step_100k_club_unlocked`** at `_maybeFireFirstUnlockToast:16290` (inside the existing first-unlock celebration block, immediately after the welcome toast). Fires once per (device, accolade) pair via the existing seen-key guard plus the dedicated `_PAE_STEP_100K_SUBMITTED_KEY`.
+  - **Hook 3 — `verified_streak`** at `_guildhallMaybeFireStreakMilestone:3327` (immediately after the existing `recordGuildActivity('habit_streak', …)` local write). **Only safe because the two callers of this function — `_guildhallMaybeFireStreakMilestone('Sleep', …)` and `('Workout', …)` at `app.js:9466–9467` — are both HealthKit-auto-verified streak categories.** No user-typed habit ever reaches this function. The `habitName` parameter (`"Sleep"` or `"Workout"`) is used as a local dedupe-source label only; the public payload contains ONLY the band integer.
+  - **Renderer** in `_friendActivityRowHtml`: three new `else if` cases for the new event types. Icons:
+    - `rare_item_drop` → violet ◆ (distinguishes from gold ✦ ultra-rare).
+    - `step_100k_club_unlocked` → gold ⇈ (same family as `step_milestone_bucket` but prestige-tier).
+    - `verified_streak` → violet ◇ (open diamond — distinct from solid rank ◆).
+    - Label always comes from backend `eventLabel`; alias casing follows 1z.209 rules (Richie capitalized, others lowercase).
+- `index.html` — `app.js?v=543`.
+- `sw.js` — `CACHE_VERSION = 'v5.429'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w90`, `app.js?v=543`, `auth.js?v=20` (unchanged), `styles.css?v=305` (unchanged — no CSS), `sw.js CACHE_VERSION v5.429`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+### Exact public payloads transmitted
+
+| Event type | Payload | Idempotency |
+|---|---|---|
+| `rare_item_drop` | `{ eventType, eventKey:'rare', eventLabel:'found a rare item', eventValue:null, rarity:null, clientEventId:'rare:'+nonce, clientCreatedAt:ISO }` | Per-`cardId` nonce stored in localStorage; reveal-modal re-opens coalesce via UNIQUE(user_id, client_event_id) |
+| `step_100k_club_unlocked` | `{ eventType, eventKey:'step_100k_club', eventLabel:'joined the 100K Step Club', eventValue:100000, rarity:null, clientEventId:'step_100k_club:'+<base36ts>, clientCreatedAt:ISO }` | One-shot localStorage marker + backend UNIQUE |
+| `verified_streak` | `{ eventType, eventKey:'verified_streak:'+band, eventLabel:'reached a '+band+'-day verified streak', eventValue:band, rarity:null, clientEventId:'verified_streak:'+band+':'+<base36ts>, clientCreatedAt:ISO }` | Per-(source, band) localStorage marker + backend UNIQUE |
+
+### Exact renderer copy (Guild feed)
+
+| Event | Copy |
+|---|---|
+| `rare_item_drop` | `<alias> found a rare item` |
+| `step_100k_club_unlocked` | `<alias> joined the 100K Step Club` |
+| `verified_streak` band 7 | `<alias> reached a 7-day verified streak` |
+| `verified_streak` band 14 | `<alias> reached a 14-day verified streak` |
+| `verified_streak` band 30 | `<alias> reached a 30-day verified streak` |
+| `verified_streak` band 100 | `<alias> reached a 100-day verified streak` |
+| `verified_streak` band 365 | `<alias> reached a 365-day verified streak` |
+
+### Hooks intentionally not added
+
+- **`rollBossDrop` / `forceDrop` first-acquisition branches** — these were considered but `openCardRevealModal` is the cleaner attach point: every rare AND ultra-rare drop already routes through the reveal modal queue (per `rollBossDrop:5476`), the user has actually seen the reveal at that point, and we get a single submit site instead of two. If a future code path bypasses the reveal modal for legitimate rare acquisitions (currently none), revisit.
+- **Manual / user-typed habit streaks** — the `_guildhallMaybeFireStreakMilestone` function is the ONLY hook site for `verified_streak` because its only two callers are `'Sleep'` and `'Workout'`. Any future call site with a user-typed habit name would risk leaking the habit name; if a third HealthKit-verified streak category ever joins, add it there. **Do not** call `_queueVerifiedStreakPublicEvent` from any path that handles user-typed habits.
+
+### Privacy grep (verified at commit time)
+
+```
+$ awk '/_queuePublicAchievementEvent\(\{/,/\}\);/' app.js | grep -nE "cardId|cardName|card\.id|card\.name|slot|metadata|habitName|habitCategory|sleepHours|workoutType"
+(no matches)
+```
+
+### Guard rails preserved
+
+- No backend deploy (1z.226B already live).
+- No D1 mutation. No migration.
+- No item / card identity transmitted. No habit name transmitted. No habit category transmitted. No exact HealthKit values. No sleep / workout details. No souls / economy amounts. No metadata smuggling.
+- Hunter-mode local rows (carrying exact card names, habit names, step counts) unchanged.
+- All previously-shipped public types (`boss_kill`, `rank_up`, `step_milestone_bucket`, `ultra_rare_drop`) unchanged.
+- Backend-primary feed + local fallback strategy unchanged.
+- Date grouping, See More, Hunter/Guild toggle, Roster, Add Friend, friend rank badges, public profile summary, Habits perf, overscroll containment, Relic Archive 24h NEW badge (1z.224), `GUILD NOTIFICATIONS` heading (1z.225) — all unchanged.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Rollback
+
+Six independent reverts:
+1. Drop the `rare_item_drop` block at `openCardRevealModal:7521`.
+2. Drop the `_queueStep100KClubPublicEvent()` call inside `_maybeFireFirstUnlockToast`.
+3. Drop the `_queueVerifiedStreakPublicEvent(habitName, band)` call inside `_guildhallMaybeFireStreakMilestone`.
+4. Drop the three renderer cases (`rare_item_drop` / `step_100k_club_unlocked` / `verified_streak`) in `_friendActivityRowHtml`.
+5. Drop the new helpers and their `window.*` exports.
+6. Revert knob bumps (`w90 → w89`, `app.js?v=543 → 542`, `sw.js v5.429 → v5.428`).
+
+Leftover localStorage keys (`hb_public_rare_drop_nonce_map`, `hb_public_verified_streak_bands_seen`, `hb_public_step_100k_submitted`) are harmless dead state on rollback.
+
+### Manual QA (w90)
+
+1. Cold-launch w90. Confirm `"build": "2.2.3-w90"`.
+2. Trigger a fresh rare drop (boss kill → reveal modal). Hunter shows `You looted <exact item name>` privately; Guild Activity shows `<your-alias> found a rare item` after the next 5s queue flush + backend fetch.
+3. Trigger a common drop. No public Guild row appears.
+4. Trigger a fresh ultra-rare drop. Guild shows `<alias> looted an ultra-rare item` (1z.223C path still works).
+5. Cross 100K steps in a week such that the backend awards the 100K Step Club accolade and refreshes accolades. Welcome toast fires once; Guild Activity shows `<alias> joined the 100K Step Club` after the next backend fetch. Restart the app — no duplicate row.
+6. Cross a 7-day Sleep verified streak band. Guild Activity shows `<alias> reached a 7-day verified streak`. Cross again → no duplicate. Cross 14-day → fresh row. No "Sleep" or "Workout" string visible in the Guild row.
+7. Verify boss kill / rank-up / step bucket / ultra-rare public events still work.
+8. Verify `GUILD NOTIFICATIONS` heading + date grouping + See More + Hunter/Guild toggle.
+9. Verify Relic Archive 24h NEW badge still works on the Items tab.
+
+---
+
+## May 31, 2026 — 1z.226A Backend: three new generic public Guild Notification events
 
 **TL;DR.** Backend code + tests only. Extends `ALLOWED_EVENT_TYPES` with three new privacy-safe event types: `rare_item_drop`, `step_100k_club_unlocked`, `verified_streak`. Each follows the 1z.223A hard-pinned validation posture — every field except `clientEventId` / `clientCreatedAt` is fixed to canonical literals or a tiny enum. **No deploy. No D1 mutation. No migration (event_type column is TEXT).** Frontend hooks deferred to Phase 1z.226C.
 

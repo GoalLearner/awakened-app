@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w89';
+  const APP_BUILD_TAG = '2.2.3-w90';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3317,6 +3317,16 @@
       days:      band,
       currentDays: currentDays,
     }, 'streak_' + habitName.toLowerCase() + '_' + band);
+    // v3 Phase 1z.226C — public Guild Notification submit for the
+    // same band crossing. ONLY safe because the two callers of
+    // _guildhallMaybeFireStreakMilestone (see lbGetSnapshot in
+    // 1z.165) are 'Sleep' and 'Workout', both HealthKit-auto-
+    // verified streak categories — no user-typed habit name ever
+    // reaches this function. The public payload contains ONLY the
+    // band integer (one of {7,14,30,100,365}); the habit name is
+    // used locally as a dedupe-source label only, never sent.
+    // Backend (1z.226A) enforces the same allowlist.
+    try { _queueVerifiedStreakPublicEvent(habitName, band); } catch (_) {}
   }
 
   function recordGuildActivity(type, payload, seenKey) {
@@ -4850,6 +4860,23 @@
       // label always comes from backend eventLabel ("looted an
       // ultra-rare item") — never an exact card name.
       iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
+    } else if (ev.eventType === 'rare_item_drop') {
+      // v3 Phase 1z.226C — generic rare-tier drop. Violet diamond
+      // ◆ to distinguish from gold ultra-rare ✦. Label always
+      // comes from backend ("found a rare item") — no card name.
+      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
+    } else if (ev.eventType === 'step_100k_club_unlocked') {
+      // v3 Phase 1z.226C — one-shot 100K Step Club accolade
+      // unlock. Gold ⇈ glyph (same family as step_milestone_bucket
+      // but visually prestige-tier). Label always comes from
+      // backend ("joined the 100K Step Club").
+      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
+    } else if (ev.eventType === 'verified_streak') {
+      // v3 Phase 1z.226C — generic verified-streak milestone.
+      // Violet ◇ glyph (open diamond) to distinguish from solid
+      // rank ◆. Label always comes from backend ("reached a
+      // 30-day verified streak") — no habit name ever.
+      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◇</span>';
     } else {
       iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
     }
@@ -7482,6 +7509,30 @@
           eventValue:      null,
           rarity:          null,
           clientEventId:   'ultra_rare:' + nonce,
+          clientCreatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (_) {}
+
+    // v3 Phase 1z.226C — generic public RARE-tier drop event.
+    // Backend (1z.226A) accepts ultra-narrow shape: fixed eventKey
+    // "rare", fixed eventLabel "found a rare item", null value &
+    // rarity. card.id and card.name are NEVER forwarded — only
+    // used as the local lookup key for the privacy-safe nonce
+    // map. Gated to rarity === 'rare' so common drops never
+    // surface publicly and the ultra-rare branch above stays
+    // mutually exclusive (no double-submit).
+    try {
+      if (card && card.rarity === 'rare'
+          && typeof _queuePublicAchievementEvent === 'function') {
+        const nonce = _publicRareNonce(card.id || null);
+        _queuePublicAchievementEvent({
+          eventType:       'rare_item_drop',
+          eventKey:        'rare',
+          eventLabel:      'found a rare item',
+          eventValue:      null,
+          rarity:          null,
+          clientEventId:   'rare:' + nonce,
           clientCreatedAt: new Date().toISOString(),
         });
       }
@@ -12817,6 +12868,113 @@
   }
   try { window.__publicUltraRareNonce = _publicUltraRareNonce; } catch (_) {}
 
+  // v3 Phase 1z.226C — privacy-safe nonce for the generic public
+  // RARE-tier drop event. Same shape as _publicUltraRareNonce
+  // (per-cardId localStorage lookup; nonce is base36ts-base36rand;
+  // 200-entry FIFO cap) so duplicate reveal-modal opens of the
+  // same rare card coalesce server-side via UNIQUE(user_id,
+  // client_event_id) without ever transmitting card identity.
+  const _PAE_RARE_NONCE_MAP_KEY = 'hb_public_rare_drop_nonce_map';
+  function _publicRareNonce(cardId) {
+    let map = null;
+    try {
+      const raw = localStorage.getItem(_PAE_RARE_NONCE_MAP_KEY);
+      if (raw) map = JSON.parse(raw);
+    } catch (_) { map = null; }
+    if (!map || typeof map !== 'object') map = {};
+    const lookupKey = (typeof cardId === 'string' && cardId) ? cardId : '__anon__';
+    if (typeof map[lookupKey] === 'string' && map[lookupKey].length > 0) {
+      return map[lookupKey];
+    }
+    const tsPart   = Date.now().toString(36);
+    const randPart = Math.floor(Math.random() * 0xffffffff).toString(36);
+    const nonce    = tsPart + '-' + randPart;
+    map[lookupKey] = nonce;
+    try {
+      const keys = Object.keys(map);
+      if (keys.length > 200) {
+        for (let i = 0; i < keys.length - 200; i++) delete map[keys[i]];
+      }
+      localStorage.setItem(_PAE_RARE_NONCE_MAP_KEY, JSON.stringify(map));
+    } catch (_) {}
+    return nonce;
+  }
+  try { window.__publicRareNonce = _publicRareNonce; } catch (_) {}
+
+  // v3 Phase 1z.226C — verified streak public-submit dedupe.
+  // Stores per-(source, band) one-shot markers so the same
+  // band crossing for the same HealthKit-verified streak
+  // category (Sleep / Workout) doesn't queue twice. The source
+  // string ("sleep" / "workout") is stored locally ONLY — the
+  // public payload contains just the band integer, never the
+  // streak source.
+  const _PAE_VERIFIED_STREAK_SEEN_KEY = 'hb_public_verified_streak_bands_seen';
+  function _publicVerifiedStreakAlreadySent(source, band) {
+    try {
+      const raw = localStorage.getItem(_PAE_VERIFIED_STREAK_SEEN_KEY);
+      if (!raw) return false;
+      const map = JSON.parse(raw);
+      if (!map || typeof map !== 'object') return false;
+      return map[String(source).toLowerCase() + '_' + band] === 1;
+    } catch (_) { return false; }
+  }
+  function _publicVerifiedStreakMarkSent(source, band) {
+    try {
+      const raw = localStorage.getItem(_PAE_VERIFIED_STREAK_SEEN_KEY);
+      let map = null;
+      try { map = raw ? JSON.parse(raw) : null; } catch (_) { map = null; }
+      if (!map || typeof map !== 'object') map = {};
+      map[String(source).toLowerCase() + '_' + band] = 1;
+      localStorage.setItem(_PAE_VERIFIED_STREAK_SEEN_KEY, JSON.stringify(map));
+    } catch (_) {}
+  }
+  // Public submit wrapper for verified streak band crossings. Only
+  // queues when (a) source is HealthKit-auto-verified (Sleep or
+  // Workout — both shipped via _guildhallMaybeFireStreakMilestone),
+  // and (b) the (source, band) pair hasn't been queued before. The
+  // backend (1z.226A) validates the band against the canonical
+  // {7,14,30,100,365} allowlist; this guard is defense-in-depth.
+  const _PAE_VERIFIED_STREAK_BANDS = new Set([7, 14, 30, 100, 365]);
+  function _queueVerifiedStreakPublicEvent(source, band) {
+    if (typeof _queuePublicAchievementEvent !== 'function') return;
+    if (!_PAE_VERIFIED_STREAK_BANDS.has(band)) return;
+    if (_publicVerifiedStreakAlreadySent(source, band)) return;
+    _queuePublicAchievementEvent({
+      eventType:       'verified_streak',
+      eventKey:        'verified_streak:' + band,
+      eventLabel:      'reached a ' + band + '-day verified streak',
+      eventValue:      band,
+      rarity:          null,
+      clientEventId:   'verified_streak:' + band + ':' + Date.now().toString(36),
+      clientCreatedAt: new Date().toISOString(),
+    });
+    _publicVerifiedStreakMarkSent(source, band);
+  }
+  try { window.__queueVerifiedStreakPublicEvent = _queueVerifiedStreakPublicEvent; } catch (_) {}
+
+  // v3 Phase 1z.226C — 100K Step Club public-submit dedupe.
+  // One-shot localStorage marker so the public event fires
+  // exactly once per device-lifetime. Backend's UNIQUE on
+  // (user_id, client_event_id) is the second safety net.
+  const _PAE_STEP_100K_SUBMITTED_KEY = 'hb_public_step_100k_submitted';
+  function _queueStep100KClubPublicEvent() {
+    if (typeof _queuePublicAchievementEvent !== 'function') return;
+    try {
+      if (localStorage.getItem(_PAE_STEP_100K_SUBMITTED_KEY) === '1') return;
+    } catch (_) {}
+    _queuePublicAchievementEvent({
+      eventType:       'step_100k_club_unlocked',
+      eventKey:        'step_100k_club',
+      eventLabel:      'joined the 100K Step Club',
+      eventValue:      100000,
+      rarity:          null,
+      clientEventId:   'step_100k_club:' + Date.now().toString(36),
+      clientCreatedAt: new Date().toISOString(),
+    });
+    try { localStorage.setItem(_PAE_STEP_100K_SUBMITTED_KEY, '1'); } catch (_) {}
+  }
+  try { window.__queueStep100KClubPublicEvent = _queueStep100KClubPublicEvent; } catch (_) {}
+
   // Bucket detector for step milestones. Submits one
   // step_milestone_bucket event per (date, bucket) crossing.
   // Idempotency lives in localStorage so we never queue the
@@ -16268,6 +16426,15 @@
         showHabitToast('Welcome to the 100K Step Club.');
       }
     } catch (_) {}
+    // v3 Phase 1z.226C — public Guild Notification submit for the
+    // first 100K Step Club unlock. Fires exactly once per device
+    // via the _PAE_STEP_100K_SUBMITTED_KEY one-shot marker
+    // inside _queueStep100KClubPublicEvent. Backend's
+    // UNIQUE(user_id, client_event_id) is the second safety net.
+    // Step count, weekly_step_records identity, and 100K Club row
+    // metadata are NEVER forwarded — only the canonical fixed
+    // shape per 1z.226A.
+    try { _queueStep100KClubPublicEvent(); } catch (_) {}
     // Trigger the 600ms one-time pulse on the 100K Club badge, if
     // the Status card is currently mounted. CSS rule:
     // `.sc-rank-hero--100k-club.is-new` animates a single pulse,
