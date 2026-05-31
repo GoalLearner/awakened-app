@@ -4,7 +4,60 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.224 Relic Archive "NEW" badge 24h expiration (read this first)
+## May 31, 2026 — 1z.225 Social heading "GUILD NOTIFICATIONS" (read this first)
+
+**TL;DR.** Pure copy change: the Social tab section title swaps from `GUILD ACTIVITY` → `GUILD NOTIFICATIONS`. Single span in `index.html`. No behavior, no logic, no internal names touched.
+
+**Files modified.**
+- `index.html` — one `<div class="guildhall-section-title">` text swap (line 692). `app.js?v=542`.
+- `app.js` — `APP_BUILD_TAG` bumped to `2.2.3-w89`.
+- `sw.js` — `CACHE_VERSION = 'v5.428'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w89`, `app.js?v=542`, `auth.js?v=20` (unchanged), `styles.css?v=305` (unchanged — no CSS), `sw.js CACHE_VERSION v5.428`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Old label.** `GUILD ACTIVITY`
+**New label.** `GUILD NOTIFICATIONS`
+
+**Internal names preserved (not user-visible).**
+- Function names: `renderGuildActivity`, `setGuildActivityFilter`, `_guildActivityFilter`, etc.
+- CSS classes: `.guildhall-activity-*`, `.guildhall-section-*`.
+- Comments referencing "Guild Activity" across `app.js`, `styles.css`, and `index.html`.
+- Diagnostic breadcrumb names: `guildhall-guild-feed-render`, `guildhall-hunter-feed-render`, `guild-friends-activity-fetch-*`.
+- DOM IDs: `guildhall-activity-section`, `guildhall-activity-body`, etc.
+- Backend event types + endpoint names.
+
+Renaming internals would create churn for zero user value and risk breaking other surfaces — skipped per spec.
+
+**Confirmed preserved (behavior).**
+- Hunter/Guild segmented control.
+- Today/Yesterday/date group accordion.
+- See More pagination.
+- Backend-primary feed (`/v1/friends/activity`) + local fallback strategy.
+- Ultra-rare public event submit + Hunter exact-name display from 1z.223C.
+- Hunter Feed superset (incl. `friend_added` from 1z.197).
+- 1z.224 Relic Archive 24h "NEW" badge.
+- All other surfaces (Roster, Add Friend, friend rank badges, public profile summary, Armory, Habits perf, overscroll containment).
+
+**Guard rails preserved.**
+- No backend deploy / D1 / migration / Codemagic / archive / upload.
+- No feed logic / event types / public submit pipeline change.
+- No HealthKit / leaderboard / friend / auth / rank / habits / inventory / boss / Duel change.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Rollback.** Single text revert at `index.html:692`. Knob bumps revert with the same train.
+
+**Manual QA (w89).**
+1. Cold-launch w89. Confirm `"build": "2.2.3-w89"`.
+2. Open Social tab. Heading reads `GUILD NOTIFICATIONS`.
+3. Toggle Hunter/Guild — feed renders both modes correctly.
+4. Date grouping (Today / Yesterday / etc.) still works.
+5. See More still works.
+6. Ultra-rare drops still surface in both modes per 1z.223C.
+7. Add Friend / Remove Friend / Roster unchanged.
+
+---
+
+## May 31, 2026 — 1z.224 Relic Archive "NEW" badge 24h expiration
 
 **TL;DR.** Frontend-only. The Relic Archive header pill (`9 NEW`) was an unbounded "discovered but unviewed" count that grew forever. Now it counts only relics acquired within the last 24 hours, on a rolling window. Per-card NEW chips elsewhere in the archive keep their existing "unviewed" affordance — only the aggregate header pill is bounded.
 
