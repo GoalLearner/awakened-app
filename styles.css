@@ -2388,6 +2388,15 @@ footer {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* v3 Phase 1z.220B — lock vertical overscroll/rubber-band on
+     every tab panel (Profile, Stats, History, Achievements,
+     Quests, …). Mirrors the 1z.220A `#main-scroll` Habits fix
+     so the rest of the app feels equally static at top/bottom.
+     iOS 16+ honors this natively; older WebKit falls back to
+     default bounce (acceptable per 1z.220A guidance). The
+     Habits panel (#main-scroll) carries its own redundant
+     overscroll-behavior:none in the per-id block above. */
+  overscroll-behavior: none;
 }
 
 .tab-panel::-webkit-scrollbar { display: none; }
