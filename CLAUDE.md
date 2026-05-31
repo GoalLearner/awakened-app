@@ -4,6 +4,61 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 30, 2026 — Closeout: w85 TestFlight live, user QA passed (read this first)
+
+**Status.** `2.2.3-w85` is the latest shipped TestFlight build. User QA passed: "everything looks good, everything is functioning perfectly." Session closed cleanly.
+
+**Final shipped state.**
+
+| Knob | Value |
+|---|---|
+| Latest frontend phase | `1z.220A` |
+| Latest frontend commit | `88bebcc` (origin/main) |
+| `APP_VERSION` | `2.2.3` |
+| `APP_BUILD_TAG` | `2.2.3-w85` |
+| `app.js?v=` | `538` |
+| `auth.js?v=` | `20` |
+| `styles.css?v=` | `304` |
+| `sw.js CACHE_VERSION` | `v5.424` |
+| `simulated-leaderboard.js?v=` | `7` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` |
+
+**Summary of final shipped changes (the trains that went out in this ship window):**
+- **1z.214** Habits page performance pass (rAF-coalesced header metrics, renderHabits fingerprint bail, HealthKit side-effect coalescing, double-rAF anim retriggers, delegated handler on `#habit-list`).
+- **1z.213** Armory Equipment Bonuses → Sigil Grid (per-stat colored cards + glyph chips + gold TOTAL cell).
+- **1z.215** Armory TOTAL tile alignment.
+- **1z.209** Lowercase alias display across Social/Guild surfaces; Richie remains the lone capitalized exception via `LB_ALIAS_DISPLAY_OVERRIDES`.
+- **1z.219** Pacific Time leaderboard frontend: `lbGetCurrentWeekStartPT` helper, `'client_pacific_week_v1'` submit tag, "resets Sunday 12:00 AM Pacific Time" copy.
+- **1z.220** Main icon rail vertical bounce lock.
+- **1z.220A** Habits panel top/bottom overscroll containment.
+
+**Backend dependency.**
+- **1z.218** backend Pacific weekly reset helper was deployed before the w85 frontend ship per the user's confirmation. Backend 1z.218 deployed before w85 ship; Worker version ID not revalidated in this closeout pass (the prior recorded version from 1z.216D deploy was `f3d421f2-d650-43aa-8065-e8190e5e4a9a`; if 1z.218 was deployed in a subsequent ship, its version ID was not captured in this conversation).
+- Dual trust allowlist active: backend accepts both `'client_sunday_utc_v2'` and `'client_pacific_week_v1'` during the transition window.
+- **1z.221** (retire `'client_sunday_utc_v2'` from the trust allowlist) remains future work — recommended after ~2-3 weeks of clean Pacific-tagged traffic.
+
+**Outstanding caveats / future work.**
+- **Galilea `best_value = 78684`** on `leaderboard_snapshots` row for `step_total / week_start='2026-05-31'` remains intentionally untouched (per user direction in 1z.216D closeout). Should only be cleaned if a real visible surface is audited and confirms the contaminated peak is user-facing. `current_value` was already reset to 0.
+- **1z.221 UTC trust-tag retirement** — gated on ~2-3 weeks of clean telemetry showing no residual `'client_sunday_utc_v2'` traffic from active devices.
+- **`overscroll-behavior: none`** in 1z.220A requires iOS 16+ for full effect. Older WebKit will fall back to default rubber-band. Capacitor's minimum-supported iOS likely covers the active user base; if a real device on an older iOS shows bounce, the fallback is a scoped JS touchmove guard on `#main-scroll` — not needed today.
+- **1z.222 (optional)** — if any future change adds an 8th tab AND a narrow viewport produces horizontal overflow on `.tab-bar`, revisit whether `touch-action: pan-x` flick still feels right or switch to `touch-action: manipulation` (tap-only).
+- **`best_value` HoF audit** — `weekly_step_records` may carry an inflated row for Galilea matching the same contamination event. Not user-confirmed to be visible; defer unless reported.
+
+**Next recommended actions (next session).**
+- Monitor w85 in TestFlight; collect Copy Debug Info if anything appears off.
+- Defer 1z.221 UTC tag retirement for ~2-3 weeks.
+- No broad changes recommended tonight.
+
+**Guard rails preserved across the entire ship window.**
+- No production D1 mutation since the surgical 1z.216D cleanup of Galilea's `current_value`.
+- No migration ran.
+- No frontend code paths changed habits / XP / streak / rank / class / particles / audio / HealthKit / boss / leaderboard scoring math / Social/Guild semantics / Armory math / inventory / auth / public-event payloads / Duels.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Files of record.** This document (`CLAUDE.md`) is the canonical project state log. Historical phase entries below are preserved for rollback context and shouldn't be deleted.
+
+---
+
 ## May 30, 2026 — 1z.220A Habits panel overscroll lock (read this first)
 
 **TL;DR.** Frontend CSS-only fix. Kills the iOS rubber-band overscroll bounce at the top and bottom boundaries of the Habits scroll container (`#main-scroll`). Smooth momentum scrolling inside the valid range is preserved. Other tab panels keep their current iOS-native feel — change is scoped to Habits only.
@@ -53,7 +108,7 @@ This blocks the local rubber-band on iOS 16+ without removing the momentum-scrol
 - No global body or document-level CSS change.
 - `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
 
-**Sequencing note.** w85 inherits the Pacific leaderboard frontend from 1z.219. **Do NOT TestFlight to production users until backend 1z.218 has deployed first.** 1z.221 (UTC tag retirement) follows ~2-3 weeks after the Pacific rollout.
+**Sequencing note (historical — resolved at w85 ship).** w85 inherits the Pacific leaderboard frontend from 1z.219. At the time this entry was written, the deploy gate was: do not TestFlight until backend 1z.218 has deployed. **Status now: backend 1z.218 was deployed before the w85 frontend ship per user confirmation; w85 is live on TestFlight with user QA passed.** 1z.221 (UTC tag retirement) follows ~2-3 weeks after the Pacific rollout.
 
 **Manual QA (w85).**
 1. Cold-launch w85. Confirm `"build": "2.2.3-w85"`.
