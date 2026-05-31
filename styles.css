@@ -2292,6 +2292,22 @@ footer {
 }
 
 /* ── TAB BAR ── */
+/* v3 Phase 1z.220 — vertical lock. Pre-1z.220 the rail had
+   `overflow-x: auto` + `-webkit-overflow-scrolling: touch`,
+   which on iOS WebKit turned the nav into a momentum-scrollable
+   viewport — even with the 7 icons fitting via flex:1 with zero
+   horizontal overflow, dragging directly on the rail produced a
+   vertical rubber-band bounce. Fix:
+     - overflow-y: hidden  (no vertical scroll, no bounce)
+     - overflow-x: auto kept (defensive: a future 8th tab on a
+       narrow viewport could need it; today's 7 fit flush)
+     - dropped -webkit-overflow-scrolling: touch (no momentum
+       behavior = no rubber-band)
+     - touch-action: pan-x (allow horizontal pans if/when needed,
+       block any vertical pan/zoom gesture interpretation)
+     - overscroll-behavior: contain (chain bounces stay inside
+       the rail and never bubble into the page)
+*/
 .tab-bar {
   display: flex;
   background: var(--bg);
@@ -2300,7 +2316,9 @@ footer {
   padding: 0;
   gap: 0;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .tab-bar::-webkit-scrollbar { display: none; }

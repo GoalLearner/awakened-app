@@ -4,6 +4,62 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## May 30, 2026 — 1z.220 Tab bar vertical lock (read this first)
+
+**TL;DR.** Frontend CSS-only fix. Locks the main `<nav class="tab-bar">` icon rail so it can't be dragged vertically or rubber-band bounce on iOS WebKit. Tap behavior, active underline, icon order, icon art, and routing logic are all untouched.
+
+**Root cause.** `.tab-bar` had `overflow-x: auto` paired with `-webkit-overflow-scrolling: touch`. On iOS WebKit that combination turns the element into a momentum-scrollable viewport even when the 7 buttons (each `flex: 1`) fit flush on every iPhone width and there's no horizontal overflow to scroll. The momentum metadata still applies, so touch-drags directly on the rail produced a vertical rubber-band bounce.
+
+**Fix.** Four CSS lines on `.tab-bar`:
+
+| Change | Effect |
+|---|---|
+| keep `overflow-x: auto` | defensive — a future 8th tab on a narrow viewport could need it. Today's 7 fit flush. |
+| add `overflow-y: hidden` | hard block on any vertical scroll viewport behavior |
+| drop `-webkit-overflow-scrolling: touch` | removes the iOS momentum-scroll behavior that was producing the bounce |
+| add `touch-action: pan-x` | allows horizontal pans if/when needed, tells iOS to not interpret vertical drags on this element as gestures |
+| add `overscroll-behavior: contain` | even if some future content overflows, any chain-scroll stays inside the rail and never bubbles into the page |
+
+No `position: fixed`. No JS touch listener. No tap-handling change. Pure containment.
+
+**Files modified.**
+- `styles.css` — `.tab-bar` rule body. ~13 lines of clarifying comment + 4 active CSS lines changed.
+- `app.js` — `APP_BUILD_TAG` bumped to `2.2.3-w84`.
+- `index.html` — `app.js?v=537`, `styles.css?v=303`.
+- `sw.js` — `CACHE_VERSION = 'v5.423'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w84`, `app.js?v=537`, `auth.js?v=20` (unchanged), `styles.css?v=303`, `sw.js CACHE_VERSION v5.423`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved.
+
+**Audited element/class.** `<nav class="tab-bar">` at `index.html:411`. Contains 7 `<button class="tab-btn">` children with `id="tab-{profile|habits|stats|history|quests|items|social}"` and matching `data-tab` attributes. Tab routing logic in `app.js` reads `data-tab` — untouched.
+
+**Behaviour preserved.**
+- Every icon still taps and routes correctly.
+- Active underline still moves on selection.
+- Icon order, art, sizes, padding, font, color — all unchanged.
+- Page scrolling outside the rail is unaffected (the `overscroll-behavior: contain` only governs chain-scrolls originating *inside* the rail; vertical page scroll from below the rail still works exactly as before).
+- 7 icons still fit flush on every supported iPhone width.
+
+**Guard rails preserved.**
+- No backend / D1 / migration / Codemagic / archive / upload.
+- No tab routing logic, icon assets, header metrics, rank, XP, HealthKit, habits, leaderboard, Social/Guild, Armory gear math, bosses, inventory, auth, or public activity changes.
+- No JS touch listeners added.
+- No `position: fixed` / sticky positioning changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Manual QA (w84).**
+1. Cold-launch w84. Confirm `"build": "2.2.3-w84"` in Copy Debug Info.
+2. On the Profile / Status tab, place a finger directly on any icon in the rail and drag up/down. The rail should NOT move vertically. It should NOT rubber-band.
+3. Tap each of the 7 icons in sequence. Each tab opens correctly. The purple underline moves to the tapped icon.
+4. Start a vertical drag below the rail (on the Hunter Profile card or stat hexagon). Page scrolls normally.
+5. Start a vertical drag inside the rail. No vertical movement, no page jump, no broken tap.
+6. On a narrow viewport (iPhone SE / mini), confirm all 7 icons still fit. If they ever don't, horizontal pan still works thanks to retained `overflow-x: auto` + `touch-action: pan-x`.
+7. Smoke test: Habits, Stats, History, Dungeon, Items, Social — each tab opens cleanly and renders normally.
+8. Rotate to landscape (if supported by the app): no broken layout.
+
+**Rollback.** Single CSS revert: restore the original 5-line `.tab-bar` block (with `-webkit-overflow-scrolling: touch` re-added and the four new lines removed). Plus knob bumps revert: `w84 → w83`, `app.js?v 537 → 536`, `styles.css?v 303 → 302`, `sw.js v5.423 → v5.422`. No DB / backend / storage touched.
+
+---
+
 ## May 30, 2026 — 1z.219 Frontend Pacific weekly reset helper (read this first)
 
 **TL;DR.** Frontend-only prep train. Mirrors the 1z.218 backend Pacific anchor on the client. New `lbGetCurrentWeekStartPT(nowMs)` computes Sunday-in-Pacific via `Intl.DateTimeFormat`. The four active call sites (two sum helpers, two cache invalidation reads, plus the leaderboard subhead copy generator) all swap to the Pacific helper. The submit path now tags weekly cumulative metrics with `'client_pacific_week_v1'` (matches the new backend trust allowlist). Subhead copy updates to "resets Sunday 12:00 AM Pacific Time." Knobs bumped to w83. **No deploy. No backend touch. No D1 mutation. Not shipped to TestFlight yet.**
