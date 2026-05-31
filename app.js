@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w90';
+  const APP_BUILD_TAG = '2.2.3-w91';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16620,10 +16620,13 @@
             // Inline stat strip — carries .sc-hero-class + data-class-key
             // on the class segment so the existing class-detail delegated
             // click handler (at ~line 9255) still fires.
+            // v3 Phase 1z.227 — dropped the "<N> PTS" middle
+            // segment per product direction. Rank + class are
+            // now the only identity tokens on this strip; the
+            // total-XP value still appears in the bottom "85
+            // TOTAL XP" stat cell so the number isn't lost.
             '<div class="sc-identity-strip">' +
               '<span class="sc-identity-rank" data-rank="' + esc(rank.id) + '">' + esc(rank.id) + ' RANK</span>' +
-              '<span class="sc-identity-sep">·</span>' +
-              '<span class="sc-identity-pts">' + totalPoints.toLocaleString() + ' PTS</span>' +
               '<span class="sc-identity-sep">·</span>' +
               '<span class="sc-identity-class sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
                 '<span class="sc-hero-class-name">' + esc((cls.name || '').toUpperCase()) + '</span>' +
