@@ -143,6 +143,39 @@ const VALID_ULTRA_RARE_DROP = {
   clientCreatedAt: NOW_ISO,
 };
 
+// v3 Phase 1z.226A — fixed canonical rare-tier drop payload.
+const VALID_RARE_ITEM_DROP = {
+  eventType:       'rare_item_drop',
+  eventKey:        'rare',
+  eventLabel:      'found a rare item',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'rare:2026-05-31T19-30-00:n1',
+  clientCreatedAt: NOW_ISO,
+};
+
+// v3 Phase 1z.226A — 100K Step Club accolade unlock payload.
+const VALID_STEP_100K_CLUB = {
+  eventType:       'step_100k_club_unlocked',
+  eventKey:        'step_100k_club',
+  eventLabel:      'joined the 100K Step Club',
+  eventValue:      100000,
+  rarity:          null,
+  clientEventId:   'step_100k_club:2026-W22',
+  clientCreatedAt: NOW_ISO,
+};
+
+// v3 Phase 1z.226A — verified streak 30-day band payload.
+const VALID_VERIFIED_STREAK_30 = {
+  eventType:       'verified_streak',
+  eventKey:        'verified_streak:30',
+  eventLabel:      'reached a 30-day verified streak',
+  eventValue:      30,
+  rarity:          null,
+  clientEventId:   'verified_streak:30:2026-05-31',
+  clientCreatedAt: NOW_ISO,
+};
+
 describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -578,6 +611,315 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     // No inserts should have run.
     expect(db._calls().length).toBe(0);
   });
+
+  // ── v3 Phase 1z.226A — three new generic public event types ──
+  //
+  // Each new type follows the same hard-pinned validation posture
+  // as ultra_rare_drop (1z.223A): label / key / value are fixed
+  // canonical strings/integers; the client can only vary
+  // clientEventId and clientCreatedAt. Item names, card identity,
+  // habit names, and habit categories are all rejected. Existing
+  // private types stay rejected.
+
+  // — rare_item_drop —
+  it('accepts a valid canonical rare_item_drop', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [VALID_RARE_ITEM_DROP] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    expect(calls[0]?.binds[3]).toBe('rare');
+    expect(calls[0]?.binds[4]).toBe('found a rare item');
+    expect(calls[0]?.binds[5]).toBeNull();
+    expect(calls[0]?.binds[6]).toBeNull();
+  });
+
+  it('rejects rare_item_drop with an exact item name in the label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventLabel: 'found Dream-Woven Hood' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects rare_item_drop with a "found a common item" label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventLabel: 'found a common item' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects rare_item_drop with a card-slug eventKey', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventKey: 'dream_woven_hood' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+  });
+
+  it('rejects rare_item_drop with non-null eventValue', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventValue: 1 }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  it('rejects rare_item_drop with non-null rarity', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, rarity: 'rare' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+  });
+
+  it('still rejects the local-only card_drop type (rare_item_drop is the only public drop variant for non-ultra)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventType: 'card_drop' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_TYPE');
+  });
+
+  // — step_100k_club_unlocked —
+  it('accepts a valid canonical step_100k_club_unlocked', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [VALID_STEP_100K_CLUB] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    expect(calls[0]?.binds[3]).toBe('step_100k_club');
+    expect(calls[0]?.binds[4]).toBe('joined the 100K Step Club');
+    expect(calls[0]?.binds[5]).toBe(100000);
+    expect(calls[0]?.binds[6]).toBeNull();
+  });
+
+  it('rejects step_100k_club_unlocked with a 50K Step Club label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_STEP_100K_CLUB, eventLabel: 'joined the 50K Step Club' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects step_100k_club_unlocked with a step-milestone-style label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_STEP_100K_CLUB, eventLabel: 'crossed 100,000 steps today' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects step_100k_club_unlocked with a different eventKey', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_STEP_100K_CLUB, eventKey: 'club' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+  });
+
+  it('rejects step_100k_club_unlocked with eventValue != 100000', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_STEP_100K_CLUB, eventValue: 50000 }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  it('rejects step_100k_club_unlocked with non-null rarity', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_STEP_100K_CLUB, rarity: 'S+' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+  });
+
+  // — verified_streak —
+  for (const band of [7, 14, 30, 100, 365]) {
+    it(`accepts verified_streak band ${band}`, async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{
+          eventType:       'verified_streak',
+          eventKey:        'verified_streak:' + band,
+          eventLabel:      `reached a ${band}-day verified streak`,
+          eventValue:      band,
+          rarity:          null,
+          clientEventId:   'verified_streak:' + band + ':2026-05-31',
+          clientCreatedAt: NOW_ISO,
+        }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      const calls = db._calls();
+      expect(calls[0]?.binds[3]).toBe('verified_streak:' + band);
+      expect(calls[0]?.binds[4]).toBe(`reached a ${band}-day verified streak`);
+      expect(calls[0]?.binds[5]).toBe(band);
+      expect(calls[0]?.binds[6]).toBeNull();
+    });
+  }
+
+  it('rejects verified_streak with non-allowed band 5', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        eventKey:   'verified_streak:5',
+        eventLabel: 'reached a 5-day verified streak',
+        eventValue: 5,
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  it('rejects verified_streak with non-allowed band 21', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        eventKey:   'verified_streak:21',
+        eventLabel: 'reached a 21-day verified streak',
+        eventValue: 21,
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  it('rejects verified_streak with a habit name in the label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        eventLabel: 'reached a 30-day Meditation streak',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects verified_streak with label/value band mismatch (label 30, value 7)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        eventValue: 7,
+        eventKey:   'verified_streak:7',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects verified_streak with key/value band mismatch (value 30, key :7)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        eventKey: 'verified_streak:7',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+  });
+
+  it('rejects verified_streak with non-null rarity', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        rarity: 'S',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+  });
+
+  // — Privacy: no smuggling across all three new types —
+  it('rare_item_drop: smuggle attempt (cardId/cardName/metadata) never binds those values', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_RARE_ITEM_DROP,
+        cardId:   'dream_woven_hood',
+        cardName: 'Dream-Woven Hood',
+        metadata: { secret: 'leak' },
+      }] }),
+      makeEnv(db), session,
+    );
+    const calls = db._calls();
+    const joined = calls[0]!.binds.map(b => String(b)).join('|');
+    expect(joined).not.toContain('dream_woven_hood');
+    expect(joined).not.toContain('Dream-Woven Hood');
+    expect(joined).not.toContain('leak');
+    expect(joined).not.toContain('secret');
+  });
+
+  it('verified_streak: smuggle attempt (habitName/habitCategory/metadata) never binds those values', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_VERIFIED_STREAK_30,
+        habitName:     'Quit smoking',
+        habitCategory: 'meditation',
+        metadata:      { secret: 'leak' },
+      }] }),
+      makeEnv(db), session,
+    );
+    const calls = db._calls();
+    const joined = calls[0]!.binds.map(b => String(b)).join('|');
+    expect(joined).not.toContain('Quit smoking');
+    expect(joined).not.toContain('meditation');
+    expect(joined).not.toContain('leak');
+    expect(joined).not.toContain('secret');
+  });
+
+  // — Existing private types remain rejected after the 1z.226A allowlist expansion —
+  for (const banned of ['card_drop', 'sleep_quality_7h', 'habit_streak', 'friend_added', 'workout', 'workout_streak']) {
+    it(`still rejects ${banned}`, async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_BOSS_KILL, eventType: banned }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_TYPE');
+    });
+  }
 });
 
 describe('GET /v1/friends/activity — feed read (1z.200)', () => {

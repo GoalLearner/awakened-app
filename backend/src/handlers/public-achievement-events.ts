@@ -48,6 +48,28 @@ const ALLOWED_EVENT_TYPES = [
   // via _guildhallRowHtml; this entry only powers Guild-mode
   // friend feed visibility.
   'ultra_rare_drop',
+  // v3 Phase 1z.226A — generic public rare-tier item drop. As
+  // with ultra_rare_drop, the label is a single fixed string
+  // ("found a rare item") and the eventKey is fixed ("rare").
+  // Card name, card id, slot, and pity state are NEVER
+  // accepted. Intentionally distinct from the `card_drop`
+  // event type used in local Hunter activity — that type
+  // carries the card name and remains rejected forever.
+  'rare_item_drop',
+  // v3 Phase 1z.226A — one-shot prestige unlock for the
+  // existing 100K Step Club accolade. eventValue is the
+  // canonical 100,000 marker; eventLabel is a single fixed
+  // string. Distinct from step_milestone_bucket — the latter
+  // fires once per bucket crossing across a day; this fires
+  // ONCE per accolade lifetime.
+  'step_100k_club_unlocked',
+  // v3 Phase 1z.226A — generic verified-streak milestone.
+  // The label is a fixed band-keyed phrase ("reached a 30-day
+  // verified streak") with NO habit name, NO habit category,
+  // NO completion detail. eventValue carries the band integer;
+  // eventKey carries `verified_streak:<band>` so backend can
+  // sanity-cross-check the trio at write time.
+  'verified_streak',
 ] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
@@ -71,9 +93,47 @@ const ULTRA_RARE_DROP_LABEL = 'looted an ultra-rare item';
 // out via the key field.
 const ULTRA_RARE_DROP_KEY   = 'ultra_rare';
 
+// v3 Phase 1z.226A — rare-tier drop. Same shape as
+// ultra_rare_drop: every field hard-pinned. Card name / card id
+// / slot / rarity tier are NEVER accepted.
+const RARE_ITEM_DROP_LABEL = 'found a rare item';
+const RARE_ITEM_DROP_KEY   = 'rare';
+
+// v3 Phase 1z.226A — 100K Step Club accolade unlock. Single
+// canonical event per accolade lifetime. The value 100000 is the
+// marker, not a step count.
+const STEP_100K_CLUB_LABEL = 'joined the 100K Step Club';
+const STEP_100K_CLUB_KEY   = 'step_100k_club';
+const STEP_100K_CLUB_VALUE = 100000;
+
+// v3 Phase 1z.226A — verified streak milestone bands. Allowlist
+// is { 7, 14, 30, 100, 365 } only. Every other length rejected.
+// Label/key/value are cross-validated so a client cannot post
+// `label: "30-day"` with `value: 7` and have it persist.
+const VERIFIED_STREAK_BANDS = new Set([7, 14, 30, 100, 365]);
+const VERIFIED_STREAK_LABEL_FOR_BAND: Record<number, string> = {
+  7:   'reached a 7-day verified streak',
+  14:  'reached a 14-day verified streak',
+  30:  'reached a 30-day verified streak',
+  100: 'reached a 100-day verified streak',
+  365: 'reached a 365-day verified streak',
+};
+const VERIFIED_STREAK_KEY_FOR_BAND: Record<number, string> = {
+  7:   'verified_streak:7',
+  14:  'verified_streak:14',
+  30:  'verified_streak:30',
+  100: 'verified_streak:100',
+  365: 'verified_streak:365',
+};
+
 const ALLOWED_STEP_BUCKETS = new Set([10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]);
 
-const EVENT_KEY_RE         = /^[A-Za-z0-9_\-]+$/;
+// v3 Phase 1z.226A — colon allowed so verified_streak band keys
+// like "verified_streak:30" pass the cross-cutting key gate.
+// boss_kill / rank_up / step_milestone_bucket / ultra_rare_drop /
+// rare_item_drop / step_100k_club_unlocked keys do not contain
+// colons, so widening this regex is purely additive.
+const EVENT_KEY_RE         = /^[A-Za-z0-9_:\-]+$/;
 const CLIENT_EVENT_ID_RE   = /^[A-Za-z0-9_:\-]+$/;
 
 const MAX_BATCH_SIZE       = 10;
@@ -258,7 +318,7 @@ function validateEvent(
       return { ok: false, code: 'INVALID_RARITY', detail: 'step_milestone_bucket rarity must be null.' };
     }
     rarity = null;
-  } else {
+  } else if (eventType === 'ultra_rare_drop') {
     // v3 Phase 1z.223A — ultra_rare_drop. Strict allowlist with
     // ZERO degrees of freedom on label or key. The whole point
     // of this event is "something rare just happened" without
@@ -293,6 +353,117 @@ function validateEvent(
         ok: false,
         code: 'INVALID_RARITY',
         detail: 'ultra_rare_drop rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else if (eventType === 'rare_item_drop') {
+    // v3 Phase 1z.226A — rare-tier item drop. Same posture as
+    // ultra_rare_drop: every field hard-pinned. Card identity is
+    // never accepted. Intentionally distinct from the local
+    // `card_drop` event type (which carries the card name and
+    // remains rejected forever via INVALID_EVENT_TYPE above).
+    if (eventLabel !== RARE_ITEM_DROP_LABEL) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `rare_item_drop label must be exactly "${RARE_ITEM_DROP_LABEL}".`,
+      };
+    }
+    if (eventKey !== RARE_ITEM_DROP_KEY) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: `rare_item_drop eventKey must be exactly "${RARE_ITEM_DROP_KEY}".`,
+      };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'rare_item_drop eventValue must be null.',
+      };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'rare_item_drop rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else if (eventType === 'step_100k_club_unlocked') {
+    // v3 Phase 1z.226A — one-shot accolade unlock event. Label
+    // and key are hard-pinned. eventValue must equal the
+    // canonical 100,000 marker so the value cannot be smuggled
+    // to disclose actual step counts.
+    if (eventLabel !== STEP_100K_CLUB_LABEL) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `step_100k_club_unlocked label must be exactly "${STEP_100K_CLUB_LABEL}".`,
+      };
+    }
+    if (eventKey !== STEP_100K_CLUB_KEY) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: `step_100k_club_unlocked eventKey must be exactly "${STEP_100K_CLUB_KEY}".`,
+      };
+    }
+    if (raw.eventValue !== STEP_100K_CLUB_VALUE) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: `step_100k_club_unlocked eventValue must equal ${STEP_100K_CLUB_VALUE}.`,
+      };
+    }
+    eventValue = STEP_100K_CLUB_VALUE;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'step_100k_club_unlocked rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else {
+    // v3 Phase 1z.226A — verified_streak (fallthrough — last in
+    // the chain because ALLOWED_EVENT_TYPES already gated the
+    // narrowing above this block). Band must be in {7,14,30,
+    // 100,365}; label / key / value are cross-checked so the
+    // trio is internally consistent. No habit name, no habit
+    // category, no completion detail accepted.
+    if (!isInt(raw.eventValue, 7, 365) || !VERIFIED_STREAK_BANDS.has(raw.eventValue)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'verified_streak eventValue must be one of 7, 14, 30, 100, 365.',
+      };
+    }
+    const band = raw.eventValue;
+    const expectedLabel = VERIFIED_STREAK_LABEL_FOR_BAND[band];
+    if (eventLabel !== expectedLabel) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `verified_streak label must be exactly "${expectedLabel}" for eventValue ${band}.`,
+      };
+    }
+    const expectedKey = VERIFIED_STREAK_KEY_FOR_BAND[band];
+    if (eventKey !== expectedKey) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: `verified_streak eventKey must be exactly "${expectedKey}" for eventValue ${band}.`,
+      };
+    }
+    eventValue = band;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'verified_streak rarity must be null.',
       };
     }
     rarity = null;

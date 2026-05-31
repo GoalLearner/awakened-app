@@ -4,7 +4,65 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.225 Social heading "GUILD NOTIFICATIONS" (read this first)
+## May 31, 2026 — 1z.226A Backend: three new generic public Guild Notification events (read this first)
+
+**TL;DR.** Backend code + tests only. Extends `ALLOWED_EVENT_TYPES` with three new privacy-safe event types: `rare_item_drop`, `step_100k_club_unlocked`, `verified_streak`. Each follows the 1z.223A hard-pinned validation posture — every field except `clientEventId` / `clientCreatedAt` is fixed to canonical literals or a tiny enum. **No deploy. No D1 mutation. No migration (event_type column is TEXT).** Frontend hooks deferred to Phase 1z.226C.
+
+**Accepted shapes.**
+
+| Event type | `eventLabel` | `eventKey` | `eventValue` | `rarity` |
+|---|---|---|---|---|
+| `rare_item_drop` | exact `"found a rare item"` | exact `"rare"` | `null` | `null` |
+| `step_100k_club_unlocked` | exact `"joined the 100K Step Club"` | exact `"step_100k_club"` | exact `100000` | `null` |
+| `verified_streak` band `7` | exact `"reached a 7-day verified streak"` | exact `"verified_streak:7"` | `7` | `null` |
+| `verified_streak` band `14` | exact `"reached a 14-day verified streak"` | exact `"verified_streak:14"` | `14` | `null` |
+| `verified_streak` band `30` | exact `"reached a 30-day verified streak"` | exact `"verified_streak:30"` | `30` | `null` |
+| `verified_streak` band `100` | exact `"reached a 100-day verified streak"` | exact `"verified_streak:100"` | `100` | `null` |
+| `verified_streak` band `365` | exact `"reached a 365-day verified streak"` | exact `"verified_streak:365"` | `365` | `null` |
+
+**Files modified.**
+- `backend/src/handlers/public-achievement-events.ts`:
+  - `ALLOWED_EVENT_TYPES` now `['boss_kill', 'rank_up', 'step_milestone_bucket', 'ultra_rare_drop', 'rare_item_drop', 'step_100k_club_unlocked', 'verified_streak']`.
+  - New constants: `RARE_ITEM_DROP_LABEL`, `RARE_ITEM_DROP_KEY`, `STEP_100K_CLUB_LABEL`, `STEP_100K_CLUB_KEY`, `STEP_100K_CLUB_VALUE`, `VERIFIED_STREAK_BANDS`, `VERIFIED_STREAK_LABEL_FOR_BAND`, `VERIFIED_STREAK_KEY_FOR_BAND`.
+  - `EVENT_KEY_RE` widened from `/^[A-Za-z0-9_\-]+$/` → `/^[A-Za-z0-9_:\-]+$/` so verified_streak band keys (e.g. `"verified_streak:30"`) pass the cross-cutting key gate. Other event types don't use colons; the change is purely additive.
+  - Three new `else if (eventType === ...)` validation branches with field-by-field equality checks. The trailing `verified_streak` branch cross-validates `eventValue` (band) ↔ `eventLabel` (band string) ↔ `eventKey` (band suffix) so a smuggle attempt like `value: 30, label: '7-day', key: 'verified_streak:7'` is rejected.
+- `backend/src/handlers/public-achievement-events.test.ts`:
+  - Three new fixture constants: `VALID_RARE_ITEM_DROP`, `VALID_STEP_100K_CLUB`, `VALID_VERIFIED_STREAK_30`.
+  - **32 new tests** covering: canonical accepts for each type; rejected item / card names (`"found Dream-Woven Hood"`); rejected card-slug keys; rejected non-canonical labels / wrong values / wrong rarities; rejected non-allowlisted streak bands (`5`, `21`); rejected habit-name labels (`"reached a 30-day Meditation streak"`); rejected band-mismatch combos (label `30-day`, value `7`); privacy-smuggle assertions that `cardId`/`cardName`/`habitName`/`habitCategory`/`metadata` NEVER reach any bind position. Plus a parameterized still-rejected loop for `card_drop`, `sleep_quality_7h`, `habit_streak`, `friend_added`, `workout`, `workout_streak`.
+
+**Tests run.** `npx vitest run` → **249/249 pass** (32 new in 1z.226A on top of 217 baseline from 1z.216F + 1z.223A trains).
+
+**Migration?** No. `public_achievement_events.event_type` is TEXT and accepts any allowlisted string. Schema unchanged.
+
+**Privacy posture (unchanged).**
+- ✅ No card name, card id, item slug, habit name, habit category, or metadata reaches a bind position.
+- ✅ `metadata_json` continues to bind NULL.
+- ✅ Hunter-mode local rendering (`_guildhallRowHtml`) is unchanged — local rows with card names / habit names / exact step counts continue to display privately on the user's own device only.
+- ✅ GET response unchanged — when frontend submits these new types in 1z.226C, they'll flow through the existing privacy-safe field whitelist.
+
+**Guard rails preserved.**
+- No Worker deploy.
+- No D1 mutation.
+- No migration.
+- No frontend changes.
+- No `card_drop` / `sleep_quality_7h` / `habit_streak` / `friend_added` / `workout` / `workout_streak` acceptance — all still rejected.
+- No leaderboard / HealthKit / inventory / drop rates / item rewards / rank / XP / souls / auth changes.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Next phases (gated separately).**
+1. **1z.226B** — `npx wrangler deploy` to push the new validation live. The new types activate instantly; no existing rows are affected.
+2. **1z.226C** — Frontend hooks + renderer:
+   - **`rare_item_drop`**: hook in `rollBossDrop` / `forceDrop` `wasFirstAcquisition` branch, gated on `dropped.rarity === 'rare'`. Strip `cardId` / `cardName` before submission.
+   - **`step_100k_club_unlocked`**: hook tied to existing 100K Step Club accolade award path. One submit per accolade lifetime (idempotent via clientEventId).
+   - **`verified_streak`**: hook tied to existing streak band crossing detection. Must derive the band integer from `GUILDHALL_STREAK_BANDS` or equivalent — habit name NEVER part of the payload.
+   - `_friendActivityRowHtml` icon mapping for each new type. Suggested glyphs: rare_item_drop → ◆ (violet diamond, distinct from ultra_rare ✦); step_100k_club_unlocked → 👟 or ⇈⇈ (compound); verified_streak → 🔥 (existing local habit_streak glyph).
+   - Knob bumps to w90.
+
+**Rollback.** Single revert: remove the three new entries from `ALLOWED_EVENT_TYPES` + drop the three validation branches + revert the `EVENT_KEY_RE` widening. No DB / backend deploy state to roll back since this phase didn't deploy.
+
+---
+
+## May 31, 2026 — 1z.225 Social heading "GUILD NOTIFICATIONS"
 
 **TL;DR.** Pure copy change: the Social tab section title swaps from `GUILD ACTIVITY` → `GUILD NOTIFICATIONS`. Single span in `index.html`. No behavior, no logic, no internal names touched.
 
