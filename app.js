@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w99';
+  const APP_BUILD_TAG = '2.2.5-w100';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33012,7 +33012,327 @@
     } catch (_) {}
   }
 
-  function showWelcomeScreen() {
+  // ─────────────────────────────────────────────────────────
+  // v3 Phase 1z.233 — Cinematic Onboarding (Direction A)
+  //
+  // ClaudeDesign-led 7-screen first-run reveal that replaces the
+  // legacy showWelcomeScreen → showPathScreen → showOnboarding chain
+  // for brand-new users. The legacy markup is kept in the DOM as a
+  // safety fallback but is unreachable from the redirected entry
+  // below. At "Enter Awakened" the same functional contract as
+  // `_completeOnboardingFinish` is honored:
+  //   • playerName + hb_name persisted
+  //   • hb_welcomed=1, hb_hunter_name_claimed=1
+  //   • selectedPackId + hb_path persisted
+  //   • habits[] built from the chosen pack's DEFAULT_HABITS indices
+  //   • runOnboardingNotifPrompt → _completeOnboardingFinish path
+  //     reused (so the App Store-compliant notification prompt still
+  //     fires at the end). For 'custom' pack the user enters the
+  //     app with zero habits and adds them from the Habits tab.
+  //
+  // The "+25 XP" cinematic on screen 6 is SYMBOLIC — no XP / streak /
+  // rank math is touched. The visual is the reward; the first real
+  // habit completion still credits XP normally.
+  // ─────────────────────────────────────────────────────────
+  function _cinPaintSigils(root) {
+    const SIG = '<svg width="100%" height="100%" viewBox="0 0 40 40" aria-hidden="true">' +
+      '<path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/>' +
+      '</svg>';
+    const ICONS = {
+      sleep: '<svg viewBox="0 0 42 42" fill="none"><path d="M28 23a10 10 0 11-9-13 8 8 0 009 13z" stroke="#34d399" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+      focus: '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="12" stroke="#eab308" stroke-width="1.6"/><circle cx="21" cy="21" r="5.5" stroke="#eab308" stroke-width="1.6"/><circle cx="21" cy="21" r="1.6" fill="#eab308"/></svg>',
+      body:  '<svg viewBox="0 0 42 42" fill="none"><path d="M8 21h26" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"/><rect x="5" y="16.5" width="3.6" height="9" rx="1.4" fill="#ef4444"/><rect x="33.4" y="16.5" width="3.6" height="9" rx="1.4" fill="#ef4444"/><rect x="10" y="18.5" width="3" height="5" rx="1.2" fill="#ef4444"/><rect x="29" y="18.5" width="3" height="5" rx="1.2" fill="#ef4444"/></svg>',
+      mind:  '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="11" stroke="#3b82f6" stroke-width="1.6"/><path d="M21 10v22M10 21a11 11 0 0122 0" stroke="#3b82f6" stroke-width="1.2" opacity=".7"/></svg>'
+    };
+    root.querySelectorAll('.sigil').forEach((s) => {
+      if (s.hasAttribute('data-mini')) {
+        s.style.width = '13px';
+        s.style.height = '13px';
+        s.style.display = 'inline-flex';
+        s.innerHTML = SIG;
+      } else {
+        s.innerHTML = SIG;
+      }
+    });
+    root.querySelectorAll('[data-ic]').forEach((e) => {
+      const k = e.getAttribute('data-ic');
+      if (ICONS[k]) e.innerHTML = ICONS[k];
+    });
+    // Size the four primary sigils to match the design (84px, 58px on Why).
+    ['cin-sig1', 'cin-sig2', 'cin-sig6'].forEach((id) => {
+      const e = root.querySelector('#' + id);
+      if (e) { e.style.width = '84px'; e.style.height = '84px'; }
+    });
+    const s3 = root.querySelector('#cin-sig3');
+    if (s3) { s3.style.width = '58px'; s3.style.height = '58px'; }
+  }
+
+  function showCinematicOnboarding() {
+    const root = document.getElementById('cin-onboarding');
+    if (!root) { console.warn('[cin] container missing — falling back to legacy welcome'); _legacyShowWelcomeScreen(); return; }
+    root.classList.remove('hidden');
+    root.setAttribute('aria-hidden', 'false');
+
+    _cinPaintSigils(root);
+
+    const state = { name: '', why: null, pack: null };
+    const order = ['cin-scr1', 'cin-scr2', 'cin-scr3', 'cin-scr4', 'cin-scr5', 'cin-scr6', 'cin-scr7'];
+    let idx = 0;
+
+    const dots = root.querySelector('#cin-dots');
+    const skip = root.querySelector('#cin-skip');
+
+    function show(i) {
+      idx = i;
+      order.forEach((id, k) => {
+        const el = root.querySelector('#' + id);
+        if (el) el.classList.toggle('show', k === i);
+      });
+      const stepAttr = parseInt((root.querySelector('#' + order[i]) || {}).dataset?.step || '0', 10);
+      // Goal-gradient dots active on steps 1..4 (screens 2..5)
+      dots.classList.toggle('on', stepAttr >= 1 && stepAttr <= 4);
+      Array.from(dots.children).forEach((d, k) => d.classList.toggle('fill', k <= stepAttr - 1));
+      // Subtle Skip only on Path + Commitment (not on opening, naming, why, peak, hook)
+      skip.classList.toggle('on', i >= 3 && i < 5);
+      if (order[i] === 'cin-scr5') _fillPact();
+      if (order[i] === 'cin-scr6') _runReward();
+      if (order[i] === 'cin-scr7') {
+        const hl = root.querySelector('#cin-hookLine');
+        if (hl) hl.textContent = _whyLine();
+      }
+    }
+    function next() { if (idx < order.length - 1) show(idx + 1); }
+
+    // Generic next buttons
+    root.querySelectorAll('[data-cin-next]').forEach((b) => b.addEventListener('click', next));
+
+    // Screen 1 — opening: both the sigil and the ghost-tap CTA advance.
+    root.querySelector('#cin-igniteTap').addEventListener('click', next);
+    root.querySelector('#cin-opTap').addEventListener('click', (e) => { e.stopPropagation(); next(); });
+
+    // Screen 2 — naming.
+    const field   = root.querySelector('#cin-nameField');
+    const confirm = root.querySelector('#cin-nameConfirm');
+    field.addEventListener('input', () => {
+      confirm.disabled = field.value.trim().length < 2;
+    });
+    field.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !confirm.disabled) _confirmName();
+    });
+    confirm.addEventListener('click', _confirmName);
+
+    function _confirmName() {
+      state.name = field.value.trim();
+      root.querySelector('#cin-name-kicker').style.display = 'none';
+      root.querySelector('#cin-name-title').style.display = 'none';
+      root.querySelector('#cin-nameInputWrap').style.display = 'none';
+      const ack = root.querySelector('#cin-nameAck');
+      ack.style.display = 'block';
+      root.querySelector('#cin-nameEcho').textContent = state.name;
+      _typewrite(
+        root.querySelector('#cin-nameSys'),
+        state.name.toUpperCase() + '. The system recognizes you.',
+        () => {
+          const w = root.querySelector('#cin-nameNextWrap');
+          w.style.transition = 'opacity .6s';
+          w.style.opacity = '1';
+        }
+      );
+    }
+
+    // Screen 3 — why.
+    root.querySelectorAll('#cin-whyGrid .pick').forEach((p) => {
+      p.addEventListener('click', () => {
+        root.querySelectorAll('#cin-whyGrid .pick').forEach((x) => x.setAttribute('aria-checked', 'false'));
+        p.setAttribute('aria-checked', 'true');
+        state.why  = p.dataset.why;
+        state.pack = p.dataset.pack;  // design's bias: VIT/STR → morning, FOCUS/INT → locked-in
+        root.querySelector('#cin-whyNext').disabled = false;
+      });
+    });
+    // When Why → Continue is tapped, pre-select the biased pack on screen 4.
+    root.querySelector('#cin-whyNext').addEventListener('click', () => {
+      setTimeout(() => {
+        if (!state.pack) return;
+        const el = root.querySelector('#cin-packs .pack[data-pack="' + state.pack + '"]');
+        if (el && el.getAttribute('aria-checked') !== 'true') el.click();
+      }, 30);
+    });
+
+    // Screen 4 — path.
+    root.querySelectorAll('#cin-packs .pack').forEach((p) => {
+      p.addEventListener('click', () => {
+        root.querySelectorAll('#cin-packs .pack').forEach((x) => x.setAttribute('aria-checked', 'false'));
+        p.setAttribute('aria-checked', 'true');
+        state.pack = p.dataset.pack;
+        root.querySelector('#cin-pathNext').disabled = false;
+      });
+    });
+
+    // Screen 5 — commitment "pact" tome.
+    function _fillPact() {
+      root.querySelector('#cin-pName').textContent = state.name || 'Unnamed';
+      const packId = state.pack || 'morning';
+      const pack   = (typeof getPackById === 'function') ? getPackById(packId) : null;
+      const packName = (pack && pack.name) || (
+        packId === 'morning'   ? 'Morning Routine' :
+        packId === 'locked-in' ? 'Locked-In'       :
+        'Your Own Path'
+      );
+      root.querySelector('#cin-pPath').textContent = packName;
+
+      // First rites = first 3 habit names from the chosen pack (or
+      // friendly placeholders for the empty custom pack).
+      let names = [];
+      if (typeof getPackHabitDefs === 'function') {
+        try {
+          const defs = getPackHabitDefs(packId) || [];
+          names = defs.slice(0, 3).map((h) => h && h.name).filter(Boolean);
+        } catch (_) {}
+      }
+      if (!names.length) {
+        names = (packId === 'custom')
+          ? ['Choose your first rite', 'Set your own hours', 'Hold the line']
+          : ['Sleep · 7 hours', 'Wake up at consistent time', 'No phone or social media after waking'];
+      }
+      root.querySelector('#cin-pHabits').innerHTML = names
+        .map((h) => '<div class="hbt"><span class="b"></span>' + esc(h) + '</div>')
+        .join('');
+    }
+
+    // Screen 6 — reward (peak). Sparks are generated each visit so the
+    // angles are fresh; no idle DOM cost when not on screen 6.
+    function _runReward() {
+      const host = root.querySelector('#cin-sparks');
+      host.innerHTML = '';
+      const reduced = (() => {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+        catch (_) { return false; }
+      })();
+      if (!reduced) {
+        for (let i = 0; i < 18; i++) {
+          const a    = Math.random() * Math.PI * 2;
+          const dist = 70 + Math.random() * 120;
+          const dur  = 1.1 + Math.random() * 1.1;
+          const dly  = 0.15 + Math.random() * 0.3;
+          const s = document.createElement('span');
+          s.className = 'spark';
+          s.style.animation = 'cin-sparkfly ' + dur.toFixed(2) + 's ease-out ' + dly.toFixed(2) + 's both';
+          s.style.setProperty('--dx', (Math.cos(a) * dist).toFixed(0) + 'px');
+          s.style.setProperty('--dy', (Math.sin(a) * dist).toFixed(0) + 'px');
+          host.appendChild(s);
+        }
+      }
+      setTimeout(() => {
+        const w = root.querySelector('#cin-rewardNext');
+        w.style.transition = 'opacity .6s';
+        w.style.opacity = '1';
+      }, reduced ? 600 : 2600);
+    }
+
+    // Screen 7 — tomorrow hook copy biased by the WHY answer.
+    function _whyLine() {
+      const map = {
+        VIT:   'Your first night, reclaimed.',
+        FOCUS: 'Your first hour, undivided.',
+        STR:   'Your first rep, logged.',
+        INT:   'Your first page, turned.'
+      };
+      return map[state.why] || 'Your first verified streak awaits.';
+    }
+
+    // Typewriter for the system text on screen 2.
+    function _typewrite(el, text, done) {
+      const rm = (() => {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+        catch (_) { return false; }
+      })();
+      if (rm) {
+        el.innerHTML = esc(text).replace(/^(\S+)/, '<b>$1</b>');
+        if (done) done();
+        return;
+      }
+      el.innerHTML = '';
+      let i = 0;
+      (function step() {
+        if (i <= text.length) {
+          const t = text.slice(0, i);
+          el.innerHTML = esc(t).replace(/^(\S+\.)/, '<b>$1</b>');
+          i++;
+          setTimeout(step, 34);
+        } else if (done) done();
+      })();
+    }
+
+    // Skip → jump straight to commitment (screen 5).
+    skip.addEventListener('click', () => show(4));
+
+    // Final "Enter Awakened" — commit everything, fade to black, then
+    // hand off to the existing _completeOnboardingFinish so the
+    // notification prompt + habit creation + reveal of #app all run
+    // through their canonical path.
+    root.querySelector('#cin-enterApp').addEventListener('click', () => {
+      try {
+        // Name → existing storage keys (matches launchQuest + _completeOnboardingFinish).
+        const n = state.name || 'Hunter';
+        playerName = n;
+        localStorage.setItem('hb_name', playerName);
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+
+        // Pack → match the legacy IDs the rest of the app uses.
+        selectedPackId = state.pack || 'morning';
+        localStorage.setItem('hb_path', selectedPackId);
+
+        // Pre-populate obSelected with the pack's habit indices so
+        // _completeOnboardingFinish builds the habit list correctly.
+        if (typeof obSelected !== 'undefined' && typeof getPackById === 'function') {
+          obSelected.clear();
+          const pack = getPackById(selectedPackId);
+          if (pack && Array.isArray(pack.habits)) {
+            pack.habits.forEach((i) => obSelected.add(i));
+          }
+        }
+      } catch (e) { console.warn('[cin] commit failed', e); }
+
+      // Fade to black, then hand off.
+      const fb = root.querySelector('#cin-fb');
+      if (fb) fb.classList.add('on');
+      setTimeout(() => {
+        root.classList.add('hidden');
+        root.setAttribute('aria-hidden', 'true');
+        try {
+          // Re-uses the canonical end-of-onboarding pipeline (notif
+          // prompt → finish → main app reveal). Same guarantees as
+          // legacy onboarding completion.
+          if (typeof runOnboardingNotifPrompt === 'function') {
+            runOnboardingNotifPrompt(() => _completeOnboardingFinish());
+          } else if (typeof _completeOnboardingFinish === 'function') {
+            _completeOnboardingFinish();
+          }
+        } catch (e) { console.warn('[cin] handoff failed', e); }
+      }, 850);
+    });
+
+    // Kick off. If the hunter name is already claimed (returning user
+    // who started but didn't finish onboarding), skip the opening +
+    // naming screens and land on the WHY question with name pre-filled.
+    try {
+      const claimed = (localStorage.getItem('hb_name') || '').trim();
+      const already = localStorage.getItem('hb_hunter_name_claimed') === '1';
+      if (already && claimed && claimed !== 'Hunter') {
+        state.name = claimed;
+        if (field) field.value = claimed;
+        show(2);  // jump directly to WHY (screen 3)
+        return;
+      }
+    } catch (_) {}
+    show(0);
+  }
+
+  // Legacy welcome screen — keep callable as `_legacyShowWelcomeScreen`
+  // so the cinematic-onboarding fallback path still has somewhere to go.
+  function _legacyShowWelcomeScreen() {
     const screen = document.getElementById('welcome-screen');
     screen.classList.remove('hidden');
 
@@ -33153,6 +33473,19 @@
   //  16=Morning sunlight, 41=Morning gratitude, 6=Daily walk,
   //  46=Vitamins, 12=Meditate & Breathwork, 4=Strength training, 19=Whole foods
   var MORNING_HABIT_INDICES = [1, 23, 14, 16, 41, 6, 46, 12, 4, 19];
+
+  // v3 Phase 1z.233 — Public showWelcomeScreen entry point now
+  // delegates to the cinematic onboarding flow. The legacy implementation
+  // (renamed to _legacyShowWelcomeScreen above) remains callable as a
+  // fallback if the cinematic container is missing at runtime.
+  function showWelcomeScreen() {
+    if (document.getElementById('cin-onboarding')) {
+      try { return showCinematicOnboarding(); } catch (e) {
+        console.warn('[cin] failed; falling back to legacy welcome', e);
+      }
+    }
+    return _legacyShowWelcomeScreen();
+  }
 
   function showPathScreen() {
     document.getElementById('app').classList.add('hidden');
@@ -38814,7 +39147,15 @@
         }
         showWelcomeScreen();
       } else if (needsOnboarding) {
-        showPathScreen();
+        // v3 Phase 1z.233 — Partial-onboarding users (welcomed but not
+        // finished) now also go through the cinematic flow; it detects
+        // the already-claimed name and skips screens 1+2 internally.
+        if (document.getElementById('cin-onboarding')) {
+          try { showCinematicOnboarding(); }
+          catch (e) { console.warn('[cin] partial-onboarding fallback', e); showPathScreen(); }
+        } else {
+          showPathScreen();
+        }
       } else {
         render();
         setupFridayBanner();

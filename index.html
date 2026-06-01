@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=311">
+  <link rel="stylesheet" href="styles.css?v=312">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -210,6 +210,158 @@
     <div class="ob-footer">
       <button id="ob-start-btn" class="ob-start-btn" disabled>Start Tracking</button>
     </div>
+  </div>
+
+  <!-- v3 Phase 1z.233 — Cinematic Onboarding (7-screen reveal).
+       Replaces the visible first-run flow for brand-new users. Legacy
+       #welcome-screen / #path-screen / #onboarding markup is kept in
+       the DOM as a safety fallback and is not reachable from the
+       redirected showWelcomeScreen() path. All class names from the
+       ClaudeDesign source are kept verbatim and scoped under
+       #cin-onboarding so they cannot collide globally. IDs are
+       prefixed `cin-` for the same reason. Sigils (sparkle/star) are
+       injected by JS via cin._paintSigils() so the recurring motif is
+       a single source of truth. -->
+  <div id="cin-onboarding" class="cin-onboarding hidden" aria-hidden="true">
+
+    <div class="dots" id="cin-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <button class="skip" id="cin-skip" type="button">Skip</button>
+
+    <!-- 1 · OPENING -->
+    <section class="scr" data-step="0" id="cin-scr1">
+      <div class="halo"></div>
+      <button class="tap-sigil" id="cin-igniteTap" type="button" aria-label="Continue">
+        <span class="sigil ignite" id="cin-sig1"></span>
+      </button>
+      <div style="height:30px"></div>
+      <div class="op-line l1">A new hunter stirs in the dark.</div>
+      <div class="op-line l2">The system has been waiting.</div>
+      <div class="op-line l3" style="margin-top:30px"><button type="button" class="ghosttap" id="cin-opTap">Touch the mark</button></div>
+    </section>
+
+    <!-- 2 · NAMING -->
+    <section class="scr" data-step="1" id="cin-scr2">
+      <div class="halo"></div>
+      <span class="sigil breathe rise" id="cin-sig2"></span>
+      <div class="kicker rise d1" id="cin-name-kicker" style="margin-top:24px">The system asks</div>
+      <h1 class="title rise d1" id="cin-name-title" style="margin:12px 0 18px">What do they call you?</h1>
+      <div id="cin-nameInputWrap" class="rise d2">
+        <input class="field" id="cin-nameField" maxlength="18" placeholder="hunter name"
+               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" />
+        <div style="margin-top:26px"><button type="button" class="cta" id="cin-nameConfirm" disabled>Confirm</button></div>
+      </div>
+      <div id="cin-nameAck" style="display:none">
+        <div class="kicker" style="margin-bottom:12px">Designation accepted</div>
+        <div class="title" id="cin-nameEcho" style="font-size:34px"></div>
+        <div class="sys" id="cin-nameSys" style="margin-top:18px"></div>
+        <div style="margin-top:26px;opacity:0" id="cin-nameNextWrap">
+          <button type="button" class="cta" data-cin-next>Continue</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · WHY -->
+    <section class="scr" data-step="2" id="cin-scr3">
+      <span class="sigil breathe rise" id="cin-sig3" style="transform:scale(.7)"></span>
+      <div class="kicker rise d1" style="margin-top:6px">Speak it once</div>
+      <h1 class="title rise d1" style="margin:10px 0 20px;font-size:25px">What are you here<br/>to overcome?</h1>
+      <div class="grid2 rise d2" id="cin-whyGrid">
+        <button class="pick" role="checkbox" aria-checked="false" data-why="VIT"   data-pack="morning"   type="button">
+          <span class="ic" data-ic="sleep"></span><span class="pl">Sleep</span><span class="ps">Recovery</span>
+        </button>
+        <button class="pick" role="checkbox" aria-checked="false" data-why="FOCUS" data-pack="locked-in" type="button">
+          <span class="ic" data-ic="focus"></span><span class="pl">Focus</span><span class="ps">Presence</span>
+        </button>
+        <button class="pick" role="checkbox" aria-checked="false" data-why="STR"   data-pack="morning"   type="button">
+          <span class="ic" data-ic="body"></span><span class="pl">Body</span><span class="ps">Strength</span>
+        </button>
+        <button class="pick" role="checkbox" aria-checked="false" data-why="INT"   data-pack="locked-in" type="button">
+          <span class="ic" data-ic="mind"></span><span class="pl">Mind</span><span class="ps">Clarity</span>
+        </button>
+      </div>
+      <div class="rise d3" style="margin-top:24px">
+        <button type="button" class="cta" id="cin-whyNext" data-cin-next disabled>Continue</button>
+      </div>
+    </section>
+
+    <!-- 4 · PATH -->
+    <section class="scr" data-step="3" id="cin-scr4">
+      <div class="kicker rise" style="margin-bottom:4px">Choose your way</div>
+      <h1 class="title rise" style="margin:0 0 16px;font-size:24px">The path that calls you</h1>
+      <div class="packs rise d1" id="cin-packs">
+        <button class="pack" role="checkbox" aria-checked="false" data-pack="morning" type="button">
+          <div class="pn"><span class="sigil" data-mini></span>Morning Routine</div>
+          <div class="pb">Rise before the world. Anchor the day in light.</div>
+          <div class="bonus"><span class="sigil" data-mini></span>Compound Effect bonus active</div>
+        </button>
+        <button class="pack" role="checkbox" aria-checked="false" data-pack="locked-in" type="button">
+          <div class="pn"><span class="sigil" data-mini></span>Locked-In</div>
+          <div class="pb">Sharpen the mind. Hold the line against the noise.</div>
+        </button>
+        <button class="pack" role="checkbox" aria-checked="false" data-pack="custom" type="button">
+          <div class="pn"><span class="sigil" data-mini></span>Forge Your Own</div>
+          <div class="pb">Walk a road no one cut for you.</div>
+          <div class="warn">Going solo? The system favors the consistent — the lone road is harder to hold.</div>
+        </button>
+      </div>
+      <div class="rise d2" style="margin-top:18px">
+        <button type="button" class="cta" id="cin-pathNext" data-cin-next disabled>Continue</button>
+      </div>
+    </section>
+
+    <!-- 5 · COMMITMENT -->
+    <section class="scr" data-step="4" id="cin-scr5">
+      <div class="kicker rise" style="margin-bottom:14px">The pact</div>
+      <div class="tome rise d1" id="cin-pact">
+        <div class="sec"><div class="lbl">Hunter</div><div class="val" id="cin-pName">—</div></div>
+        <div class="sec"><div class="lbl">Path</div><div class="val" id="cin-pPath">—</div></div>
+        <div class="sec"><div class="lbl">First rites</div><div id="cin-pHabits"></div></div>
+      </div>
+      <div class="stanza rise d2" style="font-size:14px;margin-top:18px">When you tap, the mark is struck. There is no undoing a beginning.</div>
+      <div class="rise d3" style="margin-top:20px">
+        <button type="button" class="cta" id="cin-awakenBtn" data-cin-next style="padding:15px 34px">Step into the circle</button>
+      </div>
+    </section>
+
+    <!-- 6 · FIRST REWARD (PEAK) -->
+    <section class="scr" data-step="-1" id="cin-scr6">
+      <div class="bloom" aria-hidden="true"></div>
+      <div class="ring" aria-hidden="true"></div>
+      <div class="ring r2" aria-hidden="true"></div>
+      <div id="cin-sparks" aria-hidden="true"></div>
+      <span class="sigil" id="cin-sig6" style="margin-bottom:8px"></span>
+      <div class="syswin">
+        <div class="wh">System · First Awakening</div>
+        <div class="wx">+25 <span style="font-size:15px;color:var(--cin-goldSoft)">XP</span></div>
+        <div class="ws">The spark is lit. It will not go out on its own.</div>
+      </div>
+      <div style="margin-top:30px;opacity:0" id="cin-rewardNext">
+        <button type="button" class="ghosttap" data-cin-next>Continue</button>
+      </div>
+    </section>
+
+    <!-- 7 · TOMORROW HOOK -->
+    <section class="scr" data-step="-1" id="cin-scr7">
+      <div class="kicker rise" style="margin-bottom:16px">The road ahead</div>
+      <div class="locked rise d1">
+        <div class="blur" aria-hidden="true"><span class="sigil" style="transform:scale(1.6)"></span></div>
+        <div class="day">Day 2</div>
+        <div class="lt" id="cin-hookLine">Your first verified streak awaits.</div>
+        <div class="lock-ic" aria-hidden="true">
+          <svg width="22" height="24" viewBox="0 0 22 24" fill="none">
+            <rect x="4" y="10" width="14" height="11" rx="2.5" stroke="#a78bfa" stroke-width="1.4"/>
+            <path d="M7 10V7a4 4 0 018 0v3" stroke="#a78bfa" stroke-width="1.4"/>
+            <circle cx="11" cy="15.5" r="1.6" fill="#f5b842"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stanza rise d2" style="font-size:14px;margin-top:20px">Return when the sun does. The system remembers those who keep their word.</div>
+      <div class="rise d3" style="margin-top:22px">
+        <button type="button" class="cta" id="cin-enterApp" style="padding:14px 30px">Enter Awakened</button>
+      </div>
+    </section>
+
+    <div class="fadeblack" id="cin-fb" aria-hidden="true"></div>
   </div>
 
   <div id="app">
@@ -2478,7 +2630,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=552"></script>
+  <script src="app.js?v=553"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2899,7 +3051,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W99</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W100</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

@@ -4,7 +4,95 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.232 Frontend: Remove duplicate onboarding name input (read this first)
+## Jun 1, 2026 — 1z.233 Frontend: Cinematic Onboarding (Direction A — read this first)
+
+**TL;DR.** ClaudeDesign-led 7-screen cinematic first-run reveal. Replaces the visible welcome → path → habits flow for brand-new users. Peak-end engineered: the only burst of gold/particles/system-fanfare fires on screen 6 *immediately after* the user's biggest commitment ("Step into the circle"). Screen 7 ends on anticipation, not closure. Single source of truth for hunter name (screen 2). Why-question biases pack selection. First Rites in the Commitment tome reflect actual pack habits, not placeholders.
+
+**Process note.** Frontend / visual + flow change. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit math changed. **The "+25 XP" on screen 6 is SYMBOLIC** — no XP is actually credited. First real habit completion still credits XP normally.
+
+**The 7 screens.**
+
+| # | Screen | What it does |
+|---|---|---|
+| 1 | **Opening** | Sigil ignites. "A new hunter stirs in the dark." → "The system has been waiting." → ghost-tap "Touch the mark". |
+| 2 | **Naming** | Single name field. After Confirm: name echoes in Cinzel, typewriter system text `<NAME>. THE SYSTEM RECOGNIZES YOU.` |
+| 3 | **Why** | 4 picks (Sleep / Focus / Body / Mind). Biases pack on next screen (Sleep+Body→Morning, Focus+Mind→Locked-In). |
+| 4 | **Path** | Morning Routine / Locked-In / Forge Your Own. Mythic-reframed cards. "Going Solo?" warn still present. Pre-selected from Why. |
+| 5 | **Commitment** | Tome shows Hunter + Path + first 3 habit names from the chosen pack. "There is no undoing a beginning." CTA: **Step into the circle**. |
+| 6 | **First Reward (PEAK)** | Bloom + 2 rings + 18 sparks + system window: `+25 XP / The spark is lit. It will not go out on its own.` Symbolic only — no XP math. |
+| 7 | **Tomorrow Hook** | Locked Day 2 card with blurred sigil. Copy biased by Why answer ("Your first night, reclaimed." etc). CTA: **Enter Awakened** → fade-to-black → main app. |
+
+**Functional contract preserved.** "Enter Awakened" handler does what `_completeOnboardingFinish` did:
+- `playerName`, `localStorage.hb_name`, `hb_welcomed=1`, `hb_hunter_name_claimed=1` saved
+- `selectedPackId`, `localStorage.hb_path` saved
+- `obSelected` pre-filled with the pack's `DEFAULT_HABITS` indices
+- `runOnboardingNotifPrompt(() => _completeOnboardingFinish())` invoked — the canonical end-of-onboarding pipeline that fires the App Store-compliant notification prompt before building the habits array.
+
+**Files modified.**
+- `index.html` — added `#cin-onboarding` container (7 `.scr` sections + dots + skip + fadeblack overlay) immediately before `#app`. The legacy `#welcome-screen`, `#path-screen`, `#onboarding` markup is **kept in the DOM** as a safety fallback (unreachable in the redirected path). Knobs bumped.
+- `app.js` —
+  - `_cinPaintSigils(root)` — paints the recurring 4-point star into every `.sigil` token + colored mini-icons for the Why picks.
+  - `showCinematicOnboarding()` — the controller. Drives the 7 screens, manages `state.{name,why,pack}`, runs typewriter on naming ack, pre-biases pack from Why, fills the Commitment tome with real pack habit names via `getPackHabitDefs()`, scatters 18 sparks on screen 6, biases the tomorrow-hook copy by Why answer, commits to the canonical storage keys on "Enter Awakened", then hands off to `runOnboardingNotifPrompt → _completeOnboardingFinish`.
+  - Public `showWelcomeScreen()` becomes a thin wrapper that delegates to `showCinematicOnboarding()` when the container exists. Original implementation renamed to `_legacyShowWelcomeScreen()` and kept callable as a fallback.
+  - Launch routine: `else if (needsOnboarding)` branch now also routes through the cinematic flow (so partial-onboarding users get the new experience too). The cinematic flow auto-detects `hb_hunter_name_claimed === '1'` and jumps directly to screen 3 (Why) when name is already claimed.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w100'`.
+- `styles.css` — appended ~625 lines of `.cin-*` / `#cin-onboarding *` rules. All scoped under `#cin-onboarding`. Three named keyframes: `cin-bloom`, `cin-ringExp`, `cin-sparkfly`, plus screen/sigil/typewriter motion. Full `prefers-reduced-motion` fallback (bloom resolves to static halo; ignite/breathe/rise/sparks disabled).
+- `index.html` knobs — `styles.css?v=312`, `app.js?v=553`.
+- `sw.js` — `CACHE_VERSION = 'v5.439'`.
+
+**Hard rules honored (from the design brief).**
+- ✅ No productivity quotes
+- ✅ No "Welcome to Awakened!" or generic SaaS copy
+- ✅ No feature list
+- ✅ No permission request screens during onboarding (the canonical `runOnboardingNotifPrompt` still fires *after* "Enter Awakened" as before — that's the existing in-context prompt)
+- ✅ No duplicate name input — Welcome's `#wc-name-input` is legacy fallback; the new `#cin-nameField` is the single source of truth
+- ✅ No "Skip" on screens 1-3 (opening/naming/why) or 6-7 (peak/hook); subtle skip visible only on screens 4-5 (Path/Commitment)
+- ✅ Progress dots visible from screen 2-5; goal-gradient fill
+- ✅ Sigil motif recurs across every screen (recall hook)
+- ✅ Mobile-first; no horizontal scroll
+- ✅ Dark fantasy palette only
+- ✅ Single tap target per screen
+
+**Hard rules honored (guardrails).**
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload
+- ✅ No XP / streak / rank / class / HealthKit / compound math changed
+- ✅ The "+25 XP" cinematic is symbolic — `state` does not credit XP; the canonical first-habit-completion XP path is untouched
+- ✅ No public events emitted
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+**Returning-user behavior.**
+- Fully onboarded users (`hb_welcomed=1` + `needsOnboarding=false`) skip onboarding entirely as before — the cinematic flow does not fire.
+- Partial-onboarding users (welcomed but didn't finish) re-enter cinematic flow; if name already claimed, the flow jumps directly to screen 3 (Why) and skips the opening + naming screens.
+
+**Manual QA checklist (w100).**
+1. Fresh install (clear `hb_welcomed` + `hb_name` + `hb_path` from localStorage).
+2. Launch — cinematic sigil ignites; two opening lines fade in; ghost-tap visible.
+3. Tap → screen 2 — type a name → Confirm → echo + typewriter system line + Continue button fades in.
+4. Continue → screen 3 (Why) — pick one of Sleep/Focus/Body/Mind → Continue.
+5. Screen 4 (Path) — biased pack is pre-selected (Sleep/Body → Morning, Focus/Mind → Locked-In). Can change. Custom shows the going-solo warn copy. Continue.
+6. Screen 5 (Commitment) — tome shows your name + path + first 3 actual habit names from the chosen pack. **Step into the circle** CTA.
+7. Tap → screen 6 (peak) — bloom + rings + sparks + `+25 XP / The spark is lit.` system window. Continue ghost-tap fades in after ~2.6s.
+8. Tap → screen 7 — locked Day 2 card with blurred sigil. Why-biased copy line. **Enter Awakened** CTA.
+9. Tap → fade-to-black → notification permission prompt (existing flow) → main app.
+10. Settings → name shown matches what was entered on screen 2.
+11. Habits tab → pack's habits are present (Morning: 10 habits; Locked-In: 16 habits; Custom: 0 habits).
+12. Reduced-motion: iOS Reduce Motion ON → fades resolve instantly, bloom static, sparks suppressed. Flow still completable.
+13. Returning user (re-launch after completing) — no cinematic onboarding; main app loads normally.
+14. Partial-user simulation (clear `hb_path` only) — cinematic flow opens on screen 3 (skips opening + naming).
+15. Skip button on Path or Commitment jumps to Commitment screen; Enter Awakened still completes correctly.
+16. Smoke: Habits, Social, Leaderboards, Armory, Relic Archive, What's Coming sheet unchanged.
+
+**Rollback notes.** Revert this commit to restore the legacy welcome → path → habits flow. The legacy markup and JS are still present and unreachable only via the `showWelcomeScreen` wrapper; deleting the wrapper restores the original behavior. No data migration required — UI/flow only.
+
+**Open follow-ups.**
+- **Skip behavior** on Commitment screen still goes to Commitment (no-op) per the design. Could be improved to skip to Reward.
+- **First-XP credit** — the design promises +25 XP but the current implementation is symbolic. If product wants real XP credit on first awakening, a small ~3-line addition would award 25 XP into the existing rank system. Hold for a future train.
+- **Notification prompt position** — currently fires *after* "Enter Awakened" tap (existing `runOnboardingNotifPrompt`). Some teams prefer it earlier with context. If desired, can be moved to fire after screen 5 (Commitment).
+- **Legacy markup cleanup** — `#welcome-screen` + `#path-screen` + `#onboarding` can be deleted in a future train once w100 stabilizes on TestFlight.
+
+---
+
+## Jun 1, 2026 — 1z.232 Frontend: Remove duplicate onboarding name input
 
 **TL;DR.** Small cleanup pass. The Choose Habits screen had a second `Your Name` input (`#ob-name-input` inside `.ob-name-row`) even though the Welcome screen had already captured the hunter name. The Onboarding JS was display-suppressing the row at runtime when `hb_name` existed, but the element was still in the DOM and the code paths still referenced it. Cleaner to remove it from the markup entirely. Also swapped two productivity quotes for in-world copy.
 
