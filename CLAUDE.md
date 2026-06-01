@@ -4,7 +4,91 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.245 Frontend: Single onboarding name capture — defer Apple alias claim to cinematic (read this first)
+## Jun 1, 2026 — 1z.246 Frontend: Award First Awakening +25 XP for real (read this first)
+
+**TL;DR.** Cinematic reward screen has displayed "+25 XP / The spark is lit." since 1z.233 as a symbolic visual. On-device QA confirmed the main app showed `0 TOTAL XP` after onboarding — broken promise. Now real: `_completeOnboardingFinish()` grants +25 XP exactly once via the canonical `totalPoints += 25; save()` pattern. Guarded with a localStorage key so reload, restore, double-tap, or any re-entry cannot duplicate the grant.
+
+**Process note.** Frontend-only. Uses the existing XP source of truth (`totalPoints` → `localStorage.hb_points`). No new XP path, no new helper, no rank/class/stat math changed. No backend / D1 / migration / Worker / Codemagic / archive / upload.
+
+**Audit (XP source of truth).**
+- `totalPoints` (let, app.js:10912) — runtime XP counter.
+- Persisted by `save()` (app.js:12300) → `localStorage.hb_points`.
+- Canonical grant pattern: `totalPoints += pts; save();` followed by `render()` → `updateHeaderMetrics()` picks up the new total.
+- Standard helpers like `applyStatPts()` are stat-specific (per-habit) and intentionally NOT used here since the +25 isn't tied to a habit difficulty.
+
+**Implementation.**
+- New constants (immediately above `_completeOnboardingFinish`):
+  ```js
+  const ONBOARDING_FIRST_AWAKENING_XP = 25;
+  const ONBOARDING_FIRST_XP_GUARD_KEY = 'hb_onboarding_first_xp_awarded_v1';
+  ```
+- Grant block inserted between `obConfig.clear()` and `save()`:
+  ```js
+  try {
+    if (localStorage.getItem(ONBOARDING_FIRST_XP_GUARD_KEY) !== '1') {
+      totalPoints += ONBOARDING_FIRST_AWAKENING_XP;
+      localStorage.setItem(ONBOARDING_FIRST_XP_GUARD_KEY, '1');
+    }
+  } catch (_) {}
+  ```
+- `save()` immediately after persists `hb_points` and the guard.
+- `render()` (already called downstream) re-runs `updateHeaderMetrics()`, header shows `25 TOTAL XP`.
+
+**Files modified.**
+- `app.js` — constants block + 7-line grant block + `APP_BUILD_TAG` bump.
+- `index.html` — knob bumps only.
+- `sw.js` — `CACHE_VERSION` bump.
+- `auth.js`, `styles.css`, `simulated-leaderboard.js` — untouched.
+
+**Knobs.**
+- `APP_BUILD_TAG` `2.2.5-w112 → 2.2.5-w113`.
+- `app.js?v=` `565 → 566`.
+- `auth.js?v=21`, `styles.css?v=318`, `simulated-leaderboard.js?v=7` — preserved.
+- `sw.js CACHE_VERSION` `v5.451 → v5.452`.
+- `QA_UNLOCK_C_RANK_DUNGEONS=false` — preserved.
+
+**Edge-case coverage.**
+| Scenario | Behavior |
+|---|---|
+| Fresh user, single complete | +25 XP granted, guard set, save persists `hb_points=25` ✅ |
+| Force-quit + relaunch | `hb_points` already 25, guard already `'1'`. No re-grant. ✅ |
+| Enter Awakened double-tap | `_completeOnboardingFinish` re-entry guarded by the localStorage check. Second call no-ops on the XP block. ✅ |
+| Returning Apple user (already onboarded) | `needsOnboarding=false` → cinematic never fires → `_completeOnboardingFinish` never runs → no grant. ✅ |
+| Cloud restore | Restored state has `hb_points` from cloud and `needsOnboarding=false`. Cinematic doesn't fire. No grant. ✅ |
+| Reset all progress | `performReset()` wipes all `hb_*` keys including the guard. Next fresh onboarding can earn it again. ✅ (Desired QA loop) |
+| `_completeOnboardingFinish` called by some future code path with `needsOnboarding` already false | The guard still gates the grant — at most one +25 ever per device unless reset. ✅ |
+
+**Preserved.**
+- All cinematic flow, SFX, naming, Apple alias claim (1z.245), pack creation, notification prompt path.
+- All stat XP / class XP / rank logic — none of those branches are touched. Just the totalPoints bucket.
+- The cinematic reward-screen copy ("+25 XP / SYSTEM · FIRST AWAKENING / The spark is lit. It will not go out on its own.") — unchanged.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Manual QA checklist (w113).**
+1. Reset all progress.
+2. Go through cinematic onboarding.
+3. Reach "+25 XP" reward screen → continue.
+4. Tap "Enter Awakened".
+5. Header shows `25 TOTAL XP` (not 0).
+6. Rank E progress bar shows 25/500 progress.
+7. Open the XP · 30D progress sheet → `TOTAL XP: 25`, `DAILY XP: 25`.
+8. Force-quit and relaunch → still 25, **not 50**.
+9. Reset all progress again → guard cleared → next onboarding can earn another 25.
+10. Smoke: complete a real habit afterward → XP increments normally past 25.
+
+**Rollback notes.** Revert this commit removes the grant. Existing users with the guard set keep their 25 XP and the guard. A future commit re-introducing the same constants would no-op on those users (correct behavior).
+
+**Confirmations.**
+- ✅ Frontend-only.
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload.
+- ✅ No XP/streak/rank/HealthKit/leaderboard/Social/Guild/inventory/boss/economy logic changed beyond the single +25 grant.
+- ✅ Onboarding +25 can only be granted once per device per fresh onboarding session.
+- ✅ Rank/header/persistence updates via the canonical `save() → render() → updateHeaderMetrics()` path.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 1, 2026 — 1z.245 Frontend: Single onboarding name capture — defer Apple alias claim to cinematic
 
 **TL;DR.** On-device QA found iOS fresh users were being asked for their hunter name TWICE: once in the post-Apple-Sign-In alias picker (`#signin-step-alias` "Claim Your Hunter Name"), then again in the cinematic naming screen ("THE SYSTEM ASKS"). Root cause: auth's alias picker and the cinematic name screen were independent name captures. Fix: defer the backend alias claim until the cinematic Confirm tap. The alias picker UI is now unreachable. Hunter name flows through one screen and is committed to the backend inline from the cinematic.
 

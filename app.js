@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w112';
+  const APP_BUILD_TAG = '2.2.5-w113';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34158,6 +34158,19 @@
     runOnboardingNotifPrompt(() => _completeOnboardingFinish());
   }
 
+  // v3 Phase 1z.246 — First Awakening XP grant. The cinematic reward
+  // screen (1z.233 / 1z.244) displayed "+25 XP" as a symbolic number
+  // for several trains; on-device QA confirmed the main app showed
+  // 0 TOTAL XP after onboarding, breaking the promise. This makes it
+  // real: granted once inside _completeOnboardingFinish() (the same
+  // path that builds habits and persists them), gated by a localStorage
+  // key so reload / double-tap / cloud restore can't duplicate it.
+  // Reset all progress clears all hb_* keys (incl. the guard) so a
+  // fresh QA pass can earn it again. Returning users never see
+  // _completeOnboardingFinish so they don't get an extra grant either.
+  const ONBOARDING_FIRST_AWAKENING_XP = 25;
+  const ONBOARDING_FIRST_XP_GUARD_KEY = 'hb_onboarding_first_xp_awarded_v1';
+
   function _completeOnboardingFinish() {
     // v3 Phase 1z.232 — Duplicate `#ob-name-input` is no longer in the
     // HTML. The Welcome screen now owns name capture. Kept null-safe
@@ -34242,6 +34255,18 @@
 
     // Reset onboarding state
     obConfig.clear();
+
+    // v3 Phase 1z.246 — Award the First Awakening +25 XP exactly once.
+    // Guarded so reload, restore, double-tap on Enter Awakened, or any
+    // re-entry into this function cannot duplicate the grant. Uses the
+    // canonical totalPoints + save() pattern; render() below picks up
+    // the new total via updateHeaderMetrics().
+    try {
+      if (localStorage.getItem(ONBOARDING_FIRST_XP_GUARD_KEY) !== '1') {
+        totalPoints += ONBOARDING_FIRST_AWAKENING_XP;
+        localStorage.setItem(ONBOARDING_FIRST_XP_GUARD_KEY, '1');
+      }
+    } catch (_) {}
 
     save();
     needsOnboarding = false;
