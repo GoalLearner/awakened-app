@@ -27419,32 +27419,38 @@ body.social-hub-on .duels-page-header {
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.5),
     0 0 22px rgba(139, 92, 246, 0.18);
-  padding: 8px 6px;
+  /* Right padding reserves space for the floating AM badge so it
+     never overlaps the minute column. */
+  padding: 10px 48px 10px 10px;
+  overflow: hidden;
 }
 .ndp-panel.hidden { display: none; }
 
 .ndp-cols {
   display: grid;
-  grid-template-columns: 1fr 10px 1fr 38px;
+  grid-template-columns: 1fr 12px 1fr;
   align-items: stretch;
-  gap: 2px;
+  gap: 4px;
   max-height: 200px;
+  overflow: hidden;
 }
 .ndp-col {
   display: flex;
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(245, 184, 66, 0.4) transparent;
   padding: 4px 0;
 }
-.ndp-col::-webkit-scrollbar { width: 5px; }
+.ndp-col::-webkit-scrollbar { width: 5px; height: 0; }
 .ndp-col::-webkit-scrollbar-thumb {
   background: rgba(245, 184, 66, 0.35);
   border-radius: 3px;
 }
 .ndp-col::-webkit-scrollbar-track { background: transparent; }
+.ndp-col::-webkit-scrollbar:horizontal { display: none; }
 
 .ndp-colsep {
   display: flex;
@@ -27457,25 +27463,26 @@ body.social-hub-on .duels-page-header {
   user-select: none;
 }
 
-.ndp-col--lock {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* v3 Phase 1z.242 — AM moved to the top-right corner of the panel,
+   anchored next to the first minute row. No longer occupies a grid
+   column; floats over the columns via absolute positioning. */
 .ndp-lock {
+  position: absolute;
+  top: 10px;
+  right: 12px;
   font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.5px;
-  color: rgba(245, 184, 66, 0.85);
-  background: rgba(245, 184, 66, 0.10);
-  border: 1px solid rgba(245, 184, 66, 0.30);
+  color: rgba(245, 184, 66, 0.95);
+  background: rgba(245, 184, 66, 0.14);
+  border: 1px solid rgba(245, 184, 66, 0.45);
   border-radius: 6px;
-  padding: 8px 0;
-  width: 100%;
-  text-align: center;
+  padding: 4px 8px;
   cursor: default;
   user-select: none;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .ndp-item {
