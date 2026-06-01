@@ -4,6 +4,78 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## Jun 1, 2026 — 1z.234 Frontend: Debug-only "Reset to Fresh User" button (read this first)
+
+**TL;DR.** Tiny QA-quality-of-life addition. The cinematic onboarding (1z.233) is first-run only — testing it requires wiping localStorage + service workers + Cache Storage. Doing that via DevTools every iteration is friction. This adds a debug-gated button inside the existing diagnostics surface (5-tap on the Settings version footer) that does the full nuke + reload in one tap. Hidden from normal users.
+
+**Process note.** Frontend-only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / HealthKit / leaderboard / Social / Guild / inventory / boss / economy logic changed. No onboarding logic changed.
+
+**Gating.** Strict — the button only appears after the existing diagnostics unlock:
+1. Open Settings.
+2. Tap the version footer (`#settings-app-ver`) 5 times within 3 seconds.
+3. Toast `Diagnostics unlocked.` fires + the `#awk-debug-row` wrapper is injected below the footer.
+4. The new `#awk-debug-reset-fresh-btn` is appended to that same wrapper, alongside the existing `Copy Debug Info` button.
+5. Hidden state is per-Settings-open — re-opening Settings hides the row again, requiring a fresh 5-tap to re-reveal.
+
+Normal users never see the button. There is no permanent UI affordance.
+
+**Files modified.**
+- `app.js` —
+  - Extended `_revealDebugInfoButton()` to append a hairline divider + `Reset to Fresh User` button + one-line destructive hint into the existing `#awk-debug-row` wrapper. Red-tinted styling (`#f0596b`) to read as destructive.
+  - Added `_debugResetToFreshUser()` async helper that wipes everything that can keep a returning user from seeing fresh onboarding:
+    - `localStorage` (every key, not just `hb_*`)
+    - `sessionStorage`
+    - All registered service workers (`navigator.serviceWorker.getRegistrations() → r.unregister()`)
+    - All Cache Storage entries (`caches.keys() → caches.delete(k)`)
+    - Each step independently try-wrapped — a single failure can't block reload.
+    - Hard reload to `location.href.split('?')[0] + '?fresh=<timestamp>'` to bust any HTTP cache layer above the SW (Capacitor / iOS WebView).
+  - Confirmation is a native `window.confirm()` — debug-only, no new modal CSS needed.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w101'`.
+- `index.html` — footer label `BUILD W100` → `BUILD W101`. `app.js?v=554`. `styles.css?v=312` unchanged (no CSS — button uses inline styles like its sibling Copy Debug Info button).
+- `sw.js` — `CACHE_VERSION = 'v5.440'`.
+
+**Reset behavior (per tap).**
+1. `confirm()` — destructive copy with two buttons (Cancel / OK).
+2. On OK:
+   1. `localStorage.removeItem(k)` for every key.
+   2. `sessionStorage.clear()`.
+   3. `navigator.serviceWorker.getRegistrations() → unregister()` (all).
+   4. `caches.keys() → caches.delete(k)` (all).
+   5. Single `console.log('[Awakened] debug reset → fresh user')` breadcrumb.
+   6. `location.href = base + '?fresh=' + Date.now()` — hard reload, bust HTTP cache.
+
+**Expected post-reset behavior.**
+- `shouldShowIntroOnboarding()` returns true (since `hb_onboarding_seen_v2` is cleared).
+- `needsWelcome === true` (since `hb_welcomed` is gone).
+- Launch routine fires the old intro splash → then the 1z.233 cinematic onboarding (7 screens).
+- Sanity console checks: `window.__APP_VERSION === '2.2.5'`, `document.getElementById('cin-onboarding') !== null`.
+
+**Preserved invariants.**
+- All onboarding pack / habit / cinematic logic untouched.
+- All Settings IDs preserved; the existing `Reset all progress` two-step modal flow is independent and still works.
+- 5-tap debug-info gesture on `#settings-app-ver` still primary.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Manual QA checklist (w101).**
+1. Open Settings → confirm `Reset to Fresh User` is NOT visible by default.
+2. Tap version footer 5 times → toast appears → both buttons render below footer: `Copy Debug Info` and `Reset to Fresh User` (red-tinted).
+3. Tap Reset to Fresh User → native confirm dialog with the destructive copy.
+4. Tap Cancel → nothing happens; Settings still open.
+5. Tap Reset to Fresh User again → confirm OK → page reloads with `?fresh=<timestamp>` in URL.
+6. After reload: intro splash → cinematic onboarding fires from screen 1.
+7. Console check: `document.getElementById('cin-onboarding')` returns the element; `document.querySelector('script[src*="app.js"]').src` shows `app.js?v=554`.
+8. Complete onboarding → returns to main app, hunter name + habits saved correctly.
+9. Close Settings → re-open Settings → `Reset to Fresh User` is hidden again (requires fresh 5-tap).
+10. Existing-user smoke: regular Settings interactions, Reset all progress two-step flow, Habits, Social, Leaderboards all unchanged.
+
+**Rollback notes.** Revert this commit to remove the debug reset button + helper. No data migration required. Existing diagnostics unlock + Copy Debug Info are unaffected.
+
+**Open follow-ups.**
+- Could additionally gate the button on `location.hostname === 'localhost'` or a TestFlight build flag for extra paranoia. Currently the only gate is the 5-tap unlock — same level of protection as Copy Debug Info, which has been ship-safe since 1z.92.
+- Could split the reset into stages (clear storage only / clear caches only / full nuke) but YAGNI for QA tooling.
+
+---
+
 ## Jun 1, 2026 — 1z.233 Frontend: Cinematic Onboarding (Direction A — read this first)
 
 **TL;DR.** ClaudeDesign-led 7-screen cinematic first-run reveal. Replaces the visible welcome → path → habits flow for brand-new users. Peak-end engineered: the only burst of gold/particles/system-fanfare fires on screen 6 *immediately after* the user's biggest commitment ("Step into the circle"). Screen 7 ends on anticipation, not closure. Single source of truth for hunter name (screen 2). Why-question biases pack selection. First Rites in the Commitment tome reflect actual pack habits, not placeholders.

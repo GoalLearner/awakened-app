@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w100';
+  const APP_BUILD_TAG = '2.2.5-w101';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21374,7 +21374,86 @@
     hint.style.cssText = 'font-size:0.72rem;color:#94a3b8;line-height:1.3;';
     wrap.appendChild(btn);
     wrap.appendChild(hint);
+
+    // v3 Phase 1z.234 — Debug-only "Reset to Fresh User" button.
+    // Lives in the same diagnostics wrapper (hidden behind the 5-tap
+    // version-footer unlock). Wipes localStorage + sessionStorage +
+    // service workers + Cache Storage, then reloads. Lets QA re-test
+    // the 1z.233 cinematic onboarding without DevTools console tricks.
+    // Each step is independently try-wrapped so a single failure (e.g.
+    // sandboxed iframe with no caches API) can't block the reload.
+    const divider = document.createElement('div');
+    divider.style.cssText = 'height:1px;background:rgba(255,255,255,0.08);margin:6px 0 2px;';
+    wrap.appendChild(divider);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.id = 'awk-debug-reset-fresh-btn';
+    resetBtn.type = 'button';
+    resetBtn.textContent = 'Reset to Fresh User';
+    resetBtn.style.cssText = [
+      'padding:10px 14px','border-radius:10px',
+      'background:rgba(240,89,107,0.10)','color:#f0596b',
+      'border:1px solid rgba(240,89,107,0.45)','font-weight:700',
+      'font-size:0.86rem','cursor:pointer',
+    ].join(';');
+    resetBtn.addEventListener('click', () => {
+      const ok = window.confirm(
+        'Reset to fresh user?\n\n' +
+        'This clears local app data, onboarding state, service worker ' +
+        'cache, and reloads the app. Use only for QA.'
+      );
+      if (!ok) return;
+      try { _debugResetToFreshUser(); } catch (e) { console.warn('[debug-reset]', e); }
+    });
+    const resetHint = document.createElement('div');
+    resetHint.textContent = 'Clears local data, caches, service worker, then reloads. QA only.';
+    resetHint.style.cssText = 'font-size:0.72rem;color:#94a3b8;line-height:1.3;';
+    wrap.appendChild(resetBtn);
+    wrap.appendChild(resetHint);
+
     try { verEl.parentNode.insertBefore(wrap, verEl.nextSibling); } catch (_) {}
+  }
+
+  // v3 Phase 1z.234 — Debug-only fresh-user reset. Wipes every layer of
+  // local state that can keep a returning user from seeing the cinematic
+  // onboarding: localStorage (hb_* + everything else), sessionStorage,
+  // any registered service workers, and all Cache Storage entries. Each
+  // step is independently try-wrapped so a single failure can't block the
+  // reload. Always hard-reloads even if cleanup partially fails. NOT
+  // reachable by normal users — only fires from the debug-only button
+  // injected by _revealDebugInfoButton after the 5-tap unlock.
+  async function _debugResetToFreshUser() {
+    try {
+      Object.keys(localStorage).forEach(k => {
+        try { localStorage.removeItem(k); } catch (_) {}
+      });
+    } catch (_) {}
+    try { sessionStorage.clear(); } catch (_) {}
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => {
+          try { return r.unregister(); } catch (_) { return Promise.resolve(); }
+        }));
+      }
+    } catch (_) {}
+    try {
+      if (window.caches && caches.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => {
+          try { return caches.delete(k); } catch (_) { return Promise.resolve(); }
+        }));
+      }
+    } catch (_) {}
+    try { console.log('[Awakened] debug reset → fresh user'); } catch (_) {}
+    // Hard reload from network. Append a cache-buster so any HTTP cache
+    // layer between us and the SW (Capacitor / iOS WebView) misses.
+    try {
+      const base = location.href.split('?')[0].split('#')[0];
+      location.href = base + '?fresh=' + Date.now();
+    } catch (_) {
+      try { location.reload(); } catch (_) {}
+    }
   }
 
   // v3 Phase 1z.89 — deterministic interaction reset for the Add Habits
