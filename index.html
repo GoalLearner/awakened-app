@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=317">
+  <link rel="stylesheet" href="styles.css?v=318">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -246,8 +246,13 @@
       <div class="kicker rise d1" id="cin-name-kicker" style="margin-top:24px">The system asks</div>
       <h1 class="title rise d1" id="cin-name-title" style="margin:12px 0 18px">What do they call you?</h1>
       <div id="cin-nameInputWrap" class="rise d2">
-        <input class="field" id="cin-nameField" maxlength="18" placeholder="hunter name"
+        <input class="field" id="cin-nameField" maxlength="20" placeholder="hunter name"
                autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" />
+        <!-- v3 Phase 1z.245 — inline backend error for the deferred
+             alias claim (ALIAS_TAKEN, ALIAS_INVALID, NETWORK, etc).
+             Hidden until completeSignIn returns a non-ok result. -->
+        <div id="cin-nameError" class="cin-name-error" style="display:none"></div>
+        <div id="cin-nameSuggestions" class="cin-name-suggestions" style="display:none"></div>
         <div style="margin-top:26px"><button type="button" class="cta" id="cin-nameConfirm" disabled>Confirm</button></div>
       </div>
       <div id="cin-nameAck" style="display:none">
@@ -2650,12 +2655,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=20"></script>
+  <script src="auth.js?v=21"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=564"></script>
+  <script src="app.js?v=565"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3076,7 +3081,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W111</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W112</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

@@ -23,6 +23,14 @@
     try { window.Auth.devSignInIfLocalhost(); } catch (_) {}
     const user = window.Auth.getCurrentUser();
     if (user && user.alias) return false; // signed in + alias set → mount app
+    // v3 Phase 1z.245 — deferred alias claim. If Apple Sign-In completed
+    // but the alias hasn't been claimed yet (token persisted under
+    // hb_apple_pending_v1), let the app mount so the cinematic
+    // onboarding's name screen can call completeSignIn() inline. The
+    // legacy in-gate alias picker is no longer visible.
+    if (typeof window.Auth.isApplePending === 'function' && window.Auth.isApplePending()) {
+      return false;
+    }
     const gate = document.getElementById('signin-gate');
     if (!gate) return false; // gate markup missing — fail open
     gate.classList.remove('hidden');
@@ -43,18 +51,13 @@
     //   user but no alias → step "alias" (alias picker)
     const stepApple = document.getElementById('signin-step-apple');
     const stepAlias = document.getElementById('signin-step-alias');
-    if (user && !user.alias) {
-      if (stepApple) stepApple.classList.add('hidden');
-      if (stepAlias) stepAlias.classList.remove('hidden');
-      const aliasInput = document.getElementById('signin-alias-input');
-      if (aliasInput) {
-        try { aliasInput.value = localStorage.getItem('hb_name') || ''; } catch (_) {}
-        setTimeout(() => { try { aliasInput.focus(); } catch (_) {} }, 250);
-      }
-    } else {
-      if (stepApple) stepApple.classList.remove('hidden');
-      if (stepAlias) stepAlias.classList.add('hidden');
-    }
+    // v3 Phase 1z.245 — the legacy `user && !user.alias` branch (which
+    // showed the alias picker) is unreachable now: Apple Sign-In reloads
+    // before alias claim, and the gate exits early on isApplePending().
+    // Always show the Apple step; alias step stays hidden as a safety
+    // fallback for any cached HTML.
+    if (stepApple) stepApple.classList.remove('hidden');
+    if (stepAlias) stepAlias.classList.add('hidden');
 
     // Wire Apple-sign-in button.
     const appleBtn = document.getElementById('signin-apple-btn');
@@ -73,18 +76,14 @@
             // user cancelled or no response — stay on the apple step
             return;
           }
-          // Transition to alias picker.
-          if (stepApple) stepApple.classList.add('hidden');
-          if (stepAlias) stepAlias.classList.remove('hidden');
-          const aliasInput = document.getElementById('signin-alias-input');
-          if (aliasInput) {
-            try {
-              const suggested = (response.givenName && String(response.givenName).trim()) ||
-                                (localStorage.getItem('hb_name') || '');
-              aliasInput.value = suggested.slice(0, 20);
-            } catch (_) {}
-            setTimeout(() => { try { aliasInput.focus(); } catch (_) {} }, 250);
-          }
+          // v3 Phase 1z.245 — Reload into the main app. The Apple
+          // identity token is now persisted (auth.js _savePending),
+          // the gate's new isApplePending() short-circuit will return
+          // false, the main app mounts, and the cinematic onboarding's
+          // name screen calls completeSignIn() with the user's chosen
+          // hunter name. No more alias-picker step.
+          window.location.reload();
+          return;
         } catch (e) {
           if (e && e.message === 'NATIVE_ONLY') {
             if (appleErr) appleErr.textContent = 'Sign in with Apple is only available in the iOS app.';
@@ -196,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w111';
+  const APP_BUILD_TAG = '2.2.5-w112';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33410,18 +33409,92 @@
     });
 
     // Screen 2 — naming.
-    const field   = root.querySelector('#cin-nameField');
-    const confirm = root.querySelector('#cin-nameConfirm');
+    const field        = root.querySelector('#cin-nameField');
+    const confirm      = root.querySelector('#cin-nameConfirm');
+    const errEl        = root.querySelector('#cin-nameError');
+    const suggBox      = root.querySelector('#cin-nameSuggestions');
     field.addEventListener('input', () => {
       confirm.disabled = field.value.trim().length < 2;
+      // Clear any prior backend error when the user re-edits.
+      if (errEl) errEl.style.display = 'none';
+      if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
     });
     field.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !confirm.disabled) _confirmName();
     });
     confirm.addEventListener('click', _confirmName);
 
-    function _confirmName() {
-      state.name = field.value.trim();
+    function _showNameError(msg, suggested) {
+      if (errEl) {
+        errEl.textContent = msg || 'Could not claim that name.';
+        errEl.style.display = 'block';
+      }
+      if (Array.isArray(suggested) && suggested.length && suggBox) {
+        suggBox.innerHTML = '';
+        const label = document.createElement('div');
+        label.className = 'cin-name-suggestions-label';
+        label.textContent = 'Try one of these:';
+        suggBox.appendChild(label);
+        suggested.slice(0, 3).forEach((s) => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'cin-name-suggestion-chip';
+          chip.textContent = s;
+          chip.addEventListener('click', () => {
+            field.value = s;
+            field.dispatchEvent(new Event('input'));
+            try { field.focus(); } catch (_) {}
+          });
+          suggBox.appendChild(chip);
+        });
+        suggBox.style.display = 'block';
+      }
+    }
+
+    async function _confirmName() {
+      const name = field.value.trim();
+      if (!name || confirm.disabled) return;
+      if (errEl) errEl.style.display = 'none';
+      if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
+
+      // v3 Phase 1z.245 — if Apple Sign-In is pending (iOS native first-
+      // run, alias not yet claimed on the backend), commit the alias
+      // here. The cinematic name screen is now the SINGLE place the
+      // hunter name is captured. On error, surface inline and let the
+      // user retry without leaving the cinematic.
+      const Auth = window.Auth;
+      const pending = !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
+      if (pending) {
+        if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
+          _showNameError('3–20 chars · letters, numbers, spaces, _ and - only.');
+          return;
+        }
+        confirm.disabled = true;
+        let result;
+        try {
+          result = await Auth.completeSignIn(name);
+        } catch (e) {
+          result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' };
+        }
+        if (!result || !result.ok) {
+          const code = result && result.code;
+          if (code === 'ALIAS_TAKEN') {
+            _showNameError(result.reason || 'That name is taken.', result.suggested);
+          } else if (code === 'ALIAS_INVALID') {
+            _showNameError(result.reason || 'Name rejected by the system.');
+          } else if (code === 'NO_PENDING_TOKEN' || code === 'APPLE_TOKEN_INVALID') {
+            _showNameError('Sign-in expired. Please restart the app and sign in again.');
+          } else if (code === 'NETWORK') {
+            _showNameError('Connection error. Try again.');
+          } else {
+            _showNameError((result && result.reason) || 'Could not claim that name.');
+          }
+          confirm.disabled = false;
+          return;
+        }
+      }
+
+      state.name = name;
       _cinPlaySfx('chime'); // v3 Phase 1z.244 — system recognition
       root.querySelector('#cin-name-kicker').style.display = 'none';
       root.querySelector('#cin-name-title').style.display = 'none';
@@ -33618,21 +33691,28 @@
       }, 850);
     });
 
-    // Pre-fill the name field if a name is already on disk (auth
-    // alias from signin, or dev stub). The user can keep it or
-    // change it — we no longer auto-skip the opening / naming
-    // screens. Skipping made dev/QA reset land in the middle of
-    // the flow, and made real users lose the cinematic intro
-    // simply because they'd signed in with Apple ID.
+    // Pre-fill the name field. Priority order:
+    //   1. Apple Sign-In givenName (if pending claim — 1z.245)
+    //   2. Existing hb_name on disk (dev stub or post-claim)
+    // The user can keep or edit either. We no longer auto-skip the
+    // opening / naming screens.
     try {
-      const claimed = (localStorage.getItem('hb_name') || '').trim();
-      if (claimed && claimed !== 'Hunter') {
-        if (field) {
-          field.value = claimed;
-          // Confirm button is gated on input length; trigger the
-          // enable check by firing the input event.
-          try { field.dispatchEvent(new Event('input')); } catch (_) {}
+      let prefill = '';
+      try {
+        if (window.Auth && typeof window.Auth.isApplePending === 'function' &&
+            window.Auth.isApplePending() &&
+            typeof window.Auth.getPendingGivenName === 'function') {
+          const gn = window.Auth.getPendingGivenName();
+          if (gn && String(gn).trim()) prefill = String(gn).trim().slice(0, 20);
         }
+      } catch (_) {}
+      if (!prefill) {
+        const claimed = (localStorage.getItem('hb_name') || '').trim();
+        if (claimed && claimed !== 'Hunter') prefill = claimed;
+      }
+      if (prefill && field) {
+        field.value = prefill;
+        try { field.dispatchEvent(new Event('input')); } catch (_) {}
       }
     } catch (_) {}
     show(0);

@@ -4,7 +4,107 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.244 Frontend: Cinematic onboarding SFX (read this first)
+## Jun 1, 2026 — 1z.245 Frontend: Single onboarding name capture — defer Apple alias claim to cinematic (read this first)
+
+**TL;DR.** On-device QA found iOS fresh users were being asked for their hunter name TWICE: once in the post-Apple-Sign-In alias picker (`#signin-step-alias` "Claim Your Hunter Name"), then again in the cinematic naming screen ("THE SYSTEM ASKS"). Root cause: auth's alias picker and the cinematic name screen were independent name captures. Fix: defer the backend alias claim until the cinematic Confirm tap. The alias picker UI is now unreachable. Hunter name flows through one screen and is committed to the backend inline from the cinematic.
+
+**Process note.** Frontend / flow + auth-storage only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit / boss / leaderboard / Social / Guild / inventory / economy logic changed. App Store 5.1.1(iv) compliance and `/v1/auth/verify` backend contract unchanged — same request shape, same response handling.
+
+**Architecture.**
+- **Before:** Apple Sign-In → alias picker UI in gate → `completeSignIn(alias)` → reload → main app → cinematic naming (writes `hb_name` again).
+- **After:** Apple Sign-In → reload → main app mounts (gate dismissed via new `isApplePending()` check) → cinematic naming → `completeSignIn(name)` called from cinematic Confirm handler → on success, advance to ack; on ALIAS_TAKEN, inline error + suggestion chips, retry without leaving the cinematic.
+
+**Files modified.**
+- `auth.js` —
+  - New `PENDING_LS_KEY = 'hb_apple_pending_v1'` + `PENDING_TTL_MS = 10 * 60 * 1000` (matches Apple identity token lifetime).
+  - `_savePending()` / `_clearPending()` / `_restorePending()` IIFE-on-load → persist `{identityToken, sub, payload, expiresAt}` between `signInWithApple()` and `completeSignIn()`. Survives the reload.
+  - `signInWithApple()` now calls `_savePending()` after the in-memory cache write.
+  - `completeSignIn()` success branch now calls `_clearPending()` instead of three manual nullings — removes the persisted entry too.
+  - New public API: `Auth.isApplePending()` (boolean) + `Auth.getPendingGivenName()` (for cinematic prefill).
+  - Bumped `auth.js?v=21`.
+- `app.js` —
+  - Gate `setupSignInGateIfNeeded`: new short-circuit `if (Auth.isApplePending()) return false;` — alias-pending users mount the app.
+  - Gate's `user && !user.alias` branch (which used to show the alias step) is now a fallback that always shows the Apple step + hides the alias step.
+  - Apple-sign-in click handler: `signInWithApple()` success → `window.location.reload()` (no more in-page alias-step transition).
+  - Cinematic `_confirmName` rewritten as async: if `isApplePending()`, validate alias client-side, call `Auth.completeSignIn(name)`, await result. On `ALIAS_TAKEN` render up-to-3 suggestion chips inside the cinematic. On `ALIAS_INVALID`/`NETWORK`/other surface inline copy. On success, proceed to the system-recognition ack and the rest of the cinematic.
+  - Cinematic name prefill priority: Apple `givenName` (when pending) → `hb_name` → empty.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w112'`.
+- `index.html` —
+  - Cinematic name screen: added `#cin-nameError` + `#cin-nameSuggestions` containers. Field `maxlength` raised `18 → 20` to match the alias validator (3–20 chars).
+  - `app.js?v=565`, `auth.js?v=21`, `styles.css?v=318`. Footer label W112.
+- `styles.css` — appended `~50 lines` of `#cin-onboarding .cin-name-error` + `.cin-name-suggestions` + `.cin-name-suggestion-chip` styles. Gold pill chips, italic Cormorant error copy.
+- `sw.js` — `CACHE_VERSION = 'v5.451'`.
+
+**Path coverage.**
+| Path | Behavior |
+|---|---|
+| iOS fresh user (Apple Sign-In) | Gate Apple step → tap "Sign in with Apple" → token persisted → reload → gate dismissed → cinematic fires → name on screen 2 → Confirm calls `completeSignIn` → backend OK → ack + next |
+| iOS fresh user, ALIAS_TAKEN | Same as above, but Confirm returns 409 → inline error + suggestion chips inside the cinematic → user picks a suggestion or retypes → Confirm again |
+| iOS returning user (alias already set) | Gate's `user && user.alias` returns false → no Apple step → no onboarding (`needsOnboarding=false`) → main app loads directly |
+| Localhost / dev user | `devSignInIfLocalhost()` sets alias=`DevUser` → gate exits early → cinematic fires → Confirm sees `isApplePending()===false` → skips backend call → advances locally |
+| Apple Sign-In + close app before naming | Token persisted for 10 min → relaunch within window → `_restorePending()` restores in-memory state → gate dismissed → cinematic fires → Confirm completes claim. After 10 min → `_restorePending` finds expired entry → clears → next launch shows Apple step again |
+| Cloud restore prompt accepted/cancelled | Restore prompt fires AFTER gate exits (inside `CloudSync.maybeSyncOnInit`) — independent of the cinematic. Cancelling restore continues into cinematic naming as expected |
+
+**Cinematic naming screen — error UI surface.**
+- `#cin-nameError` — italic Cormorant copy in gold-orange (`#e7a06a`). Hidden until a backend error fires.
+- `#cin-nameSuggestions` — flex column of gold pill chips. Tap a chip → fills the input → user can confirm or keep editing.
+- Both clear automatically when the user types again (input event).
+
+**Preserved invariants.**
+- All cinematic screens (1–7) unchanged in structure. Only screen 2's Confirm gained backend coupling.
+- App Store 5.1.1(iv) single neutral "Sign in with Apple" button preserved (no Skip / Maybe Later added).
+- `/v1/auth/verify` request shape unchanged — same `{identityToken, alias}` POST.
+- All response codes handled: ALIAS_TAKEN, ALIAS_INVALID, NO_PENDING_TOKEN, APPLE_TOKEN_INVALID, NETWORK, BACKEND_ERROR.
+- Cinematic SFX (1z.244) `chime` still fires on successful name commit.
+- `_completeOnboardingFinish` still runs at "Enter Awakened" → habit pack built, `runOnboardingNotifPrompt` still fires.
+- No XP / streak / rank / class / HealthKit / boss math touched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Knobs.**
+- `APP_BUILD_TAG` `2.2.5-w111 → 2.2.5-w112`.
+- `app.js?v=` `564 → 565`.
+- `auth.js?v=` `20 → 21` (first bump in many trains — auth.js logic changed).
+- `styles.css?v=` `317 → 318`.
+- `sw.js CACHE_VERSION` `v5.450 → v5.451`.
+- `simulated-leaderboard.js?v=7` preserved.
+- `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved.
+
+**Manual QA checklist (w112).**
+1. Reset all progress / fresh install.
+2. Open app → gate shows Apple step ("Sign in to begin / Claim your hunter identity").
+3. Tap "Sign in with Apple" → native sheet → authorize.
+4. **Confirm the old "Claim Your Hunter Name" screen does NOT appear.**
+5. App reloads → cinematic opening fires (sigil ignites).
+6. Tap through to screen 2 (naming) — name field is pre-filled with Apple's given name (if Apple shared it).
+7. Edit if desired → Confirm.
+8. Backend `completeSignIn` runs → success → "Designation accepted" ack + name echo + typewriter.
+9. Why → Path → Commitment → Reward → Tomorrow → Enter Awakened → main app.
+10. ALIAS_TAKEN simulation: temporarily pick a name another tester has. Confirm → inline gold-orange error + suggestion chips. Tap a suggestion → field updates → Confirm → success.
+11. Force-quit between Apple Sign-In and naming → relaunch within 10 min → cinematic resumes from opening, naming Confirm still works.
+12. Force-quit and wait 11+ min → relaunch → token expired → gate shows Apple step again (user re-authorizes).
+13. Returning user (already-onboarded Apple user) → no Apple step, no cinematic, app loads directly.
+14. Localhost dev: cinematic appears, naming Confirm is instant (no backend call).
+15. Smoke: Habits, Social, Leaderboards (alias correctly shows the name typed in the cinematic), Armory, Relic Archive.
+
+**Rollback notes.** Revert this commit restores the alias-picker flow. No data migration required. Any in-flight `hb_apple_pending_v1` entries will be ignored by the legacy gate code and expire naturally within 10 min.
+
+**Open follow-ups.**
+- The alias-picker DOM markup (`#signin-step-alias` and its inputs) is still in `index.html` as a safety fallback. Can be deleted in a future cleanup train once the new flow has soaked on TestFlight.
+- Backend currently has no "change alias" endpoint. If a user types a name in the cinematic that conflicts and they tap a suggestion, they end up with the suggestion. There's no later rename path — note for product if it matters.
+
+**Confirmations.**
+- ✅ Frontend / flow + auth-storage only.
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload.
+- ✅ No XP / streak / rank / HealthKit / boss / leaderboard math changed.
+- ✅ Old "Claim Your Hunter Name" screen is unreachable in fresh onboarding.
+- ✅ Cinematic naming is the single name capture for the entire onboarding flow.
+- ✅ Cloud restore Cancel still routes into cinematic onboarding.
+- ✅ Existing-user skip-onboarding path unchanged.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 1, 2026 — 1z.244 Frontend: Cinematic onboarding SFX
 
 **TL;DR.** Added seven generated-tone SFX accents to the cinematic onboarding (1z.233), one per moment: ignite (screen 1 first tap), chime (name confirm), tap (Why pick), vow (Path pick), seal (Step into the circle), reward (screen 6 peak), gate (Enter Awakened). All WebAudio synthesis — zero asset weight. Fully fail-safe. Honors the existing `soundEnabled` pref (Settings sound toggle). No autoplay before user tap. No background music loop. No onboarding progression dependency on audio.
 

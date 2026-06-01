@@ -27526,3 +27526,54 @@ body.social-hub-on .duels-page-header {
   .ndp-item { transition: none; }
   .ndp-item.is-active { transform: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.245 — Cinematic naming inline error / suggestions.
+   Surfaces backend completeSignIn() responses (ALIAS_TAKEN, etc.)
+   inside the naming screen so the user can retry without leaving
+   the cinematic flow.
+   ═══════════════════════════════════════════════════════════════ */
+
+#cin-onboarding .cin-name-error {
+  margin-top: 14px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  color: #e7a06a;
+  line-height: 1.4;
+  text-align: center;
+  max-width: 280px;
+}
+
+#cin-onboarding .cin-name-suggestions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+#cin-onboarding .cin-name-suggestions-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 2px;
+  color: var(--cin-t3);
+  text-transform: uppercase;
+}
+#cin-onboarding .cin-name-suggestion-chip {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: #ffd270;
+  background: rgba(245, 184, 66, 0.10);
+  border: 1px solid rgba(245, 184, 66, 0.40);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+#cin-onboarding .cin-name-suggestion-chip:hover,
+#cin-onboarding .cin-name-suggestion-chip:focus {
+  background: rgba(245, 184, 66, 0.20);
+  outline: none;
+}

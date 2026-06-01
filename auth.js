@@ -148,15 +148,66 @@
     return /^[A-Za-z0-9 _-]+$/.test(trimmed);
   }
 
-  // In-memory transient state held between signInWithApple() (step 1)
-  // and completeSignIn(alias) (step 2). NEVER persisted to localStorage
-  // — if the user force-quits between steps, they re-authorize with
-  // Apple on next launch. This is correct: Apple identity tokens are
-  // short-lived (10 min) and a fresh one is required for backend
-  // verification anyway.
+  // Transient state held between signInWithApple() (step 1) and
+  // completeSignIn(alias) (step 2).
+  //
+  // v3 Phase 1z.245 — Now ALSO persisted to localStorage under
+  // PENDING_LS_KEY for ≤ 10 minutes so the alias claim can be deferred
+  // until the cinematic onboarding's name screen calls completeSignIn.
+  // The legacy "alias picker right after Apple" gate step is gone; we
+  // reload after Apple auth and the cinematic claims the alias inline.
+  // Apple identity tokens are short-lived (~10 min), so the persisted
+  // window is bounded — if the user force-quits and waits, they re-do
+  // the Apple Sign-In on next launch.
   let _pendingIdentityToken = null;
   let _pendingAppleSub = null;
   let _pendingApplePayload = null; // { givenName, familyName, email } for UX pre-fill
+  const PENDING_LS_KEY = 'hb_apple_pending_v1';
+  const PENDING_TTL_MS = 10 * 60 * 1000;  // 10 min — match Apple token lifetime
+
+  function _savePending() {
+    try {
+      if (!_pendingIdentityToken || !_pendingAppleSub) {
+        localStorage.removeItem(PENDING_LS_KEY);
+        return;
+      }
+      localStorage.setItem(PENDING_LS_KEY, JSON.stringify({
+        t: _pendingIdentityToken,
+        s: _pendingAppleSub,
+        p: _pendingApplePayload,
+        e: Date.now() + PENDING_TTL_MS,
+      }));
+    } catch (_) {}
+  }
+  function _clearPending() {
+    _pendingIdentityToken = null;
+    _pendingAppleSub = null;
+    _pendingApplePayload = null;
+    try { localStorage.removeItem(PENDING_LS_KEY); } catch (_) {}
+  }
+  (function _restorePending() {
+    try {
+      const raw = localStorage.getItem(PENDING_LS_KEY);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.t || !obj.s) { _clearPending(); return; }
+      if (typeof obj.e === 'number' && Date.now() > obj.e) { _clearPending(); return; }
+      _pendingIdentityToken = obj.t;
+      _pendingAppleSub      = obj.s;
+      _pendingApplePayload  = obj.p || null;
+    } catch (_) {}
+  })();
+
+  // True when an Apple identity token has been received but the alias
+  // hasn't been claimed yet. Used by the gate to allow the app to mount
+  // (so the cinematic name screen can call completeSignIn() inline)
+  // and by the cinematic to know when to make the backend call.
+  function isApplePending() {
+    return !!_pendingIdentityToken && !!_pendingAppleSub;
+  }
+  function getPendingGivenName() {
+    return (_pendingApplePayload && _pendingApplePayload.givenName) || null;
+  }
 
   // Invokes the Apple Sign-In native flow. Returns the Apple plugin's
   // raw response on success (so the gate UI can pre-fill the alias
@@ -193,6 +244,9 @@
       familyName: response.familyName || null,
       email:      response.email || null,
     };
+    // v3 Phase 1z.245 — persist so the alias claim survives the reload
+    // into the main app / cinematic onboarding flow.
+    _savePending();
     return response;
   }
 
@@ -258,11 +312,10 @@
         signed_in_date: deviceLocalDate(),
       });
       try { localStorage.setItem('hb_name', data.alias); } catch (_) {}
-      // Clear in-memory pending state — the identityToken has served
-      // its purpose and Apple's tokens are single-use anyway.
-      _pendingIdentityToken = null;
-      _pendingAppleSub = null;
-      _pendingApplePayload = null;
+      // Clear pending state — identityToken has served its purpose and
+      // Apple's tokens are single-use anyway. v3 Phase 1z.245 — also
+      // removes the persisted PENDING_LS_KEY localStorage entry.
+      _clearPending();
       return { ok: true, alias: data.alias, isNewUser: !!data.isNewUser };
     }
 
@@ -1182,6 +1235,9 @@
     signInWithApple,
     completeSignIn,
     getPendingApplePayload,
+    // v3 Phase 1z.245 — deferred alias claim
+    isApplePending,
+    getPendingGivenName,
     deleteAccount,
     submitLeaderboardSnapshot,
     fetchLeaderboardTop,
