@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w107';
+  const APP_BUILD_TAG = '2.2.5-w108';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30910,6 +30910,121 @@
     return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
   }
 
+  // v3 Phase 1z.241 — Custom theme-matched picker for the Morning
+  // Briefing time. Two scrollable-column dropdown (hours 4–11,
+  // minutes 00/15/30/45) + locked AM. Dark-navy panel, gold accents,
+  // Cinzel display. Updates the hidden #notif-explain-digest-time so
+  // existing finish() read path stays untouched.
+  const NDP_HOURS   = [4, 5, 6, 7, 8, 9, 10, 11];
+  const NDP_MINUTES = [0, 15, 30, 45];
+
+  function _ndpFormatDisplay(hh, mm) {
+    return hh + ':' + String(mm).padStart(2, '0') + ' AM';
+  }
+
+  function _wireDigestTimePicker() {
+    const wrap    = document.getElementById('ndp-wrap');
+    if (!wrap || wrap.dataset.wired === '1') return;
+    const trigger = document.getElementById('ndp-trigger');
+    const panel   = document.getElementById('ndp-panel');
+    const display = document.getElementById('ndp-display');
+    const hidden  = document.getElementById('notif-explain-digest-time');
+    if (!trigger || !panel || !display || !hidden) return;
+    wrap.dataset.wired = '1';
+
+    // Parse the initial value (HH:MM 24h) into picker state.
+    const initial = _snapMorningTime(wrap.dataset.time || hidden.value || '09:00');
+    let [curH, curM] = initial.split(':').map((n) => parseInt(n, 10));
+
+    // Render the columns once. Items are re-marked active on each
+    // state change without rebuilding the DOM.
+    const hCol = panel.querySelector('.ndp-col[data-col="h"]');
+    const mCol = panel.querySelector('.ndp-col[data-col="m"]');
+    hCol.innerHTML = NDP_HOURS.map((h) =>
+      '<button type="button" class="ndp-item" data-h="' + h + '">' + h + '</button>'
+    ).join('');
+    mCol.innerHTML = NDP_MINUTES.map((m) =>
+      '<button type="button" class="ndp-item" data-m="' + m + '">' + String(m).padStart(2, '0') + '</button>'
+    ).join('');
+
+    function paintActive() {
+      hCol.querySelectorAll('.ndp-item').forEach((el) => {
+        el.classList.toggle('is-active', parseInt(el.dataset.h, 10) === curH);
+      });
+      mCol.querySelectorAll('.ndp-item').forEach((el) => {
+        el.classList.toggle('is-active', parseInt(el.dataset.m, 10) === curM);
+      });
+    }
+
+    function syncOut() {
+      const v = String(curH).padStart(2, '0') + ':' + String(curM).padStart(2, '0');
+      wrap.dataset.time = v;
+      hidden.value      = v;
+      display.textContent = _ndpFormatDisplay(curH, curM);
+    }
+
+    paintActive();
+    syncOut();
+
+    let isOpen = false;
+    function openPanel() {
+      isOpen = true;
+      panel.classList.remove('hidden');
+      trigger.setAttribute('aria-expanded', 'true');
+      // Scroll active items into view inside their columns.
+      [hCol, mCol].forEach((col) => {
+        const active = col.querySelector('.ndp-item.is-active');
+        if (active && typeof active.scrollIntoView === 'function') {
+          try { active.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+        }
+      });
+    }
+    function closePanel() {
+      if (!isOpen) return;
+      isOpen = false;
+      panel.classList.add('hidden');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isOpen ? closePanel() : openPanel();
+    });
+
+    hCol.addEventListener('click', (e) => {
+      const t = e.target.closest('.ndp-item');
+      if (!t) return;
+      e.stopPropagation();
+      curH = parseInt(t.dataset.h, 10);
+      paintActive();
+      syncOut();
+    });
+    mCol.addEventListener('click', (e) => {
+      const t = e.target.closest('.ndp-item');
+      if (!t) return;
+      e.stopPropagation();
+      curM = parseInt(t.dataset.m, 10);
+      paintActive();
+      syncOut();
+      // Closing on minute pick matches typical mobile pickers — the
+      // user has now made both selections (hour first, then minute).
+      // If they want to change the hour again, they can re-open.
+      setTimeout(closePanel, 120);
+    });
+
+    // Click outside the picker → close.
+    document.addEventListener('click', (e) => {
+      if (!isOpen) return;
+      if (wrap.contains(e.target)) return;
+      closePanel();
+    });
+    // ESC closes too (web/dev convenience).
+    document.addEventListener('keydown', (e) => {
+      if (isOpen && e.key === 'Escape') closePanel();
+    });
+  }
+
   function showNotifExplainer(callback, opts) {
     opts = opts || {};
     const ov = document.getElementById('notif-explain-overlay');
@@ -30931,33 +31046,13 @@
 
     ov.classList.remove('hidden');
 
-    // v3 Phase 1z.239 — force the native time picker to open on tap
-    // so the chip's "I'm adjustable" affordance is unambiguous.
-    // showPicker() is the modern path (Chrome 99+, iOS 16+). On older
-    // browsers the input still works via focus + keyboard / spinner.
-    //
-    // v3 Phase 1z.240 — Morning Briefing constraints. Native
-    // <input type="time"> ignores `step` in most browser dropdowns
-    // and can't restrict AM/PM. Snap any chosen value to a 15-min
-    // AM-only slot on change/blur so the user can't end up with
-    // 9:07 PM as their Morning Briefing time.
-    const _digestEl = document.getElementById('notif-explain-digest-time');
-    if (_digestEl && !_digestEl.dataset.pickerWired) {
-      _digestEl.dataset.pickerWired = '1';
-      _digestEl.addEventListener('click', (e) => {
-        e.preventDefault();
-        try {
-          if (typeof _digestEl.showPicker === 'function') _digestEl.showPicker();
-          else _digestEl.focus();
-        } catch (_) { try { _digestEl.focus(); } catch (__) {} }
-      });
-      const _snap = () => {
-        const snapped = _snapMorningTime(_digestEl.value);
-        if (snapped && snapped !== _digestEl.value) _digestEl.value = snapped;
-      };
-      _digestEl.addEventListener('change', _snap);
-      _digestEl.addEventListener('blur',   _snap);
-    }
+    // v3 Phase 1z.241 — Custom Morning Briefing time picker. Native
+    // <input type="time"> couldn't be themed and showed PM + per-minute
+    // options we don't want. The chip + dropdown panel is rendered +
+    // wired here; the hidden #notif-explain-digest-time keeps the
+    // finish() read path identical to 1z.238 (value is the canonical
+    // HH:MM 24h source of truth).
+    try { _wireDigestTimePicker(); } catch (e) { console.warn('[digest-picker] wire', e); }
 
     const finish = (ok) => {
       ov.classList.add('hidden');

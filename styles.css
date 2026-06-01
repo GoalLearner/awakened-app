@@ -27354,7 +27354,8 @@ body.social-hub-on .duels-page-header {
   padding: 0;
 }
 
-.notif-type-time-input {
+.notif-type-time-input,
+.ndp-trigger {
   font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -27373,21 +27374,137 @@ body.social-hub-on .duels-page-header {
   text-align: center;
 }
 .notif-type-time-input:hover,
-.notif-type-time-input:focus {
+.notif-type-time-input:focus,
+.ndp-trigger:hover,
+.ndp-trigger:focus,
+.ndp-trigger[aria-expanded="true"] {
   background: rgba(245, 184, 66, 0.18);
   border-color: #f5b842;
   box-shadow: 0 0 10px rgba(245, 184, 66, 0.35);
 }
-/* v3 Phase 1z.239 — let the browser's native clock/spinner indicator
-   render inside the chip so users see it's clickable. Gold-tint the
-   icon so it blends with the dark-fantasy palette. */
-.notif-type-time-input::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  filter: invert(78%) sepia(64%) saturate(450%) hue-rotate(355deg)
-          brightness(101%) contrast(96%);
-  margin-left: 4px;
-  opacity: 0.85;
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.241 — Custom Morning Briefing time picker.
+   Replaces the un-themable native time dropdown. Dark navy panel,
+   gold accents, Cinzel display. Hours 4–11 AM, minutes 00/15/30/45,
+   AM locked.
+   ═══════════════════════════════════════════════════════════════ */
+.ndp-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
 }
-.notif-type-time-input::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
+.ndp-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+.ndp-icon { opacity: 0.85; }
+.ndp-trigger:hover .ndp-icon { opacity: 1; }
+
+.ndp-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10010;
+  width: 220px;
+  background: linear-gradient(180deg, #15153a 0%, #0e0e26 100%);
+  border: 1px solid rgba(245, 184, 66, 0.30);
+  border-radius: 12px;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(139, 92, 246, 0.18);
+  padding: 8px 6px;
+}
+.ndp-panel.hidden { display: none; }
+
+.ndp-cols {
+  display: grid;
+  grid-template-columns: 1fr 10px 1fr 38px;
+  align-items: stretch;
+  gap: 2px;
+  max-height: 200px;
+}
+.ndp-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 184, 66, 0.4) transparent;
+  padding: 4px 0;
+}
+.ndp-col::-webkit-scrollbar { width: 5px; }
+.ndp-col::-webkit-scrollbar-thumb {
+  background: rgba(245, 184, 66, 0.35);
+  border-radius: 3px;
+}
+.ndp-col::-webkit-scrollbar-track { background: transparent; }
+
+.ndp-colsep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(245, 184, 66, 0.6);
+  user-select: none;
+}
+
+.ndp-col--lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ndp-lock {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(245, 184, 66, 0.85);
+  background: rgba(245, 184, 66, 0.10);
+  border: 1px solid rgba(245, 184, 66, 0.30);
+  border-radius: 6px;
+  padding: 8px 0;
+  width: 100%;
+  text-align: center;
+  cursor: default;
+  user-select: none;
+}
+
+.ndp-item {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #bdbad6;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, transform 120ms;
+}
+.ndp-item:hover {
+  background: rgba(139, 92, 246, 0.12);
+  color: #f1f0fb;
+}
+.ndp-item.is-active {
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.30), rgba(245, 184, 66, 0.16));
+  color: #ffd270;
+  border: 1px solid rgba(245, 184, 66, 0.55);
+  box-shadow: 0 0 10px rgba(245, 184, 66, 0.25);
+  transform: scale(1.04);
+}
+.ndp-item:focus { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ndp-item { transition: none; }
+  .ndp-item.is-active { transform: none; }
 }
