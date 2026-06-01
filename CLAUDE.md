@@ -4,7 +4,90 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.243 Frontend: Polish onboarding time picker layout/scroll (read this first)
+## Jun 1, 2026 — 1z.244 Frontend: Cinematic onboarding SFX (read this first)
+
+**TL;DR.** Added seven generated-tone SFX accents to the cinematic onboarding (1z.233), one per moment: ignite (screen 1 first tap), chime (name confirm), tap (Why pick), vow (Path pick), seal (Step into the circle), reward (screen 6 peak), gate (Enter Awakened). All WebAudio synthesis — zero asset weight. Fully fail-safe. Honors the existing `soundEnabled` pref (Settings sound toggle). No autoplay before user tap. No background music loop. No onboarding progression dependency on audio.
+
+**Process note.** Frontend / additive only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit / boss / leaderboard / Social / Guild / inventory / economy logic changed. Onboarding progression untouched — SFX calls are best-effort, every one wrapped in try/catch.
+
+**Implementation.**
+- New helpers in `app.js` next to the cinematic controller:
+  - `_cinSfxAllowed()` — checks the existing `soundEnabled` flag (`localStorage.hb_sound !== 'off'`). If user disables sound in Settings, all onboarding SFX go silent.
+  - `_cinGetSfxCtx()` — lazily creates one shared `window.__cinSfxCtx` (mirrors the `__bloomCtx` pattern from 1z.74). Calls `ctx.resume()` if suspended (iOS autoplay-unlock on first gesture). Returns `null` on any failure.
+  - `_cinPlaySfx(kind)` — try/catch wrap around a small `tone()` helper that creates osc+gain envelopes. Seven sound profiles (ignite / chime / tap / vow / seal / reward / gate). Falls silent on any error.
+- SFX call sites (7 total) added to the existing screen handlers:
+  - `igniteTap.click` + `opTap.click` → `ignite` (also unlocks AudioContext via first-gesture).
+  - `_confirmName()` → `chime`.
+  - `whyGrid .pick.click` → `tap`.
+  - `packs .pack.click` → `vow`.
+  - `awakenBtn.click` (overlay on `[data-cin-next]` generic handler) → `seal`.
+  - `_runReward()` (called when entering screen 6) → `reward`.
+  - `enterApp.click` (screen 7) → `gate`.
+
+**Sound profile cheat sheet.**
+
+| Kind | Profile | Duration |
+|---|---|---|
+| `ignite` | Sine 80 → 220 Hz sweep + 320 → 540 Hz overtone | ~600 ms |
+| `chime` | Two sine tones (660, 880 Hz), 80ms stagger | ~400 ms |
+| `tap` | Triangle 520 → 380 Hz blip | ~180 ms |
+| `vow` | Sine 180 → 340 Hz + triangle 90 → 170 Hz body | ~420 ms |
+| `seal` | Two sine sweeps (220 → 440 Hz / 110 → 220 Hz) | ~500 ms |
+| `reward` | Three ascending notes (660 / 880 / 1320 Hz) × sine+triangle | ~1100 ms |
+| `gate` | Sine 330 → 660 Hz + triangle 220 → 440 Hz | ~600 ms |
+
+All envelopes use exponential attack/decay with peaks ≤ 0.14. No harsh square waves.
+
+**Safety guarantees.**
+- ✅ No autoplay before first user gesture (AudioContext only resumed inside `igniteTap.click` and subsequent screens).
+- ✅ Single shared AudioContext (no per-tap context construction).
+- ✅ Every SFX call wrapped in try/catch; failure is silent.
+- ✅ Honors existing `soundEnabled` pref so the Settings sound toggle suppresses onboarding SFX too (post-onboarding sessions).
+- ✅ Falls silent if WebAudio missing (`window.AudioContext` undefined → null return).
+- ✅ Falls silent if iOS autoplay denied (ctx.resume() try/catch).
+- ✅ No background music loop, no scheduled timers that can stack.
+- ✅ Reduced-motion accessibility unchanged (audio is independent of motion).
+
+**Files modified.**
+- `app.js` — +120 lines (helper block + 7 wired call sites). `APP_BUILD_TAG` bump.
+- `index.html` — knob bumps only.
+- `sw.js` — `CACHE_VERSION` bump.
+- `styles.css` — unchanged (no UI added).
+
+**Knobs.**
+- `APP_BUILD_TAG` `2.2.5-w110 → 2.2.5-w111`.
+- `app.js?v=` `563 → 564`.
+- `styles.css?v=` `317` (unchanged — no CSS).
+- `sw.js CACHE_VERSION` `v5.449 → v5.450`.
+- `auth.js?v=20`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS=false` — preserved.
+
+**Manual QA checklist.**
+1. Reset all progress → fresh onboarding fires (silent until first tap).
+2. Tap the sigil on screen 1 → low ignition pulse.
+3. Type name → tap Confirm → soft system chime.
+4. Tap a Why card → quiet rune tap.
+5. Tap a Path card → deeper vow pulse.
+6. Tap "Step into the circle" → seal sound.
+7. Screen 6 lands → reward shimmer (the loudest moment, still tasteful).
+8. Tap "Enter Awakened" → gate-open sweep.
+9. With Settings sound OFF on a *subsequent* run, no SFX play (existing users; verifies the pref is honored).
+10. With device volume down or muted, onboarding still progresses; no errors in console.
+11. Returning users skip onboarding — no SFX fire.
+12. Rapid taps don't crash or stack badly (each SFX ≤ 1.1s with quick decay).
+
+**Rollback notes.** Single-commit revert removes the helper block + 7 call sites; the cinematic controller is otherwise unchanged.
+
+**Confirmations.**
+- ✅ Frontend / additive only.
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload.
+- ✅ No XP / streak / rank / HealthKit / boss / leaderboard / Social / Guild logic changed.
+- ✅ Audio failures never crash or block onboarding.
+- ✅ Existing `soundEnabled` pref respected.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 1, 2026 — 1z.243 Frontend: Polish onboarding time picker layout/scroll
 
 **TL;DR.** Two visual bugs in the custom Morning Briefing time picker shipped in 1z.241/242: the AM badge was touching the highlighted "00" pill (cramped right gutter + 1.04× scale on the active item), and the hour column only fit ~5 rows so users couldn't comfortably reach `9` and beyond. Surgical CSS + one JS line fixes both. No backend, no logic change.
 

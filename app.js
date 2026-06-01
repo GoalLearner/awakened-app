@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w110';
+  const APP_BUILD_TAG = '2.2.5-w111';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33201,6 +33201,123 @@
   // rank math is touched. The visual is the reward; the first real
   // habit completion still credits XP normally.
   // ─────────────────────────────────────────────────────────
+  // v3 Phase 1z.244 — Cinematic onboarding SFX. All sounds are
+  // generated via WebAudio (no assets), share one AudioContext
+  // (window.__cinSfxCtx), honor the existing soundEnabled prefs
+  // (hb_sound localStorage), and fail silently on any error —
+  // autoplay blocks, missing AudioContext, suspended state, anything.
+  // Onboarding progression never depends on audio.
+  //
+  // Sound moments:
+  //   ignite — first sigil tap on screen 1 (low awakening pulse)
+  //   chime  — name confirmed on screen 2 (system recognizes you)
+  //   tap    — Why pick on screen 3 (quiet rune)
+  //   vow    — Path pick on screen 4 (deeper selection)
+  //   seal   — "Step into the circle" on screen 5 (pact)
+  //   reward — first-reward peak on screen 6 (shimmer)
+  //   gate   — "Enter Awakened" on screen 7 (gate opens)
+  function _cinSfxAllowed() {
+    return (typeof soundEnabled === 'undefined') || soundEnabled;
+  }
+  function _cinGetSfxCtx() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      if (!window.__cinSfxCtx) window.__cinSfxCtx = new Ctx();
+      const c = window.__cinSfxCtx;
+      if (c.state === 'suspended') { try { c.resume(); } catch (_) {} }
+      return c;
+    } catch (_) { return null; }
+  }
+  function _cinPlaySfx(kind) {
+    try {
+      if (!_cinSfxAllowed()) return;
+      const ctx = _cinGetSfxCtx();
+      if (!ctx) return;
+      const t0 = ctx.currentTime;
+      const dest = ctx.destination;
+
+      // Tiny helper — creates osc+gain envelope and schedules cleanly.
+      const tone = (opts) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = opts.type || 'sine';
+        o.frequency.setValueAtTime(opts.fStart, t0 + (opts.delay || 0));
+        if (typeof opts.fEnd === 'number') {
+          o.frequency.exponentialRampToValueAtTime(
+            opts.fEnd, t0 + (opts.delay || 0) + (opts.sweep || opts.dur)
+          );
+        }
+        g.gain.setValueAtTime(0.0001, t0 + (opts.delay || 0));
+        g.gain.exponentialRampToValueAtTime(
+          opts.peak, t0 + (opts.delay || 0) + (opts.attack || 0.04)
+        );
+        g.gain.exponentialRampToValueAtTime(
+          0.0001, t0 + (opts.delay || 0) + opts.dur
+        );
+        o.connect(g); g.connect(dest);
+        o.start(t0 + (opts.delay || 0));
+        o.stop(t0 + (opts.delay || 0) + opts.dur + 0.05);
+      };
+
+      switch (kind) {
+        case 'ignite': {
+          tone({ type: 'sine', fStart: 80, fEnd: 220,
+                 peak: 0.14, attack: 0.18, dur: 0.55, sweep: 0.45 });
+          tone({ type: 'sine', fStart: 320, fEnd: 540,
+                 peak: 0.06, attack: 0.10, dur: 0.40, sweep: 0.30, delay: 0.10 });
+          break;
+        }
+        case 'chime': {
+          tone({ type: 'sine', fStart: 660, peak: 0.10, attack: 0.03, dur: 0.28 });
+          tone({ type: 'sine', fStart: 880, peak: 0.09, attack: 0.03, dur: 0.32, delay: 0.08 });
+          break;
+        }
+        case 'tap': {
+          tone({ type: 'triangle', fStart: 520, fEnd: 380,
+                 peak: 0.08, attack: 0.02, dur: 0.16, sweep: 0.10 });
+          break;
+        }
+        case 'vow': {
+          tone({ type: 'sine', fStart: 180, fEnd: 340,
+                 peak: 0.12, attack: 0.06, dur: 0.40, sweep: 0.22 });
+          tone({ type: 'triangle', fStart: 90, fEnd: 170,
+                 peak: 0.05, attack: 0.06, dur: 0.42, sweep: 0.25, delay: 0.03 });
+          break;
+        }
+        case 'seal': {
+          tone({ type: 'sine', fStart: 220, fEnd: 440,
+                 peak: 0.10, attack: 0.10, dur: 0.45, sweep: 0.32 });
+          tone({ type: 'sine', fStart: 110, fEnd: 220,
+                 peak: 0.08, attack: 0.10, dur: 0.55, sweep: 0.40, delay: 0.05 });
+          break;
+        }
+        case 'reward': {
+          // Three-note ascending shimmer with sine + triangle pair
+          const notes = [
+            { f: 660,  dly: 0.00 },
+            { f: 880,  dly: 0.12 },
+            { f: 1320, dly: 0.24 },
+          ];
+          notes.forEach(n => {
+            tone({ type: 'sine',     fStart: n.f, peak: 0.12,
+                   attack: 0.05, dur: 0.85, delay: n.dly });
+            tone({ type: 'triangle', fStart: n.f, peak: 0.06,
+                   attack: 0.05, dur: 0.85, delay: n.dly });
+          });
+          break;
+        }
+        case 'gate': {
+          tone({ type: 'sine', fStart: 330, fEnd: 660,
+                 peak: 0.12, attack: 0.08, dur: 0.55, sweep: 0.45 });
+          tone({ type: 'triangle', fStart: 220, fEnd: 440,
+                 peak: 0.06, attack: 0.08, dur: 0.50, sweep: 0.40, delay: 0.05 });
+          break;
+        }
+      }
+    } catch (_) {}
+  }
+
   function _cinPaintSigils(root) {
     const SIG = '<svg width="100%" height="100%" viewBox="0 0 40 40" aria-hidden="true">' +
       '<path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/>' +
@@ -33273,9 +33390,24 @@
     // Generic next buttons
     root.querySelectorAll('[data-cin-next]').forEach((b) => b.addEventListener('click', next));
 
+    // v3 Phase 1z.244 — SFX overlay on the commitment screen's awaken
+    // CTA. Generic next() above advances; this only adds the seal sound.
+    {
+      const awakenBtn = root.querySelector('#cin-awakenBtn');
+      if (awakenBtn) awakenBtn.addEventListener('click', () => _cinPlaySfx('seal'));
+    }
+
     // Screen 1 — opening: both the sigil and the ghost-tap CTA advance.
-    root.querySelector('#cin-igniteTap').addEventListener('click', next);
-    root.querySelector('#cin-opTap').addEventListener('click', (e) => { e.stopPropagation(); next(); });
+    // First user gesture also unlocks the shared AudioContext (1z.244).
+    root.querySelector('#cin-igniteTap').addEventListener('click', () => {
+      _cinPlaySfx('ignite');
+      next();
+    });
+    root.querySelector('#cin-opTap').addEventListener('click', (e) => {
+      e.stopPropagation();
+      _cinPlaySfx('ignite');
+      next();
+    });
 
     // Screen 2 — naming.
     const field   = root.querySelector('#cin-nameField');
@@ -33290,6 +33422,7 @@
 
     function _confirmName() {
       state.name = field.value.trim();
+      _cinPlaySfx('chime'); // v3 Phase 1z.244 — system recognition
       root.querySelector('#cin-name-kicker').style.display = 'none';
       root.querySelector('#cin-name-title').style.display = 'none';
       root.querySelector('#cin-nameInputWrap').style.display = 'none';
@@ -33310,6 +33443,7 @@
     // Screen 3 — why.
     root.querySelectorAll('#cin-whyGrid .pick').forEach((p) => {
       p.addEventListener('click', () => {
+        _cinPlaySfx('tap'); // v3 Phase 1z.244 — rune tap
         root.querySelectorAll('#cin-whyGrid .pick').forEach((x) => x.setAttribute('aria-checked', 'false'));
         p.setAttribute('aria-checked', 'true');
         state.why  = p.dataset.why;
@@ -33329,6 +33463,7 @@
     // Screen 4 — path.
     root.querySelectorAll('#cin-packs .pack').forEach((p) => {
       p.addEventListener('click', () => {
+        _cinPlaySfx('vow'); // v3 Phase 1z.244 — deeper selection pulse
         root.querySelectorAll('#cin-packs .pack').forEach((x) => x.setAttribute('aria-checked', 'false'));
         p.setAttribute('aria-checked', 'true');
         state.pack = p.dataset.pack;
@@ -33370,6 +33505,7 @@
     // Screen 6 — reward (peak). Sparks are generated each visit so the
     // angles are fresh; no idle DOM cost when not on screen 6.
     function _runReward() {
+      _cinPlaySfx('reward'); // v3 Phase 1z.244 — emotional peak shimmer
       const host = root.querySelector('#cin-sparks');
       host.innerHTML = '';
       const reduced = (() => {
@@ -33439,6 +33575,7 @@
     // notification prompt + habit creation + reveal of #app all run
     // through their canonical path.
     root.querySelector('#cin-enterApp').addEventListener('click', () => {
+      _cinPlaySfx('gate'); // v3 Phase 1z.244 — system gate opens
       try {
         // Name → existing storage keys (matches launchQuest + _completeOnboardingFinish).
         const n = state.name || 'Hunter';
