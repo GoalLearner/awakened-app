@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w91';
+  const APP_BUILD_TAG = '2.2.3-w92';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17699,6 +17699,152 @@
     }
   }
 
+  // v3 Phase 1z.228A — Design-led Habit Completion Reward Burst.
+  // Implements the ClaudeDesign "reward-fx" CardBurst on top of the existing
+  // per-tap feedback in toggleHabit (chime + xp-float + card-flash + sparkles).
+  //
+  // Three tiers driven by post-completion streak:
+  //   normal    → 1 ring, 12 sparks, single +N XP top chip,    ~1100ms
+  //   streak    → 2 rings, 18 sparks, top chip + STREAK HELD,  ~1300ms
+  //   milestone → 2 rings, 26 sparks, NO top chip (suppressed) ~1900ms
+  //
+  // Duplicate +XP prevention (the critical product rule):
+  //   • The burst's top XP chip is the ONLY new XP message.
+  //   • While the burst plays, the card's existing bottom `.codex-xp-chip`
+  //     fades to opacity 0 via the `.is-reward-bursting` class (matches the
+  //     design's `opacity: burst ? 0 : 1` in reward-habits.jsx). It restores
+  //     when the burst self-cleans.
+  //   • Milestone tier suppresses even the top chip — no +XP shown twice,
+  //     ever, in any tier.
+  //
+  // Deferred (reported in CLAUDE.md): centered milestone banner + scrim,
+  // MOMENTUM +1 header chip, sigil/souls/banner copy.
+  const HABIT_REWARD_MILESTONE_BANDS = new Set([7, 14, 30, 100, 365]);
+  const HABIT_REWARD_SPARK_COLORS = ['#ffd270', '#f5b842', '#8b5cf6'];
+  function _showHabitCompletionRewardBurst(li, ctx) {
+    if (!li || !ctx) return;
+    try {
+      const streakCount = (typeof ctx.streakCount === 'number') ? ctx.streakCount : 0;
+      const xpAmount    = (typeof ctx.xp === 'number') ? ctx.xp : 0;
+      const isMilestone = HABIT_REWARD_MILESTONE_BANDS.has(streakCount);
+      const isStreak    = !isMilestone && streakCount >= 2;
+      const tier        = isMilestone ? 'milestone' : (isStreak ? 'streak' : 'normal');
+      const sparkCount  = isMilestone ? 26 : (isStreak ? 18 : 12);
+      const sparkReach  = isMilestone ? 96 : (isStreak ? 58 : 46);
+      const lifeMs      = isMilestone ? 1900 : (isStreak ? 1300 : 1100);
+
+      const burst = document.createElement('div');
+      burst.className = 'habit-reward-burst habit-reward-burst--' + tier;
+      burst.setAttribute('aria-hidden', 'true');
+
+      // Bloom (gold→violet radial flash)
+      const bloom = document.createElement('div');
+      bloom.className = 'habit-reward-burst__bloom';
+      burst.appendChild(bloom);
+
+      // Shockwave ring (gold). Streak/milestone add a second violet ring.
+      const ring1 = document.createElement('div');
+      ring1.className = 'habit-reward-burst__ring habit-reward-burst__ring--gold';
+      burst.appendChild(ring1);
+      if (tier !== 'normal') {
+        const ring2 = document.createElement('div');
+        ring2.className = 'habit-reward-burst__ring habit-reward-burst__ring--violet';
+        burst.appendChild(ring2);
+      }
+
+      // Sparks (cheap: one <span> per particle, all CSS-animated, no JS RAF)
+      const sparkLayer = document.createElement('div');
+      sparkLayer.className = 'habit-reward-burst__sparks';
+      for (let i = 0; i < sparkCount; i++) {
+        const ang  = (i / sparkCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const dist = sparkReach * (0.55 + Math.random() * 0.6);
+        const dx   = Math.cos(ang) * dist;
+        const dy   = Math.sin(ang) * dist - dist * 0.12;
+        const sz   = 2 + Math.random() * (isMilestone ? 3 : 2);
+        const col  = HABIT_REWARD_SPARK_COLORS[Math.floor(Math.random() * HABIT_REWARD_SPARK_COLORS.length)];
+        const dur  = 560 + Math.round(Math.random() * 220);
+        const delay = Math.round(Math.random() * 80);
+        const s = document.createElement('span');
+        s.className = 'habit-reward-burst__spark';
+        s.style.cssText =
+          'width:'  + sz + 'px;' +
+          'height:' + sz + 'px;' +
+          'background:' + col + ';' +
+          'box-shadow: 0 0 ' + (sz * 2) + 'px ' + col + ';' +
+          '--hb-dx:' + dx + 'px;' +
+          '--hb-dy:' + dy + 'px;' +
+          'animation-duration:' + dur + 'ms;' +
+          'animation-delay:'    + delay + 'ms;';
+        sparkLayer.appendChild(s);
+      }
+      burst.appendChild(sparkLayer);
+
+      // Single XP chip (suppressed on milestone)
+      if (!isMilestone && xpAmount > 0) {
+        const chip = document.createElement('div');
+        chip.className = 'habit-reward-burst__chip';
+        chip.innerHTML =
+          '<svg width="8" height="11" viewBox="0 0 5 7" aria-hidden="true">' +
+            '<path d="M3 0L0 4h2l-0.7 3L5 2.5H3l1-2.5z" fill="currentColor"/>' +
+          '</svg>+' + xpAmount + ' XP';
+        burst.appendChild(chip);
+      }
+
+      // Optional STREAK HELD label (streak tier only).
+      if (isStreak) {
+        const lab = document.createElement('div');
+        lab.className = 'habit-reward-burst__label';
+        lab.textContent = 'STREAK HELD';
+        burst.appendChild(lab);
+      }
+      // Milestone gets a stronger label (single line, no banner — banner deferred).
+      if (isMilestone) {
+        const lab = document.createElement('div');
+        lab.className = 'habit-reward-burst__label habit-reward-burst__label--milestone';
+        lab.textContent = streakCount + '-DAY STREAK';
+        burst.appendChild(lab);
+      }
+
+      // Hide the card's existing bottom +XP chip while the burst plays —
+      // this is the design's duplicate-XP prevention pattern. CSS handles
+      // the opacity transition; class self-clears on cleanup.
+      li.classList.add('is-reward-bursting');
+      li.appendChild(burst);
+
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { burst.remove(); } catch (_) {}
+        try { li.classList.remove('is-reward-bursting'); } catch (_) {}
+      };
+      // The longest child animation drives end. Fallback timeout matches lifeMs.
+      burst.addEventListener('animationend', (e) => {
+        // Only clean on the bloom finishing (longest reliable child).
+        if (e.target === bloom) cleanup();
+      }, { once: false });
+      setTimeout(cleanup, lifeMs);
+    } catch (_) {}
+  }
+
+  // Daily progress count pulse — small text-shadow + scale pop on the
+  // `#completed-count` element. Uses the 1z.214 double-rAF retrigger
+  // pattern so a rapid-tap sequence each gets a fresh animation.
+  function _pulseHabitDailyProgress() {
+    try {
+      const el = document.getElementById('completed-count');
+      if (!el) return;
+      el.classList.remove('habit-progress-pulse');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.classList.add('habit-progress-pulse');
+        });
+      });
+      const onEnd = () => { el.classList.remove('habit-progress-pulse'); };
+      el.addEventListener('animationend', onEnd, { once: true });
+    } catch (_) {}
+  }
+
   // ── FEATURE 2: DAILY QUOTE ───────────────────────────────
   // ── QUOTE ROTATION (Feature 2 — rotating display) ────────
   let _quoteCurrent  = null;
@@ -18377,6 +18523,21 @@
           xpFloat.innerHTML = iconify('⚡+' + xpAmt + ' XP' + (isWeekend() ? ' 2×' : ''), { size: 14 });
           li.appendChild(xpFloat);
           xpFloat.addEventListener('animationend', () => xpFloat.remove(), { once: true });
+
+          // v3 Phase 1z.228A — Design-led completion reward burst.
+          // Gated on !compoundFiredNow so the compound fanfare keeps its
+          // moment of ownership. Uncheck/silent already exit before this
+          // block (we're inside !wasDone && !silent).
+          if (!compoundFiredNow) {
+            try {
+              const streakAfter = (typeof getStreak === 'function') ? (getStreak(id) || 0) : 0;
+              _showHabitCompletionRewardBurst(li, {
+                streakCount: streakAfter,
+                xp:          xpAmt,
+              });
+            } catch (_) {}
+            try { _pulseHabitDailyProgress(); } catch (_) {}
+          }
         }
       }
 

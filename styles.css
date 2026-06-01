@@ -19240,6 +19240,215 @@ body.reveal-locked { overflow: hidden; }
   letter-spacing: 0.3px;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   v3 Phase 1z.228A — Design-led Habit Completion Reward Burst
+   Implements the ClaudeDesign reward-fx CardBurst overlay.
+   Anchored to .habit-item (li). Self-cleans via animationend.
+
+   Duplicate +XP prevention: while .is-reward-bursting is set on
+   the li, the card's existing bottom .codex-xp-chip fades to 0,
+   so the burst's single top chip is the only XP message visible.
+   Milestone tier suppresses the top chip too (label only).
+   ───────────────────────────────────────────────────────────── */
+
+.habit-item.is-reward-bursting .codex-xp-chip {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.habit-reward-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: visible;
+}
+
+/* Bloom — gold→violet radial flash. Drives cleanup via animationend. */
+.habit-reward-burst__bloom {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: 172%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  background: radial-gradient(closest-side,
+    rgba(245, 184, 66, 0.55) 0%,
+    rgba(139, 92, 246, 0.30) 38%,
+    transparent 72%);
+  animation: hab-rwd-bloom 600ms ease-out forwards;
+}
+.habit-reward-burst--milestone .habit-reward-burst__bloom {
+  background: radial-gradient(closest-side,
+    rgba(245, 184, 66, 0.70) 0%,
+    rgba(139, 92, 246, 0.42) 42%,
+    transparent 76%);
+  animation-duration: 760ms;
+}
+
+/* Shockwave ring(s) — read as the haptic/audio tap. */
+.habit-reward-burst__ring {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.45);
+}
+.habit-reward-burst__ring--gold {
+  border: 1.5px solid #f5b842;
+  box-shadow: 0 0 10px rgba(245, 184, 66, 0.42);
+  animation: hab-rwd-ring 600ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.habit-reward-burst__ring--violet {
+  border: 1px solid #8b5cf6;
+  animation: hab-rwd-ring 640ms cubic-bezier(0.2, 0.7, 0.3, 1) 80ms forwards;
+}
+
+/* Spark field — pure CSS animation, one span per particle. */
+.habit-reward-burst__sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.habit-reward-burst__spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  animation-name: hab-rwd-spark;
+  animation-timing-function: cubic-bezier(0.18, 0.7, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+/* Single top XP chip — the one XP reward message per completion.
+   Suppressed on milestone tier (label-only). */
+.habit-reward-burst__chip {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 10px;
+  background: linear-gradient(180deg,
+    rgba(42, 33, 12, 0.95),
+    rgba(22, 16, 5, 0.95));
+  border: 1px solid #f5b842;
+  box-shadow:
+    0 0 24px rgba(245, 184, 66, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #ffd270;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  transform: translate(-50%, 8px) scale(0.7);
+  opacity: 0;
+  animation: hab-rwd-rise 950ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.habit-reward-burst__chip svg { color: #ffd270; }
+
+/* Optional status label (streak: STREAK HELD; milestone: N-DAY STREAK). */
+.habit-reward-burst__label {
+  position: absolute;
+  top: 64%;
+  left: 50%;
+  transform: translate(-50%, 4px);
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #f5b842;
+  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(245, 184, 66, 0.42), 0 1px 2px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  animation: hab-rwd-cap 1000ms ease-out 120ms forwards;
+}
+.habit-reward-burst__label--milestone {
+  top: 50%;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 13px;
+  letter-spacing: 2.2px;
+  color: #ffd270;
+  text-shadow: 0 0 14px rgba(245, 184, 66, 0.55), 0 1px 2px rgba(0, 0, 0, 0.9);
+  animation-duration: 1600ms;
+}
+
+/* Daily progress count pulse — fires once per successful completion. */
+.habit-progress-pulse {
+  display: inline-block;
+  animation: hab-rwd-count 460ms cubic-bezier(0.34, 1.56, 0.5, 1);
+  text-shadow: 0 0 12px rgba(245, 184, 66, 0.42);
+}
+
+/* Keyframes — scoped names so they cannot collide with other animations. */
+@keyframes hab-rwd-bloom {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  25%  { opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
+@keyframes hab-rwd-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.45); opacity: 0; }
+  20%  { opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.3); opacity: 0; }
+}
+@keyframes hab-rwd-spark {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(1); opacity: 0; }
+  14%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--hb-dx, 0), var(--hb-dy, 0)) scale(0.2); opacity: 0; }
+}
+@keyframes hab-rwd-rise {
+  0%   { transform: translate(-50%, 8px)   scale(0.7);  opacity: 0; }
+  20%  { transform: translate(-50%, -8px)  scale(1.08); opacity: 1; }
+  32%  { transform: translate(-50%, -12px) scale(1);    opacity: 1; }
+  72%  { opacity: 1; }
+  100% { transform: translate(-50%, -50px) scale(0.96); opacity: 0; }
+}
+@keyframes hab-rwd-cap {
+  0%   { opacity: 0; transform: translate(-50%, 4px); letter-spacing: 3px; }
+  30%  { opacity: 1; transform: translate(-50%, 0); }
+  72%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+@keyframes hab-rwd-count {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+/* Reduced-motion fallback — collapse everything to brief opacity fades. */
+@media (prefers-reduced-motion: reduce) {
+  .habit-reward-burst__bloom,
+  .habit-reward-burst__ring,
+  .habit-reward-burst__spark,
+  .habit-reward-burst__chip,
+  .habit-reward-burst__label {
+    animation-duration: 240ms !important;
+    animation-timing-function: ease-out !important;
+  }
+  .habit-reward-burst__ring,
+  .habit-reward-burst__spark {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  .habit-progress-pulse {
+    animation: none !important;
+    text-shadow: none;
+  }
+  .habit-item.is-reward-bursting .codex-xp-chip {
+    transition: opacity 120ms ease-out;
+  }
+}
+
 /* Drag handle + more button — preserved exact data attributes for
    existing drag/click logic. Positioned over the card surface so
    they remain tappable without disturbing the centered layout. */

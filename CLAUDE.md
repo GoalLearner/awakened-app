@@ -4,7 +4,95 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.226C Frontend: hooks + renderer for the three new Guild Notification events (read this first)
+## May 31, 2026 — 1z.228A Frontend: Design-led Habit Completion Reward Burst (read this first)
+
+**TL;DR.** Frontend-only / visual-only. Implements the ClaudeDesign "reward-fx" CardBurst on top of the existing per-tap feedback in `toggleHabit`. Three tiers driven by post-completion streak. **Single-XP guarantee:** while the burst plays, the card's bottom `.codex-xp-chip` fades to opacity 0 via the `.is-reward-bursting` class (matching the design's own `opacity: burst ? 0 : 1` pattern in `reward-habits.jsx`). The burst's top chip is the only XP message visible. Milestone tier suppresses even the top chip — no `+XP` is ever shown twice in any tier.
+
+**Process note.** The first 1z.228 attempt (commit `6eaafed`) started before the ClaudeDesign output was reviewed. It was reverted (`0247bff`). This 1z.228A rebuild follows the design bundle (`reward-fx.jsx`, `reward-habits.jsx`, `reward-data.jsx`) the user provided.
+
+**Files modified.**
+- `app.js` —
+  - `_showHabitCompletionRewardBurst(li, ctx)` — builds the transient overlay (`bloom + ring(s) + sparks + chip + label`) and adds `.is-reward-bursting` to the `<li>`. Self-cleans on bloom animationend with a `setTimeout` fallback at `lifeMs` (`normal` 1100ms / `streak` 1300ms / `milestone` 1900ms).
+  - `_pulseHabitDailyProgress()` — fires the `.habit-progress-pulse` class on `#completed-count` using the 1z.214 double-rAF retrigger pattern.
+  - Wired both inside `toggleHabit`'s `if (!silent)` block, gated on `!compoundFiredNow`. Compound fanfare still owns its moment.
+  - Bumped `APP_BUILD_TAG = '2.2.3-w92'`.
+- `styles.css` —
+  - Added `.habit-reward-burst*`, `.habit-reward-burst--milestone`, `.habit-reward-burst--streak`, `.habit-reward-burst__bloom/ring/sparks/spark/chip/label` (with `--milestone` variant), `.habit-progress-pulse`, and the `.habit-item.is-reward-bursting .codex-xp-chip { opacity: 0 }` duplicate-XP suppressor.
+  - Keyframes: `hab-rwd-bloom`, `hab-rwd-ring`, `hab-rwd-spark`, `hab-rwd-rise`, `hab-rwd-cap`, `hab-rwd-count` (scoped names — cannot collide).
+  - `@media (prefers-reduced-motion: reduce)` collapses sparks/rings to none and shortens everything else to 240ms fades.
+- `index.html` — `styles.css?v=306`, `app.js?v=545`.
+- `sw.js` — `CACHE_VERSION = 'v5.431'`.
+
+**Tier behavior.**
+| Tier | Trigger (post-completion streak N) | Visual | Top XP chip | Label |
+|---|---|---|---|---|
+| Normal | N ≤ 1 | bloom + 1 gold ring + 12 sparks | `+N XP` | none (card's own `SEALED` shows) |
+| Streak | N ≥ 2 and N ∉ {7,14,30,100,365} | bloom + gold + violet rings + 18 sparks | `+N XP` | `STREAK HELD` |
+| Milestone | N ∈ {7, 14, 30, 100, 365} | denser bloom + 2 rings + 26 sparks | **suppressed** | `<N>-DAY STREAK` (Cinzel) |
+
+**Duplicate-XP prevention (verified).**
+1. The burst's top XP chip is the ONLY new XP message added to the DOM.
+2. Existing bottom `.codex-xp-chip` fades to `opacity: 0` (200ms transition) while `.is-reward-bursting` is set on the `<li>`. Restores on cleanup.
+3. Milestone tier suppresses the top chip too — milestone shows only the streak-count label.
+4. No second bottom `+XP` element is appended.
+5. The card's own `SEALED` banner is unchanged (separate `.codex-sealed-banner`).
+
+**Deferred (and intentionally NOT shipped in this train).**
+- Centered milestone banner + scrim from the design's `MilestoneBanner` component. User feedback: keep cleaner / more premium. Milestone tier still upgrades the card-level burst.
+- `MOMENTUM +1` header chip and progress-bar shimmer sweep — clutter; deferred.
+- Sigil / souls / milestone copy (`DISCIPLINE ASCENDED`, `WILL FORGED`, etc.) — deferred with the banner.
+- `HapticPulse` whole-screen luminance — depends on banner; deferred.
+
+**1z.214 perf invariants preserved.**
+- No new state in `_computeHabitsRenderFingerprint(todayHabits)` — the burst is transient DOM, fingerprint still reads `(id, checked, streakBand, autoVerify)`.
+- No `void li.offsetWidth` reflows. Sparks are pure CSS animation, no per-frame JS.
+- No persistent listeners — `animationend` is `once: false` but `cleanup()` is idempotent via the `cleaned` guard; `setTimeout` fallback ensures cleanup even if `animationend` is missed.
+- `#habit-list` delegated handler unchanged.
+- HealthKit side-effect coalescing untouched.
+- `updateHeaderMetrics` rAF coalescing untouched.
+
+**Math / backend / privacy invariants preserved.**
+- No XP, streak, rank, class, HealthKit, or compound math changed.
+- No backend files modified. No D1 mutation. No migration. No Worker deploy. No Codemagic. No archive/upload.
+- No item / boss / leaderboard / Social / Guild / inventory / economy / souls logic touched.
+- No public events emitted.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Gates (when the burst fires).**
+- Fires on `!silent && !wasDone && li` (manual user completion only).
+- Suppressed on uncheck (the `wasDone` branch returns before the burst block).
+- Suppressed on `silent` auto-verify (`!silent` gate).
+- Suppressed when `compoundFiredNow` (compound fanfare owns the moment).
+- Reads `getStreak(id)` after `check(id)` — so the burst tier matches the streak the user just earned.
+
+**Manual QA checklist (w92).**
+1. Cold-launch → Copy Debug Info shows `2.2.3-w92`.
+2. Tap a fresh-streak habit (streak 0→1): one bloom + 12 sparks + top `+N XP` chip; bottom `.codex-xp-chip` fades during burst, restores after; card SEALED.
+3. Tap a streaking habit (streak 1→2 or higher): rings doubled, 18 sparks, `STREAK HELD` label appears.
+4. Tap a streak-7 habit: 26 sparks, denser bloom, `7-DAY STREAK` label, NO top XP chip (verify duplicate prevention).
+5. Rapid-tap multiple habits: each card gets its own independent burst; no stuck overlays.
+6. Uncheck → recheck: burst only on recheck.
+7. Auto-verify (e.g. Daily walk completes via HealthKit while on another tab): no burst.
+8. Tap a habit that triggers compound: compound fanfare plays, no burst overlay.
+9. `#completed-count` pulses on each completion (scale 1→1.4→1, gold text-shadow).
+10. Switch tabs and return: no stuck burst DOM under `#habit-list`.
+11. Scroll Habits: smoothness preserved (1z.214).
+12. Smoke: Social, Leaderboards, Armory, Relic Archive still render unchanged.
+13. iOS Settings → Accessibility → Reduce Motion ON: bursts collapse to short fades; no sparks/rings.
+
+**Rollback notes.** If this train regresses anything, revert this commit. Restores:
+- `APP_BUILD_TAG = '2.2.3-w91'`
+- `app.js?v=544`, `styles.css?v=305`, `sw.js v5.430`
+- All burst CSS/JS removed; `.is-reward-bursting` class no longer set, bottom XP chip stays visible.
+No data migration required — purely visual.
+
+**Open follow-ups.**
+- ClaudeDesign milestone banner (`MilestoneBanner` component) — requires explicit user design re-approval before implementing the centered overlay UX.
+- Optional: tint the burst chip per habit's primary stat color (one CSS variable change).
+
+---
+
+## May 31, 2026 — 1z.226C Frontend: hooks + renderer for the three new Guild Notification events
 
 **TL;DR.** Frontend-only. Lights up the 1z.226A/B backend by adding (a) three new public submit hooks with privacy-safe idempotency, (b) one helper-set per event type to build payloads without ever forwarding card identity / habit identity, and (c) three new icon cases in the Guild feed renderer. Hunter-mode local rows (which still carry exact card name / exact habit name / exact step counts privately) are unchanged.
 
