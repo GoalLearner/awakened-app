@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w94';
+  const APP_BUILD_TAG = '2.2.3-w95';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -32155,8 +32155,15 @@
       ssSheet.classList.add('hidden');
       ssOverlay.classList.add('hidden');
     });
-    // Check for updates
-    document.getElementById('update-check-btn').addEventListener('click', checkForUpdates);
+    // v3 Phase 1z.229 — Check for Updates button removed from Settings UI.
+    // The PWA service worker handles updates automatically; the button was
+    // dead weight. Guard the listener so init doesn't throw if the element
+    // is absent. Kept gated rather than removed so a future debug surface
+    // can re-introduce the button without re-wiring.
+    {
+      const _updBtn = document.getElementById('update-check-btn');
+      if (_updBtn) _updBtn.addEventListener('click', checkForUpdates);
+    }
     // Open reset step 1
     document.getElementById('reset-open-btn').addEventListener('click', showReset1);
     // Step 1 buttons
@@ -32296,12 +32303,28 @@
         if (cloudRestoreBtn) cloudRestoreBtn.disabled = true;
         return;
       }
+      // v3 Phase 1z.229 — Direction A single-line cloud status. Folds the
+      // prior two-line "Last backup · … / Last restore · …" into one
+      // relative-time line. Restore timestamp is still tracked internally
+      // (CloudSync.getLastRestoreAt) but no longer surfaced here.
       const lastBackup  = CloudSync.getLastBackupAt();
-      const lastRestore = CloudSync.getLastRestoreAt();
-      const fmt = (iso) => iso ? new Date(iso).toLocaleString() : 'Never';
-      cloudStatusEl.innerHTML =
-        'Last backup · <b>' + esc(fmt(lastBackup)) + '</b><br>' +
-        'Last restore · <b>' + esc(fmt(lastRestore)) + '</b>';
+      const relAgo = (iso) => {
+        if (!iso) return null;
+        const t = new Date(iso).getTime();
+        if (isNaN(t)) return null;
+        const s = Math.max(0, (Date.now() - t) / 1000);
+        if (s < 60)        return 'just now';
+        if (s < 3600)      return Math.floor(s / 60) + 'm ago';
+        if (s < 86400)     return Math.floor(s / 3600) + 'h ago';
+        if (s < 86400 * 7) return Math.floor(s / 86400) + 'd ago';
+        try {
+          return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        } catch (_) { return new Date(iso).toLocaleDateString(); }
+      };
+      const ago = relAgo(lastBackup);
+      cloudStatusEl.textContent = ago
+        ? 'Last backed up ' + ago
+        : 'Never backed up';
       if (cloudBackupBtn)  cloudBackupBtn.disabled  = false;
       if (cloudRestoreBtn) cloudRestoreBtn.disabled = false;
     }
@@ -32606,16 +32629,24 @@
       document.getElementById('settings-rem-quiet-start').value = status.quietStart;
       document.getElementById('settings-rem-quiet-end').value   = status.quietEnd;
 
-      // Pause status
+      // Pause status — v3 Phase 1z.229 Direction A: only show the
+      // status line when actually paused. "Currently: Active" was
+      // visual noise; hide the row entirely when nothing is paused.
       const pauseStatus  = document.getElementById('settings-rem-pause-status');
       const pauseCancel  = document.getElementById('settings-rem-pause-cancel');
       if (status.paused) {
         const d = new Date(status.pausedUntil);
-        pauseStatus.textContent = 'Paused until ' + d.toLocaleString();
-        pauseCancel.classList.remove('hidden');
+        if (pauseStatus) {
+          pauseStatus.textContent = 'Paused until ' + d.toLocaleString();
+          pauseStatus.classList.remove('hidden');
+        }
+        if (pauseCancel) pauseCancel.classList.remove('hidden');
       } else {
-        pauseStatus.textContent = 'Currently: Active';
-        pauseCancel.classList.add('hidden');
+        if (pauseStatus) {
+          pauseStatus.textContent = '';
+          pauseStatus.classList.add('hidden');
+        }
+        if (pauseCancel) pauseCancel.classList.add('hidden');
       }
 
       // Master disable toggle
@@ -38510,9 +38541,16 @@
     setupXpDetail();
     setupEquipmentPanel();
 
-    // Reflect canonical APP_VERSION in the Settings header
+    // Reflect canonical APP_VERSION + build tag in the Settings footer.
+    // v3 Phase 1z.229 — Direction A footer format: "v2.2.3 · BUILD W95".
+    // This element is also the 5-tap debug-info unlock target.
     const verEl = document.getElementById('settings-app-ver');
-    if (verEl) verEl.textContent = 'Version ' + APP_VERSION;
+    if (verEl) {
+      const _build = (typeof APP_BUILD_TAG === 'string' && APP_BUILD_TAG.indexOf('-w') >= 0)
+        ? APP_BUILD_TAG.slice(APP_BUILD_TAG.indexOf('-w') + 1).toUpperCase()
+        : '';
+      verEl.textContent = 'v' + APP_VERSION + (_build ? ' · BUILD ' + _build : '');
+    }
 
     // v3 Phase 1z.92 — wire the 5-tap debug unlock on the version line.
     // Hidden from normal users; only surfaces a Copy Debug Info button
@@ -38528,14 +38566,31 @@
     // hb_notif_perm_requested flag.
     try { recoverNotifPermissionIfDropped(); } catch (_) {}
 
-    // Settings → "What's New" button (manual open — does NOT update flag)
-    const wnBtn = document.getElementById('settings-whats-new-btn');
-    if (wnBtn) {
-      wnBtn.addEventListener('click', () => {
-        // Close settings first so the new sheet has a clean stage
-        if (typeof closeSettings === 'function') closeSettings();
-        setTimeout(() => openWhatsNewSheet({ manual: true }), 320);
-      });
+    // Settings → "What's New" button retired in 1z.229 Direction A.
+    // The HTML element is gone; guard the listener so init doesn't throw
+    // if a future debug surface re-introduces it.
+    {
+      const wnBtn = document.getElementById('settings-whats-new-btn');
+      if (wnBtn) {
+        wnBtn.addEventListener('click', () => {
+          if (typeof closeSettings === 'function') closeSettings();
+          setTimeout(() => openWhatsNewSheet({ manual: true }), 320);
+        });
+      }
+    }
+
+    // v3 Phase 1z.229 — Settings → "What's Coming" small link. Placeholder
+    // until the atmospheric combat-reveal teaser ships. Renders a one-line
+    // toast so the affordance is alive but commits to no specifics.
+    {
+      const wcBtn = document.getElementById('settings-whats-coming-link');
+      if (wcBtn) {
+        wcBtn.addEventListener('click', () => {
+          try {
+            if (typeof showHabitToast === 'function') showHabitToast('Coming soon.');
+          } catch (_) {}
+        });
+      }
     }
 
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);

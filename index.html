@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=308">
+  <link rel="stylesheet" href="styles.css?v=309">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2478,7 +2478,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=547"></script>
+  <script src="app.js?v=548"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2639,371 +2639,257 @@
     <div class="wn-footer-text">Tap anywhere or swipe down to dismiss.</div>
   </div>
 
-  <!-- Settings sheet -->
+  <!-- Settings sheet — v3 Phase 1z.229 (Direction A: Tight list, glanceable summaries).
+       Removed: Check for Updates, in-list version chip, "Habit RPG" header card,
+       local file Backup/Restore, two-line backup labels, inline "Turn off
+       Morning Briefing", Voice Preview cards, "What's Coming" 6-card section,
+       What's New button, helper paragraphs, "Currently: Active" line when not paused.
+       Sound moved to an inline row. Cloud Backup folded into Account as a card.
+       Version footer at the bottom (still the 5-tap debug unlock target). -->
   <div id="settings-overlay" class="settings-overlay hidden"></div>
-  <div id="settings-sheet"   class="settings-sheet hidden">
+  <div id="settings-sheet"   class="settings-sheet settings-v2 hidden">
     <div class="settings-drag-handle"></div>
     <div class="settings-header">
       <span class="settings-title">Settings</span>
       <button id="settings-close" class="settings-close-btn" aria-label="Close">✕</button>
     </div>
-    <div class="settings-app-info">
-      <div class="settings-app-name-row">
-        <div class="settings-app-name">⚔ Habit RPG</div>
-        <div class="settings-app-sound">
-          <span class="settings-app-sound-lbl">Sound</span>
+
+    <div class="settings-v2-list">
+
+      <!-- ACCOUNT — collapsible. Cloud backup folded in as the single
+           backup surface (local file backup retired in 1z.229). -->
+      <div class="settings-collapsible">
+        <button id="settings-account-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="account">
+          <span class="settings-collapsible-lbl">ACCOUNT</span>
+          <span id="settings-account-summary" class="settings-collapsible-summary">Signed out</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-account-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+
+          <!-- Identity card: avatar + alias + member-since -->
+          <div class="account-identity-card" id="account-identity-card">
+            <div class="account-identity-avatar" id="account-identity-avatar" aria-hidden="true">—</div>
+            <div class="account-identity-text">
+              <div class="account-identity-alias" id="account-identity-alias">—</div>
+              <div class="account-identity-since" id="account-identity-since">—</div>
+            </div>
+          </div>
+
+          <!-- Cloud backup card — single backup surface. The two-line
+               "Last backup / Last restore" labels collapse into one
+               relative-time line rendered by refreshCloudStatus(). -->
+          <div class="settings-v2-cloudcard" id="settings-cloud-section">
+            <div class="settings-v2-cloudcard-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <path d="M6 15a4 4 0 01-.5-7.97A5 5 0 0115.6 8.2 3.5 3.5 0 0116 15H6z" stroke="#a78bfa" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M11 9.5v4M9.3 11.3 11 9.5l1.7 1.8" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="settings-v2-cloudcard-text">
+              <div class="settings-v2-cloudcard-title">Cloud backup</div>
+              <div class="settings-v2-cloudcard-sub" id="settings-cloud-status">Checking…</div>
+            </div>
+          </div>
+
+          <div class="settings-v2-btnrow">
+            <button id="settings-cloud-backup-now" type="button" class="settings-v2-btn settings-v2-btn--gold">Back up now</button>
+            <button id="settings-cloud-restore-now" type="button" class="settings-v2-btn settings-v2-btn--ghost">Restore</button>
+          </div>
+          <div class="settings-v2-btnrow">
+            <button id="settings-account-signout" type="button" class="settings-v2-btn settings-v2-btn--ghost">Sign out</button>
+            <button id="settings-account-delete" type="button" class="settings-v2-btn settings-v2-btn--redtext">Delete account</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS — collapsible. Inline Morning-Briefing off button
+           and Voice Preview cards retired in 1z.229. -->
+      <div class="settings-collapsible">
+        <button id="settings-rem-section-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="reminders">
+          <span class="settings-collapsible-lbl">NOTIFICATIONS</span>
+          <span id="settings-rem-section-summary" class="settings-collapsible-summary">0 active</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-rem-section-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+
+          <!-- Permission status -->
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">System permission</span>
+            <span class="settings-v2-fright">
+              <span id="settings-rem-permission" class="settings-v2-pill settings-v2-pill--neutral">Not set</span>
+            </span>
+          </div>
+          <!-- v3 Phase 1z.78 — App Store Review 5.1.1(iv) compliance.
+               Tapping this button opens the explainer modal which proceeds
+               to iOS's native permission sheet. -->
+          <button id="settings-rem-enable" class="settings-rem-enable-btn hidden" type="button">Set up notifications</button>
+          <p id="settings-rem-web-note" class="settings-rem-note hidden">
+            Reminders work best in the iOS app. Install from App Store for full functionality.
+          </p>
+
+          <div class="settings-v2-subh">Daily system pings</div>
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Morning Briefing</span>
+            <span class="settings-v2-fright">
+              <button id="settings-rem-digest-btn" class="settings-v2-timechip notif-ping-time-btn" type="button">9:00 AM</button>
+            </span>
+          </div>
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Momentum Check</span>
+            <span class="settings-v2-fright"><span class="settings-v2-timechip settings-v2-timechip--static">1:00 PM</span></span>
+          </div>
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Evening Closeout</span>
+            <span class="settings-v2-fright"><span class="settings-v2-timechip settings-v2-timechip--static">7:00 PM</span></span>
+          </div>
+
+          <div class="settings-v2-subh">Quiet hours</div>
+          <div class="settings-v2-frow">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Quiet hours</div>
+              <div class="settings-v2-fsub">Silence pings overnight</div>
+            </div>
+            <span class="settings-v2-fright">
+              <button id="settings-rem-quiet-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Quiet hours"></button>
+            </span>
+          </div>
+          <div id="settings-rem-quiet-times" class="settings-rem-quiet-times settings-v2-quiettimes">
+            <label class="settings-rem-time-lbl">From <input id="settings-rem-quiet-start" type="time" class="settings-rem-time-input"></label>
+            <label class="settings-rem-time-lbl">to <input id="settings-rem-quiet-end" type="time" class="settings-rem-time-input"></label>
+          </div>
+
+          <div class="settings-v2-subh">Manage</div>
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Pause notifications</span>
+            <span class="settings-v2-fright">
+              <span class="settings-v2-seg">
+                <button id="settings-rem-pause-24" class="settings-v2-seg-item" type="button">24 hours</button>
+                <button id="settings-rem-pause-7d" class="settings-v2-seg-item" type="button">7 days</button>
+              </span>
+            </span>
+          </div>
+          <!-- v3 Phase 1z.229 — "Currently: Active" line is now hidden by
+               JS when no pause is active; it only shows "Paused until …"
+               while paused. Cancel button only appears with pause active. -->
+          <p id="settings-rem-pause-status" class="settings-rem-note hidden">Currently: Active</p>
+          <button id="settings-rem-pause-cancel" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button">Cancel pause</button>
+
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Disable all reminders</span>
+            <span class="settings-v2-fright">
+              <button id="settings-rem-master-toggle" class="settings-toggle" role="switch" aria-checked="false" aria-label="Disable all reminders"></button>
+            </span>
+          </div>
+
+          <button id="settings-rem-view-all" class="settings-v2-frow settings-v2-rowbtn" type="button">
+            <span class="settings-v2-fname">View all habit reminders</span>
+            <span class="settings-v2-fright">
+              <span id="settings-rem-count" class="settings-v2-badge">0</span>
+              <span class="settings-v2-chevsmall">›</span>
+            </span>
+          </button>
+          <div id="settings-rem-list" class="settings-rem-list hidden"></div>
+
+        </div><!-- /settings-rem-section-body -->
+      </div>
+
+      <!-- APPLE HEALTH — collapsible -->
+      <div class="settings-collapsible">
+        <button id="settings-health-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="health">
+          <span class="settings-collapsible-lbl">APPLE HEALTH</span>
+          <span id="settings-health-summary" class="settings-collapsible-summary">Not connected</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-health-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+
+          <!-- State A: HealthKit unavailable (web / non-iOS) -->
+          <div id="settings-health-state-unavailable" class="hidden">
+            <p class="settings-rem-note">Apple Health integration is available in the iOS app only.</p>
+          </div>
+
+          <!-- State B: Connected (permission granted) -->
+          <div id="settings-health-state-connected" class="hidden">
+            <div class="settings-v2-frow">
+              <span class="settings-v2-fname">Status</span>
+              <span class="settings-v2-fright">
+                <span id="settings-health-status-value" class="settings-v2-pill settings-v2-pill--green"><span class="settings-v2-pilldot"></span>Connected</span>
+              </span>
+            </div>
+            <div class="settings-v2-frow">
+              <div class="settings-v2-fcol">
+                <div class="settings-v2-fname">Auto-verify habits</div>
+                <div class="settings-v2-fsub">Confirm steps, sleep &amp; workouts from Health</div>
+              </div>
+              <span class="settings-v2-fright">
+                <button id="settings-health-autoverify-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Auto-verify habits"></button>
+              </span>
+            </div>
+            <p id="settings-health-paused-note" class="settings-rem-note hidden">Auto-verify is paused. Tap the toggle to resume.</p>
+
+            <button id="settings-health-manage-link" class="settings-v2-frow settings-v2-rowbtn" type="button">
+              <span class="settings-v2-fname">Manage data access</span>
+              <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+            </button>
+          </div>
+
+          <!-- State C: Not connected (permission unknown / denied) -->
+          <div id="settings-health-state-disconnected" class="hidden">
+            <div class="settings-v2-frow">
+              <span class="settings-v2-fname">Status</span>
+              <span class="settings-v2-fright"><span class="settings-v2-pill settings-v2-pill--neutral">Not connected</span></span>
+            </div>
+            <p class="settings-rem-note">Connect Apple Health to auto-verify your Daily walk habit when you reach your step goal. Your data stays on your device.</p>
+            <button id="settings-health-connect-btn" class="settings-rem-enable-btn" type="button">Connect Apple Health</button>
+            <p class="settings-rem-note">If you previously declined, you'll need to enable Steps access in iPhone Settings → Privacy &amp; Security → Health → Awakened.</p>
+          </div>
+
+        </div><!-- /settings-health-body -->
+      </div>
+
+      <!-- SOUND — inline row. Toggle relocated from header. -->
+      <div class="settings-v2-soundrow">
+        <span class="settings-collapsible-lbl">SOUND</span>
+        <span class="settings-v2-fright">
           <button id="sound-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habit completion sounds"></button>
-        </div>
+        </span>
       </div>
-      <div class="settings-app-ver" id="settings-app-ver">Version 1.0</div>
-    </div>
-    <!-- Check for Updates -->
-    <div class="settings-update-wrap">
-      <button id="update-check-btn" class="settings-update-btn">
-        <span class="update-btn-icon">🔄</span>
-        <span id="update-check-label">Check for Updates</span>
-      </button>
-      <p class="settings-update-sub">Tap to get the latest version of Awakened</p>
-      <button id="settings-whats-new-btn" class="settings-whats-new-btn">
-        <span class="update-btn-icon">✨</span>
-        <span>What's New</span>
-      </button>
-    </div>
-    <!-- (Sound moved to the header; toggle now lives next to "Habit RPG".) -->
 
-    <!-- Account (v2.1.0) — collapsible -->
-    <div class="settings-collapsible">
-      <button id="settings-account-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="account">
-        <span class="settings-collapsible-lbl">ACCOUNT</span>
-        <span id="settings-account-summary" class="settings-collapsible-summary">Signed out</span>
-        <span class="settings-collapsible-chevron">›</span>
-      </button>
-      <div id="settings-account-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-
-        <!-- Identity card: avatar + alias + member-since -->
-        <div class="account-identity-card" id="account-identity-card">
-          <div class="account-identity-avatar" id="account-identity-avatar" aria-hidden="true">—</div>
-          <div class="account-identity-text">
-            <div class="account-identity-alias" id="account-identity-alias">—</div>
-            <div class="account-identity-since" id="account-identity-since">—</div>
-          </div>
-        </div>
-
-        <!-- Backup my data — safe action, secondary style (v2.1 Phase D) -->
-        <button id="settings-account-backup" type="button" class="account-action-btn account-action-btn--secondary">
-          <span class="account-action-icon" aria-hidden="true">⬇</span>
-          <span class="account-action-label">Backup my data</span>
+      <!-- LEGAL — collapsible (end-of-list per convention) -->
+      <div class="settings-collapsible">
+        <button id="settings-legal-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="legal">
+          <span class="settings-collapsible-lbl">LEGAL</span>
+          <span class="settings-collapsible-summary">Privacy</span>
+          <span class="settings-collapsible-chevron">›</span>
         </button>
-
-        <!-- Restore from backup — safe action, secondary style (v2.1 Phase D) -->
-        <button id="settings-account-restore" type="button" class="account-action-btn account-action-btn--secondary">
-          <span class="account-action-icon" aria-hidden="true">⬆</span>
-          <span class="account-action-label">Restore from backup</span>
-        </button>
-        <input id="settings-account-restore-file" type="file" accept=".json,application/json" style="display:none;">
-
-        <!-- Cloud Backup (v3 Phase 1w) — server-side backup of full
-             local state. Distinct from the JSON file backup above.
-             Status line shows last sync timestamps. -->
-        <div class="account-cloud-section" id="settings-cloud-section">
-          <div class="account-cloud-label">CLOUD BACKUP</div>
-          <div class="account-cloud-status" id="settings-cloud-status">Checking…</div>
-          <button id="settings-cloud-backup-now" type="button" class="account-action-btn account-action-btn--secondary">
-            <span class="account-action-icon" aria-hidden="true">☁</span>
-            <span class="account-action-label">Back up now</span>
-          </button>
-          <button id="settings-cloud-restore-now" type="button" class="account-action-btn account-action-btn--secondary">
-            <span class="account-action-icon" aria-hidden="true">⟳</span>
-            <span class="account-action-label">Restore from cloud</span>
+        <div id="settings-legal-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+          <button id="settings-privacy-policy-link" type="button" class="settings-legal-row">
+            <span class="settings-legal-label">Privacy Policy</span>
+            <span class="settings-legal-chevron" aria-hidden="true">↗</span>
           </button>
         </div>
-
-        <!-- Sign out — secondary, full-width -->
-        <button id="settings-account-signout" type="button" class="account-action-btn account-action-btn--secondary">
-          <span class="account-action-icon" aria-hidden="true">⏻</span>
-          <span class="account-action-label">Sign out</span>
-        </button>
-
-        <!-- Divider — physically separates safe from destructive actions -->
-        <div class="account-section-divider" aria-hidden="true"></div>
-
-        <!-- Delete my account — destructive, full-width -->
-        <button id="settings-account-delete" type="button" class="account-action-btn account-action-btn--danger">
-          <span class="account-action-icon" aria-hidden="true">🗑</span>
-          <span class="account-action-label">Delete my account</span>
-        </button>
-        <div class="account-action-subtitle">Permanently deletes your account and leaderboard data.</div>
-
-      </div>
-    </div>
-
-    <!-- Reminders — collapsible (v3 Phase 1m redesign) -->
-    <div class="settings-collapsible">
-      <button id="settings-rem-section-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="reminders">
-        <span class="settings-collapsible-lbl">NOTIFICATIONS</span>
-        <span id="settings-rem-section-summary" class="settings-collapsible-summary">0 active</span>
-        <span class="settings-collapsible-chevron">›</span>
-      </button>
-      <div id="settings-rem-section-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-
-      <!-- Permission status -->
-      <div class="settings-rem-row">
-        <span class="settings-rem-label">Notification permission</span>
-        <span id="settings-rem-permission" class="settings-rem-value">Not set</span>
-      </div>
-      <!-- v3 Phase 1z.78 — App Store Review 5.1.1(iv) compliance.
-           Renamed from "Enable" to "Set up notifications" so the
-           button copy stays neutral. Apple flags "Enable" alongside
-           "Allow" / "Grant" / "Turn On" as words reserved for the
-           system permission dialog. Tapping this button opens the
-           1z.78-compliant explainer modal (single Continue) which
-           proceeds to iOS's native permission sheet. -->
-      <button id="settings-rem-enable" class="settings-rem-enable-btn hidden" type="button">Set up notifications</button>
-      <p id="settings-rem-web-note" class="settings-rem-note hidden">
-        Reminders work best in the iOS app. Install from App Store for full functionality.
-      </p>
-
-      <!-- v3 Phase 1m — DAILY SYSTEM PINGS sub-section.
-           Three rows: Morning Briefing (user-configurable time),
-           Momentum Check (fixed 1 PM), Evening Closeout (fixed 7 PM).
-           Only Morning Briefing has a user-editable time today; the
-           other two are governed by the master Disable toggle below. -->
-      <div class="notif-subsection-label">DAILY SYSTEM PINGS</div>
-      <p class="settings-rem-note settings-rem-note--sub">Three tactical messages per day.</p>
-
-      <div class="notif-ping-row">
-        <div class="notif-ping-glyph" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 22 22">
-            <circle cx="11" cy="14" r="5" fill="#f5b842" opacity="0.85"/>
-            <g stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.9">
-              <path d="M11 4v3M3 14h2M17 14h2M5 8l1.5 1.5M17 8l-1.5 1.5"/>
-            </g>
-            <path d="M3 17h16" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
-          </svg>
-        </div>
-        <div class="notif-ping-text">
-          <div class="notif-ping-name">Morning Briefing</div>
-          <div class="notif-ping-desc">Review today's objectives.</div>
-        </div>
-        <button id="settings-rem-digest-btn" class="settings-rem-digest-btn notif-ping-time-btn" type="button">9:00 AM</button>
-      </div>
-      <button id="settings-rem-digest-clear" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button" style="margin:0 0 10px">Turn off Morning Briefing</button>
-
-      <div class="notif-ping-row notif-ping-row--readonly">
-        <div class="notif-ping-glyph" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 22 22">
-            <path d="M11 2L4 4.5v6c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5v-6L11 2z" fill="#f5b842" fill-opacity="0.15" stroke="#f5b842" stroke-width="1.4"/>
-            <path d="M7 11l3 3 5-5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="notif-ping-text">
-          <div class="notif-ping-name">Momentum Check</div>
-          <div class="notif-ping-desc">Protect the chain before the day slips.</div>
-        </div>
-        <span class="notif-ping-time-static">1:00 PM</span>
       </div>
 
-      <div class="notif-ping-row notif-ping-row--readonly">
-        <div class="notif-ping-glyph" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 22 22">
-            <path d="M16 12.5A7 7 0 119.5 6a5.5 5.5 0 006.5 6.5z" fill="#f5b842" fill-opacity="0.2" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/>
-            <circle cx="14" cy="6" r="0.9" fill="#f5b842" opacity="0.7"/>
-            <circle cx="17" cy="9" r="0.6" fill="#f5b842" opacity="0.6"/>
-          </svg>
-        </div>
-        <div class="notif-ping-text">
-          <div class="notif-ping-name">Evening Closeout</div>
-          <div class="notif-ping-desc">Finish what remains. Seal the day.</div>
-        </div>
-        <span class="notif-ping-time-static">7:00 PM</span>
-      </div>
+    </div><!-- /settings-v2-list -->
 
-      <p class="settings-rem-note settings-rem-note--hint">Use <strong>Disable all reminders</strong> below to silence every system ping.</p>
+    <!-- Reset all progress — alone, bottom block. Long warning lives
+         in the existing two-step #reset1-modal / #reset2-modal flow. -->
+    <button id="reset-open-btn" class="settings-v2-reset" type="button">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M3 4h10M6 4V2.6h4V4M5 4l.7 9.4h4.6L11 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Reset all progress
+    </button>
 
-      <!-- Quiet hours -->
-      <div class="notif-subsection-label">QUIET HOURS</div>
-      <p class="settings-rem-note settings-rem-note--sub">Reminders skip this window unless you chose the exact time on a habit.</p>
-      <div class="settings-rem-row settings-rem-row--toggle">
-        <span class="settings-rem-label">Enabled</span>
-        <button id="settings-rem-quiet-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Quiet hours"></button>
-      </div>
-      <div id="settings-rem-quiet-times" class="settings-rem-quiet-times">
-        <label class="settings-rem-time-lbl">From <input id="settings-rem-quiet-start" type="time" class="settings-rem-time-input"></label>
-        <label class="settings-rem-time-lbl">to <input id="settings-rem-quiet-end" type="time" class="settings-rem-time-input"></label>
-      </div>
+    <!-- What's Coming — small de-emphasized link. Points to the
+         atmospheric combat-reveal page (in design as of 1z.229). -->
+    <button id="settings-whats-coming-link" class="settings-v2-whatscoming" type="button">
+      ✦ <b>What's Coming</b>
+    </button>
 
-      <!-- Pause -->
-      <div class="notif-subsection-label">PAUSE NOTIFICATIONS</div>
-      <div class="settings-rem-pause-row">
-        <button id="settings-rem-pause-24" class="settings-rem-pause-btn" type="button">Pause 24h</button>
-        <button id="settings-rem-pause-7d" class="settings-rem-pause-btn" type="button">Pause 7 days</button>
-        <button id="settings-rem-pause-cancel" class="settings-rem-pause-btn settings-rem-pause-cancel hidden" type="button">Cancel pause</button>
-      </div>
-      <p id="settings-rem-pause-status" class="settings-rem-note">Currently: Active</p>
-
-      <!-- Master toggle -->
-      <div class="settings-rem-row settings-rem-row--toggle">
-        <span class="settings-rem-label">Disable all reminders</span>
-        <button id="settings-rem-master-toggle" class="settings-toggle" role="switch" aria-checked="false" aria-label="Disable all reminders"></button>
-      </div>
-
-      <!-- Habit Reminders -->
-      <div class="notif-subsection-label">HABIT REMINDERS</div>
-      <p class="settings-rem-note settings-rem-note--sub">Personal nudges for individual habits.</p>
-      <button id="settings-rem-view-all" class="settings-rem-view-all" type="button">
-        View all habit reminders <span id="settings-rem-count" class="settings-rem-count-chip">0</span>
-        <span class="settings-rem-view-arrow">›</span>
-      </button>
-      <div id="settings-rem-list" class="settings-rem-list hidden"></div>
-
-      <!-- v3 Phase 1m — Notification voice previews -->
-      <div class="notif-subsection-label">VOICE PREVIEW</div>
-      <p class="settings-rem-note settings-rem-note--sub">What the system will say.</p>
-      <div id="notif-preview-list" class="notif-preview-list"></div>
-
-      </div><!-- /settings-rem-section-body -->
-    </div>
-
-    <!-- Apple Health — collapsible (v1.1.6) -->
-    <div class="settings-collapsible">
-      <button id="settings-health-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="health">
-        <span class="settings-collapsible-lbl">APPLE HEALTH</span>
-        <span id="settings-health-summary" class="settings-collapsible-summary">Not connected</span>
-        <span class="settings-collapsible-chevron">›</span>
-      </button>
-      <div id="settings-health-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-
-        <!-- State A: HealthKit unavailable (web / non-iOS) -->
-        <div id="settings-health-state-unavailable" class="hidden">
-          <p class="settings-rem-note">Apple Health integration is available in the iOS app only.</p>
-        </div>
-
-        <!-- State B: Connected (permission granted) -->
-        <div id="settings-health-state-connected" class="hidden">
-          <div class="settings-rem-row">
-            <span class="settings-rem-label">Status</span>
-            <span id="settings-health-status-value" class="settings-rem-value granted">Connected</span>
-          </div>
-          <div class="settings-rem-row">
-            <span class="settings-rem-label">Source</span>
-            <span class="settings-rem-value">iOS Health</span>
-          </div>
-          <div class="settings-rem-row settings-rem-row--toggle">
-            <span class="settings-rem-label">Auto-verify habits</span>
-            <button id="settings-health-autoverify-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Auto-verify habits"></button>
-          </div>
-          <p class="settings-rem-note">When enabled, your Daily walk completes automatically once you reach your step goal in Apple Health. Manual completion always works.</p>
-          <p id="settings-health-paused-note" class="settings-rem-note hidden">Auto-verify is paused. Tap the toggle to resume.</p>
-          <p class="settings-rem-note">Set your step goal by editing the Daily walk habit.</p>
-
-          <button id="settings-health-manage-link" class="settings-rem-view-all" type="button">
-            Manage data access in iPhone Settings
-            <span class="settings-rem-view-arrow">›</span>
-          </button>
-        </div>
-
-        <!-- State C: Not connected (permission unknown / denied) -->
-        <div id="settings-health-state-disconnected" class="hidden">
-          <div class="settings-rem-row">
-            <span class="settings-rem-label">Status</span>
-            <span class="settings-rem-value">Not connected</span>
-          </div>
-          <p class="settings-rem-note">Connect Apple Health to auto-verify your Daily walk habit when you reach your step goal. Your data stays on your device.</p>
-          <button id="settings-health-connect-btn" class="settings-rem-enable-btn" type="button">Connect Apple Health</button>
-          <p class="settings-rem-note">If you previously declined, you'll need to enable Steps access in iPhone Settings → Privacy &amp; Security → Health → Awakened.</p>
-        </div>
-
-      </div><!-- /settings-health-body -->
-    </div>
-
-    <!-- What's Coming — collapsible -->
-    <div class="settings-collapsible">
-      <button id="settings-coming-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="coming">
-        <span class="settings-collapsible-lbl">WHAT'S COMING</span>
-        <span class="settings-collapsible-summary">6 features</span>
-        <span class="settings-collapsible-chevron">›</span>
-      </button>
-      <div id="settings-coming-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-      <div class="settings-coming-list">
-
-        <div class="settings-coming-card">
-          <div class="settings-coming-top">
-            <span class="settings-coming-icon">⚔️</span>
-            <span class="settings-coming-title">Card System</span>
-            <span class="settings-coming-badge">COMING SOON</span>
-          </div>
-          <div class="settings-coming-desc">Earn armor and weapons by completing habits. Equip them to your character.</div>
-        </div>
-
-        <div class="settings-coming-card">
-          <div class="settings-coming-top">
-            <span class="settings-coming-icon">🏰</span>
-            <span class="settings-coming-title">Dungeons &amp; Bosses</span>
-            <span class="settings-coming-badge">COMING SOON</span>
-          </div>
-          <div class="settings-coming-desc">Enter dungeons based on your rank. Defeat bosses through verified habit streaks to earn rare drops.</div>
-        </div>
-
-        <div class="settings-coming-card">
-          <div class="settings-coming-top">
-            <span class="settings-coming-icon">🧙</span>
-            <span class="settings-coming-title">Avatar &amp; Character</span>
-            <span class="settings-coming-badge">COMING SOON</span>
-          </div>
-          <div class="settings-coming-desc">Build and customize your character. Your equipped gear appears on your avatar.</div>
-        </div>
-
-        <div class="settings-coming-card">
-          <div class="settings-coming-top">
-            <span class="settings-coming-icon">🌐</span>
-            <span class="settings-coming-title">Global Leaderboard</span>
-            <span class="settings-coming-badge">COMING SOON</span>
-          </div>
-          <div class="settings-coming-desc">Compete with hunters worldwide. See who is truly awakened.</div>
-        </div>
-
-        <div class="settings-coming-card">
-          <div class="settings-coming-top">
-            <span class="settings-coming-icon">🤖</span>
-            <span class="settings-coming-title">AI Habit Coach</span>
-            <span class="settings-coming-badge">COMING SOON</span>
-          </div>
-          <div class="settings-coming-desc">A personal coach that knows your stats, rank, and habits. Get personalized guidance powered by AI.</div>
-        </div>
-
-        <div class="settings-coming-card">
-          <div class="settings-coming-top">
-            <span class="settings-coming-icon">👥</span>
-            <span class="settings-coming-title">Social &amp; Friends</span>
-            <span class="settings-coming-badge">COMING SOON</span>
-          </div>
-          <div class="settings-coming-desc">Compare stats with friends. Build accountability through shared journeys.</div>
-        </div>
-
-      </div>
-      </div><!-- /settings-coming-body -->
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-lbl">DATA</div>
-      <button id="reset-open-btn" class="settings-reset-btn">🗑 Reset All Progress</button>
-      <p class="settings-reset-warn">This will permanently delete all habits, streaks, points, stats, and achievements. This cannot be undone.</p>
-    </div>
-
-    <!-- LEGAL — collapsible (v2.1 Phase E). End-of-list per convention. -->
-    <div class="settings-collapsible">
-      <button id="settings-legal-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="legal">
-        <span class="settings-collapsible-lbl">LEGAL</span>
-        <span class="settings-collapsible-summary">Privacy</span>
-        <span class="settings-collapsible-chevron">›</span>
-      </button>
-      <div id="settings-legal-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-        <button id="settings-privacy-policy-link" type="button" class="settings-legal-row">
-          <span class="settings-legal-label">Privacy Policy</span>
-          <span class="settings-legal-chevron" aria-hidden="true">↗</span>
-        </button>
-      </div>
-    </div>
+    <!-- Version footer — also the 5-tap debug-info unlock target.
+         _setupDebugInfoUnlock() wires the gesture to this element. -->
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.3 · BUILD W95</div>
   </div>
 
   <!-- Signing-out overlay (v2.1 Phase E). Brief loading state between

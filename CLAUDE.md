@@ -4,7 +4,93 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.228C Frontend: Ultra-light Habit Reward chip for rapid taps (read this first)
+## Jun 1, 2026 — 1z.229 Frontend: Settings page redesign (Direction A — tight list) (read this first)
+
+**TL;DR.** Subtraction-led Settings redesign per ClaudeDesign Direction A. Single inset list of hairline-divided rows, each with a glanceable state summary on the right (read state without expanding). Cloud Backup folded into Account. Sound is an inline row. Reset all progress sits alone in a bottom block. What's Coming becomes a small de-emphasized link (placeholder — points to atmospheric combat-reveal teaser still in design). Version footer at the bottom (still the 5-tap debug-info unlock target).
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit math changed. App Store submission (w94) was made earlier today; this is the w95 train.
+
+**Removed (subtraction).**
+- `Check for Updates` button + helper line. Service worker handles updates.
+- `What's New` button. App Store release notes serve that purpose.
+- `What's Coming · 6 features` collapsible (all 6 features shipped).
+- Local file Backup / Restore buttons + `<input type=file>` (Cloud is the canonical backup path).
+- Two-line `Last backup · …` / `Last restore · …` labels → one relative-time line: `Last backed up 2h ago`.
+- Inline `Turn off Morning Briefing` button (asymmetric — only one of three pings had it).
+- Voice Preview 3-card section.
+- `Habit RPG` app-name header card + inline version chip.
+- `Use Disable all reminders below…` helper paragraph.
+- Long `Reset all progress` warning paragraph (moves into the existing two-step confirm dialog).
+- `Currently: Active` line shown when nothing was paused (now hidden until actually paused).
+
+**Kept and restyled.**
+- Account, Notifications, Apple Health, Legal collapsibles — same IDs, new chrome.
+- Sound toggle moved out of the header into an inline list row.
+- Daily system pings (Morning Briefing / Momentum Check / Evening Closeout). Morning Briefing is still the only user-editable time; Momentum & Evening render as static time chips (same visual weight, no edit affordance).
+- Quiet hours toggle + From/To inputs.
+- Pause notifications — 24h / 7 days. Now a segmented control instead of two separate buttons.
+- Disable all reminders, View all habit reminders, count badge.
+- Apple Health: Status pill, Auto-verify toggle + subtitle, Manage data access row (chevron).
+- Privacy Policy link.
+- Reset all progress (two-step modal flow unchanged).
+- Cloud backup (relocated INTO the Account collapsible as a `.settings-v2-cloudcard` purple-tinted card).
+
+**Added (new).**
+- `#settings-whats-coming-link` — small de-emphasized button under the Reset block. Tap shows `Coming soon.` toast as placeholder. Will be wired to the atmospheric combat-reveal page when ClaudeDesign output ships.
+- Footer: `v2.2.3 · BUILD W95` — also the 5-tap debug-info unlock target (preserved).
+
+**Files modified.**
+- `index.html` — Settings sheet inner content rewritten (~365 lines → ~250 lines). New `.settings-v2-*` class hooks. All preserved IDs reused.
+- `app.js` —
+  - Guarded `#update-check-btn` listener (button no longer in DOM).
+  - Guarded `#settings-whats-new-btn` listener.
+  - Wired new `#settings-whats-coming-link` (toast placeholder).
+  - Version footer format → `v{APP_VERSION} · BUILD {Wxx}` derived from `APP_BUILD_TAG`.
+  - `refreshCloudStatus()` rewritten to render single-line relative time (`Last backed up 2h ago`).
+  - Pause-status line: hidden when not paused; shows `Paused until …` only while paused.
+  - Bumped `APP_BUILD_TAG = '2.2.3-w95'`.
+- `styles.css` — appended ~330 lines of scoped `.settings-v2 *` rules. No existing rules touched.
+- `index.html` knobs — `styles.css?v=309`, `app.js?v=548`.
+- `sw.js` — `CACHE_VERSION = 'v5.434'`.
+
+**Preserved invariants.**
+- All settings IDs the JS depends on (`#settings-account-toggle`, `#settings-rem-*`, `#settings-health-*`, `#sound-toggle`, `#reset-open-btn`, `#settings-app-ver`, `#settings-legal-toggle`, etc.) remain present and behaviorally identical.
+- 5-tap debug-info unlock gesture still targets `#settings-app-ver`.
+- Two-step reset confirm flow (`#reset1-modal` / `#reset2-modal`) untouched.
+- Notifications behavior (permission status, digest time, quiet hours, pause, master toggle, habit reminders list) unchanged — only the chrome around them changes.
+- Apple Health behavior (3-state UI, auto-verify toggle, connect / manage flows) unchanged.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Math / backend / privacy invariants preserved.**
+- No XP / streak / rank / class / HealthKit / compound math changed.
+- No backend files. No D1. No migration. No Worker deploy. No Codemagic. No archive/upload.
+- No public events emitted.
+
+**Manual QA checklist (w95).**
+1. Settings opens; root shows 4 collapsibles + inline SOUND + LEGAL.
+2. Each collapsed row shows a state summary on the right (e.g. `@Richie`, `0 active`, `Connected · Auto-verify on`).
+3. Expand ACCOUNT → identity card, cloud backup card with `Last backed up …`, four buttons (Back up now / Restore / Sign out / Delete account).
+4. Expand NOTIFICATIONS → permission pill, 3 ping rows (Morning Briefing editable), Quiet hours toggle + times, Pause segmented control, Disable toggle, View all reminders.
+5. Expand APPLE HEALTH → status pill, Auto-verify toggle, Manage data access row.
+6. Toggle SOUND inline.
+7. Expand LEGAL → Privacy Policy link.
+8. Tap Reset all progress → two-step confirm flow works.
+9. Tap `✦ What's Coming` → `Coming soon.` toast appears.
+10. Tap version footer 5 times rapidly → `Diagnostics unlocked.` toast + Copy Debug Info button appears.
+11. Pause for 24h → `Paused until …` line + Cancel button appear. Cancel → both hide.
+12. Cloud backup → tap Back up now → status updates to `Last backed up just now`.
+13. Smoke: Habits, Social, Leaderboards, Armory, Relic Archive unchanged.
+
+**Rollback notes.** Revert this commit to restore the legacy Settings sheet (w94 layout with Check for Updates, What's New, local file backup, Voice Preview, What's Coming cards). No data migration required — UI only.
+
+**Open follow-ups.**
+- Atmospheric combat-reveal page for `What's Coming` — still in ClaudeDesign. When delivered, wire the `#settings-whats-coming-link` click to open it instead of the toast.
+- Momentum Check / Evening Closeout are still hard-coded (1:00 PM / 7:00 PM). If the visual parity (all three look like time chips) implies user-editable, plan a future train to add config support.
+- Local file Backup / Restore is fully removed — if users need device-to-device migration without cloud, this needs a new path (or restore the buttons under an Advanced disclosure).
+
+---
+
+## May 31, 2026 — 1z.228C Frontend: Ultra-light Habit Reward chip for rapid taps
 
 **TL;DR.** On-device QA of 1z.228B (build w93) confirmed the duplicate-XP fix held but rapid check/uncheck still felt laggy. Bloom + ring removed entirely — those two large simultaneous composite animations (radial-gradient at 150% width, ring scaling to 2.1×) were the dominant remaining cost. Reward = one floating chip + completed-count pulse + bottom XP strip hide. Per-completion DOM cost: **1 node** (was 4–5 in w93, 17–45 in w92).
 
