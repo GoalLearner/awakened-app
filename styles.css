@@ -19241,78 +19241,29 @@ body.reveal-locked { overflow: hidden; }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   v3 Phase 1z.228B — Lightweight Habit Completion Reward Burst
-   Rebuild of 1z.228A after on-device QA found duplicate XP and
-   rapid-tap lag. Sparks removed entirely (were the dominant perf
-   cost: 12–26 box-shadow-animated spans per burst). Single ring
-   across all tiers. 4–5 DOM nodes per burst (was 17–45).
+   v3 Phase 1z.228C — Ultra-light Habit Completion Reward chip
+   Rebuild of 1z.228B after on-device QA reported rapid-tap lag
+   persisted despite spark removal. Bloom (radial-gradient) and
+   ring (large scale animation) are now gone entirely — they were
+   the two largest remaining composite costs per burst. The reward
+   is now one floating chip + `#completed-count` pulse + bottom XP
+   strip hide. Per-completion DOM cost: 1 node.
 
-   Duplicate +XP prevention: while .is-reward-bursting is set on
-   the li, the card's static .codex-xp-chip fades to 0. The
-   floating `.xp-float` element is suppressed at the source in
-   toggleHabit when the burst will fire — that was the actual
-   bottom-right `+N XP 2×` duplicate visible on weekends.
+   Duplicate +XP prevention still active:
+   • `.codex-xp-chip` (static bottom strip) fades while
+     `.is-reward-bursting` is set on the li.
+   • `.xp-float` (legacy 1z.165 floater) is suppressed at the
+     source in toggleHabit so it cannot duplicate the chip.
    ───────────────────────────────────────────────────────────── */
 
 .habit-item.is-reward-bursting .codex-xp-chip {
   opacity: 0;
-  transition: opacity 200ms ease-out;
+  transition: opacity 160ms ease-out;
 }
 
-.habit-reward-burst {
+.habit-reward-chip {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 6;
-  overflow: visible;
-}
-
-/* Bloom — gold→violet radial flash. Opacity+transform only. */
-.habit-reward-burst__bloom {
-  position: absolute;
-  top: 44%;
-  left: 50%;
-  width: 150%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0.5);
-  background: radial-gradient(closest-side,
-    rgba(245, 184, 66, 0.50) 0%,
-    rgba(139, 92, 246, 0.26) 40%,
-    transparent 72%);
-  animation: hab-rwd-bloom 600ms ease-out forwards;
-}
-.habit-reward-burst--milestone .habit-reward-burst__bloom {
-  background: radial-gradient(closest-side,
-    rgba(245, 184, 66, 0.62) 0%,
-    rgba(139, 92, 246, 0.36) 44%,
-    transparent 76%);
-  animation-duration: 760ms;
-}
-
-/* Shockwave ring — gold, single. Opacity+transform only. */
-.habit-reward-burst__ring {
-  position: absolute;
-  top: 46%;
-  left: 50%;
-  width: 74%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 1.5px solid #f5b842;
-  transform: translate(-50%, -50%) scale(0.45);
-  animation: hab-rwd-ring 600ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
-}
-.habit-reward-burst--milestone .habit-reward-burst__ring {
-  border-color: #ffd270;
-  animation-duration: 720ms;
-}
-
-/* Single top XP chip — the one canonical XP message per completion.
-   Carries `2×` suffix on weekends (replacing the suppressed .xp-float).
-   Suppressed entirely on milestone tier. */
-.habit-reward-burst__chip {
-  position: absolute;
-  top: 40%;
+  top: 38%;
   left: 50%;
   display: flex;
   align-items: center;
@@ -19330,12 +19281,15 @@ body.reveal-locked { overflow: hidden; }
   letter-spacing: 0.3px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  transform: translate(-50%, 8px) scale(0.7);
+  pointer-events: none;
+  z-index: 6;
+  transform: translate(-50%, 6px) scale(0.85);
   opacity: 0;
-  animation: hab-rwd-rise 800ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  animation: hab-rwd-chip 700ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
-.habit-reward-burst__chip svg { color: #ffd270; }
-.habit-reward-burst__chip-2x {
+.habit-reward-chip svg { color: #ffd270; }
+.habit-reward-chip-2x {
   margin-left: 4px;
   padding: 0 4px;
   border-radius: 4px;
@@ -19345,87 +19299,41 @@ body.reveal-locked { overflow: hidden; }
   font-weight: 800;
   letter-spacing: 0.3px;
 }
-
-/* Optional status label (streak: STREAK HELD; milestone: N-DAY STREAK). */
-.habit-reward-burst__label {
-  position: absolute;
-  top: 64%;
-  left: 50%;
-  transform: translate(-50%, 4px);
-  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
-  font-size: 8.5px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  color: #f5b842;
-  white-space: nowrap;
-  text-align: center;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
-  opacity: 0;
-  animation: hab-rwd-cap 900ms ease-out 120ms forwards;
-}
-.habit-reward-burst__label--milestone {
-  top: 50%;
+.habit-reward-chip--milestone {
+  top: 44%;
   font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
   font-size: 13px;
   letter-spacing: 2.2px;
   color: #ffd270;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  animation-duration: 1300ms;
+  animation-duration: 1100ms;
 }
 
 /* Daily progress count pulse — fires once per successful completion.
-   Opacity+transform only; no text-shadow animation. */
+   Opacity+transform only. */
 .habit-progress-pulse {
   display: inline-block;
-  animation: hab-rwd-count 400ms cubic-bezier(0.34, 1.56, 0.5, 1);
+  animation: hab-rwd-count 360ms cubic-bezier(0.34, 1.56, 0.5, 1);
 }
 
-/* Keyframes — scoped names so they cannot collide with other animations. */
-@keyframes hab-rwd-bloom {
-  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-  25%  { opacity: 0.9; }
-  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
-}
-@keyframes hab-rwd-ring {
-  0%   { transform: translate(-50%, -50%) scale(0.45); opacity: 0; }
-  20%  { opacity: 0.85; }
-  100% { transform: translate(-50%, -50%) scale(2.1); opacity: 0; }
-}
-@keyframes hab-rwd-rise {
-  0%   { transform: translate(-50%, 8px)   scale(0.7);  opacity: 0; }
-  22%  { transform: translate(-50%, -8px)  scale(1.06); opacity: 1; }
-  34%  { transform: translate(-50%, -12px) scale(1);    opacity: 1; }
+@keyframes hab-rwd-chip {
+  0%   { transform: translate(-50%, 6px)   scale(0.85); opacity: 0; }
+  22%  { transform: translate(-50%, -6px)  scale(1.06); opacity: 1; }
+  34%  { transform: translate(-50%, -10px) scale(1);    opacity: 1; }
   72%  { opacity: 1; }
-  100% { transform: translate(-50%, -44px) scale(0.96); opacity: 0; }
-}
-@keyframes hab-rwd-cap {
-  0%   { opacity: 0; transform: translate(-50%, 4px); letter-spacing: 3px; }
-  30%  { opacity: 1; transform: translate(-50%, 0); }
-  72%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -8px); }
+  100% { transform: translate(-50%, -36px) scale(0.96); opacity: 0; }
 }
 @keyframes hab-rwd-count {
   0%   { transform: scale(1); }
-  40%  { transform: scale(1.32); }
+  40%  { transform: scale(1.28); }
   100% { transform: scale(1); }
 }
 
-/* Reduced-motion fallback — collapse everything to brief opacity fades. */
 @media (prefers-reduced-motion: reduce) {
-  .habit-reward-burst__bloom,
-  .habit-reward-burst__ring,
-  .habit-reward-burst__chip,
-  .habit-reward-burst__label {
-    animation-duration: 240ms !important;
+  .habit-reward-chip {
+    animation-duration: 220ms !important;
     animation-timing-function: ease-out !important;
   }
-  .habit-reward-burst__ring {
-    animation: none !important;
-    opacity: 0 !important;
-  }
-  .habit-progress-pulse {
-    animation: none !important;
-  }
+  .habit-progress-pulse { animation: none !important; }
   .habit-item.is-reward-bursting .codex-xp-chip {
     transition: opacity 120ms ease-out;
   }

@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w93';
+  const APP_BUILD_TAG = '2.2.3-w94';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17699,7 +17699,28 @@
     }
   }
 
-  // v3 Phase 1z.228B — Lightweight Habit Completion Reward Burst.
+  // v3 Phase 1z.228C — Ultra-light Habit Completion Reward chip.
+  //
+  // 1z.228B on-device QA: duplicate XP fixed, but rapid taps still felt
+  // laggy. Root cause: two large simultaneous composite animations per
+  // burst (bloom radial-gradient 150% wide scaling 0.5→1.4, ring 74%
+  // wide scaling 0.45→2.1), multiplied across cards during rapid taps.
+  // Plus a stale-timer race: the prior burst's setTimeout could yank
+  // `.is-reward-bursting` off the li mid-new-burst.
+  //
+  // This rebuild drops the bloom and ring entirely. The reward is now
+  // ONE floating chip + `#completed-count` pulse + bottom XP strip
+  // hide-during-chip. Per-completion DOM cost: 1 node (was 4–5).
+  // Stale-timer race closed via per-li tracked timer id.
+  //
+  // Three tiers driven by post-completion streak:
+  //   normal    → chip `+N XP` (with `2×` on weekends), ~750ms
+  //   streak    → chip `+N XP` (with `2×` on weekends), ~900ms
+  //   milestone → chip `N-DAY STREAK` (Cinzel),         ~1200ms
+  //
+  // Legacy 1z.228B helper name and class roots are kept so any cached
+  // CSS still applies harmlessly — no migrations required.
+  // (was: Lightweight Habit Completion Reward Burst.)
   //
   // 1z.228A on-device QA found (a) duplicate +XP visible on weekends because
   // the existing `.xp-float` element (`⚡+N XP 2×`) was not covered by the
@@ -17731,71 +17752,45 @@
       const isWknd      = !!ctx.weekend;
       const isMilestone = HABIT_REWARD_MILESTONE_BANDS.has(streakCount);
       const isStreak    = !isMilestone && streakCount >= 2;
-      const tier        = isMilestone ? 'milestone' : (isStreak ? 'streak' : 'normal');
-      const lifeMs      = isMilestone ? 1400 : (isStreak ? 1100 : 900);
+      const lifeMs      = isMilestone ? 1200 : (isStreak ? 900 : 750);
 
-      // Idempotent re-burst: clean any in-flight burst on this card before
-      // adding a new one. Prevents stacked overlays on rapid taps.
-      const prior = li.querySelectorAll('.habit-reward-burst');
-      for (let i = 0; i < prior.length; i++) {
-        try { prior[i].remove(); } catch (_) {}
-      }
+      // Cancel any prior burst cleanup on this card so a stale timer
+      // can't yank `.is-reward-bursting` off mid-new-burst. Stored on
+      // the li itself — one slot per card, no global map.
+      const priorTimer = li._habitRewardTimer;
+      if (priorTimer) { try { clearTimeout(priorTimer); } catch (_) {} li._habitRewardTimer = 0; }
+      const priorChip = li.querySelector('.habit-reward-chip');
+      if (priorChip) { try { priorChip.remove(); } catch (_) {} }
 
-      const burst = document.createElement('div');
-      burst.className = 'habit-reward-burst habit-reward-burst--' + tier;
-      burst.setAttribute('aria-hidden', 'true');
-
-      // Bloom (gold→violet radial flash). 1 node, opacity+transform only.
-      const bloom = document.createElement('div');
-      bloom.className = 'habit-reward-burst__bloom';
-      burst.appendChild(bloom);
-
-      // Shockwave ring (gold). 1 node, opacity+transform only.
-      const ring = document.createElement('div');
-      ring.className = 'habit-reward-burst__ring';
-      burst.appendChild(ring);
-
-      // Single XP chip — the one canonical XP message (suppressed on milestone).
-      // Carries `2×` on weekends because the suppressed `.xp-float` used to.
-      if (!isMilestone && xpAmount > 0) {
-        const chip = document.createElement('div');
-        chip.className = 'habit-reward-burst__chip';
+      // One DOM node: the chip itself. No bloom, no ring, no labels.
+      const chip = document.createElement('div');
+      chip.setAttribute('aria-hidden', 'true');
+      if (isMilestone) {
+        chip.className = 'habit-reward-chip habit-reward-chip--milestone';
+        chip.textContent = streakCount + '-DAY STREAK';
+      } else if (xpAmount > 0) {
+        chip.className = 'habit-reward-chip';
         chip.innerHTML =
           '<svg width="8" height="11" viewBox="0 0 5 7" aria-hidden="true">' +
             '<path d="M3 0L0 4h2l-0.7 3L5 2.5H3l1-2.5z" fill="currentColor"/>' +
           '</svg>+' + xpAmount + ' XP' +
-          (isWknd ? '<span class="habit-reward-burst__chip-2x">2×</span>' : '');
-        burst.appendChild(chip);
+          (isWknd ? '<span class="habit-reward-chip-2x">2×</span>' : '');
+      } else {
+        return; // nothing to show
       }
 
-      // Optional STREAK HELD label (streak tier only).
-      if (isStreak) {
-        const lab = document.createElement('div');
-        lab.className = 'habit-reward-burst__label';
-        lab.textContent = 'STREAK HELD';
-        burst.appendChild(lab);
-      }
-      // Milestone label (no chip — banner deferred).
-      if (isMilestone) {
-        const lab = document.createElement('div');
-        lab.className = 'habit-reward-burst__label habit-reward-burst__label--milestone';
-        lab.textContent = streakCount + '-DAY STREAK';
-        burst.appendChild(lab);
-      }
-
-      // Hide the card's existing bottom +N XP chip while the burst plays
-      // (static `.codex-xp-chip`; `.xp-float` is suppressed at the source).
+      // Hide the card's static `.codex-xp-chip` while the chip plays.
       li.classList.add('is-reward-bursting');
-      li.appendChild(burst);
+      li.appendChild(chip);
 
-      let cleaned = false;
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        try { burst.remove(); } catch (_) {}
+      li._habitRewardTimer = setTimeout(() => {
+        li._habitRewardTimer = 0;
+        try {
+          const c = li.querySelector('.habit-reward-chip');
+          if (c) c.remove();
+        } catch (_) {}
         try { li.classList.remove('is-reward-bursting'); } catch (_) {}
-      };
-      setTimeout(cleanup, lifeMs);
+      }, lifeMs);
     } catch (_) {}
   }
 

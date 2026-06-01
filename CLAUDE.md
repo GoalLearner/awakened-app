@@ -4,7 +4,93 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.228B Frontend: Smooth Habit Reward Burst + duplicate-XP fix (read this first)
+## May 31, 2026 — 1z.228C Frontend: Ultra-light Habit Reward chip for rapid taps (read this first)
+
+**TL;DR.** On-device QA of 1z.228B (build w93) confirmed the duplicate-XP fix held but rapid check/uncheck still felt laggy. Bloom + ring removed entirely — those two large simultaneous composite animations (radial-gradient at 150% width, ring scaling to 2.1×) were the dominant remaining cost. Reward = one floating chip + completed-count pulse + bottom XP strip hide. Per-completion DOM cost: **1 node** (was 4–5 in w93, 17–45 in w92).
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit math changed.
+
+**Remaining-lag root cause (1z.228B).**
+- Bloom: `radial-gradient(closest-side, …)` overlay sized 150% of the card with animated `scale(0.5 → 1.4)` + opacity. Gradients re-paint per frame; multiplied across simultaneous rapid-tap cards on iOS, this dominates the compositor.
+- Ring: 74% wide, animated `scale(0.45 → 2.1)` + opacity over 600ms. Less expensive than bloom but stacked on top of it.
+- Stale-timer race: 1z.228B removed prior `.habit-reward-burst` elements on re-tap but did NOT cancel the prior `setTimeout(cleanup, lifeMs)`, so the stale timer could yank `.is-reward-bursting` off the li mid-new-burst, causing flicker and re-fade of `.codex-xp-chip`.
+
+**Fix.**
+- `app.js` —
+  - `_showHabitCompletionRewardBurst(li, ctx)` rewritten ultra-light: no bloom, no ring, no labels. Just one `.habit-reward-chip` element appended directly to the li.
+  - Per-li tracked timer (`li._habitRewardTimer`) — the prior burst's timer is now cleared on re-tap so cleanup races are gone.
+  - Milestone collapses to a single Cinzel-styled label-shaped chip in the same DOM slot (still one node).
+  - Bumped `APP_BUILD_TAG = '2.2.3-w94'`.
+- `styles.css` —
+  - Deleted: `.habit-reward-burst`, `.habit-reward-burst__bloom`, `.habit-reward-burst__ring`, `.habit-reward-burst__chip`, `.habit-reward-burst__label`, all variant modifiers, and `@keyframes hab-rwd-bloom` / `hab-rwd-ring` / `hab-rwd-rise` / `hab-rwd-cap`.
+  - Added: `.habit-reward-chip` (the single visible element), `.habit-reward-chip-2x`, `.habit-reward-chip--milestone`, `@keyframes hab-rwd-chip`.
+  - `@keyframes hab-rwd-count` retained for `.habit-progress-pulse`.
+  - Reduced-motion fallback simplified.
+- `index.html` — `styles.css?v=308`, `app.js?v=547`.
+- `sw.js` — `CACHE_VERSION = 'v5.433'`.
+
+**Final tier behavior (1z.228C).**
+| Tier | Trigger | Nodes | Visual | Copy |
+|---|---|---|---|---|
+| Normal | streak ≤ 1 | 1 | chip rises ~40px, fades | `+N XP` (with `2×` on weekends) |
+| Streak | streak ≥ 2, not milestone | 1 | same chip, ~900ms instead of 750ms | `+N XP` (with `2×` on weekends) |
+| Milestone | streak ∈ {7, 14, 30, 100, 365} | 1 | Cinzel chip, ~1100ms | `<N>-DAY STREAK` |
+
+**What was intentionally removed.**
+- Bloom (radial-gradient overlay) — too expensive on iOS rapid taps.
+- Shockwave ring — second largest composite cost.
+- Streak `STREAK HELD` sub-label — collapsed into longer chip lifetime.
+- Card border glow / box-shadow pulse — never added (would have been third-most expensive).
+
+**What stayed.**
+- One canonical XP chip with `2×` suffix on weekends.
+- `.is-reward-bursting` class on the li, fading `.codex-xp-chip` to 0 — duplicate-XP prevention still active.
+- `.xp-float` suppression at source in `toggleHabit` — second layer of duplicate-XP prevention.
+- `#completed-count` pulse (small transform-only animation).
+- Compound fanfare ownership — burst still gated on `!compoundFiredNow`; `.xp-float` plays on the compound branch.
+
+**Per-completion work (w94).**
+- 1 `createElement` + 1 `appendChild` + 1 class add on li + 1 `querySelector` on the li (re-tap idempotency check) + 1 `setTimeout`. Optionally 1 `clearTimeout` + 1 `remove()` if re-tapping the same card.
+- Composite animations active: 1 (chip transform/opacity). Down from 2 (bloom + ring) in w93.
+- No gradient animation. No animated box-shadow. No animated filter. No layout reads.
+
+**1z.214 perf invariants preserved.**
+- Fingerprint unchanged: `(id, checked, streakBand, autoVerify)`.
+- No layout reads, no `getBoundingClientRect`, no `offsetWidth`.
+- Delegated `#habit-list` handler untouched.
+- `_pulseHabitDailyProgress` still uses double-rAF retrigger pattern.
+
+**Math / backend / privacy invariants preserved.**
+- No XP / streak / rank / class / HealthKit / compound math changed.
+- No backend files. No D1. No migration. No Worker deploy. No Codemagic. No archive/upload.
+- No public events emitted.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Manual QA checklist (w94).**
+1. Copy Debug Info shows `2.2.3-w94`.
+2. Rapidly complete + uncheck 10+ habits in succession — feels close to pre-burst smoothness.
+3. On a weekend, completing a habit shows ONE `+N XP 2×` chip (top of card), no duplicate bottom-right floating XP.
+4. After every burst, the card's bottom `.codex-xp-chip` returns to normal opacity.
+5. Tap-untap-tap same card rapidly — no flicker, no stuck hidden bottom strip, one chip at a time.
+6. Uncheck → no chip.
+7. Auto-verify habit → no chip (silent path).
+8. Compound fanfare habit → `.xp-float` plays (legacy), no reward chip (compound owns).
+9. Streak ≥ 2 → chip simply lives slightly longer (900ms vs 750ms).
+10. Milestone (e.g. streak 7) → Cinzel chip `7-DAY STREAK`.
+11. `#completed-count` pulses on every successful completion.
+12. iOS Reduce Motion ON → chip collapses to 220ms fade, progress pulse off.
+13. Smoke: Social, Leaderboards, Armory, Relic Archive unchanged.
+
+**Rollback notes.** Revert this commit to restore 1z.228B (still has rapid-tap lag). For full feature removal, revert chain to `0247bff` (= w91 clean state). No data migration required — visual only.
+
+**Open follow-ups.**
+- Centered milestone banner / `MilestoneBanner` from design — still deferred.
+- `MOMENTUM +1` chip — still deferred.
+- Subtle card glow could be re-added later via CSS `outline` (composite-cheap) if QA reports the chip alone feels too understated.
+
+---
+
+## May 31, 2026 — 1z.228B Frontend: Smooth Habit Reward Burst + duplicate-XP fix
 
 **TL;DR.** On-device QA of 1z.228A (build w92) found two issues: (a) duplicate `+N XP` visible on weekends — top burst chip + bottom `+N XP 2×` floating element, and (b) rapid check/uncheck felt laggy. This train fixes both. Sparks removed entirely. `.xp-float` suppressed at the source when the burst fires. Single ring across all tiers. Same-card re-tap removes any prior burst before appending. Node count per burst dropped from 17/25/45 → 4/5/5.
 
