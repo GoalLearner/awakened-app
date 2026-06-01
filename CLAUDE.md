@@ -4,7 +4,78 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.230 Frontend: What's Coming · Combat Reveal sheet (read this first)
+## Jun 1, 2026 — Docs: w98 TestFlight verification + Workout auto-verify retest (read this first)
+
+**Docs-only update.** No code, knobs, backend, D1, migration, Worker deploy, Codemagic, archive, or upload occurred in this entry.
+
+### Release state
+
+| Surface | Version | Build |
+|---|---|---|
+| **App Store (live)** | `2.2.4` | `179` |
+| **TestFlight (installed + verified)** | `2.2.5` | `180` |
+| **Repo / dev train** | `2.2.5-w98` | HEAD `c86e3c5` |
+
+`APP_VERSION = '2.2.5'`, `APP_BUILD_TAG = '2.2.5-w98'`, `app.js?v=551`, `styles.css?v=311`, `sw.js CACHE_VERSION = 'v5.437'`. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### TestFlight verification — Copy Debug Info confirms
+
+- `version: "2.2.5"`
+- `build: "2.2.5-w98"`
+- Platform: iOS / Capacitor
+- TestFlight 2.2.5 (180) is installed and running correctly on-device.
+
+### Workout auto-verify retest — NOT a confirmed bug
+
+**Outcome:** the verifier matched the Workout habit and skipped because HealthKit returned 0 qualifying minutes against the 30-minute target. This is the expected behavior, not a regression.
+
+Relevant breadcrumbs from the live debug payload:
+- `strength-habit-matched` → `name: "Workout"` (habit found in list)
+- `strength.totalMinutes: 0`
+- `workout.totalMinutes: 0`
+- `targetMin: 30`
+- `strength-skip` → `reason: "below-daily-target"`
+
+> **Working summary:** "Workout auto-verify remains pending, but current w98 debug does not show a bug. The app matched the Workout habit and skipped because HealthKit returned 0 qualifying minutes against the 30-minute target. Need a true HealthKit-recorded 30+ minute workout sample to retest."
+
+**Next retest requirement.** To validate the path end-to-end:
+1. Perform (or import) a **real workout of ≥ 30 minutes** that writes into Apple Health's workout/strength sample stream.
+2. Open the app while or after that workout is recorded.
+3. Tap Copy Debug Info and check for `strength.totalMinutes >= 30` OR `workout.totalMinutes >= 30`.
+4. **Expected:** with the target met and the habit not already checked / not unchecked by user today, the Workout habit auto-verifies and seals.
+5. If steps 1–4 happen and the habit still does NOT seal, **that** is the bug signature — escalate to a w99 patch.
+
+### Other verifiers — all healthy in w98 debug
+
+- **Sleep:** query succeeded; selected today's session at `selectedSessionAsleepHours: 8.07`, `goalHours: 7`, `meets: true`. Skipped only because `alreadyChecked: true`. Verifier path is intact.
+- **Walk:** `steps: 1640`, `threshold: 8000`, `meets: false`, `storedChecked: false`. Correctly did NOT seal. Verifier path is intact.
+
+### Leaderboard submit path — healthy
+
+Successful submit results observed for all five categories in the debug payload:
+- `bedtime_streak`
+- `sleep_streak`
+- `flights_climbed`
+- `workout_streak`
+- `step_total`
+
+Backend `/v1/leaderboard/submit` path is functioning in w98.
+
+### Decision posture
+
+- 2.2.5 (180) on TestFlight is the candidate for the next App Store submission.
+- **Hold the promotion** until a real ≥ 30-min Apple Health workout retest closes the Workout auto-verify question. If that retest passes, ship 2.2.5 to production. If it surfaces a real bug, fix lands in w99 → archive 181 → ship as 2.2.5.
+
+### Confirmations
+
+- ✅ No app code changed
+- ✅ No knobs changed
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 1, 2026 — 1z.230 Frontend: What's Coming · Combat Reveal sheet
 
 **TL;DR.** Atmospheric vibe-first reveal sheet wired to the Settings `✦ What's Coming` link (was a placeholder toast in w95). Two rim-lit silhouettes across a violet/gold ritual circle, slow rift pulse, drifting embers, breathing sigil, two short stanzas. No date, no mechanics, no CTA. Close ✕ is the only exit. Replaces the w95 "Coming soon." toast.
 
