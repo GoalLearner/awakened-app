@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w98';
+  const APP_BUILD_TAG = '2.2.5-w99';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33274,14 +33274,14 @@
     const screen = document.getElementById('onboarding');
     screen.classList.remove('hidden');
 
-    // Pre-fill name if captured from welcome screen / signin alias.
-    // v3 Phase 1j — the hunter name is claimed once via signin and
-    // never editable. If we already have a real name, hide the
-    // name-input row entirely so the user isn't asked again.
+    // v3 Phase 1z.232 — Duplicate name input removed from the
+    // Onboarding HTML. Welcome screen (#wc-name-input) is the single
+    // source of truth for the hunter name. The element lookup is kept
+    // null-safe in case any cached HTML still has the old row.
     const obNameInput = document.getElementById('ob-name-input');
-    const claimedName = (localStorage.getItem('hb_name') || '').trim();
-    const nameAlreadyClaimed = claimedName && claimedName !== 'Hunter';
     if (obNameInput) {
+      const claimedName = (localStorage.getItem('hb_name') || '').trim();
+      const nameAlreadyClaimed = claimedName && claimedName !== 'Hunter';
       if (nameAlreadyClaimed) {
         obNameInput.value = claimedName;
         const row = obNameInput.closest('.ob-name-row');
@@ -33438,6 +33438,9 @@
   }
 
   function _completeOnboardingFinish() {
+    // v3 Phase 1z.232 — Duplicate `#ob-name-input` is no longer in the
+    // HTML. The Welcome screen now owns name capture. Kept null-safe
+    // so a stale cached HTML version can still save its name if present.
     const nameInput = document.getElementById('ob-name-input');
     if (nameInput && nameInput.value.trim()) {
       playerName = nameInput.value.trim();

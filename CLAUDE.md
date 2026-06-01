@@ -4,7 +4,60 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — Docs: w98 TestFlight verification + Workout auto-verify retest (read this first)
+## Jun 1, 2026 — 1z.232 Frontend: Remove duplicate onboarding name input (read this first)
+
+**TL;DR.** Small cleanup pass. The Choose Habits screen had a second `Your Name` input (`#ob-name-input` inside `.ob-name-row`) even though the Welcome screen had already captured the hunter name. The Onboarding JS was display-suppressing the row at runtime when `hb_name` existed, but the element was still in the DOM and the code paths still referenced it. Cleaner to remove it from the markup entirely. Also swapped two productivity quotes for in-world copy.
+
+**Process note.** Minimal cleanup only. The broader onboarding redesign (cinematic identity moment, "why" question, first-XP cinematic, tomorrow-hook) is being explored by ClaudeDesign separately — this train does NOT implement that. Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit math changed.
+
+**Changes (HTML).**
+- Removed `.ob-name-row` block from `#onboarding` (the `label` + `#ob-name-input` pair).
+- Welcome screen quote text changed: `"90 days of consistency creates a permanent change in your brain."` → `"The first seal is always the hardest."`
+- Onboarding inspiration block: `"Win the morning, win the day." — Tim Ferriss` → `"The path begins with the first vow."` (attribution `<p class="ob-inspiration-attr">` element removed).
+- `Start Tracking` CTA left untouched (broader onboarding redesign owns the CTA pass).
+- Footer label `BUILD W98` → `BUILD W99`.
+
+**Changes (JS).**
+- `showOnboarding()` — `obNameInput` lookup wrapped in `if (obNameInput)` null-safety; logic kept inside the guard so cached HTML from older builds still hides the row gracefully if it appears.
+- `_completeOnboardingFinish()` — same null-safety on the fallback name-save block. Welcome is the only place name capture happens in the new flow.
+- Bumped `APP_BUILD_TAG = '2.2.5-w99'`.
+
+**Single source of truth for the hunter name.**
+- `#wc-name-input` → `launchQuest()` → `playerName`, `localStorage.hb_name`, `hb_welcomed=1`, `hb_hunter_name_claimed=1`.
+- Onboarding no longer asks. Onboarding screen displays habit selection only.
+- Status tab pencil edit path (existing) still works for renaming later.
+
+**Preserved invariants.**
+- All onboarding pack / habit selection / Compound Effect Bonus logic untouched.
+- `selectedPackId` save, `obSelected` / `obConfig` reads, habit creation in `_completeOnboardingFinish` all unchanged.
+- The `runOnboardingNotifPrompt` notification flow at the end of onboarding still fires.
+- Returning users (already-onboarded `hb_welcomed=1`, `needsOnboarding=false`) are unaffected — they don't re-enter onboarding.
+- 5-tap debug-info gesture on `#settings-app-ver` still works.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Manual QA checklist (w99).**
+1. Fresh install (or clear `hb_welcomed` + `hb_name` + `hb_player_class` from localStorage).
+2. Open app → Welcome screen shows.
+3. Enter hunter name on Welcome → tap START MY QUEST.
+4. Welcome quote now reads `"The first seal is always the hardest."`
+5. Continue through Choose Path.
+6. Land on Choose Habits — **no second name input visible**.
+7. Inspiration line now reads `"The path begins with the first vow."` (no Tim Ferriss attribution).
+8. Pick habits → tap Start Tracking → onboarding completes.
+9. Open Settings → name shown is the one entered on Welcome.
+10. Status tab — name shows as entered. Pencil edit still works to rename.
+11. Returning user (skip onboarding) — Settings shows name correctly, no regression.
+12. Smoke: Habits, Social, Leaderboards, Armory, Relic Archive unchanged.
+
+**Rollback notes.** Revert this commit to restore the duplicate `#ob-name-input` and the productivity quotes. No data migration required — UI-text only.
+
+**Open follow-ups.**
+- ClaudeDesign is exploring a full onboarding redesign (cinematic 7-screen flow with identity moment, "why" question, first-XP cinematic, tomorrow-hook). This 1z.232 cleanup will be subsumed by that train when it lands.
+- `Start Tracking` CTA still flat. Candidates for the redesign: `Awaken`, `Begin`, `Step into the circle`.
+
+---
+
+## Jun 1, 2026 — Docs: w98 TestFlight verification + Workout auto-verify retest
 
 **Docs-only update.** No code, knobs, backend, D1, migration, Worker deploy, Codemagic, archive, or upload occurred in this entry.
 

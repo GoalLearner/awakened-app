@@ -149,7 +149,7 @@
                autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
       </div>
       <button id="wc-start-btn" class="wc-start-btn" disabled>START MY QUEST</button>
-      <div id="wc-quote" class="wc-quote">&#8220;90 days of consistency creates a permanent change in your brain.&#8221;</div>
+      <div id="wc-quote" class="wc-quote">&#8220;The first seal is always the hardest.&#8221;</div>
     </div>
     <div id="wc-flash" class="wc-flash"></div>
   </div>
@@ -191,21 +191,21 @@
   <div id="path-flash-overlay" class="path-flash-overlay"></div>
 
 
-  <!-- Onboarding selection screen -->
+  <!-- Onboarding selection screen.
+       v3 Phase 1z.232 — Removed the `.ob-name-row` duplicate name
+       input. The Welcome screen is now the single source of truth
+       for the hunter name (`#wc-name-input` → `localStorage.hb_name`).
+       Inspiration block is in-world copy (no productivity quotes).
+       The wider onboarding redesign is being explored separately by
+       ClaudeDesign — this is a minimal cleanup only. -->
   <div id="onboarding" class="onboarding hidden">
     <div class="ob-header">
       <h1 class="ob-title">Choose Your Habits</h1>
       <p class="ob-subtitle">Select the habits you want to build.<br>You can always add more later.</p>
-      <div class="ob-name-row">
-        <label class="ob-name-label" for="ob-name-input">Your Name</label>
-        <input id="ob-name-input" class="ob-name-input" type="text" placeholder="e.g. Jin-Woo" maxlength="20"
-               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
-      </div>
     </div>
     <div id="ob-list" class="ob-list"></div>
     <div class="ob-inspiration">
-      <p class="ob-inspiration-quote">"Win the morning, win the day."</p>
-      <p class="ob-inspiration-attr">— Tim Ferriss</p>
+      <p class="ob-inspiration-quote">"The path begins with the first vow."</p>
     </div>
     <div class="ob-footer">
       <button id="ob-start-btn" class="ob-start-btn" disabled>Start Tracking</button>
@@ -2478,7 +2478,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=551"></script>
+  <script src="app.js?v=552"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2899,7 +2899,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W98</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W99</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
