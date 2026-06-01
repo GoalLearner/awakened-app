@@ -4,7 +4,91 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## May 31, 2026 — 1z.226C Frontend: hooks + renderer for the three new Guild Notification events (read this first)
+## May 31, 2026 — 1z.228 Habits page completion reward burst (read this first)
+
+**TL;DR.** Frontend-only visual polish. Habit completion now plays a layered "DISCIPLINE SEALED" reward burst overlay on the just-completed card, plus a gold/violet glow halo, plus a brief pulse on the daily progress count (`#completed-count`). Three feedback tiers (normal / streak / milestone) determined by the user's current streak count for the habit. No XP / streak / rank / class / HealthKit / habit-data math touched. 1z.214 perf invariants preserved.
+
+**Files modified.**
+- `app.js` —
+  - New `_showHabitRewardBurst(li, ctx)` helper near `spawnXpParticles`. Builds a transient `.habit-reward-burst` div, appends it to the `<li>`, and self-cleans on the slowest animationend (with a setTimeout fallback for older WKWebView). No persistent listeners; no fingerprint impact.
+  - New `_pulseDailyProgressCount()` helper. Double-rAF retrigger pattern from 1z.214 — no forced reflow.
+  - Hook inside the existing per-tap burst block in `toggleHabit` (the `if (!silent)` branch). Both helpers fire only when `!compoundFiredNow` so the bigger compound fanfare retains its spotlight when it owns the moment.
+  - `HABIT_REWARD_MILESTONE_BANDS = new Set([7, 14, 30, 100, 365])` matches the existing `GUILDHALL_STREAK_BANDS` set used by the 1z.165 streak milestone path.
+  - `HABIT_REWARD_MILESTONE_FLAVOR` provides per-band sub-copy (e.g. 30 → `DISCIPLINE ASCENDED`, 100 → `A HUNDRED DAYS OF POWER`).
+- `styles.css` —
+  - New scoped block under `.habit-item.completed` for `.habit-reward-burst*`, `.habit-progress-pulse`, and four keyframe sets (`hab-rwd-fadeout`, `hab-rwd-halo`, `hab-rwd-pulse`, `hab-rwd-textin`, `hab-rwd-progresspulse`).
+  - `prefers-reduced-motion: reduce` media query collapses all animations to quick fades — no scale, no halo expansion, no pulse.
+- `index.html` — `app.js?v=545`, `styles.css?v=306`.
+- `sw.js` — `CACHE_VERSION = 'v5.431'`.
+
+**Final knobs.** `APP_VERSION 2.2.3`, `APP_BUILD_TAG 2.2.3-w92`, `app.js?v=545`, `auth.js?v=20` (unchanged), `styles.css?v=306`, `sw.js CACHE_VERSION v5.431`, `simulated-leaderboard.js?v=7` (unchanged), `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+### Reward burst behavior
+
+| Tier | Trigger (streak count) | Copy | Duration | Visual |
+|---|---|---|---|---|
+| **Normal** | 0 or 1 | `DISCIPLINE SEALED` | ~1300 ms | gold/violet halo + label fade |
+| **Streak** | 2–6 (any band-not-yet-milestone) | `STREAK HELD` + `<N>-DAY STREAK` sub | ~1700 ms | stronger halo + dual line |
+| **Milestone** | 7, 14, 30, 100, 365 | `<N>-DAY STREAK` + per-band flavor | ~2500 ms | dual-keyframe halo (expand + pulse) + larger Cinzel label |
+| **Daily progress pulse** | every successful completion | `#completed-count` glows briefly | ~700 ms | scale 1.0→1.18→1.0 with gold text-shadow |
+
+### Explicitly included
+
+- ✅ Normal completion burst.
+- ✅ Streak continuation copy + visual.
+- ✅ Milestone bands `{7, 14, 30, 100, 365}` with stronger glow + flavor line.
+- ✅ Daily progress count pulse.
+
+### Explicitly preserved
+
+- All existing 1z.165 per-tap FX (`playCheckSound`, `spawnXpParticles`, `cb-ripple`, card-flash double-rAF retrigger, floating XP chip, streak-badge pop).
+- 1z.214 invariants: `_computeHabitsRenderFingerprint` unchanged (the burst is appended to an existing `<li>` and does not affect the fingerprint computation since fingerprint reads `(id, checked, streakBand, autoVerify)` per habit — none of which the burst touches); `_setupHabitListDelegation` unchanged; `_scheduleHeaderMetricsUpdate` unchanged; `_armHabitsSideEffectsCoalesce` unchanged.
+- `toggleHabit` non-completion paths: uncheck path is untouched (burst only fires inside the `if (!wasDone)` branch).
+- Silent auto-verify: burst suppressed via the existing `!silent` gate (auto-verify shouldn't feel like a user tap).
+- Compound fanfare: burst suppressed via `!compoundFiredNow` so the compound moment owns the spotlight.
+- Rapid taps: each burst is a transient DOM node with its own animationend cleanup + setTimeout fallback. Stacking is fine; no persistent listeners; no shared global state.
+
+### Explicitly NOT changed
+
+- No XP math.
+- No streak math.
+- No rank math.
+- No class math.
+- No HealthKit verification logic.
+- No habit completion semantics or persistence.
+- No boss / leaderboard / Social / Guild / public event / inventory / souls / drop / item / friend / Roster / Armory math.
+- No backend / D1 / migration / Codemagic / archive / upload.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Rollback
+
+Five independent reverts:
+1. Drop the `_showHabitRewardBurst` + `_pulseDailyProgressCount` helpers in `app.js`.
+2. Drop the call-block inside the `if (!silent)` branch of `toggleHabit`.
+3. Drop the `HABIT_REWARD_MILESTONE_BANDS` + `HABIT_REWARD_MILESTONE_FLAVOR` constants.
+4. Drop the `.habit-reward-burst*` + `.habit-progress-pulse` CSS block and the four keyframe declarations.
+5. Revert knob bumps.
+
+No DB / backend / storage touched.
+
+### Manual QA (w92)
+
+1. Cold-launch w92. Confirm `"build": "2.2.3-w92"`.
+2. Tap a fresh (non-streaking) habit → gold "DISCIPLINE SEALED" label appears centered on the card, halo glows + fades over ~1.3s, daily progress count pulses.
+3. Tap a habit with an active 3-day streak → "STREAK HELD" + "3-DAY STREAK" sub, slightly longer + stronger halo.
+4. Tap a habit that crosses a milestone band (test via 7-day in dev) → bigger Cinzel label + flavor line + dual-keyframe halo (expand then pulse).
+5. Rapid-tap multiple habits → each gets its own burst; no stuck overlays; no missed taps; smooth 1z.214 perf path intact.
+6. Uncheck a habit → no burst.
+7. Auto-verified habit (Daily Walk) updates → no burst (silent gate fires correctly).
+8. Tap `•••` overflow → menu opens normally; no burst.
+9. Switch tabs and return → no residual burst nodes in the DOM.
+10. Scroll the Habits list → smoothness preserved.
+11. Enable iOS Reduce Motion → bursts collapse to quick fades; daily count just blinks.
+12. Smoke test Social → Guild Notifications, Leaderboards, Armory Sigil Grid, Relic Archive.
+
+---
+
+## May 31, 2026 — 1z.226C Frontend: hooks + renderer for the three new Guild Notification events
 
 **TL;DR.** Frontend-only. Lights up the 1z.226A/B backend by adding (a) three new public submit hooks with privacy-safe idempotency, (b) one helper-set per event type to build payloads without ever forwarding card identity / habit identity, and (c) three new icon cases in the Guild feed renderer. Hunter-mode local rows (which still carry exact card name / exact habit name / exact step counts privately) are unchanged.
 

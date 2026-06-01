@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w91';
+  const APP_BUILD_TAG = '2.2.3-w92';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17665,6 +17665,97 @@
     legendary: '#fbbf24',
   };
 
+  // v3 Phase 1z.228 — habit completion reward burst. Transient
+  // overlay anchored to the just-completed habit card. Self-cleans
+  // on animationend so there's nothing to garbage-collect, no
+  // persistent listeners, no fingerprint impact on 1z.214's
+  // _computeHabitsRenderFingerprint, and no impact on rapid taps.
+  //
+  // Three feedback tiers:
+  //   normal     — "DISCIPLINE SEALED" + soft halo
+  //   streak     — "STREAK HELD" + day count (active streak ≥ 2)
+  //   milestone  — "<N>-DAY STREAK" stronger glow + flavor copy
+  //                (bands: 7, 14, 30, 100, 365)
+  //
+  // No XP / streak / rank / HealthKit math touched — the burst
+  // reads streak count and difficulty for display only and never
+  // writes back. The compound-popup fanfare path is unchanged;
+  // we only run the burst on user-facing single-toggle moments
+  // (silent auto-verify is skipped, matching the rest of the
+  // per-tap-burst block in toggleHabit).
+  const HABIT_REWARD_MILESTONE_BANDS = new Set([7, 14, 30, 100, 365]);
+  const HABIT_REWARD_MILESTONE_FLAVOR = {
+    7:   'YOUR STREAK HAS TAKEN FORM',
+    14:  'TWO WEEKS · DISCIPLINE GROWS',
+    30:  'DISCIPLINE ASCENDED',
+    100: 'A HUNDRED DAYS OF POWER',
+    365: 'A YEAR OF UNBROKEN WILL',
+  };
+  function _showHabitRewardBurst(li, ctx) {
+    if (!li || !ctx) return;
+    try {
+      // Reuse the existing per-tap container without rebuild — the
+      // li already exists, we just inject a child overlay.
+      const burst = document.createElement('div');
+      const streakCount = (typeof ctx.streakCount === 'number') ? ctx.streakCount : 0;
+      const isMilestone = HABIT_REWARD_MILESTONE_BANDS.has(streakCount);
+      const isStreak    = !isMilestone && streakCount >= 2;
+      let tierCls = 'habit-reward-burst';
+      let topLabel;
+      let subLabel = '';
+      if (isMilestone) {
+        tierCls += ' habit-reward-burst--milestone';
+        topLabel = streakCount + '-DAY STREAK';
+        subLabel = HABIT_REWARD_MILESTONE_FLAVOR[streakCount] || '';
+      } else if (isStreak) {
+        tierCls += ' habit-reward-burst--streak';
+        topLabel = 'STREAK HELD';
+        subLabel = streakCount + '-DAY STREAK';
+      } else {
+        topLabel = 'DISCIPLINE SEALED';
+      }
+      burst.className = tierCls;
+      burst.setAttribute('aria-hidden', 'true');
+      burst.innerHTML =
+        '<div class="habit-reward-burst-halo"></div>' +
+        '<div class="habit-reward-burst-text">' +
+          '<div class="habit-reward-burst-label">' + esc(topLabel) + '</div>' +
+          (subLabel ? '<div class="habit-reward-burst-sub">' + esc(subLabel) + '</div>' : '') +
+        '</div>';
+      li.appendChild(burst);
+      // Self-cleanup on the slowest animation end. We listen on the
+      // burst container so any of its child keyframe animations
+      // closing triggers removal. A timeout fallback covers
+      // animationend-misfire edge cases (older WKWebView).
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { burst.remove(); } catch (_) {}
+      };
+      burst.addEventListener('animationend', cleanup, { once: true });
+      setTimeout(cleanup, isMilestone ? 2600 : (isStreak ? 1800 : 1400));
+    } catch (_) {}
+  }
+  function _pulseDailyProgressCount() {
+    try {
+      const el = document.getElementById('completed-count');
+      if (!el) return;
+      // Double-rAF retrigger pattern from 1z.214 — no forced reflow.
+      el.classList.remove('habit-progress-pulse');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.classList.add('habit-progress-pulse');
+        });
+      });
+      el.addEventListener(
+        'animationend',
+        () => el.classList.remove('habit-progress-pulse'),
+        { once: true },
+      );
+    } catch (_) {}
+  }
+
   function spawnXpParticles(li, diff) {
     const cb    = li.querySelector('.habit-cb');
     if (!cb) return;
@@ -18377,6 +18468,21 @@
           xpFloat.innerHTML = iconify('⚡+' + xpAmt + ' XP' + (isWeekend() ? ' 2×' : ''), { size: 14 });
           li.appendChild(xpFloat);
           xpFloat.addEventListener('animationend', () => xpFloat.remove(), { once: true });
+
+          // v3 Phase 1z.228 — habit reward burst (DISCIPLINE SEALED /
+          // streak / milestone overlay) + daily progress count pulse.
+          // Skipped on the compound-fanfare moment so the bigger
+          // celebration owns the spotlight; otherwise fires on every
+          // user-initiated completion.
+          if (!compoundFiredNow) {
+            try {
+              _showHabitRewardBurst(li, {
+                difficulty:  diff,
+                streakCount: (typeof getStreak === 'function') ? (getStreak(id) || 0) : 0,
+              });
+            } catch (_) {}
+            try { _pulseDailyProgressCount(); } catch (_) {}
+          }
         }
       }
 
