@@ -4,7 +4,77 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.229 Frontend: Settings page redesign (Direction A — tight list) (read this first)
+## Jun 1, 2026 — 1z.230 Frontend: What's Coming · Combat Reveal sheet (read this first)
+
+**TL;DR.** Atmospheric vibe-first reveal sheet wired to the Settings `✦ What's Coming` link (was a placeholder toast in w95). Two rim-lit silhouettes across a violet/gold ritual circle, slow rift pulse, drifting embers, breathing sigil, two short stanzas. No date, no mechanics, no CTA. Close ✕ is the only exit. Replaces the w95 "Coming soon." toast.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit math changed. Pure presentation surface — does not commit to any future feature design.
+
+**Files modified.**
+- `index.html` —
+  - Loaded `Cormorant Garamond:ital,wght@0,500;1,500;1,600` + extended Cinzel weights (`500;600;700;900`) — required by the reveal's typography.
+  - Added `#whats-coming-overlay` + `#whats-coming-sheet` markup immediately after the Settings sheet. Inline SVG silhouettes (~30 lines each) carry their own drop-shadow filters (gold/violet rim glow).
+  - Footer version label `BUILD W95` → `BUILD W96`.
+  - `styles.css?v=310`, `app.js?v=549`.
+- `app.js` —
+  - Replaced the w95 toast handler on `#settings-whats-coming-link` with `openWhatsComingSheet()` wiring.
+  - Added `openWhatsComingSheet` / `closeWhatsComingSheet` / `_wcSpawnEmbers` / `_wcClearEmbers` helpers next to `closeSettings`. Embers (16 transient `<span>` nodes) spawn lazily on open via `requestAnimationFrame` and tear down on close — page costs nothing while hidden.
+  - Ember positions are derived from index (`(i * 0x9E37 + 0x123) % 1000 / 1000`) instead of `Math.random()` so the same set renders each open. Easier to QA and avoids first-frame variance.
+  - Close button + overlay tap + ESC all close the sheet.
+  - Opening from Settings auto-closes Settings underneath after one frame for a continuous transition.
+  - Bumped `APP_BUILD_TAG = '2.2.3-w96'`.
+- `styles.css` — appended ~280 lines of scoped `.whats-coming-*` + `.wc-*` rules. All composite-cheap (no animated `box-shadow`, no animated filter, no animated gradient). Three keyframes: `wc-rift-pulse` (4.5s opacity+height), `wc-rise` (ember translateY+opacity), `wc-breathe` (sigil scale+opacity).
+- `sw.js` — `CACHE_VERSION = 'v5.435'`.
+
+**Hard rules honored (from the design brief).**
+- ✅ No "Duels" naming, framing, or visual assets reused.
+- ✅ No specific mechanics mentioned (no stats names, no turn timers, no class trees, no action menus, no damage numbers, no class matchups).
+- ✅ No sign-up / waitlist / opt-in inputs.
+- ✅ No release date, ETA, or season number.
+- ✅ No "soon" copy in the sheet itself.
+- ✅ No checkmark / progress-bar / coming-soon-badge clichés.
+
+**Reduced-motion behavior.** `@media (prefers-reduced-motion: reduce)` disables ember spawn (CSS keyframe + JS early-return), kills rift pulse and sigil breathe, and disables the sheet open transition. Scene becomes a still composition.
+
+**Per-open cost.**
+- 16 transient `<span>` ember nodes created on open, removed on close.
+- 0 layout reads, 0 forced reflows.
+- 3 CSS animations active (`wc-rift-pulse`, `wc-rise` ×16 ember spans, `wc-breathe`). All transform+opacity only.
+- 0 JS work while open after the initial spawn.
+
+**Preserved invariants.**
+- All Settings IDs unchanged from 1z.229.
+- 5-tap debug-info gesture still works on `#settings-app-ver`.
+- Two-step reset confirm flow untouched.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+- No public events emitted.
+
+**Manual QA checklist (w96).**
+1. Settings → tap `✦ What's Coming` → sheet opens, Settings fades out underneath.
+2. Two silhouettes visible (left gold-rim, right violet-rim), ritual circle between them, gold rift pulse running.
+3. Embers drift upward, ~16 of them, randomized speeds, no banding.
+4. Sigil under "COMBAT AWAKENS" breathes slowly.
+5. Two stanzas visible: "A turn-based reckoning…" and "The one you have been forging…".
+6. Closing line: "Train. The call will come."
+7. Tap ✕ → sheet closes, embers stop. No stuck DOM nodes (inspect `#wc-embers` is empty).
+8. Tap outside (overlay) → sheet closes.
+9. ESC (web/dev only) → sheet closes.
+10. iOS Reduce Motion ON → embers do not spawn, rift static, sigil static. Scene still composed correctly.
+11. Re-open → sheet shows again, embers spawn again (same set per the deterministic seeding).
+12. Tap `✦ What's Coming` from inside a freshly opened app → sheet works without Settings prior.
+13. Footer shows `v2.2.3 · BUILD W96`.
+14. Smoke: Habits, Social, Leaderboards, Armory, Relic Archive unchanged.
+
+**Rollback notes.** Revert this commit to restore the w95 toast placeholder. No data migration required — UI only.
+
+**Open follow-ups.**
+- If on-device QA finds the silhouettes too generic, swap in commissioned art (the SVGs in the markup are placeholders matching the design — single `<g>` per figure, easy to replace).
+- Title text "COMBAT AWAKENS" could shift to a sigil-only first frame with a fade-in for a more cinematic reveal — design currently shows static.
+- Sound is silent. If the team wants a single low ambient drone tied to this sheet, that's a future train (with sound toggle respected).
+
+---
+
+## Jun 1, 2026 — 1z.229 Frontend: Settings page redesign (Direction A — tight list)
 
 **TL;DR.** Subtraction-led Settings redesign per ClaudeDesign Direction A. Single inset list of hairline-divided rows, each with a glanceable state summary on the right (read state without expanding). Cloud Backup folded into Account. Sound is an inline row. Reset all progress sits alone in a bottom block. What's Coming becomes a small de-emphasized link (placeholder — points to atmospheric combat-reveal teaser still in design). Version footer at the bottom (still the 5-tap debug-info unlock target).
 

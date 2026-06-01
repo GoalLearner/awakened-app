@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w95';
+  const APP_BUILD_TAG = '2.2.3-w96';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -31790,6 +31790,74 @@
     }, { once: true });
   }
 
+  // v3 Phase 1z.230 — Atmospheric "What's Coming · Combat Reveal" sheet.
+  // Lazy ember spawn keeps cost at zero while hidden. The sheet is a
+  // pure CSS scene (silhouettes, circle, rift, sigil); JS only manages
+  // the 16 ambient ember nodes on open, and removes them on close.
+  function _wcSpawnEmbers() {
+    const host = document.getElementById('wc-embers');
+    if (!host) return;
+    // Idempotent: clear any prior embers before respawning.
+    host.innerHTML = '';
+    const reduced = (() => {
+      try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+      catch (_) { return false; }
+    })();
+    if (reduced) return;  // CSS already disables ember keyframes; skip DOM cost.
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const e = document.createElement('span');
+      e.className = 'wc-ember';
+      // Pseudo-random per-position values; pulled from i so the same set
+      // shows each open (Date.now / Math.random would be nondeterministic
+      // and harder to QA). Mix indices to break visual banding.
+      const seed = (i * 0x9E37 + 0x123) % 1000 / 1000;
+      const seed2 = ((i + 7) * 0x6BA1 + 0x9F) % 1000 / 1000;
+      const x   = 12 + seed * 76;            // % across
+      const dur = 6 + seed2 * 6;             // seconds
+      const dly = -seed * 12;                // seconds (negative → already in flight)
+      const sz  = 2 + seed2 * 2.4;
+      e.style.left  = x.toFixed(2) + '%';
+      e.style.bottom = (70 + seed * 120).toFixed(1) + 'px';
+      e.style.width  = sz.toFixed(1) + 'px';
+      e.style.height = sz.toFixed(1) + 'px';
+      e.style.animationDuration = dur.toFixed(2) + 's';
+      e.style.animationDelay    = dly.toFixed(2) + 's';
+      host.appendChild(e);
+    }
+  }
+  function _wcClearEmbers() {
+    const host = document.getElementById('wc-embers');
+    if (host) host.innerHTML = '';
+  }
+  function openWhatsComingSheet() {
+    const sheet   = document.getElementById('whats-coming-sheet');
+    const overlay = document.getElementById('whats-coming-overlay');
+    if (!sheet) return;
+    // Open the sheet first, then close Settings underneath so the
+    // transition feels continuous (the existing closeSettings runs
+    // its own fade-out independently).
+    if (overlay) overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+    // Defer ember spawn one frame so the opening transition starts
+    // without competing for layout/paint.
+    requestAnimationFrame(() => { try { _wcSpawnEmbers(); } catch (_) {} });
+    // Close Settings underneath. If Settings isn't open this is a no-op.
+    try {
+      const ss = document.getElementById('settings-sheet');
+      if (ss && !ss.classList.contains('hidden')) closeSettings();
+    } catch (_) {}
+  }
+  function closeWhatsComingSheet() {
+    const sheet   = document.getElementById('whats-coming-sheet');
+    const overlay = document.getElementById('whats-coming-overlay');
+    if (!sheet) return;
+    // Tear down embers immediately — no point animating during fade-out.
+    _wcClearEmbers();
+    sheet.classList.add('hidden');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
   // ── BOTTOM-SHEET DISMISS GESTURE (reusable) ──────────────
   // Attaches swipe/drag-down-to-dismiss to a bottom sheet element.
   //   sheet         — the sheet DOM element (must already be styled as bottom sheet)
@@ -38579,18 +38647,27 @@
       }
     }
 
-    // v3 Phase 1z.229 — Settings → "What's Coming" small link. Placeholder
-    // until the atmospheric combat-reveal teaser ships. Renders a one-line
-    // toast so the affordance is alive but commits to no specifics.
+    // v3 Phase 1z.230 — Settings → "What's Coming" opens the atmospheric
+    // Combat Reveal sheet. Vibe-first, no CTA. Embers spawn on open and
+    // tear down on close so the page costs nothing while hidden.
     {
       const wcBtn = document.getElementById('settings-whats-coming-link');
       if (wcBtn) {
         wcBtn.addEventListener('click', () => {
-          try {
-            if (typeof showHabitToast === 'function') showHabitToast('Coming soon.');
-          } catch (_) {}
+          try { openWhatsComingSheet(); } catch (_) {}
         });
       }
+      const wcClose   = document.getElementById('whats-coming-close');
+      const wcOverlay = document.getElementById('whats-coming-overlay');
+      if (wcClose)   wcClose.addEventListener('click', closeWhatsComingSheet);
+      if (wcOverlay) wcOverlay.addEventListener('click', closeWhatsComingSheet);
+      // ESC closes (web/dev); harmless on iOS.
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const sheet = document.getElementById('whats-coming-sheet');
+          if (sheet && !sheet.classList.contains('hidden')) closeWhatsComingSheet();
+        }
+      });
     }
 
     document.getElementById('day-popup-overlay').addEventListener('click', closeDayPopup);
