@@ -27340,3 +27340,45 @@ body.social-hub-on .duels-page-header {
     opacity: .6 !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.238 — Inline Morning-Briefing time input on the
+   notification explainer. Replaces the static `AT WAKE` chip with a
+   gold-tinted time picker the user can scrub before tapping Continue.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.notif-type-time-edit {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0;
+}
+
+.notif-type-time-input {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f5b842;
+  background: rgba(245, 184, 66, 0.10);
+  border: 1px solid rgba(245, 184, 66, 0.40);
+  border-radius: 8px;
+  padding: 6px 9px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  min-width: 78px;
+  text-align: center;
+}
+.notif-type-time-input:focus {
+  border-color: #f5b842;
+  box-shadow: 0 0 8px rgba(245, 184, 66, 0.35);
+}
+/* Hide the iOS native time-picker icon clutter (still tappable). */
+.notif-type-time-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+  position: absolute;
+  inset: 0;
+}

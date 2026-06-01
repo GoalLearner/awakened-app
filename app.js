@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w104';
+  const APP_BUILD_TAG = '2.2.5-w105';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30916,7 +30916,15 @@
       // Restore originals so the next caller (e.g., in-edit) gets default copy.
       if (titleEl) titleEl.innerHTML = _origTitle;
       if (subEl)   subEl.innerHTML   = _origSub;
-      try { callback && callback(ok); } catch (_) {}
+      // v3 Phase 1z.238 — pass the chosen Morning Briefing time back to
+      // the caller so they can persist it. Falls back to 09:00 if the
+      // input isn't present (legacy callers / cached HTML).
+      let chosenDigest = '09:00';
+      try {
+        const t = (document.getElementById('notif-explain-digest-time') || {}).value;
+        if (typeof t === 'string' && /^\d{2}:\d{2}$/.test(t)) chosenDigest = t;
+      } catch (_) {}
+      try { callback && callback(ok, { digestTime: chosenDigest }); } catch (_) {}
     };
     if (enableBtn) enableBtn.onclick = () => finish(true);
   }
@@ -30932,7 +30940,7 @@
     // button (5.1.1(iv) compliance), so `ok` is always true. The
     // legacy if-not-ok branch remains as defensive dead code in case
     // a future change re-introduces an opt-out path.
-    showNotifExplainer(async (ok) => {
+    showNotifExplainer(async (ok, payload) => {
       if (!ok) {
         // Defensive — legacy "Maybe Later" path. Unreachable in 1z.78.
         try {
@@ -30942,16 +30950,16 @@
         cb && cb();
         return;
       }
+      // v3 Phase 1z.238 — chosen digest time comes from the inline
+      // time input on the explainer screen. Skip the post-permission
+      // confirmation toast since the user just set the time directly.
+      const digestTime = (payload && /^\d{2}:\d{2}$/.test(payload.digestTime || ''))
+        ? payload.digestTime
+        : '09:00';
       try {
         const granted = await Notif.requestPermission();
         if (granted === 'granted') {
-          // Schedule the once-a-day digest at 9:00 AM by default. The
-          // confirmation toast lets the user scroll the time chip to
-          // change it inline, no Settings trip required.
-          try { await Notif.setDailyDigest('09:00'); } catch (_) {}
-          if (typeof showReminderConfirmToast === 'function') {
-            showReminderConfirmToast('09:00');
-          }
+          try { await Notif.setDailyDigest(digestTime); } catch (_) {}
         } else {
           if (typeof showHabitToast === 'function') {
             showHabitToast('Reminders are off. Turn them on in iOS Settings → Awakened anytime.', { sticky: true });
@@ -33874,20 +33882,23 @@
     setStoredWhatsNewSeen(APP_VERSION);
 
     // ── Generate Chapter 1: The Beginning ─────────────────
+    // v3 Phase 1z.238 — The full-screen "THE BEGINNING" chapter reveal
+    // is retired. The 1z.233 cinematic onboarding already delivers the
+    // lore moment; a second reveal felt redundant on-device. The
+    // chapter text is still SAVED so the Status tab can surface it
+    // ("📜 THE BEGINNING · <date>") — we just no longer block entry
+    // to the main app on it. showBeginningReveal() remains callable
+    // for any future surface that wants to replay the chapter.
     saveBeginningIfMissing();
 
     document.getElementById('onboarding').classList.add('hidden');
-    // Show The Beginning reveal BEFORE the main app — it's the
-    // user's first real moment with their permanent narrative.
-    showBeginningReveal(() => {
-      document.getElementById('app').classList.remove('hidden');
-      render();
-      // First-install daily-login bonus: deferred from init() so the
-      // toast doesn't appear over the welcome/onboarding screens.
-      // Now that the main app is finally visible, fire it here.
-      // Idempotent — no-ops if init's gate had already let it through.
-      try { tryGrantDailyLoginBonus(); } catch (_) {}
-    });
+    document.getElementById('app').classList.remove('hidden');
+    render();
+    // First-install daily-login bonus: deferred from init() so the
+    // toast doesn't appear over the welcome/onboarding screens.
+    // Now that the main app is finally visible, fire it here.
+    // Idempotent — no-ops if init's gate had already let it through.
+    try { tryGrantDailyLoginBonus(); } catch (_) {}
   }
 
   // ── The Beginning reveal — full-screen typewriter ────────
