@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w101';
+  const APP_BUILD_TAG = '2.2.5-w102';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -37900,17 +37900,19 @@
   let _introObOnComplete = null;
 
   function shouldShowIntroOnboarding() {
+    // v3 Phase 1z.235 — Legacy "Chapter 1 of 5 · Discipline Becomes
+    // Power" intro splash retired. The 1z.233 cinematic onboarding is
+    // now the only first-run experience. We still flip the v2 version
+    // key so any code that reads it stays consistent with the prior
+    // contract (returning users are treated as having "seen" the
+    // intro). The whole _renderIntroObStep / INTRO_OB_STEPS plumbing
+    // is kept in the file for rollback safety but is unreachable.
     try {
-      if (localStorage.getItem(INTRO_OB_VERSION_KEY) === '1') return false;
-      // Returning users who completed the old welcome flow get
-      // auto-migrated (they don't need to see brand-new content
-      // unless we explicitly bump the version key).
-      if (localStorage.getItem('hb_welcomed') === '1') {
-        try { localStorage.setItem(INTRO_OB_VERSION_KEY, '1'); } catch (_) {}
-        return false;
+      if (localStorage.getItem(INTRO_OB_VERSION_KEY) !== '1') {
+        localStorage.setItem(INTRO_OB_VERSION_KEY, '1');
       }
     } catch (_) {}
-    return true;
+    return false;
   }
 
   function _renderIntroObExtra(step) {
