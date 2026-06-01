@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w105';
+  const APP_BUILD_TAG = '2.2.5-w106';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30911,6 +30911,23 @@
     //  see compliance comment above.)
 
     ov.classList.remove('hidden');
+
+    // v3 Phase 1z.239 — force the native time picker to open on tap
+    // so the chip's "I'm adjustable" affordance is unambiguous.
+    // showPicker() is the modern path (Chrome 99+, iOS 16+). On older
+    // browsers the input still works via focus + keyboard / spinner.
+    const _digestEl = document.getElementById('notif-explain-digest-time');
+    if (_digestEl && !_digestEl.dataset.pickerWired) {
+      _digestEl.dataset.pickerWired = '1';
+      _digestEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        try {
+          if (typeof _digestEl.showPicker === 'function') _digestEl.showPicker();
+          else _digestEl.focus();
+        } catch (_) { try { _digestEl.focus(); } catch (__) {} }
+      });
+    }
+
     const finish = (ok) => {
       ov.classList.add('hidden');
       // Restore originals so the next caller (e.g., in-edit) gets default copy.

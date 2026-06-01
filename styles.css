@@ -27356,29 +27356,38 @@ body.social-hub-on .duels-page-header {
 
 .notif-type-time-input {
   font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #f5b842;
   background: rgba(245, 184, 66, 0.10);
   border: 1px solid rgba(245, 184, 66, 0.40);
   border-radius: 8px;
-  padding: 6px 9px;
+  padding: 8px 10px;
   outline: none;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
-  min-width: 78px;
+  min-width: 92px;
+  min-height: 36px;
   text-align: center;
 }
+.notif-type-time-input:hover,
 .notif-type-time-input:focus {
+  background: rgba(245, 184, 66, 0.18);
   border-color: #f5b842;
-  box-shadow: 0 0 8px rgba(245, 184, 66, 0.35);
+  box-shadow: 0 0 10px rgba(245, 184, 66, 0.35);
 }
-/* Hide the iOS native time-picker icon clutter (still tappable). */
+/* v3 Phase 1z.239 — let the browser's native clock/spinner indicator
+   render inside the chip so users see it's clickable. Gold-tint the
+   icon so it blends with the dark-fantasy palette. */
 .notif-type-time-input::-webkit-calendar-picker-indicator {
-  opacity: 0;
   cursor: pointer;
-  position: absolute;
-  inset: 0;
+  filter: invert(78%) sepia(64%) saturate(450%) hue-rotate(355deg)
+          brightness(101%) contrast(96%);
+  margin-left: 4px;
+  opacity: 0.85;
+}
+.notif-type-time-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
