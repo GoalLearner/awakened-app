@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=310">
+  <link rel="stylesheet" href="styles.css?v=311">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2478,7 +2478,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=549"></script>
+  <script src="app.js?v=550"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2653,6 +2653,19 @@
       <span class="settings-title">Settings</span>
       <button id="settings-close" class="settings-close-btn" aria-label="Close">✕</button>
     </div>
+
+    <!-- v3 Phase 1z.231 — promoted "What's Coming" hero card. Lives
+         at the top of the sheet (above the list) so users see the
+         teaser before any settings rows. Opens the atmospheric
+         Combat Reveal sheet (1z.230). -->
+    <button id="settings-whats-coming-top" class="settings-v2-wctop" type="button">
+      <span class="settings-v2-wctop-spark" aria-hidden="true">✦</span>
+      <span class="settings-v2-wctop-text">
+        <span class="settings-v2-wctop-label">What's Coming</span>
+        <span class="settings-v2-wctop-sub">A glimpse</span>
+      </span>
+      <span class="settings-v2-wctop-chev" aria-hidden="true">›</span>
+    </button>
 
     <div class="settings-v2-list">
 
@@ -2881,15 +2894,12 @@
       Reset all progress
     </button>
 
-    <!-- What's Coming — small de-emphasized link. Points to the
-         atmospheric combat-reveal page (in design as of 1z.229). -->
-    <button id="settings-whats-coming-link" class="settings-v2-whatscoming" type="button">
-      ✦ <b>What's Coming</b>
-    </button>
+    <!-- v3 Phase 1z.231 — bottom "What's Coming" link removed; the
+         hero card at the top of the sheet now owns this affordance. -->
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.3 · BUILD W96</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.3 · BUILD W97</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

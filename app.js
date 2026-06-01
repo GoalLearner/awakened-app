@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.3';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.3-w96';
+  const APP_BUILD_TAG = '2.2.3-w97';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -38650,13 +38650,16 @@
     // v3 Phase 1z.230 — Settings → "What's Coming" opens the atmospheric
     // Combat Reveal sheet. Vibe-first, no CTA. Embers spawn on open and
     // tear down on close so the page costs nothing while hidden.
+    //
+    // v3 Phase 1z.231 — promoted from a small bottom link to a top hero
+    // card (#settings-whats-coming-top). The old #settings-whats-coming-link
+    // ID is still wired here as a fallback in case cached HTML lingers.
     {
+      const wcTop = document.getElementById('settings-whats-coming-top');
       const wcBtn = document.getElementById('settings-whats-coming-link');
-      if (wcBtn) {
-        wcBtn.addEventListener('click', () => {
-          try { openWhatsComingSheet(); } catch (_) {}
-        });
-      }
+      const onOpen = () => { try { openWhatsComingSheet(); } catch (_) {} };
+      if (wcTop) wcTop.addEventListener('click', onOpen);
+      if (wcBtn) wcBtn.addEventListener('click', onOpen);
       const wcClose   = document.getElementById('whats-coming-close');
       const wcOverlay = document.getElementById('whats-coming-overlay');
       if (wcClose)   wcClose.addEventListener('click', closeWhatsComingSheet);

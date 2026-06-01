@@ -26639,3 +26639,77 @@ body.social-hub-on .duels-page-header {
   .wc-rift   { opacity: 0.45; }
   .whats-coming-sheet { transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.231 — Promoted "What's Coming" hero card at the top
+   of the Settings sheet. Replaces the small bottom link from 1z.229.
+   Tasteful gold-accent card: sparkle, Cinzel label, secondary teaser,
+   chevron. Tappable across the entire row. Scoped under .settings-v2.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.settings-v2 .settings-v2-wctop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% - 32px);
+  margin: 4px 16px 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(180deg,
+    rgba(245, 184, 66, 0.10),
+    rgba(139, 92, 246, 0.08));
+  border: 1px solid rgba(245, 184, 66, 0.32);
+  box-shadow: 0 0 18px rgba(245, 184, 66, 0.10);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.settings-v2 .settings-v2-wctop:active {
+  background: linear-gradient(180deg,
+    rgba(245, 184, 66, 0.14),
+    rgba(139, 92, 246, 0.12));
+}
+
+.settings-v2 .settings-v2-wctop-spark {
+  font-size: 22px;
+  color: #f5b842;
+  text-shadow: 0 0 12px rgba(245, 184, 66, 0.55);
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.settings-v2 .settings-v2-wctop-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.settings-v2 .settings-v2-wctop-label {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1.4px;
+  color: #ffd270;
+  text-shadow: 0 0 10px rgba(245, 184, 66, 0.35);
+  line-height: 1.2;
+}
+.settings-v2 .settings-v2-wctop-sub {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #bdbad6;
+  margin-top: 3px;
+  letter-spacing: 0.2px;
+}
+
+.settings-v2 .settings-v2-wctop-chev {
+  color: #f5b842;
+  font-size: 22px;
+  font-weight: 400;
+  flex: 0 0 auto;
+  opacity: 0.85;
+  margin-left: 2px;
+}
