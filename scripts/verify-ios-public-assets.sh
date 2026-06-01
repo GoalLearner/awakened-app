@@ -22,6 +22,7 @@
 #   - APP_VERSION         (app.js)
 #   - APP_BUILD_TAG       (app.js)
 #   - app.js?v=...        (index.html)
+#   - styles.css?v=...    (index.html)  [added 1z.245]
 #   - CACHE_VERSION       (sw.js)
 #
 # USAGE (MacBook, after `npx cap copy ios` / `cap sync ios`, BEFORE
@@ -96,6 +97,12 @@ extract_appjs_v() {
     | head -n1
 }
 
+extract_stylescss_v() {
+  grep -m1 -oE 'styles\.css\?v=[0-9]+' "$1" \
+    | sed -E "s/.*=//" \
+    | head -n1
+}
+
 extract_cache_version() {
   grep -m1 -oE "CACHE_VERSION[[:space:]]*=[[:space:]]*'[^']+'" "$1" \
     | sed -E "s/.*=[[:space:]]*'([^']+)'/\1/" \
@@ -106,12 +113,14 @@ extract_cache_version() {
 ROOT_VERSION="$(extract_app_version app.js)"
 ROOT_BUILD_TAG="$(extract_build_tag app.js)"
 ROOT_APPJS_V="$(extract_appjs_v index.html)"
+ROOT_STYLES_V="$(extract_stylescss_v index.html)"
 ROOT_CACHE_VERSION="$(extract_cache_version sw.js)"
 
 # ── Read iOS public/ values ─────────────────────────────────────────
 IOS_VERSION="$(extract_app_version ios/App/App/public/app.js)"
 IOS_BUILD_TAG="$(extract_build_tag ios/App/App/public/app.js)"
 IOS_APPJS_V="$(extract_appjs_v ios/App/App/public/index.html)"
+IOS_STYLES_V="$(extract_stylescss_v ios/App/App/public/index.html)"
 IOS_CACHE_VERSION="$(extract_cache_version ios/App/App/public/sw.js)"
 
 # ── Print summary ───────────────────────────────────────────────────
@@ -140,6 +149,7 @@ report() {
 report "APP_VERSION"     "$ROOT_VERSION"        "$IOS_VERSION"
 report "APP_BUILD_TAG"   "$ROOT_BUILD_TAG"      "$IOS_BUILD_TAG"
 report "app.js?v="       "$ROOT_APPJS_V"        "$IOS_APPJS_V"
+report "styles.css?v="   "$ROOT_STYLES_V"       "$IOS_STYLES_V"
 report "sw.js CACHE_VER" "$ROOT_CACHE_VERSION"  "$IOS_CACHE_VERSION"
 
 # v3 Phase 1z.119 — hash-compare simulated-leaderboard.js root vs iOS
