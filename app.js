@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w102';
+  const APP_BUILD_TAG = '2.2.5-w103';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21428,6 +21428,14 @@
         try { localStorage.removeItem(k); } catch (_) {}
       });
     } catch (_) {}
+    // v3 Phase 1z.236 — Belt-and-braces: explicitly tear down the auth
+    // user record so devSignInIfLocalhost re-stubs cleanly on reload.
+    // Auth.signOut also clears cloud-sync state if available.
+    try {
+      if (typeof Auth !== 'undefined' && Auth && typeof Auth.signOut === 'function') {
+        Auth.signOut();
+      }
+    } catch (_) {}
     try { sessionStorage.clear(); } catch (_) {}
     try {
       if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
@@ -33393,17 +33401,21 @@
       }, 850);
     });
 
-    // Kick off. If the hunter name is already claimed (returning user
-    // who started but didn't finish onboarding), skip the opening +
-    // naming screens and land on the WHY question with name pre-filled.
+    // Pre-fill the name field if a name is already on disk (auth
+    // alias from signin, or dev stub). The user can keep it or
+    // change it — we no longer auto-skip the opening / naming
+    // screens. Skipping made dev/QA reset land in the middle of
+    // the flow, and made real users lose the cinematic intro
+    // simply because they'd signed in with Apple ID.
     try {
       const claimed = (localStorage.getItem('hb_name') || '').trim();
-      const already = localStorage.getItem('hb_hunter_name_claimed') === '1';
-      if (already && claimed && claimed !== 'Hunter') {
-        state.name = claimed;
-        if (field) field.value = claimed;
-        show(2);  // jump directly to WHY (screen 3)
-        return;
+      if (claimed && claimed !== 'Hunter') {
+        if (field) {
+          field.value = claimed;
+          // Confirm button is gated on input length; trigger the
+          // enable check by firing the input event.
+          try { field.dispatchEvent(new Event('input')); } catch (_) {}
+        }
       }
     } catch (_) {}
     show(0);
@@ -39198,34 +39210,14 @@
     // users see the 5-card intro before the existing welcome flow.
     try { setupIntroOnboarding(); } catch (_) {}
     const enterFirstRunFlow = () => {
-      // v3 Phase 1j — single hunter-name claim. The signin-alias
-      // step is the canonical name claim now. If we've already got
-      // a real name on disk (set by Auth on alias commit OR by a
-      // prior session), bypass the older "A new hunter awakens"
-      // welcome screen — it would just ask for the name again.
-      const claimedName = (localStorage.getItem('hb_name') || '').trim();
-      const alreadyClaimed = claimedName && claimedName !== 'Hunter';
-      if (alreadyClaimed) {
-        try { localStorage.setItem('hb_hunter_name_claimed', '1'); } catch (_) {}
-      }
+      // v3 Phase 1z.236 — Always route first-run through the cinematic
+      // flow (via showWelcomeScreen → showCinematicOnboarding). The
+      // legacy 1j "skip welcome if alias already claimed" bypass is
+      // retired — dev/QA reset was landing on the path screen because
+      // devSignInIfLocalhost pre-writes hb_name='DevUser', tripping
+      // that bypass. The cinematic flow pre-fills the name field if
+      // a claimed name exists; it no longer auto-skips screens 1+2.
       if (needsWelcome) {
-        if (alreadyClaimed) {
-          // Skip the welcome ceremony entirely — name is already
-          // claimed via signin. Mark welcomed + route to path picker.
-          try { localStorage.setItem('hb_welcomed', '1'); } catch (_) {}
-          needsWelcome = false;
-          if (needsOnboarding) {
-            showPathScreen();
-          } else {
-            render();
-            setupFridayBanner();
-            maybeAutoShowWhatsNew();
-            setTimeout(() => {
-              try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
-            }, 900);
-          }
-          return;
-        }
         showWelcomeScreen();
       } else if (needsOnboarding) {
         // v3 Phase 1z.233 — Partial-onboarding users (welcomed but not
