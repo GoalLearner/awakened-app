@@ -27412,16 +27412,18 @@ body.social-hub-on .duels-page-header {
   top: calc(100% + 8px);
   right: 0;
   z-index: 10010;
-  width: 220px;
+  width: 240px;
   background: linear-gradient(180deg, #15153a 0%, #0e0e26 100%);
   border: 1px solid rgba(245, 184, 66, 0.30);
   border-radius: 12px;
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.5),
     0 0 22px rgba(139, 92, 246, 0.18);
-  /* Right padding reserves space for the floating AM badge so it
-     never overlaps the minute column. */
-  padding: 10px 48px 10px 10px;
+  /* v3 Phase 1z.243 — Widened right padding so the floating AM badge
+     has a clear gutter beside the minute column. With the active pill
+     at scale(1.02) and the AM badge sitting at right: 14px, the gap
+     stays ≥ 14px even with the largest selection. */
+  padding: 12px 64px 12px 12px;
   overflow: hidden;
 }
 .ndp-panel.hidden { display: none; }
@@ -27431,7 +27433,9 @@ body.social-hub-on .duels-page-header {
   grid-template-columns: 1fr 12px 1fr;
   align-items: stretch;
   gap: 4px;
-  max-height: 200px;
+  /* v3 Phase 1z.243 — Taller so all 8 hour rows (4–11) and 4 minute
+     rows can be reached comfortably without aggressive scrolling. */
+  max-height: 296px;
   overflow: hidden;
 }
 .ndp-col {
@@ -27442,7 +27446,9 @@ body.social-hub-on .duels-page-header {
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(245, 184, 66, 0.4) transparent;
-  padding: 4px 0;
+  /* Generous vertical padding lets the first / last items center into
+     the selection zone when the user scrolls to extremes. */
+  padding: 12px 0 20px;
 }
 .ndp-col::-webkit-scrollbar { width: 5px; height: 0; }
 .ndp-col::-webkit-scrollbar-thumb {
@@ -27465,20 +27471,23 @@ body.social-hub-on .duels-page-header {
 
 /* v3 Phase 1z.242 — AM moved to the top-right corner of the panel,
    anchored next to the first minute row. No longer occupies a grid
-   column; floats over the columns via absolute positioning. */
+   column; floats over the columns via absolute positioning.
+   v3 Phase 1z.243 — pulled further from the column edge and slimmed
+   so the gutter between AM and the selected minute pill reads as
+   intentional rather than touching. */
 .ndp-lock {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.4px;
   color: rgba(245, 184, 66, 0.95);
   background: rgba(245, 184, 66, 0.14);
   border: 1px solid rgba(245, 184, 66, 0.45);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 4px 7px;
   cursor: default;
   user-select: none;
   pointer-events: none;
@@ -27507,7 +27516,9 @@ body.social-hub-on .duels-page-header {
   color: #ffd270;
   border: 1px solid rgba(245, 184, 66, 0.55);
   box-shadow: 0 0 10px rgba(245, 184, 66, 0.25);
-  transform: scale(1.04);
+  /* Tighter scale so the highlighted pill doesn't push into the AM
+     gutter. The earlier 1.04 felt cramped at 220px panel width. */
+  transform: scale(1.02);
 }
 .ndp-item:focus { outline: none; }
 

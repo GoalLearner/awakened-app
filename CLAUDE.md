@@ -4,7 +4,68 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.234 Frontend: Debug-only "Reset to Fresh User" button (read this first)
+## Jun 1, 2026 — 1z.243 Frontend: Polish onboarding time picker layout/scroll (read this first)
+
+**TL;DR.** Two visual bugs in the custom Morning Briefing time picker shipped in 1z.241/242: the AM badge was touching the highlighted "00" pill (cramped right gutter + 1.04× scale on the active item), and the hour column only fit ~5 rows so users couldn't comfortably reach `9` and beyond. Surgical CSS + one JS line fixes both. No backend, no logic change.
+
+**Root cause.**
+- **AM ↔ 00 collision:** panel had `padding-right: 48px` (~12px gap reserved); AM badge `right: 12px`; minute column's selected pill rendered with `transform: scale(1.04)`. With the selected pill enlarged, only ~4px of breathing room remained between the column edge and the AM badge.
+- **Hour column truncated:** `.ndp-cols { max-height: 200px }` fit only 5–6 rows at the chosen item padding/font size. With 8 hours (`4–11`) the bottom rows clipped at the edge, and `scrollIntoView({ block: 'nearest' })` doesn't reposition partially visible items, so `9` stayed at the cropped boundary on open.
+
+**Fix (`styles.css`).**
+- `.ndp-panel` width `220 → 240px`, padding-right `48 → 64px`.
+- `.ndp-cols` max-height `200 → 296px` (room for all 8 hours).
+- `.ndp-col` padding `4px 0 → 12px 0 20px` (first/last items can center into selection zone).
+- `.ndp-lock` (AM badge) moved from `top:10/right:12` to `top:14/right:14`, font `12 → 11.5px`, padding `4 8 → 4 7` — visibly intentional spacing from the column.
+- `.ndp-item.is-active` `transform: scale(1.04) → 1.02` — highlight stays visible without pushing into the AM gutter.
+
+**Fix (`app.js`).**
+- `openPanel()` — `scrollIntoView({ block: 'nearest' })` → `'center'`. Active row lands in the middle of the column when the panel opens, with siblings visible above and below.
+
+**Preserved.**
+- 8 hour values (4–11), 4 minute values (00/15/30/45), AM lock — all unchanged.
+- `_snapMorningTime()` snap-on-submit defense from 1z.240 unchanged.
+- Continue → permission → app handoff unchanged.
+- Settings → Notifications → Morning Briefing still reflects the chosen time.
+- No horizontal scrollbars; gold-on-violet hover; reduced-motion fallback.
+- Compliance with App Store 5.1.1(iv) — single neutral primary unchanged.
+
+**Files modified.**
+- `styles.css` — 7 declarations touched in `.ndp-*` block.
+- `app.js` — 1 line (`'nearest' → 'center'`) + `APP_BUILD_TAG` bump.
+- `index.html` — knob bumps.
+- `sw.js` — `CACHE_VERSION` bump.
+
+**Knobs.**
+- `APP_BUILD_TAG` `2.2.5-w109 → 2.2.5-w110`.
+- `app.js?v=` `562 → 563`.
+- `styles.css?v=` `316 → 317`.
+- `sw.js CACHE_VERSION` `v5.448 → v5.449`.
+- `auth.js?v=20`, `simulated-leaderboard.js?v=7`, `QA_UNLOCK_C_RANK_DUNGEONS=false` — all preserved.
+
+**Manual QA checklist.**
+1. Reset all progress → fresh onboarding.
+2. Reach "Let the system call you back."
+3. Tap the Morning Briefing chip → picker opens.
+4. Confirm AM badge sits with clear gold gutter beside the highlighted `00`.
+5. Hour column shows multiple rows above and below the active value; user can scroll to reach `4` and `11` without the rows clipping awkwardly.
+6. Pick `9` → display updates, picker closes on minute pick.
+7. Continue → permission → main app.
+8. Settings → Notifications → Morning Briefing shows the chosen time.
+9. Smoke: tab navigation, Habits, Social, Leaderboards unchanged.
+
+**Rollback notes.** Single-commit revert restores the 1z.242 picker; behavioral contract is identical, only visual numbers change.
+
+**Confirmations.**
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload.
+- ✅ No XP / streak / rank / HealthKit / boss / leaderboard math changed.
+- ✅ Onboarding flow logic untouched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 1, 2026 — 1z.234 Frontend: Debug-only "Reset to Fresh User" button
 
 **TL;DR.** Tiny QA-quality-of-life addition. The cinematic onboarding (1z.233) is first-run only — testing it requires wiping localStorage + service workers + Cache Storage. Doing that via DevTools every iteration is friction. This adds a debug-gated button inside the existing diagnostics surface (5-tap on the Settings version footer) that does the full nuke + reload in one tap. Hidden from normal users.
 

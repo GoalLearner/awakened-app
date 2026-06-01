@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w109';
+  const APP_BUILD_TAG = '2.2.5-w110';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30971,11 +30971,14 @@
       isOpen = true;
       panel.classList.remove('hidden');
       trigger.setAttribute('aria-expanded', 'true');
-      // Scroll active items into view inside their columns.
+      // v3 Phase 1z.243 — Center the active row in the column so the
+      // user can see neighbors above and below. `'nearest'` left the
+      // selected hour at the bottom edge when it was already partially
+      // visible, which is what made 9 unreachable without scrolling.
       [hCol, mCol].forEach((col) => {
         const active = col.querySelector('.ndp-item.is-active');
         if (active && typeof active.scrollIntoView === 'function') {
-          try { active.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+          try { active.scrollIntoView({ block: 'center' }); } catch (_) {}
         }
       });
     }
