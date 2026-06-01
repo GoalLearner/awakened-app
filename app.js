@@ -196,7 +196,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w106';
+  const APP_BUILD_TAG = '2.2.5-w107';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30891,6 +30891,25 @@
   // with onboarding/settings code paths; cb is always invoked with
   // ok=true (no cancel path remains). Legacy opts.cancelLabel /
   // opts.enableLabel are ignored — the button copy stays neutral.
+  // v3 Phase 1z.240 — Snap a user-chosen time to a 15-min AM slot.
+  // Morning Briefing is, by definition, in the morning — anything ≥
+  // noon is clamped to 11:45 AM. Minute is rounded to the nearest
+  // quarter; if rounding crosses an hour boundary into PM territory,
+  // we clamp instead of advancing. Falls back to 09:00 on bad input.
+  function _snapMorningTime(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+    if (!m) return '09:00';
+    let h  = parseInt(m[1], 10);
+    let mi = parseInt(m[2], 10);
+    if (isNaN(h)) h = 9;
+    if (isNaN(mi)) mi = 0;
+    mi = Math.round(mi / 15) * 15;
+    if (mi >= 60) { mi = 0; h += 1; }
+    if (h >= 12)  { h = 11; mi = 45; }   // clamp to AM
+    if (h < 0)    { h = 0;  mi = 0; }
+    return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+  }
+
   function showNotifExplainer(callback, opts) {
     opts = opts || {};
     const ov = document.getElementById('notif-explain-overlay');
@@ -30916,6 +30935,12 @@
     // so the chip's "I'm adjustable" affordance is unambiguous.
     // showPicker() is the modern path (Chrome 99+, iOS 16+). On older
     // browsers the input still works via focus + keyboard / spinner.
+    //
+    // v3 Phase 1z.240 — Morning Briefing constraints. Native
+    // <input type="time"> ignores `step` in most browser dropdowns
+    // and can't restrict AM/PM. Snap any chosen value to a 15-min
+    // AM-only slot on change/blur so the user can't end up with
+    // 9:07 PM as their Morning Briefing time.
     const _digestEl = document.getElementById('notif-explain-digest-time');
     if (_digestEl && !_digestEl.dataset.pickerWired) {
       _digestEl.dataset.pickerWired = '1';
@@ -30926,6 +30951,12 @@
           else _digestEl.focus();
         } catch (_) { try { _digestEl.focus(); } catch (__) {} }
       });
+      const _snap = () => {
+        const snapped = _snapMorningTime(_digestEl.value);
+        if (snapped && snapped !== _digestEl.value) _digestEl.value = snapped;
+      };
+      _digestEl.addEventListener('change', _snap);
+      _digestEl.addEventListener('blur',   _snap);
     }
 
     const finish = (ok) => {
@@ -30936,10 +30967,15 @@
       // v3 Phase 1z.238 — pass the chosen Morning Briefing time back to
       // the caller so they can persist it. Falls back to 09:00 if the
       // input isn't present (legacy callers / cached HTML).
+      // v3 Phase 1z.240 — final snap pass (defense in depth) so we
+      // never persist a PM time or a non-15-min value, even if the
+      // change/blur listeners somehow didn't fire.
       let chosenDigest = '09:00';
       try {
         const t = (document.getElementById('notif-explain-digest-time') || {}).value;
-        if (typeof t === 'string' && /^\d{2}:\d{2}$/.test(t)) chosenDigest = t;
+        if (typeof t === 'string' && /^\d{2}:\d{2}$/.test(t)) {
+          chosenDigest = _snapMorningTime(t);
+        }
       } catch (_) {}
       try { callback && callback(ok, { digestTime: chosenDigest }); } catch (_) {}
     };

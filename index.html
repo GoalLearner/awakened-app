@@ -2180,7 +2180,11 @@
                Beginning chapter reveal are gone — Continue both grants
                permission AND saves whichever time the user picked here. -->
           <label class="notif-type-time-edit" aria-label="Morning Briefing time">
-            <input id="notif-explain-digest-time" type="time" value="09:00" step="900"
+            <!-- v3 Phase 1z.240 — min/max scope the picker to AM; step
+                 enforces 15-min increments. JS additionally snaps any
+                 value the browser accepts outside these bounds. -->
+            <input id="notif-explain-digest-time" type="time" value="09:00"
+                   min="00:00" max="11:45" step="900"
                    class="notif-type-time-input"
                    autocomplete="off">
           </label>
@@ -2639,7 +2643,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=559"></script>
+  <script src="app.js?v=560"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3060,7 +3064,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W106</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W107</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
