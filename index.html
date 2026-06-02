@@ -899,12 +899,19 @@
            ABOVE the Add Friend input/button (per user request:
            "friends above the add friends"). All render target IDs
            preserved so renderFriendsSection JS works unchanged. -->
+      <!-- v3 Phase 1z.268 — friends accordion now starts EXPANDED.
+           The 1z.267B Guild Hall summary widget removal made the
+           friends list the de-facto roster surface; opening it by
+           default removes a tap and matches user expectation
+           ("the friend list should be visible by default"). The
+           toggle still collapses/expands on tap via
+           setupGuildFriendsAccordion. -->
       <section id="guildhall-friends-section"
-               class="social-section social-section--friends guildhall-section guildhall-section--friends is-collapsed">
+               class="social-section social-section--friends guildhall-section guildhall-section--friends">
         <button type="button"
                 id="guildhall-friends-toggle"
                 class="guildhall-friends-toggle"
-                aria-expanded="false"
+                aria-expanded="true"
                 aria-controls="guildhall-friends-body-wrap">
           <!-- v3 Phase 1z.175 — redundant "· GUILD ·" kicker
                removed; the title itself is now "GUILD" so the
@@ -2706,7 +2713,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=583"></script>
+  <script src="app.js?v=584"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3127,7 +3134,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W130</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W131</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
