@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w133';
+  const APP_BUILD_TAG = '2.2.5-w134';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20828,15 +20828,29 @@
     }, 80);
   }
 
-  // Render the identity button: PNG icon if selected, emoji fallback.
+  // Render the identity button.
+  //   - PNG icon if iconKey selected → <img> centered via flex parent
+  //   - Emoji if emoji-mode opted in  → emoji glyph centered via flex
+  //   - Otherwise (fresh state)       → minimal dark placeholder tile
+  //
+  // v3 Phase 1z.270C — removed the ⚡ default visual. A fresh modal
+  // now shows a clean dark placeholder tile instead of a lightning
+  // emoji so the resting state reads as "intentional empty," not as
+  // "lightning is your icon."
   function _renderCustomIconBtn() {
     const btn = document.getElementById('custom-emoji-btn');
     if (!btn) return;
     if (_customIconKey && HABIT_ICON_BY_KEY[_customIconKey]) {
       btn.innerHTML = '<img class="custom-emoji-btn-img" src="' +
         HABIT_ICON_BY_KEY[_customIconKey] + '" alt="" draggable="false" loading="eager" decoding="async">';
+    } else if (_customEmojiModeChosen && _customEmoji) {
+      // User explicitly opted into emoji mode — render whatever
+      // emoji they chose (including ⚡ if that's what they picked).
+      // The placeholder is reserved for the resting "nothing picked
+      // yet" state.
+      btn.innerHTML = '<span class="custom-emoji-btn-glyph">' + esc(_customEmoji) + '</span>';
     } else {
-      btn.textContent = _customEmoji || '⚡';
+      btn.innerHTML = '<span class="custom-emoji-btn-placeholder" aria-hidden="true"></span>';
     }
   }
 

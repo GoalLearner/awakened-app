@@ -10708,10 +10708,20 @@ footer {
 }
 .custom-emoji-btn {
   width: 56px; height: 52px;
+  /* v3 Phase 1z.270C — flex centering so every state (PNG icon,
+     emoji glyph, dark placeholder) lands dead-center inside the
+     trigger. The previous inline/text default left the selected
+     icon slightly top-left because the parent didn't enforce a
+     centering layout. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   font-size: 1.6rem;
+  line-height: 1;
   cursor: pointer;
   -webkit-appearance: none;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -10772,11 +10782,40 @@ footer {
    Scoped to the Create Your Own Habit modal. Identity button shows
    either an emoji or a PNG icon (via .custom-emoji-btn-img); the grid
    below it toggles open on identity-button click. */
+/* v3 Phase 1z.270C — All three trigger-content modes share the same
+   centered footprint inside the 56×52 button. Block-level + explicit
+   width/height + object-fit means the contents never inherit inline
+   whitespace from a text-mode parent. */
 .custom-emoji-btn-img {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   display: block;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.custom-emoji-btn-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 1.6rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+/* Default resting state — a clean dark tile that reads as
+   "ready for your pick," not as a chosen icon. Subtle outline +
+   tiny inner glow let it look intentional without becoming busy. */
+.custom-emoji-btn-placeholder {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: #07071a;
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.50);
+  flex: 0 0 auto;
 }
 .custom-icon-grid {
   margin: 4px 0 10px;

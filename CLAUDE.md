@@ -4,7 +4,101 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.270B Frontend: Require explicit custom habit icon choice (read this first)
+## Jun 2, 2026 — 1z.270C Frontend: Polish custom habit icon trigger (read this first)
+
+**TL;DR.** Removed the ⚡ lightning bolt from the resting/default trigger state and added flex centering so every state (PNG icon, emoji glyph, placeholder) sits dead-center inside the 56×52 button. The new default is a clean dark tile that reads as "ready for your pick," not as "lightning is the icon."
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit creation / persistence / validation / XP / streak / HealthKit logic touched — pure render + CSS polish. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `app.js` —
+  - `_renderCustomIconBtn()`: three branches now.
+    1. `iconKey` set → `<img class="custom-emoji-btn-img">` (existing path)
+    2. `_customEmojiModeChosen === true` → `<span class="custom-emoji-btn-glyph">` rendering the picked emoji (including ⚡ if user picked it on purpose)
+    3. **Default / resting** → `<span class="custom-emoji-btn-placeholder" aria-hidden="true">` — a clean dark inner tile, NOT the old ⚡ text
+  - Bumped `APP_BUILD_TAG = '2.2.5-w134'`.
+- `index.html` — knobs only: `app.js?v=587`, `styles.css?v=332`, footer `BUILD W134`.
+- `styles.css` —
+  - `.custom-emoji-btn`: added `display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1;` so all contents center.
+  - `.custom-emoji-btn-img`: 28→30px, explicit `display: block; margin: 0; flex: 0 0 auto;`
+  - `.custom-emoji-btn-glyph` (new): centered emoji glyph footprint, 30×30, flex inline.
+  - `.custom-emoji-btn-placeholder` (new): clean dark tile, 30×30, near-black `#07071a` background, subtle violet outline + inner shadow.
+- `sw.js` — `CACHE_VERSION = 'v5.473'`.
+
+### Placeholder treatment
+
+Inner 30×30 dark tile:
+- `background: #07071a` (near-black; matches modal dark base)
+- `border: 1px solid rgba(167, 139, 250, 0.22)` (whisper of violet — reads as Awakened)
+- `box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.50)` (depth so it doesn't look flat)
+- `border-radius: 7px`
+
+The outer trigger button still has its own violet hover/ring from 1z.270B so the whole element reads as tappable.
+
+### Centering fix
+
+Root cause: `.custom-emoji-btn` was originally a text-emoji button. It used the browser default inline/text rendering. When 1z.270 dropped an `<img>` inside, the image inherited the text baseline + line-height alignment — visible as a slight top-left bias.
+
+Fix: `display: flex; align-items: center; justify-content: center;` on the button parent, plus all three content modes (img, glyph, placeholder) get the same 30×30 footprint with `flex: 0 0 auto`. Single-source centering; every state visually identical in position.
+
+### Preserved behavior
+
+- Icon picker open/close (`#custom-icon-grid` toggle) — unchanged
+- Selected icon persistence (`habit.iconKey`) — unchanged
+- "Use emoji instead" fallback path — unchanged, including emoji-mode validation flag from 1z.270B
+- Create Habit gate (`name && stat && (iconKey || emojiMode)`) — unchanged
+- Stat selection — unchanged
+- Inline `Choose an icon first.` validation — unchanged
+- Legacy custom habits without `iconKey` — still render their emoji via `habitIconHtml` fallback
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w134` |
+| `app.js?v=` | `587` |
+| `styles.css?v=` | `332` |
+| `sw.js CACHE_VERSION` | `v5.473` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w134)
+
+1. Add Habits → Create Your Own.
+2. **Default trigger no longer shows ⚡** — it's a small dark tile inside the violet-outlined button.
+3. Trigger still reads as tappable (violet outline + hover).
+4. Tap trigger / scroll modal → icon grid opens (no behavior change).
+5. Pick `Hydrate` → water-drop PNG sits **dead-center** in the trigger.
+6. Pick `Strength` → strength PNG sits dead-center.
+7. Pick `Finance` → finance PNG sits dead-center.
+8. Tap "Use emoji instead" → emoji picker opens, pick 🔥 → flame glyph sits dead-center.
+9. (Edge case) Pick ⚡ via emoji picker → lightning glyph shows in the trigger as a real user-selected emoji (NOT the old default).
+10. Save → habit appears with chosen icon. No regression.
+11. Cancel modal → reopen → resting state again shows the dark placeholder.
+12. Legacy custom habits (no iconKey) → still render their emoji exactly as before.
+13. iPhone viewport — no clipping, no horizontal overflow.
+
+### Rollback notes
+
+Single-commit revert restores w133 (⚡ default + minor mis-centering). No data implications — `iconKey` field shape unchanged.
+
+### Confirmations
+
+- ✅ `node --check app.js` + `node --check sw.js` pass
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty)
+- ✅ No lightning emoji in default trigger
+- ✅ Default trigger looks intentional (dark tile with violet outline)
+- ✅ Selected icon is truly centered (flex parent + matching 30×30 footprint across all three modes)
+- ✅ Existing custom habit icon flow still works
+- ✅ Emoji fallback preserved
+- ✅ No unrelated logic changed
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.270B Frontend: Require explicit custom habit icon choice
 
 **TL;DR.** On-device QA of 1z.270 showed users tapping Create Habit without realizing the lightning bolt was a tappable picker — they shipped with the default emoji unintentionally. This phase makes the icon choice unmissable: grid opens by default, explicit `CHOOSE HABIT ICON` label, Create Habit is now disabled until the user either picks an icon OR explicitly opts into emoji mode via "Use emoji instead". Belt-and-braces inline validation if anything bypasses the disabled button. Emoji fallback path preserved.
 
