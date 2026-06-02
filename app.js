@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w119';
+  const APP_BUILD_TAG = '2.2.5-w120';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20881,6 +20881,13 @@
   }
 
   function openLibrary() {
+    // v3 Phase 1z.252B — Reset filter / search / selection state on every
+    // open so re-entry starts clean. Carries over the prior session's
+    // chip selection would be confusing.
+    _libActiveChip = 'pop';
+    _libQuery      = '';
+    _libSelected.clear();
+    _libCommitting = false;
     renderLibrary();
     document.getElementById('lib-overlay').classList.remove('hidden');
     document.getElementById('lib-sheet').classList.remove('hidden');
@@ -20889,194 +20896,415 @@
   function closeLibrary() {
     document.getElementById('lib-overlay').classList.add('hidden');
     document.getElementById('lib-sheet').classList.add('hidden');
+    // Drop selection state so a future open doesn't show stale picks.
+    _libSelected.clear();
+    _libCommitting = false;
+  }
+
+  // v3 Phase 1z.252B — Add Habits sheet redesign state (in-memory).
+  // _libActiveChip: 'pop' | 'cat:<labelKey>' — which chip is selected.
+  // _libQuery:      current search text (lowercased, trimmed).
+  // _libSelected:   Set<defaultHabitIdx> awaiting commit.
+  // _libCommitting: guard against rapid double-tap on the CTA.
+  let _libActiveChip = 'pop';
+  let _libQuery      = '';
+  const _libSelected = new Set();
+  let _libCommitting = false;
+
+  // Chip key → existing OB_CATEGORIES label. Order matches the design.
+  const LIB_CHIPS = [
+    { key: 'pop',    label: 'Popular',         catLabel: null                                },
+    { key: 'phys',   label: 'Physical',        catLabel: 'Physical Performance'              },
+    { key: 'mental', label: 'Mental & Focus',  catLabel: 'Mental & Focus'                    },
+    { key: 'nutr',   label: 'Nutrition',       catLabel: 'Nutrition'                         },
+    { key: 'disc',   label: 'Discipline',      catLabel: 'Discipline & Productivity'         },
+    { key: 'fin',    label: 'Financial',       catLabel: 'Financial & Growth'                },
+    { key: 'learn',  label: 'Learning',        catLabel: 'Learning & Skills'                 },
+    { key: 'well',   label: 'Wellbeing',       catLabel: 'Wellbeing & Relationships'         },
+  ];
+
+  // Curated POPULAR list — exact names that exist in DEFAULT_HABITS.
+  // Filtered at render time to indices, so a name typo here just drops
+  // the row (no crash). Order is the rendered order.
+  const LIB_POPULAR_NAMES = [
+    'Sleep before midnight',
+    'Workout',
+    'Cold shower',
+    'Daily walk',
+    'Meditate & Breathwork',
+    'Get morning sunlight',
+    'Hydrate',
+    'Read',
+    'Protein goal',
+    'Mobility & Stretching',
+    'Cardio workout',
+  ];
+
+  function _libGetVisibleIndices(activeNames) {
+    // Search overrides chip filter.
+    if (_libQuery) {
+      const q = _libQuery;
+      const out = [];
+      for (let i = 0; i < DEFAULT_HABITS.length; i++) {
+        const h = DEFAULT_HABITS[i];
+        if (!h || !h.name) continue;
+        if (activeNames.has(h.name)) continue;
+        if (h.name.toLowerCase().includes(q)) out.push(i);
+      }
+      return out;
+    }
+    // Popular: index lookup by exact name.
+    if (_libActiveChip === 'pop') {
+      const idxByName = {};
+      for (let i = 0; i < DEFAULT_HABITS.length; i++) {
+        if (DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name) {
+          idxByName[DEFAULT_HABITS[i].name] = i;
+        }
+      }
+      const out = [];
+      for (let i = 0; i < LIB_POPULAR_NAMES.length; i++) {
+        const idx = idxByName[LIB_POPULAR_NAMES[i]];
+        if (typeof idx !== 'number') continue;
+        if (activeNames.has(DEFAULT_HABITS[idx].name)) continue;
+        out.push(idx);
+      }
+      return out;
+    }
+    // Category chip: walk OB_CATEGORIES slice.
+    const chip = LIB_CHIPS.find(c => c.key === _libActiveChip);
+    if (!chip || !chip.catLabel) return [];
+    const cat = OB_CATEGORIES.find(c => c.label === chip.catLabel);
+    if (!cat) return [];
+    const out = [];
+    for (let i = cat.start; i < cat.end; i++) {
+      if (!activeNames.has(DEFAULT_HABITS[i].name)) out.push(i);
+    }
+    return out;
+  }
+
+  // Stat → text color for the row meta line.
+  const LIB_STAT_COLOR = {
+    STR:   '#ef4444',
+    VIT:   '#34d399',
+    INT:   '#3b82f6',
+    FOCUS: '#eab308',
+    WILL:  '#f97316',
+    WLT:   '#f5b842',
+  };
+
+  // Resolve a habit's primaryStat (1z.247-era data) without throwing
+  // if the field is missing on an older row.
+  function _libHabitStat(h) {
+    if (!h) return null;
+    if (h.primaryStat) return h.primaryStat;
+    if (typeof HABIT_PRIMARY_STAT === 'object' && HABIT_PRIMARY_STAT[h.name]) {
+      return HABIT_PRIMARY_STAT[h.name];
+    }
+    return null;
+  }
+
+  function _libUpdateCta() {
+    const cta = document.getElementById('lib-cta');
+    if (!cta) return;
+    const n = _libSelected.size;
+    if (n === 0) {
+      cta.disabled = true;
+      cta.textContent = 'Select habits to add';
+    } else {
+      cta.disabled = false;
+      cta.innerHTML = 'Add <span class="lib-cta-n">' + n + '</span> habit' +
+        (n !== 1 ? 's' : '') + ' to my list';
+    }
+  }
+
+  function _libCommitSelection() {
+    if (_libCommitting) return;
+    if (!_libSelected.size) return;
+    _libCommitting = true;
+    try {
+      const picked = Array.from(_libSelected);
+      const existingNames = new Set(habits.map(h => h && h.name));
+      const created = [];
+      let skippedDup = 0;
+      for (let i = 0; i < picked.length; i++) {
+        const idx = picked[i];
+        const built = _buildQuickPickHabitRow(idx);
+        if (!built) continue;
+        const { def, newH } = built;
+        if (existingNames.has(def.name)) { skippedDup++; continue; }
+        habits.push(newH);
+        if (def.note) habitNotes[newH.id] = def.note;
+        existingNames.add(def.name);
+        created.push(def.name);
+      }
+      _libSelected.clear();
+      try { save(); } catch (_) {}
+      try {
+        _addBreadcrumb && _addBreadcrumb('add-habits-commit', {
+          selectedCount:         picked.length,
+          createdCount:          created.length,
+          skippedDuplicateCount: skippedDup,
+          habitCount:            habits.length,
+        });
+      } catch (_) {}
+      // skipSideEffects matches the pack-add path — no HealthKit cascade.
+      try { renderHabits({ skipSideEffects: true }); } catch (_) {}
+      try {
+        const msg = created.length === 0
+          ? 'Those vows are already in your list.'
+          : (created.length === 1
+              ? 'Vow added — ' + created[0]
+              : created.length + ' vows added.');
+        showHabitToast(msg);
+      } catch (_) {}
+      closeLibrary();
+    } finally {
+      _libCommitting = false;
+    }
   }
 
   function renderLibrary() {
-    const list = document.getElementById('lib-list');
-    list.innerHTML = '';
+    const sheet = document.getElementById('lib-sheet');
+    const list  = document.getElementById('lib-list');
+    if (!sheet || !list) return;
     const activeNames = new Set(habits.map(h => h.name));
 
-    // Build available-habits map per category
-    const catData = OB_CATEGORIES.map(cat => {
-      const available = [];
-      for (let i = cat.start; i < cat.end; i++) {
-        if (!activeNames.has(DEFAULT_HABITS[i].name)) available.push(i);
-      }
-      return { cat, available };
-    }).filter(d => d.available.length > 0);
-
-    // ── Morning Routine pack entry — always shown at the top ──
-    // Distinct orange/gold styling marks this as a curated pack
-    // (not a regular category) and signals the compound bonus.
-    const mrEntry = document.createElement('div');
-    mrEntry.className = 'lib-pack-entry';
-    const mrMissing = getMissingMorningHabits().length;
-    mrEntry.innerHTML =
-      '<span class="lib-pack-emoji">' + packIconHtml('morning', { size: 44 }) + '</span>' +
-      '<span class="lib-pack-text">' +
-        '<span class="lib-pack-title">Morning Routine ' +
-          '<span class="lib-pack-bolt" data-bonus-info aria-label="About the Compound Effect Bonus" role="button" tabindex="0">' + xpIconHtml({ size: 14 }) + '</span>' +
-        '</span>' +
-        '<span class="lib-pack-sub">Complete 10-habit starter pack</span>' +
-      '</span>' +
-      '<span class="lib-pack-count">' +
-        (mrMissing === 0 ? 'All added' : '10 habits') +
-      '</span>' +
-      '<span class="lib-pack-chevron">›</span>';
-    mrEntry.addEventListener('click', openMorningPackModal);
-
-    // ── Locked-In pack entry — sits directly below Morning Routine ──
-    // Violet accent distinguishes it from MR's gold; the lock + bolt
-    // signal "bigger achievement, second compound bonus."
-    const liEntry = document.createElement('div');
-    liEntry.className = 'lib-pack-entry lib-pack-entry--lockedin';
-    const liMissing = getMissingPackHabits('locked-in').length;
-    liEntry.innerHTML =
-      '<span class="lib-pack-emoji">' + packIconHtml('lockedin', { size: 44 }) + '</span>' +
-      '<span class="lib-pack-text">' +
-        '<span class="lib-pack-title">Locked-In ' +
-          '<span class="lib-pack-bolt" aria-label="Locked-In Bonus">' + xpIconHtml({ size: 14 }) + '</span>' +
-        '</span>' +
-        '<span class="lib-pack-sub">Master the full discipline cycle.</span>' +
-      '</span>' +
-      '<span class="lib-pack-count">' +
-        (liMissing === 0 ? 'All added' : '16 habits') +
-      '</span>' +
-      '<span class="lib-pack-chevron">›</span>';
-    liEntry.addEventListener('click', openLockedInPackModal);
-
-    // ── Create your own — purple-accented, dashed border, sits below packs ──
-    // Always shown (until cap is reached) so users can author personal habits
-    // alongside the curated 49. XP is fixed at Medium so the rank economy
-    // can't be gamed.
-    const customCount    = habits.filter(h => h.custom).length;
-    const customsLeft    = Math.max(0, MAX_CUSTOM_HABITS - customCount);
-    const customEntry    = document.createElement('div');
-    customEntry.className = 'lib-pack-entry lib-pack-entry--custom';
-    customEntry.innerHTML =
-      '<span class="lib-pack-emoji">' + packIconHtml('custom', { size: 44 }) + '</span>' +
-      '<span class="lib-pack-text">' +
-        '<span class="lib-pack-title">Create Your Own</span>' +
-        '<span class="lib-pack-sub">' +
-          (customsLeft === 0
-            ? 'Cap reached (' + MAX_CUSTOM_HABITS + ' custom habits)'
-            : 'Your habit, your stat. +3 XP per completion.') +
-        '</span>' +
-      '</span>' +
-      '<span class="lib-pack-count">' +
-        (customsLeft === 0 ? 'Full' : customsLeft + ' left') +
-      '</span>' +
-      '<span class="lib-pack-chevron">›</span>';
-    if (customsLeft > 0) {
-      customEntry.addEventListener('click', openCustomHabitModal);
-    } else {
-      customEntry.style.opacity = '0.55';
-      customEntry.style.cursor  = 'not-allowed';
+    // ── Chips ────────────────────────────────────────────────
+    const chipsEl = document.getElementById('lib-chips');
+    if (chipsEl && !chipsEl.dataset.wired) {
+      chipsEl.dataset.wired = '1';
+      chipsEl.innerHTML = LIB_CHIPS.map(c =>
+        '<button type="button" class="lib-chip" data-chip="' + c.key + '">' +
+          esc(c.label) +
+        '</button>'
+      ).join('');
+      chipsEl.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest && e.target.closest('.lib-chip');
+        if (!btn) return;
+        _libActiveChip = btn.dataset.chip;
+        _libQuery      = '';
+        const si = document.getElementById('lib-search-input');
+        if (si) si.value = '';
+        try {
+          _addBreadcrumb && _addBreadcrumb('add-habits-filter-change', {
+            filterKey: _libActiveChip,
+          });
+        } catch (_) {}
+        renderLibrary();
+      });
+    }
+    if (chipsEl) {
+      chipsEl.querySelectorAll('.lib-chip').forEach(btn => {
+        btn.classList.toggle('is-on',
+          btn.dataset.chip === _libActiveChip && !_libQuery);
+      });
     }
 
-    list.appendChild(mrEntry);
-    list.appendChild(liEntry);
-    list.appendChild(customEntry);
+    // ── Search ───────────────────────────────────────────────
+    const searchEl = document.getElementById('lib-search-input');
+    if (searchEl && !searchEl.dataset.wired) {
+      searchEl.dataset.wired = '1';
+      searchEl.addEventListener('input', () => {
+        _libQuery = (searchEl.value || '').trim().toLowerCase();
+        try {
+          _addBreadcrumb && _addBreadcrumb('add-habits-search', {
+            queryLength: _libQuery.length,
+          });
+        } catch (_) {}
+        renderLibrary();
+      });
+    }
 
-    if (!catData.length) {
-      // Pack entry above is shown; the rest of the categories area is empty.
-      const empty = document.createElement('p');
+    // ── Start-fast strip (packs + Create Your Own) ──────────
+    // Hidden on search or non-Popular chip — focus on the filtered list.
+    const starter = document.getElementById('lib-starter');
+    if (starter) {
+      const showStarter = !_libQuery && _libActiveChip === 'pop';
+      starter.style.display = showStarter ? 'block' : 'none';
+    }
+    const packsEl = document.getElementById('lib-packs');
+    if (packsEl) {
+      const mrMissing = getMissingMorningHabits().length;
+      const liMissing = getMissingPackHabits('locked-in').length;
+      packsEl.innerHTML =
+        '<button type="button" class="lib-packcard lib-packcard--gold" id="lib-pack-morning">' +
+          '<span class="lib-packcard-head">' +
+            '<span class="lib-packcard-ic">' + packIconHtml('morning', { size: 22 }) + '</span>' +
+            '<span class="lib-packcard-name">Morning Routine</span>' +
+          '</span>' +
+          '<span class="lib-packcard-count">' +
+            (mrMissing === 0 ? 'All added' : mrMissing + ' habits') +
+          '</span>' +
+          '<span class="lib-packcard-desc">The 10-habit starter pack.</span>' +
+        '</button>' +
+        '<button type="button" class="lib-packcard lib-packcard--violet" id="lib-pack-lockedin">' +
+          '<span class="lib-packcard-head">' +
+            '<span class="lib-packcard-ic">' + packIconHtml('lockedin', { size: 22 }) + '</span>' +
+            '<span class="lib-packcard-name">Locked-In</span>' +
+          '</span>' +
+          '<span class="lib-packcard-count">' +
+            (liMissing === 0 ? 'All added' : liMissing + ' habits') +
+          '</span>' +
+          '<span class="lib-packcard-desc">The full discipline cycle.</span>' +
+        '</button>';
+      const mrBtn = document.getElementById('lib-pack-morning');
+      const liBtn = document.getElementById('lib-pack-lockedin');
+      if (mrBtn) mrBtn.addEventListener('click', () => {
+        try { _addBreadcrumb && _addBreadcrumb('add-habits-pack-tap', { packId: 'morning' }); } catch (_) {}
+        openMorningPackModal();
+      });
+      if (liBtn) liBtn.addEventListener('click', () => {
+        try { _addBreadcrumb && _addBreadcrumb('add-habits-pack-tap', { packId: 'locked-in' }); } catch (_) {}
+        openLockedInPackModal();
+      });
+    }
+    const createRow = document.getElementById('lib-create-row');
+    if (createRow) {
+      const customCount = habits.filter(h => h.custom).length;
+      const customsLeft = Math.max(0, MAX_CUSTOM_HABITS - customCount);
+      createRow.classList.toggle('is-disabled', customsLeft === 0);
+      createRow.innerHTML =
+        '<span class="lib-create-ic">' + packIconHtml('custom', { size: 24 }) + '</span>' +
+        '<span class="lib-create-body">' +
+          '<span class="lib-create-name">Create your own</span>' +
+          '<span class="lib-create-sub">' +
+            (customsLeft === 0
+              ? 'Cap reached (' + MAX_CUSTOM_HABITS + ' custom habits)'
+              : 'Your habit, your stat · +3 XP') +
+          '</span>' +
+        '</span>' +
+        '<span class="lib-create-left">' +
+          (customsLeft === 0 ? 'Full' : customsLeft + ' left') +
+        '</span>';
+      createRow.onclick = customsLeft > 0 ? openCustomHabitModal : null;
+    }
+
+    // ── List of available habits ─────────────────────────────
+    const items = _libGetVisibleIndices(activeNames);
+    const listCount = document.getElementById('lib-listcount');
+    if (listCount) {
+      if (_libQuery) {
+        listCount.textContent = items.length + ' result' +
+          (items.length !== 1 ? 's' : '');
+      } else {
+        const chip = LIB_CHIPS.find(c => c.key === _libActiveChip);
+        listCount.textContent = ((chip && chip.label) || 'Popular') +
+          ' · ' + items.length;
+      }
+    }
+
+    list.innerHTML = '';
+    if (!items.length) {
+      const empty = document.createElement('div');
       empty.className = 'lib-empty';
-      empty.textContent = 'All individual habits are already in your list.';
+      empty.textContent = _libQuery
+        ? 'No habits match “' + _libQuery + '”.'
+        : 'All habits in this category are already in your list.';
       list.appendChild(empty);
+      try {
+        _addBreadcrumb && _addBreadcrumb('add-habits-sheet-render', {
+          filterKey:    _libActiveChip,
+          visibleCount: 0,
+          queryLength:  _libQuery.length,
+        });
+      } catch (_) {}
+      _libUpdateCta();
+      _wireLibFooter();
       return;
     }
 
-    // ── Accordion state ──────────────────────────────────────
-    let libOpenIdx = -1; // start with all categories collapsed
+    const frag = document.createDocumentFragment();
+    items.forEach(idx => {
+      const h = DEFAULT_HABITS[idx];
+      if (!h) return;
+      const diff   = h.difficulty || 'medium';
+      const xp     = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 0;
+      const stat   = _libHabitStat(h);
+      const statCl = (stat && LIB_STAT_COLOR[stat]) ? LIB_STAT_COLOR[stat] : '#a78bfa';
+      const isSel  = _libSelected.has(idx);
+      const row = document.createElement('button');
+      row.type      = 'button';
+      row.className = 'lib-row' + (isSel ? ' is-selected' : '');
+      row.dataset.idx = String(idx);
+      row.setAttribute('aria-pressed', isSel ? 'true' : 'false');
+      row.innerHTML =
+        '<span class="lib-row-ic">' + habitIconHtml(h, { size: 26, eager: false }) + '</span>' +
+        '<span class="lib-row-mid">' +
+          '<span class="lib-row-name">' + esc(h.name) + '</span>' +
+          '<span class="lib-row-meta">' +
+            '<span class="lib-row-dpill lib-row-dpill--' + diff + '">' +
+              ((DIFFICULTY[diff] && DIFFICULTY[diff].label) || diff) +
+            '</span>' +
+            (stat
+              ? '<span class="lib-row-xp"><span class="lib-row-stat" style="color:' + statCl + '">' +
+                  stat + '</span> · +' + xp + ' XP</span>'
+              : '<span class="lib-row-xp">+' + xp + ' XP</span>'
+            ) +
+          '</span>' +
+        '</span>' +
+        '<span class="lib-row-add" aria-hidden="true">' + (isSel ? '✓' : '+') + '</span>';
+      frag.appendChild(row);
+    });
+    list.appendChild(frag);
 
-    function libSetOpen(idx) {
-      list.querySelectorAll('.ob-acc-section').forEach((sec, i) => {
-        const body    = sec.querySelector('.ob-acc-body');
-        const chevron = sec.querySelector('.ob-acc-chevron');
-        const isOpen  = (i === idx);
-        sec.classList.toggle('ob-open', isOpen);
-        chevron.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
-        body.style.maxHeight    = isOpen ? body.scrollHeight + 'px' : '0';
+    // Single delegated handler — tapping anywhere on the row toggles.
+    if (!list.dataset.wired) {
+      list.dataset.wired = '1';
+      list.addEventListener('click', (e) => {
+        const row = e.target && e.target.closest && e.target.closest('.lib-row');
+        if (!row) return;
+        const idx = parseInt(row.dataset.idx, 10);
+        if (isNaN(idx)) return;
+        if (_libSelected.has(idx)) {
+          _libSelected.delete(idx);
+          row.classList.remove('is-selected');
+          row.setAttribute('aria-pressed', 'false');
+          const add = row.querySelector('.lib-row-add');
+          if (add) add.textContent = '+';
+        } else {
+          _libSelected.add(idx);
+          row.classList.add('is-selected');
+          row.setAttribute('aria-pressed', 'true');
+          const add = row.querySelector('.lib-row-add');
+          if (add) add.textContent = '✓';
+        }
+        try {
+          _addBreadcrumb && _addBreadcrumb('add-habits-add-tap', {
+            idx, selectedCount: _libSelected.size,
+          });
+        } catch (_) {}
+        _libUpdateCta();
       });
-      libOpenIdx = idx;
     }
 
-    catData.forEach(({ cat, available }, catIdx) => {
-      const sec = document.createElement('div');
-      sec.className = 'ob-acc-section';
+    _libUpdateCta();
+    _wireLibFooter();
 
-      const hdr = document.createElement('div');
-      hdr.className = 'ob-acc-header';
-      hdr.innerHTML =
-        '<span class="ob-acc-label">' + cat.label + '</span>' +
-        '<span class="ob-acc-count">' + available.length + ' available</span>' +
-        '<span class="ob-acc-chevron">▶</span>';
-      hdr.addEventListener('click', () => libSetOpen(libOpenIdx === catIdx ? -1 : catIdx));
-      sec.appendChild(hdr);
-
-      const body  = document.createElement('div');
-      body.className = 'ob-acc-body';
-      body.style.maxHeight = '0';
-
-      const inner = document.createElement('div');
-      inner.className = 'ob-acc-inner';
-
-      available.forEach(idx => {
-        const h    = DEFAULT_HABITS[idx];
-        const card = document.createElement('div');
-        card.className = 'lib-card';
-        card.innerHTML =
-          '<span class="ob-card-emoji">' + habitIconHtml(h, { size: 24 }) + '</span>' +
-          '<span class="ob-card-name">' + esc(h.name) + '</span>' +
-          '<span class="diff-badge ' + h.difficulty + '">' + DIFFICULTY[h.difficulty].label + '</span>' +
-          '<span class="lib-card-add">›</span>';
-
-        card.addEventListener('click', () => openHabitDetail(h, {
-          context: 'library',
-          // v3 Phase 1z.85 — push + save ONLY here. renderHabits +
-          // renderLibrary moved to openHabitDetail's addBtn click handler
-          // so a throw in the renders can't strand the detail sheet (the
-          // iOS post-save freeze class). Dedup guard prevents duplicate
-          // preset habits when the user re-opens an already-added preset
-          // from the library and taps Add to My Habits again.
-          onConfirm: cfg => {
-            const existing = habits.find(x => !x.custom && x.name === h.name);
-            if (existing) {
-              try {
-                if (typeof showHabitToast === 'function') {
-                  showHabitToast(h.name + ' is already in your habits.');
-                }
-              } catch (_) {}
-              return;
-            }
-            const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: cfg.difficulty, type: cfg.type || h.type || 'build' };
-            if (cfg.days)                                    newH.days           = cfg.days;
-            if (typeof cfg.stepGoal === 'number')            newH.stepGoal       = cfg.stepGoal;
-            else if (typeof cfg.sleepGoalHours === 'number') newH.sleepGoalHours = cfg.sleepGoalHours;
-            else if (cfg.goal)                               newH.goal           = cfg.goal;
-            if (cfg.startDate)                               newH.startDate      = cfg.startDate;
-            habits.push(newH);
-            // Pre-fill note from DEFAULT_HABITS if present
-            if (h.note) habitNotes[newH.id] = h.note;
-            try { save(); }
-            catch (err) { console.error('[library] save threw', err); }
-            // Renders intentionally NOT called here — openHabitDetail's
-            // addBtn handler (1z.85 fix) runs renderHabits + renderLibrary
-            // AFTER closing the detail sheet.
-          },
-        }));
-        inner.appendChild(card);
+    try {
+      _addBreadcrumb && _addBreadcrumb('add-habits-sheet-render', {
+        filterKey:    _libActiveChip,
+        visibleCount: items.length,
+        queryLength:  _libQuery.length,
       });
-
-      body.appendChild(inner);
-      sec.appendChild(body);
-      list.appendChild(sec);
-    });
-
-    // All categories start collapsed; user expands what they want.
-    requestAnimationFrame(() => libSetOpen(-1));
+    } catch (_) {}
   }
+
+  function _wireLibFooter() {
+    const cta = document.getElementById('lib-cta');
+    if (cta && !cta.dataset.wired) {
+      cta.dataset.wired = '1';
+      cta.addEventListener('click', () => {
+        if (cta.disabled) return;
+        _libCommitSelection();
+      });
+    }
+  }
+  // v3 Phase 1z.252B — Legacy renderLibrary() body (pack-entry cards,
+  // 7-accordion category list, per-row openHabitDetail confirm flow)
+  // removed here. The new compact sheet above (search + chips +
+  // start-fast strip + one-tap multi-select rows + sticky CTA) owns
+  // this surface entirely. openHabitDetail() remains callable from
+  // other surfaces (Habits tab card menu edit pencil).
 
   // v3 Phase 1z.88 — canonical "is this preset already in the user's habits"
   // check. Name-based because preset habit identity is the display name

@@ -4141,6 +4141,435 @@ footer {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.252B — Add Habits sheet redesign
+   All rules scoped under .lib-sheet--v2 so the legacy .lib-* /
+   .ob-acc-* styles continue to work for any other surface that
+   reuses them. Mobile-first iPhone viewport. No emoji icons —
+   habitIconHtml() / packIconHtml() render the existing PNGs.
+   ═══════════════════════════════════════════════════════════════ */
+
+.lib-sheet--v2 {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Search field */
+.lib-sheet--v2 .lib-search-wrap {
+  margin: 0 16px 4px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 13px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
+}
+.lib-sheet--v2 .lib-search-wrap:focus-within {
+  border-color: rgba(139, 92, 246, 0.55);
+}
+.lib-sheet--v2 .lib-search-icon { color: #9aa0bd; flex: 0 0 auto; display: flex; }
+.lib-sheet--v2 .lib-search-input {
+  flex: 1; min-width: 0;
+  background: none; border: 0; outline: none;
+  color: #f4f3fb; font-size: 15px;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+}
+.lib-sheet--v2 .lib-search-input::placeholder { color: #5c5c78; }
+
+/* Category chip strip */
+.lib-sheet--v2 .lib-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 16px 10px;
+  scrollbar-width: none;
+  flex: 0 0 auto;
+}
+.lib-sheet--v2 .lib-chips::-webkit-scrollbar { display: none; }
+.lib-sheet--v2 .lib-chip {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #9aa0bd;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform 100ms ease;
+}
+.lib-sheet--v2 .lib-chip:active { transform: scale(0.95); }
+.lib-sheet--v2 .lib-chip.is-on {
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.16), rgba(245, 184, 66, 0.05));
+  border-color: rgba(245, 184, 66, 0.50);
+  color: #f5b842;
+}
+
+/* Scroll container */
+.lib-sheet--v2 .lib-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 100px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.lib-sheet--v2 .lib-scroll::-webkit-scrollbar { width: 7px; }
+.lib-sheet--v2 .lib-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+
+/* Start-fast strip */
+.lib-sheet--v2 .lib-starter { padding-top: 4px; }
+.lib-sheet--v2 .lib-seclbl {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #5c5c78;
+  text-transform: uppercase;
+  margin: 0 2px 9px;
+}
+.lib-sheet--v2 .lib-packs {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 0;
+}
+.lib-sheet--v2 .lib-packcard {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 13px;
+  padding: 11px 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform 100ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lib-sheet--v2 .lib-packcard:active { transform: scale(0.97); }
+.lib-sheet--v2 .lib-packcard--gold {
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.12), rgba(245, 184, 66, 0.03));
+  border: 1px solid rgba(245, 184, 66, 0.40);
+}
+.lib-sheet--v2 .lib-packcard--violet {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.14), rgba(139, 92, 246, 0.04));
+  border: 1px solid rgba(139, 92, 246, 0.45);
+}
+.lib-sheet--v2 .lib-packcard-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lib-sheet--v2 .lib-packcard-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.lib-sheet--v2 .lib-packcard-ic img,
+.lib-sheet--v2 .lib-packcard-ic svg {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.lib-sheet--v2 .lib-packcard-name {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  line-height: 1.15;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-sheet--v2 .lib-packcard--gold .lib-packcard-name { color: #ecca84; }
+.lib-sheet--v2 .lib-packcard--violet .lib-packcard-name { color: #a78bfa; }
+.lib-sheet--v2 .lib-packcard-count {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #9aa0bd;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.lib-sheet--v2 .lib-packcard-desc {
+  font-size: 11px;
+  color: #9aa0bd;
+  line-height: 1.3;
+  margin-top: 3px;
+}
+
+/* Create Your Own row */
+.lib-sheet--v2 .lib-create-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 9px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px dashed rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.04);
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.lib-sheet--v2 .lib-create-row.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.lib-sheet--v2 .lib-create-ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.30);
+  overflow: hidden;
+}
+.lib-sheet--v2 .lib-create-ic img,
+.lib-sheet--v2 .lib-create-ic svg {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.lib-sheet--v2 .lib-create-body { flex: 1; min-width: 0; }
+.lib-sheet--v2 .lib-create-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #a78bfa;
+}
+.lib-sheet--v2 .lib-create-sub {
+  font-size: 11px;
+  color: #5c5c78;
+  margin-top: 1px;
+}
+.lib-sheet--v2 .lib-create-left {
+  margin-left: auto;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: #f5b842;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+/* Divider */
+.lib-sheet--v2 .lib-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 14px 2px 12px;
+}
+
+/* List heading */
+.lib-sheet--v2 .lib-listcount {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #5c5c78;
+  text-transform: uppercase;
+  margin: 0 2px 9px;
+}
+
+/* Habit rows */
+.lib-sheet--v2 .lib-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #16163a, #0e0e26);
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.lib-sheet--v2 .lib-row.is-selected {
+  border-color: rgba(52, 211, 153, 0.50);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.12);
+}
+.lib-sheet--v2 .lib-row-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.lib-sheet--v2 .lib-row-ic img,
+.lib-sheet--v2 .lib-row-ic svg {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+.lib-sheet--v2 .lib-row-mid {
+  flex: 1;
+  min-width: 0;
+}
+.lib-sheet--v2 .lib-row-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #f4f3fb;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-sheet--v2 .lib-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+}
+.lib-sheet--v2 .lib-row-dpill {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.lib-sheet--v2 .lib-row-dpill--easy {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+}
+.lib-sheet--v2 .lib-row-dpill--medium {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+}
+.lib-sheet--v2 .lib-row-dpill--hard {
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.12);
+}
+.lib-sheet--v2 .lib-row-xp {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: #5c5c78;
+}
+.lib-sheet--v2 .lib-row-xp .lib-row-stat {
+  font-weight: 700;
+}
+.lib-sheet--v2 .lib-row-add {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  cursor: pointer;
+  border: 1.5px solid rgba(167, 139, 250, 0.50);
+  background: rgba(139, 92, 246, 0.08);
+  color: #a78bfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  transition: transform 100ms ease, background 200ms ease,
+              border-color 200ms ease, color 200ms ease;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0;
+}
+.lib-sheet--v2 .lib-row-add:active { transform: scale(0.9); }
+.lib-sheet--v2 .lib-row.is-selected .lib-row-add {
+  background: #34d399;
+  border-color: #34d399;
+  color: #04130d;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.50);
+}
+
+.lib-sheet--v2 .lib-empty {
+  padding: 40px 10px;
+  text-align: center;
+  color: #5c5c78;
+  font-size: 13px;
+}
+
+/* Sticky footer CTA */
+.lib-sheet--v2 .lib-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px max(env(safe-area-inset-bottom, 0px), 22px);
+  background: linear-gradient(180deg, rgba(17, 16, 42, 0), rgba(17, 16, 42, 0.96) 28%);
+  pointer-events: none;
+}
+.lib-sheet--v2 .lib-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 52px;
+  border-radius: 15px;
+  border: 0;
+  width: 100%;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  color: #1b1405;
+  background: linear-gradient(180deg, #f7c65c, #e3a52f);
+  box-shadow: 0 0 20px rgba(245, 184, 66, 0.30);
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  pointer-events: auto;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.lib-sheet--v2 .lib-cta:disabled {
+  opacity: 0.4;
+  filter: saturate(0.4);
+  box-shadow: none;
+  cursor: default;
+  color: #6b5a2a;
+}
+.lib-sheet--v2 .lib-cta-n { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-sheet--v2 .lib-chip,
+  .lib-sheet--v2 .lib-packcard,
+  .lib-sheet--v2 .lib-row,
+  .lib-sheet--v2 .lib-row-add { transition: none !important; }
+  .lib-sheet--v2 .lib-chip:active,
+  .lib-sheet--v2 .lib-packcard:active,
+  .lib-sheet--v2 .lib-row-add:active { transform: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    v3 Phase 1z.9 — Compact buff pill (Double XP Weekend marker).
    Sits in .today-strip-right between #perfect-streak-display and
    #souls-badge. Hidden Mon–Thu via #double-xp-banner.hidden.
