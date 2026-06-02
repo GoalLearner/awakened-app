@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w124';
+  const APP_BUILD_TAG = '2.2.5-w125';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4841,60 +4841,70 @@
   // appear in exactly the expected position. If the label is
   // unrecognized (defensive fallback), we render it plain so older
   // event types served from cache never blow up the row.
-  // v3 Phase 1z.261 — per-eventType color identity. Each public
-  // event type now resolves to its own dedicated accent class
-  // (`.guildhall-activity-target--<cls>`) instead of the
-  // gold/violet binary from 1z.260. Hunter renderer
-  // (_guildhallRowHtml) still uses --gold / --violet directly and
-  // is unaffected.
+  // v3 Phase 1z.262 — Color-system remap (ClaudeDesign direction).
+  // Three-tier emphasis: Tier 1 (crown, big glow), Tier 2 (wins,
+  // medium glow), Tier 3 (routine, NO glow + ✓ glyph for verified
+  // family). Gold reserved for only two events (100K Club, ultra-
+  // rare) so it reads as "elite" instead of UI furniture. Boss and
+  // steps moved to opposite poles (crimson vs teal). Verified
+  // streak/workout/sleep unified under one calm green so routine
+  // confirmations recede under real wins.
+  //
+  // Each entry returns:
+  //   cls    — color class (CSS .guildhall-activity-target--<cls>)
+  //   target — highlighted phrase (returned by label parse)
+  //   verified (optional) — appends a small ✓ glyph after target
+  //
+  // Hunter renderer (_guildhallRowHtml) hardcodes --gold/--violet
+  // directly and is unaffected by this remap.
   function _friendActivityLabelParts(eventType, label) {
     if (typeof label !== 'string' || !label) return null;
-    // boss_kill — "defeated <Boss Name>" → molten gold/orange
+    // boss_kill — "defeated <Boss Name>" → crimson (Tier 2)
     if (eventType === 'boss_kill' && label.startsWith('defeated ')) {
-      return { prefix: 'defeated ', target: label.slice('defeated '.length), suffix: '', cls: 'boss' };
+      return { prefix: 'defeated ', target: label.slice('defeated '.length), suffix: '', cls: 'combat' };
     }
-    // rank_up — "reached <tier>[ <division>]" → arcane violet
+    // rank_up — "reached <tier>[ <division>]" → violet (Tier 2)
     if (eventType === 'rank_up' && label.startsWith('reached ')) {
       return { prefix: 'reached ', target: label.slice('reached '.length), suffix: '', cls: 'rank' };
     }
-    // step_milestone_bucket — "crossed <N> steps today" → amber
+    // step_milestone_bucket — "crossed <N> steps today" → teal (Tier 2, opposite pole from combat)
     if (eventType === 'step_milestone_bucket') {
       const m = /^crossed (.+ steps) today$/.exec(label);
-      if (m) return { prefix: 'crossed ', target: m[1], suffix: ' today', cls: 'steps' };
+      if (m) return { prefix: 'crossed ', target: m[1], suffix: ' today', cls: 'step' };
     }
-    // ultra_rare_drop — fixed → legendary gold (brighter than boss)
+    // ultra_rare_drop — fixed → iridescent gold (Tier 1 crown)
     if (eventType === 'ultra_rare_drop' && label === 'looted an ultra-rare item') {
       return { prefix: 'looted an ', target: 'ultra-rare item', suffix: '', cls: 'ultra' };
     }
-    // rare_item_drop — fixed → purple/magenta
+    // rare_item_drop — fixed → azure blue (Tier 2)
     if (eventType === 'rare_item_drop' && label === 'found a rare item') {
       return { prefix: 'found a ', target: 'rare item', suffix: '', cls: 'rare' };
     }
-    // step_100k_club_unlocked — fixed → fire red (per 1z.261 brief)
+    // step_100k_club_unlocked — fixed → signature gold (Tier 1 crown)
     if (eventType === 'step_100k_club_unlocked' && label === 'joined the 100K Step Club') {
       return { prefix: 'joined the ', target: '100K Step Club', suffix: '', cls: 'club' };
     }
-    // verified_streak — "reached a <N>-day verified streak" → teal/cyan
+    // verified_streak — "reached a <N>-day verified streak" → mint green + ✓ (Tier 3, no glow)
     if (eventType === 'verified_streak') {
       const m = /^reached a (.+-day verified streak)$/.exec(label);
-      if (m) return { prefix: 'reached a ', target: m[1], suffix: '', cls: 'streak' };
+      if (m) return { prefix: 'reached a ', target: m[1], suffix: '', cls: 'verify', verified: true };
     }
-    // verified_workout — fixed → warm red-orange (distinct from club fire-red)
+    // verified_workout — fixed → mint green + ✓ (Tier 3, no glow)
     if (eventType === 'verified_workout' && label === 'completed a verified workout') {
-      return { prefix: 'completed a ', target: 'verified workout', suffix: '', cls: 'workout' };
+      return { prefix: 'completed a ', target: 'verified workout', suffix: '', cls: 'verify', verified: true };
     }
-    // verified_sleep_7h — fixed → moon blue
+    // verified_sleep_7h — fixed → mint green + ✓ (Tier 3, no glow)
     if (eventType === 'verified_sleep_7h' && label === 'slept over 7 hours last night') {
-      return { prefix: 'slept ', target: 'over 7 hours', suffix: ' last night', cls: 'sleep' };
+      return { prefix: 'slept ', target: 'over 7 hours', suffix: ' last night', cls: 'verify', verified: true };
     }
-    // flights_milestone_bucket — "climbed <N> flights today" → ascension emerald
+    // flights_milestone_bucket — "climbed <N> flights today" → sky blue (Tier 2)
     if (eventType === 'flights_milestone_bucket') {
       const m = /^climbed (\d+ flights) today$/.exec(label);
-      if (m) return { prefix: 'climbed ', target: m[1], suffix: ' today', cls: 'flights' };
+      if (m) return { prefix: 'climbed ', target: m[1], suffix: ' today', cls: 'flight' };
     }
-    // friend_added (defensive — Hunter-only path today) → social violet
+    // friend_added (defensive — Hunter-only path today) → slate silver (Tier 3, quiet)
     if (eventType === 'friend_added' && label === 'joined your Guild') {
-      return { prefix: '', target: 'joined your Guild', suffix: '', cls: 'friend' };
+      return { prefix: '', target: 'joined your Guild', suffix: '', cls: 'social' };
     }
     return null;
   }
@@ -4913,52 +4923,42 @@
       ? _guildhallFormatRelativeTs(ts)
       : '';
     // v3 Phase 1z.260 — split label into prefix + accented target +
-    // suffix so the highlighted phrase gets gold/violet styling
-    // matching Hunter rows. Falls back to plain label for unknown
-    // event types (defensive — old/cached events shouldn't break).
+    // suffix so the highlighted phrase gets per-eventType styling.
+    // v3 Phase 1z.262 — verified events (streak/workout/sleep) get
+    // a small ✓ glyph appended after the target phrase to reinforce
+    // the "system-confirmed" feel from the ClaudeDesign brief.
     const parts = _friendActivityLabelParts(ev.eventType, label);
+    const targetCheck = (parts && parts.verified)
+      ? '<span class="guildhall-activity-target-check" aria-hidden="true">✓</span>'
+      : '';
     const labelHtml = parts
       ? (esc(parts.prefix) +
          '<span class="guildhall-activity-target guildhall-activity-target--' + parts.cls + '">' +
-           esc(parts.target) +
+           esc(parts.target) + targetCheck +
          '</span>' +
          esc(parts.suffix))
       : esc(label);
-    // Pick an icon based on eventType — reuses the same glyphs as
-    // _guildhallActivityIconHtml for shape consistency.
-    let iconHtml;
-    if (ev.eventType === 'boss_kill') {
-      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⚔</span>';
-    } else if (ev.eventType === 'rank_up') {
-      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
-    } else if (ev.eventType === 'step_milestone_bucket') {
-      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
-    } else if (ev.eventType === 'ultra_rare_drop') {
-      // v3 Phase 1z.223C — matches the local Hunter-mode ultra-rare
-      // ✦ glyph for visual consistency across the two surfaces. The
-      // label always comes from backend eventLabel ("looted an
-      // ultra-rare item") — never an exact card name.
-      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
-    } else if (ev.eventType === 'rare_item_drop') {
-      // v3 Phase 1z.226C — generic rare-tier drop. Violet diamond
-      // ◆ to distinguish from gold ultra-rare ✦. Label always
-      // comes from backend ("found a rare item") — no card name.
-      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
-    } else if (ev.eventType === 'step_100k_club_unlocked') {
-      // v3 Phase 1z.226C — one-shot 100K Step Club accolade
-      // unlock. Gold ⇈ glyph (same family as step_milestone_bucket
-      // but visually prestige-tier). Label always comes from
-      // backend ("joined the 100K Step Club").
-      iconHtml = '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
-    } else if (ev.eventType === 'verified_streak') {
-      // v3 Phase 1z.226C — generic verified-streak milestone.
-      // Violet ◇ glyph (open diamond) to distinguish from solid
-      // rank ◆. Label always comes from backend ("reached a
-      // 30-day verified streak") — no habit name ever.
-      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◇</span>';
-    } else {
-      iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
-    }
+    // v3 Phase 1z.262 — icon tile gets a per-eventType color tint
+    // (.guildhall-activity-icon--<cls>) matching the target phrase
+    // family, so the icon tile + highlighted phrase pull the eye
+    // together. Glyphs unchanged. Hunter renderer (_guildhallRowHtml)
+    // is decoupled and not affected.
+    let iconGlyph; let iconClsKey;
+    if (ev.eventType === 'boss_kill')                  { iconGlyph = '⚔'; iconClsKey = 'combat'; }
+    else if (ev.eventType === 'rank_up')               { iconGlyph = '◆'; iconClsKey = 'rank';   }
+    else if (ev.eventType === 'step_milestone_bucket') { iconGlyph = '⇈'; iconClsKey = 'step';   }
+    else if (ev.eventType === 'ultra_rare_drop')       { iconGlyph = '✦'; iconClsKey = 'ultra';  }
+    else if (ev.eventType === 'rare_item_drop')        { iconGlyph = '◆'; iconClsKey = 'rare';   }
+    else if (ev.eventType === 'step_100k_club_unlocked') { iconGlyph = '⇈'; iconClsKey = 'club'; }
+    else if (ev.eventType === 'verified_streak')       { iconGlyph = '✦'; iconClsKey = 'verify'; }
+    else if (ev.eventType === 'verified_workout')      { iconGlyph = '✦'; iconClsKey = 'verify'; }
+    else if (ev.eventType === 'verified_sleep_7h')     { iconGlyph = '✦'; iconClsKey = 'verify'; }
+    else if (ev.eventType === 'flights_milestone_bucket') { iconGlyph = '▲'; iconClsKey = 'flight'; }
+    else if (ev.eventType === 'friend_added')          { iconGlyph = '·'; iconClsKey = 'social'; }
+    else                                                { iconGlyph = '·'; iconClsKey = 'social'; }
+    const iconHtml =
+      '<span class="guildhall-activity-icon guildhall-activity-icon--' + iconClsKey +
+      '" aria-hidden="true">' + iconGlyph + '</span>';
     // "<alias> <eventLabel>" — alias prominent, eventLabel as the
     // rest. eventLabel is regex-validated server-side, so the
     // pre-computed labelHtml is safe to drop into the row.

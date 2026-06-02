@@ -25760,28 +25760,127 @@ button.guildhall-summary-tile:active {
 .guildhall-activity-target--gold   { color: var(--gold); }
 .guildhall-activity-target--violet { color: var(--accent, #8b5cf6); }
 
-/* v3 Phase 1z.261 — per-eventType accent palette for Guild
-   Notifications. Hunter renderer (_guildhallRowHtml) still uses
-   --gold / --violet directly and is unaffected by these classes.
-   Each color is tuned for the dark-navy background and reuses the
-   `font-weight: 800` baseline from .guildhall-activity-target. */
-.guildhall-activity-target--boss    { color: #f59e0b; }                                /* molten gold/orange — bosses */
-.guildhall-activity-target--steps   { color: #fbbf24; }                                /* amber — step milestones */
-.guildhall-activity-target--rank    { color: #a78bfa; }                                /* arcane violet — rank labels */
-.guildhall-activity-target--ultra   {                                                  /* legendary gold w/ subtle violet glow */
-  color: #ffd166;
-  text-shadow: 0 0 6px rgba(139, 92, 246, 0.35);
+/* v3 Phase 1z.262 — ClaudeDesign color-system remap.
+   Three-tier emphasis: Tier 1 (crown, big glow, w700), Tier 2
+   (wins, medium glow, w600), Tier 3 (routine, NO glow, w500/600).
+   Gold reserved for only two events (100K Club, ultra-rare) so
+   it reads as "elite," not UI furniture. Boss (crimson) and Steps
+   (teal) on opposite poles for instant separation. Verified
+   family (streak/workout/sleep) unified mint green + ✓ glyph.
+   Hunter renderer (_guildhallRowHtml) hardcodes --gold/--violet
+   and is unaffected.
+
+   The 1z.261 keys (boss / steps / club / streak / workout / sleep /
+   flights / friend) are deliberately replaced with the design's
+   keys (combat / step / club / verify / flight / social) — the
+   helper now emits the new keys so older modifier rules are dead. */
+
+/* ── Tier 2 — wins · medium glow · weight 600 ──────────────── */
+.guildhall-activity-target--combat {
+  color: #f0596b;
+  font-weight: 600;
+  text-shadow: 0 0 9px rgba(240, 89, 107, 0.40);
 }
-.guildhall-activity-target--rare    { color: #c084fc; }                                /* magenta-purple — rare drops */
-.guildhall-activity-target--club    {                                                  /* fire red — 100K Step Club */
-  color: #ff4d2e;
-  text-shadow: 0 0 6px rgba(244, 63, 31, 0.30);
+.guildhall-activity-target--step {
+  color: #2dd4bf;
+  font-weight: 600;
+  text-shadow: 0 0 9px rgba(45, 212, 191, 0.40);
 }
-.guildhall-activity-target--streak  { color: #2dd4bf; }                                /* teal/cyan — discipline */
-.guildhall-activity-target--workout { color: #fb6b3a; }                                /* warm red-orange — strength */
-.guildhall-activity-target--sleep   { color: #818cf8; }                                /* moon blue/violet-blue */
-.guildhall-activity-target--flights { color: #34d399; }                                /* ascension emerald */
-.guildhall-activity-target--friend  { color: #b794f4; }                                /* soft social violet */
+.guildhall-activity-target--flight {
+  color: #38bdf8;
+  font-weight: 600;
+  text-shadow: 0 0 9px rgba(56, 189, 248, 0.40);
+}
+.guildhall-activity-target--rank {
+  color: #a78bfa;
+  font-weight: 600;
+  text-shadow: 0 0 9px rgba(167, 139, 250, 0.40);
+}
+.guildhall-activity-target--rare {
+  color: #3b82f6;
+  font-weight: 600;
+  text-shadow: 0 0 9px rgba(59, 130, 246, 0.40);
+}
+
+/* ── Tier 1 — crown moments · strong glow · weight 700 ─────── */
+.guildhall-activity-target--ultra {
+  color: #fbbf24;
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.55);
+}
+.guildhall-activity-target--club {
+  color: #f5b842;
+  font-weight: 700;
+  text-shadow: 0 0 13px rgba(245, 184, 66, 0.60);
+}
+
+/* ── Tier 3 — routine confirmations · NO glow ──────────────── */
+.guildhall-activity-target--verify {
+  color: #34d399;
+  font-weight: 500;
+}
+.guildhall-activity-target--social {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Small system ✓ glyph after the target phrase on verified events.
+   Reinforces the "confirmed" feel and lets the Tier-3 verified
+   family recede quietly while still being recognizable. */
+.guildhall-activity-target-check {
+  margin-left: 4px;
+  color: #34d399;
+  font-size: 0.78em;
+  font-weight: 700;
+  vertical-align: baseline;
+}
+
+/* ── Icon tile per-eventType tints ──────────────────────────── */
+.guildhall-activity-icon--combat {
+  color: #f0596b;
+  border-color: rgba(240, 89, 107, 0.35);
+  background: rgba(240, 89, 107, 0.10);
+}
+.guildhall-activity-icon--step {
+  color: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.35);
+  background: rgba(45, 212, 191, 0.10);
+}
+.guildhall-activity-icon--flight {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.10);
+}
+.guildhall-activity-icon--rank {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.10);
+}
+.guildhall-activity-icon--rare {
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.10);
+}
+.guildhall-activity-icon--ultra {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.40);
+  background: rgba(251, 191, 36, 0.12);
+}
+.guildhall-activity-icon--club {
+  color: #f5b842;
+  border-color: rgba(245, 184, 66, 0.40);
+  background: rgba(245, 184, 66, 0.12);
+}
+.guildhall-activity-icon--verify {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.30);
+  background: rgba(52, 211, 153, 0.08);
+}
+.guildhall-activity-icon--social {
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.06);
+}
 /* v3 Phase 1z.180 — souls-ledger / collapsed-boss-kill suffix.
    Renders the "· +50 souls" or "· Daily login" tail in a muted
    tone so the primary delta/target carries the eye, and the

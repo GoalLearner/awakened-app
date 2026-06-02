@@ -4,7 +4,119 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.261 Frontend: Per-eventType color identity for Guild Notifications (read this first)
+## Jun 2, 2026 — 1z.262 Frontend: ClaudeDesign color-system remap for Guild Notifications (read this first)
+
+**TL;DR.** Full color-system remap per ClaudeDesign brief. Three-tier emphasis (crown / wins / routine), gold reserved for only two events, boss-kill and steps pushed to opposite poles of the wheel (crimson vs teal), verified family unified under one calm mint green with a small ✓ glyph and no glow. Each row glows at most once. Icon tiles now match the target-phrase color family per event. Hunter renderer untouched.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No event payload / privacy contract / HealthKit / XP / streak / rank / leaderboard / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Color map (1z.261 → 1z.262)
+
+| Event type | Class key | Color | Hex | Tier | Glow | Weight |
+|---|---|---|---|---|---|---|
+| `boss_kill` | `combat` (was `boss`) | crimson | `#f0596b` | 2 | medium | 600 |
+| `step_milestone_bucket` | `step` (was `steps`) | teal | `#2dd4bf` | 2 | medium | 600 |
+| `flights_milestone_bucket` | `flight` (was `flights`) | sky | `#38bdf8` | 2 | medium | 600 |
+| `rank_up` | `rank` | violet | `#a78bfa` | 2 | medium | 600 |
+| `rare_item_drop` | `rare` | azure | `#3b82f6` | 2 | medium | 600 |
+| **`ultra_rare_drop`** | `ultra` | **iridescent gold** | `#fbbf24` | **1** | **strong** | **700** |
+| **`step_100k_club_unlocked`** | `club` | **signature gold** | `#f5b842` | **1** | **strong** | **700** |
+| `verified_streak` | `verify` (was `streak`) | mint green + ✓ | `#34d399` | 3 | **NONE** | 500 |
+| `verified_workout` | `verify` (was `workout`) | mint green + ✓ | `#34d399` | 3 | **NONE** | 500 |
+| `verified_sleep_7h` | `verify` (was `sleep`) | mint green + ✓ | `#34d399` | 3 | **NONE** | 500 |
+| `friend_added` | `social` (was `friend`) | slate silver | `#94a3b8` | 3 | NONE | 600 |
+
+**Key shifts from 1z.261:**
+- Boss kills moved from molten orange `#f59e0b` → **crimson** `#f0596b` (opposite pole from steps teal).
+- 100K Step Club went from fire red `#ff4d2e` → **signature gold** `#f5b842` (now a Tier 1 crown moment).
+- Rare drops went from magenta `#c084fc` → **azure** `#3b82f6` (distinct from rank violet).
+- All three verified events (streak/workout/sleep) now share **one mint green** `#34d399` with a **small ✓ glyph appended** to the target phrase, and **no text-shadow** — they intentionally recede under the real wins.
+- Flights went from emerald `#34d399` → **sky** `#38bdf8` (frees emerald for the verified family).
+- Friend_added went from soft violet → **slate silver** `#94a3b8` (Tier 3 quiet).
+
+**Why this works:** The two most frequent events (boss kills + step milestones) sit at opposite poles of the wheel, so they separate instantly even at a glance. Gold appears only twice (ultra-rare + 100K Club), so it reads as "elite," not as UI furniture. The verified family is calm enough that routine sleep/workout/streak confirmations don't compete with the rare boss kill or the 100K Club unlock.
+
+### Files modified
+
+- `app.js` —
+  - `_friendActivityLabelParts` renamed cls keys to match the ClaudeDesign palette (`combat`, `step`, `flight`, `verify`, `social`, `rare`, `ultra`, `club`, `rank`). Verified events return `verified: true` so the renderer can append a ✓.
+  - `_friendActivityRowHtml` updated to (a) append the ✓ glyph when `parts.verified` is set, (b) compose icon class as `.guildhall-activity-icon--<clsKey>` so the icon tile gets a matching tint per event type.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w125'`.
+- `styles.css` —
+  - Replaced the 11 1z.261 `.guildhall-activity-target--*` rules with the design's tiered palette: 5 Tier 2 (combat, step, flight, rank, rare), 2 Tier 1 (ultra, club), 2 Tier 3 (verify, social).
+  - Added new `.guildhall-activity-target-check` for the small green ✓ glyph (0.78em, color `#34d399`, weight 700, 4px left margin).
+  - Added 9 new `.guildhall-activity-icon--*` icon-tile tints matching the target color families.
+  - **Preserved** the existing `.guildhall-activity-target--gold` / `--violet` rules so the Hunter renderer keeps working unchanged.
+- `index.html` — `app.js?v=578`, `styles.css?v=327`, footer `BUILD W125`.
+- `sw.js` — `CACHE_VERSION = 'v5.464'`.
+
+### Tier discipline (per design brief)
+
+> "Color lives only on the **left icon tile + the target phrase**; names stay white, timestamps stay muted, and **every row glows at most once**."
+
+All Tier 2 and Tier 1 rules use a single `text-shadow` on the target phrase. Tier 3 rules have **no** text-shadow — the verified family is intentionally calm so it reads as routine system confirmation rather than competing with the wins. Names (`<strong>` alias) and timestamps (`.guildhall-activity-time`) remain unstyled by this change, preserving the design's "only one glow per row" rule.
+
+### Hunter feed isolation
+
+`_guildhallRowHtml` (lines 3416–3483) still hardcodes `.guildhall-activity-target--gold` and `.guildhall-activity-target--violet` directly. Those two classes are preserved in `styles.css` from before. So Hunter rows continue rendering exactly as they did pre-1z.262.
+
+### Robustness
+
+- Unknown / older cached eventTypes still render plain text (no `parts`, no `cls`, no ✓).
+- Older 1z.261 cached HTML referencing `--boss`, `--steps`, `--workout`, `--sleep`, `--flights`, `--friend` will render with browser-default styling because those modifiers are gone. Acceptable — first render after cache bust picks up the new classes.
+- Icon glyphs are unchanged from 1z.226C / 1z.260 (⚔ ◆ ⇈ ✦ ▲ ◇ ·) — only the tile color tint is new.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w125` |
+| `app.js?v=` | `578` |
+| `styles.css?v=` | `327` |
+| `sw.js CACHE_VERSION` | `v5.464` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w125)
+
+1. Open Guild Notifications → Guild mode.
+2. **Boss kill** rows → boss name renders crimson `#f0596b` with medium glow; icon tile has crimson tint.
+3. **Step milestone** rows → `10,000 steps` renders teal `#2dd4bf` with medium glow; icon tile teal-tinted. Should feel like the opposite pole from boss kills.
+4. **Flights** rows → `25 flights` renders sky blue `#38bdf8`.
+5. **Rank up** rows → rank label (e.g. `D I`) violet.
+6. **Rare item** drop → `rare item` azure (clearly different from rank violet).
+7. **Ultra-rare** drop → `ultra-rare item` iridescent gold `#fbbf24` with **strong glow** (Tier 1).
+8. **100K Step Club** unlock → `100K Step Club` signature gold `#f5b842` with **strong glow** (Tier 1 — feels elite, not warning red).
+9. **Verified streak** rows → streak phrase mint green `#34d399`, **no glow**, with a small green **✓** appended (Tier 3 routine).
+10. **Verified workout** (when 1z.258 ships) → `verified workout` same mint + ✓ + no glow.
+11. **Verified sleep** (when 1z.258 ships) → `over 7 hours` same mint + ✓ + no glow.
+12. **Friend added** rows → `joined your Guild` slate silver `#94a3b8`, Tier 3 quiet.
+13. Each row should glow at most once. The verified family should visibly recede.
+14. Row structure, height, icon glyphs, timestamps, See More, date grouping all unchanged.
+15. Switch to Hunter mode → visually identical to before (gold/violet preserved on Hunter path).
+
+### Rollback notes
+
+Single-commit revert restores 1z.261. No data implications. All event payloads are unchanged; this is a pure render-layer remap.
+
+### Confirmations
+
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty).
+- ✅ No event payload / privacy contract changes.
+- ✅ No HealthKit / XP / streak / rank / class / leaderboard / Social / boss / inventory / economy / auth / onboarding logic changed.
+- ✅ Hunter renderer untouched (`_guildhallRowHtml` unchanged, `--gold` / `--violet` classes preserved).
+- ✅ Row structure / height / icon glyphs / timestamps preserved.
+- ✅ Tier 1 / Tier 2 / Tier 3 emphasis applied per ClaudeDesign brief.
+- ✅ Verified family unified mint green + ✓ + no glow.
+- ✅ Gold restricted to ultra_rare_drop + 100K Step Club.
+- ✅ Boss (crimson) + Steps (teal) sit on opposite color poles.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.261 Frontend: Per-eventType color identity for Guild Notifications
 
 **TL;DR.** 1z.260 unified Guild rows under just two accent classes (`--gold`, `--violet`). This phase gives each public event type its own dedicated accent — `100K Step Club` lands in **fire red**, verified workout in warm red-orange (distinct from club fire), verified sleep in moon blue, flights in ascension emerald, etc. Pure visual polish: helper returns a per-eventType class key, 11 new CSS rules added, Hunter renderer untouched.
 
