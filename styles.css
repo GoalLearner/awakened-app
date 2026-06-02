@@ -27433,9 +27433,12 @@ body.social-hub-on .duels-page-header {
   grid-template-columns: 1fr 12px 1fr;
   align-items: stretch;
   gap: 4px;
-  /* v3 Phase 1z.243 — Taller so all 8 hour rows (4–11) and 4 minute
-     rows can be reached comfortably without aggressive scrolling. */
-  max-height: 296px;
+  /* v3 Phase 1z.252 — Shorter visible window forces natural scrolling
+     in the hour column so the last value can no longer clip against
+     the panel edge. ~7 rows visible at any one time across the 9-hour
+     range (3–11 AM). 1z.243's larger max-height was tight enough to
+     pin the active-pill's scale(1.02) against the panel border. */
+  max-height: 224px;
   overflow: hidden;
 }
 .ndp-col {
@@ -27446,9 +27449,11 @@ body.social-hub-on .duels-page-header {
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(245, 184, 66, 0.4) transparent;
-  /* Generous vertical padding lets the first / last items center into
-     the selection zone when the user scrolls to extremes. */
-  padding: 12px 0 20px;
+  /* v3 Phase 1z.252 — Extra bottom padding gives the last hour row
+     clearance from the panel edge so the active-pill scale(1.02) can
+     never clip. Top padding lets the first row settle into the
+     selection zone when the user scrolls all the way up. */
+  padding: 14px 0 28px;
 }
 .ndp-col::-webkit-scrollbar { width: 5px; height: 0; }
 .ndp-col::-webkit-scrollbar-thumb {

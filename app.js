@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w118';
+  const APP_BUILD_TAG = '2.2.5-w119';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -31163,11 +31163,18 @@
   }
 
   // v3 Phase 1z.241 — Custom theme-matched picker for the Morning
-  // Briefing time. Two scrollable-column dropdown (hours 4–11,
-  // minutes 00/15/30/45) + locked AM. Dark-navy panel, gold accents,
-  // Cinzel display. Updates the hidden #notif-explain-digest-time so
-  // existing finish() read path stays untouched.
-  const NDP_HOURS   = [4, 5, 6, 7, 8, 9, 10, 11];
+  // Briefing time. Two scrollable-column dropdown + locked AM.
+  // Dark-navy panel, gold accents, Cinzel display. Updates the hidden
+  // #notif-explain-digest-time so existing finish() read path stays
+  // untouched.
+  //
+  // v3 Phase 1z.252 — Expanded hour range from 4–11 to 3–11 to match
+  // the "scroll up to see 3–5" mental model from on-device QA. 12 is
+  // intentionally NOT included — 12 AM is midnight and conflicts with
+  // _snapMorningTime's AM-window clamp (h>=12 → 11:45). Column height
+  // tightened in CSS so the last hour can't clip against the panel
+  // edge; user scrolls naturally to reach the extremes.
+  const NDP_HOURS   = [3, 4, 5, 6, 7, 8, 9, 10, 11];
   const NDP_MINUTES = [0, 15, 30, 45];
 
   function _ndpFormatDisplay(hh, mm) {
