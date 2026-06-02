@@ -25759,6 +25759,29 @@ button.guildhall-summary-tile:active {
 }
 .guildhall-activity-target--gold   { color: var(--gold); }
 .guildhall-activity-target--violet { color: var(--accent, #8b5cf6); }
+
+/* v3 Phase 1z.261 — per-eventType accent palette for Guild
+   Notifications. Hunter renderer (_guildhallRowHtml) still uses
+   --gold / --violet directly and is unaffected by these classes.
+   Each color is tuned for the dark-navy background and reuses the
+   `font-weight: 800` baseline from .guildhall-activity-target. */
+.guildhall-activity-target--boss    { color: #f59e0b; }                                /* molten gold/orange — bosses */
+.guildhall-activity-target--steps   { color: #fbbf24; }                                /* amber — step milestones */
+.guildhall-activity-target--rank    { color: #a78bfa; }                                /* arcane violet — rank labels */
+.guildhall-activity-target--ultra   {                                                  /* legendary gold w/ subtle violet glow */
+  color: #ffd166;
+  text-shadow: 0 0 6px rgba(139, 92, 246, 0.35);
+}
+.guildhall-activity-target--rare    { color: #c084fc; }                                /* magenta-purple — rare drops */
+.guildhall-activity-target--club    {                                                  /* fire red — 100K Step Club */
+  color: #ff4d2e;
+  text-shadow: 0 0 6px rgba(244, 63, 31, 0.30);
+}
+.guildhall-activity-target--streak  { color: #2dd4bf; }                                /* teal/cyan — discipline */
+.guildhall-activity-target--workout { color: #fb6b3a; }                                /* warm red-orange — strength */
+.guildhall-activity-target--sleep   { color: #818cf8; }                                /* moon blue/violet-blue */
+.guildhall-activity-target--flights { color: #34d399; }                                /* ascension emerald */
+.guildhall-activity-target--friend  { color: #b794f4; }                                /* soft social violet */
 /* v3 Phase 1z.180 — souls-ledger / collapsed-boss-kill suffix.
    Renders the "· +50 souls" or "· Daily login" tail in a muted
    tone so the primary delta/target carries the eye, and the

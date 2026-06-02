@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w123';
+  const APP_BUILD_TAG = '2.2.5-w124';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4841,55 +4841,60 @@
   // appear in exactly the expected position. If the label is
   // unrecognized (defensive fallback), we render it plain so older
   // event types served from cache never blow up the row.
+  // v3 Phase 1z.261 — per-eventType color identity. Each public
+  // event type now resolves to its own dedicated accent class
+  // (`.guildhall-activity-target--<cls>`) instead of the
+  // gold/violet binary from 1z.260. Hunter renderer
+  // (_guildhallRowHtml) still uses --gold / --violet directly and
+  // is unaffected.
   function _friendActivityLabelParts(eventType, label) {
     if (typeof label !== 'string' || !label) return null;
-    // boss_kill — "defeated <Boss Name>"
+    // boss_kill — "defeated <Boss Name>" → molten gold/orange
     if (eventType === 'boss_kill' && label.startsWith('defeated ')) {
-      return { prefix: 'defeated ', target: label.slice('defeated '.length), suffix: '', cls: 'gold' };
+      return { prefix: 'defeated ', target: label.slice('defeated '.length), suffix: '', cls: 'boss' };
     }
-    // rank_up — "reached <tier>[ <division>]"
+    // rank_up — "reached <tier>[ <division>]" → arcane violet
     if (eventType === 'rank_up' && label.startsWith('reached ')) {
-      return { prefix: 'reached ', target: label.slice('reached '.length), suffix: '', cls: 'violet' };
+      return { prefix: 'reached ', target: label.slice('reached '.length), suffix: '', cls: 'rank' };
     }
-    // step_milestone_bucket — "crossed <N> steps today"
+    // step_milestone_bucket — "crossed <N> steps today" → amber
     if (eventType === 'step_milestone_bucket') {
       const m = /^crossed (.+ steps) today$/.exec(label);
-      if (m) return { prefix: 'crossed ', target: m[1], suffix: ' today', cls: 'gold' };
+      if (m) return { prefix: 'crossed ', target: m[1], suffix: ' today', cls: 'steps' };
     }
-    // ultra_rare_drop — fixed "looted an ultra-rare item"
+    // ultra_rare_drop — fixed → legendary gold (brighter than boss)
     if (eventType === 'ultra_rare_drop' && label === 'looted an ultra-rare item') {
-      return { prefix: 'looted an ', target: 'ultra-rare item', suffix: '', cls: 'gold' };
+      return { prefix: 'looted an ', target: 'ultra-rare item', suffix: '', cls: 'ultra' };
     }
-    // rare_item_drop — fixed "found a rare item"
+    // rare_item_drop — fixed → purple/magenta
     if (eventType === 'rare_item_drop' && label === 'found a rare item') {
-      return { prefix: 'found a ', target: 'rare item', suffix: '', cls: 'violet' };
+      return { prefix: 'found a ', target: 'rare item', suffix: '', cls: 'rare' };
     }
-    // step_100k_club_unlocked — fixed "joined the 100K Step Club"
+    // step_100k_club_unlocked — fixed → fire red (per 1z.261 brief)
     if (eventType === 'step_100k_club_unlocked' && label === 'joined the 100K Step Club') {
-      return { prefix: 'joined the ', target: '100K Step Club', suffix: '', cls: 'gold' };
+      return { prefix: 'joined the ', target: '100K Step Club', suffix: '', cls: 'club' };
     }
-    // verified_streak — band-pinned "reached a <N>-day verified streak"
+    // verified_streak — "reached a <N>-day verified streak" → teal/cyan
     if (eventType === 'verified_streak') {
       const m = /^reached a (.+-day verified streak)$/.exec(label);
-      if (m) return { prefix: 'reached a ', target: m[1], suffix: '', cls: 'gold' };
+      if (m) return { prefix: 'reached a ', target: m[1], suffix: '', cls: 'streak' };
     }
-    // verified_workout — fixed "completed a verified workout"
+    // verified_workout — fixed → warm red-orange (distinct from club fire-red)
     if (eventType === 'verified_workout' && label === 'completed a verified workout') {
-      return { prefix: 'completed a ', target: 'verified workout', suffix: '', cls: 'violet' };
+      return { prefix: 'completed a ', target: 'verified workout', suffix: '', cls: 'workout' };
     }
-    // verified_sleep_7h — fixed "slept over 7 hours last night"
+    // verified_sleep_7h — fixed → moon blue
     if (eventType === 'verified_sleep_7h' && label === 'slept over 7 hours last night') {
-      return { prefix: 'slept ', target: 'over 7 hours', suffix: ' last night', cls: 'violet' };
+      return { prefix: 'slept ', target: 'over 7 hours', suffix: ' last night', cls: 'sleep' };
     }
-    // flights_milestone_bucket — "climbed <N> flights today"
+    // flights_milestone_bucket — "climbed <N> flights today" → ascension emerald
     if (eventType === 'flights_milestone_bucket') {
       const m = /^climbed (\d+ flights) today$/.exec(label);
-      if (m) return { prefix: 'climbed ', target: m[1], suffix: ' today', cls: 'gold' };
+      if (m) return { prefix: 'climbed ', target: m[1], suffix: ' today', cls: 'flights' };
     }
-    // friend_added (Hunter-only path today, but defensive in case
-    // it ever lands in the public feed) — "joined your Guild"
+    // friend_added (defensive — Hunter-only path today) → social violet
     if (eventType === 'friend_added' && label === 'joined your Guild') {
-      return { prefix: '', target: 'joined your Guild', suffix: '', cls: 'violet' };
+      return { prefix: '', target: 'joined your Guild', suffix: '', cls: 'friend' };
     }
     return null;
   }

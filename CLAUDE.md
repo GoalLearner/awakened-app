@@ -4,7 +4,91 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.260 Frontend: Hunter-style accent colors on Guild Notifications (read this first)
+## Jun 2, 2026 — 1z.261 Frontend: Per-eventType color identity for Guild Notifications (read this first)
+
+**TL;DR.** 1z.260 unified Guild rows under just two accent classes (`--gold`, `--violet`). This phase gives each public event type its own dedicated accent — `100K Step Club` lands in **fire red**, verified workout in warm red-orange (distinct from club fire), verified sleep in moon blue, flights in ascension emerald, etc. Pure visual polish: helper returns a per-eventType class key, 11 new CSS rules added, Hunter renderer untouched.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No event payload / privacy contract / HealthKit / XP / streak / rank / leaderboard / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `app.js` — `_friendActivityLabelParts` now returns `cls: 'boss'|'rank'|'steps'|'ultra'|'rare'|'club'|'streak'|'workout'|'sleep'|'flights'|'friend'` instead of `'gold'|'violet'`. Composes into `guildhall-activity-target--<cls>`. Unknown eventTypes still fall through to plain `esc(label)`.
+- `styles.css` — added 11 new rules under existing `.guildhall-activity-target--gold` / `--violet` (which remain in place because Hunter renderer still uses them directly).
+- `index.html` — `app.js?v=577`, `styles.css?v=326`, footer `BUILD W124`.
+- `sw.js` — `CACHE_VERSION = 'v5.463'`.
+
+### Color map
+
+| EventType | Class | Color | Notes |
+|---|---|---|---|
+| `boss_kill` | `--boss` | `#f59e0b` molten gold/orange | distinct from `--ultra` legendary gold |
+| `step_milestone_bucket` | `--steps` | `#fbbf24` amber | brighter than boss |
+| `rank_up` | `--rank` | `#a78bfa` arcane violet | |
+| `ultra_rare_drop` | `--ultra` | `#ffd166` legendary gold + violet glow | text-shadow `rgba(139,92,246,0.35)` |
+| `rare_item_drop` | `--rare` | `#c084fc` magenta-purple | clearly distinct from ultra |
+| **`step_100k_club_unlocked`** | **`--club`** | **`#ff4d2e` fire red** + ember glow | text-shadow `rgba(244,63,31,0.30)` |
+| `verified_streak` | `--streak` | `#2dd4bf` teal/cyan | discipline color |
+| `verified_workout` | `--workout` | `#fb6b3a` warm red-orange | warmer than `--club` fire red |
+| `verified_sleep_7h` | `--sleep` | `#818cf8` moon blue/violet-blue | cool/night feel |
+| `flights_milestone_bucket` | `--flights` | `#34d399` ascension emerald | distinct from steps amber |
+| `friend_added` (defensive) | `--friend` | `#b794f4` soft social violet | |
+
+### Hunter feed isolation
+
+`_guildhallRowHtml` hardcodes `guildhall-activity-target--gold` / `--violet` in its switch (app.js:3416, 3430, 3440, etc.). It does NOT call `_friendActivityLabelParts`. So Hunter rows are visually unchanged — they continue to use the original two-color scheme. Only Guild mode picks up the new per-eventType palette.
+
+### Robustness
+
+- `.guildhall-activity-target` baseline (font-weight 800) is shared across both Hunter and Guild rows.
+- All new modifiers are `color:` only (plus subtle text-shadow on `--ultra` and `--club`). No font-size, no line-height, no padding, no row-height change.
+- Unknown / older cached eventTypes still render plain text via the `null` return path.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w124` |
+| `app.js?v=` | `577` |
+| `styles.css?v=` | `326` |
+| `sw.js CACHE_VERSION` | `v5.463` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w124)
+
+1. Open Guild Notifications → Guild mode.
+2. Boss kill rows → boss name in **molten gold/orange**.
+3. Step milestone rows → `10,000 steps` in **amber**.
+4. Rank up rows → rank label in **arcane violet**.
+5. Rare item drop → `rare item` in **magenta-purple**.
+6. Ultra-rare drop → `ultra-rare item` in **legendary gold with violet glow**.
+7. **100K Step Club → `100K Step Club` in fire red.** ← the headline of this phase.
+8. Verified streak rows → streak phrase in **teal/cyan**.
+9. Verified workout rows (when 1z.258 ships) → `verified workout` in **warm red-orange** (clearly distinct from fire red).
+10. Verified sleep rows (when 1z.258 ships) → `over 7 hours` in **moon blue**.
+11. Flights bucket rows (when 1z.258 ships) → `N flights` in **emerald**.
+12. Row heights unchanged. Timestamps, See More, date grouping unchanged.
+13. Switch to Hunter mode → visually identical to before.
+
+### Rollback notes
+
+Revert this commit to restore the binary gold/violet scheme from 1z.260. No data implications. The new CSS classes are additive — even if a row references one of the new modifiers without the CSS, it'd inherit the default `.guildhall-activity-target` text color (browser default white).
+
+### Confirmations
+
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty).
+- ✅ No event payload / privacy contract changes.
+- ✅ No HealthKit / XP / streak / rank / class / leaderboard / Social / boss / inventory / economy / auth / onboarding logic changed.
+- ✅ Hunter renderer (`_guildhallRowHtml`) untouched.
+- ✅ Row structure, height, icons, timestamps preserved.
+- ✅ 100K Step Club renders in fire red (`#ff4d2e`).
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.260 Frontend: Hunter-style accent colors on Guild Notifications
 
 **TL;DR.** The Guild feed was rendering eventLabels as plain gray text while the Hunter feed already accented boss names, milestones, ranks, etc. in gold/violet via `.guildhall-activity-target--gold|--violet`. This phase teaches the Guild renderer (`_friendActivityRowHtml`) to split each label into prefix + accented target + suffix using the same classes Hunter already uses — visual parity with zero new CSS, no backend changes, no animation, no row-structure changes.
 
