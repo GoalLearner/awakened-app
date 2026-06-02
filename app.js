@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w127';
+  const APP_BUILD_TAG = '2.2.5-w128';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3867,6 +3867,10 @@
     // v3 Phase 1z.193 — drop the "Guild member" subtitle to match
     // the lower Guild accordion's 1z.186 cleanup. The row now reads
     // cleanly with just the alias.
+    // v3 Phase 1z.265 — 24H column removed (see header comment).
+    // `feats` value is still computed above for the breadcrumb /
+    // potential future re-introduction; just not painted.
+    void feats;
     return (
       '<div class="guild-roster-row guild-roster-row--no-sub' + (isSelf ? ' guild-roster-row--self' : '') + '">' +
         '<span class="guild-roster-rank">#' + rank + '</span>' +
@@ -3874,7 +3878,6 @@
         '<div class="guild-roster-name">' +
           '<div class="guild-roster-alias">' + esc(aliasDisp) + '</div>' +
         '</div>' +
-        '<span class="guild-roster-stat guild-roster-stat--feats">' + esc(feats) + '</span>' +
         '<span class="guild-roster-stat guild-roster-stat--bosses">' + esc(boss) + '</span>' +
       '</div>'
     );
@@ -3940,7 +3943,12 @@
         '<span class="guild-roster-rank">#</span>' +
         '<span class="guild-roster-avatar guild-roster-avatar--head"></span>' +
         '<div class="guild-roster-name"><div class="guild-roster-alias">HUNTER</div></div>' +
-        '<span class="guild-roster-stat guild-roster-stat--feats">24H</span>' +
+        // v3 Phase 1z.265 — 24H column removed. The backend
+        // /v1/friends endpoint doesn't expose per-friend
+        // feats24h, so every friend row was rendering "—"
+        // while only the viewer's column showed a real number.
+        // BOSSES column stays (1z.196 backend bossesSlainTotal
+        // works for friends).
         '<span class="guild-roster-stat guild-roster-stat--bosses">BOSSES</span>' +
       '</div>';
     list.innerHTML = headerHtml + rows.map((r, i) => _guildRosterRowHtml(r.row, i + 1, r.isSelf)).join('');

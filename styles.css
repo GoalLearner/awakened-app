@@ -25165,7 +25165,9 @@ button.guildhall-summary-tile:active {
 }
 .guild-roster-row {
   display: grid;
-  grid-template-columns: 32px 36px minmax(0, 1fr) 56px 64px;
+  /* v3 Phase 1z.265 — 24H column removed. Was: 32px 36px 1fr 56px 64px.
+     The dropped 56px slot freed up width for the name column. */
+  grid-template-columns: 32px 36px minmax(0, 1fr) 72px;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
