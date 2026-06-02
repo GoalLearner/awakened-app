@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w122';
+  const APP_BUILD_TAG = '2.2.5-w123';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4831,6 +4831,69 @@
   // newest-expanded continue to apply uniformly. Backend supplies
   // a preformatted eventLabel + alias + (optional) rankLabel; we
   // never inject any local data into a friend row.
+  // v3 Phase 1z.260 — Split a Guild eventLabel into a plain prefix +
+  // accented target + plain suffix so the Guild feed can highlight
+  // the meaningful phrase using the same `.guildhall-activity-
+  // target--gold` / `--violet` classes Hunter rows already use.
+  //
+  // Each label is regex/equality-validated server-side (1z.226A +
+  // 1z.256), so the substrings we match here are guaranteed to
+  // appear in exactly the expected position. If the label is
+  // unrecognized (defensive fallback), we render it plain so older
+  // event types served from cache never blow up the row.
+  function _friendActivityLabelParts(eventType, label) {
+    if (typeof label !== 'string' || !label) return null;
+    // boss_kill — "defeated <Boss Name>"
+    if (eventType === 'boss_kill' && label.startsWith('defeated ')) {
+      return { prefix: 'defeated ', target: label.slice('defeated '.length), suffix: '', cls: 'gold' };
+    }
+    // rank_up — "reached <tier>[ <division>]"
+    if (eventType === 'rank_up' && label.startsWith('reached ')) {
+      return { prefix: 'reached ', target: label.slice('reached '.length), suffix: '', cls: 'violet' };
+    }
+    // step_milestone_bucket — "crossed <N> steps today"
+    if (eventType === 'step_milestone_bucket') {
+      const m = /^crossed (.+ steps) today$/.exec(label);
+      if (m) return { prefix: 'crossed ', target: m[1], suffix: ' today', cls: 'gold' };
+    }
+    // ultra_rare_drop — fixed "looted an ultra-rare item"
+    if (eventType === 'ultra_rare_drop' && label === 'looted an ultra-rare item') {
+      return { prefix: 'looted an ', target: 'ultra-rare item', suffix: '', cls: 'gold' };
+    }
+    // rare_item_drop — fixed "found a rare item"
+    if (eventType === 'rare_item_drop' && label === 'found a rare item') {
+      return { prefix: 'found a ', target: 'rare item', suffix: '', cls: 'violet' };
+    }
+    // step_100k_club_unlocked — fixed "joined the 100K Step Club"
+    if (eventType === 'step_100k_club_unlocked' && label === 'joined the 100K Step Club') {
+      return { prefix: 'joined the ', target: '100K Step Club', suffix: '', cls: 'gold' };
+    }
+    // verified_streak — band-pinned "reached a <N>-day verified streak"
+    if (eventType === 'verified_streak') {
+      const m = /^reached a (.+-day verified streak)$/.exec(label);
+      if (m) return { prefix: 'reached a ', target: m[1], suffix: '', cls: 'gold' };
+    }
+    // verified_workout — fixed "completed a verified workout"
+    if (eventType === 'verified_workout' && label === 'completed a verified workout') {
+      return { prefix: 'completed a ', target: 'verified workout', suffix: '', cls: 'violet' };
+    }
+    // verified_sleep_7h — fixed "slept over 7 hours last night"
+    if (eventType === 'verified_sleep_7h' && label === 'slept over 7 hours last night') {
+      return { prefix: 'slept ', target: 'over 7 hours', suffix: ' last night', cls: 'violet' };
+    }
+    // flights_milestone_bucket — "climbed <N> flights today"
+    if (eventType === 'flights_milestone_bucket') {
+      const m = /^climbed (\d+ flights) today$/.exec(label);
+      if (m) return { prefix: 'climbed ', target: m[1], suffix: ' today', cls: 'gold' };
+    }
+    // friend_added (Hunter-only path today, but defensive in case
+    // it ever lands in the public feed) — "joined your Guild"
+    if (eventType === 'friend_added' && label === 'joined your Guild') {
+      return { prefix: '', target: 'joined your Guild', suffix: '', cls: 'violet' };
+    }
+    return null;
+  }
+
   function _friendActivityRowHtml(ev) {
     if (!ev || typeof ev !== 'object') return '';
     // v3 Phase 1z.209 — visible alias lowercased to match the
@@ -4844,6 +4907,18 @@
     const time     = (typeof _guildhallFormatRelativeTs === 'function' && Number.isFinite(ts) && ts > 0)
       ? _guildhallFormatRelativeTs(ts)
       : '';
+    // v3 Phase 1z.260 — split label into prefix + accented target +
+    // suffix so the highlighted phrase gets gold/violet styling
+    // matching Hunter rows. Falls back to plain label for unknown
+    // event types (defensive — old/cached events shouldn't break).
+    const parts = _friendActivityLabelParts(ev.eventType, label);
+    const labelHtml = parts
+      ? (esc(parts.prefix) +
+         '<span class="guildhall-activity-target guildhall-activity-target--' + parts.cls + '">' +
+           esc(parts.target) +
+         '</span>' +
+         esc(parts.suffix))
+      : esc(label);
     // Pick an icon based on eventType — reuses the same glyphs as
     // _guildhallActivityIconHtml for shape consistency.
     let iconHtml;
@@ -4880,13 +4955,13 @@
       iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
     }
     // "<alias> <eventLabel>" — alias prominent, eventLabel as the
-    // rest. eventLabel is regex-validated server-side, so it's
-    // safe to drop into the row.
+    // rest. eventLabel is regex-validated server-side, so the
+    // pre-computed labelHtml is safe to drop into the row.
     return (
       '<div class="guildhall-activity-row">' +
         iconHtml +
         '<div class="guildhall-activity-text">' +
-          '<strong>' + esc(alias) + '</strong> ' + esc(label) +
+          '<strong>' + esc(alias) + '</strong> ' + labelHtml +
         '</div>' +
         '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
       '</div>'

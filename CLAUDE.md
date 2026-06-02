@@ -4,7 +4,96 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.256 Backend: Allowlist verified public Guild Notification events (read this first)
+## Jun 2, 2026 — 1z.260 Frontend: Hunter-style accent colors on Guild Notifications (read this first)
+
+**TL;DR.** The Guild feed was rendering eventLabels as plain gray text while the Hunter feed already accented boss names, milestones, ranks, etc. in gold/violet via `.guildhall-activity-target--gold|--violet`. This phase teaches the Guild renderer (`_friendActivityRowHtml`) to split each label into prefix + accented target + suffix using the same classes Hunter already uses — visual parity with zero new CSS, no backend changes, no animation, no row-structure changes.
+
+**Process note.** Frontend-only / visual polish. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit / leaderboard / public-event privacy contract changes. No event payload changes. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `app.js` —
+  - New helper `_friendActivityLabelParts(eventType, label)` returns `{ prefix, target, suffix, cls }` for each recognized eventType. Recognizes all 10 public event types (`boss_kill`, `rank_up`, `step_milestone_bucket`, `ultra_rare_drop`, `rare_item_drop`, `step_100k_club_unlocked`, `verified_streak`, `verified_workout`, `verified_sleep_7h`, `flights_milestone_bucket`) plus defensive `friend_added`. Returns `null` for unknown types so older/cached events fall back to plain text gracefully.
+  - `_friendActivityRowHtml` now calls the helper and renders the meaningful phrase inside `<span class="guildhall-activity-target guildhall-activity-target--<cls>">`. Prefix/target/suffix are individually `esc()`-wrapped; the span tags themselves are literal HTML.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w123'`.
+- `index.html` — `styles.css?v=325` (unchanged, no CSS edits), `app.js?v=576`. Footer label `BUILD W123`.
+- `sw.js` — `CACHE_VERSION = 'v5.462'`.
+- `styles.css` — **not touched**. `.guildhall-activity-target--gold` and `--violet` already exist (styles.css:25757–25761) and Hunter rows use them today.
+
+### Color map (matches Hunter feed conventions)
+
+| EventType | Accent class | Highlighted phrase |
+|---|---|---|
+| `boss_kill` | `--gold` | `<Boss Name>` |
+| `rank_up` | `--violet` | `D I`, `S+`, etc. |
+| `step_milestone_bucket` | `--gold` | `10,000 steps` |
+| `ultra_rare_drop` | `--gold` | `ultra-rare item` |
+| `rare_item_drop` | `--violet` | `rare item` |
+| `step_100k_club_unlocked` | `--gold` | `100K Step Club` |
+| `verified_streak` | `--gold` | `7-day verified streak` (band-keyed) |
+| `verified_workout` | `--violet` | `verified workout` |
+| `verified_sleep_7h` | `--violet` | `over 7 hours` |
+| `flights_milestone_bucket` | `--gold` | `25 flights` |
+| `friend_added` (defensive) | `--violet` | `joined your Guild` |
+
+### Robustness
+
+- Labels are regex/equality-validated server-side (1z.226A + 1z.256), so the substrings the renderer matches are guaranteed to appear in the expected position when the eventType is recognized.
+- Unknown eventTypes (e.g. older cached events that don't match any case) fall back to plain `esc(label)` rendering — no broken rows.
+- Prefix/target/suffix are each escaped separately; the only un-escaped HTML is the literal `<span class="...">` wrapper.
+- Hunter feed renderer (`_guildhallRowHtml`, app.js:3406) is unchanged.
+
+### Preserved
+
+- Hunter/Guild segmented toggle behavior.
+- Today/Yesterday/date grouping.
+- See More pagination.
+- Backend-primary feed behavior + local fallback.
+- Timestamps, icons, row structure, row height.
+- Public-event privacy contract (1z.226A / 1z.256).
+- `friend_added` Hunter-side rendering via `_guildhallRowHtml` (the `friend_added` branch in `_friendActivityLabelParts` is defensive-only — current backend doesn't emit it to Guild feed).
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w123` |
+| `app.js?v=` | `576` |
+| `styles.css?v=` | `325` (unchanged — no CSS edits) |
+| `sw.js CACHE_VERSION` | `v5.462` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w123)
+
+1. Switch to Guild mode in Guild Notifications.
+2. Confirm boss names in `<alias> defeated <Boss Name>` rows render in **gold**.
+3. Confirm rank labels in `<alias> reached <Rank>` rows render in **violet**.
+4. Confirm step milestones in `<alias> crossed 10,000 steps today` render with **gold** `10,000 steps`.
+5. If 1z.258 hooks are live, confirm `verified_workout` rows highlight `verified workout` in violet, `verified_sleep_7h` rows highlight `over 7 hours` in violet, `flights_milestone_bucket` rows highlight `25 flights` in gold.
+6. Switch to Hunter mode — confirm rendering is unchanged from previous build.
+7. Older cached events with unrecognized eventType still render plainly (no broken HTML).
+8. Smoke: tab navigation, See More, date grouping, timestamps all unchanged.
+
+### Open follow-ups
+
+- The 1z.256 new event types (`verified_workout`, `verified_sleep_7h`, `flights_milestone_bucket`) are backend-only as of this writing — frontend submit hooks for them ship in 1z.258. Once those land, this color polish will light up automatically.
+
+### Confirmations
+
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload.
+- ✅ No event payload changes. No privacy contract changes.
+- ✅ No HealthKit / XP / streak / rank / class logic changed.
+- ✅ Hunter feed renderer unchanged.
+- ✅ Row structure, height, icons, timestamps preserved.
+- ✅ Existing `.guildhall-activity-target--gold|--violet` classes reused.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.256 Backend: Allowlist verified public Guild Notification events
 
 **TL;DR.** Added backend support for three new privacy-safe public event types: `verified_workout`, `verified_sleep_7h`, `flights_milestone_bucket`. Same hard-pinned label/key/value posture as the 1z.226A rare/100K-club/streak events. **No deploy.** Backend-only patch + 33 new tests. The 1z.255 audit decided the contracts; this phase implements + tests them. Frontend hooks (1z.258) and renderer color polish (1z.259) come later.
 
