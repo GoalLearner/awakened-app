@@ -27785,6 +27785,80 @@ body.social-hub-on .duels-page-header {
   text-transform: uppercase;
 }
 
+/* v3 Phase 1z.250 — selected chip state + gold check badge.
+   The chip becomes a touch warmer; the check badge floats top-right
+   inside the chip without affecting layout (absolute positioning). */
+.empty-state .ev-chip {
+  position: relative;
+}
+.empty-state .ev-chip-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(245, 184, 66, 0);
+  border: 1px solid rgba(245, 184, 66, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 160ms ease, transform 160ms ease,
+              background 160ms ease, border-color 160ms ease;
+}
+.empty-state .ev-chip-check svg { opacity: 0; transition: opacity 120ms ease 60ms; }
+.empty-state .ev-chip.is-selected {
+  border-color: rgba(245, 184, 66, 0.75);
+  background: linear-gradient(180deg,
+    rgba(40, 32, 14, 0.95),
+    rgba(20, 15, 5, 0.95));
+  box-shadow:
+    0 0 22px rgba(245, 184, 66, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.empty-state .ev-chip.is-selected .ev-chip-check {
+  background: linear-gradient(180deg, #f7c65c, #e3a52f);
+  border-color: rgba(245, 184, 66, 0.75);
+  opacity: 1;
+  transform: scale(1);
+}
+.empty-state .ev-chip.is-selected .ev-chip-check svg { opacity: 1; }
+
+/* Commit CTA — gold premium look, compact so it doesn't push the
+   layout into scroll. Disabled state dims gracefully. */
+.empty-state .ev-commit {
+  margin-top: 10px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: #1b1405;
+  background: linear-gradient(180deg, #f7c65c, #e3a52f);
+  border: 1px solid rgba(245, 184, 66, 0.6);
+  box-shadow:
+    0 0 22px rgba(245, 184, 66, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: filter 160ms ease, transform 120ms ease,
+              box-shadow 200ms ease;
+}
+.empty-state .ev-commit:active { transform: scale(0.98); }
+.empty-state .ev-commit:disabled {
+  background: rgba(245, 184, 66, 0.10);
+  border-color: rgba(245, 184, 66, 0.28);
+  color: rgba(245, 184, 66, 0.55);
+  box-shadow: none;
+  cursor: default;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+}
+
 /* ── Browse link ────────────────────────────────────────────── */
 .empty-state .ev-browse {
   margin-top: 8px;
@@ -27815,4 +27889,10 @@ body.social-hub-on .duels-page-header {
   }
   .empty-state .ev-sigil-disc { animation: none; }
   .empty-state .ev-chip:active { transform: none; }
+  /* v3 Phase 1z.250 — instant chip selection / CTA state under
+     reduce-motion so users don't see fade-in/scale animations. */
+  .empty-state .ev-chip-check,
+  .empty-state .ev-chip-check svg { transition: none; }
+  .empty-state .ev-commit { transition: none; }
+  .empty-state .ev-commit:active { transform: none; }
 }

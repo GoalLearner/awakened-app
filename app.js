@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w116';
+  const APP_BUILD_TAG = '2.2.5-w117';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20670,6 +20670,17 @@
     { idx: 11, cadence: 'DAILY'   },
   ];
 
+  // v3 Phase 1z.250 — Multi-select state for First Vow quick-picks.
+  // In-memory only; the empty state is shown ONLY when habits.length===0,
+  // and is rebuilt from FIRST_VOW_PICKS on every render, so selection is
+  // ephemeral by design. After commit the empty state vanishes and this
+  // Set is irrelevant. Cleared on successful commit so re-entry (via
+  // Reset all progress) starts clean.
+  const _firstVowSelected = new Set();
+  // Guard against rapid double-tap on the commit CTA so habits can't
+  // duplicate while save() / renderHabits() are in flight.
+  let _firstVowCommitting = false;
+
   function _renderFirstVowQuickPicks() {
     const grid = document.getElementById('empty-state-quickgrid');
     if (!grid) return;
@@ -20678,8 +20689,14 @@
       .filter(x => x.def);
     grid.innerHTML = fp.map(({ p, def }) => {
       const iconHtml = habitIconHtml(def, { size: 28, eager: true });
+      const selected = _firstVowSelected.has(p.idx);
       return '' +
-        '<button type="button" class="ev-chip" data-quickpick-idx="' + p.idx + '">' +
+        '<button type="button" class="ev-chip' + (selected ? ' is-selected' : '') +
+              '" data-quickpick-idx="' + p.idx + '"' +
+              ' aria-pressed="' + (selected ? 'true' : 'false') + '">' +
+          '<span class="ev-chip-check" aria-hidden="true">' +
+            '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6.2 5 9l5-6" stroke="#1b1405" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '</span>' +
           '<span class="ev-chip-ic">' + iconHtml + '</span>' +
           '<span class="ev-chip-body">' +
             '<span class="ev-chip-name">' + esc(def.name) + '</span>' +
@@ -20688,6 +20705,43 @@
         '</button>';
     }).join('');
     _wireFirstVowQuickPicks();
+    _updateFirstVowCommitCta();
+  }
+
+  function _updateFirstVowCommitCta() {
+    const cta = document.getElementById('empty-state-commit');
+    if (!cta) return;
+    const n = _firstVowSelected.size;
+    if (n === 0) {
+      cta.textContent = 'SELECT A VOW';
+      cta.disabled = true;
+    } else {
+      cta.textContent = 'BEGIN WITH ' + n + (n === 1 ? ' VOW' : ' VOWS');
+      cta.disabled = false;
+    }
+  }
+
+  function _toggleFirstVowSelection(idx, btnEl) {
+    if (_firstVowSelected.has(idx)) {
+      _firstVowSelected.delete(idx);
+      if (btnEl) {
+        btnEl.classList.remove('is-selected');
+        btnEl.setAttribute('aria-pressed', 'false');
+      }
+      try { _addBreadcrumb && _addBreadcrumb('first-vow-quickpick-deselect', {
+        idx, selectedCount: _firstVowSelected.size,
+      }); } catch (_) {}
+    } else {
+      _firstVowSelected.add(idx);
+      if (btnEl) {
+        btnEl.classList.add('is-selected');
+        btnEl.setAttribute('aria-pressed', 'true');
+      }
+      try { _addBreadcrumb && _addBreadcrumb('first-vow-quickpick-select', {
+        idx, selectedCount: _firstVowSelected.size,
+      }); } catch (_) {}
+    }
+    _updateFirstVowCommitCta();
   }
 
   function _wireFirstVowQuickPicks() {
@@ -20699,7 +20753,15 @@
         if (!btn) return;
         const idx = parseInt(btn.dataset.quickpickIdx, 10);
         if (isNaN(idx)) return;
-        _addQuickPickHabit(idx, btn);
+        _toggleFirstVowSelection(idx, btn);
+      });
+    }
+    const cta = document.getElementById('empty-state-commit');
+    if (cta && !cta.dataset.wired) {
+      cta.dataset.wired = '1';
+      cta.addEventListener('click', () => {
+        if (cta.disabled) return;
+        _commitFirstVowSelection();
       });
     }
     const browse = document.getElementById('empty-state-browse');
@@ -20712,21 +20774,14 @@
     }
   }
 
-  // Instant-create a single curated habit by DEFAULT_HABITS index.
-  // Dedupes by name, builds the same shape as confirmPackAdd, applies
-  // goal defaults (step / sleep / measurable) using the same branches
-  // as _completeOnboardingFinish. Does NOT auto-complete, does NOT
-  // award XP, does NOT trigger HealthKit verification on creation, does
-  // NOT emit public events.
-  function _addQuickPickHabit(idx, btnEl) {
+  // v3 Phase 1z.250 — Build a single habit row from a DEFAULT_HABITS
+  // index. Used by the multi-commit path below. Mirrors the goal-default
+  // branches in _completeOnboardingFinish so curated step / sleep habits
+  // get canonical thresholds without forcing the user to open a detail
+  // sheet. Returns null on bad input; never throws.
+  function _buildQuickPickHabitRow(idx) {
     const def = DEFAULT_HABITS && DEFAULT_HABITS[idx];
-    if (!def || !def.name) return;
-    // Dedupe by name — same rule as getMissingPackHabits.
-    if (habits.some(h => h && h.name === def.name)) {
-      try { showHabitToast(def.name + ' is already in your list.'); } catch (_) {}
-      return;
-    }
-
+    if (!def || !def.name) return null;
     const newH = {
       id:          uid(),
       emoji:       def.emoji,
@@ -20735,10 +20790,6 @@
       type:        def.type || 'build',
     };
     if (def.primaryStat) newH.primaryStat = def.primaryStat;
-
-    // Goal defaults mirror _completeOnboardingFinish so curated step /
-    // sleep habits get the canonical thresholds without forcing the
-    // user to open a detail sheet.
     try {
       if (typeof isStepGoalHabit === 'function' && isStepGoalHabit(def) &&
           typeof HEALTHKIT_WALK_DEFAULT_THRESHOLD === 'number') {
@@ -20756,21 +20807,77 @@
         }
       }
     } catch (_) {}
+    return { def, newH };
+  }
 
-    habits.push(newH);
-    if (def.note) habitNotes[newH.id] = def.note;
-
-    try { save(); } catch (_) {}
+  // v3 Phase 1z.250 — Commit the in-memory selection. Builds rows for
+  // each selected quick-pick, dedupes against existing habits by exact
+  // name (same rule as getMissingPackHabits), pushes them all, then
+  // performs a SINGLE save() + renderHabits({skipSideEffects:true}).
+  //
+  // Does NOT auto-complete, does NOT award XP, does NOT trigger
+  // HealthKit verification on creation, does NOT emit public events.
+  // Guarded against rapid double-tap via _firstVowCommitting.
+  function _commitFirstVowSelection() {
+    if (_firstVowCommitting) return;
+    _firstVowCommitting = true;
     try {
-      _addBreadcrumb && _addBreadcrumb('habits-empty-quickpick-created', {
-        idx, name: def.name, habitCount: habits.length,
-      });
-    } catch (_) {}
+      const picked = Array.from(_firstVowSelected);
+      if (picked.length === 0) return;
 
-    // skipSideEffects matches the pack-add path — avoids the HealthKit
-    // native-bridge cascade on a freshly added habit.
-    try { renderHabits({ skipSideEffects: true }); } catch (_) {}
-    try { showHabitToast('Vow added — ' + def.name); } catch (_) {}
+      const existingNames = new Set(habits.map(h => h && h.name));
+      const created = [];
+      let skippedDup = 0;
+
+      for (let i = 0; i < picked.length; i++) {
+        const idx = picked[i];
+        const built = _buildQuickPickHabitRow(idx);
+        if (!built) continue;
+        const { def, newH } = built;
+        if (existingNames.has(def.name)) {
+          skippedDup++;
+          continue;
+        }
+        habits.push(newH);
+        if (def.note) habitNotes[newH.id] = def.note;
+        existingNames.add(def.name);
+        created.push(def.name);
+      }
+
+      // Clear selection so re-entry (Reset all progress → onboarding)
+      // starts clean. Empty state will be re-rendered if habits is still 0.
+      _firstVowSelected.clear();
+
+      try { save(); } catch (_) {}
+      try {
+        _addBreadcrumb && _addBreadcrumb('first-vow-commit', {
+          selectedCount:        picked.length,
+          createdCount:         created.length,
+          skippedDuplicateCount: skippedDup,
+          habitCount:           habits.length,
+        });
+      } catch (_) {}
+
+      if (created.length === 0) {
+        try { showHabitToast('Those vows are already in your list.'); } catch (_) {}
+        // Still re-render the empty state so the CTA resets even if
+        // every selection was already a duplicate (edge case).
+        try { renderHabits({ skipSideEffects: true }); } catch (_) {}
+        return;
+      }
+
+      // skipSideEffects matches the pack-add path — avoids the HealthKit
+      // native-bridge cascade on freshly added habits.
+      try { renderHabits({ skipSideEffects: true }); } catch (_) {}
+      try {
+        const msg = created.length === 1
+          ? 'Vow added — ' + created[0]
+          : created.length + ' vows added.';
+        showHabitToast(msg);
+      } catch (_) {}
+    } finally {
+      _firstVowCommitting = false;
+    }
   }
 
   function openLibrary() {
