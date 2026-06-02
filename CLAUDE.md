@@ -4,7 +4,116 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.264 Frontend: Hide self-authored events from Guild mode (read this first)
+## Jun 2, 2026 — 1z.266B Frontend: Replace top XP·30D sparkline with Bosses Slain card (read this first)
+
+**TL;DR.** The third top-row metric card (`.metric-card--spark`) now hosts BOSSES · SLAIN instead of the XP·30D sparkline. The whole card is tappable and opens the existing Kill Log sheet (same `openBossesSlainSheet()` the lower Guild Hall tile uses). Fresh users see `0`. Same `.metric-card--spark` class kept so the layout grid / init order is unchanged. XP math, persistence, and all other XP surfaces untouched.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No boss-kill counting, XP math, leaderboard, public events, HealthKit, rank, souls, inventory, economy, onboarding, or Add Habits logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `index.html` — replaced inner markup of `.metric-card--spark` (was XP·30D label + 130×22 SVG sparkline + total + "TOTAL XP" unit). Now: `BOSSES · SLAIN` label + chevron + `#top-bosses-slain-total` value + `KILL LOG` unit. Card carries `role="button" tabindex="0" aria-label="Open Kill Log"` + a new `.metric-card--bosses` modifier. `app.js?v=582`, `styles.css?v=329`, footer `BUILD W129`.
+- `app.js` —
+  - `updateHeaderMetrics`: added a small post-XP-render writer (new `try` block right after the orphan-safe XP sparkline writes). Reads `loadBosses()` and sums `kill_count > 0` rows — exact same logic as `_renderGuildhallSummary()`'s lower BOSSES SLAIN tile and as the Kill Log sheet's source.
+  - `setupXpDetail()`: card tap now calls `openBossesSlainSheet()` (preferring direct local ref, falling back to `window.openBossesSlainSheet`). Added Enter/Space keyboard activation for the new `role="button"`. Kept the function name `setupXpDetail` so existing init order (DOMContentLoaded / setupApp wiring) is undisturbed. XP-detail-sheet overlay/close/dismiss-gesture wiring left in place defensively in case any other surface still navigates there.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w129'`.
+- `styles.css` — added a small scoped block:
+  - `.metric-card.metric-card--bosses { cursor: pointer; }` + `:active { transform: scale(0.985); }`
+  - `.metric-card-value--combat` — crimson `#f0596b` with subtle text-shadow (1z.262 combat family)
+  - `.metric-card-reset--chev` — chevron tint
+  - `.metric-card-unit--cta` — `KILL LOG` color
+  - `.metric-card-body--bosses` — flex-baseline gap (so the count + KILL LOG hint sit side-by-side cleanly)
+- `sw.js` — `CACHE_VERSION = 'v5.468'`.
+
+### Single source of truth
+
+Top card count + lower Guild Hall BOSSES SLAIN tile + Kill Log sheet ALL read the same `loadBosses()` localStorage state. No duplicate state, no fake numbers. If the Kill Log shows 39, the top card shows 39, and the lower tile shows 39.
+
+### Tap behavior
+
+- Whole card tappable (CSS `cursor: pointer`)
+- Click → `openBossesSlainSheet()` → existing Kill Log sheet
+- Enter / Space (keyboard) → same handler
+- `role="button"` + `aria-label="Open Kill Log"` for screen readers
+- Lower Guild Hall BOSSES SLAIN tile **unchanged** — still opens the same sheet via its own tile routing
+- No duplicate modal — both surfaces share the existing sheet
+
+### Orphan XP sparkline DOM
+
+Removed from markup:
+- `#xp-30d-spark` (the SVG)
+- `#xp-30d-spark-area`, `#xp-30d-spark-line`, `#xp-30d-spark-dot`
+- `#xp-30d-total`, `#xp-30d-delta`
+- `<linearGradient id="xp-30d-spark-gradient">`
+
+Left untouched in `updateHeaderMetrics`:
+- The 30-day series computation (`perDay[]`, `series[]`)
+- The orphan-safe writer that reads the now-missing IDs and silently no-ops via `if (totalEl) ...` / `if (line) ...` guards
+
+This minimizes risk: if any other surface ever reintroduces those IDs, the writer keeps working. If we want to remove it later, that's a separate cleanup. The 1z.249 onboarding-XP-in-perDay stamp logic also remains intact (no user impact — it just doesn't paint anywhere now).
+
+### XP preservation (per the brief)
+
+- ✅ Total all-time XP still visible in: Rank pill / Progress sheet / Status tab Hunter Profile
+- ✅ XP math (`totalPoints` increments, `save()`, rank thresholds) unchanged
+- ✅ Onboarding +25 XP grant (1z.246) unchanged
+- ✅ 1z.249 onboarding stamp logic unchanged
+- ✅ The XP-detail sheet (`#xp-detail-sheet`) markup still exists; its close handlers still wire. It's just no longer reachable from the dashboard card. A future phase can either re-attach it elsewhere or remove the dead surface.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w129` |
+| `app.js?v=` | `582` |
+| `styles.css?v=` | `329` |
+| `sw.js CACHE_VERSION` | `v5.468` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w129)
+
+1. Launch app → top-right metric card shows `BOSSES · SLAIN` with a `›` chevron.
+2. Fresh user (Reset All Progress) → top card shows `0` not `—`. Tap → Kill Log opens with empty state.
+3. Existing user with 39 kills → top card shows `39` (matches lower Guild Hall BOSSES SLAIN tile).
+4. Tap the top card → existing Kill Log sheet opens (same one as the lower tile).
+5. Close Kill Log → tap the lower Guild Hall BOSSES SLAIN tile → same sheet opens.
+6. Tab Enter (with keyboard) on the top card → Kill Log opens.
+7. Kill Log content (totals, rank groups, individual rows) **unchanged**.
+8. Rank pill (top-left) still shows correct rank + points.
+9. Progress sheet still shows XP totals.
+10. Status tab Hunter Profile still shows XP.
+11. Onboarding still grants +25 XP and lands users on Habits per 1z.248.
+12. Top row layout clean on iPhone — three cards, no overflow, the new card fits the same grid slot.
+13. Switch to Social tab → lower Guild Hall BOSSES SLAIN tile still renders with the same count.
+14. Boss kill in active hunt → both top card and lower tile increment together.
+
+### Rollback notes
+
+Single-commit revert. The XP·30D markup + the orphan-safe writer + the XP detail sheet are all in source history; restoring is just `git revert`. No data implications.
+
+### Open questions for follow-up phases
+
+- **Lower-tile redundancy**: top card and lower tile show the same number on the same scroll. If product wants to remove the lower tile, that's a 1-line markup delete in a future phase.
+- **XP·30D resurrection**: if users miss the sparkline, a Settings → Diagnostics surface or a Progress-sheet add-on is the natural home. Not in scope for this train.
+- **Dead code cleanup**: orphan XP writer in `updateHeaderMetrics` + `openXpDetail`/`closeXpDetail` + `#xp-detail-sheet` markup can be removed in a later cleanup phase once we're sure no surface relies on them.
+
+### Confirmations
+
+- ✅ `node --check app.js` + `node --check sw.js` pass
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty)
+- ✅ No XP math / persistence / surface logic changed
+- ✅ No boss-kill counting / Kill Log / public events / leaderboard / HealthKit / rank / souls / inventory / economy / onboarding / Add Habits logic changed
+- ✅ Top card count source = `loadBosses()` (same as lower tile + Kill Log)
+- ✅ Top card opens existing Kill Log via existing `openBossesSlainSheet()` (no duplicate modal)
+- ✅ Lower Guild Hall BOSSES SLAIN tile preserved (intentional)
+- ✅ Fresh users show `0` not `—`
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.264 Frontend: Hide self-authored events from Guild mode
 
 **TL;DR.** Guild Notifications → **Guild** mode now filters out the viewer's own public events at render time. Hunter mode is unchanged. No backend changes — events are still submitted, still stored, still visible to friends in their Guild feeds. Filter is case-insensitive alias compare using the existing 1z.209 `_displayAliasLower` helper.
 

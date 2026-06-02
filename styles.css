@@ -17372,6 +17372,37 @@ body.reveal-locked { overflow: hidden; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* v3 Phase 1z.266B — top BOSSES SLAIN card (replaces XP·30D sparkline).
+   Reuses metric-card grid + sizing; only the count tint, the cursor
+   pointer, and the right-side chevron are net-new. Crimson value matches
+   the 1z.262 combat color family so the top card visually links with
+   Hunter/Guild Notification boss kills. */
+.metric-card.metric-card--bosses {
+  cursor: pointer;
+}
+.metric-card.metric-card--bosses:active {
+  transform: scale(0.985);
+}
+.metric-card-value--combat {
+  color: #f0596b;
+  text-shadow: 0 0 10px rgba(240, 89, 107, 0.35);
+}
+.metric-card-reset--chev {
+  color: rgba(240, 89, 107, 0.55);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.metric-card-unit--cta {
+  color: rgba(240, 89, 107, 0.82);
+  font-weight: 700;
+}
+.metric-card-body--bosses {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
 .metric-card-sub b,
 .metric-card--rank .metric-card-sub {
   color: var(--gold-bright, var(--gold));

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w128';
+  const APP_BUILD_TAG = '2.2.5-w129';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19008,6 +19008,33 @@
       }
     } catch (_) {}
 
+    // v3 Phase 1z.266B — Top Bosses Slain card writer. Replaces the
+    // XP·30D sparkline (orphan IDs above no-op via getElementById
+    // null-guard). Reads the same loadBosses() hb_bosses store as
+    // _renderGuildhallSummary's lower BOSSES SLAIN tile and as the
+    // Kill Log sheet — single source of truth, no fake numbers.
+    // Fresh users render `0` (not "—"); writer is null-guarded so
+    // older cached HTML without the top card silently no-ops.
+    try {
+      const topEl = document.getElementById('top-bosses-slain-total');
+      if (topEl) {
+        let n = 0;
+        try {
+          if (typeof loadBosses === 'function') {
+            const all = loadBosses();
+            for (const id in all) {
+              if (!Object.prototype.hasOwnProperty.call(all, id)) continue;
+              const s = all[id];
+              if (s && typeof s.kill_count === 'number' && s.kill_count > 0) {
+                n += s.kill_count;
+              }
+            }
+          }
+        } catch (_) {}
+        topEl.textContent = String(n);
+      }
+    } catch (_) {}
+
     // ── World Rank · Steps card (Phase 1z.18) ────────────────
     // Replaces the legacy WEEK XP card. State-driven render
     // (active / loading / empty). Whole card opens the existing
@@ -19820,12 +19847,41 @@
       }
     } catch (_) {}
   }
+  // v3 Phase 1z.266B — Top metric card #3 (`.metric-card--spark`) now
+  // hosts BOSSES SLAIN instead of the XP·30D sparkline. The card tap
+  // opens the existing Kill Log sheet via the same window-exported
+  // openBossesSlainSheet() used by the lower Guild Hall tile — single
+  // source of truth, single modal, no duplicate state.
+  //
+  // setupXpDetail retains its name so external init order
+  // (setupApp / DOMContentLoaded) doesn't have to change. The
+  // overlay / close / dismiss-gesture wiring for #xp-detail-sheet
+  // stays in place defensively in case any other surface still
+  // navigates there; the dashboard card itself no longer opens it.
   function setupXpDetail() {
     const card    = document.querySelector('.metric-card--spark');
     const overlay = document.getElementById('xp-detail-overlay');
     const sheet   = document.getElementById('xp-detail-sheet');
     const close   = document.getElementById('xp-detail-close');
-    if (card) card.addEventListener('click', openXpDetail);
+    const openKillLog = () => {
+      try {
+        if (typeof openBossesSlainSheet === 'function') {
+          openBossesSlainSheet();
+        } else if (window && typeof window.openBossesSlainSheet === 'function') {
+          window.openBossesSlainSheet();
+        }
+      } catch (_) {}
+    };
+    if (card) {
+      card.addEventListener('click', openKillLog);
+      // Keyboard activation for the role="button" tabindex="0" card.
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openKillLog();
+        }
+      });
+    }
     if (overlay) overlay.addEventListener('click', closeXpDetail);
     if (close)   close.addEventListener('click', closeXpDetail);
     if (sheet && typeof attachSheetDismissGesture === 'function') {

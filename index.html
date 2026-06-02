@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=328">
+  <link rel="stylesheet" href="styles.css?v=329">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -467,26 +467,27 @@
           </div>
         </button>
 
-        <!-- Card 3: 30-day cumulative XP sparkline -->
-        <div class="metric-card metric-card--spark">
+        <!-- v3 Phase 1z.266B — Card 3: Bosses Slain (replaces the
+             legacy XP·30D sparkline). Same `.metric-card--spark`
+             class kept so the layout grid + existing init order
+             stay identical. Whole card is tappable and opens the
+             existing Kill Log sheet via openBossesSlainSheet()
+             (the same opener wired to the lower Guild Hall tile).
+
+             Orphan XP·30D IDs (#xp-30d-total / #xp-30d-delta /
+             #xp-30d-spark*) are gone; the updateHeaderMetrics
+             writer queries them with getElementById and silently
+             no-ops on null — safe to leave the writer in place
+             for rollback simplicity. XP math itself is unchanged. -->
+        <div class="metric-card metric-card--spark metric-card--bosses"
+             role="button" tabindex="0" aria-label="Open Kill Log">
           <div class="metric-card-head">
-            <span class="metric-card-label">XP · 30D</span>
-            <span id="xp-30d-delta" class="metric-card-reset">+0 / 7D</span>
+            <span class="metric-card-label">BOSSES · SLAIN</span>
+            <span class="metric-card-reset metric-card-reset--chev" aria-hidden="true">›</span>
           </div>
-          <svg id="xp-30d-spark" class="metric-spark" viewBox="0 0 130 22" preserveAspectRatio="none" aria-hidden="true">
-            <defs>
-              <linearGradient id="xp-30d-spark-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"  stop-color="#fbbf24" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <path id="xp-30d-spark-area" fill="url(#xp-30d-spark-gradient)" d=""/>
-            <path id="xp-30d-spark-line" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d=""/>
-            <circle id="xp-30d-spark-dot" cx="0" cy="22" r="1.8" fill="#fbbf24" filter="drop-shadow(0 0 3px #fbbf24)"/>
-          </svg>
-          <div class="metric-card-body">
-            <span id="xp-30d-total" class="metric-card-value">0</span>
-            <span class="metric-card-unit">TOTAL XP</span>
+          <div class="metric-card-body metric-card-body--bosses">
+            <span id="top-bosses-slain-total" class="metric-card-value metric-card-value--combat">0</span>
+            <span class="metric-card-unit metric-card-unit--cta">KILL LOG</span>
           </div>
         </div>
       </div>
@@ -2734,7 +2735,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=581"></script>
+  <script src="app.js?v=582"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3155,7 +3156,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W128</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W129</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
