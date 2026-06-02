@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w126';
+  const APP_BUILD_TAG = '2.2.5-w127';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5141,25 +5141,93 @@
       // rapid filter flaps from spamming the endpoint.
       try { _refreshFriendsActivityCache(); } catch (_) {}
 
+      // v3 Phase 1z.264 — Self-events filter for Guild mode.
+      //
+      // Backend `/v1/friends/activity` intentionally includes the
+      // viewer's own events alongside friends' events so solo
+      // users don't see an empty feed (see public-achievement-
+      // events.ts handleFriendsActivityGet). The product decision
+      // now is the opposite: Guild = friends/guildmates only,
+      // Hunter = my own. Filter self events out at the render
+      // layer; do not change submission or backend storage.
+      //
+      // Backend omits `user_id` from the response for privacy, so
+      // we identify self via alias. Aliases are unique (users
+      // table constraint) and the canonical public identity, so
+      // alias-compare is safe. Case-insensitive via the existing
+      // 1z.209 `_displayAliasLower` helper.
+      //
+      // If we can't determine the viewer's alias (auth not ready,
+      // dev stub edge case), default to showing all events rather
+      // than risk hiding genuine friend rows.
+      let _viewerAliasLower = null;
+      try {
+        const _u = (typeof Auth !== 'undefined' && Auth && typeof Auth.getCurrentUser === 'function')
+          ? Auth.getCurrentUser() : null;
+        if (_u && typeof _u.alias === 'string' && _u.alias) {
+          _viewerAliasLower = _displayAliasLower(_u.alias);
+        }
+      } catch (_) {}
+
+      let _selfFilteredCount = 0;
+      let _selfFilterMode    = 'none';
+
       let normalized;
       if (Array.isArray(_friendsActivityCache)) {
+        _selfFilterMode = _viewerAliasLower ? 'alias' : 'none';
         normalized = _friendsActivityCache
           .filter(ev => ev && ev.createdAt)
+          .filter(ev => {
+            if (!_viewerAliasLower) return true;
+            const evAliasLower = (typeof ev.alias === 'string')
+              ? _displayAliasLower(ev.alias) : '';
+            if (evAliasLower && evAliasLower === _viewerAliasLower) {
+              _selfFilteredCount += 1;
+              return false;
+            }
+            return true;
+          })
           .map(ev => {
             const ts = Date.parse(ev.createdAt);
             return { ts: Number.isFinite(ts) ? ts : 0, html: _friendActivityRowHtml(ev) };
           });
       } else {
-        // Local fallback (pre-w71 behaviour). Drops curated types
-        // (e.g. non-ultra card_drop, friend_added) before render.
-        normalized = Array.isArray(entries)
-          ? entries
-              .filter(e => e && typeof e.ts === 'number' && !GUILDHALL_GUILD_HIDDEN_TYPES.has(e.type))
-              .map(e => ({ ts: e.ts, html: _guildhallRowHtml(e) }))
-          : [];
+        // v3 Phase 1z.264 — Local fallback now returns [] for Guild
+        // mode. Every hb_guild_activity entry is self-authored by
+        // construction (it's the viewer's personal feat log), and
+        // Guild mode is friends-only. If the backend cache is
+        // empty/offline the empty state renders. Pre-1z.264 this
+        // path surfaced the viewer's own events, which contradicted
+        // the new Guild/Hunter separation.
+        _selfFilterMode = 'local-fallback-empty';
+        if (Array.isArray(entries)) {
+          // Count what we would have shown, for the breadcrumb.
+          for (const e of entries) {
+            if (e && typeof e.ts === 'number'
+                 && !GUILDHALL_GUILD_HIDDEN_TYPES.has(e.type)) {
+              _selfFilteredCount += 1;
+            }
+          }
+        }
+        normalized = [];
       }
       normalized.sort((a, b) => (b.ts || 0) - (a.ts || 0));
       visible = normalized.slice(0, GUILDHALL_GROUPED_FEED_CAP);
+
+      try {
+        if (typeof _paeLog === 'function') {
+          _paeLog('guild-activity-self-events-filtered', {
+            rawCount:           Array.isArray(_friendsActivityCache)
+              ? _friendsActivityCache.length
+              : (Array.isArray(entries) ? entries.length : 0),
+            visibleCount:       visible.length,
+            filteredSelfCount:  _selfFilteredCount,
+            hasViewerAlias:     !!_viewerAliasLower,
+            filterMode:         _selfFilterMode,
+            build:              (typeof APP_BUILD_TAG !== 'undefined') ? APP_BUILD_TAG : 'unknown',
+          });
+        }
+      } catch (_) {}
     }
 
     if (visible.length === 0) {

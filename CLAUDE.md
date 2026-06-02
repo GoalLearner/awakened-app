@@ -4,7 +4,128 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.263 Frontend: Apply 1z.262 color system to Hunter feed (read this first)
+## Jun 2, 2026 — 1z.264 Frontend: Hide self-authored events from Guild mode (read this first)
+
+**TL;DR.** Guild Notifications → **Guild** mode now filters out the viewer's own public events at render time. Hunter mode is unchanged. No backend changes — events are still submitted, still stored, still visible to friends in their Guild feeds. Filter is case-insensitive alias compare using the existing 1z.209 `_displayAliasLower` helper.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No event payload / privacy contract / submission / HealthKit / XP / streak / rank / leaderboard / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Why backend currently includes self-events
+
+`handleFriendsActivityGet` in `backend/src/handlers/public-achievement-events.ts:754-838` explicitly unions the viewer with their accepted friends in the SQL:
+```sql
+WHERE e.user_id = ?   -- viewer
+   OR e.user_id IN (... friends ...)
+```
+Comment (line 776-779): *"Self inclusion keeps solo users from seeing an empty feed."* The product framing has since shifted — Hunter mode handles "my own activity" and Guild mode should be friends-only. The cleanest answer is a render-time filter (frontend) so we don't touch the backend contract or break solo-user-empty-feed safety for any other future surface.
+
+### Audit findings
+
+- Backend response intentionally OMITS `user_id` per event (line 822-825: *"creates a needless identity-disclosure vector"*). Only `alias` is exposed.
+- Aliases are unique by `users` table constraint AND are the canonical public identity → alias compare is safe.
+- Frontend already has viewer's alias via `Auth.getCurrentUser().alias`, and `_displayAliasLower` (1z.209) gives a case/space-insensitive lowercase normalization that matches how aliases are displayed and submitted.
+- Filter location: `renderGuildActivity()` at the `Array.isArray(_friendsActivityCache)` block (app.js:5145+). One filter chain step before `.map(_friendActivityRowHtml)`.
+
+### Filter behavior
+
+- **Hunter mode** — untouched. Personal feats render exactly as 1z.263 left them.
+- **Guild mode + backend cache populated** — every event where `_displayAliasLower(ev.alias) === viewerAlias` is dropped. Friends' events render normally.
+- **Guild mode + backend cache null (offline / pre-first-fetch)** — local fallback now returns `[]`. The `hb_guild_activity` local store is by construction the viewer's personal feat log; every entry is self-authored. With Guild mode now friends-only, surfacing those would contradict the contract.
+- **Viewer alias unavailable (auth not ready, dev stub edge case)** — defaults to showing all events rather than risk hiding genuine friend rows. Reported as `filterMode: 'none'` in the breadcrumb.
+
+### Empty-state behavior
+
+If after filtering there are zero visible events in Guild mode, the existing empty state renders: `"The board is quiet. Guild activity will appear here."`
+
+That message is unchanged. The existing empty-state subline ("Guild activity will appear here.") still reads correctly under the new friends-only contract.
+
+### Breadcrumb
+
+Added `guild-activity-self-events-filtered` (only fires when Guild branch renders). Fields:
+- `rawCount` — total events considered (backend cache OR local fallback)
+- `visibleCount` — count after filter + slice
+- `filteredSelfCount` — how many self-authored rows were removed
+- `hasViewerAlias` — boolean
+- `filterMode` — `'alias'` | `'local-fallback-empty'` | `'none'`
+- `build`
+
+Privacy-safe — no aliases, no IDs, no labels.
+
+### Submission / backend invariants preserved
+
+- `_queuePublicAchievementEvent` still queues every viewer-authored eligible event
+- `submitPublicAchievementEvents` still POSTs them to `/v1/users/me/public-achievement-events`
+- Friends viewing their own Guild feed STILL see the viewer's events (their backend filter unions the viewer's events into their feed by the same SQL pattern)
+- No backend handler / SQL / validator changes
+- `_friendsActivityCache` is unchanged — the filter applies only at the normalize step inside the Guild render branch
+
+### Colors / layout / grouping preserved
+
+- 1z.262 / 1z.263 tiered color palette unchanged.
+- Date grouping (`_groupGuildActivityEntriesByDate`) operates on the filtered `visible` array, so date-group activity counts and See More now reflect the friends-only set automatically.
+- Row HTML, icons, timestamps, sticky CTA all unchanged.
+
+### Files modified
+
+- `app.js` —
+  - `renderGuildActivity()` Guild branch (was app.js:5129-5163): new viewer-alias resolution + per-event self filter inside the backend-cache normalize chain; local fallback now returns `[]`; new `guild-activity-self-events-filtered` breadcrumb.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w127'`.
+- `index.html` — `app.js?v=580`, footer `BUILD W127`.
+- `sw.js` — `CACHE_VERSION = 'v5.466'`.
+- `styles.css` — unchanged.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w127` |
+| `app.js?v=` | `580` |
+| `styles.css?v=` | `327` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.466` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w127)
+
+1. Open Guild Notifications → **Hunter** mode → confirm your own events still render (boss kills, step milestones, sleep ✓, habit streak ✓, rank ups, etc.).
+2. Switch to **Guild** mode → your own events should be GONE.
+3. Friends' events (`galilea crossed 10,000 steps today`, `rendiesel defeated The Glass Strider`, etc.) should still render with the 1z.262 palette.
+4. Date group activity counts reflect the filtered list (e.g. if "Yesterday" had 9 activities pre-filter and 4 of them were yours, it now shows 5).
+5. See More still works.
+6. If all events in Guild are yours, empty state appears: "The board is quiet. Guild activity will appear here."
+7. Public event submission still works — verify by triggering a milestone, then having a friend confirm they see it in THEIR Guild feed.
+8. Backgrounded / offline / first-fetch case → Guild shows empty briefly (or whatever subset has fetched), never your own local events.
+9. Switch back to Hunter mode → your own events return.
+10. Colors / row heights / timestamps / icons all unchanged.
+
+### Edge cases
+
+- **Alias change post-event**: a viewer who renames their alias and views Guild would still hide events authored under their OLD alias because the backend response includes the CURRENT alias (joined from `users.alias`). So those rows would be hidden. Acceptable — the post-rename self events are still self events.
+- **Dev stub / no auth**: filter falls back to `filterMode: 'none'` and shows all events. Safe default; the dev surface doesn't have friend data anyway.
+- **Alias collisions**: backend `users.alias` is unique, so this isn't possible in practice.
+
+### Rollback notes
+
+Single-commit revert restores the pre-1z.264 behavior (self-events visible in Guild mode). No data implications. The filter is purely render-time.
+
+### Confirmations
+
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty).
+- ✅ No event payload / privacy contract / submission changes.
+- ✅ No HealthKit / XP / streak / rank / class / leaderboard / boss / inventory / economy / auth / onboarding logic changed.
+- ✅ Hunter mode rendering unchanged.
+- ✅ Guild mode color palette (1z.262) preserved.
+- ✅ Hunter feed color palette (1z.263) preserved.
+- ✅ Souls ledger rendering unchanged.
+- ✅ Date grouping / See More / empty state preserved.
+- ✅ Friends still see viewer's events in their own Guild feeds (backend SQL unchanged).
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.263 Frontend: Apply 1z.262 color system to Hunter feed
 
 **TL;DR.** Extend the ClaudeDesign tiered color system from Guild mode (1z.262) to the Hunter (personal) feed renderer too. Every Hunter row that was using legacy `--gold` / `--violet` binary gets remapped to its tier-appropriate class. Verified events (`sleep_quality_7h`, `habit_streak`) join the mint-green Tier 3 family with a ✓ glyph. Icon tile tints now match the target-phrase color family in Hunter just like in Guild. CSS palette from 1z.262 is reused — no new CSS needed.
 
