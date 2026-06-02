@@ -4,7 +4,147 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.266B Frontend: Replace top XP·30D sparkline with Bosses Slain card (read this first)
+## Jun 2, 2026 — 1z.267B Frontend: Remove Guild Hall summary widget (read this first)
+
+**TL;DR.** Deleted the large `.guildhall-command-panel` block from the Social tab (HUNTERS / FEATS · 24H / BOSSES SLAIN tiles + the `· GUILD HALL · SOCIAL` kicker + the decorative R/G/L avatar chips). The Social tab now flows directly from the tab strip into GUILD NOTIFICATIONS. Bosses Slain access is preserved through the top dashboard card (1z.266B). Hunter access is preserved through the inline friends accordion ("GUILD N hunters"). No replacement widget. CSS intentionally left in place for a future cleanup phase.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No Guild Notifications / Hunter-Guild filter / public event / boss kill counting / Kill Log content / XP / streak / rank / class / HealthKit / leaderboard / boss / inventory / economy / auth / onboarding / Add Habits logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `index.html` — removed the `.guildhall-command-panel` markup (was ~43 lines). Replaced with a single comment block documenting the removal + coverage + preserved null-guarded code paths. Bumped `app.js?v=583`, footer `BUILD W130`.
+- `app.js` — bumped `APP_BUILD_TAG = '2.2.5-w130'`. **No other JS changes.**
+- `sw.js` — `CACHE_VERSION = 'v5.469'`.
+- `styles.css` — **unchanged.** Dead rules for `.guildhall-command-panel*` / `.guildhall-summary-tile*` / `.guildhall-summary-chip*` etc. intentionally left in place; sweep in a future 1z.267C cleanup.
+
+### Exact markup removed
+
+```html
+<div class="guildhall-command-panel">
+  <div class="guildhall-command-panel-inner">
+    <div class="guildhall-command-panel-top">
+      <div class="guildhall-page-header guildhall-page-header--inline">
+        <span class="guildhall-kicker">· GUILD HALL ·</span>
+        <span class="guildhall-page-title-inline">SOCIAL</span>
+      </div>
+      <div id="guildhall-summary-chips" class="guildhall-summary-chips guildhall-summary-chips--hero" aria-hidden="true"></div>
+    </div>
+    <div class="guildhall-command-panel-tiles">
+      <button data-roster-open="hunters" data-roster-sort="alias" aria-label="Open Guild Members roster">
+        HUNTERS / #guildhall-summary-hunters
+      </button>
+      <button data-roster-open="feats24h" data-roster-sort="feats24h" aria-label="Open guild feats roster">
+        FEATS · 24H / #guildhall-summary-today
+      </button>
+      <button data-roster-open="bosses" data-roster-sort="bosses" aria-label="Open bosses slain roster">
+        BOSSES SLAIN / #guildhall-summary-bosses
+      </button>
+    </div>
+  </div>
+</div>
+```
+
+### Roster access decision
+
+**Option A2 — accept the dedicated Roster bottom-sheet popup becomes unreachable.**
+
+The investigation (1z.267A) identified three options:
+- **A1** — wire the friends-accordion header to open the Roster sheet (conflicts with the existing expand/collapse click handler at `setupGuildFriendsAccordion`).
+- **A2** — accept the popup unreachable; rely on the inline friends accordion as the roster surface.
+- **A3** — add a new "View Roster" link (adds back the UI weight the brief is trying to remove).
+
+The brief explicitly says: *"If wiring it would conflict with accordion behavior or become confusing, leave roster popup unreachable for this phase"* and *"Do not add a new visual 'View Roster' row unless absolutely necessary."* The friends-accordion toggle at `app.js:4477-4481` already owns its click handler for collapse/expand — wiring it to also open the bottom-sheet would create dual behavior. So: Option A2.
+
+`openGuildRosterSheet` remains on `window` for any future surface that wants to open it. Just no current entry point.
+
+### FEATS · 24H decision
+
+Retired with the widget. The brief: *"This is acceptable for this phase."* `openFeats24hSheet` stays on `window` (no risk to leave it); the inline `#guildhall-feats24h-sheet` markup also stays in case a future surface wants to use it. Today's feats remain individually visible in Hunter-mode rows under the "Today" date group.
+
+### Null-guard verification
+
+- `renderGuildhallSummary()` at `app.js:3596-3700` early-returns at line ~3592: `if (!huntersEl && !todayEl && !bossesEl && !chipsEl) return;` — confirmed safe with the widget gone.
+- `setupGuildRosterSheet()` at `app.js:4411-4457` queries `.guildhall-command-panel [data-roster-open]` → empty NodeList → forEach no-ops — confirmed safe.
+- Tile router (`setupGuildRosterSheet`'s forEach body) never reached → openers never called from this surface → openers still callable from elsewhere via `window`.
+- `setupGuildFriendsAccordion()` (separate from widget) **unchanged and still works** — accordion below still expands/collapses on tap.
+
+### Coverage after removal
+
+| Capability | Pre-1z.267B | Post-1z.267B |
+|---|---|---|
+| BOSSES SLAIN count | Widget tile + lower of top metric row | **Top dashboard card** (1z.266B) — same count, same Kill Log opener |
+| Open Kill Log | Widget tile | **Top dashboard card** |
+| HUNTERS count | Widget tile | Inline `#guildhall-friends-section` ("GUILD N hunters") accordion below |
+| Open Roster bottom-sheet | Widget tile | **Unreachable** (A2 acceptance) — `openGuildRosterSheet` still on `window` |
+| FEATS · 24H count | Widget tile | **Retired** (Hunter feed Today rows substitute) |
+| Open Feats · 24H sheet | Widget tile | **Unreachable** — `openFeats24hSheet` still on `window` |
+| GUILD NOTIFICATIONS | Below widget | First section of Social tab |
+| Hunter/Guild toggle | Below widget | Unchanged, just moved up |
+| Self-event filter (1z.264) | Unchanged | Unchanged |
+| Hunter mode personal feed | Unchanged | Unchanged |
+| Color tiers (1z.262/263) | Unchanged | Unchanged |
+| Friends accordion at bottom | Below GUILD NOTIFICATIONS | Below GUILD NOTIFICATIONS (unchanged) |
+
+### Layout / spacing
+
+`#guildhall-activity-section` (the GUILD NOTIFICATIONS surface) already carries its own top padding via existing `.guildhall-section--activity` CSS. After widget removal, GUILD NOTIFICATIONS becomes the first visible Social-tab section. No spacing changes needed — the heading + segmented Hunter/Guild toggle anchor the section naturally.
+
+If on-device QA shows it's too close to the tab strip, a single `padding-top` tweak on `.guildhall-section--activity` will resolve. Left untouched for now.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w130` |
+| `app.js?v=` | `583` |
+| `styles.css?v=` | `329` (unchanged — dead CSS deferred) |
+| `sw.js CACHE_VERSION` | `v5.469` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w130)
+
+1. Launch app → Social tab.
+2. Confirm the large `· GUILD HALL · SOCIAL` widget with HUNTERS / FEATS · 24H / BOSSES SLAIN tiles is **gone**.
+3. Confirm the page flows: tab strip → **GUILD NOTIFICATIONS** heading → activity feed → friends accordion at bottom.
+4. Switch Hunter ↔ Guild toggle — both modes work.
+5. Guild mode still hides self events (1z.264).
+6. Hunter mode still shows own events with tiered colors (1z.263).
+7. Date grouping (Today / Yesterday / Sun, May 31) still renders.
+8. See More still works.
+9. Top dashboard `BOSSES · SLAIN` card → tap → Kill Log opens.
+10. Kill Log content unchanged (rank groups, counts, individual kills).
+11. Bottom `GUILD N hunters` accordion — header tap still expands / collapses the friend list.
+12. No browser-console errors about missing summary elements.
+13. Spacing between tab strip and GUILD NOTIFICATIONS feels clean on iPhone viewport.
+14. Smoke: Habits, Stats, Items, Quests tabs unchanged.
+
+### Rollback notes
+
+Single-commit revert. The widget markup is gone from `index.html` only — all JS, CSS, and openers remain in source. A revert restores the markup and everything resumes working without any state migration.
+
+### Open follow-ups
+
+- **1z.267C** — dead CSS sweep for `.guildhall-command-panel*` / `.guildhall-summary-tile*` / `.guildhall-summary-chip*` selectors once on-device QA confirms no surface still depends on them.
+- Optional: if Roster bottom-sheet capabilities (sort by rank / sort by bosses / self highlight) are missed, wire a small affordance in a future phase (e.g., a tiny `›` chevron next to the friends-accordion header that opens the popup distinct from the accordion toggle).
+
+### Confirmations
+
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty).
+- ✅ No Guild Notifications / Hunter-Guild filter / public event payload changes.
+- ✅ No boss kill counting / Kill Log content / XP / streak / rank / class / HealthKit / leaderboard / boss / inventory / economy / auth / onboarding / Add Habits logic changed.
+- ✅ Guild Notifications still renders.
+- ✅ Hunter/Guild toggle still works.
+- ✅ Top dashboard Bosses Slain card opens Kill Log.
+- ✅ Friends accordion at bottom still expands/collapses.
+- ✅ Renderer + tile router safely null-guarded (early returns, empty NodeLists).
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.266B Frontend: Replace top XP·30D sparkline with Bosses Slain card
 
 **TL;DR.** The third top-row metric card (`.metric-card--spark`) now hosts BOSSES · SLAIN instead of the XP·30D sparkline. The whole card is tappable and opens the existing Kill Log sheet (same `openBossesSlainSheet()` the lower Guild Hall tile uses). Fresh users see `0`. Same `.metric-card--spark` class kept so the layout grid / init order is unchanged. XP math, persistence, and all other XP surfaces untouched.
 

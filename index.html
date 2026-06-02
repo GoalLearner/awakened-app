@@ -807,65 +807,36 @@
          elsewhere; just not invoked from the social-tab branch). -->
     <div id="social-panel" class="tab-panel hidden" data-panel="social">
 
-      <!-- v3 Phase 1z.173 — Guild Hall Command Panel (Variation B
-           from ClaudeDesign Social Tab Polish). Binds the page
-           header, avatar stack, and three summary tiles into one
-           gradient-rimmed hero so the title area reads as a single
-           Guild Hall surface instead of two stacked rows.
-           Preserves the 1z.172 tile routing (data-roster-open attrs
-           and #guildhall-summary-* ids are untouched). -->
-      <div class="guildhall-command-panel">
-        <div class="guildhall-command-panel-inner">
-          <!-- v3 Phase 1z.174 — title compaction. Kicker + title
-               now share a single line ("· GUILD HALL · SOCIAL") so
-               the Command Panel reads as one tighter header strip.
-               The standalone subtitle paragraph is removed — the
-               three color-coded tiles below carry the meaning
-               better than a sentence ever did. -->
-          <div class="guildhall-command-panel-top">
-            <div class="guildhall-page-header guildhall-page-header--inline">
-              <span class="guildhall-kicker">· GUILD HALL ·</span>
-              <span class="guildhall-page-title-inline">SOCIAL</span>
-            </div>
-            <div id="guildhall-summary-chips" class="guildhall-summary-chips guildhall-summary-chips--hero" aria-hidden="true"></div>
-          </div>
-          <div class="guildhall-command-panel-tiles">
-            <button type="button"
-                    class="guildhall-summary-tile guildhall-summary-tile--hunters"
-                    data-roster-open="hunters" data-roster-sort="alias"
-                    aria-label="Open Guild Members roster">
-              <div class="guildhall-summary-tile-accent"></div>
-              <div class="guildhall-summary-tile-label">HUNTERS</div>
-              <div id="guildhall-summary-hunters" class="guildhall-summary-tile-value">—</div>
-            </button>
-            <button type="button"
-                    class="guildhall-summary-tile guildhall-summary-tile--feats"
-                    data-roster-open="feats24h" data-roster-sort="feats24h"
-                    aria-label="Open guild feats roster">
-              <div class="guildhall-summary-tile-accent"></div>
-              <div class="guildhall-summary-tile-label">FEATS · 24H</div>
-              <div id="guildhall-summary-today" class="guildhall-summary-tile-value">—</div>
-            </button>
-            <button type="button"
-                    class="guildhall-summary-tile guildhall-summary-tile--bosses"
-                    data-roster-open="bosses" data-roster-sort="bosses"
-                    aria-label="Open bosses slain roster">
-              <div class="guildhall-summary-tile-accent"></div>
-              <div class="guildhall-summary-tile-label">BOSSES SLAIN</div>
-              <div id="guildhall-summary-bosses" class="guildhall-summary-tile-value">—</div>
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- v3 Phase 1z.267B — Guild Hall summary widget removed.
+           The HUNTERS / FEATS · 24H / BOSSES SLAIN tiles, the
+           page kicker/title ("· GUILD HALL · SOCIAL"), and the
+           decorative R/G/L avatar chips are gone. The Social tab
+           now flows straight from the tab strip into GUILD
+           NOTIFICATIONS.
 
-      <!-- v3 Phase 1z.173 — legacy Guild Hall summary card removed.
-           The HUNTERS / FEATS · 24H / BOSSES SLAIN tiles + the
-           friend avatar chips are now folded into the
-           .guildhall-command-panel above. All element IDs were
-           preserved so renderGuildhallSummary() keeps writing into
-           the right nodes (#guildhall-summary-hunters / -today /
-           -bosses / -chips). Tile routing semantics (data-roster-
-           open) are unchanged. -->
+           Coverage:
+             • Bosses Slain + Kill Log access → the top dashboard
+               BOSSES · SLAIN card (1z.266B) opens openBossesSlainSheet.
+             • Hunter list → inline friends accordion below
+               (#guildhall-friends-section, "GUILD N hunters") shows
+               the same hunters with their ranks.
+             • FEATS · 24H → retired with the widget. Today's feats
+               are still individually visible in Hunter-mode rows.
+
+           Code preserved (intentionally null-guarded no-ops):
+             • renderGuildhallSummary() — early-returns when none of
+               its target IDs exist (line ~3596).
+             • setupGuildRosterSheet() — querySelectorAll empty,
+               forEach no-ops (line ~4411).
+             • openGuildRosterSheet, openFeats24hSheet,
+               openBossesSlainSheet — still on window for any future
+               callers; only the tile router stopped reaching them.
+
+           Dead CSS for .guildhall-command-panel*,
+           .guildhall-summary-tile*, .guildhall-summary-chip* etc.
+           intentionally left in styles.css for this phase. Sweep
+           in a future 1z.267C cleanup if desired. -->
+
 
       <!-- v3 Phase 1z.164 — Guild Activity section (local-only feed
            from hb_souls_ledger). Phase 1 reads on-device events only;
@@ -2735,7 +2706,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=582"></script>
+  <script src="app.js?v=583"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3156,7 +3127,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W129</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W130</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
