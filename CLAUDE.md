@@ -4,6 +4,66 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## Jun 2, 2026 — 1z.256 Backend: Allowlist verified public Guild Notification events (read this first)
+
+**TL;DR.** Added backend support for three new privacy-safe public event types: `verified_workout`, `verified_sleep_7h`, `flights_milestone_bucket`. Same hard-pinned label/key/value posture as the 1z.226A rare/100K-club/streak events. **No deploy.** Backend-only patch + 33 new tests. The 1z.255 audit decided the contracts; this phase implements + tests them. Frontend hooks (1z.258) and renderer color polish (1z.259) come later.
+
+**Process note.**
+- ✅ Backend code + tests + CLAUDE.md only.
+- ✅ No deploy.
+- ✅ No D1 mutation. No migration needed (the `public_achievement_events` table accepts any allowlisted eventType string).
+- ✅ No frontend changes. No knob bumps.
+- ✅ No XP / HealthKit / leaderboard / Social / Guild / boss / inventory / economy logic changed.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `backend/src/handlers/public-achievement-events.ts` — three new entries in `ALLOWED_EVENT_TYPES`, three new constants for hard-pinned labels/keys, three new branches in `validateEvent`. The verified_streak fallthrough `else` was promoted to an explicit `else if (eventType === 'verified_streak')` so the new branches sit at the same nesting level; the new `flights_milestone_bucket` branch is the new fallthrough (`ALLOWED_EVENT_TYPES` still gates the narrowing above).
+- `backend/src/handlers/public-achievement-events.test.ts` — 33 new tests covering happy-path + every reject vector for the three new types, including silent-drop verification for the known HealthKit smuggling fields.
+
+### Three new event types
+
+**`verified_workout`** — Label: `completed a verified workout` (fixed). Key: `verified_workout:<YYYY-MM-DD>`. Value: `null`. Rarity: `null`. One event per day max via date-scoped key.
+
+**`verified_sleep_7h`** — Label: `slept over 7 hours last night` (fixed). Key: `verified_sleep_7h:<YYYY-MM-DD>`. Value: `null` (threshold encoded in eventType, exact hours never on wire). Rarity: `null`.
+
+**`flights_milestone_bucket`** — Label: `climbed (10|25|50|100) flights today`. Key: `flights_milestone_bucket:<YYYY-MM-DD>:(10|25|50|100)`. Value: bucket integer. Rarity: `null`. Label/key/value cross-validated for bucket agreement.
+
+### Smuggling vector behavior
+
+The handler architecture is **silent-drop for unknown fields**. The validator reads only named fields (`raw.eventType`, `raw.eventKey`, etc.); extra fields like `workoutType`, `calories`, `sleepHours`, `bedtime`, `exactFlights`, `metadata_json` are never read, never bound, never stored. Tests explicitly verify this: a smuggled payload still succeeds with HTTP 200, only the 10 named bind positions are populated, and the stringified binds are asserted to NOT contain any smuggled value.
+
+### Test results
+
+- **105/105** tests pass in `public-achievement-events.test.ts` (72 prior + 33 new).
+- **282/282** tests pass across all 13 backend test files. No regressions.
+
+### What was deliberately NOT done
+
+- ❌ No backend deploy. That's the 1z.257 phase, awaiting explicit approval.
+- ❌ No frontend changes. The frontend `_queuePublicAchievementEvent` allowlist (app.js:12811) still only allows `boss_kill`, `rank_up`, `step_milestone_bucket`. Loosening this gate + adding submit hooks is the 1z.258 phase.
+- ❌ No renderer color polish. That's the 1z.259 phase.
+- ❌ No explicit field-level reject of smuggling fields (preserves silent-drop architecture; tests lock the behavior in instead).
+
+### Deploy command (for 1z.257, NOT run in this phase)
+
+```bash
+cd /Volumes/AwakenedDev/repos/awakened-app/backend
+git pull --ff-only origin main
+npx wrangler deploy
+```
+
+### Confirmations
+
+- ✅ Backend accepts `verified_workout`, `verified_sleep_7h`, `flights_milestone_bucket(10|25|50|100)`.
+- ✅ Backend rejects every label/key/value typo and smuggling vector tested.
+- ✅ Existing event types unchanged.
+- ✅ All 282 backend tests pass.
+- ✅ No deploy / D1 mutation / migration / frontend knob bump.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
 ## Jun 1, 2026 — 1z.248 Frontend: Land on Habits + tighten First Vow layout (read this first)
 
 **TL;DR.** On-device QA of w114 surfaced two issues: (1) fresh users were dropped on the Hunter Profile tab after onboarding instead of Habits (so the First Vow they were promised wasn't visible), and (2) the First Vow empty state had ~80px of dead space above the sigil because the base `.empty-state` rule carried `padding: 72px 40px 40px` from the legacy ✓ + p layout. Both fixed.

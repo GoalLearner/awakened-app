@@ -70,6 +70,30 @@ const ALLOWED_EVENT_TYPES = [
   // eventKey carries `verified_streak:<band>` so backend can
   // sanity-cross-check the trio at write time.
   'verified_streak',
+  // v3 Phase 1z.256 — generic verified-workout event. Fires at
+  // most once per device-local day (eventKey carries the date).
+  // Label is the single fixed string "completed a verified
+  // workout". The whole point of this event is to celebrate
+  // that a user finished a verified Apple Health workout
+  // WITHOUT leaking workout type, duration, calories, heart
+  // rate, distance, pace, or location. Any unknown extra field
+  // on the payload is silently dropped by the validator (it
+  // reads only the named fields), and the test suite locks
+  // that behavior in for known HealthKit smuggling vectors.
+  'verified_workout',
+  // v3 Phase 1z.256 — verified sleep over 7 hours. Fires at
+  // most once per sleep-night-date (eventKey carries the date).
+  // Label is the single fixed string "slept over 7 hours last
+  // night". eventValue is null because the threshold is already
+  // encoded in the eventType + label; we never accept raw sleep
+  // hours, sleep score, bedtime/wake time, or sleep stages.
+  'verified_sleep_7h',
+  // v3 Phase 1z.256 — bucketed flights-climbed milestone. Same
+  // shape as step_milestone_bucket, but the allowed buckets are
+  // {10, 25, 50, 100} flights. The exact non-bucketed flight
+  // count is rejected so a public feed event can never leak
+  // raw daily flights.
+  'flights_milestone_bucket',
 ] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
@@ -127,6 +151,31 @@ const VERIFIED_STREAK_KEY_FOR_BAND: Record<number, string> = {
 };
 
 const ALLOWED_STEP_BUCKETS = new Set([10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]);
+
+// v3 Phase 1z.256 — verified workout. Same hard-pin posture as
+// the 1z.226A ultra/rare/100K-club events: label and key shape
+// are both fixed; eventValue and rarity must be null. The key is
+// date-scoped so dedupe naturally caps the public feed at one
+// event per device-local day.
+const VERIFIED_WORKOUT_LABEL = 'completed a verified workout';
+const RE_VERIFIED_WORKOUT_KEY = /^verified_workout:\d{4}-\d{2}-\d{2}$/;
+
+// v3 Phase 1z.256 — verified sleep ≥ 7 hours. Threshold lives in
+// the event type, not the value. We accept null only — sending
+// the raw hours (or anything else) is rejected so the public
+// surface can never carry exact sleep duration.
+const VERIFIED_SLEEP_7H_LABEL = 'slept over 7 hours last night';
+const RE_VERIFIED_SLEEP_7H_KEY = /^verified_sleep_7h:\d{4}-\d{2}-\d{2}$/;
+
+// v3 Phase 1z.256 — bucketed flights-climbed milestone. Mirrors
+// step_milestone_bucket but with a much smaller bucket set so
+// the feed isn't dominated by stair-day spam. Label / key /
+// value all carry the bucket; the validator cross-checks the
+// trio for internal consistency so a client cannot publish
+// "climbed 100 flights" while binding eventValue=10.
+const FLIGHTS_BUCKET_VALUES = new Set([10, 25, 50, 100]);
+const RE_FLIGHTS_BUCKET_LABEL = /^climbed (10|25|50|100) flights today$/;
+const RE_FLIGHTS_BUCKET_KEY = /^flights_milestone_bucket:\d{4}-\d{2}-\d{2}:(10|25|50|100)$/;
 
 // v3 Phase 1z.226A — colon allowed so verified_streak band keys
 // like "verified_streak:30" pass the cross-cutting key gate.
@@ -427,13 +476,14 @@ function validateEvent(
       };
     }
     rarity = null;
-  } else {
-    // v3 Phase 1z.226A — verified_streak (fallthrough — last in
-    // the chain because ALLOWED_EVENT_TYPES already gated the
-    // narrowing above this block). Band must be in {7,14,30,
-    // 100,365}; label / key / value are cross-checked so the
-    // trio is internally consistent. No habit name, no habit
-    // category, no completion detail accepted.
+  } else if (eventType === 'verified_streak') {
+    // v3 Phase 1z.226A — verified_streak. Band must be in
+    // {7,14,30,100,365}; label / key / value are cross-checked
+    // so the trio is internally consistent. No habit name, no
+    // habit category, no completion detail accepted.
+    // v3 Phase 1z.256 — promoted from fallthrough `else` to an
+    // explicit branch so the three new HealthKit-backed types
+    // below can each own their own validation block.
     if (!isInt(raw.eventValue, 7, 365) || !VERIFIED_STREAK_BANDS.has(raw.eventValue)) {
       return {
         ok: false,
@@ -464,6 +514,135 @@ function validateEvent(
         ok: false,
         code: 'INVALID_RARITY',
         detail: 'verified_streak rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else if (eventType === 'verified_workout') {
+    // v3 Phase 1z.256 — verified workout. Label hard-pinned; key
+    // is date-scoped so the feed is naturally capped at one per
+    // day per user. eventValue and rarity must be null. Unknown
+    // extra fields on the payload (workoutType, calories,
+    // heartRate, distance, pace, location, duration) are
+    // silently dropped by the validator — the test suite locks
+    // that behavior in for the known HealthKit smuggling
+    // vectors.
+    if (eventLabel !== VERIFIED_WORKOUT_LABEL) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `verified_workout label must be exactly "${VERIFIED_WORKOUT_LABEL}".`,
+      };
+    }
+    if (!RE_VERIFIED_WORKOUT_KEY.test(eventKey)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: 'verified_workout eventKey must match "verified_workout:<YYYY-MM-DD>".',
+      };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'verified_workout eventValue must be null.',
+      };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'verified_workout rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else if (eventType === 'verified_sleep_7h') {
+    // v3 Phase 1z.256 — verified sleep ≥ 7 hours. Threshold is
+    // encoded in the eventType + label; eventValue MUST be null
+    // so raw sleep duration, sleep score, bedtime/wake time,
+    // or sleep stages can never appear on the public surface.
+    // Unknown extra fields (sleepHours, asleepHours, sleepScore,
+    // bedtime, wakeTime, sleepStages, deepSleep, remSleep) are
+    // silently dropped by the validator — tests lock this in.
+    if (eventLabel !== VERIFIED_SLEEP_7H_LABEL) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `verified_sleep_7h label must be exactly "${VERIFIED_SLEEP_7H_LABEL}".`,
+      };
+    }
+    if (!RE_VERIFIED_SLEEP_7H_KEY.test(eventKey)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: 'verified_sleep_7h eventKey must match "verified_sleep_7h:<YYYY-MM-DD>".',
+      };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'verified_sleep_7h eventValue must be null.',
+      };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'verified_sleep_7h rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else {
+    // v3 Phase 1z.256 — flights_milestone_bucket (fallthrough;
+    // ALLOWED_EVENT_TYPES already gated the narrowing above this
+    // block to exactly this type). Bucket must be one of
+    // {10,25,50,100}; label / key / value are cross-checked so
+    // the trio is internally consistent. Exact non-bucket
+    // flights values are rejected.
+    if (!isInt(raw.eventValue, 10, 100) || !FLIGHTS_BUCKET_VALUES.has(raw.eventValue)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'flights_milestone_bucket eventValue must be one of 10, 25, 50, 100.',
+      };
+    }
+    const bucket = raw.eventValue;
+    if (!RE_FLIGHTS_BUCKET_LABEL.test(eventLabel)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: 'flights_milestone_bucket label must match "climbed <N> flights today" for N in {10,25,50,100}.',
+      };
+    }
+    if (!RE_FLIGHTS_BUCKET_KEY.test(eventKey)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: 'flights_milestone_bucket eventKey must match "flights_milestone_bucket:<YYYY-MM-DD>:<bucket>".',
+      };
+    }
+    // Cross-check that label bucket, key bucket, and eventValue
+    // all agree. Without this, a client could publish a "100
+    // flights" label while binding eventValue=10 and the row
+    // would order incorrectly in any future leaderboard derived
+    // from the feed.
+    const labelBucket = parseInt((eventLabel.match(/^climbed (\d+) flights today$/) ?? [, ''])[1] || '0', 10);
+    const keyBucket = parseInt((eventKey.match(/:(\d+)$/) ?? [, ''])[1] || '0', 10);
+    if (labelBucket !== bucket || keyBucket !== bucket) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'flights_milestone_bucket label / key / eventValue bucket must all agree.',
+      };
+    }
+    eventValue = bucket;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'flights_milestone_bucket rarity must be null.',
       };
     }
     rarity = null;

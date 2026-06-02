@@ -176,6 +176,48 @@ const VALID_VERIFIED_STREAK_30 = {
   clientCreatedAt: NOW_ISO,
 };
 
+// v3 Phase 1z.256 — canonical verified workout payload. Label is
+// the single fixed string, key is date-scoped. Carries no
+// HealthKit detail (no type, no duration, no calories, no HR).
+const VALID_VERIFIED_WORKOUT = {
+  eventType:       'verified_workout',
+  eventKey:        'verified_workout:2026-05-31',
+  eventLabel:      'completed a verified workout',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'verified_workout:2026-05-31',
+  clientCreatedAt: NOW_ISO,
+};
+
+// v3 Phase 1z.256 — canonical verified sleep ≥ 7h payload. Label
+// uses the threshold word ("over 7 hours"); the value is null so
+// exact sleep duration cannot ride along.
+const VALID_VERIFIED_SLEEP_7H = {
+  eventType:       'verified_sleep_7h',
+  eventKey:        'verified_sleep_7h:2026-05-31',
+  eventLabel:      'slept over 7 hours last night',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'verified_sleep_7h:2026-05-31',
+  clientCreatedAt: NOW_ISO,
+};
+
+// v3 Phase 1z.256 — canonical bucketed flights milestone payload
+// for the 10-flight bucket. Label, key, and value all carry the
+// bucket; the validator cross-checks that the trio agrees.
+function makeFlightsBucketPayload(bucket: 10 | 25 | 50 | 100) {
+  return {
+    eventType:       'flights_milestone_bucket',
+    eventKey:        `flights_milestone_bucket:2026-05-31:${bucket}`,
+    eventLabel:      `climbed ${bucket} flights today`,
+    eventValue:      bucket,
+    rarity:          null,
+    clientEventId:   `flights_milestone_bucket:2026-05-31:${bucket}`,
+    clientCreatedAt: NOW_ISO,
+  };
+}
+const VALID_FLIGHTS_BUCKET_10 = makeFlightsBucketPayload(10);
+
 describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -920,6 +962,344 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_TYPE');
     });
   }
+
+  // ────────────────────────────────────────────────────────────
+  // v3 Phase 1z.256 — verified_workout
+  // ────────────────────────────────────────────────────────────
+  describe('verified_workout (1z.256)', () => {
+    it('accepts a valid verified_workout', async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [VALID_VERIFIED_WORKOUT] }), makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      const calls = db._calls();
+      expect(calls[0]?.binds[2]).toBe('verified_workout');
+      expect(calls[0]?.binds[3]).toBe('verified_workout:2026-05-31');
+      expect(calls[0]?.binds[4]).toBe('completed a verified workout');
+      expect(calls[0]?.binds[5]).toBeNull();   // eventValue
+      expect(calls[0]?.binds[6]).toBeNull();   // rarity
+    });
+
+    it('rejects verified_workout with wrong label', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_WORKOUT, eventLabel: 'completed a workout' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+    });
+
+    it('rejects verified_workout with wrong key shape (no date)', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_WORKOUT, eventKey: 'verified_workout' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+    });
+
+    it('rejects verified_workout with malformed date in key', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_WORKOUT, eventKey: 'verified_workout:2026-5-31' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+    });
+
+    it('rejects verified_workout with non-null eventValue', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_WORKOUT, eventValue: 30 }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    });
+
+    it('rejects verified_workout with non-null rarity', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_WORKOUT, rarity: 'rare' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+    });
+
+    it('silently drops HealthKit smuggling fields on workout (workoutType, calories, heartRate, distance, pace, location, duration)', async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const smuggled = {
+        ...VALID_VERIFIED_WORKOUT,
+        workoutType: 'running',
+        calories:    487,
+        heartRate:   162,
+        distance:    5300,
+        pace:        '5:48',
+        location:    'Central Park',
+        duration:    2400,
+        metadata:    { foo: 'bar' },
+        metadata_json: '{"foo":"bar"}',
+      };
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [smuggled] }), makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);  // request itself succeeds
+      const calls = db._calls();
+      // Only the named fields are bound; smuggled values never touch the DB.
+      const binds = calls[0]?.binds ?? [];
+      expect(binds.length).toBe(10);          // 10 named bind positions
+      expect(binds[4]).toBe('completed a verified workout');
+      expect(binds[5]).toBeNull();             // eventValue stays null
+      expect(binds[6]).toBeNull();             // rarity stays null
+      // Belt-and-braces: confirm no smuggled value ended up in any bind slot.
+      const allBindsStr = JSON.stringify(binds);
+      expect(allBindsStr).not.toMatch(/running/);
+      expect(allBindsStr).not.toMatch(/487/);
+      expect(allBindsStr).not.toMatch(/162/);
+      expect(allBindsStr).not.toMatch(/5300/);
+      expect(allBindsStr).not.toMatch(/Central Park/);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────
+  // v3 Phase 1z.256 — verified_sleep_7h
+  // ────────────────────────────────────────────────────────────
+  describe('verified_sleep_7h (1z.256)', () => {
+    it('accepts a valid verified_sleep_7h', async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [VALID_VERIFIED_SLEEP_7H] }), makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      const calls = db._calls();
+      expect(calls[0]?.binds[2]).toBe('verified_sleep_7h');
+      expect(calls[0]?.binds[3]).toBe('verified_sleep_7h:2026-05-31');
+      expect(calls[0]?.binds[4]).toBe('slept over 7 hours last night');
+      expect(calls[0]?.binds[5]).toBeNull();
+      expect(calls[0]?.binds[6]).toBeNull();
+    });
+
+    it('rejects verified_sleep_7h with wrong label', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_SLEEP_7H, eventLabel: 'slept 7.4 hours last night' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+    });
+
+    it('rejects verified_sleep_7h with wrong key shape', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_SLEEP_7H, eventKey: 'verified_sleep_7h' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+    });
+
+    it('rejects verified_sleep_7h with exact hours in eventValue', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_SLEEP_7H, eventValue: 7.4 }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    });
+
+    it('rejects verified_sleep_7h with integer eventValue (even 7)', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_SLEEP_7H, eventValue: 7 }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    });
+
+    it('rejects verified_sleep_7h with non-null rarity', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_VERIFIED_SLEEP_7H, rarity: 'rare' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+    });
+
+    it('silently drops HealthKit sleep smuggling fields (sleepHours, sleepScore, bedtime, wakeTime, sleepStages, deepSleep, remSleep)', async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const smuggled = {
+        ...VALID_VERIFIED_SLEEP_7H,
+        sleepHours:    7.4,
+        asleepHours:   7.2,
+        sleepDuration: 26640,
+        sleepScore:    82,
+        bedtime:       '2026-05-30T23:30:00Z',
+        wakeTime:      '2026-05-31T06:45:00Z',
+        sleepStages:   { deep: 1200, rem: 5400, core: 18000, awake: 840 },
+        deepSleep:     1200,
+        remSleep:      5400,
+        metadata:      { sensitive: true },
+        metadata_json: '{"sensitive":true}',
+      };
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [smuggled] }), makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      const binds = db._calls()[0]?.binds ?? [];
+      expect(binds.length).toBe(10);
+      expect(binds[4]).toBe('slept over 7 hours last night');
+      expect(binds[5]).toBeNull();
+      expect(binds[6]).toBeNull();
+      const allBindsStr = JSON.stringify(binds);
+      expect(allBindsStr).not.toMatch(/7\.4/);
+      expect(allBindsStr).not.toMatch(/26640/);
+      expect(allBindsStr).not.toMatch(/82/);
+      expect(allBindsStr).not.toMatch(/2026-05-30T23/);
+      expect(allBindsStr).not.toMatch(/sensitive/);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────
+  // v3 Phase 1z.256 — flights_milestone_bucket
+  // ────────────────────────────────────────────────────────────
+  describe('flights_milestone_bucket (1z.256)', () => {
+    for (const bucket of [10, 25, 50, 100] as const) {
+      it(`accepts a valid flights_milestone_bucket for ${bucket}`, async () => {
+        const db = makeDb({ perInsertChanges: [1] });
+        const res = await handlePublicAchievementEventsPost(
+          makeReq({ events: [makeFlightsBucketPayload(bucket)] }), makeEnv(db), session,
+        );
+        expect(res.status).toBe(200);
+        const calls = db._calls();
+        expect(calls[0]?.binds[2]).toBe('flights_milestone_bucket');
+        expect(calls[0]?.binds[3]).toBe(`flights_milestone_bucket:2026-05-31:${bucket}`);
+        expect(calls[0]?.binds[4]).toBe(`climbed ${bucket} flights today`);
+        expect(calls[0]?.binds[5]).toBe(bucket);
+        expect(calls[0]?.binds[6]).toBeNull();
+      });
+    }
+
+    for (const badBucket of [1, 5, 11, 24, 26, 49, 51, 101, 1000]) {
+      it(`rejects flights_milestone_bucket with non-bucket value ${badBucket}`, async () => {
+        const db = makeDb();
+        const payload = {
+          ...VALID_FLIGHTS_BUCKET_10,
+          eventValue: badBucket,
+          // Use a key/label that the regex would accept if the bucket were valid;
+          // here we keep label/key consistent with the bad value so the failure is
+          // unambiguously on the value check, not on label/key shape.
+          eventLabel: `climbed ${badBucket} flights today`,
+          eventKey:   `flights_milestone_bucket:2026-05-31:${badBucket}`,
+        };
+        const res = await handlePublicAchievementEventsPost(
+          makeReq({ events: [payload] }), makeEnv(db), session,
+        );
+        expect(res.status).toBe(400);
+        expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+      });
+    }
+
+    it('rejects flights_milestone_bucket when label/value bucket disagree', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{
+          ...VALID_FLIGHTS_BUCKET_10,
+          eventValue: 10,
+          eventLabel: 'climbed 100 flights today',
+          eventKey:   'flights_milestone_bucket:2026-05-31:10',
+        }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      // Either INVALID_EVENT_LABEL (label fails its own regex first if the bucket
+      // it carries isn't in the allowlist) or INVALID_EVENT_VALUE (cross-check).
+      // In this case the bucketed label IS in the regex allowlist (100), so the
+      // cross-check trips → INVALID_EVENT_VALUE.
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    });
+
+    it('rejects flights_milestone_bucket when key/value bucket disagree', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{
+          ...VALID_FLIGHTS_BUCKET_10,
+          eventValue: 25,
+          eventLabel: 'climbed 25 flights today',
+          eventKey:   'flights_milestone_bucket:2026-05-31:50',
+        }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    });
+
+    it('rejects flights_milestone_bucket with null eventValue', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_FLIGHTS_BUCKET_10, eventValue: null }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    });
+
+    it('rejects flights_milestone_bucket with non-null rarity', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_FLIGHTS_BUCKET_10, rarity: 'rare' }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+    });
+
+    it('rejects flights_milestone_bucket with malformed date in key', async () => {
+      const db = makeDb();
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{
+          ...VALID_FLIGHTS_BUCKET_10,
+          eventKey: 'flights_milestone_bucket:2026/05/31:10',
+        }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+    });
+
+    it('silently drops exact-flights smuggling fields (flights, exactFlights, stairs)', async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const smuggled = {
+        ...VALID_FLIGHTS_BUCKET_10,
+        flights:       47,
+        exactFlights:  47,
+        stairs:        820,
+        metadata:      { exact: 47 },
+        metadata_json: '{"exact":47}',
+      };
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [smuggled] }), makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      const binds = db._calls()[0]?.binds ?? [];
+      expect(binds.length).toBe(10);
+      expect(binds[4]).toBe('climbed 10 flights today');
+      expect(binds[5]).toBe(10);                  // bucket, NOT 47
+      expect(binds[6]).toBeNull();
+      const allBindsStr = JSON.stringify(binds);
+      expect(allBindsStr).not.toMatch(/47/);     // exact flights never leaks
+      expect(allBindsStr).not.toMatch(/820/);    // stairs never leaks
+      expect(allBindsStr).not.toMatch(/exact/);
+    });
+  });
 });
 
 describe('GET /v1/friends/activity — feed read (1z.200)', () => {
