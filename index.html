@@ -161,7 +161,8 @@
       <div class="path-subtitle">Pick a starting pack or build your own.</div>
     </div>
     <div id="path-cards" class="path-cards"></div>
-    <div class="path-note">Morning Routine and Locked-In each unlock a <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
+    <!-- v3 Phase 1z.251 — copy aligned with the 2-option onboarding. -->
+    <div class="path-note">Morning Routine unlocks the <span class="path-note-highlight">Compound Effect Bonus</span> — bonus XP that grows the longer your streak.</div>
     <div class="path-footer">
       <button id="path-continue-btn" class="path-continue-btn" disabled>CONTINUE →</button>
     </div>
@@ -274,13 +275,18 @@
         <button class="pick" role="checkbox" aria-checked="false" data-why="VIT"   data-pack="morning"   type="button">
           <span class="ic" data-ic="sleep"></span><span class="pl">Sleep</span><span class="ps">Recovery</span>
         </button>
-        <button class="pick" role="checkbox" aria-checked="false" data-why="FOCUS" data-pack="locked-in" type="button">
+        <!-- v3 Phase 1z.251 — FOCUS / INT used to bias the cinematic
+             Path screen toward Locked-In. With Locked-In removed from
+             the path choice, both now bias toward Forge Your Own
+             (Custom) so the user lands on a path that exists and the
+             First Vow quick-pick can deliver their intent. -->
+        <button class="pick" role="checkbox" aria-checked="false" data-why="FOCUS" data-pack="custom"    type="button">
           <span class="ic" data-ic="focus"></span><span class="pl">Focus</span><span class="ps">Presence</span>
         </button>
         <button class="pick" role="checkbox" aria-checked="false" data-why="STR"   data-pack="morning"   type="button">
           <span class="ic" data-ic="body"></span><span class="pl">Body</span><span class="ps">Strength</span>
         </button>
-        <button class="pick" role="checkbox" aria-checked="false" data-why="INT"   data-pack="locked-in" type="button">
+        <button class="pick" role="checkbox" aria-checked="false" data-why="INT"   data-pack="custom"    type="button">
           <span class="ic" data-ic="mind"></span><span class="pl">Mind</span><span class="ps">Clarity</span>
         </button>
       </div>
@@ -294,14 +300,16 @@
       <div class="kicker rise" style="margin-bottom:4px">Choose your way</div>
       <h1 class="title rise" style="margin:0 0 16px;font-size:24px">The path that calls you</h1>
       <div class="packs rise d1" id="cin-packs">
+        <!-- v3 Phase 1z.251 — Locked-In removed from the onboarding
+             path choice. The pack still exists in PACKS / Add Habits /
+             library / achievements / compound bonus tracking — users
+             can add it post-onboarding from the library. First-run
+             choice is now Morning Routine vs Forge Your Own only,
+             reducing decision friction at the most fragile moment. -->
         <button class="pack" role="checkbox" aria-checked="false" data-pack="morning" type="button">
           <div class="pn"><span class="sigil" data-mini></span>Morning Routine</div>
           <div class="pb">Rise before the world. Anchor the day in light.</div>
           <div class="bonus"><span class="sigil" data-mini></span>Compound Effect bonus active</div>
-        </button>
-        <button class="pack" role="checkbox" aria-checked="false" data-pack="locked-in" type="button">
-          <div class="pn"><span class="sigil" data-mini></span>Locked-In</div>
-          <div class="pb">Sharpen the mind. Hold the line against the noise.</div>
         </button>
         <button class="pack" role="checkbox" aria-checked="false" data-pack="custom" type="button">
           <div class="pn"><span class="sigil" data-mini></span>Forge Your Own</div>
@@ -2695,7 +2703,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=570"></script>
+  <script src="app.js?v=571"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3116,7 +3124,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W117</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W118</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

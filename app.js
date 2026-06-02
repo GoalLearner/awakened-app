@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w117';
+  const APP_BUILD_TAG = '2.2.5-w118';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33781,7 +33781,9 @@
     root.querySelector('#cin-whyNext').addEventListener('click', () => {
       setTimeout(() => {
         if (!state.pack) return;
-        const el = root.querySelector('#cin-packs .pack[data-pack="' + state.pack + '"]');
+        // v3 Phase 1z.251 — remap retired path values to a valid pick.
+        const targetPack = state.pack === 'locked-in' ? 'custom' : state.pack;
+        const el = root.querySelector('#cin-packs .pack[data-pack="' + targetPack + '"]');
         if (el && el.getAttribute('aria-checked') !== 'true') el.click();
       }, 30);
     });
@@ -33792,7 +33794,13 @@
         _cinPlaySfx('vow'); // v3 Phase 1z.244 — deeper selection pulse
         root.querySelectorAll('#cin-packs .pack').forEach((x) => x.setAttribute('aria-checked', 'false'));
         p.setAttribute('aria-checked', 'true');
-        state.pack = p.dataset.pack;
+        // v3 Phase 1z.251 — Locked-In was removed from the cinematic
+        // path choice. Defensive: if cached HTML or any stale path
+        // somehow surfaces a locked-in pack value here, remap to
+        // 'custom' so downstream pack-creation never tries to build
+        // a pack the user didn't actually choose.
+        const pickedPack = p.dataset.pack === 'locked-in' ? 'custom' : p.dataset.pack;
+        state.pack = pickedPack;
         root.querySelector('#cin-pathNext').disabled = false;
       });
     });
@@ -34142,7 +34150,11 @@
     btn.style.background = '';
     btn.onclick          = null;
 
-    var chosen = null; // 'morning' | 'locked-in' | 'custom'
+    // v3 Phase 1z.251 — Legacy fallback path screen aligned with the
+    // cinematic: Morning Routine + Forge Your Own only. Locked-In card
+    // removed from this code path too so a cinematic-bail-out doesn't
+    // re-expose the option. Pack data stays intact in PACKS / library.
+    var chosen = null; // 'morning' | 'custom'
 
     // ── Card: Morning Routine ──────────────────────────────
     var morningCard = document.createElement('div');
@@ -34157,16 +34169,8 @@
       '<div class="path-card-count">10 habits pre-selected</div>';
 
     // ── Card: Locked-In ────────────────────────────────────
-    var lockedInCard = document.createElement('div');
-    lockedInCard.className = 'path-card';
-    lockedInCard.style.setProperty('--pack-color', '#7c3aed');
-    lockedInCard.innerHTML =
-      '<div class="path-card-check">✓</div>'                                    +
-      '<div class="path-card-emoji">' + packIconHtml('lockedin', { size: 56 }) + '</div>'                                   +
-      '<div class="path-card-name">Locked-In</div>'                             +
-      '<div class="path-card-tagline">Master the day.</div>'                    +
-      '<div class="path-card-sub">For full discipline cycles</div>'             +
-      '<div class="path-card-count">16 habits pre-selected</div>';
+    // v3 Phase 1z.251 — Locked-In legacy card removed from the
+    // fallback path-screen. Pack data preserved in PACKS / library.
 
     // ── Card: Make Your Own ────────────────────────────────
     var customCard = document.createElement('div');
@@ -34182,7 +34186,6 @@
     // ── Card selection helper ──────────────────────────────
     function selectCard(card, id, color) {
       morningCard.classList.remove('path-selected');
-      lockedInCard.classList.remove('path-selected');
       customCard.classList.remove('path-selected');
       card.classList.add('path-selected');
       chosen               = id;
@@ -34208,7 +34211,6 @@
     }
 
     morningCard.onclick  = function() { selectCard(morningCard,  'morning',   '#f59e0b'); };
-    lockedInCard.onclick = function() { selectCard(lockedInCard, 'locked-in', '#7c3aed'); };
     customCard.onclick   = function() {
       selectCard(customCard, 'custom', '#a855f7');
       if (!customWarningShown) {
@@ -34218,7 +34220,6 @@
     };
 
     cardsEl.appendChild(morningCard);
-    cardsEl.appendChild(lockedInCard);
     cardsEl.appendChild(customCard);
 
     // ── Continue button ────────────────────────────────────
