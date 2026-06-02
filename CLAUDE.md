@@ -4,7 +4,135 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.270C Frontend: Polish custom habit icon trigger (read this first)
+## Jun 2, 2026 — 1z.271B Frontend: B-rank verified-only dungeon (read this first)
+
+**TL;DR.** Added 3 B-rank bosses (Forge of Ten Thousand Days, Vow Keeper, Patient Flame), each requiring 5 qualifying days/nights inside a 7-day hunt window. All verified-only — no manual habit completion paths. Soul economy already supported B (200 engage / 400 payout from existing table); no economy change. Frontend-only. No backend. The 3 boss portrait PNGs are deferred; existing `setBossImage` fallback gracefully hides missing art so cards render cleanly with text-only identity until the art ships.
+
+**Process note.** Frontend / visual + resolver logic. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit query logic broadly changed (just three new resolver branches using existing helpers). No public event allowlist change (existing `boss_kill` regex covers any boss name). No drop tables. No economy tables. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `app.js` —
+  - **Three new entries appended to `BOSSES` map** at end of the B-rank section: `the_forge_of_ten_thousand_days`, `the_vow_keeper`, `the_patient_flame`. Each has `rank: 'B'`, `cadence: 'weekly'`, `streakTarget: 5` (mirrors `qualifyingDays`/`qualifyingNights` so the existing `_bossProgressNoun` helper renders "days"/"nights" cleanly).
+  - **New field**: `qualifyingDays` / `qualifyingNights` — count of qualifying days/nights needed inside the weekly hunt window. Inert metadata for any code that doesn't know about it; only the new resolver branches read it.
+  - **New field**: `archetype` ('aggressor' / 'sustainer' / 'caster') — inert metadata for the future combat triangle (1z.269A). No render or logic dependency today.
+  - **`disengageBoss`** (around line ~920): initializes `state.qualifying_progress = 0` so the new bosses' progress mirror resets cleanly per engagement.
+  - **`resolveBossHuntsAcrossWindow`** (around line ~1040): three new branches added at the TOP of the chain, before existing single-pass branches. Branches gate on `cfg.qualifyingDays` / `cfg.qualifyingNights`:
+    1. **Patient Flame (steps qualifying-days)**: iterates `_huntWindowLocalDays(start, evalEnd)`, queries `Health.getStepsBetween` per day, counts days where steps ≥ `stepThreshold`, defeats at `qualifyingDays` qualifying days. Mirrors live count into `state.qualifying_progress`.
+    2. **Forge (workout qualifying-days)**: same pattern using `Health.getStrengthWorkoutsBetween` per day, summing `duration_min` across qualifying samples. Defeats at threshold.
+    3. **Vow Keeper (sleep qualifying-nights)**: queries `Health.getSleepBetween` for the full hunt window (widened by 12h for the same sleep-onset edge case as the existing single-night branch), iterates `_huntWindowLocalDays`, counts nights where `byDate[dayIso].totalAsleepHours >= sleepHours`, defeats at threshold.
+  - **Guards added to existing branches** so a B-rank boss doesn't accidentally trigger the lower-rank single-pass paths:
+    - Existing step branch (around line ~1048): `!cfg.qualifyingDays`
+    - Existing workout branch (Iron Warden, around line ~1141): `!cfg.qualifyingDays`
+    - Existing single-night sleep branch (Insomniac/Dream Tyrant, around line ~1165): `!cfg.qualifyingNights`
+  - Bumped `APP_BUILD_TAG = '2.2.5-w135'`.
+- `index.html` — knobs only: `app.js?v=588`, footer `BUILD W135`.
+- `sw.js` — `CACHE_VERSION = 'v5.474'`.
+- `styles.css` — **unchanged**.
+
+### Boss roster
+
+| Boss | Condition | Cadence | Archetype | Stat |
+|---|---|---|---|---|
+| **The Forge of Ten Thousand Days** | 30+ workout min on 5 of 7 days | weekly | Aggressor | STR |
+| **The Vow Keeper** | 7+ sleep hours on 5 of 7 nights | weekly | Sustainer | VIT |
+| **The Patient Flame** | 10,000 steps on 5 of 7 days | weekly | Caster | FOCUS |
+
+All three are verified-only (HealthKit-backed). No manual habit completion paths. Hunt window: 7 days from engage (existing `cadence === 'weekly'` handling).
+
+### Soul economy (no change)
+
+- Engage cost: **200 souls** (existing `SOULS_ENGAGE_COSTS.B`)
+- Kill payout: **400 souls** (existing `SOULS_KILL_REWARDS.B`)
+- Net per kill: **+200 souls**
+
+### Drops (intentionally empty for v1)
+
+`drops: []` on all three bosses — same pattern as Marathon Wraith on initial ship. `rollBossDrop` handles empty pools cleanly → "BOSS DEFEATED" no-drop variant fires. B-tier relics will be added in a follow-up 1z.271C polish phase.
+
+### Asset status
+
+The 3 portrait PNGs deferred:
+- `assets/bosses/the-forge-of-ten-thousand-days.png` — not yet created
+- `assets/bosses/the-vow-keeper.png` — not yet created
+- `assets/bosses/the-patient-flame.png` — not yet created
+
+**Graceful fallback already in place**: `setBossImage` at `app.js:668` registers `onerror` that hides the `<img>` element on missing/failed asset. No broken-image icon, no console error visible to users, no crash. Boss cards render with name + rank + condition + engage button intact when art is missing. Final art lands in a future phase before TestFlight.
+
+### QA flag decision
+
+`QA_UNLOCK_B_RANK_DUNGEONS` flag **NOT added** in this phase per brief instruction ("If adding the B-rank QA flag increases complexity, defer it"). On-device QA can verify B-rank gating by progressing to B normally, OR by temporarily editing `getRank` return value for a smoke run, OR by flipping `isGateUnlocked` to return true. Can be added in a 1-line follow-up if needed.
+
+### Privacy / public event
+
+`boss_kill` event already supports any boss name via backend regex `/^defeated [A-Za-z0-9 '\-]+$/`. New kills auto-fire as public events:
+- `defeated The Forge of Ten Thousand Days`
+- `defeated The Vow Keeper`
+- `defeated The Patient Flame`
+
+No HealthKit values, exact step counts, sleep hours, or workout minutes are sent. No backend allowlist update needed.
+
+### Kill Log / Bosses Slain integration (auto)
+
+- **Kill Log**: `_KILL_LOG_RANK_ORDER` already includes 'B'. A new B RANK section appears automatically once any B-rank boss has `kill_count > 0`.
+- **Top dashboard Bosses Slain card** (1z.266B): sums `kill_count` across all bosses → auto-includes new bosses.
+- No render code changes needed.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w135` |
+| `app.js?v=` | `588` |
+| `styles.css?v=` | `332` (unchanged — no CSS) |
+| `sw.js CACHE_VERSION` | `v5.474` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w135)
+
+1. User below B rank → all three B bosses render in preview mode with "Reach B rank to engage" (existing isGateUnlocked path).
+2. User at B rank → can engage each B boss; 200 souls deducted; hunt window stamped 7 days.
+3. Insufficient souls → engagement refused with `Need 200 souls. You have N.` toast.
+4. **Patient Flame**: walk 10K+ verified steps on 5 different days inside the 7-day window → defeated; +400 souls; kill_count = 1; B RANK section appears in Kill Log.
+5. **Forge of Ten Thousand Days**: 30+ verified workout minutes on 5 days → defeated.
+6. **Vow Keeper**: 7+ verified sleep hours on 5 nights → defeated.
+7. Live progress on boss detail card shows count via `state.qualifying_progress` (e.g., "2 / 5 days").
+8. Failed hunt → expires at 7-day window end; `failedCopy` shown; re-engage available.
+9. Top dashboard BOSSES SLAIN card increments correctly.
+10. `boss_kill` public event fires for the new bosses (visible in Hunter feed; friends see in Guild feed).
+11. **Existing E/D/C bosses unchanged** (sanity check: Insomniac single-night sleep still defeats normally; Iron Warden single-day workout still defeats normally; Steel Wolf single-day steps still defeats normally).
+12. Boss cards render cleanly even though the portrait PNGs aren't shipped (text + rank + condition + engage button visible; image area blank thanks to `setBossImage` onerror hide).
+13. No console errors.
+
+### Rollback notes
+
+Single-commit revert removes the 3 BOSSES entries, the 3 new resolver branches, and the 3 single-pass guards. The 3 new fields (`qualifyingDays`, `qualifyingNights`, `archetype`, `qualifying_progress`) are inert metadata; no migration needed.
+
+### Open follow-ups
+
+- **1z.271C**: art polish — generate and ship the 3 boss portrait PNGs (DALL·E prompts in the 1z.271A planning report).
+- **1z.271D** (optional): B-tier relic drop tables (3-5 new items per boss) once art is locked.
+- **1z.271E** (optional): on-screen "X / 5 days" detail label using `state.qualifying_progress` if the existing detail render doesn't surface it generically.
+
+### Confirmations
+
+- ✅ `node --check app.js` + `node --check sw.js` pass
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty)
+- ✅ All three B-rank conditions are verified-only (no manual habit completion paths)
+- ✅ No "3 stat domains" condition implemented
+- ✅ Existing E/D/C boss behavior preserved (guards added to prevent mis-fire)
+- ✅ Soul economy tables untouched (B was already there)
+- ✅ Drop tables empty; no economy change
+- ✅ Public event allowlist untouched
+- ✅ Kill Log + Bosses Slain card auto-handle new bosses
+- ✅ Boss art graceful fallback in place — cards render cleanly even with missing PNGs
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.270C Frontend: Polish custom habit icon trigger
 
 **TL;DR.** Removed the ⚡ lightning bolt from the resting/default trigger state and added flex centering so every state (PNG icon, emoji glyph, placeholder) sits dead-center inside the 56×52 button. The new default is a clean dark tile that reads as "ready for your pick," not as "lightning is the icon."
 

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w134';
+  const APP_BUILD_TAG = '2.2.5-w135';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -562,6 +562,69 @@
       cadence:          'daily',
       statDomain:       'VIT',
     },
+
+    // v3 Phase 1z.271B — B-rank verified-only dungeon ("The Vow Keepers'
+    // Hollow"). All three bosses require 5 qualifying days/nights inside
+    // a 7-day hunt window. Verified-only — no manual habit completion
+    // paths. Each boss maps to a future combat-triangle archetype
+    // (1z.269A): Forge → Aggressor (STR+FOCUS), Vow Keeper → Sustainer
+    // (VIT+WILL), Patient Flame → Caster/Discipline (FOCUS+WILL via
+    // verified steps consistency, accessible to non-Apple-Watch users
+    // too since it's pedometer-only). Soul economy already supports B
+    // (SOULS_ENGAGE_COSTS.B = 200, SOULS_KILL_REWARDS.B = 400) — no
+    // economy change. Drop pools empty in v1 (same pattern as Marathon
+    // Wraith); B-tier relics ship in a future 1z.271C polish phase.
+    the_forge_of_ten_thousand_days: {
+      id:               'the_forge_of_ten_thousand_days',
+      name:             'The Forge of Ten Thousand Days',
+      rank:             'B',
+      archetype:        'aggressor', // inert metadata for future combat triangle
+      flavorShort:      'A god-forge that opens only for the hammer that never falls.',
+      flavorLong:       'A god-forge sealed since the second age. Its doors part only for those who lift on the days they do not want to. Stop, and the forge cools. Continue, and the steel between you and the world grows thinner with every blow.',
+      killCondShort:    '30+ workout minutes on 5 of 7 days',
+      killCondLong:     'Complete at least 30 verified workout minutes on five days inside the 7-day hunt window. Any qualifying Apple Health workout type counts. Five days is the threshold; less than that, and the forge seals.',
+      failedCopy:       'The hammer fell silent. The forge sealed.',
+      // qualifyingDays = how many days inside the window must hit the
+      // workoutMinutes threshold. streakTarget mirrors it so the
+      // existing _bossProgressNoun helper renders "days" cleanly.
+      workoutMinutes:   30,
+      qualifyingDays:   5,
+      streakTarget:     5,
+      cadence:          'weekly',
+      statDomain:       'STR',
+    },
+    the_vow_keeper: {
+      id:               'the_vow_keeper',
+      name:             'The Vow Keeper',
+      rank:             'B',
+      archetype:        'sustainer',
+      flavorShort:      'He watches the hours you swore to give yourself.',
+      flavorLong:       'A silent figure crowned in unburned candles. He weighs the nights you slept against the nights you did not. He yields only when the count tips in your favor.',
+      killCondShort:    '7+ hours of sleep on 5 of 7 nights',
+      killCondLong:     'Sleep at least seven verified hours on five nights inside the 7-day hunt window. Six is not enough. Hold the count.',
+      failedCopy:       'The vow went unkept. The keeper turned away.',
+      sleepHours:       7,
+      qualifyingNights: 5,
+      streakTarget:     5,
+      cadence:          'weekly',
+      statDomain:       'VIT',
+    },
+    the_patient_flame: {
+      id:               'the_patient_flame',
+      name:             'The Patient Flame',
+      rank:             'B',
+      archetype:        'caster',
+      flavorShort:      'A quiet flame that waits for discipline measured in steps.',
+      flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Reach the count five times, and it warms your hand. Fall short, and the wick darkens.',
+      killCondShort:    '10,000 steps on 5 of 7 days',
+      killCondLong:     'Walk at least 10,000 verified steps on five days inside the 7-day hunt window. Steady ground beats sudden distance.',
+      failedCopy:       'The flame waited longer than you held.',
+      stepThreshold:    10000,
+      qualifyingDays:   5,
+      streakTarget:     5,
+      cadence:          'weekly',
+      statDomain:       'FOCUS',
+    },
   };
 
   // v3 Phase 1z.42 -- boss progress noun helper. Bosses whose kill
@@ -920,6 +983,11 @@
     // populated for Steel Wolf + Glass Strider). Max-per-day step
     // count inside the hunt window. Reset between hunts.
     state.step_progress = 0;
+    // v3 Phase 1z.271B — qualifying-days/nights counter for B-rank
+    // bosses (Forge / Vow Keeper / Patient Flame). The resolver
+    // mirrors the live qualifying count inside the hunt window so
+    // the detail screen can render "N / 5 days" without re-querying.
+    state.qualifying_progress = 0;
   }
 
   // Mark an active hunt as expired. Leaves kill_count alone (this
@@ -1039,13 +1107,131 @@
 
       let defeated = false;
 
+      // ── v3 Phase 1z.271B — B-rank "5 of 7" qualifying-days/nights ──
+      // Three bosses (Forge of Ten Thousand Days, Vow Keeper, Patient
+      // Flame) require N qualifying days/nights inside the weekly hunt
+      // window. Branches sit at the TOP of the chain so they take
+      // precedence over the existing single-pass branches, which we
+      // also guard below with !cfg.qualifyingDays / !cfg.qualifyingNights
+      // so a B-rank boss with both stepThreshold AND qualifyingDays
+      // can't accidentally fire the single-day path too.
+
+      // ── B-rank steps boss (Patient Flame) ──────────────────
+      if (typeof cfg.qualifyingDays === 'number' &&
+          typeof cfg.stepThreshold === 'number' &&
+          typeof Health.getStepsBetween === 'function') {
+        const days = _huntWindowLocalDays(start, evalEnd);
+        let qualifyingCount = 0;
+        let lastQualifyingDay = null;
+        for (const dayIso of days) {
+          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+          let steps = null;
+          try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { steps = null; }
+          if (typeof steps === 'number' && steps >= cfg.stepThreshold) {
+            qualifyingCount++;
+            lastQualifyingDay = dayIso;
+            if (qualifyingCount >= cfg.qualifyingDays) break;
+          }
+        }
+        state.qualifying_progress = Math.min(qualifyingCount, cfg.qualifyingDays);
+        setBossState(id, state);
+        if (qualifyingCount >= cfg.qualifyingDays) {
+          _awardHuntKillFromBackfill(id, cfg, lastQualifyingDay || (typeof getDeviceLocalDate === 'function' ? getDeviceLocalDate() : new Date().toISOString().slice(0, 10)));
+          defeated = true;
+        }
+      }
+
+      // ── B-rank workout boss (Forge of Ten Thousand Days) ───
+      // Counts days inside the window where TOTAL workout minutes
+      // for that day reach the threshold. Uses getAnyWorkoutsToday
+      // semantics adapted to a window via getStrengthWorkoutsBetween;
+      // we sum durations per day from the returned sample list.
+      if (!defeated &&
+          typeof cfg.qualifyingDays === 'number' &&
+          typeof cfg.workoutMinutes === 'number' &&
+          typeof cfg.activeEnergyKcal !== 'number' &&  // not the dual-condition boss
+          typeof Health.getStrengthWorkoutsBetween === 'function') {
+        const days = _huntWindowLocalDays(start, evalEnd);
+        let qualifyingCount = 0;
+        let lastQualifyingDay = null;
+        for (const dayIso of days) {
+          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+          let workouts = null;
+          try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+          const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+          // Sum duration_min across all qualifying workouts that day.
+          // Helper already pre-filters to workouts >= its per-sample
+          // minimum, so any item in the list counts.
+          let totalMin = 0;
+          for (const w of list) {
+            const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0;
+            if (m > 0) totalMin += m;
+          }
+          if (totalMin >= cfg.workoutMinutes) {
+            qualifyingCount++;
+            lastQualifyingDay = dayIso;
+            if (qualifyingCount >= cfg.qualifyingDays) break;
+          }
+        }
+        state.qualifying_progress = Math.min(qualifyingCount, cfg.qualifyingDays);
+        setBossState(id, state);
+        if (qualifyingCount >= cfg.qualifyingDays) {
+          _awardHuntKillFromBackfill(id, cfg, lastQualifyingDay || (typeof getDeviceLocalDate === 'function' ? getDeviceLocalDate() : new Date().toISOString().slice(0, 10)));
+          defeated = true;
+        }
+      }
+
+      // ── B-rank sleep boss (Vow Keeper) ─────────────────────
+      if (!defeated &&
+          typeof cfg.qualifyingNights === 'number' &&
+          typeof cfg.sleepHours === 'number' &&
+          typeof Health.getSleepBetween === 'function') {
+        // Widened window so a sleep block ending on the first morning
+        // inside the hunt is captured (same +12h padding pattern as the
+        // single-night branch below).
+        const sIso = new Date(start - 12 * 3600 * 1000).toISOString();
+        const eIso = new Date(evalEnd).toISOString();
+        let res = null;
+        try { res = await Health.getSleepBetween(sIso, eIso); } catch (_) { res = null; }
+        const byDate = (res && res.byDate) || {};
+        const days = _huntWindowLocalDays(start, evalEnd);
+        let qualifyingCount = 0;
+        let lastQualifyingNight = null;
+        for (const dayIso of days) {
+          const entry = byDate[dayIso];
+          const hours = entry && typeof entry.totalAsleepHours === 'number' ? entry.totalAsleepHours : 0;
+          if (hours >= cfg.sleepHours) {
+            qualifyingCount++;
+            lastQualifyingNight = dayIso;
+            if (qualifyingCount >= cfg.qualifyingNights) break;
+          }
+        }
+        state.qualifying_progress = Math.min(qualifyingCount, cfg.qualifyingNights);
+        setBossState(id, state);
+        if (qualifyingCount >= cfg.qualifyingNights) {
+          _awardHuntKillFromBackfill(id, cfg, lastQualifyingNight || (typeof getDeviceLocalDate === 'function' ? getDeviceLocalDate() : new Date().toISOString().slice(0, 10)));
+          defeated = true;
+        }
+      }
+
       // ── Steps bosses ───────────────────────────────────────
       // v3 Phase 1z.69 — also mirrors max-per-day step count into
       // state.step_progress so the boss-card + detail label can
       // render live "N / threshold steps" without a second query.
       // Benefits Steel Wolf and Glass Strider too, not just the
       // new Marathon Wraith.
-      if (typeof cfg.stepThreshold === 'number' && typeof Health.getStepsBetween === 'function') {
+      // v3 Phase 1z.271B — guard against B-rank qualifying-days
+      // bosses (Patient Flame) so they don't also fire the single-
+      // day defeat path here.
+      if (!defeated &&
+          typeof cfg.qualifyingDays !== 'number' &&
+          typeof cfg.stepThreshold === 'number' && typeof Health.getStepsBetween === 'function') {
         const days = _huntWindowLocalDays(start, evalEnd);
         let maxStepsInDay = 0;
         for (const dayIso of days) {
@@ -1138,7 +1324,12 @@
         // silently; don't expire here, let the timer handle it below.
       }
       // ── Workout boss (Iron Warden) ─────────────────────────
-      else if (typeof cfg.workoutMinutes === 'number' && typeof Health.getStrengthWorkoutsBetween === 'function') {
+      // v3 Phase 1z.271B — guard against B-rank qualifying-days
+      // bosses (Forge of Ten Thousand Days) so they don't also
+      // fire Iron Warden's first-qualifying-workout defeat here.
+      else if (typeof cfg.workoutMinutes === 'number' &&
+               typeof cfg.qualifyingDays !== 'number' &&
+               typeof Health.getStrengthWorkoutsBetween === 'function') {
         const sIso = new Date(start).toISOString();
         const eIso = new Date(evalEnd).toISOString();
         let workouts = null;
@@ -1162,7 +1353,12 @@
         }
       }
       // ── Single-night sleep boss (Insomniac, Dream Tyrant) ──
-      else if (typeof cfg.sleepHours === 'number' && cfg.streakTarget === 1 && typeof Health.getSleepBetween === 'function') {
+      // v3 Phase 1z.271B — guard against B-rank qualifying-nights
+      // bosses (Vow Keeper) so they don't also fire the first-
+      // qualifying-night defeat here.
+      else if (typeof cfg.sleepHours === 'number' && cfg.streakTarget === 1 &&
+               typeof cfg.qualifyingNights !== 'number' &&
+               typeof Health.getSleepBetween === 'function') {
         // Look at a slightly widened window so a sleep block that
         // ENDED on the first morning inside the hunt is captured
         // (the byDate key uses sleep-onset shifted +4h; a Sun→Mon
