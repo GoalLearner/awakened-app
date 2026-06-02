@@ -4,7 +4,173 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.267B Frontend: Remove Guild Hall summary widget (read this first)
+## Jun 2, 2026 — 1z.270 Frontend: Custom habit icon picker (curated) (read this first)
+
+**TL;DR.** Custom habits can now choose from a curated grid of **38 existing habit-icon PNGs** instead of being stuck on emoji. The identity button at the top of the Create-Your-Own modal now opens an inline icon picker grid; tapping an icon selects it. Emoji path preserved via "Use emoji instead" link. New field `habit.iconKey` persists the choice. `getHabitIcon` honors `iconKey` for ANY habit (custom or preset). Legacy custom habits (no `iconKey`) render their emoji exactly as before — zero migration, zero regression.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit completion / XP / streak / rank / class / HealthKit / leaderboard / Social / Guild / boss / inventory / economy / auth / onboarding logic changed. No user photo upload / camera / moderation surface added. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Audit findings
+
+- `getHabitIcon(habit)` (was `app.js:10849`) explicitly **excluded custom habits** with `if (habit.custom) return null;` — that was the bottleneck.
+- `HABIT_ICONS` map is name-keyed (e.g. `'Sleep before midnight' → assets/habit-icons/icon-sleep.png`). Keys are full habit names, not stable slugs.
+- `assets/habit-icons/` contains **38 usable habit icon PNGs** covering Physical / Mind / Discipline / Nutrition / Wealth / Learning / Wellbeing.
+- Custom create flow: `openCustomHabitModal()` → `#custom-overlay` modal → emoji button + name + stat picker → `saveCustomHabit()`.
+- Custom edit flow: uses the unified `openHabitDetail` sheet (deferred to a future follow-up phase).
+
+### Asset direction
+
+```
+Recommended direction: Option A — use existing assets
+Why: 38 PNGs cover the 7 main habit categories cleanly. v1 ships now.
+Existing asset count: 38
+Missing categories: none critical for v1
+DALL·E needed now? NO
+If yes, requested icon list: deferred to a future icon-pack phase
+```
+
+### Files modified
+
+- `app.js` —
+  - **`getHabitIcon(habit)` updated**: resolution order is now `habit.iconKey` (NEW) → preset name → null/emoji fallback. Works for any habit type. Legacy fallthrough preserved exactly.
+  - **`HABIT_ICON_OPTIONS`** (new const, ~38 entries): list of `{key, cat, label, path}` for the picker. Stable short keys (slugs) instead of full names.
+  - **`HABIT_ICON_BY_KEY`** (new const): derived `Object.create(null)` map for O(1) key → path lookup.
+  - **`HABIT_ICON_CATEGORY_ORDER`** (new const): grid section ordering.
+  - **`openCustomHabitModal()` updated**: resets `_customIconKey`, rebuilds the picker grid on first open, collapses the grid by default.
+  - **`_renderCustomIconBtn()`** (new): updates the identity button to show PNG icon if `_customIconKey` set, else emoji.
+  - **`_renderCustomIconGrid()`** (new): builds the picker grid once (idempotent via `dataset.built`). Sections by category. Each tile clickable; selection updates state + button.
+  - **`_refreshCustomIconGridSelection()`** (new): toggles `.is-selected` on the selected tile.
+  - **`saveCustomHabit()` updated**: if `_customIconKey` is set, persists it as `newH.iconKey`. Otherwise legacy emoji path unchanged.
+  - **`custom-emoji-btn` click handler updated**: toggles the icon grid (was: opened emoji picker).
+  - **`custom-emoji-fallback` click handler** (new): "Use emoji instead" link — clears `iconKey` and opens the legacy emoji picker.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w132'`.
+- `index.html` —
+  - Added `#custom-icon-grid` empty div (built lazily by JS) inside `#custom-overlay`.
+  - Added `#custom-emoji-fallback` "Use emoji instead" link.
+  - `aria-label="Choose icon"` on the identity button.
+  - Knobs: `app.js?v=585`, `styles.css?v=330`, footer `BUILD W132`.
+- `styles.css` — added scoped block under custom-modal CSS:
+  - `.custom-emoji-btn-img` (sizes the icon inside the identity button)
+  - `.custom-icon-grid` (panel, max-height, scroll, hidden state)
+  - `.custom-icon-section-label` (mono kicker per category)
+  - `.custom-icon-row` (6-col grid)
+  - `.custom-icon-tile` (button, aspect-ratio 1, hover + active states)
+  - `.custom-icon-tile.is-selected` (gold border + glow + tint)
+  - `.custom-emoji-fallback` (subtle mono link)
+- `sw.js` — `CACHE_VERSION = 'v5.471'`.
+
+### Persistence field
+
+**`habit.iconKey`** — optional string. Values are stable short slugs (e.g. `'water'`, `'meditate'`, `'finance'`) that resolve via `HABIT_ICON_BY_KEY` to a PNG path. Legacy habits don't have the field → `getHabitIcon` falls through to existing behavior → no change.
+
+### Render helper changed
+
+**`getHabitIcon(habit)`** — added a single new branch at the top:
+```js
+if (habit.iconKey && HABIT_ICON_BY_KEY[habit.iconKey]) {
+  return HABIT_ICON_BY_KEY[habit.iconKey];
+}
+```
+Every existing call site through `habitIconHtml(habit)` / `setHabitIcon(el, habit)` automatically inherits the new resolution — habit list, Today's Habits, Add Habits sheet, First Vow quick-picks, etc. **No per-surface render patches needed.**
+
+### UI behavior
+
+1. Open "Create Your Own Habit" modal.
+2. Identity button (top-left of modal) shows `⚡` by default.
+3. **Tap identity button** → icon grid expands inline below. 38 icons grouped into 7 category sections.
+4. Tap an icon → button updates to show that PNG, grid collapses, selection persisted in `_customIconKey`.
+5. **Tap "Use emoji instead"** → grid stays/collapses, legacy emoji picker opens (existing `openEmojiPicker` behavior), `_customIconKey` cleared.
+6. Save the habit → `iconKey` persisted with the habit object.
+7. Habit card renders the chosen PNG via the existing `habitIconHtml(habit)` path — no per-card patching.
+
+### DALL·E expansion plan (for future phase, NOT this one)
+
+V1 ships with 38 existing icons. If you want to expand later:
+
+**Naming convention**: `assets/habit-icons/icon-<slug>.png` (matches existing pattern).
+
+**Style guide for new DALL·E icons**:
+- Square 1:1 (target 256×256 export → 64×64 display)
+- Transparent OR near-black background to match the existing set
+- Awakened palette: deep violet `#a78bfa`, gold `#f5b842`, near-black navy
+- Solo Leveling / dark fantasy item style — glowing focal element, subtle rim light
+- No text in the icon
+- Consistent visual weight with existing set (compare against `icon-strength.png`, `icon-meditate.png`)
+
+**Suggested icon gaps that are NOT yet in the catalog** (priority order if expanding):
+1. `icon-fasting` — fasting / intermittent eating
+2. `icon-cooking` — meal prep
+3. `icon-nature` — outdoor / nature exposure
+4. `icon-music` — instrument practice / music
+5. `icon-art` — creative practice
+6. `icon-family` — distinct from `connection` (specific family time)
+7. `icon-water-outdoor` — swimming / open water
+8. `icon-stretching` — distinct from `mobility` (yoga focus)
+9. `icon-breathwork` — distinct from `meditate` (Wim Hof, box breathing)
+10. `icon-no-meat` — vegetarian / vegan eating
+
+**Wiring after adding**: append to `HABIT_ICON_OPTIONS` array → picker shows them automatically. No other code changes.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w132` |
+| `app.js?v=` | `585` |
+| `styles.css?v=` | `330` |
+| `sw.js CACHE_VERSION` | `v5.471` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w132)
+
+1. Add Habits → Create Your Own.
+2. Identity button shows `⚡`.
+3. Tap identity → icon grid expands; 7 category sections visible.
+4. Tap `Hydrate` icon → button shows water-drop PNG, grid collapses, tile shows gold border.
+5. Type a name, pick a stat, save → custom habit appears in list with the water-drop icon.
+6. Reload app → icon persists.
+7. Reset, repeat with a different icon (e.g. `Finance`) → new icon shows on card.
+8. Create another custom habit, tap "Use emoji instead" → emoji picker opens, choose 🔥, save → habit shows 🔥 emoji.
+9. **Legacy custom habits** (created before w132) → still render their emoji. No regression.
+10. Existing preset habits (Daily walk, Sleep, etc.) → still render their assigned PNG icons. No regression.
+11. Add Habits library, First Vow quick-picks → unchanged.
+12. iPhone layout — grid scrolls inside modal, no horizontal overflow.
+13. No console errors.
+
+### Edge cases handled
+
+- **Legacy custom habits** (no `iconKey`): `getHabitIcon` falls through to `null` → `habitIconHtml` renders `habit.emoji`. Identical to pre-1z.270 behavior.
+- **Selected icon then clicked emoji fallback**: `_customIconKey = null` is cleared; emoji picker opens cleanly; no double-state.
+- **Unknown `iconKey` from a future build/old client**: `HABIT_ICON_BY_KEY[unknown]` → undefined → falls through to preset / emoji path. Forward-safe.
+- **Idempotent grid build**: `dataset.built` flag prevents rebuilding the grid every open; selection state still refreshed.
+- **Cloud sync**: `iconKey` is a primitive string field on the habit object; cloud backup pulls in the full habit object so this is preserved automatically. No backend schema change.
+
+### Open follow-ups
+
+- **Edit flow**: custom habits' icon can't be changed after creation in this phase. The unified `openHabitDetail` sheet would need a small icon-picker integration — deferred to a follow-up (1z.270B or whenever edit is opened).
+- **Icon expansion**: 10 gap-fill icons listed above. Defer until product confirms they're wanted.
+
+### Rollback notes
+
+Single-commit revert restores w131. The `iconKey` field is purely additive — habits saved with `iconKey` after a revert will simply ignore the field on load (no error, just falls through to emoji). Forward-safe.
+
+### Confirmations
+
+- ✅ `node --check app.js` + `node --check sw.js` pass
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty)
+- ✅ No habit completion / XP / streak / rank / class / HealthKit / leaderboard / Social / Guild / boss / inventory / economy / auth / onboarding logic changed
+- ✅ No photo upload / camera / moderation surface added
+- ✅ Legacy habits still render correctly (`getHabitIcon` fallthrough preserved)
+- ✅ Custom habits can select and persist an icon
+- ✅ Missing `iconKey` safely falls back to existing emoji path
+- ✅ Render helper change is single-point (`getHabitIcon`); all surfaces inherit automatically
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.267B Frontend: Remove Guild Hall summary widget
 
 **TL;DR.** Deleted the large `.guildhall-command-panel` block from the Social tab (HUNTERS / FEATS · 24H / BOSSES SLAIN tiles + the `· GUILD HALL · SOCIAL` kicker + the decorative R/G/L avatar chips). The Social tab now flows directly from the tab strip into GUILD NOTIFICATIONS. Bosses Slain access is preserved through the top dashboard card (1z.266B). Hunter access is preserved through the inline friends accordion ("GUILD N hunters"). No replacement widget. CSS intentionally left in place for a future cleanup phase.
 

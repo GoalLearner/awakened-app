@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w131';
+  const APP_BUILD_TAG = '2.2.5-w132';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10846,8 +10846,21 @@
   // ALWAYS return null — they keep their user-chosen emoji. habitIconHtml
   // returns the proper render markup (img tag OR escaped emoji string).
   // setHabitIcon writes the markup into an existing element via innerHTML.
+  // v3 Phase 1z.270 — Custom habit icon support.
+  // Resolution order:
+  //   1. Explicit habit.iconKey → lookup in HABIT_ICON_BY_KEY (works for
+  //      both custom and preset habits — e.g. a preset whose user
+  //      overrode the default icon)
+  //   2. Preset habit name in HABIT_ICONS (legacy path; unchanged)
+  //   3. Custom habits without iconKey → null → habitIconHtml falls
+  //      through to habit.emoji (legacy custom path; unchanged)
+  // No regression for legacy custom habits — they have no iconKey and
+  // hit the same null path that returned today.
   function getHabitIcon(habit) {
     if (!habit) return null;
+    if (habit.iconKey && typeof HABIT_ICON_BY_KEY !== 'undefined' && HABIT_ICON_BY_KEY[habit.iconKey]) {
+      return HABIT_ICON_BY_KEY[habit.iconKey];
+    }
     if (habit.custom) return null;
     return (habit.name && HABIT_ICONS[habit.name]) || null;
   }
@@ -11789,6 +11802,77 @@
     'Visualization practice':               'assets/habit-icons/icon-visualize.png',
     'Sleep early before 11PM':              'assets/habit-icons/icon-sleep.png',
   };
+
+  // v3 Phase 1z.270 — Custom-habit icon picker catalog.
+  // Each entry maps a stable short key (saved on habit.iconKey) to a
+  // PNG path AND surfaces user-facing label + category for the picker
+  // UI. Keys are intentionally NOT habit names — they're stable slugs
+  // so the same key works across habit renames. Categories drive the
+  // grid sectioning in the modal. All paths point to icons that already
+  // ship in assets/habit-icons/.
+  //
+  // Adding new icons later: drop a PNG into assets/habit-icons/icon-
+  // <slug>.png, append an entry below, and it shows up in the picker
+  // grid. No other code needs to change. No backend, no migration.
+  const HABIT_ICON_OPTIONS = [
+    // ── Physical ──
+    { key: 'water',      cat: 'Physical', label: 'Hydrate',    path: 'assets/habit-icons/icon-water.png' },
+    { key: 'sleep',      cat: 'Physical', label: 'Sleep',      path: 'assets/habit-icons/icon-sleep.png' },
+    { key: 'strength',   cat: 'Physical', label: 'Strength',   path: 'assets/habit-icons/icon-strength.png' },
+    { key: 'cardio',     cat: 'Physical', label: 'Cardio',     path: 'assets/habit-icons/icon-cardio.png' },
+    { key: 'sprint',     cat: 'Physical', label: 'Sprint',     path: 'assets/habit-icons/icon-sprint.png' },
+    { key: 'walk',       cat: 'Physical', label: 'Walk',       path: 'assets/habit-icons/icon-walk.png' },
+    { key: 'cold',       cat: 'Physical', label: 'Cold',       path: 'assets/habit-icons/icon-cold.png' },
+    { key: 'mobility',   cat: 'Physical', label: 'Mobility',   path: 'assets/habit-icons/icon-mobility.png' },
+    { key: 'protein',    cat: 'Physical', label: 'Protein',    path: 'assets/habit-icons/icon-protein.png' },
+    { key: 'vitamins',   cat: 'Physical', label: 'Vitamins',   path: 'assets/habit-icons/icon-vitamins.png' },
+
+    // ── Mind ──
+    { key: 'meditate',   cat: 'Mind',     label: 'Meditate',   path: 'assets/habit-icons/icon-meditate.png' },
+    { key: 'read',       cat: 'Mind',     label: 'Read',       path: 'assets/habit-icons/icon-read.png' },
+    { key: 'journal',    cat: 'Mind',     label: 'Journal',    path: 'assets/habit-icons/icon-journal.png' },
+    { key: 'sunlight',   cat: 'Mind',     label: 'Sunlight',   path: 'assets/habit-icons/icon-sunlight.png' },
+    { key: 'gratitude',  cat: 'Mind',     label: 'Gratitude',  path: 'assets/habit-icons/icon-gratitude.png' },
+    { key: 'pray',       cat: 'Mind',     label: 'Pray',       path: 'assets/habit-icons/icon-pray.png' },
+    { key: 'visualize',  cat: 'Mind',     label: 'Visualize',  path: 'assets/habit-icons/icon-visualize.png' },
+    { key: 'grounding',  cat: 'Mind',     label: 'Grounding',  path: 'assets/habit-icons/icon-grounding.png' },
+
+    // ── Discipline ──
+    { key: 'priority',   cat: 'Discipline', label: 'Priority',     path: 'assets/habit-icons/icon-priority.png' },
+    { key: 'target',     cat: 'Discipline', label: 'Targets',      path: 'assets/habit-icons/icon-target.png' },
+    { key: 'plan',       cat: 'Discipline', label: 'Plan',         path: 'assets/habit-icons/icon-plan-tomorrow.png' },
+    { key: 'wake',       cat: 'Discipline', label: 'Wake',         path: 'assets/habit-icons/icon-wake.png' },
+    { key: 'tidy',       cat: 'Discipline', label: 'Tidy',         path: 'assets/habit-icons/icon-tidy.png' },
+    { key: 'nophone',    cat: 'Discipline', label: 'No phone',     path: 'assets/habit-icons/icon-nophone.png' },
+    { key: 'nosocial',   cat: 'Discipline', label: 'No social',    path: 'assets/habit-icons/icon-nosocial.png' },
+    { key: 'noscreen',   cat: 'Discipline', label: 'No screens',   path: 'assets/habit-icons/icon-noscreen-bed.png' },
+    { key: 'screencap',  cat: 'Discipline', label: 'Screen cap',   path: 'assets/habit-icons/icon-screen-cap.png' },
+    { key: 'nodoom',     cat: 'Discipline', label: 'No doomscroll',path: 'assets/habit-icons/icon-nodoomscroll.png' },
+
+    // ── Nutrition ──
+    { key: 'nutrition',  cat: 'Nutrition', label: 'Whole foods', path: 'assets/habit-icons/icon-nutrition.png' },
+    { key: 'nosugar',    cat: 'Nutrition', label: 'No sugar',    path: 'assets/habit-icons/icon-nosugar.png' },
+    { key: 'noalcohol',  cat: 'Nutrition', label: 'No alcohol',  path: 'assets/habit-icons/icon-noalcohol.png' },
+    { key: 'nocaffeine', cat: 'Nutrition', label: 'No caffeine', path: 'assets/habit-icons/icon-nocaffeine.png' },
+
+    // ── Wealth & Learning ──
+    { key: 'finance',    cat: 'Wealth',    label: 'Finance',     path: 'assets/habit-icons/icon-finance.png' },
+    { key: 'business',   cat: 'Wealth',    label: 'Business',    path: 'assets/habit-icons/icon-business.png' },
+    { key: 'learning',   cat: 'Learning',  label: 'Learning',    path: 'assets/habit-icons/icon-learning.png' },
+    { key: 'podcast',    cat: 'Learning',  label: 'Podcast',     path: 'assets/habit-icons/icon-podcast.png' },
+
+    // ── Wellbeing ──
+    { key: 'connection', cat: 'Wellbeing', label: 'Connection',  path: 'assets/habit-icons/icon-connection.png' },
+    { key: 'streak',     cat: 'Wellbeing', label: 'Streak',      path: 'assets/habit-icons/icon-streak.png' },
+  ];
+  const HABIT_ICON_BY_KEY = Object.create(null);
+  for (let _i = 0; _i < HABIT_ICON_OPTIONS.length; _i++) {
+    HABIT_ICON_BY_KEY[HABIT_ICON_OPTIONS[_i].key] = HABIT_ICON_OPTIONS[_i].path;
+  }
+  // Display order for category sections in the picker grid.
+  const HABIT_ICON_CATEGORY_ORDER = [
+    'Physical', 'Mind', 'Discipline', 'Nutrition', 'Wealth', 'Learning', 'Wellbeing'
+  ];
 
   // ── CLASS ICONS ──────────────────────────────────────────
   // Custom DALL-E art for the 8 class emblems. Renders in the Status
@@ -20712,19 +20796,82 @@
   let _customEmoji   = '⚡';
   let _customStatId  = null;
 
+  // v3 Phase 1z.270 — Custom habit icon picker state.
+  let _customIconKey = null;
   function openCustomHabitModal() {
     if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) return;
     _customEmoji  = '⚡';
     _customStatId = null;
-    document.getElementById('custom-emoji-btn').textContent = _customEmoji;
+    _customIconKey = null;
     document.getElementById('custom-name-input').value = '';
     document.getElementById('custom-error').classList.add('hidden');
+    _renderCustomIconBtn();
+    _renderCustomIconGrid();
+    // Picker grid starts collapsed; emoji-button click opens it.
+    const grid = document.getElementById('custom-icon-grid');
+    if (grid) grid.classList.add('hidden');
     renderCustomStatGrid();
     updateCustomSaveBtn();
     document.getElementById('custom-overlay').classList.remove('hidden');
     setTimeout(() => {
       try { document.getElementById('custom-name-input').focus(); } catch (_) {}
     }, 80);
+  }
+
+  // Render the identity button: PNG icon if selected, emoji fallback.
+  function _renderCustomIconBtn() {
+    const btn = document.getElementById('custom-emoji-btn');
+    if (!btn) return;
+    if (_customIconKey && HABIT_ICON_BY_KEY[_customIconKey]) {
+      btn.innerHTML = '<img class="custom-emoji-btn-img" src="' +
+        HABIT_ICON_BY_KEY[_customIconKey] + '" alt="" draggable="false" loading="eager" decoding="async">';
+    } else {
+      btn.textContent = _customEmoji || '⚡';
+    }
+  }
+
+  // Build the icon grid the first time the modal opens. Idempotent.
+  function _renderCustomIconGrid() {
+    const grid = document.getElementById('custom-icon-grid');
+    if (!grid) return;
+    if (grid.dataset.built === '1') {
+      _refreshCustomIconGridSelection();
+      return;
+    }
+    grid.dataset.built = '1';
+    let html = '';
+    for (const cat of HABIT_ICON_CATEGORY_ORDER) {
+      const items = HABIT_ICON_OPTIONS.filter(o => o.cat === cat);
+      if (!items.length) continue;
+      html += '<div class="custom-icon-section-label">' + esc(cat) + '</div>';
+      html += '<div class="custom-icon-row">';
+      for (const o of items) {
+        html += '<button type="button" class="custom-icon-tile" data-icon-key="' + esc(o.key) +
+          '" aria-label="' + esc(o.label) + '" title="' + esc(o.label) + '">' +
+          '<img src="' + o.path + '" alt="" draggable="false" loading="lazy" decoding="async">' +
+          '</button>';
+      }
+      html += '</div>';
+    }
+    grid.innerHTML = html;
+    grid.querySelectorAll('.custom-icon-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        _customIconKey = tile.getAttribute('data-icon-key') || null;
+        _refreshCustomIconGridSelection();
+        _renderCustomIconBtn();
+        // Auto-collapse the grid after selection so the modal stays compact.
+        try { grid.classList.add('hidden'); } catch (_) {}
+      });
+    });
+    _refreshCustomIconGridSelection();
+  }
+  function _refreshCustomIconGridSelection() {
+    const grid = document.getElementById('custom-icon-grid');
+    if (!grid) return;
+    grid.querySelectorAll('.custom-icon-tile').forEach(tile => {
+      const isSelected = (_customIconKey && tile.getAttribute('data-icon-key') === _customIconKey);
+      tile.classList.toggle('is-selected', !!isSelected);
+    });
   }
 
   function closeCustomHabitModal() {
@@ -20785,6 +20932,12 @@
       primaryStat: _customStatId,
       custom:      true,
     };
+    // v3 Phase 1z.270 — persist optional icon picker selection. Legacy
+    // habits without iconKey still render emoji via the existing
+    // habitIconHtml fallback. Field is purely additive — no migration.
+    if (_customIconKey && HABIT_ICON_BY_KEY[_customIconKey]) {
+      newH.iconKey = _customIconKey;
+    }
     try {
       _addHabitBreadcrumb('custom-create-validated', {
         nameLen: name.length,
@@ -20858,12 +21011,32 @@
         saveCustomHabit();
       }
     });
-    document.getElementById('custom-emoji-btn').addEventListener('click', (e) => {
-      openEmojiPicker(e.currentTarget, _customEmoji, (em) => {
-        _customEmoji = em || '⚡';
-        document.getElementById('custom-emoji-btn').textContent = _customEmoji;
-      });
+    // v3 Phase 1z.270 — Identity button now toggles the icon grid
+    // (PNG picker) instead of opening the emoji picker. Emoji is kept
+    // as a fallback for users who clear their icon selection — see the
+    // "Use emoji instead" link below. Pre-1z.270 behavior (emoji-only)
+    // is preserved for any legacy custom habits via _renderCustomIconBtn.
+    document.getElementById('custom-emoji-btn').addEventListener('click', () => {
+      const grid = document.getElementById('custom-icon-grid');
+      if (!grid) return;
+      grid.classList.toggle('hidden');
     });
+    // "Use emoji instead" affordance — clears iconKey + opens the
+    // legacy emoji picker so the user can pick an emoji as their
+    // identity. Hidden by default; shown only after grid is built.
+    const emojiLink = document.getElementById('custom-emoji-fallback');
+    if (emojiLink) {
+      emojiLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        _customIconKey = null;
+        _refreshCustomIconGridSelection();
+        const btn = document.getElementById('custom-emoji-btn');
+        openEmojiPicker(btn, _customEmoji, (em) => {
+          _customEmoji = em || '⚡';
+          _renderCustomIconBtn();
+        });
+      });
+    }
   }
 
   function closeMorningPackModal() {

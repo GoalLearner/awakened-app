@@ -10743,6 +10743,83 @@ footer {
   text-align: center;
   margin-bottom: 10px;
 }
+/* v3 Phase 1z.270 — Custom habit icon picker.
+   Scoped to the Create Your Own Habit modal. Identity button shows
+   either an emoji or a PNG icon (via .custom-emoji-btn-img); the grid
+   below it toggles open on identity-button click. */
+.custom-emoji-btn-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+.custom-icon-grid {
+  margin: 4px 0 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.20);
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  border-radius: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.custom-icon-grid.hidden { display: none; }
+.custom-icon-section-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  margin: 8px 2px 6px;
+}
+.custom-icon-section-label:first-child { margin-top: 0; }
+.custom-icon-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.custom-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 4px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.custom-icon-tile:hover {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.30);
+}
+.custom-icon-tile:active { transform: scale(0.94); }
+.custom-icon-tile img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.custom-icon-tile.is-selected {
+  background: rgba(245, 184, 66, 0.14);
+  border-color: rgba(245, 184, 66, 0.65);
+  box-shadow: 0 0 12px rgba(245, 184, 66, 0.30);
+}
+.custom-emoji-fallback {
+  display: inline-block;
+  margin: 0 0 12px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.10em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.custom-emoji-fallback:hover { color: rgba(245, 184, 66, 0.85); }
+
 .custom-stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
