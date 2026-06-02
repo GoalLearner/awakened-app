@@ -4,7 +4,96 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.270 Frontend: Custom habit icon picker (curated) (read this first)
+## Jun 2, 2026 — 1z.270B Frontend: Require explicit custom habit icon choice (read this first)
+
+**TL;DR.** On-device QA of 1z.270 showed users tapping Create Habit without realizing the lightning bolt was a tappable picker — they shipped with the default emoji unintentionally. This phase makes the icon choice unmissable: grid opens by default, explicit `CHOOSE HABIT ICON` label, Create Habit is now disabled until the user either picks an icon OR explicitly opts into emoji mode via "Use emoji instead". Belt-and-braces inline validation if anything bypasses the disabled button. Emoji fallback path preserved.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit completion / XP / streak / rank / class / HealthKit / Social / Guild / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Files modified
+
+- `app.js` —
+  - `openCustomHabitModal()`: resets `_customEmojiModeChosen = false`; grid now starts **visible** (was hidden).
+  - `updateCustomSaveBtn()`: now requires `(iconKey || emojiModeChosen)` in addition to name + stat.
+  - Icon-tile click handler: clears `_customEmojiModeChosen` (icon supersedes), clears the inline error, calls `updateCustomSaveBtn()`.
+  - Emoji-fallback click handler: on emoji-picker callback, sets `_customEmojiModeChosen = true`, clears the inline error, calls `updateCustomSaveBtn()`.
+  - `saveCustomHabit()`: belt-and-braces guard returns `showErr('Choose an icon first.')` + re-opens the grid if `iconKey` and `emojiModeChosen` are both falsy.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w133'`.
+- `index.html` —
+  - Added `<div class="custom-icon-label">CHOOSE HABIT ICON</div>`
+  - Added `<div class="custom-icon-sub">Pick the symbol this habit will carry.</div>`
+  - Removed `hidden` from `#custom-icon-grid` (starts visible).
+  - Updated identity-button `aria-label="Chosen habit icon"`.
+  - Knobs: `app.js?v=586`, `styles.css?v=331`, footer `BUILD W133`.
+- `styles.css` —
+  - `.custom-icon-label` (mono kicker; violet)
+  - `.custom-icon-sub` (helper line)
+  - Subtle violet ring on the identity button so it reads as tappable
+- `sw.js` — `CACHE_VERSION = 'v5.472'`.
+
+### State rules (1z.270B)
+
+| Action | `_customIconKey` | `_customEmojiModeChosen` | Save enabled? |
+|---|---|---|---|
+| Modal open | `null` | `false` | ❌ (name + stat not enough) |
+| Pick an icon | `'<slug>'` | `false` | ✅ if name + stat also set |
+| Tap "Use emoji instead" → confirm emoji | `null` | `true` | ✅ if name + stat also set |
+| Pick icon, then tap emoji link, then dismiss | `null` | unchanged (only flips on emoji confirm) | depends |
+| Try to save without either | n/a | n/a | ❌ + inline "Choose an icon first." |
+
+### UX behavior
+
+1. Open Create Your Own Habit modal.
+2. **First thing visible**: the icon grid + "CHOOSE HABIT ICON" label.
+3. Identity button (lightning bolt) has a subtle violet ring → reads as tappable.
+4. Create Habit button is **disabled** until icon picked OR emoji mode opted-in.
+5. Tap an icon → button updates, grid collapses, Save enables (if name + stat set).
+6. Tap "Use emoji instead" → emoji picker opens; confirm an emoji → emoji mode flips on, Save enables.
+7. Try to bypass via cached HTML / keyboard submit → inline `Choose an icon first.` + grid re-opens.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w133` |
+| `app.js?v=` | `586` |
+| `styles.css?v=` | `331` |
+| `sw.js CACHE_VERSION` | `v5.472` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w133)
+
+1. Add Habits → Create Your Own.
+2. Grid is visible by default. "CHOOSE HABIT ICON" label + helper line above it.
+3. Identity button has a subtle violet ring.
+4. Type a name, pick a stat → Create Habit stays **disabled** until icon picked.
+5. Pick an icon (e.g. Hydrate) → button shows water drop PNG, grid collapses, Create Habit **enables**.
+6. Save → habit shows water drop icon.
+7. Reset; open modal again; type name + pick stat + tap "Use emoji instead" → emoji picker opens; pick 🔥 → emoji mode on, Create Habit enables. Save → habit shows 🔥.
+8. Legacy custom habits (no `iconKey`) still render emoji. No regression.
+9. Press Enter without icon → `Choose an icon first.` appears + grid re-opens.
+10. Cancel → modal closes cleanly.
+
+### Rollback notes
+
+Single-commit revert restores 1z.270 (grid hidden by default, no required choice). `iconKey` and emoji mode are purely additive — no data shape changed.
+
+### Confirmations
+
+- ✅ `node --check app.js` + `node --check sw.js` pass
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload
+- ✅ Create Habit cannot silently proceed with the default lightning icon
+- ✅ User gets clear instruction (label + helper line + violet ring + disabled button)
+- ✅ Icon grid is discoverable (opens by default)
+- ✅ Emoji fallback still works ("Use emoji instead" link → emoji picker → emoji mode flag)
+- ✅ Existing custom habits without `iconKey` render emoji safely
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.270 Frontend: Custom habit icon picker (curated)
 
 **TL;DR.** Custom habits can now choose from a curated grid of **38 existing habit-icon PNGs** instead of being stuck on emoji. The identity button at the top of the Create-Your-Own modal now opens an inline icon picker grid; tapping an icon selects it. Emoji path preserved via "Use emoji instead" link. New field `habit.iconKey` persists the choice. `getHabitIcon` honors `iconKey` for ANY habit (custom or preset). Legacy custom habits (no `iconKey`) render their emoji exactly as before — zero migration, zero regression.
 

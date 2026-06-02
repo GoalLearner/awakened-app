@@ -10743,6 +10743,31 @@ footer {
   text-align: center;
   margin-bottom: 10px;
 }
+/* v3 Phase 1z.270B — Explicit icon-choice labeling above the grid.
+   "CHOOSE HABIT ICON" + a short helper line. Plus a subtle pulsing
+   purple ring on the identity button so it reads as tappable, not
+   decorative. */
+.custom-icon-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(167, 139, 250, 0.92);
+  text-transform: uppercase;
+  text-align: center;
+  margin: 14px 0 4px;
+}
+.custom-icon-sub {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  margin: 0 0 10px;
+}
+.custom-emoji-btn[aria-label="Chosen habit icon"] {
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.30), 0 0 10px rgba(168, 85, 247, 0.18);
+}
+
 /* v3 Phase 1z.270 — Custom habit icon picker.
    Scoped to the Create Your Own Habit modal. Identity button shows
    either an emoji or a PNG icon (via .custom-emoji-btn-img); the grid

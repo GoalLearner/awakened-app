@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w132';
+  const APP_BUILD_TAG = '2.2.5-w133';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20797,19 +20797,29 @@
   let _customStatId  = null;
 
   // v3 Phase 1z.270 — Custom habit icon picker state.
+  // v3 Phase 1z.270B — `_customEmojiModeChosen` tracks whether the
+  // user explicitly opted into the emoji fallback (via "Use emoji
+  // instead"). Create Habit is gated on (iconKey OR emojiModeChosen)
+  // so a fresh modal can't silently ship with the default lightning
+  // bolt — the user must consciously choose.
   let _customIconKey = null;
+  let _customEmojiModeChosen = false;
   function openCustomHabitModal() {
     if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) return;
     _customEmoji  = '⚡';
     _customStatId = null;
     _customIconKey = null;
+    _customEmojiModeChosen = false;
     document.getElementById('custom-name-input').value = '';
     document.getElementById('custom-error').classList.add('hidden');
     _renderCustomIconBtn();
     _renderCustomIconGrid();
-    // Picker grid starts collapsed; emoji-button click opens it.
+    // v3 Phase 1z.270B — picker grid OPENS by default so the choice
+    // is the first thing the user sees. 1z.270 hid it; on-device QA
+    // showed users tapped Create Habit without realizing the
+    // lightning bolt was a picker trigger.
     const grid = document.getElementById('custom-icon-grid');
-    if (grid) grid.classList.add('hidden');
+    if (grid) grid.classList.remove('hidden');
     renderCustomStatGrid();
     updateCustomSaveBtn();
     document.getElementById('custom-overlay').classList.remove('hidden');
@@ -20857,8 +20867,14 @@
     grid.querySelectorAll('.custom-icon-tile').forEach(tile => {
       tile.addEventListener('click', () => {
         _customIconKey = tile.getAttribute('data-icon-key') || null;
+        // v3 Phase 1z.270B — selecting an icon supersedes any prior
+        // emoji-mode opt-in. Clears the warning if it was showing.
+        _customEmojiModeChosen = false;
+        const errEl = document.getElementById('custom-error');
+        if (errEl) errEl.classList.add('hidden');
         _refreshCustomIconGridSelection();
         _renderCustomIconBtn();
+        try { updateCustomSaveBtn(); } catch (_) {}
         // Auto-collapse the grid after selection so the modal stays compact.
         try { grid.classList.add('hidden'); } catch (_) {}
       });
@@ -20902,7 +20918,12 @@
 
   function updateCustomSaveBtn() {
     const name = (document.getElementById('custom-name-input').value || '').trim();
-    document.getElementById('custom-save-btn').disabled = !(name.length > 0 && _customStatId);
+    // v3 Phase 1z.270B — Create Habit now requires an explicit icon
+    // choice (or a deliberate "Use emoji instead" opt-in). Prevents
+    // the silent default-lightning-bolt outcome surfaced in QA.
+    const iconChosen = !!_customIconKey || !!_customEmojiModeChosen;
+    document.getElementById('custom-save-btn').disabled =
+      !(name.length > 0 && _customStatId && iconChosen);
   }
 
   function saveCustomHabit() {
@@ -20916,6 +20937,18 @@
 
     if (!name)            return showErr('Give your habit a name.');
     if (!_customStatId)   return showErr('Pick the stat this habit trains.');
+    // v3 Phase 1z.270B — belt-and-braces icon-choice guard. The Create
+    // button is disabled until the user picks an icon or opts into
+    // emoji mode, but if anything bypasses that (cached HTML, keyboard
+    // submit, etc.) this surfaces a clear inline message and re-opens
+    // the picker grid.
+    if (!_customIconKey && !_customEmojiModeChosen) {
+      try {
+        const grid = document.getElementById('custom-icon-grid');
+        if (grid) grid.classList.remove('hidden');
+      } catch (_) {}
+      return showErr('Choose an icon first.');
+    }
     if (habits.some(h => h && typeof h.name === 'string' && h.name.toLowerCase() === name.toLowerCase())) {
       return showErr('You already have a habit with that name.');
     }
@@ -21033,7 +21066,13 @@
         const btn = document.getElementById('custom-emoji-btn');
         openEmojiPicker(btn, _customEmoji, (em) => {
           _customEmoji = em || '⚡';
+          // v3 Phase 1z.270B — user has now consciously opted into
+          // emoji mode. Unblocks Create Habit.
+          _customEmojiModeChosen = true;
+          const errEl = document.getElementById('custom-error');
+          if (errEl) errEl.classList.add('hidden');
           _renderCustomIconBtn();
+          try { updateCustomSaveBtn(); } catch (_) {}
         });
       });
     }
