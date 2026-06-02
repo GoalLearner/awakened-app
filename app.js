@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w120';
+  const APP_BUILD_TAG = '2.2.5-w121';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20302,22 +20302,22 @@
   // ── HABIT LIBRARY ─────────────────────────────────────────
   function setupLibrary() {
     document.getElementById('add-habit-btn').addEventListener('click', openLibrary);
-    document.getElementById('lib-close-btn').addEventListener('click', closeLibrary);
-    document.getElementById('lib-overlay').addEventListener('click', closeLibrary);
+    document.getElementById('lib-close-btn').addEventListener('click', () => {
+      try { _addBreadcrumb && _addBreadcrumb('add-habits-close-click', { reason: 'x-button' }); } catch (_) {}
+      closeLibrary();
+    });
 
-    // Swipe-down-to-dismiss on the Add Habits sheet
-    if (typeof attachSheetDismissGesture === 'function') {
-      const libSheet   = document.getElementById('lib-sheet');
-      const libOverlay = document.getElementById('lib-overlay');
-      attachSheetDismissGesture(libSheet, libOverlay, () => {
-        libSheet.classList.add('hidden');
-        libOverlay.classList.add('hidden');
-      }, {
-        baseTransform:  'translateX(-50%) ',
-        handleSelector: '.lib-drag-handle, .lib-header',
-        scrollTarget:   '#lib-list',
-      });
-    }
+    // v3 Phase 1z.253 — Backdrop tap + swipe-down dismissal removed.
+    // The X button (top-right) is the only manual dismissal path now.
+    // The previous attachSheetDismissGesture call had two on-device
+    // bugs: (a) its scrollTarget of '#lib-list' targets an element that
+    // no longer scrolls (its parent #lib-scroll does), so allowDrag was
+    // always true → any downward swipe anywhere on the sheet triggered
+    // dismissal, and (b) the same allowDrag-always state hijacked
+    // horizontal chip-strip pans, blocking left-scroll. Removing the
+    // gesture wholesale fixes both. closeLibrary() is still called
+    // programmatically after a successful bulk-commit. forceCloseAdd-
+    // HabitsStack remains available for internal cleanup paths.
 
     // Standalone pack add buttons removed — pack strips themselves are now
     // the entry point for adding missing pack habits. These guards stay in
