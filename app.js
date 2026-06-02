@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w121';
+  const APP_BUILD_TAG = '2.2.5-w122';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9061,7 +9061,9 @@
     if (typeof steps !== 'number' || !Number.isFinite(steps) || steps < 0) return;
     const state = loadLeaderboardState();
     const today = getDeviceLocalDate();
-    state.steps_daily[today] = Math.round(steps);
+    const prev  = state.steps_daily[today] || 0;
+    const next  = Math.round(steps);
+    state.steps_daily[today] = next;
     lbPruneDailyMap(state.steps_daily, LB_DAILY_RETENTION_DAYS);
 
     const weekSum = lbSumCurrentWeekSteps(state.steps_daily);
@@ -9070,6 +9072,26 @@
       state.best_7day_step_window_end = today;
     }
     saveLeaderboardState(state);
+
+    // v3 Phase 1z.254 — Re-push to backend when HealthKit step data
+    // lands. Before this fix, the only triggers for lbSubmitAllMetrics
+    // were cold-launch and visibilitychange resume. On a cold launch
+    // the submit fires BEFORE HealthKit populates state.steps_daily,
+    // so snap.steps_last_7_days = 0 → either allZero skips the submit
+    // entirely (when streaks are also 0) or Branch 1 SELF-HEAL writes
+    // 0 to the backend (when streaks are non-zero). Without a
+    // re-submit when steps actually land, the row stays at 0 until
+    // the user backgrounds + resumes 5+ min later — which is what
+    // Galilea hit after updating to w121: her real 18,259 was visible
+    // on her local UI but never reached the backend.
+    // The debounced wrapper still throttles to 5 min so a flurry of
+    // HK samples can't hammer the worker. Only re-submit when steps
+    // actually changed (skip the rerun on idempotent same-value
+    // refreshes that the comment at lbRecordStepsToday's caller
+    // already protects against).
+    if (next !== prev) {
+      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+    }
   }
 
   // v3 Phase 1z.125 / 1z.139 — flights climbed weekly sum.
@@ -9621,7 +9643,10 @@
     try {
       if (typeof window.Auth === 'undefined' ||
           typeof window.Auth.submitLeaderboardSnapshot !== 'function') {
-        return;
+        // v3 Phase 1z.254 — Return false so lbSubmitAllMetricsDebounced
+        // doesn't waste the 5-min throttle stamp on a path that never
+        // actually POSTed.
+        return false;
       }
       const snap = lbGetSnapshot();
       const metrics = [
@@ -9657,7 +9682,14 @@
       const allZero = metrics.every(([, v]) => !v || v === 0);
       if (allZero) {
         try { console.log('[Leaderboard] submit skipped — all metrics zero'); } catch (_) {}
-        return;
+        // v3 Phase 1z.254 — Return false so the throttle stamp doesn't
+        // get set when no submit actually fired. Without this, a cold
+        // launch where HealthKit hasn't yet populated state.steps_daily
+        // would skip silently AND consume the 5-min window, leaving
+        // the user's backend value stuck at 0 until they background
+        // and resume. The 1z.254 lbRecordStepsToday → debounced trigger
+        // can now break through after HK lands.
+        return false;
       }
       // v3 Phase 1z.122 — per-metric submit breadcrumbs. Proves on
       // TestFlight whether workout_streak (and the other metrics)
@@ -9737,7 +9769,14 @@
           }
         }
       } catch (_) {}
+      // v3 Phase 1z.254 — Truthy return tells the debounced wrapper to
+      // stamp the 5-min throttle. The early-return false paths above
+      // (auth gate, allZero defensive guard) leave the throttle unset
+      // so the next call (typically lbRecordStepsToday when HK lands)
+      // can break through without waiting for a foreground transition.
+      return true;
     } catch (_) {}
+    return false;
   }
 
   // 5-minute debounce so backgrounding and re-foregrounding the app
@@ -9745,16 +9784,37 @@
   // submit fires so two near-simultaneous visibility events still
   // only result in one network roundtrip.
   const LB_SUBMIT_DEBOUNCE_MS = 5 * 60 * 1000;
+  // v3 Phase 1z.254 — Concurrency guard so the new lbRecordStepsToday
+  // trigger (which calls debounced when HK step data lands) can't
+  // race with the existing cold-launch / visibilitychange triggers.
+  let _lbSubmitInFlight = false;
   function lbSubmitAllMetricsDebounced() {
     try {
+      if (_lbSubmitInFlight) return;
       const lastStr = localStorage.getItem('hb_lb_last_submit');
       const last    = lastStr ? parseInt(lastStr, 10) : 0;
       if (Number.isFinite(last) && (Date.now() - last) < LB_SUBMIT_DEBOUNCE_MS) {
         return;
       }
-      localStorage.setItem('hb_lb_last_submit', String(Date.now()));
-      lbSubmitAllMetrics();
-    } catch (_) {}
+      // v3 Phase 1z.254 — Throttle stamp moved from BEFORE the call to
+      // AFTER + only on a submit that ACTUALLY posted, so the 1w.1
+      // allZero defensive guard inside lbSubmitAllMetrics doesn't
+      // waste the 5-min window with a skipped no-op submit. lbSubmit-
+      // AllMetrics now returns truthy when it posted at least one
+      // metric; the throttle stamp only fires on truthy.
+      _lbSubmitInFlight = true;
+      Promise.resolve()
+        .then(() => lbSubmitAllMetrics())
+        .then((didSubmit) => {
+          if (didSubmit) {
+            try { localStorage.setItem('hb_lb_last_submit', String(Date.now())); } catch (_) {}
+          }
+        })
+        .catch(() => {})
+        .then(() => { _lbSubmitInFlight = false; });
+    } catch (_) {
+      _lbSubmitInFlight = false;
+    }
   }
   try {
     window.Leaderboard.submitAllMetrics          = lbSubmitAllMetrics;
