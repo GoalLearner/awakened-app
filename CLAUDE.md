@@ -4,7 +4,111 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.262 Frontend: ClaudeDesign color-system remap for Guild Notifications (read this first)
+## Jun 2, 2026 — 1z.263 Frontend: Apply 1z.262 color system to Hunter feed (read this first)
+
+**TL;DR.** Extend the ClaudeDesign tiered color system from Guild mode (1z.262) to the Hunter (personal) feed renderer too. Every Hunter row that was using legacy `--gold` / `--violet` binary gets remapped to its tier-appropriate class. Verified events (`sleep_quality_7h`, `habit_streak`) join the mint-green Tier 3 family with a ✓ glyph. Icon tile tints now match the target-phrase color family in Hunter just like in Guild. CSS palette from 1z.262 is reused — no new CSS needed.
+
+**Process note.** Frontend / visual only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No event payload / privacy contract / HealthKit / XP / streak / rank / leaderboard / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+### Hunter event remap (Hunter eventType → 1z.262 class)
+
+| Hunter eventType | Pre-1z.263 | 1z.263 | Tier | ✓? |
+|---|---|---|---|---|
+| `boss_kill` | `--gold` | `--combat` (crimson `#f0596b`) | 2 | — |
+| `step_milestone_10k` | `--gold` | `--step` (teal `#2dd4bf`) | 2 | — |
+| `sleep_quality_7h` | `--violet` | `--verify` (mint `#34d399`) | **3** | **✓** |
+| `habit_streak` | `--gold` | `--verify` (mint `#34d399`) | **3** | **✓** |
+| `rank_up` | `--violet` | `--rank` (violet `#a78bfa`) | 2 | — |
+| `ultra_rare_drop` | `--gold` | `--ultra` (iridescent gold `#fbbf24`) | **1** | — |
+| `card_drop` | `--violet` | `--rare` (azure `#3b82f6`) | 2 | — |
+| `friend_added` | `--violet` | `--social` (slate silver `#94a3b8`) | 3 | — |
+| (default) | `--gold` | `--social` (slate) | 3 | — |
+
+Icon tile color now matches each event's target-phrase family — `.guildhall-activity-icon--combat`, `--step`, `--verify`, etc. — same per-event tinting as Guild mode.
+
+### Files modified
+
+- `app.js` —
+  - `_guildhallActivityIconHtml(type)`: switched from raw `--violet` / no-modifier to per-event keys (`combat`, `step`, `verify`, `rank`, `ultra`, `rare`, `social`). Glyphs unchanged (⚔ ⇈ ☾ 🔥 ◆ ✦ ◈ ⚭).
+  - `_guildhallRowHtml(entry)`: every `targetCls` assignment in the `switch` now uses the design class. `sleep_quality_7h` and `habit_streak` set `verifiedCheck = true`; renderer appends a small green `.guildhall-activity-target-check` after the target phrase.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w126'`.
+- `index.html` — `app.js?v=579`, footer `BUILD W126`.
+- `sw.js` — `CACHE_VERSION = 'v5.465'`.
+- `styles.css` — **unchanged**. The 1z.262 palette already covers all the classes used here.
+
+### Souls-ledger rows intentionally NOT remapped
+
+`_hunterFeedSoulsRowHtml(entry)` at app.js:4550 keeps its legacy `isGain ? --gold : --violet` mapping. Reasoning:
+- The souls ledger is a transaction surface (gain/loss), not a feat-event taxonomy. The two-color gain/loss signal is functionally meaningful and predates the tiered system.
+- Both `.guildhall-activity-target--gold` and `--violet` CSS rules are preserved from before 1z.262 specifically because Hunter still uses them here.
+- Mixing the design's elite-gold (Tier 1) with a routine "you earned 5 souls from daily login" row would dilute the "gold = elite" rule the design carefully establishes.
+
+If product later wants souls rows to also adopt the tiered palette, that's a separate scope.
+
+### Tier behavior preserved
+
+- Tier 1 (`ultra_rare_drop`) → strong glow, weight 700.
+- Tier 2 (`boss_kill`, `step_milestone_10k`, `rank_up`, `card_drop`) → medium glow, weight 600.
+- Tier 3 (`sleep_quality_7h`, `habit_streak`, `friend_added`) → **no glow**, weight 500/600.
+- Each row glows at most once. Names (`<strong>You</strong>`) stay white; timestamps stay muted.
+
+### Hunter feed verified ✓ glyph
+
+Two Hunter event types now carry the small green ✓ that 1z.262 introduced for the Guild-mode verified family:
+
+- `sleep_quality_7h` → `slept 8.1 hours last night ✓`
+- `habit_streak` → `30-day Daily Walk ✓`
+
+`friend_added` does not get a ✓ — it's a social event, not a verified achievement. The `GUILD_JOIN_` rendering path is untouched.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w126` |
+| `app.js?v=` | `579` |
+| `styles.css?v=` | `327` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.465` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w126)
+
+1. Open Guild Notifications → **Hunter** mode (the personal feed).
+2. **Boss kill** rows → `You defeated The Steel Wolf` — boss name crimson, icon tile crimson tint.
+3. **Step milestone** rows → `You crossed 10,000 steps today` — steps teal, icon tile teal.
+4. **Sleep quality 7h** rows → `You slept 8.1 hours last night ✓` — phrase mint green + small ✓, **no glow**, icon tile mint.
+5. **Habit streak** rows → `You reached 30-day Daily Walk ✓` — mint + ✓ + no glow, icon mint.
+6. **Rank up** rows → `You reached D I` — rank violet with medium glow.
+7. **Ultra-rare drop** → `You looted Crown of Embers` — iridescent gold + **strong glow** (Tier 1).
+8. **Card drop** (non-ultra) → `You found Ashen Greaves · The Steel Wolf` — azure with medium glow.
+9. **Friend added** → `galilea joined your Guild` — alias slate silver (Tier 3 quiet).
+10. Souls-ledger rows (daily login, boss kill rewards, etc.) → STILL gold for gains, violet for losses. Unchanged.
+11. Switch to Guild mode → still shows the 1z.262 palette unchanged.
+12. Row structure / heights / timestamps / See More / date grouping all unchanged.
+13. Verified family (sleep, habit streak) should visibly recede compared to a fresh boss kill or ultra-rare drop in the same feed.
+
+### Rollback notes
+
+Single-commit revert restores 1z.262 (Hunter back to legacy gold/violet binary, Guild keeps the design palette). No data implications.
+
+### Confirmations
+
+- ✅ Frontend / visual only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty).
+- ✅ No event payload / privacy contract changes.
+- ✅ No HealthKit / XP / streak / rank / class / leaderboard / Social / boss / inventory / economy / auth / onboarding logic changed.
+- ✅ Hunter feed feat rows now use the same tiered palette as Guild (parity).
+- ✅ Souls-ledger rows intentionally preserved on legacy gold/violet (functional gain/loss signal).
+- ✅ `styles.css` unchanged — the 1z.262 CSS palette covers everything.
+- ✅ Glyphs, row structure, heights, timestamps, See More, date grouping all preserved.
+- ✅ Each row glows at most once.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.262 Frontend: ClaudeDesign color-system remap for Guild Notifications
 
 **TL;DR.** Full color-system remap per ClaudeDesign brief. Three-tier emphasis (crown / wins / routine), gold reserved for only two events, boss-kill and steps pushed to opposite poles of the wheel (crimson vs teal), verified family unified under one calm mint green with a small ✓ glyph and no glow. Each row glows at most once. Icon tiles now match the target-phrase color family per event. Hunter renderer untouched.
 

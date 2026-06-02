@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w125';
+  const APP_BUILD_TAG = '2.2.5-w126';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3372,77 +3372,90 @@
     } catch (_) { return ''; }
   }
   function _guildhallActivityIconHtml(type) {
-    // Feat-focused RPG glyphs. Gold = personal victory / milestone,
-    // violet = progression / rare drop.
+    // v3 Phase 1z.263 — Hunter feed icon tiles now share the
+    // ClaudeDesign per-eventType color tints from 1z.262. Glyphs
+    // unchanged for visual continuity; only the tile color
+    // family changes per event. Map:
+    //   boss_kill         → combat (crimson)
+    //   step_milestone_10k → step   (teal)
+    //   sleep_quality_7h  → verify (mint, Tier 3)
+    //   habit_streak      → verify (mint, Tier 3)
+    //   rank_up           → rank   (violet)
+    //   ultra_rare_drop   → ultra  (iridescent gold, Tier 1)
+    //   card_drop         → rare   (azure)
+    //   friend_added      → social (slate silver, Tier 3)
+    let glyph, clsKey;
     switch (type) {
-      case 'boss_kill':
-        return '<span class="guildhall-activity-icon" aria-hidden="true">⚔</span>';
-      case 'step_milestone_10k':
-        return '<span class="guildhall-activity-icon" aria-hidden="true">⇈</span>';
-      case 'sleep_quality_7h':
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">☾</span>';
-      case 'habit_streak':
-        return '<span class="guildhall-activity-icon" aria-hidden="true">🔥</span>';
-      case 'rank_up':
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◆</span>';
-      case 'ultra_rare_drop':
-        return '<span class="guildhall-activity-icon" aria-hidden="true">✦</span>';
-      case 'card_drop':
-        // v3 Phase 1z.184 — non-ultra item/card drop (Hunter-only).
-        // Distinct from ultra_rare_drop's gold ✦; use a softer
-        // violet sigil so the row reads as "progress drop"
-        // rather than "rare flex."
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">◈</span>';
-      case 'friend_added':
-        // v3 Phase 1z.170 — guild bond glyph. Two crossed
-        // chevrons ⟁ would be ideal but glyph support is uneven;
-        // ⛧/✧/✜ all RPG-friendly. Picked ⚭ (ring sign) for the
-        // "bond" semantic.
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">⚭</span>';
-      default:
-        return '<span class="guildhall-activity-icon guildhall-activity-icon--violet" aria-hidden="true">·</span>';
+      case 'boss_kill':         glyph = '⚔'; clsKey = 'combat'; break;
+      case 'step_milestone_10k':glyph = '⇈'; clsKey = 'step';   break;
+      case 'sleep_quality_7h':  glyph = '☾'; clsKey = 'verify'; break;
+      case 'habit_streak':      glyph = '🔥'; clsKey = 'verify'; break;
+      case 'rank_up':           glyph = '◆'; clsKey = 'rank';   break;
+      case 'ultra_rare_drop':   glyph = '✦'; clsKey = 'ultra';  break;
+      // v3 Phase 1z.184 — non-ultra item/card drop (Hunter-only).
+      // Softer azure sigil so the row reads as "progress drop"
+      // rather than the gold "rare flex" of ultra_rare_drop.
+      case 'card_drop':         glyph = '◈'; clsKey = 'rare';   break;
+      // v3 Phase 1z.170 — guild bond glyph (ring sign). Now
+      // slate-tinted to match the Tier-3 social treatment.
+      case 'friend_added':      glyph = '⚭'; clsKey = 'social'; break;
+      default:                  glyph = '·'; clsKey = 'social'; break;
     }
+    return '<span class="guildhall-activity-icon guildhall-activity-icon--' +
+      clsKey + '" aria-hidden="true">' + glyph + '</span>';
   }
   function _guildhallRowHtml(entry) {
     if (!entry) return '';
     const p        = entry.payload || {};
     const time     = _guildhallFormatRelativeTs(entry.ts);
     const iconHtml = _guildhallActivityIconHtml(entry.type);
+    // v3 Phase 1z.263 — Hunter feed now uses the same per-eventType
+    // color system as Guild (1z.262). Three-tier emphasis:
+    //   Tier 1 (crown, strong glow): ultra_rare_drop
+    //   Tier 2 (wins, medium glow):  boss_kill, step_milestone_10k,
+    //                                rank_up, card_drop
+    //   Tier 3 (routine, NO glow):   sleep_quality_7h, habit_streak,
+    //                                friend_added
+    //   Verified family (sleep/habit_streak) also appends a small
+    //   green ✓ glyph to reinforce "system-confirmed."
     let verb, target, targetCls;
+    let verifiedCheck = false;
     switch (entry.type) {
       case 'boss_kill':
         verb = 'defeated';
         target = p.bossName || 'a boss';
-        targetCls = 'guildhall-activity-target--gold';
+        targetCls = 'guildhall-activity-target--combat';
         break;
       case 'step_milestone_10k':
         verb = 'crossed';
         target = (p.steps != null)
           ? p.steps.toLocaleString('en-US') + ' steps today'
           : '10,000 steps today';
-        targetCls = 'guildhall-activity-target--gold';
+        targetCls = 'guildhall-activity-target--step';
         break;
       case 'sleep_quality_7h':
         verb = 'slept';
         target = (p.hours != null)
           ? p.hours.toFixed(1) + ' hours last night'
           : '7+ hours last night';
-        targetCls = 'guildhall-activity-target--violet';
+        targetCls = 'guildhall-activity-target--verify';
+        verifiedCheck = true;
         break;
       case 'habit_streak':
         verb = 'reached';
         target = p.days + '-day ' + (p.habitName || 'streak');
-        targetCls = 'guildhall-activity-target--gold';
+        targetCls = 'guildhall-activity-target--verify';
+        verifiedCheck = true;
         break;
       case 'rank_up':
         verb = 'reached';
         target = (p.toRank || 'a new rank');
-        targetCls = 'guildhall-activity-target--violet';
+        targetCls = 'guildhall-activity-target--rank';
         break;
       case 'ultra_rare_drop':
         verb = 'looted';
         target = (p.cardName || 'an ultra-rare relic');
-        targetCls = 'guildhall-activity-target--gold';
+        targetCls = 'guildhall-activity-target--ultra';
         break;
       case 'card_drop': {
         // v3 Phase 1z.184 — Hunter-mode first-acquisition row for
@@ -3460,7 +3473,7 @@
         target = bossName
           ? (cardName + ' · ' + bossName)
           : (cardName + ' · ' + rarityTxt + ' drop');
-        targetCls = 'guildhall-activity-target--violet';
+        targetCls = 'guildhall-activity-target--rare';
         break;
       }
       case 'friend_added':
@@ -3475,13 +3488,16 @@
         // the app-wide username display rule. Stored payload
         // alias retains its original casing.
         target = _displayAliasLower(p.alias || 'a new hunter');
-        targetCls = 'guildhall-activity-target--violet';
+        targetCls = 'guildhall-activity-target--social';
         break;
       default:
         verb = 'achieved';
         target = 'a feat';
-        targetCls = 'guildhall-activity-target--gold';
+        targetCls = 'guildhall-activity-target--social';
     }
+    const checkHtml = verifiedCheck
+      ? '<span class="guildhall-activity-target-check" aria-hidden="true">✓</span>'
+      : '';
     // v3 Phase 1z.170 — friend_added rows use a different subject
     // shape ("Anthony-Edwards joined your Guild" instead of
     // "You did X"). The 'GUILD_JOIN_' verb marker set by the
@@ -3505,7 +3521,7 @@
         iconHtml +
         '<div class="guildhall-activity-text">' +
           '<strong>You</strong> ' + esc(verb) + ' ' +
-          '<span class="guildhall-activity-target ' + targetCls + '">' + esc(target) + '</span>' +
+          '<span class="guildhall-activity-target ' + targetCls + '">' + esc(target) + checkHtml + '</span>' +
         '</div>' +
         '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
       '</div>'
