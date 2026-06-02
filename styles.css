@@ -27702,9 +27702,15 @@ body.social-hub-on .duels-page-header {
 /* ── Quick-pick grid ────────────────────────────────────────── */
 .empty-state .ev-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* v3 Phase 1z.249 — minmax(0, 1fr) so the track CAN collapse below
+     content width, letting `min-width: 0` on .ev-chip-body engage and
+     .ev-chip-name's ellipsis kick in. Otherwise "Meditate & Breathwork"
+     forces the right column past viewport. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   margin-top: 2px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .empty-state .ev-chip {
   display: flex;
@@ -27714,6 +27720,9 @@ body.social-hub-on .duels-page-header {
   border-radius: 13px;
   cursor: pointer;
   text-align: left;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(180deg,
     rgba(26, 21, 56, 0.90),
     rgba(15, 12, 34, 0.90));

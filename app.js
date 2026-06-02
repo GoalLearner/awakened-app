@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w115';
+  const APP_BUILD_TAG = '2.2.5-w116';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18718,6 +18718,26 @@
         });
         perDay[i] = dayXP;
       }
+      // v3 Phase 1z.249 — Fold the one-time onboarding +25 XP into the
+      // perDay slot matching its grant date so the XP · 30D tile
+      // reflects it. Naturally rolls off after 30 days. No-op if the
+      // user never went through 1z.246 onboarding (legacy users).
+      try {
+        const obXpDate = localStorage.getItem(ONBOARDING_FIRST_XP_DATE_KEY);
+        if (obXpDate && /^\d{4}-\d{2}-\d{2}$/.test(obXpDate)) {
+          for (let i = 0; i < 30; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - (29 - i));
+            const iso = d.getFullYear() + '-' +
+              String(d.getMonth() + 1).padStart(2, '0') + '-' +
+              String(d.getDate()).padStart(2, '0');
+            if (iso === obXpDate) {
+              perDay[i] += ONBOARDING_FIRST_AWAKENING_XP;
+              break;
+            }
+          }
+        }
+      } catch (_) {}
       for (let i = 0; i < 30; i++) {
         cum += perDay[i];
         series.push(cum);
@@ -34296,6 +34316,15 @@
   // _completeOnboardingFinish so they don't get an extra grant either.
   const ONBOARDING_FIRST_AWAKENING_XP = 25;
   const ONBOARDING_FIRST_XP_GUARD_KEY = 'hb_onboarding_first_xp_awarded_v1';
+  // v3 Phase 1z.249 — Date the onboarding grant fired (device-local
+  // YYYY-MM-DD). The XP · 30D sparkline tile derives its value from
+  // habit `completions[date]`, so the +25 onboarding grant was
+  // invisible there (tile read 0 while Rank correctly showed 25 PTS).
+  // We stash the grant date here so updateHeaderMetrics can add 25 to
+  // today's perDay slot — surgically restoring the +25 in the 30D
+  // total without contaminating habit-completion streaks. Naturally
+  // rolls off after 30 days.
+  const ONBOARDING_FIRST_XP_DATE_KEY = 'hb_onboarding_first_xp_date';
 
   function _completeOnboardingFinish() {
     // v3 Phase 1z.232 — Duplicate `#ob-name-input` is no longer in the
@@ -34391,6 +34420,15 @@
       if (localStorage.getItem(ONBOARDING_FIRST_XP_GUARD_KEY) !== '1') {
         totalPoints += ONBOARDING_FIRST_AWAKENING_XP;
         localStorage.setItem(ONBOARDING_FIRST_XP_GUARD_KEY, '1');
+        // v3 Phase 1z.249 — Stamp the grant date so the XP · 30D tile
+        // can include it in today's perDay slot (otherwise it shows 0
+        // until the user actually completes a habit).
+        try {
+          const todayLocal = (typeof getDeviceLocalDate === 'function')
+            ? getDeviceLocalDate()
+            : new Date().toISOString().slice(0, 10);
+          localStorage.setItem(ONBOARDING_FIRST_XP_DATE_KEY, todayLocal);
+        } catch (_) {}
       }
     } catch (_) {}
 
