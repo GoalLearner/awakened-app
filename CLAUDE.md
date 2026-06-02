@@ -4,7 +4,85 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.247 Frontend: Habits empty state — First Vow (read this first)
+## Jun 1, 2026 — 1z.248 Frontend: Land on Habits + tighten First Vow layout (read this first)
+
+**TL;DR.** On-device QA of w114 surfaced two issues: (1) fresh users were dropped on the Hunter Profile tab after onboarding instead of Habits (so the First Vow they were promised wasn't visible), and (2) the First Vow empty state had ~80px of dead space above the sigil because the base `.empty-state` rule carried `padding: 72px 40px 40px` from the legacy ✓ + p layout. Both fixed.
+
+**Process note.** Frontend-only / 1 JS line + ~10 CSS overrides. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit / leaderboard / Social / Guild / inventory / boss / economy logic changed. Onboarding screens / quick-pick habit definitions / habit icons all untouched.
+
+**Files modified.**
+- `app.js` —
+  - `_completeOnboardingFinish`: added `try { switchTab('habits'); } catch (_) {}` between `render()` and `tryGrantDailyLoginBonus()`. Fresh users now land on Habits with First Vow visible (or their newly-created pack list, if they chose Morning Routine / Locked-In). Returning users never enter `_completeOnboardingFinish` so their tab restore is unaffected.
+  - Bumped `APP_BUILD_TAG = '2.2.5-w115'`.
+- `styles.css` — tightened the First Vow empty-state spacing:
+  - **Override base `.empty-state` padding** when first-vow mode is active: `:not(.empty-state--rest-day) { padding: 8px 16px 4px; gap: 0; }`. The 72px top padding inherited from the legacy ✓ + p layout was the main offender.
+  - `.empty-state-firstvow` inner `padding: 16px 16px 8px` → `padding: 0; gap: 14px`.
+  - Sigil wrap `74×74` → `64×64`, disc `54×54` → `46×46`, ring `70×70` → `60×60`, svg `28` → `24`.
+  - Headline `font-size: 20px` → `18px` (still Cinzel, still 2px tracking).
+  - Stanza `font-size: 14.5px` → `13.5px`, top margin `8px` → `6px`.
+  - Grid `gap: 10px` → `8px`, `margin-top: 4px` → `2px`.
+  - Chip `padding: 12px` → `10px 11px`, `gap: 10px` → `9px`.
+  - Browse link `margin-top: 14px` → `8px`, `padding: 10px 0 6px` → `8px 0 4px`.
+- `index.html` knobs — `styles.css?v=320`, `app.js?v=568`. Footer label `BUILD W115`.
+- `sw.js` — `CACHE_VERSION = 'v5.454'`.
+
+**Why the gap was there.** The legacy `.empty-state` rule (styles.css:853) was designed for the dim ✓ + single `p` layout — it intentionally pushed the icon ~72px down to feel centered. When 1z.247 nested the First Vow markup inside the same container, that 72px push was applied additively. Overriding the rule when first-vow mode is on (and only then) keeps the rest-day fallback's centering intact while letting the hero start near the tab strip.
+
+**Acceptance: no scroll on iPhone viewport.** With sigil ~46×46, headline 18px, stanza 13.5px, 3 rows × 2 chips with 8px gap + 10px chip padding, and a 10px browse link, the entire First Vow block measures ~340-360px tall and sits comfortably between the tab strip and the dashed `+ Add Habits` button on iPhone 14/15/Pro viewports without scroll.
+
+**Preserved.**
+- All 1z.247 logic: `_renderFirstVowQuickPicks`, `_addQuickPickHabit`, `FIRST_VOW_PICKS` indices, dedupe, instant-create, side-effect safety.
+- All habit icons (PNG via `HABIT_ICONS`).
+- Rest-day fallback layout (legacy ✓ + p still centered with 72px top padding via the non-overridden base rule).
+- Populated Habits list spacing — `.empty-state` rules only apply when the container is visible (`habits.length === 0` or `todayHabits.length === 0`).
+- Header / metric strip / today bar / 7-tab strip / bottom dashed `+ Add Habits` button untouched.
+- Onboarding screens, +25 XP grant (1z.246), cinematic SFX (1z.244), Apple alias deferred claim (1z.245) — all unchanged.
+- Reduced-motion fallback unchanged.
+- `QA_UNLOCK_C_RANK_DUNGEONS = false`.
+
+**Returning-user safety.**
+- `_completeOnboardingFinish` is only called once per device (on first Enter Awakened tap). The `switchTab('habits')` line therefore only fires for users in active onboarding. On all subsequent app launches, the gate at the top of init dismisses or routes through normal paths — `_completeOnboardingFinish` never re-runs, so returning users land on whatever tab they last had (default `profile`, or their stored last-tab if applicable).
+
+**Knobs.**
+- `APP_BUILD_TAG` `2.2.5-w114 → 2.2.5-w115`.
+- `app.js?v=` `567 → 568`.
+- `auth.js?v=21`, `simulated-leaderboard.js?v=7` — preserved.
+- `styles.css?v=` `319 → 320`.
+- `sw.js CACHE_VERSION` `v5.453 → v5.454`.
+- `QA_UNLOCK_C_RANK_DUNGEONS=false` — preserved.
+
+**Manual QA checklist (w115).**
+1. Reset all progress.
+2. Cinematic onboarding → tap Enter Awakened.
+3. **Confirm you land on the Habits tab, not Hunter Profile.**
+4. Confirm First Vow hero is visible immediately — sigil close to the tab strip, no big dead space.
+5. Confirm the entire First Vow block (sigil + headline + stanza + 6 chips + browse link) fits on screen without scroll.
+6. Confirm the bottom dashed `+ Add Habits` button is visible.
+7. Tap Hydrate quick-pick → "Vow added — Hydrate" toast, habit appears in list, empty state vanishes.
+8. Header XP still 25 (no extra XP from chip tap).
+9. Close app + reopen → confirm you stay on the Habits tab if you left there (or default Profile if that's the saved last-tab — depends on tab restore behavior, but no fresh re-routing should fire).
+10. Restore-from-cloud path (existing user) → confirm `_completeOnboardingFinish` doesn't fire, so no tab routing happens.
+11. iOS Reduce Motion ON → sigil static, no chip press-scale.
+12. Rest-day case (habits exist, none scheduled today) → legacy "Enjoy your rest day! 😴" still renders with original 72px top padding (centered look preserved).
+
+**Rollback notes.** Single-commit revert restores the previous behavior (Hunter Profile landing + big empty-state top padding). Safe to revert at any time — no data implications.
+
+**Open follow-ups.**
+- If on-device QA shows the layout is still slightly cramped on iPhone SE / small devices, the spacing values can be wrapped in `clamp()` for responsive scaling. Left for a future train pending real-device check.
+- If product wants returning users to ALSO land on Habits (instead of Hunter Profile by default), that's a separate change to the `currentTab = 'profile'` initial assignment + tab-restore logic. Out of scope here.
+
+**Confirmations.**
+- ✅ Frontend-only.
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload.
+- ✅ No habit creation / XP / HealthKit / public event logic changed.
+- ✅ Returning users not forced to Habits — only fresh onboarding completion routes there.
+- ✅ Populated Habits view unchanged.
+- ✅ Rest-day fallback layout unchanged.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 1, 2026 — 1z.247 Frontend: Habits empty state — First Vow
 
 **TL;DR.** Replaced the lonely "No habits yet. Tap below to add your first." with the ClaudeDesign-led First Vow empty state (Direction C — mythic hero + one-tap quick-pick chips). Six curated vows (Hydrate, Sleep, Daily walk, Meditate, Morning sunlight, Read) shown as gold-bordered system-window cards using the **existing app habit icon art** (`assets/habit-icons/icon-*.png`) — no emojis. Tap → habit created instantly via the canonical pack-add path, list rerenders, empty state vanishes. The rest-day fallback ("No habits scheduled today. Enjoy your rest day!") is preserved via a `.empty-state--rest-day` mode flip.
 

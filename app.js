@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w114';
+  const APP_BUILD_TAG = '2.2.5-w115';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34413,6 +34413,13 @@
     document.getElementById('onboarding').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     render();
+    // v3 Phase 1z.248 — fresh users land on Habits after onboarding,
+    // not the default Hunter Profile tab. They just chose a path or
+    // committed to "Forge Your Own"; the First Vow empty state (1z.247)
+    // or the populated pack list is the natural next surface. Returning
+    // users skip _completeOnboardingFinish entirely so this never
+    // forces a tab on them.
+    try { if (typeof switchTab === 'function') switchTab('habits'); } catch (_) {}
     // First-install daily-login bonus: deferred from init() so the
     // toast doesn't appear over the welcome/onboarding screens.
     // Now that the main app is finally visible, fire it here.

@@ -27600,11 +27600,21 @@ body.social-hub-on .duels-page-header {
   padding: 48px 16px 16px;
   text-align: center;
 }
+/* v3 Phase 1z.248 — tighten vertical layout so First Vow fits on iPhone
+   viewport between tab strip and bottom "+ Add Habits" without scroll.
+   The base `.empty-state` rule above carries 72px of top padding +
+   18px gap that was pushing the sigil below mid-screen. When first-vow
+   mode is active we override both. */
+.empty-state:not(.empty-state--rest-day) {
+  padding: 8px 16px 4px;
+  gap: 0;
+}
 .empty-state .empty-state-firstvow {
   display: flex;
   flex-direction: column;
-  padding: 16px 16px 8px;
-  gap: 18px;
+  padding: 0;
+  gap: 14px;
+  width: 100%;
 }
 
 /* Rest-day mode: hide first-vow, show legacy ✓ + p */
@@ -27616,21 +27626,21 @@ body.social-hub-on .duels-page-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 4px;
+  padding-top: 0;
 }
 .empty-state .ev-sigil-wrap {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 74px;
-  height: 74px;
-  margin-bottom: 10px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
 }
 .empty-state .ev-sigil-ring {
   position: absolute;
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   border: 1px solid rgba(167, 139, 250, 0.45);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.32);
@@ -27642,8 +27652,8 @@ body.social-hub-on .duels-page-header {
   100% { transform: scale(1.32); opacity: 0; }
 }
 .empty-state .ev-sigil-disc {
-  width: 54px;
-  height: 54px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -27663,13 +27673,15 @@ body.social-hub-on .duels-page-header {
   50%      { transform: scale(1.06); }
 }
 .empty-state .ev-sigil-disc svg {
+  width: 24px;
+  height: 24px;
   filter: drop-shadow(0 0 6px rgba(245, 184, 66, 0.55));
 }
 
 .empty-state .ev-headline {
   font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: 2px;
   color: #ecca84;
   text-align: center;
@@ -27679,10 +27691,10 @@ body.social-hub-on .duels-page-header {
 .empty-state .ev-stanza {
   font-family: "Cormorant Garamond", Georgia, serif;
   font-style: italic;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: #9aa0bd;
   text-align: center;
-  margin: 8px auto 0;
+  margin: 6px auto 0;
   max-width: 260px;
   line-height: 1.4;
 }
@@ -27691,14 +27703,14 @@ body.social-hub-on .duels-page-header {
 .empty-state .ev-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 2px;
 }
 .empty-state .ev-chip {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px;
+  gap: 9px;
+  padding: 10px 11px;
   border-radius: 13px;
   cursor: pointer;
   text-align: left;
@@ -27766,8 +27778,8 @@ body.social-hub-on .duels-page-header {
 
 /* ── Browse link ────────────────────────────────────────────── */
 .empty-state .ev-browse {
-  margin-top: 14px;
-  padding: 10px 0 6px;
+  margin-top: 8px;
+  padding: 8px 0 4px;
   text-align: center;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 11px;
