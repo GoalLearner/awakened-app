@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.474';
+const CACHE_VERSION = 'v5.475';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -126,6 +126,12 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-furnace-knight.png',
   // v3 Phase 1z.70 — third C-rank boss (10k-steps daily)
   '/assets/bosses/the-marathon-wraith.png',
+  // v3 Phase 1z.271B/C — three B-rank bosses (verified-only,
+  // 5-of-7 qualifying-days/nights inside a weekly hunt window).
+  // Portraits added in 1z.271C.
+  '/assets/bosses/the-forge-of-ten-thousand-days.png',
+  '/assets/bosses/the-vow-keeper.png',
+  '/assets/bosses/the-patient-flame.png',
   // Item-card illustrations. Only paths that EXIST on disk get listed
   // here — cache.addAll rejects the entire install if any entry 404s.
   // The remaining 8 launch cards fall through to the network (404 in
