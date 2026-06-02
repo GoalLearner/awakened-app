@@ -27577,3 +27577,221 @@ body.social-hub-on .duels-page-header {
   background: rgba(245, 184, 66, 0.20);
   outline: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.247 — Habits tab "First Vow" empty state.
+   Replaces the dim ✓ + "No habits yet" placeholder with a mythic
+   sigil + 6 quick-pick vow cards. Tap a chip → habit is created via
+   the canonical pack-add path; empty state disappears naturally
+   because habits.length > 0 on next render.
+
+   The same #empty-state container also surfaces the legacy "rest day"
+   message — when `.empty-state--rest-day` is on the container, the
+   first-vow hero/grid hide and the rest-day fallback shows.
+
+   All rules scoped under .empty-state .ev-* so they cannot leak.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.empty-state .empty-state-restday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px 16px;
+  text-align: center;
+}
+.empty-state .empty-state-firstvow {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 8px;
+  gap: 18px;
+}
+
+/* Rest-day mode: hide first-vow, show legacy ✓ + p */
+.empty-state.empty-state--rest-day .empty-state-firstvow { display: none; }
+.empty-state:not(.empty-state--rest-day) .empty-state-restday { display: none; }
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.empty-state .ev-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+.empty-state .ev-sigil-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 74px;
+  margin-bottom: 10px;
+}
+.empty-state .ev-sigil-ring {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.32);
+  animation: ev-pulse 4.5s ease-out infinite;
+}
+@keyframes ev-pulse {
+  0%   { transform: scale(0.78); opacity: 0.9; }
+  70%  { opacity: 0; }
+  100% { transform: scale(1.32); opacity: 0; }
+}
+.empty-state .ev-sigil-disc {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 42% 34%,
+    rgba(245, 184, 66, 0.22),
+    rgba(16, 14, 40, 0.9) 70%);
+  border: 1.5px solid rgba(245, 184, 66, 0.50);
+  box-shadow:
+    0 0 18px rgba(245, 184, 66, 0.30),
+    inset 0 0 12px rgba(245, 184, 66, 0.14);
+  animation: ev-breathe 5s ease-in-out infinite;
+  z-index: 1;
+}
+@keyframes ev-breathe {
+  0%, 100% { transform: scale(0.96); }
+  50%      { transform: scale(1.06); }
+}
+.empty-state .ev-sigil-disc svg {
+  filter: drop-shadow(0 0 6px rgba(245, 184, 66, 0.55));
+}
+
+.empty-state .ev-headline {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: #ecca84;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 22px rgba(245, 184, 66, 0.24);
+}
+.empty-state .ev-stanza {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: #9aa0bd;
+  text-align: center;
+  margin: 8px auto 0;
+  max-width: 260px;
+  line-height: 1.4;
+}
+
+/* ── Quick-pick grid ────────────────────────────────────────── */
+.empty-state .ev-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.empty-state .ev-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 13px;
+  cursor: pointer;
+  text-align: left;
+  background: linear-gradient(180deg,
+    rgba(26, 21, 56, 0.90),
+    rgba(15, 12, 34, 0.90));
+  border: 1px solid rgba(245, 184, 66, 0.34);
+  box-shadow:
+    0 0 14px rgba(245, 184, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform 120ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.empty-state .ev-chip:hover {
+  border-color: rgba(245, 184, 66, 0.60);
+  box-shadow: 0 0 18px rgba(245, 184, 66, 0.18);
+}
+.empty-state .ev-chip:active {
+  transform: scale(0.96);
+}
+.empty-state .ev-chip-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: rgba(245, 184, 66, 0.08);
+  border: 1px solid rgba(245, 184, 66, 0.20);
+  overflow: hidden;
+}
+.empty-state .ev-chip-ic img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.empty-state .ev-chip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.empty-state .ev-chip-name {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f3fb;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empty-state .ev-chip-cad {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8.5px;
+  letter-spacing: 1px;
+  color: #5c5c78;
+  text-transform: uppercase;
+}
+
+/* ── Browse link ────────────────────────────────────────────── */
+.empty-state .ev-browse {
+  margin-top: 14px;
+  padding: 10px 0 6px;
+  text-align: center;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #5c5c78;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.empty-state .ev-browse:hover,
+.empty-state .ev-browse:focus {
+  color: #a78bfa;
+  outline: none;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .empty-state .ev-sigil-ring {
+    animation: none;
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  .empty-state .ev-sigil-disc { animation: none; }
+  .empty-state .ev-chip:active { transform: none; }
+}

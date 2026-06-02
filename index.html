@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=318">
+  <link rel="stylesheet" href="styles.css?v=319">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -612,9 +612,40 @@
            directly below the tab strip with ~16px breathing room
            controlled by .habit-list--codex padding. -->
       <ul id="habit-list" class="habit-list habit-list--codex"></ul>
+      <!-- v3 Phase 1z.247 — First Vow empty state. Two-mode container:
+           • "first vow" mode (habits.length===0) — mythic hero + sigil
+             + 6 quick-pick vow cards + library link. Bridges the
+             cinematic promise to the first real habit card.
+           • "rest day" mode (todayHabits.length===0 but habits exist) —
+             simple message. Sigil/grid hidden in this mode.
+           renderHabits() toggles `.empty-state--rest-day` to flip modes. -->
       <div id="empty-state" class="empty-state hidden">
-        <div class="empty-icon">✓</div>
-        <p>No habits yet.<br>Tap below to add your first.</p>
+        <!-- Rest-day fallback. Surfaced when habits exist but none scheduled today. -->
+        <div class="empty-state-restday" id="empty-state-restday">
+          <div class="empty-icon">✓</div>
+          <p>No habits scheduled today.<br>Enjoy your rest day! 😴</p>
+        </div>
+
+        <!-- First Vow hero. -->
+        <div class="empty-state-firstvow" id="empty-state-firstvow">
+          <div class="ev-hero">
+            <div class="ev-sigil-wrap" aria-hidden="true">
+              <div class="ev-sigil-ring"></div>
+              <div class="ev-sigil-disc">
+                <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+                  <path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ev-headline">YOUR FIRST VOW</div>
+            <div class="ev-stanza">The system is waiting for your first promise.</div>
+          </div>
+          <!-- Quick-pick vows. Each `.ev-chip` carries a `data-quickpick-idx`
+               into DEFAULT_HABITS. _wireFirstVowQuickPicks() in app.js
+               binds click → _addQuickPickHabit(idx). -->
+          <div class="ev-grid" id="empty-state-quickgrid"></div>
+          <button id="empty-state-browse" class="ev-browse" type="button">Browse the full library →</button>
+        </div>
       </div>
     </main>
 
@@ -2660,7 +2691,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=566"></script>
+  <script src="app.js?v=567"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3081,7 +3112,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W113</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W114</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

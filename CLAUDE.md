@@ -4,7 +4,108 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 1, 2026 — 1z.246 Frontend: Award First Awakening +25 XP for real (read this first)
+## Jun 1, 2026 — 1z.247 Frontend: Habits empty state — First Vow (read this first)
+
+**TL;DR.** Replaced the lonely "No habits yet. Tap below to add your first." with the ClaudeDesign-led First Vow empty state (Direction C — mythic hero + one-tap quick-pick chips). Six curated vows (Hydrate, Sleep, Daily walk, Meditate, Morning sunlight, Read) shown as gold-bordered system-window cards using the **existing app habit icon art** (`assets/habit-icons/icon-*.png`) — no emojis. Tap → habit created instantly via the canonical pack-add path, list rerenders, empty state vanishes. The rest-day fallback ("No habits scheduled today. Enjoy your rest day!") is preserved via a `.empty-state--rest-day` mode flip.
+
+**Process note.** Frontend-only / additive. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit / leaderboard / Social / Guild / inventory / boss / economy logic changed beyond reading existing constants. Onboarding flow untouched. Existing populated Habits view unchanged.
+
+**Files modified.**
+- `index.html` —
+  - `#empty-state` markup expanded into two siblings: `.empty-state-restday` (legacy ✓ + p) and `.empty-state-firstvow` (sigil hero + grid container + browse button). Mode flip via `.empty-state--rest-day` class on the parent.
+  - Quick-pick grid is `#empty-state-quickgrid` (populated by JS); browse button is `#empty-state-browse`.
+  - Knob bumps: `styles.css?v=319`, `app.js?v=567`, footer label `BUILD W114`.
+- `app.js` —
+  - `renderHabits` now sets/clears `.empty-state--rest-day` on the container instead of writing `<p>` innerHTML. Calls `_renderFirstVowQuickPicks()` when `habits.length === 0`.
+  - New `FIRST_VOW_PICKS` constant: 6 entries `{idx, cadence}` mapping to `DEFAULT_HABITS` indices `[0, 1, 6, 12, 16, 11]`.
+  - `_renderFirstVowQuickPicks()` builds the chip grid using `habitIconHtml(def, {size:28, eager:true})` — same helper habit cards use → icons come from the canonical `HABIT_ICONS` map → **no emojis on the final chip UI**.
+  - `_wireFirstVowQuickPicks()` binds (idempotent via `dataset.wired`) delegated click on the grid + the Browse Library link → `openLibrary()`.
+  - `_addQuickPickHabit(idx)` — instant-create helper:
+    - Dedupes by name (same rule as `getMissingPackHabits`).
+    - Builds `newH` with the same shape as `confirmPackAdd` (id, emoji, name, difficulty, type, primaryStat).
+    - Applies goal defaults via the same branches as `_completeOnboardingFinish`: `isStepGoalHabit → HEALTHKIT_WALK_DEFAULT_THRESHOLD`, `isSleepDurationHabit → HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS`, `MEASURABLE_HABITS[name]`.
+    - `habits.push(newH); save(); renderHabits({skipSideEffects:true});` — exact pack-add ordering.
+    - Does NOT auto-complete, does NOT award XP, does NOT trigger HealthKit verification, does NOT emit public events.
+    - Toast: "Vow added — <name>".
+  - Bumped `APP_BUILD_TAG = '2.2.5-w114'`.
+- `styles.css` — appended ~220 lines of scoped `.empty-state .ev-*` rules (sigil ring pulse, sigil disc breathe, headline + stanza typography, 2-col grid, gold-bordered chip cards, browse link, reduced-motion fallback). All under `.empty-state` so no leakage.
+- `sw.js` — `CACHE_VERSION = 'v5.453'`.
+
+**Quick-pick definitions (audited).**
+| Idx | DEFAULT_HABITS name | Cadence chip | Icon path | Goal handling |
+|---|---|---|---|---|
+| 0 | Hydrate | DAILY | `icon-water.png` | — |
+| 1 | Sleep | NIGHTLY | `icon-sleep.png` | `sleepGoalHours = HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS` via `isSleepDurationHabit` branch |
+| 6 | Daily walk | DAILY | `icon-walk.png` | `stepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD` via `isStepGoalHabit` branch |
+| 12 | Meditate & Breathwork | DAILY | `icon-meditate.png` | `MEASURABLE_HABITS` lookup if present |
+| 16 | Get morning sunlight | MORNING | `icon-sunlight.png` | `MEASURABLE_HABITS` lookup if present |
+| 11 | Read | DAILY | `icon-read.png` | `MEASURABLE_HABITS` lookup if present |
+
+**Hard-rule compliance (per the design brief).**
+- ✅ No emojis on final quick-pick chips — uses `habitIconHtml` → PNG icons via the same path real habit cards use.
+- ✅ Header / metric strip / today bar / 7-tab strip / bottom dashed `+ Add Habits` button **all untouched**.
+- ✅ No new permanent navigation, no floating action button.
+- ✅ No fake achievements, locks, rewards, combat copy, HealthKit states, feature promises.
+- ✅ No autoplay sound, no new external dependencies.
+- ✅ No Duels touched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Side-effect safety on creation.**
+- No XP grant — `_addQuickPickHabit` does not touch `totalPoints`.
+- No HealthKit query — `skipSideEffects: true` on the post-create `renderHabits` blocks the HK cascade (1z.97 pattern).
+- No public events — no `_queuePublicAchievementEvent` calls.
+- No leaderboard submit — `lbSubmitAllMetricsDebounced` not invoked.
+- No streak ticking — `streaks` untouched.
+- No notification prompt (unlike pack-add for morning/locked-in, which calls `runOnboardingNotifPrompt`).
+
+**Duplicate prevention.**
+- Tap chip whose habit name already exists → no-op + toast "<name> is already in your list."
+- Rapid double-tap during same render: first call adds + `save()` + rerenders, which removes the chip from the grid (next render no longer shows it because `habits.length > 0`). Second tap on stale DOM falls into the dedupe guard.
+
+**Knobs.**
+- `APP_BUILD_TAG` `2.2.5-w113 → 2.2.5-w114`.
+- `app.js?v=` `566 → 567`.
+- `auth.js?v=21`, `simulated-leaderboard.js?v=7` — preserved.
+- `styles.css?v=` `318 → 319`.
+- `sw.js CACHE_VERSION` `v5.452 → v5.453`.
+- `QA_UNLOCK_C_RANK_DUNGEONS=false` — preserved.
+
+**Manual QA checklist (w114).**
+1. Reset all progress.
+2. Complete cinematic onboarding choosing "Forge Your Own" — land on empty Habits tab.
+3. Confirm First Vow hero (sigil + "YOUR FIRST VOW" + stanza) renders.
+4. Confirm header / metric strip / 7-tab strip / bottom dashed `+ Add Habits` button **unchanged**.
+5. Confirm 6 chip cards show with **real app habit icons** (water drop, moon, boot, meditation, sunlight, book) — NOT emojis.
+6. Tap Hydrate → "Vow added — Hydrate" toast, habit appears as a normal card at top of list, empty state vanishes.
+7. Header `0 TOTAL XP` unchanged — no XP granted from chip tap.
+8. Reset again → tap Browse Full Library → existing Add Habits sheet opens.
+9. Reset again → rapid double-tap a chip → only one habit, no duplicate.
+10. Reset → tap chip → confirm no HealthKit native-bridge calls happen on creation (Settings → 5-tap → Copy Debug Info → check breadcrumbs).
+11. iOS Reduce Motion ON → sigil ring + disc static, no chip press-scale.
+12. Already populated user → no First Vow shown (Habits view normal).
+13. Rest day (habits exist but none scheduled today) → legacy "No habits scheduled today. Enjoy your rest day! 😴" renders, no First Vow.
+14. Smoke: complete a habit afterward → XP credits normally (toggle + check sound still fires).
+
+**Rollback notes.** Single-commit revert restores the legacy `<div class="empty-icon">✓</div><p>No habits yet…</p>` markup and removes the `_addQuickPickHabit` / `_renderFirstVowQuickPicks` helpers. No data migration.
+
+**Open follow-ups.**
+- The cadence chip is purely visual — there's no per-habit "evening only" gating that the cadence implies. If product wants the cadence to drive `habit.days` scheduling (e.g., Sleep is everyday + sleepGoalHours auto), that's a future train.
+- 1z.244 onboarding SFX exist but **no SFX added here** — per brief ("Do NOT add sound"). The chip tap is intentionally silent.
+
+**Confirmations.**
+- ✅ Frontend-only.
+- ✅ No backend / D1 / migration / Worker deploy / Codemagic / archive / upload.
+- ✅ Quick-pick chips use existing app habit icon art (PNG via `HABIT_ICONS` map) — zero emojis.
+- ✅ Instant-create via canonical pack-add pattern (`habits.push + save + renderHabits skipSideEffects`).
+- ✅ Dedupe by name + early-return on duplicate tap.
+- ✅ Browse Full Library link routes to existing `openLibrary()` sheet.
+- ✅ Populated Habits view unchanged.
+- ✅ No XP / HealthKit / public-event side effects from creation.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 1, 2026 — 1z.246 Frontend: Award First Awakening +25 XP for real
 
 **TL;DR.** Cinematic reward screen has displayed "+25 XP / The spark is lit." since 1z.233 as a symbolic visual. On-device QA confirmed the main app showed `0 TOTAL XP` after onboarding — broken promise. Now real: `_completeOnboardingFinish()` grants +25 XP exactly once via the canonical `totalPoints += 25; save()` pattern. Guarded with a localStorage key so reload, restore, double-tap, or any re-entry cannot duplicate the grant.
 

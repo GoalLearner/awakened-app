@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w113';
+  const APP_BUILD_TAG = '2.2.5-w114';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15768,12 +15768,14 @@
     }
 
     if (habits.length === 0) {
+      // v3 Phase 1z.247 — First Vow empty state.
       list.innerHTML = '';
-      empty.querySelector('p').innerHTML = 'No habits yet.<br>Tap below to add your first.';
+      empty.classList.remove('empty-state--rest-day');  // ensure first-vow mode
+      try { _renderFirstVowQuickPicks(); } catch (_) {}
       empty.classList.remove('hidden');
     } else if (todayHabits.length === 0) {
       list.innerHTML = '';
-      empty.querySelector('p').innerHTML = 'No habits scheduled today.<br>Enjoy your rest day! 😴';
+      empty.classList.add('empty-state--rest-day');  // hide first-vow, show rest-day msg
       empty.classList.remove('hidden');
     } else {
       empty.classList.add('hidden');
@@ -20626,6 +20628,130 @@
 
   // Backward-compat alias for existing wiring
   function confirmMorningPackAdd() { confirmPackAdd(); }
+
+  // ── v3 Phase 1z.247 — FIRST VOW QUICK-PICKS ──────────────────
+  // Six curated quick-pick vows shown in the Habits-tab empty
+  // state when habits.length === 0. Each entry maps to an index
+  // in DEFAULT_HABITS so habit-icon art, difficulty, and goal
+  // semantics flow through the canonical paths (HABIT_ICONS,
+  // isStepGoalHabit, isSleepDurationHabit, MEASURABLE_HABITS).
+  //   • Hydrate                — DEFAULT_HABITS[0]
+  //   • Sleep (7 hours)        — DEFAULT_HABITS[1]
+  //   • Daily walk             — DEFAULT_HABITS[6]
+  //   • Read                   — DEFAULT_HABITS[11]
+  //   • Meditate & Breathwork  — DEFAULT_HABITS[12]
+  //   • Get morning sunlight   — DEFAULT_HABITS[16]
+  const FIRST_VOW_PICKS = [
+    { idx: 0,  cadence: 'DAILY'   },
+    { idx: 1,  cadence: 'NIGHTLY' },
+    { idx: 6,  cadence: 'DAILY'   },
+    { idx: 12, cadence: 'DAILY'   },
+    { idx: 16, cadence: 'MORNING' },
+    { idx: 11, cadence: 'DAILY'   },
+  ];
+
+  function _renderFirstVowQuickPicks() {
+    const grid = document.getElementById('empty-state-quickgrid');
+    if (!grid) return;
+    const fp = FIRST_VOW_PICKS
+      .map(p => ({ p, def: DEFAULT_HABITS[p.idx] }))
+      .filter(x => x.def);
+    grid.innerHTML = fp.map(({ p, def }) => {
+      const iconHtml = habitIconHtml(def, { size: 28, eager: true });
+      return '' +
+        '<button type="button" class="ev-chip" data-quickpick-idx="' + p.idx + '">' +
+          '<span class="ev-chip-ic">' + iconHtml + '</span>' +
+          '<span class="ev-chip-body">' +
+            '<span class="ev-chip-name">' + esc(def.name) + '</span>' +
+            '<span class="ev-chip-cad">' + esc(p.cadence) + '</span>' +
+          '</span>' +
+        '</button>';
+    }).join('');
+    _wireFirstVowQuickPicks();
+  }
+
+  function _wireFirstVowQuickPicks() {
+    const grid = document.getElementById('empty-state-quickgrid');
+    if (grid && !grid.dataset.wired) {
+      grid.dataset.wired = '1';
+      grid.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest && e.target.closest('.ev-chip');
+        if (!btn) return;
+        const idx = parseInt(btn.dataset.quickpickIdx, 10);
+        if (isNaN(idx)) return;
+        _addQuickPickHabit(idx, btn);
+      });
+    }
+    const browse = document.getElementById('empty-state-browse');
+    if (browse && !browse.dataset.wired) {
+      browse.dataset.wired = '1';
+      browse.addEventListener('click', () => {
+        try { _addBreadcrumb && _addBreadcrumb('habits-empty-browse-library'); } catch (_) {}
+        try { openLibrary(); } catch (_) {}
+      });
+    }
+  }
+
+  // Instant-create a single curated habit by DEFAULT_HABITS index.
+  // Dedupes by name, builds the same shape as confirmPackAdd, applies
+  // goal defaults (step / sleep / measurable) using the same branches
+  // as _completeOnboardingFinish. Does NOT auto-complete, does NOT
+  // award XP, does NOT trigger HealthKit verification on creation, does
+  // NOT emit public events.
+  function _addQuickPickHabit(idx, btnEl) {
+    const def = DEFAULT_HABITS && DEFAULT_HABITS[idx];
+    if (!def || !def.name) return;
+    // Dedupe by name — same rule as getMissingPackHabits.
+    if (habits.some(h => h && h.name === def.name)) {
+      try { showHabitToast(def.name + ' is already in your list.'); } catch (_) {}
+      return;
+    }
+
+    const newH = {
+      id:          uid(),
+      emoji:       def.emoji,
+      name:        def.name,
+      difficulty:  def.difficulty,
+      type:        def.type || 'build',
+    };
+    if (def.primaryStat) newH.primaryStat = def.primaryStat;
+
+    // Goal defaults mirror _completeOnboardingFinish so curated step /
+    // sleep habits get the canonical thresholds without forcing the
+    // user to open a detail sheet.
+    try {
+      if (typeof isStepGoalHabit === 'function' && isStepGoalHabit(def) &&
+          typeof HEALTHKIT_WALK_DEFAULT_THRESHOLD === 'number') {
+        newH.stepGoal = HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+      } else if (typeof isSleepDurationHabit === 'function' && isSleepDurationHabit(def) &&
+          typeof HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS === 'number') {
+        newH.sleepGoalHours = HEALTHKIT_SLEEP_DEFAULT_GOAL_HOURS;
+      } else if (typeof MEASURABLE_HABITS !== 'undefined') {
+        const m = MEASURABLE_HABITS[def.name];
+        if (m) {
+          const defVal = m.bodyweightMin
+            ? Math.max(m.def, parseInt(localStorage.getItem('hb_bodyweight') || '0', 10))
+            : Math.max(m.min, m.def);
+          newH.goal = { value: defVal, unit: m.unit };
+        }
+      }
+    } catch (_) {}
+
+    habits.push(newH);
+    if (def.note) habitNotes[newH.id] = def.note;
+
+    try { save(); } catch (_) {}
+    try {
+      _addBreadcrumb && _addBreadcrumb('habits-empty-quickpick-created', {
+        idx, name: def.name, habitCount: habits.length,
+      });
+    } catch (_) {}
+
+    // skipSideEffects matches the pack-add path — avoids the HealthKit
+    // native-bridge cascade on a freshly added habit.
+    try { renderHabits({ skipSideEffects: true }); } catch (_) {}
+    try { showHabitToast('Vow added — ' + def.name); } catch (_) {}
+  }
 
   function openLibrary() {
     renderLibrary();
