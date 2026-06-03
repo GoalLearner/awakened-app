@@ -28732,3 +28732,281 @@ body.social-hub-on .duels-page-header {
   .empty-state .ev-commit { transition: none; }
   .empty-state .ev-commit:active { transform: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.273G — Onboarding · Training Week (cinematic step)
+   Inserted between Path (#cin-scr4) and Pact (#cin-scr5). All rules
+   scoped to #cin-onboarding .cin-tw-* so they cannot leak.
+   ═══════════════════════════════════════════════════════════════════ */
+#cin-onboarding .cin-tw-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 18px;
+  width: 100%;
+  max-width: 320px;
+}
+#cin-onboarding .cin-tw-row {
+  position: relative;
+  background: linear-gradient(180deg, rgba(22,22,58,0.85), rgba(14,14,38,0.85));
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 16px;
+  padding: 12px 13px 13px;
+  text-align: left;
+}
+#cin-onboarding .cin-tw-rowtop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#cin-onboarding .cin-tw-rowname { flex: 1 1 auto; min-width: 0; }
+#cin-onboarding .cin-tw-nm {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #f1f0fb;
+  letter-spacing: 0.4px;
+}
+#cin-onboarding .cin-tw-freq {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+#cin-onboarding .cin-tw-days {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  color: #ecca84;
+}
+#cin-onboarding .cin-tw-tag {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 9px;
+}
+#cin-onboarding .cin-tw-tag-rec {
+  color: #34d399;
+  background: rgba(52,211,153,0.10);
+  border: 1px solid rgba(52,211,153,0.30);
+}
+#cin-onboarding .cin-tw-tag-cus {
+  color: #a78bfa;
+  background: rgba(167,139,250,0.10);
+  border: 1px solid rgba(167,139,250,0.30);
+}
+#cin-onboarding .cin-tw-tag-evd {
+  color: #f5b842;
+  background: rgba(245,184,66,0.12);
+  border: 1px solid rgba(245,184,66,0.34);
+}
+
+/* Seal row — 7 small oath-marks */
+#cin-onboarding .cin-tw-seals {
+  display: flex;
+  gap: 5px;
+  margin-top: 11px;
+}
+#cin-onboarding .cin-tw-seal {
+  flex: 1 1 0;
+  aspect-ratio: 1 / 1.04;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #71718f;
+  cursor: pointer;
+  position: relative;
+  -webkit-appearance: none;
+  appearance: none;
+  transition:
+    transform 0.12s cubic-bezier(0.2,0.8,0.2,1),
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.25s;
+}
+#cin-onboarding .cin-tw-seal:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: #bdbad6;
+}
+#cin-onboarding .cin-tw-seal:active { transform: scale(0.9); }
+#cin-onboarding .cin-tw-seal.lit {
+  background: linear-gradient(180deg, #f7c65c, #e1a52c);
+  border-color: rgba(245,184,66,0.6);
+  color: #1b1405;
+  box-shadow:
+    0 0 12px rgba(245,184,66,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.5);
+}
+#cin-onboarding .cin-tw-seal.lit::after {
+  content: "";
+  position: absolute;
+  top: 4px; left: 50%;
+  transform: translateX(-50%);
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: rgba(27,20,5,0.5);
+}
+#cin-onboarding .cin-tw-seal.cin-tw-pop {
+  animation: cin-tw-sealpop 0.34s cubic-bezier(0.2,0.8,0.2,1);
+}
+#cin-onboarding .cin-tw-seal.cin-tw-shake {
+  animation: cin-tw-shake 0.42s;
+}
+@keyframes cin-tw-sealpop {
+  0%   { transform: scale(0.78); }
+  55%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes cin-tw-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-4px); }
+  40%      { transform: translateX(4px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+
+/* Per-row rest line */
+#cin-onboarding .cin-tw-restline {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 12.5px;
+  color: #bdbad6;
+}
+#cin-onboarding .cin-tw-restline .cin-tw-pip {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 7px #34d399;
+  flex: 0 0 auto;
+}
+#cin-onboarding .cin-tw-restline.cin-tw-warn { color: #e7a06a; }
+#cin-onboarding .cin-tw-restline.cin-tw-warn .cin-tw-pip {
+  background: #e7a06a;
+  box-shadow: 0 0 7px #e7a06a;
+}
+
+/* Quick-set collapsible */
+#cin-onboarding .cin-tw-quick-toggle {
+  margin-top: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #71718f;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+#cin-onboarding .cin-tw-quick-toggle:hover { color: #bdbad6; }
+#cin-onboarding .cin-tw-chev { transition: transform 0.25s; }
+#cin-onboarding .cin-tw-row.cin-tw-quick-open .cin-tw-chev {
+  transform: rotate(180deg);
+}
+#cin-onboarding .cin-tw-quick-pills {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease, margin 0.28s ease;
+  margin-top: 0;
+  overflow: hidden;
+}
+#cin-onboarding .cin-tw-row.cin-tw-quick-open .cin-tw-quick-pills {
+  grid-template-rows: 1fr;
+  margin-top: 9px;
+}
+#cin-onboarding .cin-tw-quick-pills > div {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+#cin-onboarding .cin-tw-pill {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #bdbad6;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: all 0.16s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+#cin-onboarding .cin-tw-pill:hover {
+  color: #f1f0fb;
+  border-color: rgba(255,255,255,0.2);
+}
+#cin-onboarding .cin-tw-pill.on {
+  color: #f5b842;
+  border-color: rgba(245,184,66,0.5);
+  background: rgba(245,184,66,0.10);
+}
+
+/* Persistent reassurance line */
+#cin-onboarding .cin-tw-reassure {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  color: #ecca84;
+}
+#cin-onboarding .cin-tw-star {
+  color: #f5b842;
+  font-size: 13px;
+  filter: drop-shadow(0 0 5px rgba(245,184,66,0.5));
+}
+
+/* Ghost "you can change this any time" */
+#cin-onboarding .cin-tw-ghost {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #71718f;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: center;
+}
+#cin-onboarding .cin-tw-ghost:hover { color: #bdbad6; }
+
+@media (prefers-reduced-motion: reduce) {
+  #cin-onboarding .cin-tw-seal,
+  #cin-onboarding .cin-tw-seal.cin-tw-pop,
+  #cin-onboarding .cin-tw-seal.cin-tw-shake { animation: none !important; }
+  #cin-onboarding .cin-tw-seal:active { transform: none; }
+}

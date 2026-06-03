@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=335">
+  <link rel="stylesheet" href="styles.css?v=336">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -320,6 +320,34 @@
       <div class="rise d2" style="margin-top:18px">
         <button type="button" class="cta" id="cin-pathNext" data-cin-next disabled>Continue</button>
       </div>
+    </section>
+
+    <!-- 4½ · TRAINING WEEK (v3 Phase 1z.273G)
+         Conditional cinematic between Path and the Pact. Only renders when
+         the chosen pack contains a training-type habit (Workout, Cardio
+         workout, Sprint session, Mobility & Stretching, Whole-body
+         strength). Otherwise show() auto-advances past without flashing
+         the screen. Pre-lights each row's recommended days from
+         DEFAULT_HABITS.defaultDays (1z.273E). Tap a seal to toggle. The
+         CTA writes per-habit `days` overrides into obConfig so
+         _completeOnboardingFinish picks them up (1z.273E precedence).
+         data-step matches the Path screen (3) so the goal-gradient dot
+         stays anchored to the "Path zone" through this sub-step. -->
+    <section class="scr" data-step="3" id="cin-scr-training">
+      <div class="kicker rise" style="margin-bottom:6px">The oath of rest</div>
+      <h1 class="title rise" style="margin:0 0 4px;font-size:25px">The rhythm you<br/>train at</h1>
+      <div class="stanza rise d1" style="font-size:15px;margin-top:6px;max-width:300px">
+        A vow only matters on the days you swore it. Pick the days your training counts.
+      </div>
+      <div class="cin-tw-rows rise d2" id="cin-tw-rows"></div>
+      <div class="cin-tw-reassure rise d3">
+        <span class="cin-tw-star" aria-hidden="true">✦</span>
+        Rest days are not missed days.
+      </div>
+      <div class="rise d3" style="margin-top:14px;width:100%;max-width:320px">
+        <button type="button" class="cta" id="cin-twNext">Seal these days</button>
+      </div>
+      <button type="button" class="cin-tw-ghost rise d3" id="cin-twSkip">You can change this any time</button>
     </section>
 
     <!-- 5 · COMMITMENT -->
@@ -2738,7 +2766,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=597"></script>
+  <script src="app.js?v=598"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3159,7 +3187,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W144</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W145</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

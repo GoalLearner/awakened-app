@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w144';
+  const APP_BUILD_TAG = '2.2.5-w145';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34961,7 +34961,11 @@
     _cinPaintSigils(root);
 
     const state = { name: '', why: null, pack: null };
-    const order = ['cin-scr1', 'cin-scr2', 'cin-scr3', 'cin-scr4', 'cin-scr5', 'cin-scr6', 'cin-scr7'];
+    // v3 Phase 1z.273G — Training Week inserted between Path and Pact.
+    // Conditional: show() auto-advances past it when the chosen pack
+    // includes no training habits. data-step matches Path so the dot
+    // strip stays anchored.
+    const order = ['cin-scr1', 'cin-scr2', 'cin-scr3', 'cin-scr4', 'cin-scr-training', 'cin-scr5', 'cin-scr6', 'cin-scr7'];
     let idx = 0;
 
     const dots = root.querySelector('#cin-dots');
@@ -34977,8 +34981,21 @@
       // Goal-gradient dots active on steps 1..4 (screens 2..5)
       dots.classList.toggle('on', stepAttr >= 1 && stepAttr <= 4);
       Array.from(dots.children).forEach((d, k) => d.classList.toggle('fill', k <= stepAttr - 1));
-      // Subtle Skip only on Path + Commitment (not on opening, naming, why, peak, hook)
-      skip.classList.toggle('on', i >= 3 && i < 5);
+      // Subtle Skip on Path + Training Week + Commitment (1z.273G — Training
+      // Week sits at index 4, Commitment slides from 4 to 5).
+      skip.classList.toggle('on', i >= 3 && i < 6);
+      // v3 Phase 1z.273G — Training Week mount + conditional skip.
+      if (order[i] === 'cin-scr-training') {
+        const trainingHabits = _cinCollectTrainingHabits();
+        if (trainingHabits.length === 0) {
+          // No training in this pack → auto-advance to Pact silently
+          // (deferred a microtask so the active-screen class doesn't
+          // visibly flash).
+          setTimeout(() => show(i + 1), 0);
+          return;
+        }
+        _cinRenderTrainingScreen(trainingHabits);
+      }
       if (order[i] === 'cin-scr5') _fillPact();
       if (order[i] === 'cin-scr6') _runReward();
       if (order[i] === 'cin-scr7') {
@@ -35154,6 +35171,261 @@
       });
     });
 
+    // ═══════════════════════════════════════════════════════════════
+    // v3 Phase 1z.273G — Training Week (inserted between Path and Pact)
+    //
+    // - Mounts only when the chosen pack contains a training-type habit
+    //   (see _CIN_TRAINING_HABIT_NAMES below).
+    // - Pre-lights each row's recommended days from
+    //   DEFAULT_HABITS.defaultDays (1z.273E).
+    // - Tap a seal to toggle. Last-day removal is refused (zero days
+    //   impossible) — the seal shakes and the rest line warns amber.
+    // - All 7 lit → "Every day" tag, no `days` field written (existing
+    //   "missing days = daily" contract from edit sheet / 1z.273E).
+    // - CTA "Seal these days" writes per-habit overrides into obConfig
+    //   so _completeOnboardingFinish picks them up via its existing
+    //   cfg.days precedence (1z.273E).
+    // - Ghost "You can change this any time" advances without writing,
+    //   leaving each habit's defaultDays in effect.
+    // - No backend changes. No migration. No new schedule object.
+    // ═══════════════════════════════════════════════════════════════
+    const _CIN_TRAINING_HABIT_NAMES = new Set([
+      'Workout',
+      'Cardio workout',
+      'Sprint session',
+      'Mobility & Stretching',
+      'Whole-body strength', // future, harmless if absent from pack
+    ]);
+    const _CIN_DAY_NAMES   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const _CIN_DAY_LETTERS = ['M','T','W','T','F','S','S'];
+    const _CIN_QUICK_PRESETS = {
+      3: ['Mon','Wed','Fri'],
+      4: ['Mon','Tue','Thu','Sat'],
+      5: ['Mon','Tue','Wed','Thu','Fri'],
+      7: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    };
+
+    // Collect training habits from the pack currently chosen on Path.
+    // Returns array of { idx, base } where idx is the DEFAULT_HABITS
+    // index and base is the habit definition. Empty array → screen
+    // auto-skips.
+    function _cinCollectTrainingHabits() {
+      try {
+        const packId = state.pack || 'morning';
+        if (typeof getPackById !== 'function') return [];
+        const pack = getPackById(packId);
+        if (!pack || !Array.isArray(pack.habits)) return [];
+        const out = [];
+        pack.habits.forEach((idx) => {
+          const base = DEFAULT_HABITS[idx];
+          if (!base) return;
+          if (_CIN_TRAINING_HABIT_NAMES.has(base.name)) out.push({ idx, base });
+        });
+        return out;
+      } catch (_) { return []; }
+    }
+
+    // Per-row in-memory state: idx → { days: Set<string>, rec: string }.
+    // `rec` is the recommended-days signature for "Recommended" tag detection.
+    const _cinTrainingRowState = new Map();
+
+    function _cinRecKey(arr) { return arr.slice().sort().join(','); }
+
+    function _cinRenderTrainingScreen(trainingHabits) {
+      const rowsHost = root.querySelector('#cin-tw-rows');
+      if (!rowsHost) return;
+      rowsHost.innerHTML = '';
+      _cinTrainingRowState.clear();
+
+      trainingHabits.forEach(({ idx, base }, i) => {
+        const recDays = Array.isArray(base.defaultDays) ? base.defaultDays.slice() : _CIN_DAY_NAMES.slice();
+        const initialDays = new Set(recDays);
+        _cinTrainingRowState.set(idx, { days: initialDays, rec: _cinRecKey(recDays) });
+
+        const row = document.createElement('div');
+        row.className = 'cin-tw-row r' + Math.min(i + 1, 4);
+        row.dataset.idx = String(idx);
+        row.innerHTML =
+          '<div class="cin-tw-rowtop">' +
+            '<div class="cin-tw-rowname">' +
+              '<div class="cin-tw-nm">' + esc(base.name) + '</div>' +
+              '<div class="cin-tw-freq">' +
+                '<span class="cin-tw-days"></span>' +
+                '<span class="cin-tw-tag"></span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="cin-tw-seals"></div>' +
+          '<div class="cin-tw-restline"><span class="cin-tw-pip"></span><span class="cin-tw-rt"></span></div>' +
+          '<button type="button" class="cin-tw-quick-toggle">Quick set <span class="cin-tw-chev">⌄</span></button>' +
+          '<div class="cin-tw-quick-pills"><div>' +
+            '<button type="button" class="cin-tw-pill" data-n="3">3×</button>' +
+            '<button type="button" class="cin-tw-pill" data-n="4">4×</button>' +
+            '<button type="button" class="cin-tw-pill" data-n="5">5×</button>' +
+            '<button type="button" class="cin-tw-pill" data-n="7">Daily</button>' +
+          '</div></div>';
+        rowsHost.appendChild(row);
+
+        const sealsHost = row.querySelector('.cin-tw-seals');
+        _CIN_DAY_NAMES.forEach((dayName, d) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cin-tw-seal' + (initialDays.has(dayName) ? ' lit' : '');
+          btn.textContent = _CIN_DAY_LETTERS[d];
+          btn.dataset.day = dayName;
+          btn.addEventListener('click', () => _cinTwToggleSeal(idx, dayName, btn));
+          sealsHost.appendChild(btn);
+        });
+
+        row.querySelector('.cin-tw-quick-toggle').addEventListener('click', () => {
+          row.classList.toggle('cin-tw-quick-open');
+        });
+        row.querySelectorAll('.cin-tw-pill').forEach((p) => {
+          p.addEventListener('click', () => _cinTwApplyPreset(idx, parseInt(p.dataset.n, 10)));
+        });
+
+        _cinTwUpdateRow(idx);
+      });
+    }
+
+    function _cinTwToggleSeal(idx, dayName, btn) {
+      const s = _cinTrainingRowState.get(idx);
+      if (!s) return;
+      const reduced = (() => {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+        catch (_) { return false; }
+      })();
+      if (s.days.has(dayName)) {
+        // Last-day guard — zero days is impossible.
+        if (s.days.size === 1) {
+          if (!reduced) {
+            try { btn.classList.remove('cin-tw-shake'); void btn.offsetWidth; btn.classList.add('cin-tw-shake'); }
+            catch (_) {}
+          }
+          _cinTwWarnRest(idx);
+          return;
+        }
+        s.days.delete(dayName);
+        btn.classList.remove('lit');
+      } else {
+        s.days.add(dayName);
+        btn.classList.add('lit');
+        if (!reduced) {
+          try { btn.classList.remove('cin-tw-pop'); void btn.offsetWidth; btn.classList.add('cin-tw-pop'); }
+          catch (_) {}
+        }
+      }
+      _cinTwUpdateRow(idx);
+    }
+
+    function _cinTwApplyPreset(idx, n) {
+      const s = _cinTrainingRowState.get(idx);
+      if (!s) return;
+      const pattern = _CIN_QUICK_PRESETS[n];
+      if (!pattern) return;
+      s.days = new Set(pattern);
+      const row = root.querySelector('.cin-tw-row[data-idx="' + idx + '"]');
+      if (!row) return;
+      const sealEls = row.querySelectorAll('.cin-tw-seal');
+      const reduced = (() => {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+        catch (_) { return false; }
+      })();
+      sealEls.forEach((el, d) => {
+        const dayName = _CIN_DAY_NAMES[d];
+        const lit = s.days.has(dayName);
+        el.classList.toggle('lit', lit);
+        if (lit && !reduced) {
+          try { el.classList.remove('cin-tw-pop'); void el.offsetWidth; el.classList.add('cin-tw-pop'); }
+          catch (_) {}
+        }
+      });
+      _cinTwUpdateRow(idx);
+    }
+
+    function _cinTwWarnRest(idx) {
+      const row = root.querySelector('.cin-tw-row[data-idx="' + idx + '"]');
+      if (!row) return;
+      const rl = row.querySelector('.cin-tw-restline');
+      const rt = row.querySelector('.cin-tw-rt');
+      rl.classList.add('cin-tw-warn');
+      rt.textContent = 'A vow needs at least one day.';
+      clearTimeout(row._cinTwWarnT);
+      row._cinTwWarnT = setTimeout(() => {
+        rl.classList.remove('cin-tw-warn');
+        _cinTwUpdateRow(idx);
+      }, 1600);
+    }
+
+    function _cinTwUpdateRow(idx) {
+      const s = _cinTrainingRowState.get(idx);
+      const row = root.querySelector('.cin-tw-row[data-idx="' + idx + '"]');
+      if (!s || !row) return;
+      const sortedDays = _CIN_DAY_NAMES.filter((d) => s.days.has(d));
+      const count = sortedDays.length;
+      const rest  = 7 - count;
+      const daysStr = sortedDays
+        .map((d) => _CIN_DAY_LETTERS[_CIN_DAY_NAMES.indexOf(d)])
+        .join(' · ');
+      const tagEl  = row.querySelector('.cin-tw-tag');
+      const daysEl = row.querySelector('.cin-tw-days');
+      if (count === 7) {
+        daysEl.textContent = 'Every day';
+        tagEl.textContent  = 'Every day';
+        tagEl.className    = 'cin-tw-tag cin-tw-tag-evd';
+      } else {
+        daysEl.textContent = daysStr;
+        if (_cinRecKey(sortedDays) === s.rec) {
+          tagEl.textContent = 'Recommended';
+          tagEl.className   = 'cin-tw-tag cin-tw-tag-rec';
+        } else {
+          tagEl.textContent = 'Custom';
+          tagEl.className   = 'cin-tw-tag cin-tw-tag-cus';
+        }
+      }
+      const rl = row.querySelector('.cin-tw-restline');
+      rl.classList.remove('cin-tw-warn');
+      const rt = row.querySelector('.cin-tw-rt');
+      if (count === 7)       rt.textContent = 'No rest days — train with care.';
+      else if (rest === 1)   rt.textContent = '1 rest day — and it is not a miss.';
+      else                   rt.textContent = rest + ' rest days — and not one is a miss.';
+      // sync quick-set pills
+      row.querySelectorAll('.cin-tw-pill').forEach((p) => {
+        const n = parseInt(p.dataset.n, 10);
+        const preset = _CIN_QUICK_PRESETS[n] || [];
+        p.classList.toggle('on', n === count && _cinRecKey(sortedDays) === _cinRecKey(preset));
+      });
+    }
+
+    // CTA — commit per-row overrides into obConfig and advance to Pact.
+    {
+      const ctaBtn = root.querySelector('#cin-twNext');
+      if (ctaBtn) {
+        ctaBtn.addEventListener('click', () => {
+          try {
+            _cinTrainingRowState.forEach((s, idx) => {
+              const chosen = _CIN_DAY_NAMES.filter((d) => s.days.has(d));
+              const prior = (typeof obConfig !== 'undefined' && obConfig.get) ? (obConfig.get(idx) || {}) : {};
+              // Always write `days` here so _completeOnboardingFinish
+              // can distinguish "user opted into all 7" from "untouched
+              // → use defaultDays". A length-7 array still results in
+              // no `days` field on the saved habit (1z.273E length<7
+              // gate) so the daily-default contract is preserved.
+              obConfig.set(idx, Object.assign({}, prior, { days: chosen.slice() }));
+            });
+          } catch (e) { console.warn('[cin] training-week commit failed', e); }
+          next();
+        });
+      }
+    }
+
+    // Ghost skip — accept recommended defaults (defaultDays from 1z.273E
+    // already applies), advance without writing overrides.
+    {
+      const ghostBtn = root.querySelector('#cin-twSkip');
+      if (ghostBtn) ghostBtn.addEventListener('click', () => next());
+    }
+
     // Screen 5 — commitment "pact" tome.
     function _fillPact() {
       root.querySelector('#cin-pName').textContent = state.name || 'Unnamed';
@@ -35250,8 +35522,9 @@
       })();
     }
 
-    // Skip → jump straight to commitment (screen 5).
-    skip.addEventListener('click', () => show(4));
+    // Skip → jump straight to commitment (1z.273G — index shifted from
+    // 4 to 5 to accommodate the inserted Training Week screen).
+    skip.addEventListener('click', () => show(5));
 
     // Final "Enter Awakened" — commit everything, fade to black, then
     // hand off to the existing _completeOnboardingFinish so the

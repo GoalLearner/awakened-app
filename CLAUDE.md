@@ -4,7 +4,128 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.273F Frontend: Schedule chip on habit cards (read this first)
+## Jun 3, 2026 — 1z.273G Frontend: Onboarding · Training Week cinematic (read this first)
+
+**TL;DR.** Last screen in the 1z.273 scheduling stack. Inserts a cinematic "Training Week" step between Path (`#cin-scr4`) and the Pact (`#cin-scr5`). Renders only when the chosen pack contains a training-type habit; auto-skips otherwise. Each row pre-lights its recommended `defaultDays` from 1z.273E; user can tap individual seals to customize or use a collapsed Quick set (3×/4×/5×/Daily). Writes overrides via `obConfig`, which `_completeOnboardingFinish` already honors via the 1z.273E precedence chain.
+
+**Process note.** Frontend / visual + onboarding flow only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no HealthKit gate changes (1z.273B), no manual gate changes (1z.273C), no custom-create changes (1z.273D), no `defaultDays` data changes (1z.273E), no habit chip changes (1z.273F). No XP / rank / class / boss / Social / Guild / leaderboard / inventory / economy / auth logic changed.
+
+### What ships
+
+**New cinematic screen `#cin-scr-training`** (index.html, between Path and Pact). Markup mirrors the ClaudeDesign direction: kicker `The oath of rest`, Cinzel title `The rhythm you train at`, Cormorant stanza, per-habit row stack, persistent reassurance line, primary CTA `Seal these days`, ghost `You can change this any time`.
+
+**Per-habit row** = name + meta tag (Recommended/Custom/Every day) + 7 oath-seals (Mon→Sun, gold when lit, dark when rest) + rest line + collapsed Quick-set with 3×/4×/5×/Daily preset pills.
+
+### Cinematic flow integration
+
+- **Order array** (app.js:34964): `['cin-scr1', 'cin-scr2', 'cin-scr3', 'cin-scr4', 'cin-scr-training', 'cin-scr5', 'cin-scr6', 'cin-scr7']` — Training Week inserted at index 4; Pact slides from 4 to 5.
+- **Conditional mount** in `show(i)`: when entering `cin-scr-training`, `_cinCollectTrainingHabits()` walks the chosen `state.pack` → DEFAULT_HABITS indices → filters by `_CIN_TRAINING_HABIT_NAMES`. Empty set → `setTimeout(() => show(i + 1), 0)` so the screen never visibly mounts. The goal-gradient dot does not register a separate step (data-step="3" matches Path), so an auto-skipped Training Week is invisible to the user.
+- **Skip behavior**: global Skip button still jumps to Pact — index updated from `show(4)` to `show(5)` (one-line change). Skip visibility window updated from `i >= 3 && i < 5` to `i >= 3 && i < 6` so Skip stays available across Path + Training Week + Pact.
+- **Ghost skip** (`#cin-twSkip`): advances to Pact without writing any overrides. Each habit's `defaultDays` from 1z.273E remains in effect via the existing `_completeOnboardingFinish` precedence chain.
+
+### Training-habit trigger set
+
+```js
+const _CIN_TRAINING_HABIT_NAMES = new Set([
+  'Workout',                // defaultDays: Mon/Wed/Fri
+  'Cardio workout',         // defaultDays: Tue/Thu/Sat
+  'Sprint session',         // defaultDays: Tue/Sat
+  'Mobility & Stretching',  // defaultDays: Mon/Wed/Fri/Sun
+  'Whole-body strength',    // future; harmless if absent from pack
+]);
+```
+
+Daily habits (Sleep, Daily Walk, Hydrate, Read, etc.) never trigger this screen — they have no `defaultDays` per 1z.273E.
+
+### Persistence model
+
+- Each row carries an in-memory `_cinTrainingRowState` entry: `{ days: Set<dayName>, rec: '<recommended-keys-joined>' }`.
+- **CTA "Seal these days"** iterates the state map and writes per-habit `obConfig.set(idx, Object.assign({}, prior, { days: chosen.slice() }))`. Always writes `days` (even when count === 7) so `_completeOnboardingFinish` can distinguish "user opted into all 7" from "untouched".
+- **`_completeOnboardingFinish`** line 35817 already prefers `cfg.days` (from `obConfig`) over `base.defaultDays`. Length-7 arrays still result in NO `days` field on the saved habit (existing `length > 0 && length < 7` gate from 1z.273E), so the daily-default contract is preserved.
+- **No new persistence schema.** No backend changes. No migration.
+
+### Interaction rules
+
+- **Default** — recommended seals already lit; tag reads `Recommended` (green); rest line in green ("N rest days — and not one is a miss.").
+- **Tap an unlit seal** — pop animation, gold gradient; tag flips to `Custom` (violet) unless the new set matches the recommended set exactly.
+- **Tap a lit seal (with > 1 lit)** — removes the seal; tag → `Custom`.
+- **Tap the last lit seal** — refused; seal shakes; rest line warns amber: "A vow needs at least one day." Restores after 1.6s.
+- **All 7 lit** — tag reads `Every day` (gold); rest line reads "No rest days — train with care." On save, no `days` field is written (existing daily-default behavior).
+- **Quick set 3×/4×/5×/Daily** — snaps seals to a sensible pattern (M/W/F · M/Tu/Th/Sa · M-F · Daily). Active pill highlights only when the current selection exactly matches the preset.
+- **Last-day guard** is enforced in JS, not by HTML disabled state — the seal remains tappable so users get the shake feedback rather than a dead button.
+
+### Performance & invariants
+
+- Helpers are pure (no Date, no DOM reads in hot paths). Per-row state lives in a single Map; `updateRow` does one query per row.
+- 1z.214 Habits perf invariants NOT touched (Training Week is a fresh DOM tree, separate from `#habit-list`).
+- `_cinTrainingRowState` is cleared on every render call to prevent stale state across re-entry.
+- No new fonts, no new external dependencies, no new sound (1z.244 SFX system not extended in this phase).
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w145` |
+| `app.js?v=` | `598` |
+| `styles.css?v=` | `336` |
+| `sw.js CACHE_VERSION` | `v5.484` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w145)
+
+1. Reset all progress.
+2. Onboard fresh. Welcome → Naming → Why → Path → **pick Morning Routine** (includes Workout).
+3. Hit Continue on Path → Training Week appears. Workout row shows `M · W · F` pre-lit; tag = `Recommended`; rest line `4 rest days — and not one is a miss.`
+4. Tap the Tuesday seal → tag flips to `Custom`; rest line `3 rest days...`
+5. Tap the Wednesday seal (currently lit) — should toggle off normally (size > 1).
+6. Tap remaining lit seals down to one — last one refuses; seal shakes; rest line warns amber.
+7. Open Quick set → tap `Daily` → all 7 seals light; tag = `Every day`; rest line "No rest days...".
+8. Tap `3×` → back to M/W/F; tag = `Recommended`.
+9. Tap CTA `Seal these days`. Advances to Pact.
+10. Complete onboarding. Open Habits → Workout card shows `M · W · F` chip (1z.273F).
+11. Check `localStorage.hb_habits` → Workout has `days: ['Mon','Wed','Fri']` (or whatever you chose).
+12. Reset again, pick **Forge Your Own** with NO training habits → Training Week auto-skips silently between Path and Pact (no visible flash).
+13. Reset again, pick Locked-In → multiple training habits should appear stacked.
+14. Tap global Skip on Training Week → jumps to Pact; each habit retains its `defaultDays` (1z.273E fallback).
+15. Tap Ghost `You can change this any time` → advances to Pact; same behavior.
+16. iOS Reduce Motion ON → seal pops + shakes disabled; everything else unchanged.
+
+### Rollback notes
+
+Single-commit revert removes the Training Week screen. Existing users unaffected. New users falling back to 1z.273E `defaultDays` (M/W/F for Workout, etc.) without the opt-in screen — still better than pre-1z.273E daily Workout, but loses the customization moment.
+
+### Confirmations
+
+- ✅ Frontend / visual + onboarding flow only
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty)
+- ✅ No streak math, no HealthKit gate (1z.273B), no manual gate (1z.273C), no custom-create (1z.273D), no `defaultDays` data (1z.273E), no habit chip (1z.273F) changes
+- ✅ Conditional mount: zero training habits → auto-skip (no visible flash, no extra dot)
+- ✅ Existing cinematic screens (Opening / Naming / Why / Path / Pact / Reward / Hook) untouched
+- ✅ Skip and Ghost both wired to `next()` / `show(5)`
+- ✅ `_completeOnboardingFinish` precedence chain unchanged — Training Week writes to `obConfig.set(idx, { days })` which is already honored
+- ✅ Length-7 day arrays still skip writing the `days` field per 1z.273E gate
+- ✅ `node --check` passes for `app.js` and `sw.js`
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+### Status: 1z.273 scheduling stack COMPLETE
+
+```
+1z.273A  Audit (planning only)                    ✅
+1z.273B  HealthKit auto-verify rest-day gate      ✅
+1z.273C  Manual completion rest-day gate          ✅
+1z.273D  Custom Habit Create Days row             ✅
+1z.273E  defaultDays for training habits          ✅
+1z.273F  Schedule chip on habit cards             ✅
+1z.273G  Onboarding Training Week cinematic       ✅ (this phase)
+```
+
+The scheduling system is now end-to-end. A habit only matters on the days it is scheduled. Rest days are not missed days.
+
+---
+
+## Jun 2, 2026 — 1z.273F Frontend: Schedule chip on habit cards
 
 **TL;DR.** Switches the existing pre-1z.273F multi-pill schedule chip on each habit card to a single, unambiguous middot-separated chip (`M · W · F`). Daily habits (no `days` or all 7) render NO chip — only special schedules surface. Disambiguates Tue/Thu (`Tu` / `Th`) and Sat/Sun (`Sa` / `Su`) so users can read the cadence at a glance.
 
