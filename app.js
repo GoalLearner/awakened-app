@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w151';
+  const APP_BUILD_TAG = '2.2.5-w152';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20035,6 +20035,13 @@
   }
 
   async function refreshHeaderDuelState(opts) {
+    // v3 Phase 1z.274A — Skip the backend fetch while Duels UI is
+    // hidden (1z.273K). This function fires from foreground tick AND
+    // cold launch (with force:true), so it was costing one
+    // Auth.fetchDuels() round-trip per wake regardless of cache age.
+    // Returning cached state (which is empty under DUELS_UI_HIDDEN)
+    // is safe — no downstream rendering consumes it any more.
+    if (typeof DUELS_UI_HIDDEN !== 'undefined' && DUELS_UI_HIDDEN) return _headerDuelState;
     const force = !!(opts && opts.force);
     if (!force) {
       const age = Date.now() - (_headerDuelState.fetchedAt || 0);
@@ -26596,6 +26603,12 @@
   let _duelsLiveTickHandle = null;
   function startDuelsLiveTick() {
     stopDuelsLiveTick();
+    // v3 Phase 1z.274A — Skip the 60s tick loop while Duels UI is
+    // hidden (1z.273K). renderActiveDuelHero is already no-op'd, so
+    // the only thing this interval does is iterate _duelsCache.active
+    // and call a dead render every 60s. Defensive guard saves CPU on
+    // every Social tab visit; rolls back by flipping DUELS_UI_HIDDEN.
+    if (typeof DUELS_UI_HIDDEN !== 'undefined' && DUELS_UI_HIDDEN) return;
     _duelsLiveTickHandle = setInterval(() => {
       try {
         // Tick the active duel hero from cached state. The
@@ -26942,6 +26955,13 @@
 
   function startDuelsNetworkSync() {
     stopDuelsNetworkSync();
+    // v3 Phase 1z.274A — Skip the immediate tab-open sync AND the
+    // 30s interval polling while Duels UI is hidden (1z.273K). Each
+    // _runDuelSyncCycle hits /v1/social/duels — that's wasted
+    // bandwidth, battery, and backend D1 read load for a feature
+    // with no visible surface. Largest single saving in this phase:
+    // ~2 backend reads per minute while on the Social tab.
+    if (typeof DUELS_UI_HIDDEN !== 'undefined' && DUELS_UI_HIDDEN) return;
     // First sync immediately when starting (tab-open trigger),
     // then every 30s.
     try { _runDuelSyncCycle('tab-open'); } catch (_) {}
