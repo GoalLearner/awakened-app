@@ -21788,34 +21788,75 @@ body.reveal-locked { overflow: hidden; }
   background: rgba(0,0,0,0.20);
 }
 .guildhall-friend-add--bottom #social-friend-send {
-  /* Gold gradient CTA matching the brand fantasy palette. */
-  background: linear-gradient(180deg, #fde68a 0%, #f5b842 50%, #b97a07 100%);
-  border: 1px solid rgba(245,184,66,0.65);
+  /* v3 Phase 1z.272 — Violet → gold diagonal gradient pulls in both
+     Awakened signature colors. Dual-color outer glow (violet halo +
+     gold core) makes the CTA pop against the dark navy. A slow idle
+     pulse on the glow draws attention without being noisy. */
+  background:
+    linear-gradient(135deg,
+      #a78bfa 0%,
+      #8b5cf6 30%,
+      #f5b842 70%,
+      #ffd270 100%);
+  border: 1px solid rgba(245,184,66,0.75);
   color: #14143a;
   font-family: 'Cinzel', serif;
   font-weight: 800;
   font-size: 0.78rem;
   letter-spacing: 0.10em;
   text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.35);
   box-shadow:
-    0 4px 14px rgba(245,184,66,0.30),
-    inset 0 1px 0 rgba(255,255,255,0.40);
+    0 0 0 1px rgba(167,139,250,0.35),
+    0 4px 16px rgba(167,139,250,0.35),
+    0 4px 18px rgba(245,184,66,0.40),
+    inset 0 1px 0 rgba(255,255,255,0.55);
   padding: 10px 16px;
   border-radius: 10px;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 200ms ease, filter 200ms ease;
+  animation: addFriendIdlePulse 2.8s ease-in-out infinite;
 }
 .guildhall-friend-add--bottom #social-friend-send:hover {
+  filter: brightness(1.08) saturate(1.12);
   box-shadow:
-    0 6px 18px rgba(245,184,66,0.40),
-    inset 0 1px 0 rgba(255,255,255,0.50);
+    0 0 0 1px rgba(167,139,250,0.50),
+    0 6px 22px rgba(167,139,250,0.50),
+    0 6px 24px rgba(245,184,66,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.65);
 }
 .guildhall-friend-add--bottom #social-friend-send:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.99);
+  animation: none;
 }
 .guildhall-friend-add--bottom #social-friend-send:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   box-shadow: none;
+  animation: none;
+}
+
+/* Subtle dual-color idle pulse so the CTA hints at being tappable
+   without crossing into noisy / distracting territory. ~2.8s cycle. */
+@keyframes addFriendIdlePulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(167,139,250,0.35),
+      0 4px 16px rgba(167,139,250,0.35),
+      0 4px 18px rgba(245,184,66,0.40),
+      inset 0 1px 0 rgba(255,255,255,0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(167,139,250,0.55),
+      0 6px 22px rgba(167,139,250,0.55),
+      0 6px 26px rgba(245,184,66,0.60),
+      inset 0 1px 0 rgba(255,255,255,0.65);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guildhall-friend-add--bottom #social-friend-send { animation: none; }
 }
 
 /* Duel cards */
