@@ -4,7 +4,57 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.273G Frontend: Onboarding · Training Week cinematic (read this first)
+## Jun 3, 2026 — 1z.273H QA: w145 scheduling stack audit + auto-skip flash fix (read this first)
+
+**TL;DR.** Full audit pass across all seven 1z.273 scheduling phases. One small isolated bug surfaced in 1z.273G's auto-skip path: the `setTimeout(() => show(i+1), 0)` is a macrotask, so the browser painted the Training Week screen for one frame before the auto-skip fired. The fix is a one-line swap to synchronous recursion — replaces the `.show` class in the same task before the next paint. No other issues found. Everything else passes.
+
+**Process note.** Frontend / 1-line behavior fix + audit only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No XP / streak / rank / class / HealthKit / leaderboard / Social / Guild / inventory / economy / auth logic changed.
+
+### What changed
+- `app.js` cinematic `show()` (~line 34994): `setTimeout(() => show(i + 1), 0)` → `show(i + 1)`. Sync recursion replaces the screen on the same tick so users with non-training packs never see a Training Week flash.
+- Comment corrected — the prior comment incorrectly claimed `setTimeout(0)` was a microtask.
+
+### Audit pass/fail matrix
+
+| Layer | Phase | Test | Result |
+|---|---|---|---|
+| Auto-verify HealthKit | 1z.273B | 4 breadcrumb gates wired | ✅ |
+| Manual completion | 1z.273C | Off-day toast wired | ✅ |
+| Custom create Days row | 1z.273D | `_customDays` state, default all 7 | ✅ |
+| `DEFAULT_HABITS.defaultDays` | 1z.273E | Workout M/W/F, Cardio Tu/Th/Sa, Sprint Tu/Sa, Mobility M/W/F/Su | ✅ |
+| Daily habits have NO `defaultDays` | 1z.273E | Daily Walk / Sleep / Hydrate / Read / etc. | ✅ |
+| Habit card chip | 1z.273F | `scheduleDaysLabel` + `buildSchedPills` + unambiguous labels | ✅ |
+| `renderHabits` hides off-day | n/a | Two filter sites (12478, 15995) | ✅ |
+| Training Week conditional mount | 1z.273G | `_cinCollectTrainingHabits()` walks pack | ✅ |
+| Training Week auto-skip silently | 1z.273G | **FAILED → now FIXED** (sync recursion) | ✅ |
+| CTA writes `obConfig` per habit | 1z.273G | `obConfig.set(idx, { days })` | ✅ |
+| `_completeOnboardingFinish` precedence | 1z.273E | `cfg.days` → `base.defaultDays` → none | ✅ |
+| Skip target updated to `show(5)` | 1z.273G | Pact index moved 4 → 5 | ✅ |
+| Skip visibility `i >= 3 && i < 6` | 1z.273G | Path + Training + Pact | ✅ |
+| `node --check app.js` | n/a | OK | ✅ |
+| `node --check sw.js` | n/a | OK | ✅ |
+| `git diff --stat backend/` | n/a | Empty | ✅ |
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w146` |
+| `app.js?v=` | `599` |
+| `styles.css?v=` | `336` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.485` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Verdict
+**w146 scheduling stack QA passed. Safe to prep Mac archive.**
+
+The 1z.273 stack is now fully verified and the one auto-skip flash is closed.
+
+---
+
+## Jun 3, 2026 — 1z.273G Frontend: Onboarding · Training Week cinematic
 
 **TL;DR.** Last screen in the 1z.273 scheduling stack. Inserts a cinematic "Training Week" step between Path (`#cin-scr4`) and the Pact (`#cin-scr5`). Renders only when the chosen pack contains a training-type habit; auto-skips otherwise. Each row pre-lights its recommended `defaultDays` from 1z.273E; user can tap individual seals to customize or use a collapsed Quick set (3×/4×/5×/Daily). Writes overrides via `obConfig`, which `_completeOnboardingFinish` already honors via the 1z.273E precedence chain.
 

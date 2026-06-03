@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w145';
+  const APP_BUILD_TAG = '2.2.5-w146';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34988,10 +34988,14 @@
       if (order[i] === 'cin-scr-training') {
         const trainingHabits = _cinCollectTrainingHabits();
         if (trainingHabits.length === 0) {
-          // No training in this pack → auto-advance to Pact silently
-          // (deferred a microtask so the active-screen class doesn't
-          // visibly flash).
-          setTimeout(() => show(i + 1), 0);
+          // No training in this pack → auto-advance to Pact on the
+          // same tick. 1z.273H — the prior setTimeout(0) was a macro-
+          // task, which let the browser paint the training screen
+          // (the `.show` class was already applied above) for one
+          // frame before the skip fired. Synchronous recursion
+          // replaces the `.show` class in the same task before the
+          // next paint, so the flash is gone.
+          show(i + 1);
           return;
         }
         _cinRenderTrainingScreen(trainingHabits);
