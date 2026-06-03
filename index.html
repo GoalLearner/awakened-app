@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=333">
+  <link rel="stylesheet" href="styles.css?v=334">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2359,6 +2359,22 @@
       <div class="custom-stat-label">WHICH STAT DOES THIS TRAIN?</div>
       <div id="custom-stat-grid" class="custom-stat-grid"></div>
 
+      <!-- v3 Phase 1z.273D — Days row. Reuses the same `.days-row` /
+           `.day-btn[data-day]` markup as the existing schedule picker
+           so CSS and the shared setActiveDays() helper apply
+           unchanged. Defaults to all 7 selected (= "Every day"). -->
+      <div class="custom-stat-label custom-days-label">DAYS</div>
+      <div class="custom-days-sub" id="custom-days-sub">Every day</div>
+      <div class="days-row" id="custom-days-row">
+        <button class="day-btn active" data-day="Mon" type="button">M</button>
+        <button class="day-btn active" data-day="Tue" type="button">T</button>
+        <button class="day-btn active" data-day="Wed" type="button">W</button>
+        <button class="day-btn active" data-day="Thu" type="button">T</button>
+        <button class="day-btn active" data-day="Fri" type="button">F</button>
+        <button class="day-btn active" data-day="Sat" type="button">S</button>
+        <button class="day-btn active" data-day="Sun" type="button">S</button>
+      </div>
+
       <div id="custom-error" class="custom-error hidden"></div>
 
       <div class="custom-actions">
@@ -2722,7 +2738,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=594"></script>
+  <script src="app.js?v=595"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3143,7 +3159,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W141</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W142</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

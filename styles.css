@@ -10753,6 +10753,26 @@ footer {
   text-align: center;
   margin-bottom: 10px;
 }
+/* v3 Phase 1z.273D — Days row inside the Create Your Own Habit modal.
+   Reuses .days-row / .day-btn from the schedule sheet for the pills
+   themselves. Just spacing + the inline "Every day" / "Scheduled days"
+   helper. */
+.custom-days-label {
+  margin-top: 18px;
+  margin-bottom: 4px;
+}
+.custom-days-sub {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  margin-bottom: 10px;
+}
+#custom-overlay #custom-days-row {
+  justify-content: center;
+  margin-bottom: 6px;
+}
 /* v3 Phase 1z.270B — Explicit icon-choice labeling above the grid.
    "CHOOSE HABIT ICON" + a short helper line. Plus a subtle pulsing
    purple ring on the identity button so it reads as tappable, not

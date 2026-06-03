@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w141';
+  const APP_BUILD_TAG = '2.2.5-w142';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21287,16 +21287,26 @@
   // bolt — the user must consciously choose.
   let _customIconKey = null;
   let _customEmojiModeChosen = false;
+  // v3 Phase 1z.273D — schedule selection state for the Create
+  // Your Own Habit modal. Defaults to all 7 days (= "Every day").
+  // saveCustomHabit only writes habit.days when the user picked a
+  // subset; if all 7 remain selected, the field is omitted entirely
+  // and isScheduledToday's length-7 / no-field shortcut keeps the
+  // habit on daily cadence. Minimum 1 day is enforced via the same
+  // click-handler pattern as the schedule sheet's day pills.
+  let _customDays = [...ALL_DAYS];
   function openCustomHabitModal() {
     if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) return;
     _customEmoji  = '⚡';
     _customStatId = null;
     _customIconKey = null;
     _customEmojiModeChosen = false;
+    _customDays = [...ALL_DAYS];
     document.getElementById('custom-name-input').value = '';
     document.getElementById('custom-error').classList.add('hidden');
     _renderCustomIconBtn();
     _renderCustomIconGrid();
+    _renderCustomDays();
     // v3 Phase 1z.270B — picker grid OPENS by default so the choice
     // is the first thing the user sees. 1z.270 hid it; on-device QA
     // showed users tapped Create Habit without realizing the
@@ -21391,6 +21401,44 @@
     document.getElementById('custom-overlay').classList.add('hidden');
   }
 
+  // v3 Phase 1z.273D — Days row renderer/wiring for the Create Your
+  // Own Habit modal. Reuses the shared `.days-row .day-btn[data-day]`
+  // pattern + setActiveDays() helper from the schedule sheet so CSS
+  // and selection visuals stay identical. Min-1-day rule mirrors the
+  // schedule sheet pattern (line ~23805). Idempotent: re-binding is
+  // gated by a data-wired flag so reopening the modal doesn't stack
+  // listeners.
+  function _renderCustomDays() {
+    const row = document.getElementById('custom-days-row');
+    if (!row) return;
+    setActiveDays('custom-days-row', _customDays);
+    _refreshCustomDaysSub();
+    if (row.dataset.wired === '1') return;
+    row.dataset.wired = '1';
+    row.querySelectorAll('.day-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        _customDays = [...row.querySelectorAll('.day-btn.active')].map(b => b.dataset.day);
+        if (_customDays.length === 0) {
+          // Minimum 1 day — revert and toast (mirrors schedule sheet).
+          btn.classList.add('active');
+          _customDays = [btn.dataset.day];
+          try {
+            if (typeof showHabitToast === 'function') {
+              showHabitToast('Choose at least one day.');
+            }
+          } catch (_) {}
+        }
+        _refreshCustomDaysSub();
+      });
+    });
+  }
+  function _refreshCustomDaysSub() {
+    const sub = document.getElementById('custom-days-sub');
+    if (!sub) return;
+    sub.textContent = (_customDays.length === 7) ? 'Every day' : 'Scheduled days';
+  }
+
   function renderCustomStatGrid() {
     const grid = document.getElementById('custom-stat-grid');
     if (!grid) return;
@@ -21453,6 +21501,12 @@
       return showErr('You\'ve reached the ' + MAX_CUSTOM_HABITS + '-custom-habit cap.');
     }
 
+    // v3 Phase 1z.273D — defensive zero-day guard (UI prevents this
+    // via min-1 click handler, but belt-and-braces against any future
+    // path that could land here with an empty array).
+    if (Array.isArray(_customDays) && _customDays.length === 0) {
+      return showErr('Choose at least one day.');
+    }
     const newH = {
       id:          uid(),
       emoji:       _customEmoji || '⚡',
@@ -21467,6 +21521,12 @@
     // habitIconHtml fallback. Field is purely additive — no migration.
     if (_customIconKey && HABIT_ICON_BY_KEY[_customIconKey]) {
       newH.iconKey = _customIconKey;
+    }
+    // v3 Phase 1z.273D — persist schedule subset. All 7 days = field
+    // omitted = daily via isScheduledToday's length-7 / no-field
+    // shortcut. Matches the schedule sheet's save convention.
+    if (Array.isArray(_customDays) && _customDays.length > 0 && _customDays.length < 7) {
+      newH.days = _customDays.slice();
     }
     try {
       _addHabitBreadcrumb('custom-create-validated', {

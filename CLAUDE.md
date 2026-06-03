@@ -4,7 +4,110 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.273C Frontend: Manual tap rest-day gate (read this first)
+## Jun 2, 2026 — 1z.273D Frontend: Custom habit Days row (read this first)
+
+**TL;DR.** Adds a Days row to the Create Your Own Habit modal so users can set the habit's schedule at creation time instead of creating it first and editing it after. Reuses the existing `.days-row .day-btn[data-day]` markup + `setActiveDays()` helper from the schedule sheet — same pills, same CSS, same min-1-day enforcement pattern. Defaults to all 7 selected ("Every day"). All 7 → no `habit.days` field (existing daily). Subset → `habit.days = ['Mon','Wed','Fri']` etc. matching the schedule sheet's save convention.
+
+**Process note.** Frontend / scoped UI + state. No backend / D1 / migration / Worker / Codemagic / archive / upload. No changes to HealthKit auto-verify gate (1z.273B), manual tap gate (1z.273C), streak math, daily denominator, render, onboarding, Add Habits library/packs, XP / rank / class / boss / Social / Guild / leaderboard / inventory / economy / auth.
+
+### Files modified
+
+- `index.html` — `#custom-overlay` gains a `<div class="custom-stat-label custom-days-label">DAYS</div>` + helper text + `<div class="days-row" id="custom-days-row">` with 7 `.day-btn` markup (all `.active` by default), placed between the stat-grid and the error row.
+- `app.js`
+  - New module-scope `_customDays = [...ALL_DAYS]`.
+  - `openCustomHabitModal()` resets `_customDays = [...ALL_DAYS]` and calls `_renderCustomDays()`.
+  - New `_renderCustomDays()` helper at ~line 21404 (just above `renderCustomStatGrid`) — calls shared `setActiveDays('custom-days-row', _customDays)`, refreshes the inline "Every day" / "Scheduled days" sub-label, and wires click handlers once (`dataset.wired` guard so reopening doesn't stack listeners). Min-1 enforcement mirrors the schedule sheet's pattern at line 23805 — revert + toast `"Choose at least one day."`.
+  - `_refreshCustomDaysSub()` helper toggles the sub-line text.
+  - `saveCustomHabit()` — adds two guards:
+    - **Defensive zero-day guard** before building `newH`. UI prevents this via the click handler, but belt-and-braces.
+    - **Subset write** after `iconKey`: `if (length > 0 && length < 7) newH.days = _customDays.slice();` — matches schedule sheet's convention (all 7 = omit field = daily via existing `isScheduledToday` length-7 / no-field shortcut).
+- `styles.css` — three tiny additive rules at ~line 10756:
+  - `.custom-days-label { margin-top: 18px; margin-bottom: 4px; }`
+  - `.custom-days-sub { Cormorant italic, muted, centered }`
+  - `#custom-overlay #custom-days-row { justify-content: center; margin-bottom: 6px; }`
+- `index.html` knobs — `app.js?v=595`, `styles.css?v=334`, footer `BUILD W142`.
+- `sw.js` — `CACHE_VERSION = 'v5.481'`.
+
+### Save behavior
+
+| User picks | `newH.days` written? |
+|---|---|
+| All 7 days selected (default) | **No** — field omitted → daily via `isScheduledToday` length-7 / no-field shortcut |
+| Subset (1–6 days) | **Yes** — `newH.days = [...selected days]` |
+| Zero days | **Blocked** — UI revert + toast; defensive guard in save returns error inline |
+
+This is **identical** to the schedule sheet's save convention (line 23790: `if (schedFormDays.length === 7) delete habit.days; else habit.days = [...schedFormDays];`). No data shape divergence between create and edit flows.
+
+### Reuse summary
+
+| Pattern | Reuse status |
+|---|---|
+| Day-pill markup `.day-btn[data-day="Mon"]…` | ✅ Identical to schedule sheet (index.html:2750) |
+| Active-state CSS `.day-btn.active` | ✅ Reused unchanged (styles.css:6138) |
+| `.days-row` container | ✅ Reused unchanged (styles.css:6112) |
+| `setActiveDays(rowId, days)` helper | ✅ Reused unchanged (app.js:23681) |
+| Min-1 click-handler pattern | ✅ Same pattern as schedule sheet (app.js:23805) |
+| Subset-vs-7 save convention | ✅ Same as schedule sheet (app.js:23790) |
+
+Net: **no duplication of bulky day-toggle logic**. Three small additions: state var, render+wire helper, save guard.
+
+### Daily-by-default rationale
+
+Defaulting to all 7 days means:
+- Anyone who doesn't think about scheduling at creation time still gets the historical behavior (daily habit, no schedule constraint)
+- The 1z.273B HealthKit gate and 1z.273C manual gate continue to bypass for these habits via `isScheduledToday`'s length-7 / no-field shortcut
+- No regression for existing user mental model
+- Schedule becomes opt-in, not opt-out
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w142` |
+| `app.js?v=` | `595` |
+| `styles.css?v=` | `334` |
+| `sw.js CACHE_VERSION` | `v5.481` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w142)
+
+1. Add Habits → Create Your Own.
+2. Confirm Days row appears between stat grid and Create button. Sub-label reads "Every day". All 7 pills active.
+3. Tap M, W, F off. Sub-label now reads "Scheduled days". (T, Th, Sat, Sun remain active.)
+4. Tap remaining days off until only one is active. Try to tap it off → toast: `Choose at least one day.` That day stays active.
+5. Tap T off so only M, W, F remain. Reset name + stat + icon. Tap Create Habit.
+6. Open habit detail / edit sheet for the new habit. Schedule shows `Mon Wed Fri` selected. Edit there should still work and save.
+7. Create a second habit with all 7 days. Open Copy Debug Info or inspect `hb_habits` → second habit has no `days` field (or `length === 7`).
+8. On a Tuesday (PT), the MWF habit should be hidden from the Habits list and not auto-verify (HealthKit gate from 1z.273B).
+9. Existing daily habits (no `days`) unchanged.
+10. Existing edit schedule sheet still works for all habits.
+11. Custom icon picker still works.
+12. Emoji fallback still works.
+13. Stat picker still works.
+14. iPhone modal width/layout intact, no horizontal overflow.
+
+### Rollback notes
+
+Single-commit revert. No data implications: only newly-created custom habits would have lacked the `days` field; existing habits never touched. Existing `habit.days` fields remain readable by the unchanged schedule sheet.
+
+### Confirmations
+
+- ✅ Frontend-only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty).
+- ✅ Days row added to Create Your Own Habit modal.
+- ✅ Defaults to all 7 selected → daily (no `days` field written).
+- ✅ Subset (1–6) selected → `habit.days = [...]` persists.
+- ✅ Zero-day save blocked via UI revert + defensive guard.
+- ✅ Existing edit schedule sheet untouched and still works.
+- ✅ HealthKit gate (1z.273B) and manual gate (1z.273C) untouched.
+- ✅ Streak math, daily denominator, render, onboarding, Add Habits library all untouched.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.273C Frontend: Manual tap rest-day gate
 
 **TL;DR.** Adds a defensive rest-day gate inside `toggleHabit`'s completion path. If a user (or any caller) tries to complete a habit that has `habit.days` set to a subset (e.g. `['Mon','Wed','Fri']`) and today's PT weekday isn't in that subset, the gate short-circuits with a toast — no `check(id)`, no XP, no streak, no sound, no particles, no reward burst. **Uncheck path is unconditional** so corrections always work. Silent auto-verify paths bypass the gate (already gated upstream by 1z.273B). Daily habits (no `days` field or all 7) pass through normally.
 
