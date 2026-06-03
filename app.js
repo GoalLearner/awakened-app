@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w157';
+  const APP_BUILD_TAG = '2.2.5-w158';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2997,6 +2997,21 @@
         ref_id: id || null,
       };
     }
+    // v3 Phase 1z.277D — WLT Merchant bonus row. Hint shape:
+    // 'wlt_bonus_kill_<bossId>'. Checked BEFORE the plain 'kill_'
+    // branch so the prefix match doesn't misroute (kill_ is a
+    // substring of wlt_bonus_kill_ but indexOf=0 check below would
+    // never match; ordering still good defensive practice).
+    if (h.indexOf('wlt_bonus_kill_') === 0) {
+      const id  = h.slice(15);
+      const cfg = (typeof BOSSES === 'object' && BOSSES) ? BOSSES[id] : null;
+      return {
+        type: 'wlt_bonus_kill',
+        label: 'Merchant bonus',
+        detail: cfg && cfg.name ? 'WLT bonus on ' + cfg.name : 'WLT bonus on boss kill',
+        ref_id: id,
+      };
+    }
     if (h.indexOf('kill_') === 0) {
       const id  = h.slice(5);
       const cfg = (typeof BOSSES === 'object' && BOSSES) ? BOSSES[id] : null;
@@ -3690,6 +3705,53 @@
   }
   function engageCostSouls(rank) {
     return SOULS_ENGAGE_COSTS[rank] || 0;
+  }
+
+  // v3 Phase 1z.277D — WLT Merchant bonus on boss kill rewards.
+  //
+  // Reward-side only: WLT level grants a small capped % bonus on top
+  // of the base killRewardSouls table. Implementation principles
+  // locked in 1z.277D-Prep:
+  //   - Verified behavior remains the kill detector. WLT never
+  //     touches sleepHours / stepThreshold / workoutMinutes / any
+  //     boss condition. If the kill doesn't fire, neither does this.
+  //   - killRewardSouls(rank) stays pure. The bonus is applied as a
+  //     SEPARATE earnSouls() call so the souls ledger shows two
+  //     transparent rows ("Defeated <Boss>" + "Merchant bonus"),
+  //     never a silently inflated total.
+  //   - Engage cost (engageCostSouls) is NOT discounted in this
+  //     phase — keeps the engage-button label trustworthy.
+  //   - Drop odds (rollBossDrop) are NOT modified — drops belong to
+  //     a future combat phase where items become combat-consuming.
+  //
+  // Curve: +1% souls reward per WLT level, capped at +20% at Lv20.
+  // Floored to integer at the bonus-souls computation (whole souls
+  // only). At Lv0–4 the floor collapses small bonuses to 0 on most
+  // boss rewards (e.g. floor(50 * 0.04) = 2 at Lv4; floor(35 * 0.02)
+  // = 0 at Lv2). That's intentional: small numbers stay invisible
+  // until the bonus crosses a meaningful threshold.
+  //
+  // statLevel and stats are hoisted/IIFE-scoped, available here.
+  // Try/catch makes this defensively no-op if state is missing —
+  // never throws into the kill-resolver path.
+  function wltSoulsBonusFraction() {
+    try {
+      const pts = (stats && stats.WLT && typeof stats.WLT.pts === 'number')
+        ? stats.WLT.pts
+        : 0;
+      const lvl = (typeof statLevel === 'function') ? statLevel(pts) : 0;
+      const frac = Math.max(0, Math.min(0.20, lvl * 0.01));
+      return frac;
+    } catch (_) {
+      return 0;
+    }
+  }
+  function wltKillBonusSouls(rank) {
+    const base = killRewardSouls(rank);
+    if (!base) return 0;
+    const frac = wltSoulsBonusFraction();
+    if (frac <= 0) return 0;
+    return Math.floor(base * frac);
   }
 
   // ─── v3 Phase 1z.165 — Guild Activity (dedicated event store) ──
@@ -9056,6 +9118,13 @@
         // the toast message can include the actual amount awarded.
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
+        // v3 Phase 1z.277D — WLT Merchant bonus on kill reward.
+        // Capped +20% reward at WLT Lv20. Separate earnSouls() so
+        // the ledger shows it as its own row. Fires ONLY after a
+        // real kill — gated by the same code path as the base
+        // reward above, so failed hunts and engages never trigger.
+        const _wltBonus_1 = wltKillBonusSouls(cfg.rank);
+        if (_wltBonus_1 > 0) earnSouls(_wltBonus_1, 'wlt_bonus_kill_' + id);
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
         const dropped = rollBossDrop(id);
@@ -9190,6 +9259,9 @@
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
+        // v3 Phase 1z.277D — WLT Merchant bonus (weekend boss path).
+        const _wltBonus_2 = wltKillBonusSouls(cfg.rank);
+        if (_wltBonus_2 > 0) earnSouls(_wltBonus_2, 'wlt_bonus_kill_' + id);
         const dropped = rollBossDrop(id);
         announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
@@ -9280,6 +9352,9 @@
         setBossState(id, state);
         const reward = killRewardSouls(cfg.rank);
         if (reward > 0) earnSouls(reward, 'kill_' + id);
+        // v3 Phase 1z.277D — WLT Merchant bonus (per-day boss path).
+        const _wltBonus_3 = wltKillBonusSouls(cfg.rank);
+        if (_wltBonus_3 > 0) earnSouls(_wltBonus_3, 'wlt_bonus_kill_' + id);
         const dropped = rollBossDrop(id);
         announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
@@ -9346,6 +9421,9 @@
     setBossState(id, state);
     const reward = killRewardSouls(cfg.rank);
     if (reward > 0) earnSouls(reward, 'kill_' + id);
+    // v3 Phase 1z.277D — WLT Merchant bonus (single-shot kill path).
+    const _wltBonus_4 = wltKillBonusSouls(cfg.rank);
+    if (_wltBonus_4 > 0) earnSouls(_wltBonus_4, 'wlt_bonus_kill_' + id);
     const dropped = rollBossDrop(id);
     announceKillAndDrop(cfg, reward, dropped);
     // v3 Phase 1z.165 — Guild Hall feat row. Boss kills are per-day

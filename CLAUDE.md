@@ -4,7 +4,99 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.277C Frontend: Ship boss archetype labels (read this first)
+## Jun 3, 2026 — 1z.277D Frontend: WLT souls reward bonus (read this first)
+
+**TL;DR.** First real WLT mechanic. Boss kills now pay a small capped souls bonus scaled by WLT level. Reward-only (engage cost unchanged, drops unchanged, kill detection unchanged). Bonus is posted as a separate `earnSouls()` call so the souls ledger shows it as its own "Merchant bonus" row — never a silently inflated kill reward. Verified behavior still decides victory.
+
+### Formula
+
+```
+WLT bonus = floor( killRewardSouls(rank) × min(0.20, 0.01 × WLT_level) )
+```
+
+- Cap: **+20% at WLT Lv20.**
+- Linear: +1% per WLT level.
+- Floored to integer (whole souls only).
+- At Lv0 returns 0; small bonuses at Lv1–4 may floor to 0 for low-reward bosses (intentional — keeps invisible noise out of the ledger).
+
+### Modeled per-rank bonus
+
+| Rank | Base reward | Lv5 (+5%) | Lv10 (+10%) | Lv15 (+15%) | **Lv20 (+20%)** |
+|---|---:|---:|---:|---:|---:|
+| E | 50 | +2 | +5 | +7 | **+10** |
+| D | 35 | +1 | +3 | +5 | **+7** |
+| C | 200 | +10 | +20 | +30 | **+40** |
+| B | 400 | +20 | +40 | +60 | **+80** |
+| A | 800 | +40 | +80 | +120 | **+160** |
+| S | 1600 | +80 | +160 | +240 | **+320** |
+
+### Implementation
+
+- **Helpers** (`app.js:3702-3742`, near `killRewardSouls`):
+  - `wltSoulsBonusFraction()` — reads `stats.WLT.pts`, returns `min(0.20, statLevel(pts) × 0.01)`. Try/catch defensively returns 0.
+  - `wltKillBonusSouls(rank)` — returns `floor(killRewardSouls(rank) × wltSoulsBonusFraction())`.
+- **4 boss kill resolver call sites patched** (`app.js:9058 / 9192 / 9282 / 9348` → bonus calls at `:9112 / :9249 / :9342 / :9411`). Each preserves the existing `earnSouls(reward, 'kill_' + id)` line and appends:
+  ```js
+  const _wltBonus_N = wltKillBonusSouls(cfg.rank);
+  if (_wltBonus_N > 0) earnSouls(_wltBonus_N, 'wlt_bonus_kill_' + id);
+  ```
+- **Ledger classifier** (`_classifySoulsEvent` `app.js:3000+`): added `wlt_bonus_kill_<bossId>` branch. Label: **"Merchant bonus"**. Detail: "WLT bonus on <Boss Name>". Type: `wlt_bonus_kill`. Branch sits BEFORE the plain `kill_` branch (defensive ordering).
+
+### What's NOT changed
+
+- `killRewardSouls(rank)` — base table unchanged.
+- `engageCostSouls(rank)` — costs unchanged.
+- Boss verified conditions (`sleepHours`, `stepThreshold`, `workoutMinutes`, `activeEnergyKcal`, `flightThreshold`, `qualifyingDays`, `qualifyingNights`) — unchanged.
+- Kill detection — unchanged. Bonus fires ONLY inside branches that already fired `earnSouls(reward, 'kill_' + id)`, so failed hunts and engage events cannot trigger it.
+- `rollBossDrop` / `dropRatesFor` / drop pity mechanics — unchanged.
+- `aggregateEquippedBonuses` — still inert / zero consumers.
+- `isGateUnlocked` (rank gates) — unchanged.
+- HealthKit resolvers — unchanged.
+- `recordGuildActivity` / `_queuePublicAchievementEvent` — unchanged. Bonus does NOT broadcast publicly.
+- No new storage keys. Souls persist via existing `hb_souls` path.
+- No backend calls. No D1. No migration.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w158` |
+| `app.js?v=` | `611` |
+| `styles.css?v=` | `339` (unchanged — no CSS) |
+| `sw.js CACHE_VERSION` | `v5.497` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+| `DUELS_UI_HIDDEN` | `true` (preserved) |
+
+### Manual QA (w158)
+
+1. WLT Lv0 user kills any boss → ledger shows only the base "Defeated <Boss>" row, no Merchant bonus row.
+2. Train WLT to Lv5 (100 stat XP) → next E-boss kill shows two rows: "Defeated The Insomniac +50 souls" and "Merchant bonus +2 souls".
+3. WLT Lv10 / Lv15 / Lv20 produce rounded bonuses per the table above.
+4. E kill at Lv20 = +10 bonus on 50 reward.
+5. D kill at Lv20 = +7 bonus on 35 reward.
+6. C kill at Lv20 = +40 bonus on 200 reward.
+7. B kill at Lv20 = +80 bonus on 400 reward.
+8. A kill at Lv20 = +160 bonus on 800 reward.
+9. S kill at Lv20 = +320 bonus on 1600 reward.
+10. Failed hunt (e.g. didn't hit step threshold) → no bonus row, no balance change beyond the prior engage cost.
+11. Engaging a boss → only the engage-cost row in ledger; no bonus.
+12. Boss engage button label still shows base cost (no discount applied).
+13. Drop rates and pity behavior unchanged (verify a fresh source-boss kill still rolls drops at expected odds).
+14. Guild Hall feat row for boss kill unchanged.
+15. No backend request fires from the bonus path (DevTools Network).
+16. No new localStorage keys appear (DevTools Application).
+17. `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved.
+18. `DUELS_UI_HIDDEN=true` preserved.
+
+### Rollback
+
+Single-commit revert removes the 2 helpers, 4 bonus `earnSouls` calls, 1 ledger classifier branch, and the knob bumps. No data implications — the ledger entries written under the new label remain as historical rows; they simply stop appearing for new kills. WLT-bonus souls already credited to user balances stay credited.
+
+---
+
+## Jun 3, 2026 — 1z.277C Frontend: Ship boss archetype labels
 
 **TL;DR.** Adds a display-only AGGRESSOR / SUSTAINER / CASTER pill to every boss card and to the boss detail modal. Extends the existing `archetype` field (already present on B-rank bosses) to all 12 bosses. Reinforces the 1z.277A combat-triangle vocabulary on the surface where users will eventually feel it most. Verified behavior still decides victory — the disclaimer in the detail modal says so explicitly.
 
