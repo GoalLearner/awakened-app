@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w148';
+  const APP_BUILD_TAG = '2.2.5-w149';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26373,7 +26373,17 @@
   // re-renders between schedule and fire don't double-queue.
   const DUEL_TOAST_STAGGER_MS = 1500;
   let _nextDuelToastReadyAt = 0;
+  // v3 Phase 1z.273K — Duels feature is paused product-wide. The
+  // backend may still return historical `completed` duels in the
+  // /v1/social/duels response (cleaning historical rows is a
+  // separate concern), but the UI must NOT surface them: w148 QA
+  // saw "Duel sealed — Even ground with Richie." toast on the Relic
+  // Archive screen. Hard early-return blocks every toast regardless
+  // of backend state. The entire toast pipeline below is preserved
+  // for rollback if Duels are ever revived.
+  const DUELS_UI_HIDDEN = true;
   function _maybeFireDuelResultToast(duel) {
+    if (DUELS_UI_HIDDEN) return;
     if (!duel || duel.status !== 'completed') return;
     if (duel.duel_type === 'boss_race') return;
     const key = 'hb_duel_result_seen_' + duel.id;
@@ -27013,6 +27023,14 @@
   function renderActiveDuelHero(active) {
     const mount = document.getElementById('duels-hero');
     if (!mount) return;
+    // v3 Phase 1z.273K — Duels feature paused; same gate as
+    // _maybeFireDuelResultToast. Without this clear, a previously-
+    // rendered "Duel lost. <opp> outstepped you. Train. Rematch."
+    // pill would persist on the Social tab until the user reloaded.
+    if (DUELS_UI_HIDDEN) {
+      try { mount.innerHTML = ''; } catch (_) {}
+      return;
+    }
     const duel = _pickActiveHeroDuel(active);
     // v3 Phase 1z.147 — Phase B diagnostics. One breadcrumb per
     // render so Copy Debug Info can prove the hero is reading
