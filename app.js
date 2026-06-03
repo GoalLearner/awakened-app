@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w149';
+  const APP_BUILD_TAG = '2.2.5-w150';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13557,6 +13557,29 @@
     try { _addHealthVerifyBreadcrumb(name, fields || {}); } catch (_) {}
   }
 
+  // v3 Phase 1z.273L — Frontend allowlist sync. Backend allowlist
+  // expanded in 1z.223 → 1z.226 → 1z.257 to seven additional event
+  // types, but this gate was last updated in 1z.200 and still only
+  // permitted boss_kill / rank_up / step_milestone_bucket. That
+  // silently dropped every other type at queue time — including
+  // ultra_rare_drop, rare_item_drop, verified_streak, and
+  // step_100k_club_unlocked which all have working submitters
+  // elsewhere in this file (lines 8113, 8137, 13760, 13783).
+  // verified_workout / verified_sleep_7h / flights_milestone_bucket
+  // are in the allowlist too but have NO submitter — see 1z.273M
+  // for the hook implementation.
+  const _PAE_ALLOWED_EVENT_TYPES = new Set([
+    'boss_kill',
+    'rank_up',
+    'step_milestone_bucket',
+    'ultra_rare_drop',
+    'rare_item_drop',
+    'verified_streak',
+    'step_100k_club_unlocked',
+    'verified_workout',
+    'verified_sleep_7h',
+    'flights_milestone_bucket',
+  ]);
   function _queuePublicAchievementEvent(ev) {
     if (!ev || !ev.eventType || !ev.eventLabel || !ev.clientEventId || !ev.clientCreatedAt) return;
     // Defensive: never queue an event that would carry a raw step
@@ -13566,7 +13589,7 @@
     if (ev.eventType === 'step_milestone_bucket') {
       if (!Number.isInteger(ev.eventValue) || !_PAE_STEP_BUCKETS.includes(ev.eventValue)) return;
     }
-    if (ev.eventType !== 'boss_kill' && ev.eventType !== 'rank_up' && ev.eventType !== 'step_milestone_bucket') return;
+    if (!_PAE_ALLOWED_EVENT_TYPES.has(ev.eventType)) return;
     // Coalesce same clientEventId in the pending queue so a
     // double-call inside the same debounce window doesn't bloat
     // the batch. Backend would dedupe anyway, but this keeps the
