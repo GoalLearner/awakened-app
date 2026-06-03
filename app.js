@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w155';
+  const APP_BUILD_TAG = '2.2.5-w156';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11576,6 +11576,27 @@
     FOCUS: 'Attention, presence, and distraction resistance. In a world designed to steal your attention, focus is a superpower. Protect your mornings and guard your mind.',
     WILL:  "Discipline over comfort. Willpower is doing what you said you would do when you don't feel like doing it. The rarest and most valuable stat of all.",
     WLT:   'Financial intelligence and growth mindset. Wealth is built through daily micro decisions — tracking, building, reaching, investing. Consistency here compounds harder than any other stat.',
+  };
+
+  // v3 Phase 1z.277B — Stat RPG-role copy.
+  // Sits alongside STAT_DESCRIPTIONS so the existing copy stays
+  // visible (continuity for users who already read it) and the new
+  // role/archetype framing layers in below. Rendered as a second
+  // paragraph in the stat detail sheet via textContent (no XSS
+  // surface). Tone matches 1z.277A combat-triangle audit:
+  //   STR=Aggressor, VIT=Sustainer, INT=Caster
+  //   FOCUS + WILL = universal modifiers (every archetype)
+  //   WLT = economy ONLY, explicitly non-combat
+  // No formulas, percentages, or mechanic promises — combat layer
+  // is not live yet and these strings must stay truthful regardless
+  // of how the eventual combat formulas tune.
+  const STAT_ROLES = {
+    STR:   'Force. Built through training, lifting, and physical output. In the field, STR represents direct power — the hunter who strikes first.',
+    VIT:   'Durability. Built through sleep, recovery, and endurance. In the field, VIT represents survival — the hunter who outlasts the hunt.',
+    INT:   'Tactics. Built through learning, planning, and reflection. In the field, INT represents clarity — the hunter who sees the pattern.',
+    FOCUS: 'Precision. Built through deep work, steps, and meditation. FOCUS sharpens every archetype — consistency under pressure.',
+    WILL:  'Resilience. Built through hard habits, restraint, and comeback streaks. WILL carries every archetype — the refusal to break.',
+    WLT:   'Wealth. Built through finance, trade, and resource discipline. WLT shapes economy and rewards — it does not decide combat.',
   };
 
   // ── ORIGIN STORIES — two-chapter narrative artifact ──────
@@ -33614,6 +33635,15 @@
 
     // Description
     document.getElementById('stat-detail-desc').textContent = STAT_DESCRIPTIONS[st.id] || '';
+
+    // v3 Phase 1z.277B — RPG role paragraph (Aggressor/Sustainer/
+    // Caster framing for STR/VIT/INT; universal-modifier framing for
+    // FOCUS/WILL; explicit non-combat disclaimer for WLT). Null-
+    // guarded so the rest of the sheet still renders if the markup
+    // slot is missing on stale cached HTML. textContent — no XSS
+    // surface even if STAT_ROLES strings were ever templated.
+    const roleEl = document.getElementById('stat-detail-role');
+    if (roleEl) roleEl.textContent = STAT_ROLES[st.id] || '';
 
     // Linked habits — each row shows an Add button if the user doesn't
     // have the habit yet, or an "Active" indicator if they do. Tap → add.

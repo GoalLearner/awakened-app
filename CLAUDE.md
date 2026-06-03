@@ -4,7 +4,84 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.275C Frontend: Sub-rank celebration toast (read this first)
+## Jun 3, 2026 — 1z.277B Frontend: Ship stat meaning role copy (read this first)
+
+**TL;DR.** Adds a second paragraph to the existing stat detail bottom sheet that explains each stat's RPG role using the 1z.277A combat-triangle framing (STR=Aggressor, VIT=Sustainer, INT=Caster, FOCUS/WILL=universal modifiers, WLT=economy-only / non-combat). Pure display copy — no mechanics, no formulas, no storage, no backend.
+
+### What changed
+
+| Surface | Change |
+|---|---|
+| `app.js` | New `STAT_ROLES` lookup object added next to existing `STAT_DESCRIPTIONS`. `openStatDetail()` populates new slot via `textContent`. |
+| `index.html` | One new `<p id="stat-detail-role" class="stat-detail-desc">` inserted immediately after `#stat-detail-desc`. |
+| `styles.css` | UNCHANGED. Reuses existing `.stat-detail-desc` class — same font-size, color, line-height, padding. No version bump. |
+
+### Exact copy shipped (verbatim)
+
+```
+STR:   Force. Built through training, lifting, and physical output.
+       In the field, STR represents direct power — the hunter who strikes first.
+
+VIT:   Durability. Built through sleep, recovery, and endurance.
+       In the field, VIT represents survival — the hunter who outlasts the hunt.
+
+INT:   Tactics. Built through learning, planning, and reflection.
+       In the field, INT represents clarity — the hunter who sees the pattern.
+
+FOCUS: Precision. Built through deep work, steps, and meditation.
+       FOCUS sharpens every archetype — consistency under pressure.
+
+WILL:  Resilience. Built through hard habits, restraint, and comeback streaks.
+       WILL carries every archetype — the refusal to break.
+
+WLT:   Wealth. Built through finance, trade, and resource discipline.
+       WLT shapes economy and rewards — it does not decide combat.
+```
+
+WLT explicitly disclaims combat. No string promises specific formulas or percentages — strings stay truthful regardless of how the eventual combat layer tunes.
+
+### Why this is safe to ship now
+
+- **Display-only**: no formula, no gating, no scoring, no rank/stat/XP logic touched.
+- **No new storage**: zero localStorage writes from opening the sheet.
+- **No backend calls**: stat detail sheet has never made network requests; unchanged.
+- **`textContent` only**: no XSS surface even if `STAT_ROLES` strings were ever templated in the future.
+- **Null-guarded element lookup**: stale cached HTML without the new slot still renders the rest of the sheet cleanly.
+- **Existing `STAT_DESCRIPTIONS` paragraph unchanged**: users who already read the old copy keep their continuity; the role paragraph layers in below.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w156` |
+| `app.js?v=` | `609` |
+| `styles.css?v=` | `338` (unchanged — no CSS touched) |
+| `sw.js CACHE_VERSION` | `v5.495` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+| `DUELS_UI_HIDDEN` | `true` (preserved) |
+
+### Manual QA (w156)
+
+1. Open Stats tab → all 6 stat cards render.
+2. Tap STR → sheet opens → existing description paragraph appears unchanged → new STR role paragraph appears below it (`Force. Built through training...`).
+3. Tap each of VIT, INT, FOCUS, WILL, WLT → correct role paragraph for each.
+4. WLT role paragraph explicitly contains "it does not decide combat".
+5. Linked habits list still appears below the role paragraph.
+6. Close button + overlay tap both dismiss.
+7. Small iPhone width: no horizontal overflow; sheet scrolls vertically if content tall.
+8. `hb_points` / `hb_stats` unchanged after open/close (DevTools Application).
+9. No backend request fires (DevTools Network).
+10. No new localStorage writes.
+
+### Rollback
+
+Single-commit revert removes the `STAT_ROLES` table, the `openStatDetail` populate line, the new `<p>` markup, and the knob bumps. No data implications.
+
+---
+
+## Jun 3, 2026 — 1z.275C Frontend: Sub-rank celebration toast
 
 **TL;DR.** Adds a small local-only toast when a habit completion advances the user within the same major rank (e.g., `D III → D II`). Secondary motivation moment — quieter than the full-screen major rank-up modal. Transaction-based only: no launch-time replay, no Guild/public event, no backend, no storage key.
 
