@@ -4,7 +4,114 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.273D Frontend: Custom habit Days row (read this first)
+## Jun 2, 2026 — 1z.273E Frontend: defaultDays for training habits (read this first)
+
+**TL;DR.** Adds a `defaultDays` field to four training habits in `DEFAULT_HABITS` so newly-created Workout / Cardio / Sprint / Mobility habits start with sensible recovery cadences instead of silently becoming daily. Daily Walk, Sleep, Sleep before midnight, Hydrate, Cold shower, Protein goal, etc. intentionally stay daily — they're lifestyle floors, not training cycles. Existing persisted habits are untouched. Users can override via the existing schedule sheet or the 1z.273D custom Days row.
+
+**Process note.** Frontend / data + small wiring only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no HealthKit gate changes, no manual gate changes, no rendering changes, no onboarding screen added, no XP / rank / class / boss / Social / Guild / leaderboard logic changed.
+
+### defaultDays map
+
+| Habit (index) | defaultDays | Cadence |
+|---|---|---|
+| `Cardio workout` (3) | `['Tue','Thu','Sat']` | 3× / week |
+| `Workout` (4) | `['Mon','Wed','Fri']` | 3× / week |
+| `Sprint session` (5) | `['Tue','Sat']` | 2× / week |
+| `Mobility & Stretching` (9) | `['Mon','Wed','Fri','Sun']` | 4× / week |
+
+All other 17 DEFAULT_HABITS entries: **no `defaultDays`** → daily by default (no behavior change). Note: "Whole-body strength" was in the original brief but doesn't exist in DEFAULT_HABITS; skipped intentionally.
+
+### Three wiring sites
+
+1. **Onboarding / pack creation** (`_completeOnboardingFinish`, ~line 35753):
+   - Was: `if (cfg.days) newH.days = cfg.days;`
+   - Now: `const _resolvedDays = (cfg.days non-empty) ? cfg.days : (base.defaultDays || null); if (length 1..6) newH.days = _resolvedDays.slice();`
+   - User selection via onboarding schedule picker (`cfg.days`) wins. Falls back to `base.defaultDays` if user didn't open the picker. All-7 / missing → no field written → daily.
+
+2. **Library habit-detail form init** (~line 23037-23046):
+   - Was: `let hdSched = ec.sched || 'daily'; let hdDays = ec.days ? [...ec.days] : [];`
+   - Now: prefers `h.defaultDays` for `hdSched`/`hdDays` when no explicit `ec.days` set.
+   - User opening Workout from Add Habits now sees the schedule sheet already reflecting `Mon Wed Fri` instead of `Daily`. Match between visible UI and saved outcome.
+
+3. **Library save site** (~line 23543):
+   - Was: `if (days) newH.days = days;`
+   - Now: `if (Array.isArray(days) && length > 0 && length < 7) newH.days = days.slice();`
+   - Defensive: mirrors schedule sheet's `length === 7 → delete` convention. Never writes `days: []`.
+
+### Scope
+
+| Path | Affected? |
+|---|---|
+| Onboarding-created starter habits | ✅ Inherit `defaultDays` |
+| Add Habits library-created training habits | ✅ Inherit `defaultDays` (form pre-fills) |
+| Custom habit create (1z.273D) | ❌ Untouched — uses its own Days row |
+| Existing persisted habits | ❌ Untouched — data is read-only here |
+| Cloud restored habits | ❌ Untouched — restored as-is |
+| Habit detail edit flow | ❌ Untouched — user-edited schedules respected |
+
+### User journey verification
+
+| Scenario | Result |
+|---|---|
+| Fresh onboarding selects Workout | Saves with `days: ['Mon','Wed','Fri']` |
+| Fresh onboarding selects Daily Walk | No `days` field → daily |
+| Fresh onboarding selects Sleep | No `days` field → daily |
+| User adds Workout from library, doesn't open schedule sheet | Saves with `days: ['Mon','Wed','Fri']` |
+| User adds Workout from library, opens schedule sheet | Sheet shows `specific` + MWF pills active; user can change or keep |
+| User edits Workout schedule later | Existing edit sheet works; new `days` persists |
+| User creates custom habit | Uses 1z.273D Days row, not `defaultDays` |
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w143` |
+| `app.js?v=` | `596` |
+| `styles.css?v=` | `334` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.482` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w143)
+
+1. Reset All Progress → onboard fresh → select Workout via Morning Routine pack or Forge Your Own with Workout chosen.
+2. Inspect `localStorage.hb_habits` → Workout entry has `days: ['Mon','Wed','Fri']`.
+3. Daily Walk entry has NO `days` field (daily).
+4. Sleep entry has NO `days` field (daily).
+5. Open Workout detail/edit → schedule sheet shows `specific` preset with M/W/F pills active.
+6. Change to Tue/Thu only → save → re-open → schedule shows Tue/Thu. User edit wins.
+7. From Add Habits → tap Cardio workout → schedule sheet shows Tue/Thu/Sat active by default (matches `defaultDays`).
+8. From Add Habits → tap Daily walk → schedule sheet shows `Daily` (no defaultDays, no change).
+9. Add Workout from library without opening schedule sheet → habit saves with MWF days.
+10. Add Mobility & Stretching → defaultDays `['Mon','Wed','Fri','Sun']` applies.
+11. Add Hydrate → no defaultDays → saves daily.
+12. Add a custom habit → Days row from 1z.273D still works as before (defaultDays does NOT apply to custom flow).
+13. On Tue, MWF Workout is hidden from list (`renderHabits` filter) and HealthKit auto-verify gated (1z.273B).
+14. Existing user's previously-created habits unaffected (no migration).
+
+### Rollback notes
+
+Single-commit revert. `defaultDays` is opt-in metadata: revert removes the four field assignments and the three resolution sites; previously-created habits with `habit.days` already on them remain valid and continue to function via the unchanged schedule helpers.
+
+### Confirmations
+
+- ✅ Frontend / data + small wiring only
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload (`git diff --stat backend/` empty)
+- ✅ `defaultDays` added to 4 training habits only (Cardio, Workout, Sprint, Mobility)
+- ✅ Daily Walk, Sleep, Sleep before midnight stay daily (no `defaultDays`)
+- ✅ New habits copy `defaultDays` → `habit.days` (1..6 length only)
+- ✅ All-7 / missing → no field written → daily via existing shortcut
+- ✅ Existing persisted habits not migrated / not changed
+- ✅ HealthKit gate (1z.273B) and manual gate (1z.273C) untouched
+- ✅ Custom habit Days row (1z.273D) untouched
+- ✅ Edit schedule sheet untouched
+- ✅ No onboarding screen added
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.273D Frontend: Custom habit Days row
 
 **TL;DR.** Adds a Days row to the Create Your Own Habit modal so users can set the habit's schedule at creation time instead of creating it first and editing it after. Reuses the existing `.days-row .day-btn[data-day]` markup + `setActiveDays()` helper from the schedule sheet — same pills, same CSS, same min-1-day enforcement pattern. Defaults to all 7 selected ("Every day"). All 7 → no `habit.days` field (existing daily). Subset → `habit.days = ['Mon','Wed','Fri']` etc. matching the schedule sheet's save convention.
 

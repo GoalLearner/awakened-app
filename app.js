@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w142';
+  const APP_BUILD_TAG = '2.2.5-w143';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12089,13 +12089,21 @@
     { emoji: '💧', name: 'Hydrate',                                   difficulty: 'easy'                },  // 0
     { emoji: '😴', name: 'Sleep',                                     difficulty: 'medium'              },  // 1
     { emoji: '🌙', name: 'Sleep before midnight',                     difficulty: 'medium'              },  // 2
-    { emoji: '🏃', name: 'Cardio workout',                            difficulty: 'medium'              },  // 3
-    { emoji: '🏋️', name: 'Workout',                                  difficulty: 'hard'                },  // 4
-    { emoji: '⚡', name: 'Sprint session',                            difficulty: 'hard'                },  // 5
+    // v3 Phase 1z.273E — defaultDays on training habits. Sleep,
+    // Hydrate, Daily walk, Sleep before midnight, Cold shower,
+    // Protein goal, etc. intentionally STAY daily (no defaultDays
+    // field) because they're lifestyle floors, not training cycles.
+    // Only Cardio/Workout/Sprint/Mobility get sensible recovery
+    // cadences. New habits created via onboarding or the Add Habits
+    // library pick up these defaults; users can override via the
+    // existing schedule sheet or the 1z.273D custom Days row.
+    { emoji: '🏃', name: 'Cardio workout',                            difficulty: 'medium',              defaultDays: ['Tue','Thu','Sat']        },  // 3
+    { emoji: '🏋️', name: 'Workout',                                  difficulty: 'hard',                defaultDays: ['Mon','Wed','Fri']        },  // 4
+    { emoji: '⚡', name: 'Sprint session',                            difficulty: 'hard',                defaultDays: ['Tue','Sat']              },  // 5
     { emoji: '🚶', name: 'Daily walk',                                difficulty: 'easy'                },  // 6
     { emoji: '🧊', name: 'Ice bath or cold plunge',                   difficulty: 'hard'                },  // 7
     { emoji: '🚿', name: 'Cold shower',                               difficulty: 'medium'              },  // 8
-    { emoji: '🤸', name: 'Mobility & Stretching',                     difficulty: 'easy'                },  // 9
+    { emoji: '🤸', name: 'Mobility & Stretching',                     difficulty: 'easy',                defaultDays: ['Mon','Wed','Fri','Sun']  },  // 9
     { emoji: '🥩', name: 'Protein goal',                              difficulty: 'medium'              },  // 10
     // ── 🧠 Mental & Focus (11–18) ───────────────────────────
     { emoji: '📖', name: 'Read',                                      difficulty: 'easy'                },  // 11
@@ -23035,8 +23043,15 @@
 
     // Mutable state for this screen
     let hdType  = ec.type       || h.type || 'build';
-    let hdSched = ec.sched      || 'daily';
-    let hdDays  = ec.days       ? [...ec.days] : [];
+    // v3 Phase 1z.273E — prefer the DEFAULT_HABITS entry's defaultDays
+    // when no explicit ec.sched / ec.days has been set yet. Lets the
+    // schedule sheet open already reflecting the recommended training
+    // cadence so the visible UI matches what will actually save.
+    // User can change to daily/ndays/etc. like normal.
+    const _defDays = Array.isArray(h && h.defaultDays) ? h.defaultDays : null;
+    const _useDefDays = !ec.days && _defDays && _defDays.length > 0 && _defDays.length < 7;
+    let hdSched = ec.sched      || (_useDefDays ? 'specific' : 'daily');
+    let hdDays  = ec.days       ? [...ec.days] : (_useDefDays ? [..._defDays] : []);
     let hdNdays = ec.ndays      || 3;
     let hdGoal;
     if (ec.goal) {
@@ -23540,7 +23555,15 @@
           } else {
             _addHabitBreadcrumb('default-save-start');
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
-            if (days)               newH.days           = days;
+            // v3 Phase 1z.273E — length guard. getScheduleDays() can
+            // theoretically return all 7 (specific picker with all
+            // pills toggled on). Mirror the schedule sheet's
+            // convention: 1..6 writes, 7 omits → daily via the
+            // isScheduledToday length-7 / no-field shortcut. Never
+            // writes days: [].
+            if (Array.isArray(days) && days.length > 0 && days.length < 7) {
+              newH.days = days.slice();
+            }
             if (hdIsStepGoal)       newH.stepGoal       = hdStepGoal;
             else if (hdIsSleepGoal) newH.sleepGoalHours = hdSleepGoal;
             else if (measurable)    newH.goal           = { value: hdGoal, unit: measurable.unit };
@@ -35750,7 +35773,19 @@
         difficulty: cfg.difficulty || base.difficulty,
         type:       cfg.type       || base.type || 'build',
       };
-      if (cfg.days)      newH.days      = cfg.days;
+      // v3 Phase 1z.273E — schedule resolution. User selection via
+      // the onboarding-flow schedule picker (cfg.days) wins. If the
+      // user never opened the picker AND the DEFAULT_HABITS entry
+      // carries a defaultDays training cadence, fall back to that.
+      // All-7 and missing alike → no field written → daily via the
+      // existing isScheduledToday length-7 / no-field shortcut.
+      // Never writes days: [].
+      const _resolvedDays = (Array.isArray(cfg.days) && cfg.days.length > 0)
+        ? cfg.days
+        : (Array.isArray(base.defaultDays) ? base.defaultDays : null);
+      if (_resolvedDays && _resolvedDays.length > 0 && _resolvedDays.length < 7) {
+        newH.days = _resolvedDays.slice();
+      }
       if (cfg.startDate) newH.startDate = cfg.startDate;
       // Goal — mutually exclusive across four branches: step-goal
       // habits (canonical Daily walk), sleep-goal habits (canonical
