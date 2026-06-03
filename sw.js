@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.477';
+const CACHE_VERSION = 'v5.478';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -195,6 +195,25 @@ const PRECACHE_ASSETS = [
   '/assets/items/wayfarers-signet.png',
   '/assets/items/ten-thousand-step-blade.png',
   '/assets/items/greaves-of-the-endless-road.png',
+  // v3 Phase 1z.271D-C — B-rank drops (15 items, 5 per boss).
+  // The Forge of Ten Thousand Days
+  '/assets/items/forge-blackened-handwraps.png',
+  '/assets/items/ember-anvil-circlet.png',
+  '/assets/items/coalstep-band.png',
+  '/assets/items/hammerfall-warmaul.png',
+  '/assets/items/gauntlets-of-ten-thousand-days.png',
+  // The Vow Keeper
+  '/assets/items/candlekeepers-charm.png',
+  '/assets/items/nightwatchers-gloves.png',
+  '/assets/items/mantle-of-kept-hours.png',
+  '/assets/items/ring-of-the-unbroken-vow.png',
+  '/assets/items/amulet-of-the-kept-word.png',
+  // The Patient Flame
+  '/assets/items/emberstep-boots.png',
+  '/assets/items/waiting-flame-signet.png',
+  '/assets/items/pilgrims-coal-wraps.png',
+  '/assets/items/boots-of-the-long-road.png',
+  '/assets/items/ember-ledger-of-the-patient-flame.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)
