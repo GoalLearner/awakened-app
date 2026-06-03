@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w150';
+  const APP_BUILD_TAG = '2.2.5-w151';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9741,6 +9741,15 @@
       state.best_7day_flights_window_end = today;
     }
     saveLeaderboardState(state);
+
+    // v3 Phase 1z.273M — Public flights_milestone_bucket events.
+    // Choke point: every code path that records today's flights
+    // value (range refresh OK branch + today-only fallback) lands
+    // here. Helper iterates 10/25/50/100 and fires at most once
+    // per (dateKey, bucket) per device via localStorage marker.
+    // Only the bucket integer ships in the payload — never the
+    // raw flights count, which stays private in state.flights_daily.
+    try { _emitFlightsBucketEventsIfNeeded(Math.round(flights), today); } catch (_) {}
   }
 
   // v3 Phase 1z.126 — fixes "Richie shows 0 flights this week even
@@ -13580,6 +13589,78 @@
     'verified_sleep_7h',
     'flights_milestone_bucket',
   ]);
+
+  // v3 Phase 1z.273M — Submit helpers for the three event types
+  // whose backend validators (1z.257) and renderer (1z.260+) were
+  // already wired but whose frontend call sites were never written.
+  //
+  // Each helper is idempotent per (user, dateKey, bucket) via a
+  // localStorage marker so a re-foreground / re-tick can't
+  // re-submit. Markers start with `hb_pae_*` and are wiped by the
+  // existing Reset All Progress flow (hb_* prefix).
+  //
+  // No private HealthKit value is ever included in the payload:
+  // - verified_workout: no minutes, calories, HR, distance, type
+  // - verified_sleep_7h: no exact hours, score, stages, bedtime, wake
+  // - flights_milestone_bucket: only the bucket integer; no raw count
+  const _PAE_FLIGHTS_BUCKETS = [10, 25, 50, 100];
+  const _PAE_VERIFIED_WORKOUT_LABEL = 'completed a verified workout';
+  const _PAE_VERIFIED_SLEEP_7H_LABEL = 'slept over 7 hours last night';
+
+  function _emitVerifiedWorkoutEvent(dateKey) {
+    if (typeof _queuePublicAchievementEvent !== 'function') return;
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return;
+    const mk = 'hb_pae_verified_workout_' + dateKey;
+    try { if (localStorage.getItem(mk) === '1') return; } catch (_) {}
+    _queuePublicAchievementEvent({
+      eventType:       'verified_workout',
+      eventKey:        'verified_workout:' + dateKey,
+      eventLabel:      _PAE_VERIFIED_WORKOUT_LABEL,
+      eventValue:      null,
+      rarity:          null,
+      clientEventId:   'verified_workout:' + dateKey + ':' + Date.now().toString(36),
+      clientCreatedAt: new Date().toISOString(),
+    });
+    try { localStorage.setItem(mk, '1'); } catch (_) {}
+  }
+
+  function _emitVerifiedSleep7hEvent(nightDateKey) {
+    if (typeof _queuePublicAchievementEvent !== 'function') return;
+    if (!nightDateKey || !/^\d{4}-\d{2}-\d{2}$/.test(nightDateKey)) return;
+    const mk = 'hb_pae_verified_sleep_7h_' + nightDateKey;
+    try { if (localStorage.getItem(mk) === '1') return; } catch (_) {}
+    _queuePublicAchievementEvent({
+      eventType:       'verified_sleep_7h',
+      eventKey:        'verified_sleep_7h:' + nightDateKey,
+      eventLabel:      _PAE_VERIFIED_SLEEP_7H_LABEL,
+      eventValue:      null,
+      rarity:          null,
+      clientEventId:   'verified_sleep_7h:' + nightDateKey + ':' + Date.now().toString(36),
+      clientCreatedAt: new Date().toISOString(),
+    });
+    try { localStorage.setItem(mk, '1'); } catch (_) {}
+  }
+
+  function _emitFlightsBucketEventsIfNeeded(flights, dateKey) {
+    if (typeof _queuePublicAchievementEvent !== 'function') return;
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return;
+    if (typeof flights !== 'number' || !Number.isFinite(flights) || flights < 0) return;
+    for (const bucket of _PAE_FLIGHTS_BUCKETS) {
+      if (flights < bucket) continue;
+      const mk = 'hb_pae_flights_bucket_' + dateKey + '_' + bucket;
+      try { if (localStorage.getItem(mk) === '1') continue; } catch (_) {}
+      _queuePublicAchievementEvent({
+        eventType:       'flights_milestone_bucket',
+        eventKey:        'flights_milestone_bucket:' + dateKey + ':' + bucket,
+        eventLabel:      'climbed ' + bucket + ' flights today',
+        eventValue:      bucket,
+        rarity:          null,
+        clientEventId:   'flights_milestone_bucket:' + dateKey + ':' + bucket + ':' + Date.now().toString(36),
+        clientCreatedAt: new Date().toISOString(),
+      });
+      try { localStorage.setItem(mk, '1'); } catch (_) {}
+    }
+  }
   function _queuePublicAchievementEvent(ev) {
     if (!ev || !ev.eventType || !ev.eventLabel || !ev.clientEventId || !ev.clientCreatedAt) return;
     // Defensive: never queue an event that would carry a raw step
@@ -39891,6 +39972,13 @@
                 hours: Number((data.totalAsleepHours || 0).toFixed(2)),
                 nightDate: nightDate,
               }, 'sleep_7h_' + nightDate);
+              // v3 Phase 1z.273M — Public verified_sleep_7h event.
+              // Inherits all the gates above (sleep sealed AND
+              // totalAsleepHours >= 7 AND rest-day cleared AND no
+              // race-checked-during-eval). No hours / score / stages
+              // / bedtime / wake time in the payload — the private
+              // recordGuildActivity above keeps them local-only.
+              try { _emitVerifiedSleep7hEvent(nightDate); } catch (_) {}
             }
           } catch (_) {}
         } else {
@@ -40163,6 +40251,19 @@
           count: workoutData.count,
           totalMinutes: Number(workoutData.totalMinutes.toFixed(1)),
         });
+        // v3 Phase 1z.273M — Public verified_workout event. Fires
+        // ONLY here, inside the seal-success branch, so:
+        //  - rest-day-gated bail (above) blocks it
+        //  - user-unchecked / habit-not-in-list / not-met paths skip it
+        //  - re-foreground / re-tick dedupes via the per-day marker
+        // No HealthKit values in the payload — minutes, count, type
+        // all stay private (kept only in the local breadcrumb above).
+        try {
+          const _vwDateKey = (typeof getDeviceLocalDate === 'function')
+            ? getDeviceLocalDate()
+            : new Date().toISOString().slice(0, 10);
+          _emitVerifiedWorkoutEvent(_vwDateKey);
+        } catch (_) {}
         didTodaySeal = true;
       }
     }
