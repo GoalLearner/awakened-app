@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w152';
+  const APP_BUILD_TAG = '2.2.5-w153';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11029,14 +11029,41 @@
   // fast for a long-arc progression system. Migration in init()
   // preserves rank-fraction position for existing users; see
   // migrateXPToNewThresholds().
+  // v3 Phase 1z.275B — Rank thresholds rebalanced (Original Option A
+  // from the 1z.275A audit + 1z.275B-Prep planning). The pre-w153
+  // curve (500/2500/7500/25000/70000/150000) left casual users at E
+  // rank for ~83 days and at D for ~11 months — the single biggest
+  // retention killer in the app. New curve compresses the early game
+  // so E→D happens in ~17 days for a casual user and C is reachable
+  // for consistent users in ~1 month, while preserving long-term
+  // prestige (S still ~17 months consistent, S+ still ~3 years).
+  //
+  // Migration is intentionally silent: rank-up detection is
+  // transaction-based inside toggleHabit (line 19331/19466), with NO
+  // launch-time hb_last_rank comparison and NO stored "previous
+  // rank" to compare against. Existing users see their (equal-or-
+  // higher) new rank label on next render — no popup spam, no
+  // phantom public rank_up event (PUBLIC_RANK_LAST_KEY guard at
+  // ~16855 handles first-observation safely). Dungeon gates auto-
+  // shift because isGateUnlocked uses RANKS.findIndex, not absolute
+  // XP. Sub-rank divisions auto-resize because getRankDivisionInfo
+  // derives III/II/I spans from (RANKS[i+1].min - RANKS[i].min).
+  //
+  // Pre-w153 thresholds were:
+  //   E 0   D 500   C 2500   B 7500   A 25000   S 70000   S+ 150000
+  // Post-w153 thresholds:
+  //   E 0   D 100   C 600    B 3000   A 12000   S 40000   S+ 100000
+  //
+  // No XP earning changed (diffPts / totalPoints unchanged).
+  // No dungeon gate code, sub-rank logic, or popup logic touched.
   const RANKS = [
-    { id: 'E',  label: 'E Rank',  desc: 'Just getting started',                                      min: 0,      max: 499,      next: 500    },
-    { id: 'D',  label: 'D Rank',  desc: 'Building awareness',                                        min: 500,    max: 2499,     next: 2500   },
-    { id: 'C',  label: 'C Rank',  desc: 'Consistency is forming',                                    min: 2500,   max: 7499,     next: 7500   },
-    { id: 'B',  label: 'B Rank',  desc: 'Above average discipline. Most people never get here.',     min: 7500,   max: 24999,    next: 25000  },
-    { id: 'A',  label: 'A Rank',  desc: 'True excellence. This is rare.',                            min: 25000,  max: 69999,    next: 70000  },
-    { id: 'S',  label: 'S Rank',  desc: 'Elite. You have become the habit.',                         min: 70000,  max: 149999,   next: 150000 },
-    { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.', min: 150000, max: Infinity, next: null   },
+    { id: 'E',  label: 'E Rank',  desc: 'Just getting started',                                      min: 0,      max: 99,       next: 100    },
+    { id: 'D',  label: 'D Rank',  desc: 'Building awareness',                                        min: 100,    max: 599,      next: 600    },
+    { id: 'C',  label: 'C Rank',  desc: 'Consistency is forming',                                    min: 600,    max: 2999,     next: 3000   },
+    { id: 'B',  label: 'B Rank',  desc: 'Above average discipline. Most people never get here.',     min: 3000,   max: 11999,    next: 12000  },
+    { id: 'A',  label: 'A Rank',  desc: 'True excellence. This is rare.',                            min: 12000,  max: 39999,    next: 40000  },
+    { id: 'S',  label: 'S Rank',  desc: 'Elite. You have become the habit.',                         min: 40000,  max: 99999,    next: 100000 },
+    { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.', min: 100000, max: Infinity, next: null   },
   ];
 
   // ── PERSONAL RECORDS (PRs) ───────────────────────────────

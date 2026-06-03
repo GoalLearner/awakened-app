@@ -4,7 +4,136 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.274A Frontend: Tighten app render performance (read this first)
+## Jun 3, 2026 — 1z.275B Frontend: Rebalance Hunter rank thresholds (read this first)
+
+**TL;DR.** Replaces the pre-w153 rank curve (500/2500/7500/25000/70000/150000) with Original Option A (100/600/3000/12000/40000/100000) from the 1z.275A audit + 1z.275B-Prep planning. Solves the single biggest retention killer: casual users stagnating at E rank for ~83 days and at D for ~11 months. The new curve compresses early progression while preserving long-term prestige.
+
+**Process note.** Single 5-line edit to the `RANKS` array. No other logic touched. Frontend-only. No backend / D1 / migration / Worker / Codemagic / archive / upload.
+
+### Old thresholds (pre-w153)
+| Rank | min XP | next |
+|---|---:|---:|
+| E | 0 | 500 |
+| D | 500 | 2,500 |
+| C | 2,500 | 7,500 |
+| B | 7,500 | 25,000 |
+| A | 25,000 | 70,000 |
+| S | 70,000 | 150,000 |
+| S+ | 150,000 | (max) |
+
+### New thresholds (w153)
+| Rank | min XP | next |
+|---|---:|---:|
+| E | 0 | **100** |
+| D | **100** | **600** |
+| C | **600** | **3,000** |
+| B | **3,000** | **12,000** |
+| A | **12,000** | **40,000** |
+| S | **40,000** | **100,000** |
+| S+ | **100,000** | (max) |
+
+### Time-to-rank impact (modeled)
+
+| Rank → next | Casual (6/d) | Consistent (75/d) | Power (250/d) |
+|---|---:|---:|---:|
+| E → D | **17 days** (was 83) | 1.3 d | <1 d |
+| D → C | 83 d (was 333) | 7 d | 2 d |
+| C → B | ~400 d (was 833) | **32 d** | 10 d |
+| B → A | n/a | 120 d | 36 d |
+| A → S | n/a | ~12 mo | ~16 wk |
+| S → S+ | n/a | ~27 mo | ~8 mo |
+
+Casual users now see their first rank-up in week 2-3 instead of month 3. S still ~17-18 months Consistent. S+ still ~3 years Consistent.
+
+### Migration behavior (silent + safe)
+
+| Mechanism | Why it's safe |
+|---|---|
+| Rank-up popup detection | Transaction-based inside `toggleHabit` (line 19331/19466). No launch-time `hb_last_rank` comparison exists. Existing users see their (equal-or-higher) new rank label on next render — no popup spam. |
+| Public `rank_up` event | `PUBLIC_RANK_LAST_KEY` guard (line ~16855) handles first-observation safely. No phantom Guild Notification on w153 launch. |
+| Dungeon gates | `isGateUnlocked` uses `RANKS.findIndex(r => r.id === gateRankId)` — purely index-based. Auto-shifts to new XP thresholds without any code change. |
+| Sub-rank divisions | `getRankDivisionInfo` derives III/II/I spans from `RANKS[i+1].min - RANKS[i].min`. Auto-resize for the new spans. |
+| Trade-off | Existing users at boundary XP silently re-label (e.g., 599 XP shows D instead of E without a popup). One missed celebration moment is acceptable vs. ~30 lines of new launch-time replay code + new storage key + edge-case risk. |
+
+### Existing-user impact
+
+Every XP value re-maps to **equal or higher** rank — never lower. Sample mapping:
+
+| XP | Old rank | New rank |
+|---:|---|---|
+| 99 | E | E |
+| 100 | E | **D** ⬆ |
+| 599 | E | **D** ⬆ |
+| 600 | E | **C** ⬆ (+2) |
+| 3,500 | D | **B** ⬆ (+2) |
+| 12,000 | C | **A** ⬆ (+2) |
+| 40,000 | B | **S** ⬆ (+2) |
+| 100,000 | S | **S+** ⬆ |
+| 150,000 | S+ | S+ |
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w153` |
+| `app.js?v=` | `606` |
+| `styles.css?v=` | `337` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.492` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w153)
+
+1. Fresh user at 0 XP shows E.
+2. 99 XP shows E.
+3. 100 XP shows D.
+4. 599 XP shows D.
+5. 600 XP shows C.
+6. 2,999 XP shows C.
+7. 3,000 XP shows B.
+8. 11,999 XP shows B.
+9. 12,000 XP shows A.
+10. 39,999 XP shows A.
+11. 40,000 XP shows S.
+12. 99,999 XP shows S.
+13. 100,000 XP shows S+.
+14. Rank info modal shows sub-ranks (III/II/I) correctly under new spans.
+15. B-rank dungeon (Forge / Vow Keeper / Patient Flame) is accessible at 3,000+ XP.
+16. Existing user with N XP gets a rank label ≥ what they had pre-w153.
+17. No popup spam on first launch after the build update.
+18. After w153 launch, completing a habit that crosses any new threshold fires the rank-up popup normally.
+
+### What's NOT in this phase
+
+- ❌ No XP earning changes (`diffPts`, `totalPoints +=`, compound XP, weekend 2x all unchanged)
+- ❌ No dungeon gate code changed (index-based `isGateUnlocked` self-shifts)
+- ❌ No sub-rank logic changed (auto-resizes from new spans)
+- ❌ No rank-up popup code changed (transaction-based detection handles migration silently)
+- ❌ No new storage keys, no migration code, no breadcrumbs
+- ❌ No sub-rank celebration (deferred to 1z.275C)
+
+### Rollback
+
+Single-commit revert restores the pre-w153 thresholds. No data implications: `totalPoints` is unchanged across users, only the label that `getRank()` returns shifts. A revert would re-demote silently-promoted users back to their old rank — acceptable but not ideal, so prefer leaving the curve in place unless a critical bug emerges.
+
+### Confirmations
+
+- ✅ Frontend / data-only.
+- ✅ Only `RANKS` array values changed in logic (5 mins + 5 max + 5 next values; ids/labels/descs preserved).
+- ✅ No XP earning logic changed.
+- ✅ Dungeon gates are index-based and auto-preserved.
+- ✅ Sub-rank logic auto-resizes from new spans.
+- ✅ Rank-up popup code untouched; migration is silent.
+- ✅ Existing users never demote.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Next phase (1z.275C)**: Sub-rank celebration popup — small toast/banner fires when `getRankDivisionInfo` division changes without a major rank change. Detection hooks into `toggleHabit` between major-rank check and stat-up check. ~40-60 lines. Separate phase per 1z.275B-Prep recommendation.
+
+---
+
+## Jun 3, 2026 — 1z.274A Frontend: Tighten app render performance
 
 **TL;DR.** Whole-app perf audit found Duels polling still firing backend hits and ticking timers on every Social tab visit / foreground / cold launch despite Duels UI being hidden product-wide via 1z.273K's `DUELS_UI_HIDDEN` flag. 1z.273K gated only the two visible render functions (toast + hero pill); the data path kept running. This phase closes the gap.
 
