@@ -4,7 +4,82 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.271C Frontend: Wire B-rank boss portraits (read this first)
+## Jun 2, 2026 — 1z.273B Frontend: HealthKit auto-verify rest-day gate (read this first)
+
+**TL;DR.** Adds a 4-line schedule gate in front of each of the four HealthKit auto-verify seal sites (Walk / Sleep / Sleep before midnight / Workout). If the matched habit has `habit.days` set to a subset (e.g. `['Mon','Wed','Fri']`) and today's PT weekday isn't in that subset, the auto-verifier writes a privacy-safe breadcrumb and **does not seal**. Habits without `habit.days` (or with all 7 days) continue auto-verifying daily — the existing `isScheduledToday` length-7 / no-field shortcut means zero behavior change for any habit not yet on a schedule.
+
+**Process note.** Frontend-only. Pure logic, no UI. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no XP, no rank, no HealthKit query changes, no false-positive correction changes, no manual-tap changes, no onboarding changes, no custom-habit-create changes. Only the four seal sites in the four auto-verify functions.
+
+### Why this phase first
+Per the 1z.273B-Prep audit, manual taps are visible (and `renderHabits` already hides non-scheduled habits from the list) but HealthKit auto-verify could silently seal an off-day completion. The user's principle "Rest days are not missed days" is most violated invisibly. Fixing the silent leak first lets later phases (manual gate, onboarding training week, custom-create days row) build on a correct foundation.
+
+### What changed
+| Function | Insertion point | Pattern |
+|---|---|---|
+| `autoVerifyWalk` | line 39126, between `meets` check and `recordAutoVerify` | `if/else` (no return) |
+| `autoVerifySleep` | line 39334, inside the `!isChecked` branch | `if + return` (skips the trailing 1z.165 Guild Hall feat row + public event chain, correctly suppressed when not sealing) |
+| `autoVerifySleepBeforeMidnight` | line 39400, inside the `qualifying.length > 0` branch | `if/else` (preserves the existing `bedtime-skip` no-qualifying branch) |
+| `autoVerifyStrengthTraining` | line 39612, added as `else if` between the below-target branch and seal | `else if` (preserves the existing render no-op at end-of-function) |
+
+Each gate reads `isScheduledToday(habit)` with a `typeof` defensive guard. If false, writes one breadcrumb `'auto-verify-skip-rest-day'` with `{path, reason, todayDay, scheduledDays}` and skips the seal block — no `recordAutoVerify`, no `toggleHabit`, no public-event/feat-row write.
+
+### Privacy
+Breadcrumb payload contains: `path` (one of `'walk'|'sleep'|'sleep_before_midnight'|'strength'`), `reason: 'not_scheduled_today'`, `todayDay` (short PT weekday string), `scheduledDays` (shallow copy of `habit.days`). **No HealthKit values are logged in the gate breadcrumbs.** No steps, sleep hours, workout minutes, bedtime ISO, or calories. Existing pre-seal breadcrumbs (`walk-threshold-check`, `sleep-data`, `strength-data`, `bedtime-debug`) still log their values per their existing privacy contract — none of those paths were modified.
+
+### What this phase intentionally does NOT solve
+| Gap | Phase that will solve it |
+|---|---|
+| Onboarding-created Workout still defaults to daily (no `days`) | 1z.273F (DEFAULT_HABITS `defaultDays`) and 1z.273G (training-week cinematic step) |
+| Custom Habit Create modal has no Days row | 1z.273E |
+| Manual tap on off-day habit (when reachable from outside the hidden list) still completes | 1z.273C |
+| Rest-day visual treatment (vs current hide-by-default) | 1z.273D, optional |
+
+This phase only enforces the schedule for habits that already have `days` set via the edit sheet or 1z.247 First Vow / Add Habits flow. Anyone who hasn't customized stays on daily cadence by design.
+
+### What this phase confirms
+- ✅ `isScheduledToday(habit)` returns true for `habit.days` missing or `length === 7` → no regression for unscheduled habits
+- ✅ Schedule helpers use Pacific Time consistently with the 1z.218 leaderboard reset philosophy
+- ✅ False-positive correction paths (`clearAutoVerify` at lines 39070, 39283) are NOT touched — schedule changes are forward-only, retroactive unseal works as before
+- ✅ Each gate's `else`/`return` placement preserves the original function's downstream side-effects
+
+### Knobs
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w140` |
+| `app.js?v=` | `593` |
+| `styles.css?v=` | `333` (unchanged — no CSS) |
+| `sw.js CACHE_VERSION` | `v5.479` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w140)
+1. Open a Workout habit, edit Days to `Mon / Wed / Fri`.
+2. On a Tue/Thu/Sat/Sun, complete a 30+ minute workout in Apple Health.
+3. Force-open Awakened → Workout habit should NOT auto-complete.
+4. Copy Debug Info → search for `auto-verify-skip-rest-day` → `{ path: 'strength', reason: 'not_scheduled_today', todayDay: 'Tue', scheduledDays: ['Mon','Wed','Fri'] }`.
+5. Repeat conceptually for Walk, Sleep, Sleep before midnight (each logs its `path`).
+6. On a scheduled day, normal auto-verify path still seals as before (no skip breadcrumb).
+7. Confirm habits with NO `days` field still auto-verify every day.
+8. Confirm false-positive correction (auto-verified on Mon, Mon HealthKit data later drops below threshold) still unseals correctly.
+9. Smoke: Apple Sign-In, leaderboard, public events, Bosses Slain, Kill Log unchanged. Existing E/D/C/B boss dungeon paths unchanged.
+
+### Rollback notes
+Single-commit revert restores 1z.271D-C behavior (auto-verify seals regardless of schedule). No data implications — `habit.days` is read-only here. Safe to revert at any time.
+
+### Confirmations
+- ✅ Frontend-only.
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload.
+- ✅ 4 auto-verify seal paths are schedule-gated.
+- ✅ False-positive correction / `clearAutoVerify` paths untouched.
+- ✅ Breadcrumbs contain zero HealthKit values.
+- ✅ Manual tap behavior, onboarding, custom habit create UI all unchanged.
+- ✅ Habits without `habit.days` still behave daily.
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+---
+
+## Jun 2, 2026 — 1z.271C Frontend: Wire B-rank boss portraits
 
 **TL;DR.** Moved the three B-rank boss portrait PNGs from repo root into `assets/bosses/` so the existing `getBossArtPath` resolver loads them. Added the three paths to `sw.js` precache so SW serves them offline. App.js / index.html / styles.css logic untouched — `getBossArtPath('the_forge_of_ten_thousand_days')` already resolved to `assets/bosses/the-forge-of-ten-thousand-days.png` (snake → kebab); we just made the file present.
 

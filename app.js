@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w139';
+  const APP_BUILD_TAG = '2.2.5-w140';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -39118,16 +39118,30 @@
         // Not sealed → standard threshold-check seal path.
         _addHealthVerifyBreadcrumb('walk-threshold-check', { steps, threshold, meets });
         if (meets) {
-          AUTO_VERIFY.recordAutoVerify(walk.id, {
-            source: 'healthkit-steps',
-            value: steps,
-            threshold: threshold,
-          });
-          const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
-          toggleHabit(walk.id, li, { silent: true });
-          console.log('[Health] auto-verified Daily walk:', steps, 'steps');
-          didTodaySeal = true;
-          _addHealthVerifyBreadcrumb('walk-sealed-auto', { steps, threshold });
+          // v3 Phase 1z.273B — Rest-day gate. If the habit is not
+          // scheduled today, do not seal: no recordAutoVerify, no
+          // toggleHabit, no XP, no streak. Habits without `days`
+          // (or with all 7 set) still seal as before via the
+          // length===7 / no-field shortcut in isScheduledToday.
+          if (typeof isScheduledToday === 'function' && walk && !isScheduledToday(walk)) {
+            _addHealthVerifyBreadcrumb('auto-verify-skip-rest-day', {
+              path: 'walk',
+              reason: 'not_scheduled_today',
+              todayDay: typeof getTodayDayName === 'function' ? getTodayDayName() : null,
+              scheduledDays: Array.isArray(walk.days) ? walk.days.slice() : null,
+            });
+          } else {
+            AUTO_VERIFY.recordAutoVerify(walk.id, {
+              source: 'healthkit-steps',
+              value: steps,
+              threshold: threshold,
+            });
+            const li = document.querySelector('.habit-item[data-id="' + walk.id + '"]');
+            toggleHabit(walk.id, li, { silent: true });
+            console.log('[Health] auto-verified Daily walk:', steps, 'steps');
+            didTodaySeal = true;
+            _addHealthVerifyBreadcrumb('walk-sealed-auto', { steps, threshold });
+          }
         }
       }
     }
@@ -39315,6 +39329,17 @@
       } else {
         // Re-check completion (async race with manual tap).
         if (!isChecked(sleep.id)) {
+          // v3 Phase 1z.273B — Rest-day gate (see autoVerifyWalk for
+          // rationale). Habits without `days` still seal as before.
+          if (typeof isScheduledToday === 'function' && sleep && !isScheduledToday(sleep)) {
+            _addHealthVerifyBreadcrumb('auto-verify-skip-rest-day', {
+              path: 'sleep',
+              reason: 'not_scheduled_today',
+              todayDay: typeof getTodayDayName === 'function' ? getTodayDayName() : null,
+              scheduledDays: Array.isArray(sleep.days) ? sleep.days.slice() : null,
+            });
+            return;
+          }
           AUTO_VERIFY.recordAutoVerify(sleep.id, {
             source: 'healthkit-sleep-duration',
             value: data.totalAsleepHours,
@@ -39370,15 +39395,26 @@
       const qualifying = bedtimeQualifying;
 
       if (qualifying.length > 0) {
-        const earliest = qualifying[0].start;
-        AUTO_VERIFY.recordAutoVerify(bedtime.id, {
-          source: 'healthkit-sleep-bedtime',
-          value: earliest.toISOString(),
-        });
-        const li = document.querySelector('.habit-item[data-id="' + bedtime.id + '"]');
-        toggleHabit(bedtime.id, li, { silent: true });
-        _addHealthVerifyBreadcrumb('bedtime-sealed', { earliestISO: earliest.toISOString() });
-        console.log('[Health] auto-verified Sleep before midnight:', earliest.toISOString());
+        // v3 Phase 1z.273B — Rest-day gate (see autoVerifyWalk for
+        // rationale). Habits without `days` still seal as before.
+        if (typeof isScheduledToday === 'function' && bedtime && !isScheduledToday(bedtime)) {
+          _addHealthVerifyBreadcrumb('auto-verify-skip-rest-day', {
+            path: 'sleep_before_midnight',
+            reason: 'not_scheduled_today',
+            todayDay: typeof getTodayDayName === 'function' ? getTodayDayName() : null,
+            scheduledDays: Array.isArray(bedtime.days) ? bedtime.days.slice() : null,
+          });
+        } else {
+          const earliest = qualifying[0].start;
+          AUTO_VERIFY.recordAutoVerify(bedtime.id, {
+            source: 'healthkit-sleep-bedtime',
+            value: earliest.toISOString(),
+          });
+          const li = document.querySelector('.habit-item[data-id="' + bedtime.id + '"]');
+          toggleHabit(bedtime.id, li, { silent: true });
+          _addHealthVerifyBreadcrumb('bedtime-sealed', { earliestISO: earliest.toISOString() });
+          console.log('[Health] auto-verified Sleep before midnight:', earliest.toISOString());
+        }
       } else {
         _addHealthVerifyBreadcrumb('bedtime-skip', { reason: 'no-qualifying-onset-in-window' });
         console.log('[Health] Sleep before midnight: no qualifying onset in [20:00, 24:00) window');
@@ -39573,6 +39609,19 @@
         });
         log('skip today: total workout minutes', (workoutData.totalMinutes || 0).toFixed(1),
             '< target', HEALTHKIT_WORKOUT_DAILY_TARGET_MIN);
+      } else if (typeof isScheduledToday === 'function' && strength && !isScheduledToday(strength)) {
+        // v3 Phase 1z.273B — Rest-day gate. If Workout is scheduled
+        // only on certain days (e.g. MWF) and HealthKit detected a
+        // qualifying workout on a different day, do not seal. The
+        // habit's streak/XP/animation/public events stay rest-day
+        // safe. Habits without `days` still seal via the
+        // length===7 / no-field shortcut in isScheduledToday.
+        _addHealthVerifyBreadcrumb('auto-verify-skip-rest-day', {
+          path: 'strength',
+          reason: 'not_scheduled_today',
+          todayDay: typeof getTodayDayName === 'function' ? getTodayDayName() : null,
+          scheduledDays: Array.isArray(strength.days) ? strength.days.slice() : null,
+        });
       } else {
         AUTO_VERIFY.recordAutoVerify(strength.id, {
           source:        'healthkit-any-workout',
