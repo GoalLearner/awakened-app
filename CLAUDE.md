@@ -4,7 +4,92 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.277B Frontend: Ship stat meaning role copy (read this first)
+## Jun 3, 2026 — 1z.277C Frontend: Ship boss archetype labels (read this first)
+
+**TL;DR.** Adds a display-only AGGRESSOR / SUSTAINER / CASTER pill to every boss card and to the boss detail modal. Extends the existing `archetype` field (already present on B-rank bosses) to all 12 bosses. Reinforces the 1z.277A combat-triangle vocabulary on the surface where users will eventually feel it most. Verified behavior still decides victory — the disclaimer in the detail modal says so explicitly.
+
+### Boss → archetype mapping (all 12)
+
+| Rank | Boss | Archetype | Rationale |
+|---|---|---|---|
+| E | The Insomniac | SUSTAINER | Pure sleep recovery |
+| E | The Steel Wolf | SUSTAINER | Step endurance |
+| E | The Carouser | SUSTAINER | Recovery + restraint |
+| D | The Iron Warden | AGGRESSOR | Direct training |
+| D | The Glass Strider | SUSTAINER | Step endurance |
+| D | The Dream Tyrant | SUSTAINER | Sleep recovery |
+| C | The Marathon Wraith | SUSTAINER | High-volume step endurance |
+| C | The Furnace Knight | AGGRESSOR | Workout + kcal direct output |
+| C | The Ascendant Colossus | AGGRESSOR | Vertical kinetic output |
+| B | The Forge of Ten Thousand Days | AGGRESSOR | (already in code) |
+| B | The Vow Keeper | SUSTAINER | (already in code) |
+| B | The Patient Flame | CASTER | (already in code) |
+
+Roster balance: 4 AGGRESSOR / 7 SUSTAINER / 1 CASTER. Sustainer-heavy because the roster leans on sleep+steps verified habits. Caster is intentionally rare. We do not invent new bosses to balance — that's combat-design's job later.
+
+### Where the pill appears
+
+| Surface | Placement |
+|---|---|
+| Boss card grid (`renderBossesPanel` → `buildBossCardHTML`) | Footer area, below `.bcard-kills`. Centered, color-themed. |
+| Boss full-screen detail (`openBossFullScreen`) | New `.bfs-archetype-row` inside `.bfs-name-block` — below rank label, above flavor. Adds small "ARCHETYPE" eyebrow + the pill + a one-line disclaimer: *"Verified behavior decides victory."* |
+| Engage confirmation | NOT shown (kept transactional). |
+| Kill log | NOT shown (deferred). |
+
+### Implementation
+
+- **`app.js`** — added `archetype: 'sustainer'|'aggressor'` field to the 9 E/D/C bosses in `BOSS_CONFIG` (B-rank archetypes already existed, unchanged). New `bossArchetypeLabel(archetype)` helper formats lowercase strings into uppercase pill labels and returns '' for missing/unknown. Card template appends pill via an IIFE that returns empty string when no archetype is present (defensive). Detail modal populates new DOM elements via `textContent` + `setAttribute('data-archetype', ...)`.
+- **`index.html`** — added `#bfs-archetype-row` (with `#bfs-archetype-pill` and eyebrow span) and `#bfs-archetype-disclaimer` inside `.bfs-name-block`. Both start `hidden`; `openBossFullScreen` toggles visibility per-boss.
+- **`styles.css`** — new `.boss-archetype-pill` class modeled on `.habit-schedule-chip` (compact, uppercase, tracked, 999px radius). Three `data-archetype` variants supply `--archetype-color`: `#ef4444` aggressor, `#22c55e` sustainer, `#3b82f6` caster. `color-mix()` derives border + background tints from the single color. Plus `.bfs-archetype-row`, `.bfs-archetype-eyebrow`, `.bfs-archetype-disclaimer` for the detail-modal layout.
+
+### Mechanics preserved (`git diff` verified)
+
+- `engageBoss` — untouched.
+- `resolveBossHuntsAcrossWindow` — untouched.
+- `engageCostSouls` / `killRewardSouls` — untouched.
+- `isGateUnlocked` — untouched.
+- HealthKit resolvers — untouched.
+- `aggregateEquippedBonuses` — still inert / zero consumers.
+- Boss kill conditions (`sleepHours`, `stepThreshold`, `workoutMinutes`, `activeEnergyKcal`, `flightThreshold`, `qualifyingDays`, `qualifyingNights`, `streakTarget`, `cadence`, `statDomain`) — unchanged on every boss.
+- No code reads `boss.archetype` in any mechanical path; only `bossArchetypeLabel()` (display) and the two render sites consume it.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w157` |
+| `app.js?v=` | `610` |
+| `styles.css?v=` | `339` |
+| `sw.js CACHE_VERSION` | `v5.496` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+| `DUELS_UI_HIDDEN` | `true` (preserved) |
+
+### Manual QA (w157)
+
+1. Hunt tab → Bosses panel loads.
+2. All 12 boss cards render with portraits, names, rank pills, conditions.
+3. Each card shows the correct color-coded archetype pill in its footer per the mapping table.
+4. Pill color matches family: red AGGRESSOR / green SUSTAINER / blue CASTER.
+5. Tap any boss → detail modal opens.
+6. Below the rank label, the ARCHETYPE eyebrow + colored pill appear.
+7. Disclaimer line "Verified behavior decides victory." appears under the pill.
+8. Long flavor / stats grid / kill condition / engage button all render unchanged.
+9. Engage button still works.
+10. Boss conditions / souls cost / souls reward unchanged.
+11. iPhone SE width (375px): no horizontal overflow on any card; pill stays inside the card.
+12. No localStorage writes triggered by viewing/opening boss cards (DevTools Application).
+13. No backend requests triggered by viewing/opening boss cards (DevTools Network).
+14. No regression in defeated-state card styling (`.bcard--defeated` border + trophy still appear).
+
+### Rollback
+
+Single-commit revert: removes the 9 archetype fields, the helper, the card-template IIFE, the detail-modal populate block, the new index.html DOM, the CSS additions, and the knob bumps. No data implications. B-rank archetype fields stay intact regardless (predate this phase).
+
+---
+
+## Jun 3, 2026 — 1z.277B Frontend: Ship stat meaning role copy
 
 **TL;DR.** Adds a second paragraph to the existing stat detail bottom sheet that explains each stat's RPG role using the 1z.277A combat-triangle framing (STR=Aggressor, VIT=Sustainer, INT=Caster, FOCUS/WILL=universal modifiers, WLT=economy-only / non-combat). Pure display copy — no mechanics, no formulas, no storage, no backend.
 

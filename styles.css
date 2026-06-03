@@ -13951,6 +13951,67 @@ footer {
   pointer-events: none;
 }
 
+/* v3 Phase 1z.277C — Boss archetype pill (display-only).
+   Modeled on .habit-schedule-chip — compact, uppercase, tracked.
+   Color theming via data-archetype attribute: aggressor red,
+   sustainer green, caster blue. Sits in the boss card footer
+   below .bcard-kills and in the boss detail modal name block.
+   Never implies active combat — verified behavior decides victory. */
+.boss-archetype-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  margin: 6px auto 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--archetype-color, rgba(226, 232, 240, 0.86));
+  border: 1px solid color-mix(in srgb, var(--archetype-color, #94a3b8) 38%, transparent);
+  background: color-mix(in srgb, var(--archetype-color, #94a3b8) 10%, transparent);
+}
+.boss-archetype-pill[data-archetype="aggressor"] {
+  --archetype-color: #ef4444;
+}
+.boss-archetype-pill[data-archetype="sustainer"] {
+  --archetype-color: #22c55e;
+}
+.boss-archetype-pill[data-archetype="caster"] {
+  --archetype-color: #3b82f6;
+}
+/* Boss detail modal header — pill + ARCHETYPE eyebrow label.
+   Sits below the rank label, above the long flavor paragraph. */
+.bfs-archetype-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+}
+.bfs-archetype-eyebrow {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.78);
+}
+.bfs-archetype-row .boss-archetype-pill {
+  margin: 0;
+}
+.bfs-archetype-disclaimer {
+  margin: 4px 0 6px;
+  text-align: center;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: rgba(148, 163, 184, 0.72);
+  line-height: 1.35;
+}
+
 
 
 /* Compact toggle row — visual density matches the pack progress rows */

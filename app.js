@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w156';
+  const APP_BUILD_TAG = '2.2.5-w157';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -394,6 +394,10 @@
       id:           'the_insomniac',
       name:         'The Insomniac',
       rank:         'E',
+      // v3 Phase 1z.277C — Display-only combat-triangle archetype.
+      // Sleep-recovery boss → Sustainer (VIT-aligned). Inert metadata,
+      // identical pattern to the B-rank archetype fields below.
+      archetype:    'sustainer',
       flavorShort:  'A creature born from restless nights.',
       flavorLong:   'A creature born from restless nights. It feeds on the hours you should have slept.',
       killCondShort:'Sleep 7+ hours in a single night',
@@ -410,6 +414,7 @@
       // boss rather than gating behind the D-rank dungeon.
       name:             'The Steel Wolf',
       rank:             'E',
+      archetype:        'sustainer', // 1z.277C — step endurance → Sustainer
       flavorShort:      'A wolf forged from miles.',
       flavorLong:       "It paces the borderlands of every distance you've ever walked. Move enough, and you walk beside it. Stop, and you fall behind.",
       killCondShort:    'Walk 6,000+ steps in a single day',
@@ -423,6 +428,7 @@
       id:               'the_carouser',
       name:             'The Carouser',
       rank:             'E',
+      archetype:        'sustainer', // 1z.277C — recovery + restraint → Sustainer
       flavorShort:      'He keeps a long table, and his guests rarely leave.',
       flavorLong:       'Two nights a week he calls them home — Friday and Saturday — and most answer. Refuse him both nights running, and the door stays closed.',
       killCondShort:    'Sleep 7+ hours and bed before midnight, both Friday and Saturday',
@@ -441,6 +447,7 @@
       id:               'the_iron_warden',
       name:             'The Iron Warden',
       rank:             'D',
+      archetype:        'aggressor', // 1z.277C — direct training → Aggressor
       flavorShort:      'Steel remembers what flesh forgets.',
       flavorLong:       'He stands at the threshold of the forge, and the price of passage is iron lifted. Skip the work and the gate seals. Earn the work, and the way opens — for today.',
       // v3 Phase 1z.129 — broadened from strength-only to any
@@ -460,6 +467,7 @@
       id:               'the_glass_strider',
       name:             'The Glass Strider',
       rank:             'D',
+      archetype:        'sustainer', // 1z.277C — step endurance → Sustainer
       flavorShort:      'Each step it takes, it asks for one more from you.',
       flavorLong:       'A long-legged thing of pale glass that walks the road ahead of you. Match its pace today and it lets you pass. Fall short and it walks on without you.',
       killCondShort:    '7,500+ steps today',
@@ -473,6 +481,7 @@
       id:               'the_dream_tyrant',
       name:             'The Dream Tyrant',
       rank:             'D',
+      archetype:        'sustainer', // 1z.277C — sleep recovery → Sustainer
       flavorShort:      'He rules the hours you give him. Give him fewer and he rules less.',
       flavorLong:       'A crowned figure who collects every night the user surrenders. The price of his retreat is the deep rest you owed yourself — at least seven and a half hours of it.',
       killCondShort:    '7.5+ hours of sleep last night',
@@ -508,6 +517,7 @@
       id:               'the_marathon_wraith',
       name:             'The Marathon Wraith',
       rank:             'C',
+      archetype:        'sustainer', // 1z.277C — high-volume step endurance → Sustainer
       flavorShort:      "A ghost that follows every road you've failed to finish.",
       flavorLong:       "A ghost that follows every road you've failed to finish. It fades only when your steps outlast its shadow.",
       killCondShort:    'Walk 10,000+ verified steps before the hunt expires',
@@ -534,6 +544,7 @@
       id:               'the_furnace_knight',
       name:             'The Furnace Knight',
       rank:             'C',
+      archetype:        'aggressor', // 1z.277C — workout + kcal direct output → Aggressor
       flavorShort:      'A knight sealed inside a living forge.',
       flavorLong:       'A knight sealed inside a living forge. It only yields to those who lift under fire and burn through the trial.',
       killCondShort:    'Verified strength workout AND 300+ active kcal before the hunt expires',
@@ -552,6 +563,7 @@
       id:               'the_ascendant_colossus',
       name:             'The Ascendant Colossus',
       rank:             'C',
+      archetype:        'aggressor', // 1z.277C — vertical kinetic output → Aggressor
       flavorShort:      'A giant chained above the stairwell between earth and sky.',
       flavorLong:       'A giant chained above the stairwell between earth and sky. It weakens only when you ascend.',
       killCondShort:    'Climb 10+ verified flights before the hunt expires',
@@ -643,6 +655,19 @@
     const isNightBoss = (typeof cfg.sleepHours === 'number');
     if (isNightBoss) return cfg.streakTarget === 1 ? 'night' : 'nights';
     return cfg.streakTarget === 1 ? 'day' : 'days';
+  }
+
+  // v3 Phase 1z.277C — Boss archetype display helper.
+  // Returns the uppercase user-facing label for the 3 combat-triangle
+  // archetypes, or '' for missing/unknown values. Display-only —
+  // never read by engageBoss / resolveBossHuntsAcrossWindow / souls
+  // logic. The lowercase string is the source of truth in
+  // BOSS_CONFIG; this helper is purely a label formatter.
+  function bossArchetypeLabel(archetype) {
+    if (archetype === 'aggressor') return 'AGGRESSOR';
+    if (archetype === 'sustainer') return 'SUSTAINER';
+    if (archetype === 'caster')    return 'CASTER';
+    return '';
   }
 
   // ─── v3 Phase 1z.43 — Boss hunt expiration windows + window-aware
@@ -30668,6 +30693,18 @@
           '</div>' +
           '<div class="bcard-kills">' + killText + '</div>' +
         '</div>' +
+        // v3 Phase 1z.277C — Boss archetype pill (display-only).
+        // Sits in the card footer area below the kills label so it
+        // doesn't crowd the small-screen header. Rendered only when
+        // BOSS_CONFIG has a valid archetype string; missing/unknown
+        // values produce an empty label and skip the pill entirely.
+        // Color theming via data-archetype attribute in CSS.
+        (function () {
+          const archLabel = bossArchetypeLabel(cfg.archetype);
+          if (!archLabel) return '';
+          return '<div class="boss-archetype-pill" data-archetype="' +
+                  esc(cfg.archetype) + '">' + archLabel + '</div>';
+        })() +
       '</button>'
     );
   }
@@ -30768,6 +30805,31 @@
     if (nameEl) nameEl.textContent = cfg.name;
     const rankLabel = document.getElementById('bfs-rank-label');
     if (rankLabel) rankLabel.textContent = cfg.rank + '-RANK BOSS';
+
+    // v3 Phase 1z.277C — Archetype identity row + disclaimer.
+    // Display-only. Hides the whole row when the boss has no
+    // archetype string (defensive — shouldn't happen after 1z.277C,
+    // but kept null-safe for forward additions). The disclaimer
+    // ("Verified behavior decides victory.") only renders when the
+    // pill renders, so its presence reinforces the hard rule that
+    // stats/labels never bypass real-world conditions.
+    const archRow = document.getElementById('bfs-archetype-row');
+    const archPill = document.getElementById('bfs-archetype-pill');
+    const archDisc = document.getElementById('bfs-archetype-disclaimer');
+    const archLabel = bossArchetypeLabel(cfg.archetype);
+    if (archRow && archPill) {
+      if (archLabel) {
+        archPill.textContent = archLabel;
+        archPill.setAttribute('data-archetype', cfg.archetype);
+        archRow.hidden = false;
+        if (archDisc) archDisc.hidden = false;
+      } else {
+        archPill.textContent = '';
+        archPill.setAttribute('data-archetype', '');
+        archRow.hidden = true;
+        if (archDisc) archDisc.hidden = true;
+      }
+    }
 
     // Long flavor (italic, larger)
     const flavorEl = document.getElementById('bfs-flavor');
