@@ -4,7 +4,58 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.275B Frontend: Rebalance Hunter rank thresholds (read this first)
+## Jun 3, 2026 — 1z.275B-Fix Frontend: Fix rank rebalance consistency (read this first)
+
+**TL;DR.** Code Review Agent BLOCKED 1z.275B (w153) on two findings I missed in the original handoff: (1) a launch-time XP migration with a stale lookup table was still wired up at startup, and (2) four rank-named achievements still pointed at the pre-w153 thresholds. w154 retires the migration as a permanent no-op and updates the 4 achievement targets to match the new curve.
+
+### Correction to my 1z.275B claim
+
+The 1z.275B section below says **"No new storage keys, no migration code, no breadcrumbs."** The first two clauses are wrong. `migrateXPToNewThresholds()` (was app.js:14005) ran at `init()` (line ~40980) gated by `localStorage['hb_xp_migrated_v2']`. It mapped an old-tier index into the current `RANKS` array — so under w153 thresholds, if the flag ever cleared, it would have rewritten `totalPoints` against the *new* curve using *ancient* {0/500/1500/3500/7000/14000/28000} indices. Dormant for real users (flag is set on every launch from prior versions; Reset All Progress wipes both flag and points, hitting the `totalPoints <= 0` early-return), but a latent risk worth removing.
+
+### Fix 1 — Migration retired (Option A, no-op)
+
+`migrateXPToNewThresholds()` now contains a single line: set the flag. The `OLD_RANK_THRESHOLDS` table and `XP_MIGRATION_FLAG` constant stay above the function as historical record / rollback handle — no live code reads them. Call site at `init()` is unchanged (still wrapped in try/catch).
+
+### Fix 2 — Rank-named achievements aligned to w153 curve
+
+| Achievement | Old target | New target | Desc |
+|---|---:|---:|---|
+| `the_grind` (C) | 2,500 | **600** | "Reach C Rank (600 pts)" |
+| `awakened` (A) | 25,000 | **12,000** | "Reach A Rank (12,000 pts)" |
+| `shadow_monarch` (S) | 70,000 | **40,000** | "Reach S Rank (40,000 pts)" |
+| `the_one` (S+) | 150,000 | **100,000** | "Reach S+ Rank (100,000 pts)" |
+
+`centurion` (500 lifetime XP) and `golden_hour` (7,500 lifetime XP) are intentionally NOT rank-named — they remain pure lifetime-XP milestones. No D-rank or B-rank achievement exists and none added (scope discipline; can revisit in a future phase if the rank achievement family wants to be filled out).
+
+### Existing-user effects
+
+Any user already past 600/12,000/40,000/100,000 XP under w153 immediately satisfies the corresponding achievement criterion on next render. Achievement progress is recomputed from `totalPoints` via each entry's `getProgress` — no data migration needed.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w154` |
+| `app.js?v=` | `607` |
+| `styles.css?v=` | `337` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.493` |
+
+### What's NOT in this phase
+
+- ❌ No threshold changes — RANKS array unchanged from w153
+- ❌ No rank-up popup logic changes
+- ❌ No XP earning changes
+- ❌ No backend / D1 / Worker touch
+- ❌ No new storage keys
+- ❌ No code reads `OLD_RANK_THRESHOLDS` anymore (table kept for historical record)
+
+### Rollback
+
+Single-commit revert restores both the old migration body and the old achievement targets. Safe to revert — migration body is dormant for current users either way.
+
+---
+
+## Jun 3, 2026 — 1z.275B Frontend: Rebalance Hunter rank thresholds
 
 **TL;DR.** Replaces the pre-w153 rank curve (500/2500/7500/25000/70000/150000) with Original Option A (100/600/3000/12000/40000/100000) from the 1z.275A audit + 1z.275B-Prep planning. Solves the single biggest retention killer: casual users stagnating at E rank for ~83 days and at D for ~11 months. The new curve compresses early progression while preserving long-term prestige.
 

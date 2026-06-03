@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w153';
+  const APP_BUILD_TAG = '2.2.5-w154';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11154,18 +11154,24 @@
     { id: 'centurion',     category: 'rank', icon: '🛡️', name: 'Centurion',
       desc: 'Earn 500 total points', target: 500,
       getProgress: c => ({ current: Math.min(c.totalPoints, 500), target: 500 }) },
+    // v3 Phase 1z.275B-Fix — Rank-named achievement thresholds updated
+    // to match the 1z.275B (w153) RANKS curve. Pre-w153 values were
+    // C 2500 / A 25000 / S 70000 / S+ 150000 and would have been
+    // unreachable for users on the new lower curve. Centurion (500)
+    // and Golden Hour (7500) intentionally stay as lifetime XP
+    // milestones — neither names a rank.
     { id: 'the_grind',     category: 'rank', icon: '⚡', name: 'The Grind',
-      desc: 'Reach C Rank (2,500 pts)', target: 2500,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 2500), target: 2500 }) },
+      desc: 'Reach C Rank (600 pts)', target: 600,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 600), target: 600 }) },
     { id: 'awakened',      category: 'rank', icon: '💎', name: 'Awakened',
-      desc: 'Reach A Rank (25,000 pts)', target: 25000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 25000), target: 25000 }) },
+      desc: 'Reach A Rank (12,000 pts)', target: 12000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 12000), target: 12000 }) },
     { id: 'shadow_monarch',category: 'rank', icon: '🌑', name: 'Shadow Monarch',
-      desc: 'Reach S Rank (70,000 pts)', target: 70000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 70000), target: 70000 }) },
+      desc: 'Reach S Rank (40,000 pts)', target: 40000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 40000), target: 40000 }) },
     { id: 'the_one',       category: 'rank', icon: '⭐', name: 'The One',
-      desc: 'Reach S+ Rank (150,000 pts)', target: 150000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 150000), target: 150000 }) },
+      desc: 'Reach S+ Rank (100,000 pts)', target: 100000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 100000), target: 100000 }) },
     { id: 'golden_hour',   category: 'rank', icon: '🏆', name: 'Golden Hour',
       desc: 'Earn 7,500 lifetime XP', target: 7500,
       getProgress: c => ({ current: Math.min(c.totalPoints, 7500), target: 7500 }) },
@@ -14002,46 +14008,28 @@
     { id: 'S',  min: 14000, max: 27999   },
     { id: 'S+', min: 28000, max: Infinity },
   ];
+  // v3 Phase 1z.275B-Fix — RETIRED in w154. The original 1z.131-era
+  // migration mapped users from an ancient {0/500/1500/3500/7000/
+  // 14000/28000} curve into the then-current RANKS array via tier-
+  // index lookup. After the 1z.275B rank rebalance (w153), running
+  // this against today's RANKS would map ancient indices into the
+  // NEW {0/100/600/3000/12000/40000/100000} curve, producing wrong
+  // XP for any edge case where the flag got cleared (manual
+  // localStorage edit, partial cloud restore, etc).
+  //
+  // All real users today have hb_xp_migrated_v2='1' from prior
+  // launches. New installs start at totalPoints=0 → the old early-
+  // return path would set the flag without mutation. Reset All
+  // Progress wipes both the flag and totalPoints, so the
+  // totalPoints===0 early-return would have handled that too.
+  //
+  // But to eliminate any residual risk of stale OLD_RANK_THRESHOLDS
+  // rewriting hb_points under w153+ thresholds, we no-op the body
+  // entirely and just set the flag. The OLD_RANK_THRESHOLDS table
+  // and XP_MIGRATION_FLAG constant remain above for rollback and as
+  // historical record; they're no longer read by any code path.
   function migrateXPToNewThresholds() {
-    if (localStorage.getItem(XP_MIGRATION_FLAG) === '1') return;
-    if (typeof totalPoints !== 'number' || totalPoints <= 0) {
-      // Brand-new user with 0 XP — nothing to migrate. Mark done so
-      // we don't re-check on every launch.
-      localStorage.setItem(XP_MIGRATION_FLAG, '1');
-      return;
-    }
-
-    // Find which old tier this user sits in.
-    let oldIdx = 0;
-    for (let i = OLD_RANK_THRESHOLDS.length - 1; i >= 0; i--) {
-      if (totalPoints >= OLD_RANK_THRESHOLDS[i].min) { oldIdx = i; break; }
-    }
-    const oldTier = OLD_RANK_THRESHOLDS[oldIdx];
-    const newTier = RANKS[oldIdx];
-
-    let migrated;
-    if (oldTier.id === 'S+') {
-      // S+ has no upper bound — fraction is undefined. Scale the
-      // over-floor distance by the ratio of new S→S+ size to old
-      // S→S+ size, preserving "how far past legendary" the user was.
-      const oldSToSPlusSize = OLD_RANK_THRESHOLDS[6].min - OLD_RANK_THRESHOLDS[5].min; // 14000
-      const newSToSPlusSize = RANKS[6].min - RANKS[5].min; // 80000
-      const overFloor = totalPoints - oldTier.min;
-      const scale = newSToSPlusSize / oldSToSPlusSize;
-      migrated = newTier.min + (overFloor * scale);
-    } else {
-      // Within-tier fraction: where the user sits as a 0..1 fraction
-      // through the old tier. Map to the same fraction through the
-      // new tier so rank + within-rank progress feel identical.
-      const oldTierSize = oldTier.max - oldTier.min + 1;
-      const fraction = (totalPoints - oldTier.min) / oldTierSize;
-      const newTierSize = newTier.max - newTier.min + 1;
-      migrated = newTier.min + (fraction * newTierSize);
-    }
-
-    totalPoints = Math.round(migrated);
-    try { localStorage.setItem('hb_points', String(totalPoints)); } catch (_) {}
-    localStorage.setItem(XP_MIGRATION_FLAG, '1');
+    try { localStorage.setItem(XP_MIGRATION_FLAG, '1'); } catch (_) {}
   }
 
   // ── PERSONAL RECORDS — helpers ────────────────────────────
