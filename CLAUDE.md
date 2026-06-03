@@ -4,7 +4,110 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.275B-Fix Frontend: Fix rank rebalance consistency (read this first)
+## Jun 3, 2026 — 1z.275C Frontend: Sub-rank celebration toast (read this first)
+
+**TL;DR.** Adds a small local-only toast when a habit completion advances the user within the same major rank (e.g., `D III → D II`). Secondary motivation moment — quieter than the full-screen major rank-up modal. Transaction-based only: no launch-time replay, no Guild/public event, no backend, no storage key.
+
+### Trigger condition
+
+Inside `toggleHabit` (check-path only):
+
+1. Before XP gain: capture `oldDivInfo = getRankDivisionInfo(totalPoints)`.
+2. After XP gain: compute `newDivInfo = getRankDivisionInfo(totalPoints)`.
+3. If `newRank.id !== oldRank.id` → major rank-up modal runs, **sub-rank toast is suppressed**.
+4. Else if `oldDivInfo.fullLabel !== newDivInfo.fullLabel` → queue one `{type:'subrank', label}` item for the final division.
+
+Uncheck path: `oldDivInfo` stays `null`, no toast. Launch/render: no path captures snapshots, no toast. Multi-division crossing in one tap: collapses to one toast for the final `newDivInfo.fullLabel`. S+ at cap: `fullLabel = "S+"` (division=null) so no spurious fires once promoted.
+
+### Queue ordering
+
+`levelUpQueue` order: **major rank-up (unshift) → stat-up (push) → sub-rank toast (push)**.
+
+Sub-rank is queued *after* the stat-up `forEach` so multi-stat-level completions show their stat modals first and the celebratory toast lands last as a coda.
+
+### Dispatcher
+
+`drainLevelUpQueue` adds a case for `type:'subrank'`:
+
+```js
+else if (item.type === 'subrank') {
+  try { showSubRankToast(item.label); } catch (_) {}
+  levelUpActive = false;
+  drainLevelUpQueue();
+}
+```
+
+Non-blocking — frees the queue lock immediately so any trailing achievements drain without waiting on the 2.8s auto-dismiss timer.
+
+### Toast surface
+
+`showSubRankToast(label)` builds a `.habit-toast.habit-toast--division` element with two-line content:
+
+```html
+<div class="habit-toast-kicker">DIVISION ADVANCED</div>
+<div class="habit-toast-value">D II</div>
+```
+
+- Pre-empts any in-flight `.habit-toast` (same convention as `showHabitToast` / reminder toast).
+- `role="status"` + `aria-live="polite"`.
+- Reuses the toast pipeline's RAF-based show/hide animation.
+- 2.8s dwell (between plain 2.2s and tappable 4.0s).
+
+### CSS variant
+
+`.habit-toast--division`:
+- Deep violet gradient (`rgba(36,28,60,0.98) → rgba(22,18,40,0.98)`).
+- Gold accent border (`rgba(245,158,11,0.55)`) mirroring `--tappable` palette.
+- 14px radius (slightly less pill than the base toast — more banner-like).
+- Two-line layout: small uppercase tracked kicker (gold) + larger bold value (white).
+
+**Reduced motion**: `@media (prefers-reduced-motion: reduce)` overrides the rise transform on both endpoints, keeping opacity fade only.
+
+### Guild / public path: UNTOUCHED
+
+- `recordGuildActivity('rank_up')` — not called from sub-rank path.
+- `PUBLIC_RANK_LAST_KEY` guard — not touched.
+- `hb_guild_last_rank_label` — not written.
+- `_queuePublicAchievementEvent` — not invoked.
+
+`git diff` confirmed no occurrence of these strings in the change. Sub-rank advancement is a private local UI tick only.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w155` |
+| `app.js?v=` | `608` |
+| `styles.css?v=` | `338` |
+| `sw.js CACHE_VERSION` | `v5.494` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+| `DUELS_UI_HIDDEN` | `true` (preserved) |
+
+### Manual QA checklist (w155)
+
+1. Cross D III → D II by completing a habit → one `DIVISION ADVANCED / D II` toast appears.
+2. Complete a habit without crossing a division boundary → no toast.
+3. Cross D I → C (major boundary) → major rank-up modal, NO sub-rank toast.
+4. Earn enough XP to cross multiple divisions in same major rank → one toast for final division only.
+5. Launch existing profile with existing XP → no sub-rank toast on launch.
+6. Uncheck a habit → no toast.
+7. Reduced motion on → toast fades in/out, no rise transform.
+8. Sub-rank path fires no Guild/public event (DevTools Network).
+9. Sub-rank path fires no backend request.
+10. Major rank-up modal still works as before.
+11. Stat-up modal still works as before.
+12. Reward burst (1z.228B) still works as before.
+13. Queue does not stall — complete multiple habits in sequence, all events fire.
+
+### Rollback
+
+Single-commit revert removes the sub-rank dispatcher case, `showSubRankToast`, the `oldDivInfo` capture / push site, and the CSS variant. No data implications: no storage key was written. Knobs revert to w154.
+
+---
+
+## Jun 3, 2026 — 1z.275B-Fix Frontend: Fix rank rebalance consistency
 
 **TL;DR.** Code Review Agent BLOCKED 1z.275B (w153) on two findings I missed in the original handoff: (1) a launch-time XP migration with a stale lookup table was still wired up at startup, and (2) four rank-named achievements still pointed at the pre-w153 thresholds. w154 retires the migration as a permanent no-op and updates the 4 achievement targets to match the new curve.
 

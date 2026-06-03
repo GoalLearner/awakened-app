@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w154';
+  const APP_BUILD_TAG = '2.2.5-w155';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15210,6 +15210,16 @@
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
     else if (item.type === 'classChoice') showClassChoiceScreen(item.options);
     else if (item.type === 'perfectday')  showPerfectDayScreen(item);
+    else if (item.type === 'subrank') {
+      // v3 Phase 1z.275C — Sub-rank toast is non-blocking. No modal,
+      // no overlay, no backend. Fire-and-forget: free the queue lock
+      // immediately so any trailing items (achievements, etc.) drain
+      // without waiting on the 2.6s auto-dismiss timer. Wrapped in
+      // try/catch so a missing helper can never stall the queue.
+      try { showSubRankToast(item.label); } catch (_) {}
+      levelUpActive = false;
+      drainLevelUpQueue();
+    }
     else                                  showStatLevelUp(item);
   }
 
@@ -18118,6 +18128,37 @@
     return habit.goal.value >= min;
   }
 
+  // v3 Phase 1z.275C — Sub-rank advancement toast.
+  // Two-line premium variant of the habit-toast surface. Fires when a
+  // habit completion crosses a sub-rank division boundary (e.g.
+  // D III → D II) WITHOUT crossing a major rank. Local-only: no
+  // backend, no Guild event, no public event, no storage key. The
+  // toast piggybacks on the .habit-toast DOM + animation pipeline
+  // and adds a .habit-toast--division modifier for the gold-accent
+  // two-line layout (kicker + value). 2.8s dwell — between plain
+  // (2.2s) and tappable (4.0s); long enough to read the new
+  // division label, short enough to feel like a tick, not a modal.
+  function showSubRankToast(label) {
+    const text = String(label || '').trim();
+    if (!text) return;
+    // Pre-empt any in-flight habit-toast so the celebration owns the
+    // screen, same convention used by showHabitToast / reminder toast.
+    try { document.querySelectorAll('.habit-toast').forEach(t => t.remove()); } catch (_) {}
+    const toast = document.createElement('div');
+    toast.className = 'habit-toast habit-toast--division';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.innerHTML =
+      '<div class="habit-toast-kicker">DIVISION ADVANCED</div>' +
+      '<div class="habit-toast-value">' + esc(text) + '</div>';
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('habit-toast--visible')));
+    setTimeout(() => {
+      toast.classList.remove('habit-toast--visible');
+      setTimeout(() => { try { toast.remove(); } catch (_) {} }, 300);
+    }, 2800);
+  }
+
   // Brief floating toast anchored near the bottom of the screen.
   // showHabitToast(msg, opts?)
   // opts.onTap   — if provided, the toast becomes a tap target. Tapping
@@ -19345,6 +19386,14 @@
     const wasDone = isChecked(id);
     const oldRank       = wasDone ? null : getRank(totalPoints);
     const oldStatLevels = wasDone ? null : captureStatLevels();
+    // v3 Phase 1z.275C — capture sub-rank division snapshot BEFORE XP gain.
+    // Mirrors `oldRank` capture above so the post-gain comparison is
+    // transaction-local. Check-path only — uncheck path stays null.
+    // Wrapped in try/catch because getRankDivisionInfo is defensive but
+    // we must not let any edge case (S+, malformed XP) break completion.
+    const oldDivInfo = wasDone ? null : (function () {
+      try { return getRankDivisionInfo(totalPoints); } catch (_) { return null; }
+    })();
 
     if (wasDone) {
       uncheck(id);
@@ -19478,7 +19527,8 @@
 
       // Detect rank up
       const newRank = getRank(totalPoints);
-      if (newRank.id !== oldRank.id) {
+      const majorRankChanged = newRank.id !== oldRank.id;
+      if (majorRankChanged) {
         levelUpQueue.unshift({ type: 'rank', rank: newRank });
       }
 
@@ -19491,6 +19541,33 @@
           levelUpQueue.push({ type: 'stat', stat: st, level: lv, bonusPts: bonusThr ? bonusThr.pts : null });
         }
       });
+
+      // v3 Phase 1z.275C — Sub-rank celebration.
+      // Transaction-based: fires only when THIS XP gain advances the
+      // user's sub-rank division within the SAME major rank. Major
+      // rank-up suppresses the toast (the big modal already owns the
+      // moment). Queued AFTER the stat-up forEach so visual order is:
+      //   major rank-up → stat-up modals → sub-rank toast.
+      // Multiple sub-rank crossings in one tap collapse to one toast
+      // for the final fullLabel — getRankDivisionInfo(totalPoints)
+      // reads current state, not intermediate boundaries.
+      // Local-only: no Guild event, no public event, no backend, no
+      // storage key, no launch-time replay. S+ users' fullLabel is
+      // just "S+" (division=null) so it never differs from old → no
+      // false fires past the cap.
+      if (!majorRankChanged && oldDivInfo) {
+        try {
+          const newDivInfo = getRankDivisionInfo(totalPoints);
+          if (
+            newDivInfo &&
+            oldDivInfo.fullLabel &&
+            newDivInfo.fullLabel &&
+            oldDivInfo.fullLabel !== newDivInfo.fullLabel
+          ) {
+            levelUpQueue.push({ type: 'subrank', label: newDivInfo.fullLabel });
+          }
+        } catch (_) {}
+      }
 
       // Class change: check on any stat level-up.
       // Route through checkClassChange() so first-time Civilian → class

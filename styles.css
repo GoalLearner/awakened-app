@@ -3271,6 +3271,57 @@ footer {
   letter-spacing: 0.04em;
 }
 
+/* v3 Phase 1z.275C — Sub-rank advancement toast.
+   Two-line premium variant on the .habit-toast pill. Deeper violet
+   base + gold accent border (mirrors --tappable's gold accent so it
+   reads as a celebratory cousin), but quieter than the full-screen
+   major rank-up modal. Sits above the bottom tab bar like other
+   toasts. Below the reminder toast's z-index (100000) so a sticky
+   reminder remains primary if both fire simultaneously. */
+.habit-toast--division {
+  background: linear-gradient(180deg, rgba(36, 28, 60, 0.98) 0%, rgba(22, 18, 40, 0.98) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55),
+              0 0 0 1px rgba(245, 158, 11, 0.10) inset;
+  padding: 10px 22px;
+  border-radius: 14px;
+  white-space: normal;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 160px;
+}
+.habit-toast--division .habit-toast-kicker {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold, #f59e0b);
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.habit-toast--division .habit-toast-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+/* Reduced-motion: skip the rise transform, keep opacity fade only.
+   The base .habit-toast rule applies translateX(-50%) translateY(8px)
+   as its non-visible state and removes the Y on .--visible. Override
+   both endpoints so the toast simply fades in place. */
+@media (prefers-reduced-motion: reduce) {
+  .habit-toast--division {
+    transform: translateX(-50%);
+    transition: opacity 0.2s;
+  }
+  .habit-toast--division.habit-toast--visible {
+    transform: translateX(-50%);
+  }
+}
+
 /* Reminder-confirm toast: visible pill that confirms "Reminder set for
    X". Tap anywhere on the pill to open a two-column picker (hour | min)
    that lives as a SEPARATE fixed-position element above the pill — that
