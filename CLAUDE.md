@@ -4,7 +4,164 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.273H QA: w145 scheduling stack audit + auto-skip flash fix (read this first)
+## Jun 3, 2026 — 1z.274A Frontend: Tighten app render performance (read this first)
+
+**TL;DR.** Whole-app perf audit found Duels polling still firing backend hits and ticking timers on every Social tab visit / foreground / cold launch despite Duels UI being hidden product-wide via 1z.273K's `DUELS_UI_HIDDEN` flag. 1z.273K gated only the two visible render functions (toast + hero pill); the data path kept running. This phase closes the gap.
+
+**Process note.** Frontend / perf only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit / XP / streak / rank / class / HealthKit / scheduling (1z.273) / leaderboard / Social filter / Guild Notifications renderer / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Wasted work eliminated.**
+
+| Function | What was wasted | Trigger |
+|---|---|---|
+| `startDuelsLiveTick` | 60s setInterval iterating `_duelsCache` + calling now-no-op `renderActiveDuelHero` | Every Social tab visit |
+| `startDuelsNetworkSync` | Immediate `_runDuelSyncCycle` on tab open PLUS 30s interval, each hitting `/v1/social/duels` | Every Social tab visit |
+| `refreshHeaderDuelState` | One `Auth.fetchDuels()` per foreground + per cold launch (force:true) | App foreground / cold launch |
+
+**Implementation.** 3 functions, each guarded with an early-return checking the same `DUELS_UI_HIDDEN` constant from 1z.273K. Total +8 lines.
+
+**Measurable savings.** Per 10-min Social session after cold launch: ~22 fewer backend D1 reads, ~10 fewer interval ticks, zero behavior change.
+
+**Deferred (intentionally surgical).**
+- `submitActiveStepsDuelProgress` / `submitVerifiedEventsForDuels` — already 5-min debounced; marginal benefit; 4-5 call sites = wider surface.
+- `renderHabits` further tuning — already well-optimized via 1z.214 fingerprint-bail.
+
+**Rollback.** Flip `DUELS_UI_HIDDEN = false` (single constant near line ~26418) and the timers / fetches resume verbatim — or revert this commit.
+
+**Knobs.**
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w152` |
+| `app.js?v=` | `605` |
+| `styles.css?v=` | `337` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.491` |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+---
+
+## Jun 2, 2026 — 1z.273M Frontend: Wire verified_workout / verified_sleep_7h / flights_milestone_bucket submitters
+
+**TL;DR.** Close the remaining gap from 1z.273L. Backend allowlist (1z.257) and renderer colors (1z.260+) already supported these 3 event types, but **no frontend submitters existed**. This wires all three so verified HealthKit wins finally appear in friends' Guild feeds.
+
+**Submitters added.**
+
+| Event | Call site | Gates inherited |
+|---|---|---|
+| `verified_workout` | Inside `autoVerifyStrengthTraining` at the seal-success branch (~line 40166) | Rest-day gate (1z.273B), user-unchecked, threshold ≥30 min, isScheduledToday |
+| `verified_sleep_7h` | Inside the existing `recordGuildActivity('sleep_quality_7h')` block of `autoVerifySleep` (~line 39885), gated on actual `data.totalAsleepHours >= 7` | Rest-day gate, sleep sealed, **actual ≥7h verified** independent of user's personal goal |
+| `flights_milestone_bucket` | Inside `lbRecordFlightsToday` (~line 9744) — the choke point all HealthKit flights paths land at | None needed; iterates [10, 25, 50, 100] |
+
+**Duplicate guards.** Per-day localStorage markers: `hb_pae_verified_workout_<YYYY-MM-DD>`, `hb_pae_verified_sleep_7h_<YYYY-MM-DD>`, `hb_pae_flights_bucket_<YYYY-MM-DD>_<bucket>`. All `hb_*` prefix so Reset All Progress wipes cleanly.
+
+**Privacy.**
+- `verified_workout`: no minutes, count, type, calories, HR, distance, pace, location. `eventValue: null`.
+- `verified_sleep_7h`: no exact hours, score, stages, bedtime, wake time. `eventValue: null`.
+- `flights_milestone_bucket`: only the bucket integer (10/25/50/100); raw flights count never leaves the device.
+
+**`clientEventId` format** follows existing 1z.226 `verified_streak` convention: `'<type>:<key>:' + Date.now().toString(36)` so local-marker resets still get unique ids.
+
+**Process note.** Frontend / data flow only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit / XP / streak / rank / class / HealthKit threshold / leaderboard / Social filter / Guild renderer / boss / inventory / economy / auth / onboarding / scheduling logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Knobs.** `APP_BUILD_TAG 2.2.5-w150 → 2.2.5-w151`, `app.js?v 603 → 604`, `sw.js CACHE_VERSION v5.489 → v5.490`, `styles.css?v 337` unchanged.
+
+---
+
+## Jun 2, 2026 — 1z.273L Frontend: Sync public event allowlist with backend
+
+**TL;DR.** Smoke-test investigation found Guild Notifications only showing boss kills despite verified workouts and ≥7h sleep nights. Root cause: the frontend submit gate at `_queuePublicAchievementEvent` was last updated in 1z.200 and still permitted only `boss_kill / rank_up / step_milestone_bucket` — silently dropping every type added since.
+
+**Status of every backend-allowed type before/after.**
+
+| Event type | Submitter exists? | Gate allows pre-w150? | Gate allows post-w150? |
+|---|---:|---:|---:|
+| `boss_kill` | ✅ | ✅ | ✅ |
+| `rank_up` | ✅ | ✅ | ✅ |
+| `step_milestone_bucket` | ✅ | ✅ | ✅ |
+| `ultra_rare_drop` | ✅ (1z.223) | ❌ silently dropped | ✅ |
+| `rare_item_drop` | ✅ (1z.226) | ❌ silently dropped | ✅ |
+| `verified_streak` | ✅ (1z.226) | ❌ silently dropped | ✅ |
+| `step_100k_club_unlocked` | ✅ (1z.226) | ❌ silently dropped | ✅ |
+| `verified_workout` | ❌ pending | ❌ | ✅ (gate ready, no submitter yet) |
+| `verified_sleep_7h` | ❌ pending | ❌ | ✅ |
+| `flights_milestone_bucket` | ❌ pending | ❌ | ✅ |
+
+**Implementation.** Replaced the hardcoded 3-type `if` with a `_PAE_ALLOWED_EVENT_TYPES` Set mirroring the backend allowlist (10 types). One-line gate change.
+
+**Result for w150.** Ultra-rare / rare / verified-streak / 100K Club events now reach the backend and surface in friends' Guild feeds. Verified workout / sleep / flights still missing because no submit call sites exist — see 1z.273M for the hook implementation.
+
+**Process note.** Frontend / data flow only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit / XP / streak / rank / class / HealthKit / leaderboard / Social / boss / inventory / economy / auth / onboarding / scheduling logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Knobs.** `APP_BUILD_TAG 2.2.5-w149 → 2.2.5-w150`, `app.js?v 602 → 603`, `sw.js CACHE_VERSION v5.488 → v5.489`.
+
+---
+
+## Jun 2, 2026 — 1z.273K Frontend: Hide leaked Duel toast + hero pill
+
+**TL;DR.** w148 TestFlight QA showed two leaked Duels surfaces despite the feature being paused product-wide:
+1. `"Duel sealed — Even ground with Richie."` toast appearing on the Relic Archive screen.
+2. `"Duel lost. Richie outstepped you. Train. Rematch."` pill persisting at the bottom of the Social tab inside the GUILD accordion.
+
+Backend `/v1/social/duels` may still return historical `completed` duels (cleanup is a separate concern), but the UI must never surface them.
+
+**Implementation.** Hard early-return at both surface entry points, gated by a single grep-able constant `DUELS_UI_HIDDEN = true` so the whole Duels code path is preserved verbatim for safe rollback if the feature is ever revived.
+
+- `_maybeFireDuelResultToast()`: return immediately when flag is set; no toast enqueue, no localStorage marker write.
+- `renderActiveDuelHero()`: return AND clear `mount.innerHTML` so a previously-rendered hero pill disappears on next render tick.
+
+No backend fetch path changed in this phase (Duels timers + fetches still ran — gated later in 1z.274A). No state/store mutated. No historical duel data deleted.
+
+**Process note.** Frontend / visual gate only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No habit / XP / streak / rank / class / HealthKit / scheduling / leaderboard / Social filter / Guild Notifications / boss / inventory / economy / auth / onboarding logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Knobs.** `APP_BUILD_TAG 2.2.5-w148 → 2.2.5-w149`, `app.js?v 601 → 602`, `sw.js CACHE_VERSION v5.487 → v5.488`.
+
+---
+
+## Jun 2, 2026 — 1z.273J Frontend: Move schedule from habit card to detail sheet
+
+**TL;DR.** Per on-device QA during w147 smoke test, the schedule chip on the habit card kept colliding with the XP chip on compact cards even with the 1z.273I pattern shortcuts + overflow guard. Cleaner placement: strip the chip from the card and surface the schedule on the View Note / habit detail sheet alongside the existing REMINDER row.
+
+**Implementation.**
+- `buildSchedPills` now always returns `''`. Signature preserved so the existing call site in `buildItem` (1z.273F) needs no changes; comment explains rollback path.
+- New SCHEDULE row in the View Note sheet (`#vn-schedule-display`), mirroring the REMINDER row markup so they look identical.
+- `populateHabitInfoBlock` reads `habit.days` via `scheduleDaysLabel`:
+  - all 7 / missing → `"Every day"` (dim `--none` class)
+  - subset → compact label (`"Mon · Wed · Fri"` / `"M-F"` / `"Sa-Su"` per 1z.273F/I)
+
+`.habit-schedule-chip` CSS retained but now has no DOM emitter — kept in place for diff hygiene and safe rollback.
+
+**Process note.** Frontend / visual + render only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no scheduling logic (1z.273B-H), no Training Week flow, no habit completion / XP / rank / class / HealthKit / leaderboard / Social filter / Guild / inventory / economy / auth logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Knobs.** `APP_BUILD_TAG 2.2.5-w147 → 2.2.5-w148`, `app.js?v 600 → 601`, `sw.js CACHE_VERSION v5.486 → v5.487`, `styles.css?v 337` unchanged.
+
+---
+
+## Jun 3, 2026 — 1z.273I Frontend: Prevent schedule chip overflow on compact cards
+
+**TL;DR.** Smoke test surfaced a Workout card with the schedule chip wrapping to two lines and colliding with the XP chip when the user picked weekdays (`M Tu W Th F`). The full `"M · TU · W · TH · F"` label was wider than the compact habit card could host.
+
+**Two-part fix.**
+
+1. **Pattern-detect common schedules in `scheduleDaysLabel()`**:
+   - Mon+Tue+Wed+Thu+Fri (any order) → `"M-F"`
+   - Sat+Sun (any order) → `"Sa-Su"`
+   - Other patterns keep the existing Mon→Sun middot-joined unambiguous label from 1z.273F.
+
+2. **Defensive CSS guard on `.habit-schedule-chip`**:
+   - `max-width: calc(100% - 8px)`
+   - `white-space: nowrap`
+   - `overflow: hidden`
+   - `text-overflow: ellipsis`
+
+So even a 4-day mixed schedule that doesn't match a recognized pattern can never wrap into the XP chip beneath.
+
+**Process note.** Frontend / visual + render-label only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no HealthKit gate (1z.273B), no manual gate (1z.273C), no custom-create (1z.273D), no defaultDays data (1z.273E), no Training Week flow (1z.273G/H) changed. No XP / rank / class / boss / Social / Guild / leaderboard / inventory / economy / auth logic changed. `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved.
+
+**Knobs.** `APP_BUILD_TAG 2.2.5-w146 → 2.2.5-w147`, `app.js?v 599 → 600`, `styles.css?v 336 → 337`, `sw.js CACHE_VERSION v5.485 → v5.486`.
+
+---
+
+## Jun 3, 2026 — 1z.273H QA: w145 scheduling stack audit + auto-skip flash fix
 
 **TL;DR.** Full audit pass across all seven 1z.273 scheduling phases. One small isolated bug surfaced in 1z.273G's auto-skip path: the `setTimeout(() => show(i+1), 0)` is a macrotask, so the browser painted the Training Week screen for one frame before the auto-skip fired. The fix is a one-line swap to synchronous recursion — replaces the `.show` class in the same task before the next paint. No other issues found. Everything else passes.
 
