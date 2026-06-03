@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w158';
+  const APP_BUILD_TAG = '2.2.5-w159';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6922,6 +6922,14 @@
   //      drop happened and surfaces the new count or cap status.
   //      No cinematic, regardless of rarity.
   function announceKillAndDrop(cfg, soulsReward, dropInfo) {
+    // v3 Phase 1z.278B — Boss victory fanfare. Fires at the top of
+    // the kill announcement, BEFORE the drop-reveal queue, so the
+    // emotional beat is "kill = victory chime" and (if applicable)
+    // "rare drop = sigil bloom / relic chime" as a separate later
+    // beat. Highest-priority SFX (5). Only reaches here when an
+    // upstream resolver has confirmed the kill — never fires on
+    // engage or failed/expired hunts.
+    try { playSfx('boss_victory'); } catch (_) {}
     const soulsSuffix = soulsReward > 0 ? ' +' + soulsReward + ' souls.' : '';
     let toastMsg = cfg.name + ' defeated.' + soulsSuffix;
 
@@ -15109,6 +15117,11 @@
   // ── LEVEL UP SCREENS ─────────────────────────────────────
 
   function showRankUpScreen(rank) {
+    // v3 Phase 1z.278B — Rank-up fanfare. Highest-priority SFX (5),
+    // so even if a stat-up or achievement chime is queued from the
+    // same tap, the priority gate suppresses them within the 800ms
+    // window. Fires once per modal open. Respects soundEnabled.
+    try { playSfx('rank_fanfare'); } catch (_) {}
     const screen  = document.getElementById('rankup-screen');
     const fx      = RANK_EFFECTS[rank.id] || RANK_EFFECTS['D'];
     const daysActive = Object.keys(completions).filter(d => completions[d].length > 0).length;
@@ -15248,6 +15261,17 @@
   function showStatLevelUp(item) {
     const { stat, level, bonusPts } = item;
     const isMax = level >= 20;
+    // v3 Phase 1z.278B — Stat-up chime GATED to bonus-threshold levels
+    // only. Early-game taps can cross Lv2/Lv3/Lv4 in one habit
+    // completion (the 1z.276A audit flagged this modal flood); adding
+    // sound to every level would amplify the noise problem. Bonus
+    // levels (5/10/15/20) are the only ones that grant rank XP via
+    // STAT_BONUS_THRESHOLDS, so they're the meaningful milestones.
+    // Priority 3 — boss_victory or rank_fanfare in the same 800ms
+    // window will suppress this cleanly.
+    if (level === 5 || level === 10 || level === 15 || level === 20) {
+      try { playSfx('stat_chime'); } catch (_) {}
+    }
     const popup = document.getElementById('statlvl-popup');
     const card  = document.getElementById('statlvl-card');
 
@@ -15354,6 +15378,14 @@
   }
 
   function showAchievementPopup(ach) {
+    // v3 Phase 1z.278B — Achievement chime. Priority 4 — suppressed
+    // by a fresh rank_fanfare or boss_victory in the same 800ms
+    // window, plays cleanly when it owns the moment. Throttled
+    // naturally by the priority gate if multiple achievements
+    // queue from one tap (they'll fire ≥ 800ms apart per the
+    // drainAchQueue cadence, so the gate rarely blocks them
+    // against each other).
+    try { playSfx('achievement'); } catch (_) {}
     const popup = document.getElementById('ach-popup');
     document.querySelector('.ach-popup-label').textContent = ach.label || 'ACHIEVEMENT UNLOCKED';
     // Use innerHTML + streakify so 🔥-keyed achievements ("Streak Hunter",
@@ -16696,7 +16728,10 @@
     }
 
     // ── Audio chime ───────────────────────────────────────
-    if (ms.chime) {
+    // v3 Phase 1z.278B — Respect the global sound preference. Prior
+    // to this fix, the Perfect Day chime would play even with
+    // hb_sound='off' (inconsistent with every other playback site).
+    if (ms.chime && soundEnabled) {
       try {
         const ac = new (window.AudioContext || window.webkitAudioContext)();
         const freqs = ms.day >= 100
@@ -18643,6 +18678,136 @@
 
   // ── SOUND PREFERENCE ─────────────────────────────────────
   let soundEnabled = localStorage.getItem('hb_sound') !== 'off';
+
+  // v3 Phase 1z.278B — Central synthesized-SFX helper + priority gate.
+  //
+  // The app is 100% Web Audio synthesis (zero audio files in the repo
+  // as of 1z.278A-Prep audit). This helper consolidates new sound
+  // sites onto a single shared AudioContext and adds an 800ms
+  // anti-spam priority gate so a multi-event tap (e.g. rank-up + 6
+  // stat-ups + 1 achievement) doesn't produce a chaotic chime
+  // cascade. Existing bespoke playback functions (playCheckSound,
+  // playFanfare, playAwakeningFanfare, _relicChime, etc.) are NOT
+  // refactored in this phase — they stay on their per-fire
+  // AudioContexts. The helper is additive.
+  //
+  // Priority model (locked in 1z.278A-Prep §7):
+  //   5 = rank_fanfare, boss_victory, ultra_drop, class awakening,
+  //       PR cinematic, comeback
+  //   4 = achievement, rare drop, compound popup
+  //   3 = stat_chime, subrank_blip
+  //   2 = boss_engage, perfect day
+  //   1 = habit_seal
+  //
+  // Anti-spam rule: if a new sfx fires within 800ms of the previous
+  // and its priority is LOWER, drop it silently. Same-or-higher
+  // priority plays. This lets rank-up override trailing stat-up
+  // chimes when a multi-level tap cascades celebrations.
+  //
+  // All playback wrapped in try/catch; failure is silent. iOS
+  // autoplay restrictions are handled by lazy-creating the shared
+  // context on first call AFTER a user gesture (rank-ups, kills,
+  // and achievements all run from user-initiated taps).
+  const SFX_PRIORITY = {
+    habit_seal:   1,
+    boss_engage:  2,
+    perfect_day:  2,
+    subrank_blip: 3,
+    stat_chime:   3,
+    achievement:  4,
+    rare_drop:    4,
+    compound:     4,
+    rank_fanfare: 5,
+    boss_victory: 5,
+    ultra_drop:   5,
+  };
+  const SFX_GATE_MS = 800;
+  let _sharedSfxCtx = null;
+  let _lastSfxAt = 0;
+  let _lastSfxPriority = 0;
+  function _getSfxCtx() {
+    try {
+      if (_sharedSfxCtx) return _sharedSfxCtx;
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return null;
+      _sharedSfxCtx = new Ctor();
+      return _sharedSfxCtx;
+    } catch (_) { return null; }
+  }
+  function playSfx(name) {
+    if (!soundEnabled) return;
+    const priority = SFX_PRIORITY[name] || 0;
+    if (!priority) return; // unknown sound name → no-op
+    const now = (typeof performance !== 'undefined' && performance.now)
+      ? performance.now()
+      : Date.now();
+    if ((now - _lastSfxAt) < SFX_GATE_MS && priority < _lastSfxPriority) {
+      // Within the 800ms window, a higher-priority sound already
+      // claimed this beat. Drop silently.
+      return;
+    }
+    try {
+      const ac = _getSfxCtx();
+      if (!ac) return;
+      // Resume if suspended (iOS gesture-locked context).
+      try { if (ac.state === 'suspended') ac.resume(); } catch (_) {}
+      _sfxRender(ac, name);
+      _lastSfxAt = now;
+      _lastSfxPriority = priority;
+    } catch (_) { /* silent — game state never depends on audio */ }
+  }
+  // Schedules the actual oscillator graph for each named sound.
+  // Specs locked in 1z.278A-Prep §9. Style mirrors existing chimes
+  // (sine + small gain envelope, mild exponential decay).
+  function _sfxRender(ac, name) {
+    const t0 = ac.currentTime;
+    const playNote = function (freq, startOffset, dur, peakGain, type) {
+      const osc = ac.createOscillator();
+      const g   = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      const t = t0 + startOffset;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peakGain, t + Math.min(0.04, dur * 0.25));
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    };
+    if (name === 'rank_fanfare') {
+      // Four-note arpeggio C5 → E5 → G5 → C6. Bright, premium, ~800ms.
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach(function (f, i) { playNote(f, i * 0.16, 0.55, 0.22, 'sine'); });
+      // Soft triangle layer on the top note for body.
+      playNote(1046.5, 0.48, 0.55, 0.10, 'triangle');
+      return;
+    }
+    if (name === 'boss_victory') {
+      // Five-note rise E4 → G4 → B4 → E5 → B5. Deeper, triumphant,
+      // ~1s. Mix of sine + triangle for body without harshness.
+      const notes = [329.63, 392.0, 493.88, 659.25, 987.77];
+      notes.forEach(function (f, i) {
+        playNote(f, i * 0.14, 0.55, 0.20, 'sine');
+        playNote(f * 0.5, i * 0.14, 0.55, 0.08, 'triangle');
+      });
+      return;
+    }
+    if (name === 'achievement') {
+      // Three-note triad A4 → C#5 → E5. Small, celebratory, ~300ms.
+      const notes = [440.0, 554.37, 659.25];
+      notes.forEach(function (f, i) { playNote(f, i * 0.08, 0.22, 0.18, 'sine'); });
+      return;
+    }
+    if (name === 'stat_chime') {
+      // Three-note ascending chime, slightly brighter than achievement
+      // because stat milestones are rarer (Lv5/10/15/20 only).
+      // E5 → A5 → C#6. ~350ms.
+      const notes = [659.25, 880.0, 1108.73];
+      notes.forEach(function (f, i) { playNote(f, i * 0.09, 0.24, 0.16, 'sine'); });
+      return;
+    }
+    // Unknown name — no-op (priority gate already returned early).
+  }
 
   // ── FEATURE 1: CHECK SOUND ───────────────────────────────
   function playCheckSound() {
@@ -35186,6 +35351,10 @@
 
   // ── WELCOME SCREEN ────────────────────────────────────────
   function playWelcomeSound() {
+    // v3 Phase 1z.278B — Respect the global sound preference. Prior
+    // to this fix, the welcome screen would chime even with
+    // hb_sound='off' (inconsistent with every other playback site).
+    if (!soundEnabled) return;
     try {
       const ac  = new (window.AudioContext || window.webkitAudioContext)();
       // Layer 1: rising whoosh

@@ -4,7 +4,101 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.277D Frontend: WLT souls reward bonus (read this first)
+## Jun 3, 2026 — 1z.278B Frontend: High-impact sound chimes (read this first)
+
+**TL;DR.** Fills the biggest silent emotional moments in the app with synthesized Web Audio chimes. Rank-up modal, boss defeat, achievement unlock, and stat milestone levels (Lv5/10/15/20 only) now play a sound. Pure synthesis — zero audio files added. New central `playSfx(name)` helper consolidates the new sites onto a shared `AudioContext` and adds an 800ms priority gate so multi-event taps don't produce a chime cascade. Two existing ungated playback sites (welcome screen, Perfect Day chime) are fixed to respect the existing `hb_sound` toggle.
+
+### What changed
+
+| Surface | Before | After |
+|---|---|---|
+| Rank-up modal (`showRankUpScreen`) | Silent (only vibrate + particles) | `playSfx('rank_fanfare')` — four-note C5→E5→G5→C6 arpeggio, ~800ms |
+| Boss defeat (`announceKillAndDrop`) | Silent on kill; rare/ultra drops chimed later | `playSfx('boss_victory')` at function entry — five-note E4→G4→B4→E5→B5 rise, ~1s |
+| Achievement (`showAchievementPopup`) | Silent (only vibrate) | `playSfx('achievement')` — A4→C#5→E5 triad, ~300ms |
+| Stat level-up (`showStatLevelUp`) | Silent (only vibrate) | `playSfx('stat_chime')` ONLY for Lv5/10/15/20 — E5→A5→C#6 ascending, ~350ms. Lv2/3/4 stay silent. |
+| `playWelcomeSound` | Ignored `hb_sound` toggle | Now respects `soundEnabled` |
+| Perfect Day chime (`:16699`) | Ignored `hb_sound` toggle | Now respects `soundEnabled` |
+
+### Architecture
+
+New helper `playSfx(name)` (`app.js` near `playCheckSound`):
+
+- **One shared `AudioContext`** (`_sharedSfxCtx`), lazily created on first call. Avoids the per-fire context allocation that older bespoke functions still use.
+- **Priority table** (`SFX_PRIORITY`): rank_fanfare=5, boss_victory=5, ultra_drop=5, achievement=4, rare_drop=4, compound=4, stat_chime=3, subrank_blip=3, boss_engage=2, perfect_day=2, habit_seal=1.
+- **800ms anti-spam gate**: if `(now - lastSfxAt) < 800` AND `priority < lastSfxPriority`, drop silently. Lets rank-up override trailing stat-up cascades from a multi-level habit tap.
+- **`soundEnabled` gate**: respects `hb_sound` localStorage toggle before any work.
+- **iOS unlock**: resumes the suspended `AudioContext` on first call after gesture (rank-ups, kills, achievements all run from user-initiated taps so gesture is satisfied).
+- **Try/catch everywhere**: failure is silent; game state never depends on audio success.
+
+Existing bespoke playback functions (`playCheckSound`, `playFanfare`, `playAwakeningFanfare`, `_relicChime`, `_playSigilBloomSfx`, `_cinPlaySfx`, `playPRChime`, `playPRTakeover`, `playComebackChime`) are **NOT refactored** in this phase — they stay on their per-fire contexts. The new helper is purely additive.
+
+### What's NOT changed
+
+- No rank / stat / XP / souls math.
+- No boss conditions, kill detection, or drop logic.
+- No HealthKit / scheduling / Guild / public-event behavior.
+- No CSS.
+- No new storage keys.
+- No backend / D1 / Worker / Codemagic.
+- No new audio assets — repo still ships **0 audio files**.
+- `hb_sound` toggle semantics unchanged.
+- Existing chimes (`playCheckSound` on habit tap, `_relicChime` on rare/ultra drop, `_cinPlaySfx` onboarding, `playFanfare` compound, etc.) unchanged.
+- Sub-rank toast and boss engage explicitly NOT given sounds in this phase (deferred per 1z.278A-Prep Option B scope).
+- WLT Merchant bonus ledger row explicitly NOT given a sound (bundled into `boss_victory` emotional beat to avoid per-kill double-chime).
+
+### Sound design specs (locked from 1z.278A-Prep §9)
+
+| Sound | Notes | Total length | Style |
+|---|---|---:|---|
+| `rank_fanfare` | C5→E5→G5→C6 + triangle on top note | ~800ms | Bright, premium |
+| `boss_victory` | E4→G4→B4→E5→B5 + half-octave triangle | ~1000ms | Triumphant, deeper |
+| `achievement` | A4→C#5→E5 sine triad | ~300ms | Small, celebratory |
+| `stat_chime` | E5→A5→C#6 ascending sine | ~350ms | Bright, milestone |
+
+All four use sine (+ optional triangle layer) with `linearRampToValueAtTime` attack + `exponentialRampToValueAtTime` decay. Same envelope style as existing chimes.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w159` |
+| `app.js?v=` | `612` |
+| `styles.css?v=` | `339` (unchanged — no CSS) |
+| `sw.js CACHE_VERSION` | `v5.498` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+| `DUELS_UI_HIDDEN` | `true` (preserved) |
+
+### Manual QA (w159)
+
+1. Settings → Sound ON.
+2. Trigger a rank-up (cross a major rank threshold). Confirm: rank_fanfare plays at modal open.
+3. Defeat a boss. Confirm: boss_victory plays at kill announcement, BEFORE drop reveal.
+4. If that kill drops a rare/ultra item, confirm `_relicChime` still plays during the later reveal (separate beat from victory chime).
+5. Unlock an achievement. Confirm: achievement chime plays.
+6. Cross stat Lv5/10/15/20 (e.g. complete enough VIT habits to reach the next bonus threshold). Confirm: stat_chime plays.
+7. Cross stat Lv2/3/4. Confirm: NO sound, only modal + vibrate.
+8. Multi-event tap (rank-up + ≥1 stat-up + maybe achievement from one habit completion). Confirm: only the rank-up fanfare plays cleanly; subsequent stat/achievement chimes within 800ms are suppressed by the priority gate.
+9. Toggle Settings → Sound OFF.
+10. Trigger rank-up, boss kill, achievement, stat milestone. Confirm: NO sounds.
+11. Trigger Perfect Day milestone with sound OFF. Confirm: NO chime (previously chimed despite toggle).
+12. Trigger welcome screen with sound OFF (fresh install path or reset). Confirm: NO welcome sound.
+13. Force an `AudioContext` failure (e.g. throw in DevTools). Confirm: app does NOT crash; rank-up modal still opens visually.
+14. Onboarding sounds (`_cinPlaySfx`) unchanged — first install plays the 7-kind cinematic flow normally.
+15. Habit tap chime (`playCheckSound`) still plays on completion.
+16. Compound popup chime (`playFanfare` / `playFanfareLockedIn`) still plays.
+17. PR / Comeback / Awakening chimes still play.
+18. `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved.
+19. `DUELS_UI_HIDDEN=true` preserved.
+
+### Rollback
+
+Single-commit revert removes: the `SFX_PRIORITY` table, `_getSfxCtx` / `playSfx` / `_sfxRender` helpers, the 4 `playSfx(...)` call sites, the 2 ungated-fix lines, and the knob bumps. No data implications.
+
+---
+
+## Jun 3, 2026 — 1z.277D Frontend: WLT souls reward bonus
 
 **TL;DR.** First real WLT mechanic. Boss kills now pay a small capped souls bonus scaled by WLT level. Reward-only (engage cost unchanged, drops unchanged, kill detection unchanged). Bonus is posted as a separate `earnSouls()` call so the souls ledger shows it as its own "Merchant bonus" row — never a silently inflated kill reward. Verified behavior still decides victory.
 
