@@ -6184,6 +6184,16 @@ footer {
   display: inline-flex;
   align-items: center;
   width: fit-content;
+  /* v3 Phase 1z.273I — defensive overflow guard. Even after 1z.273I's
+     pattern-detect shortcuts (M-F, Sa-Su), a 4-day mixed schedule
+     could still be wider than the compact habit card. Cap to card
+     width minus the 8px positioning gutter, force single-line, and
+     ellipsize anything that won't fit so the chip never wraps into
+     the XP chip beneath it. */
+  max-width: calc(100% - 8px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-top: 3px;
   padding: 2px 7px;
   border-radius: 999px;

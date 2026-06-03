@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w146';
+  const APP_BUILD_TAG = '2.2.5-w147';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11729,7 +11729,17 @@
   function scheduleDaysLabel(days) {
     if (!Array.isArray(days) || days.length === 0) return '';
     if (days.length === 7) return '';
-    // Preserve Mon→Sun order regardless of stored order.
+    // v3 Phase 1z.273I — common-pattern shortcuts so 5-day chips
+    // (e.g. M Tu W Th F) don't overflow compact cards. Match against
+    // an order-independent Set: weekdays → "M-F", weekends → "Sa-Su".
+    const set = new Set(days);
+    const isWeekdays = set.size === 5
+      && set.has('Mon') && set.has('Tue') && set.has('Wed')
+      && set.has('Thu') && set.has('Fri');
+    if (isWeekdays) return 'M-F';
+    const isWeekends = set.size === 2 && set.has('Sat') && set.has('Sun');
+    if (isWeekends) return 'Sa-Su';
+    // Otherwise: Mon→Sun-ordered middot-joined unambiguous labels.
     return ALL_DAYS
       .filter(d => days.includes(d))
       .map(d => _DAY_CHIP_LABEL[d] || d)
