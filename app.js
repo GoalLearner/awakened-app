@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w140';
+  const APP_BUILD_TAG = '2.2.5-w141';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11716,6 +11716,34 @@
     return days.includes(name);
   }
 
+  // v3 Phase 1z.273C — Return the next scheduled weekday label after
+  // today (PT-anchored) for a habit. Returns null when the habit is
+  // unscheduled (no `days` field or all 7 set) — those habits never
+  // hit the manual rest-day gate so a label is meaningless. Returns
+  // a long-form label ('Monday') for the toast; falls back to short
+  // form ('Mon') on Intl edge cases. Defensive fallback: 'soon'.
+  const _LONG_DAY_FOR_SHORT = {
+    Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday',
+    Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday',
+  };
+  function nextScheduledDayLabel(habit) {
+    if (!habit || !Array.isArray(habit.days) || habit.days.length === 0) return null;
+    if (habit.days.length === 7) return null;
+    const today = (typeof getTodayDayName === 'function') ? getTodayDayName() : null;
+    if (!today) return 'soon';
+    const todayIdx = ALL_DAYS.indexOf(today);
+    if (todayIdx < 0) return 'soon';
+    // Walk forward 1..7 days; first hit wins. Includes today+7 wrap
+    // so a single-day schedule (e.g. only Sun) eventually resolves.
+    for (let i = 1; i <= 7; i++) {
+      const candidate = ALL_DAYS[(todayIdx + i) % 7];
+      if (habit.days.includes(candidate)) {
+        return _LONG_DAY_FOR_SHORT[candidate] || candidate;
+      }
+    }
+    return 'soon';
+  }
+
   // ── NO ALCOHOL WEEKEND CHALLENGE ─────────────────────────
 
   // Returns { fri, sat, sun } date strings for the weekend containing today.
@@ -19183,6 +19211,25 @@
       try { Notif.onHabitCompleted(id); } catch (_) {}
       // Minimum enforcement for measurable habits
       const habit = habits.find(h => h.id === id);
+      // v3 Phase 1z.273C — Rest-day gate (manual completion only).
+      // The uncheck branch above is unconditional so corrections are
+      // always possible. Silent paths (HealthKit auto-verify) are
+      // gated upstream by 1z.273B and arrive here with silent:true,
+      // bypassing this gate. Habits with no `days` or all 7 days
+      // hit isScheduledToday's length-7 / no-field shortcut and pass
+      // through normally — only custom-scheduled habits gate.
+      if (!silent && habit && typeof isScheduledToday === 'function' && !isScheduledToday(habit)) {
+        const nextLabel = (typeof nextScheduledDayLabel === 'function')
+          ? nextScheduledDayLabel(habit)
+          : null;
+        const msg = nextLabel
+          ? ('Rest day — back on ' + nextLabel + '.')
+          : 'Rest day.';
+        try {
+          if (typeof showHabitToast === 'function') showHabitToast(msg);
+        } catch (_) {}
+        return;
+      }
       if (habit && !meetsMinimum(habit)) {
         // Tappable toast → opens Edit Habit straight to the goal stepper.
         // (Skip in silent mode — auto-verify shouldn't pop a CTA toast.)

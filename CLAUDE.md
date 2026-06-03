@@ -4,7 +4,100 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.273B Frontend: HealthKit auto-verify rest-day gate (read this first)
+## Jun 2, 2026 — 1z.273C Frontend: Manual tap rest-day gate (read this first)
+
+**TL;DR.** Adds a defensive rest-day gate inside `toggleHabit`'s completion path. If a user (or any caller) tries to complete a habit that has `habit.days` set to a subset (e.g. `['Mon','Wed','Fri']`) and today's PT weekday isn't in that subset, the gate short-circuits with a toast — no `check(id)`, no XP, no streak, no sound, no particles, no reward burst. **Uncheck path is unconditional** so corrections always work. Silent auto-verify paths bypass the gate (already gated upstream by 1z.273B). Daily habits (no `days` field or all 7) pass through normally.
+
+**Process note.** Frontend / logic-only. No UI, no CSS, no onboarding, no custom-habit-create. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no XP / rank / class / HealthKit / leaderboard / Social / Guild / boss / inventory / economy / auth changed. Only `toggleHabit` and one new helper.
+
+### What changed
+
+- **`nextScheduledDayLabel(habit)` helper** added next to `isScheduledOn` (line 11713). Returns a long-form weekday label (`'Monday'`, `'Tuesday'`, …) for the next scheduled day after today, walking 1..7 days forward with PT-anchored weekday names. Returns `null` for daily habits (no `days` or `length === 7`) so we never render a meaningless label. Defensive `'soon'` fallback.
+
+- **Gate inside `toggleHabit`** completion branch, inserted between the `habit` lookup and the `meetsMinimum` check (around line 19186). Pattern:
+  ```js
+  if (!silent && habit && !isScheduledToday(habit)) {
+    const nextLabel = nextScheduledDayLabel(habit);
+    const msg = nextLabel ? ('Rest day — back on ' + nextLabel + '.') : 'Rest day.';
+    showHabitToast(msg);
+    return;
+  }
+  ```
+
+### What gets gated, what doesn't
+
+| Path | Behavior |
+|---|---|
+| User tap on off-day habit (when reachable) | **GATED** — toast + return |
+| User tap on scheduled-today habit | **Passes** — completion + XP + streak + animations |
+| User tap on habit with no `days` field | **Passes** — `isScheduledToday` returns true via length-7 / no-field shortcut |
+| User tap on habit with all 7 days | **Passes** — same shortcut |
+| **Uncheck** of an already-checked habit | **Unconditional** — branch above the gate runs first, then returns |
+| HealthKit auto-verify (`silent: true`) | **Bypasses this gate** — already gated upstream by 1z.273B; `!silent` short-circuits this check |
+
+### Toast copy
+
+```
+Rest day — back on Wednesday.
+```
+
+For a 1-day-only schedule (e.g., a habit with `days: ['Sun']`), the helper walks forward and returns the same day label. For all 7 days (daily), the helper returns `null` and the gate never fires.
+
+### Why the gate sits between habit lookup and meetsMinimum
+
+Two reasons:
+
+1. **Pre-empts the goal-stepper prompt.** Without the gate, a Workout habit scheduled MWF tapped on a Tuesday with no minimum yet set would trigger the "Set your goal value" CTA toast — confusing UX. Rest-day check first.
+2. **Symmetric with the auto-verify gate (1z.273B).** Both gates run BEFORE any side-effect writes. False-positive correction / `clearAutoVerify` paths remain untouched — they live in the auto-verify functions, not in `toggleHabit`.
+
+### Reachability notes
+
+`renderHabits` already filters via `isScheduledToday` (line 16483) — off-day habits are hidden from the list, so most users can't even tap them. This gate is **defensive**: catches any external `toggleHabit` caller (e.g., notification action handler, deep link, DevTools, a future surface) that bypasses the hidden list. Net effect on UI today is small; correctness improvement is real.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w141` |
+| `app.js?v=` | `594` |
+| `styles.css?v=` | `333` (unchanged) |
+| `sw.js CACHE_VERSION` | `v5.480` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w141)
+
+1. Open a Workout habit, edit Days to `Mon / Wed / Fri`.
+2. On Tue/Thu/Sat/Sun, force-call `toggleHabit('<workoutId>', null)` from DevTools (or via any internal entry point).
+3. → Toast: `Rest day — back on <next scheduled day>.`
+4. Verify: habit NOT checked, no XP gained, no streak change, no sound, no particles.
+5. Uncheck a previously-checked habit on an off-day → still works (uncheck branch is unconditional).
+6. On Mon (scheduled day), `toggleHabit` completes normally with full reward chain.
+7. Habit without `habit.days` → completes normally on any day.
+8. Habit with all 7 days → completes normally.
+9. HealthKit auto-verify on off-day still respects 1z.273B gate (silent path bypasses manual gate; no double toast).
+10. Smoke: leaderboard, Bosses Slain card, Kill Log, Guild Notifications, Social all unchanged.
+
+### Rollback notes
+
+Single-commit revert restores 1z.273B behavior (auto-verify gated only). No data implications. `nextScheduledDayLabel` is read-only.
+
+### Confirmations
+
+- ✅ Frontend / logic-only
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload
+- ✅ Manual completion path gated for off-day habits
+- ✅ Uncheck path still always allowed (gate sits in the completion `else` branch only)
+- ✅ Silent auto-verify behavior from 1z.273B preserved
+- ✅ Daily habits (no `days`) still work
+- ✅ All-7-day habits still work
+- ✅ No UI / render / CSS / onboarding / custom-create changes
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.273B Frontend: HealthKit auto-verify rest-day gate
 
 **TL;DR.** Adds a 4-line schedule gate in front of each of the four HealthKit auto-verify seal sites (Walk / Sleep / Sleep before midnight / Workout). If the matched habit has `habit.days` set to a subset (e.g. `['Mon','Wed','Fri']`) and today's PT weekday isn't in that subset, the auto-verifier writes a privacy-safe breadcrumb and **does not seal**. Habits without `habit.days` (or with all 7 days) continue auto-verifying daily — the existing `isScheduledToday` length-7 / no-field shortcut means zero behavior change for any habit not yet on a schedule.
 
