@@ -4,7 +4,97 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 2, 2026 — 1z.273E Frontend: defaultDays for training habits (read this first)
+## Jun 2, 2026 — 1z.273F Frontend: Schedule chip on habit cards (read this first)
+
+**TL;DR.** Switches the existing pre-1z.273F multi-pill schedule chip on each habit card to a single, unambiguous middot-separated chip (`M · W · F`). Daily habits (no `days` or all 7) render NO chip — only special schedules surface. Disambiguates Tue/Thu (`Tu` / `Th`) and Sat/Sun (`Sa` / `Su`) so users can read the cadence at a glance.
+
+**Process note.** Frontend / visual + render-side label only. No backend / D1 / migration / Worker / Codemagic / archive / upload. No streak math, no HealthKit gate changes (1z.273B), no manual gate changes (1z.273C), no custom create UI changes (1z.273D), no defaultDays changes (1z.273E), no XP / rank / class / boss / Social / Guild / leaderboard / inventory / economy / auth logic changed.
+
+### Audit findings
+
+The schedule-chip system **already existed end-to-end** before this phase:
+- `buildSchedPills(habit)` at line 17698 was already in the render path (called from `buildItem` line 17845).
+- Multi-pill markup `<span class="sched-pill">` per active day, styled via `.sched-pill` CSS (line 6167).
+
+Two real issues:
+1. **Ambiguous labels.** `DAY_LABELS = ['M','T','W','T','F','S','S']` collided on Tue/Thu and Sat/Sun — you couldn't tell `T W T` apart from `Tue Wed Thu`.
+2. **Visual style.** Brief asked for the single-chip `M · W · F` format that reads as metadata, not multiple separate pills.
+
+### What changed
+
+- **New pure helper `scheduleDaysLabel(days)`** at ~line 11719 (next to `isScheduledToday`). Returns `''` for missing / `length === 0` / `length === 7` so daily habits never render a chip. Returns middot-joined unambiguous label preserving Mon→Sun order regardless of stored order. No Date, no DOM, no mutation.
+- **Unambiguous label map** `_DAY_CHIP_LABEL = { Mon:'M', Tue:'Tu', Wed:'W', Thu:'Th', Fri:'F', Sat:'Sa', Sun:'Su' }`.
+- **`buildSchedPills` rewritten** (line 17698) to emit a single `<div class="habit-schedule-chip">M · W · F</div>` via the helper. Same call site in `buildItem` — drop-in replacement, no markup-position change.
+- **Fingerprint invalidation on schedule save** (line 23881) — added `_lastHabitsRenderFingerprint = null` before `renderHabits()` so a same-visibility schedule edit (e.g. `MWF → MTWF` on a Mon view) still triggers chip rebuild. Otherwise the 1z.214 fingerprint `(id, checked, streakBand, autoVerify)` would bail the rebuild and leave the chip stale until the next state change.
+- **CSS**: new `.habit-schedule-chip` rule (gold-tinted, rounded pill, uppercase, letter-spaced — subordinate to the habit name). Anchored via the existing bottom-left absolute-position rule (added the new class as an extra selector beside the legacy `.habit-sched-pills` dead reference and `.na-challenge-badge`).
+- **Old `.sched-pills` / `.sched-pill` CSS** retained for diff hygiene — unused by the new chip but harmless (no other emitter references them; cleanup safe but deferred).
+
+### Logic sanity check (per brief)
+
+| Q | A |
+|---|---|
+| Should daily habits show a chip? | **No** — returns `''` for missing `days` |
+| Should all-7-day habits show a chip? | **No** — returns `''` for `length === 7` |
+| Should scheduled subset (1-6 days) show a chip? | **Yes** |
+| What should missing `habit.days` mean? | **Daily, no chip** |
+| What should `length === 7` mean? | **Daily, no chip** |
+| What should defensive `length === 0` do? | **Nothing rendered** — empty `''` |
+| Will chip only appear on scheduled days? | **Yes** — `renderHabits` hides off-day habits via `isScheduledToday`; chip ships only with rendered cards |
+| Could it confuse users? | No more than the existing hide-off-day behavior already does |
+
+### Performance
+
+- `scheduleDaysLabel(days)` is a pure helper: 2 conditionals + 1 `.filter` + 1 `.map` + 1 `.join`. ~7 operations per habit per render. Cheap.
+- No new Date / DOM query / per-card listener.
+- `buildSchedPills` retains its original signature and call site so 1z.214 perf invariants are preserved.
+- Fingerprint invalidation is a one-line nudge **inside the schedule-save handler** (cold path), not in the toggle/render hot paths.
+
+### Knobs
+
+| Knob | Value |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w144` |
+| `app.js?v=` | `597` |
+| `styles.css?v=` | `335` |
+| `sw.js CACHE_VERSION` | `v5.483` |
+| `auth.js?v=` | `21` (unchanged) |
+| `simulated-leaderboard.js?v=` | `7` (unchanged) |
+| `QA_UNLOCK_C_RANK_DUNGEONS` | `false` (preserved) |
+
+### Manual QA checklist (w144)
+
+1. Create or open a custom habit with M/W/F → habit card shows `M · W · F` chip in gold-tinted rounded pill, bottom-left of card.
+2. Create a custom habit with all 7 days selected → no chip rendered.
+3. Workout (defaultDays M/W/F from 1z.273E) → shows `M · W · F`.
+4. Cardio workout → shows `Tu · Th · Sa` (no Tue/Thu ambiguity).
+5. Sprint session → shows `Tu · Sa`.
+6. Mobility & Stretching → shows `M · W · F · Su`.
+7. Daily Walk → no chip.
+8. Sleep → no chip.
+9. Open Workout, edit schedule to Tue/Thu, save → chip immediately updates to `Tu · Th` (no day-rollover required).
+10. Smoke: streak/XP-chip/check button/icon/reward burst/sealed banner all still render correctly. No layout clipping on iPhone.
+11. iOS Reduce Motion / dark mode unchanged.
+12. Card-rebuild on toggle still fires (1z.214 perf path).
+
+### Rollback notes
+
+Single-commit revert restores the pre-1z.273F multi-pill chip. No data implications: chip is render-only.
+
+### Confirmations
+
+- ✅ Frontend / render-side label only
+- ✅ No backend / D1 / migration / Worker / Codemagic / archive / upload
+- ✅ Subset-scheduled habits get a single unambiguous chip
+- ✅ Daily / all-7 habits stay uncluttered (no chip)
+- ✅ Chip updates immediately on schedule sheet save
+- ✅ HealthKit gate (1z.273B), manual gate (1z.273C), custom create (1z.273D), defaultDays (1z.273E) untouched
+- ✅ Streak math, daily denominator, render fingerprint structure unchanged
+- ✅ 1z.214 Habits perf invariants preserved
+- ✅ `QA_UNLOCK_C_RANK_DUNGEONS = false` preserved
+
+---
+
+## Jun 2, 2026 — 1z.273E Frontend: defaultDays for training habits
 
 **TL;DR.** Adds a `defaultDays` field to four training habits in `DEFAULT_HABITS` so newly-created Workout / Cardio / Sprint / Mobility habits start with sensible recovery cadences instead of silently becoming daily. Daily Walk, Sleep, Sleep before midnight, Hydrate, Cold shower, Protein goal, etc. intentionally stay daily — they're lifestyle floors, not training cycles. Existing persisted habits are untouched. Users can override via the existing schedule sheet or the 1z.273D custom Days row.
 

@@ -6175,6 +6175,28 @@ footer {
   letter-spacing: 0.02em;
 }
 
+/* v3 Phase 1z.273F — Single-chip schedule badge on habit cards.
+   Renders only for subset schedules (1–6 days). Daily habits never
+   emit this element. Uses unambiguous middot-separated labels
+   (M · W · F, Tu · Th · Sa, etc.). Subordinate visual weight so it
+   reads as metadata, not a CTA. */
+.habit-schedule-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(245, 184, 66, 0.86);
+  border: 1px solid rgba(245, 184, 66, 0.24);
+  background: rgba(245, 184, 66, 0.07);
+}
+
 .sched-daily {
   font-size: 9px;
   font-weight: 600;
@@ -20037,14 +20059,18 @@ body.reveal-locked { overflow: hidden; }
 .habit-item.codex .habit-more-btn:active { transform: scale(0.92); }
 
 /* Schedule pills + No-alcohol challenge badge — keep visible but
-   subordinate. Anchor bottom-right corner of card. */
+   subordinate. Anchor bottom-left corner of card.
+   v3 Phase 1z.273F — added `.habit-schedule-chip` (the new
+   1z.273F single-chip class). The legacy `.habit-sched-pills`
+   selector here was a dead reference (actual class emitted was
+   `.sched-pills`), preserved for diff hygiene. */
+.habit-item.codex .habit-schedule-chip,
 .habit-item.codex .habit-sched-pills,
 .habit-item.codex .na-challenge-badge {
   position: absolute;
   bottom: 4px;
   left: 4px;
   z-index: 2;
-  font-size: 8px;
   pointer-events: none;
 }
 

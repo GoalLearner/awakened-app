@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w143';
+  const APP_BUILD_TAG = '2.2.5-w144';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11716,6 +11716,26 @@
     return days.includes(name);
   }
 
+  // v3 Phase 1z.273F — Compact unambiguous schedule label for habit
+  // cards. Returns "" for daily habits (no `days` or all 7) so the
+  // chip never clutters a daily card. Returns "" defensively for
+  // `days: []`. Single-letter labels would collide (T = Tue/Thu,
+  // S = Sat/Sun); we use 1-2 letters: M / Tu / W / Th / F / Sa / Su,
+  // joined by middot. Pure function — no Date, no DOM, no mutation.
+  const _DAY_CHIP_LABEL = {
+    Mon: 'M', Tue: 'Tu', Wed: 'W', Thu: 'Th',
+    Fri: 'F', Sat: 'Sa', Sun: 'Su',
+  };
+  function scheduleDaysLabel(days) {
+    if (!Array.isArray(days) || days.length === 0) return '';
+    if (days.length === 7) return '';
+    // Preserve Mon→Sun order regardless of stored order.
+    return ALL_DAYS
+      .filter(d => days.includes(d))
+      .map(d => _DAY_CHIP_LABEL[d] || d)
+      .join(' · ');
+  }
+
   // v3 Phase 1z.273C — Return the next scheduled weekday label after
   // today (PT-anchored) for a habit. Returns null when the habit is
   // unscheduled (no `days` field or all 7 set) — those habits never
@@ -17695,12 +17715,18 @@
     });
   }
 
+  // v3 Phase 1z.273F — Schedule chip on habit cards. The old multi-pill
+  // emission (e.g. "M T W" with single-letter Tue/Thu/Sat/Sun
+  // collisions) is retired in favor of a single chip rendering an
+  // unambiguous middot-separated label (e.g. "M · W · F"). Daily
+  // habits — no `days` field or all 7 selected — render NO chip so
+  // the card stays uncluttered, per the audited product rule that
+  // chips highlight special schedules. scheduleDaysLabel() returns
+  // "" in those cases. Defensively renders nothing for length-0.
   function buildSchedPills(habit) {
-    if (!habit.days || habit.days.length === 7) return '';
-    const pills = ALL_DAYS
-      .map((d, i) => habit.days.includes(d) ? '<span class="sched-pill">' + DAY_LABELS[i] + '</span>' : '')
-      .join('');
-    return '<div class="sched-pills">' + pills + '</div>';
+    const label = scheduleDaysLabel(habit && habit.days);
+    if (!label) return '';
+    return '<div class="habit-schedule-chip">' + label + '</div>';
   }
 
   // Difficulty colour lookup for card left-border glow
@@ -23877,6 +23903,14 @@
         try { save(); } catch (e) { try { console.warn('[sched] save failed', e); } catch (_) {} }
       }
       closeSchedulePicker();
+      // v3 Phase 1z.273F — invalidate the 1z.214 fingerprint so the
+      // habit-schedule-chip refreshes on edit. The fingerprint reads
+      // (id, checked, streakBand, autoVerify) only; a schedule edit
+      // that doesn't shift today-visibility (e.g. MWF → MTWF when
+      // viewing on Mon) would otherwise bail rebuild and leave the
+      // chip stale until the next state change. One-line nudge —
+      // does not touch the hot 214-perf path on toggle/render.
+      try { _lastHabitsRenderFingerprint = null; } catch (_) {}
       // v3 Phase 1z.97 — skipSideEffects (HealthKit cascade fix).
       try { renderHabits({ skipSideEffects: true }); } catch (e) { try { console.warn('[sched] post-save render failed', e); } catch (_) {} }
     });
