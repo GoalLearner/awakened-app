@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w137';
+  const APP_BUILD_TAG = '2.2.5-w138';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2413,6 +2413,246 @@
       art_path: 'assets/items/crown-of-the-ascendant.png',
       bonuses:       { str: 7, vit: 5, int: 3, focus: 3, will: 4, wlt: 0 },
       bonus_ranges:  { str: [5,9], vit: [3,7], int: [2,4], focus: [2,4], will: [3,5], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // v3 Phase 1z.271D-B — B-rank boss drops (15 items)
+    //
+    // Pattern: each B boss gets 3 common + 1 rare + 1 ultra (matches
+    // E/D/C precedent). Stat budgets follow the audited progression:
+    //   B common Σ=8 · B rare Σ=18 · B ultra Σ=28
+    //
+    // Per-audit (1z.271D-A) priorities for B-rank loot:
+    //   - Fill underfilled GLOVES slot (4 items → 8)
+    //   - Fill RING rare gap (0 rares → 1)
+    //   - Help thin INT supply (22 → 39 total points)
+    //   - Recover WILL pool (47 → 112)
+    //   - Controlled VIT (already dominant)
+    //   - Avoid plate (overweight from body/legs aliasing)
+    //   - No WLT bonuses — Wealth has no combat role yet and will be
+    //     addressed in a future phase when WLT has gameplay function
+    //
+    // Art: assets/items/<id>.png paths are placeholders. The existing
+    // 404 handler in setModalCardArt / Pokédex tile (1z.270 fallback
+    // pattern, same as the v2.1 content patch) gracefully degrades to
+    // slot emoji + rarity gradient. Real PNGs can be added later
+    // without re-touching item definitions.
+    // ═══════════════════════════════════════════════════════════════
+
+    // ── The Forge of Ten Thousand Days (B, Aggressor STR/FOCUS) ──
+    forge_blackened_handwraps: {
+      id: 'forge_blackened_handwraps',
+      name: 'Forge-Blackened Handwraps',
+      slot: 'gloves',
+      source_boss: 'the_forge_of_ten_thousand_days',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'Wraps soaked through with soot from a thousand silent strikes. The leather remembers the rhythm.',
+      art_path: 'assets/items/forge_blackened_handwraps.png',
+      bonuses:       { str: 4, vit: 0, int: 0, focus: 3, will: 1, wlt: 0 },
+      bonus_ranges:  { str: [3,5], vit: [0,0], int: [0,0], focus: [2,4], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    ember_anvil_circlet: {
+      id: 'ember_anvil_circlet',
+      name: 'Ember-Anvil Circlet',
+      slot: 'helm',
+      source_boss: 'the_forge_of_ten_thousand_days',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'A band of dark steel still warm from the anvil. It tightens with every strike unanswered.',
+      art_path: 'assets/items/ember_anvil_circlet.png',
+      bonuses:       { str: 3, vit: 1, int: 0, focus: 4, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [2,4], vit: [0,2], int: [0,0], focus: [3,5], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    coalstep_band: {
+      id: 'coalstep_band',
+      name: 'Coalstep Band',
+      slot: 'ring',
+      source_boss: 'the_forge_of_ten_thousand_days',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'A simple iron ring marked with the soot of ten thousand days. The smith who wore it never missed the door.',
+      art_path: 'assets/items/coalstep_band.png',
+      bonuses:       { str: 4, vit: 0, int: 0, focus: 3, will: 1, wlt: 0 },
+      bonus_ranges:  { str: [3,5], vit: [0,0], int: [0,0], focus: [2,4], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    hammerfall_warmaul: {
+      id: 'hammerfall_warmaul',
+      name: 'Hammerfall Warmaul',
+      slot: 'weapon',
+      source_boss: 'the_forge_of_ten_thousand_days',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'A two-handed maul whose head is the broken anvil of a forge that lasted a generation. Each strike is a vow.',
+      art_path: 'assets/items/hammerfall_warmaul.png',
+      bonuses:       { str: 11, vit: 0, int: 0, focus: 5, will: 2, wlt: 0 },
+      bonus_ranges:  { str: [9,13], vit: [0,0], int: [0,0], focus: [3,7], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    gauntlets_of_ten_thousand_days: {
+      id: 'gauntlets_of_ten_thousand_days',
+      name: 'Gauntlets of Ten Thousand Days',
+      slot: 'gloves',
+      source_boss: 'the_forge_of_ten_thousand_days',
+      rarity: 'ultra_rare',
+      tier: 'B',
+      flavor: 'Forged across the lifetime of one smith who never missed a day at the bellows. Best in slot — discipline made into steel.',
+      art_path: 'assets/items/gauntlets_of_ten_thousand_days.png',
+      bonuses:       { str: 15, vit: 0, int: 0, focus: 8, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [12,18], vit: [0,0], int: [0,0], focus: [6,10], will: [3,7], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Vow Keeper (B, Sustainer VIT/WILL) ───────────────
+    candlekeepers_charm: {
+      id: 'candlekeepers_charm',
+      name: "Candlekeeper's Charm",
+      slot: 'amulet',
+      source_boss: 'the_vow_keeper',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'A small pendant with a single unburned wick at its center. It hums faintly on the nights you keep your word.',
+      art_path: 'assets/items/candlekeepers_charm.png',
+      bonuses:       { str: 0, vit: 3, int: 0, focus: 1, will: 4, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [2,4], int: [0,0], focus: [0,2], will: [3,5], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    nightwatchers_gloves: {
+      id: 'nightwatchers_gloves',
+      name: "Nightwatcher's Gloves",
+      slot: 'gloves',
+      source_boss: 'the_vow_keeper',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'Soft gloves stitched for those who count the dark hours and stay anyway.',
+      art_path: 'assets/items/nightwatchers_gloves.png',
+      bonuses:       { str: 0, vit: 2, int: 0, focus: 2, will: 4, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [1,3], int: [0,0], focus: [1,3], will: [3,5], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    mantle_of_kept_hours: {
+      id: 'mantle_of_kept_hours',
+      name: 'Mantle of Kept Hours',
+      slot: 'cape',
+      source_boss: 'the_vow_keeper',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'A heavy cape woven from the gray of unbroken nights. It grows warmer the longer the count is held.',
+      art_path: 'assets/items/mantle_of_kept_hours.png',
+      bonuses:       { str: 0, vit: 3, int: 0, focus: 2, will: 3, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [2,4], int: [0,0], focus: [1,3], will: [2,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    ring_of_the_unbroken_vow: {
+      id: 'ring_of_the_unbroken_vow',
+      name: 'Ring of the Unbroken Vow',
+      slot: 'ring',
+      source_boss: 'the_vow_keeper',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'A silver band engraved with the seven marks of a week kept. The metal does not tarnish for those who do not break the chain.',
+      art_path: 'assets/items/ring_of_the_unbroken_vow.png',
+      bonuses:       { str: 0, vit: 5, int: 0, focus: 4, will: 9, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [3,7], int: [0,0], focus: [2,6], will: [7,11], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    amulet_of_the_kept_word: {
+      id: 'amulet_of_the_kept_word',
+      name: 'Amulet of the Kept Word',
+      slot: 'amulet',
+      source_boss: 'the_vow_keeper',
+      rarity: 'ultra_rare',
+      tier: 'B',
+      flavor: 'A pendant carved from a single piece of dark stone, bearing the keeper\'s own sigil. Best in slot — given only to those whose count outlasted the watcher.',
+      art_path: 'assets/items/amulet_of_the_kept_word.png',
+      bonuses:       { str: 0, vit: 8, int: 3, focus: 5, will: 12, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [6,10], int: [2,4], focus: [3,7], will: [10,14], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Patient Flame (B, Discipline FOCUS/WILL/INT) ─────
+    emberstep_boots: {
+      id: 'emberstep_boots',
+      name: 'Emberstep Boots',
+      slot: 'boots',
+      source_boss: 'the_patient_flame',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'Soles pressed by a pilgrim who walked toward something quiet for ten thousand days.',
+      art_path: 'assets/items/emberstep_boots.png',
+      bonuses:       { str: 0, vit: 0, int: 1, focus: 4, will: 3, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [0,0], int: [0,2], focus: [3,5], will: [2,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    waiting_flame_signet: {
+      id: 'waiting_flame_signet',
+      name: 'Waiting Flame Signet',
+      slot: 'ring',
+      source_boss: 'the_patient_flame',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'A ring set with a small stone that warms when the wearer is close to the count, and cools when they are not.',
+      art_path: 'assets/items/waiting_flame_signet.png',
+      bonuses:       { str: 0, vit: 0, int: 2, focus: 3, will: 3, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [0,0], int: [1,3], focus: [2,4], will: [2,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    pilgrims_coal_wraps: {
+      id: 'pilgrims_coal_wraps',
+      name: "Pilgrim's Coal Wraps",
+      slot: 'gloves',
+      source_boss: 'the_patient_flame',
+      rarity: 'common',
+      tier: 'B',
+      flavor: 'Wraps darkened by the coal carried for one last fire each evening. The hands beneath them have learned to wait.',
+      art_path: 'assets/items/pilgrims_coal_wraps.png',
+      bonuses:       { str: 0, vit: 1, int: 1, focus: 3, will: 3, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [0,2], int: [0,2], focus: [2,4], will: [2,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    boots_of_the_long_road: {
+      id: 'boots_of_the_long_road',
+      name: 'Boots of the Long Road',
+      slot: 'boots',
+      source_boss: 'the_patient_flame',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'Heavy travel boots once worn by a pilgrim who reached the end of every road she set out on. They do not measure haste, only return.',
+      art_path: 'assets/items/boots_of_the_long_road.png',
+      bonuses:       { str: 0, vit: 2, int: 3, focus: 7, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [1,3], int: [2,4], focus: [5,9], will: [4,8], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    ember_ledger_of_the_patient_flame: {
+      id: 'ember_ledger_of_the_patient_flame',
+      name: 'Ember Ledger of the Patient Flame',
+      slot: 'amulet',
+      source_boss: 'the_patient_flame',
+      rarity: 'ultra_rare',
+      tier: 'B',
+      flavor: 'A small ember held inside an obsidian frame, etched with every day the wearer reached the count. Best in slot — the flame keeps the ledger so you do not have to.',
+      art_path: 'assets/items/ember_ledger_of_the_patient_flame.png',
+      bonuses:       { str: 0, vit: 3, int: 7, focus: 10, will: 8, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [2,4], int: [5,9], focus: [8,12], will: [6,10], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
