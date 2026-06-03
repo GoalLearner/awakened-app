@@ -1150,6 +1150,16 @@
         <div id="vn-reminder-display" class="vn-reminder-display"></div>
       </div>
 
+      <!-- v3 Phase 1z.273J — Schedule row. Mirrors the REMINDER row
+           pattern so it visually fits the existing detail sheet.
+           "Every day" for daily / all-7 habits, compact label
+           ("Mon · Wed · Fri", "M-F", "Sa-Su") for subset schedules.
+           Populated by populateHabitInfoBlock(). -->
+      <div class="vn-reminder-section">
+        <div class="vn-section-label">SCHEDULE</div>
+        <div id="vn-schedule-display" class="vn-reminder-display"></div>
+      </div>
+
       <!-- System-managed message — shown for read-only auto-verify habits
            (Daily walk, Sleep, Sleep before midnight per v2.0 policy).
            Body content is filled dynamically by openNoteModal based on
@@ -2766,7 +2776,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=600"></script>
+  <script src="app.js?v=601"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3187,7 +3197,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W147</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W148</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

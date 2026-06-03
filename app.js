@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w147';
+  const APP_BUILD_TAG = '2.2.5-w148';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17725,18 +17725,17 @@
     });
   }
 
-  // v3 Phase 1z.273F — Schedule chip on habit cards. The old multi-pill
-  // emission (e.g. "M T W" with single-letter Tue/Thu/Sat/Sun
-  // collisions) is retired in favor of a single chip rendering an
-  // unambiguous middot-separated label (e.g. "M · W · F"). Daily
-  // habits — no `days` field or all 7 selected — render NO chip so
-  // the card stays uncluttered, per the audited product rule that
-  // chips highlight special schedules. scheduleDaysLabel() returns
-  // "" in those cases. Defensively renders nothing for length-0.
+  // v3 Phase 1z.273F — Schedule chip on habit cards.
+  // v3 Phase 1z.273J — Chip removed from the habit card; on compact
+  // cards it overlapped the XP chip and even the chip-overflow guard
+  // (1z.273I) wasn't enough to make 4-day mixed schedules read
+  // cleanly. The schedule now lives on the View Note / habit detail
+  // sheet (mirroring the REMINDER row pattern) — same data, calmer
+  // surface. buildSchedPills always returns '' so existing callers
+  // are safe to leave in place.
   function buildSchedPills(habit) {
-    const label = scheduleDaysLabel(habit && habit.days);
-    if (!label) return '';
-    return '<div class="habit-schedule-chip">' + label + '</div>';
+    void habit; // signature preserved for any future caller
+    return '';
   }
 
   // Difficulty colour lookup for card left-border glow
@@ -31574,6 +31573,28 @@
 
     const total = document.getElementById(prefix + '-total');
     if (total) total.textContent = computeTotalCompletionsForHabit(habit);
+
+    // v3 Phase 1z.273J — Schedule row. Same pattern as REMINDER; only
+    // the View Note sheet markup carries the element. "Every day"
+    // for daily / all-7 habits; uses the compact 1z.273F/I label
+    // ("Mon · Wed · Fri", "M-F", "Sa-Su") for subset schedules. Reuses
+    // the .vn-reminder-display--set / --none classes so the visual
+    // matches the REMINDER row above it.
+    const schedEl = document.getElementById(prefix + '-schedule-display');
+    if (schedEl) {
+      const _schedLabel = (typeof scheduleDaysLabel === 'function')
+        ? scheduleDaysLabel(habit && habit.days)
+        : '';
+      if (_schedLabel) {
+        schedEl.textContent = _schedLabel;
+        schedEl.classList.add('vn-reminder-display--set');
+        schedEl.classList.remove('vn-reminder-display--none');
+      } else {
+        schedEl.textContent = 'Every day';
+        schedEl.classList.add('vn-reminder-display--none');
+        schedEl.classList.remove('vn-reminder-display--set');
+      }
+    }
 
     // Reminder state — only the View Note sheet (prefix="vn") has this
     // section in the markup; History info popup (prefix="hi") doesn't.
