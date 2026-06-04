@@ -1,5 +1,5 @@
 /**
- * Discipline Duels v1 (v3 Phase 1x) — friends handler.
+ * Friends handler (v3 Phase 1x, retitled by 1z.279 Duels retirement).
  *
  *   GET    /v1/friends                 — list (friends + incoming + outgoing)
  *   POST   /v1/friends/request         — send a friend request by alias
@@ -485,23 +485,9 @@ export async function handleFriendsRemove(
   return jsonOk({ ok: true, removed: true });
 }
 
-// Shared helper used by duels.ts to verify two users are accepted friends.
-export async function areAcceptedFriends(
-  env: Env,
-  userIdA: string,
-  userIdB: string,
-): Promise<boolean> {
-  const row = await env.DB.prepare(
-    `SELECT 1 FROM friends
-      WHERE status = 'accepted'
-        AND ((requester_user_id = ? AND recipient_user_id = ?)
-          OR (requester_user_id = ? AND recipient_user_id = ?))
-      LIMIT 1`,
-  )
-    .bind(userIdA, userIdB, userIdB, userIdA)
-    .first();
-  return !!row;
-}
-
-// Shared helper exported for duels.ts (alias resolution).
-export { findUserByAlias, validateAliasInput, normalizeAlias };
+// v3 Phase 1z.279 — Duels permanently retired. The areAcceptedFriends
+// helper and the findUserByAlias/validateAliasInput/normalizeAlias
+// re-exports both used to be consumed by duels.ts (gone in Phase 3),
+// and nothing else imports them — removed. Internal callers within
+// this file (the existing /v1/friends/request handler) still use
+// validateAliasInput and findUserByAlias directly.

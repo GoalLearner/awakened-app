@@ -4,7 +4,41 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
-## Jun 3, 2026 — 1z.278B Frontend: High-impact sound chimes (read this first)
+## Jun 4, 2026 — 1z.279 Duels/PvP subsystem permanently retired (READ THIS FIRST)
+
+**TL;DR.** The entire Duels/PvP subsystem has been permanently retired. Anywhere CLAUDE.md history below refers to "Discipline Duels v1," "Steps Duel Scoring," "Verified Duel Scoring Engine," `DUELS_UI_HIDDEN`, `renderDuelsSection`, `submitVerifiedEventsForDuels`, `Auth.fetchDuels`, etc. — **that code is gone**. The historical entries are preserved as record but no longer reflect the current state.
+
+### What's left
+
+| Layer | Disposition |
+|---|---|
+| Frontend `app.js` | ~3,955 LOC removed (Phase 1, commit `7966029`). Header duel pill, duel-souls settlement layer, duel-type constants, render functions, sync loops, toast helpers, steps duel progress, verified-events scoring engine — **all deleted**. Only `_drainVerifiedEventOutbox` survives so any pre-retirement queued events on upgraded devices flush once. |
+| Frontend `index.html` | -119 LOC (Phase 2, commit `9a3bb98`). `#duels-hero`, `#duel-detail-overlay`, `#duel-type-overlay`, `.social-section--duels` and all child DOM removed. Social tab is now Friends + Guild Activity only. |
+| Frontend `auth.js` | 9 of 10 duel-named Auth helpers deleted (Phase 6, this commit). Only `Auth.submitVerifiedEvents` remains for the legacy outbox drain path. |
+| Backend `duels.ts` | -736 LOC (Phase 3, commit `b64dc78`). 8 handlers deleted. Two preserved: `handleVerifiedEventsSubmit` and `handleDuelsResolve` (both still take traffic from pre-w160 clients during the transition window). |
+| Backend `index.ts` | All deleted-handler routes pruned. Sole surviving duel-shaped route is `POST /v1/duels/:id/resolve` via the new `DUELS_RESOLVE_RE` regex. |
+| Backend `friends.ts` | `areAcceptedFriends` export and the `findUserByAlias/validateAliasInput/normalizeAlias` re-export removed (Phase 6, this commit) — they were only consumed by the deleted handlers. |
+| Backend `env.ts` / `wrangler.toml` | `RL_DUELS_READ` binding removed. `RL_DUELS_WRITE` kept (still used by both preserved handlers). |
+| Backend tests | `duels.test.ts` deleted entirely (Phase 4, commit `fc71120`). Stale `RL_DUELS_READ` stubs swept from 7 other test files (Phase 4 + 6). |
+| Project shell | `QA-DUELS.md` deleted (Phase 6). `codemagic.yaml` freshness gates trimmed to match the new bundle shape. `styles.css` lost ~1370 LOC of dead duel CSS. `tests/e2e/smoke.spec.ts` lost the `G · Duels picker` block. |
+| SQL migrations | **Unchanged.** Migrations 0003/0004/0005/0006/0011 are immutable and stay in place. The `duels`, `duel_progress_snapshots`, `verified_events`, `user_souls_ledger` tables stay in D1 until the future cleanup migration drops them per `backend/migrations/RETIREMENT_PLAN.md`. **Production D1 was not touched.** |
+
+### Why the preserved endpoints stay
+
+- `POST /v1/verified-events` — upgraded clients still call this on cold launch + foreground via `_drainVerifiedEventOutbox` to flush any pre-retirement queued events (`hb_verified_event_outbox`). After that one-time drain the queue stays empty forever (producer is gone). Backend handler idempotent via `UNIQUE(user_id, client_event_id)`.
+- `POST /v1/duels/:id/resolve` — w160 frontend no longer calls this, but pre-w160 clients still in the wild during the transition window might. Handler is idempotent — re-calling on a completed duel returns the cached payload without DB writes.
+
+### Future cleanup
+
+When the transition window closes (typically 60-90 days post-w160 release), a single follow-up PR completes the retirement: drops the 4 duel tables via a new migration, deletes `backend/src/handlers/duels.ts` entirely, removes the last two preserved routes, removes `RL_DUELS_WRITE`, updates `seed-sim-users.ts`, and trims the residual `_classifySoulsEvent` legacy ledger handler in `app.js`. Full draft + gating criteria live in **`backend/migrations/RETIREMENT_PLAN.md`**.
+
+### Reading the rest of this doc
+
+Everything below this section was authored BEFORE the 1z.279 retirement. Phase entries that mention "Duels" / "Discipline Duels" / "Verified Duel" / etc. describe systems that no longer exist. Do not implement them. Do not test them. Treat them as archaeology.
+
+---
+
+## Jun 3, 2026 — 1z.278B Frontend: High-impact sound chimes
 
 **TL;DR.** Fills the biggest silent emotional moments in the app with synthesized Web Audio chimes. Rank-up modal, boss defeat, achievement unlock, and stat milestone levels (Lv5/10/15/20 only) now play a sound. Pure synthesis — zero audio files added. New central `playSfx(name)` helper consolidates the new sites onto a shared `AudioContext` and adds an 800ms priority gate so multi-event taps don't produce a chime cascade. Two existing ungated playback sites (welcome screen, Perfect Day chime) are fixed to respect the existing `hb_sound` toggle.
 

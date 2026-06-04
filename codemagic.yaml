@@ -246,56 +246,28 @@ workflows:
           # checkout, (c) a typo in the copy command pattern.
           #
           # Stable markers checked:
-          #   - "social-friends-body"  → Discipline Duels v1 markup landed
-          #   - "social-duels-body"    → Duels section markup landed
-          #   - "duels-page-header"    → v3 Phase 1x.1 Duels-tab redesign landed
+          #   - "social-friends-body"  → Social tab Friends section markup landed
           #
-          # Version markers checked against the index.html currently in
-          # the repo root — if those drift, www/ is stale.
+          # v3 Phase 1z.279 — Duels permanently retired. Removed all
+          # duel-specific freshness gates (renderDuelsSection,
+          # renderActiveDuelHero, DUEL_TYPES, duel-type-overlay,
+          # submitActiveStepsDuelProgress, submitDuelProgress,
+          # submitVerifiedEventsForDuels, cancelDuel,
+          # DUEL_VERB_BY_TYPE, outanchored, duels-page-header,
+          # social-duels-body). The outbox-drain marker
+          # (_drainVerifiedEventOutbox, hb_verified_event_outbox)
+          # is preserved because the outbox path survives the
+          # retirement for legacy queue flushing.
           set -e
           echo "── www/ freshness check ──"
           if ! grep -q "social-friends-body" www/index.html; then
             echo "FAIL: www/index.html missing #social-friends-body markup"
-            echo "      (Discipline Duels v1 markup NOT in bundle)"
             head -20 www/index.html
             exit 1
           fi
-          if ! grep -q "social-duels-body" www/index.html; then
-            echo "FAIL: www/index.html missing #social-duels-body markup"
-            exit 1
-          fi
-          # v3 Phase 1x.1 — Duels tab redesign. The page header is the
-          # marker that proves the new layout shipped (vs the old
-          # leaderboard-on-top Social tab).
-          if ! grep -q "duels-page-header" www/index.html; then
-            echo "FAIL: www/index.html missing .duels-page-header (Duels tab redesign)"
-            exit 1
-          fi
-          # Verify app.js itself has the new render functions. If
-          # index.html is fresh but app.js is stale, the static markup
-          # would render but the live data hooks wouldn't fire. We've
-          # also seen builds where the copy step writes a fresh
-          # index.html alongside an older app.js (filesystem race?).
           if ! grep -q "renderFriendsSection" www/app.js; then
             echo "FAIL: www/app.js missing renderFriendsSection function"
             echo "      (app.js is stale relative to index.html)"
-            exit 1
-          fi
-          if ! grep -q "renderDuelsSection" www/app.js; then
-            echo "FAIL: www/app.js missing renderDuelsSection function"
-            exit 1
-          fi
-          if ! grep -q "renderActiveDuelHero" www/app.js; then
-            echo "FAIL: www/app.js missing renderActiveDuelHero (v3 Phase 1x.1)"
-            exit 1
-          fi
-          # v3 Phase 1x.6 — Verified-Only Duel Types must be present.
-          if ! grep -q "DUEL_TYPES" www/app.js; then
-            echo "FAIL: www/app.js missing DUEL_TYPES constant (verified duel types pass)"
-            exit 1
-          fi
-          if ! grep -q "duel-type-overlay" www/index.html; then
-            echo "FAIL: www/index.html missing #duel-type-overlay markup"
             exit 1
           fi
           if ! grep -q "fetchFriends" www/auth.js; then
@@ -303,56 +275,30 @@ workflows:
             echo "      (auth.js is stale relative to index.html)"
             exit 1
           fi
-          # v3 Phase 1y — Steps Duel Scoring v1 must be present.
-          if ! grep -q "submitActiveStepsDuelProgress" www/app.js; then
-            echo "FAIL: www/app.js missing submitActiveStepsDuelProgress (Phase 1y scoring)"
-            exit 1
-          fi
           if ! grep -q "getStepsBetween" www/app.js; then
-            echo "FAIL: www/app.js missing Health.getStepsBetween (Phase 1y scoring)"
-            exit 1
-          fi
-          if ! grep -q "submitDuelProgress" www/auth.js; then
-            echo "FAIL: www/auth.js missing submitDuelProgress (Phase 1y scoring)"
-            exit 1
-          fi
-          # v3 Phase 1z — Verified Duel Scoring Engine v1 must be present.
-          if ! grep -q "submitVerifiedEventsForDuels" www/app.js; then
-            echo "FAIL: www/app.js missing submitVerifiedEventsForDuels (Phase 1z engine)"
+            echo "FAIL: www/app.js missing Health.getStepsBetween"
             exit 1
           fi
           if ! grep -q "getSleepBetween" www/app.js; then
-            echo "FAIL: www/app.js missing Health.getSleepBetween (Phase 1z engine)"
+            echo "FAIL: www/app.js missing Health.getSleepBetween"
             exit 1
           fi
           if ! grep -q "getStrengthWorkoutsBetween" www/app.js; then
-            echo "FAIL: www/app.js missing Health.getStrengthWorkoutsBetween (Phase 1z engine)"
+            echo "FAIL: www/app.js missing Health.getStrengthWorkoutsBetween"
             exit 1
           fi
           if ! grep -q "submitVerifiedEvents" www/auth.js; then
-            echo "FAIL: www/auth.js missing submitVerifiedEvents (Phase 1z engine)"
+            echo "FAIL: www/auth.js missing submitVerifiedEvents (legacy outbox drain target)"
             exit 1
           fi
-          # v3 Phase 1z.1 — Tier 1 launch readiness (cancel + outbox).
+          # v3 Phase 1z.1 — Verified-event outbox drain path (preserved
+          # by 1z.279 for legacy queue flushing on upgraded devices).
           if ! grep -q "_drainVerifiedEventOutbox" www/app.js; then
             echo "FAIL: www/app.js missing _drainVerifiedEventOutbox (Phase 1z.1 outbox)"
             exit 1
           fi
           if ! grep -q "hb_verified_event_outbox" www/app.js; then
             echo "FAIL: www/app.js missing hb_verified_event_outbox key (Phase 1z.1 outbox)"
-            exit 1
-          fi
-          if ! grep -q "cancelDuel" www/auth.js; then
-            echo "FAIL: www/auth.js missing cancelDuel (Phase 1z.1 outgoing cancel)"
-            exit 1
-          fi
-          # v3 Phase 1z.2 — Duels polish pass gates.
-          if ! grep -q "DUEL_VERB_BY_TYPE" www/app.js; then
-            echo "FAIL: www/app.js missing DUEL_VERB_BY_TYPE (Phase 1z.2 verb bank)"
-            exit 1
-          fi
-          if ! grep -q "outanchored" www/app.js; then
-            echo "FAIL: www/app.js missing outanchored verb (Phase 1z.2 brand-locked bedtime verb)"
             exit 1
           fi
           if ! grep -q "\-\-ease-cinema" www/styles.css; then
@@ -511,78 +457,35 @@ workflows:
             head -20 "$PUB/index.html"
             exit 1
           fi
-          # v3 Phase 1x.1 — Duels tab redesign marker. Proves the
-          # dedicated Duels-tab layout shipped (vs the prior Social
-          # tab with leaderboard cards on top).
-          if ! grep -q "duels-page-header" "$PUB/index.html"; then
-            echo "FAIL: $PUB/index.html missing .duels-page-header after sync"
-            exit 1
-          fi
-          # The temporary "Friends + Duels foundation" build band must
-          # NOT ship in production — was removed in v3 Phase 1x.1.
-          if grep -q "Friends + Duels foundation" "$PUB/index.html"; then
-            echo "FAIL: legacy build marker still present in iOS bundle"
-            exit 1
-          fi
-          # v3 Phase 1x.6 — Verified-Only Duel Types must reach iOS bundle.
-          if ! grep -q "DUEL_TYPES" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing DUEL_TYPES (verified duel types pass)"
-            exit 1
-          fi
-          if ! grep -q "duel-type-overlay" "$PUB/index.html"; then
-            echo "FAIL: $PUB/index.html missing #duel-type-overlay markup"
-            exit 1
-          fi
-          # v3 Phase 1y — Steps Duel Scoring v1 must reach iOS bundle.
-          if ! grep -q "submitActiveStepsDuelProgress" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing submitActiveStepsDuelProgress (Phase 1y scoring)"
-            exit 1
-          fi
+          # v3 Phase 1z.279 — Duels permanently retired. All duel-
+          # specific iOS-bundle freshness gates removed.
+          # Preserved: HealthKit helper gates (still needed by boss
+          # auto-verify) and the outbox-drain gates (legacy queue
+          # flush path).
           if ! grep -q "getStepsBetween" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing Health.getStepsBetween (Phase 1y scoring)"
-            exit 1
-          fi
-          if ! grep -q "submitDuelProgress" "$PUB/auth.js"; then
-            echo "FAIL: $PUB/auth.js missing submitDuelProgress (Phase 1y scoring)"
-            exit 1
-          fi
-          # v3 Phase 1z — Verified Duel Scoring Engine v1 must reach iOS bundle.
-          if ! grep -q "submitVerifiedEventsForDuels" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing submitVerifiedEventsForDuels (Phase 1z engine)"
+            echo "FAIL: $PUB/app.js missing Health.getStepsBetween"
             exit 1
           fi
           if ! grep -q "getSleepBetween" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing Health.getSleepBetween (Phase 1z engine)"
+            echo "FAIL: $PUB/app.js missing Health.getSleepBetween"
             exit 1
           fi
           if ! grep -q "getStrengthWorkoutsBetween" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing Health.getStrengthWorkoutsBetween (Phase 1z engine)"
+            echo "FAIL: $PUB/app.js missing Health.getStrengthWorkoutsBetween"
             exit 1
           fi
           if ! grep -q "submitVerifiedEvents" "$PUB/auth.js"; then
-            echo "FAIL: $PUB/auth.js missing submitVerifiedEvents (Phase 1z engine)"
+            echo "FAIL: $PUB/auth.js missing submitVerifiedEvents (legacy outbox drain target)"
             exit 1
           fi
-          # v3 Phase 1z.1 — Tier 1 launch readiness must reach iOS bundle.
+          # v3 Phase 1z.1 — Verified-event outbox drain path (preserved
+          # by 1z.279 for legacy queue flushing on upgraded devices).
           if ! grep -q "_drainVerifiedEventOutbox" "$PUB/app.js"; then
             echo "FAIL: $PUB/app.js missing _drainVerifiedEventOutbox (Phase 1z.1 outbox)"
             exit 1
           fi
           if ! grep -q "hb_verified_event_outbox" "$PUB/app.js"; then
             echo "FAIL: $PUB/app.js missing hb_verified_event_outbox key (Phase 1z.1 outbox)"
-            exit 1
-          fi
-          if ! grep -q "cancelDuel" "$PUB/auth.js"; then
-            echo "FAIL: $PUB/auth.js missing cancelDuel (Phase 1z.1 outgoing cancel)"
-            exit 1
-          fi
-          # v3 Phase 1z.2 — Duels polish pass gates.
-          if ! grep -q "DUEL_VERB_BY_TYPE" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing DUEL_VERB_BY_TYPE (Phase 1z.2 verb bank)"
-            exit 1
-          fi
-          if ! grep -q "outanchored" "$PUB/app.js"; then
-            echo "FAIL: $PUB/app.js missing outanchored verb (Phase 1z.2 brand-locked bedtime verb)"
             exit 1
           fi
           if ! grep -q "\-\-ease-cinema" "$PUB/styles.css"; then

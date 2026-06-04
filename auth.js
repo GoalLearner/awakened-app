@@ -1079,7 +1079,8 @@
   }
 
   // ─────────────────────────────────────────────────────────
-  // Discipline Duels v1 (v3 Phase 1x) — friends + duels helpers.
+  // Friends + legacy-duels-residual helpers
+  // (v3 Phase 1x; trimmed by 1z.279 Duels permanent retirement).
   //
   // Same error shape as the leaderboard/cloud helpers above:
   //   { ok: true, ...payload } on success
@@ -1087,6 +1088,13 @@
   // Callers must wrap try/catch around UI rendering anyway; these
   // helpers themselves don't throw — network errors map to
   // { ok: false, code: 'NETWORK' }.
+  //
+  // The only duel-named helper that survived retirement is
+  // submitVerifiedEvents, used by app.js's _drainVerifiedEventOutbox
+  // to flush any pre-retirement queue contents on upgraded devices.
+  // The 9 helpers wrapping the deleted POST /v1/duels / accept /
+  // decline / cancel / progress / resolve / score routes were
+  // removed because zero call sites remain in app.js.
   // ─────────────────────────────────────────────────────────
   async function _authedFetch(method, path, jsonBody) {
     const u = readUser();
@@ -1168,61 +1176,19 @@
   function declineFriendRequest(friendshipId)   { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/decline'); }
   function removeFriend(friendshipId)           { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/remove'); }
 
-  function fetchDuels()                         { return _authedFetch('GET',  '/v1/duels'); }
-  function createDuel(opponentAlias, options) {
-    const body = { opponent_alias: opponentAlias };
-    if (options && typeof options === 'object') {
-      // v3 Phase 1z.147 — accept duration_seconds (preferred, MVP
-      // testing) OR duration_days (legacy). Backend rejects payloads
-      // that contain both, so we forward only one even if both are
-      // somehow set in options (seconds wins).
-      if (Number.isInteger(options.duration_seconds)) {
-        body.duration_seconds = options.duration_seconds;
-      } else if (Number.isInteger(options.duration_days)) {
-        body.duration_days = options.duration_days;
-      }
-      if (Number.isInteger(options.stake_souls))   body.stake_souls   = options.stake_souls;
-      // Verified-Only Duel Types (v3 Phase 1x.6). Default applied at the
-      // backend (`verified_objectives`) — only forward when explicitly
-      // chosen so older callers keep working.
-      if (typeof options.duel_type === 'string' && options.duel_type) {
-        body.duel_type = options.duel_type;
-      }
-    }
-    return _authedFetch('POST', '/v1/duels', body);
-  }
-  function acceptDuel(duelId)                   { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/accept'); }
-  function declineDuel(duelId)                  { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/decline'); }
-  // Outgoing duel cancel (v3 Phase 1z.1). Challenger-only, pending-only,
-  // idempotent (returns `alreadyCancelled: true` if already cancelled).
-  function cancelDuel(duelId)                   { return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/cancel'); }
-  function fetchDuel(duelId)                    { return _authedFetch('GET',  '/v1/duels/' + encodeURIComponent(duelId)); }
-
-  // Steps Duel Scoring v1 (v3 Phase 1y). Submit a per-participant
-  // Apple Health snapshot to the backend; the resolver picks the
-  // winner.
-  function submitDuelProgress(duelId, payload) {
-    return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/progress', payload);
-  }
-  function resolveDuel(duelId) {
-    return _authedFetch('POST', '/v1/duels/' + encodeURIComponent(duelId) + '/resolve');
-  }
-
-  // Verified Duel Scoring Engine v1 (v3 Phase 1z). Batch-submit
-  // verified events (≤25 per call). The backend dedupes via
-  // UNIQUE(user_id, client_event_id) so retries are safe. Callers
-  // should chunk batches of >25 events.
+  // v3 Phase 1z.279 — Sole surviving duel-named auth helper. Used
+  // by app.js _drainVerifiedEventOutbox to flush any pre-retirement
+  // queued events on upgraded devices. The backend POST
+  // /v1/verified-events endpoint is also preserved during the
+  // transition window; both will be removed together in the future
+  // cleanup PR (see backend/migrations/RETIREMENT_PLAN.md).
+  // Batch-submit verified events (≤25 per call). Backend dedupes
+  // via UNIQUE(user_id, client_event_id) so retries are safe.
   function submitVerifiedEvents(events) {
     if (!Array.isArray(events)) {
       return Promise.resolve({ ok: false, code: 'INVALID_PAYLOAD', detail: 'events must be an array.' });
     }
     return _authedFetch('POST', '/v1/verified-events', { events: events });
-  }
-
-  // Verified Duel Scoring Engine v1 (v3 Phase 1z). GET both
-  // participants' per-type score + label for a duel.
-  function fetchDuelScore(duelId) {
-    return _authedFetch('GET', '/v1/duels/' + encodeURIComponent(duelId) + '/score');
   }
 
   // Expose on window for app.js + Settings interactions.
@@ -1257,24 +1223,16 @@
     // batch submit + friend-scoped feed read.
     submitPublicAchievementEvents,
     fetchFriendsActivity,
-    // Discipline Duels v1 (v3 Phase 1x)
+    // Friends (v3 Phase 1x)
     fetchFriends,
     sendFriendRequest,
     acceptFriendRequest,
     declineFriendRequest,
     removeFriend,
-    fetchDuels,
-    createDuel,
-    acceptDuel,
-    declineDuel,
-    cancelDuel,
-    fetchDuel,
-    // Steps Duel Scoring v1 (v3 Phase 1y)
-    submitDuelProgress,
-    resolveDuel,
-    // Verified Duel Scoring Engine v1 (v3 Phase 1z)
+    // v3 Phase 1z.279 — legacy outbox drain target (sole surviving
+    // duel-named helper; the 9 other duel API wrappers were removed
+    // along with the Duels subsystem).
     submitVerifiedEvents,
-    fetchDuelScore,
     devSignInIfLocalhost,
     isLocalhostDev,
     isNative,

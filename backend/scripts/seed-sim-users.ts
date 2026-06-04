@@ -1,5 +1,15 @@
 /**
- * seed-sim-users.ts — One-off Worker entrypoint for duel-sim user seeding.
+ * seed-sim-users.ts — One-off Worker entrypoint for sim user seeding.
+ *
+ * v3 Phase 1z.279 — Duels permanently retired. This script was
+ * originally written to provision sim users for duel testing and
+ * still counts/cleans rows in `duels`, `duel_progress_snapshots`,
+ * `verified_events`, and `user_souls_ledger`. Those tables are
+ * preserved during the post-retirement transition window (see
+ * backend/migrations/RETIREMENT_PLAN.md) so this script continues
+ * to work as-is. When the final cleanup migration drops those
+ * tables, update the count/teardown queries below to remove the
+ * dropped-table references (or wrap them in try/catch).
  *
  * Runs LOCALLY via `wrangler dev --remote` with prod bindings. The
  * Worker code executes inside the Cloudflare runtime sandbox on your

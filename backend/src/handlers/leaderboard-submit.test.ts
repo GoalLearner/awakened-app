@@ -58,7 +58,6 @@ function makeEnv(db: D1Database): Env {
     RL_USER_STATE_POST: okRl,
     RL_FRIENDS_READ: okRl,
     RL_FRIENDS_WRITE: okRl,
-    RL_DUELS_READ: okRl,
     RL_DUELS_WRITE: okRl,
     RL_USER_ACCOLADES_READ: okRl,
   } as unknown as Env;
