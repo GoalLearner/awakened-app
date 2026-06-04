@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w167';
+  const APP_BUILD_TAG = '2.2.5-w168';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21272,6 +21272,22 @@
     ]},
   ];
 
+  // v3 Phase 1z.282B — First-vow commit acknowledgment.
+  // Single beat (~6 seconds at 30ms/char) fired after the user
+  // commits their initial vow selection in the onboarding picker.
+  // Closes the narrative loop between "pick your vows" and "begin"
+  // by having The First Awakened acknowledge the action. Replaces
+  // the existing "Vow added" toast on first-commit only — subsequent
+  // commits (e.g. if user resets progress) bypass the coach modal
+  // and use the toast normally.
+  const FA_FIRST_VOW_BEATS = [
+    { pose: 'nodding', lines: [
+      'You have chosen your first vows, hunter.',
+      'The system has recorded them.',
+      'Now keep them — that is the only thing that counts.',
+    ]},
+  ];
+
   // Field Manual sections — 7 sections, verbatim from ClaudeDesign.
   const FA_MANUAL_SECTIONS = [
     {
@@ -21564,9 +21580,24 @@
       storageKey: 'hb_tour_stats_v1',
     });
   }
+  // v3 Phase 1z.282B — First-vow commit acknowledgment.
+  // Returns true if the modal was shown (caller can suppress its
+  // normal toast); false if already seen (caller falls through to
+  // toast path). Single beat, single tap — "BEGIN" CTA dismisses.
+  function showFirstVowCoachmark() {
+    if (localStorage.getItem('hb_tour_first_vow_v1') === '1') return false;
+    _faRunCoachmark({
+      context: 'first_vow',
+      beats: FA_FIRST_VOW_BEATS,
+      cta: 'BEGIN',
+      storageKey: 'hb_tour_first_vow_v1',
+    });
+    return true;
+  }
   try {
-    window.__showQuestsCoachmark = showQuestsCoachmark;
-    window.__showStatsCoachmark  = showStatsCoachmark;
+    window.__showQuestsCoachmark    = showQuestsCoachmark;
+    window.__showStatsCoachmark     = showStatsCoachmark;
+    window.__showFirstVowCoachmark  = showFirstVowCoachmark;
   } catch (_) {}
 
   // ── Field Manual engine ─────────────────────────────────────────────
@@ -22487,12 +22518,20 @@
       // skipSideEffects matches the pack-add path — avoids the HealthKit
       // native-bridge cascade on freshly added habits.
       try { renderHabits({ skipSideEffects: true }); } catch (_) {}
-      try {
-        const msg = created.length === 1
-          ? 'Vow added — ' + created[0]
-          : created.length + ' vows added.';
-        showHabitToast(msg);
-      } catch (_) {}
+      // v3 Phase 1z.282B — First-vow commit acknowledgment. On the
+      // very first commit (storage key unset), surface the coach
+      // modal in lieu of the toast. After-the-fact commits (e.g.
+      // post-Reset re-entry) fall through to the toast as before.
+      let _faCoachShown = false;
+      try { _faCoachShown = showFirstVowCoachmark(); } catch (_) { _faCoachShown = false; }
+      if (!_faCoachShown) {
+        try {
+          const msg = created.length === 1
+            ? 'Vow added — ' + created[0]
+            : created.length + ' vows added.';
+          showHabitToast(msg);
+        } catch (_) {}
+      }
     } finally {
       _firstVowCommitting = false;
     }

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=345">
+  <link rel="stylesheet" href="styles.css?v=346">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -665,6 +665,20 @@
 
         <!-- First Vow hero. -->
         <div class="empty-state-firstvow" id="empty-state-firstvow">
+          <!-- v3 Phase 1z.282B — The First Awakened picker banner.
+               Inline (not modal), one-line voice. Reuses the pointing
+               pose to mirror the act of choosing. Banner is always
+               present on the First Vow picker — picker only renders
+               on first run, so no storage gate needed. -->
+          <div class="ev-coach-banner" aria-label="The First Awakened">
+            <img class="ev-coach-banner-portrait"
+                 src="assets/coach/first-awakened-pointing.png"
+                 alt="The First Awakened">
+            <div class="ev-coach-banner-text">
+              <span class="ev-coach-banner-kicker">THE FIRST AWAKENED</span>
+              <span class="ev-coach-banner-line">“Choose the vows you will keep. The system counts only what you do.”</span>
+            </div>
+          </div>
           <div class="ev-hero">
             <div class="ev-sigil-wrap" aria-hidden="true">
               <div class="ev-sigil-ring"></div>
@@ -2741,7 +2755,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=618"></script>
+  <script src="app.js?v=619"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3182,7 +3196,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W167</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W168</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

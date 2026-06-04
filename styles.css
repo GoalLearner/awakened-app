@@ -29365,4 +29365,68 @@ button.guildhall-summary-tile:active {
   font-weight: 700;
 }
 
+
+/* ── v3 Phase 1z.282B — First Vow picker coach banner ──────────
+   Inline (not modal) banner that sits at the top of the First Vow
+   picker. Small wizard portrait (left) + voice line (right). Reads
+   as part of the picker chrome, not as a notification or coachmark.
+   Always present on first-run (the picker only shows when habits
+   is empty), so no storage gate. */
+.empty-state-firstvow .ev-coach-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 0 4px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(28, 22, 54, 0.75) 0%, rgba(11, 9, 28, 0.85) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.30);
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.06),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.empty-state-firstvow .ev-coach-banner-portrait {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.40))
+          drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+.empty-state-firstvow .ev-coach-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.empty-state-firstvow .ev-coach-banner-kicker {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.30em;
+  color: #a78bfa;
+  text-transform: uppercase;
+}
+.empty-state-firstvow .ev-coach-banner-line {
+  font-family: "Cinzel", "Cormorant Garamond", "Trajan Pro", Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #f4f3fb;
+  letter-spacing: 0.01em;
+}
+
+/* iPhone SE width — slightly tighter padding so the portrait + text
+   never crowd against each other on 375px. */
+@media (max-width: 380px) {
+  .empty-state-firstvow .ev-coach-banner {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .empty-state-firstvow .ev-coach-banner-portrait { width: 50px; height: 50px; }
+  .empty-state-firstvow .ev-coach-banner-line { font-size: 12.5px; }
+}
+
 /* END v3 Phase 1z.282 The First Awakened block */
