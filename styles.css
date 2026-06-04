@@ -29430,3 +29430,484 @@ button.guildhall-summary-tile:active {
 }
 
 /* END v3 Phase 1z.282 The First Awakened block */
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.283 — Manage Vows (soft archive) bottom sheet
+   ───────────────────────────────────────────────────────────────────
+   Premium navy/violet/gold treatment matching .fa-manual-sheet shell.
+   Sticky header with live counter; gold tint at <=25, amber over-cap,
+   green ROOM MADE affirmation. Per-row Option-A inline confirm with
+   The First Awakened narrating the release. Diamond ReleaseGlyph
+   matches the Settings entry row.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.mv-overlay {
+  position: fixed; inset: 0;
+  z-index: 12100;
+  background: rgba(5, 6, 18, 0.66);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.mv-overlay.hidden { display: none; }
+
+.mv-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #15102e 0%, #0a081f 100%);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  box-shadow:
+    0 -2px 0 rgba(245, 184, 66, 0.18),
+    0 -22px 60px rgba(0, 0, 0, 0.65);
+  animation: mv-sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+@keyframes mv-sheet-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.mv-hairline {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(245, 184, 66, 0.55) 50%,
+    transparent 100%);
+}
+.mv-grabber {
+  width: 44px; height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 8px auto 4px;
+}
+
+/* ── Sticky header ───────────────────────────────────────────────── */
+.mv-header {
+  position: sticky; top: 0;
+  z-index: 2;
+  padding: 6px 18px 10px;
+  background: linear-gradient(180deg, #15102e 70%, rgba(21, 16, 46, 0) 100%);
+}
+.mv-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.mv-title {
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #f5b842;
+  text-shadow: 0 0 14px rgba(245, 184, 66, 0.30);
+}
+.mv-closebtn {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #9aa0bd;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.mv-closebtn:active { background: rgba(255, 255, 255, 0.10); color: #f4f3fb; }
+
+/* ── Counter wrap ───────────────────────────────────────────────── */
+.mv-counter-wrap {
+  margin-top: 8px;
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.mv-counter {
+  display: inline-flex; align-items: baseline; gap: 8px;
+}
+.mv-counter-num {
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: color 0.25s ease, transform 0.18s ease;
+  display: inline-block;
+}
+.mv-counter-num.mv-counter-tick {
+  animation: mv-pop 0.18s ease;
+}
+@keyframes mv-pop {
+  0%   { transform: scale(1.00); }
+  50%  { transform: scale(1.14); }
+  100% { transform: scale(1.00); }
+}
+.mv-counter-lbl {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  color: #9aa0bd;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+/* Counter color states — scoped by parent wrapper */
+.mv-counter.mv-counter--room .mv-counter-num { color: #34d399; text-shadow: 0 0 12px rgba(52, 211, 153, 0.35); }
+.mv-counter.mv-counter--ok   .mv-counter-num { color: #f5b842; }
+.mv-counter.mv-counter--over .mv-counter-num { color: #f59e42; text-shadow: 0 0 12px rgba(245, 158, 66, 0.35); }
+/* Badges (over-cap + room-made) */
+.mv-counter-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+.mv-counter-badge--over {
+  background: rgba(245, 158, 66, 0.14);
+  border: 1px solid rgba(245, 158, 66, 0.45);
+  color: #f59e42;
+}
+.mv-counter-badge--room {
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #34d399;
+  animation: mv-pop 0.22s ease;
+}
+
+/* ── Character section (idle pose + voice line) ────────────────── */
+.mv-character {
+  display: flex; align-items: center; gap: 12px;
+  margin: 6px 18px 12px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(28, 22, 54, 0.65) 0%, rgba(11, 9, 28, 0.75) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+}
+.mv-character.hidden { display: none; }
+.mv-character-portrait {
+  flex: 0 0 auto;
+  width: 50px; height: 50px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mv-character-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.35))
+          drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+.mv-character-line {
+  flex: 1; min-width: 0;
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: #f4f3fb;
+}
+
+/* ── Sort pills ─────────────────────────────────────────────────── */
+.mv-sort {
+  display: flex; gap: 8px;
+  padding: 0 18px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mv-sort::-webkit-scrollbar { display: none; }
+.mv-sort.hidden { display: none; }
+.mv-sortpill {
+  flex: 0 0 auto;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9aa0bd;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.18s ease;
+}
+.mv-sortpill.is-active {
+  background: rgba(245, 184, 66, 0.14);
+  border-color: rgba(245, 184, 66, 0.55);
+  color: #f5b842;
+}
+
+/* ── Body / list ────────────────────────────────────────────────── */
+.mv-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 14px 18px;
+}
+
+.mv-row {
+  display: flex; flex-direction: column;
+  gap: 0;
+  margin-bottom: 10px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(28, 22, 54, 0.55) 0%, rgba(11, 9, 28, 0.65) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  transition: opacity 0.28s ease, transform 0.28s ease, max-height 0.32s ease,
+              padding 0.28s ease, margin 0.28s ease, border-color 0.18s ease;
+  overflow: hidden;
+}
+.mv-row.mv-row--confirming {
+  border-color: rgba(245, 184, 66, 0.45);
+  box-shadow: 0 0 0 1px rgba(245, 184, 66, 0.18),
+              0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.mv-row.mv-row--releasing {
+  opacity: 0;
+  transform: translateX(-12px);
+  max-height: 0 !important;
+  padding-top: 0; padding-bottom: 0;
+  margin-bottom: 0;
+  border-color: transparent;
+}
+.mv-row-head {
+  display: flex; align-items: center; gap: 12px;
+}
+.mv-row-icon {
+  flex: 0 0 auto;
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: rgba(245, 184, 66, 0.08);
+  border: 1px solid rgba(245, 184, 66, 0.22);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  overflow: hidden;
+}
+.mv-row-icon img, .mv-row-icon svg { width: 22px; height: 22px; }
+.mv-row-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mv-row-name {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #f4f3fb;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mv-row-sub {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6e7494;
+}
+.mv-row-statpill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.mv-row-streak { display: inline-flex; align-items: center; gap: 5px; color: #9aa0bd; }
+.mv-row-streak-diamond { display: inline-block; }
+.mv-row-sep {
+  display: inline-block;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: rgba(154, 160, 189, 0.45);
+}
+.mv-row-last { color: #6e7494; }
+.mv-row-releasebtn {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9aa0bd;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.mv-row-releasebtn:active {
+  background: rgba(245, 184, 66, 0.10);
+  border-color: rgba(245, 184, 66, 0.40);
+  color: #f5b842;
+}
+
+/* Inline confirm strip — collapsed by default; expanded when row is confirming */
+.mv-row-confirm {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.28s ease, opacity 0.22s ease, margin 0.22s ease;
+}
+.mv-row.mv-row--confirming .mv-row-confirm {
+  max-height: 260px;
+  opacity: 1;
+  margin-top: 11px;
+}
+.mv-row-confirm-inner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(245, 184, 66, 0.18);
+}
+.mv-row-confirm-portrait {
+  flex: 0 0 auto;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mv-row-confirm-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(245, 184, 66, 0.30))
+          drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+.mv-row-confirm-line {
+  flex: 1; min-width: 0;
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #f4f3fb;
+}
+.mv-row-confirm-actions {
+  display: flex; gap: 9px;
+  margin-top: 11px;
+}
+.mv-row-confirm-actions button {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.16s ease;
+}
+.mv-row-cancelbtn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #9aa0bd;
+}
+.mv-row-cancelbtn:active { background: rgba(255, 255, 255, 0.10); color: #f4f3fb; }
+.mv-row-confirmbtn {
+  background: linear-gradient(180deg, #f5b842 0%, #d99a2a 100%);
+  border: 1px solid rgba(245, 184, 66, 0.65);
+  color: #1a0f2e;
+  box-shadow: 0 4px 14px rgba(245, 184, 66, 0.30);
+}
+.mv-row-confirmbtn:active { transform: scale(0.985); }
+
+/* "One vow remains" verse, shown when rows.length === 1 */
+.mv-single-line {
+  margin: 12px 6px 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6e7494;
+  text-align: center;
+}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+.mv-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 36px 22px 24px;
+  text-align: center;
+}
+.mv-empty-sigil {
+  width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.35))
+          drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+.mv-empty-verse {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #f4f3fb;
+  margin: 0;
+  max-width: 280px;
+}
+.mv-empty-sub {
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9aa0bd;
+  max-width: 280px;
+  margin: 0;
+}
+.mv-empty .mv-cta-gold {
+  margin-top: 6px;
+  max-width: 240px;
+}
+
+/* ── Footer / CTA ───────────────────────────────────────────────── */
+.mv-footer {
+  padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(0deg, #0a081f 70%, rgba(10, 8, 31, 0) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.mv-cta-gold {
+  display: block;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #f5b842 0%, #d99a2a 100%);
+  border: 1px solid rgba(245, 184, 66, 0.65);
+  color: #1a0f2e;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 18px rgba(245, 184, 66, 0.28);
+  transition: transform 0.12s ease;
+}
+.mv-cta-gold:active { transform: scale(0.985); }
+
+/* iPhone SE — tighten padding so the sheet fits comfortably. */
+@media (max-width: 380px) {
+  .mv-header { padding: 6px 14px 8px; }
+  .mv-character { margin: 6px 14px 10px; padding: 10px 12px; }
+  .mv-character-portrait { width: 46px; height: 46px; }
+  .mv-character-line { font-size: 12px; }
+  .mv-sort { padding: 0 14px 8px; }
+  .mv-body { padding: 0 12px 16px; }
+  .mv-row { padding: 12px; }
+  .mv-row-name { font-size: 14px; }
+  .mv-footer { padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .mv-sheet,
+  .mv-row,
+  .mv-counter-num,
+  .mv-row-confirm {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* END v3 Phase 1z.283 Manage Vows block */

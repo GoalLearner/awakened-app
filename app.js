@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w170';
+  const APP_BUILD_TAG = '2.2.5-w171';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11402,6 +11402,12 @@
   }
 
   function isScheduledToday(habit) {
+    // v3 Phase 1z.283 — Soft archive guard. Archived vows do NOT
+    // appear in today's daily render, do NOT count toward daily
+    // completion %, do NOT feed stats going forward. They remain
+    // in the habits array (with streak/completions preserved) but
+    // the daily-active read path stops here.
+    if (!habit || habit.archived) return false;
     if (!habit.days || habit.days.length === 7) return true;
     return habit.days.includes(getTodayDayName());
   }
@@ -21122,8 +21128,17 @@
   // is on the catalog of active habits, not on which ones fire today.
   // Custom habits, pack habits, library habits, onboarding picks all
   // count equally.
+  // v3 Phase 1z.283 — Soft archive predicate. A habit is "active"
+  // (counts toward cap, renders in daily list, feeds stats) when its
+  // archived flag is false / unset. Archived habits remain in the
+  // habits array — they just stop appearing in active reads.
+  // ClaudeCode wires this through every active-list read site below.
+  // Past completions, streak history, earned XP are all preserved.
+  function _isActiveHabit(h) {
+    return !!h && !h.archived;
+  }
   function getActiveHabitCount() {
-    return Array.isArray(habits) ? habits.length : 0;
+    return Array.isArray(habits) ? habits.filter(_isActiveHabit).length : 0;
   }
   function getAvailableHabitSlots() {
     return Math.max(0, MAX_ACTIVE_HABITS - getActiveHabitCount());
@@ -21132,6 +21147,7 @@
     const n = Math.max(1, Number(countToAdd) || 1);
     return (getActiveHabitCount() + n) <= MAX_ACTIVE_HABITS;
   }
+  try { window.__isActiveHabit = _isActiveHabit; } catch (_) {}
   try {
     window.__getActiveHabitCount = getActiveHabitCount;
     window.__getAvailableHabitSlots = getAvailableHabitSlots;
@@ -21205,10 +21221,15 @@
     };
     const manage = function () {
       dismiss();
-      // Route to Habits tab so the user can long-press / edit-modal a
-      // habit to remove. If the tab helper is missing for some reason,
-      // surface a fallback toast.
+      // v3 Phase 1z.283 — Open the Manage Vows sheet (replaces the
+      // previous switchTab('habits') no-op). Soft archive system —
+      // user can release vows to make room, history preserved.
       try {
+        if (typeof openManageVows === 'function') {
+          openManageVows();
+          return;
+        }
+        // Fallback path (Manage Vows not loaded for some reason).
         if (typeof switchTab === 'function') {
           switchTab('habits');
         } else if (typeof showHabitToast === 'function') {
@@ -21824,6 +21845,388 @@
     window.__showFirstVowCoachmark    = showFirstVowCoachmark;
     window.__showWelcomeBackCoachmark = showWelcomeBackCoachmark;
     window.__showFirstAwakenedRankUp  = showFirstAwakenedRankUp;
+  } catch (_) {}
+
+  // ════════════════════════════════════════════════════════════════════
+  // v3 Phase 1z.283 — Manage Vows (soft archive sheet)
+  // ════════════════════════════════════════════════════════════════════
+  // Bottom sheet listing every active vow with an inline release
+  // (Option A confirm pattern). Soft archive only — habit.archived=true
+  // hides the habit from active reads (count, daily render, stat-feed)
+  // while preserving streak, completions, and earned XP.
+  //
+  // Two entry points:
+  //   1. System Full modal "Manage Vows" CTA (replaces switchTab no-op)
+  //   2. Settings → "Manage Vows" row (below Field Manual)
+  //
+  // Voice: The First Awakened narrates the sheet header (one idle-pose
+  // line) and the per-row confirm (one nodding-pose line). Not a modal —
+  // just inline presence at two moments. Direct port of the ClaudeDesign
+  // fa-managevows.jsx spec.
+  // ════════════════════════════════════════════════════════════════════
+
+  const MV_SORTS = [
+    { id: 'az',     label: 'A–Z' },
+    { id: 'streak', label: 'Streak' },
+    { id: 'quiet',  label: 'Quietest' },
+  ];
+  let _mvSort = 'az';
+  let _mvConfirmId = null;   // habit id currently in confirm state
+  let _mvReleasingId = null; // habit id currently animating out
+  let _mvRoomMadeTimer = null;
+
+  // "Last done" formatter — Today / Yesterday / N days ago.
+  function _mvLastDone(habitId) {
+    try {
+      const dates = Object.keys(completions || {});
+      if (!dates.length) return 'Not yet kept';
+      // Find most recent date this habit was checked.
+      const todayKey = getCurrentDayName ? (typeof today !== 'undefined' ? today : null) : null;
+      let mostRecent = null;
+      dates.sort();
+      for (let i = dates.length - 1; i >= 0; i--) {
+        const d = dates[i];
+        if (Array.isArray(completions[d]) && completions[d].indexOf(habitId) !== -1) {
+          mostRecent = d;
+          break;
+        }
+      }
+      if (!mostRecent) return 'Not yet kept';
+      if (todayKey && mostRecent === todayKey) return 'Today';
+      // Compute days delta via date math.
+      const mr = Date.parse(mostRecent + 'T12:00:00Z');
+      const tk = (typeof today !== 'undefined' && today)
+        ? Date.parse(today + 'T12:00:00Z')
+        : Date.now();
+      if (isNaN(mr) || isNaN(tk)) return 'Recently';
+      const delta = Math.round((tk - mr) / 86400000);
+      if (delta <= 0) return 'Today';
+      if (delta === 1) return 'Yesterday';
+      return delta + ' days ago';
+    } catch (_) { return ''; }
+  }
+
+  // "Days since last done" numeric — for the Quietest sort.
+  function _mvDaysSince(habitId) {
+    try {
+      const dates = Object.keys(completions || {});
+      if (!dates.length) return 9999;
+      dates.sort();
+      let mostRecent = null;
+      for (let i = dates.length - 1; i >= 0; i--) {
+        const d = dates[i];
+        if (Array.isArray(completions[d]) && completions[d].indexOf(habitId) !== -1) {
+          mostRecent = d;
+          break;
+        }
+      }
+      if (!mostRecent) return 9999;
+      const mr = Date.parse(mostRecent + 'T12:00:00Z');
+      const tk = (typeof today !== 'undefined' && today)
+        ? Date.parse(today + 'T12:00:00Z')
+        : Date.now();
+      return Math.max(0, Math.round((tk - mr) / 86400000));
+    } catch (_) { return 9999; }
+  }
+
+  function _mvSortedActive() {
+    const arr = (Array.isArray(habits) ? habits : []).filter(_isActiveHabit);
+    const copy = arr.slice();
+    if (_mvSort === 'az') {
+      copy.sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      });
+    } else if (_mvSort === 'streak') {
+      copy.sort(function (a, b) {
+        const sa = (typeof getStreak === 'function') ? (getStreak(a.id) || 0) : 0;
+        const sb = (typeof getStreak === 'function') ? (getStreak(b.id) || 0) : 0;
+        return sb - sa;
+      });
+    } else if (_mvSort === 'quiet') {
+      copy.sort(function (a, b) {
+        const da = _mvDaysSince(a.id);
+        const db = _mvDaysSince(b.id);
+        if (db !== da) return db - da;
+        const sa = (typeof getStreak === 'function') ? (getStreak(a.id) || 0) : 0;
+        const sb = (typeof getStreak === 'function') ? (getStreak(b.id) || 0) : 0;
+        return sa - sb;
+      });
+    }
+    return copy;
+  }
+
+  function _mvStatColor(statId) {
+    const map = {
+      STR: '#ef4444', VIT: '#34d399', INT: '#3b82f6',
+      FOCUS: '#eab308', WILL: '#f97316', WLT: '#f5b842',
+    };
+    return map[statId] || '#a78bfa';
+  }
+
+  function _mvRowHtml(h) {
+    const id = String(h.id || '');
+    const streak = (typeof getStreak === 'function') ? (getStreak(id) || 0) : 0;
+    const statId = String(h.primaryStat || '').toUpperCase();
+    const sc = _mvStatColor(statId);
+    // Icon: reuse the existing app icon system (PNG/emoji per habit).
+    const iconHtml = (typeof habitIconHtml === 'function')
+      ? habitIconHtml(h, { size: 22 })
+      : (h.emoji ? esc(h.emoji) : '');
+    const last = _mvLastDone(id);
+    const isConfirm = (_mvConfirmId === id);
+    const isReleasing = (_mvReleasingId === id);
+
+    const releaseLabel = (String(h.name || '').length > 14) ? 'Release vow' : ('Release ' + esc(h.name || ''));
+
+    return (
+      '<div class="mv-row' +
+        (isConfirm ? ' mv-row--confirming' : '') +
+        (isReleasing ? ' mv-row--releasing' : '') +
+        '" data-mv-row-id="' + esc(id) + '">' +
+        '<div class="mv-row-head">' +
+          '<div class="mv-row-icon" aria-hidden="true">' + iconHtml + '</div>' +
+          '<div class="mv-row-main">' +
+            '<div class="mv-row-name">' + esc(h.name || '') + '</div>' +
+            '<div class="mv-row-sub">' +
+              '<span class="mv-row-statpill" style="color:' + sc + ';background:' + sc + '1f;">' + esc(statId || '') + '</span>' +
+              '<span class="mv-row-streak">' +
+                '<svg class="mv-row-streak-diamond" width="7" height="7" viewBox="0 0 10 10" aria-hidden="true">' +
+                  '<path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="none" stroke="#f5b842" stroke-width="1"/>' +
+                  '<path d="M5 3 L7 5 L5 7 L3 5 Z" fill="#f5b842"/>' +
+                '</svg>' +
+                '<span>' + streak + '-day</span>' +
+              '</span>' +
+              '<span class="mv-row-sep"></span>' +
+              '<span class="mv-row-last">' + esc(last) + '</span>' +
+            '</div>' +
+          '</div>' +
+          (isConfirm ? '' :
+            '<button class="mv-row-releasebtn" type="button" data-mv-release="' + esc(id) + '"' +
+              ' aria-label="Release ' + esc(h.name || '') + '">Release</button>'
+          ) +
+        '</div>' +
+        '<div class="mv-row-confirm">' +
+          '<div class="mv-row-confirm-inner">' +
+            '<div class="mv-row-confirm-portrait">' +
+              '<img src="assets/coach/first-awakened-nodding.png" alt="The First Awakened" class="mv-row-confirm-img">' +
+            '</div>' +
+            '<p class="mv-row-confirm-line" aria-live="polite">' +
+              'Release ' + esc(h.name || '') + '? The discipline is already recorded. The vow only leaves the active list.' +
+            '</p>' +
+          '</div>' +
+          '<div class="mv-row-confirm-actions">' +
+            '<button class="mv-row-cancelbtn" type="button" data-mv-cancel="' + esc(id) + '" aria-label="Cancel release">Cancel</button>' +
+            '<button class="mv-row-confirmbtn" type="button" data-mv-confirm="' + esc(id) + '"' +
+              ' aria-label="Confirm release of ' + esc(h.name || '') + '">' + esc(releaseLabel) + '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function _mvCounterHtml(roomMade) {
+    const count = getActiveHabitCount();
+    const over = count > MAX_ACTIVE_HABITS;
+    const colorClass = roomMade ? 'mv-counter--room' : (over ? 'mv-counter--over' : 'mv-counter--ok');
+    let badge = '';
+    if (roomMade) {
+      badge = '<span class="mv-counter-badge mv-counter-badge--room">' +
+                '<svg width="7" height="7" viewBox="0 0 10 10" aria-hidden="true">' +
+                  '<path d="M5 0.5 L9.5 5 L5 9.5 L0.5 5 Z" fill="none" stroke="#34d399" stroke-width="1"/>' +
+                  '<path d="M5 3 L7 5 L5 7 L3 5 Z" fill="#34d399"/>' +
+                '</svg> ROOM MADE</span>';
+    } else if (over) {
+      badge = '<span class="mv-counter-badge mv-counter-badge--over">OVER CAP</span>';
+    }
+    return (
+      '<span class="mv-counter ' + colorClass + '">' +
+        '<span class="mv-counter-num">' + count + ' / ' + MAX_ACTIVE_HABITS + '</span>' +
+        '<span class="mv-counter-lbl">ACTIVE VOWS</span>' +
+      '</span>' +
+      badge
+    );
+  }
+
+  function _mvSortPillsHtml() {
+    return MV_SORTS.map(function (s) {
+      const active = (s.id === _mvSort);
+      return '<button class="mv-sortpill' + (active ? ' is-active' : '') + '" type="button"' +
+        ' data-mv-sort="' + s.id + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
+        esc(s.label) + '</button>';
+    }).join('');
+  }
+
+  function _mvEmptyHtml() {
+    return (
+      '<div class="mv-empty">' +
+        '<div class="mv-empty-sigil" aria-hidden="true">' +
+          '<svg width="56" height="56" viewBox="0 0 56 56" fill="none">' +
+            '<path d="M28 3 L53 28 L28 53 L3 28 Z" stroke="#a78bfa" stroke-width="1.4" fill="rgba(139,92,246,0.06)"/>' +
+            '<path d="M28 12 L44 28 L28 44 L12 28 Z" stroke="#a78bfa" stroke-width="0.8" opacity="0.6" fill="none"/>' +
+            '<path d="M28 19 L37 28 L28 37 L19 28 Z" fill="#f5b842" opacity="0.85"/>' +
+          '</svg>' +
+        '</div>' +
+        '<p class="mv-empty-verse">No active vows.<br>The system waits for your first promise.</p>' +
+        '<p class="mv-empty-sub">Every climb begins with one kept vow.</p>' +
+        '<button id="mv-empty-add" class="mv-cta-gold" type="button">BIND A VOW</button>' +
+      '</div>'
+    );
+  }
+
+  function _mvRenderSheet(opts) {
+    const overlay = document.getElementById('mv-overlay');
+    if (!overlay) return;
+    const sheet = overlay.querySelector('.mv-sheet');
+    if (!sheet) return;
+    const roomMade = !!(opts && opts.roomMade);
+
+    const activeCount = getActiveHabitCount();
+    const counterEl = document.getElementById('mv-counter-wrap');
+    if (counterEl) counterEl.innerHTML = _mvCounterHtml(roomMade);
+    if (opts && opts.tick) {
+      const numEl = sheet.querySelector('.mv-counter-num');
+      if (numEl) {
+        try {
+          numEl.classList.add('mv-counter-tick');
+          setTimeout(function () { try { numEl.classList.remove('mv-counter-tick'); } catch (_) {} }, 160);
+        } catch (_) {}
+      }
+    }
+
+    const bodyEl = document.getElementById('mv-body');
+    if (!bodyEl) return;
+
+    if (activeCount === 0) {
+      bodyEl.innerHTML = _mvEmptyHtml();
+      const addBtn = document.getElementById('mv-empty-add');
+      if (addBtn) addBtn.addEventListener('click', function () {
+        closeManageVows();
+        // Route to Habits tab — empty state means user is at 0, which
+        // will surface the First Vow picker / Add Habits flow naturally.
+        try { if (typeof switchTab === 'function') switchTab('habits'); } catch (_) {}
+      });
+      // Hide sort + character section in empty state.
+      const charEl = document.getElementById('mv-character');
+      if (charEl) charEl.classList.add('hidden');
+      const sortEl = document.getElementById('mv-sort');
+      if (sortEl) sortEl.classList.add('hidden');
+      return;
+    }
+
+    // Restore character + sort visibility (in case they were hidden by empty).
+    const charEl = document.getElementById('mv-character');
+    if (charEl) charEl.classList.remove('hidden');
+    const sortEl = document.getElementById('mv-sort');
+    if (sortEl) {
+      sortEl.classList.remove('hidden');
+      sortEl.innerHTML = _mvSortPillsHtml();
+      sortEl.querySelectorAll('[data-mv-sort]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          const id = b.getAttribute('data-mv-sort');
+          if (id && id !== _mvSort) {
+            _mvSort = id;
+            _mvRenderSheet();
+          }
+        });
+      });
+    }
+
+    // List
+    const rows = _mvSortedActive();
+    let html = rows.map(_mvRowHtml).join('');
+    if (rows.length === 1) {
+      html += '<p class="mv-single-line">One vow remains. Release it and the system waits anew.</p>';
+    }
+    bodyEl.innerHTML = html;
+
+    // Wire row buttons
+    bodyEl.querySelectorAll('[data-mv-release]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const id = b.getAttribute('data-mv-release');
+        if (id) {
+          _mvConfirmId = id;
+          _mvRenderSheet();
+        }
+      });
+    });
+    bodyEl.querySelectorAll('[data-mv-cancel]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        _mvConfirmId = null;
+        _mvRenderSheet();
+      });
+    });
+    bodyEl.querySelectorAll('[data-mv-confirm]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const id = b.getAttribute('data-mv-confirm');
+        if (id) _mvReleaseHabit(id);
+      });
+    });
+  }
+
+  function _mvReleaseHabit(habitId) {
+    if (!Array.isArray(habits)) return;
+    const idx = habits.findIndex(function (h) { return h && h.id === habitId; });
+    if (idx === -1) return;
+    const prevCount = getActiveHabitCount();
+    _mvConfirmId = null;
+    _mvReleasingId = habitId;
+
+    // Re-render to show the releasing animation class on the row.
+    _mvRenderSheet();
+
+    const reducedMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const delay = reducedMotion ? 200 : 300;
+    setTimeout(function () {
+      try {
+        // Soft archive: set archived=true. Streak/completions preserved.
+        habits[idx].archived = true;
+        if (typeof save === 'function') save();
+      } catch (_) {}
+      _mvReleasingId = null;
+
+      const newCount = getActiveHabitCount();
+      const roomMade = (prevCount > MAX_ACTIVE_HABITS && newCount <= MAX_ACTIVE_HABITS);
+      _mvRenderSheet({ tick: true, roomMade: roomMade });
+
+      if (roomMade) {
+        if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+        clearTimeout(_mvRoomMadeTimer);
+        _mvRoomMadeTimer = setTimeout(function () {
+          _mvRenderSheet({ tick: false, roomMade: false });
+        }, 2200);
+      }
+
+      // Sync main app: re-render habits list (active list now shorter)
+      // and refresh progress %.
+      try { if (typeof renderHabits === 'function') renderHabits({ skipSideEffects: true }); } catch (_) {}
+      try { if (typeof updateProgress === 'function') updateProgress(); } catch (_) {}
+    }, delay);
+  }
+
+  function openManageVows() {
+    const overlay = document.getElementById('mv-overlay');
+    if (!overlay) return;
+    _mvConfirmId = null;
+    _mvReleasingId = null;
+    _mvRenderSheet();
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', _mvKeydown, true);
+  }
+  function closeManageVows() {
+    const overlay = document.getElementById('mv-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', _mvKeydown, true);
+    clearTimeout(_mvRoomMadeTimer);
+  }
+  function _mvKeydown(e) {
+    if (e.key === 'Escape') closeManageVows();
+  }
+  try {
+    window.__openManageVows  = openManageVows;
+    window.__closeManageVows = closeManageVows;
   } catch (_) {}
 
   // ── Field Manual engine ─────────────────────────────────────────────
@@ -39196,6 +39599,22 @@
       const fmRow = document.getElementById('settings-field-manual-row');
       if (fmRow) fmRow.addEventListener('click', function () {
         try { openFieldManual(); } catch (_) {}
+      });
+      // v3 Phase 1z.283 — Manage Vows entry point in Settings.
+      // Opens the soft-archive sheet. Always accessible (no storage
+      // gate — users may want to release vows before hitting the cap).
+      const mvRow = document.getElementById('settings-manage-vows-row');
+      if (mvRow) mvRow.addEventListener('click', function () {
+        try { openManageVows(); } catch (_) {}
+      });
+      // v3 Phase 1z.283 — Manage Vows sheet chrome wiring.
+      const mvClose = document.getElementById('mv-close-btn');
+      const mvDone  = document.getElementById('mv-done-btn');
+      const mvOver  = document.getElementById('mv-overlay');
+      if (mvClose) mvClose.addEventListener('click', closeManageVows);
+      if (mvDone)  mvDone.addEventListener('click', closeManageVows);
+      if (mvOver)  mvOver.addEventListener('click', function (e) {
+        if (e.target === mvOver) closeManageVows();
       });
       // ESC closes (web/dev); harmless on iOS.
       document.addEventListener('keydown', (e) => {
