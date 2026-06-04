@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w163';
+  const APP_BUILD_TAG = '2.2.5-w164';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -29248,16 +29248,39 @@
       isOpen = true;
       panel.classList.remove('hidden');
       trigger.setAttribute('aria-expanded', 'true');
-      // v3 Phase 1z.243 — Center the active row in the column so the
-      // user can see neighbors above and below. `'nearest'` left the
-      // selected hour at the bottom edge when it was already partially
-      // visible, which is what made 9 unreachable without scrolling.
-      [hCol, mCol].forEach((col) => {
+      // v3 Phase 1z.279-fix-w164 — Center the active row in each
+      // column on open. Previous attempt used scrollIntoView with
+      // {block: 'center'} called synchronously after the .hidden
+      // class toggle — but on iOS WebKit (Capacitor), the column's
+      // scroll context isn't fully laid out yet at that moment,
+      // so the call no-ops and the column stays at scrollTop = 0.
+      // The TestFlight W163 symptom: a user with the 9:00 default
+      // saw hours 3-8 on picker open, with 9 just below the visible
+      // edge, so it looked broken.
+      //
+      // Fix: defer to the next animation frame (so layout has run),
+      // then compute scrollTop manually using element geometry. This
+      // is more reliable than scrollIntoView across iOS WebKit
+      // versions and is functionally identical to {block: 'center'}.
+      const centerActive = (col) => {
         const active = col.querySelector('.ndp-item.is-active');
-        if (active && typeof active.scrollIntoView === 'function') {
-          try { active.scrollIntoView({ block: 'center' }); } catch (_) {}
-        }
-      });
+        if (!active) return;
+        try {
+          const target = active.offsetTop
+                       + (active.offsetHeight / 2)
+                       - (col.clientHeight / 2);
+          col.scrollTop = Math.max(0, target);
+        } catch (_) { /* no-op on any DOM measurement failure */ }
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+          [hCol, mCol].forEach(centerActive);
+        });
+      } else {
+        // Fallback for environments without rAF — should never hit
+        // in production but keeps the picker functional.
+        setTimeout(() => { [hCol, mCol].forEach(centerActive); }, 16);
+      }
     }
     function closePanel() {
       if (!isOpen) return;
