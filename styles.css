@@ -28207,3 +28207,56 @@ button.guildhall-summary-tile:active {
 }
 
 /* END v3 Phase 1z.279-fix-w163 restoration block */
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.279-fix-w165 — Guild / Social polish
+   ═══════════════════════════════════════════════════════════════
+   Two small polish hotfixes on top of w163's restoration block
+   and w164's onboarding picker fix. Both are scoped CSS — zero JS
+   touch, zero markup change. Discovered during W164 TestFlight
+   on-device smoke.
+   ─────────────────────────────────────────────────────────────── */
+
+/* Fix 1 — Friend row alignment lock.
+   Base .social-row uses display:flex with gap:10px. That works for
+   the post-restoration Friends list but lets the alias-text column
+   drift horizontally row-to-row because the flex algorithm reads
+   content widths each row (alias length varies wildly:
+   "rendiesel" vs "anthony-edwards"; rank chip below the avatar
+   varies too: "C III" vs "D II" vs "S+").
+   Switching the guildhall-scoped friend row to an explicit 3-col
+   grid pins every column to a deterministic width so all aliases
+   start at the same x and all rank sub-labels sit at the same x.
+   - 46px → avatar stack (matches the .friend-avatar width above)
+   - 1fr  → alias + rank sub-label main column
+   - auto → •••/confirm action area (sized to its content)
+   Scoped to guildhall-section--friends so the standalone Social
+   tab .social-row (used by the bottom Friends accordion under the
+   normal collapsible) is untouched. */
+.guildhall-section--friends .friend-row--accepted {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+/* Ensure the main column can shrink properly inside grid for
+   ellipsis to engage on long aliases (anthony-edwards). */
+.guildhall-section--friends .friend-row--accepted .social-row-main {
+  min-width: 0;
+}
+
+/* Fix 2 — Breathing room above GUILD NOTIFICATIONS.
+   The Social-panel layout flows directly from the horizontal
+   tab-icon strip into the Guild Activity section. With
+   .guildhall-section { margin: 0 14px 16px; } the top margin is
+   0, so the "GUILD NOTIFICATIONS" title sits flush against the
+   icon rail. Adding a small top margin restores vertical rhythm
+   without pushing the whole tab content noticeably down.
+   Scoped to --activity so only the first section gets the spacer
+   — the lower --friends accordion's margin (the existing 16px
+   bottom from its predecessor) already reads cleanly. */
+.guildhall-section--activity {
+  margin-top: 14px;
+}
+
+/* END v3 Phase 1z.279-fix-w165 polish block */
