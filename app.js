@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w177';
+  const APP_BUILD_TAG = '2.2.5-w178';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21777,7 +21777,7 @@
   // Returns true if the modal was shown (caller can suppress its
   // normal toast); false if already seen (caller falls through to
   // toast path). Single beat, single tap — "BEGIN" CTA dismisses.
-  function showFirstVowCoachmark() {
+  function showFirstVowCoachmark(opts) {
     if (localStorage.getItem('hb_tour_first_vow_v1') === '1') return false;
     // v3 Phase 1z.282C — Cross-flow guard. Eagerly set the welcome-
     // back key when a new user goes through the First Vow modal so
@@ -21785,11 +21785,17 @@
     // launch. Eager (vs on-dismiss) so even a user who backgrounds
     // mid-modal still skips welcome.
     try { localStorage.setItem('hb_tour_welcome_back_v1', '1'); } catch (_) {}
+    // v3 Phase 1z.283 W178 — Optional onDismiss hook so callers can
+    // chain follow-on flows (e.g. the pack-add notif prompt) AFTER
+    // the coach is dismissed, instead of racing it. Backward-
+    // compatible: the custom-path caller passes nothing → no chain.
+    const _onDismiss = (opts && typeof opts.onDismiss === 'function') ? opts.onDismiss : undefined;
     _faRunCoachmark({
       context: 'first_vow',
       beats: FA_FIRST_VOW_BEATS,
       cta: 'BEGIN',
       storageKey: 'hb_tour_first_vow_v1',
+      onDismiss: _onDismiss,
     });
     return true;
   }
@@ -22962,25 +22968,44 @@
     try { renderHabits({ skipSideEffects: true });          } catch (e) { try { console.warn('[pack] post-save render failed', e); } catch (_) {} }
     try { updateMorningButtonVisibility();  } catch (_) {}
     try { updateLockedInButtonVisibility(); } catch (_) {}
-    try {
-      if (pack && pack.name) {
-        showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
-      }
-    } catch (_) {}
 
-    // Auto-trigger the notification prompt when a pack is added and the
-    // user hasn't been asked yet. Pack-based paths (Morning Routine,
-    // Locked-In) are committing to a daily routine — a single morning
-    // reminder is the most useful default for them. Fired as a follow-up
-    // to the toast (not blocking the pack-add) so the moment feels
-    // natural: "you committed → here's what we suggest."
+    // v3 Phase 1z.283 W178 — Greeting parity with the custom path.
+    // Before W178: onboarding users who picked the Morning Routine /
+    // Locked-In pack added 10/16 vows in one tap and were greeted
+    // by a quick toast and (for reminderable packs) the notif prompt
+    // — but the custom path (First Vow picker) fires the FA_FIRST_VOW
+    // coachmark, so pack-path users were the only new hunters who
+    // never met The First Awakened during onboarding.
+    //
+    // Fix: try showFirstVowCoachmark() after pack-add. It self-gates
+    // on the hb_tour_first_vow_v1 storage key, so existing users
+    // adding packs later get the toast as before; only new users
+    // (key unset) see the coach. The notif prompt is chained via
+    // onDismiss so it fires AFTER coach dismissal rather than
+    // racing it on top of the FA modal.
     const isReminderable = (packId === 'morning' || packId === 'locked-in');
-    if (isReminderable) {
+    const scheduleNotifPrompt = function () {
+      if (!isReminderable) return;
       try {
         if (Notif && Notif.permAskedBefore && !Notif.permAskedBefore()) {
           setTimeout(() => runOnboardingNotifPrompt(() => {}), 600);
         }
       } catch (_) {}
+    };
+
+    let _faCoachShown = false;
+    try {
+      _faCoachShown = showFirstVowCoachmark({ onDismiss: scheduleNotifPrompt });
+    } catch (_) { _faCoachShown = false; }
+
+    if (!_faCoachShown) {
+      // Existing-user path: toast as before, then notif prompt.
+      try {
+        if (pack && pack.name) {
+          showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
+        }
+      } catch (_) {}
+      scheduleNotifPrompt();
     }
   }
 
