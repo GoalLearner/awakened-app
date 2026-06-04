@@ -60,9 +60,10 @@ export interface Env {
   RL_FRIENDS_READ: RateLimit;
   /** Discipline Duels v1 — friend writes (request/accept/decline/remove). */
   RL_FRIENDS_WRITE: RateLimit;
-  /** Discipline Duels v1 — duel reads (list + detail). */
-  RL_DUELS_READ: RateLimit;
-  /** Discipline Duels v1 — duel writes (create/accept/decline). */
+  /** v3 Phase 1z.279 — Duels retired. RL_DUELS_READ binding removed.
+   *  RL_DUELS_WRITE kept because handleDuelsResolve and
+   *  handleVerifiedEventsSubmit still use it for in-flight legacy
+   *  settlements and outbox drains. */
   RL_DUELS_WRITE: RateLimit;
   /** 100K Step Club + future accolades (v3 Phase 1z.27) — guards
    *  GET /v1/users/me/accolades. 12/min per user. */

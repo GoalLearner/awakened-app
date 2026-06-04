@@ -115,12 +115,10 @@ type = "ratelimit"
 namespace_id = "1008"
 simple = { limit = 10, period = 60 }  # 10/min per user
 
-[[unsafe.bindings]]
-name = "RL_DUELS_READ"
-type = "ratelimit"
-namespace_id = "1009"
-simple = { limit = 30, period = 60 }  # 30/min per user
-
+# v3 Phase 1z.279 — Duels permanently retired. RL_DUELS_READ binding
+# (namespace_id 1009) removed. RL_DUELS_WRITE (namespace_id 1010)
+# kept because handleDuelsResolve and handleVerifiedEventsSubmit
+# still use it.
 [[unsafe.bindings]]
 name = "RL_DUELS_WRITE"
 type = "ratelimit"

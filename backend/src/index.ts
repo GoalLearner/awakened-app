@@ -44,30 +44,23 @@ import {
   handleFriendsRemove,
 } from './handlers/friends';
 import {
-  handleDuelsList,
-  handleDuelsCreate,
-  handleDuelsAccept,
-  handleDuelsDecline,
-  handleDuelsCancel,
-  handleDuelsDetail,
-  handleDuelsSubmitProgress,
+  // v3 Phase 1z.279 — Duels permanently retired. Only two endpoints
+  // remain to handle in-flight settlements + legacy outbox drains
+  // from upgraded clients. All other duel handlers were removed.
   handleDuelsResolve,
   handleVerifiedEventsSubmit,
-  handleDuelScoreGet,
 } from './handlers/duels';
 import { handlePreflight, withCors } from './lib/cors';
 import { jsonError } from './lib/responses';
 
-// Regex matchers for parameterized routes (Discipline Duels v1 / v3 Phase 1x).
+// Regex matchers for parameterized routes.
 // Capture group #1 is the row UUID. We accept the standard randomUUID()
 // charset (hex + dashes) — anything else 404s implicitly.
 const FRIENDS_ID_RE = /^\/v1\/friends\/([0-9a-fA-F-]{8,})\/(accept|decline|remove)$/;
-const DUELS_ID_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(accept|decline|cancel)$/;
-// Steps Duel Scoring v1 (v3 Phase 1y) — POST progress + resolve.
-const DUELS_SCORING_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/(progress|resolve)$/;
-// Verified Duel Scoring Engine v1 (v3 Phase 1z) — GET /v1/duels/:id/score.
-const DUELS_SCORE_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/score$/;
-const DUELS_DETAIL_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})$/;
+// v3 Phase 1z.279 — Duels permanently retired. The only remaining
+// duel-shaped route is POST /v1/duels/:id/resolve (legacy in-flight
+// settlement from pre-w160 clients). All other duel regexes removed.
+const DUELS_RESOLVE_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/resolve$/;
 
 export default {
   async fetch(
@@ -159,15 +152,11 @@ export default {
             // alias + rankLabel joined for one-roundtrip render.
             response = await handleFriendsActivityGet(request, env, session);
           }
-          // ── Discipline Duels v1 (v3 Phase 1x) ──
+          // ── Friends + legacy-Duels residuals ──
           else if (path === '/v1/friends' && method === 'GET') {
             response = await handleFriendsList(request, env, session);
           } else if (path === '/v1/friends/request' && method === 'POST') {
             response = await handleFriendsRequest(request, env, session);
-          } else if (path === '/v1/duels' && method === 'GET') {
-            response = await handleDuelsList(request, env, session);
-          } else if (path === '/v1/duels' && method === 'POST') {
-            response = await handleDuelsCreate(request, env, session);
           } else if (FRIENDS_ID_RE.test(path) && method === 'POST') {
             const match = path.match(FRIENDS_ID_RE)!;
             const friendshipId = match[1];
@@ -179,38 +168,23 @@ export default {
             } else {
               response = await handleFriendsRemove(request, env, session, friendshipId);
             }
-          } else if (DUELS_ID_RE.test(path) && method === 'POST') {
-            const match = path.match(DUELS_ID_RE)!;
-            const duelId = match[1];
-            const action = match[2];
-            if (action === 'accept') {
-              response = await handleDuelsAccept(request, env, session, duelId);
-            } else if (action === 'decline') {
-              response = await handleDuelsDecline(request, env, session, duelId);
-            } else {
-              // 'cancel' — challenger-only, pending-only (v3 Phase 1z.1).
-              response = await handleDuelsCancel(request, env, session, duelId);
-            }
-          } else if (DUELS_SCORING_RE.test(path) && method === 'POST') {
-            // Steps Duel Scoring v1 (v3 Phase 1y).
-            const match = path.match(DUELS_SCORING_RE)!;
-            const duelId = match[1];
-            const action = match[2];
-            if (action === 'progress') {
-              response = await handleDuelsSubmitProgress(request, env, session, duelId);
-            } else {
-              response = await handleDuelsResolve(request, env, session, duelId);
-            }
+          } else if (DUELS_RESOLVE_RE.test(path) && method === 'POST') {
+            // v3 Phase 1z.279 — Duels permanently retired. The only
+            // remaining duel-shaped route handles in-flight settlement
+            // for clients still on pre-w160 builds. New clients (w160+)
+            // never call this. Idempotent: re-calling on an already-
+            // completed duel returns the existing payload without
+            // any DB writes.
+            const match = path.match(DUELS_RESOLVE_RE)!;
+            response = await handleDuelsResolve(request, env, session, match[1]);
           } else if (path === '/v1/verified-events' && method === 'POST') {
-            // Verified Duel Scoring Engine v1 (v3 Phase 1z).
+            // v3 Phase 1z.279 — Drain target for the legacy verified-
+            // event outbox on upgraded clients. New clients don't
+            // enqueue events (producer removed in w160) but still drain
+            // any pre-retirement queue contents on cold launch +
+            // foreground. Backend dedupes via UNIQUE(user_id,
+            // client_event_id).
             response = await handleVerifiedEventsSubmit(request, env, session);
-          } else if (DUELS_SCORE_RE.test(path) && method === 'GET') {
-            // Verified Duel Scoring Engine v1 (v3 Phase 1z).
-            const match = path.match(DUELS_SCORE_RE)!;
-            response = await handleDuelScoreGet(request, env, session, match[1]);
-          } else if (DUELS_DETAIL_RE.test(path) && method === 'GET') {
-            const match = path.match(DUELS_DETAIL_RE)!;
-            response = await handleDuelsDetail(request, env, session, match[1]);
           } else {
             response = jsonError(404, 'NOT_FOUND', `No route for ${method} ${path}.`);
           }
