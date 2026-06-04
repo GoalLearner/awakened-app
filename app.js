@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w169';
+  const APP_BUILD_TAG = '2.2.5-w170';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2995,6 +2995,20 @@
           : (isWin ? 'Duel victory' : 'Duel loss'),
         detail: isWin ? 'Verified duel reward' : 'Verified duel stake',
         ref_id: id || null,
+      };
+    }
+    // v3 Phase 1z.282D — The First Awakened rank-up gift. Hint
+    // shape: 'fa_rankup_<rank>' (S+ encoded as 'fa_rankup_splus').
+    // Checked early so neither boss-kill prefixes nor any other
+    // legacy classifier can claim it.
+    if (h.indexOf('fa_rankup_') === 0) {
+      const slug = h.slice(10); // strip 'fa_rankup_'
+      const rankId = (slug === 'splus') ? 'S+' : slug.toUpperCase();
+      return {
+        type: 'fa_rankup',
+        label: "First Awakened's gift",
+        detail: rankId + '-rank advancement',
+        ref_id: rankId || null,
       };
     }
     // v3 Phase 1z.277D — WLT Merchant bonus row. Hint shape:
@@ -14887,6 +14901,20 @@
       levelUpActive = false;
       drainLevelUpQueue();
     }
+    else if (item.type === 'fa_rankup') {
+      // v3 Phase 1z.282D — The First Awakened acknowledges the rank
+      // advancement and gifts engage souls for the boss tier just
+      // unlocked. Queued by toggleHabit at position 1 (after the
+      // existing 'rank' celebration) so it fires AFTER the fireworks
+      // and BEFORE any stat-up modals. Blocking — releases the queue
+      // via the showFirstAwakenedRankUp onDismiss path. try/catch
+      // guards against an exception stalling the queue.
+      try { showFirstAwakenedRankUp(item.rankId); }
+      catch (_) {
+        levelUpActive = false;
+        drainLevelUpQueue();
+      }
+    }
     else                                  showStatLevelUp(item);
   }
 
@@ -19338,6 +19366,17 @@
       const majorRankChanged = newRank.id !== oldRank.id;
       if (majorRankChanged) {
         levelUpQueue.unshift({ type: 'rank', rank: newRank });
+        // v3 Phase 1z.282D — The First Awakened acknowledges the
+        // advancement and gifts engage souls for the new boss tier.
+        // Insert at queue position 1 so order is:
+        //   [0] rank-up celebration (fireworks + fanfare)
+        //   [1] fa_rankup (The First Awakened modal + souls)
+        //   [2+] stat-ups, sub-rank, achievements
+        // Idempotency lives inside showFirstAwakenedRankUp via the
+        // hb_fa_rankup_seen_v1 seen-set; queuing here is unconditional
+        // because the orchestrator releases the queue cleanly even on
+        // already-seen ranks.
+        levelUpQueue.splice(1, 0, { type: 'fa_rankup', rankId: newRank.id });
       }
 
       // Detect stat level-ups — every level triggers a notification
@@ -21305,6 +21344,76 @@
     ]},
   ];
 
+  // v3 Phase 1z.282D — Rank-up congratulations + souls gift.
+  // Fires once per rank advancement (D, C, B, A, S, S+). Skips E —
+  // users start at E and never "advance" to it; cinematic onboarding
+  // already covers the welcome moment. S+ is treated specially: the
+  // peer-status narrative beat without a souls gift (no S+ boss
+  // currently exists, and the moment is bigger than the economy).
+  //
+  // Souls reward = engageCostSouls(rankId) so the rank-up gift
+  // covers exactly one engagement at the new tier. Pulled live (not
+  // hardcoded) so future economy changes propagate cleanly.
+  //
+  // Storage: hb_fa_rankup_seen_v1 (JSON array of seen ranks).
+  // Idempotent: shown at most once per rank per device. Reset All
+  // Progress wipes the seen-set and re-arms the moments.
+  const FA_RANKUP_BEATS = {
+    D: [{ pose: 'nodding', lines: [
+      'Hunter.',
+      'You have crossed the first threshold. The system has marked it.',
+      'Take these souls. The boss at your new rank will not enter for free.',
+    ]}],
+    C: [{ pose: 'nodding', lines: [
+      'The casual hunter is behind you now.',
+      'What you have done, most do not do.',
+      'Engage the boss at your rank. Read its condition first.',
+    ]}],
+    B: [{ pose: 'pointing', lines: [
+      'You have crossed into the disciplined ranks, hunter.',
+      'Few who began with you still stand.',
+      'The hunt deepens. So does the reward.',
+    ]}],
+    A: [{ pose: 'pointing', lines: [
+      'Hunter.',
+      'Few reach what you have reached. Fewer still continue past it.',
+      'Take these souls. The next hunt waits.',
+    ]}],
+    S: [{ pose: 'scroll', lines: [
+      'You stand where most never will, hunter.',
+      'I have read the record. The system has read it longer.',
+      'Engage the boss. The system will recognize the victory.',
+    ]}],
+    'S+': [{ pose: 'idle', lines: [
+      'Hunter.',
+      'You stand where I once stood alone.',
+      'The system has finished counting. Now we hunt as equals.',
+    ]}],
+  };
+
+  function _faRankupSeen(rankId) {
+    try {
+      const raw = localStorage.getItem('hb_fa_rankup_seen_v1');
+      if (!raw) return false;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) && arr.indexOf(rankId) !== -1;
+    } catch (_) { return false; }
+  }
+  function _faMarkRankupSeen(rankId) {
+    try {
+      const raw = localStorage.getItem('hb_fa_rankup_seen_v1');
+      const arr = raw ? (JSON.parse(raw) || []) : [];
+      if (Array.isArray(arr) && arr.indexOf(rankId) === -1) {
+        arr.push(rankId);
+        localStorage.setItem('hb_fa_rankup_seen_v1', JSON.stringify(arr));
+      }
+    } catch (_) {}
+  }
+  // Encode S+ safely for ledger source labels (no '+' in source strings).
+  function _faRankupSource(rankId) {
+    return 'fa_rankup_' + String(rankId).toLowerCase().replace('+', 'plus');
+  }
+
   // Field Manual sections — 7 sections, verbatim from ClaudeDesign.
   const FA_MANUAL_SECTIONS = [
     {
@@ -21549,6 +21658,13 @@
       document.removeEventListener('keydown', onKey, true);
       sheet.removeEventListener('click', onSheetClick);
       overlay.removeEventListener('click', onOverlayClick);
+      // v3 Phase 1z.282D — Post-dismiss callback for queue-driven
+      // coachmarks (rank-up gifts call this to release levelUpActive
+      // and drain the next queue item). Fire-and-forget; swallowed
+      // exceptions cannot stall the dismiss flow.
+      if (typeof spec.onDismiss === 'function') {
+        try { spec.onDismiss(); } catch (_) {}
+      }
     }
 
     function onKey(e) {
@@ -21633,11 +21749,81 @@
       storageKey: 'hb_tour_welcome_back_v1',
     });
   }
+
+  // v3 Phase 1z.282D — Rank-up congratulations orchestrator.
+  // Called from drainLevelUpQueue() when a 'fa_rankup' item is
+  // dispatched (queued by toggleHabit immediately after the
+  // existing 'rank' celebration item). Idempotent via the
+  // hb_fa_rankup_seen_v1 set — already-seen ranks fall through
+  // and release the queue without gifting souls or showing the
+  // modal. The seen-set is marked EAGERLY (before the modal opens)
+  // so a user who backgrounds mid-modal doesn't get re-gifted on
+  // next launch.
+  //
+  // Souls reward: engageCostSouls(rankId) — gives exactly one
+  // engagement at the new tier. S+ is treated as narrative-only
+  // (no boss exists at that tier; the peer-status moment is the
+  // reward).
+  //
+  // Ledger source label: fa_rankup_<rank>  (S+ → fa_rankup_splus).
+  // Classified by _classifySoulsEvent to render as
+  // "First Awakened's gift" with the rank in the detail row.
+  function showFirstAwakenedRankUp(rankId) {
+    const releaseQueue = function () {
+      try {
+        levelUpActive = false;
+        drainLevelUpQueue();
+      } catch (_) {}
+    };
+    if (!rankId || !FA_RANKUP_BEATS[rankId]) {
+      releaseQueue();
+      return;
+    }
+    if (_faRankupSeen(rankId)) {
+      releaseQueue();
+      return;
+    }
+    // Mark seen BEFORE any side effects so backgrounding mid-modal
+    // (or a JS exception during earnSouls / modal mount) cannot
+    // result in a re-gift on next launch. The user has "earned" the
+    // moment by crossing the rank threshold.
+    _faMarkRankupSeen(rankId);
+
+    // Credit souls. Skip S+ entirely (no engage cost; narrative
+    // moment is the reward).
+    const isSPlus = (rankId === 'S+');
+    if (!isSPlus) {
+      try {
+        const cost = (typeof engageCostSouls === 'function')
+          ? engageCostSouls(rankId)
+          : 0;
+        if (cost > 0 && typeof earnSouls === 'function') {
+          earnSouls(cost, _faRankupSource(rankId));
+        }
+      } catch (_) { /* ledger failure must not block the modal */ }
+    }
+
+    // CTA: declarative for D-S, single-glyph dismiss for S+.
+    // The S+ moment is not an "I accept" — there is nothing to
+    // accept. The user simply stands where The First Awakened
+    // once stood.
+    const cta = isSPlus ? 'CONTINUE' : 'I ACCEPT';
+
+    _faRunCoachmark({
+      context: 'rankup_' + String(rankId).toLowerCase(),
+      beats: FA_RANKUP_BEATS[rankId],
+      cta: cta,
+      // No storageKey — we handle persistence via the seen-set above.
+      onDismiss: releaseQueue,
+    });
+  }
+
   try {
     window.__showQuestsCoachmark      = showQuestsCoachmark;
     window.__showStatsCoachmark       = showStatsCoachmark;
     window.__showFirstVowCoachmark    = showFirstVowCoachmark;
     window.__showWelcomeBackCoachmark = showWelcomeBackCoachmark;
+    window.__showFirstAwakenedRankUp  = showFirstAwakenedRankUp;
   } catch (_) {}
 
   // ── Field Manual engine ─────────────────────────────────────────────
