@@ -103,6 +103,13 @@ mkdir -p www/assets/items
 if compgen -G "assets/items/*.png" > /dev/null; then
   cp assets/items/*.png www/assets/items/
 fi
+# v3 Phase 1z.282 — The First Awakened coach character pose set.
+# Five PNGs (~50-60 KB each, ~300 KB total) loaded by the coachmark
+# engine and Field Manual cover/index views.
+mkdir -p www/assets/coach
+if compgen -G "assets/coach/*.png" > /dev/null; then
+  cp assets/coach/*.png www/assets/coach/
+fi
 echo "  www/ assembled."
 echo ""
 

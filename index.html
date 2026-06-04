@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=344">
+  <link rel="stylesheet" href="styles.css?v=345">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2171,6 +2171,39 @@
     </div>
   </div>
 
+  <!-- v3 Phase 1z.282 — The First Awakened coachmark overlay.
+       Centered modal shell; copy + pose + dots populated by app.js
+       _faRunCoachmark(). Used for both Quests and Stats first-open
+       tutorials. ESC closes; overlay-tap closes. -->
+  <div id="fa-coachmark-overlay" class="fa-coach-overlay hidden" aria-hidden="true">
+    <div class="fa-coach-sheet" role="dialog" aria-modal="true" aria-labelledby="fa-coach-title">
+      <div id="fa-coach-figure" class="fa-coach-figure" aria-hidden="true"></div>
+      <div class="fa-coach-kicker">
+        <span class="fa-coach-kicker-diamond" aria-hidden="true"></span>
+        <span id="fa-coach-title">THE FIRST AWAKENED</span>
+        <span class="fa-coach-kicker-diamond" aria-hidden="true"></span>
+      </div>
+      <div class="fa-coach-divider" aria-hidden="true"></div>
+      <div id="fa-coach-speech" class="fa-coach-speech" aria-live="polite"></div>
+      <div id="fa-coach-dots" class="fa-coach-dots" aria-hidden="true"></div>
+      <div id="fa-coach-footer" class="fa-coach-footer"></div>
+    </div>
+  </div>
+
+  <!-- v3 Phase 1z.282 — Field Manual bottom sheet. Always-accessible
+       reference. Three views (cover / index / section), driven by
+       app.js openFieldManual(). Settings entry row sits in the
+       settings-v2 sheet. -->
+  <div id="fa-manual-overlay" class="fa-manual-overlay hidden" aria-hidden="true">
+    <div class="fa-manual-sheet" role="dialog" aria-modal="true" aria-labelledby="fa-manual-title">
+      <div class="fa-manual-hairline" aria-hidden="true"></div>
+      <div class="fa-manual-grabber" aria-hidden="true"></div>
+      <div id="fa-manual-topbar" class="fa-manual-topbar"></div>
+      <div id="fa-manual-body" class="fa-manual-body" id="fa-manual-title"></div>
+      <div id="fa-manual-pager" class="fa-manual-pager hidden"></div>
+    </div>
+  </div>
+
   <!-- Notification-permission explainer (shown once before iOS native prompt) -->
   <!-- v3 Phase 1m — Permission pre-prompt redesign (claudedesign port).
        Tactical system messages framing replaces the prior generic
@@ -2708,7 +2741,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=617"></script>
+  <script src="app.js?v=618"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -2896,6 +2929,25 @@
         <span class="settings-v2-wctop-sub">A glimpse</span>
       </span>
       <span class="settings-v2-wctop-chev" aria-hidden="true">›</span>
+    </button>
+
+    <!-- v3 Phase 1z.282 — Field Manual entry. Premium-highlighted row
+         that mirrors the .settings-v2-wctop visual treatment but with
+         a Field-Manual rule-glyph and gold "system manual" framing.
+         Opens the Field Manual bottom sheet hosted by The First
+         Awakened. Always re-readable; no first-time storage key. -->
+    <button id="settings-field-manual-row" class="settings-v2-fmrow" type="button">
+      <span class="settings-v2-fmrow-glyph" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+          <path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="#f5b842" stroke-width="1.4"/>
+          <circle cx="16" cy="16" r="3" fill="#f5b842"/>
+        </svg>
+      </span>
+      <span class="settings-v2-fmrow-text">
+        <span class="settings-v2-fmrow-label">Field Manual</span>
+        <span class="settings-v2-fmrow-sub">The system, plainly stated.</span>
+      </span>
+      <span class="settings-v2-fmrow-chev" aria-hidden="true">›</span>
     </button>
 
     <div class="settings-v2-list">
@@ -3130,7 +3182,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W166</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W167</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

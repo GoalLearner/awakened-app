@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.505';
+const CACHE_VERSION = 'v5.506';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -98,6 +98,14 @@ const PRECACHE_ASSETS = [
   // Lives under assets/icons/ (new folder for general-purpose UI
   // iconography, distinct from habit-icons / tab-icons / etc).
   '/assets/icons/souls-icon.png',
+  // v3 Phase 1z.282 — The First Awakened coach pose set. Five PNGs
+  // (idle / pointing / speaking / nodding / scroll), each ~50-60 KB.
+  // Loaded by the coachmark engine + Field Manual cover/index views.
+  '/assets/coach/first-awakened-idle.png',
+  '/assets/coach/first-awakened-pointing.png',
+  '/assets/coach/first-awakened-speaking.png',
+  '/assets/coach/first-awakened-nodding.png',
+  '/assets/coach/first-awakened-scroll.png',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

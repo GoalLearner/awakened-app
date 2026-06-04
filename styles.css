@@ -28575,3 +28575,794 @@ button.guildhall-summary-tile:active {
 }
 
 /* END v3 Phase 1z.280 System Full block */
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.282 — The First Awakened
+   ═══════════════════════════════════════════════════════════════
+   Coachmark + Field Manual surfaces hosted by a recurring character.
+   Direct port of the ClaudeDesign 1z.282 spec (fa-shared.jsx +
+   fa-coachmarks.jsx + fa-manual.jsx). Visual vocabulary is the same
+   as the 1z.280 System Full modal: purple-black glass card with
+   gold corner brackets, violet sigil hairline kicker, Cinzel italic
+   verse body, JetBrains Mono progress + counts. Differences from
+   System Full: character figure overlaps the top edge of the card,
+   typewriter text reveal, progress dots, multi-beat dialogue.
+
+   Palette inlined (matches FA_* tokens from design):
+     panel       linear-gradient(180deg, rgba(28,22,54,0.97), rgba(11,9,28,0.98))
+     border      rgba(167,139,250,0.45)
+     gold        #f5b842
+     goldGlow    rgba(245,184,66,0.30)
+     violet      #8b5cf6
+     violetB     #a78bfa
+     violetGlow  rgba(139,92,246,0.34)
+     text        #f4f3fb
+     text2       #9aa0bd
+     text3       #5c5c78
+   ─────────────────────────────────────────────────────────────── */
+
+/* ── Coachmark overlay ─────────────────────────────────────────── */
+.fa-coach-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  background: rgba(4, 4, 12, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.fa-coach-overlay.hidden { display: none; }
+
+.fa-coach-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  margin-top: 56px; /* leave room for the figure overlapping the top */
+  background: linear-gradient(180deg, rgba(28, 22, 54, 0.97) 0%, rgba(11, 9, 28, 0.98) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  border-radius: 22px;
+  padding: 92px 24px 22px;
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.12),
+    0 0 60px rgba(139, 92, 246, 0.26),
+    0 40px 80px rgba(0, 0, 0, 0.60);
+  cursor: pointer;
+  animation: fa-coach-rise 0.24s cubic-bezier(.2,.8,.3,1);
+  overflow: visible;
+}
+@keyframes fa-coach-rise {
+  from { transform: translateY(18px); }
+  to   { transform: translateY(0); }
+}
+
+/* Scanline + gold corner brackets — purely decorative system chrome. */
+.fa-coach-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(167, 139, 250, 0.05) 0px,
+    rgba(167, 139, 250, 0.05) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+.fa-coach-sheet > .fa-coach-corner-tl,
+.fa-coach-sheet > .fa-coach-corner-tr,
+.fa-coach-sheet > .fa-coach-corner-bl,
+.fa-coach-sheet > .fa-coach-corner-br {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  opacity: 0.7;
+}
+/* Use single ::after to render the top-left corner; other corners via
+   sibling pseudo-elements on inner children to avoid extra DOM. */
+.fa-coach-sheet::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  border-top: 1.5px solid #f5b842;
+  border-left: 1.5px solid #f5b842;
+  border-radius: 4px 0 0 0;
+  opacity: 0.7;
+  pointer-events: none;
+}
+/* Top-right + bottom-left + bottom-right corners via the kicker /
+   speech / footer pseudo-elements. */
+.fa-coach-kicker::before,
+.fa-coach-kicker::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.fa-coach-kicker::before {
+  /* repurposed slot — see .fa-coach-sheet::after for top-left.
+     Here we render the top-right bracket. */
+  top: -76px;
+  right: -14px;
+  border-top: 1.5px solid #f5b842;
+  border-right: 1.5px solid #f5b842;
+  border-radius: 0 4px 0 0;
+}
+.fa-coach-kicker::after {
+  display: none;
+}
+.fa-coach-footer::before,
+.fa-coach-footer::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  pointer-events: none;
+  bottom: -22px;
+}
+.fa-coach-footer::before {
+  left: -14px;
+  border-bottom: 1.5px solid #f5b842;
+  border-left: 1.5px solid #f5b842;
+  border-radius: 0 0 0 4px;
+}
+.fa-coach-footer::after {
+  right: -14px;
+  border-bottom: 1.5px solid #f5b842;
+  border-right: 1.5px solid #f5b842;
+  border-radius: 0 0 4px 0;
+}
+
+/* Character figure overlapping the top edge. */
+.fa-coach-figure {
+  position: absolute;
+  top: -78px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 150px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  /* Violet aura behind the figure. */
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55))
+          drop-shadow(0 0 18px rgba(139, 92, 246, 0.34));
+}
+.fa-coach-figure-img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Kicker (SYSTEM NOTICE-style) — JetBrains Mono small caps, violet. */
+.fa-coach-kicker {
+  position: relative;
+  text-align: center;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: #a78bfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.fa-coach-kicker-diamond {
+  width: 8px;
+  height: 8px;
+  background: #a78bfa;
+  transform: rotate(45deg);
+  display: inline-block;
+  opacity: 0.9;
+}
+
+/* Hairline gold divider under kicker. */
+.fa-coach-divider {
+  position: relative;
+  width: 150px;
+  height: 1px;
+  margin: 14px auto;
+  background: linear-gradient(90deg, transparent, #f5b842, transparent);
+}
+
+/* Speech area — prior lines + current typewriter line. */
+.fa-coach-speech {
+  position: relative;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  text-align: center;
+}
+.fa-coach-line {
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", "Trajan Pro", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+.fa-coach-line--prior {
+  font-size: 15.5px;
+  color: #9aa0bd;
+}
+.fa-coach-line--current {
+  font-size: 16.5px;
+  color: #f4f3fb;
+}
+.fa-coach-caret {
+  display: inline-block;
+  margin-left: 1px;
+  color: #f5b842;
+  animation: fa-caret-blink 0.9s steps(1) infinite;
+}
+@keyframes fa-caret-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Progress dots — JetBrains-Mono-style. */
+.fa-coach-dots {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 18px;
+}
+.fa-coach-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: width 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+.fa-coach-dot.is-active {
+  width: 16px;
+  background: #f5b842;
+  box-shadow: 0 0 8px rgba(245, 184, 66, 0.30);
+}
+.fa-coach-dot.is-past {
+  background: rgba(245, 184, 66, 0.40);
+}
+
+/* Footer — TAP hint OR gold CTA. */
+.fa-coach-footer {
+  position: relative;
+  margin-top: 18px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fa-coach-hint {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #5c5c78;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Gold CTA button (mirrors System Full primary). */
+.fa-coach-cta {
+  width: 100%;
+  height: 50px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #1b1405;
+  background: linear-gradient(180deg, #f7c65c 0%, #e3a52f 100%);
+  box-shadow:
+    0 0 22px rgba(245, 184, 66, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40);
+  transition: transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.fa-coach-cta:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion — drop rise + caret blink. */
+@media (prefers-reduced-motion: reduce) {
+  .fa-coach-sheet { animation: none; }
+  .fa-coach-caret { animation: none; }
+  .fa-coach-dot   { transition: none; }
+  .fa-coach-cta   { transition: none; }
+}
+
+/* Small-screen safety. */
+@media (max-width: 380px) {
+  .fa-coach-sheet { padding: 90px 20px 20px; }
+}
+
+/* ── Field Manual bottom sheet ─────────────────────────────────── */
+.fa-manual-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  background: rgba(4, 4, 12, 0.55);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+.fa-manual-overlay.hidden { display: none; }
+
+.fa-manual-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin-top: 42px;
+  background: linear-gradient(180deg, #16142f 0%, #0d0c22 100%);
+  border-radius: 26px 26px 0 0;
+  border-top: 1px solid rgba(167, 139, 250, 0.45);
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fa-sheet-up 0.28s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes fa-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.fa-manual-hairline {
+  position: absolute;
+  top: -1px;
+  left: 24%;
+  right: 24%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #f5b842, transparent);
+  box-shadow: 0 0 10px rgba(245, 184, 66, 0.30);
+  pointer-events: none;
+}
+.fa-manual-grabber {
+  width: 38px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+  margin: 10px auto 2px;
+  flex: 0 0 auto;
+}
+
+/* Top bar — back / progress / close */
+.fa-manual-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 4px;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 3;
+}
+.fa-manual-navbtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 64px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: #a78bfa;
+  padding: 6px 0;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.fa-manual-navbtn--end { justify-content: flex-end; color: #9aa0bd; }
+.fa-manual-progress {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: #5c5c78;
+}
+
+/* Scrolling content body. */
+.fa-manual-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Cover view ──────────────────────────────────────────────── */
+.fa-manual-cover {
+  padding: 14px 24px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.fa-manual-cover-figure {
+  width: 210px;
+  height: 210px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.55))
+          drop-shadow(0 0 22px rgba(139, 92, 246, 0.34));
+}
+.fa-manual-figure-img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.fa-manual-kicker {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.4em;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fa-manual-kicker-diamond {
+  width: 8px;
+  height: 8px;
+  background: #a78bfa;
+  transform: rotate(45deg);
+  display: inline-block;
+  opacity: 0.9;
+}
+.fa-manual-cover-title {
+  margin: 14px 0 0;
+  font-family: "Cinzel", "Cormorant Garamond", "Trajan Pro", Georgia, serif;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: #f5b842;
+  text-shadow: 0 0 18px rgba(245, 184, 66, 0.30);
+}
+.fa-manual-divider {
+  width: 120px;
+  height: 1px;
+  margin: 18px auto;
+  background: linear-gradient(90deg, transparent, #f5b842, transparent);
+}
+.fa-manual-cover-verse {
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 500;
+  color: #f4f3fb;
+  line-height: 1.6;
+  max-width: 320px;
+}
+.fa-manual-cover-sub {
+  margin: 14px 0 0;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 12.5px;
+  color: #9aa0bd;
+  letter-spacing: 0.02em;
+}
+.fa-manual-cover-cta-wrap {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 26px;
+}
+.fa-manual-open-btn {
+  /* Inherits .fa-coach-cta gold gradient + sizing. */
+  letter-spacing: 0.14em;
+}
+
+/* ── Index view ──────────────────────────────────────────────── */
+.fa-manual-index {
+  padding: 8px 20px 28px;
+}
+.fa-manual-index-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 4px 16px;
+}
+.fa-manual-index-figure {
+  width: 78px;
+  height: 78px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.fa-manual-index-headtxt {
+  flex: 1;
+  min-width: 0;
+}
+.fa-manual-index-title-h {
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #f5b842;
+}
+.fa-manual-index-sub {
+  margin: 4px 0 0;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 12px;
+  color: #9aa0bd;
+  line-height: 1.5;
+}
+.fa-manual-index-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fa-manual-index-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #16163a 0%, #0e0e26 100%);
+  width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.fa-manual-index-row:hover,
+.fa-manual-index-row:focus-visible {
+  border-color: rgba(167, 139, 250, 0.45);
+  outline: none;
+}
+.fa-manual-index-row:active {
+  background: linear-gradient(180deg, #1a1a44 0%, #11112e 100%);
+}
+.fa-manual-index-num {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 11px;
+  font-weight: 800;
+  color: #5c5c78;
+  width: 18px;
+  flex: 0 0 auto;
+}
+.fa-manual-index-glyph {
+  flex: 0 0 auto;
+  display: flex;
+}
+.fa-manual-index-title {
+  flex: 1;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: #f4f3fb;
+}
+.fa-manual-index-chev {
+  flex: 0 0 auto;
+  color: #5c5c78;
+}
+
+/* ── Section view ────────────────────────────────────────────── */
+.fa-manual-section {
+  padding: 18px 24px 24px;
+  animation: fa-fade-in 0.26s ease-out;
+}
+@keyframes fa-fade-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.fa-manual-section-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.fa-manual-section-glyph {
+  filter: drop-shadow(0 0 10px rgba(245, 184, 66, 0.30));
+}
+.fa-manual-section-title {
+  margin: 16px 0 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 0.20em;
+  color: #f5b842;
+  text-shadow: 0 0 16px rgba(245, 184, 66, 0.30);
+}
+.fa-manual-section .fa-manual-divider {
+  margin: 16px auto 18px;
+  width: 110px;
+}
+.fa-manual-section-body {
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 500;
+  color: #f4f3fb;
+  line-height: 1.65;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+.fa-manual-section-tip {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border-left: 2px solid #f5b842;
+  background: rgba(245, 184, 66, 0.06);
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.fa-manual-tip-diamond {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  background: #f5b842;
+  transform: rotate(45deg);
+  display: inline-block;
+  margin-top: 4px;
+  opacity: 0.95;
+}
+.fa-manual-tip-text {
+  margin: 0;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 600;
+  color: #ecca84;
+  line-height: 1.5;
+}
+
+/* ── Pager footer (section view only) ──────────────────────────── */
+.fa-manual-pager {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(5, 5, 19, 0.4);
+}
+.fa-manual-pager.hidden { display: none; }
+.fa-manual-pager-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  border: 1px solid rgba(167, 139, 250, 0.40);
+  background: rgba(139, 92, 246, 0.08);
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fa-manual-pager-btn:disabled,
+.fa-manual-pager-btn[aria-disabled="true"] {
+  border-color: rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #5c5c78;
+  cursor: default;
+  opacity: 0.4;
+}
+.fa-manual-pager-dots {
+  display: flex;
+  gap: 6px;
+}
+.fa-manual-pager-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fa-manual-pager-dot.is-active {
+  width: 14px;
+  background: #f5b842;
+}
+
+/* Reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .fa-manual-sheet,
+  .fa-manual-section,
+  .fa-manual-pager-btn,
+  .fa-manual-pager-dot,
+  .fa-manual-index-row {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ── Settings entry row (Field Manual) ─────────────────────────── */
+/* Highlighted "system" row matching the .settings-v2-wctop hero card
+   pattern but with violet outline + gold rule-diamond glyph. Sits
+   directly under What's Coming. */
+.settings-v2-fmrow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  margin: 10px 14px 14px;
+  width: calc(100% - 28px);
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.10) 0%, rgba(139, 92, 246, 0.04) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.50);
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.12),
+    0 0 22px rgba(139, 92, 246, 0.14);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, box-shadow 0.18s ease;
+}
+.settings-v2-fmrow:active {
+  transform: scale(0.99);
+}
+.settings-v2-fmrow-glyph {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 184, 66, 0.10);
+  border: 1px solid rgba(245, 184, 66, 0.30);
+}
+.settings-v2-fmrow-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-v2-fmrow-label {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f4f3fb;
+}
+.settings-v2-fmrow-sub {
+  margin-top: 2px;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 12px;
+  font-style: italic;
+  color: #9aa0bd;
+  letter-spacing: 0.03em;
+}
+.settings-v2-fmrow-chev {
+  flex: 0 0 auto;
+  color: #5c5c78;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* END v3 Phase 1z.282 The First Awakened block */

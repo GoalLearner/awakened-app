@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w166';
+  const APP_BUILD_TAG = '2.2.5-w167';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20910,7 +20910,19 @@
     // World Rank card). Calling the preview-render here would now
     // be a no-op anyway (the #lb-preview-list element was removed
     // from index.html), but skipping the call keeps the path clean.
-    if (tab === 'stats')        renderStats();
+    if (tab === 'stats') {
+      renderStats();
+      // v3 Phase 1z.282 — First Stats-tab open fires the Stats
+      // coachmark. Storage key (hb_tour_stats_v1) guards re-show.
+      // Defer to next paint so renderStats() actually paints below
+      // the modal first; otherwise the modal opens over an empty
+      // tab on cold launch.
+      try {
+        setTimeout(function () {
+          try { showStatsCoachmark(); } catch (_) {}
+        }, 320);
+      } catch (_) {}
+    }
     if (tab === 'history')      renderHistory();
     // Quests tab: always re-greet the user with the gate. Reset the
     // expansion flag on every tab activation so re-entering the
@@ -20920,6 +20932,13 @@
     if (tab === 'quests') {
       questsGateExpanded = false;
       renderQuestsPanel();
+      // v3 Phase 1z.282 — First Quests-tab open fires the Quests
+      // coachmark explaining bosses, souls, hunt windows.
+      try {
+        setTimeout(function () {
+          try { showQuestsCoachmark(); } catch (_) {}
+        }, 320);
+      } catch (_) {}
     }
     // Social tab — Guild Activity + Friends. Duels v1 (Phase 1x.1)
     // was permanently retired in 1z.279.
@@ -21189,6 +21208,574 @@
     overlay.setAttribute('aria-hidden', 'false');
   }
   try { window.__showSystemFullModal = showSystemFullModal; } catch (_) {}
+
+  // ════════════════════════════════════════════════════════════════════
+  // v3 Phase 1z.282 — The First Awakened (Coachmarks + Field Manual)
+  // ════════════════════════════════════════════════════════════════════
+  // Three guidance surfaces hosted by a recurring character — The First
+  // Awakened. Dialogue copy + visual treatment delivered by ClaudeDesign
+  // (see chats/chat7 / fa-coachmarks.jsx / fa-manual.jsx in the design
+  // bundle for canonical source). DO NOT reword the dialogue — voice
+  // calibration was specifically constrained in the ClaudeDesign brief.
+  //
+  // Storage keys (local only, wiped on Reset All Progress):
+  //   hb_tour_quests_v1  → set '1' after Quests coachmark dismissed
+  //   hb_tour_stats_v1   → set '1' after Stats coachmark dismissed
+  //   (Field Manual: no key — always re-readable from Settings)
+  //
+  // Character art: 5 PNGs at assets/coach/first-awakened-{pose}.png
+  // (idle / pointing / speaking / nodding / scroll). NOT redrawn here —
+  // these are the canonical character. See assets/coach/ for sources.
+  // ════════════════════════════════════════════════════════════════════
+
+  // Dialogue beats — verbatim from ClaudeDesign 1z.282 spec.
+  // Each beat: { pose, lines[] }. Pose changes mark beat boundaries.
+  const FA_QUESTS_BEATS = [
+    { pose: 'idle', lines: [
+      'Hunter.',
+      'I was the first to finish.',
+      'The system learned to count from me.',
+    ]},
+    { pose: 'scroll', lines: [
+      'A boss is not slain by your stats.',
+      'It is a deed made real — done in the world, then proven to the system.',
+      'Read its condition before you engage.',
+    ]},
+    { pose: 'pointing', lines: [
+      'Souls are the currency. The system asks payment to engage.',
+      'Win within the hunt’s window and they return — with the relic the boss kept.',
+      'Let the window close, and you lose only the fee. Never your progress.',
+    ]},
+    { pose: 'nodding', lines: [
+      'Those below are waiting.',
+      'Choose one. Read it. Engage when you are ready.',
+      'Now go.',
+    ]},
+  ];
+
+  const FA_STATS_BEATS = [
+    { pose: 'idle', lines: [
+      'Hunter.',
+      'The system has been watching what you do.',
+    ]},
+    { pose: 'pointing', lines: [
+      'These six marks are your shape.',
+      'Each is fed by the vows you keep — the body feeds strength, the still mind feeds focus.',
+    ]},
+    { pose: 'scroll', lines: [
+      'Touch any mark to read what it means, and what feeds it.',
+      'They reveal your build. They do not do the work for you.',
+    ]},
+    { pose: 'nodding', lines: [
+      'Know your shape, hunter.',
+      'Then go and earn it.',
+    ]},
+  ];
+
+  // Field Manual sections — 7 sections, verbatim from ClaudeDesign.
+  const FA_MANUAL_SECTIONS = [
+    {
+      id: 'vows', glyph: 'vows', title: 'VOWS',
+      body: 'A habit, once bound, becomes a vow — and the system holds you to it. Twenty-five may stand at once. No more. A hunter cannot bind endless vows; focus scattered across too many is no focus at all.',
+      tip:  'Bind only the vows you will keep. The rest are weight.',
+    },
+    {
+      id: 'rank', glyph: 'rank', title: 'RANK · XP',
+      body: 'Every vow you keep returns experience. Experience raises your rank — E, D, C, B, A, S, and S+ — each rank cut into three divisions: III, then II, then I. The climb is not granted. It is recorded.',
+      tip:  'Rank is memory. It counts only what you have already done.',
+    },
+    {
+      id: 'stats', glyph: 'stats', title: 'STATS · CLASS',
+      body: 'Six stats describe your build, and each is fed by its own kind of vow. At the fifth level the system names your class — the shape your discipline has taken. That name is read from your deeds. It is never chosen for you.',
+      tip:  'Your class is not a costume. It is what you have repeated.',
+    },
+    {
+      id: 'bosses', glyph: 'bosses', title: 'BOSSES · SOULS',
+      body: 'A boss is a challenge made real — a deed done in the world, then proven to the system. Souls are the currency it asks to engage. Win within the hunt’s window and they return, with the relic the boss guarded. Fail the window and you lose only the fee.',
+      tip:  'Read the condition before you engage. The system reads no excuses.',
+    },
+    {
+      id: 'relics', glyph: 'relics', title: 'RELICS · ARMORY',
+      body: 'What a boss guards, it surrenders on defeat. Relics gather in your armory, each marked by its rarity. For now they stand as proof of what you have done. In time, they will arm you for what is coming.',
+      tip:  'A relic is earned, never bought. The system knows the difference.',
+    },
+    {
+      id: 'guild', glyph: 'guild', title: 'GUILD',
+      body: 'No hunter climbs entirely unseen. By alias you may stand among others — to be witnessed, not to be measured against them. There are no duels here. The hunt is yours alone; the company is not.',
+      tip:  'Be witnessed. Comparison was never the work.',
+    },
+    {
+      id: 'rule', glyph: 'rule', title: 'THE SYSTEM’S RULE',
+      body: 'Hear the rule beneath all the others. Stats, souls, ranks, relics — these shape the hunt. They do not replace it. Verified behavior is the only proof; the system reads no other. The deed is the power. Everything else is only record.',
+      tip:  'Do the thing. The system believes nothing else.',
+    },
+  ];
+
+  // 7 section glyphs — inline SVG paths, gold stroke, 1.4 stroke-width.
+  // Match the vow-sigil family from 1z.280 / fa-shared.jsx.
+  function _faSectionGlyph(name, size) {
+    const sz = size || 28;
+    const c = '#f5b842';
+    const sw = '1.4';
+    const head = '<svg viewBox="0 0 32 32" width="' + sz + '" height="' + sz + '" fill="none" aria-hidden="true">';
+    let body = '';
+    switch (name) {
+      case 'vows':
+        body = '<path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="'+c+'" stroke-width="'+sw+'"/>' +
+               '<path d="M16 10 L22 16 L16 22 L10 16 Z" stroke="'+c+'" stroke-width="'+sw+'" opacity="0.7"/>' +
+               '<rect x="12" y="14.7" width="8" height="2.6" rx="1.3" fill="'+c+'"/>';
+        break;
+      case 'rank':
+        body = '<path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="'+c+'" stroke-width="'+sw+'" opacity="0.5"/>' +
+               '<rect x="11" y="18" width="3" height="5" fill="'+c+'"/>' +
+               '<rect x="15" y="14" width="3" height="9" fill="'+c+'"/>' +
+               '<rect x="19" y="10" width="3" height="13" fill="'+c+'"/>';
+        break;
+      case 'stats':
+        body = '<path d="M16 3 L27 9.5 L27 22.5 L16 29 L5 22.5 L5 9.5 Z" stroke="'+c+'" stroke-width="'+sw+'"/>' +
+               '<path d="M16 10 L21.5 13 L21.5 19 L16 22 L10.5 19 L10.5 13 Z" stroke="'+c+'" stroke-width="'+sw+'" opacity="0.6"/>';
+        break;
+      case 'bosses':
+        body = '<path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="'+c+'" stroke-width="'+sw+'"/>' +
+               '<circle cx="16" cy="16" r="4" fill="'+c+'"/>' +
+               '<path d="M16 3 L16 12 M16 20 L16 29" stroke="'+c+'" stroke-width="'+sw+'"/>';
+        break;
+      case 'relics':
+        body = '<path d="M9 11 L16 4 L23 11 L16 28 Z" stroke="'+c+'" stroke-width="'+sw+'"/>' +
+               '<path d="M9 11 L23 11 M16 4 L16 28 M12.5 11 L16 28 M19.5 11 L16 28" stroke="'+c+'" stroke-width="'+sw+'" opacity="0.55"/>';
+        break;
+      case 'guild':
+        body = '<path d="M12 5 L21 14 L12 23 L3 14 Z" stroke="'+c+'" stroke-width="'+sw+'" opacity="0.85"/>' +
+               '<path d="M20 9 L29 18 L20 27 L11 18 Z" stroke="'+c+'" stroke-width="'+sw+'"/>';
+        break;
+      case 'rule':
+        body = '<path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="'+c+'" stroke-width="'+sw+'"/>' +
+               '<circle cx="16" cy="16" r="3" fill="'+c+'"/>';
+        break;
+      default:
+        body = '<path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="'+c+'" stroke-width="'+sw+'"/>';
+    }
+    return head + body + '</svg>';
+  }
+
+  // ── Coachmark engine ────────────────────────────────────────────────
+  // Stateful: tracks current beat + line + typewriter progress.
+  // Tap behavior:
+  //   - mid-typewriter → skip to end of current line
+  //   - line typed, more lines in beat → advance to next line
+  //   - last line of beat, more beats → advance to next beat
+  //   - last line of last beat → show CTA; tap outside CTA does nothing
+  // Storage key set on dismissal (regardless of where the user dismissed).
+  function _faRunCoachmark(spec) {
+    const overlay = document.getElementById('fa-coachmark-overlay');
+    if (!overlay || !spec || !Array.isArray(spec.beats)) return;
+    const sheet   = overlay.querySelector('.fa-coach-sheet');
+    const figEl   = document.getElementById('fa-coach-figure');
+    const speech  = document.getElementById('fa-coach-speech');
+    const dots    = document.getElementById('fa-coach-dots');
+    const footer  = document.getElementById('fa-coach-footer');
+    const titleEl = document.getElementById('fa-coach-title');
+    if (!sheet || !figEl || !speech || !dots || !footer || !titleEl) return;
+
+    titleEl.textContent = 'THE FIRST AWAKENED';
+    overlay.dataset.context = spec.context || '';
+
+    const reducedMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const tw = { timer: null };
+    let bi = 0;
+    let li = 0;
+
+    function setFigure(pose) {
+      const safe = (typeof pose === 'string') ? pose.replace(/[^a-z]/gi, '') : 'idle';
+      figEl.innerHTML = '<img src="assets/coach/first-awakened-' + safe +
+        '.png" alt="The First Awakened — ' + safe + ' pose" class="fa-coach-figure-img">';
+    }
+
+    function renderDots() {
+      let html = '';
+      for (let i = 0; i < spec.beats.length; i++) {
+        const cls = (i === bi) ? 'fa-coach-dot is-active'
+                  : (i < bi)  ? 'fa-coach-dot is-past'
+                              : 'fa-coach-dot';
+        html += '<span class="' + cls + '"></span>';
+      }
+      dots.innerHTML = html;
+    }
+
+    function renderFooter(mode, ctaLabel) {
+      if (mode === 'cta') {
+        footer.innerHTML = '<button id="fa-coach-cta" class="fa-coach-cta" type="button">' +
+          (ctaLabel || 'CONTINUE').replace(/[<>&]/g, '') + '</button>';
+        const btn = document.getElementById('fa-coach-cta');
+        if (btn) btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          dismiss();
+        });
+      } else if (mode === 'skip') {
+        footer.innerHTML = '<span class="fa-coach-hint">TAP TO SKIP ' +
+          '<svg width="16" height="9" viewBox="0 0 16 9" aria-hidden="true">' +
+          '<path d="M1 4.5h13M10 1l4 3.5L10 8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      } else { // 'next'
+        footer.innerHTML = '<span class="fa-coach-hint">TAP TO CONTINUE ' +
+          '<svg width="16" height="9" viewBox="0 0 16 9" aria-hidden="true">' +
+          '<path d="M1 4.5h13M10 1l4 3.5L10 8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      }
+    }
+
+    function priorLinesHtml(beat, upToIdx) {
+      let html = '';
+      for (let i = 0; i < upToIdx; i++) {
+        html += '<p class="fa-coach-line fa-coach-line--prior">' +
+          esc(beat.lines[i]) + '</p>';
+      }
+      return html;
+    }
+
+    function startLine() {
+      const beat = spec.beats[bi];
+      const line = beat.lines[li];
+      // build static prior lines + current line container
+      speech.innerHTML = priorLinesHtml(beat, li) +
+        '<p class="fa-coach-line fa-coach-line--current"><span id="fa-coach-typed"></span>' +
+        '<span class="fa-coach-caret">▍</span></p>';
+      const typed = document.getElementById('fa-coach-typed');
+      if (!typed) return;
+      if (reducedMotion) {
+        typed.textContent = line;
+        onTypewriterDone();
+        return;
+      }
+      let i = 0;
+      clearInterval(tw.timer);
+      tw.timer = setInterval(function () {
+        i += 1;
+        typed.textContent = line.slice(0, i);
+        if (i >= line.length) {
+          clearInterval(tw.timer);
+          tw.timer = null;
+          onTypewriterDone();
+        }
+      }, 30);
+      renderFooter('skip');
+    }
+
+    function onTypewriterDone() {
+      // remove caret
+      const caret = speech.querySelector('.fa-coach-caret');
+      if (caret) caret.remove();
+      const beat = spec.beats[bi];
+      const isLastLine = li === beat.lines.length - 1;
+      const isLastBeat = bi === spec.beats.length - 1;
+      if (isLastBeat && isLastLine) {
+        renderFooter('cta', spec.cta);
+      } else {
+        renderFooter('next');
+      }
+    }
+
+    function advance() {
+      const beat = spec.beats[bi];
+      // mid-type → complete line
+      if (tw.timer) {
+        clearInterval(tw.timer);
+        tw.timer = null;
+        const typed = document.getElementById('fa-coach-typed');
+        if (typed) typed.textContent = beat.lines[li];
+        onTypewriterDone();
+        return;
+      }
+      const isLastLine = li === beat.lines.length - 1;
+      const isLastBeat = bi === spec.beats.length - 1;
+      if (!isLastLine) {
+        li += 1;
+        startLine();
+        return;
+      }
+      if (!isLastBeat) {
+        bi += 1;
+        li = 0;
+        setFigure(spec.beats[bi].pose);
+        renderDots();
+        startLine();
+        return;
+      }
+      // last line of last beat — wait for CTA
+    }
+
+    function dismiss() {
+      try {
+        clearInterval(tw.timer);
+        tw.timer = null;
+      } catch (_) {}
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      // Persist seen flag
+      if (spec.storageKey) {
+        try { localStorage.setItem(spec.storageKey, '1'); } catch (_) {}
+      }
+      document.removeEventListener('keydown', onKey, true);
+      sheet.removeEventListener('click', onSheetClick);
+      overlay.removeEventListener('click', onOverlayClick);
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') dismiss();
+    }
+    function onSheetClick(e) {
+      // Ignore clicks on the CTA button — its own handler dismisses.
+      const target = e.target;
+      if (target && target.id === 'fa-coach-cta') return;
+      e.stopPropagation();
+      advance();
+    }
+    function onOverlayClick(e) {
+      if (e.target === overlay) dismiss();
+    }
+
+    // Wire interactions
+    document.addEventListener('keydown', onKey, true);
+    sheet.addEventListener('click', onSheetClick);
+    overlay.addEventListener('click', onOverlayClick);
+
+    // Initial render
+    setFigure(spec.beats[0].pose);
+    renderDots();
+    startLine();
+
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function showQuestsCoachmark() {
+    if (localStorage.getItem('hb_tour_quests_v1') === '1') return;
+    _faRunCoachmark({
+      context: 'quests',
+      beats: FA_QUESTS_BEATS,
+      cta: 'I’M READY',
+      storageKey: 'hb_tour_quests_v1',
+    });
+  }
+  function showStatsCoachmark() {
+    if (localStorage.getItem('hb_tour_stats_v1') === '1') return;
+    _faRunCoachmark({
+      context: 'stats',
+      beats: FA_STATS_BEATS,
+      cta: 'UNDERSTOOD',
+      storageKey: 'hb_tour_stats_v1',
+    });
+  }
+  try {
+    window.__showQuestsCoachmark = showQuestsCoachmark;
+    window.__showStatsCoachmark  = showStatsCoachmark;
+  } catch (_) {}
+
+  // ── Field Manual engine ─────────────────────────────────────────────
+  // Three views: cover → index → section. Section navigation via prev/
+  // next buttons + jump-via-dots + ESC closes the sheet entirely.
+  let _faManualView = 'cover'; // 'cover' | 'index' | 'section'
+  let _faManualSi   = 0;       // section index when in 'section' view
+
+  function openFieldManual() {
+    const overlay = document.getElementById('fa-manual-overlay');
+    if (!overlay) return;
+    _faManualView = 'cover';
+    _faManualSi   = 0;
+    _faRenderManual();
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', _faManualKeydown, true);
+  }
+  function closeFieldManual() {
+    const overlay = document.getElementById('fa-manual-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', _faManualKeydown, true);
+  }
+  function _faManualKeydown(e) {
+    if (e.key === 'Escape') {
+      closeFieldManual();
+      return;
+    }
+    if (_faManualView !== 'section') return;
+    if (e.key === 'ArrowRight' && _faManualSi < FA_MANUAL_SECTIONS.length - 1) {
+      _faManualSi += 1;
+      _faRenderManual();
+    } else if (e.key === 'ArrowLeft' && _faManualSi > 0) {
+      _faManualSi -= 1;
+      _faRenderManual();
+    }
+  }
+  function _faRenderManual() {
+    const body = document.getElementById('fa-manual-body');
+    if (!body) return;
+    if (_faManualView === 'cover') body.innerHTML = _faManualCoverHtml();
+    else if (_faManualView === 'index') body.innerHTML = _faManualIndexHtml();
+    else body.innerHTML = _faManualSectionHtml(_faManualSi);
+    _faRenderManualChrome();
+    _faWireManualBody();
+    // Scroll body to top on view/section change
+    body.scrollTop = 0;
+  }
+  function _faRenderManualChrome() {
+    // Top bar shows different content per view; pager footer only in 'section'.
+    const top = document.getElementById('fa-manual-topbar');
+    if (top) {
+      if (_faManualView === 'section') {
+        const num = String(_faManualSi + 1).padStart(2, '0');
+        const total = String(FA_MANUAL_SECTIONS.length).padStart(2, '0');
+        top.innerHTML =
+          '<button id="fa-manual-back" class="fa-manual-navbtn" type="button" aria-label="Back to manual index">' +
+            '<svg width="7" height="11" viewBox="0 0 7 11" aria-hidden="true"><path d="M6 1L1 5.5 6 10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '<span>INDEX</span>' +
+          '</button>' +
+          '<span class="fa-manual-progress">' + num + ' / ' + total + '</span>' +
+          '<button id="fa-manual-close" class="fa-manual-navbtn fa-manual-navbtn--end" type="button" aria-label="Close Field Manual">' +
+            '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M1 1l11 11M12 1L1 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>' +
+          '</button>';
+      } else {
+        top.innerHTML =
+          '<span class="fa-manual-navbtn"></span>' +
+          '<span class="fa-manual-progress">THE FIELD MANUAL</span>' +
+          '<button id="fa-manual-close" class="fa-manual-navbtn fa-manual-navbtn--end" type="button" aria-label="Close Field Manual">' +
+            '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M1 1l11 11M12 1L1 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>' +
+          '</button>';
+      }
+      const back = document.getElementById('fa-manual-back');
+      if (back) back.addEventListener('click', function () {
+        _faManualView = 'index';
+        _faRenderManual();
+      });
+      const closeBtn = document.getElementById('fa-manual-close');
+      if (closeBtn) closeBtn.addEventListener('click', closeFieldManual);
+    }
+    const pager = document.getElementById('fa-manual-pager');
+    if (pager) {
+      if (_faManualView === 'section') {
+        pager.innerHTML = _faManualPagerHtml(_faManualSi);
+        pager.classList.remove('hidden');
+        const prev = document.getElementById('fa-manual-prev');
+        if (prev) prev.addEventListener('click', function () {
+          if (_faManualSi > 0) { _faManualSi -= 1; _faRenderManual(); }
+        });
+        const next = document.getElementById('fa-manual-next');
+        if (next) next.addEventListener('click', function () {
+          if (_faManualSi < FA_MANUAL_SECTIONS.length - 1) { _faManualSi += 1; _faRenderManual(); }
+        });
+        const dots = pager.querySelectorAll('.fa-manual-pager-dot');
+        dots.forEach(function (d, i) {
+          d.addEventListener('click', function () { _faManualSi = i; _faRenderManual(); });
+        });
+      } else {
+        pager.innerHTML = '';
+        pager.classList.add('hidden');
+      }
+    }
+  }
+  function _faWireManualBody() {
+    const openBtn = document.getElementById('fa-manual-open-btn');
+    if (openBtn) openBtn.addEventListener('click', function () {
+      _faManualView = 'index';
+      _faRenderManual();
+    });
+    const indexBtns = document.querySelectorAll('[data-fa-manual-jump]');
+    indexBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        const i = parseInt(b.getAttribute('data-fa-manual-jump'), 10);
+        if (!isNaN(i)) { _faManualSi = i; _faManualView = 'section'; _faRenderManual(); }
+      });
+    });
+  }
+  function _faManualCoverHtml() {
+    return (
+      '<div class="fa-manual-cover">' +
+        '<div class="fa-manual-cover-figure">' +
+          '<img src="assets/coach/first-awakened-idle.png" alt="The First Awakened" class="fa-manual-figure-img">' +
+        '</div>' +
+        '<div class="fa-manual-kicker">' +
+          '<span class="fa-manual-kicker-diamond"></span>' +
+          '<span>THE FIELD MANUAL</span>' +
+          '<span class="fa-manual-kicker-diamond"></span>' +
+        '</div>' +
+        '<h2 class="fa-manual-cover-title">The system, plainly stated.</h2>' +
+        '<div class="fa-manual-divider"></div>' +
+        '<p class="fa-manual-cover-verse">' +
+          '“I keep no secrets here.<br>' +
+          'The system has rules.<br>' +
+          'I have only read them longer than you.”' +
+        '</p>' +
+        '<p class="fa-manual-cover-sub">A record kept by the first who finished.</p>' +
+        '<div class="fa-manual-cover-cta-wrap">' +
+          '<button id="fa-manual-open-btn" class="fa-coach-cta fa-manual-open-btn" type="button">OPEN THE MANUAL</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  function _faManualIndexHtml() {
+    let rows = '';
+    for (let i = 0; i < FA_MANUAL_SECTIONS.length; i++) {
+      const s = FA_MANUAL_SECTIONS[i];
+      const num = String(i + 1).padStart(2, '0');
+      rows +=
+        '<button class="fa-manual-index-row" type="button" data-fa-manual-jump="' + i + '"' +
+          ' aria-label="Read section ' + (i + 1) + ': ' + esc(s.title) + '">' +
+          '<span class="fa-manual-index-num">' + num + '</span>' +
+          '<span class="fa-manual-index-glyph">' + _faSectionGlyph(s.glyph, 26) + '</span>' +
+          '<span class="fa-manual-index-title">' + esc(s.title) + '</span>' +
+          '<svg width="7" height="11" viewBox="0 0 7 11" class="fa-manual-index-chev" aria-hidden="true"><path d="M1 1l5 4.5L1 10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</button>';
+    }
+    return (
+      '<div class="fa-manual-index">' +
+        '<div class="fa-manual-index-head">' +
+          '<img src="assets/coach/first-awakened-idle.png" alt="" class="fa-manual-index-figure">' +
+          '<div class="fa-manual-index-headtxt">' +
+            '<h2 class="fa-manual-index-title-h">The Manual</h2>' +
+            '<p class="fa-manual-index-sub">Seven systems. Read in any order.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="fa-manual-index-list">' + rows + '</div>' +
+      '</div>'
+    );
+  }
+  function _faManualSectionHtml(idx) {
+    const s = FA_MANUAL_SECTIONS[idx];
+    if (!s) return '';
+    return (
+      '<div class="fa-manual-section">' +
+        '<div class="fa-manual-section-head">' +
+          '<div class="fa-manual-section-glyph">' + _faSectionGlyph(s.glyph, 40) + '</div>' +
+          '<h2 class="fa-manual-section-title">' + esc(s.title) + '</h2>' +
+          '<div class="fa-manual-divider"></div>' +
+        '</div>' +
+        '<p class="fa-manual-section-body">' + esc(s.body) + '</p>' +
+        '<div class="fa-manual-section-tip">' +
+          '<span class="fa-manual-tip-diamond"></span>' +
+          '<p class="fa-manual-tip-text">' + esc(s.tip) + '</p>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  function _faManualPagerHtml(idx) {
+    let dots = '';
+    for (let i = 0; i < FA_MANUAL_SECTIONS.length; i++) {
+      dots += '<span class="fa-manual-pager-dot' + (i === idx ? ' is-active' : '') + '"></span>';
+    }
+    const prevDis = (idx === 0) ? ' disabled aria-disabled="true"' : '';
+    const nextDis = (idx === FA_MANUAL_SECTIONS.length - 1) ? ' disabled aria-disabled="true"' : '';
+    return (
+      '<button id="fa-manual-prev" class="fa-manual-pager-btn"' + prevDis + ' aria-label="Previous section">' +
+        '<svg width="7" height="11" viewBox="0 0 7 11" aria-hidden="true"><path d="M6 1L1 5.5 6 10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        'PREV' +
+      '</button>' +
+      '<div class="fa-manual-pager-dots">' + dots + '</div>' +
+      '<button id="fa-manual-next" class="fa-manual-pager-btn"' + nextDis + ' aria-label="Next section">' +
+        'NEXT' +
+        '<svg width="7" height="11" viewBox="0 0 7 11" aria-hidden="true"><path d="M1 1l5 4.5L1 10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</button>'
+    );
+  }
+  try { window.__openFieldManual = openFieldManual; } catch (_) {}
 
   // Difficulty is FIXED at CUSTOM_HABIT_DIFFICULTY ('medium' / 3 XP) so
   // customs can't game the rank economy. Capped at MAX_CUSTOM_HABITS.
@@ -38337,6 +38924,14 @@
       const wcOverlay = document.getElementById('whats-coming-overlay');
       if (wcClose)   wcClose.addEventListener('click', closeWhatsComingSheet);
       if (wcOverlay) wcOverlay.addEventListener('click', closeWhatsComingSheet);
+      // v3 Phase 1z.282 — Field Manual entry point in Settings.
+      // Clicking the row opens the Field Manual bottom sheet hosted
+      // by The First Awakened. No state stored on Settings side —
+      // the manual is always re-readable.
+      const fmRow = document.getElementById('settings-field-manual-row');
+      if (fmRow) fmRow.addEventListener('click', function () {
+        try { openFieldManual(); } catch (_) {}
+      });
       // ESC closes (web/dev); harmless on iOS.
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
