@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w172';
+  const APP_BUILD_TAG = '2.2.5-w173';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22113,6 +22113,10 @@
       // Hide sort + character section in empty state.
       const charEl = document.getElementById('mv-character');
       if (charEl) charEl.classList.add('hidden');
+      // v3 Phase 1z.283 W173 — toggle the sortbar WRAPPER so its
+      // "SORT" label hides with the pills in empty state.
+      const sortBarEl = document.getElementById('mv-sortbar');
+      if (sortBarEl) sortBarEl.classList.add('hidden');
       const sortEl = document.getElementById('mv-sort');
       if (sortEl) sortEl.classList.add('hidden');
       return;
@@ -22121,6 +22125,8 @@
     // Restore character + sort visibility (in case they were hidden by empty).
     const charEl = document.getElementById('mv-character');
     if (charEl) charEl.classList.remove('hidden');
+    const sortBarEl = document.getElementById('mv-sortbar');
+    if (sortBarEl) sortBarEl.classList.remove('hidden');
     const sortEl = document.getElementById('mv-sort');
     if (sortEl) {
       sortEl.classList.remove('hidden');

@@ -29611,11 +29611,35 @@ button.guildhall-summary-tile:active {
 }
 
 /* ── Sort pills ─────────────────────────────────────────────────── */
+/* W173 polish: pills now sit inside a labeled bar (.mv-sortbar) so
+   the trio reads as one cohesive group rather than three orphaned
+   chips. Inactive pills get visible borders + stronger background
+   so they don't disappear against the navy gradient. */
+.mv-sortbar {
+  display: flex; align-items: center; gap: 11px;
+  margin: 0 18px 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(28, 22, 54, 0.45) 0%, rgba(11, 9, 28, 0.55) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.16);
+}
+.mv-sortbar.hidden { display: none; }
+.mv-sortbar-label {
+  flex: 0 0 auto;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.30em;
+  color: #6e7494;
+  padding-right: 4px;
+  border-right: 1px solid rgba(167, 139, 250, 0.18);
+}
 .mv-sort {
-  display: flex; gap: 8px;
-  padding: 0 18px 10px;
+  flex: 1 1 auto;
+  display: flex; gap: 7px;
   overflow-x: auto;
   scrollbar-width: none;
+  padding: 0;
 }
 .mv-sort::-webkit-scrollbar { display: none; }
 .mv-sort.hidden { display: none; }
@@ -29623,9 +29647,9 @@ button.guildhall-summary-tile:active {
   flex: 0 0 auto;
   padding: 7px 13px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-  color: #9aa0bd;
+  border: 1px solid rgba(167, 139, 250, 0.32);
+  background: rgba(167, 139, 250, 0.06);
+  color: #c4c8e0;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10.5px;
   font-weight: 600;
@@ -29635,10 +29659,16 @@ button.guildhall-summary-tile:active {
   -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
+.mv-sortpill:active {
+  background: rgba(167, 139, 250, 0.14);
+  border-color: rgba(167, 139, 250, 0.50);
+  color: #f4f3fb;
+}
 .mv-sortpill.is-active {
-  background: rgba(245, 184, 66, 0.14);
-  border-color: rgba(245, 184, 66, 0.55);
+  background: rgba(245, 184, 66, 0.18);
+  border-color: rgba(245, 184, 66, 0.65);
   color: #f5b842;
+  box-shadow: 0 0 12px rgba(245, 184, 66, 0.18);
 }
 
 /* ── Body / list ────────────────────────────────────────────────── */
@@ -29892,7 +29922,8 @@ button.guildhall-summary-tile:active {
   .mv-character { margin: 6px 14px 10px; padding: 10px 12px; }
   .mv-character-portrait { width: 46px; height: 46px; }
   .mv-character-line { font-size: 12px; }
-  .mv-sort { padding: 0 14px 8px; }
+  .mv-sortbar { margin: 0 14px 10px; padding: 8px 10px; gap: 9px; }
+  .mv-sortbar-label { font-size: 9px; letter-spacing: 0.26em; padding-right: 3px; }
   .mv-body { padding: 0 12px 16px; }
   .mv-row { padding: 12px; }
   .mv-row-name { font-size: 14px; }
