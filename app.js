@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w168';
+  const APP_BUILD_TAG = '2.2.5-w169';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21288,6 +21288,23 @@
     ]},
   ];
 
+  // v3 Phase 1z.282C — One-time welcome for existing users.
+  // Fires once on first app launch after the W167 upgrade for users
+  // who already had habits (i.e., were on Awakened before The First
+  // Awakened landed). Introduces the character to existing users
+  // who would otherwise only meet him via Quests/Stats tab triggers.
+  // Single beat, idle pose, three lines, "CONTINUE" CTA. Storage:
+  // hb_tour_welcome_back_v1. Cross-flow guard: new users committing
+  // their first vow via showFirstVowCoachmark() eagerly set this
+  // same key so they never see a redundant welcome on next launch.
+  const FA_WELCOME_BACK_BEATS = [
+    { pose: 'idle', lines: [
+      'Hunter.',
+      'Your climb is in the record. I have read it.',
+      'I am the first who finished. You will hear from me again.',
+    ]},
+  ];
+
   // Field Manual sections — 7 sections, verbatim from ClaudeDesign.
   const FA_MANUAL_SECTIONS = [
     {
@@ -21586,6 +21603,12 @@
   // toast path). Single beat, single tap — "BEGIN" CTA dismisses.
   function showFirstVowCoachmark() {
     if (localStorage.getItem('hb_tour_first_vow_v1') === '1') return false;
+    // v3 Phase 1z.282C — Cross-flow guard. Eagerly set the welcome-
+    // back key when a new user goes through the First Vow modal so
+    // they never see a redundant existing-user welcome on next
+    // launch. Eager (vs on-dismiss) so even a user who backgrounds
+    // mid-modal still skips welcome.
+    try { localStorage.setItem('hb_tour_welcome_back_v1', '1'); } catch (_) {}
     _faRunCoachmark({
       context: 'first_vow',
       beats: FA_FIRST_VOW_BEATS,
@@ -21594,10 +21617,27 @@
     });
     return true;
   }
+  // v3 Phase 1z.282C — Welcome modal for existing users.
+  // Gated on (has-habits AND key-unset). New users without habits
+  // never trigger this — they go through onboarding instead.
+  // First-launch-after-upgrade hook in init() fires this; the
+  // First Vow commit modal also eagerly sets the key so new users
+  // who finished onboarding never see redundant welcome.
+  function showWelcomeBackCoachmark() {
+    if (!Array.isArray(habits) || habits.length === 0) return;
+    if (localStorage.getItem('hb_tour_welcome_back_v1') === '1') return;
+    _faRunCoachmark({
+      context: 'welcome_back',
+      beats: FA_WELCOME_BACK_BEATS,
+      cta: 'CONTINUE',
+      storageKey: 'hb_tour_welcome_back_v1',
+    });
+  }
   try {
-    window.__showQuestsCoachmark    = showQuestsCoachmark;
-    window.__showStatsCoachmark     = showStatsCoachmark;
-    window.__showFirstVowCoachmark  = showFirstVowCoachmark;
+    window.__showQuestsCoachmark      = showQuestsCoachmark;
+    window.__showStatsCoachmark       = showStatsCoachmark;
+    window.__showFirstVowCoachmark    = showFirstVowCoachmark;
+    window.__showWelcomeBackCoachmark = showWelcomeBackCoachmark;
   } catch (_) {}
 
   // ── Field Manual engine ─────────────────────────────────────────────
@@ -39088,6 +39128,14 @@
         setTimeout(() => {
           try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
         }, 900);
+        // v3 Phase 1z.282C — One-time welcome for existing users.
+        // Defers 1.5s so the habits list paints first; existing
+        // users see their familiar app, THEN The First Awakened
+        // appears to introduce himself. Storage gate inside
+        // showWelcomeBackCoachmark() prevents re-show.
+        setTimeout(() => {
+          try { showWelcomeBackCoachmark(); } catch (_) {}
+        }, 1500);
       }
     };
 
