@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w171';
+  const APP_BUILD_TAG = '2.2.5-w172';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16426,7 +16426,12 @@
       return;
     }
 
-    if (habits.length === 0) {
+    // v3 Phase 1z.283 W172 — gate on ACTIVE count, not total. After
+    // soft-archiving every vow via Manage Vows, archived entries
+    // remain in habits[] so habits.length>0; without this fix the
+    // user would see the rest-day empty state instead of the First
+    // Vow picker, and the Manage Vows empty-state CTA would dead-end.
+    if (getActiveHabitCount() === 0) {
       // v3 Phase 1z.247 — First Vow empty state.
       list.innerHTML = '';
       empty.classList.remove('empty-state--rest-day');  // ensure first-vow mode
@@ -22168,6 +22173,18 @@
     const idx = habits.findIndex(function (h) { return h && h.id === habitId; });
     if (idx === -1) return;
     const prevCount = getActiveHabitCount();
+
+    // v3 Phase 1z.283 W172 — DURABILITY: persist the archive flag
+    // BEFORE the 300ms collapse animation. The earlier flow deferred
+    // the write inside the setTimeout, which could lose a release if
+    // the app was backgrounded/killed during the animation. Now the
+    // user's intent is durable the moment they tap Confirm; the
+    // animation is purely visual and replayable from state.
+    try {
+      habits[idx].archived = true;
+      if (typeof save === 'function') save();
+    } catch (_) {}
+
     _mvConfirmId = null;
     _mvReleasingId = habitId;
 
@@ -22177,11 +22194,6 @@
     const reducedMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const delay = reducedMotion ? 200 : 300;
     setTimeout(function () {
-      try {
-        // Soft archive: set archived=true. Streak/completions preserved.
-        habits[idx].archived = true;
-        if (typeof save === 'function') save();
-      } catch (_) {}
       _mvReleasingId = null;
 
       const newCount = getActiveHabitCount();
@@ -30004,9 +30016,12 @@
   // status line. Pure function of the user's active habits + current
   // HealthKit availability/grant/pause state.
   function composeBriefingStatusLine() {
-    const total = (habits && habits.length) || 0;
+    // v3 Phase 1z.283 W172 — count ACTIVE vows only. Soft-archived
+    // vows must not leak into the briefing's objective count.
+    const activeHabits = (Array.isArray(habits) ? habits.filter(_isActiveHabit) : []);
+    const total = activeHabits.length;
     if (total === 0) return '';  // card shouldn't render anyway, defensive
-    const auto = habits.filter(canAutoVerify).length;
+    const auto = activeHabits.filter(canAutoVerify).length;
     const manual = total - auto;
     if (auto === 0)         return total + ' OBJECTIVES. ALL ON YOU.';
     if (auto === total)     return total + ' OBJECTIVES. ALL SYSTEM-VERIFIED.';
@@ -30081,8 +30096,12 @@
     // composeBriefingStatusLine() is still called below as a defensive
     // write to #di-status-line so any future consumer of the legacy
     // composed string keeps working.
-    const total = (habits && habits.length) || 0;
-    const autoCount = total === 0 ? 0 : habits.filter(canAutoVerify).length;
+    // v3 Phase 1z.283 W172 — ACTIVE vows only (mirrors
+    // composeBriefingStatusLine). Archived vows are excluded from
+    // every tile + the slate below.
+    const activeHabits = (Array.isArray(habits) ? habits.filter(_isActiveHabit) : []);
+    const total = activeHabits.length;
+    const autoCount = total === 0 ? 0 : activeHabits.filter(canAutoVerify).length;
     const manualCount = Math.max(0, total - autoCount);
     const totalEl    = document.getElementById('di-summary-total');
     const verifiedEl = document.getElementById('di-summary-verified');
@@ -30098,7 +30117,9 @@
     // Bucket the user's active habits, then render the three groups
     // (morning / day / evening) in fixed order. Empty groups skipped.
     const buckets = { morning: [], day: [], evening: [] };
-    habits.forEach(h => {
+    // v3 Phase 1z.283 W172 — iterate ACTIVE vows only so soft-archived
+    // habits never appear in the briefing slate.
+    activeHabits.forEach(h => {
       const bucket = getHabitTimeOfDay(h);
       (buckets[bucket] || buckets.day).push(h);
     });

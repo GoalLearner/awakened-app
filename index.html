@@ -2240,7 +2240,7 @@
             </svg>
           </button>
         </div>
-        <div id="mv-counter-wrap" class="mv-counter-wrap"></div>
+        <div id="mv-counter-wrap" class="mv-counter-wrap" aria-live="polite" aria-atomic="true"></div>
       </div>
       <!-- Character presence + voice line at sheet top (idle pose).
            Hidden in empty state. -->
@@ -2800,7 +2800,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=622"></script>
+  <script src="app.js?v=623"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3260,7 +3260,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W171</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W172</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
