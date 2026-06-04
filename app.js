@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w175';
+  const APP_BUILD_TAG = '2.2.5-w176';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12253,8 +12253,11 @@
   //   3. All caught up
   //   4. No habits → skip (return null)
   function computeMidDayBody() {
-    // Priority 4 — no habits configured at all.
-    if (!Array.isArray(habits) || habits.length === 0) return null;
+    // Priority 4 — no ACTIVE habits configured. v3 Phase 1z.283 W176
+    // — aligned with renderHabits / briefing (W172) on active-count
+    // gating so a fully-archived user gets the null-skip rather than
+    // a midday ping with empty content.
+    if (!Array.isArray(habits) || getActiveHabitCount() === 0) return null;
 
     // Priority 1 — daily souls bonus pending.
     // Souls grant uses DEVICE-LOCAL date (see tryGrantDailyLoginBonus),
@@ -12599,7 +12602,10 @@
     return names.has(habit.name);
   }
   function getMissingPackHabits(packId) {
-    const activeNames = new Set(habits.map(h => h.name));
+    // v3 Phase 1z.283 W176 — Filter to ACTIVE names only. An archived
+    // habit isn't in your active routine, so it should show as "missing"
+    // from the pack; tapping to re-add will un-archive (preserving streak).
+    const activeNames = new Set(habits.filter(_isActiveHabit).map(h => h.name));
     return getPackHabitDefs(packId).filter(def => !activeNames.has(def.name));
   }
   function userHasAllPackHabits(packId) {
@@ -13967,6 +13973,12 @@
   function buildAchievementContext() {
     const allStreaks    = Object.values(streaks).map(s => s.count || 0);
     const maxStreak     = allStreaks.length ? Math.max(...allStreaks) : 0;
+    // v3 Phase 1z.283 W176 — Achievement context INTENTIONALLY counts
+    // archived habits' streak history. Soft-archive's promise is that
+    // "the discipline is already recorded" — earned achievements stay
+    // earned, and a legendary streak the user accumulated before
+    // archiving the vow still qualifies for unlock checks. Mirrors the
+    // Stats history view's policy (preserve past accomplishment).
     const legStreaks    = habits.filter(h => h.difficulty === 'legendary')
                                 .map(h => (streaks[h.id] && streaks[h.id].count) || 0);
     const maxLegStreak  = legStreaks.length ? Math.max(...legStreaks) : 0;
@@ -21092,7 +21104,9 @@
         : 'This pack contains 10 habits designed to compound daily.';
     }
 
-    const activeNames = new Set(habits.map(h => h.name));
+    // v3 Phase 1z.283 W176 — Active-only name set (archived vows
+    // surface as re-bindable in the pack browser).
+    const activeNames = new Set(habits.filter(_isActiveHabit).map(h => h.name));
     const defs        = getPackHabitDefs(packId);
     const missing     = defs.filter(d => !activeNames.has(d.name));
 
@@ -21144,6 +21158,21 @@
   }
   function getActiveHabitCount() {
     return Array.isArray(habits) ? habits.filter(_isActiveHabit).length : 0;
+  }
+  // v3 Phase 1z.283 W176 — Lookup an archived habit by exact name.
+  // Used by the re-bind paths (_commitFirstVowSelection, _libCommitSelection)
+  // so re-adding a vow whose name matches an archived entry UN-ARCHIVES
+  // the existing object, preserving its streak/completions/XP history,
+  // rather than silently no-op'ing on a stale name collision. Returns
+  // null if no archived match. Case-sensitive exact match — mirrors how
+  // the active-names dedup already compares.
+  function _findArchivedHabitByName(name) {
+    if (!Array.isArray(habits) || !name) return null;
+    for (let i = 0; i < habits.length; i++) {
+      const h = habits[i];
+      if (h && h.archived === true && h.name === name) return h;
+    }
+    return null;
   }
   function getAvailableHabitSlots() {
     return Math.max(0, MAX_ACTIVE_HABITS - getActiveHabitCount());
@@ -21766,7 +21795,10 @@
   // First Vow commit modal also eagerly sets the key so new users
   // who finished onboarding never see redundant welcome.
   function showWelcomeBackCoachmark() {
-    if (!Array.isArray(habits) || habits.length === 0) return;
+    // v3 Phase 1z.283 W176 — Active-count gate. An all-archived user
+    // is functionally "new again"; welcome-back is the wrong moment
+    // (First Vow picker is what they should see).
+    if (!Array.isArray(habits) || getActiveHabitCount() === 0) return;
     if (localStorage.getItem('hb_tour_welcome_back_v1') === '1') return;
     _faRunCoachmark({
       context: 'welcome_back',
@@ -22933,11 +22965,13 @@
   ];
 
   // v3 Phase 1z.250 — Multi-select state for First Vow quick-picks.
-  // In-memory only; the empty state is shown ONLY when habits.length===0,
-  // and is rebuilt from FIRST_VOW_PICKS on every render, so selection is
-  // ephemeral by design. After commit the empty state vanishes and this
-  // Set is irrelevant. Cleared on successful commit so re-entry (via
-  // Reset all progress) starts clean.
+  // In-memory only; the empty state is shown ONLY when
+  // getActiveHabitCount() === 0 (per v3 Phase 1z.283 W172 — was
+  // habits.length === 0 prior), and is rebuilt from FIRST_VOW_PICKS
+  // on every render, so selection is ephemeral by design. After
+  // commit the empty state vanishes and this Set is irrelevant.
+  // Cleared on successful commit so re-entry (via Reset all
+  // progress, or via archiving every vow) starts clean.
   const _firstVowSelected = new Set();
   // Guard against rapid double-tap on the commit CTA so habits can't
   // duplicate while save() / renderHabits() are in flight.
@@ -23104,7 +23138,10 @@
       const picked = Array.from(_firstVowSelected);
       if (picked.length === 0) return;
 
-      const existingNames = new Set(habits.map(h => h && h.name));
+      // v3 Phase 1z.283 W176 — Active-only dedup. Archived names no
+      // longer block re-binding (Option B: re-add = un-archive). The
+      // archive lookup below preserves streak/completions/XP history.
+      const existingNames = new Set(habits.filter(_isActiveHabit).map(h => h && h.name));
       // v3 Phase 1z.280 — Active habit cap, defensive commit-time trim.
       // _toggleFirstVowSelection already blocks selection past 25, so
       // this is normally a no-op. But if the user comes through here
@@ -23123,6 +23160,7 @@
         }); } catch (_) {}
       }
       const created = [];
+      const restored = []; // v3 Phase 1z.283 W176 — un-archived re-binds
       let skippedDup = 0;
 
       for (let i = 0; i < picked.length; i++) {
@@ -23132,6 +23170,17 @@
         const { def, newH } = built;
         if (existingNames.has(def.name)) {
           skippedDup++;
+          continue;
+        }
+        // v3 Phase 1z.283 W176 — Option B: re-add un-archives.
+        // If an archived habit matches by name, flip archived=false
+        // on the existing object (streak/completions/XP preserved)
+        // instead of creating a new habit with a fresh streak.
+        const archivedMatch = _findArchivedHabitByName(def.name);
+        if (archivedMatch) {
+          archivedMatch.archived = false;
+          existingNames.add(def.name);
+          restored.push(def.name);
           continue;
         }
         habits.push(newH);
@@ -23149,12 +23198,14 @@
         _addBreadcrumb && _addBreadcrumb('first-vow-commit', {
           selectedCount:        picked.length,
           createdCount:         created.length,
+          restoredCount:        restored.length,
           skippedDuplicateCount: skippedDup,
           habitCount:           habits.length,
+          activeCount:          getActiveHabitCount(),
         });
       } catch (_) {}
 
-      if (created.length === 0) {
+      if (created.length === 0 && restored.length === 0) {
         try { showHabitToast('Those vows are already in your list.'); } catch (_) {}
         // Still re-render the empty state so the CTA resets even if
         // every selection was already a duplicate (edge case).
@@ -23327,12 +23378,16 @@
     _libCommitting = true;
     try {
       const picked = Array.from(_libSelected);
-      const existingNames = new Set(habits.map(h => h && h.name));
+      // v3 Phase 1z.283 W176 — Active-only dedup. Names of archived
+      // vows no longer block re-binding; the restore path below
+      // un-archives the existing object (preserving streak history).
+      const existingNames = new Set(habits.filter(_isActiveHabit).map(h => h && h.name));
       // v3 Phase 1z.280 — Active habit cap. Bulk add gate. Count the
-      // effective add count AFTER dedup against existing names — the
-      // user picking already-owned habits shouldn't count against the
-      // cap. If the effective additions would push past 25, block
-      // entirely (no partial add) and show System Full modal.
+      // effective add count AFTER dedup against ACTIVE names — picks
+      // that match an already-active habit don't count. Picks that
+      // match an ARCHIVED habit DO count (a restore consumes a slot,
+      // because it becomes active again). The active-only set above
+      // makes this distinction implicit.
       const effectiveAddCount = picked.reduce(function (sum, idx) {
         const built = _buildQuickPickHabitRow(idx);
         if (!built) return sum;
@@ -23344,6 +23399,7 @@
         return;
       }
       const created = [];
+      const restored = []; // v3 Phase 1z.283 W176 — un-archived re-binds
       let skippedDup = 0;
       for (let i = 0; i < picked.length; i++) {
         const idx = picked[i];
@@ -23351,6 +23407,14 @@
         if (!built) continue;
         const { def, newH } = built;
         if (existingNames.has(def.name)) { skippedDup++; continue; }
+        // v3 Phase 1z.283 W176 — Option B: re-add un-archives.
+        const archivedMatch = _findArchivedHabitByName(def.name);
+        if (archivedMatch) {
+          archivedMatch.archived = false;
+          existingNames.add(def.name);
+          restored.push(def.name);
+          continue;
+        }
         habits.push(newH);
         if (def.note) habitNotes[newH.id] = def.note;
         existingNames.add(def.name);
@@ -23362,18 +23426,33 @@
         _addBreadcrumb && _addBreadcrumb('add-habits-commit', {
           selectedCount:         picked.length,
           createdCount:          created.length,
+          restoredCount:         restored.length,
           skippedDuplicateCount: skippedDup,
           habitCount:            habits.length,
+          activeCount:           getActiveHabitCount(),
         });
       } catch (_) {}
       // skipSideEffects matches the pack-add path — no HealthKit cascade.
       try { renderHabits({ skipSideEffects: true }); } catch (_) {}
       try {
-        const msg = created.length === 0
-          ? 'Those vows are already in your list.'
-          : (created.length === 1
-              ? 'Vow added — ' + created[0]
-              : created.length + ' vows added.');
+        // v3 Phase 1z.283 W176 — Toast prefers "restored" wording when
+        // every effective addition was an un-archive. Mixed batches and
+        // create-only batches keep the original "added" wording — the
+        // user-visible outcome (it's in your active list now) is the
+        // same, and adding more variants risks toast clutter.
+        const effective = created.length + restored.length;
+        let msg;
+        if (effective === 0) {
+          msg = 'Those vows are already in your list.';
+        } else if (created.length === 0 && restored.length === 1) {
+          msg = 'Vow restored — ' + restored[0];
+        } else if (created.length === 0) {
+          msg = restored.length + ' vows restored.';
+        } else if (effective === 1) {
+          msg = 'Vow added — ' + (created[0] || restored[0]);
+        } else {
+          msg = effective + ' vows added.';
+        }
         showHabitToast(msg);
       } catch (_) {}
       closeLibrary();
@@ -23386,7 +23465,9 @@
     const sheet = document.getElementById('lib-sheet');
     const list  = document.getElementById('lib-list');
     if (!sheet || !list) return;
-    const activeNames = new Set(habits.map(h => h.name));
+    // v3 Phase 1z.283 W176 — Active-only. Archived vows display as
+    // available; tapping triggers un-archive in _libCommitSelection.
+    const activeNames = new Set(habits.filter(_isActiveHabit).map(h => h.name));
 
     // ── Chips ────────────────────────────────────────────────
     const chipsEl = document.getElementById('lib-chips');
@@ -29996,7 +30077,9 @@
   function shouldShowDailyInsight() {
     // Welcome / onboarding users skip — they're already in another flow.
     if (localStorage.getItem('hb_welcomed') !== '1') return false;
-    if (!habits || habits.length === 0) return false;
+    // v3 Phase 1z.283 W176 — Active-count gate. The briefing is built
+    // from active vows (W172); no active vows = nothing to brief on.
+    if (!habits || getActiveHabitCount() === 0) return false;
 
     // Day 1 grace period — origin date is today's local date. The user
     // is fresh from onboarding; don't pile another modal on top.
@@ -31578,7 +31661,10 @@
   function renderStatDetailHabits(st) {
     const listEl = document.getElementById('stat-detail-habits');
     if (!listEl) return;
-    const activeNames = new Set(habits.map(h => h.name));
+    // v3 Phase 1z.283 W176 — Active-only. An archived habit's stat
+    // suggestion shows as "+ Add" rather than "✓ Active"; the add path
+    // routes through un-archive.
+    const activeNames = new Set(habits.filter(_isActiveHabit).map(h => h.name));
     listEl.innerHTML = st.habits.map(name => {
       const meta = _habitMeta[name] || { emoji: '', difficulty: 'medium' };
       const have = activeNames.has(name);
@@ -31602,12 +31688,31 @@
   // Called when the user taps "+ Add" on a linked-habit row in the
   // stat detail sheet. Refreshes the row in place.
   function addHabitFromStatSheet(name, statId) {
-    if (habits.some(h => h.name === name)) return;
+    // v3 Phase 1z.283 W176 — Active-only dedup. The active check below
+    // uses _isActiveHabit so the early-return only fires when the user
+    // already has THIS name in their active list. Archived matches fall
+    // through to the un-archive branch (Option B: re-add un-archives).
+    if (habits.some(h => _isActiveHabit(h) && h.name === name)) return;
     const def = DEFAULT_HABITS.find(d => d.name === name);
     if (!def) return;
     // v3 Phase 1z.280 — Active habit cap. Single-habit add gate.
     if (!canAddHabits(1)) {
       try { showSystemFullModal({ context: 'stat-sheet', attemptedCount: 1 }); } catch (_) {}
+      return;
+    }
+    // v3 Phase 1z.283 W176 — Restore path. If there's an archived habit
+    // by this name, flip its archived flag rather than creating a fresh
+    // one (preserves streak/completions/XP history).
+    const archivedMatch = _findArchivedHabitByName(name);
+    if (archivedMatch) {
+      archivedMatch.archived = false;
+      save();
+      renderHabits({ skipSideEffects: true });
+      updateMorningButtonVisibility();
+      updateLockedInButtonVisibility();
+      const st = STATS.find(s => s.id === statId);
+      if (st) renderStatDetailHabits(st);
+      showHabitToast(name + ' restored');
       return;
     }
     const newH = {
