@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w173';
+  const APP_BUILD_TAG = '2.2.5-w174';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30725,10 +30725,13 @@
     const initial = _snapMorningTime(wrap.dataset.time || hidden.value || '09:00');
     let [curH, curM] = initial.split(':').map((n) => parseInt(n, 10));
 
-    // Render the columns once. Items are re-marked active on each
-    // state change without rebuilding the DOM.
-    const hCol = panel.querySelector('.ndp-col[data-col="h"]');
-    const mCol = panel.querySelector('.ndp-col[data-col="m"]');
+    // v3 Phase 1z.283 W174 — Render once into static grids. Items are
+    // re-marked active on each state change without rebuilding the DOM.
+    // The selector switched from `.ndp-col[data-col=…]` to
+    // `[data-col=…]` so it matches the new `.ndp-grid` containers
+    // without coupling to the legacy class name.
+    const hCol = panel.querySelector('[data-col="h"]');
+    const mCol = panel.querySelector('[data-col="m"]');
     hCol.innerHTML = NDP_HOURS.map((h) =>
       '<button type="button" class="ndp-item" data-h="' + h + '">' + h + '</button>'
     ).join('');
@@ -30760,39 +30763,12 @@
       isOpen = true;
       panel.classList.remove('hidden');
       trigger.setAttribute('aria-expanded', 'true');
-      // v3 Phase 1z.279-fix-w164 — Center the active row in each
-      // column on open. Previous attempt used scrollIntoView with
-      // {block: 'center'} called synchronously after the .hidden
-      // class toggle — but on iOS WebKit (Capacitor), the column's
-      // scroll context isn't fully laid out yet at that moment,
-      // so the call no-ops and the column stays at scrollTop = 0.
-      // The TestFlight W163 symptom: a user with the 9:00 default
-      // saw hours 3-8 on picker open, with 9 just below the visible
-      // edge, so it looked broken.
-      //
-      // Fix: defer to the next animation frame (so layout has run),
-      // then compute scrollTop manually using element geometry. This
-      // is more reliable than scrollIntoView across iOS WebKit
-      // versions and is functionally identical to {block: 'center'}.
-      const centerActive = (col) => {
-        const active = col.querySelector('.ndp-item.is-active');
-        if (!active) return;
-        try {
-          const target = active.offsetTop
-                       + (active.offsetHeight / 2)
-                       - (col.clientHeight / 2);
-          col.scrollTop = Math.max(0, target);
-        } catch (_) { /* no-op on any DOM measurement failure */ }
-      };
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => {
-          [hCol, mCol].forEach(centerActive);
-        });
-      } else {
-        // Fallback for environments without rAF — should never hit
-        // in production but keeps the picker functional.
-        setTimeout(() => { [hCol, mCol].forEach(centerActive); }, 16);
-      }
+      // v3 Phase 1z.283 W174 — No scroll-centering needed. The grid
+      // layout shows every hour + minute simultaneously, so the
+      // active selection is always visible without any geometry math.
+      // The prior rAF + scrollTop pattern (1z.279-fix-w164) was a
+      // workaround for iOS WebKit's broken scrollIntoView; removing
+      // the scroll context removes the bug class entirely.
     }
     function closePanel() {
       if (!isOpen) return;

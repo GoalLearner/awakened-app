@@ -26957,135 +26957,111 @@ button.guildhall-summary-tile:active {
 .ndp-icon { opacity: 0.85; }
 .ndp-trigger:hover .ndp-icon { opacity: 1; }
 
+/* v3 Phase 1z.283 W174 — Static grid picker.
+   Replaces the prior two-column scrolling-wheel layout
+   (1z.241→1z.279-fix-w164). With only 9 hours × 4 minutes, the
+   selection space is small enough to show entirely without scroll,
+   eliminating the iOS WebView scroll-centering failures that hid
+   the active hour off-screen and the popover-overflow that overlapped
+   the row below the card. */
 .ndp-panel {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   z-index: 10010;
-  width: 240px;
-  /* v3 Phase 1z.279-fix-w164 — Edge-safety on narrow iPhones.
-     With the chip near the right edge of a card and the panel
-     dropping down 240px wide, iPhone SE (375px) was the lower
-     bound. Cap to viewport minus a 16px safe gutter so the panel
-     can never clip against the screen edge. */
+  width: 252px;
+  /* Cap to viewport minus a 16px safe gutter so the panel never
+     clips on iPhone SE-class widths. */
   max-width: calc(100vw - 16px);
   background: linear-gradient(180deg, #15153a 0%, #0e0e26 100%);
   border: 1px solid rgba(245, 184, 66, 0.30);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.5),
     0 0 22px rgba(139, 92, 246, 0.18);
-  /* v3 Phase 1z.279-fix-w164 — Tightened right padding from 64px
-     to 52px. The AM badge sits at right:12px (slimmed), so 52px
-     leaves a clean ~14px gutter beside the minute column without
-     leaving the rest of the panel feeling lopsided. */
-  padding: 12px 52px 12px 12px;
+  padding: 14px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
 }
 .ndp-panel.hidden { display: none; }
 
-.ndp-cols {
-  display: grid;
-  grid-template-columns: 1fr 12px 1fr;
-  align-items: stretch;
-  gap: 4px;
-  /* v3 Phase 1z.252 — Shorter visible window forces natural scrolling
-     in the hour column so the last value can no longer clip against
-     the panel edge. ~7 rows visible at any one time across the 9-hour
-     range (3–11 AM). 1z.243's larger max-height was tight enough to
-     pin the active-pill's scale(1.02) against the panel border. */
-  max-height: 224px;
-  overflow: hidden;
-}
-.ndp-col {
+.ndp-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(245, 184, 66, 0.4) transparent;
-  /* v3 Phase 1z.252 — Extra bottom padding gives the last hour row
-     clearance from the panel edge so the active-pill scale(1.02) can
-     never clip. Top padding lets the first row settle into the
-     selection zone when the user scrolls all the way up. */
-  padding: 14px 0 28px;
+  gap: 7px;
 }
-.ndp-col::-webkit-scrollbar { width: 5px; height: 0; }
-.ndp-col::-webkit-scrollbar-thumb {
-  background: rgba(245, 184, 66, 0.35);
-  border-radius: 3px;
+.ndp-section-head {
+  display: flex; align-items: center; justify-content: space-between;
 }
-.ndp-col::-webkit-scrollbar-track { background: transparent; }
-.ndp-col::-webkit-scrollbar:horizontal { display: none; }
-
-.ndp-colsep {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
-  font-size: 18px;
+.ndp-section-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5px;
   font-weight: 700;
-  color: rgba(245, 184, 66, 0.6);
-  user-select: none;
+  letter-spacing: 0.26em;
+  color: #6e7494;
+  text-transform: uppercase;
 }
 
-/* v3 Phase 1z.242 — AM moved to the top-right corner of the panel,
-   anchored next to the first minute row.
-   v3 Phase 1z.243 — pulled further from the column edge and slimmed.
-   v3 Phase 1z.279-fix-w164 — Re-anchored slightly closer (right:12px),
-   slimmed to a true mono-style lock chip. JetBrains Mono with tighter
-   tracking and a vertical-rhythm-friendly font-size reads as a
-   deliberate column lock rather than a stuck-on label. Vertical
-   midline aligns roughly with where the selection band sits (~14px
-   from the top of the panel + the column's 14px padding), so the
-   badge feels like the column's permanent meridian. */
+/* AM lock — now a small chip on the HOUR section header. No more
+   absolute-positioned overlay; it lives inline with the label. */
 .ndp-lock {
-  position: absolute;
-  top: 14px;
-  right: 12px;
-  font-family: 'JetBrains Mono', ui-monospace, "Cinzel", "Cormorant Garamond", Georgia, serif;
-  font-size: 10.5px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
   color: rgba(245, 184, 66, 0.95);
   background: rgba(245, 184, 66, 0.12);
   border: 1px solid rgba(245, 184, 66, 0.50);
   border-radius: 5px;
-  padding: 3px 6px;
+  padding: 3px 7px;
   line-height: 1;
   cursor: default;
   user-select: none;
-  pointer-events: none;
-  z-index: 2;
+}
+
+.ndp-grid {
+  display: grid;
+  gap: 5px;
+}
+/* Hours: 3×3 grid — every hour 3–11 AM visible at once. */
+.ndp-grid--h {
+  grid-template-columns: repeat(3, 1fr);
+}
+/* Minutes: 4-across — 00 / 15 / 30 / 45 all visible. */
+.ndp-grid--m {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .ndp-item {
   font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.8px;
-  color: #bdbad6;
-  background: transparent;
-  border: 0;
-  border-radius: 6px;
-  padding: 8px 0;
+  letter-spacing: 0.6px;
+  color: #c4c8e0;
+  background: rgba(167, 139, 250, 0.06);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 8px;
+  padding: 9px 0;
   cursor: pointer;
-  transition: background 120ms, color 120ms, transform 120ms;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 120ms, color 120ms, border-color 120ms, transform 120ms;
 }
 .ndp-item:hover {
-  background: rgba(139, 92, 246, 0.12);
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(167, 139, 250, 0.45);
   color: #f1f0fb;
 }
 .ndp-item.is-active {
   background: linear-gradient(180deg, rgba(245, 184, 66, 0.30), rgba(245, 184, 66, 0.16));
   color: #ffd270;
-  border: 1px solid rgba(245, 184, 66, 0.55);
+  border-color: rgba(245, 184, 66, 0.65);
   box-shadow: 0 0 10px rgba(245, 184, 66, 0.25);
-  /* Tighter scale so the highlighted pill doesn't push into the AM
-     gutter. The earlier 1.04 felt cramped at 220px panel width. */
   transform: scale(1.02);
 }
+.ndp-item:active { transform: scale(0.97); }
 .ndp-item:focus { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {

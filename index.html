@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=348">
+  <link rel="stylesheet" href="styles.css?v=349">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2308,6 +2308,14 @@
                00/15/30/45, AM locked. Theme-matched. The hidden input
                keeps the existing #notif-explain-digest-time read path
                intact so finish()'s value read still works. -->
+          <!-- v3 Phase 1z.283 W174 — Static grid picker.
+               Replaces the prior scrolling two-column wheel
+               (1z.241→1z.279-fix-w164) which had recurring iOS
+               WebView issues: scrollTop centering would fail to
+               position the active hour into view (selection
+               invisible), and the 240px popover overflowed onto
+               adjacent rows. With only 9 hours × 4 minutes there's
+               no reason to scroll — show every option at once. -->
           <div class="ndp-wrap" id="ndp-wrap" data-time="09:00">
             <button id="ndp-trigger" class="notif-type-time-input ndp-trigger" type="button" aria-haspopup="true" aria-expanded="false">
               <span id="ndp-display" class="ndp-display">9:00 AM</span>
@@ -2317,11 +2325,16 @@
               </svg>
             </button>
             <div id="ndp-panel" class="ndp-panel hidden" role="dialog" aria-label="Morning Briefing time">
-              <span class="ndp-lock" aria-label="AM">AM</span>
-              <div class="ndp-cols">
-                <div class="ndp-col" data-col="h" aria-label="Hour"></div>
-                <div class="ndp-colsep" aria-hidden="true">:</div>
-                <div class="ndp-col" data-col="m" aria-label="Minute"></div>
+              <div class="ndp-section">
+                <div class="ndp-section-head">
+                  <span class="ndp-section-label">HOUR</span>
+                  <span class="ndp-lock" aria-label="AM">AM</span>
+                </div>
+                <div class="ndp-grid ndp-grid--h" data-col="h" aria-label="Hour"></div>
+              </div>
+              <div class="ndp-section">
+                <span class="ndp-section-label">MINUTE</span>
+                <div class="ndp-grid ndp-grid--m" data-col="m" aria-label="Minute"></div>
               </div>
             </div>
             <input id="notif-explain-digest-time" type="hidden" value="09:00">
@@ -2806,7 +2819,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=624"></script>
+  <script src="app.js?v=625"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3266,7 +3279,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W173</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W174</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
