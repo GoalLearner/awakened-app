@@ -15,6 +15,43 @@ verifying the gating signals in the "Transition window" section.**
 
 ---
 
+## Post-deploy fix-ups (w162 — addressed before iOS build)
+
+Both items below were discovered during the production deploy
+sequence after Phase 6 and addressed before the iOS Codemagic build
+went out. They do not affect the SQL/migration plan; recording them
+here for chain-of-custody so the future cleanup PR can verify the
+state of the live frontend.
+
+1. **Friends "Pending" badge restyled.** Phase 6 deleted the
+   `.duels-pill` / `.duels-pill--pending` CSS rules but the
+   outgoing-friend-request row in `app.js` still rendered its
+   "Pending" badge with that class — so on w161 the badge rendered
+   unstyled. Replaced with the existing `.ww-status` /
+   `.ww-status--pending` pair (styles.css:12159 + 12169), which is
+   the app's canonical "pending" status pill used by the B-rank
+   weekly-window boss hunt UI. Class is provably non-duel
+   (`ww-` = "weekly window"); semantic match is exact (pending state
+   gold styling). Single 1-line change in `app.js` around line 25019.
+
+2. **Knob bumps to ship the styles.css delta to users.** Phase 6
+   removed ~1,775 LOC of dead duel CSS from `styles.css` but did
+   not bump `styles.css?v=` because the change was display-only.
+   That's fine in theory but breaks the cache-bust convention —
+   users on w161 would keep their cached `styles.css?v=339` and
+   miss the Phase 6 cleanup. Restored discipline by bumping the
+   four-knob set together:
+   - `APP_BUILD_TAG`: `2.2.5-w161` → `2.2.5-w162`
+   - `app.js?v=`: `614` → `615` (also picked up the badge swap)
+   - `styles.css?v=`: `339` → `340`
+   - `sw.js CACHE_VERSION`: `v5.500` → `v5.501`
+   - Settings footer: `BUILD W161` → `BUILD W162`
+
+Net effect on the future cleanup PR: zero. These were UX/cache
+hygiene only and don't change the migration / SQL contract.
+
+---
+
 ## Migration inventory
 
 | # | File | Touches duels? | Status |
