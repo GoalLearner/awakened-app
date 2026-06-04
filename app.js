@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w165';
+  const APP_BUILD_TAG = '2.2.5-w166';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11255,6 +11255,17 @@
   const MAX_CUSTOM_HABITS    = 5;
   const CUSTOM_HABIT_DIFFICULTY = 'medium';
 
+  // v3 Phase 1z.280 — Active habit cap. A focused hunter keeps only the
+  // vows that matter; more than 25 active habits inflates the XP / stat /
+  // rank curve and noise-floods the daily list. Applies across ALL add
+  // surfaces (custom, pack, library, onboarding, banner, stat sheet,
+  // habit detail create). Existing users above 25 are grandfathered —
+  // never auto-deleted — but cannot add more until they reduce.
+  // Archive system does not exist yet (see RETIREMENT_PLAN.md analog —
+  // future phase 1z.281); for now the modal copy says "Remove" / "Manage
+  // your vows" rather than promising "Archive" + "history preserved."
+  const MAX_ACTIVE_HABITS    = 25;
+
   const EMOJIS = [
     '🏃','💪','🧘','🚴','🏊','🏋️',
     '💧','🥗','🍎','😴','💊','🧠',
@@ -11636,6 +11647,11 @@
     }
     const def = DEFAULT_HABITS.find(d => d.name === 'No alcohol');
     if (!def) return;
+    // v3 Phase 1z.280 — Active habit cap. Banner CTA path.
+    if (!canAddHabits(1)) {
+      try { showSystemFullModal({ context: 'banner', attemptedCount: 1 }); } catch (_) {}
+      return;
+    }
     const newH = {
       id:          uid(),
       emoji:       def.emoji,
@@ -21042,6 +21058,138 @@
 
   // ── CUSTOM HABIT MODAL ─────────────────────────────────────
   // User authors a habit: emoji + name + which stat it builds.
+  // ── v3 Phase 1z.280 — Active habit cap helpers ──────────────────
+  // Single source of truth for the 25-vow cap. Reads raw `habits.length`
+  // — scheduled / rest-day filtering is irrelevant here because the cap
+  // is on the catalog of active habits, not on which ones fire today.
+  // Custom habits, pack habits, library habits, onboarding picks all
+  // count equally.
+  function getActiveHabitCount() {
+    return Array.isArray(habits) ? habits.length : 0;
+  }
+  function getAvailableHabitSlots() {
+    return Math.max(0, MAX_ACTIVE_HABITS - getActiveHabitCount());
+  }
+  function canAddHabits(countToAdd) {
+    const n = Math.max(1, Number(countToAdd) || 1);
+    return (getActiveHabitCount() + n) <= MAX_ACTIVE_HABITS;
+  }
+  try {
+    window.__getActiveHabitCount = getActiveHabitCount;
+    window.__getAvailableHabitSlots = getAvailableHabitSlots;
+    window.__canAddHabits = canAddHabits;
+  } catch (_) {}
+
+  // showSystemFullModal({ context, attemptedCount }) — surfaces the
+  // System Full overlay (markup in index.html, styling in styles.css
+  // under the 1z.280 block). Computes the right copy variant from
+  // current state:
+  //   - Grandfathered (currentCount > 25): "You have N vows. Reduce to 25."
+  //   - Bulk (attemptedCount > availableSlots && availableSlots > 0):
+  //     "This would exceed your 25 vows."
+  //   - Default full: "A focused hunter keeps only the vows that matter."
+  // CTA labels stay constant: "Manage Vows" (primary) / "Not Now"
+  // (ghost). Primary routes the user to the Habits tab where they can
+  // delete via long-press or the edit modal — the real archive system
+  // does not exist yet (deferred to 1z.281), so the copy never promises
+  // history preservation.
+  function showSystemFullModal(opts) {
+    opts = opts || {};
+    const overlay = document.getElementById('system-full-overlay');
+    if (!overlay) return;
+    const titleEl   = document.getElementById('system-full-title');
+    const countEl   = document.getElementById('system-full-count');
+    const verseEl   = document.getElementById('system-full-verse');
+    const bodyEl    = document.getElementById('system-full-body');
+    const manageBtn = document.getElementById('system-full-manage');
+    const closeBtn  = document.getElementById('system-full-close');
+
+    const currentCount = getActiveHabitCount();
+    const isGrandfather = currentCount > MAX_ACTIVE_HABITS;
+    const isBulk = !isGrandfather
+                 && Number(opts.attemptedCount) > 0
+                 && Number(opts.attemptedCount) > getAvailableHabitSlots();
+
+    // Title is fixed for tonal consistency.
+    if (titleEl) titleEl.textContent = 'System Full';
+    // Count line — show current/max. For grandfathered users this reads
+    // "27 / 25" with the over-cap value rendered honestly.
+    if (countEl) countEl.textContent = currentCount + ' / ' + MAX_ACTIVE_HABITS + ' ACTIVE VOWS';
+
+    // Cinzel italic verse — kept from the design's recommended treatment
+    // for the cinematic "system speaks" tone. Skipped in the bulk-fail
+    // variant so the practical reason leads.
+    if (verseEl) {
+      if (isBulk) {
+        verseEl.style.display = 'none';
+      } else {
+        verseEl.style.display = '';
+        verseEl.textContent = 'A hunter cannot bind endless vows.';
+      }
+    }
+
+    if (bodyEl) {
+      if (isGrandfather) {
+        bodyEl.textContent =
+          'You have ' + currentCount + ' active vows. Your current system is preserved, but you cannot add more until you reduce to ' + MAX_ACTIVE_HABITS + '.';
+      } else if (isBulk) {
+        bodyEl.textContent =
+          'This would exceed your ' + MAX_ACTIVE_HABITS + ' active vows. Choose fewer habits or manage your current vows to make room.';
+      } else {
+        bodyEl.textContent =
+          'You have reached ' + MAX_ACTIVE_HABITS + ' active habits. A focused hunter keeps only the vows that matter. Remove one to make room.';
+      }
+    }
+
+    const dismiss = function () {
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+    };
+    const manage = function () {
+      dismiss();
+      // Route to Habits tab so the user can long-press / edit-modal a
+      // habit to remove. If the tab helper is missing for some reason,
+      // surface a fallback toast.
+      try {
+        if (typeof switchTab === 'function') {
+          switchTab('habits');
+        } else if (typeof showHabitToast === 'function') {
+          showHabitToast('Open Habits and remove a vow to make room.');
+        }
+      } catch (_) {}
+    };
+
+    // Wire idempotently — replace handlers each open to avoid leaks.
+    if (manageBtn) {
+      manageBtn.onclick = manage;
+    }
+    if (closeBtn) {
+      closeBtn.onclick = dismiss;
+    }
+    overlay.onclick = function (e) {
+      // Overlay-tap (outside the sheet) closes; clicks inside don't.
+      if (e.target === overlay) dismiss();
+    };
+    // ESC dismisses (one-shot keydown listener to avoid leaks).
+    const onKey = function (e) {
+      if (e.key === 'Escape') {
+        dismiss();
+        document.removeEventListener('keydown', onKey, true);
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    // When dismissed, drop the key listener.
+    const origDismiss = dismiss;
+    overlay.addEventListener('transitionend', function once() {
+      try { document.removeEventListener('keydown', onKey, true); } catch (_) {}
+      overlay.removeEventListener('transitionend', once);
+    });
+
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+  try { window.__showSystemFullModal = showSystemFullModal; } catch (_) {}
+
   // Difficulty is FIXED at CUSTOM_HABIT_DIFFICULTY ('medium' / 3 XP) so
   // customs can't game the rank economy. Capped at MAX_CUSTOM_HABITS.
   let _customEmoji   = '⚡';
@@ -21265,6 +21413,18 @@
     if (habits.some(h => h && typeof h.name === 'string' && h.name.toLowerCase() === name.toLowerCase())) {
       return showErr('You already have a habit with that name.');
     }
+    // v3 Phase 1z.280 — Active habit cap. Gate BEFORE MAX_CUSTOM_HABITS
+    // so the broader cap wins if both fail (the user shouldn't see a
+    // "5 custom habit cap" error when their real problem is "25 active
+    // vow cap"). Surfaces the System Full modal, dismisses the custom
+    // modal context naturally on dismissal.
+    if (!canAddHabits(1)) {
+      try { _addHabitBreadcrumb('custom-create-blocked-system-full', {
+        activeCount: getActiveHabitCount(),
+      }); } catch (_) {}
+      try { showSystemFullModal({ context: 'custom', attemptedCount: 1 }); } catch (_) {}
+      return;
+    }
     if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) {
       return showErr('You\'ve reached the ' + MAX_CUSTOM_HABITS + '-custom-habit cap.');
     }
@@ -21412,6 +21572,18 @@
     const missing = getMissingPackHabits(packId);
     if (missing.length === 0) { closeMorningPackModal(); return; }
 
+    // v3 Phase 1z.280 — Active habit cap, pack bulk-add gate. `missing`
+    // is already dedup-filtered against existing names, so its length
+    // IS the effective add count. Blocking entirely (no partial add)
+    // matches the bulk-add convention — the user picked the pack
+    // expecting the whole set; adding only some without explanation
+    // would be confusing.
+    if (!canAddHabits(missing.length)) {
+      closeMorningPackModal();
+      try { showSystemFullModal({ context: 'pack', attemptedCount: missing.length }); } catch (_) {}
+      return;
+    }
+
     // Add in canonical pack order, preserving each habit's defaults.
     // Dedup: getMissingPackHabits already filtered to absent names.
     // Existing streaks/progress on existing entries remain untouched.
@@ -21557,6 +21729,23 @@
         idx, selectedCount: _firstVowSelected.size,
       }); } catch (_) {}
     } else {
+      // v3 Phase 1z.280 — Active habit cap, onboarding selection guard.
+      // Reject silently with a small inline toast rather than firing
+      // the full System Full modal — first-run shouldn't see a heavy
+      // system message during habit selection. The post-commit cap
+      // check below is the structural fallback.
+      const remainingSlots = Math.max(0, MAX_ACTIVE_HABITS - (getActiveHabitCount() + _firstVowSelected.size));
+      if (remainingSlots <= 0) {
+        try {
+          if (typeof showHabitToast === 'function') {
+            showHabitToast(MAX_ACTIVE_HABITS + ' vow max — deselect one to swap.');
+          }
+        } catch (_) {}
+        try { _addBreadcrumb && _addBreadcrumb('first-vow-quickpick-cap-block', {
+          idx, selectedCount: _firstVowSelected.size, max: MAX_ACTIVE_HABITS,
+        }); } catch (_) {}
+        return;
+      }
       _firstVowSelected.add(idx);
       if (btnEl) {
         btnEl.classList.add('is-selected');
@@ -21651,6 +21840,23 @@
       if (picked.length === 0) return;
 
       const existingNames = new Set(habits.map(h => h && h.name));
+      // v3 Phase 1z.280 — Active habit cap, defensive commit-time trim.
+      // _toggleFirstVowSelection already blocks selection past 25, so
+      // this is normally a no-op. But if the user comes through here
+      // via a state restore (Reset → onboarding while legacy state
+      // somehow held 26+ selections), trim safely to MAX_ACTIVE_HABITS
+      // and breadcrumb. NEVER trap the user — onboarding must succeed.
+      let trimmed = 0;
+      const slotsLeft = Math.max(0, MAX_ACTIVE_HABITS - getActiveHabitCount());
+      if (picked.length > slotsLeft) {
+        trimmed = picked.length - slotsLeft;
+        picked.length = slotsLeft;
+        try { _addBreadcrumb && _addBreadcrumb('first-vow-commit-trim', {
+          originalCount: picked.length + trimmed,
+          trimmedTo: picked.length,
+          slotsLeft: slotsLeft,
+        }); } catch (_) {}
+      }
       const created = [];
       let skippedDup = 0;
 
@@ -21849,6 +22055,21 @@
     try {
       const picked = Array.from(_libSelected);
       const existingNames = new Set(habits.map(h => h && h.name));
+      // v3 Phase 1z.280 — Active habit cap. Bulk add gate. Count the
+      // effective add count AFTER dedup against existing names — the
+      // user picking already-owned habits shouldn't count against the
+      // cap. If the effective additions would push past 25, block
+      // entirely (no partial add) and show System Full modal.
+      const effectiveAddCount = picked.reduce(function (sum, idx) {
+        const built = _buildQuickPickHabitRow(idx);
+        if (!built) return sum;
+        return existingNames.has(built.def.name) ? sum : sum + 1;
+      }, 0);
+      if (effectiveAddCount > 0 && !canAddHabits(effectiveAddCount)) {
+        try { showSystemFullModal({ context: 'library', attemptedCount: effectiveAddCount }); } catch (_) {}
+        _libCommitting = false;
+        return;
+      }
       const created = [];
       let skippedDup = 0;
       for (let i = 0; i < picked.length; i++) {
@@ -23304,6 +23525,15 @@
             }
             _addHabitBreadcrumb('onConfirm-complete', { saveOK });
           } else {
+            // v3 Phase 1z.280 — Active habit cap. Habit Detail create
+            // branch. Block before constructing the new row.
+            if (!canAddHabits(1)) {
+              _addHabitBreadcrumb('default-save-blocked-system-full', {
+                activeCount: getActiveHabitCount(),
+              });
+              try { showSystemFullModal({ context: 'detail', attemptedCount: 1 }); } catch (_) {}
+              return;
+            }
             _addHabitBreadcrumb('default-save-start');
             const newH = { id: uid(), emoji: h.emoji, name: h.name, difficulty: hdDiff, type: hdType };
             // v3 Phase 1z.273E — length guard. getScheduleDays() can
@@ -30117,6 +30347,11 @@
     if (habits.some(h => h.name === name)) return;
     const def = DEFAULT_HABITS.find(d => d.name === name);
     if (!def) return;
+    // v3 Phase 1z.280 — Active habit cap. Single-habit add gate.
+    if (!canAddHabits(1)) {
+      try { showSystemFullModal({ context: 'stat-sheet', attemptedCount: 1 }); } catch (_) {}
+      return;
+    }
     const newH = {
       id:          uid(),
       emoji:       def.emoji,

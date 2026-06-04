@@ -28260,3 +28260,318 @@ button.guildhall-summary-tile:active {
 }
 
 /* END v3 Phase 1z.279-fix-w165 polish block */
+
+/* ═══════════════════════════════════════════════════════════════
+   v3 Phase 1z.280 — System Full / Active Vow Limit modal
+   ═══════════════════════════════════════════════════════════════
+   Cinematic "system speaks" modal shown when any add path would push
+   the user above MAX_ACTIVE_HABITS (25). Direct port of the
+   ClaudeDesign Variant B spec — purple-black glass card with gold
+   corner brackets, violet sigil, Cinzel italic verse, JetBrains
+   Mono count. Premium and calm; no red, no error styling.
+
+   Tokens reused inline (not via CSS vars) to match the design
+   palette exactly:
+     panel bg   linear-gradient(180deg, rgba(28,22,54,0.96), rgba(11,9,28,0.98))
+     border     rgba(167,139,250,0.45)  (violetB)
+     gold       #f5b842                  (--gold)
+     gold glow  rgba(245,184,66,0.30)
+     violetB    #a78bfa
+     text       #f4f3fb
+     text2      #9aa0bd
+   ─────────────────────────────────────────────────────────────── */
+
+/* Backdrop / scrim. Fills viewport, dims background to ~72% black. */
+.system-full-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(4, 4, 12, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+  /* Capacitor / iOS WebView safe-area gutters so the modal isn't
+     glued to the notch / home indicator on edge-to-edge devices. */
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+           max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+}
+.system-full-overlay.hidden {
+  display: none;
+}
+
+/* The system card. Premium glass panel with gold corner brackets via
+   pseudo-elements + an inner repeating-linear-gradient scanline. */
+.system-full-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(180deg, rgba(28, 22, 54, 0.96) 0%, rgba(11, 9, 28, 0.98) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  border-radius: 22px;
+  padding: 30px 26px 24px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.12),
+    0 0 60px rgba(139, 92, 246, 0.28),
+    0 40px 80px rgba(0, 0, 0, 0.60);
+  /* Gentle entrance — keep painted at all times (no opacity-from-0
+     entrance) so iOS WebKit snapshots are reliable. Translate-only,
+     no opacity. */
+  animation: system-full-rise 0.22s ease-out;
+}
+@keyframes system-full-rise {
+  from { transform: translateY(8px); }
+  to   { transform: translateY(0); }
+}
+
+/* Scanline overlay — subtle CRT-style horizontal stripes for the
+   "system terminal" feel. pointer-events:none so it doesn't block taps. */
+.system-full-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(167, 139, 250, 0.05) 0px,
+    rgba(167, 139, 250, 0.05) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+
+/* Four gold corner brackets — purely decorative system-frame chrome. */
+.system-full-sheet::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  border-top: 1.5px solid #f5b842;
+  border-left: 1.5px solid #f5b842;
+  border-radius: 4px 0 0 0;
+  opacity: 0.7;
+  pointer-events: none;
+}
+/* Three more corners — implemented via :before/:after on inner pseudo
+   layers is tricky; instead we put them on the sigil/kicker descendants
+   to keep markup spare. The top-right + two bottom corners use the
+   children's pseudo-elements so we don't need extra DOM. */
+.system-full-kicker::before,
+.system-full-kicker::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.system-full-kicker::before {
+  /* top-right */
+  top: -18px;
+  right: -14px;
+  border-top: 1.5px solid #f5b842;
+  border-right: 1.5px solid #f5b842;
+  border-radius: 0 4px 0 0;
+}
+.system-full-kicker::after {
+  /* repurposed — set position later via bottom-left bracket on body */
+  display: none;
+}
+.system-full-body::before,
+.system-full-body::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.system-full-body::before {
+  /* bottom-left */
+  bottom: -100px;
+  left: -14px;
+  border-bottom: 1.5px solid #f5b842;
+  border-left: 1.5px solid #f5b842;
+  border-radius: 0 0 0 4px;
+}
+.system-full-body::after {
+  /* bottom-right */
+  bottom: -100px;
+  right: -14px;
+  border-bottom: 1.5px solid #f5b842;
+  border-right: 1.5px solid #f5b842;
+  border-radius: 0 0 4px 0;
+}
+
+/* Kicker — small uppercase tracked label with diamond bullets. */
+.system-full-kicker {
+  position: relative;
+  text-align: center;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: #a78bfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.system-full-kicker-diamond {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  background: #a78bfa;
+  transform: rotate(45deg);
+  opacity: 0.9;
+}
+
+/* Vow sigil — wraps the inline SVG diamond. drop-shadow gives the
+   violet glow that pulls the eye to the center. */
+.system-full-sigil {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 18px 0 14px;
+  filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.34));
+}
+
+/* Title — Cinzel, gold, wide-tracked. */
+.system-full-title {
+  position: relative;
+  margin: 0;
+  text-align: center;
+  font-family: "Cinzel", "Cormorant Garamond", "Trajan Pro", Georgia, serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  color: #f5b842;
+  text-shadow: 0 0 22px rgba(245, 184, 66, 0.30);
+}
+
+/* Hairline gold divider. */
+.system-full-divider {
+  position: relative;
+  width: 130px;
+  height: 1px;
+  margin: 16px auto 14px;
+  background: linear-gradient(90deg, transparent, #f5b842, transparent);
+}
+
+/* Count line — mono, gold value + violet label. */
+.system-full-count {
+  position: relative;
+  text-align: center;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #f5b842;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Italic Cinzel verse — "the system speaks." */
+.system-full-verse {
+  position: relative;
+  margin: 18px 0 0;
+  text-align: center;
+  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  color: #f4f3fb;
+}
+
+/* Sans body — practical instruction. */
+.system-full-body {
+  position: relative;
+  margin: 10px 0 0;
+  text-align: center;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #9aa0bd;
+}
+
+/* Action stack — primary on top, ghost below. */
+.system-full-actions {
+  position: relative;
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Buttons — base shape. */
+.system-full-btn {
+  width: 100%;
+  height: 50px;
+  border: 0;
+  border-radius: 14px;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.12s ease, box-shadow 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.system-full-btn:active {
+  transform: scale(0.97);
+}
+
+/* Primary — gold gradient, dark text. */
+.system-full-btn--primary {
+  color: #1b1405;
+  background: linear-gradient(180deg, #f7c65c 0%, #e3a52f 100%);
+  box-shadow:
+    0 0 22px rgba(245, 184, 66, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+/* Ghost — outlined. */
+.system-full-btn--ghost {
+  height: 48px;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #9aa0bd;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Reduced motion — drop the rise animation. */
+@media (prefers-reduced-motion: reduce) {
+  .system-full-sheet {
+    animation: none;
+  }
+  .system-full-btn {
+    transition: none;
+  }
+}
+
+/* Narrow phone safety — iPhone SE width (375px) leaves ~327px for
+   the card after the 24px gutters. The 360px max-width still fits;
+   this rule is defensive. */
+@media (max-width: 380px) {
+  .system-full-sheet {
+    padding: 26px 22px 22px;
+  }
+  .system-full-title {
+    font-size: 26px;
+  }
+}
+
+/* END v3 Phase 1z.280 System Full block */

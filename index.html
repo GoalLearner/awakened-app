@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=343">
+  <link rel="stylesheet" href="styles.css?v=344">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2125,6 +2125,52 @@
     </div>
   </div>
 
+  <!-- v3 Phase 1z.280 — System Full / Active Vow Limit overlay.
+       Triggered by showSystemFullModal() in app.js when any habit-add
+       path would push the user above MAX_ACTIVE_HABITS (25). Copy is
+       populated dynamically so the same shell serves three contexts:
+       normal full, bulk-add overflow, and grandfathered users above 25.
+       Markup mirrors the cinematic "system speaks" treatment from the
+       ClaudeDesign Variant B spec (sigil + kicker + Cinzel verse +
+       JetBrains-Mono count + Manage/Not Now CTAs). NO "Archive" copy
+       and NO "history preserved" promise — real archive system is
+       deferred to 1z.281; for now we say "Remove" honestly. -->
+  <div id="system-full-overlay" class="system-full-overlay hidden" aria-hidden="true">
+    <div class="system-full-sheet" role="dialog" aria-modal="true" aria-labelledby="system-full-title">
+      <div class="system-full-kicker">
+        <span class="system-full-kicker-diamond" aria-hidden="true"></span>
+        <span>SYSTEM NOTICE</span>
+        <span class="system-full-kicker-diamond" aria-hidden="true"></span>
+      </div>
+      <div class="system-full-sigil" aria-hidden="true">
+        <svg width="62" height="62" viewBox="0 0 56 56" fill="none">
+          <defs>
+            <linearGradient id="sf-core" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ecca84"/>
+              <stop offset="100%" stop-color="#c08418"/>
+            </linearGradient>
+          </defs>
+          <path d="M28 3 L53 28 L28 53 L3 28 Z" stroke="#a78bfa" stroke-width="1.4" fill="rgba(139,92,246,0.06)"/>
+          <path d="M28 12 L44 28 L28 44 L12 28 Z" stroke="#a78bfa" stroke-width="0.8" opacity="0.6" fill="none"/>
+          <path d="M28 3 L28 12 M28 44 L28 53 M3 28 L12 28 M44 28 L53 28" stroke="#a78bfa" stroke-width="0.7" opacity="0.5"/>
+          <path d="M28 19 L37 28 L28 37 L19 28 Z" fill="url(#sf-core)" opacity="0.95"/>
+          <rect x="22.5" y="26.6" width="11" height="2.8" rx="1.4" fill="#1a1405"/>
+        </svg>
+      </div>
+      <h2 id="system-full-title" class="system-full-title">System Full</h2>
+      <div class="system-full-divider" aria-hidden="true"></div>
+      <div id="system-full-count" class="system-full-count">25 / 25 ACTIVE VOWS</div>
+      <p id="system-full-verse" class="system-full-verse">A hunter cannot bind endless vows.</p>
+      <p id="system-full-body" class="system-full-body">
+        You have reached 25 active habits. A focused hunter keeps only the vows that matter. Remove one to make room.
+      </p>
+      <div class="system-full-actions">
+        <button id="system-full-manage" class="system-full-btn system-full-btn--primary" type="button">Manage Vows</button>
+        <button id="system-full-close"  class="system-full-btn system-full-btn--ghost"   type="button">Not Now</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Notification-permission explainer (shown once before iOS native prompt) -->
   <!-- v3 Phase 1m — Permission pre-prompt redesign (claudedesign port).
        Tactical system messages framing replaces the prior generic
@@ -2662,7 +2708,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=616"></script>
+  <script src="app.js?v=617"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3084,7 +3130,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W165</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W166</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric
