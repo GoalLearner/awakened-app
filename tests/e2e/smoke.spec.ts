@@ -1,7 +1,7 @@
 /**
  * Awakened — Playwright smoke suite.
  *
- * Goal: 7-area sanity pass against the localhost dev build. Catches
+ * Goal: 6-area sanity pass against the localhost dev build. Catches
  * the regressions that hurt most before Codemagic / TestFlight:
  *   A. App boots clean
  *   B. Status tab renders
@@ -11,7 +11,8 @@
  *   E. Leaderboard sheet: tabs visible, scroll doesn't dismiss,
  *      X closes
  *   F. Boss detail: SOULS AVAILABLE readout near Engage button
- *   G. Duels picker: no Boss Race, exactly 5 verified types
+ *   (G. Duels picker — removed in 1z.279 along with the Duels
+ *      subsystem retirement.)
  *
  * Auth is via Auth.devSignInIfLocalhost() — see auth.js. The dev
  * stub auto-mounts the app as "DevUser" on localhost so we never
@@ -300,65 +301,6 @@ test.describe('F · Boss detail Souls readout', () => {
     await expect(label).toHaveText(/souls available/i);
     await expect(page.locator('#bfs-souls-balance-num')).toHaveText('185');
     await expect(engage).toBeVisible();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────
-// G. Duels picker — Steps-only MVP (1z.148); non-steps types
-// hidden via selectable=false until the Steps Duel pipeline
-// is fully proven end-to-end with real users.
-// ─────────────────────────────────────────────────────────────
-test.describe('G · Duels picker', () => {
-  test('Steps-only MVP — only the Steps card renders in the picker', async ({ page }) => {
-    await freshApp(page);
-    // Step 1 — open the Duels tab so the picker's wiring
-    // (`setupDuelTypePicker`) has run and event listeners are
-    // attached. The tab body itself stays mostly empty without a
-    // friend roster (production data lives behind auth), which is
-    // fine — we only need the picker DOM to be hot.
-    await page.locator('#tab-social').click();
-    // Step 2 — open the type picker. `window.openDuelTypePicker`
-    // is a pre-existing global that the app uses to dispatch the
-    // picker from outside its IIFE (see `try { window.openDuelTypePicker
-    // = ... } catch (_) {}` in app.js). We pass a stub opponent
-    // alias — the picker only uses it for the "vs <alias>" header
-    // and the optional submit, neither of which the test invokes.
-    // This is the cleanest test-friendly surface: no runtime
-    // changes, no test-only exports, no DUEL_TYPES global needed.
-    const opened = await page.evaluate(() => {
-      const w = window as unknown as { openDuelTypePicker?: (alias: string) => void };
-      if (typeof w.openDuelTypePicker !== 'function') return false;
-      try { w.openDuelTypePicker('PlaywrightOpponent'); return true; }
-      catch (_) { return false; }
-    });
-    expect(opened, 'openDuelTypePicker must be exposed on window for in-app dispatch').toBe(true);
-
-    // Step 3 — the picker mounts a grid of cards; each carries
-    // `data-duel-type="<id>"`. 1z.148 flipped four types to
-    // `selectable: false` in DUEL_TYPES (sleep / bedtime / strength
-    // / verified_objectives) so only `steps` reaches the DOM.
-    // Boss Race remains hidden too (`selectable: false` since 1x.6).
-    // We assert against UI text / DOM attributes only — no runtime
-    // globals.
-    const cards = page.locator('#duel-type-grid [data-duel-type]');
-    await expect(cards).toHaveCount(1);
-
-    const ids = await cards.evaluateAll(els =>
-      els.map(el => (el as HTMLElement).getAttribute('data-duel-type') || '')
-    );
-    expect(ids).toEqual(['steps']);
-    expect(ids).not.toContain('boss_race');
-    expect(ids).not.toContain('sleep');
-    expect(ids).not.toContain('bedtime');
-    expect(ids).not.toContain('strength');
-    expect(ids).not.toContain('verified_objectives');
-
-    // Step 4 — close cleanly so the next test doesn't inherit a
-    // body class lock (`body.duel-type-locked`).
-    await page.evaluate(() => {
-      const w = window as unknown as { closeDuelTypePicker?: () => void };
-      if (typeof w.closeDuelTypePicker === 'function') w.closeDuelTypePicker();
-    });
   });
 });
 

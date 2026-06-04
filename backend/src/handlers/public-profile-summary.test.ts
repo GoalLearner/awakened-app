@@ -3,8 +3,8 @@
  * v3 Phase 1z.190 friend rank badges MVP.
  *
  * Covers the PUT /v1/users/me/public-profile-summary validation
- * matrix and the upsert bind shape. Follows the same conventions
- * as duels.test.ts: hand-rolled D1 mock, no real SQL engine.
+ * matrix and the upsert bind shape. Hand-rolled D1 mock, no real
+ * SQL engine — same pattern used elsewhere in this suite.
  *
  *   - rejects invalid tier
  *   - rejects invalid division (or division mismatched with tier)
@@ -55,7 +55,6 @@ function makeEnv(db: D1Database, rl = okRl): Env {
     RL_USER_STATE_POST: okRl,
     RL_FRIENDS_READ: okRl,
     RL_FRIENDS_WRITE: okRl,
-    RL_DUELS_READ: okRl,
     RL_DUELS_WRITE: okRl,
     RL_USER_ACCOLADES_READ: okRl,
     RL_LEADERBOARD_HOF: okRl,
