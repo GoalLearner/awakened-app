@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w176';
+  const APP_BUILD_TAG = '2.2.5-w177';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11555,7 +11555,12 @@
   // depending on whether "No alcohol" is in the user's active list.
 
   function userHasNoAlcohol() {
-    return habits.some(h => h.name === 'No alcohol');
+    // v3 Phase 1z.283 W177 — Active-only. The weekend challenge / boss
+    // logic is contextual to the user's ACTIVE discipline. If the user
+    // archived No alcohol, they explicitly opted out of tracking it
+    // right now; the system should respect that and not surface the
+    // challenge UI. Consistent with the archive-is-hide contract.
+    return habits.some(h => _isActiveHabit(h) && h.name === 'No alcohol');
   }
 
   // Returns 'complete' | 'missed' | 'pending' | 'future' for a given
@@ -22707,8 +22712,45 @@
       } catch (_) {}
       return showErr('Choose an icon first.');
     }
-    if (habits.some(h => h && typeof h.name === 'string' && h.name.toLowerCase() === name.toLowerCase())) {
+    // v3 Phase 1z.283 W177 — Active-only dedup + archived restore path.
+    // Custom habits have no library entry to surface them, so before
+    // W177 a custom vow archived via Manage Vows was effectively
+    // destroyed: name collision blocked recreation, no UI exposed the
+    // archived entry, and its MAX_CUSTOM_HABITS slot stayed consumed
+    // forever. Mirroring W176's built-in Option B: case-insensitive
+    // active-only dedup; if the name matches an ARCHIVED habit (custom
+    // or built-in), un-archive it instead of erroring.
+    const _nameKey = name.toLowerCase();
+    const _activeNameCollision = habits.some(h => _isActiveHabit(h) && typeof h.name === 'string' && h.name.toLowerCase() === _nameKey);
+    if (_activeNameCollision) {
       return showErr('You already have a habit with that name.');
+    }
+    const _archivedMatch = habits.find(h => h && h.archived === true && typeof h.name === 'string' && h.name.toLowerCase() === _nameKey);
+    if (_archivedMatch) {
+      // Active habit cap still applies — restoring brings the count up
+      // by 1, so the System Full gate must pass before the un-archive.
+      if (!canAddHabits(1)) {
+        try { _addHabitBreadcrumb('custom-create-restore-blocked-system-full', {
+          activeCount: getActiveHabitCount(),
+        }); } catch (_) {}
+        try { showSystemFullModal({ context: 'custom', attemptedCount: 1 }); } catch (_) {}
+        return;
+      }
+      _archivedMatch.archived = false;
+      try {
+        _addHabitBreadcrumb('custom-create-restored', {
+          name:        _archivedMatch.name,
+          activeCount: getActiveHabitCount(),
+          wasCustom:   !!_archivedMatch.custom,
+        });
+      } catch (_) {}
+      try { save(); } catch (_) {}
+      try { closeCustomHabitModal(); } catch (_) {}
+      try { closeLibrary(); } catch (_) {}
+      try { renderHabits({ skipSideEffects: true }); } catch (_) {}
+      try { renderLibrary(); } catch (_) {}
+      try { showHabitToast('Vow restored — ' + _archivedMatch.name); } catch (_) {}
+      return;
     }
     // v3 Phase 1z.280 — Active habit cap. Gate BEFORE MAX_CUSTOM_HABITS
     // so the broader cap wins if both fail (the user shouldn't see a
@@ -22722,7 +22764,9 @@
       try { showSystemFullModal({ context: 'custom', attemptedCount: 1 }); } catch (_) {}
       return;
     }
-    if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) {
+    // v3 Phase 1z.283 W177 — Custom-habit cap counts ACTIVE customs
+    // only. Archived customs no longer consume slots indefinitely.
+    if (habits.filter(h => _isActiveHabit(h) && h.custom).length >= MAX_CUSTOM_HABITS) {
       return showErr('You\'ve reached the ' + MAX_CUSTOM_HABITS + '-custom-habit cap.');
     }
 
@@ -23714,7 +23758,11 @@
   // the `habits` array reference.
   function isHabitAlreadyAdded(h) {
     if (!h || !h.name) return false;
-    try { return habits.some(a => !a.custom && a.name === h.name); }
+    // v3 Phase 1z.283 W177 — Active-only. Archived built-ins must
+    // surface as re-addable here; the downstream add path
+    // (addHabitFromStatSheet / library) routes through the un-archive
+    // restore branch.
+    try { return habits.some(a => _isActiveHabit(a) && !a.custom && a.name === h.name); }
     catch (_) { return false; }
   }
 
@@ -29569,7 +29617,11 @@
         ? new Set(_LOCKED_IN_EXTRA_INDICES.map(i => DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name).filter(Boolean))
         : new Set();
       if (liExtraNames.size === 0) return false;
-      return habits.some(h => liExtraNames.has(h.name));
+      // v3 Phase 1z.283 W177 — Active-only. Pack-detection is
+      // contextual to the user's ACTIVE list. Archived Locked-In
+      // habits don't count as "having the pack" — pack-rows should
+      // reflect what's currently part of the discipline.
+      return habits.some(h => _isActiveHabit(h) && liExtraNames.has(h.name));
     })();
     const rows = BONUS_PACK_IDS.map(packId => {
       if (packId === 'morning' && liExclusivelyActive) return '';
