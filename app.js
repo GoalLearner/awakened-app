@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w184';
+  const APP_BUILD_TAG = '2.2.5-w185';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3393,6 +3393,77 @@
     return true;
   }
   try { window.recordGuildActivity = recordGuildActivity; } catch (_) {}
+
+  // v3 Phase 1z.283 W185 — One-time cleanup of stale leaderboard_top10_step
+  // feats from before the minimum-effort threshold landed. Pre-W185 the
+  // W181 trigger fired on rank alone; on a sparse early-stage leaderboard
+  // (e.g. 8 total users) a hunter with trivial step counts would
+  // legitimately rank #N≤10 and earn the feat, then slide to a much
+  // lower rank as the audience grew — leaving the celebration sitting
+  // in the feed looking like a lie. This migration scans the local
+  // store once per device, drops any pre-W185 leaderboard_top10_step
+  // entries, and clears the matching best-rank tracker keys so a fresh
+  // qualifying achievement can fire cleanly under the new threshold.
+  //
+  // Idempotent via hb_guild_activity_top10_w185_swept; safe to leave
+  // shipped indefinitely. Future "real" feats (post-threshold) are
+  // never touched.
+  function _sweepStaleTop10StepFeats() {
+    const sweptKey = 'hb_guild_activity_top10_w185_swept';
+    try {
+      if (localStorage.getItem(sweptKey) === '1') return;
+    } catch (_) { return; }
+    let removedFeatCount = 0;
+    let clearedRankKeys = 0;
+    try {
+      const entries = _guildhallReadStore();
+      if (Array.isArray(entries) && entries.length) {
+        const filtered = entries.filter(function (e) {
+          if (e && e.type === 'leaderboard_top10_step') {
+            removedFeatCount++;
+            return false;
+          }
+          return true;
+        });
+        if (removedFeatCount > 0) _guildhallWriteStore(filtered);
+      }
+      // Clear the best-rank tracker keys so the next qualifying fetch
+      // (with current_value >= threshold) can fire a clean fresh feat.
+      // Iterating localStorage keys directly is safe — no other system
+      // owns this prefix.
+      const toClear = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('hb_lb_best_rank_step_total_') === 0) toClear.push(k);
+      }
+      toClear.forEach(function (k) {
+        try { localStorage.removeItem(k); clearedRankKeys++; } catch (_) {}
+      });
+      // Also clear the "seen" dedup markers so the same week+rank
+      // pair can re-fire if the user genuinely qualifies later.
+      const toClearSeen = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('hb_guild_activity_seen_lb_top10_step_') === 0) toClearSeen.push(k);
+      }
+      toClearSeen.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+
+      localStorage.setItem(sweptKey, '1');
+    } catch (_) { /* swallow — sweep is best-effort housekeeping */ }
+    try {
+      if (typeof _bcLB === 'function') {
+        _bcLB('leaderboard-top10-feat-w185-sweep', {
+          removedFeats: removedFeatCount,
+          clearedRankKeys: clearedRankKeys,
+        });
+      }
+    } catch (_) {}
+  }
+  // Fire-and-forget on script load. Safe: no DOM dependency, fully
+  // try/catch-wrapped, idempotent. If the sweep ever fails partway,
+  // the swept flag is only set on the success path; next launch retries.
+  try { _sweepStaleTop10StepFeats(); } catch (_) {}
+
   function _guildhallFormatRelativeTs(ms) {
     try {
       const delta = Date.now() - ms;
@@ -27939,8 +28010,29 @@
       // function). That means the event surfaces in the Guild feed
       // when the user opens the leaderboard sheet — by design. No
       // background polling.
+      // v3 Phase 1z.283 W185 — Minimum-effort threshold for the top-10
+      // Steps feat. The original W181 trigger fired purely on rank,
+      // which on a sparse early-stage leaderboard produces false
+      // positives: a user with 71 weekly steps could legitimately
+      // land at #8 when there were only 10 total competitors, then
+      // slide to #18 as the audience grew — leaving a stale "You
+      // reached #8" feat in the feed that looks like a lie. The W181
+      // "never un-fire on regression" design (intentional, to avoid
+      // demotion churn) combined with rank-based qualification meant
+      // the feat could persist with embarrassingly low effort.
+      //
+      // The fix: require a real-effort floor before any top-10 feat
+      // qualifies. 25,000 weekly steps ≈ 3,500/day, a basic active
+      // baseline. Filters out sparse-leaderboard false positives
+      // without gatekeeping legitimate top performers (true top-10
+      // is 40K+ weekly). Threshold can be lifted later if the user
+      // base grows enough that rank alone becomes a reliable signal.
+      const LB_TOP10_STEP_MIN_VALUE = 25000;
       try {
-        if (metric === 'step_total' && result.me && typeof result.me.rank === 'number') {
+        if (metric === 'step_total' && result.me &&
+            typeof result.me.rank === 'number' &&
+            typeof result.me.current_value === 'number' &&
+            result.me.current_value >= LB_TOP10_STEP_MIN_VALUE) {
           const myRank = result.me.rank;
           if (myRank >= 1 && myRank <= 10 && typeof lbGetCurrentWeekStartPT === 'function') {
             const weekStart = lbGetCurrentWeekStartPT(Date.now());
@@ -27964,6 +28056,20 @@
               }
             }
           }
+        } else if (metric === 'step_total' && result.me &&
+                   typeof result.me.rank === 'number' &&
+                   result.me.rank >= 1 && result.me.rank <= 10) {
+          // Breadcrumb: threshold blocked an otherwise-qualifying fire.
+          // Useful telemetry to confirm the gate is doing its job on
+          // sparse leaderboards.
+          try {
+            _bcLB('leaderboard-top10-feat-threshold-block', {
+              metric,
+              rank: result.me.rank,
+              value: (typeof result.me.current_value === 'number') ? result.me.current_value : null,
+              threshold: LB_TOP10_STEP_MIN_VALUE,
+            });
+          } catch (_) {}
         }
       } catch (_) { /* feed is not load-bearing — never block render */ }
 
