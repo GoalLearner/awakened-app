@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w181';
+  const APP_BUILD_TAG = '2.2.5-w182';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19864,13 +19864,21 @@
     // Idempotent guard against double-wiring.
     if (card.getAttribute('data-wired') === '1') return;
     card.setAttribute('data-wired', '1');
-    // v3 Phase 1z.130 — World Rank card is now the entry point for
-    // the Global Rankings Hub (a 4-metric chooser sheet), not a
-    // direct shortcut to the Steps leaderboard. Per-metric sheets
-    // are reached via the hub's row taps.
-    try { card.setAttribute('aria-label', 'Open Global Rankings'); } catch (_) {}
+    // v3 Phase 1z.283 W182 — World Rank card now opens the Steps
+    // leaderboard DIRECTLY, bypassing the four-metric Global Rankings
+    // Hub introduced in 1z.130. Steps is the only global ranking
+    // surface going forward (sleep / workout / flights are watch-
+    // dependent in practice and felt empty at our current audience
+    // size — every iPhone user can participate in steps with no
+    // device upgrade, so it's the universal competitive surface).
+    //
+    // The hub function (openGlobalRankingsHub) is preserved dormant
+    // for easy revival if the other metrics are promoted back to
+    // global ranks later — backend submits for all four metrics keep
+    // running unchanged, so the data infrastructure stays warm.
+    try { card.setAttribute('aria-label', 'Open Steps leaderboard'); } catch (_) {}
     card.addEventListener('click', () => {
-      try { openGlobalRankingsHub(); } catch (_) {}
+      try { openLeaderboardRanking('step_total'); } catch (_) {}
     });
   }
 
