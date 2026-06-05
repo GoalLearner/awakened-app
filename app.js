@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w179';
+  const APP_BUILD_TAG = '2.2.5-w180';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34609,11 +34609,53 @@
     // users skip _completeOnboardingFinish entirely so this never
     // forces a tab on them.
     try { if (typeof switchTab === 'function') switchTab('habits'); } catch (_) {}
-    // First-install daily-login bonus: deferred from init() so the
-    // toast doesn't appear over the welcome/onboarding screens.
-    // Now that the main app is finally visible, fire it here.
-    // Idempotent — no-ops if init's gate had already let it through.
-    try { tryGrantDailyLoginBonus(); } catch (_) {}
+
+    // v3 Phase 1z.283 W180 — Greeting parity for the onboarding
+    // completion path. W178 added showFirstVowCoachmark() to the
+    // in-app pack-add modal (confirmPackAdd, 22988) and the Library
+    // multi-pick (_libCommitSelection) — but the most common new-
+    // user flow lands here, NOT through either of those. Smoke test
+    // (TestFlight, fresh install → Morning Routine pack pick →
+    // onboarding finish) confirmed the gap: the user picked the
+    // pack via the onboarding sheets, _completeOnboardingFinish
+    // committed the 10 habits and switched to the Habits tab, but
+    // The First Awakened never appeared. Pack-path *onboarding*
+    // users were silently skipped.
+    //
+    // Fix: fire showFirstVowCoachmark() here, with the same
+    // self-gate pattern (storage key = hb_tour_first_vow_v1).
+    // Chain tryGrantDailyLoginBonus via onDismiss so the login-
+    // bonus toast doesn't land while the FA modal is mid-typewriter.
+    //
+    // Guards:
+    //   * Only fire when habits.length > 0. If the user finished
+    //     onboarding with no selections (Forge Your Own → skipped),
+    //     the empty-state First Vow picker (_renderFirstVowQuickPicks)
+    //     surfaces on the Habits tab and fires the coach via
+    //     _commitFirstVowSelection's existing W178 hook — firing
+    //     here too would be wrong (no vows = nothing to acknowledge).
+    //   * If the coach is suppressed (returns false — e.g. a user
+    //     who reset progress but retained the seen flag, or any
+    //     re-entry path), fall through and grant the login bonus
+    //     synchronously, matching pre-W180 behavior.
+    let _obFaCoachShown = false;
+    if (Array.isArray(habits) && habits.length > 0) {
+      try {
+        _obFaCoachShown = showFirstVowCoachmark({
+          onDismiss: function () {
+            try { tryGrantDailyLoginBonus(); } catch (_) {}
+          },
+        });
+      } catch (_) { _obFaCoachShown = false; }
+    }
+
+    if (!_obFaCoachShown) {
+      // First-install daily-login bonus: deferred from init() so the
+      // toast doesn't appear over the welcome/onboarding screens.
+      // Now that the main app is finally visible, fire it here.
+      // Idempotent — no-ops if init's gate had already let it through.
+      try { tryGrantDailyLoginBonus(); } catch (_) {}
+    }
   }
 
   // ── The Beginning reveal — full-screen typewriter ────────
