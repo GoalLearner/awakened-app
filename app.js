@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w180';
+  const APP_BUILD_TAG = '2.2.5-w181';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3439,6 +3439,12 @@
       // v3 Phase 1z.170 — guild bond glyph (ring sign). Now
       // slate-tinted to match the Tier-3 social treatment.
       case 'friend_added':      glyph = '⚭'; clsKey = 'social'; break;
+      // v3 Phase 1z.283 W181 — Weekly Steps leaderboard top-10
+      // placement. Uses the 'step' (teal) family since this is a
+      // step-domain win; glyph ▲ reads as "climbed" / "ranked up"
+      // and stays visually distinct from rank_up's ◆ (which tracks
+      // character rank tiers D→C→B→A, not leaderboard position).
+      case 'leaderboard_top10_step': glyph = '▲'; clsKey = 'step'; break;
       default:                  glyph = '·'; clsKey = 'social'; break;
     }
     return '<span class="guildhall-activity-icon guildhall-activity-icon--' +
@@ -3492,6 +3498,20 @@
         target = (p.toRank || 'a new rank');
         targetCls = 'guildhall-activity-target--rank';
         break;
+      // v3 Phase 1z.283 W181 — Weekly Steps leaderboard top-10.
+      // Reads "You reached #3 on the Steps leaderboard". The rank
+      // integer is sanity-clamped at render time in case a stale or
+      // malformed payload slips through (the writer guards rank
+      // 1-10 strictly, but defense in depth).
+      case 'leaderboard_top10_step': {
+        const r = (typeof p.rank === 'number' && p.rank >= 1 && p.rank <= 10) ? p.rank : null;
+        verb = 'reached';
+        target = r
+          ? ('#' + r + ' on the Steps leaderboard')
+          : 'the top 10 on the Steps leaderboard';
+        targetCls = 'guildhall-activity-target--step';
+        break;
+      }
       case 'ultra_rare_drop':
         verb = 'looted';
         target = (p.cardName || 'an ultra-rare relic');
@@ -3598,6 +3618,10 @@
     // Guild mode filters these out via GUILDHALL_GUILD_HIDDEN_TYPES
     // so common drops never flood the public feed.
     'card_drop',
+    // v3 Phase 1z.283 W181 — Weekly Steps leaderboard top-10 placement.
+    // Counts as a personal feat (FEATS · 24H tile + Today's Feats sheet)
+    // since it celebrates the user's competitive standing.
+    'leaderboard_top10_step',
   ]);
   // v3 Phase 1z.197 — Hunter-feed visibility extends the personal-
   // feat allowlist with roster/social events (currently just
@@ -27895,6 +27919,46 @@
         });
       } catch (_) {}
       lbCacheWrite(metric, result.top, result.me);
+
+      // v3 Phase 1z.283 W181 — Weekly Steps leaderboard top-10 placement
+      // → Guild Hall feat. Fires once when the user enters top 10 each
+      // week, and re-fires on rank IMPROVEMENT (e.g. #8 → #4) — never
+      // on regression (#4 → #7 stays silent). Each week is a fresh
+      // slate; storage key includes weekStartIso so a new week reopens
+      // the channel even at the same rank.
+      //
+      // Trigger: only on a successful Steps leaderboard fetch (this
+      // function). That means the event surfaces in the Guild feed
+      // when the user opens the leaderboard sheet — by design. No
+      // background polling.
+      try {
+        if (metric === 'step_total' && result.me && typeof result.me.rank === 'number') {
+          const myRank = result.me.rank;
+          if (myRank >= 1 && myRank <= 10 && typeof lbGetCurrentWeekStartPT === 'function') {
+            const weekStart = lbGetCurrentWeekStartPT(Date.now());
+            if (weekStart && /^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+              const bestKey = 'hb_lb_best_rank_' + metric + '_' + weekStart;
+              let seenBest = 0;
+              try {
+                const raw = localStorage.getItem(bestKey);
+                seenBest = raw ? parseInt(raw, 10) : 0;
+                if (!(seenBest > 0 && seenBest <= 10)) seenBest = 0;
+              } catch (_) { seenBest = 0; }
+
+              const shouldFire = (seenBest === 0) || (myRank < seenBest);
+              if (shouldFire) {
+                recordGuildActivity('leaderboard_top10_step', {
+                  rank:         myRank,
+                  metric:       'step_total',
+                  weekStartIso: weekStart,
+                }, 'lb_top10_step_' + weekStart + '_r' + myRank);
+                try { localStorage.setItem(bestKey, String(myRank)); } catch (_) {}
+              }
+            }
+          }
+        }
+      } catch (_) { /* feed is not load-bearing — never block render */ }
+
       const sim2 = _lbMaybeSimulate(metric, result.top, result.me);
       const finalRowCount = (sim2.top || []).length;
       try {
