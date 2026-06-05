@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w178';
+  const APP_BUILD_TAG = '2.2.5-w179';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21737,8 +21737,26 @@
       e.stopPropagation();
       advance();
     }
+    // v3 Phase 1z.283 W179 — Backdrop tap NO LONGER dismisses the
+    // coachmark. Smoke test caught the accidental-exit failure mode:
+    // a user tapping a hair outside the sheet on the welcome beat
+    // ("HUNTER.") would lose the moment entirely, the storage key
+    // got marked seen on dismiss, and the coach never re-fired —
+    // i.e., they permanently missed the First Awakened greeting on
+    // a stray tap. Dismissal is now gated on the explicit "TAP TO
+    // CONTINUE" CTA on the final beat (or ESC for keyboard users
+    // in dev / web preview). Sheet-tap-to-advance is preserved —
+    // tapping anywhere on the SHEET still skips the typewriter and
+    // advances through beats; only the dark backdrop is inert.
     function onOverlayClick(e) {
-      if (e.target === overlay) dismiss();
+      // Intentional no-op. Kept wired only so e.stopPropagation in
+      // onSheetClick has a matching listener boundary; removing
+      // the addEventListener entirely would also be fine, this
+      // form keeps the symmetry obvious to future readers.
+      if (e.target === overlay) {
+        // Absorb the tap so it doesn't bubble out, but do not dismiss.
+        e.stopPropagation();
+      }
     }
 
     // Wire interactions
