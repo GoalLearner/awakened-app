@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w188';
+  const APP_BUILD_TAG = '2.2.5-w190';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1115,8 +1115,31 @@
       // same-day pre-engage verified Health activity count: if you
       // already walked 10k today and then engage Marathon Wraith, the
       // engage-triggered resolver tick sees today's 10k and defeats.
-      // Yesterday's data still doesn't count (different day key) —
-      // each midnight resets the verification window.
+      //
+      // v3 Phase 1z.283 W190 — Production hotfix for the cross-midnight
+      // verification bug. The original 1z.72 override used ONLY
+      // [today midnight, now], which broke evening-engagement hunts: a
+      // hunter who engages The Furnace Knight at 8 PM Friday, does the
+      // qualifying strength workout + burns 300 active kcal that
+      // evening, then opens the app Saturday — their Friday-evening
+      // activity is invalidated at Saturday midnight and the boss
+      // shows ○ Strength workout, 7/300 kcal. Hunt expires Saturday
+      // evening, the engage cost (souls) is lost, kill_count stays 0.
+      // Same pattern wiped The Ascendant Colossus credit for Rendell —
+      // 21 flights Wednesday didn't carry to Thursday morning.
+      //
+      // The fix: use the EARLIER of [hunt start] or [today midnight]
+      // as the verification start. Preserves the 1z.72 pre-engage
+      // credit (Marathon Wraith case — huntStart > today midnight,
+      // so min returns today midnight, unchanged behavior) AND fixes
+      // the cross-midnight reset (Furnace Knight case — huntStart <
+      // today midnight, so min returns huntStart, reaching back to
+      // capture the qualifying evening activity).
+      //
+      // Strictly additive: the verification window never shrinks vs.
+      // the old behavior, it only extends back to hunt start when the
+      // hunt spans midnight. No false positives — every qualifying
+      // activity is still inside the hunt window by construction.
       //
       // The hunt-expiration window stays at [hunt_started_at,
       // hunt_expires_at] for the timer; only the verification window
@@ -1126,7 +1149,7 @@
       let evalEnd = huntEvalEnd;
       if (cfg.cadence === 'daily') {
         const nowDt = new Date(now);
-        start = _startOfLocalDayMs(nowDt);
+        start = Math.min(huntStart, _startOfLocalDayMs(nowDt));
         evalEnd = Math.min(_endOfLocalDayMs(nowDt), now);
       }
 
