@@ -574,6 +574,13 @@ h1 {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10px; font-weight: 600; color: #5c5c78;
 }
+/* v3 Phase 1z.284 W193 — No-alcohol weekend badge sized for the row.
+   The .na-badge-* variant classes still carry the bg/color/border. */
+.habit-item--row .hlr-na {
+  margin-top: 6px;
+  font-size: 9.5px;
+  padding: 2px 8px;
+}
 
 /* Apple Health chip. */
 .habit-item--row .hlr-health {

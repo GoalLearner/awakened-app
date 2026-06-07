@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w192';
+  const APP_BUILD_TAG = '2.2.5-w193';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18101,6 +18101,16 @@
         '</span>'
       : '';
 
+    // v3 Phase 1z.284 W193 — No-alcohol weekend challenge badge.
+    // Grid parity (buildItem renders this); without it the list view
+    // silently drops a weekend engagement cue on the default surface.
+    const isNoAlcohol = habit.name === 'No alcohol';
+    const naBadge = (isNoAlcohol && typeof getNoAlcoholBadge === 'function')
+      ? getNoAlcoholBadge() : null;
+    const naBadgeHtml = naBadge
+      ? '<div class="na-challenge-badge hlr-na ' + naBadge.cls + '">' + streakify(naBadge.text, 12) + '</div>'
+      : '';
+
     // Secondary progress line (steps text, or awaiting copy).
     let secondaryHtml = '';
     if (stateCls === 'hlr--awaiting') {
@@ -18134,6 +18144,7 @@
           '</div>' +
           '<div class="hlr-line2">' + statXpHtml + detailHtml + healthChipHtml + '</div>' +
           secondaryHtml +
+          naBadgeHtml +
         '</div>' +
         sealHtml +
         '<button class="habit-more-btn hlr-more" data-more aria-label="Manage habit">···</button>' +
