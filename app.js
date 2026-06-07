@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w187';
+  const APP_BUILD_TAG = '2.2.5-w188';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22264,10 +22264,20 @@
         if (r && typeof r.kill_count === 'number') bosses += r.kill_count;
       });
     } catch (_) {}
-    // Souls balance
+    // Souls balance — read via the canonical accessor. hb_souls is
+    // stored as JSON.stringify({ balance: N, ... }), NOT a flat int;
+    // an earlier W187 revision used parseInt() and rendered 0 for
+    // every hunter regardless of real balance. getSoulsBalance()
+    // returns _souls.balance (loadSouls()-initialized) and is the
+    // same function the in-app souls tile reads.
     let souls = 0;
     try {
-      souls = parseInt(localStorage.getItem('hb_souls') || '0', 10) || 0;
+      if (typeof getSoulsBalance === 'function') {
+        souls = getSoulsBalance() || 0;
+      } else {
+        const sObj = JSON.parse(localStorage.getItem('hb_souls') || '{}');
+        souls = (sObj && typeof sObj.balance === 'number') ? sObj.balance : 0;
+      }
     } catch (_) {}
     return {
       alias:       alias,
