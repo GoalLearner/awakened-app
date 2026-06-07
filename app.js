@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w185';
+  const APP_BUILD_TAG = '2.2.5-w186';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21940,6 +21940,171 @@
     });
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // v3 Phase 1z.283 W186 — First Awakened retention moments.
+  //
+  // Three rare, ceremonial check-ins that protect the Day 0–7
+  // window and dignify a missed streak. NONE grant XP, souls,
+  // relics, or stats. None alter streak / XP / rank math. None
+  // touch backend. Each is one-shot per device (or per break
+  // date), gated by an hb_* localStorage key that Reset All
+  // Progress wipes.
+  //
+  // Engine reuse: every moment is rendered by _faRunCoachmark,
+  // the same spec-driven coach used for First Vow / Welcome Back /
+  // Quests / Stats / Rank-up. No new modal shell, no new art —
+  // each moment selects from the five already-shipped FA poses
+  // (idle, pointing, speaking, nodding, scroll).
+  //
+  // Priority (highest first): Streak-loss > Day 7 > Day 3.
+  // Only ONE retention moment may fire per launch. Higher-
+  // priority modals (onboarding, rank-up, Daily Insight, Field
+  // Manual, Manage Vows, System Full, Reveal) silently defer the
+  // retention check to the next launch.
+  // ──────────────────────────────────────────────────────────────
+
+  const FA_DAY3_BEATS = [
+    { pose: 'idle', lines: [
+      'Hunter.',
+      'Three days is not a legacy.',
+      'It is the first proof that the vow survived contact with your life.',
+      'Continue.',
+    ]},
+  ];
+
+  const FA_DAY7_BEATS = [
+    { pose: 'speaking', lines: [
+      'Seven days.',
+      'The system has seen enough to begin counting you differently.',
+      'Do not mistake this for arrival.',
+      'It is only the gate.',
+    ]},
+  ];
+
+  const FA_STREAKLOSS_BEATS = [
+    { pose: 'nodding', lines: [
+      'The streak broke.',
+      'The discipline did not.',
+      'Return to the vow.',
+    ]},
+  ];
+
+  // Day 3 — fires once when the user opens the app on calendar
+  // day 3 or later from origin. Skips if no active vow exists
+  // (an all-archived user is functionally new again).
+  function showDay3Coachmark() {
+    if (localStorage.getItem('hb_tour_day3_v1') === '1') return false;
+    if (typeof getDaysSinceOrigin !== 'function') return false;
+    const days = getDaysSinceOrigin();
+    if (typeof days !== 'number' || days < 3) return false;
+    if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
+    _faRunCoachmark({
+      context: 'day3',
+      beats: FA_DAY3_BEATS,
+      cta: 'CONTINUE',
+      storageKey: 'hb_tour_day3_v1',
+    });
+    return true;
+  }
+
+  // Day 7 — fires once when the user opens the app on calendar
+  // day 7 or later from origin. Silent-marks Day 3 as seen so a
+  // user who first returns on Day 7+ doesn't see a back-to-back
+  // "Three days…" stale check-in on the following launch.
+  function showDay7Coachmark() {
+    if (localStorage.getItem('hb_tour_day7_v1') === '1') return false;
+    if (typeof getDaysSinceOrigin !== 'function') return false;
+    const days = getDaysSinceOrigin();
+    if (typeof days !== 'number' || days < 7) return false;
+    if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
+    // Silent-mark Day 3 so a Day 7-first user doesn't see a stale
+    // Day 3 check-in on a subsequent launch. Follows the same
+    // eager-mark pattern as showFirstVowCoachmark's welcome-back
+    // cross-flow guard at line 21908.
+    try { localStorage.setItem('hb_tour_day3_v1', '1'); } catch (_) {}
+    _faRunCoachmark({
+      context: 'day7',
+      beats: FA_DAY7_BEATS,
+      cta: 'CONTINUE',
+      storageKey: 'hb_tour_day7_v1',
+    });
+    return true;
+  }
+
+  // Streak-loss recovery — fires once per break date when a
+  // pending comeback with brokenStreak ≥ 3 exists. The 3-day
+  // floor filters trivial 1/2-day "breaks" that are usually rest
+  // days, vacations, or onboarding-noise. Dedup key is per
+  // breakDate so future breaks fire again.
+  //
+  // IMPORTANT — does NOT clear pendingComeback. The existing
+  // Comeback XP reward (checkComebackOnActivity at app.js:12832)
+  // depends on pendingComeback being non-null when the user
+  // completes their next habit. Clearing it here would steal the
+  // existing XP reward. The per-break storage key alone prevents
+  // re-fire of the retention moment for the same break.
+  function showStreakLossCoachmark() {
+    if (!pendingComeback) return false;
+    if (typeof pendingComeback.brokenStreak !== 'number' || pendingComeback.brokenStreak < 3) return false;
+    const breakDate = String(pendingComeback.breakDate || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(breakDate)) return false;
+    const seenKey = 'hb_streakloss_seen_' + breakDate;
+    if (localStorage.getItem(seenKey) === '1') return false;
+    // User has actively archived everything → effectively
+    // restarting; the recovery moment is the wrong narrative beat.
+    if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
+    _faRunCoachmark({
+      context: 'streakloss',
+      beats: FA_STREAKLOSS_BEATS,
+      cta: 'RETURN',
+      storageKey: seenKey,
+    });
+    return true;
+  }
+
+  // Higher-priority modal active? If so, defer all retention
+  // moments to the next launch — never stack on top of another
+  // narrative beat or a critical system surface.
+  function _isAnyHigherPriorityModalActive() {
+    try {
+      if (typeof levelUpActive !== 'undefined' && levelUpActive) return true;
+    } catch (_) {}
+    const ids = [
+      'fa-coachmark-overlay', // another FA coachmark already open
+      'cin-onboarding',       // cinematic onboarding
+      'daily-insight-overlay',// morning briefing
+      'fa-manual-overlay',    // field manual
+      'mv-overlay',           // manage vows
+      'system-full-overlay',  // 25-cap modal
+      'reveal-overlay',       // boss / card reveal
+    ];
+    for (let i = 0; i < ids.length; i++) {
+      const el = document.getElementById(ids[i]);
+      if (el && !el.classList.contains('hidden')) return true;
+    }
+    return false;
+  }
+
+  // Single decision point. Priority order:
+  //   1. Streak-loss recovery (most emotionally important)
+  //   2. Day 7 check-in
+  //   3. Day 3 check-in
+  // Returns silently if a higher-priority modal is mounted —
+  // does not retry, does not queue. Next launch reconsiders.
+  function maybeShowFirstAwakenedRetentionMoment() {
+    if (_isAnyHigherPriorityModalActive()) return;
+    if (showStreakLossCoachmark()) return;
+    if (showDay7Coachmark()) return;
+    if (showDay3Coachmark()) return;
+  }
+
+  try {
+    window.__showDay3Coachmark = showDay3Coachmark;
+    window.__showDay7Coachmark = showDay7Coachmark;
+    window.__showStreakLossCoachmark = showStreakLossCoachmark;
+    window.__maybeShowFirstAwakenedRetentionMoment = maybeShowFirstAwakenedRetentionMoment;
+  } catch (_) {}
+
   // v3 Phase 1z.282D — Rank-up congratulations orchestrator.
   // Called from drainLevelUpQueue() when a 'fa_rankup' item is
   // dispatched (queued by toggleHabit immediately after the
@@ -40164,6 +40329,16 @@
         setTimeout(() => {
           try { showWelcomeBackCoachmark(); } catch (_) {}
         }, 1500);
+        // v3 Phase 1z.283 W186 — Retention moments check.
+        // Defers 2.5s so welcome-back has cleanly mounted (if it
+        // was going to). The orchestrator's _isAnyHigherPriorityModalActive
+        // guard sees an open welcome-back coachmark and defers
+        // the retention moment to the next launch — preventing
+        // back-to-back character beats. One moment per launch,
+        // priority-ordered (streak-loss > Day 7 > Day 3).
+        setTimeout(() => {
+          try { maybeShowFirstAwakenedRetentionMoment(); } catch (_) {}
+        }, 2500);
       }
     };
 

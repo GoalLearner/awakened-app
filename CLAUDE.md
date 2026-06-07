@@ -38,6 +38,115 @@ Everything below this section was authored BEFORE the 1z.279 retirement. Phase e
 
 ---
 
+## Jun 5, 2026 — 1z.283 W186 First Awakened retention moments
+
+**Phase.** First Awakened Day 3 / Day 7 / streak-loss retention moments.
+
+**TL;DR.** Three rare, ceremonial First Awakened check-ins. None grant XP, souls, relics, or stats. None alter streak / XP / rank math. None touch backend. Engine reuse only — every moment renders through the existing `_faRunCoachmark` spec engine with the five already-shipped FA poses. Pure narrative-beat additions targeted at Day 0–7 retention and dignified streak-loss recovery.
+
+### Trigger conditions
+
+| Moment | Pose | Trigger (all must hold) | Storage key |
+|---|---|---|---|
+| **Day 3** | `idle` | `getDaysSinceOrigin() >= 3` AND key unset AND active habit count ≥ 1 AND no higher-priority modal | `hb_tour_day3_v1` |
+| **Day 7** | `speaking` | `getDaysSinceOrigin() >= 7` AND key unset AND active habit count ≥ 1 AND no higher-priority modal. Also eagerly silent-marks `hb_tour_day3_v1='1'` to prevent stale Day 3 firing on a subsequent launch. | `hb_tour_day7_v1` |
+| **Streak-loss** | `nodding` | `pendingComeback !== null` AND `brokenStreak >= 3` AND `breakDate` is YYYY-MM-DD AND per-break key unset AND active habit count ≥ 1 AND no higher-priority modal | `hb_streakloss_seen_<YYYY-MM-DD>` |
+
+### Priority order
+
+```
+Streak-loss recovery > Day 7 > Day 3
+```
+
+One moment per launch maximum. `maybeShowFirstAwakenedRetentionMoment()` deferred 2.5s after init so welcome-back has cleanly mounted; `_isAnyHigherPriorityModalActive()` detects open higher-priority modals (level-up queue, cinematic onboarding, daily-insight, FA coachmark, Field Manual, Manage Vows, System Full, Reveal) and silently defers to the next launch.
+
+### Copy (verbatim)
+
+**Day 3 — CTA `CONTINUE`:**
+
+```
+Hunter.
+Three days is not a legacy.
+It is the first proof that the vow survived contact with your life.
+Continue.
+```
+
+**Day 7 — CTA `CONTINUE`:**
+
+```
+Seven days.
+The system has seen enough to begin counting you differently.
+Do not mistake this for arrival.
+It is only the gate.
+```
+
+**Streak-loss — CTA `RETURN`:**
+
+```
+The streak broke.
+The discipline did not.
+Return to the vow.
+```
+
+### Critical preservation note — pendingComeback
+
+The streak-loss moment does **NOT** clear `pendingComeback`. The existing Comeback XP reward (`checkComebackOnActivity` at app.js:12832) depends on `pendingComeback` being non-null when the user completes their next habit. Clearing it would silently steal the existing XP reward. The per-break storage key (`hb_streakloss_seen_<breakDate>`) alone prevents re-fire of the retention moment for the same break. The reward path stays intact.
+
+### No-rewards, no-math guarantee
+
+| What changed | What did not |
+|---|---|
+| Three new beat constants, three new show functions, one orchestrator, one init hook | `cs.streak`, `totalPoints`, `rankInfo`, `bossesSlain`, `currentSouls`, `pendingComeback` clearing path, level-up queue, comeback XP tier table |
+| Three new `hb_*` storage keys | Streak math, XP math, souls earn / spend math, boss math, rank math, habit completion math |
+| Init-time setTimeout adds the retention check (2500ms after init) | HealthKit submit / verify, Guild backend, Worker, D1 |
+
+No new image assets. No new dependencies. No CSS changes. No backend / D1 / Worker / migration / archive / upload. No App Store metadata changes. No push notifications. No AI / LLM. `QA_UNLOCK_C_RANK_DUNGEONS=false` preserved. `DUELS_UI_HIDDEN` remains absent.
+
+### Reset All Progress
+
+All three keys begin with `hb_*` and are wiped cleanly by `performReset` (app.js:32391) via its `Object.keys(localStorage).filter(k => k.startsWith('hb_'))` sweep. Including pattern-keyed entries (`hb_streakloss_seen_*`). No reset-flow changes needed.
+
+### Knobs
+
+| | |
+|---|---|
+| `APP_BUILD_TAG` | `2.2.5-w185` → `2.2.5-w186` |
+| `app.js?v=` | `635` → `636` |
+| `styles.css?v=` | `349` (unchanged — no CSS) |
+| `sw.js CACHE_VERSION` | `v5.524` → `v5.525` |
+| Settings footer | `BUILD W185` → `BUILD W186` |
+
+### Files touched
+
+- `app.js` — 3 beat constants + 4 functions (show ×3, modal-active guard, orchestrator) + init-flow setTimeout + window-bridge exports + `APP_BUILD_TAG` bump
+- `index.html` — `app.js?v=` bump + Settings footer
+- `sw.js` — `CACHE_VERSION` bump
+
+### QA checklist
+
+1. Settings footer reads `v2.2.5 · BUILD W186`. ✓
+2. Fresh/new user before Day 3 sees no Day 3 moment. ✓ (gate: `days < 3`)
+3. User on Day 3+ sees Day 3 moment once. ✓ (gate flips `hb_tour_day3_v1='1'` on dismiss)
+4. Day 3 does not appear again after dismissal. ✓
+5. User on Day 7+ sees Day 7 moment once. ✓
+6. If Day 7 fires first, Day 3 does not fire later. ✓ (Day 7 eagerly marks Day 3 seen)
+7. Streak-loss moment fires only when a real broken streak of 3+ exists. ✓ (gate: `brokenStreak < 3` blocks)
+8. Streak-loss does not fire for 1-day or 2-day streak breaks. ✓
+9. Streak-loss does not fire repeatedly for the same break date. ✓ (per-break key)
+10. Streak-loss does not restore streak or alter streak math. ✓ (no streak writes)
+11. No XP/souls/stat/relic reward is granted. ✓ (no economy hooks)
+12. Onboarding is not interrupted. ✓ (init wiring is in the existing-user `else` branch + modal-active guard catches `#cin-onboarding`)
+13. Rank-up First Awakened gifts still work. ✓ (untouched)
+14. Quests/Stats coachmarks still work. ✓ (untouched)
+15. Field Manual still works. ✓ (modal-active guard defers retention; manual flow unchanged)
+16. System Full / Manage Vows still works. ✓ (modal-active guard defers retention)
+17. Daily Insight / welcome-back logic does not conflict. ✓ (welcome-back fires at +1500ms; retention at +2500ms; modal-active guard defers if welcome-back is up)
+18. Reset All Progress wipes the retention moment keys. ✓ (`hb_*` prefix)
+19. Duels/PvP remains absent. ✓
+20. No console errors. ✓ (try/catch wrapping on every entry point + window-bridge exports)
+
+---
+
 ## Jun 3, 2026 — 1z.278B Frontend: High-impact sound chimes
 
 **TL;DR.** Fills the biggest silent emotional moments in the app with synthesized Web Audio chimes. Rank-up modal, boss defeat, achievement unlock, and stat milestone levels (Lv5/10/15/20 only) now play a sound. Pure synthesis — zero audio files added. New central `playSfx(name)` helper consolidates the new sites onto a shared `AudioContext` and adds an 800ms priority gate so multi-event taps don't produce a chime cascade. Two existing ungated playback sites (welcome screen, Perfect Day chime) are fixed to respect the existing `hb_sound` toggle.
