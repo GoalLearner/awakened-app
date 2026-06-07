@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w190';
+  const APP_BUILD_TAG = '2.2.5-w191';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16524,6 +16524,72 @@
   // to coarse bands (0 / 1 / 2–6 / 7+) because the streak chip
   // visual is rebuilt by toggleHabit's surgical path anyway;
   // re-rendering for a streak number tick alone is wasted work.
+  // ── v3 Phase 1z.284 W191 — Habits List View ──────────────────────
+  // Opt-out view mode. List is the default (richer daily-loop surface
+  // with inline HealthKit progress bars); users who prefer the compact
+  // 3-up grid flip 'hb_habits_view_mode' to 'grid' in Settings. The
+  // list reuses the SAME DOM hooks as the grid card (.habit-item,
+  // data-id, .habit-cb, .streak-badge, [data-more], [data-drag]) so
+  // the delegated tap/seal/manage/drag machinery and toggleHabit's
+  // surgical mutations work unchanged in both modes.
+  let _habitsViewMode = (function () {
+    try {
+      const v = localStorage.getItem('hb_habits_view_mode');
+      return (v === 'grid' || v === 'list') ? v : 'list';
+    } catch (_) { return 'list'; }
+  })();
+
+  // Live progress for a habit, read SYNCHRONOUSLY from already-cached
+  // HealthKit data (no new native query). Steps come from the
+  // leaderboard state's steps_daily[today], populated every
+  // autoVerifyWalk cycle. Returns { kind, pct, text }:
+  //   kind 'steps'    — step-goal habit with a live fill bar
+  //   kind 'awaiting' — retroactive HealthKit habit (sleep) not yet sealed
+  //   kind 'none'     — binary habit, no bar
+  function _habitProgressInfo(habit) {
+    try {
+      if (!habit) return { kind: 'none', pct: 0, text: '' };
+      const isWalk = (habit.name === 'Daily walk' && !habit.custom);
+      const stepGoalRaw = parseInt(habit.stepGoal, 10);
+      const hasStepGoal = Number.isFinite(stepGoalRaw);
+      if (isWalk || hasStepGoal) {
+        const goal = (typeof getHabitStepGoal === 'function')
+          ? getHabitStepGoal(habit)
+          : (hasStepGoal ? stepGoalRaw : 8000);
+        let steps = 0;
+        try {
+          const st = loadLeaderboardState();
+          const today = getDeviceLocalDate();
+          steps = (st && st.steps_daily && st.steps_daily[today]) || 0;
+        } catch (_) { steps = 0; }
+        const pct = goal > 0 ? Math.min(Math.max(steps / goal, 0), 1) : 0;
+        return {
+          kind: 'steps',
+          pct: pct,
+          text: steps.toLocaleString('en-US') + ' / ' + goal.toLocaleString('en-US') + ' steps',
+        };
+      }
+      // Retroactive HealthKit habits (sleep) — show an awaiting state
+      // until the system seals them from last night's / tonight's data.
+      if (typeof isReadOnlyAutoVerifyHabit === 'function' &&
+          isReadOnlyAutoVerifyHabit(habit) && !isChecked(habit.id)) {
+        return { kind: 'awaiting', pct: 0, text: 'Awaiting Apple Health sync' };
+      }
+      return { kind: 'none', pct: 0, text: '' };
+    } catch (_) { return { kind: 'none', pct: 0, text: '' }; }
+  }
+
+  // Coarse 0–4 progress band for the render fingerprint, so the bar
+  // rebuilds when it crosses a visible threshold but NOT on every
+  // 12-step HealthKit tick (preserves the 1z.214 bail's value).
+  function _habitProgressBand(habit) {
+    try {
+      const info = _habitProgressInfo(habit);
+      if (info.kind !== 'steps') return 'x';
+      return String(Math.min(4, Math.floor((info.pct || 0) * 4)));
+    } catch (_) { return 'x'; }
+  }
+
   let _lastHabitsRenderFingerprint = null;
   function _computeHabitsRenderFingerprint(todayHabits) {
     try {
@@ -16531,6 +16597,7 @@
         return 'empty:' + (Array.isArray(habits) ? habits.length : 0);
       }
       const parts = [];
+      const listMode = (_habitsViewMode === 'list');
       for (let i = 0; i < todayHabits.length; i++) {
         const h = todayHabits[i];
         if (!h || !h.id) return null;
@@ -16538,9 +16605,15 @@
         const s = getStreak(h.id) || 0;
         const sBand = (s === 0) ? '0' : (s === 1) ? '1' : (s < 7) ? 'm' : 'l';
         const auto = (typeof AUTO_VERIFY !== 'undefined' && AUTO_VERIFY.isAutoVerifiedToday(h.id)) ? 'a' : 'n';
-        parts.push(h.id + ':' + checked + sBand + auto);
+        // v3 Phase 1z.284 W191 — in list mode, fold a coarse progress
+        // band into the fingerprint so the inline bar re-renders when
+        // HealthKit data crosses a visible threshold. Without this the
+        // 1z.214 bail would skip the rebuild and the bar would go stale.
+        const pBand = listMode ? ('p' + _habitProgressBand(h)) : '';
+        parts.push(h.id + ':' + checked + sBand + auto + pBand);
       }
-      return parts.join('|');
+      // Mode prefix busts the cache when the user toggles grid<->list.
+      return _habitsViewMode + '#' + parts.join('|');
     } catch (_) {
       return null;
     }
@@ -16594,20 +16667,27 @@
     // remain in habits[] so habits.length>0; without this fix the
     // user would see the rest-day empty state instead of the First
     // Vow picker, and the Manage Vows empty-state CTA would dead-end.
+    const listMode = (_habitsViewMode === 'list');
     if (getActiveHabitCount() === 0) {
       // v3 Phase 1z.247 — First Vow empty state.
       list.innerHTML = '';
       empty.classList.remove('empty-state--rest-day');  // ensure first-vow mode
       try { _renderFirstVowQuickPicks(); } catch (_) {}
       empty.classList.remove('hidden');
+      try { _renderVowsHeader(false); } catch (_) {}
     } else if (todayHabits.length === 0) {
       list.innerHTML = '';
       empty.classList.add('empty-state--rest-day');  // hide first-vow, show rest-day msg
       empty.classList.remove('hidden');
+      try { _renderVowsHeader(false); } catch (_) {}
     } else {
       empty.classList.add('hidden');
+      // v3 Phase 1z.284 W191 — view-mode-driven layout + builder.
+      list.classList.toggle('habit-list--list', listMode);
+      try { _renderVowsHeader(listMode, todayHabits); } catch (_) {}
+      const buildRow = listMode ? buildListRow : buildItem;
       const frag = document.createDocumentFragment();
-      todayHabits.forEach(h => frag.appendChild(buildItem(h)));
+      todayHabits.forEach(h => frag.appendChild(buildRow(h)));
       list.innerHTML = '';
       list.appendChild(frag);
       bindDrag();
@@ -17922,6 +18002,177 @@
     // next rebuild. The delegation path uses data-id from the
     // <li> + the habit lookup index to dispatch.
     return li;
+  }
+
+  // ── v3 Phase 1z.284 W191 — Habits List View row builder ──────────
+  // Parallel to buildItem(), emits the SAME .habit-item[data-id] shell
+  // with the SAME hooks (.habit-cb seal target, .streak-badge,
+  // [data-more], [data-drag]) so all delegated handlers + toggleHabit
+  // surgical mutations work unchanged — but laid out as a horizontal
+  // row (icon | text | seal) with an inline HealthKit progress fill.
+  // Ports ClaudeDesign's HabitRow (habits-list-shared.jsx) to vanilla.
+  function buildListRow(habit) {
+    const done   = isChecked(habit.id);
+    const count  = getStreak(habit.id);
+    const diff   = habit.difficulty || 'easy';
+    const xpVal  = diffPts(diff);
+    const wknd   = isWeekend();
+
+    const isAutoVerified = (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);
+    const isReadOnly = isReadOnlyAutoVerifyHabit(habit);
+    const isHealthHabit = isReadOnly || isAutoVerified ||
+      (typeof isHealthAutoVerifiableHabit === 'function' && isHealthAutoVerifiableHabit(habit));
+
+    // Stat color (same source as the grid card).
+    const statId  = (typeof getHabitPrimaryStat === 'function') ? getHabitPrimaryStat(habit) : null;
+    const statDef = statId && Array.isArray(STATS) ? STATS.find(s => s.id === statId) : null;
+    const statHex = (statDef && statDef.color) || '#8b5cf6';
+    const _h = statHex.replace('#', '');
+    const _r = parseInt(_h.slice(0, 2), 16);
+    const _g = parseInt(_h.slice(2, 4), 16);
+    const _b = parseInt(_h.slice(4, 6), 16);
+
+    // Name + optional goal detail (base name only — the goal either
+    // rides the secondary progress line or shows as a · detail chip).
+    const parts = (typeof habitDisplayParts === 'function')
+      ? habitDisplayParts(habit) : { base: habit.name, goal: null };
+
+    // Progress (synchronous, cached HealthKit read).
+    const prog = _habitProgressInfo(habit);
+    // Resolve the row state → drives CSS + seal kind.
+    //   sealed   = manually completed (gold)
+    //   met      = HealthKit auto-verified completion (stat color)
+    //   inprog   = step habit with a live fill
+    //   awaiting = retroactive HealthKit (sleep), not yet sealed
+    //   hollow   = plain unsealed binary
+    let stateCls;
+    if (done) stateCls = isHealthHabit ? 'hlr--met' : 'hlr--sealed';
+    else if (prog.kind === 'steps' && prog.pct > 0) stateCls = 'hlr--inprog';
+    else if (prog.kind === 'awaiting') stateCls = 'hlr--awaiting';
+    else stateCls = 'hlr--hollow';
+
+    const fillPct = done ? 100 : (prog.kind === 'steps' ? Math.round(prog.pct * 100) : 0);
+
+    const li = document.createElement('li');
+    li.className = 'habit-item habit-item--row ' + stateCls + (done ? ' completed' : '');
+    li.dataset.id = habit.id;
+    li.style.setProperty('--diff-color', DIFF_COLORS[diff] || DIFF_COLORS.easy);
+    li.style.setProperty('--stat-rgb', _r + ', ' + _g + ', ' + _b);
+
+    // Icon (real brand PNG, smaller than grid). Deliberately NOT
+    // .codex-icon-wrap — that leaks grid-card icon sizing/position.
+    const iconHtml = getHabitIcon(habit)
+      ? '<div class="hlr-icon">' + habitIconHtml(habit, { size: 52 }) + '</div>'
+      : (habit.emoji
+        ? '<div class="hlr-icon hlr-icon--emoji"><span class="habit-emoji">' + habit.emoji + '</span></div>'
+        : '<div class="hlr-icon"></div>');
+
+    // Streak flame badge (≥3), keeps the .streak-badge hook for toggleHabit.
+    const streakActive = count >= 3;
+    const streakInner = streakActive
+      ? '<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count
+      : '';
+    const streakHtml = '<span class="hlr-streak streak-badge' + (streakActive ? ' active' : '') + '">' + streakInner + '</span>';
+
+    // Stat + XP chip.
+    const statXpHtml =
+      '<span class="hlr-statxp">' +
+        '<span class="hlr-stat" style="color:' + statHex + '">' + esc(statId || '') + '</span>' +
+        '<span class="hlr-xp">+' + xpVal + ' XP' + (wknd ? ' <span class="hlr-2x">2×</span>' : '') + '</span>' +
+      '</span>';
+
+    // Goal detail (e.g. "· 20 min") — only when no secondary progress
+    // line carries it, so the goal never appears twice.
+    const showDetail = parts.goal && prog.kind === 'none';
+    const detailHtml = showDetail
+      ? '<span class="hlr-detail">· ' + esc(parts.goal) + '</span>'
+      : '';
+
+    // Apple Health chip (HealthKit habits only).
+    const healthChipHtml = isHealthHabit
+      ? '<span class="hlr-health' + (stateCls === 'hlr--awaiting' ? ' hlr-health--muted' : '') + '">' +
+          '<svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.3" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M3.6 6.1 L5.2 7.8 L8.4 4.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          'Apple Health' +
+        '</span>'
+      : '';
+
+    // Secondary progress line (steps text, or awaiting copy).
+    let secondaryHtml = '';
+    if (stateCls === 'hlr--awaiting') {
+      secondaryHtml = '<div class="hlr-secondary hlr-secondary--await">' + esc(prog.text) + '</div>';
+    } else if (prog.kind === 'steps' && !done) {
+      secondaryHtml = '<div class="hlr-secondary">' + esc(prog.text) + '</div>';
+    } else if (done && isHealthHabit && prog.kind === 'steps') {
+      secondaryHtml = '<div class="hlr-secondary hlr-secondary--met">✓ ' + esc(prog.text) + '</div>';
+    }
+
+    // Seal circle — dual-render (hollow + sealed) so toggleHabit's
+    // `.habit-cb.checked` class flip produces the sealed visual with
+    // no rebuild, exactly like the grid card.
+    const sealHtml =
+      '<div class="codex-status habit-cb hlr-seal' + (done ? ' checked' : '') +
+        (isReadOnly ? ' habit-cb--readonly' : '') + '">' +
+        '<span class="hlr-seal-hollow" aria-hidden="true"></span>' +
+        '<span class="hlr-seal-fill" aria-hidden="true">' +
+          '<svg width="16" height="16" viewBox="0 0 14 14"><path d="M2.6 7.2 L5.4 10 L11 3.6" fill="none" stroke="#1b1405" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</span>' +
+      '</div>';
+
+    li.innerHTML =
+      '<div class="hlr-fill" aria-hidden="true" style="width:' + fillPct + '%"></div>' +
+      '<div class="hlr-body">' +
+        iconHtml +
+        '<div class="hlr-main">' +
+          '<div class="hlr-line1">' +
+            '<span class="hlr-name">' + esc(parts.base) + '</span>' +
+            streakHtml +
+          '</div>' +
+          '<div class="hlr-line2">' + statXpHtml + detailHtml + healthChipHtml + '</div>' +
+          secondaryHtml +
+        '</div>' +
+        sealHtml +
+        '<button class="habit-more-btn hlr-more" data-more aria-label="Manage habit">···</button>' +
+        '<div class="drag-handle hlr-drag" data-drag aria-hidden="true">' +
+          '<span class="drag-dot"></span><span class="drag-dot"></span>' +
+          '<span class="drag-dot"></span><span class="drag-dot"></span>' +
+        '</div>' +
+      '</div>';
+
+    return li;
+  }
+
+  // v3 Phase 1z.284 W191 — "Seal your vows" header above the list.
+  // Rendered only in list mode (hidden in grid + empty states). Manages
+  // a single #vows-header element injected before #habit-list.
+  function _renderVowsHeader(show, todayHabits) {
+    const list = document.getElementById('habit-list');
+    if (!list || !list.parentNode) return;
+    let hdr = document.getElementById('vows-header');
+    if (!show) { if (hdr) hdr.classList.add('hidden'); return; }
+    if (!hdr) {
+      hdr = document.createElement('div');
+      hdr.id = 'vows-header';
+      hdr.className = 'vows-header';
+      list.parentNode.insertBefore(hdr, list);
+    }
+    hdr.classList.remove('hidden');
+    const arr = Array.isArray(todayHabits) ? todayHabits : [];
+    const total = arr.length;
+    const sealed = arr.reduce((n, h) => n + (isChecked(h.id) ? 1 : 0), 0);
+    const pct = total > 0 ? Math.round((sealed / total) * 100) : 0;
+    const complete = total > 0 && sealed === total;
+    hdr.innerHTML =
+      '<div class="vows-header-row">' +
+        '<div class="vows-header-titles">' +
+          '<div class="vows-header-kicker">TODAY’S VOWS</div>' +
+          '<div class="vows-header-title">Seal your vows</div>' +
+        '</div>' +
+        '<div class="vows-header-count' + (complete ? ' is-complete' : '') + '">' +
+          '<div class="vows-header-num">' + sealed + '<span>/' + total + '</span></div>' +
+          '<div class="vows-header-lbl">SEALED</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="vows-header-bar"><div class="vows-header-fill" style="width:' + pct + '%"></div></div>';
   }
 
   // v3 Phase 1z.214 — delegated pointer/click handlers for every
@@ -33669,6 +33920,25 @@
       localStorage.setItem('hb_sound', soundEnabled ? 'on' : 'off');
       document.getElementById('sound-toggle').setAttribute('aria-checked', soundEnabled ? 'true' : 'false');
     });
+
+    // v3 Phase 1z.284 W191 — Habits view mode toggle (List default,
+    // Grid opt-out). aria-checked === 'true' means List is ON.
+    const viewTog = document.getElementById('settings-habits-view-toggle');
+    if (viewTog) {
+      const _syncViewTog = () => {
+        viewTog.setAttribute('aria-checked', _habitsViewMode === 'list' ? 'true' : 'false');
+      };
+      _syncViewTog();
+      viewTog.addEventListener('click', () => {
+        _habitsViewMode = (_habitsViewMode === 'list') ? 'grid' : 'list';
+        try { localStorage.setItem('hb_habits_view_mode', _habitsViewMode); } catch (_) {}
+        _syncViewTog();
+        // Force a full rebuild (fingerprint mode-prefix already busts
+        // the bail, but null it defensively) then re-render the tab.
+        _lastHabitsRenderFingerprint = null;
+        try { renderHabits(); } catch (_) {}
+      });
+    }
     // Close settings
     document.getElementById('settings-close').addEventListener('click', closeSettings);
     document.getElementById('settings-overlay').addEventListener('click', closeSettings);

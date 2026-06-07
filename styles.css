@@ -459,6 +459,298 @@ h1 {
   gap: 7px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.284 W191 — Habits List View
+   Single-column rows with real PNG art icons + inline HealthKit
+   progress fill. Ports ClaudeDesign's HabitRow (habits-list-shared.jsx).
+   Stat color is read from --stat-rgb (set per-row in buildListRow);
+   the gold seal + gold accents use the brand gold.
+   ═══════════════════════════════════════════════════════════════════ */
+.habit-list.habit-list--list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 0 14px 18px;
+}
+
+/* The row shell. Reuses .habit-item but overrides the grid-card look.
+   Scoped under .habit-list--list so it outranks the later-in-source
+   grid .habit-item rules at equal class count (order-independent). */
+.habit-list--list .habit-item--row {
+  position: relative;
+  overflow: hidden;
+  min-height: 62px;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #15153a 0%, #0f0f28 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07); /* cancel grid's diff-color bottom border */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  /* neutralize grid-card transforms / aspect ratio */
+  aspect-ratio: auto;
+  display: block;
+  padding: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Inline HealthKit progress fill (behind content). */
+.habit-item--row .hlr-fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0;
+  background: linear-gradient(90deg,
+    rgba(var(--stat-rgb), 0.05),
+    rgba(var(--stat-rgb), 0.18));
+  border-right: 1.5px solid rgba(var(--stat-rgb), 0.55);
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.habit-item--row .hlr-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  min-height: 62px;
+  box-sizing: border-box;
+}
+
+/* Art icon tile. */
+.habit-item--row .hlr-icon {
+  width: 52px; height: 52px;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(120% 100% at 50% 20%, #1a1640 0%, #0c0a1e 80%);
+  border: 1px solid rgba(var(--stat-rgb), 0.5);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.05);
+  display: flex; align-items: center; justify-content: center;
+}
+.habit-item--row .hlr-icon img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.habit-item--row .hlr-icon .habit-emoji { font-size: 26px; line-height: 1; }
+
+.habit-item--row .hlr-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.habit-item--row .hlr-line1 {
+  display: flex; align-items: center; gap: 7px;
+  min-width: 0;
+}
+.habit-item--row .hlr-name {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  color: #f5f3fb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.habit-item--row .hlr-line2 {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.habit-item--row .hlr-statxp {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
+}
+.habit-item--row .hlr-stat { font-weight: 700; }
+.habit-item--row .hlr-xp { color: #5c5c78; }
+.habit-item--row .hlr-2x { color: #f5b842; }
+.habit-item--row .hlr-detail {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 600; color: #5c5c78;
+}
+
+/* Apple Health chip. */
+.habit-item--row .hlr-health {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 7px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #34d399;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.habit-item--row .hlr-health--muted {
+  background: rgba(92, 92, 120, 0.08);
+  border-color: rgba(92, 92, 120, 0.35);
+  color: #5c5c78;
+}
+
+/* Streak flame badge (≥3). */
+.habit-item--row .hlr-streak {
+  display: none;
+  align-items: center; gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 7px;
+  background: rgba(245, 184, 66, 0.10);
+  border: 1px solid rgba(245, 184, 66, 0.4);
+  color: #f5b842;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px; font-weight: 800;
+  flex: 0 0 auto;
+}
+.habit-item--row .hlr-streak.active { display: inline-flex; }
+
+/* Secondary progress line. */
+.habit-item--row .hlr-secondary {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.2px;
+  color: #9090a8;
+  font-variant-numeric: tabular-nums;
+}
+.habit-item--row .hlr-secondary--await { color: #9090a8; }
+.habit-item--row .hlr-secondary--met { color: rgba(var(--stat-rgb), 1); }
+
+/* Seal circle — 32 visual / 44 tap. Dual-render hollow vs fill. */
+.habit-item--row .hlr-seal {
+  width: 44px; height: 44px;
+  flex: 0 0 auto;
+  margin: -6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.habit-item--row .hlr-seal-hollow,
+.habit-item--row .hlr-seal-fill {
+  position: absolute;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box;
+}
+.habit-item--row .hlr-seal-hollow {
+  border: 2px solid rgba(245, 243, 251, 0.20);
+}
+.habit-item--row .hlr-seal-fill { display: none; }
+/* Seal visual is driven by .completed (which toggleHabit sets reliably
+   on a surgical seal, no rebuild) — NOT by the hlr--sealed state class
+   (which only exists after a full render). Default is gold; the
+   hlr--met override (HealthKit auto-verify, always full-rebuilt) swaps
+   to the stat color. */
+.habit-item--row.completed .hlr-seal-hollow,
+.habit-item--row .hlr-seal.checked .hlr-seal-hollow { display: none; }
+.habit-item--row.completed .hlr-seal-fill,
+.habit-item--row .hlr-seal.checked .hlr-seal-fill {
+  display: flex;
+  background: linear-gradient(180deg, #f7c558, #c08418);
+  box-shadow: 0 0 12px rgba(245, 184, 66, 0.45);
+}
+.habit-item--row.hlr--met.completed .hlr-seal-fill {
+  background: radial-gradient(circle at 38% 32%, rgba(var(--stat-rgb), 0.9), rgba(var(--stat-rgb), 0.65));
+  box-shadow: 0 0 12px rgba(var(--stat-rgb), 0.6);
+}
+.habit-item--row.hlr--awaiting .hlr-seal-hollow {
+  border: 1.6px dashed rgba(144, 144, 168, 0.6);
+}
+
+/* Row state accents — sealed look keyed on .completed (surgical-safe).
+   .habit-list--list ancestor outranks grid's later .habit-item.completed. */
+.habit-list--list .habit-item--row.completed {
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.09), rgba(245, 184, 66, 0.02));
+  border-color: rgba(245, 184, 66, 0.65);
+  box-shadow: 0 0 18px rgba(245, 184, 66, 0.14), 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.habit-list--list .habit-item--row.hlr--met.completed {
+  background: linear-gradient(180deg, rgba(var(--stat-rgb), 0.08), rgba(var(--stat-rgb), 0.02));
+  border-color: rgba(var(--stat-rgb), 0.7);
+  box-shadow: 0 0 18px rgba(var(--stat-rgb), 0.18), 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.habit-list--list .habit-item--row.hlr--awaiting { opacity: 0.82; border-color: rgba(144, 144, 168, 0.28); }
+.habit-list--list .habit-item--row.pressing { transform: scale(0.99); }
+
+/* ··· manage + drag handle — subtle in the row. */
+.habit-item--row .hlr-more {
+  flex: 0 0 auto;
+  width: 26px; height: 32px;
+  border: 0; background: transparent;
+  color: #5c5c78; font-size: 16px; line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  margin-left: -2px;
+}
+.habit-item--row .hlr-more:active { color: #9090a8; }
+.habit-item--row .hlr-drag {
+  display: none; /* reorder grip hidden in v1; bindDrag long-press still works */
+}
+
+/* iPhone SE (≤380px) — tighten. */
+@media (max-width: 380px) {
+  .habit-list.habit-list--list { padding: 0 12px 16px; gap: 8px; }
+  .habit-item--row .hlr-body { gap: 10px; padding: 10px 11px; }
+  .habit-item--row .hlr-icon { width: 46px; height: 46px; }
+  .habit-item--row .hlr-name { font-size: 14px; }
+}
+
+/* Reduced motion — no fill animation. */
+@media (prefers-reduced-motion: reduce) {
+  .habit-item--row .hlr-fill,
+  .vows-header-fill { transition: none; }
+}
+
+/* ── "Seal your vows" header (list mode only) ───────────────────── */
+.vows-header {
+  padding: 4px 16px 2px;
+  margin-bottom: 2px;
+}
+.vows-header.hidden { display: none; }
+.vows-header-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+}
+.vows-header-kicker {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 2.6px;
+  color: #f5b842;
+}
+.vows-header-title {
+  margin-top: 4px;
+  font-family: "Cinzel", "Trajan Pro", Georgia, serif;
+  font-size: 22px; font-weight: 700; letter-spacing: 0.4px;
+  color: #f5f3fb;
+}
+.vows-header-count { text-align: right; }
+.vows-header-num {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 21px; font-weight: 800; color: #f5b842; line-height: 1;
+}
+.vows-header-num span { color: #5c5c78; }
+.vows-header-count.is-complete .vows-header-num { text-shadow: 0 0 16px rgba(245, 184, 66, 0.45); }
+.vows-header-lbl {
+  margin-top: 3px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px; font-weight: 800; letter-spacing: 1.6px; color: #5c5c78;
+}
+.vows-header-count.is-complete .vows-header-lbl { color: #f5b842; }
+.vows-header-bar {
+  margin-top: 9px;
+  height: 6px; border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.vows-header-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #c08418, #f5b842);
+  box-shadow: 0 0 10px rgba(245, 184, 66, 0.45);
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* ── HABIT ITEM — app-icon size card ── */
 .habit-item {
   background: linear-gradient(160deg, #1e1e3f 0%, #22224a 100%);
