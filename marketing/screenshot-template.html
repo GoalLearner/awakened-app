@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awakened — App Store screenshot template (W189)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /*  W189 — App Store screenshot composition tool.
+      Ports ClaudeDesign's ASOShot template into a vanilla HTML/CSS tool.
+      Each `.aso-shot` artboard renders at the EXACT App Store dimension
+      and slots a real iPhone simulator capture inside the device frame.
+      You capture real screens; this tool wraps them in marketing chrome.
+
+      Capture flow:
+        1. iOS Simulator (iPhone 16 Pro Max, iOS 18+) running W188
+        2. Seed demo state (alias KAIROS, Paladin/WILL, ~6840 XP, etc.)
+        3. Cmd+S each of the 6 target screens
+        4. Drop the 6 PNGs into marketing/captures/ named 01-status.png …
+           06-guild.png
+        5. Open this file in Chrome
+        6. DevTools (F12) -> Elements -> right-click each .aso-shot ->
+           "Capture node screenshot"
+        7. Outputs land in Downloads as 1320x2868 PNGs
+        8. Upload to App Store Connect
+
+      To swap to the 6.7" set (1290x2796) for the secondary set, change
+      the :root --w/--h vars below.
+
+      This file lives under marketing/ which is EXCLUDED from:
+        * sw.js PRECACHE_ASSETS
+        * scripts/prep-local-build.sh cp lines (only top-level + assets/*
+          subdirs are copied to www/)
+      So nothing here ships to iOS. Pure dev tooling.                    */
+
+  :root {
+    /* 6.9" iPhone 16 Pro Max baseline. App Store derives smaller sizes. */
+    --w: 1320px;
+    --h: 2868px;
+
+    /* ClaudeDesign tokens (aso-shared.jsx + share-card-shared.jsx) */
+    --bg: #04040d;
+    --navy: #0a0a1f;
+    --navy-deep: #08081a;
+    --gold: #f5b842;
+    --gold-light: #f7c558;
+    --gold-deep: #c08418;
+    --gold-glow: rgba(245, 184, 66, 0.45);
+    --ivory: #f5f3fb;
+    --ivory-dim: #cfcde0;
+    --text-2: #9090a8;
+    --text-3: #5c5c78;
+    --violet: #a78bfa;
+    --serif: "Cinzel", "Trajan Pro", Georgia, serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+    --sans: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #1a1a1a; color: var(--ivory); font-family: var(--sans); }
+  body { padding: 32px 16px 64px; }
+
+  /* ── Page header / instructions ─────────────────────────── */
+  .docs-head {
+    max-width: 1100px; margin: 0 auto 32px;
+    padding: 24px; border-radius: 16px;
+    background: linear-gradient(180deg, var(--navy), var(--navy-deep));
+    border: 1px solid rgba(245,184,66,0.18);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .docs-head h1 {
+    margin: 0; font-family: var(--serif); font-weight: 700;
+    font-size: 22px; letter-spacing: 0.08em; color: var(--gold);
+    text-shadow: 0 0 18px var(--gold-glow);
+  }
+  .docs-head p { margin: 10px 0 0; font-size: 13px; line-height: 1.55; color: var(--ivory-dim); }
+  .docs-head code { font-family: var(--mono); font-size: 12px; color: var(--gold); background: rgba(245,184,66,0.10); padding: 1px 5px; border-radius: 4px; }
+  .docs-head .grid { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .docs-head .grid > div h2 { font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: 0.2em; color: var(--gold); margin: 0 0 8px; text-transform: uppercase; }
+  .docs-head .grid ol, .docs-head .grid ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--text-2); line-height: 1.7; }
+  .docs-head .grid li b { color: var(--ivory); font-weight: 700; }
+
+  /* ── Artboard ───────────────────────────────────────────── */
+  .artboard-label {
+    max-width: var(--w); margin: 48px auto 12px;
+    font-family: var(--mono); font-size: 11px; font-weight: 800;
+    letter-spacing: 0.22em; color: var(--gold);
+    text-transform: uppercase;
+  }
+  .artboard-label .dims {
+    margin-left: 12px; color: var(--text-3); font-weight: 700;
+  }
+
+  /* The actual App Store deliverable — what DevTools captures. */
+  .aso-shot {
+    position: relative;
+    width: var(--w); height: var(--h);
+    overflow: hidden;
+    margin: 0 auto;
+    background: var(--bg);
+    /* Outer page preview box-shadow only — not captured */
+    box-shadow: 0 30px 60px rgba(0,0,0,0.55);
+  }
+
+  /* ── Marketing background (ports ASOBackground) ──────────── */
+  .aso-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #0b0b20 0%, var(--bg) 58%, #020207 100%);
+    overflow: hidden;
+  }
+  .aso-bg-top-aura,
+  .aso-bg-floor-glow {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .aso-bg-top-aura {
+    top: -6%; width: 120%; height: 46%;
+    filter: blur(10px);
+  }
+  .aso-bg-floor-glow {
+    bottom: -4%; width: 120%; height: 34%;
+  }
+  .aso-bg-dust {
+    position: absolute; inset: 0; opacity: 0.5;
+    background:
+      radial-gradient(2px 2px at 18% 28%, rgba(245,184,66,0.5), transparent),
+      radial-gradient(2px 2px at 74% 20%, rgba(167,139,250,0.5), transparent),
+      radial-gradient(2px 2px at 60% 64%, rgba(245,184,66,0.4), transparent),
+      radial-gradient(2px 2px at 33% 76%, rgba(167,139,250,0.4), transparent);
+  }
+  .aso-bg-vignette {
+    position: absolute; inset: 0;
+    box-shadow: inset 0 0 360px rgba(0,0,0,0.7);
+    pointer-events: none;
+  }
+
+  /* Per-shot hue customization. Default = violet. */
+  .aso-shot { --hue: rgba(167,139,250,0.30); --floor: rgba(245,184,66,0.10); --glow: rgba(167,139,250,0.45); }
+  .aso-shot--violet  { --hue: rgba(167,139,250,0.30); --glow: rgba(167,139,250,0.50); }
+  .aso-shot--green   { --hue: rgba(52,211,153,0.26);  --glow: rgba(52,211,153,0.42); }
+  .aso-shot--gold    { --hue: rgba(245,184,66,0.28);  --glow: rgba(245,184,66,0.50); }
+  .aso-shot--red     { --hue: rgba(239,68,68,0.26);   --glow: rgba(239,68,68,0.42); }
+
+  .aso-bg-top-aura  { background: radial-gradient(60% 70% at 50% 30%, var(--hue) 0%, transparent 65%); }
+  .aso-bg-floor-glow { background: radial-gradient(60% 80% at 50% 80%, var(--floor) 0%, transparent 62%); }
+
+  /* ── Headline zone (ports ASOShot top section) ───────────── */
+  .aso-headline {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 200px 130px 0;
+    text-align: center;
+    z-index: 2;
+  }
+  .aso-kicker {
+    display: flex; align-items: center; justify-content: center; gap: 26px;
+    margin-bottom: 34px;
+  }
+  .aso-kicker-rule {
+    height: 1.5px; width: 70px;
+  }
+  .aso-kicker-rule--l { background: linear-gradient(90deg, transparent, var(--gold)); }
+  .aso-kicker-rule--r { background: linear-gradient(90deg, var(--gold), transparent); }
+  .aso-kicker-text {
+    font-family: var(--mono); font-size: 34px; font-weight: 800;
+    letter-spacing: 0.30em; color: var(--gold);
+    text-transform: uppercase;
+  }
+  .aso-headline-text {
+    font-family: var(--serif); font-weight: 700; font-size: 110px;
+    line-height: 1.06; color: var(--ivory); letter-spacing: 0.012em;
+    text-shadow: 0 4px 40px rgba(0,0,0,0.6);
+  }
+  .aso-headline-text .accent { color: var(--gold); }
+
+  /* ── Device frame (ports PhoneDevice) ────────────────────── */
+  .aso-device-wrap {
+    position: absolute; top: 720px; left: 0; right: 0;
+    display: flex; justify-content: center;
+    z-index: 1;
+  }
+  .aso-device {
+    position: relative;
+    /* Logical iPhone 16 Pro Max screen: 1320 wide → use 1000 inside the
+       device frame for breathing room; bezel scaled proportionally. */
+    --screen-w: 1000px;
+    --screen-h: 2168px;   /* 1000 / 1320 * 2868 ≈ 2173, rounded for clean fit */
+    --bezel: 28px;
+    --radius: 135px;
+  }
+  .aso-device-glow {
+    position: absolute; inset: -60px;
+    border-radius: calc(var(--radius) * 1.3);
+    background: radial-gradient(closest-side, var(--glow) 0%, transparent 78%);
+    filter: blur(14px);
+    pointer-events: none;
+  }
+  .aso-device-bezel {
+    position: relative;
+    width: calc(var(--screen-w) + var(--bezel) * 2);
+    height: calc(var(--screen-h) + var(--bezel) * 2);
+    border-radius: calc(var(--radius) + var(--bezel));
+    background: linear-gradient(145deg, #3a3a44 0%, #16161c 18%, #0c0c11 50%, #1c1c22 82%, #3a3a44 100%);
+    padding: var(--bezel);
+    box-sizing: border-box;
+    box-shadow:
+      0 50px 120px rgba(0,0,0,0.6),
+      inset 0 0 28px rgba(0,0,0,0.8),
+      inset 0 2px 2px rgba(255,255,255,0.18);
+  }
+  .aso-device-screen {
+    position: relative;
+    width: var(--screen-w);
+    height: var(--screen-h);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.9);
+  }
+  .aso-device-screen img {
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+  /* Slot placeholder when no image is provided yet. */
+  .aso-device-screen .placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        rgba(245, 184, 66, 0.04) 0,
+        rgba(245, 184, 66, 0.04) 12px,
+        rgba(245, 184, 66, 0.10) 12px,
+        rgba(245, 184, 66, 0.10) 24px
+      ),
+      var(--bg);
+    color: var(--gold);
+    font-family: var(--mono); font-size: 32px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 60px; text-align: center; line-height: 1.6;
+  }
+  .aso-device-screen .placeholder code {
+    font-family: var(--mono); font-size: 22px; color: var(--ivory);
+    background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px;
+    margin-top: 14px; letter-spacing: 0.04em;
+  }
+  /* Dynamic Island */
+  .aso-device-island {
+    position: absolute;
+    top: 28px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 85px;
+    background: #000;
+    border-radius: 50px;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+
+<div class="docs-head">
+  <h1>APP STORE SCREENSHOT TEMPLATE · W189</h1>
+  <p>
+    Wraps real iOS Simulator captures in ClaudeDesign's marketing chrome
+    (background bloom + Cinzel headline + iPhone device frame). The six
+    artboards below render at the EXACT App Store deliverable dimension —
+    <code>1320 × 2868</code> for iPhone 6.9" — and slot whatever PNG you
+    place at <code>marketing/captures/0N-name.png</code> into the device
+    screen.
+  </p>
+  <div class="grid">
+    <div>
+      <h2>CAPTURE WORKFLOW</h2>
+      <ol>
+        <li><b>iOS Simulator</b> — iPhone 16 Pro Max, iOS 18+, W188 build</li>
+        <li><b>Seed demo state</b> — alias KAIROS, Paladin (WILL), 6,840 XP, Rank C I, ~310 souls, 18 bosses (via Safari → Develop → Simulator → Storage)</li>
+        <li><b>Cmd+S</b> on each target screen → save as <code>01-status.png</code> … <code>06-guild.png</code></li>
+        <li><b>Drop</b> the 6 PNGs into <code>marketing/captures/</code></li>
+        <li><b>Reload</b> this file in Chrome</li>
+        <li>DevTools (F12) → Elements → right-click each <code>.aso-shot</code> → <b>"Capture node screenshot"</b></li>
+        <li>Outputs land in Downloads at exactly 1320 × 2868</li>
+        <li>Upload to App Store Connect → 2.2.5 → Screenshots → iPhone 6.9"</li>
+      </ol>
+    </div>
+    <div>
+      <h2>SCOPE GUARDS</h2>
+      <ul>
+        <li>This file lives in <code>marketing/</code> — <b>not</b> in <code>sw.js</code> PRECACHE, <b>not</b> in <code>scripts/prep-local-build.sh</code> cp lines. Nothing here reaches iOS.</li>
+        <li>Captures must come from a <b>demo simulator account</b> — never a real user, never real friends, never private vow names.</li>
+        <li>Slot 2 should show <b>Auto-verified · Apple Health</b> chip on a vow if visible; never show precise HealthKit values.</li>
+        <li>Slot 3 must include <b>The First Awakened</b> visible — he's the differentiator.</li>
+        <li>Slot 6 — use the W181 sim-merge leaderboard rows; never real friend aliases.</li>
+        <li>No Duels, no widget, no Apple Watch, no IP names.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  ARTBOARD 01 · Status / Home                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="artboard-label">01 · STATUS / HOME <span class="dims">1320 × 2868</span></div>
+<div class="aso-shot aso-shot--violet">
+  <div class="aso-bg">
+    <div class="aso-bg-top-aura"></div>
+    <div class="aso-bg-floor-glow"></div>
+    <div class="aso-bg-dust"></div>
+    <div class="aso-bg-vignette"></div>
+  </div>
+  <div class="aso-headline">
+    <div class="aso-kicker">
+      <span class="aso-kicker-rule aso-kicker-rule--l"></span>
+      <span class="aso-kicker-text">A Habit RPG</span>
+      <span class="aso-kicker-rule aso-kicker-rule--r"></span>
+    </div>
+    <div class="aso-headline-text">
+      Turn your habits<br>into an <span class="accent">RPG</span>.
+    </div>
+  </div>
+  <div class="aso-device-wrap">
+    <div class="aso-device">
+      <div class="aso-device-glow"></div>
+      <div class="aso-device-bezel">
+        <div class="aso-device-screen">
+          <img src="captures/01-status.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none">
+            Drop your simulator capture here<code>marketing/captures/01-status.png</code>
+          </div>
+          <div class="aso-device-island"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  ARTBOARD 02 · Habits / Vows                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="artboard-label">02 · HABITS / VOWS <span class="dims">1320 × 2868</span></div>
+<div class="aso-shot aso-shot--gold">
+  <div class="aso-bg">
+    <div class="aso-bg-top-aura"></div>
+    <div class="aso-bg-floor-glow"></div>
+    <div class="aso-bg-dust"></div>
+    <div class="aso-bg-vignette"></div>
+  </div>
+  <div class="aso-headline">
+    <div class="aso-kicker">
+      <span class="aso-kicker-rule aso-kicker-rule--l"></span>
+      <span class="aso-kicker-text">The Daily Loop</span>
+      <span class="aso-kicker-rule aso-kicker-rule--r"></span>
+    </div>
+    <div class="aso-headline-text">
+      Complete vows.<br>Earn <span class="accent">XP</span>.
+    </div>
+  </div>
+  <div class="aso-device-wrap">
+    <div class="aso-device">
+      <div class="aso-device-glow"></div>
+      <div class="aso-device-bezel">
+        <div class="aso-device-screen">
+          <img src="captures/02-habits.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none">
+            Drop your simulator capture here<code>marketing/captures/02-habits.png</code>
+          </div>
+          <div class="aso-device-island"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  ARTBOARD 03 · Rank up + First Awakened                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="artboard-label">03 · RANK-UP + FIRST AWAKENED <span class="dims">1320 × 2868</span></div>
+<div class="aso-shot aso-shot--gold">
+  <div class="aso-bg">
+    <div class="aso-bg-top-aura"></div>
+    <div class="aso-bg-floor-glow"></div>
+    <div class="aso-bg-dust"></div>
+    <div class="aso-bg-vignette"></div>
+  </div>
+  <div class="aso-headline">
+    <div class="aso-kicker">
+      <span class="aso-kicker-rule aso-kicker-rule--l"></span>
+      <span class="aso-kicker-text">Witnessed</span>
+      <span class="aso-kicker-rule aso-kicker-rule--r"></span>
+    </div>
+    <div class="aso-headline-text">
+      Rank up<br>your hunter.
+    </div>
+  </div>
+  <div class="aso-device-wrap">
+    <div class="aso-device">
+      <div class="aso-device-glow"></div>
+      <div class="aso-device-bezel">
+        <div class="aso-device-screen">
+          <img src="captures/03-rankup.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none">
+            Drop your simulator capture here<code>marketing/captures/03-rankup.png</code>
+          </div>
+          <div class="aso-device-island"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  ARTBOARD 04 · Boss / Quests                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="artboard-label">04 · BOSS / QUESTS <span class="dims">1320 × 2868</span></div>
+<div class="aso-shot aso-shot--red">
+  <div class="aso-bg">
+    <div class="aso-bg-top-aura"></div>
+    <div class="aso-bg-floor-glow"></div>
+    <div class="aso-bg-dust"></div>
+    <div class="aso-bg-vignette"></div>
+  </div>
+  <div class="aso-headline">
+    <div class="aso-kicker">
+      <span class="aso-kicker-rule aso-kicker-rule--l"></span>
+      <span class="aso-kicker-text">The Hunt</span>
+      <span class="aso-kicker-rule aso-kicker-rule--r"></span>
+    </div>
+    <div class="aso-headline-text">
+      Fight bosses with<br>real <span class="accent">discipline</span>.
+    </div>
+  </div>
+  <div class="aso-device-wrap">
+    <div class="aso-device">
+      <div class="aso-device-glow"></div>
+      <div class="aso-device-bezel">
+        <div class="aso-device-screen">
+          <img src="captures/04-boss.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none">
+            Drop your simulator capture here<code>marketing/captures/04-boss.png</code>
+          </div>
+          <div class="aso-device-island"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  ARTBOARD 05 · Stats + Relics                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="artboard-label">05 · STATS + RELICS <span class="dims">1320 × 2868</span></div>
+<div class="aso-shot aso-shot--violet">
+  <div class="aso-bg">
+    <div class="aso-bg-top-aura"></div>
+    <div class="aso-bg-floor-glow"></div>
+    <div class="aso-bg-dust"></div>
+    <div class="aso-bg-vignette"></div>
+  </div>
+  <div class="aso-headline">
+    <div class="aso-kicker">
+      <span class="aso-kicker-rule aso-kicker-rule--l"></span>
+      <span class="aso-kicker-text">Your Build</span>
+      <span class="aso-kicker-rule aso-kicker-rule--r"></span>
+    </div>
+    <div class="aso-headline-text">
+      Grow your stats.<br>Earn <span class="accent">relics</span>.
+    </div>
+  </div>
+  <div class="aso-device-wrap">
+    <div class="aso-device">
+      <div class="aso-device-glow"></div>
+      <div class="aso-device-bezel">
+        <div class="aso-device-screen">
+          <img src="captures/05-stats.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none">
+            Drop your simulator capture here<code>marketing/captures/05-stats.png</code>
+          </div>
+          <div class="aso-device-island"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  ARTBOARD 06 · Guild / Social                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="artboard-label">06 · GUILD / SOCIAL <span class="dims">1320 × 2868</span></div>
+<div class="aso-shot aso-shot--violet">
+  <div class="aso-bg">
+    <div class="aso-bg-top-aura"></div>
+    <div class="aso-bg-floor-glow"></div>
+    <div class="aso-bg-dust"></div>
+    <div class="aso-bg-vignette"></div>
+  </div>
+  <div class="aso-headline">
+    <div class="aso-kicker">
+      <span class="aso-kicker-rule aso-kicker-rule--l"></span>
+      <span class="aso-kicker-text">Together</span>
+      <span class="aso-kicker-rule aso-kicker-rule--r"></span>
+    </div>
+    <div class="aso-headline-text">
+      Climb the ranks<br>with your <span class="accent">guild</span>.
+    </div>
+  </div>
+  <div class="aso-device-wrap">
+    <div class="aso-device">
+      <div class="aso-device-glow"></div>
+      <div class="aso-device-bezel">
+        <div class="aso-device-screen">
+          <img src="captures/06-guild.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none">
+            Drop your simulator capture here<code>marketing/captures/06-guild.png</code>
+          </div>
+          <div class="aso-device-island"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

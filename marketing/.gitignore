@@ -1,0 +1,14 @@
+# Capture PNGs — never commit. Demo state worth iterating; we don't want
+# to bloat the repo with screenshot rounds, and captures may briefly
+# contain demo-data variants we don't want pinned in history.
+captures/*.png
+captures/*.jpg
+captures/*.jpeg
+
+# Final composed exports from the template — also don't commit. Final
+# outputs live in App Store Connect, not the repo.
+final-*.png
+exports/
+
+# Keep the captures/ directory itself
+!captures/.gitkeep

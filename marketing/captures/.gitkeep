@@ -1,0 +1,9 @@
+# Capture drop folder
+
+Drop iOS Simulator screenshots here:
+
+  01-status.png   02-habits.png   03-rankup.png
+  04-boss.png     05-stats.png    06-guild.png
+
+PNGs in this folder are gitignored — see ../.gitignore one level up.
+The template loads them at relative path captures/0N-name.png.
