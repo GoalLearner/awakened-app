@@ -751,6 +751,76 @@ h1 {
   transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── v3 Phase 1z.284 W192 — one-time List View intro hint ─────────── */
+.listview-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 16px 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.12), rgba(167, 139, 250, 0.04));
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.06), 0 6px 16px rgba(0, 0, 0, 0.3);
+  animation: listview-hint-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+@keyframes listview-hint-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.listview-hint.is-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.listview-hint-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.listview-hint-icon {
+  flex: 0 0 auto;
+  color: #a78bfa;
+  display: flex;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5));
+}
+.listview-hint-text {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cfcde0;
+}
+.listview-hint-text b {
+  color: #f4f3fb;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.listview-hint-x {
+  flex: 0 0 auto;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #9090a8;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.listview-hint-x:active { background: rgba(255, 255, 255, 0.10); color: #f4f3fb; }
+
+@media (max-width: 380px) {
+  .listview-hint { margin: 2px 12px 9px; }
+  .listview-hint-text { font-size: 11.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .listview-hint { animation: none; }
+  .listview-hint.is-leaving { transition: none; }
+}
+
 /* ── HABIT ITEM — app-icon size card ── */
 .habit-item {
   background: linear-gradient(160deg, #1e1e3f 0%, #22224a 100%);

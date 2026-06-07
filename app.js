@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w191';
+  const APP_BUILD_TAG = '2.2.5-w192';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16675,16 +16675,21 @@
       try { _renderFirstVowQuickPicks(); } catch (_) {}
       empty.classList.remove('hidden');
       try { _renderVowsHeader(false); } catch (_) {}
+      try { _removeListViewHint(); } catch (_) {}
     } else if (todayHabits.length === 0) {
       list.innerHTML = '';
       empty.classList.add('empty-state--rest-day');  // hide first-vow, show rest-day msg
       empty.classList.remove('hidden');
       try { _renderVowsHeader(false); } catch (_) {}
+      try { _removeListViewHint(); } catch (_) {}
     } else {
       empty.classList.add('hidden');
       // v3 Phase 1z.284 W191 — view-mode-driven layout + builder.
       list.classList.toggle('habit-list--list', listMode);
       try { _renderVowsHeader(listMode, todayHabits); } catch (_) {}
+      // v3 Phase 1z.284 W192 — one-time List View intro hint.
+      if (listMode) { try { _maybeShowListViewHint(); } catch (_) {} }
+      else { try { _removeListViewHint(); } catch (_) {} }
       const buildRow = listMode ? buildListRow : buildItem;
       const frag = document.createDocumentFragment();
       todayHabits.forEach(h => frag.appendChild(buildRow(h)));
@@ -18173,6 +18178,59 @@
         '</div>' +
       '</div>' +
       '<div class="vows-header-bar"><div class="vows-header-fill" style="width:' + pct + '%"></div></div>';
+  }
+
+  // v3 Phase 1z.284 W192 — One-time List View introduction hint.
+  // W191 flipped the Habits tab default to List for ALL users,
+  // including existing ones whose surface changed under them. This
+  // dismissible banner points them at the Grid opt-out exactly once
+  // per device. Eager-set storage key + DOM-outside-#habit-list means
+  // it never nags and survives the list rebuild.
+  function _removeListViewHint() {
+    try {
+      const h = document.getElementById('listview-hint');
+      if (h && h.parentNode) h.parentNode.removeChild(h);
+    } catch (_) {}
+  }
+  function _maybeShowListViewHint() {
+    try {
+      if (_habitsViewMode !== 'list') { _removeListViewHint(); return; }
+      if (localStorage.getItem('hb_habits_listview_hint_v1') === '1') return;
+      // Don't show during onboarding / empty state.
+      if (getActiveHabitCount() === 0) return;
+      // Already shown this session.
+      if (document.getElementById('listview-hint')) return;
+      const list = document.getElementById('habit-list');
+      if (!list || !list.parentNode) return;
+
+      const hint = document.createElement('div');
+      hint.id = 'listview-hint';
+      hint.className = 'listview-hint';
+      hint.innerHTML =
+        '<div class="listview-hint-body">' +
+          '<span class="listview-hint-icon" aria-hidden="true">' +
+            '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 0.8 L8.5 5.5 L13.2 7 L8.5 8.5 L7 13.2 L5.5 8.5 L0.8 7 L5.5 5.5 Z" fill="currentColor"/></svg>' +
+          '</span>' +
+          '<span class="listview-hint-text">Vows now show live progress. Prefer the compact grid? <b>Settings → Habits · List View</b>.</span>' +
+        '</div>' +
+        '<button class="listview-hint-x" type="button" aria-label="Dismiss">' +
+          '<svg width="11" height="11" viewBox="0 0 11 11"><path d="M1 1 L10 10 M10 1 L1 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>' +
+        '</button>';
+
+      // Insert just below the vows header if present, else above the list.
+      const vh = document.getElementById('vows-header');
+      if (vh && vh.parentNode) vh.parentNode.insertBefore(hint, vh.nextSibling);
+      else list.parentNode.insertBefore(hint, list);
+
+      // Eager-set: strictly once per device, even if not dismissed.
+      try { localStorage.setItem('hb_habits_listview_hint_v1', '1'); } catch (_) {}
+
+      const x = hint.querySelector('.listview-hint-x');
+      if (x) x.addEventListener('click', function () {
+        try { hint.classList.add('is-leaving'); } catch (_) {}
+        setTimeout(_removeListViewHint, 220);
+      });
+    } catch (_) {}
   }
 
   // v3 Phase 1z.214 — delegated pointer/click handlers for every
