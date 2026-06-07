@@ -29918,3 +29918,216 @@ button.guildhall-summary-tile:active {
 }
 
 /* END v3 Phase 1z.283 Manage Vows block */
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   v3 Phase 1z.283 W187 — Hunter Report share card preview sheet.
+   ───────────────────────────────────────────────────────────────────
+   Bottom sheet mirroring the Manage Vows pattern. Hosts the
+   1200×1500 canvas thumbnail (scaled down via max-width) plus the
+   two CTAs. Backdrop tap is no-op per W179. ESC dismisses.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.hr-overlay {
+  position: fixed; inset: 0;
+  z-index: 12200;
+  background: rgba(3, 3, 12, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: hr-fade-in 0.32s ease;
+}
+.hr-overlay.hidden { display: none; }
+@keyframes hr-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hr-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 96vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #14132f 0%, #0b0a20 100%);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  border-top: 1px solid rgba(245, 184, 66, 0.40);
+  box-shadow:
+    0 -2px 0 rgba(245, 184, 66, 0.18),
+    0 -22px 60px rgba(0, 0, 0, 0.65);
+  animation: hr-sheet-up 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+@keyframes hr-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.hr-hairline {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(245, 184, 66, 0.55) 50%,
+    transparent 100%);
+}
+.hr-grabber {
+  width: 42px; height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.20);
+  margin: 12px auto 4px;
+}
+.hr-closebtn {
+  position: absolute;
+  top: 18px; right: 18px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 10, 24, 0.6);
+  color: #9090a8;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.hr-closebtn:active { background: rgba(255, 255, 255, 0.10); color: #f4f3fb; }
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.hr-header {
+  padding: 4px 22px 12px;
+  text-align: center;
+}
+.hr-kicker {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.30em;
+  color: #f5b842;
+  text-transform: uppercase;
+}
+.hr-title {
+  margin: 6px 0 0;
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  color: #f5f3fb;
+}
+
+/* ── Canvas preview ─────────────────────────────────────────────── */
+.hr-preview-frame {
+  position: relative;
+  margin: 4px 22px 0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(245, 184, 66, 0.28);
+  background: #050513;
+  display: flex; align-items: center; justify-content: center;
+}
+.hr-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* aspect-ratio: 1200 / 1500;  -- enforced by JS via inline style */
+}
+.hr-canvas-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 5, 19, 0.85);
+  transition: opacity 0.18s ease;
+}
+.hr-canvas-loading.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+.hr-spinner {
+  width: 28px; height: 28px;
+  border: 2px solid rgba(245, 184, 66, 0.15);
+  border-top-color: #f5b842;
+  border-radius: 50%;
+  animation: hr-spin 0.8s linear infinite;
+}
+@keyframes hr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+.hr-footer {
+  padding: 18px 22px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+.hr-cta-gold {
+  width: 100%;
+  height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7c65c 0%, #e3a52f 100%);
+  color: #1b1405;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 0 22px rgba(245, 184, 66, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.12s ease;
+}
+.hr-cta-gold:active { transform: scale(0.985); }
+.hr-cta-gold svg { flex: 0 0 auto; }
+
+.hr-cta-ghost {
+  display: block;
+  width: 100%;
+  height: 46px;
+  margin-top: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 13px;
+  color: #9090a8;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s ease;
+}
+.hr-cta-ghost:active { color: #f4f3fb; }
+
+.hr-privacy {
+  margin: 8px 0 0;
+  text-align: center;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: #5c5c78;
+  line-height: 1.55;
+}
+
+/* iPhone SE — tighten the sheet so the canvas + CTAs fit. */
+@media (max-width: 380px) {
+  .hr-sheet { max-height: 94vh; }
+  .hr-header { padding: 4px 16px 10px; }
+  .hr-title { font-size: 20px; }
+  .hr-preview-frame { margin: 4px 16px 0; }
+  .hr-footer { padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .hr-cta-gold { height: 48px; font-size: 14px; }
+}
+
+/* Reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .hr-overlay, .hr-sheet, .hr-spinner {
+    animation: none;
+  }
+  .hr-cta-gold {
+    transition: none;
+  }
+}
+
+/* END v3 Phase 1z.283 W187 Hunter Report block */

@@ -16,8 +16,8 @@
        replaced once Cinzel is ready (no layout-shift flash). -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=349">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=350">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2269,6 +2269,47 @@
     </div>
   </div>
 
+  <!-- v3 Phase 1z.283 W187 — Hunter Report share card preview.
+       Opens via the level-up queue after the rank-up celebration +
+       First Awakened rank-up gift dismiss. Non-blocking bottom
+       sheet: SHARE THIS MOMENT triggers native share with a
+       1200×1500 PNG generated from local data; DISMISS releases
+       the queue. Backdrop tap is no-op (W179 lesson — accidental
+       loss). Per-rank idempotency via hb_hr_offered_<rankId>.
+       Privacy: aggregate data only, never habit names. -->
+  <div id="hr-overlay" class="hr-overlay hidden" aria-hidden="true">
+    <div class="hr-sheet" role="dialog" aria-modal="true" aria-labelledby="hr-title">
+      <div class="hr-hairline" aria-hidden="true"></div>
+      <div class="hr-grabber" aria-hidden="true"></div>
+      <button id="hr-close-btn" class="hr-closebtn" type="button" aria-label="Close Hunter Report">
+        <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+          <path d="M1 1l11 11M12 1L1 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="hr-header">
+        <div class="hr-kicker">YOUR MOMENT IS READY</div>
+        <h2 id="hr-title" class="hr-title">Share your Hunter Report</h2>
+      </div>
+      <div class="hr-preview-frame">
+        <canvas id="hr-canvas" class="hr-canvas" aria-label="Hunter Report card preview"></canvas>
+        <div id="hr-canvas-loading" class="hr-canvas-loading" aria-hidden="true">
+          <div class="hr-spinner"></div>
+        </div>
+      </div>
+      <div class="hr-footer">
+        <button id="hr-share-btn" class="hr-cta-gold" type="button">
+          <svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true">
+            <path d="M8 1 L8 12 M4 5 L8 1 L12 5" stroke="#1b1405" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 9 L2 16 L14 16 L14 9" stroke="#1b1405" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>SHARE THIS MOMENT</span>
+        </button>
+        <button id="hr-dismiss-btn" class="hr-cta-ghost" type="button">Dismiss</button>
+        <p class="hr-privacy">Only your alias and totals are shown — never your habits.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Notification-permission explainer (shown once before iOS native prompt) -->
   <!-- v3 Phase 1m — Permission pre-prompt redesign (claudedesign port).
        Tactical system messages framing replaces the prior generic
@@ -2819,7 +2860,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=636"></script>
+  <script src="app.js?v=637"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3279,7 +3320,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W186</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.5 · BUILD W187</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

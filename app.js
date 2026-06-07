@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w186';
+  const APP_BUILD_TAG = '2.2.5-w187';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15033,6 +15033,34 @@
         drainLevelUpQueue();
       }
     }
+    else if (item.type === 'hunter_report') {
+      // v3 Phase 1z.283 W187 — Hunter Report share card.
+      // Queued by toggleHabit at position 2 (after 'rank' celebration
+      // and 'fa_rankup' character beat) so it fires AFTER both
+      // narrative moments and BEFORE stat-up modals. Per-rank
+      // idempotency via hb_hr_offered_<rankId>: eager-set on show
+      // so a user who backgrounds mid-preview doesn't get re-offered
+      // on next launch. Reset All Progress wipes via hb_* sweep.
+      const offeredKey = 'hb_hr_offered_' + String(item.rankId || 'unknown');
+      let alreadyOffered = false;
+      try { alreadyOffered = localStorage.getItem(offeredKey) === '1'; } catch (_) {}
+      if (alreadyOffered) {
+        levelUpActive = false;
+        drainLevelUpQueue();
+        return;
+      }
+      try { localStorage.setItem(offeredKey, '1'); } catch (_) {}
+      try {
+        const data = _hrCollectData({ rank: item.rankId });
+        openHunterReportPreview(data, function () {
+          levelUpActive = false;
+          drainLevelUpQueue();
+        });
+      } catch (_) {
+        levelUpActive = false;
+        drainLevelUpQueue();
+      }
+    }
     else                                  showStatLevelUp(item);
   }
 
@@ -19494,12 +19522,20 @@
         // Insert at queue position 1 so order is:
         //   [0] rank-up celebration (fireworks + fanfare)
         //   [1] fa_rankup (The First Awakened modal + souls)
-        //   [2+] stat-ups, sub-rank, achievements
+        //   [2] hunter_report (W187 share card preview)
+        //   [3+] stat-ups, sub-rank, achievements
         // Idempotency lives inside showFirstAwakenedRankUp via the
         // hb_fa_rankup_seen_v1 seen-set; queuing here is unconditional
         // because the orchestrator releases the queue cleanly even on
         // already-seen ranks.
         levelUpQueue.splice(1, 0, { type: 'fa_rankup', rankId: newRank.id });
+        // v3 Phase 1z.283 W187 — Hunter Report share card. Queued
+        // immediately after fa_rankup so it follows the character
+        // beat. Per-rank idempotency via hb_hr_offered_<rankId>
+        // checked inside drainLevelUpQueue, so queuing here is also
+        // unconditional. Drain releases the queue on dismiss whether
+        // the user shared or skipped.
+        levelUpQueue.splice(2, 0, { type: 'hunter_report', rankId: newRank.id });
       }
 
       // Detect stat level-ups — every level triggers a notification
@@ -22104,6 +22140,883 @@
     window.__showStreakLossCoachmark = showStreakLossCoachmark;
     window.__maybeShowFirstAwakenedRetentionMoment = maybeShowFirstAwakenedRetentionMoment;
   } catch (_) {}
+
+  // ──────────────────────────────────────────────────────────────
+  // v3 Phase 1z.283 W187 — Hunter Report share card.
+  //
+  // A 1200×1500 PNG generated locally via Canvas API after a major
+  // rank-up. Triggered from drainLevelUpQueue() as a 'hunter_report'
+  // queue item inserted at position 2 (after 'rank' and 'fa_rankup').
+  // Per-rank idempotency via hb_hr_offered_<rankId>. Privacy: aggregate
+  // fields only (alias, class, rank, XP, streak, bosses, souls). Never
+  // habit names. Never HealthKit values. Never other users' aliases.
+  //
+  // Architecture (per design canvas notes deliverable 08):
+  //   _hrCollectData()     — pure data assembly from local state
+  //   _hrPaletteForRank()  — rank → hue/letter/glow accent map
+  //   _hrPickQuote()       — dayOfYear % 5 for stable-per-share rotation
+  //   _hrLoadFonts()       — awaits all required font weights
+  //   _hrRenderCanvas()    — main 2400×3000 backing-store renderer
+  //   _hrCanvasToFile()    — toBlob → File for native share
+  //   _hrShareReport()     — 3-tier fallback (files → text+url → clip)
+  //   openHunterReportPreview() / closeHunterReportPreview()
+  //
+  // No new dependencies (canvas already proven in 4 prod call sites,
+  // navigator.share already proven in production at shareOriginStory).
+  // ──────────────────────────────────────────────────────────────
+
+  // Rank → accent palette. Hues match the live app (status disc + 100K
+  // club badge). letter is legibility-tuned for navy. glow drives the
+  // aura/halo behind the medallion + crest.
+  const HR_RANK_PALETTE = {
+    E:    { hue: '#a78bfa', letter: '#c4b5fd', glow: 'rgba(167,139,250,0.55)', tag: 'AWAKENING' },
+    D:    { hue: '#34d399', letter: '#6ee7b7', glow: 'rgba(52,211,153,0.50)',  tag: 'PROVEN'    },
+    C:    { hue: '#3b82f6', letter: '#7aa9fb', glow: 'rgba(59,130,246,0.52)',  tag: 'TEMPERED'  },
+    B:    { hue: '#6366f1', letter: '#a5b4fc', glow: 'rgba(99,102,241,0.52)',  tag: 'ASCENDANT' },
+    A:    { hue: '#fbbf24', letter: '#fcd34d', glow: 'rgba(251,191,36,0.50)',  tag: 'ELITE'     },
+    S:    { hue: '#ef4444', letter: '#f87171', glow: 'rgba(239,68,68,0.52)',   tag: 'SOVEREIGN' },
+    'S+': { hue: '#ec4899', letter: '#f472b6', glow: 'rgba(236,72,153,0.55)',  tag: 'MONARCH'   },
+  };
+
+  // Class → display name + asset. Maps STAT → class identity.
+  const HR_CLASS_PALETTE = {
+    STR:   { name: 'Warrior',  color: '#ef4444', asset: 'avatar-warrior.png'  },
+    VIT:   { name: 'Ranger',   color: '#ec4899', asset: 'avatar-ranger.png'   },
+    INT:   { name: 'Mage',     color: '#3b82f6', asset: 'avatar-mage.png'     },
+    FOCUS: { name: 'Assassin', color: '#eab308', asset: 'avatar-assassin.png' },
+    WILL:  { name: 'Paladin',  color: '#f97316', asset: 'avatar-paladin.png'  },
+    WLT:   { name: 'Merchant', color: '#f59e0b', asset: 'avatar-merchant.png' },
+    SAGE:  { name: 'Sage',     color: '#8b5cf6', asset: 'avatar-sage.png'     },
+  };
+
+  // The First Awakened's voice — 5 lines, terse / ancient / earned.
+  // Rotated by (dayOfYear) % 5 so each user's card is stable for the
+  // current day but varies across re-shares over time.
+  const HR_QUOTE_POOL = [
+    'The climb is not granted. It is recorded.',
+    'A rank is not given. It is witnessed.',
+    'What you repeated, you became.',
+    'The vow became record.',
+    'The threshold remains. So do you.',
+  ];
+
+  function _hrPickQuote() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const day = Math.floor((now - start) / 86400000);
+    return HR_QUOTE_POOL[day % HR_QUOTE_POOL.length];
+  }
+
+  function _hrPaletteForRank(rankId) {
+    return HR_RANK_PALETTE[rankId] || HR_RANK_PALETTE.E;
+  }
+  function _hrClassFromStat(statId) {
+    return HR_CLASS_PALETTE[statId] || { name: 'Awakened', color: '#a78bfa', asset: 'avatar-base.png' };
+  }
+
+  // Pure data assembly. Aggregate fields only — never habit names,
+  // schedule, HealthKit values, friend/guild aliases.
+  function _hrCollectData(rankCtx) {
+    rankCtx = rankCtx || {};
+    let alias = 'Hunter';
+    try {
+      const u = (window.Auth && typeof Auth.getCurrentUser === 'function') ? Auth.getCurrentUser() : null;
+      if (u && typeof u.alias === 'string' && u.alias) alias = u.alias;
+    } catch (_) {}
+    // Rank from ctx or from current totalPoints
+    let rankId = rankCtx.rank || (function () {
+      try {
+        const sum = _publicRankSummary(totalPoints);
+        return sum && sum.id ? sum.id : 'E';
+      } catch (_) { return 'E'; }
+    })();
+    // S+ / S+ normalization — context may pass 'splus' or 'S+'
+    if (rankId === 'splus' || rankId === 'SPLUS') rankId = 'S+';
+    let division = 'I';
+    try {
+      if (typeof getRankDivisionInfo === 'function') {
+        const di = getRankDivisionInfo(totalPoints);
+        if (di && typeof di.division === 'string') division = di.division;
+        else if (di && typeof di.fullLabel === 'string') {
+          const m = di.fullLabel.match(/(I{1,3})$/);
+          if (m) division = m[1];
+        }
+      }
+    } catch (_) {}
+    const cls = _hrClassFromStat(currentClass);
+    // Longest active-vow streak
+    let streak = 0;
+    try {
+      if (Array.isArray(habits)) {
+        habits.forEach(function (h) {
+          if (!h || h.archived) return;
+          const s = (typeof getStreak === 'function') ? (getStreak(h.id) || 0) : 0;
+          if (s > streak) streak = s;
+        });
+      }
+    } catch (_) {}
+    // Bosses slain — sum of kill_count
+    let bosses = 0;
+    try {
+      const bossState = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      Object.keys(bossState).forEach(function (k) {
+        const r = bossState[k];
+        if (r && typeof r.kill_count === 'number') bosses += r.kill_count;
+      });
+    } catch (_) {}
+    // Souls balance
+    let souls = 0;
+    try {
+      souls = parseInt(localStorage.getItem('hb_souls') || '0', 10) || 0;
+    } catch (_) {}
+    return {
+      alias:       alias,
+      className:   cls.name,
+      classStat:   currentClass || 'SAGE',
+      classColor:  cls.color,
+      classAsset:  cls.asset,
+      rank:        rankId,
+      division:    division,
+      totalXP:     totalPoints || 0,
+      streak:      streak,
+      bosses:      bosses,
+      souls:       souls,
+      quote:       _hrPickQuote(),
+    };
+  }
+
+  function _hrFmtNum(n) {
+    return (typeof n === 'number' ? n : 0).toLocaleString('en-US');
+  }
+
+  // Await every font weight the canvas uses. document.fonts.load
+  // returns a Promise that resolves once the face is ready. Without
+  // this, the first render after cold launch falls back to system
+  // serif and the layout shifts.
+  async function _hrLoadFonts() {
+    if (!document.fonts || typeof document.fonts.load !== 'function') return;
+    const specs = [
+      '700 92px "Cinzel"',
+      '600 26px "Cinzel"',
+      '800 74px "JetBrains Mono"',
+      '800 22px "JetBrains Mono"',
+      '700 24px "JetBrains Mono"',
+      '500 italic 44px "Cormorant Garamond"',
+    ];
+    try {
+      await Promise.all(specs.map(function (s) {
+        return document.fonts.load(s).catch(function () {});
+      }));
+    } catch (_) {}
+  }
+
+  function _hrWithAlpha(rgba, alpha) {
+    // Replaces the alpha component of an rgba(r,g,b,a) string.
+    return rgba.replace(/[\d.]+\)$/, alpha + ')');
+  }
+
+  // Draw a rounded rectangle path. Older iOS WebKit doesn't support
+  // ctx.roundRect, so we hand-draw it.
+  function _hrRoundRectPath(ctx, x, y, w, h, r) {
+    if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+    ctx.beginPath();
+    ctx.moveTo(x + r.tl, y);
+    ctx.lineTo(x + w - r.tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    ctx.lineTo(x + w, y + h - r.br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    ctx.lineTo(x + r.bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    ctx.lineTo(x, y + r.tl);
+    ctx.quadraticCurveTo(x, y, x + r.tl, y);
+    ctx.closePath();
+  }
+
+  // Main renderer. Returns the canvas after every load completes.
+  async function _hrRenderCanvas(data, opts) {
+    opts = opts || {};
+    const W = 1200, H = 1500;
+    const DPR = 2;
+    await _hrLoadFonts();
+    // Preload class avatar (fall back to avatar-base.png on miss)
+    const avatarImg = new Image();
+    avatarImg.crossOrigin = 'anonymous';
+    let avatarLoaded = false;
+    try {
+      avatarImg.src = data.classAsset || 'avatar-base.png';
+      await avatarImg.decode();
+      avatarLoaded = true;
+    } catch (_) {
+      try {
+        avatarImg.src = 'avatar-base.png';
+        await avatarImg.decode();
+        avatarLoaded = true;
+      } catch (_) { avatarLoaded = false; }
+    }
+
+    const canvas = opts.canvas || document.createElement('canvas');
+    canvas.width  = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    const r = _hrPaletteForRank(data.rank);
+
+    // ── 1. Opaque base + layered background gradients ──
+    // Solid navy first → guarantees opacity (Apple icon 90717 lesson).
+    ctx.fillStyle = '#08081a';
+    ctx.fillRect(0, 0, W, H);
+
+    const baseG = ctx.createLinearGradient(0, 0, 0, H);
+    baseG.addColorStop(0,    '#0a0a1f');
+    baseG.addColorStop(0.55, '#050513');
+    baseG.addColorStop(1,    '#030309');
+    ctx.fillStyle = baseG;
+    ctx.fillRect(0, 0, W, H);
+
+    // Top rank-color glow
+    const topGlow = ctx.createRadialGradient(W/2, -120, 0, W/2, -120, W * 0.85);
+    topGlow.addColorStop(0,    _hrWithAlpha(r.glow, 0.20));
+    topGlow.addColorStop(0.46, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topGlow;
+    ctx.fillRect(0, 0, W, H);
+
+    // Violet system accent
+    const violetGlow = ctx.createRadialGradient(W/2, H * 0.08, 0, W/2, H * 0.08, W * 0.7);
+    violetGlow.addColorStop(0,    'rgba(167,139,250,0.10)');
+    violetGlow.addColorStop(0.5,  'rgba(0,0,0,0)');
+    ctx.fillStyle = violetGlow;
+    ctx.fillRect(0, 0, W, H);
+
+    // Bottom vignette
+    const botFade = ctx.createRadialGradient(W/2, H * 1.2, 0, W/2, H * 1.2, W);
+    botFade.addColorStop(0,   '#02020a');
+    botFade.addColorStop(0.6, 'rgba(0,0,0,0)');
+    ctx.fillStyle = botFade;
+    ctx.fillRect(0, 0, W, H);
+
+    // Inset vignette shadow (simulates the design's boxShadow inset 220 0.8)
+    const vignette = ctx.createRadialGradient(W/2, H/2, W * 0.35, W/2, H/2, W * 0.78);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. Double gold frame ──
+    const frameInset = 40;
+    const frameRadius = 18;
+    // Outer thick gold border
+    _hrRoundRectPath(ctx, frameInset, frameInset, W - frameInset * 2, H - frameInset * 2, frameRadius);
+    const frameG = ctx.createLinearGradient(0, frameInset, 0, H - frameInset);
+    frameG.addColorStop(0,    '#f7c558');
+    frameG.addColorStop(0.5,  '#f5b842');
+    frameG.addColorStop(1,    '#c08418');
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = frameG;
+    ctx.shadowColor = 'rgba(245,184,66,0.16)';
+    ctx.shadowBlur = 40;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Inner hairline
+    const innerInset = 52;
+    _hrRoundRectPath(ctx, innerInset, innerInset, W - innerInset * 2, H - innerInset * 2, 12);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(245,184,66,0.28)';
+    ctx.stroke();
+
+    // ── 3. Corner sigils (small geometric brackets, 4 corners) ──
+    function drawCornerSigil(cx, cy, rotation) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotation);
+      ctx.strokeStyle = '#f5b842';
+      ctx.lineWidth = 1.6;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(2, 14); ctx.lineTo(2, 2); ctx.lineTo(14, 2);
+      ctx.stroke();
+      ctx.lineWidth = 1.1;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(7, 7); ctx.lineTo(13, 13);
+      ctx.stroke();
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = '#f5b842';
+      ctx.beginPath();
+      ctx.arc(5.5, 5.5, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    const sigInset = 48;
+    drawCornerSigil(sigInset, sigInset, 0);
+    drawCornerSigil(W - sigInset, sigInset, Math.PI / 2);
+    drawCornerSigil(W - sigInset, H - sigInset, Math.PI);
+    drawCornerSigil(sigInset, H - sigInset, Math.PI * 1.5);
+
+    // ── 4. Header: small diamond + AWAKENED · HUNTER REPORT + rule ──
+    const headerY = 120;
+    // Diamond glyph
+    ctx.save();
+    ctx.translate(W / 2, headerY);
+    ctx.strokeStyle = '#f5b842';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(0, -16); ctx.lineTo(16, 0); ctx.lineTo(0, 16); ctx.lineTo(-16, 0); ctx.closePath();
+    ctx.stroke();
+    ctx.fillStyle = '#f5b842';
+    ctx.beginPath();
+    ctx.moveTo(0, -8); ctx.lineTo(8, 0); ctx.lineTo(0, 8); ctx.lineTo(-8, 0); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // Title text
+    ctx.font = '700 24px "JetBrains Mono", "SF Mono", ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#f5b842';
+    ctx.shadowColor = 'rgba(245,184,66,0.30)';
+    ctx.shadowBlur = 18;
+    // letterSpacing not natively supported in canvas — emulate with text positioning
+    const headerText = 'AWAKENED · HUNTER REPORT';
+    _hrDrawSpacedText(ctx, headerText, W / 2, headerY + 56, 9);
+    ctx.shadowBlur = 0;
+    // Gold rule under header
+    _hrDrawGoldRule(ctx, W / 2, headerY + 90, 560, true);
+
+    // ── 5. PORTRAIT MEDALLION ──
+    // Arched frame: rounded-rect with rounded TOP corners (radius ~ width/2)
+    // and shallow BOTTOM corners (12% of size). Inside: tier accent ring,
+    // navy well, class avatar PNG, floor glow.
+    const medSize = 300;
+    const medH = medSize * 1.14;
+    const medCx = W / 2;
+    const medTop = headerY + 130;
+    const medLeft = medCx - medSize / 2;
+    const arcRad = medSize * 0.46;
+    const botRad = medSize * 0.12;
+
+    // Glow halo behind
+    const haloG = ctx.createRadialGradient(medCx, medTop + medH * 0.46, 0, medCx, medTop + medH * 0.46, medSize * 0.85);
+    haloG.addColorStop(0,    r.glow);
+    haloG.addColorStop(0.38, _hrWithAlpha(r.glow, 0.10));
+    haloG.addColorStop(0.70, 'rgba(0,0,0,0)');
+    ctx.fillStyle = haloG;
+    ctx.fillRect(medLeft - medSize * 0.2, medTop - medSize * 0.2, medSize * 1.4, medH + medSize * 0.4);
+
+    // Outer gold border (the medallion frame)
+    const goldPad = Math.max(3, medSize * 0.012);
+    _hrRoundRectPath(ctx, medLeft, medTop, medSize, medH, { tl: arcRad, tr: arcRad, br: botRad, bl: botRad });
+    const medFrameG = ctx.createLinearGradient(0, medTop, 0, medTop + medH);
+    medFrameG.addColorStop(0,    '#f7c558');
+    medFrameG.addColorStop(0.48, '#f5b842');
+    medFrameG.addColorStop(1,    '#c08418');
+    ctx.fillStyle = medFrameG;
+    ctx.shadowColor = r.glow;
+    ctx.shadowBlur = medSize * 0.12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Tier accent ring (inset 1 padding inside gold)
+    const ringInset = goldPad;
+    const ringSize = medSize - ringInset * 2;
+    const ringH = medH - ringInset * 2;
+    const ringArc = arcRad - 4;
+    const ringBot = medSize * 0.10;
+    _hrRoundRectPath(ctx, medLeft + ringInset, medTop + ringInset, ringSize, ringH,
+      { tl: ringArc, tr: ringArc, br: ringBot, bl: ringBot });
+    const tierG = ctx.createLinearGradient(0, medTop + ringInset, 0, medTop + ringInset + ringH);
+    tierG.addColorStop(0, r.hue + 'cc');
+    tierG.addColorStop(1, r.hue + '33');
+    ctx.fillStyle = tierG;
+    ctx.fill();
+
+    // Navy well (inside the tier ring)
+    const wellInset = ringInset + Math.max(1, medSize * 0.006);
+    const wellSize = medSize - wellInset * 2;
+    const wellH = medH - wellInset * 2;
+    const wellArc = arcRad - 6;
+    const wellBot = medSize * 0.085;
+    ctx.save();
+    _hrRoundRectPath(ctx, medLeft + wellInset, medTop + wellInset, wellSize, wellH,
+      { tl: wellArc, tr: wellArc, br: wellBot, bl: wellBot });
+    ctx.clip();
+    // Navy fill with rank-tint at top
+    const wellTop = ctx.createRadialGradient(medCx, medTop + medH * 0.18, 0, medCx, medTop + medH * 0.18, medSize * 0.7);
+    wellTop.addColorStop(0,    r.hue + '26');
+    wellTop.addColorStop(0.52, 'rgba(0,0,0,0)');
+    const wellBase = ctx.createRadialGradient(medCx, medTop + medH * 0.30, 0, medCx, medTop + medH * 0.30, medSize * 0.85);
+    wellBase.addColorStop(0,    '#1a1640');
+    wellBase.addColorStop(0.72, '#08081a');
+    ctx.fillStyle = wellBase;
+    ctx.fillRect(medLeft + wellInset, medTop + wellInset, wellSize, wellH);
+    ctx.fillStyle = wellTop;
+    ctx.fillRect(medLeft + wellInset, medTop + wellInset, wellSize, wellH);
+
+    // Floor glow inside well
+    const floorY = medTop + medH - medSize * 0.10;
+    const floorG = ctx.createRadialGradient(medCx, floorY, 0, medCx, floorY, medSize * 0.35);
+    floorG.addColorStop(0,   r.glow);
+    floorG.addColorStop(0.7, 'rgba(0,0,0,0)');
+    ctx.fillStyle = floorG;
+    ctx.fillRect(medLeft + wellInset, medTop + wellInset, wellSize, wellH);
+
+    // Class avatar PNG
+    if (avatarLoaded) {
+      const avH = wellH * 0.85;
+      const avW = avH * (avatarImg.width / avatarImg.height || 1);
+      const avX = medCx - avW / 2;
+      const avY = medTop + medH - avH - medSize * 0.05;
+      ctx.drawImage(avatarImg, avX, avY, avW, avH);
+    } else {
+      // Fallback: a class-color rim-lit oblong silhouette
+      ctx.fillStyle = '#08081a';
+      _hrRoundRectPath(ctx, medCx - medSize * 0.18, medTop + medH * 0.18, medSize * 0.36, medH * 0.66, 24);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // ── 6. RANK CREST pendant (overlaps medallion bottom) ──
+    const crestSize = 140;
+    const crestCx = W / 2;
+    const crestCy = medTop + medH - 4;
+    _hrDrawRankCrest(ctx, crestCx, crestCy, crestSize, data.rank, data.division, r);
+
+    // ── 7. ALIAS (Cinzel 84) ──
+    const aliasY = crestCy + crestSize * 0.62;
+    ctx.font = '700 84px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#f5f3fb';
+    ctx.shadowColor = 'rgba(245,184,66,0.28)';
+    ctx.shadowBlur = 34;
+    ctx.textAlign = 'center';
+    ctx.fillText((data.alias || 'HUNTER').toUpperCase(), W / 2, aliasY);
+    ctx.shadowBlur = 0;
+
+    // ── 8. Meta line: CLASS · RANK X · DIV Y ──
+    const metaY = aliasY + 56;
+    ctx.font = '700 22px "JetBrains Mono", monospace';
+    const metaClass = (data.className || 'AWAKENED').toUpperCase();
+    const metaRank  = 'RANK ' + (data.rank || 'E');
+    const metaDiv   = 'DIV ' + (data.division || 'I');
+    // Measure each segment to space evenly
+    const segs = [
+      { text: metaClass, color: data.classColor || '#a78bfa' },
+      { text: '·',       color: '#5c5c78' },
+      { text: metaRank,  color: r.letter },
+      { text: '·',       color: '#5c5c78' },
+      { text: metaDiv,   color: '#9090a8' },
+    ];
+    const gap = 16;
+    let metaTotal = 0;
+    segs.forEach(function (s, i) {
+      metaTotal += ctx.measureText(s.text).width;
+      if (i < segs.length - 1) metaTotal += gap;
+    });
+    let metaX = W / 2 - metaTotal / 2;
+    segs.forEach(function (s, i) {
+      ctx.fillStyle = s.color;
+      ctx.textAlign = 'left';
+      _hrDrawSpacedText(ctx, s.text, metaX, metaY, 2);
+      metaX += ctx.measureText(s.text).width + 2 * Math.max(0, s.text.length - 1) + gap;
+    });
+    ctx.textAlign = 'center';
+
+    // ── 9. STAT GRID 2×2 ──
+    const gridY = metaY + 60;
+    const gridW = 880;
+    const gridH = 240;
+    const gridX = W / 2 - gridW / 2;
+    // Hairline cross
+    const hairV = ctx.createLinearGradient(W / 2, gridY, W / 2, gridY + gridH);
+    hairV.addColorStop(0,   'rgba(245,184,66,0)');
+    hairV.addColorStop(0.5, 'rgba(245,184,66,0.22)');
+    hairV.addColorStop(1,   'rgba(245,184,66,0)');
+    ctx.fillStyle = hairV;
+    ctx.fillRect(W / 2 - 0.5, gridY + gridH * 0.08, 1, gridH * 0.84);
+    const hairH = ctx.createLinearGradient(gridX, gridY + gridH / 2, gridX + gridW, gridY + gridH / 2);
+    hairH.addColorStop(0,   'rgba(245,184,66,0)');
+    hairH.addColorStop(0.5, 'rgba(245,184,66,0.22)');
+    hairH.addColorStop(1,   'rgba(245,184,66,0)');
+    ctx.fillStyle = hairH;
+    ctx.fillRect(gridX + gridW * 0.06, gridY + gridH / 2 - 0.5, gridW * 0.88, 1);
+    // 4 cells
+    _hrDrawStatCell(ctx, gridX + gridW / 4, gridY + gridH / 4, 'TOTAL XP', _hrFmtNum(data.totalXP), true);
+    _hrDrawStatCell(ctx, gridX + gridW * 3 / 4, gridY + gridH / 4, 'DAY STREAK', _hrFmtNum(data.streak), false, 'flame');
+    _hrDrawStatCell(ctx, gridX + gridW / 4, gridY + gridH * 3 / 4, 'BOSSES SLAIN', _hrFmtNum(data.bosses), false);
+    _hrDrawStatCell(ctx, gridX + gridW * 3 / 4, gridY + gridH * 3 / 4, 'SOULS', _hrFmtNum(data.souls), false, 'soul');
+
+    // ── 10. QUOTE + attribution ──
+    const quoteY = gridY + gridH + 96;
+    // Flanking rules
+    ctx.fillStyle = 'rgba(245,184,66,0.5)';
+    ctx.fillRect(W / 2 - 280 - 40, quoteY - 18, 40, 1);
+    ctx.fillRect(W / 2 + 280, quoteY - 18, 40, 1);
+    ctx.font = '500 italic 44px "Cormorant Garamond", Georgia, serif';
+    ctx.fillStyle = '#c8c6d8';
+    ctx.textAlign = 'center';
+    ctx.fillText('"' + data.quote + '"', W / 2, quoteY);
+    ctx.font = '700 14px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#5c5c78';
+    _hrDrawSpacedText(ctx, 'THE FIRST AWAKENED', W / 2, quoteY + 36, 4);
+
+    // ── 11. FOOTER: gold rule + tagline + brand mark ──
+    const footerBaseY = H - 110;
+    _hrDrawGoldRule(ctx, W / 2, footerBaseY - 40, 620, false);
+    ctx.font = '800 22px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#f5b842';
+    ctx.shadowColor = 'rgba(245,184,66,0.16)';
+    ctx.shadowBlur = 16;
+    _hrDrawSpacedText(ctx, 'TURN YOUR HABITS INTO AN RPG', W / 2, footerBaseY, 5);
+    ctx.shadowBlur = 0;
+    // Brand row: small spark + AWAKENED: HABIT RPG · awakened.app
+    ctx.font = '600 17px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#9090a8';
+    const brandA = 'AWAKENED: HABIT RPG';
+    const brandB = 'awakened.app';
+    const sepW = 12, sparkW = 30;
+    const brandAW = ctx.measureText(brandA).width;
+    const brandBW = ctx.measureText(brandB).width;
+    const brandTotal = sparkW + 10 + brandAW + sepW + brandBW;
+    let brandX = W / 2 - brandTotal / 2;
+    // Small spark mark (4-point star) glyph
+    ctx.save();
+    ctx.translate(brandX + 10, footerBaseY + 32);
+    ctx.fillStyle = '#f5b842';
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(0, -8); ctx.lineTo(2.5, -2.5); ctx.lineTo(8, 0); ctx.lineTo(2.5, 2.5);
+    ctx.lineTo(0, 8); ctx.lineTo(-2.5, 2.5); ctx.lineTo(-8, 0); ctx.lineTo(-2.5, -2.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    brandX += sparkW + 10;
+    ctx.fillStyle = '#9090a8';
+    ctx.textAlign = 'left';
+    ctx.fillText(brandA, brandX, footerBaseY + 36);
+    brandX += brandAW + sepW / 2;
+    ctx.fillStyle = '#5c5c78';
+    ctx.fillRect(brandX - 2, footerBaseY + 30, 4, 4);
+    brandX += sepW / 2;
+    ctx.fillText(brandB, brandX, footerBaseY + 36);
+    ctx.textAlign = 'center';
+
+    return canvas;
+  }
+
+  // Spaced text — emulates CSS letter-spacing by drawing chars in
+  // sequence with a fixed gap. Native canvas has no letter-spacing.
+  function _hrDrawSpacedText(ctx, str, x, y, spacing) {
+    const w = ctx.measureText(str).width + spacing * Math.max(0, str.length - 1);
+    let cur = x - w / 2;
+    const prevAlign = ctx.textAlign;
+    ctx.textAlign = 'left';
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      ctx.fillText(ch, cur, y);
+      cur += ctx.measureText(ch).width + spacing;
+    }
+    ctx.textAlign = prevAlign;
+  }
+
+  // Gold horizontal rule with optional center diamond glyph.
+  function _hrDrawGoldRule(ctx, cx, cy, width, glyph) {
+    const halfW = width / 2;
+    const gapW = glyph ? 18 : 0;
+    const lineW = halfW - gapW - (glyph ? 8 : 0);
+    // Left gradient
+    const leftG = ctx.createLinearGradient(cx - halfW, cy, cx - halfW + lineW, cy);
+    leftG.addColorStop(0, 'rgba(245,184,66,0)');
+    leftG.addColorStop(1, 'rgba(245,184,66,0.6)');
+    ctx.fillStyle = leftG;
+    ctx.fillRect(cx - halfW, cy - 0.5, lineW, 1);
+    // Right gradient
+    const rightG = ctx.createLinearGradient(cx + halfW - lineW, cy, cx + halfW, cy);
+    rightG.addColorStop(0, 'rgba(245,184,66,0.6)');
+    rightG.addColorStop(1, 'rgba(245,184,66,0)');
+    ctx.fillStyle = rightG;
+    ctx.fillRect(cx + halfW - lineW, cy - 0.5, lineW, 1);
+    // Glyph
+    if (glyph) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = '#f5b842';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -8); ctx.lineTo(8, 0); ctx.lineTo(0, 8); ctx.lineTo(-8, 0); ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = '#f5b842';
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -4); ctx.lineTo(4, 0); ctx.lineTo(0, 4); ctx.lineTo(-4, 0); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Rank crest pendant — gilded round disc with tier letter + division.
+  function _hrDrawRankCrest(ctx, cx, cy, size, rankId, division, r) {
+    const isPlus = rankId === 'S+';
+    const radius = size / 2;
+    // Drop shadow under the crest
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = size * 0.1;
+    ctx.shadowOffsetY = size * 0.04;
+    // Outer gold ring — approximate conic with linear gradient
+    const goldRingG = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius);
+    goldRingG.addColorStop(0,    '#c08418');
+    goldRingG.addColorStop(0.25, '#f7c558');
+    goldRingG.addColorStop(0.5,  '#f5b842');
+    goldRingG.addColorStop(0.72, '#c08418');
+    goldRingG.addColorStop(1,    '#f7c558');
+    ctx.fillStyle = goldRingG;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // Halo glow around ring
+    ctx.save();
+    ctx.shadowColor = 'rgba(245,184,66,0.45)';
+    ctx.shadowBlur = size * 0.18;
+    ctx.strokeStyle = 'rgba(245,184,66,0.0)';
+    ctx.lineWidth = 0;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    // Inner well — rank-color tinted navy
+    const innerR = radius - size * 0.05;
+    const wellG = ctx.createRadialGradient(cx, cy - size * 0.18, 0, cx, cy - size * 0.18, innerR);
+    wellG.addColorStop(0,    r.hue + '33');
+    wellG.addColorStop(0.66, '#08081a');
+    ctx.fillStyle = wellG;
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+    ctx.fill();
+    // Tier color outline (inside the gold)
+    ctx.strokeStyle = r.hue;
+    ctx.lineWidth = Math.max(1, size * 0.012);
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+    ctx.stroke();
+    // Rank letter
+    const letterSize = size * (isPlus ? 0.40 : 0.50);
+    ctx.font = '700 ' + letterSize + 'px "Cinzel", Georgia, serif';
+    ctx.fillStyle = r.letter;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = r.glow;
+    ctx.shadowBlur = size * 0.14;
+    if (isPlus) {
+      // Draw 'S' + smaller '+' superscript
+      const sw = ctx.measureText('S').width;
+      ctx.fillText('S', cx - size * 0.04, cy - size * 0.04);
+      ctx.font = '700 ' + (size * 0.26) + 'px "Cinzel", Georgia, serif';
+      ctx.fillText('+', cx + sw / 2 - size * 0.02, cy - size * 0.12);
+    } else {
+      ctx.fillText(rankId, cx, cy - size * 0.04);
+    }
+    ctx.shadowBlur = 0;
+    // Division label
+    ctx.font = '800 ' + (size * 0.12) + 'px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#f5b842';
+    ctx.globalAlpha = 0.92;
+    ctx.fillText(division || 'I', cx, cy + size * 0.24);
+    ctx.globalAlpha = 1;
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // Stat cell — label above, value below, optional glyph beside.
+  function _hrDrawStatCell(ctx, cx, cy, label, value, highlight, glyphKind) {
+    // Label
+    ctx.font = '700 19px "JetBrains Mono", monospace';
+    ctx.fillStyle = highlight ? '#f5b842' : '#9090a8';
+    ctx.textAlign = 'center';
+    _hrDrawSpacedText(ctx, label, cx, cy - 30, 3);
+    // Value
+    ctx.font = '800 66px "JetBrains Mono", monospace';
+    ctx.fillStyle = highlight ? '#f5b842' : '#f5f3fb';
+    if (highlight) {
+      ctx.shadowColor = 'rgba(245,184,66,0.45)';
+      ctx.shadowBlur = 26;
+    }
+    // If a glyph is present, offset the value left a bit
+    const valueW = ctx.measureText(value).width;
+    const glyphSize = 40;
+    const glyphGap = 12;
+    if (glyphKind) {
+      ctx.textAlign = 'left';
+      const totalW = valueW + glyphGap + glyphSize;
+      const startX = cx - totalW / 2;
+      ctx.fillText(value, startX, cy + 30);
+      // Glyph
+      ctx.shadowBlur = 0;
+      const gx = startX + valueW + glyphGap + glyphSize / 2;
+      const gy = cy + 12;
+      if (glyphKind === 'flame') {
+        ctx.fillStyle = '#f5b842';
+        ctx.beginPath();
+        ctx.moveTo(gx, gy - glyphSize * 0.5);
+        ctx.bezierCurveTo(gx - glyphSize * 0.18, gy - glyphSize * 0.18, gx - glyphSize * 0.36, gy + glyphSize * 0.1, gx - glyphSize * 0.36, gy + glyphSize * 0.27);
+        ctx.bezierCurveTo(gx - glyphSize * 0.36, gy + glyphSize * 0.45, gx - glyphSize * 0.12, gy + glyphSize * 0.5, gx, gy + glyphSize * 0.5);
+        ctx.bezierCurveTo(gx + glyphSize * 0.12, gy + glyphSize * 0.5, gx + glyphSize * 0.36, gy + glyphSize * 0.45, gx + glyphSize * 0.36, gy + glyphSize * 0.27);
+        ctx.bezierCurveTo(gx + glyphSize * 0.36, gy + glyphSize * 0.1, gx + glyphSize * 0.18, gy - glyphSize * 0.18, gx, gy - glyphSize * 0.5);
+        ctx.closePath();
+        ctx.fill();
+      } else if (glyphKind === 'soul') {
+        // Concentric gold rings (soul mark)
+        ctx.strokeStyle = '#f5b842';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(gx, gy, glyphSize * 0.32, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#f5b842';
+        ctx.beginPath();
+        ctx.arc(gx, gy, glyphSize * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.textAlign = 'center';
+    } else {
+      ctx.fillText(value, cx, cy + 30);
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // Canvas → File for native share.
+  async function _hrCanvasToFile(canvas) {
+    return new Promise(function (resolve, reject) {
+      try {
+        canvas.toBlob(function (blob) {
+          if (!blob) { reject(new Error('toBlob returned null')); return; }
+          try {
+            resolve(new File([blob], 'awakened-hunter-report.png', { type: 'image/png' }));
+          } catch (e) { reject(e); }
+        }, 'image/png', 0.92);
+      } catch (e) { reject(e); }
+    });
+  }
+
+  // Share orchestrator. Mirrors the shareOriginStory 3-tier fallback
+  // (line ~25980): files → text+url → clipboard.
+  async function _hrShareReport(data, canvas) {
+    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const TEXT = 'Turn your habits into an RPG. — Awakened';
+    try {
+      const file = await _hrCanvasToFile(canvas);
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        try {
+          await navigator.share({ files: [file], text: TEXT, url: APP_URL });
+          return { ok: true, mode: 'file' };
+        } catch (_) { /* user cancelled or share failed → fall through */ }
+      }
+    } catch (_) { /* canvas/file failed → fall through */ }
+    // Text + URL fallback
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: TEXT, url: APP_URL });
+        return { ok: true, mode: 'text' };
+      } catch (_) {}
+    }
+    // Clipboard final fallback
+    try {
+      await navigator.clipboard.writeText(TEXT + '\n' + APP_URL);
+      if (typeof showHabitToast === 'function') showHabitToast('Link copied');
+      return { ok: true, mode: 'clipboard' };
+    } catch (_) {
+      if (typeof showHabitToast === 'function') showHabitToast('Sharing not supported on this device');
+      return { ok: false, mode: 'none' };
+    }
+  }
+
+  // ── Modal lifecycle ───────────────────────────────────────────
+  let _hrOnDismiss = null;
+  let _hrCurrentData = null;
+  let _hrCurrentCanvas = null;
+
+  function _hrKeydown(e) {
+    if (e.key === 'Escape') closeHunterReportPreview();
+  }
+
+  async function openHunterReportPreview(data, onDismiss) {
+    const overlay = document.getElementById('hr-overlay');
+    if (!overlay) {
+      if (typeof onDismiss === 'function') onDismiss();
+      return;
+    }
+    _hrOnDismiss = (typeof onDismiss === 'function') ? onDismiss : null;
+    _hrCurrentData = data;
+    const canvas = document.getElementById('hr-canvas');
+    const loading = document.getElementById('hr-canvas-loading');
+    if (loading) loading.classList.remove('is-done');
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', _hrKeydown, true);
+    // Render the card into the canvas (async — fonts + avatar)
+    try {
+      _hrCurrentCanvas = await _hrRenderCanvas(data, { canvas: canvas });
+      if (loading) loading.classList.add('is-done');
+    } catch (_) {
+      if (loading) loading.classList.add('is-done');
+      // Canvas failed; SHARE button will still try the text fallback
+      _hrCurrentCanvas = canvas;
+    }
+  }
+
+  function closeHunterReportPreview() {
+    const overlay = document.getElementById('hr-overlay');
+    if (overlay) {
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.removeEventListener('keydown', _hrKeydown, true);
+    const cb = _hrOnDismiss;
+    _hrOnDismiss = null;
+    _hrCurrentData = null;
+    _hrCurrentCanvas = null;
+    if (typeof cb === 'function') {
+      try { cb(); } catch (_) {}
+    }
+  }
+
+  // Wire CTAs once on DOMContentLoaded init.
+  function _hrSetupOnce() {
+    const overlay = document.getElementById('hr-overlay');
+    if (!overlay || overlay.getAttribute('data-wired') === '1') return;
+    overlay.setAttribute('data-wired', '1');
+    const closeBtn = document.getElementById('hr-close-btn');
+    const dismissBtn = document.getElementById('hr-dismiss-btn');
+    const shareBtn = document.getElementById('hr-share-btn');
+    if (closeBtn) closeBtn.addEventListener('click', closeHunterReportPreview);
+    if (dismissBtn) dismissBtn.addEventListener('click', closeHunterReportPreview);
+    if (shareBtn) shareBtn.addEventListener('click', async function () {
+      if (!_hrCurrentData || !_hrCurrentCanvas) return;
+      shareBtn.disabled = true;
+      try {
+        await _hrShareReport(_hrCurrentData, _hrCurrentCanvas);
+      } catch (_) {}
+      shareBtn.disabled = false;
+      // Don't auto-close — let the user explicitly dismiss after seeing
+      // the OS share sheet confirm. This respects the W179 stance:
+      // dismissal is gated on the explicit CTA, never accidental.
+    });
+    // Backdrop tap = no-op (W179 lesson). Intentional.
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) {
+        e.stopPropagation();
+        // No-op: backdrop tap does NOT dismiss. Only buttons do.
+      }
+    });
+  }
+
+  try {
+    window.__openHunterReportPreview  = openHunterReportPreview;
+    window.__closeHunterReportPreview = closeHunterReportPreview;
+    window.__hrRenderCanvas           = _hrRenderCanvas;
+    window.__hrCollectData            = _hrCollectData;
+  } catch (_) {}
+  document.addEventListener('DOMContentLoaded', _hrSetupOnce);
 
   // v3 Phase 1z.282D — Rank-up congratulations orchestrator.
   // Called from drainLevelUpQueue() when a 'fa_rankup' item is
