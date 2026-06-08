@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w200';
+  const APP_BUILD_TAG = '2.2.5-w201';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12978,6 +12978,31 @@
       const rawPSA = localStorage.getItem('hb_ps_awarded');
       psAwarded = new Set(rawPSA ? JSON.parse(rawPSA) : []);
       selectedPackId = localStorage.getItem('hb_path') || null;
+
+      // v3 W201 hardening (audit follow-up) — extend the W199 habits
+      // array-guard to the sibling KEYED structures. JSON.parse('null')
+      // === null and the `|| '{}'` default only covers an ABSENT key, not
+      // a present key whose value parses to null / an array / a string.
+      // A malformed cloud-restored snapshot (the backend validates that
+      // state is an object but NOT its field types) writing e.g.
+      // hb_completions = "null" would later throw at completions[today]
+      // / Object.keys(streaks) on a hot path. Coerce in place: no-op for
+      // valid data, safe-default for anything malformed — closes the
+      // cloud-restore boot-crash class without a nuclear full reset.
+      const _isObj = v => (v && typeof v === 'object' && !Array.isArray(v));
+      if (!_isObj(completions))            completions = {};
+      if (!_isObj(streaks))                streaks = {};
+      if (!_isObj(stats))                  stats = initStats();
+      if (!_isObj(achievementUnlockDates)) achievementUnlockDates = {};
+      if (!_isObj(habitNotes))             habitNotes = {};
+      if (!_isObj(compoundStreaks))        compoundStreaks = {};
+      if (!_isObj(compoundAwarded))        compoundAwarded = {};
+      if (!_isObj(personalRecords))        personalRecords = {};
+      if (!_isObj(streakShields))          streakShields = {};
+      if (!_isObj(shieldClaimedAt))        shieldClaimedAt = {};
+      if (!_isObj(honestDays))             honestDays = {};
+      if (!Array.isArray(pendingShieldNotices)) pendingShieldNotices = [];
+      if (!Array.isArray(streakBreakLog))       streakBreakLog = [];
     } catch (_) {
       habits = []; completions = {}; streaks = {};
       totalPoints = 0; unlockedAchievements = new Set();
@@ -13043,8 +13068,11 @@
         var _isQuota = !!(e && (e.name === 'QuotaExceededError' ||
           e.code === 22 || e.code === 1014 ||
           (typeof e.name === 'string' && e.name.indexOf('Quota') !== -1)));
-        if (typeof _addBreadcrumb === 'function') {
-          _addBreadcrumb('save-failed', { quota: _isQuota, name: (e && e.name) || 'unknown' });
+        // v3 W201 — use the REAL breadcrumb recorder. _addBreadcrumb has
+        // no definition anywhere (16 call sites are silent no-ops); the
+        // actual bounded + debug-exported store is _addHabitBreadcrumb.
+        if (typeof _addHabitBreadcrumb === 'function') {
+          _addHabitBreadcrumb('save-failed', { quota: _isQuota, name: (e && e.name) || 'unknown' });
         }
         if (!_saveFailureWarned && typeof showHabitToast === 'function') {
           _saveFailureWarned = true;

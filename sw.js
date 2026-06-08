@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.538';
+const CACHE_VERSION = 'v5.539';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -140,12 +140,16 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-forge-of-ten-thousand-days.png',
   '/assets/bosses/the-vow-keeper.png',
   '/assets/bosses/the-patient-flame.png',
-  // Item-card illustrations. Only paths that EXIST on disk get listed
-  // here — cache.addAll rejects the entire install if any entry 404s.
-  // The remaining 8 launch cards fall through to the network (404 in
-  // dev), which the renderer cleanly handles by removing the <img>
-  // and showing the emoji + rarity gradient placeholder. Add each
-  // card's path here as its art lands on disk.
+  // Item-card illustrations. Only paths that EXIST on disk are listed
+  // here. (Historical note: this list used to be kept strictly in-sync
+  // with disk because the old cache.addAll() rejected the entire install
+  // on any 404. As of W199 the install precaches each asset
+  // independently with a per-asset catch, so a stray 404 no longer fails
+  // the install — but keeping the list accurate is still good hygiene.)
+  // The remaining launch cards fall through to the network (404 in dev),
+  // which the renderer cleanly handles by removing the <img> and showing
+  // the emoji + rarity gradient placeholder. Add each card's path here
+  // as its art lands on disk.
   '/assets/items/dream_woven_hood.png',
   '/assets/items/sleepwalkers_cloak.png',
   '/assets/items/pendant_of_the_wakeful.png',
