@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w198';
+  const APP_BUILD_TAG = '2.2.5-w199';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12929,7 +12929,19 @@
         needsOnboarding = true;
         if (!localStorage.getItem('hb_welcomed')) needsWelcome = true;
       } else {
-        habits = JSON.parse(raw);
+        // v3 W199 hardening (audit P1) — defensive type guard. JSON.parse
+        // succeeds on "null" / a JSON string / an object, so the catch
+        // below never fires for a non-array hb_habits — and a non-array
+        // value reaching habits.forEach() at init() is a boot-time
+        // TypeError (crash before any downstream guard runs). This is
+        // reachable via a corrupted localStorage write or a cloud-restored
+        // snapshot whose field types the backend doesn't validate. Coerce
+        // to a clean array of objects; an empty result falls through to
+        // the First Vow empty state — a graceful recovery, not a crash.
+        const parsedHabits = JSON.parse(raw);
+        habits = Array.isArray(parsedHabits)
+          ? parsedHabits.filter(h => h && typeof h === 'object')
+          : [];
       }
       completions = JSON.parse(localStorage.getItem('hb_completions') || '{}');
       streaks     = JSON.parse(localStorage.getItem('hb_streaks')     || '{}');
@@ -12990,6 +13002,9 @@
     return s;
   }
 
+  // v3 W199 hardening — gates the storage-failure toast to once per
+  // session so a persistently-full quota doesn't spam on every save().
+  let _saveFailureWarned = false;
   function save() {
     try {
       // v2.0 — enforce auto-verify-first ordering on every persist
@@ -13020,7 +13035,33 @@
       localStorage.setItem('hb_streak_breaks',     JSON.stringify(streakBreakLog));
       localStorage.setItem('hb_origin_beginning',  JSON.stringify(originBeginning));
       localStorage.setItem('hb_origin_awakening',  JSON.stringify(originAwakening));
-    } catch (_) {}
+    } catch (e) {
+      // v3 W199 hardening (audit P1) — a failed persist is NO LONGER
+      // silent. The 20 sequential setItem() calls above write critical
+      // state first (habits / completions / streaks / points), but a
+      // mid-sequence QuotaExceededError leaves in-memory state ahead of
+      // disk, silently dropping the user's recent XP / streaks /
+      // completions. iOS WKWebView + PWA origins have tight (~5-10MB)
+      // quotas, so this is reachable on long sessions / low-storage
+      // devices. Surface it once per session + breadcrumb so the user
+      // can act (free space, or sign in for cloud backup). CloudSync is
+      // still marked dirty below so the cloud push can preserve the
+      // in-memory state even when local disk is full.
+      try {
+        var _isQuota = !!(e && (e.name === 'QuotaExceededError' ||
+          e.code === 22 || e.code === 1014 ||
+          (typeof e.name === 'string' && e.name.indexOf('Quota') !== -1)));
+        if (typeof _addBreadcrumb === 'function') {
+          _addBreadcrumb('save-failed', { quota: _isQuota, name: (e && e.name) || 'unknown' });
+        }
+        if (!_saveFailureWarned && typeof showHabitToast === 'function') {
+          _saveFailureWarned = true;
+          showHabitToast(_isQuota
+            ? 'Storage full — recent progress may not be saved. Free up space, or sign in to back up to the cloud.'
+            : 'Could not save progress locally.');
+        }
+      } catch (_) {}
+    }
     // v3 Phase 1w — Cloud Sync. Mark dirty so the debounced backup
     // path picks this up. No-op if CloudSync isn't initialized yet
     // (early calls during boot) or if the user isn't signed in.
@@ -18709,6 +18750,11 @@
     });
 
     const close = () => {
+      // v3 W199 hardening (audit P1) — remove the document keydown
+      // listener on EVERY close path. Previously only the Escape branch
+      // removed it, so closing via Done or the backdrop leaked a
+      // permanent document-level keydown listener per open/close cycle.
+      document.removeEventListener('keydown', onKey);
       overlay.classList.remove('digest-picker-overlay--visible');
       setTimeout(() => overlay.remove(), 220);
     };
@@ -18750,9 +18796,9 @@
       if (e.target === overlay) close();      // backdrop tap dismisses
     });
 
-    // ESC dismisses
+    // ESC dismisses. (close() removes this listener on every path.)
     const onKey = (e) => {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+      if (e.key === 'Escape') close();
     };
     document.addEventListener('keydown', onKey);
   }
@@ -39064,7 +39110,11 @@
   // not custom — see CLAUDE.md "Habit identity is the name string"
   // convention). Returns null if missing.
   function findWalkHabit() {
-    return habits.find(h => h.name === 'Daily walk' && !h.custom) || null;
+    // v3 W199 hardening (audit P1) — !h.archived closes the soft-archive
+    // backfill leak: _markHistoricalAutoVerify() grants XP directly
+    // (bypassing isScheduledToday), so without this an archived "Daily
+    // walk" would still auto-complete + earn XP via HealthKit backfill.
+    return habits.find(h => h && h.name === 'Daily walk' && !h.custom && !h.archived) || null;
   }
 
   // First-encounter pre-prompt explainer. Shown ONCE per device, before
@@ -39756,10 +39806,12 @@
   // or backfill (iPhone alarm), so neither auto-verify fires AT midnight;
   // they fire when the user opens the app in the morning.
   function findSleepHabit() {
-    return habits.find(h => h.name === 'Sleep' && !h.custom) || null;
+    // v3 W199 hardening (audit P1) — !h.archived: see findWalkHabit.
+    return habits.find(h => h && h.name === 'Sleep' && !h.custom && !h.archived) || null;
   }
   function findSleepBeforeMidnightHabit() {
-    return habits.find(h => h.name === 'Sleep before midnight' && !h.custom) || null;
+    // v3 W199 hardening (audit P1) — !h.archived: see findWalkHabit.
+    return habits.find(h => h && h.name === 'Sleep before midnight' && !h.custom && !h.archived) || null;
   }
 
   async function autoVerifySleep() {
@@ -40069,9 +40121,10 @@
     // will rename it in-place on next init() cycle once it runs.
     // Prefer the canonical row when both exist so we never return the
     // dead legacy duplicate.
-    const canonical = habits.find(h => h && !h.custom && h.name === 'Workout');
+    // v3 W199 hardening (audit P1) — !h.archived: see findWalkHabit.
+    const canonical = habits.find(h => h && !h.custom && !h.archived && h.name === 'Workout');
     if (canonical) return canonical;
-    const legacy = habits.find(h => h && !h.custom && isLegacyOrCanonicalWorkoutName(h.name));
+    const legacy = habits.find(h => h && !h.custom && !h.archived && isLegacyOrCanonicalWorkoutName(h.name));
     return legacy || null;
   }
   async function autoVerifyStrengthTraining() {

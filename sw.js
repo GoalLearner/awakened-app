@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.536';
+const CACHE_VERSION = 'v5.537';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -240,8 +240,19 @@ const PRECACHE_ASSETS = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(c => c.addAll(PRECACHE_ASSETS))
+      // v3 W199 hardening (audit P1) — precache each asset INDEPENDENTLY.
+      // cache.addAll() is atomic-fail: a single missing/404'd entry
+      // rejects the whole install → the new SW never activates → on iOS
+      // Capacitor the user is stranded on the OLD service worker (serving
+      // stale markup) until a full reinstall, blocking ALL future
+      // updates. Per-asset add() with a per-asset swallow keeps install
+      // resilient: the critical shell (/, index.html, app.js, styles.css)
+      // is near-guaranteed present, and any genuinely missing asset is
+      // simply re-fetched from network at runtime. The trailing catch +
+      // skipWaiting guarantees the SW always activates so updates land.
+      .then(c => Promise.all(PRECACHE_ASSETS.map(url => c.add(url).catch(() => {}))))
       .then(() => self.skipWaiting())
+      .catch(() => self.skipWaiting())
   );
 });
 
