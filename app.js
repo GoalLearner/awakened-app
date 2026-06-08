@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w194';
+  const APP_BUILD_TAG = '2.2.5-w195';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18174,23 +18174,23 @@
       list.parentNode.insertBefore(hdr, list);
     }
     hdr.classList.remove('hidden');
+    // v3 Phase 1z.284 W195 — the redundant "N/total SEALED" count was
+    // removed (it duplicated the top header's progress tile AND could
+    // go stale: _renderVowsHeader only runs on a full rebuild, while
+    // the surgical auto-verify completion path updates the top header
+    // via updateProgress() without re-running this). The bar is now
+    // driven by updateProgress() on every completion (see #vows-header-fill
+    // write there), so it can never desync from the top header.
     const arr = Array.isArray(todayHabits) ? todayHabits : [];
     const total = arr.length;
     const sealed = arr.reduce((n, h) => n + (isChecked(h.id) ? 1 : 0), 0);
     const pct = total > 0 ? Math.round((sealed / total) * 100) : 0;
-    const complete = total > 0 && sealed === total;
     hdr.innerHTML =
-      '<div class="vows-header-row">' +
-        '<div class="vows-header-titles">' +
-          '<div class="vows-header-kicker">TODAY’S VOWS</div>' +
-          '<div class="vows-header-title">Seal your vows</div>' +
-        '</div>' +
-        '<div class="vows-header-count' + (complete ? ' is-complete' : '') + '">' +
-          '<div class="vows-header-num">' + sealed + '<span>/' + total + '</span></div>' +
-          '<div class="vows-header-lbl">SEALED</div>' +
-        '</div>' +
+      '<div class="vows-header-titles">' +
+        '<div class="vows-header-kicker">TODAY’S VOWS</div>' +
+        '<div class="vows-header-title">Seal your vows</div>' +
       '</div>' +
-      '<div class="vows-header-bar"><div class="vows-header-fill" style="width:' + pct + '%"></div></div>';
+      '<div class="vows-header-bar"><div id="vows-header-fill" class="vows-header-fill" style="width:' + pct + '%"></div></div>';
   }
 
   // v3 Phase 1z.284 W192 — One-time List View introduction hint.
@@ -19973,6 +19973,13 @@
     document.getElementById('total-count').textContent = total;
     const pct = total === 0 ? 0 : (done / total) * 100;
     document.getElementById('progress-bar').style.width = pct + '%';
+    // v3 Phase 1z.284 W195 — keep the List View "Seal your vows" bar in
+    // lockstep with the canonical count. updateProgress() fires after
+    // every completion (including the surgical auto-verify path that
+    // does NOT re-run _renderVowsHeader), so writing the width here is
+    // what prevents the vows bar from going stale vs the top header.
+    const vowsFill = document.getElementById('vows-header-fill');
+    if (vowsFill) vowsFill.style.width = pct + '%';
     const listEl = document.getElementById('habit-list');
     if (listEl) listEl.classList.toggle('all-complete', total > 0 && done === total);
     // v3 Phase 1l — Daily Objectives section header was removed; the

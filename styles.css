@@ -748,9 +748,6 @@ h1 {
   margin-bottom: 2px;
 }
 .vows-header.hidden { display: none; }
-.vows-header-row {
-  display: flex; align-items: flex-end; justify-content: space-between;
-}
 .vows-header-kicker {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10.5px; font-weight: 800; letter-spacing: 2.6px;
@@ -762,19 +759,9 @@ h1 {
   font-size: 22px; font-weight: 700; letter-spacing: 0.4px;
   color: #f5f3fb;
 }
-.vows-header-count { text-align: right; }
-.vows-header-num {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 21px; font-weight: 800; color: #f5b842; line-height: 1;
-}
-.vows-header-num span { color: #5c5c78; }
-.vows-header-count.is-complete .vows-header-num { text-shadow: 0 0 16px rgba(245, 184, 66, 0.45); }
-.vows-header-lbl {
-  margin-top: 3px;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 8px; font-weight: 800; letter-spacing: 1.6px; color: #5c5c78;
-}
-.vows-header-count.is-complete .vows-header-lbl { color: #f5b842; }
+/* W195 — the "N/total SEALED" count was removed (redundant with the top
+   header + could go stale); the bar alone, synced via updateProgress(),
+   is the canonical List-mode progress indicator. */
 .vows-header-bar {
   margin-top: 9px;
   height: 6px; border-radius: 4px;
