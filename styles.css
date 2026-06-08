@@ -15631,6 +15631,19 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-primary);
 }
 
+/* v3 W202 — wearable/app requirement note under the kill condition.
+   Muted + smaller so it reads as a calm clarification, not an alarm.
+   Hidden by default; the boss-detail renderer shows it only for
+   sleep/workout bosses. */
+.bfs-verify-note {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary, #9090a8);
+  font-style: italic;
+}
+.bfs-verify-note.hidden { display: none; }
+
 /* Current progress — larger dots than the card. */
 .bfs-progress {
   display: flex;

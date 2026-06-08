@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w201';
+  const APP_BUILD_TAG = '2.2.5-w202';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10396,6 +10396,39 @@
   // Returns an HTML string with the same structure (3 <p> tags) so
   // the modal layout stays consistent regardless of which habit
   // opened it.
+  // v3 W202 — wearable/app requirement copy. Apple Health only contains
+  // a WORKOUT or SLEEP sample when a wearable (Apple Watch, Oura, Whoop)
+  // or a compatible app writes one — the iPhone alone does NOT create
+  // those samples (it DOES track steps + flights natively, which is why
+  // step/flight habits and bosses get no such note). This is a platform
+  // limitation / user-education issue, not a verification bug. Surfaced
+  // so users don't assume verification is broken. Copy-only.
+  const _HEALTH_WORKOUT_DEVICE_NOTE =
+    "<p><strong>You'll need a wearable or workout app.</strong> Apple Health only records a workout when an Apple Watch, Oura, Whoop, or a fitness app like Strava or Nike Run Club logs one. Your iPhone alone does not create workout records. If you train without a wearable, log the session in a workout app that writes to Apple Health so Awakened can verify it.</p>";
+  const _HEALTH_SLEEP_DEVICE_NOTE =
+    "<p><strong>You'll need a sleep-tracking device or sleep app.</strong> Apple Health records sleep when an Apple Watch, Oura ring, or compatible sleep app logs it. Your iPhone alone does not create full sleep records. Make sure your device or sleep app syncs to Apple Health so Awakened can verify it.</p>";
+
+  // v3 W202 — boss-detail one-line wearable note, driven by the boss's
+  // verification METRIC (not a hardcoded id list) so it correctly covers
+  // every sleep/workout boss while leaving step/flight bosses clean:
+  //   sleepHours                      → sleep note
+  //   workoutMinutes + activeEnergyKcal → workout + active-calories note
+  //   workoutMinutes                  → workout note
+  //   stepThreshold / flightThreshold → '' (iPhone tracks natively)
+  function _bossVerifyNote(cfg) {
+    if (!cfg) return '';
+    if (typeof cfg.sleepHours === 'number') {
+      return 'Requires sleep data from Apple Watch, Oura, or a sleep app synced to Apple Health.';
+    }
+    if (typeof cfg.workoutMinutes === 'number') {
+      if (typeof cfg.activeEnergyKcal === 'number') {
+        return 'Requires a logged workout plus active calories from Apple Health.';
+      }
+      return 'Requires a workout logged by Apple Watch, Oura, Whoop, or a fitness app synced to Apple Health.';
+    }
+    return '';
+  }
+
   function systemManagedHtmlFor(habit) {
     const lead = '<p><strong>This habit is verified by Apple Health.</strong></p>';
     const tail = "<p>If Apple Health isn't connected or has no data, the habit stays unchecked. Manual completion isn't available for this one.</p>";
@@ -10405,14 +10438,19 @@
         middle = "<p>Awakened auto-checks Daily walk when Apple Health shows you've reached your step goal today. There's no manual override — either the steps are there, or the box stays empty. Walk the steps.</p>";
         break;
       case 'Sleep':
-        middle = "<p>Awakened auto-checks Sleep when Apple Health shows you've slept your goal hours last night. There's no manual override — either you slept, or you didn't. The body keeps the score.</p>";
+        middle =
+          "<p>Awakened auto-checks Sleep when Apple Health shows you've slept your goal hours last night. There's no manual override — either you slept, or you didn't. The body keeps the score.</p>" +
+          _HEALTH_SLEEP_DEVICE_NOTE;
         break;
       case 'Sleep before midnight':
-        middle = "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>";
+        middle =
+          "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>" +
+          _HEALTH_SLEEP_DEVICE_NOTE;
         break;
       case 'Workout':
         middle =
           "<p>Workout is sealed when Apple Health records at least " + HEALTHKIT_WORKOUT_DAILY_TARGET_MIN + " total minutes of workouts for today. The system is checking for real training data, not a manual tap. Connect Apple Health and put in the work. If the data shows it, your hunter earns it.</p>" +
+          _HEALTH_WORKOUT_DEVICE_NOTE +
           "<p><strong>Any workout type counts.</strong> HIIT, walking, running, cycling, strength training, yoga, swimming, sports — whatever Apple Health logs as a workout, Awakened counts it. Workout minutes sum across the day, so a 20-min walk + 15-min HIIT session would qualify. If your session didn't seal, open Apple Health → Workouts and confirm today's session is saved as a workout.</p>";
         break;
       default:
@@ -30586,6 +30624,15 @@
     // Kill condition (long version)
     const killCondEl = document.getElementById('bfs-kill-cond');
     if (killCondEl) killCondEl.textContent = cfg.killCondLong || cfg.killCondShort || '';
+
+    // v3 W202 — wearable/app requirement note for sleep/workout bosses
+    // (metric-driven; empty for step/flight bosses → element hidden).
+    const verifyNoteEl = document.getElementById('bfs-verify-note');
+    if (verifyNoteEl) {
+      const note = _bossVerifyNote(cfg);
+      verifyNoteEl.textContent = note;
+      verifyNoteEl.classList.toggle('hidden', !note);
+    }
 
     // Progress dots + label (sized larger via CSS for the modal context)
     // v3 Phase 1z.63 — flight-threshold bosses (Ascendant Colossus) use
