@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w197';
+  const APP_BUILD_TAG = '2.2.5-w198';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3034,6 +3034,15 @@
         ref_id: rankId || null,
       };
     }
+    // ⚠️ FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC (W198) — TestFlight thank-you.
+    if (h === 'gift_founders') {
+      return {
+        type: 'gift_founders',
+        label: "Founder's Gift",
+        detail: 'Thank you for testing Awakened',
+        ref_id: null,
+      };
+    }
     // v3 Phase 1z.277D — WLT Merchant bonus row. Hint shape:
     // 'wlt_bonus_kill_<bossId>'. Checked BEFORE the plain 'kill_'
     // branch so the prefix match doesn't misroute (kill_ is a
@@ -5493,10 +5502,34 @@
   // fires from the showBeginningReveal callback once the main app
   // is visible. Existing users: hb_welcomed === '1' and
   // needsOnboarding === false at init, bonus fires normally.
+  // ═══════════════════════════════════════════════════════════════════
+  // ⚠️  FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC  ⚠️   (W198 — TESTFLIGHT ONLY)
+  // One-time silent 5,000-soul thank-you for current TestFlight testers.
+  // SCOPE: this fires for ANY device that opens this build, so it MUST be
+  // deleted before the public App Store submission — otherwise every new
+  // public user would receive 5,000 free souls. To remove cleanly: delete
+  // this whole block + the single call inside tryGrantDailyLoginBonus
+  // (grep FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC for both). Idempotent: the
+  // flag is eager-set BEFORE the grant so a crash/background can't
+  // double-grant. Silent by design — no toast/modal; the balance just
+  // bumps and a "Founder's Gift" row lands in the souls ledger.
+  function _grantFoundersGiftIfDue() {
+    try {
+      var KEY = 'hb_gift_founders_5000_v1';
+      if (localStorage.getItem(KEY) === '1') return;
+      localStorage.setItem(KEY, '1');                 // eager-set first
+      if (typeof earnSouls === 'function') earnSouls(5000, 'gift_founders');
+    } catch (_) {}
+  }
+  // ═══════════════════════════════════════════════════════════════════
+
   function tryGrantDailyLoginBonus() {
     if (!_souls) loadSouls();
     if (localStorage.getItem('hb_welcomed') !== '1') return false;
     if (typeof needsOnboarding !== 'undefined' && needsOnboarding === true) return false;
+    // ⚠️ FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC — runs before the daily-bonus
+    // early-returns so an already-claimed daily bonus can't block it.
+    try { _grantFoundersGiftIfDue(); } catch (_) {}
     const today = getDeviceLocalDate();
     if (_souls.lastDailyBonusDate === today) return false; // already granted
     earnSouls(SOULS_DAILY_BONUS, 'daily_login');
