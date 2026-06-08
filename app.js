@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w199';
+  const APP_BUILD_TAG = '2.2.5-w200';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3034,7 +3034,12 @@
         ref_id: rankId || null,
       };
     }
-    // ⚠️ FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC (W198) — TestFlight thank-you.
+    // v3 W200 — RETAINED intentionally. The W198 Founder's Gift grant
+    // was removed before public launch, but TestFlight claimers still
+    // have a 'gift_founders' row in their local souls ledger; this
+    // branch keeps it labelled "Founder's Gift" in their history. New
+    // public users never produce this hint, so the branch is inert for
+    // them. Do not remove.
     if (h === 'gift_founders') {
       return {
         type: 'gift_founders',
@@ -5502,34 +5507,21 @@
   // fires from the showBeginningReveal callback once the main app
   // is visible. Existing users: hb_welcomed === '1' and
   // needsOnboarding === false at init, bonus fires normally.
-  // ═══════════════════════════════════════════════════════════════════
-  // ⚠️  FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC  ⚠️   (W198 — TESTFLIGHT ONLY)
-  // One-time silent 5,000-soul thank-you for current TestFlight testers.
-  // SCOPE: this fires for ANY device that opens this build, so it MUST be
-  // deleted before the public App Store submission — otherwise every new
-  // public user would receive 5,000 free souls. To remove cleanly: delete
-  // this whole block + the single call inside tryGrantDailyLoginBonus
-  // (grep FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC for both). Idempotent: the
-  // flag is eager-set BEFORE the grant so a crash/background can't
-  // double-grant. Silent by design — no toast/modal; the balance just
-  // bumps and a "Founder's Gift" row lands in the souls ledger.
-  function _grantFoundersGiftIfDue() {
-    try {
-      var KEY = 'hb_gift_founders_5000_v1';
-      if (localStorage.getItem(KEY) === '1') return;
-      localStorage.setItem(KEY, '1');                 // eager-set first
-      if (typeof earnSouls === 'function') earnSouls(5000, 'gift_founders');
-    } catch (_) {}
-  }
-  // ═══════════════════════════════════════════════════════════════════
+  // v3 W200 — the W198 Founder's Gift (one-time 5,000-soul TestFlight
+  // thank-you) was REMOVED here before the public launch so new public
+  // users do not receive it. Users who already claimed it KEEP their
+  // souls: the 5,000 were added to hb_souls.balance via earnSouls() and
+  // persisted at claim time, so they are part of the saved balance —
+  // removing the grant code only stops future grants, it never subtracts
+  // an existing balance. The hb_gift_founders_5000_v1 flag is left in
+  // place on claimers' devices (harmless). The 'gift_founders' ledger-
+  // label branch in _classifySoulsEvent is intentionally RETAINED so
+  // past claimers' history still renders "Founder's Gift".
 
   function tryGrantDailyLoginBonus() {
     if (!_souls) loadSouls();
     if (localStorage.getItem('hb_welcomed') !== '1') return false;
     if (typeof needsOnboarding !== 'undefined' && needsOnboarding === true) return false;
-    // ⚠️ FOUNDERS_GIFT_REMOVE_BEFORE_PUBLIC — runs before the daily-bonus
-    // early-returns so an already-claimed daily bonus can't block it.
-    try { _grantFoundersGiftIfDue(); } catch (_) {}
     const today = getDeviceLocalDate();
     if (_souls.lastDailyBonusDate === today) return false; // already granted
     earnSouls(SOULS_DAILY_BONUS, 'daily_login');
