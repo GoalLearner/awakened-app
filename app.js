@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w196';
+  const APP_BUILD_TAG = '2.2.5-w197';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19005,7 +19005,10 @@
       const dur   = 0.5 + Math.random() * 0.25;
 
       const dot = document.createElement('span');
-      dot.className = 'xp-particle';
+      // v3 Phase 1z.284 W197 — .xp-burst-dot (was .xp-particle) to avoid
+      // the infinite-drift class collision that left a particle stuck at
+      // the seal centre. See styles.css for the full explanation.
+      dot.className = 'xp-burst-dot';
       dot.style.cssText =
         'width:'  + size + 'px;' +
         'height:' + size + 'px;' +
@@ -19017,6 +19020,9 @@
         '--xp-dur:' + dur + 's;';
       li.appendChild(dot);
       dot.addEventListener('animationend', () => dot.remove(), { once: true });
+      // Removal backstop — guarantees cleanup even if animationend is
+      // ever missed (reduced-motion, future CSS regression, etc.).
+      setTimeout(() => { try { dot.remove(); } catch (_) {} }, 1200);
     }
   }
 

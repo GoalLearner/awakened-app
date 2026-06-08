@@ -9964,8 +9964,18 @@ footer {
   animation: card-flash 0.55s ease-out forwards;
 }
 
-/* XP particle dots */
-.xp-particle {
+/* XP completion-burst dots (spawnXpParticles).
+   v3 Phase 1z.284 W197 — renamed from .xp-particle to .xp-burst-dot to
+   escape a class-name COLLISION: a second, unrelated `.xp-particle` rule
+   (the decorative drifting particles in the XP-detail view, ~line 18550)
+   declares `animation: xp-particle-drift … infinite`. Both selectors were
+   unscoped `.xp-particle`, so the later (drift) rule clobbered this one's
+   animation — giving the completion-burst dots an INFINITE animation that
+   never ends. animationend therefore never fired, the dots were never
+   removed, and one lingered at the seal centre as a stuck blue dot (most
+   visible on the List View gold seal). Own class → no collision → finite
+   burst → animationend → removal. */
+.xp-burst-dot {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
