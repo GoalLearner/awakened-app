@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w193';
+  const APP_BUILD_TAG = '2.2.5-w194';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18146,8 +18146,10 @@
           secondaryHtml +
           naBadgeHtml +
         '</div>' +
-        sealHtml +
+        // W194 — ··· manage sits LEFT of the seal (clear gap) so the
+        // two no longer crowd. Drag handle stays inert (reorder off).
         '<button class="habit-more-btn hlr-more" data-more aria-label="Manage habit">···</button>' +
+        sealHtml +
         '<div class="drag-handle hlr-drag" data-drag aria-hidden="true">' +
           '<span class="drag-dot"></span><span class="drag-dot"></span>' +
           '<span class="drag-dot"></span><span class="drag-dot"></span>' +

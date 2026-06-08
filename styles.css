@@ -635,9 +635,33 @@ h1 {
   -webkit-tap-highlight-color: transparent;
   position: relative;
 }
+/* v3 Phase 1z.284 W194 — neutralize the grid .habit-cb visual styling
+   that leaks onto the row seal (the JS hook .habit-cb is kept for
+   toggleHabit, but its violet border / pulse-ring / checked bg+glow
+   must NOT render — the clean gold disc is .hlr-seal-fill). */
+.habit-list--list .habit-item--row .hlr-seal.habit-cb {
+  width: 44px; height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  animation: none;
+  overflow: visible;
+}
+.habit-list--list .habit-item--row .hlr-seal.habit-cb::before { content: none; display: none; }
+.habit-list--list .habit-item--row .hlr-seal.habit-cb.checked {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+  animation: none;
+}
 .habit-item--row .hlr-seal-hollow,
 .habit-item--row .hlr-seal-fill {
   position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
   width: 32px; height: 32px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -683,17 +707,23 @@ h1 {
 .habit-list--list .habit-item--row.hlr--awaiting { opacity: 0.82; border-color: rgba(144, 144, 168, 0.28); }
 .habit-list--list .habit-item--row.pressing { transform: scale(0.99); }
 
-/* ··· manage + drag handle — subtle in the row. */
+/* ··· manage — W194: a vertically-centered flex control sitting to the
+   LEFT of the seal with a clear gap, so it no longer crowds the seal
+   circle (was a bottom-aligned sibling stuck against it). Order in the
+   row: icon | text | ··· | seal. */
 .habit-item--row .hlr-more {
   flex: 0 0 auto;
-  width: 26px; height: 32px;
+  width: 28px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
   border: 0; background: transparent;
-  color: #5c5c78; font-size: 16px; line-height: 1;
+  color: #5c5c78; font-size: 17px; line-height: 1;
+  letter-spacing: 1px;
   cursor: pointer;
+  opacity: 0.55;
+  margin-right: 2px;
   -webkit-tap-highlight-color: transparent;
-  margin-left: -2px;
 }
-.habit-item--row .hlr-more:active { color: #9090a8; }
+.habit-item--row .hlr-more:active { color: #cfcde0; opacity: 1; }
 .habit-item--row .hlr-drag {
   display: none; /* reorder grip hidden in v1; bindDrag long-press still works */
 }
