@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w195';
+  const APP_BUILD_TAG = '2.2.5-w196';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18093,6 +18093,11 @@
       ? '<span class="hlr-detail">· ' + esc(parts.goal) + '</span>'
       : '';
 
+    // W196 — manage affordance is now a small "Edit" text button on the
+    // stat line (next to the 2×/XP), replacing the ··· that crowded the
+    // seal. Same [data-more] hook → same context menu.
+    const editHtml = '<button class="hlr-edit" data-more aria-label="Edit habit">Edit</button>';
+
     // Apple Health chip (HealthKit habits only).
     const healthChipHtml = isHealthHabit
       ? '<span class="hlr-health' + (stateCls === 'hlr--awaiting' ? ' hlr-health--muted' : '') + '">' +
@@ -18142,13 +18147,13 @@
             '<span class="hlr-name">' + esc(parts.base) + '</span>' +
             streakHtml +
           '</div>' +
-          '<div class="hlr-line2">' + statXpHtml + detailHtml + healthChipHtml + '</div>' +
+          '<div class="hlr-line2">' + statXpHtml + detailHtml + healthChipHtml + editHtml + '</div>' +
           secondaryHtml +
           naBadgeHtml +
         '</div>' +
-        // W194 — ··· manage sits LEFT of the seal (clear gap) so the
-        // two no longer crowd. Drag handle stays inert (reorder off).
-        '<button class="habit-more-btn hlr-more" data-more aria-label="Manage habit">···</button>' +
+        // W196 — manage moved to the "Edit" button on the stat line; the
+        // seal is now the only control on the right. Drag handle stays
+        // inert (reorder off).
         sealHtml +
         '<div class="drag-handle hlr-drag" data-drag aria-hidden="true">' +
           '<span class="drag-dot"></span><span class="drag-dot"></span>' +
@@ -19799,6 +19804,11 @@
           r.className = 'cb-ripple';
           cb.appendChild(r);
           r.addEventListener('animationend', () => r.remove(), { once: true });
+          // v3 Phase 1z.284 W196 — removal backstop. In the List View
+          // seal the ripple is display:none (see styles), so animationend
+          // never fires and the span would otherwise persist in the DOM.
+          // This guarantees cleanup on every completion regardless.
+          setTimeout(() => { try { r.remove(); } catch (_) {} }, 650);
         }
       }
 

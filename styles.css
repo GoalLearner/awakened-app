@@ -707,23 +707,38 @@ h1 {
 .habit-list--list .habit-item--row.hlr--awaiting { opacity: 0.82; border-color: rgba(144, 144, 168, 0.28); }
 .habit-list--list .habit-item--row.pressing { transform: scale(0.99); }
 
-/* ··· manage — W194: a vertically-centered flex control sitting to the
-   LEFT of the seal with a clear gap, so it no longer crowds the seal
-   circle (was a bottom-aligned sibling stuck against it). Order in the
-   row: icon | text | ··· | seal. */
-.habit-item--row .hlr-more {
+/* W196 — manage affordance is now a small "Edit" text button on the
+   stat line (line2), pushed to the right end via margin-left:auto so it
+   sits clear of the stats and well away from the seal circle. Same
+   [data-more] hook → same context menu. */
+.habit-item--row .hlr-edit {
   flex: 0 0 auto;
-  width: 28px; height: 44px;
-  display: flex; align-items: center; justify-content: center;
-  border: 0; background: transparent;
-  color: #5c5c78; font-size: 17px; line-height: 1;
-  letter-spacing: 1px;
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9090a8;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+  text-transform: uppercase;
   cursor: pointer;
-  opacity: 0.55;
-  margin-right: 2px;
   -webkit-tap-highlight-color: transparent;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
-.habit-item--row .hlr-more:active { color: #cfcde0; opacity: 1; }
+.habit-item--row .hlr-edit:active {
+  color: #f4f3fb;
+  border-color: rgba(245, 184, 66, 0.45);
+  background: rgba(245, 184, 66, 0.08);
+}
+
+/* W196 — the List View seal renders ONLY the hollow ring + gold fill.
+   toggleHabit appends a .cb-ripple on completion (and the grid path can
+   inject an auto-verify dot); suppress ANY child of the row seal that
+   isn't our two clean elements so nothing lingers inside the circle. */
+.habit-list--list .habit-item--row .hlr-seal > *:not(.hlr-seal-hollow):not(.hlr-seal-fill) {
+  display: none !important;
+}
 .habit-item--row .hlr-drag {
   display: none; /* reorder grip hidden in v1; bindDrag long-press still works */
 }
