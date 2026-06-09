@@ -30748,9 +30748,13 @@ button.guildhall-summary-tile:active {
 .ar-overlay { position: fixed; inset: 0; z-index: 12300; background: rgba(4,4,13,0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: stretch; justify-content: center; }
 .ar-overlay.hidden { display: none; }
 .ar-sheet { position: relative; width: 100%; max-width: 480px; background: linear-gradient(180deg, #0b0b20 0%, #04040d 62%, #020207 100%); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 80px rgba(0,0,0,0.6); }
-.ar-close { position: absolute; top: 14px; right: 14px; z-index: 6; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: #9090a8; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.ar-close:active { background: rgba(255,255,255,0.1); color: #f5f3fb; }
-.ar-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(env(safe-area-inset-top,0px) + 18px) 20px calc(env(safe-area-inset-bottom,0px) + 16px); display: flex; flex-direction: column; animation: ar-fade 0.28s ease; }
+/* EXIT pill — INSIDE the safe area. The old corner X used top:14px which
+   tucked it behind the iOS status bar / Dynamic Island = untappable.
+   Labeled, 34px touch target, right side; body padded below so the
+   prefight record pill etc. never collide with it. */
+.ar-exit { position: absolute; top: calc(env(safe-area-inset-top,0px) + 12px); right: 16px; z-index: 8; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 18px; border: 1px solid rgba(245,184,66,0.45); background: rgba(245,184,66,0.1); color: #f5b842; font-family: "JetBrains Mono", "SF Mono", ui-monospace, monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ar-exit:active { background: rgba(245,184,66,0.2); }
+.ar-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(env(safe-area-inset-top,0px) + 58px) 20px calc(env(safe-area-inset-bottom,0px) + 16px); display: flex; flex-direction: column; animation: ar-fade 0.28s ease; }
 @keyframes ar-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .ar-kicker { display: inline-flex; align-items: center; gap: 8px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.3em; color: #f5b842; text-transform: uppercase; }
 .ar-kicker::before { content: ""; width: 16px; height: 1px; background: linear-gradient(90deg, transparent, #f5b842); }
