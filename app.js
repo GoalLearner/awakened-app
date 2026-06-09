@@ -5757,6 +5757,209 @@
   } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════
+  // THE ARENA — v3 (post-launch feature) client-side 1v1 combat sim.
+  // A pure, offline "test your hunter" loop: your stat-build + equipped
+  // relics fight a bot scaled to your rank, best-of-3 rounds with a
+  // blow-by-blow log. COSMETIC ONLY — outcomes feed a win/loss record
+  // and a cosmetic title ladder. NO souls, NO XP, NO loot, NO
+  // progression gating. This is a clean NEW system — fully client-side
+  // and single-player: it has no backend, no real opponents, and shares
+  // no code, UI, markers, or naming with the retired competitive PvP
+  // subsystem (which stays fully retired and untouched).
+  //
+  // Layer A = this engine (pure logic, DOM-free, testable via
+  // window.Arena). Layer B (the screen + the Awakening-Path entry
+  // rewire) is wired separately once the ClaudeDesign spec lands.
+  // ───────────────────────────────────────────────────────────────
+
+  const ARENA_RECORD_KEY = 'hb_arena_record';
+  const ARENA_TITLE_KEY  = 'hb_arena_title';   // currently-equipped cosmetic title id
+
+  // Cosmetic title ladder. Win-count + best-streak milestones. Pure
+  // bragging rights — never affects combat power or progression.
+  const ARENA_TITLES = [
+    { id: 'arena_initiate',    name: 'Arena Initiate',  kind: 'wins',   need: 1,  blurb: 'Won your first bout.' },
+    { id: 'arena_contender',   name: 'Arena Contender', kind: 'wins',   need: 10, blurb: '10 victories.' },
+    { id: 'arena_veteran',     name: 'Arena Veteran',   kind: 'wins',   need: 25, blurb: '25 victories.' },
+    { id: 'arena_champion',    name: 'Arena Champion',  kind: 'wins',   need: 50, blurb: '50 victories.' },
+    { id: 'arena_unbroken',    name: 'Unbroken',        kind: 'streak', need: 5,  blurb: '5-win streak.' },
+    { id: 'arena_untouchable', name: 'Untouchable',     kind: 'streak', need: 10, blurb: '10-win streak.' },
+  ];
+
+  function _arenaTitleUnlocked(t, rec) {
+    return (t.kind === 'wins')   ? (rec.wins >= t.need)
+         : (t.kind === 'streak') ? (rec.bestStreak >= t.need)
+         : false;
+  }
+
+  // ── persistence ──────────────────────────────────────────────────
+  function getArenaRecord() {
+    try {
+      const r = JSON.parse(localStorage.getItem(ARENA_RECORD_KEY) || '{}');
+      return {
+        wins:          (r && typeof r.wins === 'number' && r.wins > 0) ? r.wins : 0,
+        losses:        (r && typeof r.losses === 'number' && r.losses > 0) ? r.losses : 0,
+        currentStreak: (r && typeof r.currentStreak === 'number' && r.currentStreak > 0) ? r.currentStreak : 0,
+        bestStreak:    (r && typeof r.bestStreak === 'number' && r.bestStreak > 0) ? r.bestStreak : 0,
+      };
+    } catch (_) { return { wins: 0, losses: 0, currentStreak: 0, bestStreak: 0 }; }
+  }
+  function _persistArenaRecord(rec) {
+    try { localStorage.setItem(ARENA_RECORD_KEY, JSON.stringify(rec)); } catch (_) {}
+  }
+  function _recordArenaResult(won) {
+    const r = getArenaRecord();
+    if (won) {
+      r.wins += 1;
+      r.currentStreak += 1;
+      if (r.currentStreak > r.bestStreak) r.bestStreak = r.currentStreak;
+    } else {
+      r.losses += 1;
+      r.currentStreak = 0;
+    }
+    _persistArenaRecord(r);
+    return r;
+  }
+  function arenaUnlockedTitles() {
+    const rec = getArenaRecord();
+    return ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, rec));
+  }
+  function getEquippedArenaTitle() {
+    try {
+      const id = localStorage.getItem(ARENA_TITLE_KEY);
+      if (!id) return null;
+      const t = ARENA_TITLES.find(x => x.id === id);
+      // Only honour it if still unlocked (defensive against tampering).
+      return (t && _arenaTitleUnlocked(t, getArenaRecord())) ? t : null;
+    } catch (_) { return null; }
+  }
+  function setEquippedArenaTitle(id) {
+    // id === null clears the title. Otherwise must be an unlocked title.
+    try {
+      if (id === null) { localStorage.removeItem(ARENA_TITLE_KEY); return true; }
+      const t = ARENA_TITLES.find(x => x.id === id);
+      if (!t || !_arenaTitleUnlocked(t, getArenaRecord())) return false;
+      localStorage.setItem(ARENA_TITLE_KEY, id);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  // ── combat derivation ────────────────────────────────────────────
+  // effective stat = stat LEVEL (1..20) + equipped-gear bonus for that
+  // stat. Gear bonuses are lowercase-keyed; stats are uppercase-id'd.
+  function _arenaPlayerStatline() {
+    let gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    try { gear = aggregateEquippedBonuses() || gear; } catch (_) {}
+    const out = {};
+    STATS.forEach(st => {
+      const lv = statLevel((stats[st.id] && stats[st.id].pts) || 0);
+      out[st.id] = lv + (gear[st.id.toLowerCase()] || 0);
+    });
+    return out; // { STR, VIT, INT, FOCUS, WILL, WLT }
+  }
+  // Map the six stats to combat roles so EVERY stat matters:
+  //   Attack  = STR(lead) + FOCUS(accuracy)
+  //   Defense = VIT(lead) + WILL(resilience)
+  //   Edge    = INT(initiative) + WLT(lucky breaks)
+  function _arenaCombatProfile(s) {
+    const attack  = s.STR * 1.6 + s.FOCUS * 1.0;
+    const defense = s.VIT * 1.4 + s.WILL * 1.0;
+    const edge    = s.INT * 0.8 + s.WLT  * 0.8;
+    return { attack, defense, edge, power: attack + defense + edge, stats: s };
+  }
+
+  const _ARENA_BOT_PREFIX = ['Grim', 'Pale', 'Ashen', 'Hollow', 'Iron', 'Dread', 'Sable', 'Gaunt', 'Riven', 'Wraith'];
+  const _ARENA_BOT_TITLE  = ['Warden', 'Stalker', 'Revenant', 'Husk', 'Sentinel', 'Reaver', 'Pilgrim', 'Outcast', 'Shade', 'Marauder'];
+  function _arenaBotName() {
+    const p = _ARENA_BOT_PREFIX[Math.floor(Math.random() * _ARENA_BOT_PREFIX.length)];
+    const t = _ARENA_BOT_TITLE[Math.floor(Math.random() * _ARENA_BOT_TITLE.length)];
+    return 'The ' + p + ' ' + t;
+  }
+
+  // Generate a bot scaled to the player's power. Centered slightly
+  // BELOW the player (factor mean ≈ 0.96) so wins feel earned but real
+  // losses still happen → ~60–65% player win-rate over time.
+  function _arenaGenerateBot(playerProfile, rankLabel) {
+    const factor = 0.85 + Math.random() * 0.20;            // 0.85 .. 1.05 (mean 0.95 → ~61% player win, all builds)
+    const scale  = playerProfile.power > 0 ? (playerProfile.power * factor) / playerProfile.power : factor;
+    // Distribute the bot's power across attack/defense/edge with some
+    // variance so the comparison panel isn't a mirror of the player.
+    const jitter = () => 0.85 + Math.random() * 0.30;       // 0.85 .. 1.15
+    const attack  = Math.max(1, playerProfile.attack  * scale * jitter());
+    const defense = Math.max(1, playerProfile.defense * scale * jitter());
+    const edge    = Math.max(1, playerProfile.edge    * scale * jitter());
+    return {
+      name: _arenaBotName(),
+      rankLabel: rankLabel,
+      attack, defense, edge,
+      power: attack + defense + edge,
+      isBot: true,
+    };
+  }
+
+  // Resolve a best-of-3. Each round both sides roll power × (0.7..1.3),
+  // so stats set the ODDS and the dice decide the ROUND (an underdog
+  // can still steal a round). First to 2 round-wins takes the bout.
+  function _arenaRoll(power) { return power * (0.7 + Math.random() * 0.6); }
+  function _arenaResolve(player, bot) {
+    let pWins = 0, bWins = 0;
+    const rounds = [];
+    for (let i = 0; i < 3 && pWins < 2 && bWins < 2; i++) {
+      const pRoll = _arenaRoll(player.power);
+      const bRoll = _arenaRoll(bot.power);
+      const playerWon = pRoll >= bRoll;
+      if (playerWon) pWins += 1; else bWins += 1;
+      const margin = Math.abs(pRoll - bRoll) / Math.max(pRoll, bRoll, 1);
+      rounds.push({
+        index: i + 1,
+        pRoll: Math.round(pRoll),
+        bRoll: Math.round(bRoll),
+        playerWon,
+        margin,           // 0..1 — used by the UI to pick flavour text
+      });
+    }
+    return { playerWon: pWins > bWins, pWins, bWins, rounds };
+  }
+
+  // The one entry the UI calls. Returns everything needed to render the
+  // pre-fight panel, the round log, the result, and any newly-unlocked
+  // titles. Pure — the UI owns presentation/animation.
+  function runArenaFight() {
+    const sline   = _arenaPlayerStatline();
+    const profile = _arenaCombatProfile(sline);
+    let rankLabel = 'E';
+    try { rankLabel = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
+
+    const player = {
+      name: (typeof playerName === 'string' && playerName) ? playerName : 'Hunter',
+      rankLabel,
+      attack: profile.attack, defense: profile.defense, edge: profile.edge,
+      power: profile.power, stats: sline, isBot: false,
+    };
+    const bot = _arenaGenerateBot(profile, rankLabel);
+
+    const before = getArenaRecord();
+    const result = _arenaResolve(player, bot);
+    const record = _recordArenaResult(result.playerWon);
+    const newTitles = ARENA_TITLES.filter(t =>
+      !_arenaTitleUnlocked(t, before) && _arenaTitleUnlocked(t, record));
+
+    return { player, bot, result, record, newTitles };
+  }
+
+  try {
+    window.Arena = {
+      fight:           runArenaFight,
+      record:          getArenaRecord,
+      titles:          () => ARENA_TITLES.slice(),
+      unlockedTitles:  arenaUnlockedTitles,
+      getTitle:        getEquippedArenaTitle,
+      setTitle:        setEquippedArenaTitle,
+      _statline:       _arenaPlayerStatline,   // debug
+    };
+  } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════
   // HUNTER BUILD — v3 Phase 1d pivot from body-slot equipment to
   // MOBA-style 6-slot active build. Replaces the visible Armory UI;
   // the legacy hb_pvp_equipped storage above is preserved untouched
