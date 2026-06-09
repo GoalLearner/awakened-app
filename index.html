@@ -2230,6 +2230,12 @@
        (nodding pose). Counter shows live count; over-cap state shows
        amber pill; ROOM MADE affirmation appears when count drops
        from >25 to <=25. -->
+  <!-- Relic Marketplace — buy/sell confirm sheet. Content injected by
+       app.js openMarketSheet(); a single shell serves both buy + sell. -->
+  <div id="market-overlay" class="market-overlay hidden" aria-hidden="true">
+    <div id="market-sheet" class="market-sheet" role="dialog" aria-modal="true" aria-label="Relic trade"></div>
+  </div>
+
   <div id="mv-overlay" class="mv-overlay hidden" aria-hidden="true">
     <div class="mv-sheet" role="dialog" aria-modal="true" aria-labelledby="mv-title">
       <div class="mv-hairline" aria-hidden="true"></div>
