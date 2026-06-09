@@ -5772,73 +5772,186 @@
   // rewire) is wired separately once the ClaudeDesign spec lands.
   // ───────────────────────────────────────────────────────────────
 
-  const ARENA_RECORD_KEY = 'hb_arena_record';
-  const ARENA_TITLE_KEY  = 'hb_arena_title';   // currently-equipped cosmetic title id
+  // ═══════════════════════════════════════════════════════════════
+  // THE ASCENT — a 100-floor combat tower inside The Arena.
+  //   • You attempt your CURRENT floor; beating it advances you.
+  //   • Cleared floors are re-fightable for rating (no re-advance).
+  //   • Absolute power curve: floor power is FIXED (not scaled to you),
+  //     so the floor you reach reflects your real build strength.
+  //   • 10 named milestone bosses every 10th floor (each +18% power),
+  //     each granting a title. Regular floors are procedurally named.
+  //   • Two prestige axes: FLOOR reached (build) + RATING (ELO skill).
+  //   • Daily fight limit paces the climb. Cosmetic only — never
+  //     touches souls / XP / rank / progression.
+  // ═══════════════════════════════════════════════════════════════
+  const ARENA_V2_KEY    = 'hb_arena_v2';          // new tower state
+  const ARENA_TITLE_KEY = 'hb_arena_title';       // equipped cosmetic title id
+  const ARENA_V2_MIGRATED_KEY = 'hb_arena_v2_migrated';
+  const ARENA_RECORD_KEY = 'hb_arena_record';     // legacy (pre-Ascent) — discarded on migrate
 
-  // Cosmetic title ladder. Win-count + best-streak milestones. Pure
-  // bragging rights — never affects combat power or progression.
-  const ARENA_TITLES = [
-    { id: 'arena_initiate',    name: 'Arena Initiate',  kind: 'wins',   need: 1,  blurb: 'Won your first bout.' },
-    { id: 'arena_contender',   name: 'Arena Contender', kind: 'wins',   need: 10, blurb: '10 victories.' },
-    { id: 'arena_veteran',     name: 'Arena Veteran',   kind: 'wins',   need: 25, blurb: '25 victories.' },
-    { id: 'arena_champion',    name: 'Arena Champion',  kind: 'wins',   need: 50, blurb: '50 victories.' },
-    { id: 'arena_unbroken',    name: 'Unbroken',        kind: 'streak', need: 5,  blurb: '5-win streak.' },
-    { id: 'arena_untouchable', name: 'Untouchable',     kind: 'streak', need: 10, blurb: '10-win streak.' },
+  const ASCENT_FLOORS      = 100;
+  const ASCENT_DAILY_LIMIT = 6;
+  const ASCENT_RATING_START = 1000;
+  const ASCENT_RATING_FLOOR = 100;
+  const ASCENT_RATING_K     = 24;
+  // Absolute floor power: BASE × floor^EXP  → F1≈5, F10≈112, F50≈990, F100≈2506.
+  const _ASCENT_BASE = 5, _ASCENT_EXP = 1.35, _ASCENT_BOSS_BUMP = 1.18;
+  function _ascentFloorPower(floor) {
+    const p = _ASCENT_BASE * Math.pow(Math.max(1, floor), _ASCENT_EXP);
+    return (floor % 10 === 0) ? p * _ASCENT_BOSS_BUMP : p;
+  }
+  function _ascentIsBoss(floor) { return floor % 10 === 0; }
+
+  // 10 bands of 10 floors, rank-tiered + themed.
+  const ASCENT_BANDS = [
+    { from: 1,  to: 10,  name: 'The Threshold',     tier: 'E' },
+    { from: 11, to: 20,  name: 'The Undercroft',    tier: 'E' },
+    { from: 21, to: 30,  name: 'The Ashen Climb',   tier: 'D' },
+    { from: 31, to: 40,  name: 'The Hollow Reach',  tier: 'D' },
+    { from: 41, to: 50,  name: 'The Gilded Tier',   tier: 'C' },
+    { from: 51, to: 60,  name: 'The Riven Span',    tier: 'C' },
+    { from: 61, to: 70,  name: 'The Stormcrown',    tier: 'B' },
+    { from: 71, to: 80,  name: 'The Pale Expanse',  tier: 'B' },
+    { from: 81, to: 90,  name: 'The Sovereign Steps', tier: 'A' },
+    { from: 91, to: 100, name: 'The Summit',        tier: 'S' },
   ];
+  function _ascentBandFor(floor) {
+    return ASCENT_BANDS.find(b => floor >= b.from && floor <= b.to) || ASCENT_BANDS[0];
+  }
 
-  function _arenaTitleUnlocked(t, rec) {
-    return (t.kind === 'wins')   ? (rec.wins >= t.need)
-         : (t.kind === 'streak') ? (rec.bestStreak >= t.need)
+  // Archetypes redistribute an opponent's total power across the three
+  // roles (sum of weights = 3, so total power is preserved).
+  const ASCENT_ARCHETYPES = {
+    balanced:    { label: 'Balanced',     atk: 1.00, def: 1.00, edge: 1.00 },
+    aggressor:   { label: 'Aggressor',    atk: 1.45, def: 0.80, edge: 0.75 },
+    sentinel:    { label: 'Sentinel',     atk: 0.80, def: 1.45, edge: 0.75 },
+    trickster:   { label: 'Trickster',    atk: 0.78, def: 0.77, edge: 1.45 },
+    glasscannon: { label: 'Glass Cannon', atk: 1.70, def: 0.55, edge: 0.75 },
+    juggernaut:  { label: 'Juggernaut',   atk: 0.75, def: 1.70, edge: 0.55 },
+  };
+
+  // 10 hand-crafted milestone bosses (floor → boss). Each grants a title.
+  const ASCENT_BOSSES = {
+    10:  { name: 'The Hollow Footman',  arch: 'aggressor',   title: { id: 'asc_brawler',      name: 'Brawler' } },
+    20:  { name: 'The Pale Sentinel',   arch: 'sentinel',    title: { id: 'asc_wallbreaker',  name: 'Wallbreaker' } },
+    30:  { name: 'The Iron Revenant',   arch: 'juggernaut',  title: { id: 'asc_ironbreaker',  name: 'Ironbreaker' } },
+    40:  { name: 'The Wraith Outcast',  arch: 'trickster',   title: { id: 'asc_edgewalker',   name: 'Edgewalker' } },
+    50:  { name: 'The Ashen Duelist',   arch: 'glasscannon', title: { id: 'asc_duelist',      name: 'Duelist' } },
+    60:  { name: 'The Vow-Eater',       arch: 'aggressor',   title: { id: 'asc_unbroken',     name: 'Unbroken' } },
+    70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    title: { id: 'asc_tyrantsbane',  name: 'Tyrantsbane' } },
+    80:  { name: 'The Silent Warden',   arch: 'sentinel',    title: { id: 'asc_siegebreaker', name: 'Siegebreaker' } },
+    90:  { name: 'The Dread Harbinger', arch: 'trickster',   title: { id: 'asc_shadowcaller', name: 'Shadowcaller' } },
+    100: { name: 'The Arena Sovereign', arch: 'glasscannon', title: { id: 'asc_sovereign',    name: 'Arena Sovereign' } },
+  };
+
+  // Procedural name pool for the 90 regular floors (stable per floor via
+  // a deterministic seed so a given floor always shows the same foe).
+  const _ASC_PREFIX = ['Grim', 'Pale', 'Ashen', 'Hollow', 'Iron', 'Dread', 'Sable', 'Gaunt', 'Riven', 'Wraith', 'Cinder', 'Mourn', 'Bleak', 'Vile', 'Stark', 'Umbral'];
+  const _ASC_NOUN   = ['Warden', 'Stalker', 'Revenant', 'Husk', 'Sentinel', 'Reaver', 'Pilgrim', 'Outcast', 'Shade', 'Marauder', 'Acolyte', 'Vagrant', 'Herald', 'Drifter', 'Penitent', 'Forsworn'];
+  const _ASC_ARCH_ROTATION = ['balanced', 'aggressor', 'sentinel', 'trickster', 'balanced', 'juggernaut', 'aggressor', 'trickster', 'sentinel', 'glasscannon'];
+  function _ascentSeed(floor) { let h = floor * 2654435761 % 2147483647; return () => (h = (h * 48271) % 2147483647) / 2147483647; }
+
+  // Cosmetic titles: 10 boss titles + 4 rating milestones. Pure bragging
+  // rights — never affect combat power or progression.
+  const ARENA_TITLES = (function () {
+    const boss = Object.keys(ASCENT_BOSSES).map(f => {
+      const b = ASCENT_BOSSES[f];
+      return { id: b.title.id, name: b.title.name, kind: 'boss', floor: parseInt(f, 10), blurb: 'Cleared floor ' + f + ' · ' + b.name };
+    });
+    const rating = [
+      { id: 'asc_rank_contender', name: 'Ranked Contender', kind: 'rating', need: 1200, blurb: 'Reached 1200 rating.' },
+      { id: 'asc_rank_duelist',   name: 'Ranked Duelist',   kind: 'rating', need: 1500, blurb: 'Reached 1500 rating.' },
+      { id: 'asc_rank_elite',     name: 'Ranked Elite',     kind: 'rating', need: 1800, blurb: 'Reached 1800 rating.' },
+      { id: 'asc_rank_apex',      name: 'Apex',             kind: 'rating', need: 2000, blurb: 'Reached 2000 rating.' },
+    ];
+    return boss.concat(rating);
+  })();
+
+  function _arenaTitleUnlocked(t, st) {
+    return (t.kind === 'boss')   ? (st.highestCleared >= t.floor)
+         : (t.kind === 'rating') ? (st.bestRating >= t.need)
          : false;
   }
 
-  // ── persistence ──────────────────────────────────────────────────
-  function getArenaRecord() {
+  // ── v2 tower state ───────────────────────────────────────────────
+  function _ascentDefaultState() {
+    return {
+      rating: ASCENT_RATING_START,
+      bestRating: ASCENT_RATING_START,
+      currentFloor: 1,        // next floor to attempt (highestCleared + 1)
+      highestCleared: 0,      // highest floor beaten (0 = none yet)
+      wins: 0, losses: 0,
+      streak: 0, bestStreak: 0,
+      dailyDate: '', dailyUsed: 0,
+    };
+  }
+  // One-time soft reset: discard legacy hb_arena_record, seed fresh v2.
+  function _ascentMigrateIfNeeded() {
     try {
-      const r = JSON.parse(localStorage.getItem(ARENA_RECORD_KEY) || '{}');
-      return {
-        wins:          (r && typeof r.wins === 'number' && r.wins > 0) ? r.wins : 0,
-        losses:        (r && typeof r.losses === 'number' && r.losses > 0) ? r.losses : 0,
-        currentStreak: (r && typeof r.currentStreak === 'number' && r.currentStreak > 0) ? r.currentStreak : 0,
-        bestStreak:    (r && typeof r.bestStreak === 'number' && r.bestStreak > 0) ? r.bestStreak : 0,
-      };
-    } catch (_) { return { wins: 0, losses: 0, currentStreak: 0, bestStreak: 0 }; }
+      if (localStorage.getItem(ARENA_V2_MIGRATED_KEY) === '1') return;
+      localStorage.removeItem(ARENA_RECORD_KEY);           // drop inflated legacy W/L
+      localStorage.removeItem(ARENA_TITLE_KEY);            // legacy title ids no longer exist
+      localStorage.setItem(ARENA_V2_KEY, JSON.stringify(_ascentDefaultState()));
+      localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
+    } catch (_) {}
   }
-  function _persistArenaRecord(rec) {
-    try { localStorage.setItem(ARENA_RECORD_KEY, JSON.stringify(rec)); } catch (_) {}
+  function getAscentState() {
+    _ascentMigrateIfNeeded();
+    let st;
+    try { st = JSON.parse(localStorage.getItem(ARENA_V2_KEY) || '{}'); } catch (_) { st = {}; }
+    const d = _ascentDefaultState();
+    const num = (v, def) => (typeof v === 'number' && isFinite(v) && v >= 0) ? v : def;
+    st = {
+      rating:         num(st.rating, d.rating),
+      bestRating:     num(st.bestRating, d.bestRating),
+      currentFloor:   Math.min(ASCENT_FLOORS, Math.max(1, num(st.currentFloor, d.currentFloor))),
+      highestCleared: Math.min(ASCENT_FLOORS, num(st.highestCleared, d.highestCleared)),
+      wins:           num(st.wins, 0),
+      losses:         num(st.losses, 0),
+      streak:         num(st.streak, 0),
+      bestStreak:     num(st.bestStreak, 0),
+      dailyDate:      (typeof st.dailyDate === 'string') ? st.dailyDate : '',
+      dailyUsed:      num(st.dailyUsed, 0),
+    };
+    // keep invariants
+    if (st.currentFloor <= st.highestCleared) st.currentFloor = Math.min(ASCENT_FLOORS, st.highestCleared + 1);
+    if (st.bestRating < st.rating) st.bestRating = st.rating;
+    // daily roll-over
+    let today = ''; try { today = getDeviceLocalDate(); } catch (_) {}
+    if (today && st.dailyDate !== today) { st.dailyDate = today; st.dailyUsed = 0; }
+    return st;
   }
-  function _recordArenaResult(won) {
-    const r = getArenaRecord();
-    if (won) {
-      r.wins += 1;
-      r.currentStreak += 1;
-      if (r.currentStreak > r.bestStreak) r.bestStreak = r.currentStreak;
-    } else {
-      r.losses += 1;
-      r.currentStreak = 0;
-    }
-    _persistArenaRecord(r);
-    return r;
+  function _persistAscentState(st) {
+    try { localStorage.setItem(ARENA_V2_KEY, JSON.stringify(st)); } catch (_) {}
   }
+  function ascentFightsLeft() {
+    const st = getAscentState();
+    return Math.max(0, ASCENT_DAILY_LIMIT - st.dailyUsed);
+  }
+  // Expected score (ELO) of the player vs a floor's implied rating.
+  function _ascentFloorRating(floor) { return 800 + floor * 14; }   // F1≈814 … F100≈2200
+  function _ascentRatingDelta(playerRating, floorRating, won) {
+    const expected = 1 / (1 + Math.pow(10, (floorRating - playerRating) / 400));
+    return Math.round(ASCENT_RATING_K * ((won ? 1 : 0) - expected));
+  }
+
   function arenaUnlockedTitles() {
-    const rec = getArenaRecord();
-    return ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, rec));
+    const st = getAscentState();
+    return ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st));
   }
   function getEquippedArenaTitle() {
     try {
       const id = localStorage.getItem(ARENA_TITLE_KEY);
       if (!id) return null;
       const t = ARENA_TITLES.find(x => x.id === id);
-      // Only honour it if still unlocked (defensive against tampering).
-      return (t && _arenaTitleUnlocked(t, getArenaRecord())) ? t : null;
+      return (t && _arenaTitleUnlocked(t, getAscentState())) ? t : null;  // only if still unlocked
     } catch (_) { return null; }
   }
   function setEquippedArenaTitle(id) {
-    // id === null clears the title. Otherwise must be an unlocked title.
     try {
       if (id === null) { localStorage.removeItem(ARENA_TITLE_KEY); return true; }
       const t = ARENA_TITLES.find(x => x.id === id);
-      if (!t || !_arenaTitleUnlocked(t, getArenaRecord())) return false;
+      if (!t || !_arenaTitleUnlocked(t, getAscentState())) return false;
       localStorage.setItem(ARENA_TITLE_KEY, id);
       return true;
     } catch (_) { return false; }
@@ -5878,32 +5991,32 @@
     return { attack, defense, edge, power: attack + defense + edge, stats: s };
   }
 
-  const _ARENA_BOT_PREFIX = ['Grim', 'Pale', 'Ashen', 'Hollow', 'Iron', 'Dread', 'Sable', 'Gaunt', 'Riven', 'Wraith'];
-  const _ARENA_BOT_TITLE  = ['Warden', 'Stalker', 'Revenant', 'Husk', 'Sentinel', 'Reaver', 'Pilgrim', 'Outcast', 'Shade', 'Marauder'];
-  function _arenaBotName() {
-    const p = _ARENA_BOT_PREFIX[Math.floor(Math.random() * _ARENA_BOT_PREFIX.length)];
-    const t = _ARENA_BOT_TITLE[Math.floor(Math.random() * _ARENA_BOT_TITLE.length)];
-    return 'The ' + p + ' ' + t;
-  }
-
-  // Generate a bot scaled to the player's power. Centered slightly
-  // BELOW the player (factor mean ≈ 0.96) so wins feel earned but real
-  // losses still happen → ~60–65% player win-rate over time.
-  function _arenaGenerateBot(playerProfile, rankLabel) {
-    const factor = 0.85 + Math.random() * 0.20;            // 0.85 .. 1.05 (mean 0.95 → ~61% player win, all builds)
-    const scale  = playerProfile.power > 0 ? (playerProfile.power * factor) / playerProfile.power : factor;
-    // Distribute the bot's power across attack/defense/edge with some
-    // variance so the comparison panel isn't a mirror of the player.
-    const jitter = () => 0.85 + Math.random() * 0.30;       // 0.85 .. 1.15
-    const attack  = Math.max(1, playerProfile.attack  * scale * jitter());
-    const defense = Math.max(1, playerProfile.defense * scale * jitter());
-    const edge    = Math.max(1, playerProfile.edge    * scale * jitter());
+  // Build the opponent that occupies a given floor. Bosses are the
+  // hand-crafted ASCENT_BOSSES entries; regular floors are procedurally
+  // named (deterministic per floor) with a rotating archetype. Power is
+  // the ABSOLUTE floor curve (not scaled to the player) and is split
+  // across roles by the archetype weights (sum 3 → total preserved).
+  function _ascentOpponent(floor) {
+    const f = Math.min(ASCENT_FLOORS, Math.max(1, floor | 0));
+    const band  = _ascentBandFor(f);
+    const power = _ascentFloorPower(f);
+    let name, archKey;
+    if (_ascentIsBoss(f)) {
+      const b = ASCENT_BOSSES[f];
+      name = b.name; archKey = b.arch;
+    } else {
+      const rnd = _ascentSeed(f);
+      const p = _ASC_PREFIX[Math.floor(rnd() * _ASC_PREFIX.length)];
+      const n = _ASC_NOUN[Math.floor(rnd() * _ASC_NOUN.length)];
+      name = 'The ' + p + ' ' + n;
+      archKey = _ASC_ARCH_ROTATION[f % _ASC_ARCH_ROTATION.length];
+    }
+    const a = ASCENT_ARCHETYPES[archKey] || ASCENT_ARCHETYPES.balanced;
+    const per = power / 3;
+    const attack = per * a.atk, defense = per * a.def, edge = per * a.edge;
     return {
-      name: _arenaBotName(),
-      rankLabel: rankLabel,
-      attack, defense, edge,
-      power: attack + defense + edge,
-      isBot: true,
+      name, rankLabel: band.tier, archetype: a.label, archKey,
+      attack, defense, edge, power, floor: f, isBoss: _ascentIsBoss(f), isBot: true,
     };
   }
 
@@ -5931,38 +6044,97 @@
     return { playerWon: pWins > bWins, pWins, bWins, rounds };
   }
 
-  // Build a matchup (player profile + a fresh bot) WITHOUT resolving or
-  // recording — so the pre-fight screen can show real opponent numbers,
-  // then resolve THAT same bot when the user taps FIGHT.
-  function arenaMatchup() {
+  // Build the player's combatant object (live stats + gear).
+  function _ascentPlayerCombatant() {
     const sline   = _arenaPlayerStatline();
     const profile = _arenaCombatProfile(sline);
     let rankLabel = 'E';
     try { rankLabel = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
-    const player = {
+    return {
       name: (typeof playerName === 'string' && playerName) ? playerName : 'Hunter',
       rankLabel,
       attack: profile.attack, defense: profile.defense, edge: profile.edge,
       power: profile.power, stats: sline, isBot: false,
     };
-    const bot = _arenaGenerateBot(profile, rankLabel);
-    return { player, bot };
   }
-  // Resolve a given matchup + commit the record. Returns the round
-  // result, the updated record, and any newly-unlocked titles.
+  // Build a matchup for a specific floor WITHOUT resolving/recording — so
+  // the pre-fight screen shows real opponent numbers, then resolves the
+  // same floor on FIGHT. `floor` defaults to the player's current floor.
+  // `advances` = true when this is a fresh attempt at currentFloor (a win
+  // moves you up); re-fighting a CLEARED floor only affects rating.
+  function arenaMatchup(floor) {
+    const st = getAscentState();
+    const f  = Math.min(ASCENT_FLOORS, Math.max(1, (typeof floor === 'number' ? floor : st.currentFloor) | 0));
+    return {
+      floor: f,
+      advances: (f === st.currentFloor && st.highestCleared < ASCENT_FLOORS && f > st.highestCleared),
+      player: _ascentPlayerCombatant(),
+      bot:    _ascentOpponent(f),
+      fightsLeft: ascentFightsLeft(),
+    };
+  }
+  // Resolve a matchup + commit state (record, rating, floor advance,
+  // daily decrement, title unlocks). Returns everything the UI needs.
+  // Refuses (returns null) if the daily limit is spent.
   function arenaResolveMatchup(m) {
-    const before    = getArenaRecord();
-    const result    = _arenaResolve(m.player, m.bot);
-    const record    = _recordArenaResult(result.playerWon);
+    const st = getAscentState();
+    if (st.dailyUsed >= ASCENT_DAILY_LIMIT) return null;   // out of fights today
+    const beforeTitles = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st));
+    const beforeTitleIds = beforeTitles.map(t => t.id);
+
+    const result = _arenaResolve(m.player, m.bot);
+    const won = result.playerWon;
+
+    // rating (ELO vs the floor's implied rating)
+    const ratingBefore = st.rating;
+    const delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
+    st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
+    if (st.rating > st.bestRating) st.bestRating = st.rating;
+
+    // record + streak
+    st.dailyUsed += 1;
+    if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
+    else     { st.losses += 1; st.streak = 0; }
+
+    // floor advance — only when this was a fresh attempt at currentFloor
+    let advanced = false, floorCleared = null, bossCleared = null;
+    if (won && m.advances && m.floor === st.currentFloor && m.floor > st.highestCleared) {
+      st.highestCleared = m.floor;
+      st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
+      advanced = true; floorCleared = m.floor;
+      if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+    }
+
+    _persistAscentState(st);
+
     const newTitles = ARENA_TITLES.filter(t =>
-      !_arenaTitleUnlocked(t, before) && _arenaTitleUnlocked(t, record));
-    return { result, record, newTitles };
+      beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
+
+    return {
+      result, state: st, won,
+      ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
+      advanced, floorCleared, bossCleared, newTitles,
+      fightsLeft: Math.max(0, ASCENT_DAILY_LIMIT - st.dailyUsed),
+    };
   }
-  // Convenience: full matchup + resolve in one call (headless testing).
+  // Convenience: matchup + resolve at the current floor (headless test).
   function runArenaFight() {
     const m = arenaMatchup();
     const r = arenaResolveMatchup(m);
-    return { player: m.player, bot: m.bot, result: r.result, record: r.record, newTitles: r.newTitles };
+    return r ? { player: m.player, bot: m.bot, floor: m.floor, result: r.result, state: r.state, newTitles: r.newTitles } : null;
+  }
+
+  // Expose floor data for the tower UI (no state mutation).
+  function ascentFloorInfo(floor) {
+    const st = getAscentState();
+    const f  = Math.min(ASCENT_FLOORS, Math.max(1, floor | 0));
+    return {
+      floor: f, band: _ascentBandFor(f), isBoss: _ascentIsBoss(f),
+      opponent: _ascentOpponent(f),
+      cleared: f <= st.highestCleared,
+      current: f === st.currentFloor,
+      locked:  f > st.currentFloor,
+    };
   }
 
   try {
@@ -5970,7 +6142,11 @@
       matchup:         arenaMatchup,
       resolve:         arenaResolveMatchup,
       fight:           runArenaFight,
-      record:          getArenaRecord,
+      state:           getAscentState,
+      fightsLeft:      ascentFightsLeft,
+      floorInfo:       ascentFloorInfo,
+      bands:           () => ASCENT_BANDS.slice(),
+      bosses:          () => ASCENT_BOSSES,
       titles:          () => ARENA_TITLES.slice(),
       unlockedTitles:  arenaUnlockedTitles,
       getTitle:        getEquippedArenaTitle,
