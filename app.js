@@ -6223,30 +6223,52 @@
   // ══════════════════════════════════════════════════════════════════
   // RARE + ULTRA-RARE only (commons are filler, untradeable). Option A:
   // any tradeable relic can be BOUGHT if you have the souls — no
-  // discovery gate, RPG-shop style. Buy price > sell value (anti-
-  // arbitrage spread). Respects the existing STACK_CAPS. Reuses the
-  // souls + inventory plumbing — no new storage, no backend. Purchases
-  // are NOT drops: they skip the reveal animation + the "NEW" header
-  // pill (a bought relic simply appears owned).
-  const RELIC_PRICES = {
-    rare:       { buy: 250, sell: 80  },
-    ultra_rare: { buy: 800, sell: 250 },
-    // common: absent → untradeable
-  };
+  // discovery gate, RPG-shop style. Respects the existing STACK_CAPS.
+  // Reuses the souls + inventory plumbing — no new storage, no backend.
+  // Purchases are NOT drops: they skip the reveal animation + the "NEW"
+  // header pill (a bought relic simply appears owned).
+  //
+  // PRICING — per-item, NOT flat. Scales with all three progression axes
+  // so "the harder the task, the higher the dungeon, the stronger the
+  // item, the more it costs":
+  //   buy = TIER_BASE[card.tier] × RARITY_MULT[rarity]   (dungeon × rarity)
+  //         + STAT_WEIGHT × Σ(stat bonuses)              (item strength)
+  //   sell = buy × SELL_RATIO                             (anti-arbitrage)
+  // Rounded to the nearest 10. A late-game B-rank ultra runs ~7× an
+  // early E-rank rare. TIER_BASE includes A/S so future content prices
+  // itself automatically. All knobs are tunable here.
+  const RELIC_TRADEABLE_RARITIES = { rare: true, ultra_rare: true };
+  const RELIC_TIER_BASE   = { E: 90, D: 160, C: 280, B: 480, A: 760, S: 1200 };
+  const RELIC_RARITY_MULT = { rare: 1.0, ultra_rare: 1.9 };
+  const RELIC_STAT_WEIGHT = 10;    // souls per total stat-bonus point
+  const RELIC_SELL_RATIO  = 0.30;  // sell ≈ 30% of buy (≈3.3× spread)
 
+  function _relicTotalBonus(card) {
+    const b = card && card.bonuses;
+    if (!b) return 0;
+    let t = 0;
+    ['str', 'vit', 'int', 'focus', 'will', 'wlt'].forEach(k => {
+      const v = +b[k];
+      if (isFinite(v) && v > 0) t += v;
+    });
+    return t;
+  }
   function _relicIsTradeable(cardId) {
     const card = CARDS[cardId];
-    return !!(card && RELIC_PRICES[card.rarity]);
+    return !!(card && RELIC_TRADEABLE_RARITIES[card.rarity]);
   }
   function relicBuyPrice(cardId) {
     const card = CARDS[cardId];
-    const p = card && RELIC_PRICES[card.rarity];
-    return p ? p.buy : null;
+    if (!card || !_relicIsTradeable(cardId)) return null;
+    const base = (RELIC_TIER_BASE[card.tier] != null) ? RELIC_TIER_BASE[card.tier] : RELIC_TIER_BASE.C;
+    const mult = RELIC_RARITY_MULT[card.rarity] || 1;
+    const raw  = base * mult + RELIC_STAT_WEIGHT * _relicTotalBonus(card);
+    return Math.max(10, Math.round(raw / 10) * 10);
   }
   function relicSellPrice(cardId) {
-    const card = CARDS[cardId];
-    const p = card && RELIC_PRICES[card.rarity];
-    return p ? p.sell : null;
+    const buy = relicBuyPrice(cardId);
+    if (buy == null) return null;
+    return Math.max(10, Math.round(buy * RELIC_SELL_RATIO / 10) * 10);
   }
 
   // Pre-flight checks. Both return { ok, reason, ... } so the UI can
