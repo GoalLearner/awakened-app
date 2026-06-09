@@ -31030,6 +31030,10 @@ button.guildhall-summary-tile:active {
 .asc-boss.locked  { background: radial-gradient(120% 80% at 50% 0%, rgba(239,68,68,0.1), transparent 60%), linear-gradient(180deg, #16121f, #0a0a1f); border: 1.5px solid rgba(126,133,151,0.53); box-shadow: 0 14px 44px -18px rgba(239,68,68,0.4); }
 .asc-boss-top { display: flex; align-items: center; gap: 15px; }
 .asc-boss-med { width: 78px; height: 78px; flex: none; border-radius: 16px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(120% 120% at 50% 30%, rgba(126,133,151,0.24), #04040d 74%); border: 1px solid rgba(126,133,151,0.5); }
+/* The First Awakened — the floor-100 summit boss gets his real portrait
+   with a violet/gold aura (not the faceless cold-iron silhouette). */
+.asc-boss-med--fa { background: radial-gradient(120% 120% at 50% 28%, rgba(167,139,250,0.30), rgba(245,184,66,0.06) 55%, #04040d 80%); border-color: rgba(167,139,250,0.6); box-shadow: 0 0 22px -6px rgba(167,139,250,0.6); }
+.asc-fa-img { width: 100%; height: 100%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 0 9px rgba(167,139,250,0.5)) drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
 .asc-boss-med svg { width: 48px; height: 64px; opacity: 0.92; }
 .asc-boss-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 18px; color: #f5f3fb; margin-top: 4px; line-height: 1.12; }
 .asc-boss-title { margin-top: 14px; padding: 10px 13px; border-radius: 11px; display: flex; align-items: center; gap: 11px; }
