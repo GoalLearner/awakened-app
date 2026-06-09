@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w204';
+  const APP_BUILD_TAG = '2.2.5-w205';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6233,7 +6233,7 @@
   // item, the more it costs":
   //   buy = TIER_BASE[card.tier] × RARITY_MULT[rarity]   (dungeon × rarity)
   //         + STAT_WEIGHT × Σ(stat bonuses)              (item strength)
-  //   sell = buy × 0.25   (75% OFF — you recover a quarter; 4× spread)
+  //   sell = buy × 0.70   (you recover 70% of buy; lose 30% on a flip)
   // Rounded to the nearest 10. A late-game B-rank ultra runs ~7× an
   // early E-rank rare. TIER_BASE includes A/S so future content prices
   // itself automatically. All knobs are tunable here.
@@ -6241,7 +6241,7 @@
   const RELIC_TIER_BASE   = { E: 90, D: 160, C: 280, B: 480, A: 760, S: 1200 };
   const RELIC_RARITY_MULT = { rare: 1.0, ultra_rare: 1.9 };
   const RELIC_STAT_WEIGHT = 10;    // souls per total stat-bonus point
-  const RELIC_SELL_RATIO  = 0.25;  // sell = 25% of buy (i.e. 75% off → 4× spread)
+  const RELIC_SELL_RATIO  = 0.70;  // sell = 70% of buy (recover 70%, ~1.4× spread)
 
   function _relicTotalBonus(card) {
     const b = card && card.bonuses;
