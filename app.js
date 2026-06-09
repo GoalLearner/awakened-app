@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w208';
+  const APP_BUILD_TAG = '2.2.5-w209';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5848,8 +5848,18 @@
   // effective stat = stat LEVEL (1..20) + equipped-gear bonus for that
   // stat. Gear bonuses are lowercase-keyed; stats are uppercase-id'd.
   function _arenaPlayerStatline() {
+    // v3 W209 — read the LIVE Hunter Build (hb_hunter_build) gear — the
+    // SAME source the Armory's EQUIPMENT BONUSES panel displays — via
+    // _aggregateBuildBonuses().totals. (Previously read the RETIRED
+    // legacy hb_pvp_equipped slots through aggregateEquippedBonuses(),
+    // so a player's actual equipped loadout never reached battle.) Both
+    // return lowercase-keyed {str,vit,…}, so the mapping below is
+    // unchanged — the only difference is the correct, live source.
     let gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
-    try { gear = aggregateEquippedBonuses() || gear; } catch (_) {}
+    try {
+      const agg = _aggregateBuildBonuses();
+      if (agg && agg.totals) gear = agg.totals;
+    } catch (_) {}
     const out = {};
     STATS.forEach(st => {
       const lv = statLevel((stats[st.id] && stats[st.id].pts) || 0);
