@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w214';
+  const APP_BUILD_TAG = '2.2.5-w215';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5837,16 +5837,16 @@
 
   // 10 hand-crafted milestone bosses (floor → boss). Each grants a title.
   const ASCENT_BOSSES = {
-    10:  { name: 'The Hollow Footman',  arch: 'aggressor',   title: { id: 'asc_brawler',      name: 'Brawler' } },
-    20:  { name: 'The Pale Sentinel',   arch: 'sentinel',    title: { id: 'asc_wallbreaker',  name: 'Wallbreaker' } },
-    30:  { name: 'The Iron Revenant',   arch: 'juggernaut',  title: { id: 'asc_ironbreaker',  name: 'Ironbreaker' } },
-    40:  { name: 'The Wraith Outcast',  arch: 'trickster',   title: { id: 'asc_edgewalker',   name: 'Edgewalker' } },
-    50:  { name: 'The Ashen Reaver',    arch: 'glasscannon', title: { id: 'asc_duelist',      name: 'Reaver' } },
-    60:  { name: 'The Vow-Eater',       arch: 'aggressor',   title: { id: 'asc_unbroken',     name: 'Unbroken' } },
-    70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    title: { id: 'asc_tyrantsbane',  name: 'Tyrantsbane' } },
-    80:  { name: 'The Silent Warden',   arch: 'sentinel',    title: { id: 'asc_siegebreaker', name: 'Siegebreaker' } },
-    90:  { name: 'The Dread Harbinger', arch: 'trickster',   title: { id: 'asc_shadowcaller', name: 'Shadowcaller' } },
-    100: { name: 'The First Awakened',  arch: 'balanced',    title: { id: 'asc_sovereign',    name: 'The Second Awakened' } },
+    10:  { name: 'The Hollow Footman',  arch: 'aggressor',   taunt: 'You climbed ten floors. The tower has ten thousand.',          title: { id: 'asc_brawler',      name: 'Brawler' } },
+    20:  { name: 'The Pale Sentinel',   arch: 'sentinel',    taunt: 'None pass while I still stand.',                                title: { id: 'asc_wallbreaker',  name: 'Wallbreaker' } },
+    30:  { name: 'The Iron Revenant',   arch: 'juggernaut',  taunt: 'I broke long ago. Let me show you how.',                       title: { id: 'asc_ironbreaker',  name: 'Ironbreaker' } },
+    40:  { name: 'The Wraith Outcast',  arch: 'trickster',   taunt: 'You will not see the blow that ends you.',                     title: { id: 'asc_edgewalker',   name: 'Edgewalker' } },
+    50:  { name: 'The Ashen Reaver',    arch: 'glasscannon', taunt: 'Halfway. This is where the weak turn back.',                   title: { id: 'asc_duelist',      name: 'Reaver' } },
+    60:  { name: 'The Vow-Eater',       arch: 'aggressor',   taunt: 'Every promise you broke — I have eaten them all.',             title: { id: 'asc_unbroken',     name: 'Unbroken' } },
+    70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    taunt: 'Kneel, and I may let you keep your title.',                    title: { id: 'asc_tyrantsbane',  name: 'Tyrantsbane' } },
+    80:  { name: 'The Silent Warden',   arch: 'sentinel',    taunt: '…',                                                            title: { id: 'asc_siegebreaker', name: 'Siegebreaker' } },
+    90:  { name: 'The Dread Harbinger', arch: 'trickster',   taunt: 'The summit knows your name. It is not impressed.',             title: { id: 'asc_shadowcaller', name: 'Shadowcaller' } },
+    100: { name: 'The First Awakened',  arch: 'balanced',    taunt: 'I was the first to climb. No one has reached me since.',       title: { id: 'asc_sovereign',    name: 'The Second Awakened' } },
   };
 
   // Procedural name pool for the 90 regular floors (stable per floor via
@@ -6175,8 +6175,25 @@
   let _arFight   = null;
   let _arTimers  = [];
   let _arReveal  = 0;
+  let _arRevealing = false;   // W215 — true while the cinematic reveal driver is running (double-fire guard)
 
   function _arClearTimers() { _arTimers.forEach(t => { try { clearTimeout(t); } catch (_) {} }); _arTimers = []; }
+  function _arAfter(ms, fn) { const id = setTimeout(fn, ms); _arTimers.push(id); return id; }
+  function _arReduceMotion() {
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; }
+  }
+  // W215 — portrait hook. Returns an <img> when a portrait asset exists for
+  // this foe, else the silhouette. Midjourney NPC art is drop-in later:
+  // bosses use their own file; regular floors look for assets/arena/<archKey>.png.
+  // (No art ships in W215 — silhouettes remain until files + sw.js precache land.)
+  function _arFoeArt(foe, big) {
+    const cls = 'ar-foe-art' + (big ? ' big' : '');
+    if (foe && foe.isBoss && foe.floor === 100) {
+      return '<img src="assets/coach/first-awakened-idle.png" alt="" class="' + cls + ' fa">';
+    }
+    // Future: per-archetype / per-boss portraits. Fall back to silhouette today.
+    return '<div class="ar-foe-sil-wrap' + (big ? ' big' : '') + '">' + _arFoeSil() + '</div>';
+  }
   function _arBody() { return document.getElementById('arena-body'); }
   function _arSet(html) { const b = _arBody(); if (b) b.innerHTML = html; }
   function _arBodyMode(tower) { const b = _arBody(); if (b) b.classList.toggle('ar-body--bleed', !!tower); }
@@ -6284,7 +6301,7 @@
     if (state === 'current') {
       foot = '<div class="asc-boss-cta"><div style="margin-bottom:11px">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
         '<button class="ar-cta" data-ar="fight" data-floor="' + info.floor + '">' +
-          (apex ? 'CHALLENGE THE SOVEREIGN' : 'CHALLENGE BOSS') +
+          (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') +
           '<span class="ar-cta-sub">FLOOR POWER ' + _arD(info.opponent.power) + '</span></button></div>';
     } else if (state === 'cleared') {
       foot = '<div class="asc-boss-foot"><span class="pwr">FLOOR POWER <b style="color:#c8c6d8">' + _arD(info.opponent.power) + '</b></span>' +
@@ -6313,6 +6330,7 @@
   function _arRenderTower() {
     _arView = 'tower';
     _arClearTimers();
+    _arRevealing = false;
     _arBodyMode(true);
     const st = getAscentState();
     const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
@@ -6370,36 +6388,155 @@
       else pips += '<span class="ar-pip"></span>';
     }
     const youHP = Math.max(8, 100 - bW * 45), foeHP = Math.max(8, 100 - pW * 45);
+    const youLow = youHP <= 15 ? ' low' : '', foeLow = foeHP <= 15 ? ' low' : '';
+    const last = r.rounds[reveal - 1];
     const log = shown.map((rd, i) =>
       '<div class="ar-logline neutral">Round ' + (i + 1) + '</div>' +
       '<div class="ar-logline ' + (rd.playerWon ? 'you' : 'foe') + '">' + _arNarr(rd) + '</div>').join('');
-    const done = reveal >= r.rounds.length;
+    // floating damage number for the just-revealed exchange
+    const dmg = last
+      ? '<div class="ar-dmg-float ' + (last.playerWon ? 'you' : 'foe') + '">' + (last.playerWon ? last.pRoll : last.bRoll) + '</div>'
+      : '';
+    const btn = _arRevealing
+      ? '<button class="ar-skipbtn" data-ar="skip">SKIP ▸</button>'
+      : '<button class="ar-cta" data-ar="skip">SEE RESULT</button>';
     _arSet(
       '<div class="ar-tophead"><div class="ar-kicker">Floor ' + _arMatchup.floor + ' · Round ' + Math.min(reveal || 1, 3) + ' of 3</div><div class="ar-pips">' + pips + '</div></div>' +
-      '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:' + youHP + '%"></div></div></div>' +
+      '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" style="width:' + youHP + '%"></div></div></div>' +
         '<div class="ar-hp-vs">vs</div>' +
-        '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:' + foeHP + '%"></div></div></div></div>' +
-      '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + log + '</div>' +
-      '<div class="ar-spacer"></div>' +
-      '<button class="ar-cta" data-ar="next">' + (done ? 'SEE RESULT' : 'CONTINUE<span class="ar-cta-sub">ROUND ' + (reveal + 1) + '</span>') + '</button>'
+        '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" style="width:' + foeHP + '%"></div></div></div></div>' +
+      '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + log + '</div>' + dmg +
+      '<div class="ar-spacer"></div>' + btn
     );
+    if (last) _arHitJuice(last.playerWon);
+  }
+  // ── cinematic helpers (W215) ──────────────────────────────────────
+  function _arHitJuice(playerWon) {
+    if (_arReduceMotion()) return;
+    try {
+      const sheet = document.querySelector('#arena-overlay .ar-sheet') || _arBody();
+      if (!sheet) return;
+      const cls = playerWon ? 'ar-juice-you' : 'ar-juice-foe';
+      sheet.classList.add(cls);
+      _arAfter(360, () => { try { sheet.classList.remove(cls); } catch (_) {} });
+    } catch (_) {}
+  }
+  function _arHitSound(rd) {
+    if (!rd) return;
+    try { playSfx(rd.playerWon ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(rd.playerWon ? 9 : 16); } catch (_) {}
+  }
+  function _arCountUp(el, from, to, dur) {
+    if (!el) return;
+    if (_arReduceMotion() || from === to) { el.textContent = to.toLocaleString('en-US'); return; }
+    const now0 = () => (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const start = now0();
+    const tick = () => {
+      const p = Math.min(1, (now0() - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(from + (to - from) * eased).toLocaleString('en-US');
+      if (p < 1) _arAfter(32, tick);
+    };
+    tick();
+  }
+  // VS intro — your avatar vs the foe portrait. Portrait hook (_arFoeArt)
+  // shows Midjourney NPC art when present, silhouette otherwise.
+  function _arRenderVs() {
+    _arView = 'vs';
+    _arBodyMode(false);
+    const m = _arMatchup, you = _ascPlayerPower(), foe = m.bot.power;
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    _arSet(
+      '<div class="ar-versus">' +
+        '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' +
+        '<div class="ar-vs-row">' +
+          '<div class="ar-vs-side you"><div class="ar-vs-med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div><div class="ar-vs-name">' + esc(m.player.name) + '</div></div>' +
+          '<div class="ar-vs-bolt">VS</div>' +
+          '<div class="ar-vs-side foe"><div class="ar-vs-med">' + _arFoeArt(m.bot, false) + '</div><div class="ar-vs-name">' + esc(m.bot.name) + '</div>' +
+            '<div style="margin-top:5px">' + _ascArchHtml(m.bot.archetype) + '</div></div>' +
+        '</div>' +
+        '<div class="ar-vs-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
+        '<div class="ar-vs-go">' + _ascDiffHtml(you, foe) + '</div>' +
+        '<button class="ar-cta" data-ar="introgo">FIGHT<span class="ar-cta-sub">FLOOR ' + m.floor + '</span></button>' +
+      '</div>'
+    );
+  }
+  // Boss / summit entrance — portrait, name, taunt, faceoff.
+  function _arRenderBossIntro() {
+    _arView = 'bossintro';
+    _arBodyMode(false);
+    const m = _arMatchup, boss = ASCENT_BOSSES[m.floor] || {}, apex = m.floor === 100;
+    const you = _ascPlayerPower(), foe = m.bot.power;
+    const taunt = boss.taunt || 'You should not have climbed this high.';
+    _arSet(
+      '<div class="ar-bossintro' + (apex ? ' apex' : '') + '">' +
+        '<div class="ar-bi-ribbon">' + (apex ? '✦ THE SUMMIT · FINAL BOSS ✦' : '✦ MILESTONE BOSS · FLOOR ' + m.floor + ' ✦') + '</div>' +
+        '<div class="ar-bi-med">' + _arFoeArt(m.bot, true) + '</div>' +
+        '<div class="ar-bi-name">' + esc(m.bot.name) + '</div>' +
+        '<div class="ar-bi-arch">' + _ascArchHtml(m.bot.archetype) + '</div>' +
+        '<div class="ar-bi-taunt">“' + esc(taunt) + '”</div>' +
+        '<div class="ar-bi-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
+        '<button class="ar-cta" data-ar="introgo">' + (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') + '</button>' +
+      '</div>'
+    );
+  }
+  // Timer-driven round reveal. Steps round 1→N with clash sounds + juice,
+  // then the result. Falls back to an instant full reveal under reduced motion.
+  function _arPlayReveal() {
+    _arClearTimers();
+    const r = _arFight.result, total = r.rounds.length;
+    if (_arReduceMotion()) {
+      _arRevealing = false;
+      _arReveal = total;
+      _arRenderFight(total);
+      return;
+    }
+    _arRevealing = true;
+    _arReveal = 1;
+    _arRenderFight(1);
+    _arHitSound(r.rounds[0]);
+    const step = (n) => {
+      if (n > total) { _arRevealing = false; _arAfter(700, _arRenderResult); return; }
+      _arReveal = n;
+      _arRenderFight(n);
+      _arHitSound(r.rounds[n - 1]);
+      _arAfter(850, () => step(n + 1));
+    };
+    _arAfter(850, () => step(2));
   }
   function _arStartFight(floor) {
     if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
+    _arClearTimers();
+    _arRevealing = false;
     _arMatchup = arenaMatchup(floor);
-    _arFight = arenaResolveMatchup(_arMatchup);
+    _arFight = arenaResolveMatchup(_arMatchup);   // resolved exactly once, before any reveal
     if (!_arFight) { _arRenderTower(); return; }
-    _arReveal = 1;          // show round 1 immediately (no empty pre-screen)
-    _arRenderFight(1);
+    _arReveal = 0;
+    if (_arReduceMotion()) { _arPlayReveal(); return; }   // no intros / no timers
+    const foe = _arMatchup.bot;
+    if (foe && foe.isBoss) {
+      _arRenderBossIntro();
+      try { playSfx('ar_boss_engage'); } catch (_) {}
+      try { if (navigator.vibrate) navigator.vibrate([40, 30, 60, 30, 90]); } catch (_) {}
+      _arAfter(2000, _arPlayReveal);
+    } else {
+      _arRenderVs();
+      try { playSfx('ar_engage'); } catch (_) {}
+      try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+      _arAfter(1200, _arPlayReveal);
+    }
   }
 
   // ── result ────────────────────────────────────────────────────────
   function _arRenderResult() {
     _arClearTimers();
+    _arRevealing = false;
     _arView = 'result';
     _arBodyMode(false);
     const f = _arFight, won = f.won, up = f.ratingDelta >= 0;
     const score = won ? (f.result.pWins + '–' + f.result.bWins) : (f.result.bWins + '–' + f.result.pWins);
+    const tierB = _ascTier(f.ratingBefore), tierA = _ascTier(f.ratingAfter);
+    const tierChanged = tierB.name !== tierA.name;
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const flair = f.advanced
       ? '<div class="asc-cleared-flair"><span class="sig" style="color:#34d399;width:30px;height:30px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(52,211,153,0.14);border:1px solid rgba(52,211,153,0.5)">' + _ascStar() + '</span>' +
@@ -6424,14 +6561,21 @@
       '</div>' + flair + titleHtml +
       '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
         '<span class="before">' + f.ratingBefore.toLocaleString('en-US') + '</span><span class="arrow">→</span>' +
-        '<span class="after">' + f.ratingAfter.toLocaleString('en-US') +
+        '<span class="after"><span id="ar-rating-num">' + f.ratingBefore.toLocaleString('en-US') + '</span>' +
           '<span class="delta ' + (up ? 'up' : 'down') + '">' + (up ? '▲+' : '▼') + Math.abs(f.ratingDelta) + '</span></span></div>' +
+        '<div class="asc-rtier' + (tierChanged ? ' asc-tier-pulse' : '') + '" style="color:' + tierA.color + '">' +
+          '<span class="gem" style="background:' + tierA.color + ';box-shadow:0 0 7px ' + tierA.color + 'aa"></span>' +
+          tierA.name + ' TIER' + (tierChanged ? (up ? ' · PROMOTED' : ' · DEMOTED') : '') + '</div>' +
         '<div class="lbl">ARENA RATING · ' + f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY</div></div>' +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'
     );
+    // sound + haptics + animated rating
+    try { playSfx(won ? (f.bossCleared ? 'boss_victory' : 'ar_win') : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(f.bossCleared ? 22 : 12); } catch (_) {}
+    try { _arCountUp(document.getElementById('ar-rating-num'), f.ratingBefore, f.ratingAfter, 700); } catch (_) {}
+    try { playSfx(up ? 'ar_rating_up' : 'ar_rating_down'); } catch (_) {}
   }
 
   // ── titles ────────────────────────────────────────────────────────
@@ -6492,11 +6636,17 @@
     if (closeBtn) closeBtn.addEventListener('click', closeArena);
     ov.addEventListener('click', (e) => {
       const act = e.target && e.target.closest ? e.target.closest('[data-ar]') : null;
-      if (!act) { if (e.target === ov) closeArena(); return; }
+      if (!act) {
+        // tapping anywhere during the cinematic reveal fast-forwards to the result
+        if (_arRevealing && _arFight) { _arClearTimers(); _arRevealing = false; _arRenderResult(); return; }
+        if (e.target === ov) closeArena();
+        return;
+      }
       const a = act.getAttribute('data-ar');
       if (a === 'exit')         closeArena();
-      else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight') return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
-      else if (a === 'next')    { if (_arReveal >= _arFight.result.rounds.length) _arRenderResult(); else { _arReveal += 1; _arRenderFight(_arReveal); } }
+      else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
+      else if (a === 'introgo') { if (!_arFight) return; _arClearTimers(); _arPlayReveal(); }
+      else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'tower')   _arRenderTower();
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'equip')   {
@@ -19996,6 +20146,15 @@
     rank_fanfare: 5,
     boss_victory: 5,
     ultra_drop:   5,
+    // ── Arena / The Ascent (W215) ──
+    ar_hit_you:     1,
+    ar_hit_foe:     1,
+    ar_engage:      2,
+    ar_lose:        3,
+    ar_win:         4,
+    ar_rating_up:   4,
+    ar_rating_down: 4,
+    ar_boss_engage: 5,
   };
   const SFX_GATE_MS = 800;
   let _sharedSfxCtx = null;
@@ -20050,6 +20209,20 @@
       osc.start(t);
       osc.stop(t + dur + 0.02);
     };
+    const playGlide = function (f0, f1, startOffset, dur, peakGain, type) {
+      const osc = ac.createOscillator();
+      const g   = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = type || 'sine';
+      const t = t0 + startOffset;
+      osc.frequency.setValueAtTime(Math.max(1, f0), t);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peakGain, t + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    };
     if (name === 'rank_fanfare') {
       // Four-note arpeggio C5 → E5 → G5 → C6. Bright, premium, ~800ms.
       const notes = [523.25, 659.25, 783.99, 1046.5];
@@ -20082,6 +20255,45 @@
       notes.forEach(function (f, i) { playNote(f, i * 0.09, 0.24, 0.16, 'sine'); });
       return;
     }
+    // ── Arena / The Ascent (W215) ──
+    if (name === 'ar_engage') {
+      // Fight start — short rising two-tone "ready".
+      playNote(330, 0,    0.16, 0.15, 'triangle');
+      playNote(494, 0.10, 0.30, 0.17, 'sine');
+      return;
+    }
+    if (name === 'ar_boss_engage') {
+      // Boss / summit — ominous low drone + impact.
+      playNote(69,  0,    0.95, 0.22, 'sine');
+      playNote(104, 0,    0.95, 0.11, 'triangle');
+      playNote(220, 0.16, 0.45, 0.13, 'sawtooth');
+      playNote(55,  0.5,  0.6,  0.20, 'sine');
+      return;
+    }
+    if (name === 'ar_hit_you') {
+      // Player lands the exchange — bright clash, pitched up.
+      playNote(880,  0,    0.11, 0.15, 'square');
+      playNote(1318, 0.02, 0.15, 0.09, 'sine');
+      return;
+    }
+    if (name === 'ar_hit_foe') {
+      // Player takes the exchange — duller clash, pitched down.
+      playNote(196, 0,    0.16, 0.17, 'square');
+      playNote(147, 0.02, 0.20, 0.09, 'sine');
+      return;
+    }
+    if (name === 'ar_win') {
+      // Regular floor clear — light major arpeggio C5 → E5 → G5.
+      [523.25, 659.25, 783.99].forEach(function (f, i) { playNote(f, i * 0.09, 0.30, 0.18, 'sine'); });
+      return;
+    }
+    if (name === 'ar_lose') {
+      // Defeat — descending minor tone A4 → F4 → D4.
+      [440.0, 349.23, 293.66].forEach(function (f, i) { playNote(f, i * 0.12, 0.34, 0.16, 'sine'); });
+      return;
+    }
+    if (name === 'ar_rating_up')   { playGlide(440, 740, 0, 0.5, 0.12, 'sine'); return; }
+    if (name === 'ar_rating_down') { playGlide(440, 300, 0, 0.5, 0.12, 'sine'); return; }
     // Unknown name — no-op (priority gate already returned early).
   }
 

@@ -30858,8 +30858,67 @@ button.guildhall-summary-tile:active {
 .ar-trow .tequip { padding: 6px 13px; border-radius: 20px; background: transparent; border: 1px solid rgba(245,184,66,0.5); color: #f5b842; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; }
 .ar-trow .tequipped { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 20px; background: rgba(245,184,66,0.16); border: 1px solid #f5b842; color: #f5b842; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; }
 .ar-trow .tlocked { color: #6b6b86; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; }
-@media (prefers-reduced-motion: reduce) { .ar-body, .ar-logline { animation: none; } .ar-hp-fill { transition: none; } }
-@media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; } .ar-combatant { width: 118px; } .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } }
+/* ── W215 Arena cinematic — VS intro, boss intro, hit juice, rating count-up ── */
+.ar-foe-art { width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
+.ar-foe-sil-wrap { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; }
+.ar-foe-sil-wrap svg { width: 56px; height: 76px; opacity: 0.9; }
+.ar-foe-sil-wrap.big svg { width: 96px; height: 128px; }
+/* VS intro */
+.ar-versus { display: flex; flex-direction: column; align-items: center; padding-top: 30px; animation: ar-fade 0.3s ease; }
+.ar-vs-floor { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.3em; color: #f5b842; }
+.ar-vs-row { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin-top: 20px; width: 100%; }
+.ar-vs-side { display: flex; flex-direction: column; align-items: center; width: 130px; }
+.ar-vs-med { width: 96px; height: 96px; border-radius: 16px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(120% 120% at 50% 30%, rgba(167,139,250,0.16), #04040d 72%); border: 1.5px solid rgba(245,184,66,0.5); box-shadow: 0 0 24px -8px rgba(245,184,66,0.5); }
+.ar-vs-med img { width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
+.ar-vs-side.foe .ar-vs-med { background: radial-gradient(120% 120% at 50% 30%, rgba(126,133,151,0.2), #04040d 74%); border-color: rgba(126,133,151,0.5); box-shadow: 0 0 24px -8px rgba(126,133,151,0.45); }
+.ar-vs-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; color: #f5f3fb; margin-top: 9px; text-align: center; line-height: 1.15; }
+.ar-vs-bolt { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 20px; color: #f5b842; text-shadow: 0 0 16px rgba(245,184,66,0.5); padding-top: 30px; }
+.ar-vs-faceoff { width: 100%; margin-top: 22px; }
+.ar-vs-go { display: flex; justify-content: center; margin: 14px 0 20px; }
+/* Boss / summit intro */
+.ar-bossintro { display: flex; flex-direction: column; align-items: center; padding-top: 26px; animation: ar-fade 0.4s ease; }
+.ar-bi-ribbon { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.22em; color: #f5b842; text-align: center; }
+.ar-bi-med { width: 150px; height: 150px; margin-top: 18px; border-radius: 22px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(120% 120% at 50% 28%, rgba(167,139,250,0.22), #04040d 72%); border: 1.5px solid rgba(245,184,66,0.55); box-shadow: 0 0 40px -10px rgba(245,184,66,0.6); }
+.ar-bi-med img { width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
+.ar-bossintro.apex .ar-bi-med { border-color: rgba(167,139,250,0.7); box-shadow: 0 0 54px -8px rgba(167,139,250,0.7); }
+.ar-bi-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 26px; color: #f5f3fb; margin-top: 16px; text-align: center; line-height: 1.1; }
+.ar-bossintro.apex .ar-bi-name { color: #d9c8ff; text-shadow: 0 0 22px rgba(167,139,250,0.55); }
+.ar-bi-arch { margin-top: 8px; }
+.ar-bi-taunt { font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 16px; color: #b9b4cc; text-align: center; line-height: 1.5; max-width: 300px; margin: 16px 0; }
+.ar-bi-faceoff { width: 100%; margin-bottom: 22px; }
+/* Skip pill (shown during the cinematic reveal) */
+.ar-skipbtn { display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 22px; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #9090a8; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; -webkit-tap-highlight-color: transparent; }
+.ar-skipbtn:active { background: rgba(255,255,255,0.08); }
+/* Hit juice — shake + colored flash on the sheet */
+.ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe { animation: ar-shake 0.34s ease; }
+.ar-sheet.ar-juice-you::after, .ar-sheet.ar-juice-foe::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 20; animation: ar-flash 0.34s ease forwards; }
+.ar-sheet.ar-juice-you::after { background: radial-gradient(120% 80% at 50% 60%, rgba(245,184,66,0.26), transparent 70%); }
+.ar-sheet.ar-juice-foe::after { background: radial-gradient(120% 80% at 50% 60%, rgba(239,68,68,0.26), transparent 70%); }
+@keyframes ar-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes ar-flash { from { opacity: 1; } to { opacity: 0; } }
+/* Floating damage number */
+.ar-dmg-float { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 38px; pointer-events: none; z-index: 21; animation: ar-dmgfloat 0.85s ease-out forwards; }
+.ar-dmg-float.you { color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.7); }
+.ar-dmg-float.foe { color: #ef4444; text-shadow: 0 0 18px rgba(239,68,68,0.6); }
+@keyframes ar-dmgfloat { 0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.7); } 25% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(1); } }
+/* Low-HP pulse */
+.ar-hp-fill.low { animation: ar-lowhp 0.9s ease-in-out infinite; }
+@keyframes ar-lowhp { 0%,100% { filter: none; } 50% { filter: brightness(1.55); } }
+/* Result rating tier line + promote/demote pulse */
+.asc-rtier { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; }
+.asc-rtier .gem { width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); }
+.asc-rtier.asc-tier-pulse { animation: ar-tierpulse 0.8s ease 2; }
+@keyframes ar-tierpulse { 0%,100% { transform: scale(1); filter: none; } 50% { transform: scale(1.1); filter: brightness(1.5); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ar-body, .ar-logline, .ar-versus, .ar-bossintro { animation: none; }
+  .ar-hp-fill { transition: none; }
+  .ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe,
+  .ar-sheet.ar-juice-you::after, .ar-sheet.ar-juice-foe::after,
+  .ar-dmg-float, .ar-hp-fill.low, .asc-rtier.asc-tier-pulse { animation: none; }
+  .ar-dmg-float { display: none; }
+}
+@media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; } .ar-combatant { width: 118px; } .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } .ar-bi-med { width: 128px; height: 128px; } .ar-bi-name { font-size: 23px; } .ar-vs-side { width: 116px; } }
 /* END Arena block */
 
 /* ── W210 Arena power breakdown (base + gear) + loadout strip ── */
