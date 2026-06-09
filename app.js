@@ -5794,8 +5794,13 @@
   const ASCENT_RATING_START = 1000;
   const ASCENT_RATING_FLOOR = 100;
   const ASCENT_RATING_K     = 24;
-  // Absolute floor power: BASE × floor^EXP  → F1≈5, F10≈112, F50≈990, F100≈2506.
-  const _ASCENT_BASE = 5, _ASCENT_EXP = 1.35, _ASCENT_BOSS_BUMP = 1.18;
+  // Absolute floor power: BASE × floor^EXP (+18% on bosses). Tuned to
+  // RAW player power (the UI shows ×10): new build ≈7, casual ≈50,
+  // committed/B-rank+gear ≈267, fully maxed ≈430. So the curve gives
+  // F10≈40, F30≈126, F50≈215, F70≈306, F90≈399, F100≈446 — a new hunter
+  // walls ~F5, a B-rank geared build clears ~F50, and only a fully-maxed
+  // build summits. Floor reached = real build strength.
+  const _ASCENT_BASE = 3.0, _ASCENT_EXP = 1.05, _ASCENT_BOSS_BUMP = 1.18;
   function _ascentFloorPower(floor) {
     const p = _ASCENT_BASE * Math.pow(Math.max(1, floor), _ASCENT_EXP);
     return (floor % 10 === 0) ? p * _ASCENT_BOSS_BUMP : p;
