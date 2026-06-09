@@ -5841,7 +5841,7 @@
     20:  { name: 'The Pale Sentinel',   arch: 'sentinel',    title: { id: 'asc_wallbreaker',  name: 'Wallbreaker' } },
     30:  { name: 'The Iron Revenant',   arch: 'juggernaut',  title: { id: 'asc_ironbreaker',  name: 'Ironbreaker' } },
     40:  { name: 'The Wraith Outcast',  arch: 'trickster',   title: { id: 'asc_edgewalker',   name: 'Edgewalker' } },
-    50:  { name: 'The Ashen Duelist',   arch: 'glasscannon', title: { id: 'asc_duelist',      name: 'Duelist' } },
+    50:  { name: 'The Ashen Reaver',    arch: 'glasscannon', title: { id: 'asc_duelist',      name: 'Reaver' } },
     60:  { name: 'The Vow-Eater',       arch: 'aggressor',   title: { id: 'asc_unbroken',     name: 'Unbroken' } },
     70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    title: { id: 'asc_tyrantsbane',  name: 'Tyrantsbane' } },
     80:  { name: 'The Silent Warden',   arch: 'sentinel',    title: { id: 'asc_siegebreaker', name: 'Siegebreaker' } },
@@ -5865,7 +5865,7 @@
     });
     const rating = [
       { id: 'asc_rank_contender', name: 'Ranked Contender', kind: 'rating', need: 1200, blurb: 'Reached 1200 rating.' },
-      { id: 'asc_rank_duelist',   name: 'Ranked Duelist',   kind: 'rating', need: 1500, blurb: 'Reached 1500 rating.' },
+      { id: 'asc_rank_duelist',   name: 'Ranked Blade',     kind: 'rating', need: 1500, blurb: 'Reached 1500 rating.' },
       { id: 'asc_rank_elite',     name: 'Ranked Elite',     kind: 'rating', need: 1800, blurb: 'Reached 1800 rating.' },
       { id: 'asc_rank_apex',      name: 'Apex',             kind: 'rating', need: 2000, blurb: 'Reached 2000 rating.' },
     ];
@@ -5894,10 +5894,13 @@
   function _ascentMigrateIfNeeded() {
     try {
       if (localStorage.getItem(ARENA_V2_MIGRATED_KEY) === '1') return;
+      // Mark migrated FIRST so a failure mid-migration cannot re-trigger a
+      // wipe of an in-progress climb; getAscentState() defaults cleanly if
+      // hb_arena_v2 is absent.
+      localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
       localStorage.removeItem(ARENA_RECORD_KEY);           // drop inflated legacy W/L
       localStorage.removeItem(ARENA_TITLE_KEY);            // legacy title ids no longer exist
       localStorage.setItem(ARENA_V2_KEY, JSON.stringify(_ascentDefaultState()));
-      localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
     } catch (_) {}
   }
   function getAscentState() {
