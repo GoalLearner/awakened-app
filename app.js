@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w213';
+  const APP_BUILD_TAG = '2.2.5-w214';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5790,7 +5790,7 @@
   const ARENA_RECORD_KEY = 'hb_arena_record';     // legacy (pre-Ascent) — discarded on migrate
 
   const ASCENT_FLOORS      = 100;
-  const ASCENT_DAILY_LIMIT = 6;
+  const ASCENT_DAILY_LIVES = 2;   // losses allowed per day — wins are free; lose twice and the tower closes until tomorrow
   const ASCENT_RATING_START = 1000;
   const ASCENT_RATING_FLOOR = 100;
   const ASCENT_RATING_K     = 24;
@@ -5887,7 +5887,7 @@
       highestCleared: 0,      // highest floor beaten (0 = none yet)
       wins: 0, losses: 0,
       streak: 0, bestStreak: 0,
-      dailyDate: '', dailyUsed: 0,
+      dailyDate: '', dailyLosses: 0,
     };
   }
   // One-time soft reset: discard legacy hb_arena_record, seed fresh v2.
@@ -5919,22 +5919,22 @@
       streak:         num(st.streak, 0),
       bestStreak:     num(st.bestStreak, 0),
       dailyDate:      (typeof st.dailyDate === 'string') ? st.dailyDate : '',
-      dailyUsed:      num(st.dailyUsed, 0),
+      dailyLosses:    num(st.dailyLosses, 0),
     };
     // keep invariants
     if (st.currentFloor <= st.highestCleared) st.currentFloor = Math.min(ASCENT_FLOORS, st.highestCleared + 1);
     if (st.bestRating < st.rating) st.bestRating = st.rating;
     // daily roll-over
     let today = ''; try { today = getDeviceLocalDate(); } catch (_) {}
-    if (today && st.dailyDate !== today) { st.dailyDate = today; st.dailyUsed = 0; }
+    if (today && st.dailyDate !== today) { st.dailyDate = today; st.dailyLosses = 0; }
     return st;
   }
   function _persistAscentState(st) {
     try { localStorage.setItem(ARENA_V2_KEY, JSON.stringify(st)); } catch (_) {}
   }
-  function ascentFightsLeft() {
+  function ascentLivesLeft() {
     const st = getAscentState();
-    return Math.max(0, ASCENT_DAILY_LIMIT - st.dailyUsed);
+    return Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
   }
   // Expected score (ELO) of the player vs a floor's implied rating.
   function _ascentFloorRating(floor) { return 800 + floor * 14; }   // F1≈814 … F100≈2200
@@ -6078,7 +6078,7 @@
       advances: (f === st.currentFloor && st.highestCleared < ASCENT_FLOORS && f > st.highestCleared),
       player: _ascentPlayerCombatant(),
       bot:    _ascentOpponent(f),
-      fightsLeft: ascentFightsLeft(),
+      livesLeft: ascentLivesLeft(),
     };
   }
   // Resolve a matchup + commit state (record, rating, floor advance,
@@ -6086,7 +6086,7 @@
   // Refuses (returns null) if the daily limit is spent.
   function arenaResolveMatchup(m) {
     const st = getAscentState();
-    if (st.dailyUsed >= ASCENT_DAILY_LIMIT) return null;   // out of fights today
+    if (st.dailyLosses >= ASCENT_DAILY_LIVES) return null;   // out of lives today
     const beforeTitles = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st));
     const beforeTitleIds = beforeTitles.map(t => t.id);
 
@@ -6099,10 +6099,9 @@
     st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
     if (st.rating > st.bestRating) st.bestRating = st.rating;
 
-    // record + streak
-    st.dailyUsed += 1;
+    // record + streak — only a defeat spends a life; wins are free
     if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
-    else     { st.losses += 1; st.streak = 0; }
+    else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
 
     // floor advance — only when this was a fresh attempt at currentFloor
     let advanced = false, floorCleared = null, bossCleared = null;
@@ -6122,7 +6121,7 @@
       result, state: st, won,
       ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
       advanced, floorCleared, bossCleared, newTitles,
-      fightsLeft: Math.max(0, ASCENT_DAILY_LIMIT - st.dailyUsed),
+      livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
     };
   }
   // Convenience: matchup + resolve at the current floor (headless test).
@@ -6151,7 +6150,7 @@
       resolve:         arenaResolveMatchup,
       fight:           runArenaFight,
       state:           getAscentState,
-      fightsLeft:      ascentFightsLeft,
+      livesLeft:       ascentLivesLeft,
       floorInfo:       ascentFloorInfo,
       bands:           () => ASCENT_BANDS.slice(),
       bosses:          () => ASCENT_BOSSES,
@@ -6222,21 +6221,24 @@
     return '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.4 5 5.4.6-4 3.7 1.1 5.3L10 18.4 5.1 16l1.1-5.3-4-3.7 5.4-.6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
   }
   function _ascArchHtml(arch) { return '<span class="asc-arch">' + esc((arch || '').toUpperCase()) + '</span>'; }
+  function _ascHeartHtml(on) {
+    return '<span class="asc-heart' + (on ? ' on' : '') + '"><svg width="14" height="13" viewBox="0 0 14 13" aria-hidden="true"><path fill="currentColor" d="M7 12.2S0.8 8.1 0.8 4.2A3.2 3.2 0 017 2.5 3.2 3.2 0 0113.2 4.2C13.2 8.1 7 12.2 7 12.2z"/></svg></span>';
+  }
 
   // ── tower header ──────────────────────────────────────────────────
   function _ascHeaderHtml(st) {
     const tier = _ascTier(st.rating);
-    const left = Math.max(0, ASCENT_DAILY_LIMIT - st.dailyUsed);
+    const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
     let pips = '';
-    for (let i = 0; i < ASCENT_DAILY_LIMIT; i++) pips += '<span class="asc-pip' + (i < left ? ' on' : '') + '"></span>';
+    for (let i = 0; i < ASCENT_DAILY_LIVES; i++) pips += _ascHeartHtml(i < left);
     return '<div class="asc-head">' +
       '<div class="asc-head-top"><div class="ar-kicker">The Arena · The Ascent</div></div>' +
       '<div class="asc-head-main">' +
         '<div><div class="asc-rating-lbl">ARENA RATING</div>' +
           '<div class="asc-rating-row"><span class="asc-rating-num">' + st.rating.toLocaleString('en-US') + '</span></div>' +
           '<div class="asc-rating-tier" style="color:' + tier.color + '"><span class="gem" style="background:' + tier.color + ';box-shadow:0 0 7px ' + tier.color + 'aa"></span>' + tier.name + ' TIER</div></div>' +
-        '<div class="asc-daily"><div class="asc-daily-lbl">ENTRIES TODAY</div>' +
-          '<div class="asc-daily-val' + (left === 0 ? ' spent' : '') + '">' + left + '<span class="max"> / ' + ASCENT_DAILY_LIMIT + '</span></div>' +
+        '<div class="asc-daily"><div class="asc-daily-lbl">LIVES TODAY</div>' +
+          '<div class="asc-daily-val' + (left === 0 ? ' spent' : '') + '">' + left + '<span class="max"> / ' + ASCENT_DAILY_LIVES + '</span></div>' +
           '<div class="asc-daily-pips">' + pips + '</div></div>' +
       '</div></div>';
   }
@@ -6313,7 +6315,7 @@
     _arClearTimers();
     _arBodyMode(true);
     const st = getAscentState();
-    const left = Math.max(0, ASCENT_DAILY_LIMIT - st.dailyUsed);
+    const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
     const cur = st.currentFloor;
     const lo = Math.max(1, cur - 4), hi = Math.min(ASCENT_FLOORS, cur + 6);
     let rows = '', lastBand = null;
@@ -6341,8 +6343,8 @@
         '<div class="asc-card">' + card + '</div></div>';
     }
     const body = (left === 0)
-      ? '<div class="asc-empty"><div class="big">Today’s entries are spent</div>' +
-        '<div class="sub">Return tomorrow to keep climbing — or seal more vows. The tower is not going anywhere.</div></div>'
+      ? '<div class="asc-empty"><div class="big">Out of lives for today</div>' +
+        '<div class="sub">You fell twice — the tower closes until tomorrow. Wins cost nothing; only a defeat spends a life. Return stronger.</div></div>'
       : rows;
     _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll">' + body + '</div>');
     try { const el = document.getElementById('asc-current-card'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); } catch (_) {}
@@ -6383,7 +6385,7 @@
     );
   }
   function _arStartFight(floor) {
-    if (ascentFightsLeft() <= 0) { _arRenderTower(); return; }
+    if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
     _arMatchup = arenaMatchup(floor);
     _arFight = arenaResolveMatchup(_arMatchup);
     if (!_arFight) { _arRenderTower(); return; }
@@ -6424,7 +6426,7 @@
         '<span class="before">' + f.ratingBefore.toLocaleString('en-US') + '</span><span class="arrow">→</span>' +
         '<span class="after">' + f.ratingAfter.toLocaleString('en-US') +
           '<span class="delta ' + (up ? 'up' : 'down') + '">' + (up ? '▲+' : '▼') + Math.abs(f.ratingDelta) + '</span></span></div>' +
-        '<div class="lbl">ARENA RATING · ' + f.fightsLeft + ' ENTRIES LEFT TODAY</div></div>' +
+        '<div class="lbl">ARENA RATING · ' + f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY</div></div>' +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'

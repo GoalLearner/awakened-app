@@ -30931,9 +30931,12 @@ button.guildhall-summary-tile:active {
 .asc-daily-val { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; color: #f5f3fb; }
 .asc-daily-val .max { color: #6b6b86; font-weight: 700; }
 .asc-daily-val.spent { color: #ef4444; }
-.asc-daily-pips { display: flex; gap: 4px; }
+.asc-daily-pips { display: flex; align-items: center; gap: 5px; }
 .asc-pip { width: 12px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); }
 .asc-pip.on { background: #f5b842; box-shadow: 0 0 6px rgba(245,184,66,0.47); }
+.asc-heart { display: inline-flex; color: rgba(255,255,255,0.13); }
+.asc-heart svg { display: block; }
+.asc-heart.on { color: #f5b842; filter: drop-shadow(0 0 4px rgba(245,184,66,0.5)); }
 /* exit pill in header */
 .asc-exit { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 20px; cursor: pointer; background: rgba(245,184,66,0.1); border: 1px solid rgba(245,184,66,0.45); color: #f5b842; font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; -webkit-tap-highlight-color: transparent; }
 .asc-exit:active { background: rgba(245,184,66,0.2); }
