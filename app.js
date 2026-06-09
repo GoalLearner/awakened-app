@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w212';
+  const APP_BUILD_TAG = '2.2.5-w213';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6387,8 +6387,8 @@
     _arMatchup = arenaMatchup(floor);
     _arFight = arenaResolveMatchup(_arMatchup);
     if (!_arFight) { _arRenderTower(); return; }
-    _arReveal = 0;
-    _arRenderFight(0);
+    _arReveal = 1;          // show round 1 immediately (no empty pre-screen)
+    _arRenderFight(1);
   }
 
   // ── result ────────────────────────────────────────────────────────
@@ -6494,7 +6494,7 @@
       const a = act.getAttribute('data-ar');
       if (a === 'exit')         closeArena();
       else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight') return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
-      else if (a === 'next')    { _arReveal += 1; if (_arReveal < _arFight.result.rounds.length) _arRenderFight(_arReveal); else _arRenderResult(); }
+      else if (a === 'next')    { if (_arReveal >= _arFight.result.rounds.length) _arRenderResult(); else { _arReveal += 1; _arRenderFight(_arReveal); } }
       else if (a === 'tower')   _arRenderTower();
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'equip')   {
