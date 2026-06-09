@@ -6010,6 +6010,49 @@
       '<span class="s">' + rec.currentStreak + '▲</span></span>';
   }
 
+  // Per-role split: base (stat LEVELS) vs gear (equipped relics), ×10
+  // for a readable "power score". The role formula is linear, so
+  // base+gear == the full role power and the stacked bars line up.
+  const _AR_SCALE = 10;
+  function _arenaRoleBreakdown() {
+    let gearT = {}; try { const a = _aggregateBuildBonuses(); gearT = (a && a.totals) || {}; } catch (_) {}
+    const baseStat = {}, gearStat = {};
+    STATS.forEach(st => {
+      baseStat[st.id] = statLevel((stats[st.id] && stats[st.id].pts) || 0);
+      gearStat[st.id] = gearT[st.id.toLowerCase()] || 0;
+    });
+    const bp = _arenaCombatProfile(baseStat), gp = _arenaCombatProfile(gearStat);
+    const sc = (v) => Math.round((Number(v) || 0) * _AR_SCALE);
+    return {
+      ATTACK:  { base: sc(bp.attack),  gear: sc(gp.attack)  },
+      DEFENSE: { base: sc(bp.defense), gear: sc(gp.defense) },
+      EDGE:    { base: sc(bp.edge),    gear: sc(gp.edge)    },
+    };
+  }
+  function _arRelicAccent(rarity) {
+    return rarity === 'ultra_rare' ? '#f5b842' : rarity === 'rare' ? '#79b4ff' : '#9090a8';
+  }
+  // Equipped relics from the LIVE Hunter Build → loadout chips.
+  function _arenaLoadout() {
+    let slots = [];
+    try { const bd = getHunterBuild(); slots = (bd && Array.isArray(bd.slots)) ? bd.slots : []; } catch (_) {}
+    const items = [];
+    slots.forEach((cid) => {
+      if (!cid) return;
+      const card = CARDS[cid];
+      if (!card) return;
+      const bo = card.bonuses || {};
+      let topK = null, topV = 0;
+      ['str','vit','int','focus','will','wlt'].forEach((k) => { const v = Number(bo[k]) || 0; if (v > topV) { topV = v; topK = k; } });
+      items.push({
+        name: card.name || 'Relic',
+        tag: topK ? ('+' + topV + ' ' + topK.toUpperCase()) : '',
+        accent: _arRelicAccent(card.rarity),
+      });
+    });
+    return items;
+  }
+
   // ── PREFIGHT ──────────────────────────────────────────────────────
   function _arRenderPrefight() {
     _arView = 'prefight';
@@ -6020,20 +6063,55 @@
     const title = getEquippedArenaTitle();
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
 
-    const roles = [
-      { lab: 'ATTACK',  you: p.attack,  foe: b.attack },
-      { lab: 'DEFENSE', you: p.defense, foe: b.defense },
-      { lab: 'EDGE',    you: p.edge,    foe: b.edge },
+    const bd = _arenaRoleBreakdown();
+    const loadout = _arenaLoadout();
+    const roleMeta = [
+      { key: 'ATTACK',  lead: 'STR', sub: 'FOCUS', foe: _arR(b.attack  * _AR_SCALE) },
+      { key: 'DEFENSE', lead: 'VIT', sub: 'WILL',  foe: _arR(b.defense * _AR_SCALE) },
+      { key: 'EDGE',    lead: 'INT', sub: 'WLT',   foe: _arR(b.edge    * _AR_SCALE) },
     ];
-    const rowsHtml = roles.map(r => {
-      const tot = Math.max(1, r.you + r.foe);
-      const youPct = Math.round(r.you / tot * 100), foePct = 100 - youPct;
-      return '<div class="ar-prow">' +
-        '<div class="ar-prow-top"><span class="ar-prow-role">' + r.lab + '</span>' +
-        '<span class="ar-prow-vals"><span class="you">' + _arR(r.you) + '</span> <span style="color:#3a3f4d">/</span> <span class="foe">' + _arR(r.foe) + '</span></span></div>' +
-        '<div class="ar-prow-bar"><span class="you" style="width:' + youPct + '%"></span><span class="foe" style="width:' + foePct + '%"></span></div>' +
+    const rowsHtml = roleMeta.map(rm => {
+      const base = bd[rm.key].base, gear = bd[rm.key].gear, you = base + gear, foe = rm.foe;
+      const max = Math.max(you, foe, 1);
+      const youW = Math.round(you / max * 100), foeW = Math.round(foe / max * 100);
+      const lead = you >= foe;
+      const gearBar = gear > 0 ? '<span class="g" style="flex:' + gear + '"></span>' : '';
+      const gearTxt = gear > 0 ? '<span class="g"> +' + gear + '</span>' : '';
+      return '<div class="ar-pr">' +
+        '<div class="ar-pr-you">' +
+          '<div class="ar-pr-val' + (lead ? ' lead' : '') + '">' + you + '</div>' +
+          '<div class="ar-pr-split"><span class="b">' + base + '</span>' + gearTxt + '</div>' +
+        '</div>' +
+        '<div class="ar-pr-mid">' +
+          '<div class="ar-pr-role">' + rm.key + '</div>' +
+          '<div class="ar-pr-bars">' +
+            '<div class="ar-pr-track you"><span class="fill" style="width:' + youW + '%"><span class="b" style="flex:' + Math.max(base, 1) + '"></span>' + gearBar + '</span></div>' +
+            '<div class="ar-pr-track foe"><span class="fill" style="width:' + foeW + '%"></span></div>' +
+          '</div>' +
+          '<div class="ar-pr-src">' + rm.lead + ' · ' + rm.sub + '</div>' +
+        '</div>' +
+        '<div class="ar-pr-foe' + (!lead ? ' lead' : '') + '">' + foe + '</div>' +
       '</div>';
     }).join('');
+    const loadoutHtml = loadout.length
+      ? '<div class="ar-loadout">' +
+          '<div class="ar-loadout-head"><span class="lbl">LOADOUT</span>' +
+            '<span class="tot">RELICS <b>+' + bd.ATTACK.gear + '</b> ATK · <b>+' + bd.DEFENSE.gear + '</b> DEF · <b>+' + bd.EDGE.gear + '</b> EDGE</span></div>' +
+          '<div class="ar-loadout-chips">' +
+            loadout.map(it =>
+              '<span class="ar-relic-chip" style="border-color:' + it.accent + '55">' +
+                '<span class="gem" style="color:' + it.accent + '">◆</span>' +
+                '<span class="nm">' + esc(it.name) + '</span>' +
+                (it.tag ? '<span class="tg">' + esc(it.tag) + '</span>' : '') +
+              '</span>'
+            ).join('') +
+          '</div>' +
+        '</div>'
+      : '<div class="ar-loadout-empty">' +
+          '<span class="gem">◆</span>' +
+          '<div><div class="lbl">NO RELICS EQUIPPED</div>' +
+          '<div class="msg">Equip gear in your <b>Armory</b> to boost your Arena power.</div></div>' +
+        '</div>';
 
     _arSet(
       '<div class="ar-tophead">' +
@@ -6058,8 +6136,13 @@
       '</div>' +
       '<div class="ar-power">' +
         '<div class="ar-power-head"><span class="you">YOUR POWER</span><span class="foe">CHALLENGER</span></div>' +
+        '<div class="ar-legend">' +
+          '<span><span class="sw gold"></span>STAT LEVELS</span>' +
+          '<span><span class="sw violet"></span>EQUIPPED RELICS</span>' +
+        '</div>' +
         rowsHtml +
-        '<div class="ar-total"><span class="you">' + _arR(p.power) + '</span><span class="lbl">TOTAL POWER</span><span class="foe">' + _arR(b.power) + '</span></div>' +
+        '<div class="ar-total"><span class="you">' + _arR(p.power * _AR_SCALE) + '</span><span class="lbl">TOTAL POWER</span><span class="foe">' + _arR(b.power * _AR_SCALE) + '</span></div>' +
+        '<div class="ar-loadout-wrap">' + loadoutHtml + '</div>' +
       '</div>' +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="fight">FIGHT<span class="ar-cta-sub">BEST OF 3 ROUNDS</span></button>' +

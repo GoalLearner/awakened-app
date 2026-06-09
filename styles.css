@@ -30860,3 +30860,51 @@ button.guildhall-summary-tile:active {
 @media (prefers-reduced-motion: reduce) { .ar-body, .ar-logline { animation: none; } .ar-hp-fill { transition: none; } }
 @media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; } .ar-combatant { width: 118px; } .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } }
 /* END Arena block */
+
+/* ── W210 Arena power breakdown (base + gear) + loadout strip ── */
+.ar-legend { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.ar-legend > span { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 700; letter-spacing: 0.05em; color: #6b6b86; }
+.ar-legend .sw { width: 9px; height: 5px; border-radius: 2px; }
+.ar-legend .sw.gold { background: #f5b842; }
+.ar-legend .sw.violet { background: #a78bfa; }
+.ar-pr { display: grid; grid-template-columns: 58px 1fr 44px; align-items: center; gap: 10px; margin-bottom: 13px; }
+.ar-pr:last-child { margin-bottom: 0; }
+.ar-pr-you { text-align: right; }
+.ar-pr-val { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; line-height: 1; color: #c8c6d8; font-variant-numeric: tabular-nums; }
+.ar-pr-val.lead { color: #f5b842; }
+.ar-pr-split { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.ar-pr-split .b { color: #6b6b86; }
+.ar-pr-split .g { color: #a78bfa; }
+.ar-pr-role { display: block; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; color: #9090a8; margin-bottom: 5px; }
+.ar-pr-bars { display: flex; gap: 4px; height: 6px; }
+.ar-pr-track { flex: 1; display: flex; background: rgba(255,255,255,0.04); border-radius: 3px; overflow: hidden; }
+.ar-pr-track.you { justify-content: flex-end; }
+.ar-pr-track.foe { justify-content: flex-start; }
+.ar-pr-track .fill { height: 100%; display: flex; border-radius: 3px; overflow: hidden; }
+.ar-pr-track.you .fill .b { background: linear-gradient(90deg, #c08418, #f5b842); }
+.ar-pr-track.you .fill .g { background: linear-gradient(90deg, #a78bfa, #c4b5fd); box-shadow: inset 1px 0 0 rgba(4,4,13,0.4); }
+.ar-pr-track.foe .fill { width: 100%; background: linear-gradient(90deg, #7e8597, #3a3f4d); }
+.ar-pr-src { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 7.5px; color: #6b6b86; letter-spacing: 0.08em; margin-top: 4px; }
+.ar-pr-foe { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; color: #6b6b86; text-align: left; font-variant-numeric: tabular-nums; }
+.ar-pr-foe.lead { color: #9aa1b2; }
+.ar-loadout-wrap { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+.ar-loadout-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; gap: 8px; }
+.ar-loadout-head .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em; color: #a78bfa; }
+.ar-loadout-head .tot { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.04em; color: #6b6b86; text-align: right; }
+.ar-loadout-head .tot b { color: #a78bfa; }
+.ar-loadout-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.ar-relic-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px 6px 8px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); }
+.ar-relic-chip .gem { font-size: 11px; line-height: 1; }
+.ar-relic-chip .nm { font-family: "Cinzel", Georgia, serif; font-weight: 600; font-size: 11.5px; color: #f5f3fb; }
+.ar-relic-chip .tg { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; color: #a78bfa; letter-spacing: 0.02em; }
+.ar-loadout-empty { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: 13px; background: rgba(167,139,250,0.05); border: 1px dashed rgba(167,139,250,0.35); }
+.ar-loadout-empty .gem { flex: none; width: 32px; height: 32px; border-radius: 8px; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.35); display: flex; align-items: center; justify-content: center; color: #a78bfa; font-size: 14px; }
+.ar-loadout-empty .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.15em; color: #a78bfa; }
+.ar-loadout-empty .msg { font-family: -apple-system, system-ui, sans-serif; font-size: 11.5px; color: #9090a8; margin-top: 3px; line-height: 1.4; }
+.ar-loadout-empty .msg b { color: #c8c6d8; }
+@media (max-width: 380px) {
+  .ar-pr { grid-template-columns: 50px 1fr 38px; gap: 8px; }
+  .ar-pr-val, .ar-pr-foe { font-size: 15px; }
+  .ar-loadout-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+/* END W210 Arena loadout block */
