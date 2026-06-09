@@ -5757,6 +5757,485 @@
   } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════
+  // THE ARENA — v3 (post-launch feature) client-side 1v1 combat sim.
+  // A pure, offline "test your hunter" loop: your stat-build + equipped
+  // relics fight a bot scaled to your rank, best-of-3 rounds with a
+  // blow-by-blow log. COSMETIC ONLY — outcomes feed a win/loss record
+  // and a cosmetic title ladder. NO souls, NO XP, NO loot, NO
+  // progression gating. This is a clean NEW system — fully client-side
+  // and single-player: it has no backend, no real opponents, and shares
+  // no code, UI, markers, or naming with the retired competitive PvP
+  // subsystem (which stays fully retired and untouched).
+  //
+  // Layer A = this engine (pure logic, DOM-free, testable via
+  // window.Arena). Layer B (the screen + the Awakening-Path entry
+  // rewire) is wired separately once the ClaudeDesign spec lands.
+  // ───────────────────────────────────────────────────────────────
+
+  const ARENA_RECORD_KEY = 'hb_arena_record';
+  const ARENA_TITLE_KEY  = 'hb_arena_title';   // currently-equipped cosmetic title id
+
+  // Cosmetic title ladder. Win-count + best-streak milestones. Pure
+  // bragging rights — never affects combat power or progression.
+  const ARENA_TITLES = [
+    { id: 'arena_initiate',    name: 'Arena Initiate',  kind: 'wins',   need: 1,  blurb: 'Won your first bout.' },
+    { id: 'arena_contender',   name: 'Arena Contender', kind: 'wins',   need: 10, blurb: '10 victories.' },
+    { id: 'arena_veteran',     name: 'Arena Veteran',   kind: 'wins',   need: 25, blurb: '25 victories.' },
+    { id: 'arena_champion',    name: 'Arena Champion',  kind: 'wins',   need: 50, blurb: '50 victories.' },
+    { id: 'arena_unbroken',    name: 'Unbroken',        kind: 'streak', need: 5,  blurb: '5-win streak.' },
+    { id: 'arena_untouchable', name: 'Untouchable',     kind: 'streak', need: 10, blurb: '10-win streak.' },
+  ];
+
+  function _arenaTitleUnlocked(t, rec) {
+    return (t.kind === 'wins')   ? (rec.wins >= t.need)
+         : (t.kind === 'streak') ? (rec.bestStreak >= t.need)
+         : false;
+  }
+
+  // ── persistence ──────────────────────────────────────────────────
+  function getArenaRecord() {
+    try {
+      const r = JSON.parse(localStorage.getItem(ARENA_RECORD_KEY) || '{}');
+      return {
+        wins:          (r && typeof r.wins === 'number' && r.wins > 0) ? r.wins : 0,
+        losses:        (r && typeof r.losses === 'number' && r.losses > 0) ? r.losses : 0,
+        currentStreak: (r && typeof r.currentStreak === 'number' && r.currentStreak > 0) ? r.currentStreak : 0,
+        bestStreak:    (r && typeof r.bestStreak === 'number' && r.bestStreak > 0) ? r.bestStreak : 0,
+      };
+    } catch (_) { return { wins: 0, losses: 0, currentStreak: 0, bestStreak: 0 }; }
+  }
+  function _persistArenaRecord(rec) {
+    try { localStorage.setItem(ARENA_RECORD_KEY, JSON.stringify(rec)); } catch (_) {}
+  }
+  function _recordArenaResult(won) {
+    const r = getArenaRecord();
+    if (won) {
+      r.wins += 1;
+      r.currentStreak += 1;
+      if (r.currentStreak > r.bestStreak) r.bestStreak = r.currentStreak;
+    } else {
+      r.losses += 1;
+      r.currentStreak = 0;
+    }
+    _persistArenaRecord(r);
+    return r;
+  }
+  function arenaUnlockedTitles() {
+    const rec = getArenaRecord();
+    return ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, rec));
+  }
+  function getEquippedArenaTitle() {
+    try {
+      const id = localStorage.getItem(ARENA_TITLE_KEY);
+      if (!id) return null;
+      const t = ARENA_TITLES.find(x => x.id === id);
+      // Only honour it if still unlocked (defensive against tampering).
+      return (t && _arenaTitleUnlocked(t, getArenaRecord())) ? t : null;
+    } catch (_) { return null; }
+  }
+  function setEquippedArenaTitle(id) {
+    // id === null clears the title. Otherwise must be an unlocked title.
+    try {
+      if (id === null) { localStorage.removeItem(ARENA_TITLE_KEY); return true; }
+      const t = ARENA_TITLES.find(x => x.id === id);
+      if (!t || !_arenaTitleUnlocked(t, getArenaRecord())) return false;
+      localStorage.setItem(ARENA_TITLE_KEY, id);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  // ── combat derivation ────────────────────────────────────────────
+  // effective stat = stat LEVEL (1..20) + equipped-gear bonus for that
+  // stat. Gear bonuses are lowercase-keyed; stats are uppercase-id'd.
+  function _arenaPlayerStatline() {
+    let gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    try { gear = aggregateEquippedBonuses() || gear; } catch (_) {}
+    const out = {};
+    STATS.forEach(st => {
+      const lv = statLevel((stats[st.id] && stats[st.id].pts) || 0);
+      out[st.id] = lv + (gear[st.id.toLowerCase()] || 0);
+    });
+    return out; // { STR, VIT, INT, FOCUS, WILL, WLT }
+  }
+  // Map the six stats to combat roles so EVERY stat matters:
+  //   Attack  = STR(lead) + FOCUS(accuracy)
+  //   Defense = VIT(lead) + WILL(resilience)
+  //   Edge    = INT(initiative) + WLT(lucky breaks)
+  function _arenaCombatProfile(s) {
+    const attack  = s.STR * 1.6 + s.FOCUS * 1.0;
+    const defense = s.VIT * 1.4 + s.WILL * 1.0;
+    const edge    = s.INT * 0.8 + s.WLT  * 0.8;
+    return { attack, defense, edge, power: attack + defense + edge, stats: s };
+  }
+
+  const _ARENA_BOT_PREFIX = ['Grim', 'Pale', 'Ashen', 'Hollow', 'Iron', 'Dread', 'Sable', 'Gaunt', 'Riven', 'Wraith'];
+  const _ARENA_BOT_TITLE  = ['Warden', 'Stalker', 'Revenant', 'Husk', 'Sentinel', 'Reaver', 'Pilgrim', 'Outcast', 'Shade', 'Marauder'];
+  function _arenaBotName() {
+    const p = _ARENA_BOT_PREFIX[Math.floor(Math.random() * _ARENA_BOT_PREFIX.length)];
+    const t = _ARENA_BOT_TITLE[Math.floor(Math.random() * _ARENA_BOT_TITLE.length)];
+    return 'The ' + p + ' ' + t;
+  }
+
+  // Generate a bot scaled to the player's power. Centered slightly
+  // BELOW the player (factor mean ≈ 0.96) so wins feel earned but real
+  // losses still happen → ~60–65% player win-rate over time.
+  function _arenaGenerateBot(playerProfile, rankLabel) {
+    const factor = 0.85 + Math.random() * 0.20;            // 0.85 .. 1.05 (mean 0.95 → ~61% player win, all builds)
+    const scale  = playerProfile.power > 0 ? (playerProfile.power * factor) / playerProfile.power : factor;
+    // Distribute the bot's power across attack/defense/edge with some
+    // variance so the comparison panel isn't a mirror of the player.
+    const jitter = () => 0.85 + Math.random() * 0.30;       // 0.85 .. 1.15
+    const attack  = Math.max(1, playerProfile.attack  * scale * jitter());
+    const defense = Math.max(1, playerProfile.defense * scale * jitter());
+    const edge    = Math.max(1, playerProfile.edge    * scale * jitter());
+    return {
+      name: _arenaBotName(),
+      rankLabel: rankLabel,
+      attack, defense, edge,
+      power: attack + defense + edge,
+      isBot: true,
+    };
+  }
+
+  // Resolve a best-of-3. Each round both sides roll power × (0.7..1.3),
+  // so stats set the ODDS and the dice decide the ROUND (an underdog
+  // can still steal a round). First to 2 round-wins takes the bout.
+  function _arenaRoll(power) { return power * (0.7 + Math.random() * 0.6); }
+  function _arenaResolve(player, bot) {
+    let pWins = 0, bWins = 0;
+    const rounds = [];
+    for (let i = 0; i < 3 && pWins < 2 && bWins < 2; i++) {
+      const pRoll = _arenaRoll(player.power);
+      const bRoll = _arenaRoll(bot.power);
+      const playerWon = pRoll >= bRoll;
+      if (playerWon) pWins += 1; else bWins += 1;
+      const margin = Math.abs(pRoll - bRoll) / Math.max(pRoll, bRoll, 1);
+      rounds.push({
+        index: i + 1,
+        pRoll: Math.round(pRoll),
+        bRoll: Math.round(bRoll),
+        playerWon,
+        margin,           // 0..1 — used by the UI to pick flavour text
+      });
+    }
+    return { playerWon: pWins > bWins, pWins, bWins, rounds };
+  }
+
+  // Build a matchup (player profile + a fresh bot) WITHOUT resolving or
+  // recording — so the pre-fight screen can show real opponent numbers,
+  // then resolve THAT same bot when the user taps FIGHT.
+  function arenaMatchup() {
+    const sline   = _arenaPlayerStatline();
+    const profile = _arenaCombatProfile(sline);
+    let rankLabel = 'E';
+    try { rankLabel = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
+    const player = {
+      name: (typeof playerName === 'string' && playerName) ? playerName : 'Hunter',
+      rankLabel,
+      attack: profile.attack, defense: profile.defense, edge: profile.edge,
+      power: profile.power, stats: sline, isBot: false,
+    };
+    const bot = _arenaGenerateBot(profile, rankLabel);
+    return { player, bot };
+  }
+  // Resolve a given matchup + commit the record. Returns the round
+  // result, the updated record, and any newly-unlocked titles.
+  function arenaResolveMatchup(m) {
+    const before    = getArenaRecord();
+    const result    = _arenaResolve(m.player, m.bot);
+    const record    = _recordArenaResult(result.playerWon);
+    const newTitles = ARENA_TITLES.filter(t =>
+      !_arenaTitleUnlocked(t, before) && _arenaTitleUnlocked(t, record));
+    return { result, record, newTitles };
+  }
+  // Convenience: full matchup + resolve in one call (headless testing).
+  function runArenaFight() {
+    const m = arenaMatchup();
+    const r = arenaResolveMatchup(m);
+    return { player: m.player, bot: m.bot, result: r.result, record: r.record, newTitles: r.newTitles };
+  }
+
+  try {
+    window.Arena = {
+      matchup:         arenaMatchup,
+      resolve:         arenaResolveMatchup,
+      fight:           runArenaFight,
+      record:          getArenaRecord,
+      titles:          () => ARENA_TITLES.slice(),
+      unlockedTitles:  arenaUnlockedTitles,
+      getTitle:        getEquippedArenaTitle,
+      setTitle:        setEquippedArenaTitle,
+      _statline:       _arenaPlayerStatline,   // debug
+    };
+  } catch (_) {}
+
+  // ───────────────────────────────────────────────────────────────
+  // THE ARENA — Layer B: UI controller. Renders the four views
+  // (prefight / fight / result / titles) into #arena-body, animates
+  // the best-of-3 reveal, and wires the Awakening-Path entry button.
+  // Presentation only — all outcomes come from the engine above.
+  // ───────────────────────────────────────────────────────────────
+  let _arView   = 'prefight';
+  let _arMatchup = null;   // { player, bot } from arenaMatchup()
+  let _arFight   = null;   // { result, record, newTitles } once resolved
+  let _arTimers  = [];
+
+  function _arClearTimers() { _arTimers.forEach(t => { try { clearTimeout(t); } catch (_) {} }); _arTimers = []; }
+  function _arBody() { return document.getElementById('arena-body'); }
+  function _arSet(html) { const b = _arBody(); if (b) b.innerHTML = html; }
+  function _arR(n) { return Math.round(Number(n) || 0); }
+
+  // Cold-iron opponent silhouette (a hooded figure) — never gilded.
+  function _arFoeSil() {
+    return '<svg viewBox="0 0 64 86" fill="none" aria-hidden="true">' +
+      '<path d="M32 6c-8 0-13 6-13 15 0 5 2 9 5 12-6 3-12 9-13 20-1 9 0 21 0 21h42s1-12 0-21c-1-11-7-17-13-20 3-3 5-7 5-12 0-9-5-15-13-15z" fill="#1a1d28" stroke="#3a3f4d" stroke-width="1.4"/>' +
+      '<path d="M24 22c0-6 3-10 8-10s8 4 8 10" stroke="#7e8597" stroke-width="1.2" opacity="0.6"/>' +
+      '</svg>';
+  }
+  function _arRecPill(rec) {
+    return '<span class="ar-recpill">' +
+      '<span class="w">' + rec.wins + 'W</span><span class="dot"></span>' +
+      '<span class="l">' + rec.losses + 'L</span><span class="dot"></span>' +
+      '<span class="s">' + rec.currentStreak + '▲</span></span>';
+  }
+
+  // ── PREFIGHT ──────────────────────────────────────────────────────
+  function _arRenderPrefight() {
+    _arView = 'prefight';
+    _arMatchup = arenaMatchup();
+    _arFight = null;
+    const p = _arMatchup.player, b = _arMatchup.bot;
+    const rec = getArenaRecord();
+    const title = getEquippedArenaTitle();
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+
+    const roles = [
+      { lab: 'ATTACK',  you: p.attack,  foe: b.attack },
+      { lab: 'DEFENSE', you: p.defense, foe: b.defense },
+      { lab: 'EDGE',    you: p.edge,    foe: b.edge },
+    ];
+    const rowsHtml = roles.map(r => {
+      const tot = Math.max(1, r.you + r.foe);
+      const youPct = Math.round(r.you / tot * 100), foePct = 100 - youPct;
+      return '<div class="ar-prow">' +
+        '<div class="ar-prow-top"><span class="ar-prow-role">' + r.lab + '</span>' +
+        '<span class="ar-prow-vals"><span class="you">' + _arR(r.you) + '</span> <span style="color:#3a3f4d">/</span> <span class="foe">' + _arR(r.foe) + '</span></span></div>' +
+        '<div class="ar-prow-bar"><span class="you" style="width:' + youPct + '%"></span><span class="foe" style="width:' + foePct + '%"></span></div>' +
+      '</div>';
+    }).join('');
+
+    _arSet(
+      '<div class="ar-tophead">' +
+        '<div><div class="ar-kicker">The Arena</div><div class="ar-sub">You forged this hunter. Now test it.</div></div>' +
+        _arRecPill(rec) +
+      '</div>' +
+      '<div class="ar-vsrow">' +
+        '<div class="ar-combatant">' +
+          '<div class="ar-medallion">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+          '<div class="ar-crest">' + esc(p.rankLabel) + '</div>' +
+          '<div class="ar-cname">' + esc(p.name) + '</div>' +
+          (title ? '<div class="ar-ctitle">' + esc(title.name.toUpperCase()) + '</div>'
+                 : '<div class="ar-cchallenger">YOUR HUNTER</div>') +
+        '</div>' +
+        '<div class="ar-vs">VS</div>' +
+        '<div class="ar-combatant">' +
+          '<div class="ar-medallion ar-medallion--foe">' + _arFoeSil() + '</div>' +
+          '<div class="ar-crest ar-crest--foe">' + esc(b.rankLabel) + '</div>' +
+          '<div class="ar-cname">' + esc(b.name) + '</div>' +
+          '<div class="ar-cchallenger">' + esc(b.rankLabel) + '-RANK · CHALLENGER</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ar-power">' +
+        '<div class="ar-power-head"><span class="you">YOUR POWER</span><span class="foe">CHALLENGER</span></div>' +
+        rowsHtml +
+        '<div class="ar-total"><span class="you">' + _arR(p.power) + '</span><span class="lbl">TOTAL POWER</span><span class="foe">' + _arR(b.power) + '</span></div>' +
+      '</div>' +
+      '<div class="ar-spacer"></div>' +
+      '<button class="ar-cta" data-ar="fight">FIGHT<span class="ar-cta-sub">BEST OF 3 ROUNDS</span></button>' +
+      '<div class="ar-cosmetic-note">Cosmetic only · no souls, no loss of progress</div>' +
+      (rec.wins > 0 || arenaUnlockedTitles().length ? '<button class="ar-ghost" data-ar="titles">View Titles</button>' : '')
+    );
+  }
+
+  // ── FIGHT (animated reveal) ───────────────────────────────────────
+  function _arNarr(round) {
+    const hi = round.margin > 0.28;
+    if (round.playerWon) return hi ? 'You break their guard — a decisive strike for <b>' + round.pRoll + '</b>.'
+                                   : 'You edge the exchange, <b>' + round.pRoll + '</b> to ' + round.bRoll + '.';
+    return hi ? 'They overwhelm you this round, <b>' + round.bRoll + '</b> lands hard.'
+              : 'They scrape the round from you, ' + round.bRoll + ' to ' + round.pRoll + '.';
+  }
+  function _arRenderFight(reveal) {
+    _arView = 'fight';
+    const r = _arFight.result;
+    const shown = r.rounds.slice(0, reveal);
+    let pW = 0, bW = 0;
+    const pips = [0,1,2].map(i => {
+      const rd = r.rounds[i];
+      if (i < reveal && rd) { rd.playerWon ? pW++ : bW++; return '<span class="ar-pip ' + (rd.playerWon ? 'win' : 'loss') + '"></span>'; }
+      return '<span class="ar-pip"></span>';
+    }).join('');
+    const youHP = Math.max(8, 100 - bW * 45), foeHP = Math.max(8, 100 - pW * 45);
+    const logHtml = shown.map((rd, i) =>
+      '<div class="ar-logline neutral">Round ' + (i + 1) + '</div>' +
+      '<div class="ar-logline ' + (rd.playerWon ? 'you' : 'foe') + '">' + _arNarr(rd) + '</div>'
+    ).join('');
+    const done = reveal >= r.rounds.length;
+
+    _arSet(
+      '<div class="ar-tophead"><div class="ar-kicker">Round ' + Math.min(reveal || 1, 3) + ' of 3</div><div class="ar-pips">' + pips + '</div></div>' +
+      '<div class="ar-hp">' +
+        '<div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:' + youHP + '%"></div></div></div>' +
+        '<div class="ar-hp-vs">vs</div>' +
+        '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:' + foeHP + '%"></div></div></div>' +
+      '</div>' +
+      '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + logHtml + '</div>' +
+      '<div class="ar-spacer"></div>' +
+      (done ? '' : '<div class="ar-skip"><button data-ar="skip">TAP TO SKIP <svg width="14" height="11" viewBox="0 0 14 11" aria-hidden="true"><path d="M1 1l5 4.5L1 10M7 1l5 4.5L7 10" stroke="#f5b842" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>')
+    );
+  }
+  function _arStartFight() {
+    _arFight = arenaResolveMatchup(_arMatchup);
+    const total = _arFight.result.rounds.length;
+    const reduced = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (reduced) { _arRenderResult(); return; }
+    let reveal = 0;
+    _arRenderFight(reveal);
+    const step = () => {
+      reveal += 1;
+      _arRenderFight(reveal);
+      if (reveal < total) { _arTimers.push(setTimeout(step, 850)); }
+      else { _arTimers.push(setTimeout(_arRenderResult, 700)); }
+    };
+    _arTimers.push(setTimeout(step, 650));
+  }
+
+  // ── RESULT ────────────────────────────────────────────────────────
+  function _arRenderResult() {
+    _arClearTimers();
+    _arView = 'result';
+    const won = _arFight.result.playerWon;
+    const rec = _arFight.record;
+    const nt  = _arFight.newTitles;
+    const b = _arMatchup.bot;
+    const score = won ? (_arFight.result.pWins + '–' + _arFight.result.bWins)
+                      : (_arFight.result.bWins + '–' + _arFight.result.pWins);
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+
+    const titleHtml = (won && nt && nt.length)
+      ? '<div class="ar-title-unlock"><div class="sig"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 1.5l2.4 5 5.4.6-4 3.7 1.1 5.3L10 18.4 5.1 16l1.1-5.3-4-3.7 5.4-.6z" fill="none" stroke="#f5b842" stroke-width="1.2" stroke-linejoin="round"/></svg></div>' +
+          '<div><div class="eyebrow">NEW TITLE UNLOCKED</div><div class="name">' + esc(nt[0].name) + '</div><div class="hint">' + esc(nt[0].blurb) + ' · tap Titles to equip</div></div></div>'
+      : '';
+    const streakNote = (!won && rec.bestStreak > 0)
+      ? '<div class="ar-streak-note"><span style="color:#9090a8">↺</span><div>Win streak reset to <b style="color:#c8c6d8">0</b>. Your best — <b style="color:#f5b842">' + rec.bestStreak + '</b> — still stands.</div></div>'
+      : '';
+
+    _arSet(
+      '<div class="ar-result-hero">' +
+        '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+        '<div class="ar-kicker" style="margin-top:14px">The Arena · Result</div>' +
+        '<div class="ar-result-word ' + (won ? 'win' : 'loss') + '">' + (won ? 'VICTORY' : 'DEFEAT') + '</div>' +
+        '<div class="ar-result-rule"></div>' +
+        (won
+          ? '<div class="ar-result-narr">You took ' + esc(b.name) + ' <b style="color:#f5b842">' + score + '</b>. The record holds — earned, not given.</div>'
+          : '<div class="ar-result-narr loss">“The Arena humbles every hunter. Return stronger.”</div>') +
+      '</div>' +
+      titleHtml + streakNote +
+      '<div class="ar-rec">' +
+        '<div class="ar-rec-cell"><div class="v w">' + rec.wins + '</div><div class="lbl">WINS</div></div><div class="ar-rec-div"></div>' +
+        '<div class="ar-rec-cell"><div class="v l">' + rec.losses + '</div><div class="lbl">LOSSES</div></div><div class="ar-rec-div"></div>' +
+        '<div class="ar-rec-cell"><div class="v s">' + rec.currentStreak + '</div><div class="lbl">STREAK</div></div>' +
+      '</div>' +
+      '<div class="ar-spacer"></div>' +
+      '<button class="ar-cta" data-ar="again">FIGHT AGAIN</button>' +
+      '<button class="ar-ghost" data-ar="titles">View Titles</button>'
+    );
+    try { if (won && navigator.vibrate) navigator.vibrate(12); } catch (_) {}
+  }
+
+  // ── TITLES ────────────────────────────────────────────────────────
+  function _arTitleSig(locked) {
+    return locked
+      ? '<svg width="13" height="14" viewBox="0 0 13 14"><rect x="2" y="6" width="9" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 6V4a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 20 20"><path d="M10 1.5l2.4 5 5.4.6-4 3.7 1.1 5.3L10 18.4 5.1 16l1.1-5.3-4-3.7 5.4-.6z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+  }
+  function _arRenderTitles() {
+    _arView = 'titles';
+    const rec = getArenaRecord();
+    const equipped = getEquippedArenaTitle();
+    const row = (t) => {
+      const unlocked = (t.kind === 'wins') ? rec.wins >= t.need : rec.bestStreak >= t.need;
+      const isEq = equipped && equipped.id === t.id;
+      const state = isEq ? 'equipped' : unlocked ? 'unlocked' : 'locked';
+      const have = (t.kind === 'wins') ? rec.wins : rec.bestStreak;
+      const req = unlocked ? (t.blurb + ' · earned')
+                           : (t.kind === 'wins' ? (t.need - have) + ' more wins' : 'best is ' + rec.bestStreak + ' · need ' + t.need);
+      const action = isEq
+        ? '<span class="tequipped"><svg width="9" height="9" viewBox="0 0 11 11"><path d="M1.5 5.5l2.5 2.5 5.5-5.5" stroke="#f5b842" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>EQUIPPED</span>'
+        : unlocked ? '<button class="tequip" data-ar="equip" data-tid="' + esc(t.id) + '">EQUIP</button>'
+        : '<span class="tlocked">LOCKED</span>';
+      return '<div class="ar-trow ' + state + '"><div class="sig">' + _arTitleSig(!unlocked) + '</div>' +
+        '<div class="tmid"><div class="tname">' + esc(t.name) + '</div><div class="treq">' + esc(req) + '</div></div>' + action + '</div>';
+    };
+    const wins = ARENA_TITLES.filter(t => t.kind === 'wins').map(row).join('');
+    const streaks = ARENA_TITLES.filter(t => t.kind === 'streak').map(row).join('');
+    _arSet(
+      '<div class="ar-titles-head"><div class="ar-kicker" style="justify-content:center">The Arena</div>' +
+        '<div class="ar-titles-name">Titles</div><div class="ar-sub">Cosmetic honors. Worn on your hunter profile.</div></div>' +
+      '<div class="ar-titles-group wins">WIN MILESTONES</div>' + wins +
+      '<div class="ar-titles-group streak">STREAK HONORS</div>' + streaks +
+      '<div class="ar-spacer"></div>' +
+      '<button class="ar-ghost" data-ar="back">‹ Back to the Arena</button>'
+    );
+  }
+
+  // ── open / close + wiring ─────────────────────────────────────────
+  function openArena() {
+    const ov = document.getElementById('arena-overlay');
+    if (!ov) return;
+    setupArena();              // idempotent (data-ar-wired guard)
+    _arClearTimers();
+    _arRenderPrefight();
+    ov.classList.remove('hidden');
+    ov.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', _arKeydown, true);
+  }
+  function closeArena() {
+    const ov = document.getElementById('arena-overlay');
+    if (!ov) return;
+    _arClearTimers();
+    ov.classList.add('hidden');
+    ov.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', _arKeydown, true);
+  }
+  function _arKeydown(e) { if (e.key === 'Escape') closeArena(); }
+
+  function setupArena() {
+    const ov = document.getElementById('arena-overlay');
+    if (!ov || ov.getAttribute('data-ar-wired') === '1') return;
+    ov.setAttribute('data-ar-wired', '1');
+    const closeBtn = document.getElementById('arena-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeArena);
+    ov.addEventListener('click', (e) => {
+      const act = e.target && e.target.closest ? e.target.closest('[data-ar]') : null;
+      if (!act) { if (e.target === ov) closeArena(); return; }
+      const a = act.getAttribute('data-ar');
+      if (a === 'fight')       _arStartFight();
+      else if (a === 'skip')   { _arClearTimers(); _arRenderResult(); }
+      else if (a === 'again')  _arRenderPrefight();
+      else if (a === 'titles') _arRenderTitles();
+      else if (a === 'back')   _arRenderPrefight();
+      else if (a === 'equip')  {
+        const tid = act.getAttribute('data-tid');
+        const cur = getEquippedArenaTitle();
+        setEquippedArenaTitle(cur && cur.id === tid ? null : tid);  // toggle
+        _arRenderTitles();
+      }
+    });
+    try { window.openArena = openArena; } catch (_) {}
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // HUNTER BUILD — v3 Phase 1d pivot from body-slot equipment to
   // MOBA-style 6-slot active build. Replaces the visible Armory UI;
   // the legacy hb_pvp_equipped storage above is preserved untouched
@@ -18021,17 +18500,16 @@
             (shifting ? '<div class="sc-shifting" style="margin-top:6px">⚠️ Your class is shifting...</div>' : '') +
           '</div>' +
         '</div>' +
-        // Full-width gold Awakening Path button (conditional on Chapter 1)
-        ((originBeginning && originBeginning.text)
-          ? '<div class="sc-origin-row">' +
-              '<button class="sc-origin-btn sc-origin-btn--gold" id="sc-origin-btn" type="button">' +
-                '<span class="sc-origin-btn__glyph" aria-hidden="true">📜</span>' +
-                '<span class="sc-origin-btn__label">Awakening Path</span>' +
-                ((originAwakening && originAwakening.text) ? ' <span class="sc-origin-chapters">2 chapters</span>' : '') +
-                '<span class="sc-origin-btn__chev" aria-hidden="true">›</span>' +
-              '</button>' +
-            '</div>'
-          : '') +
+        // v3 W206 — repurposed from the old "Awakening Path" lore entry
+        // to "The Arena" (combat sim). Always rendered; opens openArena().
+        '<div class="sc-origin-row">' +
+          '<button class="sc-origin-btn sc-origin-btn--gold" id="sc-arena-btn" type="button">' +
+            '<span class="sc-origin-btn__glyph" aria-hidden="true">⚔️</span>' +
+            '<span class="sc-origin-btn__label">The Arena</span>' +
+            '<span class="sc-origin-chapters">Test your build</span>' +
+            '<span class="sc-origin-btn__chev" aria-hidden="true">›</span>' +
+          '</button>' +
+        '</div>' +
         // Portrait frame — avatar + radar inside one bounded gold-cornered
         // zone with hex grid backdrop.
         (function() {
@@ -27769,11 +28247,11 @@
     document.addEventListener('click', e => {
       const t = e.target;
       if (!t || !t.closest) return;
-      const btn = t.closest('#sc-origin-btn');
+      const btn = t.closest('#sc-arena-btn');
       if (!btn) return;
       e.preventDefault();
       e.stopPropagation();
-      openOriginStorySheet();
+      try { openArena(); } catch (_) {}
     });
     // Swipe-down dismiss
     if (typeof attachSheetDismissGesture === 'function') {
