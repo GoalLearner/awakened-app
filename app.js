@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w203';
+  const APP_BUILD_TAG = '2.2.5-w204';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6326,7 +6326,19 @@
     const inv = getInventory();
     const entry = inv.cards[cardId];
     entry.count = Math.max(0, (entry.count || 0) - 1);
-    // Stays `discovered` at count 0 — you've seen it, you just don't own one.
+    // v3 W204 — when the LAST copy sells, revert to undiscovered so the
+    // archive shows the "?" mystery card again. This is the ownership-
+    // clarity signal ("you no longer own this") AND it closes a latent
+    // bug: equip-eligible lists filter on `.discovered` (archive line
+    // ~21643) and equipCard doesn't verify ownership, so a discovered-
+    // but-count-0 relic would otherwise stay equippable. Reverting the
+    // flag restores the invariant discovered ⟺ owned. first_acquired_date
+    // is intentionally PRESERVED, so re-buying re-reveals the relic in
+    // its original chronological slot with no dramatic reveal / NEW pill
+    // (buyRelic guards first_acquired_date with !entry.first_acquired_date).
+    // Note: canSellRelic blocks selling the last copy of an EQUIPPED
+    // relic, so this revert can never orphan an equipped slot.
+    if (entry.count <= 0) entry.discovered = false;
     inv.cards[cardId] = entry;
     persistInventory();
     earnSouls(price, 'relic_sell_' + cardId);
