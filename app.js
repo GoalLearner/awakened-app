@@ -5846,7 +5846,7 @@
     70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    title: { id: 'asc_tyrantsbane',  name: 'Tyrantsbane' } },
     80:  { name: 'The Silent Warden',   arch: 'sentinel',    title: { id: 'asc_siegebreaker', name: 'Siegebreaker' } },
     90:  { name: 'The Dread Harbinger', arch: 'trickster',   title: { id: 'asc_shadowcaller', name: 'Shadowcaller' } },
-    100: { name: 'The Arena Sovereign', arch: 'glasscannon', title: { id: 'asc_sovereign',    name: 'Arena Sovereign' } },
+    100: { name: 'The First Awakened',  arch: 'balanced',    title: { id: 'asc_sovereign',    name: 'The Second Awakened' } },
   };
 
   // Procedural name pool for the 90 regular floors (stable per floor via
@@ -6294,7 +6294,8 @@
     return '<div><div class="asc-boss-ribbon"><span class="rule l"></span>' +
         '<span class="lbl">' + (apex ? '✦ THE SUMMIT · FINAL BOSS ✦' : '✦ MILESTONE BOSS ✦') + '</span><span class="rule r"></span></div>' +
       '<div class="asc-boss ' + state + '"' + (state === 'current' ? ' id="asc-current-card"' : '') + '>' +
-        '<div class="asc-boss-top"><div class="asc-boss-med">' + _arFoeSil() + '</div>' +
+        '<div class="asc-boss-top"><div class="asc-boss-med' + (info.floor === 100 ? ' asc-boss-med--fa' : '') + '">' +
+          (info.floor === 100 ? '<img src="assets/coach/first-awakened-idle.png" alt="" class="asc-fa-img">' : _arFoeSil()) + '</div>' +
           '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">' +
             '<span class="asc-ftag ' + (state === 'locked' ? '' : 'gold') + '">FLOOR ' + info.floor + '</span>' +
             (state === 'cleared' ? '<span class="asc-slain">✓ SLAIN</span>' : '') + '</div>' +
