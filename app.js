@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w206';
+  const APP_BUILD_TAG = '2.2.5-w207';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5978,6 +5978,7 @@
   let _arView   = 'prefight';
   let _arMatchup = null;   // { player, bot } from arenaMatchup()
   let _arFight   = null;   // { result, record, newTitles } once resolved
+  let _arReveal  = 1;      // rounds currently shown in the fight view (tap-to-advance)
   let _arTimers  = [];
 
   function _arClearTimers() { _arTimers.forEach(t => { try { clearTimeout(t); } catch (_) {} }); _arTimers = []; }
@@ -6065,9 +6066,14 @@
     return hi ? 'They overwhelm you this round, <b>' + round.bRoll + '</b> lands hard.'
               : 'They scrape the round from you, ' + round.bRoll + ' to ' + round.pRoll + '.';
   }
-  function _arRenderFight(reveal) {
+  // Tap-to-advance: the user controls the pace. _arReveal = how many
+  // rounds are currently shown (1..total). Tapping CONTINUE reveals the
+  // next round; on the last round it becomes SEE RESULT.
+  function _arRenderFight() {
     _arView = 'fight';
     const r = _arFight.result;
+    const total = r.rounds.length;
+    const reveal = Math.max(1, Math.min(_arReveal, total));
     const shown = r.rounds.slice(0, reveal);
     let pW = 0, bW = 0;
     const pips = [0,1,2].map(i => {
@@ -6080,10 +6086,10 @@
       '<div class="ar-logline neutral">Round ' + (i + 1) + '</div>' +
       '<div class="ar-logline ' + (rd.playerWon ? 'you' : 'foe') + '">' + _arNarr(rd) + '</div>'
     ).join('');
-    const done = reveal >= r.rounds.length;
+    const more = reveal < total;
 
     _arSet(
-      '<div class="ar-tophead"><div class="ar-kicker">Round ' + Math.min(reveal || 1, 3) + ' of 3</div><div class="ar-pips">' + pips + '</div></div>' +
+      '<div class="ar-tophead"><div class="ar-kicker">Round ' + reveal + ' of ' + total + '</div><div class="ar-pips">' + pips + '</div></div>' +
       '<div class="ar-hp">' +
         '<div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:' + youHP + '%"></div></div></div>' +
         '<div class="ar-hp-vs">vs</div>' +
@@ -6091,23 +6097,16 @@
       '</div>' +
       '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + logHtml + '</div>' +
       '<div class="ar-spacer"></div>' +
-      (done ? '' : '<div class="ar-skip"><button data-ar="skip">TAP TO SKIP <svg width="14" height="11" viewBox="0 0 14 11" aria-hidden="true"><path d="M1 1l5 4.5L1 10M7 1l5 4.5L7 10" stroke="#f5b842" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>')
+      (more
+        ? '<button class="ar-cta" data-ar="next">CONTINUE<span class="ar-cta-sub">ROUND ' + (reveal + 1) + ' OF ' + total + '</span></button>'
+        : '<button class="ar-cta" data-ar="next">SEE RESULT</button>')
     );
   }
   function _arStartFight() {
+    if (_arView === 'fight') return;     // already resolving — ignore re-taps
     _arFight = arenaResolveMatchup(_arMatchup);
-    const total = _arFight.result.rounds.length;
-    const reduced = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    if (reduced) { _arRenderResult(); return; }
-    let reveal = 0;
-    _arRenderFight(reveal);
-    const step = () => {
-      reveal += 1;
-      _arRenderFight(reveal);
-      if (reveal < total) { _arTimers.push(setTimeout(step, 850)); }
-      else { _arTimers.push(setTimeout(_arRenderResult, 700)); }
-    };
-    _arTimers.push(setTimeout(step, 650));
+    _arReveal = 1;                        // reveal round 1; user taps to continue
+    _arRenderFight();
   }
 
   // ── RESULT ────────────────────────────────────────────────────────
@@ -6221,7 +6220,10 @@
       if (!act) { if (e.target === ov) closeArena(); return; }
       const a = act.getAttribute('data-ar');
       if (a === 'fight')       _arStartFight();
-      else if (a === 'skip')   { _arClearTimers(); _arRenderResult(); }
+      else if (a === 'next')   {
+        if (_arFight && _arReveal < _arFight.result.rounds.length) { _arReveal += 1; _arRenderFight(); }
+        else _arRenderResult();
+      }
       else if (a === 'again')  _arRenderPrefight();
       else if (a === 'titles') _arRenderTitles();
       else if (a === 'back')   _arRenderPrefight();
