@@ -3034,6 +3034,17 @@
         ref_id: rankId || null,
       };
     }
+    // Relic Marketplace (buy/sell). Hint: 'relic_buy_<id>' / 'relic_sell_<id>'.
+    if (h.indexOf('relic_buy_') === 0) {
+      const rid = h.slice(10);
+      const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
+      return { type: 'relic_buy', label: 'Relic purchased', detail: rcard ? rcard.name : null, ref_id: rid || null };
+    }
+    if (h.indexOf('relic_sell_') === 0) {
+      const rid = h.slice(11);
+      const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
+      return { type: 'relic_sell', label: 'Relic sold', detail: rcard ? rcard.name : null, ref_id: rid || null };
+    }
     // v3 W200 — RETAINED intentionally. The W198 Founder's Gift grant
     // was removed before public launch, but TestFlight claimers still
     // have a 'gift_founders' row in their local souls ledger; this
@@ -6207,6 +6218,319 @@
     return _inventory;
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // Relic Marketplace (engine) — inline buy/sell on the Relics page.
+  // ══════════════════════════════════════════════════════════════════
+  // RARE + ULTRA-RARE only (commons are filler, untradeable). Option A:
+  // any tradeable relic can be BOUGHT if you have the souls — no
+  // discovery gate, RPG-shop style. Respects the existing STACK_CAPS.
+  // Reuses the souls + inventory plumbing — no new storage, no backend.
+  // Purchases are NOT drops: they skip the reveal animation + the "NEW"
+  // header pill (a bought relic simply appears owned).
+  //
+  // PRICING — per-item, NOT flat. Scales with all three progression axes
+  // so "the harder the task, the higher the dungeon, the stronger the
+  // item, the more it costs":
+  //   buy = TIER_BASE[card.tier] × RARITY_MULT[rarity]   (dungeon × rarity)
+  //         + STAT_WEIGHT × Σ(stat bonuses)              (item strength)
+  //   sell = buy × 0.25   (75% OFF — you recover a quarter; 4× spread)
+  // Rounded to the nearest 10. A late-game B-rank ultra runs ~7× an
+  // early E-rank rare. TIER_BASE includes A/S so future content prices
+  // itself automatically. All knobs are tunable here.
+  const RELIC_TRADEABLE_RARITIES = { rare: true, ultra_rare: true };
+  const RELIC_TIER_BASE   = { E: 90, D: 160, C: 280, B: 480, A: 760, S: 1200 };
+  const RELIC_RARITY_MULT = { rare: 1.0, ultra_rare: 1.9 };
+  const RELIC_STAT_WEIGHT = 10;    // souls per total stat-bonus point
+  const RELIC_SELL_RATIO  = 0.25;  // sell = 25% of buy (i.e. 75% off → 4× spread)
+
+  function _relicTotalBonus(card) {
+    const b = card && card.bonuses;
+    if (!b) return 0;
+    let t = 0;
+    ['str', 'vit', 'int', 'focus', 'will', 'wlt'].forEach(k => {
+      const v = +b[k];
+      if (isFinite(v) && v > 0) t += v;
+    });
+    return t;
+  }
+  function _relicIsTradeable(cardId) {
+    const card = CARDS[cardId];
+    return !!(card && RELIC_TRADEABLE_RARITIES[card.rarity]);
+  }
+  function relicBuyPrice(cardId) {
+    const card = CARDS[cardId];
+    if (!card || !_relicIsTradeable(cardId)) return null;
+    const base = (RELIC_TIER_BASE[card.tier] != null) ? RELIC_TIER_BASE[card.tier] : RELIC_TIER_BASE.C;
+    const mult = RELIC_RARITY_MULT[card.rarity] || 1;
+    const raw  = base * mult + RELIC_STAT_WEIGHT * _relicTotalBonus(card);
+    return Math.max(10, Math.round(raw / 10) * 10);
+  }
+  function relicSellPrice(cardId) {
+    const buy = relicBuyPrice(cardId);
+    if (buy == null) return null;
+    return Math.max(10, Math.round(buy * RELIC_SELL_RATIO / 10) * 10);
+  }
+
+  // Pre-flight checks. Both return { ok, reason, ... } so the UI can
+  // render the exact disabled/blocked state without re-deriving logic.
+  function canBuyRelic(cardId) {
+    const card = CARDS[cardId];
+    if (!card) return { ok: false, reason: 'unknown' };
+    if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
+    const price = relicBuyPrice(cardId);
+    const entry = getInventory().cards[cardId] || _stubCard();
+    const cap = STACK_CAPS[card.rarity] != null ? STACK_CAPS[card.rarity] : Infinity;
+    if ((entry.count || 0) >= cap) return { ok: false, reason: 'at_cap', cap: cap };
+    const bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
+    if (bal < price) return { ok: false, reason: 'insufficient', price: price, shortBy: price - bal };
+    return { ok: true, price: price };
+  }
+  function canSellRelic(cardId) {
+    const card = CARDS[cardId];
+    if (!card) return { ok: false, reason: 'unknown' };
+    if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
+    const entry = getInventory().cards[cardId] || _stubCard();
+    if ((entry.count || 0) < 1) return { ok: false, reason: 'not_owned' };
+    // Block selling the LAST copy of an equipped relic (a duplicate is fine).
+    if ((entry.count || 0) === 1 && isCardEquipped(cardId)) return { ok: false, reason: 'equipped' };
+    return { ok: true, price: relicSellPrice(cardId) };
+  }
+
+  // Execute. Both re-check pre-flight (defense against a stale UI), then
+  // mutate inventory + souls and persist. Return { ok, reason, price,
+  // newCount } for the caller's toast / re-render.
+  function buyRelic(cardId) {
+    const chk = canBuyRelic(cardId);
+    if (!chk.ok) return chk;
+    const price = chk.price;
+    // Pay first (balance already verified) — never grant before charging.
+    spendSouls(price, 'relic_buy_' + cardId);
+    const inv = getInventory();
+    const entry = inv.cards[cardId] || _stubCard();
+    const wasFirstAcquisition = !entry.discovered;
+    entry.discovered = true;
+    entry.count = (entry.count || 0) + 1;
+    if (wasFirstAcquisition && !entry.first_acquired_date) {
+      entry.first_acquired_date = getDeviceLocalDate();
+    }
+    // Deliberately NO reveal_queue enqueue and NO _stampRelicArchiveNew:
+    // a purchase is not a drop. The relic just appears owned in the grid.
+    inv.cards[cardId] = entry;
+    persistInventory();
+    return { ok: true, price: price, newCount: entry.count };
+  }
+  function sellRelic(cardId) {
+    const chk = canSellRelic(cardId);
+    if (!chk.ok) return chk;
+    const price = chk.price;
+    const inv = getInventory();
+    const entry = inv.cards[cardId];
+    entry.count = Math.max(0, (entry.count || 0) - 1);
+    // Stays `discovered` at count 0 — you've seen it, you just don't own one.
+    inv.cards[cardId] = entry;
+    persistInventory();
+    earnSouls(price, 'relic_sell_' + cardId);
+    return { ok: true, price: price, newCount: entry.count };
+  }
+  try {
+    window.buyRelic = buyRelic;
+    window.sellRelic = sellRelic;
+    window.canBuyRelic = canBuyRelic;
+    window.canSellRelic = canSellRelic;
+  } catch (_) {}
+
+  // ── Marketplace UI (Layer B) — inline card affordance + confirm sheets ──
+  // Souls sigil (matches the header badge): ring + inner dot.
+  function _marketSoulsSvg(cls) {
+    return '<svg class="' + (cls || 'market-souls') + '" viewBox="0 0 12 12" aria-hidden="true">' +
+      '<circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.9"/>' +
+      '<circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>';
+  }
+  // Per-card trade affordance. Owned tradeable → SELL; un-owned tradeable
+  // → BUY (affordable / insufficient). Commons → '' (no control).
+  function _marketAffordanceHtml(card, entry) {
+    if (!card || !_relicIsTradeable(card.id)) return '';
+    const owned = !!(entry && (entry.count || 0) > 0);
+    if (owned) {
+      const sell = relicSellPrice(card.id);
+      return '<button class="market-trade market-trade--sell" type="button" ' +
+        'data-market-action="sell" data-card-id="' + esc(card.id) + '">' +
+        '<span class="market-trade-label">SELL</span>' +
+        '<span class="market-trade-amt">+' + sell + _marketSoulsSvg() + '</span>' +
+      '</button>';
+    }
+    const buy = relicBuyPrice(card.id);
+    const chk = canBuyRelic(card.id);
+    const affordable = chk.ok;
+    const need = (chk.reason === 'insufficient') ? chk.shortBy : 0;
+    return '<button class="market-trade market-trade--buy' + (affordable ? '' : ' is-disabled') + '" ' +
+      'type="button" data-market-action="buy" data-card-id="' + esc(card.id) + '">' +
+      '<span class="market-trade-label">BUY</span>' +
+      '<span class="market-trade-amt">−' + buy + _marketSoulsSvg() + '</span>' +
+    '</button>' +
+    (need > 0 ? '<div class="market-trade-need">Need ' + need + ' more</div>' : '');
+  }
+
+  // ── Confirm-sheet engine ────────────────────────────────────────────
+  let _marketSheetCardId = null;
+  let _marketSheetAction = null; // 'buy' | 'sell'
+
+  function _marketSheetHtml(action, cardId) {
+    const card = CARDS[cardId];
+    if (!card) return '';
+    const rarity = card.rarity; // 'rare' | 'ultra_rare'
+    const rarityLabel = (RARITY_LABELS && RARITY_LABELS[rarity]) || (rarity === 'ultra_rare' ? 'ULTRA-RARE' : 'RARE');
+    const slotKey = (typeof getCardEquipmentSlot === 'function') ? getCardEquipmentSlot(card) : (card.slot || null);
+    const slotDef = (slotKey != null && typeof EQUIPMENT_SLOT_INDEX !== 'undefined' && typeof EQUIPMENT_SLOTS !== 'undefined')
+      ? EQUIPMENT_SLOTS[EQUIPMENT_SLOT_INDEX[slotKey]] : null;
+    const slotLabel = slotDef ? slotDef.label : (slotKey ? String(slotKey).toUpperCase() : '');
+    const sourceLabel = (typeof getCardDropSourceLabel === 'function') ? getCardDropSourceLabel(card) : '';
+    const bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
+
+    const artImg = card.art_path
+      ? '<img class="market-sheet-art-img" src="' + esc(card.art_path) + '" alt="" data-card-art="1">'
+      : '';
+    const slotIcon = (typeof SLOT_ICONS !== 'undefined' && SLOT_ICONS[card.slot]) ? SLOT_ICONS[card.slot] : '✦';
+
+    const head =
+      '<div class="market-sheet-head">' +
+        '<div class="market-sheet-art market-sheet-art--' + rarity + '">' +
+          '<span class="market-sheet-art-icon">' + slotIcon + '</span>' + artImg +
+        '</div>' +
+        '<div class="market-sheet-headtext">' +
+          '<div class="market-sheet-rarity market-sheet-rarity--' + rarity + '">' + esc(rarityLabel) + '</div>' +
+          '<div class="market-sheet-name">' + esc(card.name) + '</div>' +
+          '<div class="market-sheet-meta">' +
+            (slotLabel ? '<span class="market-sheet-slot">' + esc(slotLabel) + '</span>' : '') +
+            (sourceLabel ? '<span class="market-sheet-source">Drops from ' + esc(sourceLabel) + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    const priceRow = (label, value, big, tone) =>
+      '<div class="market-row' + (big ? ' market-row--big' : '') + '">' +
+        '<span class="market-row-label">' + esc(label) + '</span>' +
+        '<span class="market-row-val market-row-val--' + (tone || 'gold') + '">' + value + _marketSoulsSvg('market-souls' + (big ? ' market-souls--big' : '')) + '</span>' +
+      '</div>';
+
+    if (action === 'buy') {
+      const chk = canBuyRelic(cardId);
+      const price = relicBuyPrice(cardId);
+      const insufficient = (chk.reason === 'insufficient');
+      const need = insufficient ? chk.shortBy : 0;
+      const after = bal - price;
+      const ledger =
+        '<div class="market-ledger">' +
+          priceRow('Price', price, true, 'gold') +
+          '<div class="market-ledger-rule"></div>' +
+          priceRow('Your balance', bal, false, 'ink') +
+          priceRow('After purchase', (insufficient ? '–' + need : after), false, (insufficient ? 'danger' : 'gold')) +
+        '</div>';
+      const warn = insufficient
+        ? '<div class="market-warn market-warn--danger">You need <b>' + need + ' more souls</b>. Slay bosses to earn more.</div>'
+        : '';
+      const cta = '<button class="market-cta' + (insufficient ? ' is-disabled' : '') + '" type="button" ' +
+        (insufficient ? 'disabled' : 'data-market-confirm="buy"') + '>Confirm Purchase</button>';
+      const dismiss = '<button class="market-dismiss" type="button" data-market-close="1">' + (insufficient ? 'Close' : 'Cancel') + '</button>';
+      return head + ledger + warn + '<div class="market-actions">' + cta + dismiss + '</div>';
+    }
+
+    // sell
+    const chk = canSellRelic(cardId);
+    const value = relicSellPrice(cardId);
+    const blocked = (chk.reason === 'equipped');
+    const after = bal + value;
+    const ledger =
+      '<div class="market-ledger">' +
+        priceRow('Sell for', value, true, 'gold') +
+        '<div class="market-ledger-rule"></div>' +
+        priceRow('Your balance', bal, false, 'ink') +
+        priceRow('After sale', after, false, 'gold') +
+      '</div>';
+    const warn = blocked
+      ? '<div class="market-warn market-warn--equip"><span class="market-warn-glyph">!</span>' +
+        '<span><b>Equipped — last copy.</b> Unequip this relic before selling it.</span></div>'
+      : '';
+    const cta = '<button class="market-cta' + (blocked ? ' is-disabled' : '') + '" type="button" ' +
+      (blocked ? 'disabled' : 'data-market-confirm="sell"') + '>Confirm Sale</button>';
+    const dismiss = '<button class="market-dismiss" type="button" data-market-close="1">Cancel</button>';
+    return head + ledger + warn + '<div class="market-actions">' + cta + dismiss + '</div>';
+  }
+
+  function openMarketSheet(action, cardId) {
+    const overlay = document.getElementById('market-overlay');
+    const sheet = document.getElementById('market-sheet');
+    if (!overlay || !sheet || !CARDS[cardId]) return;
+    _marketSheetAction = action;
+    _marketSheetCardId = cardId;
+    sheet.innerHTML =
+      '<div class="market-sheet-grabber" aria-hidden="true"></div>' +
+      '<div class="market-sheet-hairline" aria-hidden="true"></div>' +
+      _marketSheetHtml(action, cardId);
+    // Art fallback (404 → emoji underneath), mirrors the archive grid.
+    sheet.querySelectorAll('img[data-card-art="1"]').forEach(img => {
+      img.addEventListener('error', () => img.remove(), { once: true });
+    });
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', _marketKeydown, true);
+  }
+  function closeMarketSheet() {
+    const overlay = document.getElementById('market-overlay');
+    if (overlay) { overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden', 'true'); }
+    _marketSheetCardId = null;
+    _marketSheetAction = null;
+    document.removeEventListener('keydown', _marketKeydown, true);
+  }
+  function _marketKeydown(e) { if (e.key === 'Escape') closeMarketSheet(); }
+
+  function _marketConfirm(action) {
+    const cardId = _marketSheetCardId;
+    if (!cardId) return;
+    const res = (action === 'buy') ? buyRelic(cardId) : sellRelic(cardId);
+    if (res && res.ok) {
+      const card = CARDS[cardId];
+      const nm = card ? card.name : 'Relic';
+      try {
+        if (typeof showHabitToast === 'function') {
+          showHabitToast(action === 'buy'
+            ? nm + ' purchased −' + res.price + ' souls'
+            : nm + ' sold +' + res.price + ' souls');
+        }
+      } catch (_) {}
+      closeMarketSheet();
+      try { renderPokedex(); } catch (_) {}
+      try { if (typeof refreshSoulsDisplay === 'function') refreshSoulsDisplay(); } catch (_) {}
+    }
+    // On failure (stale UI), leave the sheet open; the re-checked state
+    // already reflects the block. Nothing to grant/charge.
+  }
+
+  // Delegated handlers for the affordance buttons + sheet controls.
+  function setupMarketplace() {
+    const root = document.getElementById('pokedex-sections');
+    if (root && root.getAttribute('data-market-wired') !== '1') {
+      root.setAttribute('data-market-wired', '1');
+      root.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-market-action]');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();   // don't also open the card detail modal
+        openMarketSheet(btn.getAttribute('data-market-action'), btn.getAttribute('data-card-id'));
+      });
+    }
+    const overlay = document.getElementById('market-overlay');
+    if (overlay && overlay.getAttribute('data-market-wired') !== '1') {
+      overlay.setAttribute('data-market-wired', '1');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.closest('[data-market-close]')) { closeMarketSheet(); return; }
+        const conf = e.target.closest('[data-market-confirm]');
+        if (conf) { _marketConfirm(conf.getAttribute('data-market-confirm')); }
+      });
+    }
+  }
+  try { window.openMarketSheet = openMarketSheet; window.closeMarketSheet = closeMarketSheet; } catch (_) {}
+
   // ── v3 Phase 1h — first-common (per boss) ──────────────────
   function hasPulledFirstCommonForBoss(bossId) {
     const inv = getInventory();
@@ -8267,7 +8591,7 @@
             chip = '<span class="pokedex-card-equipped-badge archive-equipped-badge" aria-label="Equipped">EQUIPPED</span>';
           }
           const newCls = isNew ? ' archive-card--new archive-card--new-' + c.rarity : '';
-          return (
+          return '<div class="pokedex-cell">' + (
             '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + newCls + '" type="button" data-card-id="' + esc(c.id) + '">' +
               '<div class="pokedex-card-art">' +
                 '<span class="pokedex-card-slot-icon">' + slotIcon + '</span>' +
@@ -8278,7 +8602,7 @@
               '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
               sourceLine +
             '</button>'
-          );
+          ) + _marketAffordanceHtml(c, entry) + '</div>';
         }
         // Undiscovered mystery card — show "?" + rarity teaser +
         // source hint so the user knows where to hunt. Item name
@@ -8287,7 +8611,7 @@
         const mysteryHint = sourceLabel
           ? 'Drops from ' + sourceLabel
           : 'Defeat dungeon bosses to discover';
-        return (
+        return '<div class="pokedex-cell">' + (
           '<button class="pokedex-card pokedex-card--undiscovered pokedex-card--' + c.rarity + ' archive-mystery-card" type="button" data-card-id="' + esc(c.id) + '">' +
             '<div class="pokedex-card-art pokedex-card-art--undiscovered">' +
               '<span class="pokedex-card-mystery archive-mystery-mark">?</span>' +
@@ -8296,7 +8620,7 @@
             '<div class="archive-mystery-rarity">' + esc(rarityTeaser) + '</div>' +
             '<div class="archive-mystery-hint">' + esc(mysteryHint) + '</div>' +
           '</button>'
-        );
+        ) + _marketAffordanceHtml(c, entry) + '</div>';
       }).join('');
       const bodyHtml = visibleCards.length === 0
         ? '<div class="pokedex-section-empty">No items in this tier yet.</div>'
@@ -8325,6 +8649,9 @@
     // it reflects current Gear Power + equipped count whenever the
     // archive re-renders (which fires after every equip/unequip).
     try { refreshArmoryCTAStatus(); } catch (_) {}
+
+    // Relic Marketplace — wire the affordance + sheet delegation (idempotent).
+    try { setupMarketplace(); } catch (_) {}
   }
 
   // Builds the stat-bonus badge row for a card. Returns an empty

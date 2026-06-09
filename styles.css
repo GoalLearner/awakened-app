@@ -16399,6 +16399,191 @@ body.bfs-locked { overflow: hidden; }
   gap: 10px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Relic Marketplace — inline trade affordance + buy/sell confirm sheets
+   (ports ClaudeDesign "Relic Marketplace" to scoped CSS classes)
+   ═══════════════════════════════════════════════════════════════════ */
+/* Each grid cell stacks the (unchanged) card button + its trade control. */
+.pokedex-cell { display: flex; flex-direction: column; gap: 7px; }
+.pokedex-cell > .pokedex-card { flex: 1 1 auto; }
+
+/* ── Card-level trade button (compact for the 3-col grid) ───────────── */
+.market-trade {
+  width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+  border-radius: 9px;
+  padding: 0 9px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.market-trade:active { transform: scale(0.97); }
+.market-trade-amt { display: inline-flex; align-items: center; gap: 4px; }
+.market-souls { width: 11px; height: 11px; flex: none; display: block; }
+.market-souls--big { width: 16px; height: 16px; }
+
+/* BUY — affordable (gold, active) */
+.market-trade--buy {
+  background: linear-gradient(180deg, rgba(245,184,66,0.16), rgba(245,184,66,0.07));
+  border: 1px solid rgba(245,184,66,0.55);
+  color: #f5b842;
+  box-shadow: 0 0 14px -3px rgba(245,184,66,0.30), inset 0 1px 0 rgba(245,184,66,0.14);
+}
+/* BUY — insufficient (muted, still tappable → opens the explainer sheet) */
+.market-trade--buy.is-disabled {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #6b6b86;
+  box-shadow: none;
+}
+/* SELL — secondary control */
+.market-trade--sell {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(245,184,66,0.30);
+  color: #9090a8;
+}
+.market-trade--sell .market-trade-amt { color: #f5b842; }
+.market-trade-need {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8.5px; font-weight: 600; letter-spacing: 0.03em;
+  color: #f5b842; opacity: 0.62; text-align: center; margin-top: 3px;
+}
+
+/* ── Overlay + bottom sheet ─────────────────────────────────────────── */
+.market-overlay {
+  position: fixed; inset: 0; z-index: 12200;
+  background: rgba(4,4,13,0.66);
+  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.market-overlay.hidden { display: none; }
+.market-sheet {
+  width: 100%; max-width: 480px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #0e0e24 0%, #04040d 92%);
+  border-top-left-radius: 24px; border-top-right-radius: 24px;
+  border-top: 1px solid rgba(245,184,66,0.36);
+  box-shadow: 0 -20px 60px -10px rgba(0,0,0,0.7), 0 -1px 0 rgba(245,184,66,0.13);
+  padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  animation: market-sheet-up 0.30s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes market-sheet-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.market-sheet-grabber { width: 38px; height: 4px; border-radius: 4px; margin: 0 auto 4px; background: rgba(245,243,251,0.22); }
+.market-sheet-hairline { height: 1px; margin: 12px -20px 0; background: linear-gradient(90deg, transparent, rgba(245,184,66,0.33) 30%, rgba(245,184,66,0.33) 70%, transparent); }
+
+/* ── Sheet relic head ───────────────────────────────────────────────── */
+.market-sheet-head { display: flex; gap: 14px; align-items: center; padding-top: 18px; }
+.market-sheet-art {
+  width: 76px; height: 76px; flex: none; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  border: 1px solid rgba(121,180,255,0.33);
+  background: radial-gradient(120% 120% at 50% 36%, rgba(121,180,255,0.18), #04040d 74%);
+  box-shadow: 0 0 22px -6px rgba(121,180,255,0.4);
+}
+.market-sheet-art--ultra_rare {
+  border-color: rgba(245,184,66,0.45);
+  background: radial-gradient(120% 120% at 50% 36%, rgba(245,184,66,0.18), #04040d 74%);
+  box-shadow: 0 0 22px -6px rgba(245,184,66,0.45);
+}
+.market-sheet-art-icon { font-size: 30px; line-height: 1; }
+.market-sheet-art-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.market-sheet-headtext { min-width: 0; }
+.market-sheet-rarity {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: #79b4ff;
+}
+.market-sheet-rarity--ultra_rare { color: #f5b842; text-shadow: 0 0 12px rgba(245,184,66,0.27); }
+.market-sheet-name {
+  font-family: "Cinzel", Georgia, serif; font-weight: 600; font-size: 19px;
+  color: #f5f3fb; margin-top: 4px; line-height: 1.2;
+}
+.market-sheet-meta { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
+.market-sheet-slot {
+  padding: 3px 9px; border-radius: 7px; background: rgba(8,8,20,0.6);
+  border: 1px solid rgba(245,184,66,0.33);
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em; color: #f5b842;
+}
+.market-sheet-source { font-size: 11.5px; color: #6b6b86; }
+
+/* ── Ledger ─────────────────────────────────────────────────────────── */
+.market-ledger {
+  margin-top: 18px; padding: 15px 16px; border-radius: 14px;
+  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
+}
+.market-ledger-rule { height: 1px; background: rgba(255,255,255,0.07); margin: 13px 0; }
+.market-row { display: flex; align-items: center; justify-content: space-between; }
+.market-row + .market-row { margin-top: 9px; }
+.market-row-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.03em; color: #9090a8;
+}
+.market-row--big .market-row-label { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6b86; }
+.market-row-val { display: inline-flex; align-items: center; gap: 6px; font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 600; font-size: 14px; }
+.market-row--big .market-row-val { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 26px; }
+.market-row-val--gold { color: #f5b842; }
+.market-row-val--ink  { color: #f5f3fb; }
+.market-row-val--danger { color: #f0607a; }
+
+/* ── Warnings ───────────────────────────────────────────────────────── */
+.market-warn {
+  margin-top: 13px; padding: 11px 14px; border-radius: 11px;
+  font-size: 12.5px; line-height: 1.4;
+}
+.market-warn--danger {
+  background: rgba(240,96,122,0.08); border: 1px solid rgba(240,96,122,0.28);
+  color: #f3909f; text-align: center;
+}
+.market-warn--danger b { color: #f0607a; }
+.market-warn--equip {
+  background: rgba(245,184,66,0.08); border: 1px solid rgba(245,184,66,0.30);
+  color: #f0d9a8; display: flex; align-items: center; gap: 11px; text-align: left;
+}
+.market-warn--equip b { color: #f5b842; }
+.market-warn-glyph {
+  width: 26px; height: 26px; flex: none; border-radius: 7px;
+  background: rgba(245,184,66,0.14); border: 1px solid rgba(245,184,66,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; color: #f5b842;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────── */
+.market-actions { margin-top: 18px; }
+.market-cta {
+  width: 100%; height: 52px; border-radius: 14px; cursor: pointer;
+  font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: linear-gradient(180deg, #f5b842 0%, #d99a26 100%);
+  border: 1px solid #f5b842; color: #1c1405;
+  box-shadow: 0 8px 24px -8px rgba(245,184,66,0.53), inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: transform 0.12s ease;
+}
+.market-cta:active { transform: scale(0.99); }
+.market-cta.is-disabled {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  color: #6b6b86; cursor: not-allowed; box-shadow: none;
+}
+.market-dismiss {
+  width: 100%; height: 44px; margin-top: 8px; background: transparent; border: none;
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-size: 13.5px; font-weight: 500; color: #9090a8; cursor: pointer; letter-spacing: 0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .market-sheet { animation: none; }
+  .market-trade { transition: none; }
+}
+@media (max-width: 380px) {
+  .market-trade { height: 28px; font-size: 9px; padding: 0 7px; }
+  .market-sheet { padding-left: 16px; padding-right: 16px; }
+}
+/* END Relic Marketplace block */
+
 .pokedex-card {
   position: relative;
   display: flex;
