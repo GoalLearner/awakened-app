@@ -3034,6 +3034,17 @@
         ref_id: rankId || null,
       };
     }
+    // Relic Marketplace (buy/sell). Hint: 'relic_buy_<id>' / 'relic_sell_<id>'.
+    if (h.indexOf('relic_buy_') === 0) {
+      const rid = h.slice(10);
+      const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
+      return { type: 'relic_buy', label: 'Relic purchased', detail: rcard ? rcard.name : null, ref_id: rid || null };
+    }
+    if (h.indexOf('relic_sell_') === 0) {
+      const rid = h.slice(11);
+      const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
+      return { type: 'relic_sell', label: 'Relic sold', detail: rcard ? rcard.name : null, ref_id: rid || null };
+    }
     // v3 W200 — RETAINED intentionally. The W198 Founder's Gift grant
     // was removed before public launch, but TestFlight claimers still
     // have a 'gift_founders' row in their local souls ledger; this
@@ -6206,6 +6217,105 @@
     if (!_inventory) loadInventory();
     return _inventory;
   }
+
+  // ══════════════════════════════════════════════════════════════════
+  // Relic Marketplace (engine) — inline buy/sell on the Relics page.
+  // ══════════════════════════════════════════════════════════════════
+  // RARE + ULTRA-RARE only (commons are filler, untradeable). Option A:
+  // any tradeable relic can be BOUGHT if you have the souls — no
+  // discovery gate, RPG-shop style. Buy price > sell value (anti-
+  // arbitrage spread). Respects the existing STACK_CAPS. Reuses the
+  // souls + inventory plumbing — no new storage, no backend. Purchases
+  // are NOT drops: they skip the reveal animation + the "NEW" header
+  // pill (a bought relic simply appears owned).
+  const RELIC_PRICES = {
+    rare:       { buy: 250, sell: 80  },
+    ultra_rare: { buy: 800, sell: 250 },
+    // common: absent → untradeable
+  };
+
+  function _relicIsTradeable(cardId) {
+    const card = CARDS[cardId];
+    return !!(card && RELIC_PRICES[card.rarity]);
+  }
+  function relicBuyPrice(cardId) {
+    const card = CARDS[cardId];
+    const p = card && RELIC_PRICES[card.rarity];
+    return p ? p.buy : null;
+  }
+  function relicSellPrice(cardId) {
+    const card = CARDS[cardId];
+    const p = card && RELIC_PRICES[card.rarity];
+    return p ? p.sell : null;
+  }
+
+  // Pre-flight checks. Both return { ok, reason, ... } so the UI can
+  // render the exact disabled/blocked state without re-deriving logic.
+  function canBuyRelic(cardId) {
+    const card = CARDS[cardId];
+    if (!card) return { ok: false, reason: 'unknown' };
+    if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
+    const price = relicBuyPrice(cardId);
+    const entry = getInventory().cards[cardId] || _stubCard();
+    const cap = STACK_CAPS[card.rarity] != null ? STACK_CAPS[card.rarity] : Infinity;
+    if ((entry.count || 0) >= cap) return { ok: false, reason: 'at_cap', cap: cap };
+    const bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
+    if (bal < price) return { ok: false, reason: 'insufficient', price: price, shortBy: price - bal };
+    return { ok: true, price: price };
+  }
+  function canSellRelic(cardId) {
+    const card = CARDS[cardId];
+    if (!card) return { ok: false, reason: 'unknown' };
+    if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
+    const entry = getInventory().cards[cardId] || _stubCard();
+    if ((entry.count || 0) < 1) return { ok: false, reason: 'not_owned' };
+    // Block selling the LAST copy of an equipped relic (a duplicate is fine).
+    if ((entry.count || 0) === 1 && isCardEquipped(cardId)) return { ok: false, reason: 'equipped' };
+    return { ok: true, price: relicSellPrice(cardId) };
+  }
+
+  // Execute. Both re-check pre-flight (defense against a stale UI), then
+  // mutate inventory + souls and persist. Return { ok, reason, price,
+  // newCount } for the caller's toast / re-render.
+  function buyRelic(cardId) {
+    const chk = canBuyRelic(cardId);
+    if (!chk.ok) return chk;
+    const price = chk.price;
+    // Pay first (balance already verified) — never grant before charging.
+    spendSouls(price, 'relic_buy_' + cardId);
+    const inv = getInventory();
+    const entry = inv.cards[cardId] || _stubCard();
+    const wasFirstAcquisition = !entry.discovered;
+    entry.discovered = true;
+    entry.count = (entry.count || 0) + 1;
+    if (wasFirstAcquisition && !entry.first_acquired_date) {
+      entry.first_acquired_date = getDeviceLocalDate();
+    }
+    // Deliberately NO reveal_queue enqueue and NO _stampRelicArchiveNew:
+    // a purchase is not a drop. The relic just appears owned in the grid.
+    inv.cards[cardId] = entry;
+    persistInventory();
+    return { ok: true, price: price, newCount: entry.count };
+  }
+  function sellRelic(cardId) {
+    const chk = canSellRelic(cardId);
+    if (!chk.ok) return chk;
+    const price = chk.price;
+    const inv = getInventory();
+    const entry = inv.cards[cardId];
+    entry.count = Math.max(0, (entry.count || 0) - 1);
+    // Stays `discovered` at count 0 — you've seen it, you just don't own one.
+    inv.cards[cardId] = entry;
+    persistInventory();
+    earnSouls(price, 'relic_sell_' + cardId);
+    return { ok: true, price: price, newCount: entry.count };
+  }
+  try {
+    window.buyRelic = buyRelic;
+    window.sellRelic = sellRelic;
+    window.canBuyRelic = canBuyRelic;
+    window.canSellRelic = canSellRelic;
+  } catch (_) {}
 
   // ── v3 Phase 1h — first-common (per boss) ──────────────────
   function hasPulledFirstCommonForBoss(bossId) {
