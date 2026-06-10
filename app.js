@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w219';
+  const APP_BUILD_TAG = '2.2.5-w220';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6540,9 +6540,11 @@
     _arView = 'vs';
     _arBodyMode(false);
     const m = _arMatchup, you = _ascPlayerPower(), foe = m.bot.power;
-    const res = (_arFight && _arFight.result) || {};
-    const paLabel = (ASCENT_ARCHETYPES[res.playerArch] || {}).label || 'Balanced';
-    const eff = res.eff || { key: 'neutral' };
+    // Deterministic (no dice) — safe to show before the fight is resolved.
+    const playerArch = _arenaArchOf(m.player);
+    const foeArch = m.bot.archKey || _arenaArchOf(m.bot);
+    const eff = _arenaEffectiveness(playerArch, foeArch);
+    const paLabel = (ASCENT_ARCHETYPES[playerArch] || {}).label || 'Balanced';
     const effBadge = (eff.key === 'super' || eff.key === 'weak')
       ? '<span class="ar-tag ' + eff.key + '">' + eff.label + '</span>'
       : '<span class="ar-vs-even">EVEN MATCH</span>';
@@ -6677,31 +6679,40 @@
       try { cta.scrollIntoView({ block: 'nearest' }); } catch (_) {}
     } catch (_) {}
   }
+  // Open the VS / boss preview for a floor. The matchup is NOT resolved or
+  // committed here — that happens only when the player taps FIGHT (introgo),
+  // so backing out of the preview never silently spends a fight. The preview
+  // shows deterministic info (archetypes, effectiveness, power); the dice roll
+  // waits for the commit tap.
   function _arStartFight(floor) {
     if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
     _arClearTimers();
     _arRevealing = false;
-    _arMatchup = arenaMatchup(floor);
-    _arFight = arenaResolveMatchup(_arMatchup);   // resolved exactly once, before any reveal
-    if (!_arFight) { _arRenderTower(); return; }
+    _arFight = null;
+    _arFlawless = false;
     _arReveal = 0;
-    // FLAWLESS one-hit KO: a clean sweep (2–0) where the player is ≥2× the
-    // floor's power. Cosmetic-only — the outcome is already resolved above.
-    _arFlawless = !!(_arFight.won && _arFight.result.bWins === 0 &&
-      _ascPlayerPower() >= 2 * Math.max(1, _arMatchup.bot.power));
-    if (_arReduceMotion()) { _arPlayReveal(); return; }   // no intros / no timers
+    _arMatchup = arenaMatchup(floor);
     const foe = _arMatchup.bot;
     if (foe && foe.isBoss) {
       _arRenderBossIntro();
       try { playSfx('ar_boss_engage'); } catch (_) {}
       try { if (navigator.vibrate) navigator.vibrate([40, 30, 60, 30, 90]); } catch (_) {}
-      _arAfter(2000, _arBeginReveal);
     } else {
       _arRenderVs();
       try { playSfx('ar_engage'); } catch (_) {}
       try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
-      _arAfter(1200, _arBeginReveal);
     }
+  }
+  // Commit the current matchup (resolve + record/rating/floor/life, exactly
+  // once) and start the reveal. Called from the FIGHT/CHALLENGE (introgo) tap.
+  function _arCommitFight() {
+    if (!_arMatchup || _arFight) return;   // guard double-tap / no preview open
+    _arClearTimers();
+    _arFight = arenaResolveMatchup(_arMatchup);
+    if (!_arFight) { _arRenderTower(); return; }   // out of lives
+    _arFlawless = !!(_arFight.won && _arFight.result.bWins === 0 &&
+      _ascPlayerPower() >= 2 * Math.max(1, _arMatchup.bot.power));
+    _arBeginReveal();
   }
   // Picks the reveal style: a flawless stomp gets the one-hit KO cinematic,
   // everything else the round-by-round driver.
@@ -6830,7 +6841,7 @@
       const a = act.getAttribute('data-ar');
       if (a === 'exit')         closeArena();
       else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
-      else if (a === 'introgo') { if (!_arFight) return; _arClearTimers(); _arBeginReveal(); }
+      else if (a === 'introgo') { _arCommitFight(); }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'tower')   _arRenderTower();
