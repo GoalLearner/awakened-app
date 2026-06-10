@@ -31179,8 +31179,8 @@ button.guildhall-summary-tile:active {
 .asc-empty .sub { font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 14px; color: #9090a8; line-height: 1.5; max-width: 280px; }
 
 /* ── W222 fill modules — pre-fight scouting + victory recap ───────────────── */
-.asc-fill { margin-top: 16px; text-align: left; }
-.asc-fill-stack { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
+.asc-fill { margin-top: 16px; text-align: left; width: 100%; box-sizing: border-box; }
+.asc-fill-stack { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; width: 100%; box-sizing: border-box; }
 .asc-fill-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 3px; margin-bottom: 7px; }
 .asc-fill-head .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em; color: #9090a8; }
 .asc-fill-head .a { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.1em; }
@@ -31220,8 +31220,8 @@ button.guildhall-summary-tile:active {
 /* loadout */
 /* loadout — full 8-slot compact grid + totals (ClaudeDesign "Loadout Module") */
 .asc-loadout-panel { border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); padding: 10px 11px; }
-.asc-loadgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.asc-load-cell { min-height: 56px; box-sizing: border-box; border-radius: 10px; padding: 7px 7px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
+.asc-loadgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.asc-load-cell { min-width: 0; overflow: hidden; min-height: 56px; box-sizing: border-box; border-radius: 10px; padding: 7px 7px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
 .asc-load-cell.sel { background: rgba(255,255,255,0.05); }
 .asc-load-cell.empty { cursor: default; align-items: center; justify-content: center; gap: 4px; border: 1px dashed rgba(255,255,255,0.14); background: transparent; }
 .asc-load-cell .top { display: flex; align-items: center; gap: 4px; }
