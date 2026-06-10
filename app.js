@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w217';
+  const APP_BUILD_TAG = '2.2.5-w218';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6028,28 +6028,83 @@
     };
   }
 
-  // Resolve a best-of-3. Each round both sides roll power × (0.7..1.3),
-  // so stats set the ODDS and the dice decide the ROUND (an underdog
-  // can still steal a round). First to 2 round-wins takes the bout.
+  // ── W218 combat RNG: archetype derived from build → type triangle,
+  //    plus per-round crits & misses. Bounded ("dramatic but fair") so a
+  //    clearly stronger build still wins; floor reached still = build.
+  const _ARENA_EFF_MULT  = 1.20;  // SUPER EFFECTIVE bonus to player power
+  const _ARENA_EFF_PEN   = 0.83;  // NOT VERY EFFECTIVE penalty (≈1/1.20)
+  const _ARENA_CRIT_MULT = 1.45;  // a crit roll is ×this
+  const _ARENA_MISS_MULT = 0.45;  // a miss roll is ×this
+  // Derive a fighting archetype from a combatant's role split (the player
+  // has no assigned archetype; the bot keeps its own archKey).
+  function _arenaArchOf(c) {
+    const tot = Math.max(1e-6, (c.attack || 0) + (c.defense || 0) + (c.edge || 0));
+    const a = (c.attack || 0) / tot, d = (c.defense || 0) / tot, e = (c.edge || 0) / tot;
+    const mx = Math.max(a, d, e);
+    if (mx < 0.40) return 'balanced';
+    if (a === mx) return a >= 0.52 ? 'glasscannon' : 'aggressor';
+    if (d === mx) return d >= 0.52 ? 'juggernaut'  : 'sentinel';
+    return 'trickster';
+  }
+  // Type triangle (extremes collapse to their base): aggressor ▸ trickster ▸
+  // sentinel ▸ aggressor. Balanced / mirror = neutral.
+  const _ARENA_BEATS = { aggressor: 'trickster', trickster: 'sentinel', sentinel: 'aggressor' };
+  function _arenaBaseArch(k) { return k === 'glasscannon' ? 'aggressor' : k === 'juggernaut' ? 'sentinel' : k; }
+  function _arenaEffectiveness(pa, fa) {
+    const p = _arenaBaseArch(pa), f = _arenaBaseArch(fa);
+    if (p === 'balanced' || f === 'balanced' || p === f) return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
+    if (_ARENA_BEATS[p] === f) return { key: 'super', label: 'SUPER EFFECTIVE', mult: _ARENA_EFF_MULT };
+    if (_ARENA_BEATS[f] === p) return { key: 'weak',  label: 'NOT VERY EFFECTIVE', mult: _ARENA_EFF_PEN };
+    return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
+  }
+  // Per-side crit/miss odds. Crit scales with EDGE share (WLT = "lucky
+  // breaks"); the player's misses shrink with above-average FOCUS (accuracy).
+  function _arenaSideOdds(c) {
+    const tot = Math.max(1e-6, (c.attack || 0) + (c.defense || 0) + (c.edge || 0));
+    const edgeShare = (c.edge || 0) / tot;
+    const crit = Math.max(0.08, Math.min(0.28, 0.08 + edgeShare * 0.40));
+    let miss = 0.09;
+    if (c.stats && typeof c.stats.FOCUS === 'number') {
+      const six = ['STR', 'VIT', 'INT', 'FOCUS', 'WILL', 'WLT'].reduce((a, k) => a + (c.stats[k] || 0), 0) || 1;
+      const focusShare = (c.stats.FOCUS || 0) / six;
+      miss = Math.max(0.04, 0.09 - Math.max(0, focusShare - 0.166) * 0.40);
+    }
+    return { crit, miss };
+  }
+  // Resolve a best-of-3. Each round both sides roll power × (0.7..1.3); a
+  // crit/miss can spike or whiff the roll. Stats set the ODDS, dice the ROUND.
   function _arenaRoll(power) { return power * (0.7 + Math.random() * 0.6); }
+  function _arenaRollSide(power, odds) {
+    let v = _arenaRoll(power), crit = false, miss = false;
+    const r = Math.random();
+    if (r < odds.crit) { v *= _ARENA_CRIT_MULT; crit = true; }
+    else if (r > 1 - odds.miss) { v *= _ARENA_MISS_MULT; miss = true; }
+    return { v, crit, miss };
+  }
   function _arenaResolve(player, bot) {
+    const playerArch = _arenaArchOf(player);
+    const foeArch    = bot.archKey || _arenaArchOf(bot);
+    const eff        = _arenaEffectiveness(playerArch, foeArch);
+    const pPow       = player.power * eff.mult;   // type matchup shifts the player's effective power
+    const pOdds = _arenaSideOdds(player), bOdds = _arenaSideOdds(bot);
     let pWins = 0, bWins = 0;
     const rounds = [];
     for (let i = 0; i < 3 && pWins < 2 && bWins < 2; i++) {
-      const pRoll = _arenaRoll(player.power);
-      const bRoll = _arenaRoll(bot.power);
-      const playerWon = pRoll >= bRoll;
+      const p = _arenaRollSide(pPow, pOdds);
+      const b = _arenaRollSide(bot.power, bOdds);
+      const playerWon = p.v >= b.v;
       if (playerWon) pWins += 1; else bWins += 1;
-      const margin = Math.abs(pRoll - bRoll) / Math.max(pRoll, bRoll, 1);
+      const margin = Math.abs(p.v - b.v) / Math.max(p.v, b.v, 1);
       rounds.push({
         index: i + 1,
-        pRoll: Math.round(pRoll),
-        bRoll: Math.round(bRoll),
+        pRoll: Math.round(p.v),
+        bRoll: Math.round(b.v),
         playerWon,
-        margin,           // 0..1 — used by the UI to pick flavour text
+        margin,                                   // 0..1 — used by the UI for flavour text
+        pCrit: p.crit, pMiss: p.miss, bCrit: b.crit, bMiss: b.miss,
       });
     }
-    return { playerWon: pWins > bWins, pWins, bWins, rounds };
+    return { playerWon: pWins > bWins, pWins, bWins, rounds, eff, playerArch, foeArch };
   }
 
   // Build the player's combatant object (live stats + gear).
@@ -6372,8 +6427,14 @@
   // ── fight reveal ──────────────────────────────────────────────────
   function _arNarr(round) {
     const hi = round.margin > 0.28;
-    if (round.playerWon) return hi ? 'You break their guard — a decisive strike.'
-                                   : 'You edge the exchange, <b>' + round.pRoll + '</b> to ' + round.bRoll + '.';
+    if (round.playerWon) {
+      if (round.pCrit) return '<b>CRITICAL</b> — you shatter their guard.';
+      if (round.bMiss) return 'They swing wide — you punish the opening.';
+      return hi ? 'You break their guard — a decisive strike.'
+                : 'You edge the exchange, <b>' + round.pRoll + '</b> to ' + round.bRoll + '.';
+    }
+    if (round.bCrit) return '<b>CRITICAL</b> — they shatter your guard.';
+    if (round.pMiss) return 'Your strike whiffs — they capitalize.';
     return hi ? 'They overwhelm you — <b>' + round.bRoll + '</b> lands hard.'
               : 'They scrape the round, ' + round.bRoll + ' to ' + round.pRoll + '.';
   }
@@ -6399,25 +6460,36 @@
     const animateHP = !_arReduceMotion();
     const youStart = animateHP ? youHPp : youHP, foeStart = animateHP ? foeHPp : foeHP;
     const last = r.rounds[reveal - 1];
-    const log = shown.map((rd, i) =>
-      '<div class="ar-logline neutral">Round ' + (i + 1) + '</div>' +
-      '<div class="ar-logline ' + (rd.playerWon ? 'you' : 'foe') + '">' + _arNarr(rd) + '</div>').join('');
-    // floating damage number for the just-revealed exchange
-    const dmg = last
-      ? '<div class="ar-dmg-float ' + (last.playerWon ? 'you' : 'foe') + '">' + (last.playerWon ? last.pRoll : last.bRoll) + '</div>'
-      : '';
+    const eff = r.eff || { key: 'neutral' };
+    const effChip = (eff.key === 'super' || eff.key === 'weak')
+      ? '<span class="ar-tag ' + eff.key + '">' + eff.label + '</span>' : '';
+    const log = shown.map((rd, i) => {
+      let tags = '';
+      if (rd.playerWon ? rd.pCrit : rd.bCrit) tags += '<span class="ar-tag crit">CRITICAL</span>';
+      if (rd.playerWon ? rd.bMiss : rd.pMiss) tags += '<span class="ar-tag miss">MISS</span>';
+      return '<div class="ar-logline neutral">Round ' + (i + 1) + (tags ? ' ' + tags : '') + '</div>' +
+        '<div class="ar-logline ' + (rd.playerWon ? 'you' : 'foe') + '">' + _arNarr(rd) + '</div>';
+    }).join('');
+    // floating damage number for the just-revealed exchange (CRIT styled bigger)
+    let dmg = '';
+    if (last) {
+      const yw = last.playerWon, crit = yw ? last.pCrit : last.bCrit;
+      const val = yw ? last.pRoll : last.bRoll;
+      dmg = '<div class="ar-dmg-float ' + (yw ? 'you' : 'foe') + (crit ? ' crit' : '') + '">' +
+        (crit ? 'CRIT ' + val : val) + '</div>';
+    }
     const btn = _arRevealing
       ? '<button class="ar-skipbtn" data-ar="skip">SKIP ▸</button>'
       : '<button class="ar-cta" data-ar="skip">SEE RESULT</button>';
     _arSet(
-      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + _arMatchup.floor + ' · Round ' + Math.min(reveal || 1, 3) + ' of 3</div><div class="ar-pips">' + pips + '</div></div>' +
+      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + _arMatchup.floor + ' · Round ' + Math.min(reveal || 1, 3) + ' of 3' + effChip + '</div><div class="ar-pips">' + pips + '</div></div>' +
       '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" id="ar-hp-you" style="width:' + youStart + '%"></div></div></div>' +
         '<div class="ar-hp-vs">vs</div>' +
         '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" id="ar-hp-foe" style="width:' + foeStart + '%"></div></div></div></div>' +
       '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + log + '</div>' + dmg +
       '<div class="ar-spacer"></div>' + btn
     );
-    if (last) _arHitJuice(last.playerWon);
+    if (last) _arHitJuice(last.playerWon, last.playerWon ? last.pCrit : last.bCrit);
     if (animateHP && (youStart !== youHP || foeStart !== foeHP)) {
       _arAfter(30, () => {
         try {
@@ -6428,20 +6500,26 @@
     }
   }
   // ── cinematic helpers (W215) ──────────────────────────────────────
-  function _arHitJuice(playerWon) {
+  function _arHitJuice(playerWon, crit) {
     if (_arReduceMotion()) return;
     try {
       const sheet = document.querySelector('#arena-overlay .ar-sheet') || _arBody();
       if (!sheet) return;
-      const cls = playerWon ? 'ar-juice-you' : 'ar-juice-foe';
-      sheet.classList.add(cls);
-      _arAfter(360, () => { try { sheet.classList.remove(cls); } catch (_) {} });
+      const classes = [playerWon ? 'ar-juice-you' : 'ar-juice-foe'];
+      if (crit) classes.push('ar-juice-crit');
+      classes.forEach(c => sheet.classList.add(c));
+      _arAfter(360, () => { try { classes.forEach(c => sheet.classList.remove(c)); } catch (_) {} });
     } catch (_) {}
   }
   function _arHitSound(rd) {
     if (!rd) return;
-    try { playSfx(rd.playerWon ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate(rd.playerWon ? 9 : 16); } catch (_) {}
+    const yw = rd.playerWon, crit = yw ? rd.pCrit : rd.bCrit, miss = yw ? rd.bMiss : rd.pMiss;
+    try {
+      if (crit) playSfx('ar_crit');
+      else playSfx(yw ? 'ar_hit_you' : 'ar_hit_foe');
+      if (miss) playSfx('ar_miss');
+    } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(crit ? 20 : (yw ? 9 : 16)); } catch (_) {}
   }
   function _arCountUp(el, from, to, dur) {
     if (!el) return;
@@ -6462,21 +6540,30 @@
     _arView = 'vs';
     _arBodyMode(false);
     const m = _arMatchup, you = _ascPlayerPower(), foe = m.bot.power;
+    const res = (_arFight && _arFight.result) || {};
+    const paLabel = (ASCENT_ARCHETYPES[res.playerArch] || {}).label || 'Balanced';
+    const eff = res.eff || { key: 'neutral' };
+    const effBadge = (eff.key === 'super' || eff.key === 'weak')
+      ? '<span class="ar-tag ' + eff.key + '">' + eff.label + '</span>'
+      : '<span class="ar-vs-even">EVEN MATCH</span>';
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     _arSet(
       '<div class="ar-versus">' +
         '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' +
         '<div class="ar-vs-row">' +
-          '<div class="ar-vs-side you"><div class="ar-vs-med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div><div class="ar-vs-name">' + esc(m.player.name) + '</div></div>' +
+          '<div class="ar-vs-side you"><div class="ar-vs-med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div><div class="ar-vs-name">' + esc(m.player.name) + '</div>' +
+            '<div style="margin-top:5px">' + _ascArchHtml(paLabel) + '</div></div>' +
           '<div class="ar-vs-bolt">VS</div>' +
           '<div class="ar-vs-side foe"><div class="ar-vs-med">' + _arFoeArt(m.bot, false) + '</div><div class="ar-vs-name">' + esc(m.bot.name) + '</div>' +
             '<div style="margin-top:5px">' + _ascArchHtml(m.bot.archetype) + '</div></div>' +
         '</div>' +
+        '<div class="ar-vs-eff">' + effBadge + '</div>' +
         '<div class="ar-vs-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
         '<div class="ar-vs-go">' + _ascDiffHtml(you, foe) + '</div>' +
         '<button class="ar-cta" data-ar="introgo">FIGHT<span class="ar-cta-sub">FLOOR ' + m.floor + '</span></button>' +
       '</div>'
     );
+    if (eff.key === 'super') { try { playSfx('ar_super'); } catch (_) {} }
   }
   // Boss / summit entrance — portrait, name, taunt, faceoff.
   function _arRenderBossIntro() {
@@ -20231,7 +20318,10 @@
     // ── Arena / The Ascent (W215) ──
     ar_hit_you:     1,
     ar_hit_foe:     1,
+    ar_miss:        1,
     ar_engage:      2,
+    ar_crit:        2,
+    ar_super:       2,
     ar_lose:        3,
     ar_win:         4,
     ar_rating_up:   4,
@@ -20377,6 +20467,24 @@
     }
     if (name === 'ar_rating_up')   { playGlide(440, 740, 0, 0.5, 0.12, 'sine'); return; }
     if (name === 'ar_rating_down') { playGlide(440, 300, 0, 0.5, 0.12, 'sine'); return; }
+    if (name === 'ar_crit') {
+      // Critical hit — sharp bright triple-strike, above the normal clash.
+      playNote(1046.5, 0,    0.10, 0.16, 'square');
+      playNote(1568,   0.03, 0.16, 0.12, 'sine');
+      playNote(2093,   0.05, 0.12, 0.08, 'triangle');
+      return;
+    }
+    if (name === 'ar_miss') {
+      // Miss — short downward whiff.
+      playGlide(520, 235, 0, 0.16, 0.10, 'triangle');
+      return;
+    }
+    if (name === 'ar_super') {
+      // Super effective — small rising two-note cue (E5 → B5).
+      playNote(659.25, 0,    0.14, 0.12, 'sine');
+      playNote(987.77, 0.08, 0.22, 0.12, 'sine');
+      return;
+    }
     if (name === 'ar_ko') {
       // One-hit KO — heavy impact: deep thud + bright metallic crack +
       // downward whoosh. Bigger than a normal clash; sells the finisher.

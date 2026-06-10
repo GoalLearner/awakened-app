@@ -30904,7 +30904,20 @@ button.guildhall-summary-tile:active {
 .ar-dmg-float { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 38px; pointer-events: none; z-index: 21; animation: ar-dmgfloat 0.85s ease-out forwards; }
 .ar-dmg-float.you { color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.7); }
 .ar-dmg-float.foe { color: #ef4444; text-shadow: 0 0 18px rgba(239,68,68,0.6); }
+.ar-dmg-float.crit { font-size: 52px; letter-spacing: 0.02em; text-shadow: 0 0 26px rgba(245,184,66,0.95), 0 0 8px #fff; }
 @keyframes ar-dmgfloat { 0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.7); } 25% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(1); } }
+/* W218 — combat RNG tags (crit / miss / type effectiveness) */
+.ar-tag { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 7px; padding: 2px 7px; border-radius: 5px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.13em; line-height: 1.4; }
+.ar-tag.crit  { color: #f5b842; background: rgba(245,184,66,0.14); border: 1px solid rgba(245,184,66,0.5); }
+.ar-tag.miss  { color: #9090a8; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
+.ar-tag.super { color: #34d399; background: rgba(52,211,153,0.14); border: 1px solid rgba(52,211,153,0.5); }
+.ar-tag.weak  { color: #ef4444; background: rgba(239,68,68,0.13); border: 1px solid rgba(239,68,68,0.45); }
+/* extra gold burst when the just-revealed exchange is a crit */
+.ar-sheet.ar-juice-crit::after { background: radial-gradient(120% 90% at 50% 55%, rgba(255,236,170,0.4), rgba(245,184,66,0.18) 45%, transparent 72%) !important; }
+/* VS intro effectiveness row */
+.ar-vs-eff { display: flex; justify-content: center; margin: 12px 0 2px; min-height: 18px; }
+.ar-vs-even { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.18em; color: #6b6b86; }
+.ar-vs-eff .ar-tag { margin-left: 0; padding: 3px 11px; font-size: 9px; letter-spacing: 0.16em; }
 /* Low-HP danger glow (Direction A critical state) — side-qualified to beat the per-side fill shadow */
 .ar-hp-side .ar-hp-fill.low { box-shadow: 0 0 14px rgba(239,68,68,0.65), inset 0 1px 0 rgba(255,255,255,0.45); animation: ar-lowhp 1.15s ease-in-out infinite; }
 @keyframes ar-lowhp {
