@@ -31207,6 +31207,14 @@ button.guildhall-summary-tile:active {
 .asc-tale-detail { display: none; margin-top: 8px; padding: 8px 10px; border-radius: 9px; background: rgba(255,255,255,0.03); font-size: 10.5px; line-height: 1.5; color: #9090a8; }
 .asc-tale-row.open .asc-tale-detail { display: block; }
 .asc-tale-detail .rel { color: #a78bfa; } .asc-tale-detail .sup { color: #34d399; } .asc-tale-detail .wk { color: #ef4444; }
+.asc-tale-calc { display: flex; flex-direction: column; gap: 4px; }
+.asc-tale-calc .cp { display: flex; align-items: baseline; gap: 8px; }
+.asc-tale-calc .cp .s { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 9px; letter-spacing: 0.1em; color: #c8c6d8; min-width: 48px; }
+.asc-tale-calc .cp .src { color: #9090a8; }
+.asc-tale-calc .cp .ct { margin-left: auto; font-family: "JetBrains Mono", monospace; font-weight: 800; color: #f5b842; font-variant-numeric: tabular-nums; }
+.asc-tale-calc .cp.total { margin-top: 3px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); }
+.asc-tale-calc .cp.total .s { color: #f5f3fb; }
+.asc-tale-note { margin-top: 7px; color: #6b6b86; }
 .asc-tale-read { padding: 10px 2px 4px; font-size: 10.5px; line-height: 1.5; color: #9090a8; }
 .asc-tale-read .sup { color: #34d399; } .asc-tale-read .wk { color: #ef4444; }
 /* loadout */

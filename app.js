@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w225';
+  const APP_BUILD_TAG = '2.2.5-w226';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6555,18 +6555,28 @@
     const eff = _arenaEffectiveness(playerArch, foeArch);
     const foeLabel = (ASCENT_ARCHETYPES[foeArch] || {}).label || 'Foe';
     const roles = [
-      { key: 'ATTACK',  pv: P.attack,  fv: F.attack,  s: ['STR', 'FOCUS'] },
-      { key: 'DEFENSE', pv: P.defense, fv: F.defense, s: ['VIT', 'WILL'] },
-      { key: 'EDGE',    pv: P.edge,    fv: F.edge,    s: ['INT'] },
+      { key: 'ATTACK',  pv: P.attack,  fv: F.attack,  parts: [['STR', 1.6], ['FOCUS', 1.0]] },
+      { key: 'DEFENSE', pv: P.defense, fv: F.defense, parts: [['VIT', 1.4], ['WILL', 1.0]] },
+      { key: 'EDGE',    pv: P.edge,    fv: F.edge,    parts: [['INT', 1.6]] },
     ];
     let rows = '';
     roles.forEach((r) => {
       const pv = _arD(r.pv), fv = _arD(r.fv), max = Math.max(pv, fv, 1);
       const youLead = pv >= fv;
-      const gearSum = Math.round(r.s.reduce((a, k) => a + (gear[k.toLowerCase()] || 0), 0));
-      const detail = r.s.map((s) => esc(s) + ' Lv ' + lvl(s)).join(' · ') +
-        (gearSum > 0 ? ' · <b class="rel">+' + gearSum + ' relic</b>' : '') +
-        ' — ' + (youLead ? 'you lead this exchange.' : 'they hold the edge here.');
+      // Per-stat contribution to the role value: (level + gear) × weight × 10.
+      // These sum EXACTLY to pv — the point is to show HOW the breakdown reaches
+      // the total (STR→608 + FOCUS→260 = 868), which the old "Lv 8 · Lv 8 · +48
+      // relic" line could not.
+      const partHtml = r.parts.map((p) => {
+        const id = p[0], w = p[1], lv = lvl(id), g = Math.round(gear[id.toLowerCase()] || 0);
+        const contrib = Math.round((lv + g) * w * _ASC_DISP);
+        return '<span class="cp"><span class="s">' + id + '</span><span class="src">Lv ' + lv +
+          (g > 0 ? ' <b class="rel">+' + g + '</b>' : '') + '</span><span class="ct">' + contrib + '</span></span>';
+      }).join('');
+      const detail = '<div class="asc-tale-calc">' + partHtml +
+        '<span class="cp total"><span class="s">' + r.key + '</span><span class="src"></span>' +
+        '<span class="ct">' + pv + '</span></span></div>' +
+        '<div class="asc-tale-note">' + (youLead ? 'You lead this exchange.' : 'They lead this exchange.') + '</div>';
       rows += '<div class="asc-tale-row" data-ar="tale" data-role="' + r.key + '">' +
         '<div class="asc-tale-head">' +
           '<span class="pv' + (youLead ? ' lead' : '') + '">' + pv + '</span>' +
