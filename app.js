@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w223';
+  const APP_BUILD_TAG = '2.2.5-w224';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6227,7 +6227,8 @@
   // (sticky header + bands + floor cards) into #arena-body, runs the
   // best-of-3 reveal, and shows the rating result. Presentation only —
   // every outcome + all state come from window.Arena (engine). The
-  // persistent shell EXIT pill (#arena-close, W208) closes all views.
+  // persistent shell EXIT pill (#arena-close, W208) acts as Back: returns to
+  // the tower from any sub-screen (W224), and only leaves the Arena from there.
   // ───────────────────────────────────────────────────────────────
   const _ASC_DISP = 10;   // display scale (engine power is raw; UI shows ×10)
   let _arView    = 'tower';
@@ -6941,14 +6942,21 @@
     ov.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', _arKeydown, true);
   }
-  function _arKeydown(e) { if (e.key === 'Escape') closeArena(); }
+  // EXIT acts as Back: from any sub-screen (vs / bossintro / fight / result)
+  // it returns to the tower (the Arena's main page); it only leaves the Arena
+  // entirely when you're already on the tower.
+  function _arExit() {
+    if (_arView && _arView !== 'tower') { _arClearTimers(); _arRevealing = false; _arRenderTower(); return; }
+    closeArena();
+  }
+  function _arKeydown(e) { if (e.key === 'Escape') _arExit(); }
 
   function setupArena() {
     const ov = document.getElementById('arena-overlay');
     if (!ov || ov.getAttribute('data-ar-wired') === '1') return;
     ov.setAttribute('data-ar-wired', '1');
     const closeBtn = document.getElementById('arena-close');
-    if (closeBtn) closeBtn.addEventListener('click', closeArena);
+    if (closeBtn) closeBtn.addEventListener('click', _arExit);
     ov.addEventListener('click', (e) => {
       const act = e.target && e.target.closest ? e.target.closest('[data-ar]') : null;
       if (!act) {
@@ -6958,7 +6966,7 @@
         return;
       }
       const a = act.getAttribute('data-ar');
-      if (a === 'exit')         closeArena();
+      if (a === 'exit')         _arExit();
       else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
       else if (a === 'introgo') { _arCommitFight(); }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
