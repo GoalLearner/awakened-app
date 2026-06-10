@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w220';
+  const APP_BUILD_TAG = '2.2.5-w221';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6141,30 +6141,35 @@
   // Refuses (returns null) if the daily limit is spent.
   function arenaResolveMatchup(m) {
     const st = getAscentState();
-    if (st.dailyLosses >= ASCENT_DAILY_LIVES) return null;   // out of lives today
+    // A rematch of an already-cleared floor (m.advances === false) is a pure
+    // REPLAY — it must NOT touch rating, record, streak, lives, or floor. Only a
+    // genuine attempt at your current uncleared floor is "rated". This is what
+    // stops rematch rating-farming (re-beating a weak cleared floor for points).
+    const rated = !!m.advances;
+    if (rated && st.dailyLosses >= ASCENT_DAILY_LIVES) return null;   // out of lives (progression only)
     const beforeTitles = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st));
     const beforeTitleIds = beforeTitles.map(t => t.id);
 
     const result = _arenaResolve(m.player, m.bot);
     const won = result.playerWon;
 
-    // rating (ELO vs the floor's implied rating)
     const ratingBefore = st.rating;
-    const delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
-    st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
-    if (st.rating > st.bestRating) st.bestRating = st.rating;
-
-    // record + streak — only a defeat spends a life; wins are free
-    if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
-    else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
-
-    // floor advance — only when this was a fresh attempt at currentFloor
-    let advanced = false, floorCleared = null, bossCleared = null;
-    if (won && m.advances && m.floor === st.currentFloor && m.floor > st.highestCleared) {
-      st.highestCleared = m.floor;
-      st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
-      advanced = true; floorCleared = m.floor;
-      if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+    let delta = 0, advanced = false, floorCleared = null, bossCleared = null;
+    if (rated) {
+      // rating (ELO vs the floor's implied rating)
+      delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
+      st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
+      if (st.rating > st.bestRating) st.bestRating = st.rating;
+      // record + streak — only a real defeat spends a life; wins are free
+      if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
+      else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
+      // floor advance — fresh attempt at currentFloor only
+      if (won && m.floor === st.currentFloor && m.floor > st.highestCleared) {
+        st.highestCleared = m.floor;
+        st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
+        advanced = true; floorCleared = m.floor;
+        if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+      }
     }
 
     _persistAscentState(st);
@@ -6173,7 +6178,7 @@
       beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
 
     return {
-      result, state: st, won,
+      result, state: st, won, rated,
       ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
       advanced, floorCleared, bossCleared, newTitles,
       livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
@@ -6743,6 +6748,21 @@
         '<div><div class="eyebrow">NEW TITLE UNLOCKED</div><div class="name">' + esc(f.newTitles[0].name) + '</div>' +
         '<div class="hint">' + esc(f.newTitles[0].blurb) + ' · tap Titles to equip</div></div></div>'
       : '';
+    const gem = '<span class="gem" style="background:' + tierA.color + ';box-shadow:0 0 7px ' + tierA.color + 'aa"></span>';
+    // Rated fights show the rating change; a rematch (replay) shows nothing
+    // changed — rating only moves when you climb, never from re-beating a floor.
+    const ratingStrip = f.rated
+      ? '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
+          '<span class="before">' + f.ratingBefore.toLocaleString('en-US') + '</span><span class="arrow">→</span>' +
+          '<span class="after"><span id="ar-rating-num">' + f.ratingBefore.toLocaleString('en-US') + '</span>' +
+            '<span class="delta ' + (up ? 'up' : 'down') + '">' + (up ? '▲+' : '▼') + Math.abs(f.ratingDelta) + '</span></span></div>' +
+          '<div class="asc-rtier' + (tierChanged ? ' asc-tier-pulse' : '') + '" style="color:' + tierA.color + '">' + gem +
+            tierA.name + ' TIER' + (tierChanged ? (up ? ' · PROMOTED' : ' · DEMOTED') : '') + '</div>' +
+          '<div class="lbl">ARENA RATING · ' + f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY</div></div>'
+      : '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
+          '<span class="after">' + f.ratingAfter.toLocaleString('en-US') + '</span></div>' +
+          '<div class="asc-rtier" style="color:' + tierA.color + '">' + gem + tierA.name + ' TIER</div>' +
+          '<div class="lbl">REMATCH · RATING UNCHANGED</div></div>';
     _arSet(
       '<div class="ar-result-hero">' +
         '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
@@ -6754,15 +6774,7 @@
               ? 'You ended ' + esc(_arMatchup.bot.name) + ' in a single strike. <b style="color:#f5b842">FLAWLESS.</b>'
               : 'You took ' + esc(_arMatchup.bot.name) + ' <b style="color:#f5b842">' + score + '</b>. Earned, not given.') + '</div>'
           : '<div class="ar-result-narr loss">“The tower humbles every hunter. Return stronger.”</div>') +
-      '</div>' + flair + titleHtml +
-      '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
-        '<span class="before">' + f.ratingBefore.toLocaleString('en-US') + '</span><span class="arrow">→</span>' +
-        '<span class="after"><span id="ar-rating-num">' + f.ratingBefore.toLocaleString('en-US') + '</span>' +
-          '<span class="delta ' + (up ? 'up' : 'down') + '">' + (up ? '▲+' : '▼') + Math.abs(f.ratingDelta) + '</span></span></div>' +
-        '<div class="asc-rtier' + (tierChanged ? ' asc-tier-pulse' : '') + '" style="color:' + tierA.color + '">' +
-          '<span class="gem" style="background:' + tierA.color + ';box-shadow:0 0 7px ' + tierA.color + 'aa"></span>' +
-          tierA.name + ' TIER' + (tierChanged ? (up ? ' · PROMOTED' : ' · DEMOTED') : '') + '</div>' +
-        '<div class="lbl">ARENA RATING · ' + f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY</div></div>' +
+      '</div>' + flair + titleHtml + ratingStrip +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'
@@ -6770,8 +6782,10 @@
     // sound + haptics + animated rating
     try { playSfx(won ? (f.bossCleared ? 'boss_victory' : 'ar_win') : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(f.bossCleared ? 22 : 12); } catch (_) {}
-    try { _arCountUp(document.getElementById('ar-rating-num'), f.ratingBefore, f.ratingAfter, 700); } catch (_) {}
-    try { playSfx(up ? 'ar_rating_up' : 'ar_rating_down'); } catch (_) {}
+    if (f.rated) {
+      try { _arCountUp(document.getElementById('ar-rating-num'), f.ratingBefore, f.ratingAfter, 700); } catch (_) {}
+      try { playSfx(up ? 'ar_rating_up' : 'ar_rating_down'); } catch (_) {}
+    }
   }
 
   // ── titles ────────────────────────────────────────────────────────
