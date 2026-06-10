@@ -31218,14 +31218,33 @@ button.guildhall-summary-tile:active {
 .asc-tale-read { padding: 10px 2px 4px; font-size: 10.5px; line-height: 1.5; color: #9090a8; }
 .asc-tale-read .sup { color: #34d399; } .asc-tale-read .wk { color: #ef4444; }
 /* loadout */
-.asc-loadout { display: flex; gap: 8px; }
-.asc-load-slot { flex: 1; min-width: 0; padding: 9px 8px; border-radius: 10px; text-align: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
-.asc-load-slot.empty { background: transparent; border: 1px dashed rgba(255,255,255,0.14); }
-.asc-load-slot .gem { display: inline-block; width: 13px; height: 13px; border-radius: 4px; transform: rotate(45deg); margin-bottom: 7px; background: #3a3f4d; }
-.asc-load-slot.empty .gem { opacity: 0.35; box-shadow: none; }
-.asc-load-slot .nm { font-size: 9.5px; font-weight: 600; color: #c8c6d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.asc-load-slot.empty .nm { color: #6b6b86; }
-.asc-load-slot .bn { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.04em; margin-top: 2px; color: #6b6b86; }
+/* loadout — full 8-slot compact grid + totals (ClaudeDesign "Loadout Module") */
+.asc-loadout-panel { border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); padding: 10px 11px; }
+.asc-loadgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.asc-load-cell { min-height: 56px; box-sizing: border-box; border-radius: 10px; padding: 7px 7px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
+.asc-load-cell.sel { background: rgba(255,255,255,0.05); }
+.asc-load-cell.empty { cursor: default; align-items: center; justify-content: center; gap: 4px; border: 1px dashed rgba(255,255,255,0.14); background: transparent; }
+.asc-load-cell .top { display: flex; align-items: center; gap: 4px; }
+.asc-load-cell .ldt-gem { width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); flex: none; }
+.asc-load-cell .sl { font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.12em; color: #6b6b86; }
+.asc-load-cell .bn { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 800; letter-spacing: 0.03em; }
+.asc-load-cell .bn .pl { color: #6b6b86; font-size: 7.5px; }
+.asc-load-cell .nm { font-size: 8.5px; color: #9090a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asc-load-cell.empty .mt { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; color: #6b6b86; opacity: 0.8; }
+.asc-load-exp { display: none; margin-top: 7px; padding: 9px 11px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); align-items: center; gap: 10px; }
+.asc-load-exp.open { display: flex; }
+.asc-load-exp .lgem { width: 14px; height: 14px; border-radius: 3px; transform: rotate(45deg); flex: none; }
+.asc-load-exp .meta { flex: 1; min-width: 0; }
+.asc-load-exp .meta .t { display: flex; align-items: baseline; gap: 7px; }
+.asc-load-exp .meta .nm { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 12.5px; color: #f5f3fb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asc-load-exp .meta .rr { font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.15em; flex: none; }
+.asc-load-exp .meta .sl { font-family: "JetBrains Mono", monospace; font-size: 7px; font-weight: 700; letter-spacing: 0.1em; color: #6b6b86; margin-top: 2px; }
+.asc-load-exp .pills { display: flex; gap: 5px; flex: none; }
+.asc-load-exp .pill { padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; }
+.asc-load-totals { margin-top: 8px; padding: 7px 10px; border-radius: 9px; background: rgba(245,184,66,0.04); border: 1px solid rgba(245,184,66,0.18); display: flex; align-items: center; gap: 8px; }
+.asc-load-totals .lbl { font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.15em; color: #6b6b86; flex: none; }
+.asc-load-totals .v { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.03em; color: #f5b842; white-space: nowrap; text-align: right; }
+.asc-load-totals .v .dot { color: #6b6b86; }
 /* stakes */
 .asc-stakes { display: flex; border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); overflow: hidden; }
 .asc-stakes .col { flex: 1; padding: 12px 14px; }

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w226';
+  const APP_BUILD_TAG = '2.2.5-w227';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6594,31 +6594,59 @@
     return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">TALE OF THE TAPE</span><span class="a dim">TAP A ROW</span></div>' +
       '<div class="asc-tale">' + rows + '<div class="asc-tale-read">' + verdict + '</div></div></div>';
   }
-  // Your Loadout: equipped relics + bonus, deep-links to the Armory modal.
+  // Your Loadout: full 8-slot grid (ClaudeDesign "Loadout Module") — rarity gem
+  // + primary bonus per cell, tap to expand full bonuses, a totals bar across
+  // all gear, deep-links to the Armory modal. Read-only display.
+  const _LDT_ACCENT = { common: '#c8c6d8', rare: '#5eead4', ultra_rare: '#a78bfa', 'ultra-rare': '#a78bfa', ultra: '#a78bfa' };
+  const _LDT_RNAME  = { common: 'COMMON', rare: 'RARE', ultra_rare: 'ULTRA-RARE', 'ultra-rare': 'ULTRA-RARE', ultra: 'ULTRA-RARE' };
+  function _ldtSlotLabels() {
+    try { if (typeof EQUIPMENT_SLOTS !== 'undefined') return EQUIPMENT_SLOTS.map((s) => s.label); } catch (_) {}
+    return ['HELM', 'AMULET', 'CAPE', 'WEAPON', 'PLATE', 'GLOVES', 'BOOTS', 'RING'];
+  }
+  function _ldtCardAt(i) {
+    try { let s = []; const b = getHunterBuild(); if (b && Array.isArray(b.slots)) s = b.slots;
+      const id = s[i]; return (id && typeof CARDS !== 'undefined') ? CARDS[id] : null; } catch (_) { return null; }
+  }
+  function _ldtBonuses(card) {
+    const b = (card && card.bonuses) || {};
+    return Object.keys(b).filter((k) => (b[k] || 0) !== 0).map((k) => [k.toUpperCase(), b[k]]).sort((a, c) => c[1] - a[1]);
+  }
+  // expand strip for a tapped cell (full bonuses + rarity name)
+  function _ascLoadExpHtml(i) {
+    const card = _ldtCardAt(i);
+    if (!card) return '';
+    const col = _LDT_ACCENT[card.rarity] || '#c8c6d8';
+    const pills = _ldtBonuses(card).map((p) => '<span class="pill" style="color:' + col + '">+' + p[1] + ' ' + esc(p[0]) + '</span>').join('');
+    return '<span class="lgem" style="background:' + col + ';box-shadow:0 0 7px ' + col + '88"></span>' +
+      '<div class="meta"><div class="t"><span class="nm">' + esc(card.name || 'Relic') + '</span>' +
+      '<span class="rr" style="color:' + col + '">' + (_LDT_RNAME[card.rarity] || 'COMMON') + '</span></div>' +
+      '<div class="sl">' + esc(_ldtSlotLabels()[i] || '') + '</div></div><div class="pills">' + pills + '</div>';
+  }
   function _ascLoadoutHtml() {
-    let slots = []; try { const b = getHunterBuild(); if (b && Array.isArray(b.slots)) slots = b.slots; } catch (_) {}
-    const accent = { common: '#c8c6d8', rare: '#5eead4', ultra_rare: '#a78bfa', 'ultra-rare': '#a78bfa', ultra: '#a78bfa' };
-    const equipped = [];
-    for (let i = 0; i < slots.length && equipped.length < 3; i++) {
-      const card = (slots[i] && typeof CARDS !== 'undefined') ? CARDS[slots[i]] : null;
-      if (card) equipped.push(card);
+    const labels = _ldtSlotLabels();
+    let cells = '';
+    for (let i = 0; i < labels.length; i++) {
+      const card = _ldtCardAt(i);
+      if (!card) {
+        cells += '<div class="asc-load-cell empty"><span class="sl">' + esc(labels[i]) + '</span><span class="mt">＋ Empty</span></div>';
+        continue;
+      }
+      const col = _LDT_ACCENT[card.rarity] || '#c8c6d8';
+      const bl = _ldtBonuses(card), prim = bl[0] || ['', 0];
+      cells += '<div class="asc-load-cell" data-ar="loadcell" data-slot="' + i + '">' +
+        '<div class="top"><span class="ldt-gem" style="background:' + col + '"></span><span class="sl">' + esc(labels[i]) + '</span></div>' +
+        '<div class="bn" style="color:' + col + '">+' + prim[1] + ' ' + esc(prim[0]) + (bl.length > 1 ? '<span class="pl"> +</span>' : '') + '</div>' +
+        '<div class="nm">' + esc(card.name || 'Relic') + '</div></div>';
     }
-    let tiles = '';
-    equipped.forEach((card) => {
-      let top = null, topv = 0;
-      const b = card.bonuses || {};
-      Object.keys(b).forEach((k) => { if ((b[k] || 0) > topv) { topv = b[k]; top = k; } });
-      const col = accent[card.rarity] || '#c8c6d8';
-      tiles += '<div class="asc-load-slot"><span class="gem" style="background:' + col + ';box-shadow:0 0 6px ' + col + '88"></span>' +
-        '<div class="nm">' + esc(card.name || 'Relic') + '</div>' +
-        '<div class="bn" style="color:' + col + '">' + (top ? '+' + topv + ' ' + top.toUpperCase() : '—') + '</div></div>';
-    });
-    for (let i = equipped.length; i < 3; i++) {
-      tiles += '<div class="asc-load-slot empty"><span class="gem"></span><div class="nm">Empty slot</div><div class="bn">—</div></div>';
-    }
+    let totals = {}; try { totals = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
+    const tparts = ['str', 'vit', 'int', 'focus', 'will', 'wlt']
+      .filter((k) => (totals[k] || 0) > 0).map((k) => '+' + Math.round(totals[k]) + ' ' + k.toUpperCase());
+    const totalsHtml = tparts.length ? tparts.join('<span class="dot"> · </span>') : '—';
     return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">YOUR LOADOUT</span>' +
       '<span class="a link" data-ar="armory">ADJUST IN ARMORY →</span></div>' +
-      '<div class="asc-loadout">' + tiles + '</div></div>';
+      '<div class="asc-loadout-panel"><div class="asc-loadgrid">' + cells + '</div>' +
+      '<div class="asc-load-exp" id="asc-load-exp"></div>' +
+      '<div class="asc-load-totals"><span class="lbl">TOTAL GEAR BONUS</span><span class="v">' + totalsHtml + '</span></div></div></div>';
   }
   // On the Line — honest stakes (as-built: a boss loss costs rating + a life).
   function _ascStakesHtml(m) {
@@ -6986,6 +7014,20 @@
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'tale')    { try { act.classList.toggle('open'); } catch (_) {} }   // expand a tale-of-the-tape row
+      else if (a === 'loadcell'){                                                       // expand a loadout cell's full bonuses
+        try {
+          const i = parseInt(act.getAttribute('data-slot'), 10);
+          const exp = document.getElementById('asc-load-exp');
+          if (!exp) return;
+          const grid = act.parentNode;
+          if (grid) grid.querySelectorAll('.asc-load-cell.sel').forEach((el) => { if (el !== act) el.classList.remove('sel'); });
+          if (exp.getAttribute('data-open') === String(i)) {
+            exp.className = 'asc-load-exp'; exp.innerHTML = ''; exp.removeAttribute('data-open'); act.classList.remove('sel');
+          } else {
+            exp.innerHTML = _ascLoadExpHtml(i); exp.className = 'asc-load-exp open'; exp.setAttribute('data-open', String(i)); act.classList.add('sel');
+          }
+        } catch (_) {}
+      }
       else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
       else if (a === 'tower')   _arRenderTower();
       else if (a === 'titles')  _arRenderTitles();
