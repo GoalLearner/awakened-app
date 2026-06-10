@@ -30910,13 +30910,30 @@ button.guildhall-summary-tile:active {
 .asc-rtier.asc-tier-pulse { animation: ar-tierpulse 0.8s ease 2; }
 @keyframes ar-tierpulse { 0%,100% { transform: scale(1); filter: none; } 50% { transform: scale(1.1); filter: brightness(1.5); } }
 
+/* W216 — FLAWLESS one-hit KO */
+.ar-hp-fill.ko { transition: width 0.5s cubic-bezier(0.6, 0, 0.18, 1); }
+.ar-ko-stage { position: relative; display: flex; justify-content: center; align-items: center; margin-top: 20px; min-height: 156px; }
+.ar-ko-foe { width: 120px; display: flex; justify-content: center; transition: transform 0.5s ease, opacity 0.5s ease, filter 0.5s ease; }
+.ar-ko-foe svg, .ar-ko-foe .ar-foe-art { width: 100%; height: auto; }
+.ar-ko-foe.struck { animation: ar-ko-fall 0.6s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+@keyframes ar-ko-fall { to { opacity: 0.16; transform: translateY(12px) rotate(7deg) scale(0.94); filter: grayscale(1) brightness(0.45); } }
+.ar-ko-stamp { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; z-index: 22; }
+.ar-ko-stamp .big { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 46px; letter-spacing: 0.04em; color: #f5b842; text-shadow: 0 0 22px rgba(245,184,66,0.75), 0 2px 4px rgba(0,0,0,0.6); animation: ar-ko-stamp 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+.ar-ko-stamp .sub { margin-top: 4px; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 11px; letter-spacing: 0.32em; color: #ef4444; opacity: 0; animation: ar-ko-sub 0.4s ease 0.32s forwards; }
+@keyframes ar-ko-stamp { 0% { opacity: 0; transform: scale(2.5) rotate(-9deg); } 45% { opacity: 1; transform: scale(0.9) rotate(-3deg); } 100% { opacity: 1; transform: scale(1) rotate(-3deg); } }
+@keyframes ar-ko-sub { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.ar-sheet.ar-ko-shake { animation: ar-ko-shake 0.5s ease; }
+@keyframes ar-ko-shake { 0%,100% { transform: translate(0,0); } 12% { transform: translate(-9px, 4px); } 28% { transform: translate(8px, -5px); } 44% { transform: translate(-7px, 3px); } 60% { transform: translate(5px, -3px); } 78% { transform: translate(-3px, 2px); } }
+
 @media (prefers-reduced-motion: reduce) {
   .ar-body, .ar-logline, .ar-versus, .ar-bossintro { animation: none; }
-  .ar-hp-fill { transition: none; }
+  .ar-hp-fill, .ar-hp-fill.ko, .ar-ko-foe { transition: none; }
   .ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe,
   .ar-sheet.ar-juice-you::after, .ar-sheet.ar-juice-foe::after,
-  .ar-dmg-float, .ar-hp-fill.low, .asc-rtier.asc-tier-pulse { animation: none; }
+  .ar-dmg-float, .ar-hp-fill.low, .asc-rtier.asc-tier-pulse,
+  .ar-ko-foe.struck, .ar-ko-stamp .big, .ar-ko-stamp .sub, .ar-sheet.ar-ko-shake { animation: none; }
   .ar-dmg-float { display: none; }
+  .ar-ko-stamp .sub { opacity: 1; }
 }
 @media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; } .ar-combatant { width: 118px; } .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } .ar-bi-med { width: 128px; height: 128px; } .ar-bi-name { font-size: 23px; } .ar-vs-side { width: 116px; } }
 /* END Arena block */

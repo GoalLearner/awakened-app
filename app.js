@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w215';
+  const APP_BUILD_TAG = '2.2.5-w216';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6176,6 +6176,7 @@
   let _arTimers  = [];
   let _arReveal  = 0;
   let _arRevealing = false;   // W215 — true while the cinematic reveal driver is running (double-fire guard)
+  let _arFlawless  = false;   // W216 — true when this fight is a ≥2× clean-sweep stomp (one-hit KO reveal)
 
   function _arClearTimers() { _arTimers.forEach(t => { try { clearTimeout(t); } catch (_) {} }); _arTimers = []; }
   function _arAfter(ms, fn) { const id = setTimeout(fn, ms); _arTimers.push(id); return id; }
@@ -6389,6 +6390,14 @@
     }
     const youHP = Math.max(8, 100 - bW * 45), foeHP = Math.max(8, 100 - pW * 45);
     const youLow = youHP <= 15 ? ' low' : '', foeLow = foeHP <= 15 ? ' low' : '';
+    // Pokémon-style smooth drain: render the bars at the PREVIOUS round's HP,
+    // then patch to the current HP after a tick so the CSS width transition
+    // animates the chip. Under reduced motion, render at the final HP directly.
+    let pWp = 0, bWp = 0;
+    for (let i = 0; i < reveal - 1; i++) { const rd = r.rounds[i]; if (rd) { rd.playerWon ? pWp++ : bWp++; } }
+    const youHPp = Math.max(8, 100 - bWp * 45), foeHPp = Math.max(8, 100 - pWp * 45);
+    const animateHP = !_arReduceMotion();
+    const youStart = animateHP ? youHPp : youHP, foeStart = animateHP ? foeHPp : foeHP;
     const last = r.rounds[reveal - 1];
     const log = shown.map((rd, i) =>
       '<div class="ar-logline neutral">Round ' + (i + 1) + '</div>' +
@@ -6402,13 +6411,21 @@
       : '<button class="ar-cta" data-ar="skip">SEE RESULT</button>';
     _arSet(
       '<div class="ar-tophead"><div class="ar-kicker">Floor ' + _arMatchup.floor + ' · Round ' + Math.min(reveal || 1, 3) + ' of 3</div><div class="ar-pips">' + pips + '</div></div>' +
-      '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" style="width:' + youHP + '%"></div></div></div>' +
+      '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" id="ar-hp-you" style="width:' + youStart + '%"></div></div></div>' +
         '<div class="ar-hp-vs">vs</div>' +
-        '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" style="width:' + foeHP + '%"></div></div></div></div>' +
+        '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" id="ar-hp-foe" style="width:' + foeStart + '%"></div></div></div></div>' +
       '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + log + '</div>' + dmg +
       '<div class="ar-spacer"></div>' + btn
     );
     if (last) _arHitJuice(last.playerWon);
+    if (animateHP && (youStart !== youHP || foeStart !== foeHP)) {
+      _arAfter(30, () => {
+        try {
+          const ey = document.getElementById('ar-hp-you'); if (ey) ey.style.width = youHP + '%';
+          const ef = document.getElementById('ar-hp-foe'); if (ef) ef.style.width = foeHP + '%';
+        } catch (_) {}
+      });
+    }
   }
   // ── cinematic helpers (W215) ──────────────────────────────────────
   function _arHitJuice(playerWon) {
@@ -6504,6 +6521,54 @@
     };
     _arAfter(850, () => step(2));
   }
+  // W216 — one-hit KO cinematic for a flawless stomp. Phase 0 holds both
+  // fighters at full HP (a beat of tension); phase 1 slams the foe's bar to
+  // zero with the FLAWLESS stamp, heavy impact, and shake. Outcome already
+  // resolved — this is presentation only.
+  function _arRenderFlawless(phase) {
+    if (phase === 0) {
+      _arView = 'fight';
+      _arBodyMode(false);
+      const m = _arMatchup;
+      _arSet(
+        '<div class="ar-tophead"><div class="ar-kicker">Floor ' + m.floor + ' · Finishing Blow</div></div>' +
+        '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(m.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:100%"></div></div></div>' +
+          '<div class="ar-hp-vs">vs</div>' +
+          '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(m.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" id="ar-ko-foehp" style="width:100%"></div></div></div></div>' +
+        '<div class="ar-ko-stage"><div class="ar-ko-foe">' + _arFoeArt(m.bot, false) + '</div></div>' +
+        '<div class="ar-spacer"></div><button class="ar-skipbtn" data-ar="skip">SKIP ▸</button>'
+      );
+      return;
+    }
+    // phase 1 — the strike (patch in place so the bar slam + stamp animate)
+    try {
+      const foeHP = document.getElementById('ar-ko-foehp');
+      if (foeHP) { foeHP.classList.add('ko'); foeHP.style.width = '0%'; }
+      const sheet = document.querySelector('#arena-overlay .ar-sheet') || _arBody();
+      if (sheet) { sheet.classList.add('ar-ko-shake'); _arAfter(560, () => { try { sheet.classList.remove('ar-ko-shake'); } catch (_) {} }); }
+      const foeArt = document.querySelector('#arena-overlay .ar-ko-foe');
+      if (foeArt) foeArt.classList.add('struck');
+      const stage = document.querySelector('#arena-overlay .ar-ko-stage');
+      if (stage) {
+        const stamp = document.createElement('div');
+        stamp.className = 'ar-ko-stamp';
+        stamp.innerHTML = '<span class="big">FLAWLESS</span><span class="sub">ONE-SHOT KO</span>';
+        stage.appendChild(stamp);
+      }
+    } catch (_) {}
+  }
+  function _arPlayFlawless() {
+    _arClearTimers();
+    _arRevealing = true;
+    _arReveal = _arFight.result.rounds.length;   // logically fully revealed
+    _arRenderFlawless(0);
+    _arAfter(560, () => {
+      _arRenderFlawless(1);
+      try { playSfx('ar_ko'); } catch (_) {}
+      try { if (navigator.vibrate) navigator.vibrate([55, 35, 130]); } catch (_) {}
+      _arAfter(1250, () => { _arRevealing = false; _arRenderResult(); });
+    });
+  }
   function _arStartFight(floor) {
     if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
     _arClearTimers();
@@ -6512,19 +6577,29 @@
     _arFight = arenaResolveMatchup(_arMatchup);   // resolved exactly once, before any reveal
     if (!_arFight) { _arRenderTower(); return; }
     _arReveal = 0;
+    // FLAWLESS one-hit KO: a clean sweep (2–0) where the player is ≥2× the
+    // floor's power. Cosmetic-only — the outcome is already resolved above.
+    _arFlawless = !!(_arFight.won && _arFight.result.bWins === 0 &&
+      _ascPlayerPower() >= 2 * Math.max(1, _arMatchup.bot.power));
     if (_arReduceMotion()) { _arPlayReveal(); return; }   // no intros / no timers
     const foe = _arMatchup.bot;
     if (foe && foe.isBoss) {
       _arRenderBossIntro();
       try { playSfx('ar_boss_engage'); } catch (_) {}
       try { if (navigator.vibrate) navigator.vibrate([40, 30, 60, 30, 90]); } catch (_) {}
-      _arAfter(2000, _arPlayReveal);
+      _arAfter(2000, _arBeginReveal);
     } else {
       _arRenderVs();
       try { playSfx('ar_engage'); } catch (_) {}
       try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
-      _arAfter(1200, _arPlayReveal);
+      _arAfter(1200, _arBeginReveal);
     }
+  }
+  // Picks the reveal style: a flawless stomp gets the one-hit KO cinematic,
+  // everything else the round-by-round driver.
+  function _arBeginReveal() {
+    if (_arFlawless && !_arReduceMotion()) _arPlayFlawless();
+    else _arPlayReveal();
   }
 
   // ── result ────────────────────────────────────────────────────────
@@ -6556,7 +6631,9 @@
         '<div class="ar-result-word ' + (won ? 'win' : 'loss') + '">' + (won ? 'VICTORY' : 'DEFEAT') + '</div>' +
         '<div class="ar-result-rule"></div>' +
         (won
-          ? '<div class="ar-result-narr">You took ' + esc(_arMatchup.bot.name) + ' <b style="color:#f5b842">' + score + '</b>. Earned, not given.</div>'
+          ? '<div class="ar-result-narr">' + (_arFlawless
+              ? 'You ended ' + esc(_arMatchup.bot.name) + ' in a single strike. <b style="color:#f5b842">FLAWLESS.</b>'
+              : 'You took ' + esc(_arMatchup.bot.name) + ' <b style="color:#f5b842">' + score + '</b>. Earned, not given.') + '</div>'
           : '<div class="ar-result-narr loss">“The tower humbles every hunter. Return stronger.”</div>') +
       '</div>' + flair + titleHtml +
       '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
@@ -6645,7 +6722,7 @@
       const a = act.getAttribute('data-ar');
       if (a === 'exit')         closeArena();
       else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
-      else if (a === 'introgo') { if (!_arFight) return; _arClearTimers(); _arPlayReveal(); }
+      else if (a === 'introgo') { if (!_arFight) return; _arClearTimers(); _arBeginReveal(); }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'tower')   _arRenderTower();
       else if (a === 'titles')  _arRenderTitles();
@@ -20154,6 +20231,7 @@
     ar_win:         4,
     ar_rating_up:   4,
     ar_rating_down: 4,
+    ar_ko:          4,
     ar_boss_engage: 5,
   };
   const SFX_GATE_MS = 800;
@@ -20294,6 +20372,15 @@
     }
     if (name === 'ar_rating_up')   { playGlide(440, 740, 0, 0.5, 0.12, 'sine'); return; }
     if (name === 'ar_rating_down') { playGlide(440, 300, 0, 0.5, 0.12, 'sine'); return; }
+    if (name === 'ar_ko') {
+      // One-hit KO — heavy impact: deep thud + bright metallic crack +
+      // downward whoosh. Bigger than a normal clash; sells the finisher.
+      playNote(80,   0,    0.30, 0.30, 'sine');       // body thud
+      playNote(120,  0,    0.20, 0.16, 'triangle');
+      playNote(1568, 0.01, 0.12, 0.14, 'square');     // bright crack (G6)
+      playGlide(900, 170, 0.04, 0.5, 0.12, 'sawtooth'); // downward whoosh
+      return;
+    }
     // Unknown name — no-op (priority gate already returned early).
   }
 
