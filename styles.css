@@ -31178,6 +31178,71 @@ button.guildhall-summary-tile:active {
 .asc-empty .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 20px; color: #f5b842; }
 .asc-empty .sub { font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 14px; color: #9090a8; line-height: 1.5; max-width: 280px; }
 
+/* ── W222 fill modules — pre-fight scouting + victory recap ───────────────── */
+.asc-fill { margin-top: 16px; text-align: left; }
+.asc-fill-stack { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
+.asc-fill-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 3px; margin-bottom: 7px; }
+.asc-fill-head .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em; color: #9090a8; }
+.asc-fill-head .a { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.1em; }
+.asc-fill-head .a.dim { color: #6b6b86; font-size: 8px; letter-spacing: 0.12em; }
+.asc-fill-head .a.link { color: #a78bfa; cursor: pointer; }
+/* tale of the tape */
+.asc-tale { border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); padding: 3px 13px; }
+.asc-tale-row { padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+.asc-tale-row:last-of-type { border-bottom: none; }
+.asc-tale-head { display: grid; grid-template-columns: 46px 1fr 46px; align-items: center; gap: 10px; }
+.asc-tale-head .pv, .asc-tale-head .fv { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; color: #6b6b86; }
+.asc-tale-head .pv { text-align: right; }
+.asc-tale-head .pv.lead { color: #f5b842; } .asc-tale-head .fv.lead { color: #c8c6d8; }
+.asc-tale-head .mid { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.asc-tale-head .rk { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.18em; color: #7e8597; }
+.asc-tale-head .rk .chev { color: #6b6b86; transition: transform 0.2s; }
+.asc-tale-row.open .rk .chev { transform: rotate(180deg); }
+.asc-tale-bars { display: flex; gap: 4px; height: 5px; width: 100%; }
+.asc-tale-bars .b { flex: 1; background: rgba(255,255,255,0.04); border-radius: 3px; overflow: hidden; display: flex; }
+.asc-tale-bars .b.you { justify-content: flex-end; }
+.asc-tale-bars .b i { display: block; height: 100%; border-radius: 3px; }
+.asc-tale-bars .b.you i { background: linear-gradient(90deg, #c08418, #f5b842); }
+.asc-tale-bars .b.foe i { background: linear-gradient(90deg, #5c6072, #3a3f4d); }
+.asc-tale-detail { display: none; margin-top: 8px; padding: 8px 10px; border-radius: 9px; background: rgba(255,255,255,0.03); font-size: 10.5px; line-height: 1.5; color: #9090a8; }
+.asc-tale-row.open .asc-tale-detail { display: block; }
+.asc-tale-detail .rel { color: #a78bfa; } .asc-tale-detail .sup { color: #34d399; } .asc-tale-detail .wk { color: #ef4444; }
+.asc-tale-read { padding: 10px 2px 4px; font-size: 10.5px; line-height: 1.5; color: #9090a8; }
+.asc-tale-read .sup { color: #34d399; } .asc-tale-read .wk { color: #ef4444; }
+/* loadout */
+.asc-loadout { display: flex; gap: 8px; }
+.asc-load-slot { flex: 1; min-width: 0; padding: 9px 8px; border-radius: 10px; text-align: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+.asc-load-slot.empty { background: transparent; border: 1px dashed rgba(255,255,255,0.14); }
+.asc-load-slot .gem { display: inline-block; width: 13px; height: 13px; border-radius: 4px; transform: rotate(45deg); margin-bottom: 7px; background: #3a3f4d; }
+.asc-load-slot.empty .gem { opacity: 0.35; box-shadow: none; }
+.asc-load-slot .nm { font-size: 9.5px; font-weight: 600; color: #c8c6d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asc-load-slot.empty .nm { color: #6b6b86; }
+.asc-load-slot .bn { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.04em; margin-top: 2px; color: #6b6b86; }
+/* stakes */
+.asc-stakes { display: flex; border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); overflow: hidden; }
+.asc-stakes .col { flex: 1; padding: 12px 14px; }
+.asc-stakes .col:first-child { flex: 1.4; }
+.asc-stakes .vdiv { width: 1px; background: rgba(255,255,255,0.06); }
+.asc-stakes .lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.18em; color: #6b6b86; margin-bottom: 8px; }
+.asc-stakes .lbl.win { color: #34d399; }
+.asc-stakes .row { display: flex; align-items: baseline; gap: 9px; margin-bottom: 6px; }
+.asc-stakes .row .v { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 800; color: #f5b842; min-width: 34px; }
+.asc-stakes .row .d { font-size: 10.5px; color: #c8c6d8; }
+.asc-stakes .txt { font-size: 10.5px; line-height: 1.55; color: #9090a8; }
+.asc-stakes .txt b { color: #ef4444; font-weight: 800; }
+.asc-stakes .txt .dim { color: #6b6b86; }
+/* recap */
+.asc-recap { margin-top: 7px; border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); padding: 13px 15px; text-align: left; }
+.asc-recap .ln { display: flex; gap: 9px; align-items: baseline; margin-bottom: 7px; }
+.asc-recap .ln .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.asc-recap .ln.you .dot { background: #f5b842; } .asc-recap .ln.foe .dot { background: #3a3f4d; }
+.asc-recap .ln .tx { font-size: 11px; line-height: 1.5; color: #c8c6d8; }
+.asc-recap-stats { display: flex; gap: 8px; margin-top: 5px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.05); }
+.asc-recap-stats .st { flex: 1; text-align: center; }
+.asc-recap-stats .st .v { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: #c8c6d8; }
+.asc-recap-stats .st .v.win { color: #34d399; }
+.asc-recap-stats .st .l { font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.12em; color: #6b6b86; margin-top: 3px; }
+
 @media (prefers-reduced-motion: reduce) { .asc-scroll { scroll-behavior: auto; } }
 @media (max-width: 380px) {
   .asc-scroll { padding-left: 14px; padding-right: 14px; }

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w221';
+  const APP_BUILD_TAG = '2.2.5-w222';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6539,6 +6539,102 @@
     };
     tick();
   }
+  // ── W222 fill modules (presentation only — real engine state) ─────
+  // Tale of the Tape: role-by-role you-vs-foe (ATTACK/DEFENSE/EDGE), ×10
+  // display, tap a row to expand your stat + relic breakdown + the matchup.
+  function _ascTaleHtml(m) {
+    const P = m.player, F = m.bot;
+    let gear = {}; try { gear = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
+    const lvl = (id) => { try { return statLevel((stats[id] && stats[id].pts) || 0); } catch (_) { return 1; } };
+    const playerArch = _arenaArchOf(P), foeArch = F.archKey || _arenaArchOf(F);
+    const eff = _arenaEffectiveness(playerArch, foeArch);
+    const foeLabel = (ASCENT_ARCHETYPES[foeArch] || {}).label || 'Foe';
+    const roles = [
+      { key: 'ATTACK',  pv: P.attack,  fv: F.attack,  s: ['STR', 'FOCUS'] },
+      { key: 'DEFENSE', pv: P.defense, fv: F.defense, s: ['VIT', 'WILL'] },
+      { key: 'EDGE',    pv: P.edge,    fv: F.edge,    s: ['INT', 'WLT'] },
+    ];
+    let rows = '';
+    roles.forEach((r) => {
+      const pv = _arD(r.pv), fv = _arD(r.fv), max = Math.max(pv, fv, 1);
+      const youLead = pv >= fv;
+      const gearSum = Math.round((gear[r.s[0].toLowerCase()] || 0) + (gear[r.s[1].toLowerCase()] || 0));
+      const detail = r.s.map((s) => esc(s) + ' Lv ' + lvl(s)).join(' · ') +
+        (gearSum > 0 ? ' · <b class="rel">+' + gearSum + ' relic</b>' : '') +
+        ' — ' + (youLead ? 'you lead this exchange.' : 'they hold the edge here.');
+      rows += '<div class="asc-tale-row" data-ar="tale" data-role="' + r.key + '">' +
+        '<div class="asc-tale-head">' +
+          '<span class="pv' + (youLead ? ' lead' : '') + '">' + pv + '</span>' +
+          '<span class="mid"><span class="rk">' + r.key + '<svg width="8" height="5" viewBox="0 0 8 5" class="chev"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg></span>' +
+            '<span class="asc-tale-bars"><span class="b you"><i style="width:' + Math.round(pv / max * 100) + '%"></i></span>' +
+              '<span class="b foe"><i style="width:' + Math.round(fv / max * 100) + '%"></i></span></span></span>' +
+          '<span class="fv' + (youLead ? '' : ' lead') + '">' + fv + '</span>' +
+        '</div><div class="asc-tale-detail">' + detail + '</div></div>';
+    });
+    const verdict = eff.key === 'super'
+      ? 'Your style counters the ' + esc(foeLabel) + ' — <b class="sup">SUPER EFFECTIVE</b>.'
+      : eff.key === 'weak'
+      ? 'The ' + esc(foeLabel) + ' counters your style — <b class="wk">NOT VERY EFFECTIVE</b>.'
+      : 'An even match — no type advantage either way.';
+    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">TALE OF THE TAPE</span><span class="a dim">TAP A ROW</span></div>' +
+      '<div class="asc-tale">' + rows + '<div class="asc-tale-read">' + verdict + '</div></div></div>';
+  }
+  // Your Loadout: equipped relics + bonus, deep-links to the Armory modal.
+  function _ascLoadoutHtml() {
+    let slots = []; try { const b = getHunterBuild(); if (b && Array.isArray(b.slots)) slots = b.slots; } catch (_) {}
+    const accent = { common: '#c8c6d8', rare: '#5eead4', ultra_rare: '#a78bfa', 'ultra-rare': '#a78bfa', ultra: '#a78bfa' };
+    const equipped = [];
+    for (let i = 0; i < slots.length && equipped.length < 3; i++) {
+      const card = (slots[i] && typeof CARDS !== 'undefined') ? CARDS[slots[i]] : null;
+      if (card) equipped.push(card);
+    }
+    let tiles = '';
+    equipped.forEach((card) => {
+      let top = null, topv = 0;
+      const b = card.bonuses || {};
+      Object.keys(b).forEach((k) => { if ((b[k] || 0) > topv) { topv = b[k]; top = k; } });
+      const col = accent[card.rarity] || '#c8c6d8';
+      tiles += '<div class="asc-load-slot"><span class="gem" style="background:' + col + ';box-shadow:0 0 6px ' + col + '88"></span>' +
+        '<div class="nm">' + esc(card.name || 'Relic') + '</div>' +
+        '<div class="bn" style="color:' + col + '">' + (top ? '+' + topv + ' ' + top.toUpperCase() : '—') + '</div></div>';
+    });
+    for (let i = equipped.length; i < 3; i++) {
+      tiles += '<div class="asc-load-slot empty"><span class="gem"></span><div class="nm">Empty slot</div><div class="bn">—</div></div>';
+    }
+    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">YOUR LOADOUT</span>' +
+      '<span class="a link" data-ar="armory">ADJUST IN ARMORY →</span></div>' +
+      '<div class="asc-loadout">' + tiles + '</div></div>';
+  }
+  // On the Line — honest stakes (as-built: a boss loss costs rating + a life).
+  function _ascStakesHtml(m) {
+    const st = getAscentState();
+    const fr = _ascentFloorRating(m.floor);
+    const winD = _ascentRatingDelta(st.rating, fr, true);
+    const loseD = _ascentRatingDelta(st.rating, fr, false);   // negative
+    const boss = ASCENT_BOSSES[m.floor] || {};
+    const title = (boss.title && boss.title.name) ? boss.title.name : null;
+    const winRows = '<div class="row"><span class="v">+' + winD + '</span><span class="d">Arena rating</span></div>' +
+      (title ? '<div class="row"><span class="v">TITLE</span><span class="d">“' + esc(title) + '” — yours to equip</span></div>' : '');
+    const loseTxt = m.advances
+      ? 'Rating dips <b>' + loseD + '</b><br>A life spent.<br><span class="dim">Grow stronger, return.</span>'
+      : 'Replay — nothing at stake.<br><span class="dim">Rating already earned.</span>';
+    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
+      '<div class="asc-stakes"><div class="col"><div class="lbl win">ON VICTORY</div>' + winRows + '</div>' +
+      '<div class="vdiv"></div><div class="col"><div class="lbl">ON DEFEAT</div><div class="txt">' + loseTxt + '</div></div></div></div>';
+  }
+  // Fight Recap — blow-by-blow + honest stats (dmg = winning-side rolls).
+  function _ascRecapHtml(f) {
+    if (!f || !f.result || !Array.isArray(f.result.rounds)) return '';
+    const rounds = f.result.rounds;
+    let dealt = 0, taken = 0;
+    rounds.forEach((rd) => { if (rd.playerWon) dealt += (rd.pRoll || 0); else taken += (rd.bRoll || 0); });
+    const lines = rounds.map((rd) =>
+      '<div class="ln ' + (rd.playerWon ? 'you' : 'foe') + '"><span class="dot"></span><span class="tx">' + _arNarr(rd) + '</span></div>').join('');
+    const stat = (v, l, win) => '<div class="st"><div class="v' + (win ? ' win' : '') + '">' + v + '</div><div class="l">' + l + '</div></div>';
+    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT FELL</span></div>' +
+      '<div class="asc-recap">' + lines +
+      '<div class="asc-recap-stats">' + stat(dealt, 'DMG DEALT') + stat(taken, 'DMG TAKEN', taken === 0) + stat(rounds.length, 'ROUNDS') + '</div></div></div>';
+  }
   // VS intro — your avatar vs the foe portrait. Portrait hook (_arFoeArt)
   // shows Midjourney NPC art when present, silhouette otherwise.
   function _arRenderVs() {
@@ -6568,6 +6664,7 @@
         '<div class="ar-vs-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
         '<div class="ar-vs-go">' + _ascDiffHtml(you, foe) + '</div>' +
         '<button class="ar-cta" data-ar="introgo">FIGHT<span class="ar-cta-sub">FLOOR ' + m.floor + '</span></button>' +
+        _ascTaleHtml(m) +
       '</div>'
     );
     if (eff.key === 'super') { try { playSfx('ar_super'); } catch (_) {} }
@@ -6588,6 +6685,7 @@
         '<div class="ar-bi-taunt">“' + esc(taunt) + '”</div>' +
         '<div class="ar-bi-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
         '<button class="ar-cta" data-ar="introgo">' + (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') + '</button>' +
+        '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
       '</div>'
     );
   }
@@ -6774,7 +6872,7 @@
               ? 'You ended ' + esc(_arMatchup.bot.name) + ' in a single strike. <b style="color:#f5b842">FLAWLESS.</b>'
               : 'You took ' + esc(_arMatchup.bot.name) + ' <b style="color:#f5b842">' + score + '</b>. Earned, not given.') + '</div>'
           : '<div class="ar-result-narr loss">“The tower humbles every hunter. Return stronger.”</div>') +
-      '</div>' + flair + titleHtml + ratingStrip +
+      '</div>' + flair + titleHtml + ratingStrip + _ascRecapHtml(f) +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'
@@ -6858,6 +6956,8 @@
       else if (a === 'introgo') { _arCommitFight(); }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
+      else if (a === 'tale')    { try { act.classList.toggle('open'); } catch (_) {} }   // expand a tale-of-the-tape row
+      else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
       else if (a === 'tower')   _arRenderTower();
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'equip')   {
