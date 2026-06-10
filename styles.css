@@ -31231,6 +31231,11 @@ button.guildhall-summary-tile:active {
 .asc-stakes .txt { font-size: 10.5px; line-height: 1.55; color: #9090a8; }
 .asc-stakes .txt b { color: #ef4444; font-weight: 800; }
 .asc-stakes .txt .dim { color: #6b6b86; }
+.asc-stakes.exhibition { display: block; }
+.asc-stakes .exb { padding: 13px 15px; }
+.asc-stakes .exb-tag { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.2em; color: #a78bfa; margin-bottom: 7px; }
+.asc-stakes .exb-txt { font-size: 10.5px; line-height: 1.55; color: #9090a8; }
+.asc-stakes .exb-txt .dim { color: #6b6b86; }
 /* recap */
 .asc-recap { margin-top: 7px; border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); padding: 13px 15px; text-align: left; }
 .asc-recap .ln { display: flex; gap: 9px; align-items: baseline; margin-bottom: 7px; }

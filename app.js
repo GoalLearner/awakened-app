@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w222';
+  const APP_BUILD_TAG = '2.2.5-w223';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6608,16 +6608,23 @@
   // On the Line — honest stakes (as-built: a boss loss costs rating + a life).
   function _ascStakesHtml(m) {
     const st = getAscentState();
+    const boss = ASCENT_BOSSES[m.floor] || {};
+    const title = (boss.title && boss.title.name) ? boss.title.name : null;
+    // Rematch (m.advances === false): nothing is on the line — no rating, no
+    // re-grant of the title (W221). Show an honest exhibition note instead of
+    // the win/lose stakes (which would falsely promise rating + the title).
+    if (!m.advances) {
+      return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
+        '<div class="asc-stakes exhibition"><div class="exb"><div class="exb-tag">EXHIBITION</div>' +
+        '<div class="exb-txt">Nothing at stake — rating already earned' + (title ? ', title already yours' : '') + '.' +
+        '<br><span class="dim">Replay for the fight, or to chase a FLAWLESS.</span></div></div></div></div>';
+    }
     const fr = _ascentFloorRating(m.floor);
     const winD = _ascentRatingDelta(st.rating, fr, true);
     const loseD = _ascentRatingDelta(st.rating, fr, false);   // negative
-    const boss = ASCENT_BOSSES[m.floor] || {};
-    const title = (boss.title && boss.title.name) ? boss.title.name : null;
     const winRows = '<div class="row"><span class="v">+' + winD + '</span><span class="d">Arena rating</span></div>' +
       (title ? '<div class="row"><span class="v">TITLE</span><span class="d">“' + esc(title) + '” — yours to equip</span></div>' : '');
-    const loseTxt = m.advances
-      ? 'Rating dips <b>' + loseD + '</b><br>A life spent.<br><span class="dim">Grow stronger, return.</span>'
-      : 'Replay — nothing at stake.<br><span class="dim">Rating already earned.</span>';
+    const loseTxt = 'Rating dips <b>' + loseD + '</b><br>A life spent.<br><span class="dim">Grow stronger, return.</span>';
     return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
       '<div class="asc-stakes"><div class="col"><div class="lbl win">ON VICTORY</div>' + winRows + '</div>' +
       '<div class="vdiv"></div><div class="col"><div class="lbl">ON DEFEAT</div><div class="txt">' + loseTxt + '</div></div></div></div>';
@@ -6664,7 +6671,7 @@
         '<div class="ar-vs-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
         '<div class="ar-vs-go">' + _ascDiffHtml(you, foe) + '</div>' +
         '<button class="ar-cta" data-ar="introgo">FIGHT<span class="ar-cta-sub">FLOOR ' + m.floor + '</span></button>' +
-        _ascTaleHtml(m) +
+        '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
       '</div>'
     );
     if (eff.key === 'super') { try { playSfx('ar_super'); } catch (_) {} }
