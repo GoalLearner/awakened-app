@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w229';
+  const APP_BUILD_TAG = '2.2.5-w230';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6047,6 +6047,23 @@
   const _ARENA_READ_WIN    = 1.25, _ARENA_READ_LOSE = 0.80;     // triangle read
   const _ARENA_ALLIN_HIT   = 1.40, _ARENA_ALLIN_PUNISH = 0.65;  // gamble vs GUARD
   const _ARENA_MOVE_LABEL  = { strike: 'STRIKE', guard: 'GUARD', feint: 'FEINT', allin: 'ALL-IN' };
+  // ClaudeDesign "Arena Move Selector" — role accent + glyph + beats, per move.
+  const _ARENA_MOVE_META = {
+    strike: { role: 'ATTACK',  glyph: 'sword',  accent: '#f5b842', beats: 'feint' },
+    guard:  { role: 'DEFENSE', glyph: 'shield', accent: '#5eead4', beats: 'strike' },
+    feint:  { role: 'EDGE',    glyph: 'dagger', accent: '#a78bfa', beats: 'guard' },
+  };
+  function _arGlyph(type, color, size) {
+    const rc = 'stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+    const p = {
+      sword:  '<path d="M12.5 1.5L6 8m0 0L4.2 6.2M6 8l1.8 1.8M2.6 11.4l2-2m-2 2L1.5 12.5m1.1-1.1l1.1 1.1" ' + rc + '/>',
+      shield: '<path d="M7 1.4l4.8 1.7v3.8c0 3.2-2.1 5.2-4.8 6-2.7-.8-4.8-2.8-4.8-6V3.1z" stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linejoin="round"/>',
+      dagger: '<path d="M7 1.2v7.6M7 8.8L5 12.8h4zM4.6 6h4.8" ' + rc + '/>',
+      burst:  '<path d="M7 1.2v3M7 9.8v3M1.2 7h3M9.8 7h3M2.9 2.9l2.1 2.1M9 9l2.1 2.1M11.1 2.9L9 5M5 9l-2.1 2.1" stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linecap="round"/>',
+      eye:    '<g stroke="' + color + '" stroke-width="1.2" fill="none"><path d="M1.5 7C3 4.2 5 2.8 7 2.8S11 4.2 12.5 7C11 9.8 9 11.2 7 11.2S3 9.8 1.5 7z" stroke-linejoin="round"/><circle cx="7" cy="7" r="1.7"/></g>',
+    };
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="display:block;flex:none" aria-hidden="true">' + (p[type] || '') + '</svg>';
+  }
   // foe move tendency by archetype — readable, not deterministic; foe never ALL-INs (v1)
   const _ARENA_BOT_BIAS = {
     aggressor:   { strike: 0.55, guard: 0.20, feint: 0.25 },
@@ -6984,72 +7001,108 @@
     else _arRenderResult();
   }
   // shared HUD: two HP bars derived from current round wins
-  function _arHudHtml(youHP, foeHP) {
-    const youLow = youHP <= 15 ? ' low' : '', foeLow = foeHP <= 15 ? ' low' : '';
-    return '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" style="width:' + youHP + '%"></div></div></div>' +
-      '<div class="ar-hp-vs">vs</div>' +
-      '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" style="width:' + foeHP + '%"></div></div></div></div>';
-  }
-  function _arSessPips() {
+  // Combat header (ported) — YOU/FOE names, facing slim bars, diamond pips, status.
+  function _arCombatHeader(roundNo, statusRight, tone) {
+    const s = _arSess, m = _arMatchup;
+    const youHP = Math.max(8, 100 - s.bWins * 45), foeHP = Math.max(8, 100 - s.pWins * 45);
     let pips = '';
-    for (let i = 0; i < 3; i++) { const rd = _arSess.rounds[i]; pips += '<span class="ar-pip' + (rd ? (rd.playerWon ? ' win' : ' loss') : '') + '"></span>'; }
-    return pips;
+    for (let i = 0; i < 3; i++) { const rd = s.rounds[i]; pips += '<span class="ar-cpip ' + (rd ? (rd.playerWon ? 'win' : 'loss') : 'pending') + '"></span>'; }
+    return '<div class="ar-chead">' +
+      '<div class="ar-chead-names"><span class="you">YOU</span><span class="foe">' + esc(m.bot.name) + '</span></div>' +
+      '<div class="ar-chead-bars"><span class="bar you"><i style="width:' + youHP + '%"></i></span>' +
+        '<span class="dot"></span><span class="bar foe"><i style="width:' + foeHP + '%"></i></span></div>' +
+      '<div class="ar-chead-pips">' + pips + '</div>' +
+      '<div class="ar-chead-status"><span class="rule"></span><span class="txt">ROUND ' + roundNo +
+        ' OF 3 <span class="sep">·</span> <span class="hi"' + (tone ? ' style="color:' + tone + '"' : '') + '>' + statusRight + '</span></span><span class="rule"></span></div></div>';
   }
-  // Move-select for a round — HUD + foe tendency tell + 4 move buttons.
+  // Move-select — header + foe tendency tell + 3 role cards + ALL-IN gamble.
   function _arRenderMoves(round) {
     _arView = 'moves';
     _arBodyMode(false);
     const s = _arSess, m = _arMatchup;
-    const youHP = Math.max(8, 100 - s.bWins * 45), foeHP = Math.max(8, 100 - s.pWins * 45);
     const bias = _ARENA_BOT_BIAS[s.foeArch] || _ARENA_BOT_BIAS.balanced;
     let topMv = 'strike', topV = 0;
     ['strike', 'guard', 'feint'].forEach((k) => { if ((bias[k] || 0) > topV) { topV = bias[k]; topMv = k; } });
-    const tell = topV >= 0.5
-      ? 'The ' + esc(m.bot.archetype) + ' favors <b>' + _ARENA_MOVE_LABEL[topMv] + '</b>.'
-      : 'Reads are even — watch for a pattern.';
-    const btn = (mv, role, hint, cls) =>
-      '<button class="ar-move ' + (cls || '') + '" data-ar="move" data-move="' + mv + '">' +
-        '<span class="mv">' + _ARENA_MOVE_LABEL[mv] + '</span><span class="rl">' + role + '</span>' +
-        '<span class="hint">' + hint + '</span></button>';
+    const tell = '<div class="ar-tell"><span class="ic">' + _arGlyph('eye', '#a78bfa', 15) + '</span>' +
+      '<div class="tx"><span class="k">YOUR READ</span><span class="s">' +
+      (topV >= 0.5 ? 'The ' + esc(m.bot.archetype) + ' favors <b>' + _ARENA_MOVE_LABEL[topMv] + '</b>.' : 'Reads are even — <b>watch for a pattern</b>.') +
+      '</span></div></div>';
+    const card = (mv) => {
+      const d = _ARENA_MOVE_META[mv];
+      return '<button class="ar-move" data-ar="move" data-move="' + mv + '">' +
+        '<span class="badge" style="border-color:' + d.accent + '55;background:' + d.accent + '10;box-shadow:0 0 10px ' + d.accent + '22">' + _arGlyph(d.glyph, d.accent, 17) + '</span>' +
+        '<span class="mv">' + _ARENA_MOVE_LABEL[mv] + '</span>' +
+        '<span class="rl" style="color:' + d.accent + '">LEANS ' + d.role + '</span>' +
+        '<span class="be">beats ' + d.beats + '</span></button>';
+    };
+    const allin = '<button class="ar-allin" data-ar="move" data-move="allin"><span class="inner">' +
+      '<span class="dia">' + _arGlyph('burst', '#f5b842', 19) + '</span>' +
+      '<span class="lbl"><span class="t">ALL-IN</span><span class="s">THE GAMBLE <span class="dim">— HUGE UNLESS GUARDED</span></span></span>' +
+      '<span class="chev">»</span></span></button>';
     _arSet(
-      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + m.floor + ' · Round ' + round + ' of 3 · Your Move</div><div class="ar-pips">' + _arSessPips() + '</div></div>' +
-      _arHudHtml(youHP, foeHP) +
-      '<div class="ar-move-tell">' + tell + '</div>' +
-      '<div class="ar-moves">' +
-        btn('strike', 'LEANS ATTACK', 'Beats Feint', '') +
-        btn('guard', 'LEANS DEFENSE', 'Beats Strike', '') +
-        btn('feint', 'LEANS EDGE', 'Beats Guard', '') +
-        btn('allin', 'THE GAMBLE', 'Huge — unless Guarded', 'allin') +
+      _arCombatHeader(round, 'YOUR MOVE', '') +
+      '<div class="ar-mv-flex"></div>' + tell + '<div class="ar-mv-flex big"></div>' +
+      '<div class="ar-mv-foot">' +
+        '<div class="ar-mv-div"><span class="r"></span><span class="t">CHOOSE YOUR MOVE</span><span class="r"></span></div>' +
+        '<div class="ar-move-grid">' + card('strike') + card('guard') + card('feint') + '</div>' +
+        allin +
+        '<div class="ar-mv-tri">STRIKE ▸ FEINT ▸ GUARD ▸ STRIKE</div>' +
       '</div>'
     );
   }
-  // Exchange reveal — both moves, the read verdict, rolls + tags, then CONTINUE.
+  // Exchange reveal — face-off, verdict stamp, rolls, tags, narration, CONTINUE.
   function _arRenderExchange(round) {
     _arView = 'exchange';
     _arBodyMode(false);
-    const s = _arSess, m = _arMatchup;
-    const youHP = Math.max(8, 100 - s.bWins * 45), foeHP = Math.max(8, 100 - s.pWins * 45);
-    const readTxt = round.read === 'win' ? 'YOU WON THE READ' : round.read === 'lose' ? 'YOU LOST THE READ' : 'READ EVEN';
-    let tags = '';
-    if (round.playerWon ? round.pCrit : round.bCrit) tags += '<span class="ar-tag crit">CRITICAL</span>';
-    if (round.playerWon ? round.bMiss : round.pMiss) tags += '<span class="ar-tag miss">MISS</span>';
-    if (s.eff.key === 'super') tags += '<span class="ar-tag super">SUPER EFFECTIVE</span>';
-    else if (s.eff.key === 'weak') tags += '<span class="ar-tag weak">NOT VERY EFFECTIVE</span>';
+    const s = _arSess;
+    const youWon = round.playerWon, isAllin = round.pMove === 'allin';
+    const burst = isAllin && round.read === 'win', punished = isAllin && round.read === 'lose';
+    let beat;
+    if (isAllin) beat = round.read === 'win' ? 'ALL-IN — UNGUARDED' : 'GUARD STOPS ALL-IN';
+    else if (round.read === 'win') beat = _ARENA_MOVE_LABEL[round.pMove] + ' BEATS ' + _ARENA_MOVE_LABEL[round.bMove];
+    else if (round.read === 'lose') beat = _ARENA_MOVE_LABEL[round.bMove] + ' BEATS ' + _ARENA_MOVE_LABEL[round.pMove];
+    else beat = 'MIRROR — NO READ';
+    const vcls = round.read === 'win' ? 'win' : round.read === 'lose' ? 'lose' : 'even';
+    const vtxt = round.read === 'win' ? 'YOU WON THE READ' : round.read === 'lose' ? 'YOU LOST THE READ' : 'READ EVEN';
+    const vsub = burst ? 'THE GAMBLE LANDS' : punished ? 'GUARDED — THE GAMBLE BACKFIRES' : '';
+    const tags = [];
+    if (punished) tags.push(['COUNTERED', '#ef4444']);
+    if (youWon ? round.pCrit : round.bCrit) tags.push(['CRITICAL', '#f5b842']);
+    if (youWon ? round.bMiss : round.pMiss) tags.push(['MISS', '#6b6b86']);
+    if (s.eff.key === 'super') tags.push(['SUPER EFFECTIVE', '#34d399']);
+    else if (s.eff.key === 'weak') tags.push(['NOT VERY EFFECTIVE', '#6b6b86']);
+    const tagsHtml = tags.map((t) => '<span class="ar-rtag" style="color:' + t[1] + ';border-color:' + t[1] + '55;background:' + t[1] + '10">' + t[0] + '</span>').join('');
+    const chip = (mv, who) => {
+      const g = (mv === 'allin') ? 'burst' : _ARENA_MOVE_META[mv].glyph;
+      const isYou = who === 'you', pun = isYou && punished;
+      const col = pun ? '#ef4444' : isYou ? '#f5b842' : '#c8c6d8';
+      return '<span class="ar-fchip ' + who + (pun ? ' punished' : '') + '"><span class="who">' + (isYou ? 'YOU' : 'FOE') + '</span>' +
+        _arGlyph(g, col, 20) + '<span class="nm">' + _ARENA_MOVE_LABEL[mv] + '</span></span>';
+    };
+    const youBig = burst || round.pCrit, foeBig = punished || round.bCrit;
     _arSet(
-      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + m.floor + ' · Round ' + round.index + ' of 3</div><div class="ar-pips">' + _arSessPips() + '</div></div>' +
-      _arHudHtml(youHP, foeHP) +
-      '<div class="ar-read ' + round.read + '">' +
-        '<div class="ar-read-vs"><span class="mv you">' + _ARENA_MOVE_LABEL[round.pMove] + '</span>' +
-          '<span class="x">vs</span><span class="mv foe">' + _ARENA_MOVE_LABEL[round.bMove] + '</span></div>' +
-        '<div class="ar-read-verdict">' + readTxt + '</div>' +
-        '<div class="ar-read-rolls">' + round.pRoll + '<span class="d"> — </span>' + round.bRoll + '</div>' +
-        (tags ? '<div class="ar-read-tags">' + tags + '</div>' : '') +
-        '<div class="ar-read-narr ' + (round.playerWon ? 'you' : 'foe') + '">' + _arNarr(round) + '</div>' +
-      '</div>' +
-      '<div class="ar-spacer"></div>' +
-      '<button class="ar-cta" data-ar="next">' + (s.done ? 'SEE RESULT' : 'CONTINUE<span class="ar-cta-sub">ROUND ' + (round.index + 1) + '</span>') + '</button>'
+      _arCombatHeader(round.index, 'THE READ', round.read === 'win' ? '#34d399' : round.read === 'lose' ? '#ef4444' : '#f5b842') +
+      '<div class="ar-ex-flex"></div>' +
+      '<div class="ar-faceoff' + (punished ? ' shake' : '') + '"><div class="row">' + chip(round.pMove, 'you') +
+        '<span class="vs">VS</span>' + chip(round.bMove, 'foe') + '</div><div class="beat">' + beat + '</div></div>' +
+      '<div class="ar-verdict ' + vcls + '"><span class="big">' + vtxt + '</span>' + (vsub ? '<span class="sub">' + vsub + '</span>' : '') + '</div>' +
+      '<div class="ar-rolls' + (burst ? ' burst' : '') + '"><div class="side"><span class="n you' + (youBig ? ' big' : '') + '">' + round.pRoll +
+        '</span><span class="l">YOUR ROLL</span></div><span class="dash">—</span>' +
+        '<div class="side"><span class="n foe' + (foeBig ? ' big' : '') + '">' + round.bRoll + '</span><span class="l">FOE ROLL</span></div></div>' +
+      (tagsHtml ? '<div class="ar-rtags">' + tagsHtml + '</div>' : '') +
+      '<div class="ar-rnarr ' + (burst ? 'gold' : punished ? 'red' : '') + '">' + _arNarr(round) + '</div>' +
+      '<div class="ar-ex-flex big"></div>' +
+      '<button class="ar-contbtn" data-ar="next">' + (s.done ? 'SEE RESULT ▸' : 'CONTINUE ▸') + '</button>'
     );
-    _arHitJuice(round.playerWon, round.playerWon ? round.pCrit : round.bCrit);
+    try {
+      const sheet = document.querySelector('#arena-overlay .ar-sheet');
+      if (sheet && !_arReduceMotion()) {
+        sheet.classList.remove('ar-vig-gold', 'ar-vig-red');
+        if (burst) sheet.classList.add('ar-vig-gold'); else if (punished) sheet.classList.add('ar-vig-red');
+        _arAfter(950, () => { try { sheet.classList.remove('ar-vig-gold', 'ar-vig-red'); } catch (_) {} });
+      }
+    } catch (_) {}
+    _arHitJuice(youWon, youWon ? round.pCrit : round.bCrit);
     _arHitSound(round);
   }
 
