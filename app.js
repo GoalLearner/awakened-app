@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w224';
+  const APP_BUILD_TAG = '2.2.5-w225';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5988,14 +5988,18 @@
     });
     return out; // { STR, VIT, INT, FOCUS, WILL, WLT }
   }
-  // Map the six stats to combat roles so EVERY stat matters:
+  // Map five stats to combat roles. WLT (Wealth) is intentionally EXCLUDED —
+  // it has no combat role (see the 1z.277 reward-only design); folding it into
+  // EDGE was a mistake. EDGE = INT × 1.6 so a balanced build's power is
+  // unchanged (old INT×0.8 + WLT×0.8 == 1.6·INT when INT==WLT), keeping the
+  // tower curve anchored — only Wealth-heavy builds lose (intended).
   //   Attack  = STR(lead) + FOCUS(accuracy)
   //   Defense = VIT(lead) + WILL(resilience)
-  //   Edge    = INT(initiative) + WLT(lucky breaks)
+  //   Edge    = INT(initiative / finesse)
   function _arenaCombatProfile(s) {
     const attack  = s.STR * 1.6 + s.FOCUS * 1.0;
     const defense = s.VIT * 1.4 + s.WILL * 1.0;
-    const edge    = s.INT * 0.8 + s.WLT  * 0.8;
+    const edge    = s.INT * 1.6;
     return { attack, defense, edge, power: attack + defense + edge, stats: s };
   }
 
@@ -6057,8 +6061,8 @@
     if (_ARENA_BEATS[f] === p) return { key: 'weak',  label: 'NOT VERY EFFECTIVE', mult: _ARENA_EFF_PEN };
     return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
   }
-  // Per-side crit/miss odds. Crit scales with EDGE share (WLT = "lucky
-  // breaks"); the player's misses shrink with above-average FOCUS (accuracy).
+  // Per-side crit/miss odds. Crit scales with EDGE share (INT-driven finesse);
+  // the player's misses shrink with above-average FOCUS (accuracy).
   function _arenaSideOdds(c) {
     const tot = Math.max(1e-6, (c.attack || 0) + (c.defense || 0) + (c.edge || 0));
     const edgeShare = (c.edge || 0) / tot;
@@ -6553,13 +6557,13 @@
     const roles = [
       { key: 'ATTACK',  pv: P.attack,  fv: F.attack,  s: ['STR', 'FOCUS'] },
       { key: 'DEFENSE', pv: P.defense, fv: F.defense, s: ['VIT', 'WILL'] },
-      { key: 'EDGE',    pv: P.edge,    fv: F.edge,    s: ['INT', 'WLT'] },
+      { key: 'EDGE',    pv: P.edge,    fv: F.edge,    s: ['INT'] },
     ];
     let rows = '';
     roles.forEach((r) => {
       const pv = _arD(r.pv), fv = _arD(r.fv), max = Math.max(pv, fv, 1);
       const youLead = pv >= fv;
-      const gearSum = Math.round((gear[r.s[0].toLowerCase()] || 0) + (gear[r.s[1].toLowerCase()] || 0));
+      const gearSum = Math.round(r.s.reduce((a, k) => a + (gear[k.toLowerCase()] || 0), 0));
       const detail = r.s.map((s) => esc(s) + ' Lv ' + lvl(s)).join(' · ') +
         (gearSum > 0 ? ' · <b class="rel">+' + gearSum + ' relic</b>' : '') +
         ' — ' + (youLead ? 'you lead this exchange.' : 'they hold the edge here.');
