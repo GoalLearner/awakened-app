@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w218';
+  const APP_BUILD_TAG = '2.2.5-w219';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6658,8 +6658,24 @@
       _arRenderFlawless(1);
       try { playSfx('ar_ko'); } catch (_) {}
       try { if (navigator.vibrate) navigator.vibrate([55, 35, 130]); } catch (_) {}
-      _arAfter(1250, () => { _arRevealing = false; _arRenderResult(); });
+      // Hold on the KO and hand control to the player — no auto-advance to the
+      // result (a one-shot finishing too fast read as "it skipped the fight").
+      _arAfter(1150, () => { _arRevealing = false; _arShowKoContinue(); });
     });
+  }
+  // Swap the KO screen's SKIP button for an explicit CONTINUE → result, so the
+  // FLAWLESS finisher waits for a tap instead of jumping to the victory screen.
+  function _arShowKoContinue() {
+    try {
+      const btn = document.querySelector('#arena-body [data-ar="skip"]');
+      if (!btn) return;
+      const cta = document.createElement('button');
+      cta.className = 'ar-cta';
+      cta.setAttribute('data-ar', 'koresult');
+      cta.innerHTML = 'CONTINUE<span class="ar-cta-sub">VICTORY</span>';
+      btn.replaceWith(cta);
+      try { cta.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+    } catch (_) {}
   }
   function _arStartFight(floor) {
     if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
@@ -6816,6 +6832,7 @@
       else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
       else if (a === 'introgo') { if (!_arFight) return; _arClearTimers(); _arBeginReveal(); }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
+      else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'tower')   _arRenderTower();
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'equip')   {
