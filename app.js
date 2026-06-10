@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w228';
+  const APP_BUILD_TAG = '2.2.5-w229';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6039,6 +6039,37 @@
   const _ARENA_EFF_PEN   = 0.83;  // NOT VERY EFFECTIVE penalty (≈1/1.20)
   const _ARENA_CRIT_MULT = 1.45;  // a crit roll is ×this
   const _ARENA_MISS_MULT = 0.45;  // a miss roll is ×this
+  // W229 "Read & Counter" — pick a move each round. The read is a bounded
+  // TIEBREAKER (build + type-effectiveness still dominate). Triangle:
+  // STRIKE ▸ FEINT ▸ GUARD ▸ STRIKE. ALL-IN is the gamble — big unless Guarded.
+  const ARENA_MOVES        = ['strike', 'guard', 'feint', 'allin'];
+  const _ARENA_MOVE_BEATS  = { strike: 'feint', feint: 'guard', guard: 'strike' };
+  const _ARENA_READ_WIN    = 1.25, _ARENA_READ_LOSE = 0.80;     // triangle read
+  const _ARENA_ALLIN_HIT   = 1.40, _ARENA_ALLIN_PUNISH = 0.65;  // gamble vs GUARD
+  const _ARENA_MOVE_LABEL  = { strike: 'STRIKE', guard: 'GUARD', feint: 'FEINT', allin: 'ALL-IN' };
+  // foe move tendency by archetype — readable, not deterministic; foe never ALL-INs (v1)
+  const _ARENA_BOT_BIAS = {
+    aggressor:   { strike: 0.55, guard: 0.20, feint: 0.25 },
+    glasscannon: { strike: 0.60, guard: 0.15, feint: 0.25 },
+    sentinel:    { strike: 0.25, guard: 0.55, feint: 0.20 },
+    juggernaut:  { strike: 0.25, guard: 0.60, feint: 0.15 },
+    trickster:   { strike: 0.20, guard: 0.25, feint: 0.55 },
+    balanced:    { strike: 0.34, guard: 0.33, feint: 0.33 },
+  };
+  function _arenaBotMove(archKey) {
+    const bias = _ARENA_BOT_BIAS[archKey] || _ARENA_BOT_BIAS.balanced;
+    let r = Math.random(), acc = 0;
+    for (const mv of ['strike', 'guard', 'feint']) { acc += (bias[mv] || 0); if (r <= acc) return mv; }
+    return 'strike';
+  }
+  // Player read multiplier given both moves (foe never all-ins in v1).
+  function _arenaReadMult(pMove, bMove) {
+    if (pMove === 'allin') return { p: bMove === 'guard' ? _ARENA_ALLIN_PUNISH : _ARENA_ALLIN_HIT, b: 1.0, read: bMove === 'guard' ? 'lose' : 'win' };
+    if (pMove === bMove) return { p: 1.0, b: 1.0, read: 'neutral' };
+    if (_ARENA_MOVE_BEATS[pMove] === bMove) return { p: _ARENA_READ_WIN, b: _ARENA_READ_LOSE, read: 'win' };
+    if (_ARENA_MOVE_BEATS[bMove] === pMove) return { p: _ARENA_READ_LOSE, b: _ARENA_READ_WIN, read: 'lose' };
+    return { p: 1.0, b: 1.0, read: 'neutral' };
+  }
   // Derive a fighting archetype from a combatant's role split (the player
   // has no assigned archetype; the bot keeps its own archKey).
   function _arenaArchOf(c) {
@@ -6195,6 +6226,78 @@
     return r ? { player: m.player, bot: m.bot, floor: m.floor, result: r.result, state: r.state, newTitles: r.newTitles } : null;
   }
 
+  // ── W229 interactive session — the UI drives one round at a time, commit
+  //    happens once in arenaFinalizeSession (preserves W220/W221 invariants).
+  // Start a session (no state mutation). eff/odds/archetypes computed once.
+  function arenaStartSession(m) {
+    const playerArch = _arenaArchOf(m.player);
+    const foeArch    = m.bot.archKey || _arenaArchOf(m.bot);
+    const eff        = _arenaEffectiveness(playerArch, foeArch);
+    return {
+      m, eff, playerArch, foeArch,
+      pOdds: _arenaSideOdds(m.player), bOdds: _arenaSideOdds(m.bot),
+      pPow: m.player.power * eff.mult, bPow: m.bot.power,
+      pWins: 0, bWins: 0, rounds: [], done: false,
+    };
+  }
+  // Resolve ONE round with the player's chosen move (no commit). The read
+  // multiplier is a bounded tiebreaker layered over the power roll + crit/miss.
+  function arenaResolveRound(sess, pMove) {
+    if (!sess || sess.done) return null;
+    if (ARENA_MOVES.indexOf(pMove) === -1) pMove = 'strike';
+    const bMove = _arenaBotMove(sess.foeArch);
+    const rm = _arenaReadMult(pMove, bMove);
+    const p = _arenaRollSide(sess.pPow * rm.p, sess.pOdds);
+    const b = _arenaRollSide(sess.bPow * rm.b, sess.bOdds);
+    const playerWon = p.v >= b.v;
+    if (playerWon) sess.pWins += 1; else sess.bWins += 1;
+    const round = {
+      index: sess.rounds.length + 1,
+      pRoll: Math.round(p.v), bRoll: Math.round(b.v), playerWon,
+      margin: Math.abs(p.v - b.v) / Math.max(p.v, b.v, 1),
+      pCrit: p.crit, pMiss: p.miss, bCrit: b.crit, bMiss: b.miss,
+      pMove, bMove, read: rm.read,
+    };
+    sess.rounds.push(round);
+    if (sess.pWins >= 2 || sess.bWins >= 2 || sess.rounds.length >= 3) sess.done = true;
+    return round;
+  }
+  // Finalize + commit ONCE — the W220/W221 logic (rating only if rated, a
+  // defeat spends a life, floor advance, titles). Same result shape the UI uses.
+  function arenaFinalizeSession(sess) {
+    const m = sess.m, st = getAscentState();
+    const rated = !!m.advances;
+    const beforeTitleIds = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st)).map(t => t.id);
+    const result = {
+      playerWon: sess.pWins > sess.bWins, pWins: sess.pWins, bWins: sess.bWins,
+      rounds: sess.rounds, eff: sess.eff, playerArch: sess.playerArch, foeArch: sess.foeArch,
+    };
+    const won = result.playerWon;
+    const ratingBefore = st.rating;
+    let delta = 0, advanced = false, floorCleared = null, bossCleared = null;
+    if (rated) {
+      delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
+      st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
+      if (st.rating > st.bestRating) st.bestRating = st.rating;
+      if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
+      else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
+      if (won && m.floor === st.currentFloor && m.floor > st.highestCleared) {
+        st.highestCleared = m.floor;
+        st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
+        advanced = true; floorCleared = m.floor;
+        if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+      }
+    }
+    _persistAscentState(st);
+    const newTitles = ARENA_TITLES.filter(t => beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
+    return {
+      result, state: st, won, rated,
+      ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
+      advanced, floorCleared, bossCleared, newTitles,
+      livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
+    };
+  }
+
   // Expose floor data for the tower UI (no state mutation).
   function ascentFloorInfo(floor) {
     const st = getAscentState();
@@ -6242,6 +6345,7 @@
   let _arReveal  = 0;
   let _arRevealing = false;   // W215 — true while the cinematic reveal driver is running (double-fire guard)
   let _arFlawless  = false;   // W216 — true when this fight is a ≥2× clean-sweep stomp (one-hit KO reveal)
+  let _arSess      = null;    // W229 — interactive fight session (pick-a-move per round)
 
   function _arClearTimers() { _arTimers.forEach(t => { try { clearTimeout(t); } catch (_) {} }); _arTimers = []; }
   function _arAfter(ms, fn) { const id = setTimeout(fn, ms); _arTimers.push(id); return id; }
@@ -6397,6 +6501,7 @@
     _arView = 'tower';
     _arClearTimers();
     _arRevealing = false;
+    _arSess = null;
     _arBodyMode(true);
     const st = getAscentState();
     const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
@@ -6841,6 +6946,7 @@
     if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
     _arClearTimers();
     _arRevealing = false;
+    _arSess = null;
     _arFight = null;
     _arFlawless = false;
     _arReveal = 0;
@@ -6856,22 +6962,95 @@
       try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
     }
   }
-  // Commit the current matchup (resolve + record/rating/floor/life, exactly
-  // once) and start the reveal. Called from the FIGHT/CHALLENGE (introgo) tap.
+  // Start an interactive fight session (W229). Called from the FIGHT/CHALLENGE
+  // (introgo) tap. No state commits here — that happens once in _arFinishSession.
   function _arCommitFight() {
-    if (!_arMatchup || _arFight) return;   // guard double-tap / no preview open
+    if (!_arMatchup || _arSess || _arFight) return;   // guard double-tap / no preview open
+    if (_arMatchup.advances && ascentLivesLeft() <= 0) { _arRenderTower(); return; }  // out of lives
     _arClearTimers();
-    _arFight = arenaResolveMatchup(_arMatchup);
-    if (!_arFight) { _arRenderTower(); return; }   // out of lives
-    _arFlawless = !!(_arFight.won && _arFight.result.bWins === 0 &&
-      _ascPlayerPower() >= 2 * Math.max(1, _arMatchup.bot.power));
-    _arBeginReveal();
+    _arFight = null; _arFlawless = false; _arRevealing = false;
+    _arSess = arenaStartSession(_arMatchup);
+    _arRenderMoves(1);
   }
-  // Picks the reveal style: a flawless stomp gets the one-hit KO cinematic,
-  // everything else the round-by-round driver.
-  function _arBeginReveal() {
-    if (_arFlawless && !_arReduceMotion()) _arPlayFlawless();
-    else _arPlayReveal();
+  // Finalize the session (commit ONCE) and show the outcome. A ≥2× stomp that
+  // wins its opening exchange gets the one-hit KO cinematic; else the result.
+  function _arFinishSession(flawless) {
+    if (!_arSess) return;
+    _arSess.done = true;
+    _arFight = arenaFinalizeSession(_arSess);
+    _arSess = null;                    // prevent double-finalize
+    _arFlawless = !!flawless;
+    if (flawless && !_arReduceMotion()) _arPlayFlawless();
+    else _arRenderResult();
+  }
+  // shared HUD: two HP bars derived from current round wins
+  function _arHudHtml(youHP, foeHP) {
+    const youLow = youHP <= 15 ? ' low' : '', foeLow = foeHP <= 15 ? ' low' : '';
+    return '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" style="width:' + youHP + '%"></div></div></div>' +
+      '<div class="ar-hp-vs">vs</div>' +
+      '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" style="width:' + foeHP + '%"></div></div></div></div>';
+  }
+  function _arSessPips() {
+    let pips = '';
+    for (let i = 0; i < 3; i++) { const rd = _arSess.rounds[i]; pips += '<span class="ar-pip' + (rd ? (rd.playerWon ? ' win' : ' loss') : '') + '"></span>'; }
+    return pips;
+  }
+  // Move-select for a round — HUD + foe tendency tell + 4 move buttons.
+  function _arRenderMoves(round) {
+    _arView = 'moves';
+    _arBodyMode(false);
+    const s = _arSess, m = _arMatchup;
+    const youHP = Math.max(8, 100 - s.bWins * 45), foeHP = Math.max(8, 100 - s.pWins * 45);
+    const bias = _ARENA_BOT_BIAS[s.foeArch] || _ARENA_BOT_BIAS.balanced;
+    let topMv = 'strike', topV = 0;
+    ['strike', 'guard', 'feint'].forEach((k) => { if ((bias[k] || 0) > topV) { topV = bias[k]; topMv = k; } });
+    const tell = topV >= 0.5
+      ? 'The ' + esc(m.bot.archetype) + ' favors <b>' + _ARENA_MOVE_LABEL[topMv] + '</b>.'
+      : 'Reads are even — watch for a pattern.';
+    const btn = (mv, role, hint, cls) =>
+      '<button class="ar-move ' + (cls || '') + '" data-ar="move" data-move="' + mv + '">' +
+        '<span class="mv">' + _ARENA_MOVE_LABEL[mv] + '</span><span class="rl">' + role + '</span>' +
+        '<span class="hint">' + hint + '</span></button>';
+    _arSet(
+      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + m.floor + ' · Round ' + round + ' of 3 · Your Move</div><div class="ar-pips">' + _arSessPips() + '</div></div>' +
+      _arHudHtml(youHP, foeHP) +
+      '<div class="ar-move-tell">' + tell + '</div>' +
+      '<div class="ar-moves">' +
+        btn('strike', 'LEANS ATTACK', 'Beats Feint', '') +
+        btn('guard', 'LEANS DEFENSE', 'Beats Strike', '') +
+        btn('feint', 'LEANS EDGE', 'Beats Guard', '') +
+        btn('allin', 'THE GAMBLE', 'Huge — unless Guarded', 'allin') +
+      '</div>'
+    );
+  }
+  // Exchange reveal — both moves, the read verdict, rolls + tags, then CONTINUE.
+  function _arRenderExchange(round) {
+    _arView = 'exchange';
+    _arBodyMode(false);
+    const s = _arSess, m = _arMatchup;
+    const youHP = Math.max(8, 100 - s.bWins * 45), foeHP = Math.max(8, 100 - s.pWins * 45);
+    const readTxt = round.read === 'win' ? 'YOU WON THE READ' : round.read === 'lose' ? 'YOU LOST THE READ' : 'READ EVEN';
+    let tags = '';
+    if (round.playerWon ? round.pCrit : round.bCrit) tags += '<span class="ar-tag crit">CRITICAL</span>';
+    if (round.playerWon ? round.bMiss : round.pMiss) tags += '<span class="ar-tag miss">MISS</span>';
+    if (s.eff.key === 'super') tags += '<span class="ar-tag super">SUPER EFFECTIVE</span>';
+    else if (s.eff.key === 'weak') tags += '<span class="ar-tag weak">NOT VERY EFFECTIVE</span>';
+    _arSet(
+      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + m.floor + ' · Round ' + round.index + ' of 3</div><div class="ar-pips">' + _arSessPips() + '</div></div>' +
+      _arHudHtml(youHP, foeHP) +
+      '<div class="ar-read ' + round.read + '">' +
+        '<div class="ar-read-vs"><span class="mv you">' + _ARENA_MOVE_LABEL[round.pMove] + '</span>' +
+          '<span class="x">vs</span><span class="mv foe">' + _ARENA_MOVE_LABEL[round.bMove] + '</span></div>' +
+        '<div class="ar-read-verdict">' + readTxt + '</div>' +
+        '<div class="ar-read-rolls">' + round.pRoll + '<span class="d"> — </span>' + round.bRoll + '</div>' +
+        (tags ? '<div class="ar-read-tags">' + tags + '</div>' : '') +
+        '<div class="ar-read-narr ' + (round.playerWon ? 'you' : 'foe') + '">' + _arNarr(round) + '</div>' +
+      '</div>' +
+      '<div class="ar-spacer"></div>' +
+      '<button class="ar-cta" data-ar="next">' + (s.done ? 'SEE RESULT' : 'CONTINUE<span class="ar-cta-sub">ROUND ' + (round.index + 1) + '</span>') + '</button>'
+    );
+    _arHitJuice(round.playerWon, round.playerWon ? round.pCrit : round.bCrit);
+    _arHitSound(round);
   }
 
   // ── result ────────────────────────────────────────────────────────
@@ -6980,6 +7159,7 @@
     const ov = document.getElementById('arena-overlay');
     if (!ov) return;
     _arClearTimers();
+    _arSess = null;
     ov.classList.add('hidden');
     ov.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', _arKeydown, true);
@@ -6988,7 +7168,16 @@
   // it returns to the tower (the Arena's main page); it only leaves the Arena
   // entirely when you're already on the tower.
   function _arExit() {
-    if (_arView && _arView !== 'tower') { _arClearTimers(); _arRevealing = false; _arRenderTower(); return; }
+    // Bailing on a live RATED fight forfeits it as a loss — otherwise you could
+    // abandon any fight you're losing for free and dodge the daily-lives gate.
+    if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
+      let ok = true; try { ok = window.confirm('Forfeit this fight? It counts as a loss — a life spent.'); } catch (_) {}
+      if (!ok) return;
+      _arSess.bWins = 2; if (_arSess.pWins > 1) _arSess.pWins = 1; _arSess.done = true;
+      try { _arFight = arenaFinalizeSession(_arSess); } catch (_) {}
+      _arSess = null; _arClearTimers(); _arRevealing = false; _arRenderTower(); return;
+    }
+    if (_arView && _arView !== 'tower') { _arClearTimers(); _arRevealing = false; _arSess = null; _arRenderTower(); return; }
     closeArena();
   }
   function _arKeydown(e) { if (e.key === 'Escape') _arExit(); }
@@ -7004,13 +7193,27 @@
       if (!act) {
         // tapping anywhere during the cinematic reveal fast-forwards to the result
         if (_arRevealing && _arFight) { _arClearTimers(); _arRevealing = false; _arRenderResult(); return; }
-        if (e.target === ov) closeArena();
+        if (e.target === ov) _arExit();
         return;
       }
       const a = act.getAttribute('data-ar');
       if (a === 'exit')         _arExit();
-      else if (a === 'fight' || a === 'rematch') { if (_arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
+      else if (a === 'fight' || a === 'rematch') { if (_arSess || _arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arView === 'moves' || _arView === 'exchange' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
       else if (a === 'introgo') { _arCommitFight(); }
+      else if (a === 'move')    {                                          // W229 — pick a move; resolve one round
+        if (!_arSess || _arSess.done || _arView !== 'moves') return;
+        const round = arenaResolveRound(_arSess, act.getAttribute('data-move'));
+        if (!round) return;
+        // FLAWLESS one-shot: a ≥2× stomp that wins its opening exchange ends now
+        if (round.index === 1 && round.playerWon && !_arReduceMotion() &&
+            _ascPlayerPower() >= 2 * Math.max(1, _arMatchup.bot.power)) { _arFinishSession(true); return; }
+        _arRenderExchange(round);
+      }
+      else if (a === 'next')    {                                          // CONTINUE between rounds → next move / result
+        if (!_arSess || _arView !== 'exchange') return;
+        if (_arSess.done) _arFinishSession(false);
+        else _arRenderMoves(_arSess.rounds.length + 1);
+      }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'tale')    { try { act.classList.toggle('open'); } catch (_) {} }   // expand a tale-of-the-tape row
