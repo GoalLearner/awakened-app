@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w216';
+  const APP_BUILD_TAG = '2.2.5-w217';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6536,6 +6536,7 @@
           '<div class="ar-hp-vs">vs</div>' +
           '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(m.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" id="ar-ko-foehp" style="width:100%"></div></div></div></div>' +
         '<div class="ar-ko-stage"><div class="ar-ko-foe">' + _arFoeArt(m.bot, false) + '</div></div>' +
+        '<div class="ar-ko-fx" aria-hidden="true"><span class="ar-ko-flash"></span><span class="ar-ko-slash"></span></div>' +
         '<div class="ar-spacer"></div><button class="ar-skipbtn" data-ar="skip">SKIP ▸</button>'
       );
       return;
@@ -6548,11 +6549,15 @@
       if (sheet) { sheet.classList.add('ar-ko-shake'); _arAfter(560, () => { try { sheet.classList.remove('ar-ko-shake'); } catch (_) {} }); }
       const foeArt = document.querySelector('#arena-overlay .ar-ko-foe');
       if (foeArt) foeArt.classList.add('struck');
+      const fx = document.querySelector('#arena-overlay .ar-ko-fx');
+      if (fx) fx.classList.add('go');   // fires the white flash + slash streak
       const stage = document.querySelector('#arena-overlay .ar-ko-stage');
       if (stage) {
         const stamp = document.createElement('div');
         stamp.className = 'ar-ko-stamp';
-        stamp.innerHTML = '<span class="big">FLAWLESS</span><span class="sub">ONE-SHOT KO</span>';
+        stamp.innerHTML = '<div class="big">FLAWLESS</div>' +
+          '<div class="ar-ko-rule"><span class="l"></span><span class="dia"></span><span class="r"></span></div>' +
+          '<div class="sub">ONE-SHOT KO</div>';
         stage.appendChild(stamp);
       }
     } catch (_) {}

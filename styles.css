@@ -30807,11 +30807,15 @@ button.guildhall-summary-tile:active {
 .ar-hp-side { flex: 1; }
 .ar-hp-name { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 12.5px; color: #f5f3fb; }
 .ar-hp-side.foe .ar-hp-name { justify-content: flex-end; }
-.ar-hp-bar { height: 8px; border-radius: 5px; background: rgba(255,255,255,0.05); overflow: hidden; display: flex; }
+/* W217 — Direction A "refined slim bar" (ported from ClaudeDesign hpbar-css) */
+.ar-hp-bar { height: 10px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 3px rgba(0,0,0,0.65); overflow: hidden; display: flex; }
 .ar-hp-side.foe .ar-hp-bar { justify-content: flex-end; }
-.ar-hp-fill { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
-.ar-hp-side.you .ar-hp-fill { background: linear-gradient(90deg, #c08418, #f5b842); }
-.ar-hp-side.foe .ar-hp-fill { background: linear-gradient(90deg, #7f1d1d, #ef4444); }
+.ar-hp-fill { position: relative; height: 100%; border-radius: 5px; transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ar-hp-side.you .ar-hp-fill { background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 12px rgba(245,184,66,0.4), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.35); }
+.ar-hp-side.foe .ar-hp-fill { background: linear-gradient(270deg, #7f1d1d, #ef4444); box-shadow: 0 0 12px rgba(239,68,68,0.35), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.35); }
+/* ambient shimmer sweep on the lit fill */
+.ar-hp-fill::after { content: ''; position: absolute; inset: 0; border-radius: 5px; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%); background-size: 220% 100%; background-position: 180% 0; animation: ar-hpshimmer 3.4s linear infinite; }
+@keyframes ar-hpshimmer { 0%,18% { background-position: 180% 0; } 70%,100% { background-position: -80% 0; } }
 .ar-hp-vs { font-family: "Cinzel", serif; font-weight: 700; font-size: 13px; color: #6b6b86; padding-top: 16px; }
 .ar-log { margin-top: 18px; }
 .ar-log-head { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em; color: #6b6b86; margin-bottom: 10px; }
@@ -30901,39 +30905,55 @@ button.guildhall-summary-tile:active {
 .ar-dmg-float.you { color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.7); }
 .ar-dmg-float.foe { color: #ef4444; text-shadow: 0 0 18px rgba(239,68,68,0.6); }
 @keyframes ar-dmgfloat { 0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.7); } 25% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(1); } }
-/* Low-HP pulse */
-.ar-hp-fill.low { animation: ar-lowhp 0.9s ease-in-out infinite; }
-@keyframes ar-lowhp { 0%,100% { filter: none; } 50% { filter: brightness(1.55); } }
+/* Low-HP danger glow (Direction A critical state) — side-qualified to beat the per-side fill shadow */
+.ar-hp-side .ar-hp-fill.low { box-shadow: 0 0 14px rgba(239,68,68,0.65), inset 0 1px 0 rgba(255,255,255,0.45); animation: ar-lowhp 1.15s ease-in-out infinite; }
+@keyframes ar-lowhp {
+  0%,100% { box-shadow: 0 0 8px rgba(239,68,68,0.45), inset 0 1px 0 rgba(255,255,255,0.45); filter: brightness(1); }
+  50% { box-shadow: 0 0 18px rgba(239,68,68,0.85), 0 0 5px rgba(245,184,66,0.6), inset 0 1px 0 rgba(255,255,255,0.45); filter: brightness(1.3); }
+}
 /* Result rating tier line + promote/demote pulse */
 .asc-rtier { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; }
 .asc-rtier .gem { width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); }
 .asc-rtier.asc-tier-pulse { animation: ar-tierpulse 0.8s ease 2; }
 @keyframes ar-tierpulse { 0%,100% { transform: scale(1); filter: none; } 50% { transform: scale(1.1); filter: brightness(1.5); } }
 
-/* W216 — FLAWLESS one-hit KO */
-.ar-hp-fill.ko { transition: width 0.5s cubic-bezier(0.6, 0, 0.18, 1); }
+/* W216 → W217 — FLAWLESS one-hit KO theatre (ported from ClaudeDesign shared KO) */
+.ar-hp-fill.ko { transition: width 0.55s cubic-bezier(0.5, 0, 0.9, 0.4); }
 .ar-ko-stage { position: relative; display: flex; justify-content: center; align-items: center; margin-top: 20px; min-height: 156px; }
 .ar-ko-foe { width: 120px; display: flex; justify-content: center; transition: transform 0.5s ease, opacity 0.5s ease, filter 0.5s ease; }
 .ar-ko-foe svg, .ar-ko-foe .ar-foe-art { width: 100%; height: auto; }
-.ar-ko-foe.struck { animation: ar-ko-fall 0.6s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
-@keyframes ar-ko-fall { to { opacity: 0.16; transform: translateY(12px) rotate(7deg) scale(0.94); filter: grayscale(1) brightness(0.45); } }
-.ar-ko-stamp { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; z-index: 22; }
-.ar-ko-stamp .big { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 46px; letter-spacing: 0.04em; color: #f5b842; text-shadow: 0 0 22px rgba(245,184,66,0.75), 0 2px 4px rgba(0,0,0,0.6); animation: ar-ko-stamp 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
-.ar-ko-stamp .sub { margin-top: 4px; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 11px; letter-spacing: 0.32em; color: #ef4444; opacity: 0; animation: ar-ko-sub 0.4s ease 0.32s forwards; }
-@keyframes ar-ko-stamp { 0% { opacity: 0; transform: scale(2.5) rotate(-9deg); } 45% { opacity: 1; transform: scale(0.9) rotate(-3deg); } 100% { opacity: 1; transform: scale(1) rotate(-3deg); } }
-@keyframes ar-ko-sub { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.ar-ko-foe.struck { animation: ar-ko-crumple 0.6s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+@keyframes ar-ko-crumple { 0% { filter: none; transform: none; } 18% { filter: brightness(1.6); transform: scale(1.05); } 100% { filter: grayscale(1) brightness(0.4); transform: scale(0.88) rotate(6deg) translateY(8px); } }
+/* framed FLAWLESS plaque */
+.ar-ko-stamp { position: absolute; left: 50%; top: 50%; z-index: 6; text-align: center; transform: translate(-50%,-50%) rotate(-4deg); padding: 12px 24px; border-radius: 4px; pointer-events: none; background: rgba(8,8,20,0.82); border: 1px solid rgba(245,184,66,0.55); box-shadow: 0 0 0 3px rgba(8,8,20,0.82), 0 0 0 4px rgba(245,184,66,0.22), 0 18px 50px -12px rgba(0,0,0,0.85), inset 0 0 24px rgba(245,184,66,0.08); animation: ar-ko-stamp 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) forwards; }
+.ar-ko-stamp .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 31px; letter-spacing: 5px; color: #f5b842; text-shadow: 0 0 26px rgba(245,184,66,0.55), 0 1px 0 rgba(0,0,0,0.6); line-height: 1; }
+.ar-ko-rule { display: flex; align-items: center; gap: 8px; margin: 9px 0 8px; }
+.ar-ko-rule .l { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(245,184,66,0.53)); }
+.ar-ko-rule .r { flex: 1; height: 1px; background: linear-gradient(270deg, transparent, rgba(245,184,66,0.53)); }
+.ar-ko-rule .dia { width: 5px; height: 5px; transform: rotate(45deg); background: #f5b842; box-shadow: 0 0 6px #f5b842; }
+.ar-ko-stamp .sub { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 8.5px; letter-spacing: 4px; color: rgba(200,198,216,0.7); }
+@keyframes ar-ko-stamp { 0% { opacity: 0; transform: translate(-50%,-50%) rotate(-4deg) scale(2); filter: blur(7px); } 60% { opacity: 1; transform: translate(-50%,-50%) rotate(-4deg) scale(0.94); filter: blur(0); } 80% { transform: translate(-50%,-50%) rotate(-4deg) scale(1.04); } 100% { opacity: 1; transform: translate(-50%,-50%) rotate(-4deg) scale(1); } }
+/* white flash + slash streak — fired by .go (one-shot) */
+.ar-ko-fx { position: absolute; inset: 0; pointer-events: none; z-index: 23; overflow: hidden; }
+.ar-ko-flash { position: absolute; inset: 0; border-radius: 18px; opacity: 0; background: radial-gradient(circle at 72% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.25) 45%, transparent 70%); }
+.ar-ko-fx.go .ar-ko-flash { animation: ar-ko-flash 0.45s ease forwards; }
+@keyframes ar-ko-flash { 0% { opacity: 0; } 22% { opacity: 0.85; } 100% { opacity: 0; } }
+.ar-ko-slash { position: absolute; left: -12%; top: 50%; width: 124%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95) 35%, #fff 50%, rgba(255,255,255,0.95) 65%, transparent); box-shadow: 0 0 12px rgba(255,255,255,0.8); transform: rotate(-16deg) translateX(-130%); opacity: 0; }
+.ar-ko-fx.go .ar-ko-slash { animation: ar-ko-slash 0.5s ease forwards; }
+@keyframes ar-ko-slash { 0% { transform: rotate(-16deg) translateX(-130%); opacity: 0; } 30% { opacity: 1; } 70% { transform: rotate(-16deg) translateX(110%); opacity: 1; } 100% { transform: rotate(-16deg) translateX(130%); opacity: 0; } }
 .ar-sheet.ar-ko-shake { animation: ar-ko-shake 0.5s ease; }
-@keyframes ar-ko-shake { 0%,100% { transform: translate(0,0); } 12% { transform: translate(-9px, 4px); } 28% { transform: translate(8px, -5px); } 44% { transform: translate(-7px, 3px); } 60% { transform: translate(5px, -3px); } 78% { transform: translate(-3px, 2px); } }
+@keyframes ar-ko-shake { 0%,100% { transform: translate(0,0) rotate(0deg); } 18% { transform: translate(-6px, 4px) rotate(-0.6deg); } 36% { transform: translate(7px, -5px) rotate(0.5deg); } 54% { transform: translate(-5px, 3px) rotate(-0.4deg); } 72% { transform: translate(4px, -2px) rotate(0.3deg); } 88% { transform: translate(-2px, 1px) rotate(0deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ar-body, .ar-logline, .ar-versus, .ar-bossintro { animation: none; }
   .ar-hp-fill, .ar-hp-fill.ko, .ar-ko-foe { transition: none; }
+  .ar-hp-fill::after { animation: none; display: none; }
   .ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe,
   .ar-sheet.ar-juice-you::after, .ar-sheet.ar-juice-foe::after,
-  .ar-dmg-float, .ar-hp-fill.low, .asc-rtier.asc-tier-pulse,
-  .ar-ko-foe.struck, .ar-ko-stamp .big, .ar-ko-stamp .sub, .ar-sheet.ar-ko-shake { animation: none; }
-  .ar-dmg-float { display: none; }
-  .ar-ko-stamp .sub { opacity: 1; }
+  .ar-dmg-float, .ar-hp-side .ar-hp-fill.low, .asc-rtier.asc-tier-pulse,
+  .ar-ko-foe.struck, .ar-ko-stamp, .ar-sheet.ar-ko-shake,
+  .ar-ko-fx.go .ar-ko-flash, .ar-ko-fx.go .ar-ko-slash { animation: none; }
+  .ar-dmg-float, .ar-ko-flash, .ar-ko-slash { display: none; }
 }
 @media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; } .ar-combatant { width: 118px; } .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } .ar-bi-med { width: 128px; height: 128px; } .ar-bi-name { font-size: 23px; } .ar-vs-side { width: 116px; } }
 /* END Arena block */
