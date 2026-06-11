@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w238';
+  const APP_BUILD_TAG = '2.2.5-w239';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7439,7 +7439,7 @@
         : '';
       return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT FELL</span></div>' +
         '<div class="asc-recap"><div class="asc-recap-stats">' +
-          stat(r.pHP + '/' + r.pMax, 'YOUR HP', r.untouched) + stat(r.bHP + '/' + r.bMax, 'FOE HP') + stat(mt, 'MATCHUP') +
+          stat(Math.round(r.pHP) + '/' + r.pMax, 'YOUR HP', r.untouched) + stat(Math.round(r.bHP) + '/' + r.bMax, 'FOE HP') + stat(mt, 'MATCHUP') +
         '</div>' + dmgRow + '</div></div>';
     }
     if (!Array.isArray(r.rounds) || !r.rounds.length) return '';
