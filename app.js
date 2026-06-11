@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w232';
+  const APP_BUILD_TAG = '2.2.5-w233';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6110,8 +6110,11 @@
   function _arenaEffectiveness(pa, fa) {
     const p = _arenaBaseArch(pa), f = _arenaBaseArch(fa);
     if (p === 'balanced' || f === 'balanced' || p === f) return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
-    if (_ARENA_BEATS[p] === f) return { key: 'super', label: 'SUPER EFFECTIVE', mult: _ARENA_EFF_MULT };
-    if (_ARENA_BEATS[f] === p) return { key: 'weak',  label: 'NOT VERY EFFECTIVE', mult: _ARENA_EFF_PEN };
+    // W233 — per-edge map (all edges 1.20/0.83 today; per-edge tuning hook, see _ARENA_EFF_EDGES)
+    const sup = _ARENA_EFF_EDGES[p + '>' + f];
+    if (sup) return { key: 'super', label: 'SUPER EFFECTIVE', mult: sup.win };
+    const weak = _ARENA_EFF_EDGES[f + '>' + p];
+    if (weak) return { key: 'weak',  label: 'NOT VERY EFFECTIVE', mult: weak.lose };
     return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
   }
   // Per-side crit/miss odds. Crit scales with EDGE share (INT-driven finesse);
@@ -6333,6 +6336,19 @@
   const _MAX_HIT_FRAC = 0.55, _MAX_HIT_FRAC_CRIT = 0.75;
   const _ATK_CLAMP = [0.25, 2.0], _TAKEN_CLAMP = [0.40, 2.0], _DODGE_CAP = 0.50, _ARMOR_SHRED_MIN = 0.40;
   const _EDGE_TIE_BAND = 0.03, _STRUGGLE_POWER = 0.5;
+  // W233 — accuracy bonus from NORMALIZED edgeShare (scale-invariant, replaces raw EDGE×0.002)
+  const _ACC_EDGE_COEF = 0.20, _ACC_EDGE_MAXBONUS = 0.08;
+  // W233 — global DoT intake cap: total DoT against one fighter ≤ this ×maxHP per turn
+  const _DOT_INTAKE_CAP = 0.20;
+  // W233 — reference power for the offline sim suite (the §11 grids ran at raw P=100)
+  const _REF_POWER = 100;
+  // W233 — per-edge type-eff map (all edges identical today; per-edge tuning hook).
+  // win = the favored attacker's multiplier; lose = the countered attacker's.
+  const _ARENA_EFF_EDGES = {
+    'aggressor>trickster': { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },
+    'trickster>sentinel':  { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },
+    'sentinel>aggressor':  { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },
+  };
   // weapon id → archetypes it is "attuned" to (×1.15 to the PLAYER's damage). STAB analogue.
   const _WEAPON_ATTUNE = {
     titan_oathblade: ['aggressor', 'juggernaut'], hammerfall_warmaul: ['sentinel'],
@@ -6363,19 +6379,19 @@
     flurry:     { name: 'Flurry',       gl: 'dagger', power: 0.5,  acc: 0.95, hits: 3, cd: 1, desc: 'Three fast cuts.' },
     quickstep:  { name: 'Quickstep',    gl: 'dagger', power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Always strikes first.' },
     thousand:   { name: 'Thousand Cuts',gl: 'dagger', power: 0.38, acc: 0.95, hits: 4, cd: 3, desc: 'A storm of blades.' },
-    ember:      { name: 'Ember',        gl: 'burst',  power: 0.7,  acc: 0.95, cd: 0, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'Opens a bleeding wound.' },
+    ember:      { name: 'Ember',        gl: 'burst',  power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'Opens a bleeding wound.' },
     searing:    { name: 'Searing Cut',  gl: 'burst',  power: 1.1,  acc: 0.9,  cd: 1, fx: { t: 'burn', mag: 0.16, dur: 3 }, desc: 'A cut that smolders.' },
-    immolate:   { name: 'Immolate',     gl: 'burst',  power: 1.6,  acc: 0.85, cd: 3, fx: { t: 'burn', mag: 0.2,  dur: 2 }, desc: 'Engulf in flame.' },
-    sunder:     { name: 'Sunder',       gl: 'shield', power: 0.8,  acc: 0.92, cd: 2, fx: { t: 'defDown', mag: 0.25, dur: 3 }, desc: 'Shreds armor −25% (3t).' },
+    immolate:   { name: 'Immolate',     gl: 'burst',  power: 1.6,  acc: 0.85, cd: 3, fx: { t: 'burn', mag: 0.16, dur: 2 }, desc: 'Engulf in flame.' },
+    sunder:     { name: 'Sunder',       gl: 'shield', power: 0.8,  acc: 0.92, cd: 2, fx: { t: 'defDown', kind: 'sunder', mag: 0.25, dur: 3 }, desc: 'Shreds armor −25% (3t).' },
     stagger:    { name: 'Stagger',      gl: 'shield', power: 0.9,  acc: 0.85, cd: 3, fx: { t: 'stun', dur: 1 }, desc: 'Stuns — foe skips a turn.' },
-    quake:      { name: 'Quake',        gl: 'shield', power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', mag: 0.2, dur: 2 }, desc: 'Shreds armor −20% (2t).' },
-    willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', mag: 0.25, dur: 3 }, desc: 'Foe hits 25% softer.' },
+    quake:      { name: 'Quake',        gl: 'shield', power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', kind: 'quake', mag: 0.2, dur: 2 }, desc: 'Shreds armor −20% (2t).' },
+    willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', kind: 'willbreak', mag: 0.25, dur: 3 }, desc: 'Foe hits 25% softer.' },
     wardstrike: { name: 'Ward Strike',  gl: 'shield', power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'heal', mag: 0.12 }, desc: 'Strike and mend.' },
     guard:      { name: 'Guard',        gl: 'shield', power: 0,    acc: 1,    cd: 1, fx: { t: 'guard' }, desc: 'Halve the next hit.' },
-    brace:      { name: 'Brace',        gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'defUp', mag: -0.35, dur: 2 }, desc: 'Take 35% less for 2 turns.' },
-    focus:      { name: 'Focus',        gl: 'burst',  power: 0,    acc: 1,    cd: 2, fx: { t: 'atkUp', mag: 0.3, dur: 3 }, desc: 'Your hits land 30% harder.' },
-    temper:     { name: 'Temper',       gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', mag: 0.4, dur: 3 }, desc: 'Stoke your fury (+40%).' },
-    evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
+    brace:      { name: 'Brace',        gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'defUp', kind: 'brace', mag: -0.35, dur: 2 }, desc: 'Take 35% less for 2 turns.' },
+    focus:      { name: 'Focus',        gl: 'burst',  power: 0,    acc: 1,    cd: 2, fx: { t: 'atkUp', kind: 'focus', mag: 0.3, dur: 3 }, desc: 'Your hits land 30% harder.' },
+    temper:     { name: 'Temper',       gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', kind: 'temper', mag: 0.4, dur: 3 }, desc: 'Stoke your fury (+40%).' },
+    evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
     refuse:     { name: 'Refuse',       gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Guard and shed afflictions.' },
     lastvow:    { name: 'Last Vow',     gl: 'shield', power: 0,    acc: 1,    cd: 4, fx: { t: 'heal', mag: 0.4 }, desc: 'Restore 40% of your health.' },
   };
@@ -6401,8 +6417,15 @@
   function _arenaMaxHP(c) { return Math.max(20, Math.round(_HP_BASE + (c.defense || 0) * _HP_PER_DEF)); }
   function _arBlankStatus() { return { mods: [], stun: 0, guard: 0 }; }
   function _arClamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function _arStatAtkMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'atk') m += x.mag; }); return _arClamp(m, _ATK_CLAMP[0], _ATK_CLAMP[1]); }
-  function _arStatTakenMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'def') m += x.mag; }); return _arClamp(m, _TAKEN_CLAMP[0], _TAKEN_CLAMP[1]); }
+  // W233 unified stacking: SAME kind → refresh (dur=max, strongest mag — never
+  // stacks); DIFFERENT kinds in a category → MULTIPLY; clamps always bind.
+  function _arPushMod(S, k, kind, mag, dur) {
+    const ex = S.mods.find((x) => x.k === k && x.kind === kind);
+    if (ex) { ex.dur = Math.max(ex.dur, dur); if (Math.abs(mag) > Math.abs(ex.mag)) ex.mag = mag; }
+    else S.mods.push({ k, kind, mag, dur });
+  }
+  function _arStatAtkMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'atk') m *= (1 + x.mag); }); return _arClamp(m, _ATK_CLAMP[0], _ATK_CLAMP[1]); }
+  function _arStatTakenMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'def') m *= (1 + x.mag); }); return _arClamp(m, _TAKEN_CLAMP[0], _TAKEN_CLAMP[1]); }
   function _arStatDodge(s) { let d = 0; s.mods.forEach((x) => { if (x.k === 'dodge') d += x.mag; }); return Math.min(_DODGE_CAP, d); }
   function _arStatArmorShred(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'shred') m *= (1 - x.mag); }); return Math.max(_ARMOR_SHRED_MIN, m); }
   function _arenaWeaponName() {
@@ -6424,6 +6447,11 @@
     return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
   }
   function _arStruggleMove() { return { id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, acc: 0.95, cd: 0, desc: 'A desperate blow.' }; }
+  // W233 — accuracy bonus from NORMALIZED edgeShare (identical at every power level)
+  function _arAccBonusOf(c) {
+    const tot = (c.attack || 0) + (c.defense || 0) + (c.edge || 0) || 1e-6;
+    return Math.min(_ACC_EDGE_MAXBONUS, ((c.edge || 0) / tot) * _ACC_EDGE_COEF);
+  }
   function arenaStartBattle(m, seed) {
     const playerArch = _arenaArchOf(m.player);
     const foeArch    = m.bot.archKey || _arenaArchOf(m.bot);
@@ -6434,6 +6462,7 @@
       m, eff, playerArch, foeArch, weaponName: _arenaWeaponName(),
       pEff: eff.mult, bEff: _arenaEffectiveness(foeArch, playerArch).mult,        // symmetric type-eff
       pCrit: _arenaSideOdds(m.player).crit, bCrit: _arenaSideOdds(m.bot).crit,
+      pAccB: _arAccBonusOf(m.player), bAccB: _arAccBonusOf(m.bot),
       pAttuned: _arenaAttuned(playerArch),
       pHP: pMax, pMax, bHP: bMax, bMax,
       pS: _arBlankStatus(), bS: _arBlankStatus(),
@@ -6442,20 +6471,41 @@
       rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 },
     };
   }
-  // Foe AI: prefer off-cooldown; heal/guard when low; else weighted attack. Seeded.
+  // W233 foe AI — deterministic decision tree, seeded rolls (§7.1 of the doc):
+  //   1. low HP + heal off-cd       → r < 0.70 use it
+  //   2. else low HP + guard/brace  → r < 0.50 use it (Guard preferred over Brace)
+  //   3. else weighted attack: weight ∝ power × acc × hits × typeEff,
+  //      ×1.5 for a debuff/DoT the player currently lacks. Struggle only when
+  //      nothing else is available.
   function _arenaFoePick(sess) {
-    const avail = sess.bMoves.filter((mv) => !(sess.bcd[mv.id] > 0));
-    const pool = avail.length ? avail : [_arStruggleMove()];     // Struggle if all on cooldown
+    const off = sess.bMoves.filter((mv) => !(sess.bcd[mv.id] > 0));
+    if (!off.length) return _arStruggleMove();
     const lowHP = sess.bHP / sess.bMax < 0.35;
     if (lowHP) {
-      const heal = pool.find((mv) => mv.fx && mv.fx.t === 'heal');
+      const heal = off.find((mv) => mv.fx && mv.fx.t === 'heal');
       if (heal && sess.rng() < 0.7) return heal;
-      const guard = pool.find((mv) => mv.fx && (mv.fx.t === 'guard' || mv.fx.t === 'defUp' || mv.fx.t === 'guardCleanse'));
+      const guard = off.find((mv) => mv.fx && mv.fx.t === 'guard') ||
+                    off.find((mv) => mv.fx && (mv.fx.t === 'guardCleanse' || mv.fx.t === 'defUp'));
       if (guard && sess.rng() < 0.5) return guard;
     }
-    const attacks = pool.filter((mv) => (mv.power || 0) > 0);
-    const set = attacks.length ? attacks : pool;
-    return set[Math.floor(sess.rng() * set.length)];
+    const attacks = off.filter((mv) => (mv.power || 0) > 0);
+    if (!attacks.length) return off[Math.floor(sess.rng() * off.length)];
+    const playerLacks = (fx) => {
+      if (!fx) return false;
+      if (fx.t === 'burn' || fx.t === 'bleed') return !sess.pS.mods.some((x) => x.k === 'dot' && x.kind === fx.t);
+      if (fx.t === 'defDown') return !sess.pS.mods.some((x) => x.k === 'shred' && x.kind === (fx.kind || fx.t));
+      if (fx.t === 'atkDown') return !sess.pS.mods.some((x) => x.k === 'atk' && x.kind === (fx.kind || fx.t));
+      if (fx.t === 'stun') return !(sess.pS.stun > 0);
+      return false;
+    };
+    const weights = attacks.map((mv) => {
+      let w = (mv.power || 0) * (mv.acc != null ? mv.acc : 1) * (mv.hits || 1) * sess.bEff;
+      if (mv.fx && playerLacks(mv.fx)) w *= 1.5;
+      return w;
+    });
+    let r = sess.rng() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < attacks.length; i++) { r -= weights[i]; if (r <= 0) return attacks[i]; }
+    return attacks[attacks.length - 1];
   }
   function _arEdge(sess, side) { return side === 'p' ? (sess.m.player.edge || 0) : (sess.m.bot.edge || 0); }
   // Execute one combatant's move (locked v2 pipeline). Pushes readable events.
@@ -6463,7 +6513,7 @@
     const atkS = side === 'p' ? sess.pS : sess.bS, defS = side === 'p' ? sess.bS : sess.pS;
     const atkName = side === 'p' ? 'You' : esc(sess.m.bot.name);
     const defName = side === 'p' ? esc(sess.m.bot.name) : 'You';
-    if (atkS.stun > 0) { events.push({ side, t: 'stun', text: atkName + ' — stunned, can\'t move.' }); return; }
+    if (atkS.stun > 0) { atkS.stun -= 1; events.push({ side, t: 'stun', text: atkName + ' — stunned, can\'t move.' }); return; }   // W233 flinch: decrement when the skipped action occurs
     const power = move.power || 0;
     if (power > 0) {
       const atkBase  = (side === 'p' ? sess.m.player.attack : sess.m.bot.attack) || 0;
@@ -6475,7 +6525,7 @@
       const shred    = _arStatArmorShred(defS);
       const takenM   = _arStatTakenMult(defS);
       const dodge    = _arStatDodge(defS);
-      const accBonus = (side === 'p' ? sess.m.player.edge : sess.m.bot.edge) * 0.002;
+      const accBonus = side === 'p' ? sess.pAccB : sess.bAccB;   // W233 — normalized edgeShare, scale-invariant
       const maxHPd   = side === 'p' ? sess.bMax : sess.pMax;
       const remBefore = side === 'p' ? sess.bHP : sess.pHP;
       const hits = move.hits || 1;
@@ -6491,11 +6541,12 @@
         else { hit *= takenM; }
         hit *= 1 + (sess.rng() * 2 - 1) * _DMG_VAR;
         if (defS.guard > 0 && !guardUsed && hit > 0) { hit *= 0.5; guardUsed = true; }
-        const cap = (crit ? _MAX_HIT_FRAC_CRIT : _MAX_HIT_FRAC) * maxHPd;
-        hit = Math.max(0, Math.min(hit, cap));
-        total += hit; anyLanded = true;
+        total += Math.max(0, hit); anyLanded = true;
       }
       if (guardUsed) defS.guard = 0;
+      // W233 — the anti-one-shot cap binds on the MOVE TOTAL (multi-hit moves
+      // could previously stack to capFrac × hits). Values unchanged.
+      if (anyLanded) total = Math.min(total, (anyCrit ? _MAX_HIT_FRAC_CRIT : _MAX_HIT_FRAC) * maxHPd);
       if (anyLanded) {
         const shown = Math.max(1, Math.round(total));
         const effective = Math.min(total, remBefore);          // overkill past 0 not credited to the tally
@@ -6523,14 +6574,17 @@
         events.push({ side, t: 'fx', text: defName + ' is ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
       }
       case 'stun':
-        if (foeS.stun > 0) { events.push({ side, t: 'fx', text: defName + ' is already reeling.' }); }   // immunity — no chain-stun lock
-        else { foeS.stun = (fx.dur || 1) + 1; events.push({ side, t: 'fx', text: defName + ' is stunned.' }); }
+        // W233 flinch model: 1 skipped ACTION (this turn if the target hasn't
+        // acted yet, else next turn); decremented when the skip occurs. A stun
+        // on an already-stunned target is wasted (no chain-lock; cd still spent).
+        if (foeS.stun > 0) { events.push({ side, t: 'fx', text: defName + ' is already reeling.' }); }
+        else { foeS.stun = 1; events.push({ side, t: 'fx', text: defName + ' is stunned.' }); }
         break;
-      case 'atkUp': selfS.mods.push({ k: 'atk', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: atkName + ' — attack up.' }); break;
-      case 'atkDown': foeS.mods.push({ k: 'atk', mag: -fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: defName + ' — attack down.' }); break;
-      case 'defUp': selfS.mods.push({ k: 'def', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: atkName + ' braces.' }); break;   // Brace (mag negative → take less)
-      case 'defDown': foeS.mods.push({ k: 'shred', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: defName + ' — armor shredded.' }); break;   // pierces the divisor
-      case 'dodge': selfS.mods.push({ k: 'dodge', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: atkName + ' — evasive.' }); break;
+      case 'atkUp': _arPushMod(selfS, 'atk', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — attack up.' }); break;
+      case 'atkDown': _arPushMod(foeS, 'atk', fx.kind || fx.t, -fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — attack down.' }); break;
+      case 'defUp': _arPushMod(selfS, 'def', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' braces.' }); break;   // Brace (mag negative → take less)
+      case 'defDown': _arPushMod(foeS, 'shred', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — armor shredded.' }); break;   // pierces the divisor
+      case 'dodge': _arPushMod(selfS, 'dodge', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — evasive.' }); break;
       case 'guard': selfS.guard = 1; events.push({ side, t: 'fx', text: atkName + ' guards.' }); break;
       case 'guardCleanse': selfS.guard = 1; selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0; events.push({ side, t: 'fx', text: atkName + ' refuses — guarded, afflictions shed.' }); break;
       case 'heal': {
@@ -6545,16 +6599,26 @@
     ['p', 'b'].forEach((side) => {
       const S = side === 'p' ? sess.pS : sess.bS;
       const max = side === 'p' ? sess.pMax : sess.bMax;
-      S.mods.filter((x) => x.k === 'dot').forEach((d) => {
-        const dmg = Math.max(1, Math.round(max * d.mag));
-        const before = side === 'p' ? sess.pHP : sess.bHP;
-        if (side === 'p') { sess.pHP = Math.max(0, sess.pHP - dmg); sess.untouched = false; } else sess.bHP = Math.max(0, sess.bHP - dmg);
-        if (d.src) sess.dmgDealt[d.src] += Math.min(dmg, before);                 // credit DoT to its applier (effective)
-        events.push({ side: side === 'p' ? 'b' : 'p', t: 'dot', dmg, text: (side === 'p' ? 'You take' : esc(sess.m.bot.name) + ' takes') + ' ' + dmg + ' from ' + d.kind + '.' });
-      });
+      // W233 — global DoT intake cap: if this fighter's scheduled ticks exceed
+      // _DOT_INTAKE_CAP × maxHP, scale every tick proportionally (appliers are
+      // credited their scaled share, so the timeout tally matches HP lost).
+      const dots = S.mods.filter((x) => x.k === 'dot');
+      if (dots.length) {
+        const raw = dots.map((d) => Math.max(1, Math.round(max * d.mag)));
+        const rawSum = raw.reduce((a, b) => a + b, 0);
+        const capAmt = Math.round(max * _DOT_INTAKE_CAP);
+        const scale = rawSum > capAmt ? capAmt / rawSum : 1;
+        dots.forEach((d, i) => {
+          const dmg = Math.max(1, Math.round(raw[i] * scale));
+          const before = side === 'p' ? sess.pHP : sess.bHP;
+          if (side === 'p') { sess.pHP = Math.max(0, sess.pHP - dmg); sess.untouched = false; } else sess.bHP = Math.max(0, sess.bHP - dmg);
+          if (d.src) sess.dmgDealt[d.src] += Math.min(dmg, before);               // credit the applier (effective)
+          events.push({ side: side === 'p' ? 'b' : 'p', t: 'dot', dmg, text: (side === 'p' ? 'You take' : esc(sess.m.bot.name) + ' takes') + ' ' + dmg + ' from ' + d.kind + '.' });
+        });
+      }
       S.mods.forEach((x) => { x.dur -= 1; });
       S.mods = S.mods.filter((x) => x.dur > 0);
-      if (S.stun > 0) S.stun -= 1;
+      // (stun no longer decrements here — W233 flinch model decrements on the skipped action)
     });
     Object.keys(sess.cd).forEach((k) => { if (sess.cd[k] > 0) sess.cd[k] -= 1; });
     Object.keys(sess.bcd).forEach((k) => { if (sess.bcd[k] > 0) sess.bcd[k] -= 1; });
@@ -6641,26 +6705,95 @@
     };
   }
 
-  // W232 — dev self-test: deterministic seeded auto-play + sanity invariants.
-  // Run in console: Arena.selfTest()  (or Arena.selfTest(seed)).
+  // W233 — dev self-test: deterministic seeded assertions over the battle
+  // engine. Run in console: Arena.selfTest()  (or Arena.selfTest(seed)).
   function _arenaSelfTest(seed) {
     seed = (seed != null) ? seed : 1;
     const mk = (atk, def, edge, arch, name) => ({ attack: atk, defense: def, edge: edge, archKey: arch, name: name || 'Fighter', isBot: true });
-    const m = { floor: 5, advances: false, player: mk(40, 36, 16, null, 'You'), bot: mk(34, 30, 12, 'sentinel', 'Test Foe') };
-    const play = (sd) => {
-      const s = arenaStartBattle(m, sd);
-      let g = 0;
-      while (!s.done && g++ < 300) {
-        const mv = s.pMoves.find((x) => !(s.cd[x.id] > 0)) || { id: 'struggle' };
-        if (!arenaTakeTurn(s, mv.id)) break;
-      }
-      return { won: s.won, turns: s.turn, dp: Math.round(s.dmgDealt.p), db: Math.round(s.dmgDealt.b), pHP: Math.round(s.pHP), bHP: Math.round(s.bHP) };
-    };
-    const a = play(seed), b = play(seed);
-    const deterministic = JSON.stringify(a) === JSON.stringify(b);
-    const sane = isFinite(a.pHP) && isFinite(a.bHP) && a.turns <= _BATTLE_TURN_CAP + 2 && (a.pHP <= 0 || a.bHP <= 0 || a.turns > _BATTLE_TURN_CAP);
-    const res = { pass: deterministic && sane, deterministic, sane, sample: a };
-    try { console.log('[ArenaSelfTest]', res.pass ? 'PASS' : 'FAIL', res); } catch (_) {}
+    const M = (p, b, adv) => ({ floor: 5, advances: !!adv, player: p, bot: b });
+    const lib = (id) => Object.assign({ id }, ARENA_MOVE_LIB[id]);
+    const checks = [];
+    const ok = (name, cond) => checks.push({ name, pass: !!cond });
+    try {
+      // T1 determinism — same seed → identical battle
+      const play = (sd) => {
+        const s = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), sd);
+        let g = 0;
+        while (!s.done && g++ < 300) {
+          const mv = s.pMoves.find((x) => !(s.cd[x.id] > 0)) || { id: 'struggle' };
+          if (!arenaTakeTurn(s, mv.id)) break;
+        }
+        return { won: s.won, turns: s.turn, dp: Math.round(s.dmgDealt.p), db: Math.round(s.dmgDealt.b), pHP: Math.round(s.pHP), bHP: Math.round(s.bHP) };
+      };
+      const a = play(seed), b = play(seed);
+      ok('T1 determinism', JSON.stringify(a) === JSON.stringify(b));
+      // T2 sanity — finite, ends by KO or cap
+      ok('T2 sanity', isFinite(a.pHP) && isFinite(a.bHP) && a.turns <= _BATTLE_TURN_CAP + 2 && (a.pHP <= 0 || a.bHP <= 0 || a.turns > _BATTLE_TURN_CAP));
+      // T3 move-total cap — overwhelming attacker: Flurry (3 hits) and Thousand
+      // Cuts (4 hits) each total ≤ capFrac×maxHP (crit cap if any sub-hit crit)
+      let capOK = true;
+      [['flurry', 41], ['thousand', 42]].forEach(([mvId, sd]) => {
+        const s = arenaStartBattle(M(mk(5000, 30, 20, null, 'You'), mk(30, 30, 10, 'balanced', 'Foe')), sd);
+        s.pMoves = [lib(mvId)]; s.pAttuned = 1;
+        const ev = arenaTakeTurn(s, mvId) || [];
+        const hit = ev.find((e) => e.side === 'p' && e.t === 'hit');
+        if (hit) { const cap = (hit.crit ? _MAX_HIT_FRAC_CRIT : _MAX_HIT_FRAC) * s.bMax; if (hit.dmg > Math.ceil(cap) + 1) capOK = false; }
+        else capOK = false;
+      });
+      ok('T3 move-total hit cap (multi-hit)', capOK);
+      // T4 accuracy scale-invariance — same edgeShare at 1× and 3× magnitude
+      ok('T4 accuracy scale-invariant', Math.abs(_arAccBonusOf(mk(30, 30, 30)) - _arAccBonusOf(mk(90, 90, 90))) < 1e-12);
+      // T5 shred stacking — Sunder re-cast refreshes; Sunder+Quake multiply; floor 0.40
+      const sS = _arBlankStatus();
+      _arPushMod(sS, 'shred', 'sunder', 0.25, 3); _arPushMod(sS, 'shred', 'sunder', 0.25, 3);
+      const r1 = Math.abs(_arStatArmorShred(sS) - 0.75) < 1e-9 && sS.mods.length === 1;
+      _arPushMod(sS, 'shred', 'quake', 0.20, 2);
+      const r2 = Math.abs(_arStatArmorShred(sS) - 0.60) < 1e-9;
+      _arPushMod(sS, 'shred', 'x1', 0.25, 3); _arPushMod(sS, 'shred', 'x2', 0.25, 3);
+      const r3 = _arStatArmorShred(sS) >= 0.40 - 1e-9;
+      ok('T5 shred refresh/multiply/clamp', r1 && r2 && r3);
+      // T6 Willbreak re-cast refreshes (one mod, ATK ×0.75, duration extended)
+      const wS = _arBlankStatus();
+      _arPushMod(wS, 'atk', 'willbreak', -0.25, 3); _arPushMod(wS, 'atk', 'willbreak', -0.25, 5);
+      ok('T6 willbreak refresh', wS.mods.length === 1 && wS.mods[0].dur === 5 && Math.abs(_arStatAtkMult(wS) - 0.75) < 1e-9);
+      // T6b different atk kinds multiply, clamped (Focus 1.3 × Temper 1.4 = 1.82 ≤ 2.0)
+      const fS = _arBlankStatus();
+      _arPushMod(fS, 'atk', 'focus', 0.3, 3); _arPushMod(fS, 'atk', 'temper', 0.4, 3);
+      ok('T6b atk kinds multiply+clamp', Math.abs(_arStatAtkMult(fS) - 1.82) < 1e-9);
+      // T7 DoT intake cap — burn 16% + bleed 12% on maxHP 100 ticks exactly 20 total, credit = HP lost
+      const s7 = arenaStartBattle(M(mk(30, 27.3, 10, null, 'You'), mk(30, 27.3, 10, 'balanced', 'Foe')), 7);
+      // (defense 27.3 → maxHP 100)
+      s7.bS.mods.push({ k: 'dot', kind: 'burn', mag: 0.16, dur: 2, src: 'p' });
+      s7.bS.mods.push({ k: 'dot', kind: 'bleed', mag: 0.12, dur: 2, src: 'p' });
+      const hpBefore = s7.bHP, dpBefore = s7.dmgDealt.p;
+      _arEndTurn(s7, []);
+      const lost = hpBefore - s7.bHP, credited = s7.dmgDealt.p - dpBefore;
+      ok('T7 DoT intake cap + credit', lost === Math.round(s7.bMax * _DOT_INTAKE_CAP) && credited === lost);
+      // T8 stun flinch timing — not-yet-acted: skips THIS action (stun cleared);
+      // already-acted: persists end-of-turn, skips NEXT action
+      const s8 = arenaStartBattle(M(mk(30, 30, 10, null, 'You'), mk(30, 30, 10, 'balanced', 'Foe')), 8);
+      s8.bS.stun = 1;
+      const ev8 = []; _arExecMove(s8, 'b', lib('slash'), ev8);
+      const skipped = ev8.some((e) => e.t === 'stun') && s8.bS.stun === 0;
+      s8.bS.stun = 1; _arEndTurn(s8, []);
+      ok('T8 stun flinch timing', skipped && s8.bS.stun === 1);
+      // T9 wasted stun — Stagger vs stunned target: damage lands, stun not re-applied/extended
+      const s9 = arenaStartBattle(M(mk(60, 30, 10, null, 'You'), mk(30, 30, 10, 'balanced', 'Foe')), 9);
+      s9.bS.stun = 1;
+      const ev9 = []; _arExecMove(s9, 'p', lib('stagger'), ev9);
+      ok('T9 wasted stun', s9.bS.stun === 1 && ev9.some((e) => e.side === 'p' && (e.t === 'hit' || e.t === 'miss')));
+      // T10 unrated rematch commits NOTHING (rating, lives, W-L, streak → rotation)
+      const before10 = JSON.stringify(getAscentState());
+      const s10 = arenaStartBattle(M(mk(40, 30, 10, null, 'You'), mk(30, 30, 10, 'balanced', 'Foe'), false), 10);
+      s10.done = true; s10.won = true;
+      arenaFinalizeBattle(s10);
+      ok('T10 unrated commits nothing', JSON.stringify(getAscentState()) === before10);
+    } catch (e) {
+      checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
+    }
+    const passed = checks.filter((c) => c.pass).length;
+    const res = { pass: passed === checks.length, passed, total: checks.length, checks };
+    try { console.log('[ArenaSelfTest]', res.pass ? 'PASS' : 'FAIL', passed + '/' + checks.length, res); } catch (_) {}
     return res;
   }
   try {
