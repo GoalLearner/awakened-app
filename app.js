@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w255';
+  const APP_BUILD_TAG = '2.2.5-w256';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7126,7 +7126,11 @@
           '<div class="asc-ftag gold">FLOOR ' + String(info.floor).padStart(2, '0') + '</div>' +
           '<div class="asc-cur-name">' + esc(info.opponent.name) + '</div>' +
           '<div style="margin-top:6px">' + _ascArchHtml(info.opponent.archetype) + '</div></div>' +
-          '<div class="asc-foe-med">' + _arFoeSil() + '</div></div>' +
+          // W256 — archetype art on the current-floor card (was a hardcoded
+          // silhouette; boss cards got their portraits in W252)
+          '<div class="asc-foe-med">' + (info.opponent.archKey
+            ? '<img src="assets/arena/foe_' + info.opponent.archKey + '.webp" alt="" class="asc-fa-img" onerror="window.__arFoeArtFail(this)">'
+            : _arFoeSil()) + '</div></div>' +
         '<div class="asc-cur-mid">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
         '<div style="margin-top:13px">' + _ascFaceoffHtml(you, info.opponent.power) + '</div>' +
         (ascentLivesLeft() > 0
