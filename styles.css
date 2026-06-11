@@ -31504,6 +31504,12 @@ button.guildhall-summary-tile:active {
 .pkb-spot::before { content: ''; position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); width: 70%; height: 16%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent 75%); }
 .pkb-spot .spr { position: relative; width: 78%; height: 90%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.55)); }
 .pkb-spot .spr img, .pkb-spot .spr svg { width: 100%; height: 100%; object-fit: contain; }
+/* W254 — visual upscale on the FOE image only: grows upward from the feet
+   (bottom origin) into the sky with ZERO layout movement — the box, plate,
+   platform, and air gap are untouched. The art is ~35% narrower than its box,
+   so the width absorbs the scale. On the img (not .spr) so the KO fall and
+   lunge transforms compose cleanly. Player untouched (protected invariant). */
+.pkb-spot.foe .spr img { transform: scale(1.18); transform-origin: 50% 100%; }
 /* player faces up-right across the diagonal; darkened back-quarter + faint rim */
 .pkb-spot.you .spr { transform: scaleX(-1); filter: brightness(0.8) saturate(0.92) drop-shadow(0 8px 12px rgba(0,0,0,0.6)) drop-shadow(-1px -1px 0 rgba(245,184,66,0.16)); }
 .pkb-spot.lunge-you { transform: translate(16px, -10px); }
