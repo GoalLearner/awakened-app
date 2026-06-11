@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w240';
+  const APP_BUILD_TAG = '2.2.5-w241';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7893,19 +7893,28 @@
     _pkbEffShown = { p: false, b: false };
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const tint = _pkbArchTint(s.foeArch);
+    // W241 — proportion pass: boss-scaled foe, shared ground plane, drifting
+    // motes (embers on boss floors), camera settle, flavor-only text box.
+    const isBoss = !!m.bot.isBoss;
+    let flavor = 'Choose your opening move.';
+    try { const bz = ASCENT_BOSSES[m.floor]; if (isBoss && bz && bz.taunt) flavor = '“' + bz.taunt + '”'; } catch (_) {}
+    let motes = '';
+    for (let i = 0; i < 6; i++) motes += '<i></i>';
     _arSet(
       '<div class="pkb">' +
         '<div class="pkb-top">FLOOR ' + m.floor + ' — ' + esc(m.bot.name).toUpperCase() + '</div>' +
-        '<div class="pkb-stage" id="pkb-stage">' +
+        '<div class="pkb-stage settle" id="pkb-stage">' +
+          '<div class="pkb-ground" style="background:linear-gradient(196deg,transparent 26%,' + tint + '12 44%,rgba(245,184,66,0.05) 66%,transparent 86%)"></div>' +
+          '<div class="pkb-motes' + (isBoss ? ' embers' : '') + '" aria-hidden="true">' + motes + '</div>' +
           '<div class="pkb-row foe">' +
             '<div class="pkb-plate" id="pkb-plate-b">' +
               '<div class="nm">' + esc(m.bot.name) + '</div>' +
               '<div class="hp"><i id="pkb-bar-b" class="ok"></i></div>' +
               '<div class="num" id="pkb-num-b"></div>' +
               '<div class="chips" id="pkb-chips-b"></div></div>' +
-            '<div class="pkb-spot foe" id="pkb-spot-b">' +
+            '<div class="pkb-spot foe' + (isBoss ? ' boss' : '') + '" id="pkb-spot-b">' +
               '<span class="plat" style="background:radial-gradient(closest-side,' + tint + '30,transparent 78%);border-color:' + tint + '3d"></span>' +
-              '<div class="spr">' + _arFoeArt(m.bot, !!m.bot.isBoss) + '</div></div>' +
+              '<div class="spr">' + _arFoeArt(m.bot, isBoss) + '</div></div>' +
           '</div>' +
           '<div class="pkb-row you">' +
             '<div class="pkb-spot you" id="pkb-spot-p">' +
@@ -7919,7 +7928,7 @@
           '</div>' +
           '<div class="pkb-fx" id="pkb-fx"></div>' +
         '</div>' +
-        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line">Floor ' + m.floor + ' · ' + esc(m.bot.name) + '. Choose your opening move.</span></div>' +
+        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line">' + esc(flavor) + '</span></div>' +
         '<div class="pkb-moves" id="pkb-moves"></div>' +
       '</div>'
     );
