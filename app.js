@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w236';
+  const APP_BUILD_TAG = '2.2.5-w237';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6364,7 +6364,7 @@
   // ±20% a countered rated attempt was a near-auto-loss (+49 pts, no counterplay).
   const _ARENA_EFF_EDGES = {
     'aggressor>trickster': { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },   // measured +25.2
-    'trickster>sentinel':  { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },   // measured +19.4
+    'trickster>sentinel':  { win: 1.18, lose: 1 / 1.18 },                    // W237 clean retune: +20.3 kit-neutral
     'sentinel>aggressor':  { win: 1.08, lose: 1 / 1.08 },                    // measured +22.9
   };
   // weapon id → archetypes it is "attuned" to (×1.15 to the PLAYER's damage). STAB analogue.
@@ -6392,7 +6392,7 @@
     slash:      { name: 'Slash',        gl: 'sword',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A clean cut.' },
     lunge:      { name: 'Lunge',        gl: 'sword',  power: 1.25, acc: 0.88, cd: 2, desc: 'A committed thrust.' },
     cleave:     { name: 'Cleave',       gl: 'sword',  power: 1.55, acc: 0.82, cd: 2, desc: 'Wide, heavy swing.' },
-    crush:      { name: 'Crush',        gl: 'sword',  power: 1.7,  acc: 0.78, cd: 2, desc: 'Bone-breaking blow.' },
+    crush:      { name: 'Crush',        gl: 'sword',  power: 1.55, acc: 0.78, cd: 2, desc: 'Bone-breaking blow.' },
     oathstrike: { name: 'Oathstrike',   gl: 'sword',  power: 1.95, acc: 0.88, cd: 3, desc: 'A vow made steel.' },
     flurry:     { name: 'Flurry',       gl: 'dagger', power: 0.5,  acc: 0.95, hits: 3, cd: 1, desc: 'Three fast cuts.' },
     quickstep:  { name: 'Quickstep',    gl: 'dagger', power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Always strikes first.' },
@@ -6403,7 +6403,7 @@
     sunder:     { name: 'Sunder',       gl: 'shield', power: 0.8,  acc: 0.92, cd: 2, fx: { t: 'defDown', kind: 'sunder', mag: 0.25, dur: 3 }, desc: 'Shreds armor −25% (3t).' },
     stagger:    { name: 'Stagger',      gl: 'shield', power: 0.9,  acc: 0.85, cd: 4, fx: { t: 'stun', dur: 1 }, desc: 'Stuns — foe skips a turn.' },
     quake:      { name: 'Quake',        gl: 'shield', power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', kind: 'quake', mag: 0.2, dur: 2 }, desc: 'Shreds armor −20% (2t).' },
-    willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', kind: 'willbreak', mag: 0.25, dur: 3 }, desc: 'Foe hits 25% softer.' },
+    willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', kind: 'willbreak', mag: 0.25, dur: 2 }, desc: 'Foe hits 25% softer.' },
     wardstrike: { name: 'Ward Strike',  gl: 'shield', power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'heal', mag: 0.12 }, desc: 'Strike and mend.' },
     guard:      { name: 'Guard',        gl: 'shield', power: 0,    acc: 1,    cd: 1, fx: { t: 'guard' }, desc: 'Halve the next hit.' },
     brace:      { name: 'Brace',        gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'defUp', kind: 'brace', mag: -0.35, dur: 2 }, desc: 'Take 35% less for 2 turns.' },
@@ -6464,8 +6464,14 @@
     const ids = (wid && WEAPON_MOVES[wid]) ? WEAPON_MOVES[wid] : WEAPON_MOVES.unarmed;
     return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
   }
-  function _arenaFoeKit(arch) {
-    const ids = ARCH_MOVES[arch] || ARCH_MOVES.balanced;
+  // W237 tiered foe kits — early-route tricksters (F4–F5) carry a LESSER kit
+  // (no Searing): kit COMPOSITION varies by floor tier (content design, like
+  // bosses); move DEFINITIONS never fork (the locked anti-fork principle).
+  const _TRICK_LESSER = ['flurry', 'quickstep', 'evade', 'slash'];
+  function _arenaFoeKit(arch, floor) {
+    const ids = (arch === 'trickster' && floor >= 4 && floor <= 5)
+      ? _TRICK_LESSER
+      : (ARCH_MOVES[arch] || ARCH_MOVES.balanced);
     return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
   }
   function _arStruggleMove() { return { id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, acc: 0.95, cd: 0, desc: 'A desperate blow.' }; }
@@ -6488,7 +6494,7 @@
       pAttuned: _arenaAttuned(playerArch),
       pHP: pMax, pMax, bHP: bMax, bMax,
       pS: _arBlankStatus(), bS: _arBlankStatus(),
-      pMoves: _arenaPlayerKit(), bMoves: _arenaFoeKit(foeArch),
+      pMoves: _arenaPlayerKit(), bMoves: _arenaFoeKit(foeArch, m.bot && m.bot.floor),
       cd: {}, bcd: {}, turn: 1, log: [], done: false, won: false, untouched: true,
       rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 },
     };
@@ -6933,6 +6939,17 @@
       _arApplyFx(s23, 'p', { t: 'burn', mag: 0.16, dur: 3 }, [], 'You', 'Foe');
       const m23 = s23.bS.mods.find((x) => x.k === 'dot');
       ok('T23 2×-power applier: ceiling binds (16%)', !!m23 && Math.abs(m23.mag - 0.16) < 1e-9);
+      // T24 (W237) — tiered foe kits: F4–F5 tricksters carry the lesser kit (no Searing)
+      const k4 = _arenaFoeKit('trickster', 4).map((x) => x.id).join(',');
+      const k5 = _arenaFoeKit('trickster', 5).map((x) => x.id).join(',');
+      const k6 = _arenaFoeKit('trickster', 6).map((x) => x.id).join(',');
+      ok('T24 tiered trickster kits (lesser F4–F5, full F6+)',
+        k4 === 'flurry,quickstep,evade,slash' && k5 === k4 && k6 === 'flurry,quickstep,evade,searing');
+      // T25 (W237) — lever values shipped: Willbreak dur 2, Crush 1.55, TS edge 1.18 reciprocal
+      ok('T25 W237 lever constants', ARENA_MOVE_LIB.willbreak.fx.dur === 2 &&
+        Math.abs(ARENA_MOVE_LIB.crush.power - 1.55) < 1e-9 &&
+        Math.abs(_ARENA_EFF_EDGES['trickster>sentinel'].win - 1.18) < 1e-9 &&
+        Math.abs(_ARENA_EFF_EDGES['trickster>sentinel'].win * _ARENA_EFF_EDGES['trickster>sentinel'].lose - 1) <= 0.01);
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }

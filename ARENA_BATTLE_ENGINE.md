@@ -1,20 +1,20 @@
-# Awakened — Arena Battle Engine (v2.5, as shipped W236)
+# Awakened — Arena Battle Engine (v2.6, as shipped W237) — FINAL SIM-TUNED BASELINE
 
 > **Status:** CANONICAL for the Ascent tower. This documents the engine **as actually
 > implemented** in `app.js` (build W236), validated by simulation (§12).
-> **v2.5 changelog (W236 — Cauterize, DoT power-scaling, gate re-spec):** cleansing now
-> **cauterizes** (2 turns of DoT immunity) — Refuse no longer loses the tempo war 1-for-2
-> against CD-1 reappliers; DoT magnitude now **power-scales at application**
-> (clamp(applier/target, 0.5, 1.0)) so an under-powered burner can no longer ignore the
-> build-strength invariant; the F6 gate targets were **re-specced** (blade AND grown stats —
-> the old blade-alone ≥55 target was a reviewer spec error); pre-authorized levers fired:
-> Ember CD 1→2 (Kiln still over band → STOP), Thousand Cuts 0.38→0.45 (Step now in band),
-> trickster excluded from the F1–F3 rotation pool (F4–F5 trickster → STOP). New flags:
-> Vessel 81.8 (buffed by its own Cauterize) and the Trick▸Sent edge +40.4 (Cauterize moved
-> the flat control) — both await the next ruling. selfTest is now 24 checks.
-> **Design principle (locked this patch):** shared move tables are ONE balance surface —
-> **never fork per-side variants of a shared move**; fix mechanisms (tempo, scaling), not
-> per-caster numbers.
+> **v2.6 changelog (W237 — clean-edge retune, T2-primary calibration, Vessel tempo lever,
+> tiered ramp kits):** T3 was a **contaminated instrument** — it measured multiplier-effect
+> PLUS kit asymmetry; the new methodology is kit-neutral (both sides Rusted kit, stat shapes
+> only). Clean numbers: AT +5.9 (was reading +26.4 — almost all kit asymmetry; band
+> ceiling-bound/unreachable, flagged), TS retuned 1.20→**1.18** (+20.3 clean ✓), SA 1.08
+> survives clean (+19.5 ✓). **Calibration hierarchy inverted:** T2 cell bounds [25, 90] are
+> PRIMARY; T1 row mean secondary with a documented (75, 79] identity-weapon acceptance zone.
+> Levers: Vessel Willbreak dur 3→2 (ships; Ward-heal lever reverted — worsened target, shares
+> a table with sentinel foes), Warmaul Crush 1.7→1.55 (ships; 90.5 residual flagged). **Tiered
+> foe kits:** F4–F5 tricksters carry a lesser kit (no Searing) — the ramp passes EVERY target.
+> selfTest → 26 checks.
+> **Design principles (locked):** shared move tables are ONE balance surface — never fork
+> per-side variants of a shared MOVE; kit COMPOSITION may vary by floor tier (content design).
 > **This is not PvP.** The Arena is a cosmetic, single-player, **bot-only** climb. Duels/PvP
 > are permanently retired; `PVP.md` is stale and is **not** a source of truth for this engine.
 > **Stack:** one vanilla-JS IIFE (`app.js`); engine pure/DOM-free; localStorage-only
@@ -22,18 +22,23 @@
 
 ---
 
-## 0. Calibration targets (govern every balance decision)
+## 0. Calibration targets (REVISED W237 — hierarchy inverted)
 
-| Target | Band |
-|---|---|
-| **T1** | Matched-weapon player vs equal-power floor foe: **row mean ∈ [55%, 75%]** |
-| **T2** | Any single cell ∈ [25%, 90%]; outside → flag; full row outside T1 after prescribed levers are exhausted → STOP and report |
-| **T3** | Each type-eff edge's measured contribution at equal power ∈ **[+15, +25] win pts** |
-| **T4** | Mean fight length ∈ **[4, 10] turns** at 0.5× / 1× / 3× REF_POWER |
-| **T5** | Any kit containing utility moves: utility actions = **15–40%** of that side's actions across the mirror sims *(added W235)* |
+**T2 is PRIMARY; T1 is secondary.** Rationale (one-time, reasoned revision): row-mean
+enforcement drove identity-degrading nerf chains while guaranteed-win cells (100%/95% matchups
+— the real player-facing failure) went untracked. No near-guaranteed matchups is the harder,
+more meaningful constraint.
 
-The matched-weapon baseline is **not 50%** — player rows carry a weapon kit + Attuned vs floor
-archetype kits; the gear edge is by design. Upgrade the bots before nerfing player weapons.
+| Target | Band | Rank |
+|---|---|---|
+| **T2** | every cell ∈ **[25%, 90%]** (automated scan in every grid run) | **PRIMARY** |
+| **T1** | row mean ∈ [55%, 75%]; **(75, 79] = documented acceptance zone** for identity weapons that are T2-clean | secondary |
+| **T3** | each edge's **kit-neutral** contribution ∈ [+15, +25] (W237 methodology: both sides Rusted kit, stat shapes only, live vs TYPE_EFF=1) | guard |
+| **T4** | fight length ∈ [4, 10] turns at 0.5×/1×/3× REF | guard |
+| **T5** | utility 15–40% per utility-carrying kit (telemetry; AI frozen) | report-only |
+
+A weapon **passes** when T2-clean AND row mean ≤ 79. The matched-weapon baseline is not 50% —
+the player's gear edge is by design; upgrade bots before nerfing weapons.
 
 ---
 
@@ -59,20 +64,22 @@ role → `aggressor`/`sentinel`/`trickster` · ≥52% → `glasscannon`/`juggern
 
 ---
 
-## 3. Type effectiveness (symmetric, per-edge)
+## 3. Type effectiveness (symmetric, per-edge; CLEAN-measured as of W237)
 
 Triangle **Aggressor ▸ Trickster ▸ Sentinel ▸ Aggressor**; reciprocal pairs (1+s, 1/(1+s));
-computed per direction. Per-edge map `_ARENA_EFF_EDGES`:
+computed per direction. **The instrument finding (W237):** v2.3–v2.5 edge values were tuned
+against a contaminated reading — old "Suite B" used archetype KITS, so it measured multiplier
+× kit-asymmetry. Cauterize exposed it (TS read +40.4 with the dial untouched). The clean
+methodology: both sides Rusted kit, archetype stat shapes, equal power.
 
-| Edge | Multipliers | Measured (W236 / v2.5 baseline; T3 +15..+25) |
-|---|---|---|
-| Aggressor ▸ Trickster | 1.20 / 0.83 | **+26.4** — documented per rule (≤ +27; kit-interaction overage) |
-| Trickster ▸ Sentinel | 1.20 / 0.83 | **+40.4** 🛑 flagged — Cauterize moved the FLAT control (sentinels now cauterize trickster burns at typeEff 1.0); awaiting ruling |
-| Sentinel ▸ Aggressor | 1.08 / 0.926 | **+22.8** ✓ |
+| Edge | Multipliers | Contaminated read | **CLEAN read (T3 +15..+25)** |
+|---|---|---|---|
+| Aggressor ▸ Trickster | 1.20 / 0.83 | +26.4 | **+5.9 — ceiling-bound** (flat is already 93.5% on stat shape alone; max possible ≈ +6.5; 3 iterations gained ≤0.2 → fixed at 1.20, flagged UNREACHABLE) |
+| Trickster ▸ Sentinel | **1.18 / 0.847** *(W237 retune)* | +40.4 | **+20.3 ✓** (1 iteration) |
+| Sentinel ▸ Aggressor | 1.08 / 0.926 | +22.8 | **+19.5 ✓** (W234 value survives clean measurement) |
 
----
-
-## 4. Weapons, moves & foe kits
+Deep finding: trickster-shape LOSES to sentinel-shape ~98:2 on stats alone — the TS triangle
+direction exists almost entirely via the multiplier + the trickster KIT, not the stat shape. Weapons, moves & foe kits
 
 ### 4.1 Player weapons (Attuned ×1.15 when weapon matches your archetype)
 | Weapon | Moveset | Attuned |
@@ -90,9 +97,16 @@ Aggressor: Cleave·Sunder·Slash·Focus · Glass-Cannon: Oathstrike·Cleave·Sla
 Sentinel: Slash·Brace·**Refuse**·Ward Strike · Juggernaut: Crush·Brace·**Refuse**·Quake ·
 Trickster: Flurry·Quickstep·Evade·Searing Cut · Balanced: Slash·Guard·Focus·Lunge
 
-### 4.3 Move table changes vs v2.3: Stagger CD 4 · **Ember CD 2 (W236 lever)** ·
-**Thousand Cuts power 0.45 (W236 lever)** · Immolate 16%×2 · Searing 16%×3 (the W235 12%
-lever was applied, measured, REVERTED — it is shared with the trickster foe kit). Struggle 0.5 (both sides).
+### 4.3 Move table changes vs v2.3: Stagger CD 4 · Ember CD 2 · Thousand Cuts 0.45 ·
+**Willbreak duration 2 (W237 Vessel tempo lever)** · **Crush power 1.55 (W237 Warmaul
+lever)** · Immolate 16%×2 · Searing 16%×3 (W235 12% lever reverted — shared table). Struggle
+0.5 (both sides).
+
+### 4.3b Tiered foe kits (W237)
+**F4–F5 tricksters carry the lesser kit Flurry / Quickstep / Evade / Slash** (no Searing);
+the full kit (with Searing) debuts at F6+, after the blade gate. Early-route trainers don't
+carry Toxic. Kit composition by floor tier is content design (bosses already do it) — move
+definitions never fork.
 
 ### 4.4 Floor archetype rotation
 Regular floors rotate per committed rated attempt; bosses fixed. **W236: floors 1–3 draw from
@@ -202,65 +216,66 @@ ramp value. Structural; reported, not papered over.
 
 ---
 
-## 12. Validation (W236 / v2.5 final state — grid 10k/cell · edges 20k/cell · seeded)
+## 12. Validation (W237 / v2.6 FINAL SIM BASELINE — grid 10k/cell · edges 20k/cell · seeded)
 
-### Per-weapon grid (Cauterize + DoT scaling + fired levers: Ember CD 2, Thousand 0.45)
-| Weapon | Aggr | Sent | Trick | Glass | Jugg | Row mean (T1 55–75) | Util (T5, frozen) |
+### Per-weapon grid (clean edges + all fired levers) — T2 scan is permanent grid output
+| Weapon | Aggr | Sent | Trick | Glass | Jugg | Row mean | T2 scan |
 |---|---|---|---|---|---|---|---|
-| Unarmed | 29.9 | 5.1 | 14.9 | 34.9 | 14.6 | 19.9 ⚠ progression | 29.9 |
-| Rusted | 38.0 | 10.4 | 20.5 | 45.7 | 22.3 | 27.3 ⚠ starter | 29.5 |
-| Titan's | 72.0 | 74.8 | 74.5 | 64.8 | 69.8 | **71.2 ✓** | 9.8 |
-| Warmaul | 91.2 | 81.2 | 38.0 | 83.8 | 88.2 | **76.5 — accepted (75–78 band, rule d)** | 14.1 |
-| Kilnforged | 75.2 | 94.6 | 87.5 | 57.8 | 78.4 | 78.7 🛑 (§13.1) | 20.9 |
-| Step Blade | 28.3 | 85.3 | 48.1 | 51.2 | 77.4 | **58.0 ✓ (lever b)** | 14.7 |
-| Vessel | 94.7 | 74.4 | 65.8 | 74.3 | 100 | 81.8 🛑 (§13.2 — Cauterize self-buff) | 27.4 |
+| Unarmed | 29.9 | 5.1 | 14.9 | 34.9 | 18.0 | 20.6 (progression) | sent/trick/jugg < 25 (gate story §11) |
+| Rusted | 38.0 | 10.4 | 20.5 | 45.7 | 27.2 | 28.3 (starter) | sent/trick < 25 (gate story) |
+| Titan's | 72.0 | 74.8 | 74.5 | 64.8 | 75.4 | **72.3 ✓ PASS** | **clean** |
+| Warmaul | 90.5 | 75.4 | 36.0 | 83.8 | 89.6 | **75.1 (zone] ** | aggr 90.5 🛑 (0.5 over after Crush 1.55 — STOP-flagged) |
+| Kilnforged | 75.2 | 94.6 | 87.5 | 57.8 | 82.3 | 79.5 | sent 94.6 🛑 (STOP — §13.1) |
+| Step Blade | 28.3 | 81.1 | 48.1 | 51.2 | 78.2 | **57.4 ✓ PASS** | **clean** |
+| Vessel | 89.1 | 63.4 | 60.5 | 65.4 | 100 | **75.7 (zone]** | jugg 100 🛑 (STOP — §13.2) |
 
-**T4:** 7.4 / 6.5 / 7.6 turns — in band. 2× power: 100%. Glass(step) vs Jugg: 58.8%.
+**T4:** 7.4 / 6.5 / 7.6 turns ✓ (balanced kits unaffected by levers). **T5 (report-only,
+AI frozen):** Titan 9.8 · Warmaul 14.5 · Step 14.8 below; others in band.
 
-### Fresh-account ramp (1.0/0.7 curve · trickster excluded F1–F3 · natural rotation)
-| Floor | Power | Natural arch → win% | Targets |
-|---|---|---|---|
-| F1 | 1.0 | sentinel → **100 ✓** | ≥80 ✓ |
-| F2 | 1.7 | aggressor → **100 ✓** (pool aggr/sent) | ≥55 ✓ |
-| F3 | 2.4 | sentinel → **100 ✓** (pool aggr/sent) | ≥55 ✓ |
-| F4 | 3.1 | sentinel → 100 ✓ · *trickster cell 0.4 🛑* | ≥55 ✓ natural / 🛑 cell |
-| F5 | 3.8 | trickster → **0.1 🛑 (§13.3)** | ≥55 ✗ |
-| F6 gate | 19.7 | weaponless 0 (≤40 ✓) · fresh+blade 1.7–4.4 (≤25 ✓) · **D-rank+blade 92.9–100 (≥55 ✓)** | **all re-specced targets PASS** |
+### Fresh-account ramp (tiered kits) — ALL TARGETS PASS
+| Floor | Natural arch → win% | Trickster cell |
+|---|---|---|
+| F1–F3 | 100 ✓ (pool aggr/sent) | n/a (excluded) |
+| F4 | 100 ✓ | **100 ✓ (lesser kit)** |
+| F5 | trickster → **100 ✓ (lesser kit)** | 100 ✓ |
+| F6 gate | weaponless 0 (≤40 ✓) · fresh+blade 1.7–4.4 (≤25 ✓) · D-rank+blade 92.9–100 (≥55 ✓) | full kit debuts |
 
-D-rank profile (derived from app.js, not invented): D = 100–599 lifetime pts (RANKS table);
-mid-band 350 pts ÷ 6 stats ≈ 58 pts/stat → statLevel 4 each (xpToNextLevel cumulative
-5/20/50/100) → with the blade: ATTACK 16.2 / DEF 9.6 / EDGE 6.4 = 32.2 raw.
+F1 ≥80 ✓ · every F1–F5 ≥55 ✓ · monotonic ✓ · no fallback exclusion needed.
 
 ### Assertions
-**In-app `Arena.selfTest()`: 24 checks** (18 prior + W236: cauterized DoT wasted while
-direct damage lands · immunity expires on schedule · pre-emptive Refuse grants immunity ·
-0.5×-power burn halves · equal-power unchanged · 2×-power ceiling binds).
+**In-app `Arena.selfTest()`: 26 checks** (24 prior + W237: tiered trickster kits ·
+lever-constant verification incl. the TS reciprocal pair). Sim mirror: clean-edge T3 harness
+(seeded) + the automated T2 scan in every grid run.
 
 ---
 
-## 13. Open items (human calls — nothing improvised)
+## 13. Open items after v2.6 (for the ON-DEVICE phase — sim tuning is closed)
 
-1. **🛑 Kilnforged (still over band after the full lever ladder):** 81.6 → 79.4 (Cauterize)
-   → **78.7** (Ember CD 2). Every pre-authorized lever is spent (W234 DOT cap, W235 Searing
-   revert finding, W236 Cauterize + Ember CD). The row is now driven by direct damage + the
-   one-sided Attuned bonus vs kit-poor foes, not DoT uptime. Candidates for the next ruling:
-   foe-kit Attuned-equivalents · Kiln attune off Aggressor · accept 75–80 as the "best weapon"
-   identity band.
-2. **🛑 Vessel 81.8 (NEW — Cauterize self-buff):** its own Refuse now cauterizes, erasing its
-   former trickster weakness (30→66). No lever was authorized this patch. Candidates: Ward
-   Strike heal 12→10 (the W234-prescribed, never-fired lever) · revisit after the Trick▸Sent
-   edge ruling (the two interact).
-3. **🛑 Ramp trickster F4–F5 (post-exclusion):** F1–F3 fixed at 100% via the pool exclusion;
-   F4 (0.4%) and F5 (0.1%) trickster cells remain near-zero for a FRESH account (DoT scaling
-   floor 0.5 still = ~3.6 HP/turn vs a 45-HP pool while fresh damage needs 15+ turns).
-   Mitigations already in play: rotation means one loss re-rolls the matchup (a life, not a
-   wall); by F4–F5 a real account has stats/weapon. Candidates: extend the exclusion to F5 ·
-   raise the DoT-scaling floor exemption below absolute power ~10 · accept as-is (lives
-   absorb it).
-4. **Trick▸Sent edge +40.4 (🛑 flagged, no lever defined):** Cauterize changed the FLAT
-   control (sentinel cleanses now neutralize burn even at typeEff 1.0), so the measured
-   "contribution" of the multiplier ballooned. May warrant re-defining the T3 methodology
-   (the multiplier itself did not change) rather than retuning the edge.
-5. **Accepted/documented:** Warmaul 76.5 (75–78 accept band, nerf spent) · Aggr▸Trick +26.4
-   (≤+27 documented kit-interaction overage) · T5 residuals (Titan 9.8 / Warmaul 14.1 / Step
-   14.7) condition-bound, AI frozen.
+1. **🛑 Kilnforged — STOP, human call with numbers:** clean-edge baseline row 79.5 (zone-edge;
+   drifted +0.8 from the Crush lever weakening jugg foes), sent cell **94.6 > 90** (T2-primary
+   violation). Lever ladder exhausted (4 fired levers + 1 reverted across W234–W236). The
+   sent cell is the wall-breaker identity expressing against a cleanse the AI casts at p 0.90
+   max. Options for the ruling: accept as the wall-breaker exception · a sentinel-AI
+   cleanse-priority rework (currently frozen) · on-device data first (recommended by the
+   final-baseline framing).
+2. **🛑 Vessel vs Juggernaut 100% — STOP after lever 1:** Willbreak-2 shipped (row 82.8→75.7,
+   aggr cell fixed); the Ward-heal lever REVERTED (worsened the row 75.7→78.1 — Ward Strike
+   is shared with sentinel foes — and left jugg at 100). Structural: a sustain kit cannot lose
+   to a slow bruiser that can't out-damage its heal loop. Candidates: juggernaut foe-kit
+   armor-shred priority · accept (juggernaut floors are 1-in-3 rotation slots).
+3. **🛑 Warmaul aggr cell 90.5** (0.5 over) after its Crush lever — within noise of the bound;
+   flagged, not chased ("document and stop").
+4. **Aggr▸Trick edge: T3 band UNREACHABLE** (ceiling-bound at ≈ +6.5 — the stat-shape
+   asymmetry IS the matchup). Fixed at 1.20/0.83. Any future change is a stat-shape
+   (archetype-weights) question, not a multiplier question.
+5. **Accepted/documented:** Warmaul row 75.1 + Kiln row 79.5 in/near the (75,79] zone ·
+   T5 residuals condition-bound (AI frozen) · unarmed/rusted rows = the §11 gate story.
+
+---
+
+## 14. Closing — v2.6 is the final sim-tuned baseline
+
+Sim-side tuning is **closed** as of W237. The remaining 🛑 items are deliberately parked:
+every further balance change requires **on-device play data** (real player builds, real move
+choices, real session lengths — none of which the AI-vs-AI mirror can supply). The next
+balance commit after W237 must cite on-device evidence, not simulation.
