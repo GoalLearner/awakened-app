@@ -1,17 +1,20 @@
-# Awakened — Arena Battle Engine (v2.4, as shipped W235)
+# Awakened — Arena Battle Engine (v2.5, as shipped W236)
 
 > **Status:** CANONICAL for the Ascent tower. This documents the engine **as actually
-> implemented** in `app.js` (build W235), validated by simulation (§12).
-> **v2.4 changelog (W235 — AI v2 utility branches, re-baseline, Option A floor ramp):**
-> the W233 AI never cast 0-power moves outside the panic branch — Refuse/Temper/Focus/Evade had
-> **zero selection weight**, so the W234 grid measured AI poverty, not balance. AI v2 adds
-> CLEANSE / SETUP / EVADE branches (§7.1); everything was re-baselined. **T5** (utility-usage
-> band) added to the calibration targets. The Patch-3 Searing lever was applied, measured,
-> and **reverted** — it worsened its own target (Searing is shared with the trickster foe kit;
-> §13.1). The **Option A early-floor ramp shipped** (anchor 1.0 / slope 0.7 — best-of-tested;
-> the approved 2.0/1.1 left fixable power-walls) with the F6 "earn a weapon" cliff + a gate-
-> legibility loss line; the remaining ramp misses are **structural** (%maxHP DoT/heals at
-> micro-power) and are STOP-reported in §13.4. selfTest is now 18 checks.
+> implemented** in `app.js` (build W236), validated by simulation (§12).
+> **v2.5 changelog (W236 — Cauterize, DoT power-scaling, gate re-spec):** cleansing now
+> **cauterizes** (2 turns of DoT immunity) — Refuse no longer loses the tempo war 1-for-2
+> against CD-1 reappliers; DoT magnitude now **power-scales at application**
+> (clamp(applier/target, 0.5, 1.0)) so an under-powered burner can no longer ignore the
+> build-strength invariant; the F6 gate targets were **re-specced** (blade AND grown stats —
+> the old blade-alone ≥55 target was a reviewer spec error); pre-authorized levers fired:
+> Ember CD 1→2 (Kiln still over band → STOP), Thousand Cuts 0.38→0.45 (Step now in band),
+> trickster excluded from the F1–F3 rotation pool (F4–F5 trickster → STOP). New flags:
+> Vessel 81.8 (buffed by its own Cauterize) and the Trick▸Sent edge +40.4 (Cauterize moved
+> the flat control) — both await the next ruling. selfTest is now 24 checks.
+> **Design principle (locked this patch):** shared move tables are ONE balance surface —
+> **never fork per-side variants of a shared move**; fix mechanisms (tempo, scaling), not
+> per-caster numbers.
 > **This is not PvP.** The Arena is a cosmetic, single-player, **bot-only** climb. Duels/PvP
 > are permanently retired; `PVP.md` is stale and is **not** a source of truth for this engine.
 > **Stack:** one vanilla-JS IIFE (`app.js`); engine pure/DOM-free; localStorage-only
@@ -61,10 +64,10 @@ role → `aggressor`/`sentinel`/`trickster` · ≥52% → `glasscannon`/`juggern
 Triangle **Aggressor ▸ Trickster ▸ Sentinel ▸ Aggressor**; reciprocal pairs (1+s, 1/(1+s));
 computed per direction. Per-edge map `_ARENA_EFF_EDGES`:
 
-| Edge | Multipliers | Measured (W235 baseline; T3 +15..+25) |
+| Edge | Multipliers | Measured (W236 / v2.5 baseline; T3 +15..+25) |
 |---|---|---|
-| Aggressor ▸ Trickster | 1.20 / 0.83 | **+26.4** ⚠ (do-not-touch per review; flagged) |
-| Trickster ▸ Sentinel | 1.20 / 0.83 | **+24.8** ✓ |
+| Aggressor ▸ Trickster | 1.20 / 0.83 | **+26.4** — documented per rule (≤ +27; kit-interaction overage) |
+| Trickster ▸ Sentinel | 1.20 / 0.83 | **+40.4** 🛑 flagged — Cauterize moved the FLAT control (sentinels now cauterize trickster burns at typeEff 1.0); awaiting ruling |
 | Sentinel ▸ Aggressor | 1.08 / 0.926 | **+22.8** ✓ |
 
 ---
@@ -87,13 +90,14 @@ Aggressor: Cleave·Sunder·Slash·Focus · Glass-Cannon: Oathstrike·Cleave·Sla
 Sentinel: Slash·Brace·**Refuse**·Ward Strike · Juggernaut: Crush·Brace·**Refuse**·Quake ·
 Trickster: Flurry·Quickstep·Evade·Searing Cut · Balanced: Slash·Guard·Focus·Lunge
 
-### 4.3 Move table — unchanged from v2.3 (W234): Stagger CD 4 · Ember CD 1 · Immolate 16%×2 ·
-**Searing Cut 16%×3 (the W235 12% lever was applied, measured, REVERTED — §13.1)** · Struggle
-0.5 fallback (both sides).
+### 4.3 Move table changes vs v2.3: Stagger CD 4 · **Ember CD 2 (W236 lever)** ·
+**Thousand Cuts power 0.45 (W236 lever)** · Immolate 16%×2 · Searing 16%×3 (the W235 12%
+lever was applied, measured, REVERTED — it is shared with the trickster foe kit). Struggle 0.5 (both sides).
 
 ### 4.4 Floor archetype rotation
-Regular floors: `['aggressor','sentinel','trickster'][(floor + wins + losses) % 3]` — advances
-per committed rated attempt; bosses fixed. Matchup-shopping costs lives + ELO.
+Regular floors rotate per committed rated attempt; bosses fixed. **W236: floors 1–3 draw from
+[aggressor, sentinel] only** (onboarding — a fresh weaponless account has no answer to DoT);
+the full triangle resumes at F4+. Matchup-shopping costs lives + ELO.
 
 ---
 
@@ -113,11 +117,26 @@ Guard = active block (crit-immune, consumed); Brace = stance (crit-pierced). Int
 
 ---
 
-## 6. Status effects — unchanged from v2.3
+## 6. Status effects
+
 DoT end-of-turn (refresh-by-kind; burn+bleed coexist; **intake cap 15% maxHP/turn**, scaled
 proportionally, appliers credited); stun = flinch (skip next action; decrements on the skip;
 wasted on a stunned target); unified stacking (same kind refresh / different kinds multiply /
 clamps bind: ATK [0.25,2.0], taken [0.40,2.0], shred ≥0.40, dodge ≤0.50); heals never overheal.
+
+**Cauterize (W236):** when a cleanse resolves (Refuse — and any future cleanse), the caster
+gains **dotImmune for 2 turns** (standard timed-flag taxonomy: same-kind refresh, end-of-turn
+decrement, CAUTERIZED chip). While immune, NEW DoT applications are wasted (the applying
+move's direct damage still lands, like stun-on-stunned). A pre-emptive Refuse with nothing to
+cleanse still grants immunity — legitimate tactics. *Rationale:* cleanse lost the action
+economy 1-for-2 — Refuse (CD 2) removed what one CD-1 action instantly reapplied, and the
+reapplier also dealt direct damage; immunity fixes the tempo war instead of nerfing kits.
+
+**DoT power-scaling (W236):** at application, stored magnitude =
+`move.dotMag × clamp(applierPower / targetPower, 0.5, 1.0)` (power = ATTACK+DEFENSE+EDGE).
+Ceiling 1.0: over-powered appliers gain nothing (DoT already scales with the target's pool).
+Floor 0.5: DoT never vanishes — it remains the wall-counter at parity. The intake cap applies
+AFTER scaling. Heals are untouched (% of the caster's own pool — already power-scaled).
 
 ---
 
@@ -137,7 +156,7 @@ turn: DoT ticks → durations → cooldowns.
 5. **WEIGHTED ATTACK** — weight ∝ power × acc × hits × typeEff, ×1.5 for a debuff/DoT the
    opponent lacks. Struggle only when nothing is legal.
 
-**T5 outcome (fix-at-closest, residuals reported):** in-band — Unarmed 29.9 · Rusted 29.5 ·
+**AI v2 is FROZEN as of W236** (no branch/condition/p changes; T5 residuals accepted as condition-bound). **T5 outcome (fix-at-closest, residuals reported):** in-band — Unarmed 29.9 · Rusted 29.5 ·
 Kiln 20.0 · Vessel 27.5 · Aggr-foe 20.2 · Glass-foe 23.4 · Jugg-foe 30.6. **Below band
 (condition-bound — Brace/Evade live in HP windows that winning kits rarely occupy):** Titan
 9.8 · Warmaul 14.1 · Step 14.6 · Sentinel-foe 8.9 · Trickster-foe 13.3. No new branches
@@ -183,58 +202,65 @@ ramp value. Structural; reported, not papered over.
 
 ---
 
-## 12. Validation (W235 final state — grid 10k/cell · edges 20k/cell · seeded)
+## 12. Validation (W236 / v2.5 final state — grid 10k/cell · edges 20k/cell · seeded)
 
-### Per-weapon grid (AI v2, final constants)
-| Weapon | Aggr | Sent | Trick | Glass | Jugg | Row mean (T1 55–75) | Util (T5 15–40) |
+### Per-weapon grid (Cauterize + DoT scaling + fired levers: Ember CD 2, Thousand 0.45)
+| Weapon | Aggr | Sent | Trick | Glass | Jugg | Row mean (T1 55–75) | Util (T5, frozen) |
 |---|---|---|---|---|---|---|---|
-| Unarmed | 29.9 | 5.1 | 14.9 | 34.9 | 14.6 | 19.9 ⚠ (progression — §11) | 29.9 ✓ |
-| Rusted | 38.0 | 10.4 | 20.5 | 45.7 | 22.3 | 27.3 ⚠ (starter) | 29.5 ✓ |
-| Titan's | 72.0 | 74.8 | 74.5 | 64.8 | 69.8 | **71.2 ✓** | 9.8 ⚠ |
-| Warmaul | 91.2 | 81.2 | 38.0 | 83.8 | 88.2 | 76.5 ⚠ (1.5 over; nerf spent) | 14.1 ⚠ |
-| Kilnforged | 75.2 | 99.2 | 87.5 | 57.8 | 88.4 | 81.6 🛑 (§13.1) | 20.0 ✓ |
-| Step Blade | 22.0 | 75.9 | 40.1 | 42.0 | 70.7 | 50.2 ⚠ (below) | 14.6 ⚠ |
-| Vessel | 94.7 | 74.4 | 30.1 | 74.3 | 100 | **74.7 ✓** | 27.5 ✓ |
+| Unarmed | 29.9 | 5.1 | 14.9 | 34.9 | 14.6 | 19.9 ⚠ progression | 29.9 |
+| Rusted | 38.0 | 10.4 | 20.5 | 45.7 | 22.3 | 27.3 ⚠ starter | 29.5 |
+| Titan's | 72.0 | 74.8 | 74.5 | 64.8 | 69.8 | **71.2 ✓** | 9.8 |
+| Warmaul | 91.2 | 81.2 | 38.0 | 83.8 | 88.2 | **76.5 — accepted (75–78 band, rule d)** | 14.1 |
+| Kilnforged | 75.2 | 94.6 | 87.5 | 57.8 | 78.4 | 78.7 🛑 (§13.1) | 20.9 |
+| Step Blade | 28.3 | 85.3 | 48.1 | 51.2 | 77.4 | **58.0 ✓ (lever b)** | 14.7 |
+| Vessel | 94.7 | 74.4 | 65.8 | 74.3 | 100 | 81.8 🛑 (§13.2 — Cauterize self-buff) | 27.4 |
 
-vs W234: the AI fix alone moved Titan 67→71, Kiln 88→82, Step's worst cell 9→22, and walls
-now cleanse. **T4:** 7.4 / 6.5 / 7.6 turns at 0.5×/1×/3× — in band, 0% timeouts. 2× power:
-100%. Countered Aggr/Titan vs Sentinel: 74.8% @1×.
+**T4:** 7.4 / 6.5 / 7.6 turns — in band. 2× power: 100%. Glass(step) vs Jugg: 58.8%.
 
-### Fresh-account ramp (shipped 1.0/0.7; natural rotation at attempts=0)
-| Floor | Power | vs Aggr | vs Sent | vs Trick | Natural arch |
-|---|---|---|---|---|---|
-| F1 | 1.0 | 100 | 100 | 0.1 | sentinel → **100 ✓** |
-| F2 | 1.7 | 100 | 100 | 0.1 | trickster → **0.1 ✗** |
-| F3 | 2.4 | 100 | 100 | 0.1 | aggressor → 100 ✓ |
-| F4 | 3.1 | 100 | 100 | 0.0 | sentinel → 100 ✓ |
-| F5 | 3.8 | 98.8 | 100 | 0.0 | trickster → **0.0 ✗** |
-| F6 | 19.7 | 0.0 | 0.0 | 0.0 | weaponless ≤40 ✓ · **with blade 1.7–4.4 ✗ (target ≥55)** |
+### Fresh-account ramp (1.0/0.7 curve · trickster excluded F1–F3 · natural rotation)
+| Floor | Power | Natural arch → win% | Targets |
+|---|---|---|---|
+| F1 | 1.0 | sentinel → **100 ✓** | ≥80 ✓ |
+| F2 | 1.7 | aggressor → **100 ✓** (pool aggr/sent) | ≥55 ✓ |
+| F3 | 2.4 | sentinel → **100 ✓** (pool aggr/sent) | ≥55 ✓ |
+| F4 | 3.1 | sentinel → 100 ✓ · *trickster cell 0.4 🛑* | ≥55 ✓ natural / 🛑 cell |
+| F5 | 3.8 | trickster → **0.1 🛑 (§13.3)** | ≥55 ✗ |
+| F6 gate | 19.7 | weaponless 0 (≤40 ✓) · fresh+blade 1.7–4.4 (≤25 ✓) · **D-rank+blade 92.9–100 (≥55 ✓)** | **all re-specced targets PASS** |
+
+D-rank profile (derived from app.js, not invented): D = 100–599 lifetime pts (RANKS table);
+mid-band 350 pts ÷ 6 stats ≈ 58 pts/stat → statLevel 4 each (xpToNextLevel cumulative
+5/20/50/100) → with the blade: ATTACK 16.2 / DEF 9.6 / EDGE 6.4 = 32.2 raw.
 
 ### Assertions
-**In-app `Arena.selfTest()`: 18 checks** (15 prior + W235: wall-AI cleanses DoT · kiln-AI
-Tempers · step-AI Evades at mid-HP). Sim mirror: suites above + utility counters.
+**In-app `Arena.selfTest()`: 24 checks** (18 prior + W236: cauterized DoT wasted while
+direct damage lands · immunity expires on schedule · pre-emptive Refuse grants immunity ·
+0.5×-power burn halves · equal-power unchanged · 2×-power ceiling binds).
 
 ---
 
 ## 13. Open items (human calls — nothing improvised)
 
-1. **🛑 Kilnforged (Patch-3 STOP + a coupling finding):** row mean 81.6 at the AI-v2 baseline.
-   The prescribed Searing 16→12 lever was applied and **made it WORSE (82.0)** — Searing is
-   shared with the **trickster foe kit**, so nerfing it weakens the strongest anti-Kiln column
-   (and pushed Warmaul 76.5→78.0, Vessel 74.7→76.5). Lever **reverted**. Candidates needing a
-   ruling: a Kiln-only Searing variant (decouple player/foe move tables) · remove Temper from
-   the Kiln kit · wall-AI cleanse-priority when burning is already p 0.90 (maxed).
-2. **T5 residuals (condition-bound):** Titan 9.8 · Warmaul 14.1 · Step 14.6 · Sentinel-foe 8.9
-   · Trickster-foe 13.3 after both p-iterations (guard 0.70, evade 0.60 fixed-at-closest).
-   Brace/Evade are gated to HP windows that winning kits rarely occupy. A proactive-Brace or
-   opener-Evade branch would fix it — **new branches are out of scope per the rule.**
-3. **Warmaul 76.5** (nerf spent, 1.5 over T1) · **Step row 50.2** (below T1; its worst cell
-   healed 9.1→22.0) · **Aggr▸Trick edge +26.4** (do-not-touch) — all flagged, no action.
-4. **🛑 Ramp (Patch-5c STOP — structural, with the full iteration record):** tested 2.0/1.1,
-   1.4/0.9, 1.0/0.7 (shipped best-of-tested). Power-bound cells fixed (F4 sent 3.6→100, F5
-   aggr 1.0→98.8). **Unfixable by ramp constants:** (a) trickster floors ≈ 0% at EVERY power —
-   Searing burns 16% of the PLAYER's maxHP/turn, power-independent, while a fresh account
-   needs 15+ turns to kill anything; (b) F6-with-blade 1.7–4.4% vs ≥55 — the blade alone is
-   12.4 raw vs 19.7. **Candidates for the next ruling:** exclude trickster from the F1–5
-   rotation pool · scale DoT/heal magnitudes by foe power below a power floor · re-spec the F6
-   target as blade + D-rank-typical stats (≈19+ raw, which sims ≥55).
+1. **🛑 Kilnforged (still over band after the full lever ladder):** 81.6 → 79.4 (Cauterize)
+   → **78.7** (Ember CD 2). Every pre-authorized lever is spent (W234 DOT cap, W235 Searing
+   revert finding, W236 Cauterize + Ember CD). The row is now driven by direct damage + the
+   one-sided Attuned bonus vs kit-poor foes, not DoT uptime. Candidates for the next ruling:
+   foe-kit Attuned-equivalents · Kiln attune off Aggressor · accept 75–80 as the "best weapon"
+   identity band.
+2. **🛑 Vessel 81.8 (NEW — Cauterize self-buff):** its own Refuse now cauterizes, erasing its
+   former trickster weakness (30→66). No lever was authorized this patch. Candidates: Ward
+   Strike heal 12→10 (the W234-prescribed, never-fired lever) · revisit after the Trick▸Sent
+   edge ruling (the two interact).
+3. **🛑 Ramp trickster F4–F5 (post-exclusion):** F1–F3 fixed at 100% via the pool exclusion;
+   F4 (0.4%) and F5 (0.1%) trickster cells remain near-zero for a FRESH account (DoT scaling
+   floor 0.5 still = ~3.6 HP/turn vs a 45-HP pool while fresh damage needs 15+ turns).
+   Mitigations already in play: rotation means one loss re-rolls the matchup (a life, not a
+   wall); by F4–F5 a real account has stats/weapon. Candidates: extend the exclusion to F5 ·
+   raise the DoT-scaling floor exemption below absolute power ~10 · accept as-is (lives
+   absorb it).
+4. **Trick▸Sent edge +40.4 (🛑 flagged, no lever defined):** Cauterize changed the FLAT
+   control (sentinel cleanses now neutralize burn even at typeEff 1.0), so the measured
+   "contribution" of the multiplier ballooned. May warrant re-defining the T3 methodology
+   (the multiplier itself did not change) rather than retuning the edge.
+5. **Accepted/documented:** Warmaul 76.5 (75–78 accept band, nerf spent) · Aggr▸Trick +26.4
+   (≤+27 documented kit-interaction overage) · T5 residuals (Titan 9.8 / Warmaul 14.1 / Step
+   14.7) condition-bound, AI frozen.

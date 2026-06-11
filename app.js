@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w235';
+  const APP_BUILD_TAG = '2.2.5-w236';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6035,8 +6035,11 @@
       // stat-shape is permanently walled by a fixed bad matchup (bosses stay
       // fixed). Name + total power unchanged; only the role split / matchup rotates.
       let attempts = 0; try { const st = getAscentState(); attempts = (st.wins || 0) + (st.losses || 0); } catch (_) {}
-      const pool = ['aggressor', 'sentinel', 'trickster'];
-      archKey = pool[((f + attempts) % 3 + 3) % 3];
+      // W236 — trickster excluded from the F1–F3 pool (onboarding sequencing: a
+      // fresh weaponless account has no answer to DoT; the full triangle resumes
+      // at F4+ where rotation + lives absorb the matchup).
+      const pool = (f <= 3) ? ['aggressor', 'sentinel'] : ['aggressor', 'sentinel', 'trickster'];
+      archKey = pool[((f + attempts) % pool.length + pool.length) % pool.length];
     }
     const a = ASCENT_ARCHETYPES[archKey] || ASCENT_ARCHETYPES.balanced;
     const per = power / 3;
@@ -6393,8 +6396,8 @@
     oathstrike: { name: 'Oathstrike',   gl: 'sword',  power: 1.95, acc: 0.88, cd: 3, desc: 'A vow made steel.' },
     flurry:     { name: 'Flurry',       gl: 'dagger', power: 0.5,  acc: 0.95, hits: 3, cd: 1, desc: 'Three fast cuts.' },
     quickstep:  { name: 'Quickstep',    gl: 'dagger', power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Always strikes first.' },
-    thousand:   { name: 'Thousand Cuts',gl: 'dagger', power: 0.38, acc: 0.95, hits: 4, cd: 3, desc: 'A storm of blades.' },
-    ember:      { name: 'Ember',        gl: 'burst',  power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'Opens a bleeding wound.' },
+    thousand:   { name: 'Thousand Cuts',gl: 'dagger', power: 0.45, acc: 0.95, hits: 4, cd: 3, desc: 'A storm of blades.' },
+    ember:      { name: 'Ember',        gl: 'burst',  power: 0.7,  acc: 0.95, cd: 2, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'Opens a bleeding wound.' },
     searing:    { name: 'Searing Cut',  gl: 'burst',  power: 1.1,  acc: 0.9,  cd: 1, fx: { t: 'burn', mag: 0.16, dur: 3 }, desc: 'A cut that smolders.' },
     immolate:   { name: 'Immolate',     gl: 'burst',  power: 1.6,  acc: 0.85, cd: 3, fx: { t: 'burn', mag: 0.16, dur: 2 }, desc: 'Engulf in flame.' },
     sunder:     { name: 'Sunder',       gl: 'shield', power: 0.8,  acc: 0.92, cd: 2, fx: { t: 'defDown', kind: 'sunder', mag: 0.25, dur: 3 }, desc: 'Shreds armor −25% (3t).' },
@@ -6621,9 +6624,22 @@
     const selfS = side === 'p' ? sess.pS : sess.bS, foeS = side === 'p' ? sess.bS : sess.pS;
     switch (fx.t) {
       case 'burn': case 'bleed': {
+        // W236 Cauterize: a fresh cleanse grants 2 turns of DoT immunity — new
+        // applications are wasted (the move's direct damage already landed).
+        if (foeS.mods.some((x) => x.k === 'dotImmune')) {
+          events.push({ side, t: 'fx', text: defName + ' — cauterized; the ' + fx.t + ' does not take.' }); break;
+        }
+        // W236 DoT power-scaling: an under-powered applier's %maxHP DoT is scaled
+        // by clamp(applierPower/targetPower, 0.5, 1.0) at APPLICATION time — kills
+        // the power-independent burn while parity/overpowered burns are unchanged.
+        const aC = side === 'p' ? sess.m.player : sess.m.bot;
+        const tC = side === 'p' ? sess.m.bot : sess.m.player;
+        const aPow = (aC.attack || 0) + (aC.defense || 0) + (aC.edge || 0);
+        const tPow = ((tC.attack || 0) + (tC.defense || 0) + (tC.edge || 0)) || 1e-6;
+        const magEff = fx.mag * _arClamp(aPow / tPow, 0.5, 1.0);
         const ex = foeS.mods.find((x) => x.k === 'dot' && x.kind === fx.t);   // refresh-by-kind to highest, never additive
-        if (ex) { ex.dur = Math.max(ex.dur, fx.dur); ex.mag = Math.max(ex.mag, fx.mag); ex.src = side; }
-        else foeS.mods.push({ k: 'dot', kind: fx.t, mag: fx.mag, dur: fx.dur, src: side });
+        if (ex) { ex.dur = Math.max(ex.dur, fx.dur); ex.mag = Math.max(ex.mag, magEff); ex.src = side; }
+        else foeS.mods.push({ k: 'dot', kind: fx.t, mag: magEff, dur: fx.dur, src: side });
         events.push({ side, t: 'fx', text: defName + ' is ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
       }
       case 'stun':
@@ -6639,7 +6655,13 @@
       case 'defDown': _arPushMod(foeS, 'shred', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — armor shredded.' }); break;   // pierces the divisor
       case 'dodge': _arPushMod(selfS, 'dodge', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — evasive.' }); break;
       case 'guard': selfS.guard = 1; events.push({ side, t: 'fx', text: atkName + ' guards.' }); break;
-      case 'guardCleanse': selfS.guard = 1; selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0; events.push({ side, t: 'fx', text: atkName + ' refuses — guarded, afflictions shed.' }); break;
+      case 'guardCleanse':
+        selfS.guard = 1; selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0;
+        // W236 Cauterize: every cleanse cast (even pre-emptive, with nothing to
+        // cleanse) grants 2 turns of DoT immunity — Refuse no longer loses the
+        // tempo war 1-for-2 against a CD-1 reapplier.
+        _arPushMod(selfS, 'dotImmune', 'cauterize', 1, 2);
+        events.push({ side, t: 'fx', text: atkName + ' refuses — afflictions shed, wounds cauterized.' }); break;
       case 'heal': {
         const max = side === 'p' ? sess.pMax : sess.bMax;
         const amt = Math.round(max * fx.mag);
@@ -6883,6 +6905,34 @@
       let evadeSeen = false;
       for (let i = 0; i < 12 && !evadeSeen; i++) { if (_arenaFoePick(s17).id === 'evade') evadeSeen = true; }
       ok('T17 step-AI uses Evade at mid-HP', evadeSeen);
+      // T18 (W236 Cauterize) — DoT vs an immune target: direct damage lands, no burn
+      const s18 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'balanced', 'Foe')), 18);
+      s18.bS.mods.push({ k: 'dotImmune', kind: 'cauterize', mag: 1, dur: 2 });
+      const ev18 = []; _arExecMove(s18, 'p', Object.assign(lib('searing'), { acc: 1 }), ev18);
+      ok('T18 cauterized: direct dmg lands, DoT wasted',
+        ev18.some((e) => e.side === 'p' && e.t === 'hit') && !s18.bS.mods.some((x) => x.k === 'dot'));
+      // T19 — immunity expires on schedule; the next application sticks
+      _arEndTurn(s18, []); _arEndTurn(s18, []);
+      _arApplyFx(s18, 'p', { t: 'burn', mag: 0.16, dur: 3 }, [], 'You', 'Foe');
+      ok('T19 cauterize expires; next DoT sticks',
+        !s18.bS.mods.some((x) => x.k === 'dotImmune') && s18.bS.mods.some((x) => x.k === 'dot' && x.kind === 'burn'));
+      // T20 — pre-emptive Refuse grants immunity with nothing to cleanse
+      const s20 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), 20);
+      _arApplyFx(s20, 'b', { t: 'guardCleanse' }, [], 'Foe', 'You');
+      ok('T20 pre-emptive cleanse cauterizes', s20.bS.mods.some((x) => x.k === 'dotImmune') && s20.bS.guard === 1);
+      // T21–T23 (W236 DoT power-scaling at application)
+      const s21 = arenaStartBattle(M(mk(60, 60, 30, null, 'You'), mk(25, 25, 25, 'balanced', 'Foe')), 21);   // 150 vs 75
+      _arApplyFx(s21, 'b', { t: 'burn', mag: 0.16, dur: 3 }, [], 'Foe', 'You');                              // 0.5× applier
+      const m21 = s21.pS.mods.find((x) => x.k === 'dot');
+      ok('T21 0.5×-power applier: 16% burn → 8%', !!m21 && Math.abs(m21.mag - 0.08) < 1e-9);
+      const s22 = arenaStartBattle(M(mk(30, 30, 30, null, 'You'), mk(30, 30, 30, 'balanced', 'Foe')), 22);   // equal
+      _arApplyFx(s22, 'b', { t: 'burn', mag: 0.16, dur: 3 }, [], 'Foe', 'You');
+      const m22 = s22.pS.mods.find((x) => x.k === 'dot');
+      ok('T22 equal-power applier: 16% unchanged', !!m22 && Math.abs(m22.mag - 0.16) < 1e-9);
+      const s23 = arenaStartBattle(M(mk(60, 60, 30, null, 'You'), mk(25, 25, 25, 'balanced', 'Foe')), 23);   // 2× applier
+      _arApplyFx(s23, 'p', { t: 'burn', mag: 0.16, dur: 3 }, [], 'You', 'Foe');
+      const m23 = s23.bS.mods.find((x) => x.k === 'dot');
+      ok('T23 2×-power applier: ceiling binds (16%)', !!m23 && Math.abs(m23.mag - 0.16) < 1e-9);
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }
@@ -7588,6 +7638,7 @@
       else if (x.k === 'atk') h += '<span class="ar-st ' + (x.mag > 0 ? 'up' : 'down') + '">ATK' + (x.mag > 0 ? '+' : '−') + '</span>';
       else if (x.k === 'def') h += '<span class="ar-st ' + (x.mag < 0 ? 'up' : 'down') + '">DEF' + (x.mag < 0 ? '+' : '−') + '</span>';
       else if (x.k === 'shred') h += '<span class="ar-st down">ARMOR−</span>';
+      else if (x.k === 'dotImmune') h += '<span class="ar-st up">CAUTERIZED</span>';
       else if (x.k === 'dodge') h += '<span class="ar-st up">EVA</span>';
     });
     if (S.guard > 0) h += '<span class="ar-st up">GUARD</span>';
