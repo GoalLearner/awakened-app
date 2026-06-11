@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w249';
+  const APP_BUILD_TAG = '2.2.5-w250';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7685,7 +7685,9 @@
     missing: {}, status: {}, lastPlay: null, voices: 0, loaded: false, duckT: null, log: false,
     musicSlot: null, want: null,   // W248 — want: slot to auto-start once its buffer decodes (menu-music race)
     slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting', 'arena_menu',
-            'sfx_lunge', 'sfx_hit_normal', 'sfx_hit_crit', 'sfx_miss_dodge', 'sfx_hp_drain', 'sfx_ko', 'sfx_boss_intro'],
+            'sfx_lunge', 'sfx_hit_normal', 'sfx_hit_crit', 'sfx_miss_dodge', 'sfx_hp_drain', 'sfx_ko', 'sfx_boss_intro',
+            // W250 — main-screen earned-moment cues (habit_check is a drop-in slot, absent today)
+            'sfx_habit_check', 'sfx_rank_up', 'sfx_achievement', 'sfx_stat_up', 'sfx_rare_drop', 'sfx_perfect_day', 'sfx_hall_greeting'],
   };
   // W248 — file-preferred cues: when a generated sample exists for a cue, play
   // it (per-cue gain trim) instead of the synth; absent files fall back to the
@@ -7918,6 +7920,50 @@
     if (_AUD.buffers[slot]) { _AUD.want = null; _audPlayMusic(slot, true); }
     else if (!_AUD.missing[slot]) _AUD.want = slot;
   }
+  // W250 — main-screen file cue: play a decoded sample on the sfx bus. Returns
+  // true if it played; callers fall back to their synth otherwise (the same
+  // file-preferred pattern as the battle SFX).
+  function _audFileCue(slot, gain) {
+    if (!soundEnabled) return false;
+    const buf = _AUD.buffers[slot];
+    if (!buf) return false;
+    const c = _audCtx(); if (!c) return false;
+    if (c.state === 'suspended') { try { c.resume(); } catch (_) {} if (c.state === 'suspended') return false; }
+    if (!_audVoiceOk(false)) return false;
+    try {
+      _audSpend(Math.min(1.2, buf.duration));
+      const src = c.createBufferSource(); src.buffer = buf;
+      const g = c.createGain(); g.gain.value = gain || 0.7;
+      src.connect(g); g.connect(_AUD.sfx); src.start();
+      if (_AUD.log) { try { console.log('[aud] file-cue: ' + slot); } catch (_) {} }
+      return true;
+    } catch (_) { return false; }
+  }
+  // W250 — the hall acknowledges its hunter: one soft bell on the FIRST app
+  // interaction of each local day (gesture-gated for iOS; once daily = zero
+  // repetition risk — the design answer to "no home-screen music"). The first
+  // tap also warms the audio buffers for every main-screen cue. Drop-in slot;
+  // absent file or muted sound = silent no-op that does NOT burn the day.
+  (function () {
+    const KEY = 'hb_hall_greet_date';
+    const onFirstTap = () => {
+      try {
+        let today = ''; try { today = getDeviceLocalDate(); } catch (_) {}
+        if (!today) return;
+        if (localStorage.getItem(KEY) === today) { document.removeEventListener('pointerdown', onFirstTap, true); return; }
+        if (!soundEnabled) return;                 // muted — try again another tap/day
+        document.removeEventListener('pointerdown', onFirstTap, true);
+        _audUnlock(); _audLoadMusic();
+        const tryPlay = (tries) => {
+          if (_AUD.buffers['sfx_hall_greeting']) {
+            if (_audFileCue('sfx_hall_greeting', 0.35)) { try { localStorage.setItem(KEY, today); } catch (_) {} }
+          } else if (!_AUD.missing['sfx_hall_greeting'] && tries > 0) setTimeout(() => tryPlay(tries - 1), 400);
+        };
+        tryPlay(8);
+      } catch (_) {}
+    };
+    try { document.addEventListener('pointerdown', onFirstTap, true); } catch (_) {}
+  })();
   // read-only audio state probe (Safari/preview debugging; complements Copy Debug Info)
   try {
     window.__audState = function () {
@@ -10045,6 +10091,8 @@
 
   function _relicChime(rarity) {
     if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+    // W250 — generated treasure-reveal sample when present (synth fallback)
+    try { if (_audFileCue('sfx_rare_drop', rarity === 'ultra_rare' ? 0.85 : 0.7)) return; } catch (_) {}
     try {
       const ac = new (window.AudioContext || window.webkitAudioContext)();
       const t0 = ac.currentTime;
@@ -22187,6 +22235,15 @@
       // claimed this beat. Drop silently.
       return;
     }
+    // W250 — file-preferred celebration cues (generated Suno samples; synth
+    // fallback below when the file slot is absent). The priority gate above
+    // still governs — a file cue claims the beat exactly like a synth one.
+    const FM = { rank_fanfare: ['sfx_rank_up', 0.7], achievement: ['sfx_achievement', 0.6],
+                 stat_chime: ['sfx_stat_up', 0.55], perfect_day: ['sfx_perfect_day', 0.7] };
+    try {
+      const fm = FM[name];
+      if (fm && _audFileCue(fm[0], fm[1])) { _lastSfxAt = now; _lastSfxPriority = priority; return; }
+    } catch (_) {}
     try {
       const ac = _getSfxCtx();
       if (!ac) return;
@@ -22333,6 +22390,9 @@
   // ── FEATURE 1: CHECK SOUND ───────────────────────────────
   function playCheckSound() {
     if (!soundEnabled) return;
+    // W250 — drop-in slot for a generated habit-seal sound (sfx_habit_check);
+    // absent today, so the classic synth sweep below still plays.
+    try { if (_audFileCue('sfx_habit_check', 0.5)) return; } catch (_) {}
     try {
       const ac   = new (window.AudioContext || window.webkitAudioContext)();
       const osc  = ac.createOscillator();

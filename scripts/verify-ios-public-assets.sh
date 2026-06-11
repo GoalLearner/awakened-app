@@ -256,6 +256,12 @@ REQUIRED_AUDIO=(
   "assets/audio/sfx_hp_drain.m4a"
   "assets/audio/sfx_ko.m4a"
   "assets/audio/sfx_boss_intro.m4a"
+  "assets/audio/sfx_rank_up.m4a"
+  "assets/audio/sfx_achievement.m4a"
+  "assets/audio/sfx_stat_up.m4a"
+  "assets/audio/sfx_rare_drop.m4a"
+  "assets/audio/sfx_perfect_day.m4a"
+  "assets/audio/sfx_hall_greeting.m4a"
   "assets/audio/battle_loop.mp3"
   "assets/audio/boss_loop.mp3"
   "assets/audio/arena_menu.mp3"
@@ -268,6 +274,12 @@ REQUIRED_AUDIO=(
   "assets/audio/sfx_hp_drain.mp3"
   "assets/audio/sfx_ko.mp3"
   "assets/audio/sfx_boss_intro.mp3"
+  "assets/audio/sfx_rank_up.mp3"
+  "assets/audio/sfx_achievement.mp3"
+  "assets/audio/sfx_stat_up.mp3"
+  "assets/audio/sfx_rare_drop.mp3"
+  "assets/audio/sfx_perfect_day.mp3"
+  "assets/audio/sfx_hall_greeting.mp3"
 )
 audio_missing=()
 for snd in "${REQUIRED_AUDIO[@]}"; do

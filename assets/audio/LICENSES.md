@@ -25,6 +25,13 @@ Audio synthesis (nothing to license).
 | `sfx_hp_drain.m4a` (+`.mp3`) | SHIPPING | sfx_hp_drain — Suno (paid plan) generation, commercial license, 2026-06-11 |
 | `sfx_ko.m4a` (+`.mp3`) | SHIPPING | sfx_ko — Suno (paid plan) generation, commercial license, 2026-06-11 |
 | `sfx_boss_intro.m4a` (+`.mp3`) | SHIPPING | sfx_boss_intro — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_rank_up.m4a` (+`.mp3`) | SHIPPING (main screen) | sfx_rank_up — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_achievement.m4a` (+`.mp3`) | SHIPPING (main screen) | sfx_achievement — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_stat_up.m4a` (+`.mp3`) | SHIPPING (main screen) | sfx_stat_up — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_rare_drop.m4a` (+`.mp3`) | SHIPPING (main screen) | sfx_rare_drop — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_perfect_day.m4a` (+`.mp3`) | SHIPPING (main screen; candidate B — "Glorious" take — chosen by loudness consistency, A archived) | sfx_perfect_day — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_hall_greeting.m4a` (+`.mp3`) | SHIPPING (once-daily first-tap greeting) | sfx_hall_greeting — Suno (paid plan) generation, commercial license, 2026-06-11 |
+| `sfx_habit_check` | ABSENT (drop-in slot wired in playCheckSound) | <!-- sfx_habit_check — Suno (paid plan) generation, commercial license, YYYY-MM-DD --> |
 
 Cues still procedural (no file yet): ui_tap, ui_denied, text_blip, super_effective,
 not_effective, heal, status_burn, status_stun, status_buff, cauterize, dot_tick.
