@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w233';
+  const APP_BUILD_TAG = '2.2.5-w234';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6338,16 +6338,21 @@
   const _EDGE_TIE_BAND = 0.03, _STRUGGLE_POWER = 0.5;
   // W233 — accuracy bonus from NORMALIZED edgeShare (scale-invariant, replaces raw EDGE×0.002)
   const _ACC_EDGE_COEF = 0.20, _ACC_EDGE_MAXBONUS = 0.08;
-  // W233 — global DoT intake cap: total DoT against one fighter ≤ this ×maxHP per turn
-  const _DOT_INTAKE_CAP = 0.20;
+  // W233 — global DoT intake cap: total DoT against one fighter ≤ this ×maxHP per
+  // turn. W234: 0.20 → 0.15 (Patch-2 ladder, second prescribed Kilnforged lever).
+  const _DOT_INTAKE_CAP = 0.15;
   // W233 — reference power for the offline sim suite (the §11 grids ran at raw P=100)
   const _REF_POWER = 100;
   // W233 — per-edge type-eff map (all edges identical today; per-edge tuning hook).
   // win = the favored attacker's multiplier; lose = the countered attacker's.
+  // W234 per-edge tuning (calibration band T3: each edge adds +15..+25 win pts,
+  // measured): aggr>trick untouched per review; trick>sent landed in band via the
+  // foe-kit rearmament alone; sent>aggr tuned to s=0.08 (reciprocal pair) — at
+  // ±20% a countered rated attempt was a near-auto-loss (+49 pts, no counterplay).
   const _ARENA_EFF_EDGES = {
-    'aggressor>trickster': { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },
-    'trickster>sentinel':  { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },
-    'sentinel>aggressor':  { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },
+    'aggressor>trickster': { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },   // measured +25.2
+    'trickster>sentinel':  { win: _ARENA_EFF_MULT, lose: _ARENA_EFF_PEN },   // measured +19.4
+    'sentinel>aggressor':  { win: 1.08, lose: 1 / 1.08 },                    // measured +22.9
   };
   // weapon id → archetypes it is "attuned" to (×1.15 to the PLAYER's damage). STAB analogue.
   const _WEAPON_ATTUNE = {
@@ -6383,7 +6388,7 @@
     searing:    { name: 'Searing Cut',  gl: 'burst',  power: 1.1,  acc: 0.9,  cd: 1, fx: { t: 'burn', mag: 0.16, dur: 3 }, desc: 'A cut that smolders.' },
     immolate:   { name: 'Immolate',     gl: 'burst',  power: 1.6,  acc: 0.85, cd: 3, fx: { t: 'burn', mag: 0.16, dur: 2 }, desc: 'Engulf in flame.' },
     sunder:     { name: 'Sunder',       gl: 'shield', power: 0.8,  acc: 0.92, cd: 2, fx: { t: 'defDown', kind: 'sunder', mag: 0.25, dur: 3 }, desc: 'Shreds armor −25% (3t).' },
-    stagger:    { name: 'Stagger',      gl: 'shield', power: 0.9,  acc: 0.85, cd: 3, fx: { t: 'stun', dur: 1 }, desc: 'Stuns — foe skips a turn.' },
+    stagger:    { name: 'Stagger',      gl: 'shield', power: 0.9,  acc: 0.85, cd: 4, fx: { t: 'stun', dur: 1 }, desc: 'Stuns — foe skips a turn.' },
     quake:      { name: 'Quake',        gl: 'shield', power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', kind: 'quake', mag: 0.2, dur: 2 }, desc: 'Shreds armor −20% (2t).' },
     willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', kind: 'willbreak', mag: 0.25, dur: 3 }, desc: 'Foe hits 25% softer.' },
     wardstrike: { name: 'Ward Strike',  gl: 'shield', power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'heal', mag: 0.12 }, desc: 'Strike and mend.' },
@@ -6406,12 +6411,16 @@
     vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
+  // W234 rearmament: walls (sentinel/juggernaut) carry REFUSE so they can
+  // cleanse DoT (Kilnforged was structurally unbeatable-against); trickster
+  // gets a real kit (chip + priority + a DoT threat) so its column isn't
+  // ladder-wide free wins via rotation.
   const ARCH_MOVES = {
     aggressor:   ['cleave', 'sunder', 'slash', 'focus'],
     glasscannon: ['oathstrike', 'cleave', 'slash', 'temper'],
-    sentinel:    ['slash', 'brace', 'guard', 'wardstrike'],
-    juggernaut:  ['crush', 'brace', 'guard', 'quake'],
-    trickster:   ['quickstep', 'willbreak', 'evade', 'flurry'],
+    sentinel:    ['slash', 'brace', 'refuse', 'wardstrike'],
+    juggernaut:  ['crush', 'brace', 'refuse', 'quake'],
+    trickster:   ['flurry', 'quickstep', 'evade', 'searing'],
     balanced:    ['slash', 'guard', 'focus', 'lunge'],
   };
   function _arenaMaxHP(c) { return Math.max(20, Math.round(_HP_BASE + (c.defense || 0) * _HP_PER_DEF)); }
@@ -6788,6 +6797,28 @@
       s10.done = true; s10.won = true;
       arenaFinalizeBattle(s10);
       ok('T10 unrated commits nothing', JSON.stringify(getAscentState()) === before10);
+      // T11 W234 foe kits — walls carry Refuse; trickster has the rearmed kit
+      ok('T11 rearmed foe kits', ARCH_MOVES.sentinel.indexOf('refuse') !== -1 && ARCH_MOVES.juggernaut.indexOf('refuse') !== -1 &&
+        JSON.stringify(ARCH_MOVES.trickster) === JSON.stringify(['flurry', 'quickstep', 'evade', 'searing']));
+      // T12 Refuse cleanses an active burn+bleed (and shred/debuffs) + guards
+      const s12 = arenaStartBattle(M(mk(30, 30, 10, null, 'You'), mk(30, 30, 10, 'sentinel', 'Foe')), 12);
+      s12.bS.mods.push({ k: 'dot', kind: 'burn', mag: 0.16, dur: 3, src: 'p' });
+      s12.bS.mods.push({ k: 'dot', kind: 'bleed', mag: 0.12, dur: 3, src: 'p' });
+      _arApplyFx(s12, 'b', { t: 'guardCleanse' }, [], 'Foe', 'You');
+      ok('T12 refuse cleanses DoT + guards', s12.bS.mods.filter((x) => x.k === 'dot').length === 0 && s12.bS.guard === 1);
+      // T13 per-edge multipliers flow through _arenaEffectiveness
+      let edgeOK = true;
+      Object.keys(_ARENA_EFF_EDGES).forEach((key) => {
+        const parts = key.split('>'), e = _ARENA_EFF_EDGES[key];
+        if (Math.abs(_arenaEffectiveness(parts[0], parts[1]).mult - e.win) > 1e-9) edgeOK = false;
+        if (Math.abs(_arenaEffectiveness(parts[1], parts[0]).mult - e.lose) > 1e-9) edgeOK = false;
+      });
+      ok('T13 per-edge mults match the map', edgeOK);
+      // T14 reciprocal-pair invariant: win × lose ≈ 1.0 for every edge
+      ok('T14 reciprocal pairs', Object.keys(_ARENA_EFF_EDGES).every((key) => {
+        const e = _ARENA_EFF_EDGES[key];
+        return Math.abs(e.win * e.lose - 1) <= 0.01;
+      }));
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }

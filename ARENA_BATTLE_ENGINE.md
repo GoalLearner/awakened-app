@@ -1,15 +1,15 @@
-# Awakened — Arena Battle Engine (v2.2, as shipped W233)
+# Awakened — Arena Battle Engine (v2.3, as shipped W234)
 
 > **Status:** CANONICAL for the Ascent tower. This documents the engine **as actually
-> implemented** in `app.js` (build W233), with every constant validated by simulation (§11).
-> **v2.2 changelog (W233, external review patch):** the anti-one-shot cap now binds on the
-> **move total** (multi-hit moves could previously stack to capFrac × hits); accuracy now uses
-> **normalized edgeShare** (scale-invariant — raw EDGE previously pinned every move at the 99%
-> cap at high level); **unified modifier stacking** (same kind refreshes, different kinds
-> multiply, clamps always bind); Ember CD 0→1 + Immolate 20%→16%×2 + a global **DoT intake
-> cap** (20% maxHP/turn); **flinch-model stun timing**; lives locked to rated fights only; the
-> foe AI is now a specified decision tree; per-edge type-eff map; expanded self-test + sim
-> suites. One open tuning flag (Kilnforged/sustain rows — §13).
+> implemented** in `app.js` (build W234), validated by simulation (§12).
+> **v2.3 changelog (W234 — foe-kit rearmament, per-edge type-eff, calibration bands):**
+> structural fix first — **foe kits were rearmed** (walls carry Refuse so DoT has an answer;
+> trickster got a real kit) before any weapon was nerfed; a new **Calibration Targets** section
+> (§0) now governs all balance work; type-eff is **per-edge** (Sent▸Aggr softened to 1.08/0.926
+> — at ±20% a countered rated attempt was a near-auto-loss); DOT_INTAKE_CAP 0.20→0.15 and
+> Stagger CD 3→4 per the prescribed escalation ladders; the early-floor power curve was
+> audited (frontier crosses fresh-account power at floor ~2–3, first weapon is days away) —
+> **curve change proposed, not shipped** (§13). selfTest is now 15 checks.
 > **This is not PvP.** The Arena is a cosmetic, single-player, **bot-only** climb. Duels/PvP
 > are permanently retired; `PVP.md` is stale and is **not** a source of truth for this engine.
 > **Stack:** one vanilla-JS IIFE (`app.js`), no modules/bundler, Capacitor → iOS. The engine
@@ -18,23 +18,34 @@
 
 ---
 
+## 0. Calibration targets (govern every balance decision)
+
+| Target | Band |
+|---|---|
+| **T1** | Matched-weapon player vs equal-power floor foe: **row mean ∈ [55%, 75%]** |
+| **T2** | Any single cell ∈ [25%, 90%]; outside → flag; full row outside T1 after the prescribed levers are exhausted → STOP and report |
+| **T3** | Each type-eff edge's measured contribution at equal power ∈ **[+15, +25] win pts** (archetype kits, no weapons, TYPE_EFF on vs forced 1.0) |
+| **T4** | Mean fight length ∈ **[4, 10] turns** at 0.5× / 1× / 3× REF_POWER |
+
+The baseline for a matched-weapon player is **not 50%**: player rows carry a weapon kit +
+Attuned vs floor foes' archetype kits — the player's gear edge is by design. Do not balance
+player weapons down to bot poverty; upgrade the bots first (that is what W234 did).
+
+---
+
 ## 1. Design goals & invariants
 
 1. **Build + tactics, not luck.** A clearly stronger build wins; the moveset is the tactical
    layer on top.
-2. **"Floor reached = build strength."** HP *and* damage both derive from the same stats, so
-   total power dominates who clears which floor. *(Sim: a 2× build wins 100%.)*
-3. **Cosmetic only.** The engine returns a result object; the single commit writes only Arena
-   rating / W-L / streak / floor / titles to `hb_arena_v2`. No XP, souls, stats, or power.
+2. **"Floor reached = build strength."** *(Sim: a 2× build wins 100%.)*
+3. **Cosmetic only.** The single commit writes only Arena rating / W-L / streak / floor /
+   titles to `hb_arena_v2`. No XP, souls, stats, or power.
 4. **Your weapon defines your 4 moves.** Armor relics feed stats/HP, never moves.
-5. **Deterministic & testable.** All randomness flows through a seeded PRNG (mulberry32);
-   no `Math.random` in the engine.
+5. **Deterministic & testable.** All randomness through a seeded PRNG (mulberry32).
 
 ---
 
 ## 2. The combatants
-
-Six character stats map to three combat **roles** (raw values; the app UI shows them ×10):
 
 | Role | Formula | Combat job |
 |---|---|---|
@@ -42,68 +53,57 @@ Six character stats map to three combat **roles** (raw values; the app UI shows 
 | **DEFENSE** | `VIT×1.4 + WILL` | **HP pool AND per-hit mitigation** |
 | **EDGE** | `INT×1.6` | crit chance, turn order, accuracy |
 
-*(Wealth/WLT was deliberately removed from combat in W225 — it is a non-combat stat.)*
+**Max HP:** `maxHP = max(20, round(40 + DEFENSE × 2.2))`. Player roles = live stats + armor;
+foe roles = the floor curve split by archetype weights (sum 3 — split never changes total power).
 
-**Max HP:** `maxHP = max(20, round(40 + DEFENSE × 2.2))`
-
-- **Player** roles = live stats + equipped armor. **Foe** roles = the floor's power curve split
-  by its archetype weights (which sum to 3, so the split never changes total power).
-- **Build shape still matters:** a glass cannon kills fast but is fragile; a tank mitigates +
-  has more HP but kills slowly. Total power still decides the ladder.
-
-### 2.1 Archetype (derived from the role split)
-`balanced` (no role ≥ 40% of the total) · else the dominant role → `aggressor` (ATTACK) /
-`sentinel` (DEFENSE) / `trickster` (EDGE); a role ≥ 52% of the total → the extreme
-`glasscannon` / `juggernaut`. The player's archetype is derived from their build; a floor's is
-assigned (rotating — §4.3 / boss-fixed).
+**Archetype** (derived from the role split): `balanced` (no role ≥ 40%) · dominant role →
+`aggressor` / `sentinel` / `trickster` · ≥ 52% → `glasscannon` / `juggernaut`.
 
 ---
 
-## 3. Type effectiveness (symmetric RPS, ±20%)
+## 3. Type effectiveness (symmetric, PER-EDGE — no longer uniform ±20%)
 
-Triangle: **Aggressor ▸ Trickster ▸ Sentinel ▸ Aggressor** (extremes collapse to their base;
-Balanced & mirrors are neutral).
+Triangle: **Aggressor ▸ Trickster ▸ Sentinel ▸ Aggressor** (extremes collapse; Balanced &
+mirrors neutral). Computed per direction, per hit; multipliers are reciprocal pairs
+(favored = 1+s, countered = 1/(1+s)).
 
-- Attacker counters defender → that attacker's damage **×1.20**; the countered side's outgoing
-  damage is ×0.83 vs neutral.
-- Computed **per direction, per hit** — symmetric (when the foe counters you, *its* damage is
-  ×1.20 against you).
-- **Implementation (W233):** a per-edge map (`_ARENA_EFF_EDGES`) — all three edges are
-  1.20/0.83 today; the map exists so individual edges can be tuned later (§11 measured each
-  edge's actual contribution).
-
----
-
-## 4. Weapons & moves
-
-A move: `{ power (×ATTACK; 0 = non-damage), accuracy, hits, priority, cooldown, effect }`.
-
-| Weapon | Moveset | Identity |
+| Edge | Multipliers | Measured contribution (T3 band +15..+25) |
 |---|---|---|
-| (Unarmed) | Jab · Hook · Guard · Focus | fallback |
-| Rusted Training Blade | Slash · Lunge · Guard · Focus | balanced starter |
-| Titan's Oathblade | Cleave · Sunder · Brace · Oathstrike | heavy hitter |
-| Hammerfall Warmaul | Crush · Stagger · Brace · Quake | stun / armor-break |
-| Kilnforged Warblade | Searing Cut · Ember · Temper · Immolate | burn + bleed DoT |
-| Ten-Thousand Step Blade | Flurry · Quickstep · Evade · Thousand Cuts | fast / priority |
-| Vessel of Refusal | Ward Strike · Refuse · Willbreak · Last Vow | sustain / defense |
+| Aggressor ▸ Trickster | 1.20 / 0.83 | **+25.2 pts** (untouched per review; ~0.2 over band — flagged) |
+| Trickster ▸ Sentinel | 1.20 / 0.83 | **+19.4 pts** (landed in band via the W234 kit rearmament alone) |
+| Sentinel ▸ Aggressor | **1.08 / 0.926** | **+22.9 pts** (tuned W234, s=0.08, 2 iterations) |
 
-Foes carry an **archetype kit** (e.g. Sentinels run Slash / Brace / Guard / Ward Strike).
+**Why per-edge:** there is no switching mechanic — you bring one build into a rated attempt.
+At a uniform ±20%, the Sent▸Aggr edge measured **+49 win pts**, turning countered attempts
+into near-auto-losses with zero counterplay. Each edge is tuned so a counter stings but is
+playable; the map (`_ARENA_EFF_EDGES`) is the tuning point.
 
-### 4.1 Attuned bonus (player-only "STAB" analogue)
-If the equipped weapon matches the player's derived archetype, the player's **damaging moves
-get ×1.15**. Foes never get it (their kit matches by construction).
+---
 
-| Weapon | Attuned archetypes |
-|---|---|
-| Titan's Oathblade | Aggressor / Juggernaut |
-| Hammerfall Warmaul | Sentinel |
-| Kilnforged Warblade | Aggressor |
-| Ten-Thousand Step Blade | Trickster / Glass-Cannon |
-| Vessel of Refusal | Sentinel |
-| Rusted / Unarmed | none |
+## 4. Weapons, moves & foe kits
 
-### 4.2 Move table (power = ×ATTACK)
+### 4.1 Player weapons (weapon defines your 4 moves; Attuned ×1.15 if it matches your archetype)
+| Weapon | Moveset | Attuned archetypes |
+|---|---|---|
+| (Unarmed) | Jab · Hook · Guard · Focus | none |
+| Rusted Training Blade | Slash · Lunge · Guard · Focus | none |
+| Titan's Oathblade | Cleave · Sunder · Brace · Oathstrike | Aggressor / Juggernaut |
+| Hammerfall Warmaul | Crush · Stagger · Brace · Quake | Sentinel |
+| Kilnforged Warblade | Searing Cut · Ember · Temper · Immolate | Aggressor |
+| Ten-Thousand Step Blade | Flurry · Quickstep · Evade · Thousand Cuts | Trickster / Glass-Cannon |
+| Vessel of Refusal | Ward Strike · Refuse · Willbreak · Last Vow | Sentinel |
+
+### 4.2 Foe kits (ALL documented — the W233 doc only showed one, which is how the trickster gap hid)
+| Foe archetype | Kit | W234 change |
+|---|---|---|
+| Aggressor | Cleave · Sunder · Slash · Focus | unchanged |
+| Glass-Cannon | Oathstrike · Cleave · Slash · Temper | unchanged |
+| Sentinel | Slash · Brace · **Refuse** · Ward Strike | Guard → **Refuse** (walls must answer DoT) |
+| Juggernaut | Crush · Brace · **Refuse** · Quake | Guard → **Refuse** |
+| Trickster | **Flurry · Quickstep · Evade · Searing Cut** | rearmed (was Quickstep/Willbreak/Evade/Flurry — its column was free wins ladder-wide) |
+| Balanced | Slash · Guard · Focus · Lunge | unchanged |
+
+### 4.3 Move table (power = ×ATTACK; W234 changes bold)
 | Move | Power | Acc | Hits | Prio | CD | Effect |
 |---|---|---|---|---|---|---|
 | Jab | 0.85 | 97% | 1 | — | 0 | — |
@@ -116,12 +116,12 @@ get ×1.15**. Foes never get it (their kit matches by construction).
 | Flurry | 0.5 | 95% | 3 | — | 1 | — |
 | Quickstep | 0.7 | 99% | 1 | +1 | 1 | goes first |
 | Thousand Cuts | 0.38 | 95% | 4 | — | 3 | — |
-| Ember | 0.7 | 95% | 1 | — | **1** | **bleed** 12%/t ×3 *(CD 0→1 in v2.2)* |
-| Searing Cut | 1.1 | 90% | 1 | — | 1 | **burn** 16%/t ×3 |
-| Immolate | 1.6 | 85% | 1 | — | 3 | **burn 16%/t ×2** *(20%→16% in v2.2)* |
-| Sunder | 0.8 | 92% | 1 | — | 2 | **armor-shred** −25% ×3 |
-| Quake | 1.2 | 85% | 1 | — | 2 | **armor-shred** −20% ×2 |
-| Stagger | 0.9 | 85% | 1 | — | 3 | **stun** (skip 1 action) |
+| Ember | 0.7 | 95% | 1 | — | 1 | bleed 12%/t ×3 |
+| Searing Cut | 1.1 | 90% | 1 | — | 1 | burn 16%/t ×3 |
+| Immolate | 1.6 | 85% | 1 | — | 3 | burn 16%/t ×2 |
+| Sunder | 0.8 | 92% | 1 | — | 2 | armor-shred −25% ×3 |
+| Quake | 1.2 | 85% | 1 | — | 2 | armor-shred −20% ×2 |
+| Stagger | 0.9 | 85% | 1 | — | **4** | stun (skip 1 action) *(CD 3→4 in W234 — Warmaul row-mean lever)* |
 | Willbreak | 0.85 | 90% | 1 | — | 2 | foe ATK ×0.75 ×3 |
 | Ward Strike | 0.7 | 95% | 1 | — | 1 | heal self 12% |
 | Brace | 0 | — | — | — | 2 | self takes ×0.65 ×2 |
@@ -130,16 +130,12 @@ get ×1.15**. Foes never get it (their kit matches by construction).
 | Guard | 0 | — | — | — | 1 | halve next landed hit (crit-immune block) |
 | Refuse | 0 | — | — | — | 2 | cleanse own debuffs/DoT + guard |
 | Last Vow | 0 | — | — | — | 4 | heal self 40% |
-| *Struggle* | 0.5 | 95% | 1 | — | 0 | fallback when ALL moves are on CD (both sides) |
+| *Struggle* | 0.5 | 95% | 1 | — | 0 | fallback when ALL moves on CD (both sides) |
 
-### 4.3 Floor archetype rotation (no permanent walls)
-Regular floors take their archetype from `['aggressor','sentinel','trickster'][(floor + wins +
-losses) % 3]` — it advances each committed **rated** attempt, so a countered build hits a
-beatable matchup within ≤3 tries. The floor's **name and total power are unchanged**; only the
-matchup rotates. **Milestone bosses keep their fixed archetype** — they are the real type
-checks. *Honest note:* because rotation advances on rated attempts, a player can deliberately
-lose to rotate into a favorable matchup — "matchup shopping" — at the real cost of lives and
-ELO; bosses cannot be shopped.
+### 4.4 Floor archetype rotation
+Regular floors: `['aggressor','sentinel','trickster'][(floor + wins + losses) % 3]` — advances
+each committed **rated** attempt; bosses keep fixed archetypes. "Matchup shopping" (losing on
+purpose to rotate) costs lives + ELO; bosses can't be shopped.
 
 ---
 
@@ -147,40 +143,33 @@ ELO; bosses cannot be shopped.
 
 ```
 // once per move:
-baseAtk = ATTACK × atkStatusMult × attunedMult            // attuned = 1.15 only if player's weapon↔archetype match
-typeEff = effectiveness(attackerArch → defenderArch)       // 1.20 / 0.83 / 1.0 (symmetric, per direction)
-accuracy = min(0.99, move.acc + min(0.08, edgeShare × 0.20))   // W233: NORMALIZED edgeShare — scale-invariant
+baseAtk = ATTACK × atkStatusMult × attunedMult            // attuned = 1.15, player-only, weapon↔archetype match
+typeEff = effectiveness(attackerArch → defenderArch)       // per-edge map (§3), symmetric, per direction
+accuracy = min(0.99, move.acc + min(0.08, edgeShare × 0.20))   // normalized edgeShare — scale-invariant
 
 // per sub-hit (loop `move.hits`):
   if rng() > accuracy            → miss (0; leaves Guard intact)
   else if rng() < dodge          → dodged (0; leaves Guard intact)   // dodge = min(0.50, Σ Evade)
   else:
-    crit   = rng() < critChance                                      // critChance = clamp(0.08 + edgeShare×0.40, 0.08, 0.28)
-    defEff = DEFENSE_base × armorShred × (crit ? (1 − 0.5) : 1)       // crit pierces HALF the base armor
+    crit   = rng() < critChance                                      // clamp(0.08 + edgeShare×0.40, 0.08, 0.28)
+    defEff = DEFENSE_base × armorShred × (crit ? 0.5 : 1)             // crit pierces HALF the base armor
     hit    = baseAtk × move.power × typeEff / (1 + defEff / 60)       // DEFENSE mitigates (DEF_SCALE = 60)
-    if crit: hit ×= 1.5                                               // crit SKIPS the takenMult below (ignores Brace/DEF-up)
-    else:    hit ×= clamp(takenMult, 0.40, 2.0)                       // Brace 0.65 / DEF-up
-    hit ×= 1 + rng(−0.15…+0.15)                                       // ±15% variance, PER sub-hit
-    if Guard not-yet-consumed AND hit > 0: hit ×= 0.5; consume Guard  // first LANDED sub-hit only; applies on crit too
+    if crit: hit ×= 1.5                                               // crit SKIPS takenMult (ignores Brace/DEF-up)
+    else:    hit ×= clamp(takenMult, 0.40, 2.0)
+    hit ×= 1 + rng(−0.15…+0.15)                                       // variance PER sub-hit
+    if Guard not-yet-consumed AND hit > 0: hit ×= 0.5; consume Guard  // first LANDED sub-hit; applies on crits too
     accumulate hit
 
-// W233 — the anti-one-shot cap binds on the MOVE TOTAL (was per sub-hit, which
-// let multi-hit moves stack to capFrac × hits):
-total      = min(Σ hits, (anyCrit ? 0.75 : 0.55) × defender.maxHP)
-effective  = min(total, defender.HP_before)    // overkill past 0 is NOT credited to the damage tally
+total      = min(Σ hits, (anyCrit ? 0.75 : 0.55) × defender.maxHP)   // anti-one-shot cap binds on the MOVE TOTAL
+effective  = min(total, defender.HP_before)    // overkill is NOT credited to the damage tally
 defender.HP = max(0, HP − total)
 dmgDealt[attacker] += effective                // the 40-turn-timeout decider (§8)
-display = max(1, round(total))                 // a UI floor only — NOT in the damage tally
+display = max(1, round(total))                 // UI floor only — NOT in the tally
 ```
 
-**Why crit is the tank counter:** a crit ignores the defender's temporary DEF buffs (Brace /
-DEF-up) **and** sees only half their *base* armor in the divisor. Combined with **Sunder/Quake**
-(which shred the base-armor term itself, down to a 40% floor), a high-EDGE build has a real,
-scaling answer to a wall. *(Sim: glass-cannon-with-weapon vs juggernaut ≈ 53% — a coin-flip.)*
-
-**Crit vs Guard vs Brace (intentional asymmetry):** **Guard is an active block** (a Protect
-analogue) — it halves even a critical hit and is consumed by the first landed sub-hit. **Brace
-is a stance buff** (a stat-stage analogue) — crits pierce it. Active play beats passive stance.
+**Crit vs Guard vs Brace (intentional):** **Guard** is an active block (Protect analogue) —
+crit-immune, consumed by the first landed sub-hit. **Brace** is a stance buff (stat-stage
+analogue) — crits pierce it. Active play beats passive stance.
 
 ---
 
@@ -188,78 +177,59 @@ is a stance buff** (a stat-stage analogue) — crits pierce it. Active play beat
 
 | Status | Effect |
 |---|---|
-| **DoT** (burn / bleed) | `round(afflicted.maxHP × mag)` at end of each turn; credited to its applier. |
-| **DoT intake cap (W233)** | If one fighter's scheduled DoT ticks exceed **20% maxHP** in a turn, every tick is scaled proportionally to total exactly 20%; appliers are credited their scaled share. |
+| **DoT** (burn / bleed) | `round(maxHP × mag)` at end of turn; credited to its applier. |
+| **DoT intake cap** | One fighter's total DoT ticks per turn ≤ **15% maxHP** (W234: was 20%); over → every tick scaled proportionally; appliers credited their scaled share. |
 | **Stun** | skip your next **action** (flinch model — §7). |
-| **ATK up/down** | multiply your outgoing damage for N turns. |
-| **Brace / DEF-up** | damage-taken multiplier (Brace ×0.65); a separate layer from base armor; **crit-pierced**. |
-| **Armor-shred** (Sunder/Quake) | multiplies the *base-armor* term in the divisor (×(1−mag)); the real anti-tank debuff. |
-| **Dodge** (Evade) | % chance to avoid a hit. |
-| **Guard** | halve the next landed hit — **crit-immune active block**, consumed on use. |
-| **Heal** | restore `maxHP × mag` (no overheal). |
-| **Cleanse** (Refuse) | strip own debuffs + DoT, then guard. |
+| **ATK up/down** | multiply outgoing damage. |
+| **Brace / DEF-up** | damage-taken multiplier; crit-pierced. |
+| **Armor-shred** (Sunder/Quake) | multiplies the base-armor divisor term; the anti-tank debuff. |
+| **Dodge** (Evade) | avoid chance; cap 50%. |
+| **Guard** | halve next landed hit; crit-immune; consumed. |
+| **Heal** | restore `maxHP × mag`; no overheal. |
+| **Cleanse** (Refuse) | strip own debuffs + DoT + shred, then guard. |
 
-**Unified stacking rule (W233 — applies to ALL timed effects):**
-- **Same kind → REFRESH:** `dur = max(dur, new.dur)`, magnitude = the strongest. Never stacks
-  (Sunder re-cast keeps the armor term at 0.75; Willbreak re-cast keeps ATK at ×0.75).
-- **Different kinds in the same category → MULTIPLY**, then clamp (Sunder 0.75 × Quake 0.80 =
-  0.60 armor term; Focus 1.30 × Temper 1.40 = 1.82 ATK).
-- **Clamps always bind:** ATK mult ∈ [0.25, 2.0]; taken mult ∈ [0.40, 2.0]; armor-shred
-  product floor 0.40; dodge cap 0.50.
-- **One stun at a time** — a stun on an already-stunned target is wasted (its damage component
-  still lands; the cooldown is still spent). No chain-lock.
-- **DoTs:** same kind refreshes; different kinds (burn + bleed) coexist — subject to the
-  intake cap.
-- **Heal cannot overheal.**
+**Unified stacking:** same kind → REFRESH (dur = max, strongest mag; never stacks) · different
+kinds in a category → MULTIPLY · clamps always bind: ATK ∈ [0.25, 2.0], taken ∈ [0.40, 2.0],
+armor-shred floor 0.40, dodge cap 0.50. One stun at a time (a stun on a stunned target is
+wasted; its damage still lands; CD still spent). Same-kind DoT refreshes; burn+bleed coexist
+under the intake cap.
 
 ---
 
 ## 7. Turn order & flow
 
-Each **turn** = both fighters act once:
-1. Player picks an off-cooldown move (or **Struggle**, 0.5 power, if all four are on CD).
+1. Player picks an off-CD move (or **Struggle** if all four are on CD).
 2. Foe AI picks (§7.1).
-3. **Order:** higher `priority` first; else higher **EDGE**; within a 3% EDGE band, a seeded
-   coin flip.
-4. Each side acts in order; a fighter KO'd before acting is skipped (a priority KO denies the
-   opponent's action — intended).
-5. End-of-turn: DoT ticks (capped, credited) → durations decrement → expired drop → cooldowns tick.
+3. Higher `priority` first; else higher EDGE; within a 3% EDGE band → seeded coin flip.
+4. Each side acts in order; a KO before acting skips the victim (priority KO denies the action).
+5. End of turn: DoT ticks (capped, credited) → durations decrement → cooldowns tick.
 
-**Stun timing (W233 flinch model):** "skip your next action" means — if the stunned fighter has
-**not yet acted this turn**, they lose *this* turn's action; if they had already acted, they
-lose *next* turn's. The stun decrements **when the skipped action occurs** (not at end-of-turn).
-Acting first therefore makes your stuns better — an intended EDGE reward.
+**Stun (flinch model):** if the stunned fighter hasn't acted this turn they lose *this* turn's
+action, else *next* turn's; the stun decrements **when the skip occurs**. Acting first makes
+your stuns better — an intended EDGE reward.
 
-### 7.1 Foe AI (deterministic decision tree, seeded rolls)
-1. If HP < 35% **and** a heal move is off-cooldown: roll — `r < 0.70` → use the heal.
-2. Else if HP < 35% **and** Guard or Brace is off-cooldown: roll — `r < 0.50` → use it
-   (Guard preferred over Brace).
-3. Else a **weighted attack** among off-cooldown damaging moves: weight ∝ `power × acc × hits
-   × typeEff`, ×1.5 for a debuff/DoT move whose effect the player currently lacks. Struggle
-   only when nothing else is available.
-The AI obeys the same stun/dodge/cooldown rules as the player (no cheating) and draws from the
-same seeded PRNG.
+### 7.1 Foe AI (deterministic tree, seeded rolls)
+1. HP < 35% and a heal off-CD: `r < 0.70` → heal.
+2. Else HP < 35% and Guard/Brace off-CD: `r < 0.50` → use it (Guard preferred).
+3. Else weighted attack (weight ∝ power × acc × hits × typeEff; ×1.5 for a debuff/DoT the
+   player lacks). Struggle only when nothing else is available. No cheating; same PRNG.
 
 ---
 
 ## 8. Win / loss & the timeout rule
 
-- **KO:** a fighter at HP ≤ 0 loses immediately (KO always trumps timeout).
-- **Timeout (40 turns):** the fighter who dealt **more total *effective* damage** wins (DoT
-  counts; overkill doesn't). Tie → higher current HP% → seeded coin. *(In normal play fights
-  end by KO in ~6 turns — 0% timeouts across all sim suites; this is a safety net.)*
+**KO:** HP ≤ 0 loses immediately (KO trumps timeout). **Timeout (40 turns):** most total
+*effective* damage wins (DoT counts, overkill doesn't); tie → higher HP% → seeded coin.
+*(0% timeouts across all sim suites — it's a safety net.)*
 
 ---
 
 ## 9. Stakes & commit (cosmetic; once)
 
-Committed exactly once at fight end (`arenaFinalizeBattle`):
-- **Rated fights only** (a genuine attempt at your current floor): ELO change, W-L record,
-  streak, **a daily life on a loss** (2 lives/day; forfeit/quit of a rated attempt = a loss),
-  floor advance + titles on a win.
-- **Unrated rematches of cleared floors commit NOTHING** — no rating, no life, no W-L, no
-  streak, and (because rotation keys off wins+losses) no rotation advance.
-- Rating is floored at the global `ASCENT_RATING_FLOOR = 100`. **Never** XP / currency / power.
+**Rated fights only** (genuine attempt at your current floor): ELO, W-L, streak, a daily life
+on a loss (2/day; forfeiting a rated attempt = a loss), floor advance + titles on a win.
+**Unrated rematches commit NOTHING** (no rating/life/W-L/streak/rotation). Rating floors at
+the global `ASCENT_RATING_FLOOR = 100`. Never XP / currency / power.
 
 ---
 
@@ -267,103 +237,81 @@ Committed exactly once at fight end (`arenaFinalizeBattle`):
 
 ```
 HP_BASE = 40     HP_PER_DEF = 2.2     DEF_SCALE = 60       VARIANCE = ±15% / sub-hit
-CRIT_MULT = 1.5  CRIT_PIERCE = 0.5    CRIT_RANGE = 8–28% (from edgeShare)
-ACC_EDGE_COEF = 0.20   ACC_EDGE_MAXBONUS = 0.08            // accuracy bonus = min(0.08, edgeShare×0.20)
-ATTUNED = 1.15   TYPE_EFF = per-edge map (all edges 1.20 / 0.83 today), symmetric
-MAX_HIT_FRAC = 0.55   MAX_HIT_FRAC_CRIT = 0.75             // MOVE-LEVEL anti-one-shot cap (W233)
-DOT_INTAKE_CAP = 0.20                                       // max DoT one fighter takes per turn
+CRIT_MULT = 1.5  CRIT_PIERCE = 0.5    CRIT_RANGE = 8–28% (edgeShare)
+ACC_EDGE_COEF = 0.20   ACC_EDGE_MAXBONUS = 0.08
+ATTUNED = 1.15
+TYPE_EFF: per-edge map — aggr>trick 1.20/0.83 · trick>sent 1.20/0.83 · sent>aggr 1.08/0.926
+MAX_HIT_FRAC = 0.55   MAX_HIT_FRAC_CRIT = 0.75             // move-level anti-one-shot cap
+DOT_INTAKE_CAP = 0.15                                       // W234 (was 0.20)
 DODGE_CAP = 0.50  ATK_CLAMP = [0.25, 2.0]  TAKEN_CLAMP = [0.40, 2.0]  ARMOR_SHRED_MIN = 0.40
-EDGE_TIE_BAND = 3%   STRUGGLE_POWER = 0.5   TURN_CAP = 40 (→ most effective damage wins)
-REF_POWER = 100                                             // the raw power all §11 grids ran at
-// defScaleEff fight-relative scaling: NOT applied — §11 suite C passed at 0.5×/1×/3× without it
+EDGE_TIE_BAND = 3%   STRUGGLE_POWER = 0.5   TURN_CAP = 40   REF_POWER = 100
+Stagger CD = 4 (W234, was 3)
 ```
-> **Durability is multiplicative:** effective tankiness ≈ `maxHP × mitigation = (40 + 2.2·D)(1 +
-> D/60)`. Tanks *are* tankier than a pure-HP model — intended ("tough but countered"); the
-> crit/Sunder pierce is the counter. If tanks feel oppressive, **raise `DEF_SCALE` before
-> cutting `HP_PER_DEF`.**
 
 ---
 
-## 11. Validation (W233 — offline simulation of the exact pipeline, ≥10k fights/cell, seeded)
+## 11. Early-floor power curve (audited W234 — change PROPOSED, not shipped)
 
-### Suite A — per-weapon grid (player = matching-archetype build + weapon ± attuned, vs foe archetype kits, equal power)
-| Weapon (build) | vs Aggr | vs Sent | vs Trick | vs Glass | vs Jugg | Flag |
+Fresh account (all stats level 1, no gear): ATTACK 2.6 + DEFENSE 2.4 + EDGE 1.6 = **6.6 raw**.
+Curve `3.0 × floor^1.05` (boss ×1.18): F1 **3.0 (0.45×)** · F2 **6.2 (0.94×)** · F3 **9.5
+(1.44×)** · F4 12.8 (1.95×) · F5 16.3 (2.46×) · F10 boss 39.7 (6.0×). The frontier crosses
+player power at **floor ~2–3**, while the first weapon (Rusted Training Blade) is a **D-tier
+drop from The Iron Warden** — reachable only at D-rank, realistically days in. An unarmed
+fresh account at *equal* power already sits at a 20.8% row mean (§12), so the practical wall
+is floor 2–3. **Proposals awaiting product approval (§13.4); no curve change shipped.**
+
+---
+
+## 12. Validation (W234 — final state, ≥10k fights/cell grid · 20k/cell edges, seeded)
+
+### Per-weapon grid (player = matching-arch build + weapon, vs floor foe kits, equal power)
+| Weapon (build) | vs Aggr | vs Sent | vs Trick | vs Glass | vs Jugg | Row mean (T1: 55–75%) |
 |---|---|---|---|---|---|---|
-| Unarmed (bal) | 26.6% | 5.9% | 47.8% | 27.5% | 24.0% | |
-| Rusted (bal) | 36.4% | 14.1% | 62.5% | 38.9% | 35.2% | |
-| Titan's (aggr) | 59.6% | 49.7% | 96.8% | 48.1% | 53.2% | |
-| Warmaul (sent) | 95.5% | 82.1% | 83.0% | 87.6% | 91.6% | ⚠ row >60% |
-| Kilnforged (aggr) | 83.0% | 95.9% | 100% | 67.1% | 96.4% | ⚠ row >60% (post-nerf — §13) |
-| Step Blade (trick) | 9.1% | 84.9% | 73.6% | 18.1% | 79.7% | |
-| Vessel (sent) | 98.7% | 63.0% | 99.0% | 89.6% | 100% | ⚠ row >60% |
+| Unarmed (bal) | 26.6% | 7.6% | 18.2% | 27.5% | 24.0% | 20.8% ⚠ (progression story — §11/§13) |
+| Rusted (bal) | 36.4% | 16.5% | 28.5% | 38.9% | 35.3% | 31.1% ⚠ (no Attuned, starter kit) |
+| Titan's (aggr) | 59.6% | 75.7% | 78.8% | 48.1% | 74.2% | **67.3% ✓ in band** |
+| Warmaul (sent) | 88.0% | 82.8% | 35.4% | 78.6% | 91.0% | 75.2% ⚠ 0.2 over after its one nerf (flagged) |
+| Kilnforged (aggr) | 80.1% | 98.1% | 98.5% | 67.0% | 95.5% | 87.8% 🛑 STOP-reported (§13.1) |
+| Step Blade (trick) | 9.1% | 84.8% | 47.6% | 18.1% | 79.4% | 47.8% ⚠ below band (flag-only — §13.3) |
+| Vessel (sent) | 93.5% | 71.9% | 18.8% | 71.8% | 100% | **71.2% ✓ in band** (cell flags: 18.8 / 100) |
 
-*Reading note:* rows compare a **weapon kit + attuned player** against bare **foe archetype
-kits**, so >50% is expected by design (weapons are the player's edge); the meaningful signal is
-the **spread between rows** — sustain/control kits (Warmaul/Kilnforged/Vessel) far outperform
-burst kits (Titan/Step) under AI play. Human tuning call open (§13).
+*vs W233: the trickster column now has teeth (Vessel 99→19, Warmaul 83→35, Unarmed 48→18) and
+walls can cleanse — the two structural holes are closed.*
 
-### Suite B — type-eff contribution per triangle edge (live ±20% vs forced 1.0)
-| Edge | live | flat (1.0) | type-eff adds |
-|---|---|---|---|
-| Aggressor > Trickster | 98.3% | 82.5% | +15.8 win-pts |
-| Trickster > Sentinel | 52.2% | 2.5% | +49.7 win-pts |
-| Sentinel > Aggressor | 83.1% | 33.6% | +49.6 win-pts |
+### Type-eff edge contributions — see §3 (Aggr▸Trick +25.2 · Trick▸Sent +19.4 · Sent▸Aggr +22.9)
 
-*(Per-edge multipliers deliberately NOT retuned — the per-edge map exists so a human can; the
-asymmetry mostly reflects the underlying archetype power spread, not the multiplier.)*
+### Multi-power (T4) & scenarios
+0.5× / 1× / 3× REF_POWER: **6.9 / 5.9 / 7.0 turns — all in band, 0% timeouts.** Build
+dominance: 2× power wins **100%**. Countered overlevel (Aggr/Titan vs Sentinel): 75.7% @1× →
+95.5% @1.15× (the softened edge restores counterplay; was 51% @1× at ±20%).
 
-### Suite C — multi-power balanced mirror (assert mean turns ∈ [4, 10])
-| Power | win | avg turns | timeouts | band |
-|---|---|---|---|---|
-| 0.5× REF | 50.3% | 6.9 | 0% | OK |
-| 1× REF | 49.9% | 5.9 | 0% | OK |
-| 3× REF | 49.9% | 7.0 | 0% | OK |
-
-→ **PASS at all levels; the conditional `defScaleEff` fight-relative scaling was NOT applied.**
-
-### Scenario re-runs (patched engine)
-| Scenario | Result |
-|---|---|
-| Balanced mirror, equal power | 49.9% · 5.9 turns · max single move 49.8% maxHP |
-| 2× power (build dominance) | **100%** — "floor = build strength" holds |
-| Glass-cannon (Step) vs Juggernaut | 52.6% — tank crackable |
-| Trickster (Step) vs Juggernaut | 79.7% |
-| Countered build (Aggr/Titan vs Sentinel) | 49.7% @1× → 85.5% @1.15× → 96.0% @1.3× |
-
-### Assertions (all pass)
-**Offline sim: 10/10** — determinism · sanity · move-total cap (multi-hit) · accuracy
+### Assertions
+**In-app `Arena.selfTest()`: 15 checks** — determinism · sanity · move-total cap · accuracy
 scale-invariance · shred refresh/multiply/floor · willbreak refresh + focus×temper clamp ·
-DoT intake cap + applier credit · stun flinch timing · wasted stun · timeout rule.
-**In-app `Arena.selfTest()`: 11 checks** (the same suite plus the unrated-commits-nothing
-check, runnable on-device).
+DoT intake cap + credit · stun flinch · wasted stun · unrated-commits-nothing · **rearmed foe
+kits · Refuse cleanses DoT · per-edge mults match the map · reciprocal-pair invariant**.
+Offline sim mirror: 10/10 core assertions + the three suites above.
 
 ---
 
-## 12. Implementation notes
+## 13. Open items (human calls — none shipped)
 
-- **In place** in `app.js` (`arenaStartBattle` → `arenaTakeTurn` → `arenaFinalizeBattle`, plus
-  `_arExecMove` / `_arApplyFx` / `_arEndTurn` / `_arenaFoePick`). No ESM modules, no Node test
-  runner, no Netlify/D1.
-- **Seedable RNG:** inline `mulberry32`; every engine roll uses `sess.rng()`. Live play seeds
-  from time + a counter; tests pass a fixed seed.
-- The session carries a `dmgDealt` accumulator (effective damage, DoT credited via a `src`
-  field) surfaced as a "DMG DEALT" row on the result screen, so a timeout loss is legible.
-- **Dev self-test:** `Arena.selfTest(seed)` runs the 11 deterministic checks and logs
-  PASS/FAIL with the per-check list. `Arena._battle` exposes `{ start, turn, finalize }`.
-
----
-
-## 13. Open tuning questions (for review — none are blockers)
-
-1. **⚠ Kilnforged (4c stop-condition, reported):** after BOTH prescribed nerfs (Ember CD 1,
-   Immolate 16%×2) the row is still >60% vs every archetype (83–100%). Per the review's own
-   rule, no third nerf was improvised. Candidate levers for the human call: Searing Cut burn
-   16%→12%, DOT_INTAKE_CAP 0.20→0.15, or removing Temper from the kit.
-2. **Sustain/control kits dominate under AI play** (Warmaul 82–96%, Vessel 63–100% rows).
-   Partly an artifact of AI-vs-AI testing (the AI never punishes predictable heals), partly
-   real — burst kits (Titan/Step) may need a touch more power, or heals a cooldown bump.
-3. **Per-edge type-eff:** the map is in place; Suite B shows the *measured* contribution per
-   edge if individual edges ever need different multipliers.
-4. **Attuned 1.15** — drop to 1.10 if a single weapon/archetype dominates the live ladder.
-5. **DEF_SCALE = 60 / HP_PER_DEF = 2.2** — validated at 0.5×–3× power in sim; verify fight
-   length on real on-device builds before further tuning.
+1. **🛑 Kilnforged (Patch-2 STOP, both prescribed levers exhausted):** row still >60% in every
+   column (80–98%) after foe-kit rearmament AND DOT_INTAKE_CAP 0.15. Note the W234 edge
+   softening *helped* Kilnforged vs its sentinel counter (92.6→98.1). Candidate levers for a
+   human call: Searing burn 16%→12% · remove Temper from the kit · sentinel/juggernaut AI
+   prioritizing Refuse when burning (currently a generic 50% guard roll).
+2. **Warmaul 75.2% row mean** after its one prescribed nerf (Stagger CD 4) — 0.2 pts over T1,
+   within sampling noise; flagged, no second nerf stacked.
+3. **Step Blade 47.8% mean / 9.1% vs Aggressor** — flagged-only per spec (fast kit losing to
+   attack-stacked foes is acceptable RPS); watch whether the aggressor cell behaves as a wall
+   in live rotation.
+4. **Early-floor curve (Patch-5 proposal — APPROVAL REQUIRED, nothing shipped):**
+   - **Option A (piecewise ramp):** for floors 1–5, `power = 2.0 + 1.1×(floor−1)` →
+     0.30× / 0.47× / 0.64× / 0.80× / 0.97× of fresh power; curve unchanged from F6 (the F5→F6
+     step becomes the explicit "earn your first weapon" gate).
+   - **Option B (re-anchor):** `_ASCENT_BASE 3.0→1.0`, `_ASCENT_EXP 1.05→1.29` → F1 0.15× /
+     F3 0.62× / F5 1.21× / F100 380 ≈ unchanged summit; smooth, softens the mid-tower ~15%.
+   - Progression pacing is a product call — pick one (or neither) before any code ships.
+5. **Aggr▸Trick edge +25.2** — 0.2 over T3, do-not-touch per review; re-measure after any
+   future kit change.
