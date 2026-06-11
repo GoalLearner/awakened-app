@@ -31532,6 +31532,9 @@ button.guildhall-summary-tile:active {
 .pkb-moves .ar-bmoves.lock { opacity: 0.45; pointer-events: none; filter: saturate(0.55); transition: opacity 0.2s ease; }
 /* fast-forward indicator */
 #arena-overlay.pkb-ff .pkb-text::after { content: '▶▶'; float: right; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; color: #f5b842; }
+/* W243 — battle-audio volume sliders (settings) */
+.aud-volrow input[type="range"] { -webkit-appearance: none; appearance: none; width: 132px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.12); outline: none; }
+.aud-volrow input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #f5b842; border: 2px solid #0e0e24; box-shadow: 0 0 6px rgba(245,184,66,0.5); }
 /* reduced motion: collapse transforms to fades, keep the sequencing */
 @media (prefers-reduced-motion: reduce) {
   .pkb-stage.nudge, .pkb-spot.shake, .pkb-stage.settle { animation: none; }

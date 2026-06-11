@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w242';
+  const APP_BUILD_TAG = '2.2.5-w243';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7640,6 +7640,9 @@
     if (_arMatchup.advances && ascentLivesLeft() <= 0) { _arRenderTower(); return; }  // out of lives
     _arClearTimers();
     _arFight = null; _arFlawless = false; _arRevealing = false;
+    // W243 — this tap is the user gesture that unlocks audio (never autoplay):
+    // resume the context + decode the music slots here, before the first beat.
+    try { _audUnlock(); _audLoadMusic(); } catch (_) {}
     _arSess = arenaStartBattle(_arMatchup);   // W231 — weapon-driven HP battle
     _arRenderBattle(null);
   }
@@ -7664,6 +7667,217 @@
   // text box, the move grid in the thumb zone. Each turn's engine events play
   // as SEQUENTIAL beats (announce → lunge → impact → float → drain → toast);
   // input locks until the queue drains. Hold ≥250ms anywhere = 2× fast-forward.
+  // ═══════════════════════════════════════════════════════════════
+  //  W243 — BATTLE AUDIO DIRECTOR. Subscribes to the SAME event beats the
+  //  visual director plays (W242) — it never invents timing. Web Audio only,
+  //  zero dependencies, zero audio files for SFX (all procedural). Three
+  //  buses: master → music, sfx. iOS notes: the context unlocks on the first
+  //  battle gesture (FIGHT tap / move tap — never autoplay); we run as an
+  //  AMBIENT-style session (the WKWebView default respects the ringer
+  //  switch) — players control sound with the phone's switch plus the
+  //  in-app toggles; Capacitor exposes no audio-session category in config,
+  //  so the default is the documented, intended behavior.
+  // ═══════════════════════════════════════════════════════════════
+  const _AUD = {
+    ctx: null, music: null, sfx: null, buffers: {}, musicSrc: null, musicGain: null,
+    missing: {}, voices: 0, loaded: false, duckT: null, log: false,
+    slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting'],
+  };
+  function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
+  function _audMusicOn() { return _audSet('hb_music', 'on') !== 'off'; }
+  function _audMusicVol() { const v = parseFloat(_audSet('hb_music_vol', '0.35')); return isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.35; }
+  function _audSfxVol() { const v = parseFloat(_audSet('hb_sfx_vol', '0.7')); return isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.7; }
+  function _audCtx() {
+    if (_AUD.ctx) return _AUD.ctx;
+    try {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return null;
+      const ctx = new Ctor();
+      const master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);  // limiter-ish ceiling
+      const music = ctx.createGain(); music.gain.value = _audMusicVol(); music.connect(master);
+      const sfx = ctx.createGain(); sfx.gain.value = _audSfxVol(); sfx.connect(master);
+      _AUD.ctx = ctx; _AUD.master = master; _AUD.music = music; _AUD.sfx = sfx;
+      return ctx;
+    } catch (_) { return null; }
+  }
+  // first-gesture unlock — called from battle taps (never before a gesture)
+  function _audUnlock() {
+    try { const c = _audCtx(); if (c && c.state === 'suspended') c.resume(); } catch (_) {}
+  }
+  function _audApplyVols() {
+    if (!_AUD.ctx) return;
+    try {
+      _AUD.sfx.gain.value = _audSfxVol();
+      _AUD.music.gain.value = _audMusicOn() ? _audMusicVol() : 0;
+    } catch (_) {}
+  }
+  // ── synth toolkit: osc/noise → (filter) → ADSR-ish gain → sfx bus ──
+  function _audVoiceOk(priority) {
+    if (_AUD.voices < 8) return true;
+    return !!priority;                      // cap ~8 voices; only priority cues break through
+  }
+  function _audSpend(dur) { _AUD.voices += 1; setTimeout(() => { _AUD.voices = Math.max(0, _AUD.voices - 1); }, Math.ceil(dur * 1000) + 60); }
+  function _audOsc(o) {
+    // o: {type, f0, f1, t, dur, peak, filter:{type,f0,f1,q}, detune}
+    const c = _AUD.ctx; if (!c) return;
+    const t0 = c.currentTime + (o.t || 0);
+    const osc = c.createOscillator();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.f0, t0);
+    if (o.f1 && o.f1 !== o.f0) osc.frequency.exponentialRampToValueAtTime(Math.max(1, o.f1), t0 + o.dur);
+    if (o.detune) osc.detune.value = o.detune;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(o.peak || 0.2, t0 + Math.min(0.012, o.dur * 0.2));
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+    let node = osc;
+    if (o.filter) {
+      const f = c.createBiquadFilter(); f.type = o.filter.type || 'lowpass';
+      f.frequency.setValueAtTime(o.filter.f0, t0);
+      if (o.filter.f1) f.frequency.exponentialRampToValueAtTime(Math.max(10, o.filter.f1), t0 + o.dur);
+      if (o.filter.q) f.Q.value = o.filter.q;
+      osc.connect(f); node = f;
+    }
+    node.connect(g); g.connect(_AUD.sfx);
+    osc.start(t0); osc.stop(t0 + o.dur + 0.03);
+  }
+  function _audNoise(o) {
+    // o: {t, dur, peak, filter:{type,f0,f1,q}}
+    const c = _AUD.ctx; if (!c) return;
+    const t0 = c.currentTime + (o.t || 0);
+    const len = Math.max(1, Math.floor(c.sampleRate * o.dur));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(o.peak || 0.2, t0 + Math.min(0.01, o.dur * 0.2));
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+    let node = src;
+    if (o.filter) {
+      const f = c.createBiquadFilter(); f.type = o.filter.type || 'lowpass';
+      f.frequency.setValueAtTime(o.filter.f0, t0);
+      if (o.filter.f1) f.frequency.exponentialRampToValueAtTime(Math.max(10, o.filter.f1), t0 + o.dur);
+      if (o.filter.q) f.Q.value = o.filter.q;
+      src.connect(f); node = f;
+    }
+    node.connect(g); g.connect(_AUD.sfx);
+    src.start(t0);
+  }
+  // ── the cue book — short, punchy, chiptune-adjacent. Per-cue gain trims. ──
+  function _audCue(name) {
+    if (!soundEnabled) return;                                  // SFX on/off = the app's existing Sound toggle
+    const c = _audCtx(); if (!c) return;
+    if (c.state === 'suspended') { try { c.resume(); } catch (_) {} if (c.state === 'suspended') return; }
+    const pri = name === 'ko' || name === 'hit_crit' || name === 'boss_intro';
+    if (!_audVoiceOk(pri)) return;
+    if (_AUD.log) { try { console.log('[aud] cue:', name); } catch (_) {} }
+    switch (name) {
+      case 'ui_tap':      _audSpend(0.06); _audOsc({ type: 'square', f0: 660, dur: 0.05, peak: 0.06 }); break;
+      case 'ui_denied':   _audSpend(0.12); _audOsc({ type: 'square', f0: 140, f1: 90, dur: 0.11, peak: 0.1, filter: { type: 'lowpass', f0: 500 } }); break;
+      case 'text_blip':   _audSpend(0.03); _audOsc({ type: 'square', f0: 880, dur: 0.025, peak: 0.018 }); break;
+      case 'lunge':       _audSpend(0.16); _audNoise({ dur: 0.15, peak: 0.1, filter: { type: 'bandpass', f0: 600, f1: 2400, q: 1.2 } }); break;
+      case 'hit_normal':  _audSpend(0.18);
+        _audNoise({ dur: 0.09, peak: 0.22, filter: { type: 'lowpass', f0: 2800, f1: 600 } });
+        _audOsc({ type: 'sine', f0: 160, f1: 70, dur: 0.16, peak: 0.3 }); break;
+      case 'hit_crit':    _audSpend(0.3);
+        _audNoise({ dur: 0.1, peak: 0.26, filter: { type: 'lowpass', f0: 3200, f1: 500 } });
+        _audOsc({ type: 'sine', f0: 200, f1: 55, dur: 0.22, peak: 0.38 });
+        _audOsc({ type: 'square', f0: 520, f1: 1040, t: 0.05, dur: 0.16, peak: 0.09 }); break;
+      case 'super_effective': _audSpend(0.3);
+        _audOsc({ type: 'square', f0: 740, dur: 0.1, peak: 0.1 });
+        _audOsc({ type: 'square', f0: 1108, t: 0.1, dur: 0.16, peak: 0.1 }); break;
+      case 'not_effective': _audSpend(0.3);
+        _audOsc({ type: 'square', f0: 392, dur: 0.11, peak: 0.09, filter: { type: 'lowpass', f0: 1200 } });
+        _audOsc({ type: 'square', f0: 294, t: 0.11, dur: 0.17, peak: 0.09, filter: { type: 'lowpass', f0: 900 } }); break;
+      case 'miss_dodge':  _audSpend(0.2); _audNoise({ dur: 0.18, peak: 0.09, filter: { type: 'highpass', f0: 1200, f1: 4500 } }); break;
+      case 'hp_drain':    _audSpend(0.05); _audOsc({ type: 'square', f0: 480, dur: 0.03, peak: 0.025, filter: { type: 'lowpass', f0: 900 } }); break;
+      case 'heal':        _audSpend(0.34);
+        [523, 659, 784].forEach((f, i) => _audOsc({ type: 'sine', f0: f, t: i * 0.07, dur: 0.16, peak: 0.08 })); break;
+      case 'status_burn': _audSpend(0.3);
+        for (let i = 0; i < 4; i++) _audNoise({ t: i * 0.05, dur: 0.04, peak: 0.07, filter: { type: 'bandpass', f0: 1800 + i * 400, q: 3 } }); break;
+      case 'status_stun': _audSpend(0.2);
+        _audOsc({ type: 'square', f0: 620, dur: 0.14, peak: 0.09, detune: -18 });
+        _audOsc({ type: 'square', f0: 624, dur: 0.14, peak: 0.09, detune: 22 }); break;
+      case 'status_buff': _audSpend(0.24);
+        [440, 587, 880].forEach((f, i) => _audOsc({ type: 'sine', f0: f, t: i * 0.05, dur: 0.1, peak: 0.06 })); break;
+      case 'cauterize':   _audSpend(0.4); _audNoise({ dur: 0.38, peak: 0.12, filter: { type: 'highpass', f0: 900, f1: 300 } }); break;
+      case 'dot_tick':    _audSpend(0.07); _audNoise({ dur: 0.05, peak: 0.06, filter: { type: 'bandpass', f0: 2200, q: 2.5 } }); break;
+      case 'ko':          _audSpend(0.7);
+        _audOsc({ type: 'sine', f0: 120, f1: 32, dur: 0.65, peak: 0.42 });
+        _audNoise({ dur: 0.2, peak: 0.18, filter: { type: 'lowpass', f0: 1400, f1: 200 } }); break;
+      case 'boss_intro':  _audSpend(1.2);
+        _audOsc({ type: 'sine', f0: 50, f1: 38, dur: 1.1, peak: 0.4 });
+        _audOsc({ type: 'sawtooth', f0: 98, f1: 110, t: 0.15, dur: 0.9, peak: 0.07, filter: { type: 'lowpass', f0: 300, f1: 700 } }); break;
+    }
+  }
+  // ── music layer: gapless buffer loops, drop-in file slots ──
+  function _audLoadMusic() {
+    if (_AUD.loaded || !_audCtx()) return;
+    _AUD.loaded = true;
+    _AUD.slots.forEach((slot) => {
+      if (_AUD.buffers[slot] || _AUD.missing[slot]) return;
+      fetch('assets/audio/' + slot + '.m4a')
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then((ab) => new Promise((res, rej) => _AUD.ctx.decodeAudioData(ab, res, rej)))
+        .then((buf) => { _AUD.buffers[slot] = buf; })
+        .catch(() => {
+          if (!_AUD.missing[slot]) {
+            _AUD.missing[slot] = true;
+            try { console.log('[aud] music slot absent (ships silent): ' + slot); } catch (_) {}
+          }
+        });
+    });
+  }
+  function _audStopMusic(fade) {
+    const c = _AUD.ctx; if (!c || !_AUD.musicSrc) return;
+    const src = _AUD.musicSrc, g = _AUD.musicGain;
+    _AUD.musicSrc = null; _AUD.musicGain = null;
+    try {
+      if (g && fade) { g.gain.setValueAtTime(g.gain.value, c.currentTime); g.gain.linearRampToValueAtTime(0.0001, c.currentTime + fade); }
+      setTimeout(() => { try { src.stop(); } catch (_) {} }, fade ? Math.ceil(fade * 1000) : 0);
+      if (!fade) src.stop();
+    } catch (_) {}
+  }
+  function _audPlayMusic(slot, loop) {
+    const c = _audCtx(); if (!c || !_audMusicOn()) return;
+    const buf = _AUD.buffers[slot];
+    if (!buf) return;                                          // slot absent → silent, already logged
+    _audStopMusic(0.15);
+    try {
+      const src = c.createBufferSource();
+      src.buffer = buf; src.loop = !!loop;
+      if (loop) { src.loopStart = 0; src.loopEnd = buf.duration; }   // gapless: buffer loop points, never <audio>
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, c.currentTime);
+      g.gain.linearRampToValueAtTime(1, c.currentTime + 0.6);        // 600ms fade-in
+      src.connect(g); g.connect(_AUD.music);
+      src.start();
+      _AUD.musicSrc = src; _AUD.musicGain = g; _AUD.musicLoop = !!loop;
+    } catch (_) {}
+  }
+  // duck music −4dB (×0.63) during crit/KO blocking beats
+  function _audDuck(ms) {
+    const c = _AUD.ctx; if (!c || !_AUD.musicGain) return;
+    try {
+      const g = _AUD.musicGain;
+      g.gain.cancelScheduledValues(c.currentTime);
+      g.gain.setValueAtTime(0.63, c.currentTime);
+      g.gain.linearRampToValueAtTime(1, c.currentTime + (ms / 1000) + 0.25);
+    } catch (_) {}
+  }
+  // lifecycle: background pauses, foreground resumes (interruption-safe)
+  (function () {
+    try {
+      document.addEventListener('visibilitychange', () => {
+        const c = _AUD.ctx; if (!c) return;
+        if (document.hidden) { try { c.suspend(); } catch (_) {} }
+        else { try { c.resume(); } catch (_) {} }
+      });
+    } catch (_) {}
+  })();
+
   // W242 — significance-weighted timing table (single source of truth).
   // Principle: FAST ACTIONS, SLOW CONSEQUENCES. Animations (anim-scaled, 2× under
   // fast-forward) stay punchy; HOLDS (hold-scaled, ×0.25 under FF, min 150ms) give
@@ -7727,6 +7941,11 @@
     bar.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
     bar.className = frac > 0.5 ? 'ok' : frac >= 0.2 ? 'warn' : 'crit';
     num.innerHTML = v + '<span class="mx"> / ' + max + '</span>';
+    // the classic quiet tick-down during the drain (skipped under FF — spam control)
+    if (animate && !_pkbFF) {
+      const n = 4, span = Math.max(_PKB_T.drainMin, _pkbMs(_PKB_T.drain));
+      for (let k = 0; k < n; k++) _arAfter(Math.round((k + 0.5) * span / n), () => { try { _audCue('hp_drain'); } catch (_) {} });
+    }
   }
   function _pkbChips(side, pulse) {
     const s = _arSess; if (!s) return;
@@ -7742,7 +7961,7 @@
     const card = (mv) => {
       const onCd = s.cd[mv.id] > 0;
       const tag = (mv.power ? 'PWR ' + Math.round(mv.power * 100) : 'SUPPORT') + (mv.prio ? ' · 1ST' : '') + (mv.hits ? ' · ×' + mv.hits : '');
-      return '<button class="ar-bmove' + (onCd ? ' cd' : '') + '"' + (onCd ? '' : ' data-ar="move" data-move="' + mv.id + '"') + '>' +
+      return '<button class="ar-bmove' + (onCd ? ' cd' : '') + '"' + (onCd ? ' data-ar="movecd"' : ' data-ar="move" data-move="' + mv.id + '"') + '>' +
         '<div class="top"><span class="g">' + _arGlyph(mv.gl || 'sword', onCd ? '#6b6b86' : '#f5b842', 15) + '</span><span class="nm">' + esc(mv.name) + '</span>' +
           (onCd ? '<span class="cdn">' + s.cd[mv.id] + '</span>' : '') + '</div>' +
         '<div class="ds">' + esc(mv.desc || '') + '</div><div class="tg">' + tag + '</div></button>';
@@ -7776,11 +7995,13 @@
     // reveal + hold) — long lines type faster instead of eating the dwell budget
     const ticks = Math.max(1, Math.floor(_PKB_T.announce / _PKB_T.type));
     const step = Math.max(_pkbFF ? 5 : 2, Math.ceil(plain.length / ticks));
+    let blip = 0;
     const tick = () => {
       if (finished || !_arSess) return;
       i += step;
       if (i >= plain.length) { finish(); return; }
       el.textContent = plain.slice(0, i);
+      if (!_pkbFF && (blip++ % 2 === 0)) { try { _audCue('text_blip'); } catch (_) {} }   // FF: spam control
       _arAfter(_PKB_T.type, tick);
     };
     el.textContent = '';
@@ -7837,7 +8058,7 @@
     const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
     if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
     else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
-    try { playSfx(e.crit ? 'ar_crit' : e.side === 'p' ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
+    try { _audCue(e.crit ? 'hit_crit' : 'hit_normal'); } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
@@ -7854,10 +8075,10 @@
         const eff = e.side === 'p' ? s.pEff : s.bEff;
         const showEff = !_pkbEffShown[e.side] && Math.abs(eff - 1) > 0.001;
         const chain = [];
-        if (e.crit) chain.push((cb) => _pkbToast('CRITICAL HIT!', 'crit', 'crit', cb));
+        if (e.crit) chain.push((cb) => { try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {} _pkbToast('CRITICAL HIT!', 'crit', 'crit', cb); });
         if (showEff) {
           _pkbEffShown[e.side] = true;
-          chain.push((cb) => _pkbToast(eff > 1 ? 'SUPER EFFECTIVE!' : 'NOT VERY EFFECTIVE…', eff > 1 ? 'super' : 'weak', 'eff', cb));
+          chain.push((cb) => { try { _audCue(eff > 1 ? 'super_effective' : 'not_effective'); } catch (_) {} _pkbToast(eff > 1 ? 'SUPER EFFECTIVE!' : 'NOT VERY EFFECTIVE…', eff > 1 ? 'super' : 'weak', 'eff', cb); });
         }
         if (!chain.length) chain.push((cb) => _pkbHold(_PKB_T.settle, cb));
         let i = 0;
@@ -7866,6 +8087,7 @@
       };
       _pkbSay(used, _PKB_T.announceHold, () => {
         const atk = _pkbEl('pkb-spot-' + e.side);
+        try { _audCue('lunge'); } catch (_) {}
         if (atk) { atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe'); _pkbAfter(_PKB_T.lunge, () => atk.classList.remove('lunge-you', 'lunge-foe')); }
         _pkbAfter(_PKB_T.lunge, () => {
           if (hits > 1) {
@@ -7892,15 +8114,16 @@
         });
       });
     } else if (e.t === 'miss') {
-      _pkbSay(used, _PKB_T.announceHold, () => _pkbToast('MISS', 'miss', 'miss', next));
+      _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} _pkbToast('MISS', 'miss', 'miss', next); });
     } else if (e.t === 'dodge') {
-      _pkbSay(used, _PKB_T.announceHold, () => _pkbToast('DODGED!', 'miss', 'miss', next));
+      _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} _pkbToast('DODGED!', 'miss', 'miss', next); });
     } else if (e.t === 'dot') {
       // drain animates DURING the dwell — start it as the line lands, hold covers it
       const defSide = e.side === 'p' ? 'b' : 'p';
       _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
       _pkbSetHP(defSide, _pkbHPm[defSide], true);
       _pkbChips(defSide, true);
+      try { _audCue('dot_tick'); } catch (_) {}
       _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'heal') {
       const m2 = (e.text || '').match(/restores\s(\d+)\sHP/);
@@ -7911,9 +8134,18 @@
       }
       const plate = _pkbEl('pkb-plate-' + e.side);
       if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
+      try { _audCue('heal'); } catch (_) {}
       _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'fx') {
-      const cau = (e.text || '').indexOf('cauterized; the') !== -1;
+      const tx = e.text || '';
+      const cau = tx.indexOf('cauterized; the') !== -1;
+      // status cue by engine-authored line content (event log is the truth)
+      try {
+        if (cau || tx.indexOf('refuses') !== -1) _audCue('cauterize');
+        else if (tx.indexOf('burning') !== -1 || tx.indexOf('bleeding') !== -1) _audCue('status_burn');
+        else if (tx.indexOf('stunned') !== -1 || tx.indexOf('armor shredded') !== -1 || tx.indexOf('reeling') !== -1) _audCue('status_stun');
+        else _audCue('status_buff');     // atk up/down, braces, evasive, guards
+      } catch (_) {}
       _pkbSay(e.text, _PKB_T.statusHold, () => {
         _pkbChips('p', true); _pkbChips('b', true);
         if (cau) _pkbToast('CAUTERIZED — NO EFFECT', 'cau', 'status', next);
@@ -7958,6 +8190,9 @@
       if (spot) spot.classList.add('ko');
       if (plate) plate.classList.add('ko');
       try { if (navigator.vibrate) navigator.vibrate(s.won ? 22 : [30, 40, 60]); } catch (_) {}
+      try { _audCue('ko'); _audDuck(_pkbHoldMs(_PKB_T.koHold) + _PKB_T.ko); } catch (_) {}
+      // KO resolution: crossfade the loop out, sting in (slot absent → silent)
+      try { _audStopMusic(0.5); setTimeout(() => _audPlayMusic(s.won ? 'victory_sting' : 'defeat_sting', false), 350); } catch (_) {}
       if (_pkbFightT0) { try { console.log('[pkb] fight real-time: ' + ((Date.now() - _pkbFightT0) / 1000).toFixed(1) + 's, turns: ' + (s.turn - 1)); } catch (_) {} }
       _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', _PKB_T.koHold, () => {
         _pkbAfter(_PKB_T.ko, () => { _pkbLock(false); _pkbRefreshMoves(); });
@@ -8020,6 +8255,15 @@
     _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
     _pkbChips('p'); _pkbChips('b');
     _pkbRefreshMoves();
+    // W243 — music: boss floors get boss_loop + the intro boom under the taunt
+    // line; regular floors get battle_loop. Decode is async, so retry once if
+    // the buffer wasn't ready for the very first fight. Absent slots = silent.
+    try {
+      if (isBoss) _audCue('boss_intro');
+      const slot = isBoss ? 'boss_loop' : 'battle_loop';
+      _audPlayMusic(slot, true);
+      _arAfter(1200, () => { if (!_AUD.musicSrc && _arView === 'battle') _audPlayMusic(slot, true); });
+    } catch (_) {}
   }
 
   // ── result ────────────────────────────────────────────────────────
@@ -8039,6 +8283,7 @@
     _arRevealing = false;
     _arView = 'result';
     _arBodyMode(false);
+    try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}   // forfeit path: loop never outlives the fight
     const f = _arFight, won = f.won, up = f.ratingDelta >= 0;
     const score = won ? (f.result.pWins + '–' + f.result.bWins) : (f.result.bWins + '–' + f.result.pWins);
     const tierB = _ascTier(f.ratingBefore), tierA = _ascTier(f.ratingAfter);
@@ -8144,6 +8389,7 @@
     if (!ov) return;
     _arClearTimers();
     _arSess = null;
+    try { _audStopMusic(0.25); } catch (_) {}     // W243 — music never outlives the Arena
     ov.classList.add('hidden');
     ov.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', _arKeydown, true);
@@ -8201,8 +8447,10 @@
         if (!_arSess || _arSess.done || _arView !== 'battle' || _pkbBusy) return;
         const ev = arenaTakeTurn(_arSess, act.getAttribute('data-move'));
         if (!ev) return;                                                   // invalid / on cooldown
+        try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}              // W243 — gesture + tap click
         _pkbPlay(ev);                                                      // beats handle sfx/haptics/HP/toasts; unlocks on drain
       }
+      else if (a === 'movecd')  { try { _audCue('ui_denied'); } catch (_) {} }   // cooldown-locked move tapped
       else if (a === 'pkbtext') { if (_pkbTypeDone) _pkbTypeDone(); }      // tap the text box → finish the typewriter line
       else if (a === 'next')    {                                          // SEE RESULT after the final blow
         if (!_arSess || !_arSess.done || _pkbBusy) return;
@@ -37073,6 +37321,31 @@
       localStorage.setItem('hb_sound', soundEnabled ? 'on' : 'off');
       document.getElementById('sound-toggle').setAttribute('aria-checked', soundEnabled ? 'true' : 'false');
     });
+    // ── W243 — battle audio settings (music on/off + volumes), applied live ──
+    (function () {
+      const mt = document.getElementById('music-toggle');
+      const mv = document.getElementById('music-vol');
+      const sv = document.getElementById('sfx-vol');
+      if (mt) {
+        mt.setAttribute('aria-checked', _audMusicOn() ? 'true' : 'false');
+        mt.addEventListener('click', () => {
+          const on = !_audMusicOn();
+          try { localStorage.setItem('hb_music', on ? 'on' : 'off'); } catch (_) {}
+          mt.setAttribute('aria-checked', on ? 'true' : 'false');
+          _audApplyVols();
+          if (!on) { try { _audStopMusic(0.2); } catch (_) {} }
+        });
+      }
+      if (mv) {
+        mv.value = Math.round(_audMusicVol() * 100);
+        mv.addEventListener('input', () => { try { localStorage.setItem('hb_music_vol', String(mv.value / 100)); } catch (_) {} _audApplyVols(); });
+      }
+      if (sv) {
+        sv.value = Math.round(_audSfxVol() * 100);
+        sv.addEventListener('input', () => { try { localStorage.setItem('hb_sfx_vol', String(sv.value / 100)); } catch (_) {} _audApplyVols(); });
+        sv.addEventListener('change', () => { try { _audUnlock(); _audCue('ui_tap'); } catch (_) {} });   // audible preview at the new level
+      }
+    })();
 
     // v3 Phase 1z.284 W191 — Habits view mode toggle (List default,
     // Grid opt-out). aria-checked === 'true' means List is ON.
