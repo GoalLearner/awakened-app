@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w246';
+  const APP_BUILD_TAG = '2.2.5-w247';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7821,9 +7821,20 @@
   // Status lands in Copy Debug Info → payload.audio.
   function _audLoadSlot(slot) {
     const attempt = (ext) => fetch('assets/audio/' + slot + '.' + ext)
-      .then((r) => { if (!r.ok) throw ('fetch-' + r.status); return r.arrayBuffer(); })
-      .then((ab) => new Promise((res, rej) =>
-        _AUD.ctx.decodeAudioData(ab, res, (e) => rej('decode: ' + String((e && e.message) || e || 'null')))));
+      .then((r) => {
+        // W247 — Capacitor's custom scheme (capacitor://localhost) serves
+        // bundled files with STATUS 0 (non-HTTP path): r.ok is false but the
+        // body is real. A truly absent file REJECTS with TypeError instead
+        // (proven by the sting slots in the W246 device payload). So accept
+        // status 0; the byteLength guard below catches any empty body.
+        if (!r.ok && r.status !== 0) throw ('fetch-' + r.status);
+        return r.arrayBuffer();
+      })
+      .then((ab) => {
+        if (!ab || ab.byteLength < 1024) throw ('empty-body-' + (ab ? ab.byteLength : 'null'));
+        return new Promise((res, rej) =>
+          _AUD.ctx.decodeAudioData(ab, res, (e) => rej('decode: ' + String((e && e.message) || e || 'null'))));
+      });
     attempt('m4a')
       .then((buf) => { _AUD.buffers[slot] = buf; _AUD.status[slot] = 'm4a ok ' + buf.duration.toFixed(1) + 's'; })
       .catch((e1) => attempt('mp3')
