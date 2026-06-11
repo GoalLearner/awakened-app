@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w241';
+  const APP_BUILD_TAG = '2.2.5-w242';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7664,9 +7664,29 @@
   // text box, the move grid in the thumb zone. Each turn's engine events play
   // as SEQUENTIAL beats (announce → lunge → impact → float → drain → toast);
   // input locks until the queue drains. Hold ≥250ms anywhere = 2× fast-forward.
-  const _PKB_T = { announce: 350, hold: 250, lunge: 180, impact: 250, float: 600, drain: 500, drainMin: 300, toast: 450, ko: 700, gap: 120, type: 16 };
+  // W242 — significance-weighted timing table (single source of truth).
+  // Principle: FAST ACTIONS, SLOW CONSEQUENCES. Animations (anim-scaled, 2× under
+  // fast-forward) stay punchy; HOLDS (hold-scaled, ×0.25 under FF, min 150ms) give
+  // meaningful messages reading time. Reduced-motion collapses animations only —
+  // holds remain full length (reading time matters more without motion).
+  const _PKB_T = {
+    type: 16,                                  // typewriter ms per step
+    announce: 350, announceHold: 300,          // move announce (blocking)
+    lunge: 180, impact: 250, float: 600,       // the attack — unchanged, punchy
+    drain: 500, drainMin: 300,                 // HP drain animation
+    settle: 350,                               // post-drain settle (only if NO toast follows)
+    critReveal: 200, critHold: 900, critFade: 150,
+    effReveal: 200, effHold: 800, effFade: 150,
+    missReveal: 150, missHold: 550,
+    statusHold: 800,                           // status-applied line (burn/stun/CAUTERIZED)
+    dotHold: 600,                              // end-of-turn DoT tick line
+    actorGap: 450,                             // between actors (was 120)
+    turnGap: 550,                              // between full turns
+    ko: 700, koHold: 600,
+    multiHit: 200,                             // sub-hit impact spacing (Flurry identity)
+  };
   let _pkbBusy = false, _pkbFF = false, _pkbFFTimer = null, _pkbTypeDone = null;
-  let _pkbHPm = { p: 0, b: 0 }, _pkbEffShown = { p: true, b: true };
+  let _pkbHPm = { p: 0, b: 0 }, _pkbEffShown = { p: true, b: true }, _pkbFightT0 = 0;
 
   function _pkbArchTint(archKey) {
     if (archKey === 'aggressor' || archKey === 'glasscannon') return '#ef4444';
@@ -7674,8 +7694,10 @@
     if (archKey === 'trickster') return '#a78bfa';
     return '#6b6b86';
   }
-  function _pkbMs(ms) { return Math.max(40, Math.round(ms * (_pkbFF ? 0.5 : 1))); }
+  function _pkbMs(ms) { return Math.max(40, Math.round(ms * (_pkbFF ? 0.5 : 1))); }          // animations: 2× under FF
   function _pkbAfter(ms, cb) { _arAfter(_pkbMs(ms), cb); }
+  function _pkbHoldMs(ms) { return _pkbFF ? Math.max(150, Math.round(ms * 0.25)) : ms; }     // holds: ×0.25 under FF, min 150
+  function _pkbHold(ms, cb) { _arAfter(_pkbHoldMs(ms), cb); }
   function _pkbEl(id) { return document.getElementById(id); }
 
   // status chips with remaining-turn counts (truth = session state)
@@ -7735,22 +7757,28 @@
     const grid = box && box.firstChild;
     if (grid && grid.classList) grid.classList.toggle('lock', !!on);
   }
-  // typewriter — tap the text box to complete the line instantly
-  function _pkbSay(text, cb) {
+  // typewriter — tap the text box to complete the line instantly. `hold` is the
+  // post-reveal dwell (hold-scaled): comprehension time, not animation time.
+  function _pkbSay(text, hold, cb) {
     const el = _pkbEl('pkb-text-line');
     if (!el) { cb && cb(); return; }
     const plain = String(text).replace(/<[^>]*>/g, '');
+    const dwell = (typeof hold === 'number') ? hold : _PKB_T.announceHold;
     let i = 0, finished = false;
     const finish = () => {
       if (finished) return;
       finished = true; _pkbTypeDone = null;
       el.textContent = plain;
-      _pkbAfter(_PKB_T.hold, () => { if (cb) cb(); });
+      _pkbHold(dwell, () => { if (cb) cb(); });
     };
     _pkbTypeDone = finish;
+    // adaptive speed: every line fully reveals within ~announce ms (spec: 350ms
+    // reveal + hold) — long lines type faster instead of eating the dwell budget
+    const ticks = Math.max(1, Math.floor(_PKB_T.announce / _PKB_T.type));
+    const step = Math.max(_pkbFF ? 5 : 2, Math.ceil(plain.length / ticks));
     const tick = () => {
       if (finished || !_arSess) return;
-      i += _pkbFF ? 5 : 2;
+      i += step;
       if (i >= plain.length) { finish(); return; }
       el.textContent = plain.slice(0, i);
       _arAfter(_PKB_T.type, tick);
@@ -7771,14 +7799,28 @@
     fx.appendChild(d);
     _pkbAfter(_PKB_T.float + 250, () => { try { d.remove(); } catch (_) {} });
   }
-  function _pkbToast(txt, cls, cb) {
+  // significance-tiered BLOCKING toast: reveal (anim-scaled) → hold (hold-scaled)
+  // → fade. Nothing advances until the full beat elapses; toasts never overlap
+  // the next announce.
+  function _pkbToast(txt, cls, tier, cb) {
     const fx = _pkbEl('pkb-fx');
     if (!fx) { cb && cb(); return; }
+    const T = tier === 'crit' ? { r: _PKB_T.critReveal, h: _PKB_T.critHold, f: _PKB_T.critFade }
+            : tier === 'eff'  ? { r: _PKB_T.effReveal,  h: _PKB_T.effHold,  f: _PKB_T.effFade }
+            : tier === 'status' ? { r: _PKB_T.missReveal, h: _PKB_T.statusHold, f: _PKB_T.effFade }
+            : { r: _PKB_T.missReveal, h: _PKB_T.missHold, f: 0 };          // miss/dodged
     const t = document.createElement('div');
     t.className = 'pkb-toast ' + (cls || '');
+    t.style.animationDuration = _pkbMs(T.r) + 'ms';
     t.textContent = txt;
     fx.appendChild(t);
-    _pkbAfter(_PKB_T.toast + 250, () => { try { t.remove(); } catch (_) {} if (cb) cb(); });
+    _pkbAfter(T.r, () => _pkbHold(T.h, () => {
+      if (T.f) {
+        t.style.transition = 'opacity ' + _pkbMs(T.f) + 'ms ease';
+        t.style.opacity = '0';
+        _pkbAfter(T.f, () => { try { t.remove(); } catch (_) {} if (cb) cb(); });
+      } else { try { t.remove(); } catch (_) {} if (cb) cb(); }
+    }));
   }
   // move-name extraction from our own event text formats (presentation only)
   function _pkbMoveName(e) {
@@ -7788,82 +7830,122 @@
     if (!m) m = t.match(/dodges\s(.+?)!/);
     return m ? m[1] : null;
   }
-  // one beat per engine event — announce → act → react → drain → toast
+  // one beat per engine event. Stacking order for an attack: announce → lunge →
+  // impact → number + drain → crit toast → effectiveness toast → (status events
+  // follow in-queue with their own holds). Post-drain settle ONLY if no toast.
+  function _pkbImpactFx(e, defSide, dmgShown) {
+    const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
+    if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
+    else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
+    try { playSfx(e.crit ? 'ar_crit' : e.side === 'p' ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
+    _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
+  }
   function _pkbBeat(e, next) {
     const s = _arSess; if (!s) return;
     const foeName = _arMatchup.bot.name;
     const mvName = _pkbMoveName(e);
     const used = (e.side === 'p' ? 'You used ' : foeName + ' used ') + (mvName ? mvName.toUpperCase() : 'an attack') + '!';
     if (e.t === 'hit') {
-      _pkbSay(used, () => {
+      const defSide = e.side === 'p' ? 'b' : 'p';
+      const hits = parseInt(((e.text || '').match(/×(\d+)\sfor/) || [])[1], 10) || 1;
+      // aftermath chain — each beat blocking; settle only when no toast follows
+      const aftermath = () => {
+        const eff = e.side === 'p' ? s.pEff : s.bEff;
+        const showEff = !_pkbEffShown[e.side] && Math.abs(eff - 1) > 0.001;
+        const chain = [];
+        if (e.crit) chain.push((cb) => _pkbToast('CRITICAL HIT!', 'crit', 'crit', cb));
+        if (showEff) {
+          _pkbEffShown[e.side] = true;
+          chain.push((cb) => _pkbToast(eff > 1 ? 'SUPER EFFECTIVE!' : 'NOT VERY EFFECTIVE…', eff > 1 ? 'super' : 'weak', 'eff', cb));
+        }
+        if (!chain.length) chain.push((cb) => _pkbHold(_PKB_T.settle, cb));
+        let i = 0;
+        const run = () => { if (!_arSess) return; (i < chain.length) ? chain[i++](run) : next(); };
+        run();
+      };
+      _pkbSay(used, _PKB_T.announceHold, () => {
         const atk = _pkbEl('pkb-spot-' + e.side);
         if (atk) { atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe'); _pkbAfter(_PKB_T.lunge, () => atk.classList.remove('lunge-you', 'lunge-foe')); }
         _pkbAfter(_PKB_T.lunge, () => {
-          const defSide = e.side === 'p' ? 'b' : 'p';
-          const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
-          if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
-          else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
-          try { playSfx(e.crit ? 'ar_crit' : e.side === 'p' ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
-          try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
-          _pkbFloat(e.side, '−' + (e.dmg || 0), !!e.crit);
-          _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
-          _pkbSetHP(defSide, _pkbHPm[defSide], true);
-          const after = () => {
-            const eff = e.side === 'p' ? s.pEff : s.bEff;
-            if (!_pkbEffShown[e.side] && Math.abs(eff - 1) > 0.001) {
-              _pkbEffShown[e.side] = true;
-              _pkbToast(eff > 1 ? 'SUPER EFFECTIVE!' : 'NOT VERY EFFECTIVE…', eff > 1 ? 'super' : 'weak', next);
-            } else next();
-          };
-          if (e.crit) _pkbToast('CRITICAL HIT!', 'crit', after);
-          else _pkbAfter(Math.round(_PKB_T.drain * 0.7), after);
+          if (hits > 1) {
+            // MULTI-HIT: rapid sub-impacts (the weapon's identity), numbers
+            // stacking, ONE drain at the end, then the normal aftermath holds.
+            const per = Math.max(1, Math.round((e.dmg || 0) / hits));
+            let h = 0;
+            const sub = () => {
+              if (!_arSess) return;
+              _pkbImpactFx(e, defSide, h === hits - 1 ? (e.dmg || 0) - per * (hits - 1) : per);
+              h += 1;
+              if (h < hits) { _pkbAfter(_PKB_T.multiHit, sub); return; }
+              _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+              _pkbSetHP(defSide, _pkbHPm[defSide], true);
+              _pkbAfter(_PKB_T.drain, aftermath);
+            };
+            sub();
+          } else {
+            _pkbImpactFx(e, defSide, e.dmg || 0);
+            _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+            _pkbSetHP(defSide, _pkbHPm[defSide], true);
+            _pkbAfter(_PKB_T.drain, aftermath);
+          }
         });
       });
     } else if (e.t === 'miss') {
-      _pkbSay(used, () => _pkbToast('MISS', 'miss', next));
+      _pkbSay(used, _PKB_T.announceHold, () => _pkbToast('MISS', 'miss', 'miss', next));
     } else if (e.t === 'dodge') {
-      _pkbSay(used, () => _pkbToast('DODGED!', 'miss', next));
+      _pkbSay(used, _PKB_T.announceHold, () => _pkbToast('DODGED!', 'miss', 'miss', next));
     } else if (e.t === 'dot') {
+      // drain animates DURING the dwell — start it as the line lands, hold covers it
       const defSide = e.side === 'p' ? 'b' : 'p';
-      _pkbSay(e.text, () => {
-        _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
-        _pkbSetHP(defSide, _pkbHPm[defSide], true);
-        _pkbChips(defSide, true);
-        _pkbAfter(_PKB_T.drainMin, next);
-      });
+      _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+      _pkbSetHP(defSide, _pkbHPm[defSide], true);
+      _pkbChips(defSide, true);
+      _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'heal') {
-      _pkbSay(e.text, () => {
-        const m2 = (e.text || '').match(/restores\s(\d+)\sHP/);
-        if (m2) {
-          const max = e.side === 'p' ? s.pMax : s.bMax;
-          _pkbHPm[e.side] = Math.min(max, _pkbHPm[e.side] + parseInt(m2[1], 10));
-          _pkbSetHP(e.side, _pkbHPm[e.side], true);
-        }
-        const plate = _pkbEl('pkb-plate-' + e.side);
-        if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
-        _pkbAfter(_PKB_T.drainMin, next);
-      });
+      const m2 = (e.text || '').match(/restores\s(\d+)\sHP/);
+      if (m2) {
+        const max = e.side === 'p' ? s.pMax : s.bMax;
+        _pkbHPm[e.side] = Math.min(max, _pkbHPm[e.side] + parseInt(m2[1], 10));
+        _pkbSetHP(e.side, _pkbHPm[e.side], true);
+      }
+      const plate = _pkbEl('pkb-plate-' + e.side);
+      if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
+      _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'fx') {
       const cau = (e.text || '').indexOf('cauterized; the') !== -1;
-      _pkbSay(e.text, () => {
+      _pkbSay(e.text, _PKB_T.statusHold, () => {
         _pkbChips('p', true); _pkbChips('b', true);
-        if (cau) _pkbToast('CAUTERIZED — NO EFFECT', 'cau', next);
+        if (cau) _pkbToast('CAUTERIZED — NO EFFECT', 'cau', 'status', next);
         else next();
       });
-    } else {   // stun-skip + anything unrecognized: narrate the engine text
-      _pkbSay(e.text || '…', next);
+    } else {   // stun-skip + anything unrecognized: significant — status hold
+      _pkbSay(e.text || '…', _PKB_T.statusHold, next);
     }
   }
   function _pkbPlay(events) {
     if (!_arSess) return;
     _pkbLock(true);
     const q = (events || []).slice();
+    let lastActor = null;
     const step = () => {
       if (!_arSess || _arView !== 'battle') return;          // exited mid-queue
       if (!q.length) { _pkbDrained(); return; }
-      _pkbBeat(q.shift(), () => _pkbAfter(_PKB_T.gap, step));
+      const e = q[0];
+      // 450ms breath when the OTHER actor takes over (hit/miss/dodge/stun
+      // start an action); small gap otherwise — the beats themselves hold.
+      const isAction = e.t === 'hit' || e.t === 'miss' || e.t === 'dodge' || e.t === 'stun';
+      const gap = (isAction && lastActor && e.side !== lastActor) ? _PKB_T.actorGap : 120;
+      if (isAction) lastActor = e.side;
+      _pkbHold(gap, () => {
+        if (!_arSess || _arView !== 'battle') return;
+        q.shift();
+        _pkbBeat(e, step);
+      });
     };
-    step();
+    // first beat starts immediately (no leading gap)
+    if (q.length) { const e0 = q.shift(); if (e0.t === 'hit' || e0.t === 'miss' || e0.t === 'dodge' || e0.t === 'stun') lastActor = e0.side; _pkbBeat(e0, step); }
+    else _pkbDrained();
   }
   function _pkbDrained() {
     const s = _arSess; if (!s) return;
@@ -7876,11 +7958,13 @@
       if (spot) spot.classList.add('ko');
       if (plate) plate.classList.add('ko');
       try { if (navigator.vibrate) navigator.vibrate(s.won ? 22 : [30, 40, 60]); } catch (_) {}
-      _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', () => {
+      if (_pkbFightT0) { try { console.log('[pkb] fight real-time: ' + ((Date.now() - _pkbFightT0) / 1000).toFixed(1) + 's, turns: ' + (s.turn - 1)); } catch (_) {} }
+      _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', _PKB_T.koHold, () => {
         _pkbAfter(_PKB_T.ko, () => { _pkbLock(false); _pkbRefreshMoves(); });
       });
     } else {
-      _pkbSay('What will you do?', () => { _pkbLock(false); _pkbRefreshMoves(); });
+      // between full turns — a breath before the prompt hands control back
+      _pkbHold(_PKB_T.turnGap, () => _pkbSay('What will you do?', 0, () => { _pkbLock(false); _pkbRefreshMoves(); }));
     }
   }
   // The battle screen — built ONCE per fight; the director patches it per turn.
@@ -7891,6 +7975,7 @@
     const s = _arSess, m = _arMatchup;
     _pkbHPm = { p: s.pHP, b: s.bHP };
     _pkbEffShown = { p: false, b: false };
+    _pkbFightT0 = Date.now();   // W242 — duration instrumentation (logged at KO)
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const tint = _pkbArchTint(s.foeArch);
     // W241 — proportion pass: boss-scaled foe, shared ground plane, drifting
