@@ -22765,6 +22765,43 @@ body.bro-locked { overflow: hidden; }
 .sc-card--profile .sc-origin-btn.sc-origin-btn--gold:active { transform: scale(0.98); }
 .sc-card--profile .sc-origin-btn__glyph { font-size: 14px; line-height: 1; }
 .sc-card--profile .sc-origin-btn__label { line-height: 1; }
+/* ── W255 — Arena entry "Banner portal" (ClaudeDesign direction A) ──────────
+   72px cinematic strip: painted summit crop (bg_s) → looming foe silhouette
+   (right edge) → readability scrim → 7s gold light-sweep idle. One tap target;
+   the scrim guarantees the text wins every contrast war. */
+.scab { position: relative; display: block; width: 100%; height: 72px; margin: 0; padding: 0;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden;
+  background: #0e0e24; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; }
+.scab:active { transform: scale(0.98); border-color: rgba(245,184,66,0.45);
+  box-shadow: 0 0 24px rgba(245,184,66,0.22), inset 0 0 30px rgba(245,184,66,0.06); }
+.scab-vista { position: absolute; inset: 0; }
+.scab-vista img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 64%; filter: saturate(0.9) brightness(0.85); }
+.scab-foe { position: absolute; right: -10px; bottom: -6px; width: 86px; height: 86px; pointer-events: none; }
+.scab-foe::before { content: ''; position: absolute; inset: -16px; background: radial-gradient(closest-side, rgba(167,139,250,0.18) 0%, transparent 70%); }
+.scab-foe img { position: relative; width: 100%; height: 100%; object-fit: contain; object-position: bottom; filter: brightness(0.22) saturate(0.6); opacity: 0.85; }
+.scab-scrim { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7,7,15,0.80) 0%, rgba(7,7,15,0.48) 45%, rgba(7,7,15,0.16) 100%); }
+.scab-sweep { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.scab-sweep i { position: absolute; top: 0; bottom: 0; width: 45%; opacity: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(245,184,66,0.08) 50%, transparent 100%); }
+@media (prefers-reduced-motion: no-preference) { .scab-sweep i { animation: scabSweep 7s ease-in-out -2.1s infinite; } }
+@keyframes scabSweep {
+  0%, 100% { transform: translateX(-120%); opacity: 0; }
+  40% { opacity: 1; }
+  60% { transform: translateX(220%); opacity: 0; }
+  61% { transform: translateX(-120%); }
+}
+.scab-body { position: relative; height: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 13px; padding: 0 16px; }
+.scab-roundel { width: 38px; height: 38px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(245,184,66,0.35); background: rgba(245,184,66,0.07); box-shadow: 0 0 8px rgba(245,184,66,0.12); }
+.scab:active .scab-roundel { box-shadow: 0 0 12px rgba(245,184,66,0.35); }
+.scab-text { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; flex: 1; min-width: 0; }
+.scab-title { font-family: "Cinzel", Georgia, serif; font-size: 17px; font-weight: 700; letter-spacing: 0.2em; color: #f5f3fb;
+  white-space: nowrap; text-shadow: 0 1px 8px rgba(0,0,0,0.7), 0 0 18px rgba(245,184,66,0.18); }
+.scab-whisper { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14px; color: #9090a8;
+  white-space: nowrap; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+.scab-chev { flex: none; }
 .sc-card--profile .sc-origin-btn--gold .sc-origin-chapters {
   font-size: 10px;
   letter-spacing: 0.8px;

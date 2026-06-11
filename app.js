@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w254';
+  const APP_BUILD_TAG = '2.2.5-w255';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21007,12 +21007,25 @@
         '</div>' +
         // v3 W206 — repurposed from the old "Awakening Path" lore entry
         // to "The Arena" (combat sim). Always rendered; opens openArena().
+        // W255 — "Banner portal" (ClaudeDesign direction A): cinematic 72px
+        // strip with a real painted-backdrop crop (bg_s — the summit) behind a
+        // readability scrim, a looming foe silhouette at the right edge, and a
+        // slow gold light-sweep idle. Same id + delegated handler; pure chrome.
         '<div class="sc-origin-row">' +
-          '<button class="sc-origin-btn sc-origin-btn--gold" id="sc-arena-btn" type="button">' +
-            '<span class="sc-origin-btn__glyph" aria-hidden="true">⚔️</span>' +
-            '<span class="sc-origin-btn__label">The Arena</span>' +
-            '<span class="sc-origin-chapters">Test your build</span>' +
-            '<span class="sc-origin-btn__chev" aria-hidden="true">›</span>' +
+          '<button class="scab" id="sc-arena-btn" type="button" aria-label="The Arena — test your build">' +
+            '<span class="scab-vista" aria-hidden="true"><img src="assets/backgrounds/bg_s.webp" alt="" decoding="async"></span>' +
+            '<span class="scab-foe" aria-hidden="true"><img src="assets/arena/foe_juggernaut.webp" alt="" decoding="async"></span>' +
+            '<span class="scab-scrim" aria-hidden="true"></span>' +
+            '<span class="scab-sweep" aria-hidden="true"><i></i></span>' +
+            '<span class="scab-body">' +
+              '<span class="scab-roundel" aria-hidden="true">' +
+                '<svg width="19" height="19" viewBox="0 0 20 20"><g stroke="#f5b842" stroke-width="1.4" fill="none" stroke-linecap="round">' +
+                '<path d="M4 3l10.5 10.5M14.5 13.5l1.8 1.8M12.6 15.4l3.7-3.7"/>' +
+                '<path d="M16 3L5.5 13.5M5.5 13.5l-1.8 1.8M7.4 15.4l-3.7-3.7"/></g></svg></span>' +
+              '<span class="scab-text"><span class="scab-title">THE ARENA</span>' +
+                '<span class="scab-whisper">The tower is waiting.</span></span>' +
+              '<svg class="scab-chev" width="11" height="17" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '</span>' +
           '</button>' +
         '</div>' +
         // Portrait frame — avatar + radar inside one bounded gold-cornered
