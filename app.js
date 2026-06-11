@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w256';
+  const APP_BUILD_TAG = '2.2.5-w257';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8737,6 +8737,9 @@
         const cur = getEquippedArenaTitle();
         setEquippedArenaTitle(cur && cur.id === tid ? null : tid);
         _arRenderTitles();
+        // W257 — push the new equipped title to the public profile (debounced;
+        // the title id is folded into the submit signature, so the gate fires)
+        try { _maybeSubmitPublicRankSummary('arena-title-change'); } catch (_) {}
       }
     });
     try { window.openArena = openArena; } catch (_) {}
@@ -16750,8 +16753,14 @@
     // always (even for rank-only changes) is safe because the
     // backend treats unchanged values as a no-op for the columns.
     const achievements = _publicAchievementsSummary();
-    const achSig = _publicAchievementsSignature(achievements);
     payload.achievements = achievements;
+    // W257 — equipped Arena title rides the same heartbeat. Folding the id
+    // into the submit signature means equipping/unequipping a title triggers
+    // a fresh submit via the existing gate (same mechanism as achievements).
+    let arenaTitleId = null;
+    try { const t = getEquippedArenaTitle(); arenaTitleId = (t && t.id) || null; } catch (_) {}
+    payload.arenaTitle = arenaTitleId;
+    const achSig = _publicAchievementsSignature(achievements) + '|' + (arenaTitleId || '');
     _prsLogBreadcrumb('public-achievements-summary-built', {
       bossesSlainTotal:        achievements.bossesSlainTotal,
       ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
@@ -32557,9 +32566,21 @@
     const topRows = top.map((row, i) => {
       const isMe = myAlias && row.alias === myAlias;
       const rankClass = isMe ? 'lb-rank-row lb-rank-row--me' : 'lb-rank-row';
+      // W257 — equipped Arena title chip. The id comes from the backend row
+      // (real users) or the sim merge (bots); MY row prefers local equipped
+      // state so the chip updates instantly, before any backend round-trip.
+      // Unknown/absent ids render nothing (back/forward compatible).
+      let titleId = row.arena_title || null;
+      if (isMe) { try { const t = getEquippedArenaTitle(); titleId = (t && t.id) || titleId; } catch (_) {} }
+      let titleChip = '';
+      if (titleId && typeof ARENA_TITLES !== 'undefined') {
+        const tdef = ARENA_TITLES.find((t) => t.id === titleId);
+        if (tdef) titleChip = '<span class="lb-rank-title">“' + esc(tdef.name) + '”</span>';
+      }
       return '<div class="' + rankClass + '">' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
         '<span class="lb-rank-name">' + esc(displayAliases[i] || '—') + '</span>' +
+        titleChip +
         '<span class="lb-rank-value">' + meta.formatValue(row.current_value) + '</span>' +
       '</div>';
     }).join('');

@@ -80,6 +80,19 @@ const ULTRA_RARE_DROPS_MAX = 9_999;
 // part of this label.
 const STREAK_LABEL_RE = /^\d{1,4}-day (MR|LI|stat|habit) streak$/;
 
+// W257 — equipped Arena title whitelist. The 14 fixed cosmetic title IDs the
+// Ascent tower can award (10 boss titles + 4 rating milestones). Mirrors
+// ARENA_TITLES in app.js — IDs only; display names resolve client-side.
+// The server cannot verify a title is genuinely unlocked (the Arena is a
+// client-side minigame); accepted cosmetic-only risk. This field can never
+// grant power, currency, or progression.
+const ARENA_TITLE_IDS = [
+  'asc_brawler', 'asc_wallbreaker', 'asc_ironbreaker', 'asc_edgewalker',
+  'asc_duelist', 'asc_unbroken', 'asc_tyrantsbane', 'asc_siegebreaker',
+  'asc_shadowcaller', 'asc_sovereign',
+  'asc_rank_contender', 'asc_rank_duelist', 'asc_rank_elite', 'asc_rank_apex',
+] as const;
+
 interface PutBody {
   rankTier?: unknown;
   rankDivision?: unknown;
@@ -88,6 +101,7 @@ interface PutBody {
   rankPoints?: unknown;
   clientUpdatedAt?: unknown;
   achievements?: unknown;
+  arenaTitle?: unknown;
 }
 
 // Per-field "was this key present in the achievements object?"
@@ -112,6 +126,10 @@ interface Validated {
   rankPoints: number;
   clientUpdatedAt: string;
   achievements: ValidatedAchievements;
+  // W257 — equipped Arena title. Same set/clear/preserve semantics as
+  // verifiedStreakLabel: omitted key → preserve existing column; null →
+  // deliberate "unequipped" clear; string → must be a whitelisted ID.
+  arenaTitle: AchField<string>;
 }
 
 function isAllowedTier(v: unknown): v is (typeof ALLOWED_TIERS)[number] {
@@ -312,6 +330,26 @@ function validate(body: PutBody):
     return { ok: false, code: achCheck.code, detail: achCheck.detail };
   }
 
+  // W257 — validate the optional equipped Arena title. Omitted →
+  // preserve; null → clear ("unequipped"); string → whitelist only.
+  let arenaTitle: AchField<string> = { set: false, value: null };
+  if ('arenaTitle' in body && body.arenaTitle !== undefined) {
+    if (body.arenaTitle === null) {
+      arenaTitle = { set: true, value: null };
+    } else if (
+      typeof body.arenaTitle === 'string' &&
+      (ARENA_TITLE_IDS as readonly string[]).includes(body.arenaTitle)
+    ) {
+      arenaTitle = { set: true, value: body.arenaTitle };
+    } else {
+      return {
+        ok: false,
+        code: 'INVALID_ARENA_TITLE',
+        detail: 'arenaTitle must be a known Arena title id or null.',
+      };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -322,6 +360,7 @@ function validate(body: PutBody):
       rankPoints: body.rankPoints,
       clientUpdatedAt: body.clientUpdatedAt,
       achievements: achCheck.value,
+      arenaTitle,
     },
   };
 }
@@ -385,6 +424,8 @@ export async function handlePublicProfileSummaryPut(
   const dropsSet  = ach.ultraRareDropsTotal.set ? 1 : 0;
   const streakSet = ach.verifiedStreakLabel.set ? 1 : 0;
   const achSet    = ach.hasAny ? 1 : 0;
+  // W257 — equipped Arena title: same set/preserve sentinel pattern.
+  const titleSet  = v.arenaTitle.set ? 1 : 0;
 
   await env.DB.prepare(
     `INSERT INTO public_profile_summary (
@@ -392,9 +433,10 @@ export async function handlePublicProfileSummaryPut(
         rank_sort_value, rank_points,
         client_updated_at, server_updated_at, metadata_json,
         bosses_slain_total, ultra_rare_drops_total,
-        verified_streak_label, achievements_updated_at
+        verified_streak_label, achievements_updated_at,
+        arena_title
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
-        COALESCE(?, 0), COALESCE(?, 0), ?, ?)
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
@@ -414,7 +456,10 @@ export async function handlePublicProfileSummaryPut(
                                        ELSE public_profile_summary.verified_streak_label END,
         achievements_updated_at = CASE WHEN ? = 1
                                        THEN ?
-                                       ELSE public_profile_summary.achievements_updated_at END`,
+                                       ELSE public_profile_summary.achievements_updated_at END,
+        arena_title             = CASE WHEN ? = 1
+                                       THEN ?
+                                       ELSE public_profile_summary.arena_title END`,
   )
     .bind(
       // INSERT bindings (positional with the VALUES clause)
@@ -430,11 +475,13 @@ export async function handlePublicProfileSummaryPut(
       ach.ultraRareDropsTotal.value,
       ach.verifiedStreakLabel.value,
       achievementsUpdatedAt,
+      v.arenaTitle.value,
       // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
       bossesSet, ach.bossesSlainTotal.value,
       dropsSet,  ach.ultraRareDropsTotal.value,
       streakSet, ach.verifiedStreakLabel.value,
       achSet,    achievementsUpdatedAt,
+      titleSet,  v.arenaTitle.value,
     )
     .run();
 

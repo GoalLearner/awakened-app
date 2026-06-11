@@ -30,6 +30,8 @@ const MAX_LIMIT = 500;
 interface TopRow {
   alias: string;
   current_value: number;
+  // W257 — equipped Arena title ID (nullable; cosmetic chip on the client)
+  arena_title: string | null;
 }
 
 interface MyRow {
@@ -83,9 +85,11 @@ export async function handleLeaderboardTop(
   // scan; no full-table sort.
   const topResult = weekly
     ? await env.DB.prepare(
-        `SELECT u.alias AS alias, ls.current_value AS current_value
+        `SELECT u.alias AS alias, ls.current_value AS current_value,
+                pps.arena_title AS arena_title
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
+         LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
          WHERE ls.metric = ? AND ls.week_start = ?
          ORDER BY ls.current_value DESC
          LIMIT ?`,
@@ -93,9 +97,11 @@ export async function handleLeaderboardTop(
         .bind(metric, currentWeek, limit)
         .all<TopRow>()
     : await env.DB.prepare(
-        `SELECT u.alias AS alias, ls.current_value AS current_value
+        `SELECT u.alias AS alias, ls.current_value AS current_value,
+                pps.arena_title AS arena_title
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
+         LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
          WHERE ls.metric = ?
          ORDER BY ls.current_value DESC
          LIMIT ?`,
@@ -107,6 +113,8 @@ export async function handleLeaderboardTop(
     rank: i + 1,
     alias: row.alias,
     current_value: row.current_value,
+    // W257 — null/undefined → client renders no chip (back/forward compatible)
+    arena_title: row.arena_title ?? null,
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,

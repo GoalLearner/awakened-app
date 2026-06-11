@@ -108,16 +108,16 @@
   // with natural wobble. Backend cap remains 1000 for real users.
   const BOTS = [
     // Top tier — competitive with high-real-user weeks (40-50)
-    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 52, flightsJitter: 6 },
-    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 42, flightsJitter: 6 },
+    { name: 'ShadowMonarch_K', avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 52, flightsJitter: 6, title: 'asc_ironbreaker' },
+    { name: 'AscendantNova',   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 42, flightsJitter: 6, title: 'asc_rank_contender' },
 
     // Active — stairs-heavy week but not extreme (25-40)
-    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 33, flightsJitter: 6 },
+    { name: 'ghostlift',       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 33, flightsJitter: 6, title: 'asc_wallbreaker' },
     { name: 'Marcus T.',       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2, flightsBase: 26, flightsJitter: 5 },
-    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase: 20, flightsJitter: 5 },
+    { name: 'Sienna K.',       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase: 20, flightsJitter: 5, title: 'asc_brawler' },
 
     // Normal — moderate stair use (10-25)
-    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase: 14, flightsJitter: 4 },
+    { name: 'voidwalker_88',   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase: 14, flightsJitter: 4, title: 'asc_brawler' },
     { name: 'Jordan F.',       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1, flightsBase: 10, flightsJitter: 3 },
     { name: 'AwakenedRen',     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  6, flightsJitter: 3 },
 
@@ -322,7 +322,8 @@
       // tie-bump so a bot already at the cap (e.g. saturated)
       // can't be nudged 137 over by the tie-breaker.
       if (metric === 'step_total' && val > SIM_STEP_WEEKLY_CAP) val = SIM_STEP_WEEKLY_CAP;
-      fakes.push({ alias: bot.name, current_value: val, _sim: true });
+      // W257 — modest Arena-title chips on some bots (apex titles never simulated)
+      fakes.push({ alias: bot.name, current_value: val, _sim: true, arena_title: bot.title || null });
     }
 
     // Dedupe vs. real entries (real user could share a name with

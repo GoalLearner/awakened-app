@@ -272,10 +272,10 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(calls[0]?.binds[11]).toBeNull();
     // ON CONFLICT CASE WHEN sentinels (12, 14, 16, 18) — all 0
     // because no achievement fields were set.
-    expect(calls[0]?.binds[12]).toBe(0);
-    expect(calls[0]?.binds[14]).toBe(0);
-    expect(calls[0]?.binds[16]).toBe(0);
-    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[13]).toBe(0);
+    expect(calls[0]?.binds[15]).toBe(0);
+    expect(calls[0]?.binds[17]).toBe(0);
+    expect(calls[0]?.binds[19]).toBe(0);
   });
 
   it('upserts a valid S+ summary with null division', async () => {
@@ -442,10 +442,10 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     expect(calls[0]?.binds[10]).toBe('30-day MR streak');
     expect(calls[0]?.binds[11]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
     // Sentinels (12, 14, 16, 18) — all 1 since all fields set.
-    expect(calls[0]?.binds[12]).toBe(1);
-    expect(calls[0]?.binds[14]).toBe(1);
-    expect(calls[0]?.binds[16]).toBe(1);
-    expect(calls[0]?.binds[18]).toBe(1);
+    expect(calls[0]?.binds[13]).toBe(1);
+    expect(calls[0]?.binds[15]).toBe(1);
+    expect(calls[0]?.binds[17]).toBe(1);
+    expect(calls[0]?.binds[19]).toBe(1);
   });
 
   it('partial achievement payload only marks present fields for update', async () => {
@@ -460,15 +460,15 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     );
     const calls = db._calls();
     // bossesSlainTotal set → sentinel 1, value 28
-    expect(calls[0]?.binds[12]).toBe(1);
-    expect(calls[0]?.binds[13]).toBe(28);
+    expect(calls[0]?.binds[13]).toBe(1);
+    expect(calls[0]?.binds[14]).toBe(28);
     // ultraRareDropsTotal NOT set → sentinel 0
-    expect(calls[0]?.binds[14]).toBe(0);
+    expect(calls[0]?.binds[15]).toBe(0);
     // verifiedStreakLabel NOT set → sentinel 0
-    expect(calls[0]?.binds[16]).toBe(0);
+    expect(calls[0]?.binds[17]).toBe(0);
     // achievements_updated_at: hasAny=true → sentinel 1 + stamped ts
-    expect(calls[0]?.binds[18]).toBe(1);
-    expect(calls[0]?.binds[19]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
+    expect(calls[0]?.binds[19]).toBe(1);
+    expect(calls[0]?.binds[20]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
   });
 
   it('empty achievements object is treated as a no-op for the achievement surface', async () => {
@@ -484,10 +484,10 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
 
     const calls = db._calls();
     // Every sentinel must be 0 → preserve every existing value.
-    expect(calls[0]?.binds[12]).toBe(0);
-    expect(calls[0]?.binds[14]).toBe(0);
-    expect(calls[0]?.binds[16]).toBe(0);
-    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[13]).toBe(0);
+    expect(calls[0]?.binds[15]).toBe(0);
+    expect(calls[0]?.binds[17]).toBe(0);
+    expect(calls[0]?.binds[19]).toBe(0);
   });
 
   it('explicit null verifiedStreakLabel marks the field for clear', async () => {
@@ -503,13 +503,13 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     expect(res.status).toBe(200);
     const calls = db._calls();
     // verifiedStreakLabel set (explicit null) → sentinel 1 + null value
-    expect(calls[0]?.binds[16]).toBe(1);
-    expect(calls[0]?.binds[17]).toBeNull();
+    expect(calls[0]?.binds[17]).toBe(1);
+    expect(calls[0]?.binds[18]).toBeNull();
     // Other counts NOT set → sentinel 0
-    expect(calls[0]?.binds[12]).toBe(0);
-    expect(calls[0]?.binds[14]).toBe(0);
+    expect(calls[0]?.binds[13]).toBe(0);
+    expect(calls[0]?.binds[15]).toBe(0);
     // hasAny=true → ach timestamp stamped
-    expect(calls[0]?.binds[18]).toBe(1);
+    expect(calls[0]?.binds[19]).toBe(1);
   });
 
   it('accepts zero bossesSlainTotal as a real submitted value (not a clear)', async () => {
@@ -524,17 +524,78 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    expect(calls[0]?.binds[12]).toBe(1);
-    expect(calls[0]?.binds[13]).toBe(0);
+    expect(calls[0]?.binds[13]).toBe(1);
+    expect(calls[0]?.binds[14]).toBe(0);
   });
 
   it('rank-only submit leaves CASE WHEN sentinels all zero (preserve existing achievement columns)', async () => {
     const db = makeDb();
     await handlePublicProfileSummaryPut(makeReq(validPayload), makeEnv(db), session);
     const calls = db._calls();
-    expect(calls[0]?.binds[12]).toBe(0);
-    expect(calls[0]?.binds[14]).toBe(0);
-    expect(calls[0]?.binds[16]).toBe(0);
-    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[13]).toBe(0);
+    expect(calls[0]?.binds[15]).toBe(0);
+    expect(calls[0]?.binds[17]).toBe(0);
+    expect(calls[0]?.binds[19]).toBe(0);
+  });
+});
+
+
+describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2026, 5, 11, 12, 0, 0)));
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('accepts a whitelisted arena title id and binds it (insert + sentinel)', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: 'asc_brawler' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+    expect(calls.length).toBe(1);
+    expect(calls[0].sql).toContain('arena_title');
+    expect(calls[0].binds[12]).toBe('asc_brawler');   // INSERT value
+    expect(calls[0].binds[21]).toBe(1);               // titleSet sentinel
+    expect(calls[0].binds[22]).toBe('asc_brawler');   // CASE WHEN value
+  });
+
+  it('accepts null as a deliberate "unequipped" clear', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: null }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+    expect(calls[0].binds[12]).toBe(null);
+    expect(calls[0].binds[21]).toBe(1);               // set → clears the column
+    expect(calls[0].binds[22]).toBe(null);
+  });
+
+  it('preserves the existing title when the key is omitted (sentinel 0)', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq(validPayload), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+    expect(calls[0].binds[21]).toBe(0);               // not set → CASE preserves
+  });
+
+  it('rejects a non-whitelisted title id', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: 'asc_totally_fake' }), makeEnv(db), session);
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe('INVALID_ARENA_TITLE');
+    expect((db as unknown as { _calls: () => unknown[] })._calls().length).toBe(0);
+  });
+
+  it('rejects a non-string, non-null title', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: 42 }), makeEnv(db), session);
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe('INVALID_ARENA_TITLE');
   });
 });
