@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.587';
+const CACHE_VERSION = 'v5.588';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -153,6 +153,13 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_rare_drop.mp3',
   '/assets/audio/sfx_perfect_day.mp3',
   '/assets/audio/sfx_hall_greeting.mp3',
+  // W251 — NPC battle sprites (archetypes; boss portraits added as art lands)
+  '/assets/arena/foe_aggressor.webp',
+  '/assets/arena/foe_sentinel.webp',
+  '/assets/arena/foe_trickster.webp',
+  '/assets/arena/foe_glasscannon.webp',
+  '/assets/arena/foe_juggernaut.webp',
+  '/assets/arena/foe_balanced.webp',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

@@ -125,6 +125,13 @@ fi
 # W249 — battle tier backgrounds (webp, processed from Midjourney plates by
 # the resolver ladder in app.js; missing tier falls back gracefully but the
 # bundle should always carry all six).
+# W251 — generated NPC battle sprites (foe_<archKey> covers the 90 procedural
+# floors; boss_<floor> portraits drop in as they land). Missing files fall
+# back to silhouettes in-app, but anything PRESENT here must ship.
+mkdir -p www/assets/arena
+if compgen -G "assets/arena/*.webp" > /dev/null; then
+  cp assets/arena/*.webp www/assets/arena/
+fi
 mkdir -p www/assets/backgrounds
 if compgen -G "assets/backgrounds/*.webp" > /dev/null; then
   cp assets/backgrounds/*.webp www/assets/backgrounds/

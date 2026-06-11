@@ -219,6 +219,27 @@ fi
 # loops ship under assets/audio/ and are fetched by the AudioDirector at
 # battle entry; if prep skips them the music layer silently ships absent
 # ("the music never came on"). Same per-file presence gate as the images.
+echo "── Required arena NPC art in iOS public/ ──"
+REQUIRED_ARENA_ART=(
+  "assets/arena/foe_aggressor.webp"
+  "assets/arena/foe_sentinel.webp"
+  "assets/arena/foe_trickster.webp"
+  "assets/arena/foe_glasscannon.webp"
+  "assets/arena/foe_juggernaut.webp"
+  "assets/arena/foe_balanced.webp"
+)
+art_missing=()
+for art in "${REQUIRED_ARENA_ART[@]}"; do
+  if [ ! -f "ios/App/App/public/$art" ]; then
+    art_missing+=("$art")
+  fi
+done
+if [ ${#art_missing[@]} -gt 0 ]; then
+  for a in "${art_missing[@]}"; do echo "ERROR: required arena art missing from iOS public/: $a" >&2; done
+  exit 1
+fi
+echo "  ✓ All ${#REQUIRED_ARENA_ART[@]} required arena art files present"
+
 echo "── Required battle-audio assets in iOS public/ ──"
 echo "── Required battle-background assets in iOS public/ ──"
 REQUIRED_BG=(

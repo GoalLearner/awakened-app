@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w250';
+  const APP_BUILD_TAG = '2.2.5-w251';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7010,9 +7010,30 @@
     if (foe && foe.isBoss && foe.floor === 100) {
       return '<img src="assets/coach/first-awakened-idle.png" alt="" class="' + cls + ' fa">';
     }
-    // Future: per-archetype / per-boss portraits. Fall back to silhouette today.
+    // W251 — generated NPC art. Milestone bosses get unique portraits
+    // (boss_<floor>.webp, drop-in as they land); the 90 procedural floors
+    // share their archetype's sprite (foe_<archKey>.webp — 6 cover all).
+    // Absent file → graceful silhouette swap via onerror, logged honestly
+    // (the W249 lesson: degradation must never silently mask a path bug).
+    const art = (foe && foe.isBoss && foe.floor) ? 'boss_' + foe.floor
+              : (foe && foe.archKey) ? 'foe_' + foe.archKey : null;
+    if (art) {
+      return '<img src="assets/arena/' + art + '.webp" alt="" class="' + cls + '" onerror="window.__arFoeArtFail(this)">';
+    }
     return '<div class="ar-foe-sil-wrap' + (big ? ' big' : '') + '">' + _arFoeSil() + '</div>';
   }
+  // onerror fallback for missing NPC art — swap to the silhouette, warn once per file.
+  const _arArtWarned = {};
+  window.__arFoeArtFail = function (img) {
+    try {
+      const file = (img.src || '').split('/').pop();
+      if (!_arArtWarned[file]) { _arArtWarned[file] = 1; try { console.warn('[arena-art] missing: ' + file + ' — silhouette fallback'); } catch (_) {} }
+      const wrap = document.createElement('div');
+      wrap.className = 'ar-foe-sil-wrap' + ((img.className || '').indexOf('big') !== -1 ? ' big' : '');
+      wrap.innerHTML = _arFoeSil();
+      img.replaceWith(wrap);
+    } catch (_) {}
+  };
   function _arBody() { return document.getElementById('arena-body'); }
   function _arSet(html) { const b = _arBody(); if (b) b.innerHTML = html; }
   function _arBodyMode(tower) { const b = _arBody(); if (b) b.classList.toggle('ar-body--bleed', !!tower); }
