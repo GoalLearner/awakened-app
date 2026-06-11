@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w247';
+  const APP_BUILD_TAG = '2.2.5-w248';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7155,6 +7155,7 @@
     _arClearTimers();
     _arRevealing = false;
     _arSess = null;
+    try { _audWantMusic('arena_menu'); } catch (_) {}   // W248 — lofi menu loop on the Arena's main page (no-op if already playing)
     _arBodyMode(true);
     const st = getAscentState();
     const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
@@ -7681,7 +7682,16 @@
   const _AUD = {
     ctx: null, music: null, sfx: null, buffers: {}, musicSrc: null, musicGain: null,
     missing: {}, status: {}, lastPlay: null, voices: 0, loaded: false, duckT: null, log: false,
-    slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting'],
+    musicSlot: null, want: null,   // W248 — want: slot to auto-start once its buffer decodes (menu-music race)
+    slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting', 'arena_menu',
+            'sfx_lunge', 'sfx_hit_normal', 'sfx_hit_crit', 'sfx_miss_dodge', 'sfx_hp_drain', 'sfx_ko', 'sfx_boss_intro'],
+  };
+  // W248 — file-preferred cues: when a generated sample exists for a cue, play
+  // it (per-cue gain trim) instead of the synth; absent files fall back to the
+  // procedural sound. Same drop-in pattern as the foe art and music slots.
+  const _AUD_FILE_CUES = {
+    lunge: 0.5, hit_normal: 0.7, hit_crit: 0.85, miss_dodge: 0.5,
+    hp_drain: 0.16, ko: 0.9, boss_intro: 0.8,
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
   function _audMusicOn() { return _audSet('hb_music', 'on') !== 'off'; }
@@ -7773,6 +7783,19 @@
     const pri = name === 'ko' || name === 'hit_crit' || name === 'boss_intro';
     if (!_audVoiceOk(pri)) return;
     if (_AUD.log) { try { console.log('[aud] cue:', name); } catch (_) {} }
+    // file-preferred path (W248): generated sample wins over the synth
+    if (_AUD_FILE_CUES[name] != null) {
+      const fbuf = _AUD.buffers['sfx_' + name];
+      if (fbuf) {
+        try {
+          _audSpend(Math.min(1.2, fbuf.duration));
+          const src = _AUD.ctx.createBufferSource(); src.buffer = fbuf;
+          const g = _AUD.ctx.createGain(); g.gain.value = _AUD_FILE_CUES[name];
+          src.connect(g); g.connect(_AUD.sfx); src.start();
+        } catch (_) {}
+        return;
+      }
+    }
     switch (name) {
       case 'ui_tap':      _audSpend(0.06); _audOsc({ type: 'square', f0: 660, dur: 0.05, peak: 0.06 }); break;
       case 'ui_denied':   _audSpend(0.12); _audOsc({ type: 'square', f0: 140, f1: 90, dur: 0.11, peak: 0.1, filter: { type: 'lowpass', f0: 500 } }); break;
@@ -7836,11 +7859,15 @@
           _AUD.ctx.decodeAudioData(ab, res, (e) => rej('decode: ' + String((e && e.message) || e || 'null'))));
       });
     attempt('m4a')
-      .then((buf) => { _AUD.buffers[slot] = buf; _AUD.status[slot] = 'm4a ok ' + buf.duration.toFixed(1) + 's'; })
+      .then((buf) => {
+        _AUD.buffers[slot] = buf; _AUD.status[slot] = 'm4a ok ' + buf.duration.toFixed(1) + 's';
+        if (_AUD.want === slot) { _AUD.want = null; _audPlayMusic(slot, true); }   // W248 — deferred start (menu race)
+      })
       .catch((e1) => attempt('mp3')
         .then((buf) => {
           _AUD.buffers[slot] = buf;
           _AUD.status[slot] = 'mp3 fallback ok (m4a: ' + e1 + ')';
+          if (_AUD.want === slot) { _AUD.want = null; _audPlayMusic(slot, true); }
           try { console.log('[aud] ' + slot + ': ' + _AUD.status[slot]); } catch (_) {}
         })
         .catch((e2) => {
@@ -7881,9 +7908,22 @@
       g.gain.linearRampToValueAtTime(1, c.currentTime + 0.6);        // 600ms fade-in
       src.connect(g); g.connect(_AUD.music);
       src.start();
-      _AUD.musicSrc = src; _AUD.musicGain = g; _AUD.musicLoop = !!loop;
+      _AUD.musicSrc = src; _AUD.musicGain = g; _AUD.musicLoop = !!loop; _AUD.musicSlot = slot;
     } catch (_) {}
   }
+  // W248 — request a music slot: plays now if decoded, else defers to load-complete.
+  function _audWantMusic(slot) {
+    if (_AUD.musicSrc && _AUD.musicSlot === slot) return;        // already playing it
+    if (_AUD.buffers[slot]) { _AUD.want = null; _audPlayMusic(slot, true); }
+    else if (!_AUD.missing[slot]) _AUD.want = slot;
+  }
+  // read-only audio state probe (Safari/preview debugging; complements Copy Debug Info)
+  try {
+    window.__audState = function () {
+      return { ctx: _AUD.ctx ? _AUD.ctx.state : 'none', slot: _AUD.musicSlot, playing: !!_AUD.musicSrc,
+               want: _AUD.want, lastPlay: _AUD.lastPlay, voices: _AUD.voices, status: Object.assign({}, _AUD.status) };
+    };
+  } catch (_) {}
   // duck music −4dB (×0.63) during crit/KO blocking beats
   function _audDuck(ms) {
     const c = _AUD.ctx; if (!c || !_AUD.musicGain) return;
@@ -7970,10 +8010,15 @@
     bar.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
     bar.className = frac > 0.5 ? 'ok' : frac >= 0.2 ? 'warn' : 'crit';
     num.innerHTML = v + '<span class="mx"> / ' + max + '</span>';
-    // the classic quiet tick-down during the drain (skipped under FF — spam control)
+    // the classic quiet tick-down during the drain (skipped under FF — spam control).
+    // W248 — with a generated drain SAMPLE present, one continuous play covers the
+    // whole drain; the 4-tick spread is the synth-only pattern.
     if (animate && !_pkbFF) {
-      const n = 4, span = Math.max(_PKB_T.drainMin, _pkbMs(_PKB_T.drain));
-      for (let k = 0; k < n; k++) _arAfter(Math.round((k + 0.5) * span / n), () => { try { _audCue('hp_drain'); } catch (_) {} });
+      if (_AUD.buffers['sfx_hp_drain']) { try { _audCue('hp_drain'); } catch (_) {} }
+      else {
+        const n = 4, span = Math.max(_PKB_T.drainMin, _pkbMs(_PKB_T.drain));
+        for (let k = 0; k < n; k++) _arAfter(Math.round((k + 0.5) * span / n), () => { try { _audCue('hp_drain'); } catch (_) {} });
+      }
     }
   }
   function _pkbChips(side, pulse) {
@@ -8290,6 +8335,7 @@
     try {
       if (isBoss) _audCue('boss_intro');
       const slot = isBoss ? 'boss_loop' : 'battle_loop';
+      _AUD.want = null;   // W248 — cancel any pending menu-music start; battle owns the bus now
       _audPlayMusic(slot, true);
       // cold first decode on-device can outlast a single retry — ladder it
       [1200, 2600, 4500].forEach((ms) => _arAfter(ms, () => { if (!_AUD.musicSrc && _arView === 'battle') _audPlayMusic(slot, true); }));
@@ -8409,6 +8455,9 @@
     if (!ov) return;
     setupArena();
     _arClearTimers();
+    // W248 — opening the Arena is a user gesture: unlock the context, start the
+    // buffer decodes, and cue the menu music (starts the moment its decode lands).
+    try { _audUnlock(); _audLoadMusic(); } catch (_) {}
     _arRenderTower();
     ov.classList.remove('hidden');
     ov.setAttribute('aria-hidden', 'false');
@@ -8419,7 +8468,7 @@
     if (!ov) return;
     _arClearTimers();
     _arSess = null;
-    try { _audStopMusic(0.25); } catch (_) {}     // W243 — music never outlives the Arena
+    try { _AUD.want = null; _audStopMusic(0.25); } catch (_) {}   // W243/W248 — music never outlives the Arena
     ov.classList.add('hidden');
     ov.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', _arKeydown, true);

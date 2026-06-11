@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.584';
+const CACHE_VERSION = 'v5.585';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -106,13 +106,34 @@ const PRECACHE_ASSETS = [
   '/assets/coach/first-awakened-speaking.png',
   '/assets/coach/first-awakened-nodding.png',
   '/assets/coach/first-awakened-scroll.png',
-  // W244 — battle music loops (gapless 48s AAC, processed from Suno
-  // generations by scripts/process-battle-audio.js). Stings are drop-in
-  // slots — add their paths here when the files land (see LICENSES.md).
+  // W244/W248 — battle + menu music (gapless AAC loops processed by
+  // scripts/process-battle-audio.js), stings + battle SFX one-shots
+  // (scripts/process-sting-audio.js). mp3 twins = iOS decode fallback.
+  // Licenses: assets/audio/LICENSES.md.
   '/assets/audio/battle_loop.m4a',
   '/assets/audio/boss_loop.m4a',
+  '/assets/audio/arena_menu.m4a',
+  '/assets/audio/victory_sting.m4a',
+  '/assets/audio/defeat_sting.m4a',
+  '/assets/audio/sfx_lunge.m4a',
+  '/assets/audio/sfx_hit_normal.m4a',
+  '/assets/audio/sfx_hit_crit.m4a',
+  '/assets/audio/sfx_miss_dodge.m4a',
+  '/assets/audio/sfx_hp_drain.m4a',
+  '/assets/audio/sfx_ko.m4a',
+  '/assets/audio/sfx_boss_intro.m4a',
   '/assets/audio/battle_loop.mp3',
   '/assets/audio/boss_loop.mp3',
+  '/assets/audio/arena_menu.mp3',
+  '/assets/audio/victory_sting.mp3',
+  '/assets/audio/defeat_sting.mp3',
+  '/assets/audio/sfx_lunge.mp3',
+  '/assets/audio/sfx_hit_normal.mp3',
+  '/assets/audio/sfx_hit_crit.mp3',
+  '/assets/audio/sfx_miss_dodge.mp3',
+  '/assets/audio/sfx_hp_drain.mp3',
+  '/assets/audio/sfx_ko.mp3',
+  '/assets/audio/sfx_boss_intro.mp3',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',
