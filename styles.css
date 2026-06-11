@@ -31436,3 +31436,75 @@ button.guildhall-summary-tile:active {
   .asc-faceoff .v { font-size: 19px; }
 }
 /* END Ascent block */
+
+/* ═══ W238 — Pokémon-composition battle screen (.pkb-*, scoped) ═══ */
+.pkb { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pkb-top { flex: none; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.22em; color: #6b6b86; padding: 2px 40px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pkb-stage { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 8px 4px; border-radius: 18px;
+  background: radial-gradient(120% 95% at 50% 28%, rgba(40,36,80,0.5) 0%, rgba(20,18,46,0.25) 45%, rgba(10,10,26,0) 75%); }
+.pkb-stage.nudge { animation: pkbNudge 0.25s ease; }
+@keyframes pkbNudge { 0%,100% { transform: translate(0,0); } 30% { transform: translate(-4px,2px); } 65% { transform: translate(3px,-1px); } }
+.pkb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pkb-row.foe { align-items: flex-start; }
+.pkb-row.you { align-items: flex-end; }
+/* sprites + platforms — foe upper-right, player lower-left, facing the diagonal */
+.pkb-spot { position: relative; width: 128px; height: 112px; flex: none; display: flex; align-items: flex-end; justify-content: center; transition: transform 0.18s ease, opacity 0.6s ease, filter 0.6s ease; }
+.pkb-spot .plat { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 116px; height: 30px; border-radius: 50%; border: 1px solid; }
+.pkb-spot .spr { position: relative; width: 96px; height: 98px; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.55)); }
+.pkb-spot .spr img, .pkb-spot .spr svg { width: 100%; height: 100%; object-fit: contain; }
+.pkb-spot.you .spr { transform: scaleX(-1); }    /* player faces up-right across the diagonal */
+.pkb-spot.lunge-you { transform: translate(16px, -10px); }
+.pkb-spot.lunge-foe { transform: translate(-16px, 10px); }
+.pkb-spot.shake { animation: pkbShake 0.25s ease; }
+@keyframes pkbShake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,0); } 50% { transform: translate(5px,0); } 75% { transform: translate(-3px,0); } }
+.pkb-spot.ko { filter: grayscale(1) brightness(0.55) drop-shadow(0 8px 12px rgba(0,0,0,0.55)); opacity: 0.35; transform: translateY(10px); }
+/* info plates — glued to their owners */
+.pkb-plate { flex: 1; min-width: 0; max-width: 215px; border-radius: 13px; background: rgba(14,14,36,0.92); border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 6px 14px rgba(0,0,0,0.35); padding: 9px 11px 8px; transition: opacity 0.5s ease; }
+.pkb-plate.ko { opacity: 0.4; }
+.pkb-plate.healed { box-shadow: 0 0 16px rgba(52,211,153,0.35), 0 6px 14px rgba(0,0,0,0.35); }
+.pkb-plate .nm { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; color: #c8c6d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pkb-plate.you .nm { color: #f5b842; }
+.pkb-plate .nm .wpn { color: #6b6b86; font-weight: 700; letter-spacing: 0.05em; }
+.pkb-plate .hp { margin-top: 6px; height: 9px; border-radius: 5px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+.pkb-plate .hp i { display: block; height: 100%; border-radius: 4px; transform-origin: left center; transform: scaleX(1); transition: transform 0.5s cubic-bezier(0.2,0.8,0.2,1), background-color 0.3s ease; will-change: transform; }
+.pkb-plate .hp i.ok   { background: linear-gradient(90deg, #1f9d6a, #34d399); box-shadow: 0 0 8px rgba(52,211,153,0.4); }
+.pkb-plate .hp i.warn { background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 8px rgba(245,184,66,0.4); }
+.pkb-plate .hp i.crit { background: linear-gradient(90deg, #b91c1c, #ef4444); box-shadow: 0 0 8px rgba(239,68,68,0.45); animation: arLowPulse 0.9s ease-in-out infinite; }
+.pkb-plate .num { margin-top: 4px; font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 800; color: #f5f3fb; font-variant-numeric: tabular-nums; }
+.pkb-plate .num .mx { color: #6b6b86; font-weight: 700; font-size: 9px; }
+.pkb-plate .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; min-height: 14px; }
+.pkb-plate .chips.pulse { animation: pkbChipPulse 0.45s ease; }
+@keyframes pkbChipPulse { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.pkb-plate .chips .ar-st.cau { font-size: 8.5px; box-shadow: 0 0 8px rgba(52,211,153,0.45); }
+/* fx layer — damage floats + toasts */
+.pkb-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 18px; }
+.pkb-float { position: absolute; transform: translate(-50%, 0); font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 22px; color: #f5f3fb; text-shadow: 0 2px 8px rgba(0,0,0,0.7); animation: pkbFloat 0.6s ease-out forwards; }
+.pkb-float.you { color: #ffd98a; }
+.pkb-float.foe { color: #ff9d9d; }
+.pkb-float.crit { font-size: 30px; color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.65); animation: pkbFloatCrit 0.65s cubic-bezier(0.16,1.2,0.3,1) forwards; }
+@keyframes pkbFloat { 0% { opacity: 0; margin-top: 6px; } 18% { opacity: 1; } 100% { opacity: 0; margin-top: -28px; } }
+@keyframes pkbFloatCrit { 0% { opacity: 0; transform: translate(-50%,0) scale(1.6); } 22% { opacity: 1; transform: translate(-50%,0) scale(1); } 100% { opacity: 0; transform: translate(-50%,-30px) scale(1); } }
+.pkb-toast { position: absolute; top: 38%; left: 50%; transform: translate(-50%,-50%); padding: 7px 16px; border-radius: 9px; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; white-space: nowrap; background: rgba(10,10,26,0.88); border: 1px solid; animation: pkbToast 0.45s cubic-bezier(0.16,1.2,0.3,1) both; }
+.pkb-toast.crit  { color: #f5b842; border-color: rgba(245,184,66,0.55); }
+.pkb-toast.super { color: #34d399; border-color: rgba(52,211,153,0.55); }
+.pkb-toast.weak  { color: #9090a8; border-color: rgba(144,144,168,0.45); }
+.pkb-toast.miss  { color: #c8c6d8; border-color: rgba(200,198,216,0.4); }
+.pkb-toast.cau   { color: #5eead4; border-color: rgba(94,234,212,0.55); }
+@keyframes pkbToast { 0% { opacity: 0; transform: translate(-50%,-50%) scale(1.35); } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+/* text box — typewriter narration, tap to complete */
+.pkb-text { flex: none; margin-top: 10px; min-height: 52px; border-radius: 13px; background: rgba(14,14,36,0.92); border: 1px solid rgba(255,255,255,0.09); padding: 10px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pkb-text span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 15.5px; line-height: 1.35; color: #e3e0ee; }
+/* move grid — thumb zone; locks during resolution */
+.pkb-moves { flex: none; margin-top: 10px; }
+.pkb-moves .ar-bmoves.lock { opacity: 0.45; pointer-events: none; filter: saturate(0.55); transition: opacity 0.2s ease; }
+/* fast-forward indicator */
+#arena-overlay.pkb-ff .pkb-text::after { content: '▶▶'; float: right; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; color: #f5b842; }
+/* reduced motion: collapse transforms to fades, keep the sequencing */
+@media (prefers-reduced-motion: reduce) {
+  .pkb-stage.nudge, .pkb-spot.shake { animation: none; }
+  .pkb-spot.lunge-you, .pkb-spot.lunge-foe { transform: none; }
+  .pkb-spot, .pkb-plate .hp i { transition-duration: 0.15s; }
+  .pkb-float, .pkb-float.crit { animation: pkbFade 0.6s ease forwards; }
+  .pkb-toast { animation: pkbFade 0.45s ease both; }
+  @keyframes pkbFade { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+}

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w237';
+  const APP_BUILD_TAG = '2.2.5-w238';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7648,54 +7648,275 @@
   // shared HUD: two HP bars derived from current round wins
   // Combat header (ported) — YOU/FOE names, facing slim bars, diamond pips, status.
   // Status-icon chips for one combatant.
+  // ═══ W238 — Pokémon-composition battle UI + event director ═══════
+  // PRESENTATION ONLY (engine frozen at v2.6): the screen is built ONCE per
+  // fight as a persistent stage — foe upper-right on an archetype-tinted
+  // platform, player lower-left, plates glued to their owners, a typewriter
+  // text box, the move grid in the thumb zone. Each turn's engine events play
+  // as SEQUENTIAL beats (announce → lunge → impact → float → drain → toast);
+  // input locks until the queue drains. Hold ≥250ms anywhere = 2× fast-forward.
+  const _PKB_T = { announce: 350, hold: 250, lunge: 180, impact: 250, float: 600, drain: 500, drainMin: 300, toast: 450, ko: 700, gap: 120, type: 16 };
+  let _pkbBusy = false, _pkbFF = false, _pkbFFTimer = null, _pkbTypeDone = null;
+  let _pkbHPm = { p: 0, b: 0 }, _pkbEffShown = { p: true, b: true };
+
+  function _pkbArchTint(archKey) {
+    if (archKey === 'aggressor' || archKey === 'glasscannon') return '#ef4444';
+    if (archKey === 'sentinel' || archKey === 'juggernaut') return '#3b82f6';
+    if (archKey === 'trickster') return '#a78bfa';
+    return '#6b6b86';
+  }
+  function _pkbMs(ms) { return Math.max(40, Math.round(ms * (_pkbFF ? 0.5 : 1))); }
+  function _pkbAfter(ms, cb) { _arAfter(_pkbMs(ms), cb); }
+  function _pkbEl(id) { return document.getElementById(id); }
+
+  // status chips with remaining-turn counts (truth = session state)
   function _arBattleStatus(S) {
     let h = '';
     S.mods.forEach((x) => {
-      if (x.k === 'dot') h += '<span class="ar-st burn">' + (x.kind === 'bleed' ? 'BLEED' : 'BURN') + '</span>';
-      else if (x.k === 'atk') h += '<span class="ar-st ' + (x.mag > 0 ? 'up' : 'down') + '">ATK' + (x.mag > 0 ? '+' : '−') + '</span>';
-      else if (x.k === 'def') h += '<span class="ar-st ' + (x.mag < 0 ? 'up' : 'down') + '">DEF' + (x.mag < 0 ? '+' : '−') + '</span>';
-      else if (x.k === 'shred') h += '<span class="ar-st down">ARMOR−</span>';
-      else if (x.k === 'dotImmune') h += '<span class="ar-st up">CAUTERIZED</span>';
-      else if (x.k === 'dodge') h += '<span class="ar-st up">EVA</span>';
+      const n = x.dur > 0 ? '·' + x.dur : '';
+      if (x.k === 'dot') h += '<span class="ar-st burn">' + (x.kind === 'bleed' ? 'BLEED' : 'BURN') + n + '</span>';
+      else if (x.k === 'atk') h += '<span class="ar-st ' + (x.mag > 0 ? 'up' : 'down') + '">ATK' + (x.mag > 0 ? '+' : '−') + n + '</span>';
+      else if (x.k === 'def') h += '<span class="ar-st ' + (x.mag < 0 ? 'up' : 'down') + '">DEF' + (x.mag < 0 ? '+' : '−') + n + '</span>';
+      else if (x.k === 'shred') h += '<span class="ar-st down">ARMOR−' + n + '</span>';
+      else if (x.k === 'dotImmune') h += '<span class="ar-st up cau">CAUTERIZED' + n + '</span>';
+      else if (x.k === 'dodge') h += '<span class="ar-st up">EVA' + n + '</span>';
     });
     if (S.guard > 0) h += '<span class="ar-st up">GUARD</span>';
     if (S.stun > 0) h += '<span class="ar-st down">STUN</span>';
     return h;
   }
-  // The battle screen — real HP (with numbers) + status + log + your weapon's
-  // 4 moves. Re-rendered after each turn; `events` is the last turn's log.
-  function _arRenderBattle(events) {
+  function _pkbSetHP(side, hp, animate) {
+    const s = _arSess; if (!s) return;
+    const max = side === 'p' ? s.pMax : s.bMax;
+    const v = Math.max(0, Math.min(max, Math.round(hp)));
+    const frac = max ? v / max : 0;
+    const bar = _pkbEl('pkb-bar-' + side), num = _pkbEl('pkb-num-' + side);
+    if (!bar || !num) return;
+    bar.style.transitionDuration = animate ? Math.max(_PKB_T.drainMin, _pkbMs(_PKB_T.drain)) + 'ms' : '0ms';
+    bar.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+    bar.className = frac > 0.5 ? 'ok' : frac >= 0.2 ? 'warn' : 'crit';
+    num.innerHTML = v + '<span class="mx"> / ' + max + '</span>';
+  }
+  function _pkbChips(side, pulse) {
+    const s = _arSess; if (!s) return;
+    const el = _pkbEl('pkb-chips-' + side);
+    if (!el) return;
+    el.innerHTML = _arBattleStatus(side === 'p' ? s.pS : s.bS);
+    if (pulse) { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+  }
+  function _pkbRefreshMoves() {
+    const s = _arSess; const box = _pkbEl('pkb-moves');
+    if (!s || !box) return;
+    if (s.done) { box.innerHTML = '<button class="ar-contbtn" data-ar="next">SEE RESULT ▸</button>'; return; }
+    const card = (mv) => {
+      const onCd = s.cd[mv.id] > 0;
+      const tag = (mv.power ? 'PWR ' + Math.round(mv.power * 100) : 'SUPPORT') + (mv.prio ? ' · 1ST' : '') + (mv.hits ? ' · ×' + mv.hits : '');
+      return '<button class="ar-bmove' + (onCd ? ' cd' : '') + '"' + (onCd ? '' : ' data-ar="move" data-move="' + mv.id + '"') + '>' +
+        '<div class="top"><span class="g">' + _arGlyph(mv.gl || 'sword', onCd ? '#6b6b86' : '#f5b842', 15) + '</span><span class="nm">' + esc(mv.name) + '</span>' +
+          (onCd ? '<span class="cdn">' + s.cd[mv.id] + '</span>' : '') + '</div>' +
+        '<div class="ds">' + esc(mv.desc || '') + '</div><div class="tg">' + tag + '</div></button>';
+    };
+    const allCd = s.pMoves.every((mv) => s.cd[mv.id] > 0);
+    const kit = allCd ? [{ id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, desc: 'A desperate blow.' }] : s.pMoves;
+    box.innerHTML = '<div class="ar-bmoves' + (_pkbBusy ? ' lock' : '') + '">' + kit.map(card).join('') + '</div>';
+  }
+  function _pkbLock(on) {
+    _pkbBusy = on;
+    const box = _pkbEl('pkb-moves');
+    const grid = box && box.firstChild;
+    if (grid && grid.classList) grid.classList.toggle('lock', !!on);
+  }
+  // typewriter — tap the text box to complete the line instantly
+  function _pkbSay(text, cb) {
+    const el = _pkbEl('pkb-text-line');
+    if (!el) { cb && cb(); return; }
+    const plain = String(text).replace(/<[^>]*>/g, '');
+    let i = 0, finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true; _pkbTypeDone = null;
+      el.textContent = plain;
+      _pkbAfter(_PKB_T.hold, () => { if (cb) cb(); });
+    };
+    _pkbTypeDone = finish;
+    const tick = () => {
+      if (finished || !_arSess) return;
+      i += _pkbFF ? 5 : 2;
+      if (i >= plain.length) { finish(); return; }
+      el.textContent = plain.slice(0, i);
+      _arAfter(_PKB_T.type, tick);
+    };
+    el.textContent = '';
+    tick();
+  }
+  function _pkbFloat(attackerSide, txt, crit) {
+    const fx = _pkbEl('pkb-fx'), st = _pkbEl('pkb-stage');
+    const spot = _pkbEl('pkb-spot-' + (attackerSide === 'p' ? 'b' : 'p'));
+    if (!fx || !st || !spot) return;
+    const d = document.createElement('div');
+    d.className = 'pkb-float ' + (attackerSide === 'p' ? 'you' : 'foe') + (crit ? ' crit' : '');
+    d.textContent = txt;
+    const r = spot.getBoundingClientRect(), rs = st.getBoundingClientRect();
+    d.style.left = (r.left - rs.left + r.width * 0.5) + 'px';
+    d.style.top = (r.top - rs.top + r.height * 0.2) + 'px';
+    fx.appendChild(d);
+    _pkbAfter(_PKB_T.float + 250, () => { try { d.remove(); } catch (_) {} });
+  }
+  function _pkbToast(txt, cls, cb) {
+    const fx = _pkbEl('pkb-fx');
+    if (!fx) { cb && cb(); return; }
+    const t = document.createElement('div');
+    t.className = 'pkb-toast ' + (cls || '');
+    t.textContent = txt;
+    fx.appendChild(t);
+    _pkbAfter(_PKB_T.toast + 250, () => { try { t.remove(); } catch (_) {} if (cb) cb(); });
+  }
+  // move-name extraction from our own event text formats (presentation only)
+  function _pkbMoveName(e) {
+    const t = e.text || '';
+    let m = t.match(/—\s(.+?)(?:\s×\d+)?\sfor\s\d/);
+    if (!m) m = t.match(/—\s(.+?)\smisses!/);
+    if (!m) m = t.match(/dodges\s(.+?)!/);
+    return m ? m[1] : null;
+  }
+  // one beat per engine event — announce → act → react → drain → toast
+  function _pkbBeat(e, next) {
+    const s = _arSess; if (!s) return;
+    const foeName = _arMatchup.bot.name;
+    const mvName = _pkbMoveName(e);
+    const used = (e.side === 'p' ? 'You used ' : foeName + ' used ') + (mvName ? mvName.toUpperCase() : 'an attack') + '!';
+    if (e.t === 'hit') {
+      _pkbSay(used, () => {
+        const atk = _pkbEl('pkb-spot-' + e.side);
+        if (atk) { atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe'); _pkbAfter(_PKB_T.lunge, () => atk.classList.remove('lunge-you', 'lunge-foe')); }
+        _pkbAfter(_PKB_T.lunge, () => {
+          const defSide = e.side === 'p' ? 'b' : 'p';
+          const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
+          if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
+          else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
+          try { playSfx(e.crit ? 'ar_crit' : e.side === 'p' ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
+          try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
+          _pkbFloat(e.side, '−' + (e.dmg || 0), !!e.crit);
+          _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+          _pkbSetHP(defSide, _pkbHPm[defSide], true);
+          const after = () => {
+            const eff = e.side === 'p' ? s.pEff : s.bEff;
+            if (!_pkbEffShown[e.side] && Math.abs(eff - 1) > 0.001) {
+              _pkbEffShown[e.side] = true;
+              _pkbToast(eff > 1 ? 'SUPER EFFECTIVE!' : 'NOT VERY EFFECTIVE…', eff > 1 ? 'super' : 'weak', next);
+            } else next();
+          };
+          if (e.crit) _pkbToast('CRITICAL HIT!', 'crit', after);
+          else _pkbAfter(Math.round(_PKB_T.drain * 0.7), after);
+        });
+      });
+    } else if (e.t === 'miss') {
+      _pkbSay(used, () => _pkbToast('MISS', 'miss', next));
+    } else if (e.t === 'dodge') {
+      _pkbSay(used, () => _pkbToast('DODGED!', 'miss', next));
+    } else if (e.t === 'dot') {
+      const defSide = e.side === 'p' ? 'b' : 'p';
+      _pkbSay(e.text, () => {
+        _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+        _pkbSetHP(defSide, _pkbHPm[defSide], true);
+        _pkbChips(defSide, true);
+        _pkbAfter(_PKB_T.drainMin, next);
+      });
+    } else if (e.t === 'heal') {
+      _pkbSay(e.text, () => {
+        const m2 = (e.text || '').match(/restores\s(\d+)\sHP/);
+        if (m2) {
+          const max = e.side === 'p' ? s.pMax : s.bMax;
+          _pkbHPm[e.side] = Math.min(max, _pkbHPm[e.side] + parseInt(m2[1], 10));
+          _pkbSetHP(e.side, _pkbHPm[e.side], true);
+        }
+        const plate = _pkbEl('pkb-plate-' + e.side);
+        if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
+        _pkbAfter(_PKB_T.drainMin, next);
+      });
+    } else if (e.t === 'fx') {
+      const cau = (e.text || '').indexOf('cauterized; the') !== -1;
+      _pkbSay(e.text, () => {
+        _pkbChips('p', true); _pkbChips('b', true);
+        if (cau) _pkbToast('CAUTERIZED — NO EFFECT', 'cau', next);
+        else next();
+      });
+    } else {   // stun-skip + anything unrecognized: narrate the engine text
+      _pkbSay(e.text || '…', next);
+    }
+  }
+  function _pkbPlay(events) {
+    if (!_arSess) return;
+    _pkbLock(true);
+    const q = (events || []).slice();
+    const step = () => {
+      if (!_arSess || _arView !== 'battle') return;          // exited mid-queue
+      if (!q.length) { _pkbDrained(); return; }
+      _pkbBeat(q.shift(), () => _pkbAfter(_PKB_T.gap, step));
+    };
+    step();
+  }
+  function _pkbDrained() {
+    const s = _arSess; if (!s) return;
+    _pkbHPm = { p: s.pHP, b: s.bHP };                        // reconcile to engine truth
+    _pkbSetHP('p', s.pHP, true); _pkbSetHP('b', s.bHP, true);
+    _pkbChips('p'); _pkbChips('b');
+    if (s.done) {
+      const loser = s.won ? 'b' : 'p';
+      const spot = _pkbEl('pkb-spot-' + loser), plate = _pkbEl('pkb-plate-' + loser);
+      if (spot) spot.classList.add('ko');
+      if (plate) plate.classList.add('ko');
+      try { if (navigator.vibrate) navigator.vibrate(s.won ? 22 : [30, 40, 60]); } catch (_) {}
+      _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', () => {
+        _pkbAfter(_PKB_T.ko, () => { _pkbLock(false); _pkbRefreshMoves(); });
+      });
+    } else {
+      _pkbSay('What will you do?', () => { _pkbLock(false); _pkbRefreshMoves(); });
+    }
+  }
+  // The battle screen — built ONCE per fight; the director patches it per turn.
+  function _arRenderBattle() {
     _arView = 'battle';
     _arBodyMode(false);
+    _pkbBusy = false; _pkbFF = false;
     const s = _arSess, m = _arMatchup;
-    const pPct = Math.round(s.pHP / s.pMax * 100), bPct = Math.round(s.bHP / s.bMax * 100);
-    const effTag = s.eff.key === 'super' ? ' <b style="color:#34d399">SUPER EFFECTIVE</b>'
-      : s.eff.key === 'weak' ? ' <b style="color:#ef4444">NOT VERY EFFECTIVE</b>' : '';
-    const hp =
-      '<div class="ar-bhp"><div class="ar-bhp-side"><div class="row"><span class="nm you">YOU <span class="wpn">· ' + esc(s.weaponName) + '</span></span><span class="hpn">' + s.pHP + '<span class="mx"> / ' + s.pMax + '</span></span></div>' +
-        '<div class="bar you' + (pPct <= 22 ? ' low' : '') + '"><i style="width:' + pPct + '%"></i></div><div class="stat">' + _arBattleStatus(s.pS) + '</div></div>' +
-      '<div class="ar-bhp-side foe"><div class="row"><span class="nm foe">' + esc(m.bot.name) + '</span><span class="hpn">' + s.bHP + '<span class="mx"> / ' + s.bMax + '</span></span></div>' +
-        '<div class="bar foe' + (bPct <= 22 ? ' low' : '') + '"><i style="width:' + bPct + '%"></i></div><div class="stat">' + _arBattleStatus(s.bS) + '</div></div></div>';
-    const logHtml = (events && events.length)
-      ? events.slice(-4).map((e) => '<div class="ln ' + (e.side === 'p' ? 'you' : 'foe') + (e.crit ? ' crit' : '') + '">' + e.text + '</div>').join('')
-      : '<div class="ln neutral">Floor ' + m.floor + ' · ' + esc(m.bot.name) + '.' + effTag + '<br>Choose your opening move.</div>';
-    let foot;
-    if (s.done) {
-      foot = '<button class="ar-contbtn" data-ar="next">SEE RESULT ▸</button>';
-    } else {
-      const card = (mv) => {
-        const onCd = s.cd[mv.id] > 0;
-        const tag = (mv.power ? 'PWR ' + Math.round(mv.power * 100) : 'SUPPORT') + (mv.prio ? ' · 1ST' : '') + (mv.hits ? ' · ×' + mv.hits : '');
-        return '<button class="ar-bmove' + (onCd ? ' cd' : '') + '"' + (onCd ? '' : ' data-ar="move" data-move="' + mv.id + '"') + '>' +
-          '<div class="top"><span class="g">' + _arGlyph(mv.gl || 'sword', onCd ? '#6b6b86' : '#f5b842', 15) + '</span><span class="nm">' + esc(mv.name) + '</span>' +
-            (onCd ? '<span class="cdn">' + s.cd[mv.id] + '</span>' : '') + '</div>' +
-          '<div class="ds">' + esc(mv.desc || '') + '</div><div class="tg">' + tag + '</div></button>';
-      };
-      const allCd = s.pMoves.every((mv) => s.cd[mv.id] > 0);
-      const kit = allCd ? [{ id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, desc: 'A desperate blow.' }] : s.pMoves;
-      foot = '<div class="ar-bmoves">' + kit.map(card).join('') + '</div>';
-    }
-    _arSet(hp + '<div class="ar-blog">' + logHtml + '</div><div class="ar-bspace"></div>' + foot);
+    _pkbHPm = { p: s.pHP, b: s.bHP };
+    _pkbEffShown = { p: false, b: false };
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const tint = _pkbArchTint(s.foeArch);
+    _arSet(
+      '<div class="pkb">' +
+        '<div class="pkb-top">FLOOR ' + m.floor + ' — ' + esc(m.bot.name).toUpperCase() + '</div>' +
+        '<div class="pkb-stage" id="pkb-stage">' +
+          '<div class="pkb-row foe">' +
+            '<div class="pkb-plate" id="pkb-plate-b">' +
+              '<div class="nm">' + esc(m.bot.name) + '</div>' +
+              '<div class="hp"><i id="pkb-bar-b" class="ok"></i></div>' +
+              '<div class="num" id="pkb-num-b"></div>' +
+              '<div class="chips" id="pkb-chips-b"></div></div>' +
+            '<div class="pkb-spot foe" id="pkb-spot-b">' +
+              '<span class="plat" style="background:radial-gradient(closest-side,' + tint + '30,transparent 78%);border-color:' + tint + '3d"></span>' +
+              '<div class="spr">' + _arFoeArt(m.bot, !!m.bot.isBoss) + '</div></div>' +
+          '</div>' +
+          '<div class="pkb-row you">' +
+            '<div class="pkb-spot you" id="pkb-spot-p">' +
+              '<span class="plat" style="background:radial-gradient(closest-side,#f5b84230,transparent 78%);border-color:#f5b8423d"></span>' +
+              '<div class="spr">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div></div>' +
+            '<div class="pkb-plate you" id="pkb-plate-p">' +
+              '<div class="nm">YOU <span class="wpn">· ' + esc(s.weaponName) + '</span></div>' +
+              '<div class="hp"><i id="pkb-bar-p" class="ok"></i></div>' +
+              '<div class="num" id="pkb-num-p"></div>' +
+              '<div class="chips" id="pkb-chips-p"></div></div>' +
+          '</div>' +
+          '<div class="pkb-fx" id="pkb-fx"></div>' +
+        '</div>' +
+        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line">Floor ' + m.floor + ' · ' + esc(m.bot.name) + '. Choose your opening move.</span></div>' +
+        '<div class="pkb-moves" id="pkb-moves"></div>' +
+      '</div>'
+    );
+    _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
+    _pkbChips('p'); _pkbChips('b');
+    _pkbRefreshMoves();
   }
 
   // ── result ────────────────────────────────────────────────────────
@@ -7848,6 +8069,19 @@
     ov.setAttribute('data-ar-wired', '1');
     const closeBtn = document.getElementById('arena-close');
     if (closeBtn) closeBtn.addEventListener('click', _arExit);
+    // W238 — hold ≥250ms anywhere during beat playback = 2× fast-forward
+    ov.addEventListener('pointerdown', () => {
+      if (_arView !== 'battle' || !_pkbBusy) return;
+      if (_pkbFFTimer) clearTimeout(_pkbFFTimer);
+      _pkbFFTimer = setTimeout(() => { _pkbFF = true; try { ov.classList.add('pkb-ff'); } catch (_) {} }, 250);
+    });
+    const _pkbFFEnd = () => {
+      if (_pkbFFTimer) { clearTimeout(_pkbFFTimer); _pkbFFTimer = null; }
+      _pkbFF = false;
+      try { ov.classList.remove('pkb-ff'); } catch (_) {}
+    };
+    ov.addEventListener('pointerup', _pkbFFEnd);
+    ov.addEventListener('pointercancel', _pkbFFEnd);
     ov.addEventListener('click', (e) => {
       const act = e.target && e.target.closest ? e.target.closest('[data-ar]') : null;
       if (!act) {
@@ -7860,20 +8094,15 @@
       if (a === 'exit')         _arExit();
       else if (a === 'fight' || a === 'rematch') { if (_arSess || _arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arView === 'battle' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
       else if (a === 'introgo') { _arCommitFight(); }
-      else if (a === 'move')    {                                          // W231 — pick a move; resolve a battle turn
-        if (!_arSess || _arSess.done || _arView !== 'battle') return;
+      else if (a === 'move')    {                                          // W238 — pick a move; the director plays the turn
+        if (!_arSess || _arSess.done || _arView !== 'battle' || _pkbBusy) return;
         const ev = arenaTakeTurn(_arSess, act.getAttribute('data-move'));
         if (!ev) return;                                                   // invalid / on cooldown
-        const hitFoe = ev.some((e) => e.side === 'p' && e.t === 'hit');
-        const hitYou = ev.some((e) => e.side === 'b' && (e.t === 'hit' || e.t === 'dot'));
-        const crit = ev.some((e) => e.crit);
-        if (hitFoe) _arHitJuice(true, crit); else if (hitYou) _arHitJuice(false, false);
-        try { playSfx(crit ? 'ar_crit' : hitFoe ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
-        try { if (navigator.vibrate) navigator.vibrate(crit ? 18 : 10); } catch (_) {}
-        _arRenderBattle(ev);                                               // shows SEE RESULT when done
+        _pkbPlay(ev);                                                      // beats handle sfx/haptics/HP/toasts; unlocks on drain
       }
+      else if (a === 'pkbtext') { if (_pkbTypeDone) _pkbTypeDone(); }      // tap the text box → finish the typewriter line
       else if (a === 'next')    {                                          // SEE RESULT after the final blow
-        if (!_arSess || !_arSess.done) return;
+        if (!_arSess || !_arSess.done || _pkbBusy) return;
         _arFinishSession();
       }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
