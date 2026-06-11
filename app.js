@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w252';
+  const APP_BUILD_TAG = '2.2.5-w253';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8056,6 +8056,13 @@
   function _arBgTier(floor) {
     try { return String(_ascentBandFor(floor).tier || 'E').toLowerCase(); } catch (_) { return 'e'; }
   }
+  // W253 — per-tier background focal bias (object-position Y). Luminance-edge
+  // profiling showed five of six plates carry their focal architecture in the
+  // TOP third of the image (e 27% · d 17% · c 10% · b 10% · a 24%) — the
+  // default centered crop displayed exactly that band ABOVE the fighters,
+  // reading as empty sky. Low Y pulls the arches down behind the fighter
+  // band; bg_s is inverted (focal at 67%) so it pushes up instead.
+  const _PKB_BG_FOCAL = { e: '12%', d: '6%', c: '0%', b: '0%', a: '10%', s: '100%' };
   function _pkbMountBg(floor) {
     const stage = _pkbEl('pkb-stage'); if (!stage) return;
     const wrap = stage.querySelector('.pkb-bgwrap'); if (!wrap) return;
@@ -8066,6 +8073,7 @@
       const t = ORDER[idx];
       const img = document.createElement('img');
       img.className = 'pkb-bg'; img.alt = ''; img.decoding = 'async';
+      img.style.objectPosition = '50% ' + (_PKB_BG_FOCAL[t] || '50%');   // W253 focal bias
       img.onload = () => {
         if (t !== want) { try { console.log('[pkb-bg] substituted bg_' + t + ' for missing bg_' + want + ' (attempted: ' + attempted.join(', ') + ')'); } catch (_) {} }
         requestAnimationFrame(() => img.classList.add('on'));   // 400ms opacity fade (CSS)
