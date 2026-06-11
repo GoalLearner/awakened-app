@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w230';
+  const APP_BUILD_TAG = '2.2.5-w231';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6315,6 +6315,252 @@
     };
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  //  W231 — Weapon-driven move-list combat (real HP battle).
+  //  Your equipped WEAPON sets your 4 moves; armor still feeds stats/HP.
+  //  ATTACK→damage, DEFENSE→HP pool, EDGE→crit + turn order + accuracy.
+  //  Cosmetic-only; build still decides (HP & damage scale off build).
+  // ═══════════════════════════════════════════════════════════════
+  const _HP_BASE = 30, _HP_PER_DEF = 4.5, _DMG_VAR = 0.15, _BATTLE_TURN_CAP = 40;
+  // Move templates. power = ATTACK multiplier (0 = non-damage); acc = hit chance;
+  // hits = multi-hit; prio = goes first; cd = cooldown turns; fx = status applied.
+  // fx.t: burn/bleed(dot) · stun · atkUp/atkDown · defUp(self -dmg)/defDown(foe +dmg)
+  //       · dodge · guard(halve next) · heal · cleanse.
+  const ARENA_MOVE_LIB = {
+    jab:        { name: 'Jab',          gl: 'sword',  power: 0.85, acc: 0.97, cd: 0, desc: 'Quick, reliable.' },
+    hook:       { name: 'Hook',         gl: 'sword',  power: 1.3,  acc: 0.85, cd: 2, desc: 'Heavy fist.' },
+    slash:      { name: 'Slash',        gl: 'sword',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A clean cut.' },
+    lunge:      { name: 'Lunge',        gl: 'sword',  power: 1.25, acc: 0.88, cd: 2, desc: 'A committed thrust.' },
+    cleave:     { name: 'Cleave',       gl: 'sword',  power: 1.55, acc: 0.82, cd: 2, desc: 'Wide, heavy swing.' },
+    crush:      { name: 'Crush',        gl: 'sword',  power: 1.7,  acc: 0.78, cd: 2, desc: 'Bone-breaking blow.' },
+    oathstrike: { name: 'Oathstrike',   gl: 'sword',  power: 1.95, acc: 0.88, cd: 3, desc: 'A vow made steel.' },
+    flurry:     { name: 'Flurry',       gl: 'dagger', power: 0.5,  acc: 0.95, hits: 3, cd: 1, desc: 'Three fast cuts.' },
+    quickstep:  { name: 'Quickstep',    gl: 'dagger', power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Always strikes first.' },
+    thousand:   { name: 'Thousand Cuts',gl: 'dagger', power: 0.38, acc: 0.95, hits: 4, cd: 3, desc: 'A storm of blades.' },
+    ember:      { name: 'Ember',        gl: 'burst',  power: 0.7,  acc: 0.95, cd: 0, fx: { t: 'burn', mag: 0.12, dur: 3 }, desc: 'Ignites — burns over time.' },
+    searing:    { name: 'Searing Cut',  gl: 'burst',  power: 1.1,  acc: 0.9,  cd: 1, fx: { t: 'burn', mag: 0.16, dur: 3 }, desc: 'A cut that smolders.' },
+    immolate:   { name: 'Immolate',     gl: 'burst',  power: 1.6,  acc: 0.85, cd: 3, fx: { t: 'burn', mag: 0.2,  dur: 2 }, desc: 'Engulf in flame.' },
+    sunder:     { name: 'Sunder',       gl: 'shield', power: 0.8,  acc: 0.92, cd: 2, fx: { t: 'defDown', mag: 0.3, dur: 3 }, desc: 'Foe takes +30% dmg.' },
+    stagger:    { name: 'Stagger',      gl: 'shield', power: 0.9,  acc: 0.85, cd: 3, fx: { t: 'stun', dur: 1 }, desc: 'Stuns — foe skips a turn.' },
+    quake:      { name: 'Quake',        gl: 'shield', power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', mag: 0.2, dur: 2 }, desc: 'Shatter their footing.' },
+    willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', mag: 0.25, dur: 3 }, desc: 'Foe hits 25% softer.' },
+    wardstrike: { name: 'Ward Strike',  gl: 'shield', power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'heal', mag: 0.12 }, desc: 'Strike and mend.' },
+    guard:      { name: 'Guard',        gl: 'shield', power: 0,    acc: 1,    cd: 1, fx: { t: 'guard' }, desc: 'Halve the next hit.' },
+    brace:      { name: 'Brace',        gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'defUp', mag: -0.35, dur: 2 }, desc: 'Take 35% less for 2 turns.' },
+    focus:      { name: 'Focus',        gl: 'burst',  power: 0,    acc: 1,    cd: 2, fx: { t: 'atkUp', mag: 0.3, dur: 3 }, desc: 'Your hits land 30% harder.' },
+    temper:     { name: 'Temper',       gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', mag: 0.4, dur: 3 }, desc: 'Stoke your fury (+40%).' },
+    evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
+    refuse:     { name: 'Refuse',       gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Guard and shed afflictions.' },
+    lastvow:    { name: 'Last Vow',     gl: 'shield', power: 0,    acc: 1,    cd: 4, fx: { t: 'heal', mag: 0.4 }, desc: 'Restore 40% of your health.' },
+  };
+  // Weapon id → 4 move ids (the weapon names your kit). Unknown weapon → unarmed.
+  const WEAPON_MOVES = {
+    unarmed:               ['jab', 'hook', 'guard', 'focus'],
+    rusted_training_blade: ['slash', 'lunge', 'guard', 'focus'],
+    titan_oathblade:       ['cleave', 'sunder', 'brace', 'oathstrike'],
+    hammerfall_warmaul:    ['crush', 'stagger', 'brace', 'quake'],
+    kilnforged_warblade:   ['searing', 'ember', 'temper', 'immolate'],
+    ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
+    vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
+  };
+  // Foe kits by archetype (floors/bosses have no weapon).
+  const ARCH_MOVES = {
+    aggressor:   ['cleave', 'sunder', 'slash', 'focus'],
+    glasscannon: ['oathstrike', 'cleave', 'slash', 'temper'],
+    sentinel:    ['slash', 'brace', 'guard', 'wardstrike'],
+    juggernaut:  ['crush', 'brace', 'guard', 'quake'],
+    trickster:   ['quickstep', 'willbreak', 'evade', 'flurry'],
+    balanced:    ['slash', 'guard', 'focus', 'lunge'],
+  };
+  function _arenaMaxHP(c) { return Math.max(20, Math.round(_HP_BASE + (c.defense || 0) * _HP_PER_DEF)); }
+  function _arBlankStatus() { return { mods: [], stun: 0, guard: 0 }; }
+  function _arStatAtkMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'atk') m += x.mag; }); return Math.max(0.3, m); }
+  function _arStatTakenMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'def') m += x.mag; }); return Math.max(0.2, m); }
+  function _arStatDodge(s) { let d = 0; s.mods.forEach((x) => { if (x.k === 'dodge') d += x.mag; }); return Math.min(0.7, d); }
+  function _arenaWeaponName() {
+    try { const b = getHunterBuild(); const id = b && b.slots ? b.slots[3] : null; const c = id && typeof CARDS !== 'undefined' ? CARDS[id] : null; if (c && c.name) return c.name; } catch (_) {}
+    return 'Bare Fists';
+  }
+  function _arenaPlayerKit() {
+    let wid = null;
+    try { const b = getHunterBuild(); if (b && Array.isArray(b.slots)) wid = b.slots[3]; } catch (_) {}
+    const ids = (wid && WEAPON_MOVES[wid]) ? WEAPON_MOVES[wid] : WEAPON_MOVES.unarmed;
+    return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
+  }
+  function _arenaFoeKit(arch) {
+    const ids = ARCH_MOVES[arch] || ARCH_MOVES.balanced;
+    return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
+  }
+  function arenaStartBattle(m) {
+    const playerArch = _arenaArchOf(m.player);
+    const foeArch    = m.bot.archKey || _arenaArchOf(m.bot);
+    const eff        = _arenaEffectiveness(playerArch, foeArch);
+    const pMax = _arenaMaxHP(m.player), bMax = _arenaMaxHP(m.bot);
+    return {
+      m, eff, playerArch, foeArch, weaponName: _arenaWeaponName(),
+      pHP: pMax, pMax, bHP: bMax, bMax,
+      pS: _arBlankStatus(), bS: _arBlankStatus(),
+      pMoves: _arenaPlayerKit(), bMoves: _arenaFoeKit(foeArch),
+      cd: {}, bcd: {}, turn: 1, log: [], done: false, won: false, untouched: true,
+    };
+  }
+  // Foe AI: prefer off-cooldown moves; heal/guard when low, else weighted attack.
+  function _arenaFoePick(sess) {
+    const avail = sess.bMoves.filter((mv) => !(sess.bcd[mv.id] > 0));
+    const pool = avail.length ? avail : sess.bMoves;
+    const lowHP = sess.bHP / sess.bMax < 0.35;
+    if (lowHP) {
+      const heal = pool.find((mv) => mv.fx && mv.fx.t === 'heal');
+      if (heal && Math.random() < 0.7) return heal;
+      const guard = pool.find((mv) => mv.fx && (mv.fx.t === 'guard' || mv.fx.t === 'defUp' || mv.fx.t === 'guardCleanse'));
+      if (guard && Math.random() < 0.5) return guard;
+    }
+    const attacks = pool.filter((mv) => (mv.power || 0) > 0);
+    const set = attacks.length ? attacks : pool;
+    return set[Math.floor(Math.random() * set.length)];
+  }
+  function _arEdge(sess, side) { return side === 'p' ? (sess.m.player.edge || 0) : (sess.m.bot.edge || 0); }
+  // Execute one combatant's move within a turn; push readable events.
+  function _arExecMove(sess, side, move, events) {
+    const atkKey = side === 'p' ? 'pS' : 'bS';
+    const atkS = sess[atkKey], defS = side === 'p' ? sess.bS : sess.pS;
+    const atkName = side === 'p' ? 'You' : esc(sess.m.bot.name);
+    const defName = side === 'p' ? esc(sess.m.bot.name) : 'You';
+    if (atkS.stun > 0) { events.push({ side, t: 'stun', text: atkName + ' — stunned, can\'t move.' }); return; }
+    const atkStat = (side === 'p' ? sess.m.player.attack : sess.m.bot.attack) * _arStatAtkMult(atkS);
+    // accuracy (EDGE nudges it up a touch)
+    const acc = Math.min(0.99, (move.acc != null ? move.acc : 1) + _arEdge(sess, side) * 0.002);
+    if ((move.power || 0) > 0 && Math.random() > acc) { events.push({ side, t: 'miss', text: atkName + ' — ' + move.name + ' misses!' }); }
+    else {
+      // damage
+      if ((move.power || 0) > 0) {
+        const dodge = _arStatDodge(defS);
+        if (dodge > 0 && Math.random() < dodge) { events.push({ side, t: 'dodge', text: defName + ' dodges ' + move.name + '!' }); }
+        else {
+          const hits = move.hits || 1;
+          let total = 0, crit = false;
+          const critChance = side === 'p' ? _arenaSideOdds(sess.m.player).crit : _arenaSideOdds(sess.m.bot).crit;
+          const eff = side === 'p' ? sess.eff.mult : 1;   // type matchup boosts the player's damage only
+          for (let h = 0; h < hits; h++) {
+            let dmg = atkStat * move.power * eff;
+            if (Math.random() < critChance) { dmg *= 1.5; crit = true; }
+            dmg *= 1 + (Math.random() * 2 - 1) * _DMG_VAR;
+            dmg *= _arStatTakenMult(defS);
+            if (defS.guard > 0) dmg *= 0.5;
+            total += dmg;
+          }
+          total = Math.max(1, Math.round(total));
+          if (defS.guard > 0) defS.guard = 0;   // guard consumed
+          if (side === 'p') { sess.bHP = Math.max(0, sess.bHP - total); }
+          else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
+          events.push({ side, t: 'hit', crit, dmg: total, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + total + (crit ? ' (CRIT!)' : '') + '.' });
+        }
+      }
+      // status effect
+      if (move.fx) _arApplyFx(sess, side, move.fx, events, atkName, defName);
+    }
+    // KO check
+    if (sess.bHP <= 0) { sess.done = true; sess.won = true; }
+    else if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
+  }
+  function _arApplyFx(sess, side, fx, events, atkName, defName) {
+    const selfS = side === 'p' ? sess.pS : sess.bS, foeS = side === 'p' ? sess.bS : sess.pS;
+    switch (fx.t) {
+      case 'burn': case 'bleed':
+        foeS.mods.push({ k: 'dot', kind: fx.t, mag: fx.mag, dur: fx.dur });
+        events.push({ side, t: 'fx', text: defName + ' is ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
+      case 'stun': foeS.stun = Math.max(foeS.stun, (fx.dur || 1) + 1); events.push({ side, t: 'fx', text: defName + ' is stunned.' }); break;
+      case 'atkUp': selfS.mods.push({ k: 'atk', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: atkName + ' — attack up.' }); break;
+      case 'atkDown': foeS.mods.push({ k: 'atk', mag: -fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: defName + ' — attack down.' }); break;
+      case 'defUp': selfS.mods.push({ k: 'def', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: atkName + ' braces.' }); break;
+      case 'defDown': foeS.mods.push({ k: 'def', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: defName + ' — defense broken.' }); break;
+      case 'dodge': selfS.mods.push({ k: 'dodge', mag: fx.mag, dur: fx.dur }); events.push({ side, t: 'fx', text: atkName + ' — evasive.' }); break;
+      case 'guard': selfS.guard = 1; events.push({ side, t: 'fx', text: atkName + ' guards.' }); break;
+      case 'guardCleanse': selfS.guard = 1; selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.mag < 0)); selfS.stun = 0; events.push({ side, t: 'fx', text: atkName + ' refuses — guarded, afflictions shed.' }); break;
+      case 'heal': {
+        const max = side === 'p' ? sess.pMax : sess.bMax;
+        const amt = Math.round(max * fx.mag);
+        if (side === 'p') sess.pHP = Math.min(sess.pMax, sess.pHP + amt); else sess.bHP = Math.min(sess.bMax, sess.bHP + amt);
+        events.push({ side, t: 'heal', text: atkName + ' — restores ' + amt + ' HP.' }); break;
+      }
+    }
+  }
+  function _arEndTurn(sess, events) {
+    ['p', 'b'].forEach((side) => {
+      const S = side === 'p' ? sess.pS : sess.bS;
+      // DoT ticks (scaled off the AFFLICTED side's max HP for predictability)
+      const max = side === 'p' ? sess.pMax : sess.bMax;
+      S.mods.filter((x) => x.k === 'dot').forEach((d) => {
+        const dmg = Math.max(1, Math.round(max * d.mag));
+        if (side === 'p') { sess.pHP = Math.max(0, sess.pHP - dmg); sess.untouched = false; } else sess.bHP = Math.max(0, sess.bHP - dmg);
+        events.push({ side: side === 'p' ? 'b' : 'p', t: 'dot', dmg, text: (side === 'p' ? 'You take' : esc(sess.m.bot.name) + ' takes') + ' ' + dmg + ' from ' + d.kind + '.' });
+      });
+      // decrement durations
+      S.mods.forEach((x) => { x.dur -= 1; });
+      S.mods = S.mods.filter((x) => x.dur > 0);
+      if (S.stun > 0) S.stun -= 1;
+    });
+    // cooldowns tick
+    Object.keys(sess.cd).forEach((k) => { if (sess.cd[k] > 0) sess.cd[k] -= 1; });
+    Object.keys(sess.bcd).forEach((k) => { if (sess.bcd[k] > 0) sess.bcd[k] -= 1; });
+    if (sess.bHP <= 0) { sess.done = true; sess.won = true; }
+    else if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
+  }
+  // Resolve a full turn given the player's chosen move id (no commit).
+  function arenaTakeTurn(sess, moveId) {
+    if (!sess || sess.done) return null;
+    const pMove = sess.pMoves.find((x) => x.id === moveId);
+    if (!pMove || sess.cd[pMove.id] > 0) return null;   // invalid or on cooldown
+    const bMove = _arenaFoePick(sess);
+    const events = [];
+    const pPrio = pMove.prio || 0, bPrio = bMove.prio || 0;
+    const pFirst = (pPrio !== bPrio) ? (pPrio > bPrio) : (_arEdge(sess, 'p') >= _arEdge(sess, 'b'));
+    const order = pFirst ? ['p', 'b'] : ['b', 'p'];
+    for (const s of order) { if (sess.done) break; _arExecMove(sess, s, s === 'p' ? pMove : bMove, events); }
+    if (pMove.cd) sess.cd[pMove.id] = pMove.cd + 1;     // +1: ticked down at end of this turn
+    if (bMove.cd) sess.bcd[bMove.id] = bMove.cd + 1;
+    if (!sess.done) _arEndTurn(sess, events);
+    sess.turn += 1;
+    if (!sess.done && sess.turn > _BATTLE_TURN_CAP) { sess.done = true; sess.won = (sess.pHP / sess.pMax) >= (sess.bHP / sess.bMax); }
+    sess.log = events;
+    return events;
+  }
+  // Finalize + commit ONCE (W220/W221) — won comes from HP. Same result shape.
+  function arenaFinalizeBattle(sess) {
+    const m = sess.m, st = getAscentState();
+    const rated = !!m.advances;
+    const beforeTitleIds = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st)).map(t => t.id);
+    const won = !!sess.won;
+    const result = {
+      playerWon: won, pWins: won ? 1 : 0, bWins: won ? 0 : 1, rounds: [], battle: true,
+      pHP: sess.pHP, bHP: sess.bHP, pMax: sess.pMax, bMax: sess.bMax,
+      eff: sess.eff, playerArch: sess.playerArch, foeArch: sess.foeArch, untouched: sess.untouched,
+    };
+    const ratingBefore = st.rating;
+    let delta = 0, advanced = false, floorCleared = null, bossCleared = null;
+    if (rated) {
+      delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
+      st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
+      if (st.rating > st.bestRating) st.bestRating = st.rating;
+      if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
+      else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
+      if (won && m.floor === st.currentFloor && m.floor > st.highestCleared) {
+        st.highestCleared = m.floor;
+        st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
+        advanced = true; floorCleared = m.floor;
+        if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+      }
+    }
+    _persistAscentState(st);
+    const newTitles = ARENA_TITLES.filter(t => beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
+    return {
+      result, state: st, won, rated,
+      ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
+      advanced, floorCleared, bossCleared, newTitles,
+      livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
+    };
+  }
+
   // Expose floor data for the tower UI (no state mutation).
   function ascentFloorInfo(floor) {
     const st = getAscentState();
@@ -6796,13 +7042,22 @@
   }
   // Fight Recap — blow-by-blow + honest stats (dmg = winning-side rolls).
   function _ascRecapHtml(f) {
-    if (!f || !f.result || !Array.isArray(f.result.rounds)) return '';
-    const rounds = f.result.rounds;
+    if (!f || !f.result) return '';
+    const r = f.result;
+    const stat = (v, l, win) => '<div class="st"><div class="v' + (win ? ' win' : '') + '">' + v + '</div><div class="l">' + l + '</div></div>';
+    if (r.battle) {   // W231 — HP battle: show remaining HP + the matchup
+      const mt = r.eff && r.eff.key === 'super' ? 'SUPER' : r.eff && r.eff.key === 'weak' ? 'WEAK' : 'EVEN';
+      return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT FELL</span></div>' +
+        '<div class="asc-recap"><div class="asc-recap-stats">' +
+          stat(r.pHP + '/' + r.pMax, 'YOUR HP', r.untouched) + stat(r.bHP + '/' + r.bMax, 'FOE HP') + stat(mt, 'MATCHUP') +
+        '</div></div></div>';
+    }
+    if (!Array.isArray(r.rounds) || !r.rounds.length) return '';
+    const rounds = r.rounds;
     let dealt = 0, taken = 0;
     rounds.forEach((rd) => { if (rd.playerWon) dealt += (rd.pRoll || 0); else taken += (rd.bRoll || 0); });
     const lines = rounds.map((rd) =>
       '<div class="ln ' + (rd.playerWon ? 'you' : 'foe') + '"><span class="dot"></span><span class="tx">' + _arNarr(rd) + '</span></div>').join('');
-    const stat = (v, l, win) => '<div class="st"><div class="v' + (win ? ' win' : '') + '">' + v + '</div><div class="l">' + l + '</div></div>';
     return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT FELL</span></div>' +
       '<div class="asc-recap">' + lines +
       '<div class="asc-recap-stats">' + stat(dealt, 'DMG DEALT') + stat(taken, 'DMG TAKEN', taken === 0) + stat(rounds.length, 'ROUNDS') + '</div></div></div>';
@@ -6986,124 +7241,67 @@
     if (_arMatchup.advances && ascentLivesLeft() <= 0) { _arRenderTower(); return; }  // out of lives
     _arClearTimers();
     _arFight = null; _arFlawless = false; _arRevealing = false;
-    _arSess = arenaStartSession(_arMatchup);
-    _arRenderMoves(1);
+    _arSess = arenaStartBattle(_arMatchup);   // W231 — weapon-driven HP battle
+    _arRenderBattle(null);
   }
-  // Finalize the session (commit ONCE) and show the outcome. A ≥2× stomp that
-  // wins its opening exchange gets the one-hit KO cinematic; else the result.
-  function _arFinishSession(flawless) {
+  // Finalize the battle (commit ONCE) and show the result. A win without taking
+  // any damage reads as FLAWLESS on the result screen.
+  function _arFinishSession() {
     if (!_arSess) return;
+    const flawless = !!(_arSess.won && _arSess.untouched);
     _arSess.done = true;
-    _arFight = arenaFinalizeSession(_arSess);
+    _arFight = arenaFinalizeBattle(_arSess);
     _arSess = null;                    // prevent double-finalize
-    _arFlawless = !!flawless;
-    if (flawless && !_arReduceMotion()) _arPlayFlawless();
-    else _arRenderResult();
+    _arFlawless = flawless;
+    _arRenderResult();
   }
   // shared HUD: two HP bars derived from current round wins
   // Combat header (ported) — YOU/FOE names, facing slim bars, diamond pips, status.
-  function _arCombatHeader(roundNo, statusRight, tone) {
-    const s = _arSess, m = _arMatchup;
-    const youHP = Math.max(8, 100 - s.bWins * 45), foeHP = Math.max(8, 100 - s.pWins * 45);
-    let pips = '';
-    for (let i = 0; i < 3; i++) { const rd = s.rounds[i]; pips += '<span class="ar-cpip ' + (rd ? (rd.playerWon ? 'win' : 'loss') : 'pending') + '"></span>'; }
-    return '<div class="ar-chead">' +
-      '<div class="ar-chead-names"><span class="you">YOU</span><span class="foe">' + esc(m.bot.name) + '</span></div>' +
-      '<div class="ar-chead-bars"><span class="bar you"><i style="width:' + youHP + '%"></i></span>' +
-        '<span class="dot"></span><span class="bar foe"><i style="width:' + foeHP + '%"></i></span></div>' +
-      '<div class="ar-chead-pips">' + pips + '</div>' +
-      '<div class="ar-chead-status"><span class="rule"></span><span class="txt">ROUND ' + roundNo +
-        ' OF 3 <span class="sep">·</span> <span class="hi"' + (tone ? ' style="color:' + tone + '"' : '') + '>' + statusRight + '</span></span><span class="rule"></span></div></div>';
+  // Status-icon chips for one combatant.
+  function _arBattleStatus(S) {
+    let h = '';
+    S.mods.forEach((x) => {
+      if (x.k === 'dot') h += '<span class="ar-st burn">' + (x.kind === 'bleed' ? 'BLEED' : 'BURN') + '</span>';
+      else if (x.k === 'atk') h += '<span class="ar-st ' + (x.mag > 0 ? 'up' : 'down') + '">ATK' + (x.mag > 0 ? '+' : '−') + '</span>';
+      else if (x.k === 'def') h += '<span class="ar-st ' + (x.mag < 0 ? 'up' : 'down') + '">DEF' + (x.mag < 0 ? '+' : '−') + '</span>';
+      else if (x.k === 'dodge') h += '<span class="ar-st up">EVA</span>';
+    });
+    if (S.guard > 0) h += '<span class="ar-st up">GUARD</span>';
+    if (S.stun > 0) h += '<span class="ar-st down">STUN</span>';
+    return h;
   }
-  // Move-select — header + foe tendency tell + 3 role cards + ALL-IN gamble.
-  function _arRenderMoves(round) {
-    _arView = 'moves';
+  // The battle screen — real HP (with numbers) + status + log + your weapon's
+  // 4 moves. Re-rendered after each turn; `events` is the last turn's log.
+  function _arRenderBattle(events) {
+    _arView = 'battle';
     _arBodyMode(false);
     const s = _arSess, m = _arMatchup;
-    const bias = _ARENA_BOT_BIAS[s.foeArch] || _ARENA_BOT_BIAS.balanced;
-    let topMv = 'strike', topV = 0;
-    ['strike', 'guard', 'feint'].forEach((k) => { if ((bias[k] || 0) > topV) { topV = bias[k]; topMv = k; } });
-    const tell = '<div class="ar-tell"><span class="ic">' + _arGlyph('eye', '#a78bfa', 15) + '</span>' +
-      '<div class="tx"><span class="k">YOUR READ</span><span class="s">' +
-      (topV >= 0.5 ? 'The ' + esc(m.bot.archetype) + ' favors <b>' + _ARENA_MOVE_LABEL[topMv] + '</b>.' : 'Reads are even — <b>watch for a pattern</b>.') +
-      '</span></div></div>';
-    const card = (mv) => {
-      const d = _ARENA_MOVE_META[mv];
-      return '<button class="ar-move" data-ar="move" data-move="' + mv + '">' +
-        '<span class="badge" style="border-color:' + d.accent + '55;background:' + d.accent + '10;box-shadow:0 0 10px ' + d.accent + '22">' + _arGlyph(d.glyph, d.accent, 17) + '</span>' +
-        '<span class="mv">' + _ARENA_MOVE_LABEL[mv] + '</span>' +
-        '<span class="rl" style="color:' + d.accent + '">LEANS ' + d.role + '</span>' +
-        '<span class="be">beats ' + d.beats + '</span></button>';
-    };
-    const allin = '<button class="ar-allin" data-ar="move" data-move="allin"><span class="inner">' +
-      '<span class="dia">' + _arGlyph('burst', '#f5b842', 19) + '</span>' +
-      '<span class="lbl"><span class="t">ALL-IN</span><span class="s">THE GAMBLE <span class="dim">— HUGE UNLESS GUARDED</span></span></span>' +
-      '<span class="chev">»</span></span></button>';
-    _arSet(
-      _arCombatHeader(round, 'YOUR MOVE', '') +
-      '<div class="ar-mv-flex"></div>' + tell + '<div class="ar-mv-flex big"></div>' +
-      '<div class="ar-mv-foot">' +
-        '<div class="ar-mv-div"><span class="r"></span><span class="t">CHOOSE YOUR MOVE</span><span class="r"></span></div>' +
-        '<div class="ar-move-grid">' + card('strike') + card('guard') + card('feint') + '</div>' +
-        allin +
-        '<div class="ar-mv-tri">STRIKE ▸ FEINT ▸ GUARD ▸ STRIKE</div>' +
-      '</div>'
-    );
-  }
-  // Exchange reveal — face-off, verdict stamp, rolls, tags, narration, CONTINUE.
-  function _arRenderExchange(round) {
-    _arView = 'exchange';
-    _arBodyMode(false);
-    const s = _arSess;
-    const youWon = round.playerWon, isAllin = round.pMove === 'allin';
-    const burst = isAllin && round.read === 'win', punished = isAllin && round.read === 'lose';
-    let beat;
-    if (isAllin) beat = round.read === 'win' ? 'ALL-IN — UNGUARDED' : 'GUARD STOPS ALL-IN';
-    else if (round.read === 'win') beat = _ARENA_MOVE_LABEL[round.pMove] + ' BEATS ' + _ARENA_MOVE_LABEL[round.bMove];
-    else if (round.read === 'lose') beat = _ARENA_MOVE_LABEL[round.bMove] + ' BEATS ' + _ARENA_MOVE_LABEL[round.pMove];
-    else beat = 'MIRROR — NO READ';
-    const vcls = round.read === 'win' ? 'win' : round.read === 'lose' ? 'lose' : 'even';
-    const vtxt = round.read === 'win' ? 'YOU WON THE READ' : round.read === 'lose' ? 'YOU LOST THE READ' : 'READ EVEN';
-    const vsub = burst ? 'THE GAMBLE LANDS' : punished ? 'GUARDED — THE GAMBLE BACKFIRES' : '';
-    const tags = [];
-    if (punished) tags.push(['COUNTERED', '#ef4444']);
-    if (youWon ? round.pCrit : round.bCrit) tags.push(['CRITICAL', '#f5b842']);
-    if (youWon ? round.bMiss : round.pMiss) tags.push(['MISS', '#6b6b86']);
-    if (s.eff.key === 'super') tags.push(['SUPER EFFECTIVE', '#34d399']);
-    else if (s.eff.key === 'weak') tags.push(['NOT VERY EFFECTIVE', '#6b6b86']);
-    const tagsHtml = tags.map((t) => '<span class="ar-rtag" style="color:' + t[1] + ';border-color:' + t[1] + '55;background:' + t[1] + '10">' + t[0] + '</span>').join('');
-    const chip = (mv, who) => {
-      const g = (mv === 'allin') ? 'burst' : _ARENA_MOVE_META[mv].glyph;
-      const isYou = who === 'you', pun = isYou && punished;
-      const col = pun ? '#ef4444' : isYou ? '#f5b842' : '#c8c6d8';
-      return '<span class="ar-fchip ' + who + (pun ? ' punished' : '') + '"><span class="who">' + (isYou ? 'YOU' : 'FOE') + '</span>' +
-        _arGlyph(g, col, 20) + '<span class="nm">' + _ARENA_MOVE_LABEL[mv] + '</span></span>';
-    };
-    const youBig = burst || round.pCrit, foeBig = punished || round.bCrit;
-    _arSet(
-      _arCombatHeader(round.index, 'THE READ', round.read === 'win' ? '#34d399' : round.read === 'lose' ? '#ef4444' : '#f5b842') +
-      '<div class="ar-ex-flex"></div>' +
-      '<div class="ar-faceoff' + (punished ? ' shake' : '') + '"><div class="row">' + chip(round.pMove, 'you') +
-        '<span class="vs">VS</span>' + chip(round.bMove, 'foe') + '</div><div class="beat">' + beat + '</div></div>' +
-      '<div class="ar-verdict ' + vcls + '"><span class="big">' + vtxt + '</span>' + (vsub ? '<span class="sub">' + vsub + '</span>' : '') + '</div>' +
-      '<div class="ar-rolls' + (burst ? ' burst' : '') + '"><div class="side"><span class="n you' + (youBig ? ' big' : '') + '">' + round.pRoll +
-        '</span><span class="l">YOUR ROLL</span></div><span class="dash">—</span>' +
-        '<div class="side"><span class="n foe' + (foeBig ? ' big' : '') + '">' + round.bRoll + '</span><span class="l">FOE ROLL</span></div></div>' +
-      (tagsHtml ? '<div class="ar-rtags">' + tagsHtml + '</div>' : '') +
-      '<div class="ar-rnarr ' + (burst ? 'gold' : punished ? 'red' : '') + '">' + _arNarr(round) + '</div>' +
-      '<div class="ar-ex-flex big"></div>' +
-      '<button class="ar-contbtn" data-ar="next">' + (s.done ? 'SEE RESULT ▸' : 'CONTINUE ▸') + '</button>'
-    );
-    try {
-      const sheet = document.querySelector('#arena-overlay .ar-sheet');
-      if (sheet && !_arReduceMotion()) {
-        sheet.classList.remove('ar-vig-gold', 'ar-vig-red');
-        if (burst) sheet.classList.add('ar-vig-gold'); else if (punished) sheet.classList.add('ar-vig-red');
-        _arAfter(950, () => { try { sheet.classList.remove('ar-vig-gold', 'ar-vig-red'); } catch (_) {} });
-      }
-    } catch (_) {}
-    _arHitJuice(youWon, youWon ? round.pCrit : round.bCrit);
-    _arHitSound(round);
+    const pPct = Math.round(s.pHP / s.pMax * 100), bPct = Math.round(s.bHP / s.bMax * 100);
+    const effTag = s.eff.key === 'super' ? ' <b style="color:#34d399">SUPER EFFECTIVE</b>'
+      : s.eff.key === 'weak' ? ' <b style="color:#ef4444">NOT VERY EFFECTIVE</b>' : '';
+    const hp =
+      '<div class="ar-bhp"><div class="ar-bhp-side"><div class="row"><span class="nm you">YOU <span class="wpn">· ' + esc(s.weaponName) + '</span></span><span class="hpn">' + s.pHP + '<span class="mx"> / ' + s.pMax + '</span></span></div>' +
+        '<div class="bar you' + (pPct <= 22 ? ' low' : '') + '"><i style="width:' + pPct + '%"></i></div><div class="stat">' + _arBattleStatus(s.pS) + '</div></div>' +
+      '<div class="ar-bhp-side foe"><div class="row"><span class="nm foe">' + esc(m.bot.name) + '</span><span class="hpn">' + s.bHP + '<span class="mx"> / ' + s.bMax + '</span></span></div>' +
+        '<div class="bar foe' + (bPct <= 22 ? ' low' : '') + '"><i style="width:' + bPct + '%"></i></div><div class="stat">' + _arBattleStatus(s.bS) + '</div></div></div>';
+    const logHtml = (events && events.length)
+      ? events.slice(-4).map((e) => '<div class="ln ' + (e.side === 'p' ? 'you' : 'foe') + (e.crit ? ' crit' : '') + '">' + e.text + '</div>').join('')
+      : '<div class="ln neutral">Floor ' + m.floor + ' · ' + esc(m.bot.name) + '.' + effTag + '<br>Choose your opening move.</div>';
+    let foot;
+    if (s.done) {
+      foot = '<button class="ar-contbtn" data-ar="next">SEE RESULT ▸</button>';
+    } else {
+      const card = (mv) => {
+        const onCd = s.cd[mv.id] > 0;
+        const tag = (mv.power ? 'PWR ' + Math.round(mv.power * 100) : 'SUPPORT') + (mv.prio ? ' · 1ST' : '') + (mv.hits ? ' · ×' + mv.hits : '');
+        return '<button class="ar-bmove' + (onCd ? ' cd' : '') + '"' + (onCd ? '' : ' data-ar="move" data-move="' + mv.id + '"') + '>' +
+          '<div class="top"><span class="g">' + _arGlyph(mv.gl || 'sword', onCd ? '#6b6b86' : '#f5b842', 15) + '</span><span class="nm">' + esc(mv.name) + '</span>' +
+            (onCd ? '<span class="cdn">' + s.cd[mv.id] + '</span>' : '') + '</div>' +
+          '<div class="ds">' + esc(mv.desc || '') + '</div><div class="tg">' + tag + '</div></button>';
+      };
+      foot = '<div class="ar-bmoves">' + s.pMoves.map(card).join('') + '</div>';
+    }
+    _arSet(hp + '<div class="ar-blog">' + logHtml + '</div><div class="ar-bspace"></div>' + foot);
   }
 
   // ── result ────────────────────────────────────────────────────────
@@ -7151,8 +7349,8 @@
         '<div class="ar-result-rule"></div>' +
         (won
           ? '<div class="ar-result-narr">' + (_arFlawless
-              ? 'You ended ' + esc(_arMatchup.bot.name) + ' in a single strike. <b style="color:#f5b842">FLAWLESS.</b>'
-              : 'You took ' + esc(_arMatchup.bot.name) + ' <b style="color:#f5b842">' + score + '</b>. Earned, not given.') + '</div>'
+              ? 'You felled ' + esc(_arMatchup.bot.name) + ' without taking a wound. <b style="color:#f5b842">FLAWLESS.</b>'
+              : 'You felled ' + esc(_arMatchup.bot.name) + '. <b style="color:#f5b842">Earned, not given.</b>') + '</div>'
           : '<div class="ar-result-narr loss">“The tower humbles every hunter. Return stronger.”</div>') +
       '</div>' + flair + titleHtml + ratingStrip + _ascRecapHtml(f) +
       '<div class="ar-spacer"></div>' +
@@ -7226,8 +7424,8 @@
     if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
       let ok = true; try { ok = window.confirm('Forfeit this fight? It counts as a loss — a life spent.'); } catch (_) {}
       if (!ok) return;
-      _arSess.bWins = 2; if (_arSess.pWins > 1) _arSess.pWins = 1; _arSess.done = true;
-      try { _arFight = arenaFinalizeSession(_arSess); } catch (_) {}
+      _arSess.won = false; _arSess.done = true;   // forfeit = loss
+      try { _arFight = arenaFinalizeBattle(_arSess); } catch (_) {}
       _arSess = null; _arClearTimers(); _arRevealing = false; _arRenderTower(); return;
     }
     if (_arView && _arView !== 'tower') { _arClearTimers(); _arRevealing = false; _arSess = null; _arRenderTower(); return; }
@@ -7251,21 +7449,23 @@
       }
       const a = act.getAttribute('data-ar');
       if (a === 'exit')         _arExit();
-      else if (a === 'fight' || a === 'rematch') { if (_arSess || _arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arView === 'moves' || _arView === 'exchange' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
+      else if (a === 'fight' || a === 'rematch') { if (_arSess || _arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arView === 'battle' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
       else if (a === 'introgo') { _arCommitFight(); }
-      else if (a === 'move')    {                                          // W229 — pick a move; resolve one round
-        if (!_arSess || _arSess.done || _arView !== 'moves') return;
-        const round = arenaResolveRound(_arSess, act.getAttribute('data-move'));
-        if (!round) return;
-        // FLAWLESS one-shot: a ≥2× stomp that wins its opening exchange ends now
-        if (round.index === 1 && round.playerWon && !_arReduceMotion() &&
-            _ascPlayerPower() >= 2 * Math.max(1, _arMatchup.bot.power)) { _arFinishSession(true); return; }
-        _arRenderExchange(round);
+      else if (a === 'move')    {                                          // W231 — pick a move; resolve a battle turn
+        if (!_arSess || _arSess.done || _arView !== 'battle') return;
+        const ev = arenaTakeTurn(_arSess, act.getAttribute('data-move'));
+        if (!ev) return;                                                   // invalid / on cooldown
+        const hitFoe = ev.some((e) => e.side === 'p' && e.t === 'hit');
+        const hitYou = ev.some((e) => e.side === 'b' && (e.t === 'hit' || e.t === 'dot'));
+        const crit = ev.some((e) => e.crit);
+        if (hitFoe) _arHitJuice(true, crit); else if (hitYou) _arHitJuice(false, false);
+        try { playSfx(crit ? 'ar_crit' : hitFoe ? 'ar_hit_you' : 'ar_hit_foe'); } catch (_) {}
+        try { if (navigator.vibrate) navigator.vibrate(crit ? 18 : 10); } catch (_) {}
+        _arRenderBattle(ev);                                               // shows SEE RESULT when done
       }
-      else if (a === 'next')    {                                          // CONTINUE between rounds → next move / result
-        if (!_arSess || _arView !== 'exchange') return;
-        if (_arSess.done) _arFinishSession(false);
-        else _arRenderMoves(_arSess.rounds.length + 1);
+      else if (a === 'next')    {                                          // SEE RESULT after the final blow
+        if (!_arSess || !_arSess.done) return;
+        _arFinishSession();
       }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
