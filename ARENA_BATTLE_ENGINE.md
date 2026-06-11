@@ -108,6 +108,34 @@ the full kit (with Searing) debuts at F6+, after the blade gate. Early-route tra
 carry Toxic. Kit composition by floor tier is content design (bosses already do it) — move
 definitions never fork.
 
+### 4.5 Move → users index (CHECK BEFORE ANY LEVER — added per the playtest protocol)
+Every lever this series that misfired (Searing W235, Ward Strike W237, Crush side-effects
+W237) hit a SHARED move. Single-user moves are safe levers; shared moves cut both ways.
+
+| Move | Used by | Lever safety |
+|---|---|---|
+| Jab, Hook | Unarmed | safe |
+| Thousand Cuts | Step Blade | safe |
+| Ember, Immolate | Kilnforged | safe |
+| Stagger | Warmaul | safe |
+| Willbreak, Last Vow | Vessel | safe |
+| Searing Cut | Kilnforged · Trickster-foe (F6+ kit) | **shared** (W235 revert) |
+| Ward Strike | Vessel · Sentinel-foe | **shared** (W237 revert) |
+| Crush | Warmaul · Juggernaut-foe | **shared** (W237 side-effects) |
+| Quake | Warmaul · Juggernaut-foe | **shared** |
+| Cleave | Titan's · Aggressor-foe · Glass-foe | **shared** |
+| Sunder | Titan's · Aggressor-foe | **shared** |
+| Oathstrike | Titan's · Glass-foe | **shared** |
+| Slash | Rusted · Aggr/Glass/Sentinel/Balanced-foe · Trickster-lesser (F4–5) | **shared (widest)** |
+| Lunge | Rusted · Balanced-foe | **shared** |
+| Flurry, Quickstep, Evade | Step Blade · Trickster-foe (both tiers) | **shared** |
+| Guard | Unarmed · Rusted · Balanced-foe | **shared** |
+| Brace | Titan's · Warmaul · Sentinel-foe · Juggernaut-foe | **shared** |
+| Focus | Unarmed · Rusted · Aggressor-foe · Balanced-foe | **shared** |
+| Temper | Kilnforged · Glass-foe | **shared** |
+| Refuse | Vessel · Sentinel-foe · Juggernaut-foe | **shared** |
+| Struggle | universal fallback (both sides) | engine constant |
+
 ### 4.4 Floor archetype rotation
 Regular floors rotate per committed rated attempt; bosses fixed. **W236: floors 1–3 draw from
 [aggressor, sentinel] only** (onboarding — a fresh weaponless account has no answer to DoT);
