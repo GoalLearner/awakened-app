@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w248';
+  const APP_BUILD_TAG = '2.2.5-w249';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7651,6 +7651,7 @@
   // any damage reads as FLAWLESS on the result screen.
   function _arFinishSession() {
     if (!_arSess) return;
+    if (_arSess._finalized) { _arSess = null; _arRenderResult(); return; }   // W249 — committed at KO; render only
     const flawless = !!(_arSess.won && _arSess.untouched);
     _arSess.done = true;
     _arFight = arenaFinalizeBattle(_arSess);
@@ -7965,6 +7966,8 @@
     turnGap: 440,                              // between full turns
     ko: 700, koHold: 600,                      // the finale keeps its weight
     multiHit: 200,                             // sub-hit impact spacing (Flurry identity)
+    splashIn: 250, splashHold: 900, splashOut: 250,   // W249 — foe intro splash (blocking, tap-skippable)
+    vicFloat: 900, vicGap: 450,                        // W249 — in-arena victory floats
   };
   // W246 — "a tad faster": ~20% off the DWELLS (announce/settle/toasts/status/
   // gaps) per on-device feel; attack animations and the KO beat unchanged.
@@ -7976,6 +7979,72 @@
     if (archKey === 'sentinel' || archKey === 'juggernaut') return '#3b82f6';
     if (archKey === 'trickster') return '#a78bfa';
     return '#6b6b86';
+  }
+  // W249 — tier backgrounds. Tier derivation = _ascentBandFor — the ONE shared
+  // floor→tier source (foe art and backgrounds can never disagree). Milestone
+  // bosses inherit their band's background.
+  let _pkbLastBgTier = null, _pkbSplashSkip = null;
+  function _arBgTier(floor) {
+    try { return String(_ascentBandFor(floor).tier || 'E').toLowerCase(); } catch (_) { return 'e'; }
+  }
+  function _pkbMountBg(floor) {
+    const stage = _pkbEl('pkb-stage'); if (!stage) return;
+    const wrap = stage.querySelector('.pkb-bgwrap'); if (!wrap) return;
+    const ORDER = ['e', 'd', 'c', 'b', 'a', 's'];
+    const want = _arBgTier(floor);
+    const tryTier = (idx, attempted) => {
+      if (idx < 0) { try { console.log('[pkb-bg] all tiers failed (' + attempted.join(', ') + ') — gradient only'); } catch (_) {} return; }
+      const t = ORDER[idx];
+      const img = document.createElement('img');
+      img.className = 'pkb-bg'; img.alt = ''; img.decoding = 'async';
+      img.onload = () => {
+        if (t !== want) { try { console.log('[pkb-bg] substituted bg_' + t + ' for missing bg_' + want + ' (attempted: ' + attempted.join(', ') + ')'); } catch (_) {} }
+        requestAnimationFrame(() => img.classList.add('on'));   // 400ms opacity fade (CSS)
+        _pkbLastBgTier = t;
+      };
+      img.onerror = () => { try { img.remove(); } catch (_) {} tryTier(idx - 1, attempted.concat('bg_' + t)); };
+      img.src = 'assets/backgrounds/bg_' + t + '.webp';
+      wrap.appendChild(img);
+    };
+    tryTier(Math.max(0, ORDER.indexOf(want)), []);
+  }
+  // W249 — foe intro splash: name + archetype in the telegraph color, in the
+  // sky band. Blocking beat (in→hold→out), tap skips, FF compresses the hold.
+  function _pkbSplash(cb) {
+    const stage = _pkbEl('pkb-stage'), m = _arMatchup, ss = _arSess;
+    if (!stage || !m || !ss) { cb(); return; }
+    const tint = _pkbArchTint(ss.foeArch);
+    const d = document.createElement('div');
+    d.className = 'pkb-splash';
+    d.innerHTML = '<div class="nm">' + esc(m.bot.name).toUpperCase() + '</div>' +
+      '<div class="arch" style="color:' + tint + '">— ' + esc((m.bot.archetype || '')).toUpperCase() + ' —</div>';
+    stage.appendChild(d);
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true; _pkbSplashSkip = null;
+      d.style.transition = 'opacity ' + _pkbMs(_PKB_T.splashOut) + 'ms ease';
+      d.style.opacity = '0';
+      _pkbAfter(_PKB_T.splashOut, () => { try { d.remove(); } catch (_) {} cb(); });
+    };
+    _pkbSplashSkip = finish;
+    d.style.transition = 'opacity ' + _pkbMs(_PKB_T.splashIn) + 'ms ease';
+    requestAnimationFrame(() => { d.style.opacity = '1'; });
+    _pkbAfter(_PKB_T.splashIn, () => _pkbHold(_PKB_T.splashHold, finish));
+  }
+  // W249 — victory float: rises from where the foe stood. READS the committed
+  // result object only (never computes rating itself).
+  function _pkbVicFloat(txt, cls) {
+    const fx = _pkbEl('pkb-fx'), st = _pkbEl('pkb-stage'), spot = _pkbEl('pkb-spot-b');
+    if (!fx || !st || !spot) return;
+    const d = document.createElement('div');
+    d.className = 'pkb-vicfloat ' + (cls || '');
+    d.textContent = txt;
+    const r = spot.getBoundingClientRect(), rs = st.getBoundingClientRect();
+    d.style.left = (r.left - rs.left + r.width * 0.5) + 'px';
+    d.style.top = (r.top - rs.top + r.height * 0.45) + 'px';
+    d.style.animationDuration = _pkbMs(_PKB_T.vicFloat) + 'ms';
+    fx.appendChild(d);
+    _pkbAfter(_PKB_T.vicFloat + 350, () => { try { d.remove(); } catch (_) {} });
   }
   function _pkbMs(ms) { return Math.max(40, Math.round(ms * (_pkbFF ? 0.5 : 1))); }          // animations: 2× under FF
   function _pkbAfter(ms, cb) { _arAfter(_pkbMs(ms), cb); }
@@ -8268,8 +8337,20 @@
       // KO resolution: crossfade the loop out, sting in (slot absent → silent)
       try { _audStopMusic(0.5); setTimeout(() => _audPlayMusic(s.won ? 'victory_sting' : 'defeat_sting', false), 350); } catch (_) {}
       if (_pkbFightT0) { try { console.log('[pkb] fight real-time: ' + ((Date.now() - _pkbFightT0) / 1000).toFixed(1) + 's, turns: ' + (s.turn - 1)); } catch (_) {} }
+      // W249 Patch 4 — the ONE arenaFinalizeBattle call, moved from the SEE
+      // RESULT tap to the KO so the victory floats can READ the committed
+      // result (display never computes). _finalized → result tap renders only.
+      let fin = null;
+      try { _arFlawless = !!(s.won && s.untouched); fin = arenaFinalizeBattle(s); _arFight = fin; s._finalized = true; } catch (_) {}
       _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', _PKB_T.koHold, () => {
-        _pkbAfter(_PKB_T.ko, () => { _pkbLock(false); _pkbRefreshMoves(); });
+        _pkbAfter(_PKB_T.ko, () => {
+          if (s.won && fin) {
+            if (fin.rated) _pkbVicFloat('+' + fin.ratingDelta + ' RATING', 'rating');
+            else _pkbVicFloat('UNRATED CLEAR', 'unrated');
+            if (fin.newTitles && fin.newTitles.length) _pkbAfter(_PKB_T.vicGap, () => _pkbVicFloat('“' + fin.newTitles[0].name + '”', 'title'));
+            _pkbHold(_PKB_T.vicFloat + _PKB_T.vicGap, () => { _pkbLock(false); _pkbRefreshMoves(); });
+          } else { _pkbLock(false); _pkbRefreshMoves(); }
+        });
       });
     } else {
       // between full turns — a breath before the prompt hands control back
@@ -8298,6 +8379,8 @@
       '<div class="pkb">' +
         '<div class="pkb-top">FLOOR ' + m.floor + ' — ' + esc(m.bot.name).toUpperCase() + '</div>' +
         '<div class="pkb-stage settle" id="pkb-stage">' +
+          '<div class="pkb-bgwrap" aria-hidden="true"></div>' +
+          '<div class="pkb-bg-scrim" aria-hidden="true"></div>' +
           '<div class="pkb-ground" style="background:linear-gradient(196deg,transparent 26%,' + tint + '12 44%,rgba(245,184,66,0.05) 66%,transparent 86%)"></div>' +
           '<div class="pkb-motes' + (isBoss ? ' embers' : '') + '" aria-hidden="true">' + motes + '</div>' +
           '<div class="pkb-row foe">' +
@@ -8322,18 +8405,28 @@
           '</div>' +
           '<div class="pkb-fx" id="pkb-fx"></div>' +
         '</div>' +
-        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line">' + esc(flavor) + '</span></div>' +
+        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line"></span></div>' +
         '<div class="pkb-moves" id="pkb-moves"></div>' +
       '</div>'
     );
     _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
     _pkbChips('p'); _pkbChips('b');
+    _pkbBusy = true;                 // W249 — input locked through the splash beat
     _pkbRefreshMoves();
-    // W243 — music: boss floors get boss_loop + the intro boom under the taunt
-    // line; regular floors get battle_loop. Decode is async, so retry once if
-    // the buffer wasn't ready for the very first fight. Absent slots = silent.
+    // W249 Patch 2a — freeze the move-grid slot height so SEE RESULT swaps in
+    // with ZERO layout delta (the KO drift was this section changing height).
+    try { const mvBox = _pkbEl('pkb-moves'); if (mvBox && mvBox.offsetHeight) mvBox.style.minHeight = mvBox.offsetHeight + 'px'; } catch (_) {}
+    _pkbMountBg(m.floor);            // W249 Patch 1 — tier background (fallback ladder logs)
+    // W249 Patch 3 — foe intro splash BEFORE the first text line; on boss
+    // floors the boss_intro boom fires UNDER the splash (moved off the taunt
+    // so the two beats never double-hit), then the taunt types in.
+    if (isBoss) { try { _audCue('boss_intro'); } catch (_) {} }
+    _pkbSplash(() => {
+      _pkbSay(flavor, 0, () => { _pkbBusy = false; _pkbLock(false); _pkbRefreshMoves(); });
+    });
+    // W243 — music: boss floors get boss_loop; regular floors battle_loop.
+    // Decode is async — retry ladder for the cold first fight. Absent = silent.
     try {
-      if (isBoss) _audCue('boss_intro');
       const slot = isBoss ? 'boss_loop' : 'battle_loop';
       _AUD.want = null;   // W248 — cancel any pending menu-music start; battle owns the bus now
       _audPlayMusic(slot, true);
@@ -8504,9 +8597,12 @@
       _pkbFFTimer = setTimeout(() => { _pkbFF = true; try { ov.classList.add('pkb-ff'); } catch (_) {} }, 250);
     });
     const _pkbFFEnd = () => {
+      const wasFF = _pkbFF;
       if (_pkbFFTimer) { clearTimeout(_pkbFFTimer); _pkbFFTimer = null; }
       _pkbFF = false;
       try { ov.classList.remove('pkb-ff'); } catch (_) {}
+      // W249 — a quick tap (no FF engaged) skips the intro splash
+      if (!wasFF && _pkbSplashSkip && _arView === 'battle') { const f = _pkbSplashSkip; _pkbSplashSkip = null; f(); }
     };
     ov.addEventListener('pointerup', _pkbFFEnd);
     ov.addEventListener('pointercancel', _pkbFFEnd);

@@ -220,6 +220,29 @@ fi
 # battle entry; if prep skips them the music layer silently ships absent
 # ("the music never came on"). Same per-file presence gate as the images.
 echo "── Required battle-audio assets in iOS public/ ──"
+echo "── Required battle-background assets in iOS public/ ──"
+REQUIRED_BG=(
+  "assets/backgrounds/bg_e.webp"
+  "assets/backgrounds/bg_d.webp"
+  "assets/backgrounds/bg_c.webp"
+  "assets/backgrounds/bg_b.webp"
+  "assets/backgrounds/bg_a.webp"
+  "assets/backgrounds/bg_s.webp"
+)
+bg_missing=()
+for bg in "${REQUIRED_BG[@]}"; do
+  if [ ! -f "ios/App/App/public/$bg" ]; then
+    bg_missing+=("$bg")
+    fail=1
+  fi
+done
+if [ "${#bg_missing[@]}" -gt 0 ]; then
+  echo "  ❌ Missing required backgrounds in ios/App/App/public/:"
+  for bg in "${bg_missing[@]}"; do echo "      - $bg"; done
+else
+  echo "  ✓ All ${#REQUIRED_BG[@]} required background files present"
+fi
+
 REQUIRED_AUDIO=(
   "assets/audio/battle_loop.m4a"
   "assets/audio/boss_loop.m4a"

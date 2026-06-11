@@ -122,6 +122,13 @@ fi
 if compgen -G "assets/audio/*.mp3" > /dev/null; then
   cp assets/audio/*.mp3 www/assets/audio/   # W246 — iOS decode-fallback twins
 fi
+# W249 — battle tier backgrounds (webp, processed from Midjourney plates by
+# the resolver ladder in app.js; missing tier falls back gracefully but the
+# bundle should always carry all six).
+mkdir -p www/assets/backgrounds
+if compgen -G "assets/backgrounds/*.webp" > /dev/null; then
+  cp assets/backgrounds/*.webp www/assets/backgrounds/
+fi
 echo "  www/ assembled."
 echo ""
 

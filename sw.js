@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.585';
+const CACHE_VERSION = 'v5.586';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -110,6 +110,13 @@ const PRECACHE_ASSETS = [
   // scripts/process-battle-audio.js), stings + battle SFX one-shots
   // (scripts/process-sting-audio.js). mp3 twins = iOS decode fallback.
   // Licenses: assets/audio/LICENSES.md.
+  // W249 — battle tier backgrounds (webp ≤252KB each, 1.16MB total)
+  '/assets/backgrounds/bg_e.webp',
+  '/assets/backgrounds/bg_d.webp',
+  '/assets/backgrounds/bg_c.webp',
+  '/assets/backgrounds/bg_b.webp',
+  '/assets/backgrounds/bg_a.webp',
+  '/assets/backgrounds/bg_s.webp',
   '/assets/audio/battle_loop.m4a',
   '/assets/audio/boss_loop.m4a',
   '/assets/audio/arena_menu.m4a',

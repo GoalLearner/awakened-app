@@ -31453,6 +31453,22 @@ button.guildhall-summary-tile:active {
 @keyframes pkbSettle { 0% { transform: scale(1.04); } 100% { transform: scale(1); } }
 .pkb-stage.nudge { animation: pkbNudge 0.25s ease; }
 @keyframes pkbNudge { 0%,100% { transform: translate(0,0); } 30% { transform: translate(-4px,2px); } 65% { transform: translate(3px,-1px); } }
+/* W249 — tier backgrounds: full-bleed art BEHIND everything; the scrim wins
+   every readability contest (heavier behind plates/text, lighter in the sky) */
+.pkb-bgwrap { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; }
+.pkb-bgwrap .pkb-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.4s ease; }
+.pkb-bgwrap .pkb-bg.on { opacity: 1; }
+.pkb-bg-scrim { position: absolute; inset: 0; border-radius: 18px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(7,7,18,0.55) 0%, rgba(7,7,18,0.40) 26%, rgba(7,7,18,0.56) 55%, rgba(7,7,18,0.80) 100%); }
+/* W249 — foe intro splash (sky band): name + archetype telegraph color */
+.pkb-splash { position: absolute; top: 7%; left: 12px; right: 12px; text-align: center; opacity: 0; z-index: 3; pointer-events: none; }
+.pkb-splash .nm { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 23px; line-height: 1.15; color: #f5f3fb; letter-spacing: 0.04em; text-shadow: 0 2px 16px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6); }
+.pkb-splash .arch { margin-top: 5px; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.3em; text-shadow: 0 1px 10px rgba(0,0,0,0.9); }
+/* W249 — in-arena victory floats (rise from the fallen foe) */
+.pkb-vicfloat { position: absolute; transform: translate(-50%, 0); font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 15px; letter-spacing: 0.12em; color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.55), 0 2px 10px rgba(0,0,0,0.9); animation: pkbVicRise 0.9s ease-out forwards; pointer-events: none; white-space: nowrap; }
+.pkb-vicfloat.unrated { color: #9090a8; font-size: 11px; text-shadow: 0 2px 10px rgba(0,0,0,0.9); }
+.pkb-vicfloat.title { color: #a78bfa; font-size: 13px; text-shadow: 0 0 18px rgba(167,139,250,0.55), 0 2px 10px rgba(0,0,0,0.9); }
+@keyframes pkbVicRise { 0% { opacity: 0; margin-top: 12px; } 15% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; margin-top: -36px; } }
 /* shared ground plane — the space BETWEEN fighters reads as their floor */
 .pkb-ground { position: absolute; inset: 12% 0 4%; pointer-events: none; border-radius: 18px; }
 /* drifting motes (embers on boss floors) — transform/opacity only */
@@ -31490,7 +31506,10 @@ button.guildhall-summary-tile:active {
 .pkb-spot.lunge-foe { transform: translate(-16px, 10px); }
 .pkb-spot.shake { animation: pkbShake 0.25s ease; }
 @keyframes pkbShake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,0); } 50% { transform: translate(5px,0); } 75% { transform: translate(-3px,0); } }
-.pkb-spot.ko { filter: grayscale(1) brightness(0.55) drop-shadow(0 8px 12px rgba(0,0,0,0.55)); opacity: 0.35; transform: translateY(10px); }
+/* W249 — KO is a transform on the SPRITE only: the spot/platform/plate never
+   move (no layout drift), and the fall ends FULLY gone (no half-ghost). */
+.pkb-spot.ko .spr { opacity: 0; transform: translateY(26px); filter: grayscale(1) brightness(0.5); transition: transform 0.6s ease, opacity 0.6s ease, filter 0.35s ease; }
+.pkb-spot.you.ko .spr { transform: scaleX(-1) translateY(26px); }
 /* info plates — glued to their owners */
 .pkb-plate { flex: 1; min-width: 0; max-width: 215px; border-radius: 13px; background: rgba(14,14,36,0.92); border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 6px 14px rgba(0,0,0,0.35); padding: 9px 11px 8px; transition: opacity 0.5s ease; }
 .pkb-plate.ko { opacity: 0.4; }
@@ -31542,6 +31561,8 @@ button.guildhall-summary-tile:active {
   .pkb-spot.lunge-you, .pkb-spot.lunge-foe { transform: none; }
   .pkb-spot, .pkb-plate .hp i { transition-duration: 0.15s; }
   .pkb-float, .pkb-float.crit { animation: pkbFade 0.6s ease forwards; }
+  .pkb-vicfloat { animation: pkbFade 0.9s ease forwards; }
+  .pkb-bgwrap .pkb-bg { transition-duration: 0.01s; }
   .pkb-toast { animation: pkbFade 0.45s ease both; }
   @keyframes pkbFade { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
 }
