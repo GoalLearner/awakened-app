@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.581';
+const CACHE_VERSION = 'v5.582';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -106,6 +106,11 @@ const PRECACHE_ASSETS = [
   '/assets/coach/first-awakened-speaking.png',
   '/assets/coach/first-awakened-nodding.png',
   '/assets/coach/first-awakened-scroll.png',
+  // W244 — battle music loops (gapless 48s AAC, processed from Suno
+  // generations by scripts/process-battle-audio.js). Stings are drop-in
+  // slots — add their paths here when the files land (see LICENSES.md).
+  '/assets/audio/battle_loop.m4a',
+  '/assets/audio/boss_loop.m4a',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

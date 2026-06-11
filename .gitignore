@@ -32,3 +32,6 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# Original full-length Suno generations (processed loops live in assets/audio/)
+audio-originals/
