@@ -223,6 +223,8 @@ echo "── Required battle-audio assets in iOS public/ ──"
 REQUIRED_AUDIO=(
   "assets/audio/battle_loop.m4a"
   "assets/audio/boss_loop.m4a"
+  "assets/audio/battle_loop.mp3"
+  "assets/audio/boss_loop.mp3"
 )
 audio_missing=()
 for snd in "${REQUIRED_AUDIO[@]}"; do

@@ -119,6 +119,9 @@ mkdir -p www/assets/audio
 if compgen -G "assets/audio/*.m4a" > /dev/null; then
   cp assets/audio/*.m4a www/assets/audio/
 fi
+if compgen -G "assets/audio/*.mp3" > /dev/null; then
+  cp assets/audio/*.mp3 www/assets/audio/   # W246 — iOS decode-fallback twins
+fi
 echo "  www/ assembled."
 echo ""
 

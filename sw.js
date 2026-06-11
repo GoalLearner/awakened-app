@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.582';
+const CACHE_VERSION = 'v5.583';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -111,6 +111,8 @@ const PRECACHE_ASSETS = [
   // slots — add their paths here when the files land (see LICENSES.md).
   '/assets/audio/battle_loop.m4a',
   '/assets/audio/boss_loop.m4a',
+  '/assets/audio/battle_loop.mp3',
+  '/assets/audio/boss_loop.mp3',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

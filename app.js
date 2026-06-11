@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w244';
+  const APP_BUILD_TAG = '2.2.5-w246';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7680,7 +7680,7 @@
   // ═══════════════════════════════════════════════════════════════
   const _AUD = {
     ctx: null, music: null, sfx: null, buffers: {}, musicSrc: null, musicGain: null,
-    missing: {}, voices: 0, loaded: false, duckT: null, log: false,
+    missing: {}, status: {}, lastPlay: null, voices: 0, loaded: false, duckT: null, log: false,
     slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting'],
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
@@ -7813,22 +7813,35 @@
     }
   }
   // ── music layer: gapless buffer loops, drop-in file slots ──
+  // W246 — typed per-slot diagnostics (fetch-404 vs decode failure are now
+  // distinguishable — the W244/245 symptom was a blind "absent") + an mp3
+  // fallback chain: iOS WKWebView decodeAudioData has a history of rejecting
+  // AAC/m4a that desktop Chromium accepts; the mp3 twin decodes everywhere
+  // (its seam carries ~25ms codec padding — acceptable for a fallback).
+  // Status lands in Copy Debug Info → payload.audio.
+  function _audLoadSlot(slot) {
+    const attempt = (ext) => fetch('assets/audio/' + slot + '.' + ext)
+      .then((r) => { if (!r.ok) throw ('fetch-' + r.status); return r.arrayBuffer(); })
+      .then((ab) => new Promise((res, rej) =>
+        _AUD.ctx.decodeAudioData(ab, res, (e) => rej('decode: ' + String((e && e.message) || e || 'null')))));
+    attempt('m4a')
+      .then((buf) => { _AUD.buffers[slot] = buf; _AUD.status[slot] = 'm4a ok ' + buf.duration.toFixed(1) + 's'; })
+      .catch((e1) => attempt('mp3')
+        .then((buf) => {
+          _AUD.buffers[slot] = buf;
+          _AUD.status[slot] = 'mp3 fallback ok (m4a: ' + e1 + ')';
+          try { console.log('[aud] ' + slot + ': ' + _AUD.status[slot]); } catch (_) {}
+        })
+        .catch((e2) => {
+          _AUD.missing[slot] = true;
+          _AUD.status[slot] = 'absent (m4a: ' + e1 + ' · mp3: ' + e2 + ')';
+          try { console.log('[aud] ' + slot + ': ' + _AUD.status[slot]); } catch (_) {}
+        }));
+  }
   function _audLoadMusic() {
     if (_AUD.loaded || !_audCtx()) return;
     _AUD.loaded = true;
-    _AUD.slots.forEach((slot) => {
-      if (_AUD.buffers[slot] || _AUD.missing[slot]) return;
-      fetch('assets/audio/' + slot + '.m4a')
-        .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-        .then((ab) => new Promise((res, rej) => _AUD.ctx.decodeAudioData(ab, res, rej)))
-        .then((buf) => { _AUD.buffers[slot] = buf; })
-        .catch(() => {
-          if (!_AUD.missing[slot]) {
-            _AUD.missing[slot] = true;
-            try { console.log('[aud] music slot absent (ships silent): ' + slot); } catch (_) {}
-          }
-        });
-    });
+    _AUD.slots.forEach((slot) => { if (!_AUD.buffers[slot] && !_AUD.missing[slot]) _audLoadSlot(slot); });
   }
   function _audStopMusic(fade) {
     const c = _AUD.ctx; if (!c || !_AUD.musicSrc) return;
@@ -7841,9 +7854,12 @@
     } catch (_) {}
   }
   function _audPlayMusic(slot, loop) {
-    const c = _audCtx(); if (!c || !_audMusicOn()) return;
+    const c = _audCtx();
+    if (!c) { _AUD.lastPlay = slot + ': no-ctx'; return; }
+    if (!_audMusicOn()) { _AUD.lastPlay = slot + ': music-off'; return; }
     const buf = _AUD.buffers[slot];
-    if (!buf) return;                                          // slot absent → silent, already logged
+    if (!buf) { _AUD.lastPlay = slot + ': no-buffer (' + (_AUD.status[slot] || 'still loading') + ')'; return; }
+    _AUD.lastPlay = slot + ': started';
     _audStopMusic(0.15);
     try {
       const src = c.createBufferSource();
@@ -7885,20 +7901,22 @@
   // holds remain full length (reading time matters more without motion).
   const _PKB_T = {
     type: 16,                                  // typewriter ms per step
-    announce: 350, announceHold: 300,          // move announce (blocking)
+    announce: 350, announceHold: 240,          // move announce (blocking)
     lunge: 180, impact: 250, float: 600,       // the attack — unchanged, punchy
-    drain: 500, drainMin: 300,                 // HP drain animation
-    settle: 350,                               // post-drain settle (only if NO toast follows)
-    critReveal: 200, critHold: 900, critFade: 150,
-    effReveal: 200, effHold: 800, effFade: 150,
-    missReveal: 150, missHold: 550,
-    statusHold: 800,                           // status-applied line (burn/stun/CAUTERIZED)
-    dotHold: 600,                              // end-of-turn DoT tick line
-    actorGap: 450,                             // between actors (was 120)
-    turnGap: 550,                              // between full turns
-    ko: 700, koHold: 600,
+    drain: 450, drainMin: 280,                 // HP drain animation
+    settle: 280,                               // post-drain settle (only if NO toast follows)
+    critReveal: 200, critHold: 750, critFade: 150,
+    effReveal: 200, effHold: 650, effFade: 150,
+    missReveal: 150, missHold: 450,
+    statusHold: 600,                           // status-applied line (burn/stun/CAUTERIZED)
+    dotHold: 480,                              // end-of-turn DoT tick line
+    actorGap: 360,                             // between actors
+    turnGap: 440,                              // between full turns
+    ko: 700, koHold: 600,                      // the finale keeps its weight
     multiHit: 200,                             // sub-hit impact spacing (Flurry identity)
   };
+  // W246 — "a tad faster": ~20% off the DWELLS (announce/settle/toasts/status/
+  // gaps) per on-device feel; attack animations and the KO beat unchanged.
   let _pkbBusy = false, _pkbFF = false, _pkbFFTimer = null, _pkbTypeDone = null;
   let _pkbHPm = { p: 0, b: 0 }, _pkbEffShown = { p: true, b: true }, _pkbFightT0 = 0;
 
@@ -8262,7 +8280,8 @@
       if (isBoss) _audCue('boss_intro');
       const slot = isBoss ? 'boss_loop' : 'battle_loop';
       _audPlayMusic(slot, true);
-      _arAfter(1200, () => { if (!_AUD.musicSrc && _arView === 'battle') _audPlayMusic(slot, true); });
+      // cold first decode on-device can outlast a single retry — ladder it
+      [1200, 2600, 4500].forEach((ms) => _arAfter(ms, () => { if (!_AUD.musicSrc && _arView === 'battle') _audPlayMusic(slot, true); }));
     } catch (_) {}
   }
 
@@ -28893,6 +28912,16 @@
     try { payload.userAgent  = navigator.userAgent; } catch (_) {}
     try { payload.isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (_) {}
     try { payload.platform   = (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || null; } catch (_) {}
+
+    // ── W246 — battle audio state (the music-silent diagnostic) ──
+    try {
+      payload.audio = {
+        ctx: _AUD.ctx ? _AUD.ctx.state : 'not-created',
+        soundEnabled: !!soundEnabled,
+        musicOn: _audMusicOn(), musicVol: _audMusicVol(), sfxVol: _audSfxVol(),
+        slots: _AUD.status, lastPlay: _AUD.lastPlay, playingNow: !!_AUD.musicSrc,
+      };
+    } catch (err) { payload.audioErr = String(err && err.message || err); }
 
     // ── Add Habits breadcrumbs (the main diagnostic) ─────────
     try {
