@@ -31330,6 +31330,11 @@ button.guildhall-summary-tile:active {
 .asc-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 50px 24px; text-align: center; }
 .asc-empty .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 20px; color: #f5b842; }
 .asc-empty .sub { font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 14px; color: #9090a8; line-height: 1.5; max-width: 280px; }
+/* W240 — out-of-lives banner: the tower stays open for free rematches */
+.asc-livesout { margin: 4px 16px 14px; padding: 13px 16px; border-radius: 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); text-align: center; }
+.asc-livesout .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14.5px; color: #f5b842; }
+.asc-livesout .sub { margin-top: 5px; font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 12px; color: #9090a8; line-height: 1.45; }
+.asc-cta-locked { opacity: 0.45; filter: grayscale(0.5); pointer-events: none; cursor: default; }
 
 /* ── W222 fill modules — pre-fight scouting + victory recap ───────────────── */
 .asc-fill { margin-top: 16px; text-align: left; width: 100%; box-sizing: border-box; }

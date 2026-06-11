@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w239';
+  const APP_BUILD_TAG = '2.2.5-w240';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7108,8 +7108,10 @@
           '<div class="asc-foe-med">' + _arFoeSil() + '</div></div>' +
         '<div class="asc-cur-mid">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
         '<div style="margin-top:13px">' + _ascFaceoffHtml(you, info.opponent.power) + '</div>' +
-        '<button class="ar-cta asc-cur-cta" data-ar="fight" data-floor="' + info.floor + '">FIGHT' +
-          '<span class="ar-cta-sub">CLEAR FLOOR ' + info.floor + ' TO ASCEND</span></button>' +
+        (ascentLivesLeft() > 0
+          ? '<button class="ar-cta asc-cur-cta" data-ar="fight" data-floor="' + info.floor + '">FIGHT' +
+            '<span class="ar-cta-sub">CLEAR FLOOR ' + info.floor + ' TO ASCEND</span></button>'
+          : '<div class="ar-cta asc-cur-cta asc-cta-locked">OUT OF LIVES<span class="ar-cta-sub">RATED CLIMB RESUMES TOMORROW</span></div>') +
       '</div></div>';
   }
   function _ascBossCard(info, state) {
@@ -7119,9 +7121,11 @@
     let foot;
     if (state === 'current') {
       foot = '<div class="asc-boss-cta"><div style="margin-bottom:11px">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
-        '<button class="ar-cta" data-ar="fight" data-floor="' + info.floor + '">' +
-          (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') +
-          '<span class="ar-cta-sub">FLOOR POWER ' + _arD(info.opponent.power) + '</span></button></div>';
+        (ascentLivesLeft() > 0
+          ? '<button class="ar-cta" data-ar="fight" data-floor="' + info.floor + '">' +
+            (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') +
+            '<span class="ar-cta-sub">FLOOR POWER ' + _arD(info.opponent.power) + '</span></button>'
+          : '<div class="ar-cta asc-cta-locked">OUT OF LIVES<span class="ar-cta-sub">RATED CLIMB RESUMES TOMORROW</span></div>') + '</div>';
     } else if (state === 'cleared') {
       foot = '<div class="asc-boss-foot"><span class="pwr">FLOOR POWER <b style="color:#c8c6d8">' + _arD(info.opponent.power) + '</b></span>' +
         '<span class="asc-mini-rematch" data-ar="rematch" data-floor="' + info.floor + '" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid rgba(245,184,66,0.33);font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:800;letter-spacing:0.08em;color:#f5b842;cursor:pointer">↺ REMATCH</span></div>';
@@ -7180,11 +7184,13 @@
         '<div class="asc-node' + (state === 'current' || info.isBoss ? ' shift' : '') + '"><span class="' + nodeCls + '"></span></div></div>' +
         '<div class="asc-card">' + card + '</div></div>';
     }
-    const body = (left === 0)
-      ? '<div class="asc-empty"><div class="big">Out of lives for today</div>' +
-        '<div class="sub">You fell twice — the tower closes until tomorrow. Wins cost nothing; only a defeat spends a life. Return stronger.</div></div>'
-      : rows;
-    _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll">' + body + '</div>');
+    // W240 — at 0 lives the tower stays OPEN: rated climbing locks until
+    // tomorrow, but cleared floors remain freely rematchable (exhibitions).
+    const banner = (left === 0)
+      ? '<div class="asc-livesout"><div class="big">Out of lives — the climb rests</div>' +
+        '<div class="sub">Rated attempts resume tomorrow. Rematch any cleared floor for the fight itself — no stakes, no cost.</div></div>'
+      : '';
+    _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll">' + banner + rows + '</div>');
     try { const el = document.getElementById('asc-current-card'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); } catch (_) {}
   }
 
@@ -7605,7 +7611,6 @@
   // shows deterministic info (archetypes, effectiveness, power); the dice roll
   // waits for the commit tap.
   function _arStartFight(floor) {
-    if (ascentLivesLeft() <= 0) { _arRenderTower(); return; }
     _arClearTimers();
     _arRevealing = false;
     _arSess = null;
@@ -7613,6 +7618,10 @@
     _arFlawless = false;
     _arReveal = 0;
     _arMatchup = arenaMatchup(floor);
+    // W240 — lives gate RATED attempts only. Rematches of cleared floors are
+    // free exhibitions (no rating/life/record — W221) and stay playable at 0
+    // lives so the tower is never "closed for fun".
+    if (_arMatchup.advances && ascentLivesLeft() <= 0) { _arMatchup = null; _arRenderTower(); return; }
     const foe = _arMatchup.bot;
     if (foe && foe.isBoss) {
       _arRenderBossIntro();
