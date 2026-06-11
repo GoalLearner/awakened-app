@@ -193,6 +193,18 @@ workflows:
           if compgen -G "assets/items/*.png" > /dev/null; then
             cp assets/items/*.png www/assets/items/
           fi
+          # W245 — battle music loops (parity with prep-local-build.sh;
+          # missing these = silent music layer on device)
+          mkdir -p www/assets/audio
+          if compgen -G "assets/audio/*.m4a" > /dev/null; then
+            cp assets/audio/*.m4a www/assets/audio/
+          fi
+          # W245 — coach pose set parity (prep-local-build.sh has had this
+          # since 1z.282; the fallback flow was missing it)
+          mkdir -p www/assets/coach
+          if compgen -G "assets/coach/*.png" > /dev/null; then
+            cp assets/coach/*.png www/assets/coach/
+          fi
 
       - name: Add iOS platform (runs on first build only)
         script: |

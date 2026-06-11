@@ -110,6 +110,15 @@ mkdir -p www/assets/coach
 if compgen -G "assets/coach/*.png" > /dev/null; then
   cp assets/coach/*.png www/assets/coach/
 fi
+# W245 — battle music loops (W244). The AudioDirector fetches
+# assets/audio/*.m4a at battle entry; if these are missing from the
+# bundle the music layer silently ships absent (exactly the W244
+# on-device symptom: "music never came on"). LICENSES.md stays
+# repo-side only — the bundle needs just the audio files.
+mkdir -p www/assets/audio
+if compgen -G "assets/audio/*.m4a" > /dev/null; then
+  cp assets/audio/*.m4a www/assets/audio/
+fi
 echo "  www/ assembled."
 echo ""
 

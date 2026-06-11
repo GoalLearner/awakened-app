@@ -215,6 +215,29 @@ else
   echo "  ✓ All ${#REQUIRED_IMAGES[@]} required root-bundled images present"
 fi
 
+# W245 — guard against the W244 music-missing class of bug. The battle
+# loops ship under assets/audio/ and are fetched by the AudioDirector at
+# battle entry; if prep skips them the music layer silently ships absent
+# ("the music never came on"). Same per-file presence gate as the images.
+echo "── Required battle-audio assets in iOS public/ ──"
+REQUIRED_AUDIO=(
+  "assets/audio/battle_loop.m4a"
+  "assets/audio/boss_loop.m4a"
+)
+audio_missing=()
+for snd in "${REQUIRED_AUDIO[@]}"; do
+  if [ ! -f "ios/App/App/public/$snd" ]; then
+    audio_missing+=("$snd")
+    fail=1
+  fi
+done
+if [ "${#audio_missing[@]}" -gt 0 ]; then
+  echo "  ❌ Missing required battle audio in ios/App/App/public/:"
+  for snd in "${audio_missing[@]}"; do echo "      - $snd"; done
+else
+  echo "  ✓ All ${#REQUIRED_AUDIO[@]} required battle-audio files present"
+fi
+
 echo ""
 if [ "$fail" -ne 0 ]; then
   echo "❌ FAIL — iOS public/ assets do NOT match root sources."
