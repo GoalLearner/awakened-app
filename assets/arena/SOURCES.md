@@ -14,4 +14,7 @@ style-anchored with --sref to the canonical First Awakened portrait
 | foe_juggernaut.webp | all juggernaut floors |
 | foe_balanced.webp | all balanced floors |
 
-Pending (drop-in: boss_<floor>.png at repo root → pipeline): boss_10 … boss_90.
+| boss_10.webp … boss_90.webp | the 9 milestone bosses (F10–F90; F100 uses the coach portrait) |
+
+All 15 NPC sprites shipped 2026-06-11. Tower boss cards, VS intros, boss-intro
+splash, and the battle stage all render from this set.

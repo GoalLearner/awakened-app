@@ -227,6 +227,15 @@ REQUIRED_ARENA_ART=(
   "assets/arena/foe_glasscannon.webp"
   "assets/arena/foe_juggernaut.webp"
   "assets/arena/foe_balanced.webp"
+  "assets/arena/boss_10.webp"
+  "assets/arena/boss_20.webp"
+  "assets/arena/boss_30.webp"
+  "assets/arena/boss_40.webp"
+  "assets/arena/boss_50.webp"
+  "assets/arena/boss_60.webp"
+  "assets/arena/boss_70.webp"
+  "assets/arena/boss_80.webp"
+  "assets/arena/boss_90.webp"
 )
 art_missing=()
 for art in "${REQUIRED_ARENA_ART[@]}"; do

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.588';
+const CACHE_VERSION = 'v5.589';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -160,6 +160,15 @@ const PRECACHE_ASSETS = [
   '/assets/arena/foe_glasscannon.webp',
   '/assets/arena/foe_juggernaut.webp',
   '/assets/arena/foe_balanced.webp',
+  '/assets/arena/boss_10.webp',
+  '/assets/arena/boss_20.webp',
+  '/assets/arena/boss_30.webp',
+  '/assets/arena/boss_40.webp',
+  '/assets/arena/boss_50.webp',
+  '/assets/arena/boss_60.webp',
+  '/assets/arena/boss_70.webp',
+  '/assets/arena/boss_80.webp',
+  '/assets/arena/boss_90.webp',
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

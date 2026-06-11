@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w251';
+  const APP_BUILD_TAG = '2.2.5-w252';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7158,7 +7158,9 @@
         '<span class="lbl">' + (apex ? '✦ THE SUMMIT · FINAL BOSS ✦' : '✦ MILESTONE BOSS ✦') + '</span><span class="rule r"></span></div>' +
       '<div class="asc-boss ' + state + '"' + (state === 'current' ? ' id="asc-current-card"' : '') + '>' +
         '<div class="asc-boss-top"><div class="asc-boss-med' + (info.floor === 100 ? ' asc-boss-med--fa' : '') + '">' +
-          (info.floor === 100 ? '<img src="assets/coach/first-awakened-idle.png" alt="" class="asc-fa-img">' : _arFoeSil()) + '</div>' +
+          (info.floor === 100 ? '<img src="assets/coach/first-awakened-idle.png" alt="" class="asc-fa-img">'
+            // W252 — milestone-boss portraits on the tower cards (silhouette fallback)
+            : '<img src="assets/arena/boss_' + info.floor + '.webp" alt="" class="asc-fa-img" onerror="window.__arFoeArtFail(this)">') + '</div>' +
           '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">' +
             '<span class="asc-ftag ' + (state === 'locked' ? '' : 'gold') + '">FLOOR ' + info.floor + '</span>' +
             (state === 'cleared' ? '<span class="asc-slain">✓ SLAIN</span>' : '') + '</div>' +
