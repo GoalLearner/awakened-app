@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w234';
+  const APP_BUILD_TAG = '2.2.5-w235';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5801,9 +5801,19 @@
   // walls ~F5, a B-rank geared build clears ~F50, and only a fully-maxed
   // build summits. Floor reached = real build strength.
   const _ASCENT_BASE = 3.0, _ASCENT_EXP = 1.05, _ASCENT_BOSS_BUMP = 1.18;
+  // W235 Option A (approved): floors 1–5 use a gentle piecewise ramp so a fresh,
+  // weaponless account can climb on day one (fresh build ≈ 6.6 raw). The curve
+  // resumes at F6 (≈19.7) — a deliberate cliff: the "earn your first weapon"
+  // gate (the Rusted Training Blade from The Iron Warden, a D-rank boss).
+  // 1.0/0.7 = best-of-tested in the W235 ramp iterations (the approved 2.0/1.1
+  // left F4–F5 as power-walls for a fresh account; the remaining ramp misses are
+  // structural — %maxHP DoT/heals — and are reported in the doc, not tunable here).
+  const _ASCENT_RAMP_ANCHOR = 1.0, _ASCENT_RAMP_SLOPE = 0.7;   // F1–F5 = anchor + slope×(f−1)
   function _ascentFloorPower(floor) {
-    const p = _ASCENT_BASE * Math.pow(Math.max(1, floor), _ASCENT_EXP);
-    return (floor % 10 === 0) ? p * _ASCENT_BOSS_BUMP : p;
+    const f = Math.max(1, floor);
+    if (f <= 5) return _ASCENT_RAMP_ANCHOR + _ASCENT_RAMP_SLOPE * (f - 1);
+    const p = _ASCENT_BASE * Math.pow(f, _ASCENT_EXP);
+    return (f % 10 === 0) ? p * _ASCENT_BOSS_BUMP : p;
   }
   function _ascentIsBoss(floor) { return floor % 10 === 0; }
 
@@ -6480,41 +6490,75 @@
       rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 },
     };
   }
-  // W233 foe AI — deterministic decision tree, seeded rolls (§7.1 of the doc):
-  //   1. low HP + heal off-cd       → r < 0.70 use it
-  //   2. else low HP + guard/brace  → r < 0.50 use it (Guard preferred over Brace)
-  //   3. else weighted attack: weight ∝ power × acc × hits × typeEff,
-  //      ×1.5 for a debuff/DoT the player currently lacks. Struggle only when
-  //      nothing else is available.
-  function _arenaFoePick(sess) {
-    const off = sess.bMoves.filter((mv) => !(sess.bcd[mv.id] > 0));
+  // W235 AI v2 — strict-priority tree with UTILITY branches (§7.1 of the doc).
+  // The W233 tree only reached 0-power moves in the <35% panic branch, so
+  // Refuse/Temper/Focus/Evade were NEVER cast — the W234 grid measured AI
+  // poverty, not balance. First satisfied branch wins; every p is a seeded roll:
+  //   1. CLEANSE  — own incoming DoT ≥ 8% maxHP/turn + cleanse off CD → p 0.90
+  //   2. EMERGENCY— HP < 35%: heal p 0.70; else Guard/Brace p 0.70 (Guard first)
+  //   3. SETUP    — no ATK-up active + one off CD + self ≥60% + foe ≥70% → p 0.60
+  //   4. EVADE    — Evade off CD + dodge not active + self HP ∈ [35%,70%) → p 0.60
+  //   5. ATTACK   — weight ∝ power × acc × hits × typeEff, ×1.5 for a debuff/DoT
+  //                 the opponent lacks. Struggle only when nothing is legal.
+  // (Guard/Evade p's fixed at 0.70/0.60 after the two T5 iterations — the
+  //  remaining under-usage is condition-bound, reported in the doc.)
+  // Side-generic so one tree serves the live foe AND both sim sides.
+  function _arenaPickMove(ctx) {
+    const off = ctx.moves.filter((mv) => !(ctx.cd[mv.id] > 0));
     if (!off.length) return _arStruggleMove();
-    const lowHP = sess.bHP / sess.bMax < 0.35;
-    if (lowHP) {
-      const heal = off.find((mv) => mv.fx && mv.fx.t === 'heal');
-      if (heal && sess.rng() < 0.7) return heal;
-      const guard = off.find((mv) => mv.fx && mv.fx.t === 'guard') ||
-                    off.find((mv) => mv.fx && (mv.fx.t === 'guardCleanse' || mv.fx.t === 'defUp'));
-      if (guard && sess.rng() < 0.5) return guard;
+    // 1. CLEANSE
+    const dotFrac = Math.min(_DOT_INTAKE_CAP, ctx.selfS.mods.filter((x) => x.k === 'dot').reduce((a, x) => a + x.mag, 0));
+    if (dotFrac >= 0.08) {
+      const cleanse = off.find((mv) => mv.fx && mv.fx.t === 'guardCleanse');
+      if (cleanse && ctx.rng() < 0.90) return cleanse;
     }
+    // 2. EMERGENCY
+    if (ctx.selfHP / ctx.selfMax < 0.35) {
+      const heal = off.find((mv) => mv.fx && mv.fx.t === 'heal');
+      if (heal && ctx.rng() < 0.70) return heal;
+      const guard = off.find((mv) => mv.fx && mv.fx.t === 'guard') ||
+                    off.find((mv) => mv.fx && mv.fx.t === 'defUp');
+      if (guard && ctx.rng() < 0.70) return guard;
+    }
+    // 3. SETUP
+    const atkUpActive = ctx.selfS.mods.some((x) => x.k === 'atk' && x.mag > 0);
+    if (!atkUpActive && ctx.selfHP / ctx.selfMax >= 0.60 && ctx.foeHP / ctx.foeMax >= 0.70) {
+      const setup = off.find((mv) => mv.fx && mv.fx.t === 'atkUp');
+      if (setup && ctx.rng() < 0.60) return setup;
+    }
+    // 4. EVADE
+    const hpFrac = ctx.selfHP / ctx.selfMax;
+    if (hpFrac >= 0.35 && hpFrac < 0.70 && !ctx.selfS.mods.some((x) => x.k === 'dodge')) {
+      const evade = off.find((mv) => mv.fx && mv.fx.t === 'dodge');
+      if (evade && ctx.rng() < 0.60) return evade;
+    }
+    // 5. WEIGHTED ATTACK
     const attacks = off.filter((mv) => (mv.power || 0) > 0);
-    if (!attacks.length) return off[Math.floor(sess.rng() * off.length)];
-    const playerLacks = (fx) => {
+    if (!attacks.length) return off[Math.floor(ctx.rng() * off.length)];
+    const foeLacks = (fx) => {
       if (!fx) return false;
-      if (fx.t === 'burn' || fx.t === 'bleed') return !sess.pS.mods.some((x) => x.k === 'dot' && x.kind === fx.t);
-      if (fx.t === 'defDown') return !sess.pS.mods.some((x) => x.k === 'shred' && x.kind === (fx.kind || fx.t));
-      if (fx.t === 'atkDown') return !sess.pS.mods.some((x) => x.k === 'atk' && x.kind === (fx.kind || fx.t));
-      if (fx.t === 'stun') return !(sess.pS.stun > 0);
+      if (fx.t === 'burn' || fx.t === 'bleed') return !ctx.foeS.mods.some((x) => x.k === 'dot' && x.kind === fx.t);
+      if (fx.t === 'defDown') return !ctx.foeS.mods.some((x) => x.k === 'shred' && x.kind === (fx.kind || fx.t));
+      if (fx.t === 'atkDown') return !ctx.foeS.mods.some((x) => x.k === 'atk' && x.kind === (fx.kind || fx.t));
+      if (fx.t === 'stun') return !(ctx.foeS.stun > 0);
       return false;
     };
     const weights = attacks.map((mv) => {
-      let w = (mv.power || 0) * (mv.acc != null ? mv.acc : 1) * (mv.hits || 1) * sess.bEff;
-      if (mv.fx && playerLacks(mv.fx)) w *= 1.5;
+      let w = (mv.power || 0) * (mv.acc != null ? mv.acc : 1) * (mv.hits || 1) * ctx.typeEff;
+      if (mv.fx && foeLacks(mv.fx)) w *= 1.5;
       return w;
     });
-    let r = sess.rng() * weights.reduce((a, b) => a + b, 0);
+    let r = ctx.rng() * weights.reduce((a, b) => a + b, 0);
     for (let i = 0; i < attacks.length; i++) { r -= weights[i]; if (r <= 0) return attacks[i]; }
     return attacks[attacks.length - 1];
+  }
+  function _arenaFoePick(sess) {
+    return _arenaPickMove({
+      moves: sess.bMoves, cd: sess.bcd,
+      selfHP: sess.bHP, selfMax: sess.bMax, selfS: sess.bS,
+      foeHP: sess.pHP, foeMax: sess.pMax, foeS: sess.pS,
+      typeEff: sess.bEff, rng: sess.rng,
+    });
   }
   function _arEdge(sess, side) { return side === 'p' ? (sess.m.player.edge || 0) : (sess.m.bot.edge || 0); }
   // Execute one combatant's move (locked v2 pipeline). Pushes readable events.
@@ -6819,6 +6863,26 @@
         const e = _ARENA_EFF_EDGES[key];
         return Math.abs(e.win * e.lose - 1) <= 0.01;
       }));
+      // T15 (W235 AI v2) — a burning+bleeding sentinel-AI casts Refuse within 2 picks
+      const s15 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), 15);
+      s15.bS.mods.push({ k: 'dot', kind: 'burn', mag: 0.16, dur: 3, src: 'p' });
+      s15.bS.mods.push({ k: 'dot', kind: 'bleed', mag: 0.12, dur: 3, src: 'p' });
+      let refuseSeen = false;
+      for (let i = 0; i < 2 && !refuseSeen; i++) { if (_arenaFoePick(s15).id === 'refuse') refuseSeen = true; }
+      ok('T15 wall-AI cleanses DoT (Refuse ≤2 picks)', refuseSeen);
+      // T16 (W235 AI v2) — a Kilnforged-AI reaches Temper via the SETUP branch
+      const s16 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'aggressor', 'Foe')), 16);
+      s16.bMoves = WEAPON_MOVES.kilnforged_warblade.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
+      let temperSeen = false;
+      for (let i = 0; i < 12 && !temperSeen; i++) { if (_arenaFoePick(s16).id === 'temper') temperSeen = true; }
+      ok('T16 kiln-AI uses Temper (setup branch)', temperSeen);
+      // T17 (W235 AI v2) — a Step-Blade-AI reaches Evade at mid-HP (EVADE branch)
+      const s17 = arenaStartBattle(M(mk(20, 80, 10, null, 'You'), mk(34, 30, 12, 'trickster', 'Foe')), 17);
+      s17.bMoves = WEAPON_MOVES.ten_thousand_step_blade.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
+      s17.bHP = Math.round(s17.bMax * 0.5);   // mid-HP band [35%, 70%)
+      let evadeSeen = false;
+      for (let i = 0; i < 12 && !evadeSeen; i++) { if (_arenaFoePick(s17).id === 'evade') evadeSeen = true; }
+      ok('T17 step-AI uses Evade at mid-HP', evadeSeen);
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }
@@ -7567,6 +7631,17 @@
   }
 
   // ── result ────────────────────────────────────────────────────────
+  // W235 gate legibility (Patch 5b): true only for a RATED loss at the F6
+  // cliff while no weapon is equipped — the one moment the player needs to be
+  // told the blade exists, not just that they lost.
+  function _arGateHint() {
+    try {
+      if (!_arFight || _arFight.won || !_arFight.rated) return false;
+      if (!_arMatchup || _arMatchup.floor !== 6) return false;
+      const b = getHunterBuild();
+      return !(b && Array.isArray(b.slots) && b.slots[3]);
+    } catch (_) { return false; }
+  }
   function _arRenderResult() {
     _arClearTimers();
     _arRevealing = false;
@@ -7613,7 +7688,11 @@
           ? '<div class="ar-result-narr">' + (_arFlawless
               ? 'You felled ' + esc(_arMatchup.bot.name) + ' without taking a wound. <b style="color:#f5b842">FLAWLESS.</b>'
               : 'You felled ' + esc(_arMatchup.bot.name) + '. <b style="color:#f5b842">Earned, not given.</b>') + '</div>'
-          : '<div class="ar-result-narr loss">“The tower humbles every hunter. Return stronger.”</div>') +
+          // W235 gate legibility: a rated loss at the F6 cliff with no weapon
+          // equipped tells the player WHERE the blade is, not just that they lost.
+          : '<div class="ar-result-narr loss">' + (_arGateHint()
+              ? '“The tower answers strength. <b style="color:#f5b842">The Iron Warden guards a blade.</b>”'
+              : '“The tower humbles every hunter. Return stronger.”') + '</div>') +
       '</div>' + flair + titleHtml + ratingStrip + _ascRecapHtml(f) +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
