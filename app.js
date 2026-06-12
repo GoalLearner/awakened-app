@@ -6012,8 +6012,6 @@
   //    clearly stronger build still wins; floor reached still = build.
   const _ARENA_EFF_MULT  = 1.20;  // SUPER EFFECTIVE bonus to player power
   const _ARENA_EFF_PEN   = 0.83;  // NOT VERY EFFECTIVE penalty (≈1/1.20)
-  const _ARENA_CRIT_MULT = 1.45;  // a crit roll is ×this
-  const _ARENA_MISS_MULT = 0.45;  // a miss roll is ×this
   function _arGlyph(type, color, size) {
     const rc = 'stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"';
     const p = {
@@ -6061,41 +6059,6 @@
     }
     return { crit, miss };
   }
-  // Resolve a best-of-3. Each round both sides roll power × (0.7..1.3); a
-  // crit/miss can spike or whiff the roll. Stats set the ODDS, dice the ROUND.
-  function _arenaRoll(power) { return power * (0.7 + Math.random() * 0.6); }
-  function _arenaRollSide(power, odds) {
-    let v = _arenaRoll(power), crit = false, miss = false;
-    const r = Math.random();
-    if (r < odds.crit) { v *= _ARENA_CRIT_MULT; crit = true; }
-    else if (r > 1 - odds.miss) { v *= _ARENA_MISS_MULT; miss = true; }
-    return { v, crit, miss };
-  }
-  function _arenaResolve(player, bot) {
-    const playerArch = _arenaArchOf(player);
-    const foeArch    = bot.archKey || _arenaArchOf(bot);
-    const eff        = _arenaEffectiveness(playerArch, foeArch);
-    const pPow       = player.power * eff.mult;   // type matchup shifts the player's effective power
-    const pOdds = _arenaSideOdds(player), bOdds = _arenaSideOdds(bot);
-    let pWins = 0, bWins = 0;
-    const rounds = [];
-    for (let i = 0; i < 3 && pWins < 2 && bWins < 2; i++) {
-      const p = _arenaRollSide(pPow, pOdds);
-      const b = _arenaRollSide(bot.power, bOdds);
-      const playerWon = p.v >= b.v;
-      if (playerWon) pWins += 1; else bWins += 1;
-      const margin = Math.abs(p.v - b.v) / Math.max(p.v, b.v, 1);
-      rounds.push({
-        index: i + 1,
-        pRoll: Math.round(p.v),
-        bRoll: Math.round(b.v),
-        playerWon,
-        margin,                                   // 0..1 — used by the UI for flavour text
-        pCrit: p.crit, pMiss: p.miss, bCrit: b.crit, bMiss: b.miss,
-      });
-    }
-    return { playerWon: pWins > bWins, pWins, bWins, rounds, eff, playerArch, foeArch };
-  }
 
   // Build the player's combatant object (live stats + gear).
   function _ascentPlayerCombatant() {
@@ -6125,62 +6088,6 @@
       bot:    _ascentOpponent(f),
       livesLeft: ascentLivesLeft(),
     };
-  }
-  // Resolve a matchup + commit state (record, rating, floor advance,
-  // daily decrement, title unlocks). Returns everything the UI needs.
-  // Refuses (returns null) if the daily limit is spent.
-  function arenaResolveMatchup(m) {
-    try { window.__probe.arenaResolveMatchup++; } catch (_) {}
-    const st = getAscentState();
-    // A rematch of an already-cleared floor (m.advances === false) is a pure
-    // REPLAY — it must NOT touch rating, record, streak, lives, or floor. Only a
-    // genuine attempt at your current uncleared floor is "rated". This is what
-    // stops rematch rating-farming (re-beating a weak cleared floor for points).
-    const rated = !!m.advances;
-    if (rated && st.dailyLosses >= ASCENT_DAILY_LIVES) return null;   // out of lives (progression only)
-    const beforeTitles = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st));
-    const beforeTitleIds = beforeTitles.map(t => t.id);
-
-    const result = _arenaResolve(m.player, m.bot);
-    const won = result.playerWon;
-
-    const ratingBefore = st.rating;
-    let delta = 0, advanced = false, floorCleared = null, bossCleared = null;
-    if (rated) {
-      // rating (ELO vs the floor's implied rating)
-      delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
-      st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
-      if (st.rating > st.bestRating) st.bestRating = st.rating;
-      // record + streak — only a real defeat spends a life; wins are free
-      if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
-      else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
-      // floor advance — fresh attempt at currentFloor only
-      if (won && m.floor === st.currentFloor && m.floor > st.highestCleared) {
-        st.highestCleared = m.floor;
-        st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
-        advanced = true; floorCleared = m.floor;
-        if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
-      }
-    }
-
-    _persistAscentState(st);
-
-    const newTitles = ARENA_TITLES.filter(t =>
-      beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
-
-    return {
-      result, state: st, won, rated,
-      ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
-      advanced, floorCleared, bossCleared, newTitles,
-      livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
-    };
-  }
-  // Convenience: matchup + resolve at the current floor (headless test).
-  function runArenaFight() {
-    try { window.__probe.runArenaFight++; } catch (_) {}
-    const m = arenaMatchup();
-    const r = arenaResolveMatchup(m);
-    return r ? { player: m.player, bot: m.bot, floor: m.floor, result: r.result, state: r.state, newTitles: r.newTitles } : null;
   }
 
   // ── W229 interactive session — the UI drives one round at a time, commit
@@ -7163,8 +7070,6 @@
   try {
     window.Arena = {
       matchup:         arenaMatchup,
-      resolve:         arenaResolveMatchup,
-      fight:           runArenaFight,
       state:           getAscentState,
       livesLeft:       ascentLivesLeft,
       floorInfo:       ascentFloorInfo,
