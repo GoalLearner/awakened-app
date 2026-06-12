@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w258';
+  const APP_BUILD_TAG = '2.2.5-w259';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7094,8 +7094,13 @@
     const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
     let pips = '';
     for (let i = 0; i < ASCENT_DAILY_LIVES; i++) pips += _ascHeartHtml(i < left);
+    // W259 — always-visible Titles entry (was buried behind the fight-result
+    // screen's "View Titles" — undiscoverable). Shows the equipped title.
+    let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
     return '<div class="asc-head">' +
-      '<div class="asc-head-top"><div class="ar-kicker">The Arena · The Ascent</div></div>' +
+      '<div class="asc-head-top"><div class="ar-kicker">The Arena · The Ascent</div>' +
+        '<button class="asc-titles-btn" data-ar="titles" type="button">' +
+          (eqTitle ? '“' + esc(eqTitle) + '”' : 'TITLES') + ' ▸</button></div>' +
       '<div class="asc-head-main">' +
         '<div><div class="asc-rating-lbl">ARENA RATING</div>' +
           '<div class="asc-rating-row"><span class="asc-rating-num">' + st.rating.toLocaleString('en-US') + '</span></div>' +
