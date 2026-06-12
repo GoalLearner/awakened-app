@@ -130,3 +130,67 @@ No gate failure (the CSS issue was pre-commit, caught in audit) · no LEGACY-SUS
 without airtight evidence · no refactors · git state stayed clean (two pre-existing
 untracked preview mockups noted) · uncertainty never hit three borderline calls in a
 row (the four keeps were rule-applications, not coin flips).
+
+
+---
+
+# FLAGGED RESOLUTION — live session with Richie (2026-06-12)
+
+Method: temporary probe layer (counters at 8 suspect entry points + orphan-node
+visibility watcher), Richie driving — full sweep, offline cycle, organic rank-up,
+unrated rematch, rated win, rated forfeit loss (his reviewer additions). Probes
+stripped at session end (zero residue, runtime-verified). Every removal: explicit
+per-item verdict, atomic commit, full gate (selfTest 37/37 + 3 fight hashes +
+boot + spot-renders + brace-depth, added mid-session).
+
+| Item | Runtime evidence | Verdict | Action | Commit |
+|---|---|---|---|---|
+| 1a _enqueueVerifiedEvents | 0 firings everywhere incl. rated win/loss; backend documents producer removed (w160) | CUT | removed (~1 KB) | e142b56 |
+| 1b drain (reader) | fires at boot (legacy flush working) | KEEP (pre-decided) | dated deprecation comment; remove ≥ v2.2.7 | 57ce7ec |
+| 2 logger twins | PRS alive on 3 surfaces; PAE alive via W258 E2E (sole title-broadcast route); plain fights broadcast nothing BY DESIGN | KEEP BOTH | documented intentional; de-flagged | 3e8954d |
+| 3 W229 count==2 | _arGlyph + _ARENA_EFF_PEN: live 2nd refs → ACTIVE. Resolver chain (5 fns + 2 consts): export-only, 0 firings | CUT cluster | removed (~5 KB) + Arena.resolve/.fight keys | 8354bc4 |
+| 4a achievements-grid | never visible; no tab targets the panel | CUT (dead memory) | node+panel removed | 22fcab1 |
+| 4b XP·30D sheet | opener never wired (card repurposed to Kill Log) | CUT (dead memory) | nodes + ~10 KB JS + CSS family | 22fcab1/c1ce16e |
+| 4c Origin sheet | opener orphaned; LIVE arena-button opener found hiding inside setupOriginStorySheet under a stale comment — preserved, gate-proven | CUT (dead memory) | nodes + JS + 16-class CSS family; origin DATA untouched | babcc3b/c1ce16e |
+| 4d burned banner | W261-retired mechanic | CUT | node + JS + CSS | babcc3b/c1ce16e |
+| 5 mockups | product verdicts | 4 PLANNED → STAGED_FEATURES.md; Duels pair ABANDONED | preview-social + duels-polish removed; morning-briefing now tracked | 5979a72 |
+
+**Session bytes:** app.js −20.6 KB · styles.css −47.4 KB · index.html −7.4 KB
+(≈ −75 KB on top of the unsupervised pass's −139 KB).
+
+**Incident (caught + fixed in-session):** the inline origin-CSS cutter left
+styles.css at brace depth 3 (committed in babcc3b) — three cuts swallowed @media
+closing braces. Style probes missed it; a brace-balance audit caught it. Full redo
+from last-good styles.css via the proven parser (c1ce16e); depth-0 now a standing
+gate check. Lesson recorded: never hand-roll a second CSS parser mid-session.
+
+**Deferred / future pass:** orphan @keyframes (~1-2 KB; cut_keyframes.js usage-scan
+has a slicing bug — DO NOT TRUST until rewritten) · 12 unattributed dead CSS classes
+(ar-total/prog-total suffix-caution, habit-sched-pills codex-adjacent, xp-particle--1..4,
+lib-pack-*, nb-icon, hk-preprompt-secondary, is-first-unlock) · setupOriginStorySheet
++ setupXpDetail rename candidates (stale names, live contents).
+
+# UX FINDINGS (observations only — no verdicts, no code changes)
+
+1. **Hunter Report share-card preview misrenders at desktop viewport widths**
+   (canvas card cropped both edges, medallion overlapping wordmark). Verified
+   byte-identical on main — PRE-EXISTING, not a cleanup regression. Mobile-designed
+   canvas (1200×1500) + hr-preview-frame sizing assume iPhone aspect. Trigger
+   confirmed working as designed (rank-up → fa_rankup → share offer, once per rank).
+2. **Offline habit completion:** the designed offline→online trigger was part of
+   Richie's Phase A but his observation template came back unfilled and the
+   offline step was never explicitly confirmed; later screenshots suggest
+   completions seal instantly with no pending-sync indication anywhere. UNCONFIRMED
+   — re-run deliberately if offline UX matters.
+3. **Build-stale confusion:** Richie attempted the device smoke before anything had
+   been pushed/built — GitHub was 4 builds behind the desktop. Process note: say
+   explicitly when work has NOT shipped.
+
+# Merge state (end of live session)
+
+cleanup/dead-code-pass = unsupervised pass + probe layer + 9 verdict commits +
+probe strip. Step-0 smoke: NOT YET RUN at session start; Richie is building
+smoke/cleanup-w263 (0d66b36, pre-verdicts) for the device smoke. After that smoke
+passes: merge cleanup/dead-code-pass (which now extends past the smoke ref by the
+gated verdict commits) into main. If the web/Netlify target ever deploys this,
+bump sw.js CACHE_VERSION at deploy time.
