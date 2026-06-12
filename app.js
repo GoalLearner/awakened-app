@@ -31039,7 +31039,9 @@
   //
   // Local-only transport queue for verified events. v3 Phase 1z.279
   // retired Duels permanently, so this outbox no longer ENQUEUES new
-  // events — the producer (`_buildEventsForActiveDuel`) is gone. The
+  // events — the producer (`_buildEventsForActiveDuel`) is gone, and
+  // the writer (_enqueueVerifiedEvents) was removed in the flagged-item
+  // live session (2026-06-12, Richie verdict: cut). The
   // drain side is preserved so any pre-retirement queued events on
   // upgraded devices still get flushed to the backend on first
   // foreground / cold launch, after which the queue stays empty.
@@ -31067,31 +31069,6 @@
       if (arr.length > VERIFIED_EVENT_OUTBOX_CAP) arr = arr.slice(arr.length - VERIFIED_EVENT_OUTBOX_CAP);
       localStorage.setItem(VERIFIED_EVENT_OUTBOX_KEY, JSON.stringify(arr));
     } catch (_) { /* quota exceeded — best effort */ }
-  }
-
-  function _enqueueVerifiedEvents(events) {
-    try { window.__probe.enqueueVerified++; } catch (_) {}
-    if (!Array.isArray(events) || events.length === 0) return;
-    const queue = _loadVerifiedEventOutbox();
-    const byId = new Map();
-    for (const e of queue) if (e && e.client_event_id) byId.set(e.client_event_id, e);
-    for (const e of events) {
-      if (!e || !e.client_event_id) continue;
-      const existing = byId.get(e.client_event_id);
-      // For steps_total, prefer the higher value — steps over a window
-      // are cumulative and should never decrease across submissions.
-      if (existing && e.event_type === 'steps_total' &&
-          Number(existing.value || 0) > Number(e.value || 0)) {
-        continue;
-      }
-      const enriched = Object.assign({}, e, {
-        queued_at: (existing && existing.queued_at) || new Date().toISOString(),
-        attempt_count: 0,
-        last_error: null,
-      });
-      byId.set(e.client_event_id, enriched);
-    }
-    _saveVerifiedEventOutbox(Array.from(byId.values()));
   }
 
   async function _drainVerifiedEventOutbox() {
