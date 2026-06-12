@@ -1,7 +1,14 @@
-# Awakened — Arena Battle Engine (v2.6, as shipped W237) — FINAL SIM-TUNED BASELINE
+# Awakened — Arena Battle Engine (v2.7, as shipped W260) — ENDGAME AI TIERS ON THE v2.6 BASELINE
 
 > **Status:** CANONICAL for the Ascent tower. This documents the engine **as actually
-> implemented** in `app.js` (build W236), validated by simulation (§12).
+> implemented** in `app.js` (build W260), validated by simulation (§12, §12-W260).
+> **v2.7 changelog (W260 — the FIRST sanctioned engine change since the v2.6 freeze;
+> strictly ADDITIVE):** endgame AI tiers F51+ (§7.2: INSTINCT/TACTICIAN/STRATEGIST/APEX,
+> fair-play charter, sanitized no-RNG decision state, v2-fallback safety) + down-to-the-wire
+> presentation (§7.3: clutch mode, last-stand beats, DEAD-EVEN framing, tier telegraphs —
+> presentation ONLY, outcomes pure). **F1–50 is BIT-IDENTICAL to v2.6** (4-fight seeded gate,
+> byte-for-byte, run twice). AI v2 (§7.1) remains frozen — it IS tier 2. selfTest → **37**
+> checks (T26–T36). Measurement: §12-W260 (margin study · tier deltas · on-curve guardrail).
 > **v2.6 changelog (W237 — clean-edge retune, T2-primary calibration, Vessel tempo lever,
 > tiered ramp kits):** T3 was a **contaminated instrument** — it measured multiplier-effect
 > PLUS kit asymmetry; the new methodology is kit-neutral (both sides Rusted kit, stat shapes
@@ -204,6 +211,63 @@ Kiln 20.0 · Vessel 27.5 · Aggr-foe 20.2 · Glass-foe 23.4 · Jugg-foe 30.6. **
 9.8 · Warmaul 14.1 · Step 14.6 · Sentinel-foe 8.9 · Trickster-foe 13.3. No new branches
 invented per the rule.
 
+### 7.2 Endgame AI tiers (W260, v2.7 — first sanctioned engine change since the freeze; ADDITIVE)
+
+**The ladder** (`aiTierFor(floor)`; the session is tagged at `arenaStartBattle`):
+
+| Floors | Tier | Name | Brain |
+|---|---|---|---|
+| 1–50 | 2 | INSTINCT | AI v2 (§7.1) — the frozen path, **bit-identical** |
+| 51–70 | 3 | TACTICIAN | shared discipline prefix → best expected (damage + effect value) |
+| 71–90 | 4 | STRATEGIST | + one-ply expectimax + cooldown counter-timing (hold-only) |
+| 91–100 | 5 | APEX | + move-dependent second ply + habit adaptation (last ~6 player picks) |
+
+**Fair-play charter (enforced in code; pinned by selfTest T32):** tiered brains see ONLY
+`_aiSanitizedState(sess)` — plain data a human reads off the screen (HP, statuses with
+durations, cooldowns, both kits, type-eff, crit/accuracy odds, recent player picks). **NO rng
+access** on any tiered decision path — probabilistic discipline branches hash the VISIBLE
+state (`_aiHash01`), so identical states always make identical choices. Any tiered-brain
+exception falls back to the exact v2 path (a live fight can never crash from a brain bug).
+
+**Shared discipline prefix (all tiers ≥3):** lethal check (highest-accuracy expected kill) →
+cleanse at ≥8%/turn intake (never wasted on trivial DoTs) → emergency heal p.85 with
+NO-OVERHEAL + Guard/Brace fallback p.5 (under 35% HP) → punish-gated setup (only when no
+visible threat reaches 33% of own HP) → evade discipline. Higher tiers upgrade ONLY the
+attack selection after this prefix — the ladder is monotonic by construction.
+
+**Valuation layer (`_aiEffectValue`, sim-tuned W260):** no-stack gates (guard / defUp /
+dodge / atkUp / atkDown / defDown are worth ~0 while the same state is already active) and a
+×0.7 tempo discount on pure defense (a defending turn deals no damage in a
+damage-decides-timeouts meta). These two gates made the ladder monotonic: without them the
+greedy brains turtle (Brace/Refuse priced at full mitigation value every turn) and LOSE to
+v2's attacking mix — measured, fixed, re-measured.
+
+**Counter-timing (`_aiTimingBonus`, HOLD-ONLY):** when the foe's nuke returns next turn and a
+defensive move would still be cooling, hold it (−0.12 × nuke damage, threat-gated ≥30% of
+maxHP). The positive "defend now" branch was sim-proven harmful (it tipped Ward Strike →
+Brace — pure tempo loss) and removed: smart timing is *not wasting* defense, not defending more.
+
+**PROHIBITION (locked):** no HP-state-conditional engine rules, no prediction-conditional
+rules, no RNG on tiered decision paths, no reading the player's queued move. The tiers know
+nothing a human opponent couldn't. **When an AI behavior is ambiguous, choose the version
+that loses to a SMARTER human, never the one that wins by knowing more.**
+
+### 7.3 Down-to-the-wire presentation (W260 Patch 2 — presentation ONLY)
+
+**No rubber-banding, no DDA. Outcomes are pure; drama is presentation.** The engine decides
+the fight; this layer only changes pacing, light, and sound:
+
+- **Clutch mode** — both meters ≤30%: beat holds +20%, heartbeat loop (synth lub-dub; file
+  slot `sfx_heartbeat` overrides when generated), pulsing crimson vignette + HP-bar pulse.
+  Engages once, persists to the KO (a wire fight stays a wire fight).
+- **Last-stand beat** — a fighter crosses into 1–10% HP: one audio-ducked blocking line per
+  fighter per fight ("…staggers — one clean hit ends this!" / "You steady yourself…").
+- **DEAD EVEN framing** — VS and boss-intro screens show a pulsing "DEAD EVEN · this one
+  goes to the wire" banner when the prediction sits in the 48–52% band (`_arWireBand`).
+- **Telegraphs** — the foe splash names the brain (`· TACTICIAN ·` etc., floors 51+); the
+  current-floor and boss cards carry a `⚠ <TIER>-CLASS FOE · KNOWN MOVES` scouting row
+  showing the foe's TRUE kit (the one the engine actually plays — bosses included).
+
 ---
 
 ## 8. Win / loss & timeout — unchanged
@@ -277,6 +341,70 @@ lever-constant verification incl. the TS reciprocal pair). Sim mirror: clean-edg
 
 ---
 
+## 12-W260. Measurement (v2.7) — margin study · tier deltas · on-curve guardrail
+
+**Bit-identity gate (F1–50):** four seeded fights (two real-profile F47, two synthetic
+even-power) captured pre-patch, hash-compared post-patch — **byte-identical, run twice**
+(after the engine block; again after the brain restructure + valuation finalization). Tier
+mapping verified: 47:2 · 50:2 · 51:3 · 70:3 · 71:4 · 90:4 · 91:5 · 100:5.
+
+**Margin study (10k/band, v2 proxy both sides)** — wire finishes are natural; clutch
+amplifies, never fabricates:
+
+| Prediction band | winner median HP | q25–q75 | median turns |
+|---|---|---|---|
+| 45–48% | 23.4% | — | 6 |
+| **48–52% (the wire)** | **23.3%** | 11.3–42.5% | 6 |
+| 52–55% | 24.0% | — | 6 |
+| 60–70% | 40.6% | — | — |
+| 80%+ | 77.0% | — | — |
+
+STOP-check: even-band median winner HP **23.3% ≤ ~35% → PASS** (the wire is already real).
+
+**Tier deltas (10k/cell, equal power; numbers are PLAYER win rate vs the tiered foe):**
+
+| Foe tier | bal/bal | agg/sen | sen/agg | mean | vs INSTINCT |
+|---|---|---|---|---|---|
+| 2 INSTINCT | 49.9% | 37.4% | 61.9% | 49.7% | — |
+| 3 TACTICIAN | 28.9% | 29.5% | 57.9% | 38.8% | **−10.9 pts** |
+| 4 STRATEGIST | 28.9% | 29.5% | 57.9% | 38.8% | −10.9 pts |
+| 5 APEX | 28.8% | 30.1% | 57.9% | 38.9% | −10.8 pts |
+
+**Finding (reported honestly, not tuned away):** brain strength SATURATES against a
+weighted-random proxy at the Tactician jump. Strategist/Apex faculties (counter-timing,
+sequencing, habit adaptation) are ANTI-EXPLOITATION features — they express against
+patterned human play, which a random proxy cannot model. The ladder is monotonic (no tier
+measurably weaker than a lower one; Apex's +0.6 in one cell is its deliberate defensive
+habit-read, ≈1.3σ). The one big honest difficulty jump lands exactly where the tower
+announces it: floor 51.
+
+**On-curve guardrail (6k/cell/build; player power == floor power; titan/warmaul/step builds
+vs the floor's rotation foe; v2 column = same cells against the INSTINCT brain):**
+
+| Floor (arch) | Tier | tiered mean | v2 mean | tier adds |
+|---|---|---|---|---|
+| F55 (sent) | 3 | 59.4% | 61.9% | −2.6 |
+| F60 (aggr) | 3 | 55.4% | 66.7% | −11.3 |
+| F70 (sent) | 3 | 33.7% | 43.2% | −9.5 |
+| F75 (aggr) | 4 | 55.3% | 66.5% | −11.1 |
+| F85 (sent) | 4 | 32.4% | 41.8% | −9.4 |
+| F90 (aggr) | 4 | 61.5% | 64.5% | −3.0 |
+| F95 (tric) | 5 | 31.5% | 55.9% | −24.4 |
+| F100 (sent) | 5 | 12.8% | 24.6% | −11.8 ⚠ |
+
+Guardrail: **no cell drops below 30% because of the tiers.** ⚠ **F100 was already below 30%
+at v2 (24.6%)** — a pre-existing curve conversation, reported here, NOT silently retuned.
+F95 carries the largest tier delta (an Apex trickster is brutal) but stays above the line.
+Context for all cells: the proxy picks moves at weighted random — real humans pick
+intelligently, so true on-curve player win rates sit ABOVE every number in this table.
+
+selfTest: **37/37** — T26 tier ladder · T27 lethal · T28 no-overheal · T29 cleanse
+discipline · T30 counter-timing hold · T31 apex habit tracking · T32 sanitized-no-RNG ·
+T33 brain-legality sweep · T34 clutch predicate · T35 last-stand crossing · T36 wire band +
+telegraph names.
+
+---
+
 ## 13. Open items after v2.6 (for the ON-DEVICE phase — sim tuning is closed)
 
 1. **🛑 Kilnforged — STOP, human call with numbers:** clean-edge baseline row 79.5 (zone-edge;
@@ -307,3 +435,9 @@ Sim-side tuning is **closed** as of W237. The remaining 🛑 items are deliberat
 every further balance change requires **on-device play data** (real player builds, real move
 choices, real session lengths — none of which the AI-vs-AI mirror can supply). The next
 balance commit after W237 must cite on-device evidence, not simulation.
+
+**W260 addendum:** the endgame AI tiers (§7.2) were the first sanctioned change since this
+freeze — strictly additive, F1–50 bit-identical, AI v2 untouched (it IS tier 2), measured in
+§12-W260. The freeze on v2.6's BALANCE surfaces (moves, edges, pipeline, calibration) remains
+in force; the F100 on-curve flag (§12-W260) is the standing curve conversation for the
+on-device phase.

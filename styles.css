@@ -31650,3 +31650,23 @@ button.guildhall-summary-tile:active {
   .pkb-toast { animation: pkbFade 0.45s ease both; }
   @keyframes pkbFade { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
 }
+
+/* ── W260 — down-to-the-wire presentation + endgame telegraphs ─────────── */
+/* clutch vignette: above the fighters (rows z1), below toasts/splash (z2+) */
+.pkb-stage.clutch::before { content: ''; position: absolute; inset: 0; border-radius: 18px; pointer-events: none; z-index: 2;
+  box-shadow: inset 0 0 64px 22px rgba(155, 18, 28, 0.32); animation: pkbClutchVig 1.1s ease-in-out infinite; }
+@keyframes pkbClutchVig { 0%, 100% { opacity: 0.5; } 36% { opacity: 1; } 52% { opacity: 0.65; } 62% { opacity: 0.92; } }
+.pkb-stage.clutch ~ * .pkb-plate .hp i, .pkb-stage.clutch .pkb-plate .hp i { animation: pkbClutchHp 1.1s ease-in-out infinite; }
+@keyframes pkbClutchHp { 0%, 100% { filter: brightness(1); } 40% { filter: brightness(1.5); } }
+.pkb-splash .tier { margin-top: 7px; font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.3em; color: #ef4444; text-shadow: 0 0 14px rgba(239,68,68,0.55), 0 1px 10px rgba(0,0,0,0.9); }
+.ar-vs-wire { margin: 12px auto 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ar-vs-wire .word { font-family: "JetBrains Mono", monospace; font-size: 12.5px; font-weight: 800; letter-spacing: 0.34em; color: #f5b842; animation: arWirePulse 1.6s ease-in-out infinite; }
+.ar-vs-wire .sub { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em; color: #7e8597; text-transform: uppercase; }
+@keyframes arWirePulse { 0%, 100% { opacity: 0.72; text-shadow: 0 0 6px rgba(245,184,66,0.2); } 50% { opacity: 1; text-shadow: 0 0 18px rgba(245,184,66,0.6); } }
+.asc-scout { margin-top: 12px; padding: 9px 11px 10px; border: 1px solid rgba(239,68,68,0.26); border-radius: 10px; background: rgba(239,68,68,0.055); text-align: left; }
+.asc-scout .k { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.14em; color: #ef4444; }
+.asc-scout .mv { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.asc-scout .mv span { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; color: #c8c6d8; padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(126,133,151,0.3); background: rgba(15,17,26,0.5); }
+@media (prefers-reduced-motion: reduce) {
+  .pkb-stage.clutch::before, .pkb-stage.clutch .pkb-plate .hp i, .ar-vs-wire .word { animation: none; }
+}

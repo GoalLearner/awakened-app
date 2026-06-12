@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w259';
+  const APP_BUILD_TAG = '2.2.5-w260';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6503,6 +6503,7 @@
       pMoves: _arenaPlayerKit(), bMoves: _arenaFoeKit(foeArch, m.bot && m.bot.floor),
       cd: {}, bcd: {}, turn: 1, log: [], done: false, won: false, untouched: true,
       rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 },
+      aiTier: aiTierFor(m.bot && m.bot.floor),   // W260 — endgame AI ladder (≤50 → 2, unchanged)
     };
   }
   // W235 AI v2 — strict-priority tree with UTILITY branches (§7.1 of the doc).
@@ -6567,7 +6568,273 @@
     for (let i = 0; i < attacks.length; i++) { r -= weights[i]; if (r <= 0) return attacks[i]; }
     return attacks[attacks.length - 1];
   }
-  function _arenaFoePick(sess) {
+  // ═══ W260 — ENDGAME AI TIERS (v2.7 — the first sanctioned engine extension
+  // since the v2.6 freeze; strictly ADDITIVE). "Floors 1–50 test your build.
+  // Floors 51–100 test you." F1–50 = INSTINCT (the v2 tree, bit-identical);
+  // F51–70 TACTICIAN; F71–90 STRATEGIST; F91–100 APEX. Combat math, constants,
+  // move tables, commit path, lives, and ELO are untouched.
+  //
+  // THE FAIR-PLAY CHARTER (enforced at the API level): tiered decision
+  // functions receive a SANITIZED read-only state containing exactly what a
+  // human opponent could see — both HP/maxHP, visible statuses + durations,
+  // both cooldown maps, both kits, archetypes, turn number. The sanitized
+  // state holds NO RNG handle: decisions use expected values only (variance
+  // term = 1, crit folded at critChance), plus a deterministic state-hash for
+  // the few probabilistic disciplines. The combat RNG stream is never read,
+  // sampled, or advanced by a tiered decision. When behavior is ambiguous we
+  // choose the version that loses to a smarter human, never the one that wins
+  // by knowing more.
+  const AI_TIER_NAMES = { 2: 'INSTINCT', 3: 'TACTICIAN', 4: 'STRATEGIST', 5: 'APEX' };
+  function aiTierFor(floor) {
+    const f = floor | 0;
+    if (!f || f <= 50) return 2;
+    if (f <= 70) return 3;
+    if (f <= 90) return 4;
+    return 5;
+  }
+  // Sanitized, human-visible state. NO functions, NO rng — plain data only.
+  function _aiSanitizedState(sess) {
+    const snap = (S) => ({
+      stun: S.stun, guard: S.guard,
+      mods: S.mods.map((m) => ({ k: m.k, kind: m.kind, mag: m.mag, dur: m.dur })),
+    });
+    return {
+      turn: sess.turn,
+      self: { hp: sess.bHP, maxHP: sess.bMax, atk: sess.m.bot.attack || 0, def: sess.m.bot.defense || 0,
+              edge: sess.m.bot.edge || 0, arch: sess.foeArch, S: snap(sess.bS),
+              cd: Object.assign({}, sess.bcd), kit: sess.bMoves, typeEff: sess.bEff, crit: sess.bCrit, attuned: 1 },
+      foe:  { hp: sess.pHP, maxHP: sess.pMax, atk: sess.m.player.attack || 0, def: sess.m.player.defense || 0,
+              edge: sess.m.player.edge || 0, arch: sess.playerArch, S: snap(sess.pS),
+              cd: Object.assign({}, sess.cd), kit: sess.pMoves, typeEff: sess.pEff, crit: sess.pCrit, attuned: sess.pAttuned || 1 },
+      seen: (sess._aiSeen || []).slice(),
+    };
+  }
+  // Deterministic state-hash → [0,1). Derived from VISIBLE state only — the
+  // probabilistic disciplines (heal p .85 etc.) roll on this, never on the
+  // combat RNG. Same battle state → same decision (reproducible, no peeking).
+  function _aiHash01(st, salt) {
+    let h = Math.imul(st.turn + 1, 2654435761) ^ Math.imul(Math.round(st.self.hp * 7) + 1, 40503)
+          ^ Math.imul(Math.round(st.foe.hp * 13) + 1, 69069) ^ Math.imul(salt + 1, 97);
+    h = Math.imul(h ^ (h >>> 15), 2246822519);
+    h = Math.imul(h ^ (h >>> 13), 3266489917);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+  // Expected damage of a move from att→def — the REAL pipeline with expected
+  // values: variance = 1.0, crit folded at critChance (crit skips takenMult
+  // and pierces base DEF, exactly like _arExecMove), accuracy + dodge as
+  // probabilities, guard as a first-landed-hit halving, move-level cap.
+  function _aiExpectedDamage(att, def, move) {
+    const power = move.power || 0;
+    if (power <= 0) return 0;
+    const baseAtk = (att.atk || 0) * _arStatAtkMult(att.S) * (att.attuned || 1);
+    const shred = _arStatArmorShred(def.S);
+    const takenM = _arStatTakenMult(def.S);
+    const dodge = _arStatDodge(def.S);
+    const acc = Math.min(0.99, (move.acc != null ? move.acc : 1) + (att.edge || 0) * 0.002);
+    const cc = att.crit || 0.08;
+    const base = baseAtk * power * (att.typeEff || 1);
+    const dNon = base / (1 + (def.def * shred) / _DEF_SCALE) * takenM;
+    const dCrit = base / (1 + (def.def * shred * (1 - _CRIT_PIERCE)) / _DEF_SCALE) * _CRIT_MULT;
+    let perHit = (1 - cc) * dNon + cc * dCrit;
+    const hits = move.hits || 1;
+    let total = perHit * hits * acc * (1 - dodge);
+    if (def.S.guard > 0) total *= hits > 1 ? 1 - 0.5 / hits : 0.5;
+    const capFrac = _MAX_HIT_FRAC + cc * (_MAX_HIT_FRAC_CRIT - _MAX_HIT_FRAC);
+    return Math.min(total, capFrac * def.maxHP);
+  }
+  function _aiLegal(side) { return side.kit.filter((mv) => !(side.cd[mv.id] > 0)); }
+  function _aiBestDamage(att, def) {
+    let best = 0;
+    _aiLegal(att).forEach((mv) => { const d = _aiExpectedDamage(att, def, mv); if (d > best) best = d; });
+    return best;
+  }
+  function _aiDotRemaining(side) {   // Σ mag × dur of active DoT, as a maxHP fraction
+    let t = 0;
+    side.S.mods.forEach((m) => { if (m.k === 'dot') t += (m.mag || 0) * Math.max(1, m.dur || 1); });
+    return t;
+  }
+  function _aiDotPerTurn(side) {
+    let t = 0;
+    side.S.mods.forEach((m) => { if (m.k === 'dot') t += (m.mag || 0); });
+    return Math.min(_DOT_INTAKE_CAP, t);
+  }
+  // Effect value (same currency as expected damage) — used by the expectimax.
+  function _aiEffectValue(att, def, move, bestFoeDmg) {
+    const fx = move.fx;
+    if (!fx) return 0;
+    const dur2 = Math.min(fx.dur || 1, 2), dur3 = Math.min(fx.dur || 1, 3);
+    switch (fx.t) {
+      case 'heal': return Math.min(att.maxHP * (fx.mag || 0), Math.max(0, att.maxHP - att.hp));
+      case 'guard': return att.S.guard > 0 ? 0 : 0.5 * bestFoeDmg * 0.7;
+      case 'guardCleanse': return _aiDotRemaining(att) * att.maxHP + (att.S.guard > 0 ? 0 : 0.5 * bestFoeDmg * 0.7);
+      case 'defUp': return att.S.mods.some((x) => x.k === 'def' && x.mag < 0) ? 0 : Math.abs(fx.mag || 0) * bestFoeDmg * dur2 * 0.7;
+      case 'dodge': return att.S.mods.some((x) => x.k === 'dodge') ? 0 : (fx.mag || 0) * bestFoeDmg * dur2 * 0.7;
+      case 'atkUp': return att.S.mods.some((x) => x.k === 'atk' && x.mag > 0) ? 0 : (fx.mag || 0) * _aiBestDamage(att, def) * dur3 * 0.8;
+      case 'atkDown': return def.S.mods.some((x) => x.k === 'atk' && x.kind === (fx.kind || fx.t)) ? 0 : (fx.mag || 0) * bestFoeDmg * dur3 * 0.8;
+      case 'defDown': return def.S.mods.some((x) => x.k === 'shred' && x.kind === (fx.kind || fx.t)) ? 0 : (fx.mag || 0) * _aiBestDamage(att, def) * dur3 * 0.6;
+      case 'burn': case 'bleed': {
+        const already = def.S.mods.some((m) => m.k === 'dot' && m.kind === fx.t);
+        if (already) return 0;
+        const aPow = att.atk + att.def + att.edge, tPow = (def.atk + def.def + def.edge) || 1e-6;
+        const magEff = (fx.mag || 0) * _arClamp(aPow / tPow, 0.5, 1.0);
+        return def.maxHP * magEff * dur2;
+      }
+      case 'stun': return def.S.stun > 0 ? 0 : _aiBestDamage(def, att);
+      default: return 0;
+    }
+  }
+  // Shared discipline prefix (all tiers ≥3): lethal check → cleanse →
+  // emergency (no-overheal heal, guard fallback) → punish-safe setup → evade.
+  // Returns a forced move or null; the per-tier ATTACK SELECTION below is the
+  // only thing that gets smarter with each tier — so the ladder is monotonic
+  // by construction (a higher tier is never missing a lower tier's discipline).
+  function _aiDiscipline(st, pool, bestFoeDmg) {
+    // 1. LETHAL CHECK — highest-accuracy expected-lethal option.
+    const lethal = pool.filter((mv) => _aiExpectedDamage(st.self, st.foe, mv) >= st.foe.hp);
+    if (lethal.length) {
+      lethal.sort((a, b) => ((b.acc != null ? b.acc : 1) - (a.acc != null ? a.acc : 1)));
+      return lethal[0];
+    }
+    // 2. CLEANSE p1.0 at intake ≥8% — never wasted (remaining ≤6% maxHP → skip;
+    //    kills the bait-then-burn cheese).
+    if (_aiDotPerTurn(st.self) >= 0.08 && _aiDotRemaining(st.self) > 0.06) {
+      const cleanse = pool.find((mv) => mv.fx && mv.fx.t === 'guardCleanse');
+      if (cleanse) return cleanse;
+    }
+    // 3. EMERGENCY heal p.85 with NO-OVERHEAL, else Guard/Brace p.5.
+    if (st.self.hp / st.self.maxHP < 0.35) {
+      const heal = pool.find((mv) => mv.fx && mv.fx.t === 'heal');
+      if (heal) {
+        const amt = st.self.maxHP * (heal.fx.mag || 0);
+        if ((st.self.maxHP - st.self.hp) >= amt * 0.5 && _aiHash01(st, 3) < 0.85) return heal;
+      }
+      const guard = pool.find((mv) => mv.fx && mv.fx.t === 'guard') ||
+                    pool.find((mv) => mv.fx && mv.fx.t === 'defUp');
+      if (guard && _aiHash01(st, 5) < 0.5) return guard;
+    }
+    // 4. SETUP only when a visible off-cooldown nuke can't punish it.
+    const atkUpActive = st.self.S.mods.some((x) => x.k === 'atk' && x.mag > 0);
+    if (!atkUpActive && st.self.hp / st.self.maxHP >= 0.6 && st.foe.hp / st.foe.maxHP >= 0.7
+        && bestFoeDmg < st.self.hp * 0.33) {
+      const setup = pool.find((mv) => mv.fx && mv.fx.t === 'atkUp');
+      if (setup && _aiHash01(st, 7) < 0.6) return setup;
+    }
+    // 5. EVADE discipline (mid-HP, not already evasive).
+    const hpFrac = st.self.hp / st.self.maxHP;
+    if (hpFrac >= 0.35 && hpFrac < 0.7 && !st.self.S.mods.some((x) => x.k === 'dodge')) {
+      const evade = pool.find((mv) => mv.fx && mv.fx.t === 'dodge');
+      if (evade && _aiHash01(st, 11) < 0.4) return evade;
+    }
+    return null;
+  }
+  // v3 TACTICIAN — discipline prefix, then the best EXPECTED move (damage +
+  // effect value). Deterministic; state-hash for the probabilistic branches.
+  function _aiTactician(st) {
+    const legal = _aiLegal(st.self);
+    const pool = legal.length ? legal : [_arStruggleMove()];
+    const bestFoeDmg = _aiBestDamage(st.foe, st.self);
+    const forced = _aiDiscipline(st, pool, bestFoeDmg);
+    if (forced) return forced;
+    let best = null, bestScore = -Infinity;
+    pool.forEach((mv) => {
+      const sc = _aiExpectedDamage(st.self, st.foe, mv) + _aiEffectValue(st.self, st.foe, mv, bestFoeDmg);
+      if (sc > bestScore) { bestScore = sc; best = mv; }
+    });
+    return best || pool[0];
+  }
+  // One-ply expectimax score: my expected (damage + effect) minus the foe's
+  // best single expected response afterward.
+  function _aiPlyScore(st, mv, bestFoeDmgNow) {
+    const myVal = _aiExpectedDamage(st.self, st.foe, mv) + _aiEffectValue(st.self, st.foe, mv, bestFoeDmgNow);
+    const foeAfter = { hp: Math.max(1, st.foe.hp - _aiExpectedDamage(st.self, st.foe, mv)), maxHP: st.foe.maxHP,
+                       atk: st.foe.atk, def: st.foe.def, edge: st.foe.edge, S: st.foe.S, cd: st.foe.cd,
+                       kit: st.foe.kit, typeEff: st.foe.typeEff, crit: st.foe.crit, attuned: st.foe.attuned };
+    return myVal - _aiBestDamage(foeAfter, st.self);
+  }
+  function _aiFoeNuke(st) {
+    let nuke = null;
+    (st.foe.kit || []).forEach((mv) => { if ((mv.power || 0) > 0 && (!nuke || mv.power > nuke.power)) nuke = mv; });
+    return nuke ? { move: nuke, cd: st.foe.cd[nuke.id] || 0 } : null;
+  }
+  const _AI_DEF_FX = { guard: 1, defUp: 1, dodge: 1, guardCleanse: 1 };
+  // Counter-timing term shared by Strategist/Apex: defend when the foe's nuke
+  // is live AND a real threat AND we aren't guarded; hold defense for its
+  // return when it's one turn away.
+  function _aiTimingBonus(st, mv, nuke) {
+    const isDef = mv.fx && _AI_DEF_FX[mv.fx.t];
+    if (!nuke || !isDef) return 0;
+    const nukeDmg = _aiExpectedDamage(st.foe, st.self, nuke.move);
+    if (nukeDmg < st.self.maxHP * 0.30) return 0;
+    if (nuke.cd === 1 && (mv.cd || 0) >= 1) return -0.12 * nukeDmg;
+    return 0;
+  }
+  // v4 STRATEGIST — Tactician discipline, then one-ply expectimax with
+  // cooldown counter-timing for the attack choice.
+  function _aiStrategist(st) {
+    const legal = _aiLegal(st.self);
+    const pool = legal.length ? legal : [_arStruggleMove()];
+    const bestFoeDmg = _aiBestDamage(st.foe, st.self);
+    const forced = _aiDiscipline(st, pool, bestFoeDmg);
+    if (forced) return forced;
+    const nuke = _aiFoeNuke(st);
+    let best = null, bestScore = -Infinity;
+    pool.forEach((mv) => {
+      const sc = _aiPlyScore(st, mv, bestFoeDmg) + _aiTimingBonus(st, mv, nuke);
+      if (sc > bestScore) { bestScore = sc; best = mv; }
+    });
+    return best || pool[0];
+  }
+  // v5 APEX — Strategist plus a move-dependent second ply and in-battle
+  // pattern adaptation (last ~6 player picks; resets every battle).
+  function _aiApex(st) {
+    const legal = _aiLegal(st.self);
+    const pool = legal.length ? legal : [_arStruggleMove()];
+    const bestFoeDmg = _aiBestDamage(st.foe, st.self);
+    const forced = _aiDiscipline(st, pool, bestFoeDmg);
+    if (forced) return forced;
+    let habit = null;
+    if (st.seen.length >= 3) {
+      const freq = {};
+      st.seen.forEach((id) => { freq[id] = (freq[id] || 0) + 1; });
+      let top = null, n = 0;
+      Object.keys(freq).forEach((id) => { if (freq[id] > n) { n = freq[id]; top = id; } });
+      if (n >= 3) habit = (st.foe.kit || []).find((mv) => mv.id === top) || null;
+    }
+    const nuke = _aiFoeNuke(st);
+    let best = null, bestScore = -Infinity;
+    pool.forEach((mv) => {
+      let sc = _aiPlyScore(st, mv, bestFoeDmg) + _aiTimingBonus(st, mv, nuke);
+      // second ply: best expected FOLLOW-UP — the chosen move is cooling next
+      // turn, so it can't be its own follow-up.
+      let fu = 0;
+      st.self.kit.forEach((m2) => {
+        if (m2.id === mv.id && (mv.cd || 0) >= 1) return;
+        if (st.self.cd[m2.id] > 1) return;
+        const d2 = _aiExpectedDamage(st.self, st.foe, m2);
+        if (d2 > fu) fu = d2;
+      });
+      sc += 0.45 * fu;
+      // adaptation: lean defensive against a live damaging habit-loop
+      const isDef = mv.fx && _AI_DEF_FX[mv.fx.t];
+      if (habit && isDef && (habit.power || 0) > 0 && !(st.foe.cd[habit.id] > 0)) {
+        sc += 0.3 * _aiExpectedDamage(st.foe, st.self, habit);
+      }
+      if (sc > bestScore) { bestScore = sc; best = mv; }
+    });
+    return best || pool[0];
+  }
+    function _arenaFoePick(sess) {
+    const tier = sess.aiTier || 2;
+    if (tier > 2) {
+      // Tiered path: sanitized state only — the combat RNG never enters a
+      // decision. Any internal error falls back to the v2 tree (never crash
+      // a live fight).
+      try {
+        const st = _aiSanitizedState(sess);
+        const pick = tier === 3 ? _aiTactician(st) : tier === 4 ? _aiStrategist(st) : _aiApex(st);
+        if (pick) return pick;
+      } catch (_) {}
+    }
     return _arenaPickMove({
       moves: sess.bMoves, cd: sess.bcd,
       selfHP: sess.bHP, selfMax: sess.bMax, selfS: sess.bS,
@@ -6718,6 +6985,13 @@
     let pMove = sess.pMoves.find((x) => x.id === moveId);
     if (!pMove && moveId === 'struggle') pMove = _arStruggleMove();
     if (!pMove || sess.cd[pMove.id] > 0) return null;            // invalid or on cooldown
+    // W260 — APEX pattern adaptation: track the player's last ~6 picks THIS
+    // battle (tier 5 only; resets with the session — no cross-battle memory).
+    if (sess.aiTier === 5) {
+      sess._aiSeen = sess._aiSeen || [];
+      sess._aiSeen.push(pMove.id);
+      if (sess._aiSeen.length > 6) sess._aiSeen.shift();
+    }
     const bMove = _arenaFoePick(sess);
     const events = [];
     const pPrio = pMove.prio || 0, bPrio = bMove.prio || 0;
@@ -6956,6 +7230,85 @@
         Math.abs(ARENA_MOVE_LIB.crush.power - 1.55) < 1e-9 &&
         Math.abs(_ARENA_EFF_EDGES['trickster>sentinel'].win - 1.18) < 1e-9 &&
         Math.abs(_ARENA_EFF_EDGES['trickster>sentinel'].win * _ARENA_EFF_EDGES['trickster>sentinel'].lose - 1) <= 0.01);
+      // ── W260 (T26–T36) — endgame AI tiers + down-to-the-wire presentation ──
+      // T26 tier ladder: floors → brains, and the session carries its tier
+      const sT26 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), Object.assign(mk(34, 30, 12, 'sentinel', 'Foe'), { floor: 60 })), 26);
+      ok('T26 tier ladder (≤50→2, 51–70→3, 71–90→4, 91+→5; session tagged)',
+        aiTierFor(50) === 2 && aiTierFor(51) === 3 && aiTierFor(70) === 3 && aiTierFor(71) === 4 &&
+        aiTierFor(90) === 4 && aiTierFor(91) === 5 && aiTierFor(100) === 5 && sT26.aiTier === 3);
+      // crafted sanitized-state builder for the brain unit tests
+      const stMk = (selfArch, foeArch) => ({
+        turn: 3,
+        self: { hp: 100, maxHP: 100, atk: 30, def: 30, edge: 15, arch: selfArch, S: { stun: 0, guard: 0, mods: [] },
+                cd: {}, kit: _arenaFoeKit(selfArch, 60), typeEff: 1, crit: 0.08, accB: 0.02, attuned: 1 },
+        foe:  { hp: 100, maxHP: 100, atk: 30, def: 30, edge: 15, arch: foeArch, S: { stun: 0, guard: 0, mods: [] },
+                cd: {}, kit: _arenaFoeKit(foeArch, 60), typeEff: 1, crit: 0.08, accB: 0.02, attuned: 1 },
+        seen: [],
+      });
+      // T27 lethal check — a kill on the board is taken
+      const st27 = stMk('sentinel', 'balanced'); st27.foe.hp = 3;
+      const p27 = _aiTactician(st27);
+      ok('T27 discipline takes the lethal', !!p27 && (p27.power || 0) > 0 && _aiExpectedDamage(st27.self, st27.foe, p27) >= st27.foe.hp);
+      // T28 emergency heal honors NO-OVERHEAL (mostly-wasted heal is skipped)
+      const st28 = stMk('sentinel', 'balanced'); st28.self.hp = 30;
+      const mega = { id: 'megaheal', power: 0, acc: 1, cd: 0, fx: { t: 'heal', mag: 2.0 } };
+      const real = { id: 'realheal', power: 0, acc: 1, cd: 0, fx: { t: 'heal', mag: 0.4 } };
+      const skipMega = _aiDiscipline(st28, [mega], 0) === null;
+      const wantHeal = _aiHash01(st28, 3) < 0.85;
+      const tookReal = _aiDiscipline(st28, [real], 0);
+      ok('T28 emergency heal, never overheal', skipMega && (!!(tookReal && tookReal.id === 'realheal') === wantHeal));
+      // T29 cleanse discipline — a real DoT gets Refuse; a trivial one never wastes it
+      const st29 = stMk('sentinel', 'balanced');
+      st29.self.S.mods = [{ k: 'dot', kind: 'burn', mag: 0.12, dur: 2 }];
+      const p29 = _aiDiscipline(st29, st29.self.kit, 0);
+      const st29b = stMk('sentinel', 'balanced');
+      st29b.self.S.mods = [{ k: 'dot', kind: 'burn', mag: 0.05, dur: 3 }];
+      const p29b = _aiDiscipline(st29b, st29b.self.kit, 0);
+      ok('T29 cleanse: real DoT yes, trivial DoT no', !!p29 && p29.id === 'refuse' && (!p29b || p29b.id !== 'refuse'));
+      // T30 counter-timing — hold defense for the nuke's return; ignore small threats
+      const st30 = stMk('sentinel', 'balanced'); st30.foe.atk = 60; st30.foe.cd = { lunge: 1 };
+      const nk30 = _aiFoeNuke(st30);
+      const st30b = stMk('sentinel', 'balanced'); st30b.foe.cd = { lunge: 1 };
+      const nk30b = _aiFoeNuke(st30b);
+      ok('T30 counter-timing hold (threat-gated)',
+        !!nk30 && _aiTimingBonus(st30, lib('brace'), nk30) < 0 &&
+        _aiTimingBonus(st30, lib('slash'), nk30) === 0 &&
+        !!nk30b && _aiTimingBonus(st30b, lib('brace'), nk30b) === 0);
+      // T31 apex adaptation plumbing — tier-5 sessions track the player's picks
+      const s31 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), Object.assign(mk(34, 30, 12, 'sentinel', 'Foe'), { floor: 95 })), 31);
+      const mv31 = s31.pMoves.find((x) => !(s31.cd[x.id] > 0)) || { id: 'struggle' };
+      arenaTakeTurn(s31, mv31.id);
+      ok('T31 apex habit tracking (tier-5 only)', s31.aiTier === 5 && Array.isArray(s31._aiSeen) && s31._aiSeen.length === 1 && s31._aiSeen[0] === mv31.id);
+      // T32 fair-play charter — sanitized state is plain data: no functions, no rng
+      const s32 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), Object.assign(mk(34, 30, 12, 'sentinel', 'Foe'), { floor: 60 })), 32);
+      const st32 = _aiSanitizedState(s32);
+      let clean32 = true;
+      const scan32 = (o) => {
+        if (typeof o === 'function') { clean32 = false; return; }
+        if (!o || typeof o !== 'object') return;
+        Object.keys(o).forEach((k) => { if (k === 'rng') clean32 = false; scan32(o[k]); });
+      };
+      scan32(st32);
+      ok('T32 sanitized state: no functions, no rng', clean32 && !('rng' in st32));
+      // T33 tier brains always legal — hp-grid sweep, every pick is from the kit
+      let legal33 = true;
+      [['sentinel', 'aggressor'], ['balanced', 'balanced'], ['trickster', 'sentinel']].forEach((pair) => {
+        for (let hp = 10; hp <= 100; hp += 30) for (let fhp = 10; fhp <= 100; fhp += 30) {
+          const st = stMk(pair[0], pair[1]); st.self.hp = hp; st.foe.hp = fhp;
+          [_aiTactician, _aiStrategist, _aiApex].forEach((brain) => {
+            const p = brain(st);
+            if (!p || !(p.id === 'struggle' || st.self.kit.some((mv) => mv.id === p.id))) legal33 = false;
+          });
+        }
+      });
+      ok('T33 tier brains return legal moves (sweep)', legal33);
+      // T34 clutch predicate — both alive and ≤30%
+      ok('T34 clutch predicate', _pkbClutchAt(0.3, 0.3) && _pkbClutchAt(0.05, 0.29) && !_pkbClutchAt(0.31, 0.2) && !_pkbClutchAt(0.3, 0));
+      // T35 last-stand crossing — into 1–10%, never re-fires, never on a KO
+      ok('T35 last-stand crossing', _pkbLastStandCross(0.18, 0.08) && !_pkbLastStandCross(0.08, 0.05) && !_pkbLastStandCross(0.18, 0) && !_pkbLastStandCross(0.12, 0.11));
+      // T36 wire band + tier telegraph names
+      ok('T36 wire band + telegraph', _arWireBand(48) && _arWireBand(52) && !_arWireBand(47) && !_arWireBand(53) &&
+        AI_TIER_NAMES[aiTierFor(51)] === 'TACTICIAN' && AI_TIER_NAMES[aiTierFor(71)] === 'STRATEGIST' && AI_TIER_NAMES[aiTierFor(91)] === 'APEX');
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }
@@ -7054,6 +7407,9 @@
     const p = 1 / (1 + Math.pow(Math.max(1, foe) / Math.max(1, you), 2.5));
     return Math.max(1, Math.min(99, Math.round(p * p * (3 - 2 * p) * 100)));
   }
+  // W260 — the wire band: a 48–52% prediction reads DEAD EVEN to a human.
+  // Framing only; the engine never sees it.
+  function _arWireBand(odds) { return odds >= 48 && odds <= 52; }
   function _ascDiff(you, foe) {
     const r = you / Math.max(1, foe);
     if (r >= 1.12) return { key: 'FAVORED', cls: 'favored' };
@@ -7129,6 +7485,18 @@
         '<div class="fname">' + (isNext ? esc(info.opponent.name) : '— — —') + '</div></div>' +
       right + '</div>';
   }
+  // W260 — post-50 telegraph: name the brain class and show the foe's full kit
+  // on the floor card. Information the fight reveals anyway — scouting, not a
+  // spoiler; the AI gets smarter past F50 and the tower SAYS so.
+  function _ascScoutHtml(info) {
+    const tier = aiTierFor(info.floor);
+    if (tier <= 2) return '';
+    let names = [];
+    try { names = _arenaFoeKit(info.opponent.archKey, info.floor).map((mv) => mv.name || mv.id); } catch (_) {}
+    if (!names.length) return '';
+    return '<div class="asc-scout"><span class="k">⚠ ' + AI_TIER_NAMES[tier] + '-CLASS FOE · KNOWN MOVES</span>' +
+      '<div class="mv">' + names.map((n) => '<span>' + esc(n) + '</span>').join('') + '</div></div>';
+  }
   function _ascCurrentCard(info) {
     const you = _ascPlayerPower();
     return '<div><div class="asc-here-tab">▸ YOU ARE HERE</div>' +
@@ -7142,7 +7510,7 @@
           '<div class="asc-foe-med">' + (info.opponent.archKey
             ? '<img src="assets/arena/foe_' + info.opponent.archKey + '.webp" alt="" class="asc-fa-img" onerror="window.__arFoeArtFail(this)">'
             : _arFoeSil()) + '</div></div>' +
-        '<div class="asc-cur-mid">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
+        '<div class="asc-cur-mid">' + _ascDiffHtml(you, info.opponent.power) + '</div>' + _ascScoutHtml(info) +
         '<div style="margin-top:13px">' + _ascFaceoffHtml(you, info.opponent.power) + '</div>' +
         (ascentLivesLeft() > 0
           ? '<button class="ar-cta asc-cur-cta" data-ar="fight" data-floor="' + info.floor + '">FIGHT' +
@@ -7156,7 +7524,7 @@
     const you = _ascPlayerPower();
     let foot;
     if (state === 'current') {
-      foot = '<div class="asc-boss-cta"><div style="margin-bottom:11px">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
+      foot = '<div class="asc-boss-cta">' + _ascScoutHtml(info) + '<div style="margin-bottom:11px">' + _ascDiffHtml(you, info.opponent.power) + '</div>' +
         (ascentLivesLeft() > 0
           ? '<button class="ar-cta" data-ar="fight" data-floor="' + info.floor + '">' +
             (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') +
@@ -7524,6 +7892,7 @@
         '</div>' +
         '<div class="ar-vs-eff">' + effBadge + '</div>' +
         '<div class="ar-vs-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
+        (_arWireBand(_ascOdds(you, foe)) ? '<div class="ar-vs-wire"><span class="word">DEAD EVEN</span><span class="sub">this one goes to the wire</span></div>' : '') +
         '<div class="ar-vs-go">' + _ascDiffHtml(you, foe) + '</div>' +
         '<button class="ar-cta" data-ar="introgo">FIGHT<span class="ar-cta-sub">FLOOR ' + m.floor + '</span></button>' +
         '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
@@ -7546,6 +7915,7 @@
         '<div class="ar-bi-arch">' + _ascArchHtml(m.bot.archetype) + '</div>' +
         '<div class="ar-bi-taunt">“' + esc(taunt) + '”</div>' +
         '<div class="ar-bi-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
+        (_arWireBand(_ascOdds(you, foe)) ? '<div class="ar-vs-wire"><span class="word">DEAD EVEN</span><span class="sub">this one goes to the wire</span></div>' : '') +
         '<button class="ar-cta" data-ar="introgo">' + (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') + '</button>' +
         '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
       '</div>'
@@ -7750,14 +8120,16 @@
     slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting', 'arena_menu',
             'sfx_lunge', 'sfx_hit_normal', 'sfx_hit_crit', 'sfx_miss_dodge', 'sfx_hp_drain', 'sfx_ko', 'sfx_boss_intro',
             // W250 — main-screen earned-moment cues (habit_check is a drop-in slot, absent today)
-            'sfx_habit_check', 'sfx_rank_up', 'sfx_achievement', 'sfx_stat_up', 'sfx_rare_drop', 'sfx_perfect_day', 'sfx_hall_greeting'],
+            'sfx_habit_check', 'sfx_rank_up', 'sfx_achievement', 'sfx_stat_up', 'sfx_rare_drop', 'sfx_perfect_day', 'sfx_hall_greeting',
+            // W260 — clutch-mode heartbeat (drop-in slot; synth lub-dub until generated)
+            'sfx_heartbeat'],
   };
   // W248 — file-preferred cues: when a generated sample exists for a cue, play
   // it (per-cue gain trim) instead of the synth; absent files fall back to the
   // procedural sound. Same drop-in pattern as the foe art and music slots.
   const _AUD_FILE_CUES = {
     lunge: 0.5, hit_normal: 0.7, hit_crit: 0.85, miss_dodge: 0.5,
-    hp_drain: 0.16, ko: 0.9, boss_intro: 0.8,
+    hp_drain: 0.16, ko: 0.9, boss_intro: 0.8, heartbeat: 0.55,
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
   function _audMusicOn() { return _audSet('hb_music', 'on') !== 'off'; }
@@ -7893,6 +8265,9 @@
         [440, 587, 880].forEach((f, i) => _audOsc({ type: 'sine', f0: f, t: i * 0.05, dur: 0.1, peak: 0.06 })); break;
       case 'cauterize':   _audSpend(0.4); _audNoise({ dur: 0.38, peak: 0.12, filter: { type: 'highpass', f0: 900, f1: 300 } }); break;
       case 'dot_tick':    _audSpend(0.07); _audNoise({ dur: 0.05, peak: 0.06, filter: { type: 'bandpass', f0: 2200, q: 2.5 } }); break;
+      case 'heartbeat':   _audSpend(0.34);
+        _audOsc({ type: 'sine', f0: 64, f1: 46, dur: 0.12, peak: 0.2 });
+        _audOsc({ type: 'sine', f0: 58, f1: 42, t: 0.16, dur: 0.14, peak: 0.14 }); break;
       case 'ko':          _audSpend(0.7);
         _audOsc({ type: 'sine', f0: 120, f1: 32, dur: 0.65, peak: 0.42 });
         _audNoise({ dur: 0.2, peak: 0.18, filter: { type: 'lowpass', f0: 1400, f1: 200 } }); break;
@@ -8082,6 +8457,7 @@
   // gaps) per on-device feel; attack animations and the KO beat unchanged.
   let _pkbBusy = false, _pkbFF = false, _pkbFFTimer = null, _pkbTypeDone = null;
   let _pkbHPm = { p: 0, b: 0 }, _pkbEffShown = { p: true, b: true }, _pkbFightT0 = 0;
+  let _pkbClutch = false, _pkbLastStand = { p: false, b: false }, _pkbHeart = null;   // W260 — down-to-the-wire state
 
   function _pkbArchTint(archKey) {
     if (archKey === 'aggressor' || archKey === 'glasscannon') return '#ef4444';
@@ -8133,8 +8509,10 @@
     const tint = _pkbArchTint(ss.foeArch);
     const d = document.createElement('div');
     d.className = 'pkb-splash';
+    const sTier = aiTierFor(m.floor);   // W260 — telegraph the brain, not the stats
     d.innerHTML = '<div class="nm">' + esc(m.bot.name).toUpperCase() + '</div>' +
-      '<div class="arch" style="color:' + tint + '">— ' + esc((m.bot.archetype || '')).toUpperCase() + ' —</div>';
+      '<div class="arch" style="color:' + tint + '">— ' + esc((m.bot.archetype || '')).toUpperCase() + ' —</div>' +
+      (sTier > 2 ? '<div class="tier">· ' + AI_TIER_NAMES[sTier] + ' ·</div>' : '');
     stage.appendChild(d);
     let done = false;
     const finish = () => {
@@ -8165,7 +8543,7 @@
   }
   function _pkbMs(ms) { return Math.max(40, Math.round(ms * (_pkbFF ? 0.5 : 1))); }          // animations: 2× under FF
   function _pkbAfter(ms, cb) { _arAfter(_pkbMs(ms), cb); }
-  function _pkbHoldMs(ms) { return _pkbFF ? Math.max(150, Math.round(ms * 0.25)) : ms; }     // holds: ×0.25 under FF, min 150
+  function _pkbHoldMs(ms) { const v = _pkbFF ? Math.max(150, Math.round(ms * 0.25)) : ms; return _pkbClutch ? Math.round(v * 1.2) : v; }     // holds: ×0.25 under FF, min 150; +20% in clutch (W260)
   function _pkbHold(ms, cb) { _arAfter(_pkbHoldMs(ms), cb); }
   function _pkbEl(id) { return document.getElementById(id); }
 
@@ -8322,6 +8700,45 @@
     try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
+  // ── W260 Patch 2 — down-to-the-wire presentation. PURE READS of the HP
+  // meters; the outcome is already decided by the engine. No rubber-banding —
+  // this layer only changes pacing, light, and sound. Predicates are split out
+  // so selfTest can pin them.
+  function _pkbClutchAt(pFrac, bFrac) { return pFrac > 0 && bFrac > 0 && pFrac <= 0.30 && bFrac <= 0.30; }
+  function _pkbLastStandCross(prevFrac, nowFrac) { return prevFrac > 0.10 && nowFrac > 0 && nowFrac <= 0.10; }
+  function _pkbHeartStop() { if (_pkbHeart) { try { clearInterval(_pkbHeart); } catch (_) {} _pkbHeart = null; } }
+  function _pkbClutchEngage() {
+    if (_pkbClutch) return;
+    _pkbClutch = true;                                   // persists to the KO — a wire fight stays a wire fight
+    const stage = _pkbEl('pkb-stage');
+    if (stage) stage.classList.add('clutch');
+    try { _audCue('heartbeat'); } catch (_) {}
+    _pkbHeartStop();
+    _pkbHeart = setInterval(() => {
+      if (!_pkbClutch || _arView !== 'battle' || !_arSess) { _pkbHeartStop(); return; }
+      try { _audCue('heartbeat'); } catch (_) {}
+    }, 1100);
+  }
+  // After any HP-draining beat: engage clutch when BOTH meters sit ≤30%, and
+  // play each fighter's one-time last-stand line when they cross into 1–10%.
+  function _pkbDramaCheck(prev, next) {
+    const s = _arSess; if (!s) { next(); return; }
+    const pF = s.pMax ? _pkbHPm.p / s.pMax : 0, bF = s.bMax ? _pkbHPm.b / s.bMax : 0;
+    const pPrev = s.pMax ? prev.p / s.pMax : 0, bPrev = s.bMax ? prev.b / s.bMax : 0;
+    if (_pkbClutchAt(pF, bF)) _pkbClutchEngage();
+    const chain = [];
+    if (!_pkbLastStand.b && _pkbLastStandCross(bPrev, bF)) {
+      _pkbLastStand.b = true;
+      chain.push((cb) => { try { _audDuck(_pkbHoldMs(_PKB_T.statusHold)); } catch (_) {} _pkbSay(esc(_arMatchup.bot.name) + ' staggers — one clean hit ends this!', _PKB_T.statusHold, cb); });
+    }
+    if (!_pkbLastStand.p && _pkbLastStandCross(pPrev, pF)) {
+      _pkbLastStand.p = true;
+      chain.push((cb) => { try { _audDuck(_pkbHoldMs(_PKB_T.statusHold)); } catch (_) {} _pkbSay('You steady yourself — one more wound ends it.', _PKB_T.statusHold, cb); });
+    }
+    let i = 0;
+    const run = () => { if (!_arSess) return; if (i < chain.length) chain[i++](run); else next(); };
+    run();
+  }
   function _pkbBeat(e, next) {
     const s = _arSess; if (!s) return;
     const foeName = _arMatchup.bot.name;
@@ -8329,6 +8746,7 @@
     const used = (e.side === 'p' ? 'You used ' : foeName + ' used ') + (mvName ? mvName.toUpperCase() : 'an attack') + '!';
     if (e.t === 'hit') {
       const defSide = e.side === 'p' ? 'b' : 'p';
+      const prevHm = { p: _pkbHPm.p, b: _pkbHPm.b };   // W260 — drama check reads the crossing
       const hits = parseInt(((e.text || '').match(/×(\d+)\sfor/) || [])[1], 10) || 1;
       // aftermath chain — each beat blocking; settle only when no toast follows
       const aftermath = () => {
@@ -8342,7 +8760,7 @@
         }
         if (!chain.length) chain.push((cb) => _pkbHold(_PKB_T.settle, cb));
         let i = 0;
-        const run = () => { if (!_arSess) return; (i < chain.length) ? chain[i++](run) : next(); };
+        const run = () => { if (!_arSess) return; (i < chain.length) ? chain[i++](run) : _pkbDramaCheck(prevHm, next); };
         run();
       };
       _pkbSay(used, _PKB_T.announceHold, () => {
@@ -8380,11 +8798,12 @@
     } else if (e.t === 'dot') {
       // drain animates DURING the dwell — start it as the line lands, hold covers it
       const defSide = e.side === 'p' ? 'b' : 'p';
+      const prevHm = { p: _pkbHPm.p, b: _pkbHPm.b };   // W260
       _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
       _pkbSetHP(defSide, _pkbHPm[defSide], true);
       _pkbChips(defSide, true);
       try { _audCue('dot_tick'); } catch (_) {}
-      _pkbSay(e.text, _PKB_T.dotHold, next);
+      _pkbSay(e.text, _PKB_T.dotHold, () => _pkbDramaCheck(prevHm, next));
     } else if (e.t === 'heal') {
       const m2 = (e.text || '').match(/restores\s(\d+)\sHP/);
       if (m2) {
@@ -8445,6 +8864,7 @@
     _pkbSetHP('p', s.pHP, true); _pkbSetHP('b', s.bHP, true);
     _pkbChips('p'); _pkbChips('b');
     if (s.done) {
+      _pkbHeartStop();   // W260 — the KO beat owns the soundscape from here
       const loser = s.won ? 'b' : 'p';
       const spot = _pkbEl('pkb-spot-' + loser), plate = _pkbEl('pkb-plate-' + loser);
       if (spot) spot.classList.add('ko');
@@ -8483,6 +8903,7 @@
     const s = _arSess, m = _arMatchup;
     _pkbHPm = { p: s.pHP, b: s.bHP };
     _pkbEffShown = { p: false, b: false };
+    _pkbClutch = false; _pkbLastStand = { p: false, b: false }; _pkbHeartStop();   // W260 — fresh wire state
     _pkbFightT0 = Date.now();   // W242 — duration instrumentation (logged at KO)
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const tint = _pkbArchTint(s.foeArch);
