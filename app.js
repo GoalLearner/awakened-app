@@ -4396,20 +4396,6 @@
     }
     return best;
   }
-  function _killLogShieldSvg(rank) {
-    // Kept for potential reuse; the active layout is Variation C
-    // (Monster Archive) so rows use the small dot, not the shield.
-    const r = esc(rank || '?');
-    return (
-      '<span class="guild-bosses-crest" aria-hidden="true">' +
-        '<svg viewBox="0 0 40 43" width="32" height="35" focusable="false">' +
-          '<path class="guild-bosses-crest-outer" d="M20 2 L36 7 L36 22 Q36 34 20 41 Q4 34 4 22 L4 7 Z"/>' +
-          '<path class="guild-bosses-crest-inner" d="M20 6 L32 10 L32 22 Q32 31 20 37 Q8 31 8 22 L8 10 Z"/>' +
-        '</svg>' +
-        '<span class="guild-bosses-crest-letter">' + r + '</span>' +
-      '</span>'
-    );
-  }
   // v3 Phase 1z.188 — Variation C (Monster Archive) diamond crest
   // for the group headers. Same rank-palette painting as the shield
   // (driven by parent group's --rank-color custom property).
@@ -6009,20 +5995,6 @@
   const _ARENA_EFF_PEN   = 0.83;  // NOT VERY EFFECTIVE penalty (≈1/1.20)
   const _ARENA_CRIT_MULT = 1.45;  // a crit roll is ×this
   const _ARENA_MISS_MULT = 0.45;  // a miss roll is ×this
-  // W229 "Read & Counter" — pick a move each round. The read is a bounded
-  // TIEBREAKER (build + type-effectiveness still dominate). Triangle:
-  // STRIKE ▸ FEINT ▸ GUARD ▸ STRIKE. ALL-IN is the gamble — big unless Guarded.
-  const ARENA_MOVES        = ['strike', 'guard', 'feint', 'allin'];
-  const _ARENA_MOVE_BEATS  = { strike: 'feint', feint: 'guard', guard: 'strike' };
-  const _ARENA_READ_WIN    = 1.25, _ARENA_READ_LOSE = 0.80;     // triangle read
-  const _ARENA_ALLIN_HIT   = 1.40, _ARENA_ALLIN_PUNISH = 0.65;  // gamble vs GUARD
-  const _ARENA_MOVE_LABEL  = { strike: 'STRIKE', guard: 'GUARD', feint: 'FEINT', allin: 'ALL-IN' };
-  // ClaudeDesign "Arena Move Selector" — role accent + glyph + beats, per move.
-  const _ARENA_MOVE_META = {
-    strike: { role: 'ATTACK',  glyph: 'sword',  accent: '#f5b842', beats: 'feint' },
-    guard:  { role: 'DEFENSE', glyph: 'shield', accent: '#5eead4', beats: 'strike' },
-    feint:  { role: 'EDGE',    glyph: 'dagger', accent: '#a78bfa', beats: 'guard' },
-  };
   function _arGlyph(type, color, size) {
     const rc = 'stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"';
     const p = {
@@ -6033,29 +6005,6 @@
       eye:    '<g stroke="' + color + '" stroke-width="1.2" fill="none"><path d="M1.5 7C3 4.2 5 2.8 7 2.8S11 4.2 12.5 7C11 9.8 9 11.2 7 11.2S3 9.8 1.5 7z" stroke-linejoin="round"/><circle cx="7" cy="7" r="1.7"/></g>',
     };
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="display:block;flex:none" aria-hidden="true">' + (p[type] || '') + '</svg>';
-  }
-  // foe move tendency by archetype — readable, not deterministic; foe never ALL-INs (v1)
-  const _ARENA_BOT_BIAS = {
-    aggressor:   { strike: 0.55, guard: 0.20, feint: 0.25 },
-    glasscannon: { strike: 0.60, guard: 0.15, feint: 0.25 },
-    sentinel:    { strike: 0.25, guard: 0.55, feint: 0.20 },
-    juggernaut:  { strike: 0.25, guard: 0.60, feint: 0.15 },
-    trickster:   { strike: 0.20, guard: 0.25, feint: 0.55 },
-    balanced:    { strike: 0.34, guard: 0.33, feint: 0.33 },
-  };
-  function _arenaBotMove(archKey) {
-    const bias = _ARENA_BOT_BIAS[archKey] || _ARENA_BOT_BIAS.balanced;
-    let r = Math.random(), acc = 0;
-    for (const mv of ['strike', 'guard', 'feint']) { acc += (bias[mv] || 0); if (r <= acc) return mv; }
-    return 'strike';
-  }
-  // Player read multiplier given both moves (foe never all-ins in v1).
-  function _arenaReadMult(pMove, bMove) {
-    if (pMove === 'allin') return { p: bMove === 'guard' ? _ARENA_ALLIN_PUNISH : _ARENA_ALLIN_HIT, b: 1.0, read: bMove === 'guard' ? 'lose' : 'win' };
-    if (pMove === bMove) return { p: 1.0, b: 1.0, read: 'neutral' };
-    if (_ARENA_MOVE_BEATS[pMove] === bMove) return { p: _ARENA_READ_WIN, b: _ARENA_READ_LOSE, read: 'win' };
-    if (_ARENA_MOVE_BEATS[bMove] === pMove) return { p: _ARENA_READ_LOSE, b: _ARENA_READ_WIN, read: 'lose' };
-    return { p: 1.0, b: 1.0, read: 'neutral' };
   }
   // Derive a fighting archetype from a combatant's role split (the player
   // has no assigned archetype; the bot keeps its own archKey).
@@ -6068,9 +6017,6 @@
     if (d === mx) return d >= 0.52 ? 'juggernaut'  : 'sentinel';
     return 'trickster';
   }
-  // Type triangle (extremes collapse to their base): aggressor ▸ trickster ▸
-  // sentinel ▸ aggressor. Balanced / mirror = neutral.
-  const _ARENA_BEATS = { aggressor: 'trickster', trickster: 'sentinel', sentinel: 'aggressor' };
   function _arenaBaseArch(k) { return k === 'glasscannon' ? 'aggressor' : k === 'juggernaut' ? 'sentinel' : k; }
   function _arenaEffectiveness(pa, fa) {
     const p = _arenaBaseArch(pa), f = _arenaBaseArch(fa);
@@ -6217,76 +6163,6 @@
   }
 
   // ── W229 interactive session — the UI drives one round at a time, commit
-  //    happens once in arenaFinalizeSession (preserves W220/W221 invariants).
-  // Start a session (no state mutation). eff/odds/archetypes computed once.
-  function arenaStartSession(m) {
-    const playerArch = _arenaArchOf(m.player);
-    const foeArch    = m.bot.archKey || _arenaArchOf(m.bot);
-    const eff        = _arenaEffectiveness(playerArch, foeArch);
-    return {
-      m, eff, playerArch, foeArch,
-      pOdds: _arenaSideOdds(m.player), bOdds: _arenaSideOdds(m.bot),
-      pPow: m.player.power * eff.mult, bPow: m.bot.power,
-      pWins: 0, bWins: 0, rounds: [], done: false,
-    };
-  }
-  // Resolve ONE round with the player's chosen move (no commit). The read
-  // multiplier is a bounded tiebreaker layered over the power roll + crit/miss.
-  function arenaResolveRound(sess, pMove) {
-    if (!sess || sess.done) return null;
-    if (ARENA_MOVES.indexOf(pMove) === -1) pMove = 'strike';
-    const bMove = _arenaBotMove(sess.foeArch);
-    const rm = _arenaReadMult(pMove, bMove);
-    const p = _arenaRollSide(sess.pPow * rm.p, sess.pOdds);
-    const b = _arenaRollSide(sess.bPow * rm.b, sess.bOdds);
-    const playerWon = p.v >= b.v;
-    if (playerWon) sess.pWins += 1; else sess.bWins += 1;
-    const round = {
-      index: sess.rounds.length + 1,
-      pRoll: Math.round(p.v), bRoll: Math.round(b.v), playerWon,
-      margin: Math.abs(p.v - b.v) / Math.max(p.v, b.v, 1),
-      pCrit: p.crit, pMiss: p.miss, bCrit: b.crit, bMiss: b.miss,
-      pMove, bMove, read: rm.read,
-    };
-    sess.rounds.push(round);
-    if (sess.pWins >= 2 || sess.bWins >= 2 || sess.rounds.length >= 3) sess.done = true;
-    return round;
-  }
-  // Finalize + commit ONCE — the W220/W221 logic (rating only if rated, a
-  // defeat spends a life, floor advance, titles). Same result shape the UI uses.
-  function arenaFinalizeSession(sess) {
-    const m = sess.m, st = getAscentState();
-    const rated = !!m.advances;
-    const beforeTitleIds = ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st)).map(t => t.id);
-    const result = {
-      playerWon: sess.pWins > sess.bWins, pWins: sess.pWins, bWins: sess.bWins,
-      rounds: sess.rounds, eff: sess.eff, playerArch: sess.playerArch, foeArch: sess.foeArch,
-    };
-    const won = result.playerWon;
-    const ratingBefore = st.rating;
-    let delta = 0, advanced = false, floorCleared = null, bossCleared = null;
-    if (rated) {
-      delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
-      st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
-      if (st.rating > st.bestRating) st.bestRating = st.rating;
-      if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
-      else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
-      if (won && m.floor === st.currentFloor && m.floor > st.highestCleared) {
-        st.highestCleared = m.floor;
-        st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
-        advanced = true; floorCleared = m.floor;
-        if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
-      }
-    }
-    _persistAscentState(st);
-    const newTitles = ARENA_TITLES.filter(t => beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
-    return {
-      result, state: st, won, rated,
-      ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
-      advanced, floorCleared, bossCleared, newTitles,
-      livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
-    };
-  }
 
   // ═══════════════════════════════════════════════════════════════
   //  W231 — Weapon-driven move-list combat (real HP battle).
@@ -7561,89 +7437,7 @@
     return hi ? 'They overwhelm you — <b>' + round.bRoll + '</b> lands hard.'
               : 'They scrape the round, ' + round.bRoll + ' to ' + round.pRoll + '.';
   }
-  function _arRenderFight(reveal) {
-    _arView = 'fight';
-    _arBodyMode(false);
-    const r = _arFight.result;
-    const shown = r.rounds.slice(0, reveal);
-    let pW = 0, bW = 0, pips = '';
-    for (let i = 0; i < 3; i++) {
-      const rd = r.rounds[i];
-      if (i < reveal && rd) { rd.playerWon ? pW++ : bW++; pips += '<span class="ar-pip ' + (rd.playerWon ? 'win' : 'loss') + '"></span>'; }
-      else pips += '<span class="ar-pip"></span>';
-    }
-    const youHP = Math.max(8, 100 - bW * 45), foeHP = Math.max(8, 100 - pW * 45);
-    const youLow = youHP <= 15 ? ' low' : '', foeLow = foeHP <= 15 ? ' low' : '';
-    // Pokémon-style smooth drain: render the bars at the PREVIOUS round's HP,
-    // then patch to the current HP after a tick so the CSS width transition
-    // animates the chip. Under reduced motion, render at the final HP directly.
-    let pWp = 0, bWp = 0;
-    for (let i = 0; i < reveal - 1; i++) { const rd = r.rounds[i]; if (rd) { rd.playerWon ? pWp++ : bWp++; } }
-    const youHPp = Math.max(8, 100 - bWp * 45), foeHPp = Math.max(8, 100 - pWp * 45);
-    const animateHP = !_arReduceMotion();
-    const youStart = animateHP ? youHPp : youHP, foeStart = animateHP ? foeHPp : foeHP;
-    const last = r.rounds[reveal - 1];
-    const eff = r.eff || { key: 'neutral' };
-    const effChip = (eff.key === 'super' || eff.key === 'weak')
-      ? '<span class="ar-tag ' + eff.key + '">' + eff.label + '</span>' : '';
-    const log = shown.map((rd, i) => {
-      let tags = '';
-      if (rd.playerWon ? rd.pCrit : rd.bCrit) tags += '<span class="ar-tag crit">CRITICAL</span>';
-      if (rd.playerWon ? rd.bMiss : rd.pMiss) tags += '<span class="ar-tag miss">MISS</span>';
-      return '<div class="ar-logline neutral">Round ' + (i + 1) + (tags ? ' ' + tags : '') + '</div>' +
-        '<div class="ar-logline ' + (rd.playerWon ? 'you' : 'foe') + '">' + _arNarr(rd) + '</div>';
-    }).join('');
-    // floating damage number for the just-revealed exchange (CRIT styled bigger)
-    let dmg = '';
-    if (last) {
-      const yw = last.playerWon, crit = yw ? last.pCrit : last.bCrit;
-      const val = yw ? last.pRoll : last.bRoll;
-      dmg = '<div class="ar-dmg-float ' + (yw ? 'you' : 'foe') + (crit ? ' crit' : '') + '">' +
-        (crit ? 'CRIT ' + val : val) + '</div>';
-    }
-    const btn = _arRevealing
-      ? '<button class="ar-skipbtn" data-ar="skip">SKIP ▸</button>'
-      : '<button class="ar-cta" data-ar="skip">SEE RESULT</button>';
-    _arSet(
-      '<div class="ar-tophead"><div class="ar-kicker">Floor ' + _arMatchup.floor + ' · Round ' + Math.min(reveal || 1, 3) + ' of 3' + effChip + '</div><div class="ar-pips">' + pips + '</div></div>' +
-      '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(_arMatchup.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + youLow + '" id="ar-hp-you" style="width:' + youStart + '%"></div></div></div>' +
-        '<div class="ar-hp-vs">vs</div>' +
-        '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(_arMatchup.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill' + foeLow + '" id="ar-hp-foe" style="width:' + foeStart + '%"></div></div></div></div>' +
-      '<div class="ar-log"><div class="ar-log-head">BLOW BY BLOW</div>' + log + '</div>' + dmg +
-      '<div class="ar-spacer"></div>' + btn
-    );
-    if (last) _arHitJuice(last.playerWon, last.playerWon ? last.pCrit : last.bCrit);
-    if (animateHP && (youStart !== youHP || foeStart !== foeHP)) {
-      _arAfter(30, () => {
-        try {
-          const ey = document.getElementById('ar-hp-you'); if (ey) ey.style.width = youHP + '%';
-          const ef = document.getElementById('ar-hp-foe'); if (ef) ef.style.width = foeHP + '%';
-        } catch (_) {}
-      });
-    }
-  }
   // ── cinematic helpers (W215) ──────────────────────────────────────
-  function _arHitJuice(playerWon, crit) {
-    if (_arReduceMotion()) return;
-    try {
-      const sheet = document.querySelector('#arena-overlay .ar-sheet') || _arBody();
-      if (!sheet) return;
-      const classes = [playerWon ? 'ar-juice-you' : 'ar-juice-foe'];
-      if (crit) classes.push('ar-juice-crit');
-      classes.forEach(c => sheet.classList.add(c));
-      _arAfter(360, () => { try { classes.forEach(c => sheet.classList.remove(c)); } catch (_) {} });
-    } catch (_) {}
-  }
-  function _arHitSound(rd) {
-    if (!rd) return;
-    const yw = rd.playerWon, crit = yw ? rd.pCrit : rd.bCrit, miss = yw ? rd.bMiss : rd.pMiss;
-    try {
-      if (crit) playSfx('ar_crit');
-      else playSfx(yw ? 'ar_hit_you' : 'ar_hit_foe');
-      if (miss) playSfx('ar_miss');
-    } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate(crit ? 20 : (yw ? 9 : 16)); } catch (_) {}
-  }
   function _arCountUp(el, from, to, dur) {
     if (!el) return;
     if (_arReduceMotion() || from === to) { el.textContent = to.toLocaleString('en-US'); return; }
@@ -7866,99 +7660,6 @@
         '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
       '</div>'
     );
-  }
-  // Timer-driven round reveal. Steps round 1→N with clash sounds + juice,
-  // then the result. Falls back to an instant full reveal under reduced motion.
-  function _arPlayReveal() {
-    _arClearTimers();
-    const r = _arFight.result, total = r.rounds.length;
-    if (_arReduceMotion()) {
-      _arRevealing = false;
-      _arReveal = total;
-      _arRenderFight(total);
-      return;
-    }
-    _arRevealing = true;
-    _arReveal = 1;
-    _arRenderFight(1);
-    _arHitSound(r.rounds[0]);
-    const step = (n) => {
-      if (n > total) { _arRevealing = false; _arAfter(700, _arRenderResult); return; }
-      _arReveal = n;
-      _arRenderFight(n);
-      _arHitSound(r.rounds[n - 1]);
-      _arAfter(850, () => step(n + 1));
-    };
-    _arAfter(850, () => step(2));
-  }
-  // W216 — one-hit KO cinematic for a flawless stomp. Phase 0 holds both
-  // fighters at full HP (a beat of tension); phase 1 slams the foe's bar to
-  // zero with the FLAWLESS stamp, heavy impact, and shake. Outcome already
-  // resolved — this is presentation only.
-  function _arRenderFlawless(phase) {
-    if (phase === 0) {
-      _arView = 'fight';
-      _arBodyMode(false);
-      const m = _arMatchup;
-      _arSet(
-        '<div class="ar-tophead"><div class="ar-kicker">Floor ' + m.floor + ' · Finishing Blow</div></div>' +
-        '<div class="ar-hp"><div class="ar-hp-side you"><div class="ar-hp-name">' + esc(m.player.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" style="width:100%"></div></div></div>' +
-          '<div class="ar-hp-vs">vs</div>' +
-          '<div class="ar-hp-side foe"><div class="ar-hp-name">' + esc(m.bot.name) + '</div><div class="ar-hp-bar"><div class="ar-hp-fill" id="ar-ko-foehp" style="width:100%"></div></div></div></div>' +
-        '<div class="ar-ko-stage"><div class="ar-ko-foe">' + _arFoeArt(m.bot, false) + '</div></div>' +
-        '<div class="ar-ko-fx" aria-hidden="true"><span class="ar-ko-flash"></span><span class="ar-ko-slash"></span></div>' +
-        '<div class="ar-spacer"></div><button class="ar-skipbtn" data-ar="skip">SKIP ▸</button>'
-      );
-      return;
-    }
-    // phase 1 — the strike (patch in place so the bar slam + stamp animate)
-    try {
-      const foeHP = document.getElementById('ar-ko-foehp');
-      if (foeHP) { foeHP.classList.add('ko'); foeHP.style.width = '0%'; }
-      const sheet = document.querySelector('#arena-overlay .ar-sheet') || _arBody();
-      if (sheet) { sheet.classList.add('ar-ko-shake'); _arAfter(560, () => { try { sheet.classList.remove('ar-ko-shake'); } catch (_) {} }); }
-      const foeArt = document.querySelector('#arena-overlay .ar-ko-foe');
-      if (foeArt) foeArt.classList.add('struck');
-      const fx = document.querySelector('#arena-overlay .ar-ko-fx');
-      if (fx) fx.classList.add('go');   // fires the white flash + slash streak
-      const stage = document.querySelector('#arena-overlay .ar-ko-stage');
-      if (stage) {
-        const stamp = document.createElement('div');
-        stamp.className = 'ar-ko-stamp';
-        stamp.innerHTML = '<div class="big">FLAWLESS</div>' +
-          '<div class="ar-ko-rule"><span class="l"></span><span class="dia"></span><span class="r"></span></div>' +
-          '<div class="sub">ONE-SHOT KO</div>';
-        stage.appendChild(stamp);
-      }
-    } catch (_) {}
-  }
-  function _arPlayFlawless() {
-    _arClearTimers();
-    _arRevealing = true;
-    _arReveal = _arFight.result.rounds.length;   // logically fully revealed
-    _arRenderFlawless(0);
-    _arAfter(560, () => {
-      _arRenderFlawless(1);
-      try { playSfx('ar_ko'); } catch (_) {}
-      try { if (navigator.vibrate) navigator.vibrate([55, 35, 130]); } catch (_) {}
-      // Hold on the KO and hand control to the player — no auto-advance to the
-      // result (a one-shot finishing too fast read as "it skipped the fight").
-      _arAfter(1150, () => { _arRevealing = false; _arShowKoContinue(); });
-    });
-  }
-  // Swap the KO screen's SKIP button for an explicit CONTINUE → result, so the
-  // FLAWLESS finisher waits for a tap instead of jumping to the victory screen.
-  function _arShowKoContinue() {
-    try {
-      const btn = document.querySelector('#arena-body [data-ar="skip"]');
-      if (!btn) return;
-      const cta = document.createElement('button');
-      cta.className = 'ar-cta';
-      cta.setAttribute('data-ar', 'koresult');
-      cta.innerHTML = 'CONTINUE<span class="ar-cta-sub">VICTORY</span>';
-      btn.replaceWith(cta);
-      try { cta.scrollIntoView({ block: 'nearest' }); } catch (_) {}
-    } catch (_) {}
   }
   // Open the VS / boss preview for a floor. The matchup is NOT resolved or
   // committed here — that happens only when the player taps FIGHT (introgo),
@@ -14517,16 +14218,6 @@
   ];
 
 
-  // Achievement categories drive the section grouping in the UI.
-  const ACH_CATEGORIES = [
-    { id: 'streaks',  label: 'Streaks' },
-    { id: 'rank',     label: 'Rank & Points' },
-    { id: 'class',    label: 'Class & Awakening' },
-    { id: 'packs',    label: 'Packs' },
-    { id: 'habits',   label: 'Habit Mastery' },
-    { id: 'lifetime', label: 'Lifetime' },
-  ];
-
   // Each achievement: id, icon, name, desc, category, target, getProgress(ctx).
   // getProgress(ctx) returns { current: N, target: T } so the UI can show
   // a live progress bar like "12 / 30 days" on locked rows. ctx is built
@@ -18153,13 +17844,6 @@
         { month: 'long', day: 'numeric', year: 'numeric' });
     } catch (_) { return dateStr; }
   }
-  // Short numeric form for chapter header labels — '5/1/2026'
-  function _shortDate(dateStr) {
-    try {
-      return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US',
-        { month: 'numeric', day: 'numeric', year: 'numeric' });
-    } catch (_) { return dateStr; }
-  }
 
   function _originName() {
     // Use the user's actual name. The default 'Hunter' is a real name
@@ -20622,50 +20306,6 @@
     }
     // v2.1.0 — refresh the redesigned header's dependent cards.
     try { updateHeaderMetrics(); } catch (_) {}
-  }
-
-  function _formatUnlockDate(dateStr) {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr + 'T12:00:00');
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch (_) { return dateStr; }
-  }
-
-  function _formatProgressNum(n) {
-    return Number(n || 0).toLocaleString();
-  }
-
-  function _buildAchCard(ach, ctx, isRecent) {
-    const unlocked = unlockedAchievements.has(ach.id);
-    const card = document.createElement('div');
-    card.className = 'ach-card ' + (unlocked ? 'unlocked' : 'locked') + (isRecent ? ' ach-recent' : '');
-
-    const progress = (typeof ach.getProgress === 'function') ? ach.getProgress(ctx) : null;
-    let progressHTML = '';
-    if (!unlocked && progress) {
-      const pct = Math.min(100, Math.round((progress.current / progress.target) * 100));
-      progressHTML =
-        '<div class="ach-prog-bar"><div class="ach-prog-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="ach-prog-text">' +
-          _formatProgressNum(progress.current) + ' / ' + _formatProgressNum(progress.target) +
-        '</div>';
-    } else if (unlocked) {
-      const stamp = achievementUnlockDates[ach.id];
-      progressHTML = stamp
-        ? '<div class="ach-prog-text ach-prog-text--unlocked">Unlocked ' + _formatUnlockDate(stamp) + '</div>'
-        : '';
-    }
-
-    card.innerHTML =
-      // Achievement icon dropped — emoji-free pass.
-      '<div class="ach-text">' +
-        '<div class="ach-name">' + esc(ach.name) + '</div>' +
-        '<div class="ach-desc">' + esc(ach.desc) + '</div>' +
-        progressHTML +
-      '</div>' +
-      '<div class="ach-status">' + (unlocked ? '✓' : '🔒') + '</div>';
-    return card;
   }
 
   function renderProfile() {
