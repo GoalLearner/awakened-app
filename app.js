@@ -902,13 +902,6 @@
     return wrote;
   }
 
-  function _bossHuntActive(state, cfg) {
-    if (!state || state.engaged !== true) return false;
-    const exp = _bossHuntExpiresMs(state, cfg);
-    if (!exp) return true; // legacy engaged, no timestamp yet — assume active
-    return Date.now() <= exp;
-  }
-
   function _bossHuntRemainingMs(state, cfg) {
     const exp = _bossHuntExpiresMs(state, cfg);
     if (!exp) return null;
@@ -3334,7 +3327,6 @@
   // Store cap is still GUILDHALL_ACTIVITY_MAX (50); only the
   // visible slice grows. 8 rows is ~2 days of typical activity
   // for an engaged user without forcing scroll on iPhone.
-  const GUILDHALL_ACTIVITY_DISPLAY_LIMIT = 8;
   const GUILDHALL_ACTIVITY_KEY = 'hb_guild_activity';
   const GUILDHALL_ACTIVITY_MAX = 50;
   const GUILDHALL_SEEN_PREFIX  = 'hb_guild_activity_seen_';
@@ -4490,23 +4482,6 @@
         '<span class="guild-bosses-capsule-num">' + esc(num) + '</span>' +
         '<span class="guild-bosses-capsule-lbl">SLAIN</span>' +
       '</span>'
-    );
-  }
-  function _bossesSlainRowHtml(row) {
-    const rank      = row.rank || '';
-    const rankClass = rank ? (' guild-bosses-row--rank-' + esc(rank.toLowerCase())) : '';
-    const subline   = rank
-      ? '<div class="guild-bosses-sub">' + esc(rank) + '-RANK BOSS</div>'
-      : '';
-    return (
-      '<div class="guild-bosses-row' + rankClass + '">' +
-        _killLogShieldSvg(rank) +
-        '<div class="guild-bosses-name">' +
-          '<div class="guild-bosses-title">' + esc(row.name) + '</div>' +
-          subline +
-        '</div>' +
-        _killLogKillCapsule(row.kill_count) +
-      '</div>'
     );
   }
   function renderBossesSlainSheet() {
@@ -5675,9 +5650,6 @@
     if (!_equipped) loadEquipped();
     return _equipped;
   }
-  function getEquippedCardId(slot) {
-    return getEquipped()[slot] || null;
-  }
   function isCardEquipped(cardId) {
     if (!cardId) return false;
     const eq = getEquipped();
@@ -5706,12 +5678,6 @@
     saveEquipped();
     return { ok: true, prevCardId: prev || null };
   }
-  function unequipCard(cardId) {
-    // Find which slot holds this card, if any, and clear it.
-    const card = CARDS[cardId];
-    if (!card) return { ok: false };
-    return unequipSlot(card.slot);
-  }
 
   // Aggregates the stat bonuses across all currently-equipped cards.
   // v3 Phase 1a: raw sum, no class affinity multipliers yet. Phase 1b
@@ -5730,12 +5696,6 @@
       Object.keys(sum).forEach(k => { sum[k] += (card.bonuses[k] || 0); });
     });
     return sum;
-  }
-  function countEquippedSlots() {
-    const eq = getEquipped();
-    let n = 0;
-    LEGACY_EQUIPMENT_SLOTS.forEach(slot => { if (eq[slot]) n += 1; });
-    return n;
   }
 
   try {
@@ -5856,7 +5816,6 @@
   // a deterministic seed so a given floor always shows the same foe).
   const _ASC_PREFIX = ['Grim', 'Pale', 'Ashen', 'Hollow', 'Iron', 'Dread', 'Sable', 'Gaunt', 'Riven', 'Wraith', 'Cinder', 'Mourn', 'Bleak', 'Vile', 'Stark', 'Umbral'];
   const _ASC_NOUN   = ['Warden', 'Stalker', 'Revenant', 'Husk', 'Sentinel', 'Reaver', 'Pilgrim', 'Outcast', 'Shade', 'Marauder', 'Acolyte', 'Vagrant', 'Herald', 'Drifter', 'Penitent', 'Forsworn'];
-  const _ASC_ARCH_ROTATION = ['balanced', 'aggressor', 'sentinel', 'trickster', 'balanced', 'juggernaut', 'aggressor', 'trickster', 'sentinel', 'glasscannon'];
   function _ascentSeed(floor) { let h = floor * 2654435761 % 2147483647; return () => (h = (h * 48271) % 2147483647) / 2147483647; }
 
   // Cosmetic titles: 10 boss titles + 4 rating milestones. Pure bragging
@@ -16436,10 +16395,6 @@
   }
 
   // ── MORNING ROUTINE — backward-compat thin wrappers ─────────
-  // Existing call sites continue to work; new code should use the
-  // generic helpers above so future packs (3rd, 4th, ...) drop in cleanly.
-  function getMorningPack()             { return getPackById('morning'); }
-  function getMorningHabitDefs()        { return getPackHabitDefs('morning'); }
   function isMorningHabit(habit)        { return isHabitInPack(habit, 'morning'); }
   function getMissingMorningHabits()    { return getMissingPackHabits('morning'); }
 
@@ -18109,16 +18064,6 @@
     return ratio >= 1.10 && ratio < CLASS_SHIFT_DOMINANCE;  // 10–20% transition zone
   }
 
-  // For Civilian users — find the stat closest to Lv5 for the progress hint.
-  function getClosestStatToAwaken() {
-    const levels = _statLevels();
-    const top    = levels[0];
-    if (!top) return null;
-    if (top.lv >= CLASS_LV5_THRESHOLD) return null;
-    const tied = levels.filter(l => l.lv === top.lv).map(l => l.id);
-    return { ids: tied, lv: top.lv, target: CLASS_LV5_THRESHOLD };
-  }
-
   function checkClassChange(silent) {
     const result = evaluateClass(currentClass);
 
@@ -18214,12 +18159,6 @@
       return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US',
         { month: 'numeric', day: 'numeric', year: 'numeric' });
     } catch (_) { return dateStr; }
-  }
-  function _originWeekdayNoun(dateStr) {
-    try {
-      const wk = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
-      return WEEKDAY_NOUNS[wk] || 'soul';
-    } catch (_) { return 'soul'; }
   }
 
   function _originName() {
@@ -18903,7 +18842,6 @@
   // ── HISTORY ──────────────────────────────────────────────
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const HG_DCOL = { easy: '#8b5cf6', medium: '#3b82f6', hard: '#f97316', legendary: '#f59e0b' };
 
   // Returns array of 7 date strings (Mon→Sun) for the week at offset
   function getWeekDates(offset) {
@@ -19710,44 +19648,6 @@
     });
 
     el.appendChild(list);
-  }
-
-  function showDayPopup(dd) {
-    const { dateStr, doneIds } = dd;
-    const dateDisplay = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-      weekday: 'short', month: 'long', day: 'numeric'
-    });
-
-    // Compute XP for completed habits that still exist
-    const dow = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' })
-      .format(new Date(dateStr + 'T12:00:00Z'));
-    const wasWeekend = ['Fri','Sat','Sun'].includes(dow);
-    let xpTotal = 0;
-    const completedHabits = (doneIds || []).map(id => habits.find(h => h.id === id)).filter(Boolean);
-    completedHabits.forEach(h => {
-      const base = (DIFFICULTY[h.difficulty] || DIFFICULTY.easy).pts;
-      xpTotal += wasWeekend ? base * 2 : base;
-    });
-
-    document.getElementById('day-popup-date').textContent = dateDisplay;
-
-    const listEl = document.getElementById('day-popup-habits');
-    if (completedHabits.length) {
-      listEl.innerHTML = completedHabits.map(h =>
-        '<div class="day-popup-habit">' +
-          ((getHabitIcon(h) || h.emoji) ? '<span class="day-popup-habit-emoji">' + habitIconHtml(h, { size: 22 }) + '</span>' : '') +
-          '<span>' + esc(h.name) + '</span>' +
-        '</div>'
-      ).join('');
-    } else {
-      listEl.innerHTML = '<div class="day-popup-none">No habits completed</div>';
-    }
-
-    const xpEl = document.getElementById('day-popup-xp');
-    xpEl.textContent = xpTotal > 0 ? '+' + xpTotal + ' XP earned' : '';
-
-    document.getElementById('day-popup').classList.remove('hidden');
-    document.getElementById('day-popup-overlay').classList.remove('hidden');
   }
 
   function closeDayPopup() {
@@ -20734,76 +20634,6 @@
 
   function _formatProgressNum(n) {
     return Number(n || 0).toLocaleString();
-  }
-
-  function renderAchievements() {
-    const grid = document.getElementById('achievements-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    const ctx = buildAchievementContext();
-    const totalCount    = ACHIEVEMENTS.length;
-    const unlockedCount = ACHIEVEMENTS.filter(a => unlockedAchievements.has(a.id)).length;
-
-    // ── Top header: total + per-category breakdown ───────
-    const top = document.createElement('div');
-    top.className = 'ach-top';
-    const catBreakdown = ACH_CATEGORIES.map(cat => {
-      const inCat   = ACHIEVEMENTS.filter(a => a.category === cat.id);
-      const haveCat = inCat.filter(a => unlockedAchievements.has(a.id)).length;
-      // First token of cat.label is the emoji ("🔥 Streaks" → "🔥").
-      // streakify swaps 🔥 for the flame icon; other category emojis
-      // pass through escaped.
-      return '<span class="ach-cat-pill">' + streakify(cat.label.split(' ')[0], 14) +
-             ' <b>' + haveCat + '/' + inCat.length + '</b></span>';
-    }).join('');
-    top.innerHTML =
-      '<div class="ach-top-summary">' +
-        '<span class="ach-top-num">' + unlockedCount + ' / ' + totalCount + '</span>' +
-        '<span class="ach-top-label">ACHIEVEMENTS UNLOCKED</span>' +
-      '</div>' +
-      '<div class="ach-cat-breakdown">' + catBreakdown + '</div>';
-    grid.appendChild(top);
-
-    // ── Recently unlocked (last 3) ──────────────────────
-    const recent = ACHIEVEMENTS
-      .filter(a => unlockedAchievements.has(a.id) && achievementUnlockDates[a.id])
-      .sort((a, b) => (achievementUnlockDates[b.id] || '').localeCompare(achievementUnlockDates[a.id] || ''))
-      .slice(0, 3);
-    if (recent.length) {
-      const recentSec = document.createElement('div');
-      recentSec.className = 'ach-section';
-      recentSec.innerHTML = '<div class="ach-section-label">RECENTLY UNLOCKED</div>';
-      recent.forEach(ach => recentSec.appendChild(_buildAchCard(ach, ctx, true)));
-      grid.appendChild(recentSec);
-    }
-
-    // ── Categorized sections, locked-by-progress-desc ───
-    ACH_CATEGORIES.forEach(cat => {
-      const inCat = ACHIEVEMENTS.filter(a => a.category === cat.id);
-      if (!inCat.length) return;
-
-      // Sort: unlocked first, then locked sorted by % progress descending
-      const sorted = inCat.slice().sort((a, b) => {
-        const aU = unlockedAchievements.has(a.id) ? 1 : 0;
-        const bU = unlockedAchievements.has(b.id) ? 1 : 0;
-        if (aU !== bU) return bU - aU;
-        if (aU) return 0;
-        const ap = a.getProgress ? a.getProgress(ctx) : { current: 0, target: 1 };
-        const bp = b.getProgress ? b.getProgress(ctx) : { current: 0, target: 1 };
-        return (bp.current / bp.target) - (ap.current / ap.target);
-      });
-
-      const sec = document.createElement('div');
-      sec.className = 'ach-section';
-      const haveCount = inCat.filter(a => unlockedAchievements.has(a.id)).length;
-      sec.innerHTML =
-        '<div class="ach-section-label">' + streakify(cat.label, 16) +
-          '<span class="ach-section-count">' + haveCount + '/' + inCat.length + '</span>' +
-        '</div>';
-      sorted.forEach(ach => sec.appendChild(_buildAchCard(ach, ctx, false)));
-      grid.appendChild(sec);
-    });
   }
 
   function _buildAchCard(ach, ctx, isRecent) {
@@ -22211,182 +22041,6 @@
   }
 
   // ── REMINDER-CONFIRM TOAST ──────────────────────────────
-  // Sticky toast with an inline-editable time chip. Tapping the time
-  // opens the native iOS time picker; on change, the digest is
-  // rescheduled and the chip updates in place. Tap the ✕ to dismiss.
-  // Used right after the user enables the daily morning reminder so
-  // they can adjust it without navigating to Settings.
-  function showReminderConfirmToast(initialTime) {
-    document.querySelectorAll('.habit-toast').forEach(t => t.remove());
-
-    function fmt(t) {
-      const [hStr, mStr] = (t || '09:00').split(':');
-      const h  = parseInt(hStr, 10);
-      const m  = parseInt(mStr, 10) || 0;
-      const pm = h >= 12;
-      const h12 = ((h % 12) || 12);
-      return h12 + ':' + String(m).padStart(2, '0') + ' ' + (pm ? 'PM' : 'AM');
-    }
-
-    // Parse the initial time into hour (24h) and minute components.
-    let curH = 9, curM = 0;
-    {
-      const parts = (initialTime || '09:00').split(':');
-      curH = parseInt(parts[0], 10) || 0;
-      curM = parseInt(parts[1], 10) || 0;
-      // snap to 15-min grid if upstream value drifted
-      curM = Math.round(curM / 15) * 15;
-      if (curM === 60) { curH = (curH + 1) % 24; curM = 0; }
-    }
-
-    // Build hour column. The list is rotated to start at 5 AM (a sensible
-    // morning anchor for a "morning reminder") and wraps through midnight
-    // back to 4 AM. So the order is: 5 AM, 6 AM, ..., 11 PM, 12 AM, 1 AM,
-    // 2 AM, 3 AM, 4 AM. The default 9 AM still sits a few rows down.
-    // Minute column (4 entries: 00 / 15 / 30 / 45) is independent.
-    const HOUR_START = 5;
-    const hourLabel = (h) => {
-      const pm = h >= 12;
-      const h12 = ((h % 12) || 12);
-      return h12 + (pm ? ' PM' : ' AM');
-    };
-    const hoursHTML = Array.from({ length: 24 }, (_, i) => {
-      const h = (HOUR_START + i) % 24;
-      return '<button type="button" class="ht-rem-slot' +
-        (h === curH ? ' ht-rem-slot--active' : '') +
-        '" data-h="' + h + '">' + esc(hourLabel(h)) + '</button>';
-    }).join('');
-    const minutesHTML = [0, 15, 30, 45].map(m =>
-      '<button type="button" class="ht-rem-slot' +
-        (m === curM ? ' ht-rem-slot--active' : '') +
-      '" data-m="' + m + '">' + String(m).padStart(2, '0') + '</button>'
-    ).join('');
-
-    // Toast is the visible pill. Popup is a SIBLING (also position: fixed)
-    // anchored above the toast — putting them in separate fixed containers
-    // sidesteps any clipping/stacking issues from nested elements.
-    const toast = document.createElement('div');
-    toast.className = 'habit-toast habit-toast--tappable habit-toast--reminder';
-    toast.setAttribute('role', 'button');
-    toast.setAttribute('tabindex', '0');
-    toast.setAttribute('aria-label', 'Change reminder time');
-    toast.innerHTML =
-      '<span class="ht-msg">' +
-        '✓ Reminder set for ' +
-        '<span class="ht-rem-time">' + esc(fmt(initialTime)) + '</span>' +
-      '</span>' +
-      '<span class="ht-cta ht-rem-dismiss" role="button" aria-label="Dismiss">✕</span>';
-
-    const popup = document.createElement('div');
-    popup.className = 'ht-rem-popup hidden';
-    popup.innerHTML =
-      '<div class="ht-rem-col ht-rem-col--hours" data-col="h">' + hoursHTML + '</div>' +
-      '<div class="ht-rem-col-divider"></div>' +
-      '<div class="ht-rem-col ht-rem-col--mins"  data-col="m">' + minutesHTML + '</div>';
-
-    // Append both as siblings to body so they're in the root stacking
-    // context — no risk of being clipped or hidden by intermediate
-    // overlays (e.g. the Beginning reveal screen).
-    document.body.appendChild(toast);
-    document.body.appendChild(popup);
-    requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('habit-toast--visible')));
-
-    const timeChip   = toast.querySelector('.ht-rem-time');
-    const dismissBtn = toast.querySelector('.ht-rem-dismiss');
-
-    const cleanup = () => { toast.remove(); popup.remove(); };
-    const dismiss = () => {
-      toast.classList.remove('habit-toast--visible');
-      popup.classList.add('hidden');
-      setTimeout(cleanup, 300);
-    };
-
-    const openPopup = () => {
-      popup.classList.remove('hidden');
-      // For each column: leave scrollTop at 0 if the active item is
-      // already visible in the first viewport-worth of entries. Only
-      // scroll if the active item is below the visible window. This
-      // matches the spec: opening the picker shows 5 AM → 9 AM (default)
-      // with no scroll needed; if the user has selected a later hour
-      // and reopens, we scroll just enough to bring it into view.
-      popup.querySelectorAll('.ht-rem-col').forEach(col => {
-        const active = col.querySelector('.ht-rem-slot--active');
-        if (!active) { col.scrollTop = 0; return; }
-        const activeBottom = active.offsetTop + active.offsetHeight;
-        if (activeBottom <= col.clientHeight) {
-          col.scrollTop = 0;        // active is in the first viewport
-        } else {
-          // Place the active at the bottom of the visible area so the
-          // user sees the items leading up to it (matches the
-          // "9 AM at the bottom of 5/6/7/8/9" feel from the spec).
-          col.scrollTop = activeBottom - col.clientHeight;
-        }
-      });
-    };
-    const closePopup = () => popup.classList.add('hidden');
-    const isPopupOpen = () => !popup.classList.contains('hidden');
-
-    // Helper: build "HH:MM" 24h string from current state, snapping minutes.
-    const buildT = () => {
-      const m = Math.round(curM / 15) * 15;
-      const h = (m === 60) ? (curH + 1) % 24 : curH;
-      const mm = (m === 60) ? 0 : m;
-      return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-    };
-
-    const applyTime = async () => {
-      const newT = buildT();
-      timeChip.textContent = fmt(newT);
-      try { await Notif.setDailyDigest(newT); } catch (_) {}
-      try { if (typeof refreshRemindersPanel === 'function') refreshRemindersPanel(); } catch (_) {}
-    };
-
-    // Column click: pick a value in that column. Other column stays put.
-    popup.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const slot = e.target.closest('.ht-rem-slot');
-      if (!slot) return;
-      const col = slot.closest('.ht-rem-col');
-      if (!col) return;
-      // Update the active highlight within the column
-      col.querySelectorAll('.ht-rem-slot').forEach(s => s.classList.remove('ht-rem-slot--active'));
-      slot.classList.add('ht-rem-slot--active');
-      // Update the corresponding state value
-      if (col.dataset.col === 'h') curH = parseInt(slot.dataset.h, 10);
-      else                          curM = parseInt(slot.dataset.m, 10);
-      await applyTime();
-    });
-
-    // Toast-level click: toggle the popup, except for ✕ which dismisses.
-    // stopPropagation so taps don't bubble to a parent overlay (e.g. the
-    // Beginning reveal listens for taps to advance).
-    toast.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (e.target.closest('.ht-rem-dismiss')) {
-        dismiss();
-      } else {
-        isPopupOpen() ? closePopup() : openPopup();
-      }
-    });
-    toast.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      if (e.target.closest('.ht-rem-dismiss')) {
-        e.preventDefault();
-        dismiss();
-      } else if (e.target === toast) {
-        e.preventDefault();
-        isPopupOpen() ? closePopup() : openPopup();
-      }
-    });
-
-    // Tap outside closes the popup (but doesn't dismiss the toast).
-    document.addEventListener('click', (e) => {
-      if (popup.classList.contains('hidden')) return;
-      if (e.target.closest('.habit-toast--reminder')) return;
-      if (e.target.closest('.ht-rem-popup')) return;
-      closePopup();
-    });
-  }
 
   // ── DIGEST TIME PICKER (centered modal) ─────────────────
   // Same two-column UI as the post-onboarding toast picker (hour rotated
@@ -23088,14 +22742,6 @@
     if (_quoteRotating) return;
     _quoteRotating = true;
     _quoteScheduleNext();
-  }
-
-  function stopQuoteRotation() {
-    _quoteRotating = false;
-    if (_quoteTimer) { clearTimeout(_quoteTimer); _quoteTimer = null; }
-    // If we paused mid-fade, restore visibility so the user sees the quote on return
-    const el = document.getElementById('daily-quote');
-    if (el) el.style.opacity = '';
   }
 
   function renderDailyQuote() {
@@ -24337,60 +23983,8 @@
   // (assets/bosses/<id>.png) as its leading icon — no emoji glyphs.
   // Empty state: one idle pill prompting the user to engage a boss.
 
-  function _statusPillIcon(src, sizePx) {
-    const sz = sizePx || 14;
-    // v3 Phase 1z.80 — removed loading="lazy". Hunting-row pills are
-    // above-the-fold and iOS Capacitor WebView misbehaves with lazy
-    // images for bundled assets (same root cause as the 1z.48 relic-
-    // art bug). Eager load only.
-    return '<img class="status-pill-img" src="' + src + '" alt="" ' +
-           'style="width:' + sz + 'px;height:' + sz + 'px" ' +
-           'draggable="false" decoding="async">';
-  }
-
-  function _buildHuntingPills() {
-    const pills = [];
-    try {
-      if (typeof BOSSES !== 'undefined') {
-        Object.keys(BOSSES).forEach(id => {
-          const state = (typeof getBossState === 'function') ? getBossState(id) : null;
-          if (!state || state.engaged !== true) return;
-          const cfg    = BOSSES[id];
-          const streak = state.streak || 0;
-          const target = cfg.streakTarget || 0;
-          // Drop "The " prefix to save horizontal space on the pill.
-          const name = (cfg.name || id).replace(/^The\s+/, '');
-          // Boss portraits map by id — file convention is id-with-hyphens.
-          const iconSrc = getBossArtPath(id);
-          pills.push({
-            kind:    'boss',
-            key:     id,
-            bossId:  id,
-            fullName: cfg.name || id,
-            icon:    iconSrc,
-            name:    name,
-            sub:     streak + '/' + target,
-            hot:     streak > 0,
-          });
-        });
-      }
-    } catch (_) {}
-    return pills;
-  }
-
 
   // ── XP·30D detail sheet (v2.1.0) ─────────────────────────────
-  // Opens on tap of the .metric-card--spark in the header. Bottom-
-  // sheet pattern matching the leaderboard ranking sheet. Renders a
-  // larger version of the cumulative XP chart + a 6-cell stats grid.
-  function openXpDetail() {
-    const overlay = document.getElementById('xp-detail-overlay');
-    const sheet   = document.getElementById('xp-detail-sheet');
-    if (!overlay || !sheet) return;
-    populateXpDetail();
-    overlay.classList.remove('hidden');
-    sheet.classList.remove('hidden');
-  }
   function closeXpDetail() {
     const overlay = document.getElementById('xp-detail-overlay');
     const sheet   = document.getElementById('xp-detail-sheet');
@@ -24760,12 +24354,6 @@
     if (overlay) overlay.classList.add('hidden');
     if (modal)   modal.classList.add('hidden');
   }
-  function refreshEquipmentModalIfOpenNew() {
-    const modal = document.getElementById('equipment-modal');
-    if (!modal || modal.classList.contains('hidden')) return;
-    renderHunterBuild();
-    renderHunterBuildSummary();
-  }
 
   // ─── Build grid renderer ────────────────────────────────────
   // 6-slot 3×2 grid. Three slot states: equipped / unlocked-empty /
@@ -24974,11 +24562,6 @@
       // Defensive: leave totals as zeros, render the empty state.
     }
     return { totals: totals, equippedCount: equippedCount, skippedMalformed: skippedMalformed };
-  }
-
-  function _formatBuildBonusValue(v) {
-    if (!Number.isFinite(v) || v === 0) return null;
-    return (v > 0 ? '+' : '−') + Math.abs(v).toLocaleString('en-US');
   }
 
   function renderHunterBuildBonuses() {
@@ -30661,32 +30244,6 @@
   }
 
   // ── LONG PRESS ────────────────────────────────────────────
-  function bindLongPress(el, id) {
-    let timer = null, moved = false, sx, sy;
-
-    el.addEventListener('touchstart', e => {
-      if (e.target.closest('[data-drag]')) return;
-      moved = false; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-      el.classList.add('pressing');
-      timer = setTimeout(() => {
-        if (!moved) {
-          navigator.vibrate && navigator.vibrate(32);
-          document.getElementById('habit-list').classList.add('reorder-mode');
-          showCtxMenu(id, el);
-        }
-      }, 480);
-    }, { passive: true });
-
-    el.addEventListener('touchmove', e => {
-      if (Math.hypot(e.touches[0].clientX - sx, e.touches[0].clientY - sy) > 8) {
-        moved = true; clearTimeout(timer); el.classList.remove('pressing');
-      }
-    }, { passive: true });
-
-    el.addEventListener('touchend',   () => { clearTimeout(timer); el.classList.remove('pressing'); });
-    el.addEventListener('touchcancel',() => { clearTimeout(timer); el.classList.remove('pressing'); });
-    el.addEventListener('contextmenu', e => { e.preventDefault(); showCtxMenu(id, el); });
-  }
 
   // ── SCHEDULE PICKER ──────────────────────────────────────
   const SCHED_PRESETS = {
@@ -30951,17 +30508,6 @@
     return { done: done.length, total: owned.length };
   }
 
-  function getHabitCompoundPackIds(habitName) {
-    return BONUS_PACK_IDS.filter(pid =>
-      getPackHabitNames(pid).includes(habitName)
-    );
-  }
-
-  // Backward-compat wrapper used elsewhere (nudge logic, etc.)
-  function userHasAllCanonicalMorning() {
-    return userHasAllPackHabits('morning');
-  }
-
   // Bonus-popup queue — guarantees Locked-In's modal never overlaps the
   // Compound Effect modal. Items are { packId, newStreak, finalXP, doubled }.
   let _bonusPopupQueue  = [];
@@ -31113,58 +30659,6 @@
   }
 
   // ── ORIGIN STORY popup — renders both chapters ──────────
-  function openOriginStorySheet() {
-    if (!originBeginning || !originBeginning.text) return;
-    const ov    = document.getElementById('origin-overlay');
-    const sheet = document.getElementById('origin-sheet');
-    if (!ov || !sheet) return;
-
-    // ── Chapter 1: The Beginning ─────────────────────────
-    const ch1Label = document.getElementById('origin-ch1-label');
-    const ch1Text  = document.getElementById('origin-ch1-text');
-    if (ch1Label) ch1Label.textContent = '📜 THE BEGINNING · ' + _shortDate(originBeginning.dateISO);
-    if (ch1Text)  ch1Text.textContent  = originBeginning.text;
-
-    // ── Chapter 2: The Awakening (or teaser) ─────────────
-    const haveCh2  = !!(originAwakening && originAwakening.text);
-    const ch2Label = document.getElementById('origin-ch2-label');
-    const ch2Text  = document.getElementById('origin-ch2-text');
-    const ch2Since = document.getElementById('origin-since');
-    const ch2Badge = document.getElementById('origin-class-badge');
-    const ch2Teaser= document.getElementById('origin-ch2-teaser');
-    const divider  = document.getElementById('origin-divider');
-
-    if (haveCh2) {
-      const cls = CLASSES[originAwakening.classKey] || CLASSES.SAGE;
-      if (ch2Label) ch2Label.textContent = '⚔️ THE AWAKENING · ' + _shortDate(originAwakening.dateISO);
-      if (ch2Badge) {
-        ch2Badge.style.color       = cls.color;
-        ch2Badge.style.borderColor = cls.color + '60';
-        ch2Badge.style.background  = cls.color + '14';
-        // Class emblem + name — Chapter 2 badge in the Origin sheet.
-        const _ch2Key = (originAwakening && originAwakening.classKey) || null;
-        ch2Badge.innerHTML = classIconHtml(_ch2Key, { size: 18 }) + '<span>' + esc(cls.name) + '</span>';
-        ch2Badge.classList.remove('hidden');
-      }
-      if (ch2Text)  { ch2Text.textContent  = originAwakening.text; ch2Text.classList.remove('hidden'); }
-      if (ch2Since) { ch2Since.textContent = cls.name + ' since ' + originAwakening.dateDisplay; ch2Since.classList.remove('hidden'); }
-      if (ch2Teaser) ch2Teaser.classList.add('hidden');
-      if (divider)   divider.classList.remove('hidden');
-      sheet.style.setProperty('--origin-accent', cls.color);
-    } else {
-      // Civilian — show Chapter 2 placeholder + teaser
-      if (ch2Label && ch2Label.textContent !== '⚔️ THE AWAKENING') ch2Label.textContent = '⚔️ THE AWAKENING';
-      if (ch2Badge) ch2Badge.classList.add('hidden');
-      if (ch2Text)  ch2Text.classList.add('hidden');
-      if (ch2Since) ch2Since.classList.add('hidden');
-      if (ch2Teaser) ch2Teaser.classList.remove('hidden');
-      if (divider)   divider.classList.remove('hidden');
-      sheet.style.setProperty('--origin-accent', '#8b5cf6');
-    }
-
-    ov.classList.remove('hidden');
-    sheet.classList.remove('hidden');
-  }
   function closeOriginStorySheet() {
     document.getElementById('origin-overlay').classList.add('hidden');
     document.getElementById('origin-sheet').classList.add('hidden');
@@ -31782,11 +31276,6 @@
 
   // In-memory cache refreshed each Social-tab activation.
   let _friendsCache = null;
-
-  function _socialDisplayAlias(raw) {
-    try { return lbNormalizeAliasForDisplay(raw); }
-    catch (_) { return String(raw || '—'); }
-  }
 
   // v3 Phase 1z.209 — lowercase alias display for the Social/
   // Guild/Hunter surfaces. The product rule is "visible aliases
@@ -32638,10 +32127,6 @@
   // backend response verbatim; no sim filler.
   const LB_100K_CLUB_CACHE_KEY = 'hb_lb_100k_club';
   const LB_100K_CLUB_CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 min
-  // Metrics that show the 100K Club tab. v1: step_total only (the
-  // accolade itself is a step_total achievement; future accolades
-  // like sleep_perfect_month would warrant their own surfacing).
-  const LB_100K_CLUB_METRICS = new Set(['step_total']);
 
   function lbCacheRead(metric) {
     try {
@@ -35395,18 +34880,6 @@
     return def.accent || '#a78bfa';
   }
 
-  // Compact button on the Status tab — taps open the "All PRs" sheet.
-  // The button shows a small headline plus a 1-line summary of standout PRs
-  // (most-habits-day + active-days) so it never feels empty.
-  function buildPRStripHTML() {
-    // Compact chip — sits inline next to the name and rank.
-    // Tap opens the full All-PRs grid sheet.
-    return '<button id="pr-open-btn" class="pr-open-chip" aria-label="View Personal Records">' +
-      '<span class="pr-open-icon">🏆</span>' +
-      '<span class="pr-open-label">PR</span>' +
-    '</button>';
-  }
-
   function buildAllPRTilesHTML() {
     return PR_DEFS.map(def => {
       const rec    = personalRecords[def.id] || { value: 0 };
@@ -35419,20 +34892,6 @@
         '<span class="pr-tile-value">' + esc(valStr) + '</span>' +
         '<span class="pr-tile-label">' + esc(def.label) + '</span>' +
       '</button>';
-    }).join('');
-  }
-
-  function buildCompoundBadgesHTML() {
-    return BONUS_PACK_IDS.filter(packId => {
-      const cs = compoundStreaks[packId];
-      return cs && cs.streak > 0;
-    }).map(packId => {
-      const pack = getPackById(packId);
-      const s    = compoundStreaks[packId].streak;
-      const iconHTML = packId === 'morning'   ? packIconHtml('morning',  { size: 14 }) :
-                       packId === 'locked-in' ? packIconHtml('lockedin', { size: 14 }) :
-                       iconify(packId === 'locked-in' ? '🔒' : '⚡', { size: 14 });
-      return '<div class="sc-compound-badge">' + iconHTML + ' ' + esc(pack.name) + ': Day ' + s + '</div>';
     }).join('');
   }
 
@@ -39764,15 +39223,6 @@
   }
 
   // ── CHOOSE YOUR PATH ─────────────────────────────────────
-  // Morning Routine habit indices (DEFAULT_HABITS order). Mirrors the
-  // canonical _MORNING_HABIT_INDICES at top-of-file used by PACKS —
-  // tech-debt: this is a duplicate, candidate for DRY refactor later.
-  // Both copies must stay in sync. v2.0.1 swap: 2 (Sleep before
-  // midnight) → 1 (Sleep, 7+ hours).
-  //   1=Sleep, 23=Wake up consistent, 14=No phone after waking,
-  //  16=Morning sunlight, 41=Morning gratitude, 6=Daily walk,
-  //  46=Vitamins, 12=Meditate & Breathwork, 4=Strength training, 19=Whole foods
-  var MORNING_HABIT_INDICES = [1, 23, 14, 16, 41, 6, 46, 12, 4, 19];
 
   // v3 Phase 1z.233 — Public showWelcomeScreen entry point now
   // delegates to the cinematic onboarding flow. The legacy implementation
