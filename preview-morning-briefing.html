@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preview · Today's Briefing (Minimal Premium Polish)</title>
+<!--
+  preview-morning-briefing.html — STANDALONE preview of the in-app
+  morning briefing bottom sheet (#daily-insight-sheet) after the
+  v3 Phase 1z.19 "Minimal Premium Polish" redesign. Not wired into
+  the live app; safe to open in any browser; not precached by the
+  service worker; not bundled by Codemagic.
+
+  CSS rules inlined from styles.css — scoped to .di-body.briefing--premium
+  to mirror the production scoping. Sample data is plausible for a
+  mid-week 7-habit user (mix of system-verified + manual). Stat-color
+  dots use the canonical STR/VIT/INT/FOCUS/WILL/WLT palette.
+-->
+<style>
+  /* ─── Design tokens (excerpt from :root in styles.css) ─── */
+  :root {
+    --bg:               #13132a;
+    --bg-raised:        #16163a;
+    --bg-card:          #1e1e3f;
+    --bg-header:        #0f0f24;
+    --border:           rgba(255,255,255,0.10);
+    --text-primary:     #f2f2f7;
+    --text-secondary:   #8e8e93;
+    --text-tertiary:    #48484a;
+    --accent:           #8b5cf6;
+    --accent-glow:      rgba(139,92,246,0.18);
+    --gold:             #f59e0b;
+    --safe-bottom:      env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #08081a;
+    color: var(--text-primary);
+    font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ─── vn-overlay + vn-sheet shells (shared with prod) ─── */
+  .vn-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+  }
+  .vn-sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--bg-raised);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    z-index: 1001;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    max-width: 430px;
+    margin: 0 auto;
+    transform: translateY(0);
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  .vn-drag-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255,255,255,0.30);
+    border-radius: 2px;
+    margin: 10px auto 6px;
+  }
+
+  /* ─── Daily Insight body (baseline) ─── */
+  .di-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 18px 20px calc(28px + var(--safe-bottom));
+    max-height: calc(100dvh - 8vh);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .di-header { display: flex; flex-direction: column; gap: 4px; }
+
+  /* ===========================================================
+     v3 Phase 1z.19 — Morning Briefing Minimal Premium Polish
+     (verbatim from styles.css; scoped to .briefing--premium)
+     =========================================================== */
+  .di-body.briefing--premium {
+    gap: 16px;
+    padding-top: 14px;
+  }
+
+  /* Header */
+  .di-body.briefing--premium .briefing-header { gap: 6px; }
+  .di-body.briefing--premium .briefing-date {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.24em;
+  }
+  .di-body.briefing--premium .briefing-title {
+    font-size: 1.75rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+    color: var(--text-primary);
+  }
+
+  /* 3-segment summary — gradient-bordered tri-cell */
+  .di-body.briefing--premium .briefing-summary-grid {
+    display: flex;
+    align-items: stretch;
+    padding: 1px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(167,139,250,0.50), rgba(245,184,66,0.30));
+    margin-top: 2px;
+  }
+  .di-body.briefing--premium .briefing-summary-segment {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-left: 1px solid rgba(255,255,255,0.06);
+  }
+  .di-body.briefing--premium .briefing-summary-segment:first-child {
+    border-left: none;
+    border-top-left-radius: 11px;
+    border-bottom-left-radius: 11px;
+  }
+  .di-body.briefing--premium .briefing-summary-segment:last-child {
+    border-top-right-radius: 11px;
+    border-bottom-right-radius: 11px;
+  }
+  .di-body.briefing--premium .briefing-summary-segment--total    { background: rgba(167,139,250,0.12); }
+  .di-body.briefing--premium .briefing-summary-segment--verified { background: rgba(245,184,66,0.08); }
+  .di-body.briefing--premium .briefing-summary-segment--manual   { background: rgba(245,184,66,0.16); }
+  .di-body.briefing--premium .briefing-summary-num {
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .di-body.briefing--premium .briefing-summary-segment--total    .briefing-summary-num { color: #a78bfa; }
+  .di-body.briefing--premium .briefing-summary-segment--verified .briefing-summary-num { color: #a78bfa; }
+  .di-body.briefing--premium .briefing-summary-segment--manual   .briefing-summary-num {
+    color: #f5b842;
+    text-shadow: 0 0 8px rgba(245,184,66,0.32);
+  }
+  .di-body.briefing--premium .briefing-summary-lbl {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+    min-width: 0;
+  }
+  .di-body.briefing--premium .briefing-summary-lbl-1 {
+    font-weight: 800;
+    color: var(--text-secondary);
+  }
+  .di-body.briefing--premium .briefing-summary-segment--total    .briefing-summary-lbl-1 { color: #a78bfa; }
+  .di-body.briefing--premium .briefing-summary-segment--verified .briefing-summary-lbl-1 { color: #a78bfa; }
+  .di-body.briefing--premium .briefing-summary-segment--manual   .briefing-summary-lbl-1 { color: #f5b842; }
+  .di-body.briefing--premium .briefing-summary-lbl-2 {
+    color: var(--text-secondary);
+    font-weight: 700;
+  }
+
+  /* Section header — sigil dot + label + flexing rule */
+  .di-body.briefing--premium .briefing-section { margin-top: 14px; gap: 6px; }
+  .di-body.briefing--premium .briefing-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .di-body.briefing--premium .briefing-section-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 4px;
+    background: #f5b842;
+    box-shadow: 0 0 4px #f5b842;
+    flex: 0 0 auto;
+  }
+  .di-body.briefing--premium .briefing-section-rule {
+    flex: 1 1 auto;
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* Section panel — grouped card wrapping the rows */
+  .di-body.briefing--premium .briefing-section-panel {
+    background: #1a1a3a;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Row inside a section panel */
+  .di-body.briefing--premium .briefing-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .di-body.briefing--premium .briefing-section-panel .briefing-row:last-child {
+    border-bottom: none;
+  }
+  .di-body.briefing--premium .briefing-row-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 6px;
+    flex: 0 0 auto;
+    /* inline `style` from buildBriefingRow sets stat color + glow */
+  }
+  .di-body.briefing--premium .briefing-row-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .di-body.briefing--premium .briefing-row-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.25;
+    letter-spacing: 0.005em;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .di-body.briefing--premium .briefing-row-verify {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-tertiary);
+  }
+  .di-body.briefing--premium .briefing-row-verify-icon {
+    flex: 0 0 auto;
+    color: var(--text-tertiary);
+  }
+  .di-body.briefing--premium .briefing-row-xp {
+    font-size: 14px;
+    font-weight: 800;
+    color: #f5b842;
+    letter-spacing: 0.01em;
+    text-shadow: 0 0 8px rgba(245,184,66,0.14);
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* WHERE YOU STAND — label with right-flexing rule + 3 sigil tiles */
+  .di-body.briefing--premium .briefing-stand { margin-top: 6px; gap: 8px; display: flex; flex-direction: column; }
+  .di-body.briefing--premium .briefing-stand-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .di-body.briefing--premium .briefing-stand-label-rule {
+    flex: 1 1 auto;
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+  }
+  .di-body.briefing--premium .briefing-stand-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+  }
+  .di-body.briefing--premium .briefing-stand-tile {
+    padding: 10px 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.025);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .di-body.briefing--premium .briefing-stand-tile--primary {
+    background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.02));
+    border: 1px solid rgba(245,184,66,0.32);
+    box-shadow: inset 0 0 10px rgba(245,184,66,0.14);
+  }
+  .di-body.briefing--premium .briefing-stand-val {
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .di-body.briefing--premium .briefing-stand-tile--primary .briefing-stand-val {
+    color: #f5b842;
+    text-shadow: 0 0 10px rgba(245,184,66,0.32);
+  }
+  .di-body.briefing--premium .briefing-stand-lbl {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+
+  /* LOCK IN — premium gold gradient CTA */
+  .di-body.briefing--premium .briefing-lockin-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 15px 16px;
+    background: linear-gradient(180deg, #f7c558 0%, #f5b842 50%, #c08418 100%);
+    color: #1d1300;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow:
+      0 6px 20px rgba(245,184,66,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.40),
+      inset 0 -2px 0 rgba(0,0,0,0.18);
+    transition: transform 0.1s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  }
+  .di-body.briefing--premium .briefing-lockin-btn:hover {
+    filter: brightness(1.04);
+    box-shadow:
+      0 8px 24px rgba(245,184,66,0.42),
+      inset 0 1px 0 rgba(255,255,255,0.45),
+      inset 0 -2px 0 rgba(0,0,0,0.18);
+  }
+  .di-body.briefing--premium .briefing-lockin-btn:active {
+    transform: scale(0.985);
+    box-shadow:
+      0 3px 12px rgba(245,184,66,0.30),
+      inset 0 1px 0 rgba(255,255,255,0.35),
+      inset 0 -2px 0 rgba(0,0,0,0.22);
+  }
+
+  /* Narrow viewports */
+  @media (max-width: 360px) {
+    .di-body.briefing--premium .briefing-summary-segment { padding: 8px 9px; gap: 6px; }
+    .di-body.briefing--premium .briefing-summary-num     { font-size: 16px; }
+    .di-body.briefing--premium .briefing-summary-lbl     { font-size: 8.5px; }
+    .di-body.briefing--premium .briefing-stand-val       { font-size: 16px; }
+    .di-body.briefing--premium .briefing-stand-tile      { padding: 9px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Backdrop -->
+<div class="vn-overlay" aria-hidden="true"></div>
+
+<!-- Morning briefing sheet, rendered as if open -->
+<aside id="daily-insight-sheet" class="vn-sheet" role="dialog" aria-modal="true" aria-labelledby="di-title">
+  <div class="vn-drag-handle"></div>
+  <div class="di-body briefing--premium">
+
+    <!-- 1. Header -->
+    <div class="di-header briefing-header">
+      <div class="briefing-date">FRI · MAY 16 · DAY 11</div>
+      <div class="briefing-title" id="di-title">TODAY'S BRIEFING</div>
+    </div>
+
+    <!-- 2. 3-segment summary -->
+    <div class="briefing-summary-grid" role="group" aria-label="Today's objectives summary">
+      <div class="briefing-summary-segment briefing-summary-segment--total">
+        <span class="briefing-summary-num">7</span>
+        <span class="briefing-summary-lbl">
+          <span class="briefing-summary-lbl-1">OBJECTIVES</span>
+          <span class="briefing-summary-lbl-2">TOTAL</span>
+        </span>
+      </div>
+      <div class="briefing-summary-segment briefing-summary-segment--verified">
+        <span class="briefing-summary-num">3</span>
+        <span class="briefing-summary-lbl">
+          <span class="briefing-summary-lbl-1">VERIFIED</span>
+          <span class="briefing-summary-lbl-2">BY SYSTEM</span>
+        </span>
+      </div>
+      <div class="briefing-summary-segment briefing-summary-segment--manual">
+        <span class="briefing-summary-num">4</span>
+        <span class="briefing-summary-lbl">
+          <span class="briefing-summary-lbl-1">ON YOU</span>
+          <span class="briefing-summary-lbl-2">MANUAL</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 3. Habit slate -->
+    <div class="di-slate">
+
+      <!-- MORNING -->
+      <div class="briefing-section">
+        <div class="briefing-section-title">
+          <span class="briefing-section-dot" aria-hidden="true"></span>
+          <span class="briefing-section-text">MORNING</span>
+          <span class="briefing-section-rule" aria-hidden="true"></span>
+        </div>
+        <div class="briefing-section-panel">
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#f59e0b;box-shadow:0 0 4px #f59e0b"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Wake up at consistent time</span>
+            </div>
+            <span class="briefing-row-xp">+1</span>
+          </div>
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#f59e0b;box-shadow:0 0 4px #f59e0b"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Morning gratitude practice</span>
+            </div>
+            <span class="briefing-row-xp">+1</span>
+          </div>
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#3b82f6;box-shadow:0 0 4px #3b82f6"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Get morning sunlight · 10 min</span>
+            </div>
+            <span class="briefing-row-xp">+3</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DAY -->
+      <div class="briefing-section">
+        <div class="briefing-section-title">
+          <span class="briefing-section-dot" aria-hidden="true"></span>
+          <span class="briefing-section-text">DAY</span>
+          <span class="briefing-section-rule" aria-hidden="true"></span>
+        </div>
+        <div class="briefing-section-panel">
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#ec4899;box-shadow:0 0 4px #ec4899"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Daily walk · 8,000 steps</span>
+              <span class="briefing-row-verify">
+                <svg class="briefing-row-verify-icon" width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">
+                  <circle cx="4.5" cy="4.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1"/>
+                  <path d="M3 4.5l1.2 1.2L6 3.8" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Apple Health verifies</span>
+              </span>
+            </div>
+            <span class="briefing-row-xp">+3</span>
+          </div>
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#ef4444;box-shadow:0 0 4px #ef4444"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Strength training</span>
+              <span class="briefing-row-verify">
+                <svg class="briefing-row-verify-icon" width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">
+                  <circle cx="4.5" cy="4.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1"/>
+                  <path d="M3 4.5l1.2 1.2L6 3.8" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Apple Health verifies</span>
+              </span>
+            </div>
+            <span class="briefing-row-xp">+5</span>
+          </div>
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#eab308;box-shadow:0 0 4px #eab308"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Meditate &amp; Breathwork · 10 min</span>
+            </div>
+            <span class="briefing-row-xp">+3</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- EVENING -->
+      <div class="briefing-section">
+        <div class="briefing-section-title">
+          <span class="briefing-section-dot" aria-hidden="true"></span>
+          <span class="briefing-section-text">EVENING</span>
+          <span class="briefing-section-rule" aria-hidden="true"></span>
+        </div>
+        <div class="briefing-section-panel">
+
+          <div class="briefing-row">
+            <span class="briefing-row-dot" style="background:#ec4899;box-shadow:0 0 4px #ec4899"></span>
+            <div class="briefing-row-main">
+              <span class="briefing-row-name">Sleep before midnight</span>
+              <span class="briefing-row-verify">
+                <svg class="briefing-row-verify-icon" width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">
+                  <circle cx="4.5" cy="4.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1"/>
+                  <path d="M3 4.5l1.2 1.2L6 3.8" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Apple Health verifies</span>
+              </span>
+            </div>
+            <span class="briefing-row-xp">+1</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4. WHERE YOU STAND -->
+    <div class="briefing-stand">
+      <div class="briefing-stand-label">
+        <span class="briefing-stand-label-text">WHERE YOU STAND</span>
+        <span class="briefing-stand-label-rule" aria-hidden="true"></span>
+      </div>
+      <div class="briefing-stand-grid">
+        <div class="briefing-stand-tile briefing-stand-tile--primary">
+          <span class="briefing-stand-val">1,247</span>
+          <span class="briefing-stand-lbl">TOTAL XP</span>
+        </div>
+        <div class="briefing-stand-tile">
+          <span class="briefing-stand-val">8</span>
+          <span class="briefing-stand-lbl">PERFECT DAYS</span>
+        </div>
+        <div class="briefing-stand-tile">
+          <span class="briefing-stand-val">11</span>
+          <span class="briefing-stand-lbl">DAYS ACTIVE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CTA -->
+    <button class="briefing-lockin-btn" type="button">LOCK IN</button>
+  </div>
+</aside>
+
+</body>
+</html>
