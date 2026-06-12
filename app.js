@@ -25275,7 +25275,7 @@
   //   openHunterReportPreview() / closeHunterReportPreview()
   //
   // No new dependencies (canvas already proven in 4 prod call sites,
-  // navigator.share already proven in production at shareOriginStory).
+  // navigator.share already proven in production at the since-removed shareOriginStory).
   // ──────────────────────────────────────────────────────────────
 
   // Rank → accent palette. Hues match the live app (status disc + 100K
@@ -26021,7 +26021,7 @@
     });
   }
 
-  // Share orchestrator. Mirrors the shareOriginStory 3-tier fallback
+  // Share orchestrator. Mirrors the (since-removed) shareOriginStory 3-tier fallback
   // (line ~25980): files → text+url → clipboard.
   async function _hrShareReport(data, canvas) {
     const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
@@ -29922,40 +29922,15 @@
     });
   }
 
-  // ── ORIGIN STORY popup — renders both chapters ──────────
-  function closeOriginStorySheet() {
-    document.getElementById('origin-overlay').classList.add('hidden');
-    document.getElementById('origin-sheet').classList.add('hidden');
-  }
-  function shareOriginStory() {
-    if (!originBeginning || !originBeginning.text) return;
-    let text = '📜 My Origin:\n\n' + originBeginning.text;
-    if (originAwakening && originAwakening.text) {
-      text += '\n\n⚔️\n\n' + originAwakening.text;
-    }
-    text += '\n\n— Awakened: Habit RPG';
-    if (navigator.share) {
-      navigator.share({ text }).catch(() => {});
-      return;
-    }
-    try {
-      navigator.clipboard.writeText(text).then(() => {
-        if (typeof showHabitToast === 'function') showHabitToast('Copied to clipboard');
-      });
-    } catch (_) {
-      if (typeof showHabitToast === 'function') showHabitToast('Sharing not supported on this device');
-    }
-  }
+  // ── setupOriginStorySheet — STALE NAME, LIVE CONTENTS. The origin
+  // sheet itself was removed in the 2026-06-12 live flagged-item session
+  // (Richie verdict: dead memory — its opener was orphaned long ago).
+  // What remains is the DELEGATED ARENA-BUTTON OPENER that historically
+  // lived here (the old comment claimed "Your Origin" — the code always
+  // targeted #sc-arena-btn). Name kept so init order doesn't change;
+  // rename candidate for a future pass.
   function setupOriginStorySheet() {
-    const ov    = document.getElementById('origin-overlay');
-    const sheet = document.getElementById('origin-sheet');
-    const close = document.getElementById('origin-close');
-    const share = document.getElementById('origin-share');
-    if (!ov || !sheet) return;
-    if (close) close.addEventListener('click', closeOriginStorySheet);
-    if (ov)    ov.addEventListener('click', closeOriginStorySheet);
-    if (share) share.addEventListener('click', shareOriginStory);
-    // Delegated click — Status tab "Your Origin" button
+    // Delegated click — main-screen Arena button (#sc-arena-btn)
     document.addEventListener('click', e => {
       const t = e.target;
       if (!t || !t.closest) return;
@@ -29964,21 +29939,6 @@
       e.preventDefault();
       e.stopPropagation();
       try { openArena(); } catch (_) {}
-    });
-    // Swipe-down dismiss
-    if (typeof attachSheetDismissGesture === 'function') {
-      attachSheetDismissGesture(sheet, ov, () => {
-        sheet.classList.add('hidden');
-        ov.classList.add('hidden');
-      }, {
-        baseTransform:  'translateX(-50%) ',
-        handleSelector: '.origin-drag-handle, .origin-header',
-        scrollTarget:   '.origin-body',
-      });
-    }
-    // ESC dismiss
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) closeOriginStorySheet();
     });
   }
 
@@ -33223,11 +33183,6 @@
           '<div class="bfs-progress-label">' + state.streak + ' / ' + cfg.streakTarget + ' ' + _bossProgressNoun(cfg) + '</div>';
       }
     }
-
-    // W261 — burned banner retired with the Carouser weekend mechanic;
-    // keep it hidden for any legacy DOM that still carries the node.
-    const burnedBanner = document.getElementById('bfs-burned-banner');
-    if (burnedBanner) burnedBanner.classList.add('hidden');
 
     // Engagement section (v2.0.1) — three mutually-exclusive states:
     // preview (rank locked), engaged, or not-engaged-but-unlockable.

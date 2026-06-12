@@ -13152,130 +13152,9 @@ footer {
 /* ═══════════════════════════════════════════════════════════════
    ORIGIN STORY — bottom sheet popup
    ═══════════════════════════════════════════════════════════════ */
-.origin-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.62);
-  z-index: 540;
-  animation: origin-fade 0.22s ease-out;
-}
-.origin-overlay.hidden { display: none !important; }
-@keyframes origin-fade { from { opacity: 0 } to { opacity: 1 } }
-
-.origin-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 460px;
-  max-height: 88vh;
-  z-index: 541;
-  background: var(--bg-raised);
-  border: 1.5px solid rgba(245, 158, 11, 0.35);
-  border-bottom: none;
-  border-radius: 22px 22px 0 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding-bottom: calc(20px + var(--safe-bottom));
-  animation: origin-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-  box-shadow: 0 0 32px rgba(0,0,0,0.5), 0 0 18px var(--origin-accent, rgba(245,158,11,0.25));
-}
-.origin-sheet.hidden { display: none !important; }
-@keyframes origin-up {
+@keyframes origin-fade { from { opacity: 0 } to { opacity: 1 } @keyframes origin-up {
   from { transform: translateX(-50%) translateY(100%); }
   to   { transform: translateX(-50%) translateY(0); }
-}
-.origin-drag-handle {
-  width: 36px; height: 4px;
-  background: rgba(255,255,255,0.16);
-  border-radius: 2px;
-  margin: 12px auto 0;
-  flex-shrink: 0;
-}
-.origin-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px 4px;
-}
-.origin-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  color: var(--gold);
-  text-transform: uppercase;
-}
-.origin-close {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: var(--text-secondary);
-  width: 30px; height: 30px;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  -webkit-appearance: none;
-}
-.origin-body {
-  padding: 8px 22px 16px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  align-items: center;
-  text-align: center;
-}
-.origin-class-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 1.5px solid;
-  border-radius: 100px;
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-.origin-text {
-  font-family: ui-serif, Georgia, 'Times New Roman', serif;
-  font-size: 1rem;
-  font-style: italic;
-  line-height: 1.7;
-  color: var(--text-primary);
-  white-space: pre-line;     /* respect template breaks, allow natural wrap */
-  text-align: left;          /* prose alignment — eliminates orphan-word lines */
-  text-wrap: pretty;         /* balance line lengths where supported */
-  hyphens: none;
-  max-width: 460px;
-  width: 100%;
-}
-.origin-since {
-  font-size: 0.78rem;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-.origin-share-btn {
-  margin-top: 6px;
-  padding: 11px 22px;
-  background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.08));
-  border: 1px solid rgba(245,158,11,0.55);
-  color: var(--gold);
-  border-radius: 100px;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s ease, background 0.18s ease;
-}
-.origin-share-btn:hover  { background: linear-gradient(135deg, rgba(245,158,11,0.26), rgba(245,158,11,0.12)); }
-.origin-share-btn:active { transform: scale(0.97); }
-
 /* ═══════════════════════════════════════════════════════════════
    THE BEGINNING — full-screen reveal after onboarding completion
    ═══════════════════════════════════════════════════════════════ */
@@ -13356,51 +13235,7 @@ footer {
 .bg-hide .bg-content { animation: bg-out 0.32s ease-in forwards; }
 @keyframes bg-bg-in  { from { opacity: 0 } to { opacity: 1 } }
 @keyframes bg-cnt-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes bg-out    { to { opacity: 0 } }
-
-/* ═══════════════════════════════════════════════════════════════
-   ORIGIN POPUP — chapter divider, label, teaser
-   ═══════════════════════════════════════════════════════════════ */
-.origin-chapter {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  width: 100%;
-}
-.origin-ch-label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  text-align: center;
-}
-.origin-divider {
-  width: 60%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-  margin: 6px 0;
-}
-.origin-divider.hidden { display: none !important; }
-.origin-class-badge.hidden { display: none !important; }
-.origin-text.hidden        { display: none !important; }
-.origin-since.hidden       { display: none !important; }
-.origin-ch2-teaser {
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
-  font-style: italic;
-  text-align: center;
-  padding: 12px 16px;
-  background: rgba(255,255,255,0.03);
-  border: 1px dashed rgba(255,255,255,0.12);
-  border-radius: 10px;
-  max-width: 360px;
-  line-height: 1.5;
-}
-.origin-ch2-teaser.hidden { display: none !important; }
-
-/* ═══════════════════════════════════════════════════════════════
+@keyframes bg-out    { to { opacity: 0 } /* ═══════════════════════════════════════════════════════════════
    BOSS FULL-SCREEN DETAIL MODAL
    Replaces the v1.1.7 bottom-sheet. Opens from any .bcard tap. Lives
    above all tabs at z-index 200. Background matches app bg so the
@@ -13625,22 +13460,6 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
-
-/* Burned banner — Carouser only when weekend_burned. */
-.bfs-burned-banner {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: rgba(245, 158, 11, 0.10);
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  border-radius: 8px;
-  text-align: center;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--gold);
-  text-transform: uppercase;
-}
-.bfs-burned-banner.hidden { display: none; }
 
 /* Engagement section in the boss detail modal (v2.0.1). Two states:
    1. .bfs-engage-cta — not engaged: prominent gradient ENGAGE button
