@@ -188,6 +188,18 @@ const VALID_VERIFIED_WORKOUT = {
   clientCreatedAt: NOW_ISO,
 };
 
+// W258 — canonical Arena-title payload. Label is server-anchored per title id;
+// clientEventId pinned to "arena_title:<id>" (once-ever per user via UNIQUE).
+const VALID_ARENA_TITLE = {
+  eventType:       'arena_title_earned',
+  eventKey:        'asc_duelist',
+  eventLabel:      'earned the title "Reaver"',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'arena_title:asc_duelist',
+  clientCreatedAt: NOW_ISO,
+};
+
 // v3 Phase 1z.256 — canonical verified sleep ≥ 7h payload. Label
 // uses the threshold word ("over 7 hours"); the value is null so
 // exact sleep duration cannot ride along.
@@ -1298,6 +1310,83 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       expect(allBindsStr).not.toMatch(/820/);    // stairs never leaks
       expect(allBindsStr).not.toMatch(/exact/);
     });
+  });
+});
+
+describe('arena_title_earned (W258)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW_UTC));
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('accepts a valid arena title event and binds it', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [VALID_ARENA_TITLE] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    expect(calls[0]?.binds[2]).toBe('arena_title_earned');
+    expect(calls[0]?.binds[3]).toBe('asc_duelist');
+    expect(calls[0]?.binds[4]).toBe('earned the title "Reaver"');
+    expect(calls[0]?.binds[5]).toBeNull();   // eventValue
+    expect(calls[0]?.binds[6]).toBeNull();   // rarity
+  });
+
+  it('accepts the apex title (real-player prestige path)', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'asc_sovereign',
+        eventLabel: 'earned the title "The Second Awakened"',
+        clientEventId: 'arena_title:asc_sovereign',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('rejects an unknown title id', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ARENA_TITLE, eventKey: 'asc_fake', clientEventId: 'arena_title:asc_fake' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+  });
+
+  it('rejects a label that does not match the title id (tamper)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ARENA_TITLE, eventLabel: 'earned the title "Apex"' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects a mismatched clientEventId', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ARENA_TITLE, clientEventId: 'arena_title:asc_brawler' }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_CLIENT_EVENT_ID');
+  });
+
+  it('rejects non-null eventValue and rarity', async () => {
+    const db = makeDb();
+    const res1 = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ARENA_TITLE, eventValue: 5 }] }), makeEnv(db), session,
+    );
+    expect(res1.status).toBe(400);
+    const res2 = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_ARENA_TITLE, rarity: 'S' }] }), makeEnv(db), session,
+    );
+    expect(res2.status).toBe(400);
   });
 });
 

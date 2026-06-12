@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w257';
+  const APP_BUILD_TAG = '2.2.5-w258';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5079,6 +5079,11 @@
       const m = /^crossed (.+ steps) today$/.exec(label);
       if (m) return { prefix: 'crossed ', target: m[1], suffix: ' today', cls: 'step' };
     }
+    // W258 — arena_title_earned — 'earned the title "<Name>"' → gold (Tier 1)
+    if (eventType === 'arena_title_earned') {
+      const m = /^earned the title ("(?:.+)")$/.exec(label);
+      if (m) return { prefix: 'earned the title ', target: m[1], suffix: '', cls: 'arenatitle' };
+    }
     // ultra_rare_drop — fixed → iridescent gold (Tier 1 crown)
     if (eventType === 'ultra_rare_drop' && label === 'looted an ultra-rare item') {
       return { prefix: 'looted an ', target: 'ultra-rare item', suffix: '', cls: 'ultra' };
@@ -5161,6 +5166,7 @@
     else if (ev.eventType === 'verified_workout')      { iconGlyph = '✦'; iconClsKey = 'verify'; }
     else if (ev.eventType === 'verified_sleep_7h')     { iconGlyph = '✦'; iconClsKey = 'verify'; }
     else if (ev.eventType === 'flights_milestone_bucket') { iconGlyph = '▲'; iconClsKey = 'flight'; }
+    else if (ev.eventType === 'arena_title_earned')    { iconGlyph = '❖'; iconClsKey = 'arenatitle'; }   // W258 — gold Tier-1 prestige
     else if (ev.eventType === 'friend_added')          { iconGlyph = '·'; iconClsKey = 'social'; }
     else                                                { iconGlyph = '·'; iconClsKey = 'social'; }
     const iconHtml =
@@ -7676,12 +7682,37 @@
   }
   // Finalize the battle (commit ONCE) and show the result. A win without taking
   // any damage reads as FLAWLESS on the result screen.
+  // W258 — broadcast freshly-unlocked Arena titles to the guild feed.
+  // Fires at the UNLOCK moment (finalize returns newTitles), never on equip.
+  // clientEventId is pinned to "arena_title:<id>" — the backend's
+  // UNIQUE(user_id, client_event_id) makes each title announce once EVER,
+  // so re-clears and soft resets stay silent. Cosmetic/social only; failure
+  // can never break the result screen.
+  function _arAnnounceNewTitles(fin) {
+    try {
+      if (!fin || !fin.won || !fin.newTitles || !fin.newTitles.length) return;
+      if (typeof _queuePublicAchievementEvent !== 'function') return;
+      fin.newTitles.forEach((t) => {
+        if (!t || !t.id || !t.name) return;
+        _queuePublicAchievementEvent({
+          eventType: 'arena_title_earned',
+          eventKey: t.id,
+          eventLabel: 'earned the title "' + t.name + '"',
+          eventValue: null,
+          rarity: null,
+          clientEventId: 'arena_title:' + t.id,
+          clientCreatedAt: new Date().toISOString(),
+        });
+      });
+    } catch (_) {}
+  }
   function _arFinishSession() {
     if (!_arSess) return;
     if (_arSess._finalized) { _arSess = null; _arRenderResult(); return; }   // W249 — committed at KO; render only
     const flawless = !!(_arSess.won && _arSess.untouched);
     _arSess.done = true;
     _arFight = arenaFinalizeBattle(_arSess);
+    _arAnnounceNewTitles(_arFight);    // W258 — guild-feed title broadcast
     _arSess = null;                    // prevent double-finalize
     _arFlawless = flawless;
     _arRenderResult();
@@ -8423,6 +8454,7 @@
       // result (display never computes). _finalized → result tap renders only.
       let fin = null;
       try { _arFlawless = !!(s.won && s.untouched); fin = arenaFinalizeBattle(s); _arFight = fin; s._finalized = true; } catch (_) {}
+      try { _arAnnounceNewTitles(fin); } catch (_) {}   // W258 — guild-feed title broadcast (KO-commit path)
       _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', _PKB_T.koHold, () => {
         _pkbAfter(_PKB_T.ko, () => {
           if (s.won && fin) {
@@ -16889,6 +16921,7 @@
     'verified_workout',
     'verified_sleep_7h',
     'flights_milestone_bucket',
+    'arena_title_earned',   // W258 — Arena title unlocked (Ascent tower prestige)
   ]);
 
   // v3 Phase 1z.273M — Submit helpers for the three event types

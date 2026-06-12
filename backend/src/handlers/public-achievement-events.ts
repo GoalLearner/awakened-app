@@ -94,6 +94,12 @@ const ALLOWED_EVENT_TYPES = [
   // count is rejected so a public feed event can never leak
   // raw daily flights.
   'flights_milestone_bucket',
+  // W258 — Arena title earned (cosmetic Ascent-tower prestige). The label is
+  // server-anchored per title id (ARENA_TITLE_LABELS below) so no free text
+  // ever travels; clientEventId is pinned to "arena_title:<id>" which, with
+  // the UNIQUE(user_id, client_event_id) constraint, makes each title
+  // announce ONCE EVER per user — re-clears and soft resets stay silent.
+  'arena_title_earned',
 ] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
@@ -129,6 +135,27 @@ const RARE_ITEM_DROP_KEY   = 'rare';
 const STEP_100K_CLUB_LABEL = 'joined the 100K Step Club';
 const STEP_100K_CLUB_KEY   = 'step_100k_club';
 const STEP_100K_CLUB_VALUE = 100000;
+
+// W258 — the 14 fixed Arena titles (mirrors ARENA_TITLES in app.js and the
+// W257 whitelist in public-profile-summary.ts). id → exact display name; the
+// event label must equal 'earned the title "<name>"' verbatim, so no free
+// text ever reaches the feed.
+const ARENA_TITLE_LABELS: Record<string, string> = {
+  asc_brawler:        'Brawler',
+  asc_wallbreaker:    'Wallbreaker',
+  asc_ironbreaker:    'Ironbreaker',
+  asc_edgewalker:     'Edgewalker',
+  asc_duelist:        'Reaver',
+  asc_unbroken:       'Unbroken',
+  asc_tyrantsbane:    'Tyrantsbane',
+  asc_siegebreaker:   'Siegebreaker',
+  asc_shadowcaller:   'Shadowcaller',
+  asc_sovereign:      'The Second Awakened',
+  asc_rank_contender: 'Ranked Contender',
+  asc_rank_duelist:   'Ranked Blade',
+  asc_rank_elite:     'Ranked Elite',
+  asc_rank_apex:      'Apex',
+};
 
 // v3 Phase 1z.226A — verified streak milestone bands. Allowlist
 // is { 7, 14, 30, 100, 365 } only. Every other length rejected.
@@ -594,10 +621,10 @@ function validateEvent(
       };
     }
     rarity = null;
-  } else {
-    // v3 Phase 1z.256 — flights_milestone_bucket (fallthrough;
-    // ALLOWED_EVENT_TYPES already gated the narrowing above this
-    // block to exactly this type). Bucket must be one of
+  } else if (eventType === 'flights_milestone_bucket') {
+    // v3 Phase 1z.256 — flights_milestone_bucket (W258: was the chain's
+    // terminal else-fallthrough; made explicit when arena_title_earned
+    // joined the allowlist). Bucket must be one of
     // {10,25,50,100}; label / key / value are cross-checked so
     // the trio is internally consistent. Exact non-bucket
     // flights values are rejected.
@@ -643,6 +670,52 @@ function validateEvent(
         ok: false,
         code: 'INVALID_RARITY',
         detail: 'flights_milestone_bucket rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else if (eventType === 'arena_title_earned') {
+    // W258 — Arena title earned. Strictest posture: the eventKey must be one
+    // of the 14 known title ids, the label must equal the server-known
+    // 'earned the title "<name>"' for THAT id (tamper-proof — no free text),
+    // and the clientEventId is pinned to "arena_title:<id>" so the
+    // UNIQUE(user_id, client_event_id) constraint makes every title a
+    // once-ever announcement per user (re-clears / soft resets stay silent).
+    const titleName = ARENA_TITLE_LABELS[eventKey];
+    if (!titleName) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: 'arena_title_earned eventKey must be a known Arena title id.',
+      };
+    }
+    const expectedLabel = 'earned the title "' + titleName + '"';
+    if (eventLabel !== expectedLabel) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: 'arena_title_earned label must exactly match the title id.',
+      };
+    }
+    if (clientEventId !== 'arena_title:' + eventKey) {
+      return {
+        ok: false,
+        code: 'INVALID_CLIENT_EVENT_ID',
+        detail: 'arena_title_earned clientEventId must be "arena_title:<id>".',
+      };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'arena_title_earned eventValue must be null.',
+      };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'arena_title_earned rarity must be null.',
       };
     }
     rarity = null;

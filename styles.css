@@ -25471,6 +25471,12 @@ button.guildhall-summary-tile:active {
   font-weight: 700;
   text-shadow: 0 0 13px rgba(245, 184, 66, 0.60);
 }
+/* W258 — Arena title earned · gold Tier-1 prestige (same family as club) */
+.guildhall-activity-target--arenatitle {
+  color: #f5b842;
+  font-weight: 700;
+  text-shadow: 0 0 13px rgba(245, 184, 66, 0.60);
+}
 
 /* ── Tier 3 — routine confirmations · NO glow ──────────────── */
 .guildhall-activity-target--verify {
@@ -25525,6 +25531,12 @@ button.guildhall-summary-tile:active {
   background: rgba(251, 191, 36, 0.12);
 }
 .guildhall-activity-icon--club {
+  color: #f5b842;
+  border-color: rgba(245, 184, 66, 0.40);
+  background: rgba(245, 184, 66, 0.12);
+}
+/* W258 — Arena title icon tile (gold Tier-1, mirrors club) */
+.guildhall-activity-icon--arenatitle {
   color: #f5b842;
   border-color: rgba(245, 184, 66, 0.40);
   background: rgba(245, 184, 66, 0.12);
