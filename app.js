@@ -196,6 +196,25 @@
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
   const APP_BUILD_TAG = '2.2.5-w263';
+  // ── __probe — SESSION-TEMPORARY runtime evidence layer. NEVER MERGED. ──
+  window.__probe = { enqueueVerified: 0, drainOutbox: 0, drainResult: null,
+    paeQueue: 0, prsLog: 0, paeLog: 0, arenaResolveMatchup: 0, runArenaFight: 0,
+    nodesSeen: {} };
+  window.__probeDump = function () {
+    const p = window.__probe;
+    return JSON.parse(JSON.stringify(p));
+  };
+  setInterval(function () {
+    try {
+      ['achievements-grid', 'xp-detail-overlay', 'origin-overlay', 'bfs-burned-banner'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const cs = getComputedStyle(el);
+        const visible = cs.display !== 'none' && cs.visibility !== 'hidden' && el.offsetParent !== null;
+        if (visible && !window.__probe.nodesSeen[id]) window.__probe.nodesSeen[id] = new Date().toISOString();
+      });
+    } catch (_) {}
+  }, 1000);
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6111,6 +6130,7 @@
   // daily decrement, title unlocks). Returns everything the UI needs.
   // Refuses (returns null) if the daily limit is spent.
   function arenaResolveMatchup(m) {
+    try { window.__probe.arenaResolveMatchup++; } catch (_) {}
     const st = getAscentState();
     // A rematch of an already-cleared floor (m.advances === false) is a pure
     // REPLAY — it must NOT touch rating, record, streak, lives, or floor. Only a
@@ -6157,6 +6177,7 @@
   }
   // Convenience: matchup + resolve at the current floor (headless test).
   function runArenaFight() {
+    try { window.__probe.runArenaFight++; } catch (_) {}
     const m = arenaMatchup();
     const r = arenaResolveMatchup(m);
     return r ? { player: m.player, bot: m.bot, floor: m.floor, result: r.result, state: r.state, newTitles: r.newTitles } : null;
@@ -16670,6 +16691,7 @@
   let _prsInflight     = false;
 
   function _prsLogBreadcrumb(name, fields) {
+    try { window.__probe.prsLog++; } catch (_) {}
     if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
     try { _addHealthVerifyBreadcrumb(name, fields || {}); } catch (_) {}
   }
@@ -16816,6 +16838,7 @@
   let _paeInflight        = false;
 
   function _paeLog(name, fields) {
+    try { window.__probe.paeLog++; } catch (_) {}
     if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
     try { _addHealthVerifyBreadcrumb(name, fields || {}); } catch (_) {}
   }
@@ -16917,6 +16940,7 @@
     }
   }
   function _queuePublicAchievementEvent(ev) {
+    try { window.__probe.paeQueue++; } catch (_) {}
     if (!ev || !ev.eventType || !ev.eventLabel || !ev.clientEventId || !ev.clientCreatedAt) return;
     // Defensive: never queue an event that would carry a raw step
     // value or a free-text habit/card name. The backend rejects
@@ -31046,6 +31070,7 @@
   }
 
   function _enqueueVerifiedEvents(events) {
+    try { window.__probe.enqueueVerified++; } catch (_) {}
     if (!Array.isArray(events) || events.length === 0) return;
     const queue = _loadVerifiedEventOutbox();
     const byId = new Map();
@@ -31070,6 +31095,7 @@
   }
 
   async function _drainVerifiedEventOutbox() {
+    try { window.__probe.drainOutbox++; } catch (_) {}
     const queue = _loadVerifiedEventOutbox();
     if (queue.length === 0) return { drained: 0, kept: 0 };
     if (!window.Auth || typeof Auth.submitVerifiedEvents !== 'function') {
