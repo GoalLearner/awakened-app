@@ -31661,3 +31661,61 @@ button.guildhall-summary-tile:active {
 @media (prefers-reduced-motion: reduce) {
   .pkb-stage.clutch::before, .pkb-stage.clutch .pkb-plate .hp i, .ar-vs-wire .word { animation: none; }
 }
+
+/* ── W265 — The Ascent: Ledger remodel (ClaudeDesign direction A) ───────── */
+.al-head { padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 14px; }
+.al-head-row { display: flex; align-items: center; gap: 10px; }
+.al-wordmark { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 3px; color: #f5b842; }
+.al-title-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; background: rgba(245,184,66,0.05); padding: 4px 9px 3px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; -webkit-tap-highlight-color: transparent; }
+.al-head-nums { display: flex; align-items: flex-end; gap: 8px; }
+.al-lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.5px; color: #6b6b86; }
+.al-rating { display: flex; flex-direction: column; gap: 3px; }
+.al-rating-row { display: flex; align-items: baseline; gap: 9px; }
+.al-rating-row .num { font-family: "Cinzel", Georgia, serif; font-size: 28px; font-weight: 700; color: #f5b842; line-height: 1; }
+.al-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2px; }
+.al-tier i { width: 6px; height: 6px; transform: rotate(45deg); border-radius: 1px; }
+.al-lives { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; margin-left: auto; }
+.al-lives-row { display: flex; align-items: center; gap: 5px; }
+.al-lives-row .n { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; color: #9090a8; margin-left: 2px; }
+.al-scroll { padding-top: 4px; }
+.al-hero { margin: 6px 18px 0; border-radius: 16px; border: 1px solid rgba(245,184,66,0.4); background: linear-gradient(180deg, #15132f, #0e0e24); box-shadow: 0 0 28px rgba(245,184,66,0.08), inset 0 1px 0 rgba(255,255,255,0.06); padding: 18px 18px 16px; display: flex; flex-direction: column; }
+.al-hero-top { display: flex; align-items: flex-start; gap: 14px; }
+.al-hero-id { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; align-items: flex-start; }
+.al-hero-id .kick { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2.5px; color: #f5b842; }
+.al-hero-id .nm { font-family: "Cinzel", Georgia, serif; font-size: 24px; font-weight: 700; color: #f5f3fb; line-height: 1.1; }
+.al-hero-tg { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1.8px; color: #a78bfa; background: none; border: none; padding: 0; text-align: left; }
+.al-hero-tg.tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.al-hero-med { width: 64px; height: 64px; border-radius: 12px; flex: none; border: 1px solid rgba(255,255,255,0.08); background: #14122c; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.al-hero-med .asc-fa-img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.al-hero-med svg { width: 42px; height: 56px; }
+.al-hero-reward { margin-top: 11px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: #6b6b86; }
+.al-hero-reward b { color: #f5b842; font-weight: 800; }
+.al-hero-rule { height: 1px; background: rgba(255,255,255,0.08); margin: 14px 0 12px; }
+.al-hero-intel { display: flex; align-items: center; gap: 8px; }
+.al-hero-intel .read { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 15.5px; color: #c8c6d8; min-width: 0; }
+.al-hero-intel .read b { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 1.5px; color: #5eead4; }
+.al-hero-intel .odds { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; color: #6b6b86; margin-left: auto; flex: none; }
+.al-fight { margin-top: 14px; border: none; cursor: pointer; border-radius: 11px; padding: 15px 0; width: 100%; background: linear-gradient(180deg, #f5b842, #c08418); box-shadow: 0 4px 16px rgba(245,184,66,0.25); font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #241502; text-align: center; -webkit-tap-highlight-color: transparent; }
+.al-fight--locked { background: rgba(255,255,255,0.04); box-shadow: none; color: #9090a8; cursor: default; display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 12px 0; }
+.al-fight--locked span { font-size: 7.5px; font-weight: 600; letter-spacing: 1.2px; color: #6b6b86; text-transform: uppercase; }
+.al-hero .asc-scout { margin-top: 11px; }
+.al-hero--done .kick { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2.5px; color: #f5b842; }
+.al-hero--done .nm { font-family: "Cinzel", Georgia, serif; font-size: 22px; font-weight: 700; color: #f5f3fb; margin-top: 6px; display: block; }
+.al-rule { padding: 26px 18px 10px; display: flex; align-items: center; gap: 10px; }
+.al-rule .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2.5px; color: #6b6b86; flex: none; }
+.al-rule .line { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+.al-rule .right { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1px; color: #6b6b86; flex: none; }
+.al-row { margin: 0 18px 8px; border-radius: 11px; border: 1px solid transparent; background: rgba(255,255,255,0.03); padding: 0 14px; height: 46px; display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.al-row--milestone { border-color: rgba(245,184,66,0.28); background: rgba(245,184,66,0.04); }
+.al-row .fl { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #6b6b86; width: 22px; flex: none; }
+.al-row--milestone .fl { color: #f5b842; }
+.al-row .nm { font-family: "Cinzel", Georgia, serif; font-size: 14.5px; font-weight: 600; color: #9090a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-row--milestone .nm { color: #f5f3fb; }
+.al-row svg { flex: none; }
+.al-row .al-redo { margin-left: auto; }
+.al-row .al-row-title { margin-left: auto; }
+.al-row .al-row-title + .al-redo { margin-left: 0; }
+.al-dia { width: 16px; display: flex; justify-content: center; flex: none; }
+.al-dia::before { content: ""; width: 8px; height: 8px; transform: rotate(45deg); background: #f5b842; border-radius: 1.5px; box-shadow: 0 0 7px rgba(245,184,66,0.6); }
+.al-row-title { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; padding: 3px 8px 2px; flex: none; }
+.al-hint { text-align: center; padding: 18px 0 10px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 600; letter-spacing: 2px; color: #6b6b86; }
