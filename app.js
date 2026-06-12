@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w266';
+  const APP_BUILD_TAG = '2.2.5-w267';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5834,6 +5834,13 @@
     asc_brawler: 'rt_brawler', asc_duelist: 'rt_reaver', asc_sovereign: 'rt_sovereign',
     asc_rank_contender: 'rt_contender', asc_rank_duelist: 'rt_blade',
     asc_rank_elite: 'rt_elite', asc_rank_apex: 'rt_apex',
+    // W267 — retired boss-title ids map to the nearest ladder rung for
+    // DISPLAY (old clients in the wild still submit them; their chips should
+    // render as the new rating names, not vanish). Monotone by old floor.
+    asc_wallbreaker: 'rt_duelist', asc_ironbreaker: 'rt_blade',
+    asc_edgewalker: 'rt_reaver', asc_unbroken: 'rt_elite',
+    asc_tyrantsbane: 'rt_warbringer', asc_siegebreaker: 'rt_apex',
+    asc_shadowcaller: 'rt_monarch',
   };
   function _arenaTitleUnlocked(t, st) {
     return st.bestRating >= t.need;   // W266 — one currency; bestRating never decays
@@ -31592,6 +31599,8 @@
       // Unknown/absent ids render nothing (back/forward compatible).
       let titleId = row.arena_title || null;
       if (isMe) { try { const t = getEquippedArenaTitle(); titleId = (t && t.id) || titleId; } catch (_) {} }
+      // W267 — legacy ids from pre-W266 clients render as their ladder successors
+      try { if (titleId && _ARENA_TITLE_LEGACY[titleId]) titleId = _ARENA_TITLE_LEGACY[titleId]; } catch (_) {}
       let titleChip = '';
       if (titleId && typeof ARENA_TITLES !== 'undefined') {
         const tdef = ARENA_TITLES.find((t) => t.id === titleId);

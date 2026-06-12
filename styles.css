@@ -28255,7 +28255,11 @@ button.guildhall-summary-tile:active {
 }
 
 /* ── W265 — The Ascent: Ledger remodel (ClaudeDesign direction A) ───────── */
-.al-head { padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 14px; }
+/* W267 — device fix: the W265 header replaced .asc-head without inheriting
+   its safe-area padding (notch overlap) or the 84px corner reserved for the
+   persistent EXIT pill (collided with LIVES). Same conventions restored. */
+.al-head { position: sticky; top: 0; z-index: 20; padding: calc(env(safe-area-inset-top, 0px) + 12px) 18px 12px; display: flex; flex-direction: column; gap: 14px; background: linear-gradient(180deg, #0a0a1f 0%, rgba(10,10,31,0.94) 78%, rgba(10,10,31,0)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.al-head-row { padding-right: 84px; }
 .al-head-row { display: flex; align-items: center; gap: 10px; }
 .al-wordmark { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 3px; color: #f5b842; }
 .al-title-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; background: rgba(245,184,66,0.05); padding: 4px 9px 3px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; -webkit-tap-highlight-color: transparent; }
