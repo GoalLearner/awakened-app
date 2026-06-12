@@ -326,24 +326,6 @@ h1 {
 }
 
 /* ── PROGRESS ── */
-.progress-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.progress-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.progress-text {
-  display: flex;
-  align-items: baseline;
-  gap: 0;
-}
-
 /* Perfect Day Streak display */
 .perfect-streak-display {
   display: flex;
@@ -386,12 +368,6 @@ h1 {
   font-variant-numeric: tabular-nums;
   min-width: 28px;
   text-shadow: 0 0 14px rgba(139,92,246,0.4);
-}
-
-.prog-sep {
-  font-size: 17px;
-  color: var(--text-tertiary);
-  margin: 0 3px;
 }
 
 .prog-total {
@@ -905,8 +881,6 @@ h1 {
   border-bottom-color: rgba(139,92,246,0.55);
   opacity: 0.78;
 }
-.habit-item.completed .hg-emoji-wrap { opacity: 0.6; }
-
 .habit-item.pressing {
   transform: scale(0.978);
   background: var(--bg-card-active);
@@ -1050,22 +1024,6 @@ h1 {
   100% { transform: scale(1); }
 }
 
-.check-mark {
-  color: #fff;
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1;
-  opacity: 0;
-  transform: scale(0.4) rotate(-15deg);
-  transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-  pointer-events: none;
-}
-
-.habit-cb.checked .check-mark {
-  opacity: 1;
-  transform: scale(1) rotate(0deg);
-}
-
 /* Check ripple */
 .cb-ripple {
   position: absolute;
@@ -1194,47 +1152,10 @@ h1 {
 }
 
 /* ── HABIT GRID — layout helpers ──────────────────────────── */
-/* Top row inside each card: streak (left) + check circle (right) */
-.hg-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0;
-}
-
-/* Emoji center zone — grows to fill vertical space */
-.hg-emoji-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 0 1px;
-}
-.hg-emoji-wrap .habit-emoji {
-  font-size: 48px;
-  line-height: 1;
-}
-
-/* Compact habit-meta: centered, XP only (diff-badge hidden) */
-.habit-item .habit-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  justify-content: center;
-  margin-top: 2px;
-}
 /* Hide difficulty text badge — color shown via bottom border only */
 .habit-item .diff-badge {
   display: none;
 }
-
-/* Tiny check circle for 3-col grid */
-.hg-top .habit-cb {
-  width: 24px;
-  height: 24px;
-}
-.hg-top .habit-cb::before { inset: -3px; }
-.hg-top .check-mark { font-size: 11px; }
 
 /* All-complete grid glow */
 @keyframes grid-glow-pulse {
@@ -1339,34 +1260,6 @@ footer {
 }
 
 /* ── ADD FORM ── */
-.add-form {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-  align-items: center;
-}
-
-.add-form.hidden { display: none !important; }
-
-.add-form input {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 15px;
-  font-family: inherit;
-  padding: 13px 14px;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-  transition: border-color 0.18s ease;
-}
-
-.add-form input::placeholder { color: var(--text-tertiary); }
-.add-form input:focus { border-color: var(--accent); }
-
 /* ── BUTTONS ── */
 .btn-primary {
   background: var(--accent);
@@ -1519,11 +1412,6 @@ footer {
   -webkit-appearance: none;
   appearance: none;
   transition: transform 0.1s, box-shadow 0.15s;
-}
-.hk-preprompt-secondary {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
 }
 .hk-preprompt-primary {
   background: var(--accent);
@@ -1679,24 +1567,6 @@ footer {
 /* ── Auto-verify pill (Habits tab card) ─────────────────────
    Shown next to the check circle when a habit was auto-verified via
    HealthKit today. Subtle by design — a marker, not a celebration. */
-.auto-verify-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  padding: 0 7px;
-  margin-right: 6px;
-  border-radius: 6px;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-  background: var(--accent-glow);
-  border: 1px solid var(--border-accent);
-  align-self: center;
-  user-select: none;
-  pointer-events: none;
-}
-
 /* ── Auto-verify dot (History weekly cells) ────────────────
    A tiny accent dot inset in the corner of cells that were
    auto-verified. Sits over the existing stat-colored fill so the
@@ -1847,8 +1717,6 @@ footer {
 }
 
 /* ── Settings → Reminders ────────────────────────────────── */
-.settings-reminders { margin-top: 18px; }
-
 /* ── Generic collapsible Settings section ─────────────────
    Reusable for any Settings group: REMINDERS, APPEARANCE, WHAT'S COMING.
    The header is a button with [aria-expanded] driving the chevron;
@@ -1944,15 +1812,6 @@ footer {
   margin: 4px 0 8px;
 }
 .settings-rem-note.hidden { display: none; }
-.settings-rem-select {
-  background: rgba(0,0,0,0.22);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-family: inherit;
-  font-size: 0.85rem;
-}
 .settings-rem-quiet-times {
   display: flex;
   gap: 12px;
@@ -2239,20 +2098,6 @@ footer {
 }
 
 /* ── RANK SECTION ── */
-.rank-section {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  margin-top: 10px;
-}
-
-.rank-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .rank-badge {
   display: inline-flex;
   align-items: center;
@@ -2312,15 +2157,6 @@ footer {
 .rank-next.maxed {
   color: var(--gold);
   font-weight: 600;
-}
-
-/* Right-side cluster of the rank-section. Stacks souls-badge above
-   rank-next, both right-aligned, balanced against .rank-left. */
-.rank-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
 }
 
 /* Souls currency badge (v2.0.1). Sits in the rank-section right
@@ -2625,12 +2461,6 @@ footer {
   line-height: 1.45;
   color: var(--text-primary);
 }
-.souls-info-list-icon {
-  font-size: 1.05rem;
-  line-height: 1.3;
-  flex-shrink: 0;
-}
-
 /* Image bullet for the souls-info list (replaces emoji bullets).
    24px keeps visual weight matching prior emoji-glyphs at the
    surrounding ~0.86rem text. Subtle gold drop-shadow ties the warm
@@ -2821,12 +2651,6 @@ footer {
                          box-shadow: 0 0 5px rgba(245,158,11,0.25); }
 
 /* ── DIFFICULTY SELECTOR (in forms) ── */
-.add-form-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 .diff-row {
   display: flex;
   gap: 6px;
@@ -2885,24 +2709,6 @@ footer {
 
 .ach-card.locked {
   opacity: 0.45;
-}
-
-.ach-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--bg-raised);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-}
-
-.ach-card.unlocked .ach-icon-wrap {
-  background: rgba(139,92,246,0.1);
-  border-color: rgba(139,92,246,0.25);
 }
 
 .ach-text { flex: 1; min-width: 0; }
@@ -3007,15 +2813,6 @@ footer {
 }
 
 /* ── ADD FORM LAYOUT UPDATE ── */
-.add-form {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
-}
-
-/* override old inline-flex rule */
-.add-form.hidden { display: none !important; }
-
 /* ── UTILS ── */
 .hidden { display: none !important; }
 
@@ -3204,14 +3001,6 @@ footer {
   margin: 0 0 6px;
   letter-spacing: 0.01em;
 }
-.ob-inspiration-attr {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #f59e0b;
-  letter-spacing: 0.04em;
-  margin: 0;
-  opacity: 0.9;
-}
 .ob-footer {
   flex-shrink: 0;
   padding: 14px 16px calc(20px + var(--safe-bottom));
@@ -3334,25 +3123,6 @@ footer {
   font-size: 0.875rem;
   padding: 36px 16px;
   line-height: 1.5;
-}
-
-.lib-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-.lib-card:active {
-  background: var(--bg-card-active);
-  border-color: var(--border-accent);
 }
 
 /* .lib-card-add now defined in the Habit Detail section above */
@@ -3732,31 +3502,6 @@ footer {
    reveal at z-index 600). 9999 was technically enough, but explicit
    higher value defeats any stacking-context surprises. */
 .habit-toast--reminder { cursor: pointer; z-index: 100000; }
-.habit-toast--reminder .ht-rem-time {
-  font-weight: 800;
-  color: var(--gold);
-  border-bottom: 1px dashed rgba(245, 158, 11, 0.65);
-  padding: 0 2px;
-  pointer-events: none;  /* let clicks pass through to the toast handler */
-}
-.habit-toast--reminder:hover  .ht-rem-time { color: #fbbf24; border-bottom-color: #fbbf24; }
-.habit-toast--reminder:active .ht-rem-time { opacity: 0.85; }
-
-.habit-toast--reminder .ht-rem-dismiss {
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.85rem;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.habit-toast--reminder .ht-rem-dismiss:hover { background: rgba(255, 255, 255, 0.14); }
-
 /* Settings → Daily morning reminder button. Looks like the existing
    time-input row but is actually a button — taps open the centered
    custom picker modal. Same gold accent treatment. */
@@ -3910,16 +3655,6 @@ footer {
   margin: 18px 0;
 }
 
-/* Legacy .sched-reminder-label retained for any older surface still
-   referencing it; superseded by .sched-section-label in v1.1.6. */
-.sched-reminder-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-  margin-bottom: 8px;
-}
 .sched-reminder-row {
   display: flex;
   gap: 8px;
@@ -4204,22 +3939,6 @@ footer {
 .sc-hero-class:hover .sc-hero-class-name {
   border-bottom-color: currentColor;
 }
-
-/* The emblem inside the class line — visual-only span, no separate
-   click handler. Hover state inherits from the parent's hover. */
-.sc-class-emblem-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  vertical-align: middle;
-  border-radius: 100px;
-  transition: transform 0.12s ease, filter 0.18s ease;
-  pointer-events: none;
-}
-.sc-hero-class:hover  .sc-class-emblem-btn { filter: brightness(1.15) drop-shadow(0 0 8px currentColor); }
-.sc-hero-class:active .sc-class-emblem-btn { transform: scale(0.94); }
-.sc-class-emblem-btn .class-icon-img { display: block; }
 
 /* ── CLASS DETAIL SHEET ──────────────────────────────────── */
 .class-detail-overlay {
@@ -4593,15 +4312,6 @@ footer {
   opacity: 0.8;
 }
 .hd-remove-btn:active { opacity: 0.5; }
-
-/* lib-card arrow (was +) */
-.lib-card-add {
-  font-size: 1.5rem;
-  font-weight: 300;
-  color: var(--accent);
-  flex-shrink: 0;
-  line-height: 1;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    v3 Phase 1z.252B — Add Habits sheet redesign
@@ -5082,10 +4792,6 @@ footer {
   inset: -11px -6px;
   z-index: -1;
 }
-/* .aw-buff-pill__icon retired in v3 Phase 1z.10 — pill is text+pulse only.
-   Rule retained (display: none) so a stale cached HTML carrying the span
-   doesn't render a stray emoji during the 1z.9 → 1z.10 SW transition. */
-.aw-buff-pill__icon { display: none; }
 .aw-buff-pill__label { white-space: nowrap; }
 .aw-buff-pill__pulse {
   width: 4px;
@@ -5127,47 +4833,7 @@ footer {
 }
 
 /* ── HABIT PTS INDICATOR ── */
-.habit-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-}
-
-.habit-pts {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  letter-spacing: 0.02em;
-}
-
-.habit-pts.weekend {
-  color: var(--gold);
-  font-weight: 700;
-}
-
 /* ── XP BADGE ── */
-.habit-xp {
-  font-size: 0.6rem;
-  font-weight: 800;
-  color: var(--gold);
-  letter-spacing: 0.01em;
-}
-
-.habit-xp.weekend {
-  color: #fbbf24;
-  text-shadow: 0 0 8px rgba(251,191,36,0.5);
-}
-
-.xp-2x {
-  font-size: 0.65rem;
-  background: rgba(245,158,11,0.2);
-  border: 1px solid rgba(245,158,11,0.4);
-  border-radius: 4px;
-  padding: 1px 4px;
-  margin-left: 2px;
-}
-
 /* ── FLOATING XP ANIMATION ── */
 .xp-float {
   position: absolute;
@@ -5192,21 +4858,6 @@ footer {
 }
 
 /* ── 2x XP POPUP ── */
-.xp-pop {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--gold);
-  letter-spacing: 0.04em;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 10;
-  animation: xp-float 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
 /* ── PROFILE SCREEN (merged Status + Stats) ── */
 .status-content {
   padding: 16px 16px 0;
@@ -5228,57 +4879,12 @@ footer {
   50%       { box-shadow: 0 0 28px 8px rgba(245,158,11,0.4); border-color: rgba(245,158,11,0.8); }
 }
 
-.sc-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px 12px;
-}
-
-.sc-top-title {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  color: var(--gold);
-  text-transform: uppercase;
-}
-
-.sc-divider {
-  height: 1px;
-  background: rgba(245,158,11,0.18);
-  margin: 0 18px;
-}
-
-.sc-section {
-  padding: 10px 18px 12px;
-}
-
 .sc-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 0;
 }
-
-.sc-label {
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--gold);
-  width: 90px;
-  flex-shrink: 0;
-  text-transform: uppercase;
-}
-
-.sc-value {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  flex: 1;
-  min-width: 0;
-}
-
-.sc-value.sc-gold { color: var(--gold); }
 
 .sc-edit-btn {
   background: transparent;
@@ -5312,55 +4918,8 @@ footer {
   appearance: none;
 }
 
-.sc-stats-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
-.sc-stat-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
-}
-
-.sc-stat-icon {
-  font-size: 1rem;
-  width: 22px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.sc-stat-name {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--gold);
-  flex: 1;
-  text-transform: uppercase;
-}
-
-.sc-stat-level {
-  font-size: 0.9rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── ONBOARDING NAME INPUT ── */
 .ob-name-row { margin-top: 20px; }
-
-.ob-name-label {
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-tertiary);
-  margin-bottom: 6px;
-}
 
 .ob-name-input {
   width: 100%;
@@ -5384,73 +4943,6 @@ footer {
 /* ── STATS SECTION ── */
 .stats-content {
   padding: 0 16px calc(24px + var(--safe-bottom));
-}
-
-.stats-summary {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 8px;
-}
-
-.stats-rank-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--accent-glow);
-  border: 1.5px solid var(--accent);
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  letter-spacing: -0.5px;
-}
-
-.stats-rank-badge.rank-s-plus {
-  background: var(--gold-glow);
-  border-color: var(--gold);
-  color: var(--gold);
-  animation: gold-pulse 2.4s ease-in-out infinite;
-}
-
-.stats-summary-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-
-.stats-summary-rank {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.2px;
-}
-
-.stats-summary-pts {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.stats-2x-badge {
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  color: var(--gold);
-  background: rgba(245,158,11,0.12);
-  border: 1px solid rgba(245,158,11,0.3);
-  border-radius: 6px;
-  padding: 4px 7px;
-  flex-shrink: 0;
 }
 
 .stats-section-label {
@@ -5864,12 +5356,6 @@ footer {
   font-size: 0;
   line-height: 0;
 }
-/* Habit card XP badge: keep the gold accent on text, but make sure
-   the inline icon sits cleanly next to "+N XP" without extra spacing. */
-.habit-xp .xp-icon-img {
-  margin-right: 1px;
-  vertical-align: -2px;
-}
 /* The View Note header and habit-detail config show a hero-size habit
    icon — give it a soft amber glow to match the celebration treatment
    on stat icons. */
@@ -5990,12 +5476,6 @@ footer {
   gap: 6px;
 }
 
-.stat-header-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
 .stat-label {
   font-size: 0.9rem;
   font-weight: 800;
@@ -6018,97 +5498,7 @@ footer {
   white-space: nowrap;
 }
 
-.stat-bar-track {
-  height: 9px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.stat-bar-fill {
-  height: 100%;
-  border-radius: 5px;
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 7px currentColor;
-}
-
-.stat-footer-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.stat-pts {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Pill badge for "X to Lv.Y" */
-.stat-next {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px;
-  padding: 2px 8px;
-  letter-spacing: 0.01em;
-}
-
-.stat-next.maxed {
-  color: var(--gold);
-  font-weight: 700;
-  background: rgba(245,158,11,0.1);
-  border-color: rgba(245,158,11,0.25);
-}
-
 /* ── STAT BONUS MILESTONES ── */
-.stats-milestones { margin-top: 0; }
-
-.milestone-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  margin-bottom: 6px;
-  opacity: 0.5;
-}
-
-.milestone-row.earned {
-  opacity: 1;
-  border-color: rgba(139,92,246,0.25);
-}
-
-.milestone-icon { font-size: 1rem; flex-shrink: 0; }
-
-.milestone-label {
-  flex: 1;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.milestone-bonus {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.milestone-row.earned .milestone-bonus { color: var(--gold); }
-
-.milestone-status {
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.milestone-row.earned .milestone-status { color: var(--accent); }
-
 @keyframes xp-float {
   0%   { opacity: 0;   transform: translateX(-50%) translateY(0)    scale(0.7); }
   20%  { opacity: 1;   transform: translateX(-50%) translateY(-4px)  scale(1.15); }
@@ -6595,38 +5985,7 @@ footer {
 
 .day-btn:active { transform: scale(0.88); }
 
-/* Compact days row inside library cards */
-.lib-days-row {
-  display: flex;
-  gap: 4px;
-}
-
-.lib-days-row .day-btn {
-  height: 26px;
-  font-size: 10px;
-  border-radius: 6px;
-}
-
 /* ── SCHEDULE PILLS (on habit card) ── */
-.sched-pills {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 3px;
-  flex-wrap: wrap;
-}
-
-.sched-pill {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  background: rgba(255,255,255,0.07);
-  border-radius: 4px;
-  padding: 2px 5px;
-  line-height: 1.4;
-  letter-spacing: 0.02em;
-}
-
 /* v3 Phase 1z.273F — Single-chip schedule badge on habit cards.
    Renders only for subset schedules (1–6 days). Daily habits never
    emit this element. Uses unambiguous middot-separated labels
@@ -6657,13 +6016,6 @@ footer {
   color: rgba(245, 184, 66, 0.86);
   border: 1px solid rgba(245, 184, 66, 0.24);
   background: rgba(245, 184, 66, 0.07);
-}
-
-.sched-daily {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  letter-spacing: 0.02em;
 }
 
 /* ── SCHEDULE PICKER SHEET ── */
@@ -6765,13 +6117,6 @@ footer {
   justify-content: space-between;
 }
 
-.hist-nav-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.2px;
-}
-
 .hist-nav-btn {
   background: var(--bg-card);
   border: 1.5px solid var(--border);
@@ -6832,84 +6177,6 @@ footer {
   height: 36px;
   background: var(--border);
   flex-shrink: 0;
-}
-
-.hist-cal {
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 10px;
-}
-
-.hist-cal-header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 6px;
-}
-
-.hist-day-hdr {
-  text-align: center;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  padding: 4px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.hist-cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-}
-
-.hist-day-cell {
-  aspect-ratio: 1;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: default;
-  transition: opacity 0.1s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.hist-day-empty  { background: transparent; }
-
-.hist-day-future {
-  background: transparent;
-  color: var(--text-tertiary);
-}
-
-.hist-day-grey {
-  background: rgba(255,255,255,0.04);
-  color: var(--text-tertiary);
-}
-
-.hist-day-partial {
-  background: rgba(234,179,8,0.20);
-  color: #eab308;
-  cursor: pointer;
-}
-
-.hist-day-full {
-  background: rgba(139,92,246,0.20);
-  color: #8b5cf6;
-  cursor: pointer;
-}
-
-.hist-day-partial:active,
-.hist-day-full:active,
-.hist-day-grey.hist-tappable:active { opacity: 0.6; }
-
-.hist-day-grey.hist-tappable { cursor: pointer; }
-
-.hist-today {
-  outline: 1.5px solid rgba(255,255,255,0.45);
-  outline-offset: -1.5px;
 }
 
 /* ── HABIT GRID (new History views) ─────────────────────── */
@@ -7024,11 +6291,6 @@ footer {
 .hg-ach-row--locked {
   opacity: 0.45;
 }
-.hg-ach-icon {
-  font-size: 1.5rem;
-  min-width: 32px;
-  text-align: center;
-}
 .hg-ach-info {
   flex: 1;
   min-width: 0;
@@ -7100,7 +6362,7 @@ footer {
   min-width: 0;
 }
 .hg-label-hdr { padding: 4px 6px 4px 10px; }
-.hg-label-emoji { display: none; } /* History tab — emoji intentionally hidden */
+ /* History tab — emoji intentionally hidden */
 .hg-label-name {
   font-size: 12px;
   font-weight: 700;
@@ -7197,7 +6459,7 @@ footer {
   gap: 5px;
   padding: 8px 8px 7px;
 }
-.hg-habit-card-emoji { display: none; } /* History tab — emoji hidden */
+ /* History tab — emoji hidden */
 .hg-habit-card-name {
   font-size: 13px;
   font-weight: 700;
@@ -7285,7 +6547,7 @@ footer {
   gap: 6px;
   min-width: 0;
 }
-.hg-year-habit-emoji { display: none; } /* History tab — emoji hidden */
+ /* History tab — emoji hidden */
 .hg-year-habit-name {
   font-size: 13px;
   font-weight: 700;
@@ -7395,14 +6657,6 @@ footer {
 }
 .day-popup-habit:last-child { border-bottom: none; }
 
-.day-popup-habit-emoji { font-size: 15px; flex-shrink: 0; }
-
-.day-popup-none {
-  font-size: 13px;
-  color: var(--text-secondary);
-  padding: 6px 0;
-}
-
 .day-popup-xp {
   margin-top: 12px;
   font-size: 13px;
@@ -7420,39 +6674,10 @@ footer {
 
 /* ── CLASS SYSTEM ─────────────────────────────────────────── */
 
-/* Status card — class row */
-.sc-row-class { align-items: flex-start; }
-.sc-class-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-}
-.sc-class-desc {
-  font-size: 11.5px;
-  font-style: italic;
-  color: var(--text-secondary);
-  line-height: 1.45;
-}
 .sc-shifting {
   font-size: 11.5px;
   color: #f97316;
   font-weight: 600;
-}
-
-/* Stats tab — class line in summary */
-.stats-class-line {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: -0.1px;
-}
-
-/* Stats tab — dominant stat indicator */
-.stat-dom-crown {
-  font-size: 10px;
-  vertical-align: middle;
-  margin-left: 2px;
 }
 
 /* Class change popup */
@@ -8245,24 +7470,9 @@ footer {
   white-space: nowrap;
 }
 
-.sc-hero-rank {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.sc-hero-rank.sc-gold { color: var(--gold); }
-
 .sc-hero-class {
   font-size: 0.88rem;
   font-weight: 600;
-}
-
-.sc-hero-class-desc {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  font-style: italic;
-  line-height: 1.4;
-  margin-top: 1px;
 }
 
 /* 3×2 stat grid */
@@ -8454,11 +7664,6 @@ footer {
   margin-top: 5px;
 }
 
-/* Shifting class warning */
-.sc-shifting-row {
-  padding: 4px 18px 8px;
-}
-
 /* Profile panel: profile-panel is the scrollable container */
 #profile-panel {
   overflow-y: auto;
@@ -8466,26 +7671,6 @@ footer {
   scrollbar-width: none;
 }
 #profile-panel::-webkit-scrollbar { display: none; }
-
-/* Stats section inside profile (no extra top padding needed) */
-.stats-in-profile {
-  padding-top: 4px;
-}
-
-/* Remove the stats summary bar entirely in profile mode */
-.stats-in-profile .stats-summary { display: none; }
-
-/* Slightly larger hab-meta gap */
-.habit-meta {
-  gap: 7px;
-  margin-top: 4px;
-}
-
-/* Habit pts even more muted */
-.habit-pts {
-  font-size: 0.65rem;
-  opacity: 0.7;
-}
 
 /* Stat row needs right padding for the › chevron */
 .stat-body {
@@ -8595,90 +7780,9 @@ footer {
   -webkit-appearance: none;
 }
 
-/* App info block */
-.settings-app-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 22px 20px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* Inline header row — "⚔ Habit RPG" on the left, "Sound [toggle]" on the right.
-   Centered overall; the sound block is offset to the right with margin-left:auto. */
-.settings-app-name-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  width: 100%;
-}
-.settings-app-sound {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.settings-app-sound-lbl {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.65);
-  text-transform: uppercase;
-}
-
-.settings-app-name {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.2px;
-}
-
 .settings-app-ver {
   font-size: 0.75rem;
   color: var(--text-tertiary);
-}
-
-/* Data section */
-.settings-section {
-  padding: 18px 20px 0;
-}
-
-.settings-section-lbl {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin-bottom: 12px;
-}
-
-.settings-reset-btn {
-  width: 100%;
-  padding: 14px 18px;
-  background: rgba(255, 59, 48, 0.1);
-  border: 1.5px solid rgba(255, 59, 48, 0.3);
-  border-radius: var(--radius-sm);
-  color: var(--danger);
-  font-size: 0.95rem;
-  font-weight: 600;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  -webkit-appearance: none;
-  transition: background 0.15s, border-color 0.15s;
-}
-.settings-reset-btn:active {
-  background: rgba(255, 59, 48, 0.18);
-  border-color: rgba(255, 59, 48, 0.5);
-}
-
-.settings-reset-warn {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  line-height: 1.55;
-  margin-top: 10px;
-  padding: 0 2px;
 }
 
 /* ── Check for Updates ── */
@@ -8686,77 +7790,7 @@ footer {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-.settings-update-wrap {
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.settings-update-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 13px 16px;
-  background: #0d1520;
-  border: 1.5px solid #7c3aed;
-  border-radius: 12px;
-  color: #e2e8f0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: opacity 0.2s, background 0.25s, border-color 0.25s, color 0.25s;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.settings-update-btn:not(:disabled):active {
-  transform: scale(0.98);
-  opacity: 0.85;
-}
-.settings-update-btn:disabled {
-  cursor: default;
-}
-.update-btn-icon {
-  font-size: 1.05rem;
-  display: inline-block;
-  line-height: 1;
-}
-.settings-update-btn.update-btn--checking .update-btn-icon {
-  animation: spin 0.75s linear infinite;
-}
-.settings-update-btn.update-btn--found {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: #22c55e;
-  color: #22c55e;
-}
-.settings-update-btn.update-btn--uptodate {
-  background: rgba(34, 197, 94, 0.08);
-  border-color: #22c55e;
-  color: #22c55e;
-}
-.settings-update-sub {
-  font-size: 0.68rem;
-  color: var(--text-tertiary);
-  text-align: center;
-  margin: 8px 0 0;
-}
 /* ── Sound Toggle ── */
-.settings-sound-lbl {
-  margin-top: 18px;
-  margin-bottom: 10px;
-}
-.settings-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.settings-toggle-label {
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  font-weight: 500;
-  flex: 1;
-}
 .settings-toggle {
   position: relative;
   width: 44px;
@@ -8791,65 +7825,6 @@ footer {
 }
 
 /* ── What's Coming ── */
-.settings-coming-section {
-  padding: 20px 20px 4px;
-  border-bottom: 1px solid var(--border);
-}
-.settings-coming-lbl {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #f59e0b;
-  margin-bottom: 14px;
-}
-.settings-coming-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 4px;
-}
-.settings-coming-card {
-  background: rgba(15, 20, 30, 0.7);
-  border: 1px solid rgba(245, 158, 11, 0.15);
-  border-left: 3px solid #f59e0b;
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  position: relative;
-}
-.settings-coming-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-.settings-coming-icon {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-.settings-coming-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  flex: 1;
-}
-.settings-coming-badge {
-  font-size: 0.52rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: 4px;
-  padding: 2px 6px;
-  white-space: nowrap;
-}
-.settings-coming-desc {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  line-height: 1.45;
-}
-
 /* ── Shared reset overlay ── */
 .reset-overlay {
   position: fixed;
@@ -9016,70 +7991,6 @@ footer {
   margin: 8px 0 0;
 }
 
-.nb-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.nb-icon {
-  font-size: 1.6rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.nb-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.nb-label {
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.nb-sublabel {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.nb-reward {
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: #f59e0b;
-  letter-spacing: -0.2px;
-  flex-shrink: 0;
-}
-
-.nb-track {
-  height: 7px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 6px;
-}
-
-.nb-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-
-.nb-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--text-tertiary);
-  font-weight: 600;
-}
-
 .nb-all-done {
   display: flex;
   align-items: center;
@@ -9116,12 +8027,6 @@ footer {
   color: #8b5cf6;
   border: 1px solid rgba(139, 92, 246, 0.35);
 }
-.na-badge-fail {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-}
-
 /* ── Friday Weekend Warrior Challenge Modal ── */
 .fri-challenge-overlay {
   position: fixed;
@@ -9663,24 +8568,6 @@ footer {
 }
 
 
-/* Path label on Profile status card */
-.sc-hero-path {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 4px;
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.01em;
-}
-.sc-path-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 /* ── SW UPDATE BANNER ─────────────────────────────────────── */
 .sw-update-banner {
   position: fixed;
@@ -9888,29 +8775,7 @@ footer {
 }
 
 /* ── COMPOUND BADGE ON PROFILE ──────────────────────────── */
-.sc-compound-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 5px;
-  margin-right: 4px;
-  padding: 3px 10px;
-  background: rgba(245,158,11,0.1);
-  border: 1px solid rgba(245,158,11,0.28);
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.02em;
-}
-
 /* ── NOTE MODAL ─────────────────────────────────────────────── */
-.note-modal-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
 .note-modal-emoji {
   font-size: 1.55rem;
   line-height: 1;
@@ -9923,33 +8788,7 @@ footer {
   letter-spacing: -0.2px;
   line-height: 1.25;
 }
-.note-text-display {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 12px;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.65;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  font-style: italic;
-  white-space: pre-wrap;
-}
-
 /* ── HABIT NOTE INDICATOR ─────────────────────────────────── */
-.habit-note-dot {
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0.55;
-  margin-left: 3px;
-  flex-shrink: 0;
-  display: inline-block;
-  vertical-align: middle;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    FEATURE 1 — Enhanced Habit Completion Animation
    ═══════════════════════════════════════════════════════════════ */
@@ -10303,163 +9142,8 @@ footer {
   opacity: 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   COMING SOON SCREENS (Quests / Items / Social)
-   ═══════════════════════════════════════════════════════════════ */
-
-.cs-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px 28px 60px;
-  text-align: center;
-  gap: 0;
-}
-
-.cs-icon {
-  font-size: 3.2rem;
-  line-height: 1;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 0 16px rgba(139,92,246,0.35));
-}
-
-/* Custom-art version of the placeholder icon — used when the emoji is
-   replaced with an <img> pointing at one of the tab-icon PNGs. The art
-   is detailed enough to deserve a real render size on the empty-state
-   screen (96px) instead of the 32px tab-bar size. */
-.cs-icon--art {
-  width: 96px;
-  height: 96px;
-  object-fit: contain;
-  display: block;
-  margin: 16px auto 24px;
-  font-size: 0;            /* defeats inherited 3.2rem from .cs-icon */
-  line-height: 0;
-  background: transparent;
-  -webkit-user-select: none;
-  user-select: none;
-  pointer-events: none;
-}
-/* Per-screen glow — Dungeon leans crimson, Items leans gold, Social keeps
-   the brand purple. Subtle but distinguishes the three placeholders. */
-.cs-icon--dungeon { filter: drop-shadow(0 0 18px rgba(220, 38, 38, 0.40)); }
-.cs-icon--items   { filter: drop-shadow(0 0 18px rgba(245, 158, 11, 0.35)); }
-.cs-icon--social  { filter: drop-shadow(0 0 18px rgba(139,  92, 246, 0.40)); }
-
-.cs-title {
-  font-size: 1.75rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  color: var(--text-primary);
-  margin: 0 0 10px;
-}
-
-.cs-version {
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--gold, #f59e0b);
-  margin-bottom: 16px;
-}
-
-.cs-desc {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  max-width: 300px;
-  margin: 0 0 32px;
-}
-
 /* ── Items: blurred card placeholders ── */
-.cs-cards-row {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  width: 100%;
-  max-width: 320px;
-}
-
-.cs-card {
-  flex: 1;
-  min-height: 110px;
-  border-radius: 14px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: blur(3px);
-  pointer-events: none;
-  user-select: none;
-}
-.cs-card--rare      { border-color: rgba(96,165,250,0.4);  background: linear-gradient(160deg, #1e2a3f 0%, #1e2845 100%); }
-.cs-card--legendary { border-color: rgba(245,158,11,0.45); background: linear-gradient(160deg, #281e00 0%, #2c1f00 100%); }
-
-.cs-card-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.cs-card-rarity {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-.cs-card--rare      .cs-card-rarity { color: #60a5fa; }
-.cs-card--legendary .cs-card-rarity { color: #f59e0b; }
-.cs-card-lock { font-size: 1.2rem; }
-
 /* ── Social: blurred leaderboard placeholder ── */
-.cs-leaderboard {
-  width: 100%;
-  max-width: 320px;
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--bg-card);
-}
-
-.cs-lb-header {
-  display: flex;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.cs-lb-row {
-  display: flex;
-  align-items: center;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
-  color: var(--text-primary);
-}
-.cs-lb-row:last-of-type { border-bottom: none; }
-
-.cs-lb-rank  { width: 28px; flex-shrink: 0; color: var(--text-secondary); font-weight: 600; }
-.cs-lb-name  { flex: 1; font-weight: 600; }
-.cs-lb-pts   { color: var(--accent); font-weight: 700; font-size: 0.82rem; }
-
-.cs-lb-blur  { filter: blur(4px); user-select: none; pointer-events: none; }
-
-.cs-lb-lock {
-  text-align: center;
-  padding: 12px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
-  border-top: 1px solid var(--border);
-  background: rgba(139,92,246,0.06);
-}
-
 /* ═══════════════════════════════════════════════════════════════
    LEADERBOARD PREVIEW (Social tab) — v2.0.2
    Renders the user's own Apple Health-verified stats. The competitive
@@ -10472,38 +9156,6 @@ footer {
   gap: 22px;
   max-width: 520px;
   margin: 0 auto;
-}
-
-/* v3 Phase 1x.2 — Global Rankings relocated under Stats tab.
-   Visual separator from the character-stats content above. */
-.stats-rankings {
-  margin-top: 12px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-}
-.lb-preview-header { text-align: center; }
-.lb-preview-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--accent);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-.lb-preview-title {
-  font-size: 1.6rem;
-  font-weight: 900;
-  color: var(--text-primary);
-  letter-spacing: 0.05em;
-  margin: 0 0 10px;
-  text-transform: uppercase;
-}
-.lb-preview-sub {
-  font-size: 0.85rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
-  margin: 0 auto;
-  max-width: 360px;
 }
 
 .lb-preview-list {
@@ -10545,12 +9197,6 @@ footer {
   height: 36px;
   display: block;
 }
-.lb-stat-icon-glyph {
-  font-size: 1.7rem;
-  line-height: 1;
-  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.35));
-}
-
 .lb-stat-body {
   flex: 1;
   min-width: 0;
@@ -10837,9 +9483,6 @@ footer {
   flex-shrink: 0;
   letter-spacing: 0.04em;
 }
-.lb-rank-row--user .lb-rank-pos {
-  color: var(--gold);
-}
 .lb-rank-name {
   flex: 1;
   min-width: 0;
@@ -10881,16 +9524,6 @@ footer {
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
-.lb-rank-row--user .lb-rank-value {
-  color: var(--gold);
-}
-.lb-rank-row-note {
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  margin-top: 6px;
-  letter-spacing: 0.04em;
-}
 .lb-rank-footer {
   text-align: center;
   font-size: 0.78rem;
@@ -10913,33 +9546,9 @@ footer {
 }
 .lb-preview-empty.hidden { display: none; }
 
-.lb-preview-footer {
-  text-align: center;
-  font-size: 0.78rem;
-  color: var(--text-tertiary);
-  letter-spacing: 0.04em;
-  line-height: 1.5;
-  padding: 8px 12px 0;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    MORNING ROUTINE PACK — quick-add button + library entry + modal
    ═══════════════════════════════════════════════════════════════ */
-
-/* Footer button: gold-accented variant for the Morning Routine quick-add */
-.add-btn--morning {
-  border-color: rgba(245, 158, 11, 0.42);
-  border-style: solid;
-  color: #f59e0b;
-}
-.add-btn--morning .add-plus { color: #f59e0b; }
-.add-btn--morning:active {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: #f59e0b;
-  color: #f59e0b;
-  transform: scale(0.98);
-}
-.add-btn--morning.hidden { display: none !important; }
 
 /* Footer is now flex-column — Add Habits button stretches full width */
 #main-footer .add-btn { width: 100%; }
@@ -10961,74 +9570,6 @@ footer {
   background: rgba(124, 58, 237, 0.20);
   border-color: rgba(124, 58, 237, 0.60);
   color: #c4b5fd;
-}
-
-/* Library — Morning Routine pack entry pinned to the top */
-.lib-pack-entry {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg,
-    rgba(245, 158, 11, 0.10) 0%,
-    rgba(245, 158, 11, 0.04) 100%);
-  border: 1.5px solid rgba(245, 158, 11, 0.35);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: transform 0.12s ease, border-color 0.18s ease, background 0.18s ease;
-}
-.lib-pack-entry:active {
-  transform: scale(0.985);
-  border-color: rgba(245, 158, 11, 0.6);
-  background: linear-gradient(135deg,
-    rgba(245, 158, 11, 0.18) 0%,
-    rgba(245, 158, 11, 0.08) 100%);
-}
-.lib-pack-emoji {
-  font-size: 1.6rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.lib-pack-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-.lib-pack-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: 0.01em;
-}
-.lib-pack-bolt {
-  color: #f59e0b;
-  font-size: 0.85rem;
-  margin-left: 2px;
-}
-.lib-pack-sub {
-  font-size: 0.74rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.lib-pack-count {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.14);
-  border: 1px solid rgba(245, 158, 11, 0.32);
-  padding: 4px 8px;
-  border-radius: 8px;
-  white-space: nowrap;
-}
-.lib-pack-chevron {
-  color: rgba(245, 158, 11, 0.6);
-  font-size: 1.1rem;
-  font-weight: 600;
-  flex-shrink: 0;
 }
 
 /* Confirmation modal */
@@ -11506,15 +10047,6 @@ footer {
   cursor: pointer;
 }
 
-/* "Create your own" entry inside the lib-sheet */
-.lib-pack-entry--custom {
-  border: 1px dashed rgba(168, 85, 247, 0.42);
-  background: linear-gradient(180deg, rgba(168,85,247,0.08), rgba(168,85,247,0.04));
-}
-.lib-pack-entry--custom .lib-pack-emoji {
-  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.45));
-}
-
 /* ═══════════════════════════════════════════════════════════════
    MORNING ROUTINE NUDGE BANNER — shown at 8/9 of 10 canonical habits
    ═══════════════════════════════════════════════════════════════ */
@@ -11978,18 +10510,6 @@ footer {
   border-style: dashed;
   position: relative;
 }
-.habit-cb-lock {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  font-size: 0.7rem;
-  background: var(--bg-card);
-  border-radius: 50%;
-  padding: 2px;
-  line-height: 1;
-  filter: grayscale(0.4);
-}
-
 /* ── Daily Insight / Morning Briefing (v1.1.5) ──────────────
    Once-per-day bottom sheet, tactical morning briefing layout.
    Reuses .vn-sheet shell + .vn-overlay backdrop + .vn-drag-handle.
@@ -12115,38 +10635,6 @@ footer {
   flex-direction: column;
   gap: 8px;
 }
-.di-stats-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px 0;
-}
-.di-stat-inline {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  font-variant-numeric: tabular-nums;
-}
-.di-stat-value {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-.di-stat-label {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-}
-.di-stat-sep {
-  color: var(--text-tertiary);
-  font-size: 0.9rem;
-  opacity: 0.5;
-}
-
 /* ── LOCK IN — primary CTA, gold-on-dark (matches
    .settings-rem-enable-btn style). ─────────────────────────── */
 .di-cta-btn {
@@ -12167,28 +10655,6 @@ footer {
   transition: transform 0.1s, box-shadow 0.2s;
 }
 .di-cta-btn:active { transform: scale(0.98); }
-
-/* "View full details" button on the History info popup */
-.hi-full-details-btn {
-  margin-top: 4px;
-  padding: 12px;
-  width: 100%;
-  background: rgba(139, 92, 246, 0.10);
-  color: #a78bfa;
-  border: 1px solid rgba(139, 92, 246, 0.35);
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  -webkit-appearance: none;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
-}
-.hi-full-details-btn:active {
-  background: rgba(139, 92, 246, 0.20);
-  transform: scale(0.985);
-}
 
 /* Desktop: centered modal style for View Note (mirrors hi-sheet) */
 @media (min-width: 720px) {
@@ -12641,28 +11107,7 @@ footer {
 
 /* ── Footer button row (3-button layout) ── */
 .add-btn--full   { width: 100%; }
-.add-pack-row    { display: flex; gap: 8px; margin-top: 8px; }
-.add-pack-row .add-btn { flex: 1; }
-
-/* Locked-In quick-add button (parallel to add-btn--morning) */
-.add-btn--lockedin {
-  background: linear-gradient(135deg, rgba(124,58,237,0.16), rgba(124,58,237,0.08));
-  color: #a78bfa;
-  border: 1px solid rgba(124,58,237,0.55);
-}
-.add-btn--lockedin:active { background: rgba(124,58,237,0.20); }
-.add-btn--lockedin .add-plus { color: #c4b5fd; }
-
 /* ── Library entry — Locked-In variant ── */
-.lib-pack-entry--lockedin {
-  border-color: rgba(124,58,237,0.40);
-  background: linear-gradient(135deg, rgba(124,58,237,0.10), rgba(124,58,237,0.04));
-}
-.lib-pack-entry--lockedin .lib-pack-emoji,
-.lib-pack-entry--lockedin .lib-pack-title { color: #a78bfa; }
-.lib-pack-entry--lockedin .lib-pack-bolt  { color: #c4b5fd; }
-.lib-pack-entry--lockedin .lib-pack-count { color: #a78bfa; }
-
 /* ── Confirmation modal — Locked-In variant ── */
 .mr-card--lockedin {
   border-color: rgba(124,58,237,0.45);
@@ -12783,19 +11228,6 @@ footer {
 }
 .cp-prog-row--lockedin .cp-prog-bolt        { color: #c4b5fd; }
 .cp-prog-row--lockedin .cp-prog-bolt:hover  { background: rgba(124,58,237,0.14); }
-
-/* Library-entry bolts also tappable */
-.lib-pack-bolt {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: background 0.18s ease, transform 0.1s ease;
-  display: inline-block;
-}
-.lib-pack-bolt:hover  { background: rgba(245,158,11,0.10); }
-.lib-pack-bolt:active { transform: scale(0.92); }
-.lib-pack-entry--lockedin .lib-pack-bolt:hover { background: rgba(124,58,237,0.14); }
 
 /* ═══════════════════════════════════════════════════════════════
    BONUS INFO POPUP — explains XP tier formula + pack ROI
@@ -12959,31 +11391,6 @@ footer {
 }
 .bi-done-btn:active { transform: scale(0.985); opacity: 0.94; }
 
-/* ═══════════════════════════════════════════════════════════════
-   PERSONAL RECORDS — Status tab strip
-   ═══════════════════════════════════════════════════════════════ */
-.pr-strip-wrap {
-  padding: 6px 18px 14px;
-}
-.pr-strip-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--text-tertiary);
-  margin-bottom: 8px;
-}
-.pr-strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.pr-strip::-webkit-scrollbar { display: none; }
-
-.pr-strip { gap: 6px; }
 .pr-tile {
   flex: 0 0 auto;
   width: 78px;
@@ -13016,10 +11423,6 @@ footer {
 }
 .pr-tile:hover  { border-color: var(--pr-accent, rgba(167,139,250,0.55)); }
 .pr-tile:active { transform: scale(0.97); }
-.pr-tile-icon {
-  font-size: 1.05rem;
-  line-height: 1;
-}
 .pr-tile-value {
   font-size: 1rem;
   font-weight: 800;
@@ -13338,26 +11741,6 @@ footer {
 }
 .pr-open-btn:hover  { border-color: rgba(245,158,11,0.55); background: rgba(245,158,11,0.10); }
 .pr-open-btn:active { transform: scale(0.99); }
-.pr-open-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
-.pr-open-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pr-open-title {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--gold);
-}
-.pr-open-sub {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.pr-open-chev {
-  font-size: 1.4rem;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-  line-height: 1;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    PERSONAL RECORDS — All-PRs grid bottom-sheet
    ═══════════════════════════════════════════════════════════════ */
@@ -13423,48 +11806,8 @@ footer {
   height: 3px;
   border-radius: 13px 13px 0 0;
 }
-.pr-tile.pr-tile--grid .pr-tile-icon  { font-size: 1.3rem; }
 .pr-tile.pr-tile--grid .pr-tile-value { font-size: 1.45rem; }
 .pr-tile.pr-tile--grid .pr-tile-label { font-size: 0.7rem; }
-
-/* ═══════════════════════════════════════════════════════════════
-   PERSONAL RECORDS — compact chip on the name row
-   ═══════════════════════════════════════════════════════════════ */
-.pr-open-chip {
-  /* v3 Phase 1q — secondary placement. Less gradient, smaller border, no
-     glow. The name + rank line up the visual hierarchy on the left; the
-     PR chip lives off to the right as an unobtrusive secondary affordance. */
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px 3px 6px;
-  background: rgba(255,255,255,0.03);
-  border: 0.5px solid rgba(255,255,255,0.10);
-  border-radius: 10px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  font-family: inherit;
-  -webkit-appearance: none;
-  flex-shrink: 0;
-  transition: border-color 0.18s ease, background 0.22s ease, transform 0.1s ease;
-  height: 22px;
-  line-height: 1;
-}
-.pr-open-chip:hover  { border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.06); }
-.pr-open-chip:active { transform: scale(0.95); }
-.pr-open-chip .pr-open-icon  {
-  font-size: 0.78rem;
-  line-height: 1;
-  opacity: 0.85;
-}
-.pr-open-chip .pr-open-label {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.10em;
-  color: var(--gold);
-  opacity: 0.85;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    STAT DETAIL — linked-habit row Add / Active controls
@@ -13510,23 +11853,6 @@ footer {
 /* When the row already has the habit, slightly fade the diff badge so
    the eye is drawn to the missing habits' Add buttons instead. */
 .sdh-row--have .diff-badge { opacity: 0.55; }
-
-/* ═══════════════════════════════════════════════════════════════
-   CIVILIAN — Status tab text
-   ═══════════════════════════════════════════════════════════════ */
-.sc-civilian-rule {
-  font-size: 0.65rem;
-  color: var(--text-tertiary);
-  font-style: italic;
-  margin-top: 4px;
-  letter-spacing: 0.02em;
-}
-.sc-civilian-hint {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-.sc-civilian-hint b { color: var(--accent); font-weight: 700; }
 
 /* ═══════════════════════════════════════════════════════════════
    AWAKENING — full-screen takeover (first class assignment)
@@ -13732,19 +12058,6 @@ footer {
 @keyframes cc-bg-in  { from { opacity: 0 } to { opacity: 1 } }
 @keyframes cc-cnt-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes cc-out    { to { opacity: 0 } }
-
-/* ═══════════════════════════════════════════════════════════════
-   DAILY LEGENDARY MISSION — card on Habits tab
-   ═══════════════════════════════════════════════════════════════ */
-.daily-mission-card {
-  margin: 8px 14px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 12px;
-  position: relative;
-  overflow: hidden;
-}
-.daily-mission-card.hidden { display: none !important; }
 
 /* ═══════════════════════════════════════════════════════════════
    DUNGEON BOSSES — list of bosses in #quests-panel + full-screen
@@ -14417,346 +12730,9 @@ footer {
 
 
 
-/* Compact toggle row — visual density matches the pack progress rows */
-.dmc-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05));
-  border: 1px solid rgba(245,158,11,0.45);
-  border-radius: 10px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  font-family: inherit;
-  -webkit-appearance: none;
-  text-align: left;
-  transition: background 0.18s ease, border-color 0.18s ease;
-}
-.dmc-toggle:hover  { background: linear-gradient(135deg, rgba(245,158,11,0.16), rgba(245,158,11,0.08)); border-color: rgba(245,158,11,0.65); }
-.dmc-toggle:active { transform: scale(0.99); }
-.dmc--complete .dmc-toggle {
-  background: linear-gradient(135deg, rgba(34,197,94,0.14), rgba(34,197,94,0.05));
-  border-color: rgba(34,197,94,0.55);
-}
-.dmc-toggle-eyebrow {
-  font-size: 0.6rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  color: var(--gold);
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-.dmc--complete .dmc-toggle-eyebrow { color: #22c55e; }
-.dmc-toggle-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dmc-toggle .dmc-tag { font-size: 0.78rem; flex-shrink: 0; line-height: 1; }
-.dmc-toggle-progress {
-  flex-shrink: 0;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.dmc--complete .dmc-toggle-progress { color: #22c55e; }
-.dmc-toggle-xp {
-  flex-shrink: 0;
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--gold);
-  padding: 2px 6px;
-  background: rgba(245,158,11,0.16);
-  border: 1px solid rgba(245,158,11,0.40);
-  border-radius: 100px;
-}
-.dmc-toggle-chev {
-  flex-shrink: 0;
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
-  width: 14px;
-  text-align: center;
-}
-
-/* Expanded body */
-.dmc-body {
-  margin-top: 8px;
-  padding: 12px 12px 10px;
-  background: linear-gradient(155deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.03) 60%, transparent 100%);
-  border: 1px solid rgba(245,158,11,0.30);
-  border-radius: 12px;
-  animation: dmc-expand 0.22s ease-out;
-}
-@keyframes dmc-expand {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0);    }
-}
-
-.dmc-difficulty {
-  margin-left: 10px;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  padding: 2px 7px;
-  background: rgba(245,158,11,0.18);
-  border: 1px solid rgba(245,158,11,0.55);
-  color: var(--gold);
-  border-radius: 6px;
-  vertical-align: middle;
-}
-.dmc-bonus {
-  font-size: 1.05rem;
-  font-weight: 900;
-  color: var(--gold);
-  line-height: 1;
-  margin-bottom: 8px;
-  letter-spacing: 0.02em;
-  display: flex;
-  align-items: center;
-}
-.dmc-2x {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
-  background: rgba(245,158,11,0.18);
-  border: 1px solid rgba(245,158,11,0.45);
-  border-radius: 100px;
-  vertical-align: middle;
-  margin-left: 6px;
-}
-.dmc-desc {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-style: italic;
-  line-height: 1.45;
-  margin-bottom: 10px;
-}
-.dmc-components {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.dmc-comp {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  transition: background 0.18s ease, border-color 0.18s ease;
-}
-.dmc-comp--tappable {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.dmc-comp--tappable:hover { background: rgba(255,255,255,0.07); }
-.dmc-comp--done {
-  background: rgba(34,197,94,0.10);
-  border-color: rgba(34,197,94,0.30);
-}
-.dmc-comp-check {
-  flex-shrink: 0;
-  width: 22px; height: 22px;
-  border-radius: 6px;
-  border: 1.5px solid rgba(255,255,255,0.20);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 900;
-  color: transparent;
-}
-.dmc-comp--done .dmc-comp-check {
-  background: #22c55e;
-  border-color: #22c55e;
-  color: #0a0a0a;
-}
-.dmc-comp-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 0.88rem;
-  color: var(--text-primary);
-  line-height: 1.4;
-}
-.dmc-comp-sub {
-  font-size: 0.66rem;
-  color: var(--text-tertiary);
-  letter-spacing: 0.02em;
-}
-.dmc-comp-sub b { color: var(--accent); font-weight: 700; }
-
-/* ═══════════════════════════════════════════════════════════════
-   MISSION COMPLETE — full-screen celebration takeover
-   ═══════════════════════════════════════════════════════════════ */
-.mission-complete-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 520;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.mission-complete-screen.hidden { display: none !important; }
-.mc-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 38%,
-      rgba(245,158,11,0.40) 0%,
-      rgba(0,0,0,0.94) 55%,
-      #000 100%);
-  opacity: 0;
-}
-.mc-content {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 32px;
-  opacity: 0;
-}
-.mc-eyebrow {
-  font-size: 0.85rem;
-  font-weight: 900;
-  letter-spacing: 0.32em;
-  color: var(--gold);
-  text-transform: uppercase;
-  margin-bottom: 22px;
-  text-shadow: 0 0 24px rgba(245,158,11,0.65);
-}
-.mc-name {
-  font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: #fff;
-  margin-bottom: 18px;
-  text-shadow: 0 0 32px rgba(245,158,11,0.55);
-  text-transform: uppercase;
-  line-height: 1.1;
-}
-.mc-xp {
-  font-size: 2.6rem;
-  font-weight: 900;
-  color: var(--gold);
-  margin-bottom: 22px;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 24px rgba(245,158,11,0.6);
-}
-.mc-quote {
-  font-size: 1rem;
-  color: rgba(255,255,255,0.85);
-  font-style: italic;
-  max-width: 360px;
-  line-height: 1.5;
-}
-.mc-hint {
-  position: absolute;
-  bottom: calc(36px + var(--safe-bottom));
-  font-size: 0.7rem;
-  color: rgba(255,255,255,0.5);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-.mc-show .mc-bg      { animation: mc-bg-in 0.50s ease-out forwards; }
-.mc-show .mc-content { animation: mc-cnt-in 0.65s 0.18s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-.mc-hide .mc-bg,
-.mc-hide .mc-content { animation: mc-out 0.30s ease-in forwards; }
-@keyframes mc-bg-in  { from { opacity: 0 } to { opacity: 1 } }
-@keyframes mc-cnt-in { from { opacity: 0; transform: translateY(14px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes mc-out    { to { opacity: 0 } }
-
 /* ═══════════════════════════════════════════════════════════════
    ACHIEVEMENTS — categorized layout + progress bars
    ═══════════════════════════════════════════════════════════════ */
-
-/* Top summary block */
-.ach-top {
-  margin-bottom: 14px;
-  padding: 14px;
-  background: linear-gradient(160deg, rgba(245,158,11,0.10), rgba(139,92,246,0.06));
-  border: 1px solid rgba(245,158,11,0.30);
-  border-radius: 14px;
-}
-.ach-top-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.ach-top-num {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-.ach-top-label {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-}
-.ach-cat-breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.ach-cat-pill {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 4px 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 100px;
-  color: var(--text-secondary);
-}
-.ach-cat-pill b {
-  color: var(--text-primary);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Section blocks */
-.ach-section {
-  margin-bottom: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.ach-section-label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  padding: 6px 4px 4px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.ach-section-count {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  letter-spacing: 0;
-  font-variant-numeric: tabular-nums;
-}
 
 /* Card layout — same shape as before with progress block added */
 .ach-card .ach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -15424,21 +13400,6 @@ footer {
 }
 .origin-ch2-teaser.hidden { display: none !important; }
 
-/* Status tab origin button — chapter counter pill */
-.sc-origin-chapters {
-  margin-left: 6px;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  padding: 1px 6px;
-  background: rgba(245, 158, 11, 0.20);
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  border-radius: 100px;
-  color: var(--gold);
-  text-transform: uppercase;
-  vertical-align: middle;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    BOSS FULL-SCREEN DETAIL MODAL
    Replaces the v1.1.7 bottom-sheet. Opens from any .bcard tap. Lives
@@ -15851,15 +13812,6 @@ body.bfs-locked { overflow: hidden; }
   text-transform: uppercase;
   cursor: default;
   user-select: none;
-}
-
-/* DROPS section — placeholder until drops system ships. */
-.bfs-section--placeholder { opacity: 0.7; }
-.bfs-section-placeholder-note {
-  margin: 0;
-  font-size: 0.85rem;
-  font-style: italic;
-  color: var(--text-tertiary);
 }
 
 /* v3 Phase 1h — RELIC MERCY readout inside the boss-fs modal */
@@ -16307,13 +14259,6 @@ body.bfs-locked { overflow: hidden; }
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.50);
   transition: width 0.4s ease;
 }
-.pokedex-subtext {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-tertiary);
-  font-style: italic;
-}
-
 .pokedex-sections {
   display: flex;
   flex-direction: column;
@@ -16636,20 +14581,6 @@ body.bfs-locked { overflow: hidden; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.pokedex-card-stack {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--gold);
-  background: rgba(0, 0, 0, 0.72);
-  padding: 2px 5px;
-  border-radius: 4px;
-  border: 1px solid rgba(245, 158, 11, 0.40);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Rarity tints — applied to the discovered card's art background and
    the section pip colors. Subtle so the card art (when it lands)
    can carry the visual weight. */
@@ -16679,22 +14610,6 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-tertiary);
   font-family: 'Cinzel', serif;
 }
-.pokedex-card-name--mystery {
-  color: var(--text-tertiary);
-  letter-spacing: 0.12em;
-  font-weight: 800;
-  /* Empty for undiscovered cards (the literal "???" text was removed
-     so the "?" inside the silhouette art carries the placeholder
-     signal alone). Reserve the same vertical space a 2-line
-     discovered name would occupy so mixed-state grid rows stay
-     height-aligned. 0.7rem font * 1.2 line-height * 2 lines = 1.68rem.
-     display:block overrides the inherited -webkit-box from
-     .pokedex-card-name — empty -webkit-box doesn't reliably honor
-     min-height when combined with -webkit-line-clamp. */
-  display: block;
-  min-height: 1.68rem;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    v3 Phase 1g — Relic Archive polish (Items tab).
    Adds equipment-slot identity + equipped state + drop source to
@@ -17834,78 +15749,6 @@ body.reveal-locked { overflow: hidden; }
   letter-spacing: 0.03em;
 }
 
-/* Full-width action buttons (Sign out + Delete) — matches the
-   visual weight of Check for Updates / What's New buttons elsewhere
-   in Settings. Two variants: secondary (sign out) + danger (delete). */
-.account-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  height: 46px;
-  padding: 0 16px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
-}
-.account-action-btn:active { transform: scale(0.985); }
-.account-action-icon {
-  font-size: 1.05rem;
-  line-height: 1;
-}
-.account-action-label {
-  line-height: 1;
-}
-
-/* Secondary: muted/outlined — Sign out is not a primary action. */
-.account-action-btn--secondary {
-  color: var(--text-secondary);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-.account-action-btn--secondary:hover {
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* Danger: red border + red text. Visually distinct from primary
-   actions. Pairs with the divider above + subtitle below. */
-.account-action-btn--danger {
-  color: #fca5a5;
-  border-color: rgba(220, 38, 38, 0.40);
-  background: rgba(220, 38, 38, 0.04);
-}
-.account-action-btn--danger:hover {
-  color: #fecaca;
-  border-color: rgba(220, 38, 38, 0.60);
-  background: rgba(220, 38, 38, 0.08);
-}
-
-/* Physical separation between Sign-out (safe) and Delete (destructive).
-   Prevents fat-finger taps after the user has just signed out. */
-.account-section-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 18px 0 14px;
-}
-
-.account-action-subtitle {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  text-align: center;
-  letter-spacing: 0.02em;
-  margin-top: 8px;
-  font-style: italic;
-}
-
 /* ───────────────────────────────────────────────────────────────
    Delete-account confirmation modal (v2.1.0 Phase E partial)
    Type-DELETE-to-confirm pattern. Two-button choice with the
@@ -18164,12 +16007,6 @@ body.reveal-locked { overflow: hidden; }
   pointer-events: none;
 }
 
-/* Hide the old shipped containers — they're absent from the new
-   markup but the selector survives in case downstream code or
-   migrations leave a stale .rank-section in the DOM. Defensive. */
-.rank-section,
-.progress-section { display: none; }
-
 /* ─── 3-card metric strip ─────────────────────────────────── */
 .metric-strip {
   display: grid;
@@ -18326,12 +16163,6 @@ body.reveal-locked { overflow: hidden; }
   letter-spacing: 0.04em;
 }
 .metric-card .rank-next.maxed { color: var(--gold-bright, var(--gold)); }
-.metric-spark {
-  width: 100%;
-  height: 22px;
-  display: block;
-}
-
 /* ─── Today-strip (habits count + streak + souls) ───────────── */
 .today-strip {
   display: flex;
@@ -18505,13 +16336,6 @@ body.reveal-locked { overflow: hidden; }
   text-transform: uppercase;
   font-weight: 600;
 }
-.status-pill-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
 /* Hunting pill icon image — circular crop on the boss portrait so it
    reads as a compact avatar at pill size. Idle state uses the dungeon
    tab icon (square, no circular crop). */
@@ -18523,28 +16347,8 @@ body.reveal-locked { overflow: hidden; }
   display: inline-block;
   vertical-align: middle;
 }
-.status-pill--idle .status-pill-img {
-  border-radius: 0;            /* dungeon tab icon already has its own shape */
-  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.45));
-}
-/* Numeric value inside streak / hunting pills */
-.status-pill-num {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.02em;
-  margin-left: 2px;
-}
 .status-pill--active {
   border-color: rgba(245, 158, 11, 0.45);
-}
-.status-pill--active .status-pill-dot {
-  background: var(--gold-bright, var(--gold));
-  box-shadow: 0 0 6px var(--gold-bright, var(--gold));
-}
-.status-pill--active .status-pill-num {
-  color: var(--gold-bright, var(--gold));
 }
 /* Hunting view — boss pill is purple-accented; idle = no engaged bosses */
 .status-pill--boss {
@@ -18559,78 +16363,13 @@ body.reveal-locked { overflow: hidden; }
   outline: 1px solid var(--gold);
   outline-offset: 2px;
 }
-.status-pill--idle {
-  border-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
-}
 /* v3 Phase 1z.279 — .status-pill--duel header pill (v3 Phase 1x.5)
    removed along with the Duels subsystem. */
-
-/* v3 Phase 1z.7 — Boss-defeat result pill. Gold, pulse dot top-right,
-   tappable. Re-opens #boss-result-overlay populated from
-   hb_boss_result_pending. Cleared when the user closes the overlay,
-   OR after 24h auto-acknowledge. */
-.status-pill--result {
-  position: relative;
-  border-color: rgba(245, 184, 66, 0.65);
-  background: linear-gradient(90deg, rgba(245, 184, 66, 0.22), rgba(245, 184, 66, 0.06));
-  color: var(--gold, #f5b842);
-  cursor: pointer;
-  padding-right: 12px;
-  box-shadow: 0 0 10px rgba(245, 184, 66, 0.32);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-.status-pill--result:hover { filter: brightness(1.08); }
-.status-pill--result:focus-visible {
-  outline: 1px solid var(--gold, #f5b842);
-  outline-offset: 2px;
-}
-.status-pill-result-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #f5b842, #c08418);
-  color: #1a1232;
-  font-weight: 800;
-  font-size: 11px;
-  flex: 0 0 auto;
-  box-shadow: 0 0 6px rgba(245,184,66,0.45), inset 0 0 0 1px rgba(255,255,255,0.18);
-}
-.status-pill-result-dot {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--gold, #f5b842);
-  box-shadow: 0 0 6px var(--gold, #f5b842);
-  border: 1.5px solid #0f0f24;
-  animation: bro-result-dot-pulse 1.6s ease-in-out infinite;
-}
-@keyframes bro-result-dot-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.55; transform: scale(1.35); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .status-pill-result-dot { animation: none; }
-}
 
 /* Status pill list — smooth opacity transition for the rotating ticker */
 .status-pill-row-list {
   transition: opacity 350ms ease;
 }
-.status-pill--str   .status-pill-dot { background: #ef4444; }
-.status-pill--vit   .status-pill-dot { background: #22c55e; }
-.status-pill--int   .status-pill-dot { background: #3b82f6; }
-.status-pill--focus .status-pill-dot { background: #eab308; }
-.status-pill--will  .status-pill-dot { background: #f97316; }
-.status-pill--wlt   .status-pill-dot { background: var(--gold); }
-
 /* ─── XP·30D card tap affordance ──────────────────────────── */
 .metric-card--spark {
   cursor: pointer;
@@ -19147,32 +16886,6 @@ body.reveal-locked { overflow: hidden; }
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
-/* Legacy .hunter-build-slot-name kept as alias for any cached JS
-   that hasn't picked up the new class name. */
-.hunter-build-slot-name {
-  position: absolute;
-  bottom: 0;
-  left: 0; right: 0;
-  z-index: 3;
-  padding: 18px 6px 6px;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    rgba(0, 0, 0, 0.78) 100%);
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.55rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: #ffffff;
-  text-transform: uppercase;
-  text-align: center;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  pointer-events: none;
-}
-
 /* Rarity outlines — applied via build-rarity--{c,r,u} class */
 .build-rarity--c { border-color: rgba(156, 163, 175, 0.55); }
 .build-rarity--r { border-color: rgba(96, 165, 250, 0.70);
@@ -21908,33 +19621,6 @@ body.reveal-locked { overflow: hidden; }
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   v3 Phase 1w — Cloud Backup section in Settings → Account
-   ═══════════════════════════════════════════════════════════════ */
-.account-cloud-section {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.account-cloud-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--gold);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.account-cloud-status {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  line-height: 1.4;
-  margin-bottom: 6px;
-}
-.account-cloud-status b { color: var(--text-secondary); font-weight: 600; }
-
 /* ──────────────────────────────────────────────────────────────────
    Social tab — Friends section (v3 Phase 1x, retitled by 1z.279
    Duels permanent retirement).
@@ -22685,8 +20371,6 @@ body.bro-locked { overflow: hidden; }
   margin: 0 6px;
   font-weight: 600;
 }
-.sc-card--profile .sc-identity-pts { color: var(--text-primary); }
-
 /* The class segment of the strip carries the existing .sc-hero-class
    class + data-class-key so the delegated class-detail click handler
    still fires. Reset the legacy .sc-hero-class block layout for inline
@@ -22724,39 +20408,6 @@ body.bro-locked { overflow: hidden; }
 .sc-card--profile .sc-origin-row {
   padding: 0 16px 14px;
 }
-.sc-card--profile .sc-origin-btn.sc-origin-btn--gold {
-  /* Override the legacy compact .sc-origin-btn appearance with the
-     full-width gold variant. Element still carries id="sc-origin-btn"
-     so its existing click handler fires unchanged. */
-  width: 100%;
-  margin: 0;
-  padding: 10px 14px;
-  background: linear-gradient(180deg, rgba(245,184,66,0.18), rgba(245,184,66,0.04));
-  border: 1px solid rgba(245,184,66,0.35);
-  border-radius: 12px;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #f5b842;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  box-shadow:
-    0 0 14px rgba(245,184,66,0.32),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-  transition: transform 0.12s ease, box-shadow 0.18s ease;
-}
-.sc-card--profile .sc-origin-btn.sc-origin-btn--gold:hover {
-  box-shadow:
-    0 0 20px rgba(245,184,66,0.42),
-    inset 0 1px 0 rgba(255,255,255,0.07);
-}
-.sc-card--profile .sc-origin-btn.sc-origin-btn--gold:active { transform: scale(0.98); }
-.sc-card--profile .sc-origin-btn__glyph { font-size: 14px; line-height: 1; }
-.sc-card--profile .sc-origin-btn__label { line-height: 1; }
 /* ── W255 — Arena entry "Banner portal" (ClaudeDesign direction A) ──────────
    72px cinematic strip: painted summit crop (bg_s) → looming foe silhouette
    (right edge) → readability scrim → 7s gold light-sweep idle. One tap target;
@@ -22794,24 +20445,6 @@ body.bro-locked { overflow: hidden; }
 .scab-whisper { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14px; color: #9090a8;
   white-space: nowrap; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
 .scab-chev { flex: none; }
-.sc-card--profile .sc-origin-btn--gold .sc-origin-chapters {
-  font-size: 10px;
-  letter-spacing: 0.8px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(245,184,66,0.15);
-  border: 1px solid rgba(245,184,66,0.35);
-  color: #f5b842;
-  font-weight: 700;
-}
-.sc-card--profile .sc-origin-btn__chev {
-  margin-left: 2px;
-  font-size: 16px;
-  line-height: 1;
-  font-weight: 700;
-  opacity: 0.8;
-}
-
 /* Portrait frame — bounded zone, hex backdrop, gold corner brackets */
 .sc-card--profile .sc-portrait-frame {
   position: relative;
@@ -22960,8 +20593,6 @@ body.bro-locked { overflow: hidden; }
    sits well above the comfortable-tap threshold for a labeled
    inline CTA on a scroll surface. */
 .sc-card.sc-card--profile .sc-origin-row                                { padding: 0 16px 12px; }
-.sc-card.sc-card--profile .sc-origin-btn.sc-origin-btn--gold            { padding: 10px 14px; }
-
 /* 6. Portrait frame — restored as the centerpiece. min-height
    bumped 178→204 (still 16px shorter than the 1z.12 original 220).
    Avatar grows back to 128px (down only 2 from the 1z.12 original
@@ -23092,22 +20723,6 @@ body.bro-locked { overflow: hidden; }
   letter-spacing: 0.02em;
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.32);
 }
-.steps-card__pct {
-  margin-left: auto;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(167, 139, 250, 0.14);
-  border: 1px solid rgba(167, 139, 250, 0.40);
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 8.5px;
-  font-weight: 800;
-  color: #a78bfa;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  align-self: center;
-}
-.steps-card__pct.hidden { display: none; }
-
 .steps-card__totalrow {
   display: flex;
   align-items: center;
@@ -23125,17 +20740,6 @@ body.bro-locked { overflow: hidden; }
   letter-spacing: 0;
   margin-right: 2px;
 }
-.steps-card__delta {
-  margin-left: 6px;
-  color: #7dd07d;
-  font-weight: 800;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 9.5px;
-  letter-spacing: 0.04em;
-}
-.steps-card__delta.is-down { color: #ef4444; }
-.steps-card__delta.hidden  { display: none; }
-
 /* Loading state -- pulsing dot + Syncing... */
 .steps-card.is-loading .steps-card__label-text { color: var(--text-secondary); }
 .steps-card.is-loading .steps-card__label .steps-card__icon path { stroke: var(--text-secondary); }
@@ -23203,8 +20807,7 @@ body.bro-locked { overflow: hidden; }
    keep the rank."). The chip is hidden in v1 already; this rule
    stays for future activation when backend exposes total-users. */
 @media (max-width: 360px) {
-  .metric-card.steps-card .steps-card__pct  { display: none; }
-  .metric-card.steps-card .steps-card__rank { font-size: 20px; }
+    .metric-card.steps-card .steps-card__rank { font-size: 20px; }
 }
 
 /* ===========================================================
@@ -24541,39 +22144,6 @@ body.habit-drag-active * {
    --bg-card, --border, --text-*).
    ───────────────────────────────────────────────────────────── */
 
-/* Hub header — kicker mono gold, Cinzel title with gold glow,
-   muted subtitle. Mirrors HubHeader() in social-hub.jsx. */
-.guildhall-page-header {
-  padding: 14px 18px 10px;
-  text-align: left;
-}
-.guildhall-kicker {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--gold);
-  text-transform: uppercase;
-}
-.guildhall-page-title {
-  margin: 4px 0 0;
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  font-size: 1.45rem;
-  letter-spacing: 0.05em;
-  color: var(--gold);
-  text-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
-  line-height: 1;
-}
-.guildhall-page-sub {
-  margin: 6px 0 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  max-width: 28em;
-}
-
 /* v3 Phase 1z.173 — Guild Hall Command Panel (Variation B from
    ClaudeDesign Social Tab Polish). Wraps the page header, friend
    avatar stack, and three summary tiles into a single gold→violet
@@ -24590,48 +22160,6 @@ body.habit-drag-active * {
   border-radius: 16px;
   box-shadow: 0 0 18px rgba(167,139,250,0.20);
 }
-.guildhall-command-panel-inner {
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(245,184,66,0.12), transparent 55%),
-    linear-gradient(180deg, rgba(16,18,38,0.95), rgba(16,18,38,0.85));
-  border-radius: 15px;
-  padding: 14px 14px 12px;
-}
-.guildhall-command-panel-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-/* In Command Panel mode the page-header internal margins relax so
-   the kicker + title align flush with the panel's top-left edge.
-   The standalone page-header layout (pre-1z.173) is no longer used
-   on the Social tab — the rules below scope to the new wrapper. */
-.guildhall-command-panel .guildhall-page-header {
-  margin: 0;
-  padding: 0;
-}
-.guildhall-command-panel .guildhall-page-sub {
-  margin: 6px 0 0;
-  font-size: 0.78rem;
-  color: var(--text-secondary, #b1b4cf);
-  line-height: 1.45;
-}
-.guildhall-command-panel-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
-  margin-top: 12px;
-}
-/* Hero-mode chips: align to the top-right of the panel header.
-   Stack rules already defined below (margin-left negative) carry
-   forward — only positioning/sizing differs. */
-.guildhall-summary-chips--hero {
-  flex: 0 0 auto;
-  margin-left: 0;
-  align-self: flex-start;
-}
-
 /* v3 Phase 1z.173 — Per-tile accent colors per ClaudeDesign spec.
    Each tile gets a 2px gradient line on its top edge in the tile's
    color, and the Cinzel value picks up the same color with a soft
@@ -24641,41 +22169,6 @@ body.habit-drag-active * {
 .guildhall-summary-tile {
   position: relative;
   overflow: hidden;
-}
-.guildhall-summary-tile-accent {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  pointer-events: none;
-  opacity: 0.7;
-}
-.guildhall-summary-tile--hunters .guildhall-summary-tile-accent {
-  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.95), transparent);
-}
-.guildhall-summary-tile--feats .guildhall-summary-tile-accent {
-  background: linear-gradient(90deg, transparent, rgba(245,184,66,0.95), transparent);
-}
-.guildhall-summary-tile--bosses .guildhall-summary-tile-accent {
-  background: linear-gradient(90deg, transparent, rgba(239,68,68,0.95), transparent);
-}
-/* Color-coded value (grows in the hero card; same Cinzel face). */
-.guildhall-command-panel-tiles .guildhall-summary-tile {
-  padding: 10px 11px 11px;
-}
-.guildhall-command-panel-tiles .guildhall-summary-tile-value {
-  font-size: 1.40rem;
-}
-.guildhall-summary-tile--hunters .guildhall-summary-tile-value {
-  color: rgba(167,139,250,1);
-  text-shadow: 0 0 10px rgba(167,139,250,0.40);
-}
-.guildhall-summary-tile--feats .guildhall-summary-tile-value {
-  color: var(--gold, #f5b842);
-  text-shadow: 0 0 10px rgba(245,184,66,0.40);
-}
-.guildhall-summary-tile--bosses .guildhall-summary-tile-value {
-  color: #ef4444;
-  text-shadow: 0 0 10px rgba(239,68,68,0.40);
 }
 /* Empty-state muting — overrides all three color rules above. */
 .guildhall-summary-tile-value.is-empty {
@@ -24700,13 +22193,6 @@ body.habit-drag-active * {
   align-items: center;
   gap: 12px;
 }
-.guildhall-summary-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
 .guildhall-summary-tile {
   display: flex;
   flex-direction: column;
@@ -24717,16 +22203,6 @@ body.habit-drag-active * {
   border: 1px solid rgba(167,139,250,0.18);
   border-radius: 10px;
   min-width: 0;
-}
-.guildhall-summary-tile-label {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.10em;
-  color: var(--text-secondary, #8b8fab);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .guildhall-summary-tile-value {
   font-family: 'Cinzel', serif;
@@ -24891,13 +22367,6 @@ button.guildhall-summary-tile:active {
 }
 .guild-roster-row--self .guild-roster-alias {
   color: var(--gold, #f5b842);
-}
-.guild-roster-sub {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.55rem;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary, #6b7280);
-  text-transform: uppercase;
 }
 .guild-roster-stat {
   text-align: right;
@@ -25136,13 +22605,6 @@ button.guildhall-summary-tile:active {
   --rank-soft:  rgba(245,184,66,0.14);
 }
 .guild-bosses-row:last-child { border-bottom: 0; }
-.guild-bosses-row--rank-e { --rank-color: #a78bfa; --rank-glow: rgba(167,139,250,0.50); --rank-soft: rgba(167,139,250,0.16); }
-.guild-bosses-row--rank-d { --rank-color: #f5b842; --rank-glow: rgba(245,184,66,0.50); --rank-soft: rgba(245,184,66,0.14); }
-.guild-bosses-row--rank-c { --rank-color: #f97316; --rank-glow: rgba(249,115,22,0.50); --rank-soft: rgba(249,115,22,0.14); }
-.guild-bosses-row--rank-b { --rank-color: #3b82f6; --rank-glow: rgba(59,130,246,0.50); --rank-soft: rgba(59,130,246,0.14); }
-.guild-bosses-row--rank-a { --rank-color: #ec4899; --rank-glow: rgba(236,72,153,0.50); --rank-soft: rgba(236,72,153,0.14); }
-.guild-bosses-row--rank-s { --rank-color: #ef4444; --rank-glow: rgba(239,68,68,0.55); --rank-soft: rgba(239,68,68,0.16); }
-
 /* Fantasy shield crest — SVG path painted entirely in --rank-color. */
 .guild-bosses-crest {
   position: relative;
@@ -25180,12 +22642,6 @@ button.guildhall-summary-tile:active {
   pointer-events: none;
 }
 
-.guild-bosses-name {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
 .guild-bosses-title {
   font-family: 'Cinzel', serif;
   font-weight: 600;
@@ -25197,16 +22653,6 @@ button.guildhall-summary-tile:active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.guild-bosses-sub {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.54rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--rank-color);
-  opacity: 0.85;
-  text-transform: uppercase;
-}
-
 /* Gold kill capsule — crossed-swords glyph + Cinzel number + mono SLAIN. */
 .guild-bosses-capsule {
   display: inline-flex;
@@ -25303,14 +22749,6 @@ button.guildhall-summary-tile:active {
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 0 8px rgba(167, 139, 250, 0.30);
 }
-.guildhall-section-kicker {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--accent, #8b5cf6);
-  text-transform: uppercase;
-}
 .guildhall-section-title {
   margin-top: 2px;
   font-family: 'Cinzel', serif;
@@ -25329,15 +22767,6 @@ button.guildhall-summary-tile:active {
   color: var(--text-tertiary);
   letter-spacing: 0.06em;
 }
-.guildhall-section-meta {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.58rem;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  letter-spacing: 0.18em;
-  align-self: flex-end;
-}
-
 /* Activity card — list of recent feats rendered by
    renderGuildActivity() in app.js. */
 .guildhall-activity-body {
@@ -25737,56 +23166,6 @@ button.guildhall-summary-tile:active {
   color: var(--text-secondary);
 }
 
-/* Arena Sealed panel — purple dashed border, glyph, title, SEALED
-   pill. Always-on Phase 1 placeholder. */
-.guildhall-arena-sealed {
-  margin: 0 14px 20px;
-  padding: 14px 14px;
-  background: linear-gradient(180deg, rgba(139,92,246,0.06), rgba(139,92,246,0.01));
-  border: 1px dashed rgba(139, 92, 246, 0.45);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.guildhall-arena-glyph {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: radial-gradient(circle at 50% 30%, rgba(139,92,246,0.30), #0a0a18);
-  border: 1px solid var(--accent, #8b5cf6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--accent, #8b5cf6);
-}
-.guildhall-arena-text {
-  flex: 1;
-  min-width: 0;
-}
-.guildhall-arena-title {
-  font-family: 'Cinzel', serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--accent, #8b5cf6);
-  letter-spacing: 0.04em;
-}
-.guildhall-arena-sub {
-  margin-top: 2px;
-  font-size: 0.7rem;
-  color: var(--text-tertiary);
-  line-height: 1.4;
-}
-.guildhall-arena-pill {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.58rem;
-  font-weight: 800;
-  color: var(--accent, #8b5cf6);
-  letter-spacing: 0.18em;
-  flex-shrink: 0;
-}
-
 /* v3 Phase 1z.279 — Legacy flag-driven duel hides removed
    (body.duels-public-hidden / body.duels-challenge-hidden /
    body.social-hub-on .duels-page-header). The underlying DOM
@@ -25974,36 +23353,6 @@ button.guildhall-summary-tile:active {
    heading, Friends accordion (collapsed-by-default), and Add
    Friend row reordered BELOW the friend list. */
 
-/* Tighter inline header inside the Command Panel: kicker and
-   title now share one row, so the panel reads as a single tight
-   strip instead of a 3-line stacked block. The subtitle <p> is
-   removed from the DOM in 1z.174 — no CSS needed for that. */
-.guildhall-page-header--inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-}
-.guildhall-page-header--inline .guildhall-kicker {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--gold, #f5b842);
-  text-shadow: 0 0 8px rgba(245, 184, 66, 0.40);
-}
-.guildhall-page-title-inline {
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  font-size: 1.20rem;
-  letter-spacing: 0.14em;
-  color: var(--gold, #f5b842);
-  text-shadow: 0 0 12px rgba(245, 184, 66, 0.45);
-  line-height: 1;
-}
-
 /* Stronger Command Panel rim — bumps the gradient opacity to
    ~95% so the gold/violet border reads clearly on iPhone. Plus
    a small extra top-edge gold glow for depth. */
@@ -26016,45 +23365,6 @@ button.guildhall-summary-tile:active {
     0 0 24px rgba(167, 139, 250, 0.28),
     0 0 12px rgba(245, 184, 66, 0.18);
 }
-.guildhall-command-panel-inner {
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(245,184,66,0.22), transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(167,139,250,0.10), transparent 60%),
-    linear-gradient(180deg, rgba(16,18,38,0.96), rgba(16,18,38,0.92));
-  padding: 16px 14px 14px;
-}
-
-/* Stronger tile presence — taller, clearer borders, bolder accent
-   line, brighter value color glow. Per-tile color rules from
-   1z.173 still apply on top. */
-.guildhall-command-panel-tiles .guildhall-summary-tile {
-  padding: 12px 12px 13px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-  transition: transform 80ms ease, border-color 80ms ease, background 80ms ease;
-}
-.guildhall-command-panel-tiles .guildhall-summary-tile:active {
-  transform: scale(0.98);
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-}
-.guildhall-summary-tile-accent {
-  height: 2.5px;
-  opacity: 0.85;
-}
-.guildhall-command-panel-tiles .guildhall-summary-tile-value {
-  font-size: 1.55rem;
-  margin-top: 6px;
-}
-/* Replace harsh pure red for BOSSES SLAIN with ember/orange-red
-   that reads as "epic kill count" rather than "error". */
-.guildhall-summary-tile--bosses .guildhall-summary-tile-accent {
-  background: linear-gradient(90deg, transparent, rgba(255, 122, 70, 0.95), transparent);
-}
-.guildhall-summary-tile--bosses .guildhall-summary-tile-value {
-  color: #ff7a46;
-  text-shadow: 0 0 12px rgba(255, 122, 70, 0.45);
-}
-
 /* Solo big activity heading — replaces the kicker+subtitle combo
    from 1z.173. Cinzel-styled gold so the section reads as
    prominent without the second line. */
@@ -26267,7 +23577,6 @@ button.guildhall-summary-tile:active {
   color: #f4f3fb;
   font-weight: 500;
 }
-.settings-v2 .settings-v2-fname--dim { color: #9aa0bd; }
 .settings-v2 .settings-v2-fsub { font-size: 12px; color: #9aa0bd; margin-top: 2px; }
 .settings-v2 .settings-v2-fcol { display: flex; flex-direction: column; }
 .settings-v2 .settings-v2-fright {
@@ -26504,26 +23813,6 @@ button.guildhall-summary-tile:active {
   font-family: inherit;
   appearance: none;
   -webkit-appearance: none;
-}
-
-/* What's Coming small link */
-.settings-v2 .settings-v2-whatscoming {
-  display: block;
-  width: 100%;
-  text-align: center;
-  margin-top: 20px;
-  padding: 8px 0;
-  font-size: 12.5px;
-  color: #9aa0bd;
-  font-weight: 500;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-}
-.settings-v2 .settings-v2-whatscoming b {
-  color: #f5b842;
-  font-weight: 600;
 }
 
 /* Version footer (5-tap debug unlock target) */
@@ -27539,19 +24828,6 @@ button.guildhall-summary-tile:active {
     box-shadow: 0 0 80px 24px rgba(245,184,66,0.4) !important;
     opacity: .6 !important;
   }
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   v3 Phase 1z.238 — Inline Morning-Briefing time input on the
-   notification explainer. Replaces the static `AT WAKE` chip with a
-   gold-tinted time picker the user can scrub before tapping Continue.
-   ═══════════════════════════════════════════════════════════════════ */
-
-.notif-type-time-edit {
-  display: inline-flex;
-  align-items: center;
-  margin-left: auto;
-  padding: 0;
 }
 
 .notif-type-time-input,
@@ -29280,16 +26556,6 @@ button.guildhall-summary-tile:active {
     transparent 7px
   );
 }
-.fa-coach-sheet > .fa-coach-corner-tl,
-.fa-coach-sheet > .fa-coach-corner-tr,
-.fa-coach-sheet > .fa-coach-corner-bl,
-.fa-coach-sheet > .fa-coach-corner-br {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  pointer-events: none;
-  opacity: 0.7;
-}
 /* Use single ::after to render the top-left corner; other corners via
    sibling pseudo-elements on inner children to avoid extra DOM. */
 .fa-coach-sheet::after {
@@ -30802,35 +28068,10 @@ button.guildhall-summary-tile:active {
 .ar-kicker::before { content: ""; width: 16px; height: 1px; background: linear-gradient(90deg, transparent, #f5b842); }
 .ar-sub { font-family: -apple-system, system-ui, sans-serif; font-size: 11px; font-style: italic; color: #6b6b86; margin-top: 3px; }
 .ar-tophead { display: flex; align-items: flex-start; justify-content: space-between; }
-.ar-recpill { display: inline-flex; align-items: center; gap: 9px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; }
-.ar-recpill .w { color: #34d399; } .ar-recpill .l { color: #ef4444; } .ar-recpill .s { color: #f5b842; }
-.ar-recpill .dot { width: 3px; height: 3px; border-radius: 50%; background: #3a3f4d; }
-.ar-vsrow { display: flex; align-items: flex-start; justify-content: center; gap: 6px; margin-top: 18px; }
-.ar-combatant { display: flex; flex-direction: column; align-items: center; width: 134px; }
-.ar-medallion { width: 104px; height: 104px; border-radius: 18px; overflow: hidden; position: relative; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(120% 120% at 50% 30%, rgba(167,139,250,0.18), #04040d 72%); border: 1.5px solid rgba(245,184,66,0.5); box-shadow: 0 0 26px -8px rgba(245,184,66,0.55); }
+  .ar-medallion { width: 104px; height: 104px; border-radius: 18px; overflow: hidden; position: relative; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(120% 120% at 50% 30%, rgba(167,139,250,0.18), #04040d 72%); border: 1.5px solid rgba(245,184,66,0.5); box-shadow: 0 0 26px -8px rgba(245,184,66,0.55); }
 .ar-medallion img { width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
-.ar-medallion--foe { background: radial-gradient(120% 120% at 50% 30%, rgba(126,133,151,0.22), #04040d 74%); border-color: rgba(126,133,151,0.5); box-shadow: 0 0 26px -8px rgba(126,133,151,0.5); }
-.ar-medallion--foe svg { width: 64px; height: 86px; opacity: 0.9; }
-.ar-crest { margin-top: -14px; z-index: 2; min-width: 40px; padding: 4px 10px; border-radius: 9px; background: rgba(8,8,20,0.9); border: 1px solid rgba(245,184,66,0.6); font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15px; color: #f5b842; text-align: center; }
-.ar-crest--foe { border-color: rgba(154,161,178,0.5); color: #9aa1b2; }
-.ar-cname { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15.5px; color: #f5f3fb; margin-top: 8px; text-align: center; line-height: 1.15; }
-.ar-ctitle { margin-top: 6px; padding: 3px 10px; border-radius: 20px; background: rgba(245,184,66,0.12); border: 1px solid rgba(245,184,66,0.35); font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #f5b842; }
-.ar-cchallenger { margin-top: 6px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.15em; color: #9090a8; }
 .ar-vs { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 22px; color: #f5b842; text-shadow: 0 0 16px rgba(245,184,66,0.5); padding-top: 44px; }
-.ar-power { margin-top: 20px; padding: 16px; border-radius: 16px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); }
-.ar-power-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.ar-power-head .you { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.2em; color: #f5b842; }
-.ar-power-head .foe { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.2em; color: #9090a8; }
-.ar-prow { margin-bottom: 14px; }
-.ar-prow:last-child { margin-bottom: 0; }
-.ar-prow-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.ar-prow-role { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #9090a8; }
-.ar-prow-vals { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; }
-.ar-prow-vals .you { color: #f5b842; } .ar-prow-vals .foe { color: #9aa1b2; }
-.ar-prow-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.05); display: flex; overflow: hidden; }
-.ar-prow-bar .you { height: 100%; background: linear-gradient(90deg, #c08418, #f5b842); }
-.ar-prow-bar .foe { height: 100%; background: linear-gradient(270deg, #3a3f4d, #7e8597); margin-left: auto; }
-.ar-total { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+ .ar-total { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
 .ar-total .you { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 20px; color: #f5b842; }
 .ar-total .lbl { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.2em; color: #6b6b86; }
 .ar-total .foe { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 20px; color: #9aa1b2; }
@@ -30839,7 +28080,6 @@ button.guildhall-summary-tile:active {
 .ar-cta:active { transform: scale(0.99); }
 .ar-cta-sub { display: block; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; opacity: 0.7; margin-top: 3px; }
 .ar-ghost { width: 100%; padding: 13px; margin-top: 8px; background: transparent; border: none; color: #9090a8; font-family: -apple-system, system-ui, sans-serif; font-size: 13.5px; font-weight: 500; cursor: pointer; }
-.ar-cosmetic-note { text-align: center; margin-top: 10px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; color: #6b6b86; letter-spacing: 0.04em; }
 .ar-pips { display: flex; gap: 8px; align-items: center; }
 .ar-pip { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #6b6b86; background: transparent; }
 .ar-pip.win { background: #f5b842; border: none; box-shadow: 0 0 8px rgba(245,184,66,0.55); }
@@ -30879,14 +28119,7 @@ button.guildhall-summary-tile:active {
 .ar-title-unlock .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em; color: #f5b842; }
 .ar-title-unlock .name { font-family: "Cinzel", serif; font-weight: 700; font-size: 18px; color: #f5f3fb; margin-top: 3px; }
 .ar-title-unlock .hint { font-family: -apple-system, system-ui, sans-serif; font-size: 10.5px; color: #9090a8; margin-top: 1px; }
-.ar-streak-note { margin-top: 22px; padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 11px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); font-family: -apple-system, system-ui, sans-serif; font-size: 12px; color: #9090a8; line-height: 1.4; }
-.ar-rec { display: flex; align-items: center; margin-top: 16px; padding: 16px 8px; border-radius: 14px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); }
-.ar-rec-cell { flex: 1; text-align: center; }
-.ar-rec-cell .v { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 26px; }
-.ar-rec-cell .v.w { color: #34d399; } .ar-rec-cell .v.l { color: #ef4444; } .ar-rec-cell .v.s { color: #f5b842; }
-.ar-rec-cell .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.15em; color: #6b6b86; margin-top: 4px; }
-.ar-rec-div { width: 1px; height: 34px; background: rgba(255,255,255,0.07); }
-.ar-titles-head { text-align: center; margin-top: 4px; }
+  .ar-titles-head { text-align: center; margin-top: 4px; }
 .ar-titles-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 24px; color: #f5f3fb; margin-top: 6px; letter-spacing: 0.04em; }
 .ar-titles-group { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em; margin: 18px 0 10px; }
 .ar-titles-group.wins { color: #f5b842; }
@@ -30955,146 +28188,13 @@ button.guildhall-summary-tile:active {
 .ar-tag.weak  { color: #ef4444; background: rgba(239,68,68,0.13); border: 1px solid rgba(239,68,68,0.45); }
 /* extra gold burst when the just-revealed exchange is a crit */
 .ar-sheet.ar-juice-crit::after { background: radial-gradient(120% 90% at 50% 55%, rgba(255,236,170,0.4), rgba(245,184,66,0.18) 45%, transparent 72%) !important; }
-/* W230 — Arena Move Selector + Read Reveal (ClaudeDesign port). Body supplies
-   the 20px horizontal padding; these modules are direct flex children. */
-.ar-chead { display: flex; flex-direction: column; gap: 9px; }
-.ar-chead-names { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.ar-chead-names .you { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.25em; color: #f5b842; flex: none; }
-.ar-chead-names .foe { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.18em; color: #c8c6d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
-.ar-chead-bars { display: flex; gap: 12px; align-items: center; }
-.ar-chead-bars .bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; }
-.ar-chead-bars .bar.foe { justify-content: flex-end; }
-.ar-chead-bars .bar i { height: 100%; border-radius: 2px; display: block; }
-.ar-chead-bars .bar.you i { background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 8px rgba(245,184,66,0.35); }
-.ar-chead-bars .bar.foe i { background: linear-gradient(90deg, #7f1d1d, #ef4444); box-shadow: 0 0 8px rgba(239,68,68,0.35); }
-.ar-chead-bars .dot { width: 5px; height: 5px; transform: rotate(45deg); background: #6b6b86; opacity: 0.7; flex: none; }
-.ar-chead-pips { display: flex; gap: 10px; justify-content: center; margin-top: 3px; }
-.ar-cpip { width: 7px; height: 7px; transform: rotate(45deg); border: 1px solid #6b6b86; }
-.ar-cpip.win { background: #f5b842; border-color: #f5b842; box-shadow: 0 0 6px #f5b842; }
-.ar-cpip.loss { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 6px #ef4444; }
-.ar-chead-status { display: flex; align-items: center; justify-content: center; gap: 10px; }
-.ar-chead-status .rule { width: 26px; height: 1px; background: rgba(255,255,255,0.08); }
-.ar-chead-status .txt { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: #9090a8; white-space: nowrap; }
-.ar-chead-status .sep { color: #6b6b86; }
-.ar-chead-status .hi { font-weight: 800; color: #f5b842; }
-.ar-mv-flex { flex: 1; }
-.ar-mv-flex.big { flex: 1.4; }
-.ar-ex-flex { flex: 1.2; }
-.ar-ex-flex.big { flex: 1.6; }
-/* foe-tendency tell */
-.ar-tell { border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(167,139,250,0.05); padding: 11px 16px; display: flex; align-items: center; gap: 11px; }
-.ar-tell .ic { flex: none; display: flex; }
-.ar-tell .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ar-tell .k { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.25em; color: #a78bfa; }
-.ar-tell .s { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 16.5px; color: #c8c6d8; line-height: 1.25; }
-.ar-tell .s b { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 11.5px; font-weight: 800; letter-spacing: 0.12em; color: #5eead4; }
-/* move section */
-.ar-mv-foot { display: flex; flex-direction: column; gap: 10px; }
-.ar-mv-div { display: flex; align-items: center; gap: 10px; }
-.ar-mv-div .r { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
-.ar-mv-div .t { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.28em; color: #9090a8; }
-.ar-move-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
-.ar-move { display: flex; flex-direction: column; align-items: center; gap: 0; min-height: 138px; box-sizing: border-box; padding: 16px 8px 13px; border-radius: 12px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, #12122c, #0e0e24); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, filter 0.12s ease; }
-.ar-move:active { transform: scale(0.97); filter: brightness(1.18); }
-.ar-move .badge { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; border: 1px solid; }
-.ar-move .mv { font-family: "Cinzel", Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; color: #f5f3fb; margin-top: 11px; }
-.ar-move .rl { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.18em; margin-top: 5px; }
-.ar-move .be { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 500; letter-spacing: 0.05em; color: #6b6b86; margin-top: 6px; }
-/* ALL-IN gamble */
-.ar-allin { display: block; width: 100%; padding: 1.5px; cursor: pointer; border: none; -webkit-tap-highlight-color: transparent; clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); background: linear-gradient(100deg, #f5b842 0%, #b4541f 45%, #ef4444 100%); box-shadow: 0 0 22px rgba(239,68,68,0.22); transition: transform 0.12s ease, filter 0.12s ease; }
-.ar-allin:active { transform: scale(0.985); filter: brightness(1.12); }
-.ar-allin .inner { clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); box-sizing: border-box; padding: 16px 20px; display: flex; align-items: center; gap: 16px; background: radial-gradient(120% 160% at 8% 0%, rgba(245,184,66,0.14) 0%, transparent 45%), radial-gradient(120% 160% at 95% 100%, rgba(239,68,68,0.2) 0%, transparent 50%), linear-gradient(180deg, #1c0e16, #170a12); }
-.ar-allin .dia { width: 42px; height: 42px; flex: none; transform: rotate(45deg); border: 1px solid rgba(245,184,66,0.5); background: rgba(239,68,68,0.1); box-shadow: 0 0 12px rgba(245,184,66,0.25), inset 0 0 8px rgba(239,68,68,0.25); display: flex; align-items: center; justify-content: center; }
-.ar-allin .dia svg { transform: rotate(-45deg); }
-.ar-allin .lbl { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; flex: 1; }
-.ar-allin .lbl .t { font-family: "Cinzel", Georgia, serif; font-size: 19px; font-weight: 700; letter-spacing: 0.16em; color: #f5b842; text-shadow: 0 0 14px rgba(239,68,68,0.45); }
-.ar-allin .lbl .s { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.14em; color: #ef4444; }
-.ar-allin .lbl .s .dim { color: #9090a8; }
-.ar-allin .chev { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 800; color: #f5b842; opacity: 0.85; }
-.ar-mv-tri { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 600; letter-spacing: 0.22em; color: #6b6b86; margin-top: 6px; }
-/* read reveal — face-off */
-.ar-faceoff { display: flex; flex-direction: column; gap: 9px; }
-.ar-faceoff .row { display: flex; align-items: stretch; gap: 10px; }
-.ar-faceoff .vs { display: flex; align-items: center; font-family: "Cinzel", Georgia, serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #6b6b86; }
-.ar-faceoff .beat { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; color: #6b6b86; }
-.ar-fchip { flex: 1; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, #12122c, #0e0e24); padding: 13px 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 7px; }
-.ar-fchip.you { border-color: rgba(245,184,66,0.4); box-shadow: 0 0 16px rgba(245,184,66,0.16); }
-.ar-fchip.you.punished { border-color: #ef4444; box-shadow: 0 0 16px rgba(239,68,68,0.25); }
-.ar-fchip .who { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.25em; }
-.ar-fchip.you .who { color: #f5b842; }
-.ar-fchip.you.punished .who { color: #ef4444; }
-.ar-fchip.foe .who { color: #c8c6d8; }
-.ar-fchip .nm { font-family: "Cinzel", Georgia, serif; font-size: 14.5px; font-weight: 700; letter-spacing: 0.1em; color: #f5f3fb; white-space: nowrap; }
-/* verdict stamp */
-.ar-verdict { margin-top: 22px; padding: 13px 0 12px; text-align: center; display: flex; flex-direction: column; gap: 5px; border-top: 1px solid rgba(245,184,66,0.27); border-bottom: 1px solid rgba(245,184,66,0.27); background: linear-gradient(90deg, transparent, rgba(245,184,66,0.08) 50%, transparent); }
-.ar-verdict.win  { border-color: rgba(52,211,153,0.27); background: linear-gradient(90deg, transparent, rgba(52,211,153,0.08) 50%, transparent); }
-.ar-verdict.lose { border-color: rgba(239,68,68,0.27); background: linear-gradient(90deg, transparent, rgba(239,68,68,0.08) 50%, transparent); }
-.ar-verdict .big { font-family: "Cinzel", Georgia, serif; font-size: 17.5px; font-weight: 700; letter-spacing: 0.2em; color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.4); }
-.ar-verdict.win .big  { color: #34d399; text-shadow: 0 0 18px rgba(52,211,153,0.4); }
-.ar-verdict.lose .big { color: #ef4444; text-shadow: 0 0 18px rgba(239,68,68,0.4); }
-.ar-verdict .sub { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.25em; color: #f5b842; opacity: 0.9; }
-.ar-verdict.lose .sub { color: #ef4444; }
-/* rolls */
-.ar-rolls { margin-top: 26px; position: relative; display: flex; align-items: center; justify-content: center; gap: 22px; }
-.ar-rolls .side { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 110px; }
-.ar-rolls .n { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 38px; line-height: 1; }
-.ar-rolls .n.you { color: #f5b842; text-shadow: 0 0 14px rgba(245,184,66,0.3); }
-.ar-rolls .n.you.big { font-size: 46px; text-shadow: 0 0 26px rgba(245,184,66,0.55); }
-.ar-rolls .n.foe { color: #c8c6d8; }
-.ar-rolls .n.foe.big { font-size: 46px; color: #ef4444; text-shadow: 0 0 22px rgba(239,68,68,0.5); }
-.ar-rolls .l { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.25em; color: #6b6b86; }
-.ar-rolls .dash { font-family: "Cinzel", Georgia, serif; font-size: 20px; color: #6b6b86; padding-bottom: 14px; }
-.ar-rolls.burst::before { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 300px; height: 170px; pointer-events: none; background: radial-gradient(closest-side, rgba(245,184,66,0.28) 0%, rgba(245,184,66,0.08) 50%, transparent 78%); }
-/* tags + narration */
-.ar-rtags { margin-top: 20px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-.ar-rtag { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em; padding: 5px 11px 4px; border-radius: 4px; border: 1px solid; }
-.ar-rnarr { margin-top: 22px; padding: 0 16px; text-align: center; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 17.5px; line-height: 1.4; color: #c8c6d8; }
-.ar-rnarr.gold { color: #ecca84; }
-.ar-rnarr.red  { color: #d8a0a0; }
 /* continue button */
 .ar-contbtn { display: block; width: 100%; padding: 16px 0; border-radius: 12px; cursor: pointer; text-align: center; border: 1px solid rgba(245,184,66,0.35); background: linear-gradient(180deg, rgba(245,184,66,0.1), rgba(245,184,66,0.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 800; letter-spacing: 0.3em; color: #f5b842; -webkit-tap-highlight-color: transparent; }
 .ar-contbtn:active { filter: brightness(1.15); }
-/* ALL-IN outcome vignettes (motion-gated) + shake */
-.ar-sheet.ar-vig-gold::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5; box-shadow: inset 0 0 90px rgba(245,184,66,0.12); }
-.ar-sheet.ar-vig-red::before  { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5; box-shadow: inset 0 0 90px rgba(239,68,68,0.18); }
-@media (prefers-reduced-motion: no-preference) {
-  .ar-chead-bars .bar i { transition: width 600ms cubic-bezier(.2,.8,.2,1); }
-  .ar-verdict { animation: amStamp 420ms cubic-bezier(.16,1.2,.3,1) both; }
-  .ar-rolls { animation: amRise 480ms cubic-bezier(.2,.8,.2,1) 160ms both; }
-  .ar-rtags, .ar-rnarr { animation: amRise 480ms cubic-bezier(.2,.8,.2,1) 320ms both; }
-  .ar-faceoff.shake { animation: amShake 360ms ease-in-out 240ms 1; }
-  .ar-rolls.burst::before { animation: amBurst 900ms cubic-bezier(.16,1,.3,1) both; }
-}
-@keyframes amStamp { 0% { opacity: 0; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
-@keyframes amRise { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-@keyframes amBurst { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.4); } 55% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
-@keyframes amShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
-/* W231 — weapon-driven HP battle screen (body supplies 20px side padding) */
-.ar-bhp { display: flex; flex-direction: column; gap: 13px; }
-.ar-bhp-side .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-.ar-bhp-side .nm { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.18em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ar-bhp-side .nm.you { color: #f5b842; }
-.ar-bhp-side .nm.foe { color: #c8c6d8; }
-.ar-bhp-side .nm .wpn { color: #6b6b86; font-weight: 700; letter-spacing: 0.06em; }
-.ar-bhp-side .hpn { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 800; color: #f5f3fb; flex: none; font-variant-numeric: tabular-nums; }
-.ar-bhp-side .hpn .mx { color: #6b6b86; font-weight: 700; font-size: 10px; }
-.ar-bhp-side .bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
-.ar-bhp-side .bar i { display: block; height: 100%; border-radius: 4px; transition: width 0.45s cubic-bezier(.2,.8,.2,1); }
-.ar-bhp-side .bar.you i { background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 8px rgba(245,184,66,0.4); }
-.ar-bhp-side .bar.foe i { background: linear-gradient(90deg, #7f1d1d, #ef4444); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-.ar-bhp-side .bar.low i { background: linear-gradient(90deg, #b91c1c, #f87171) !important; animation: arLowPulse 0.9s ease-in-out infinite; }
-.ar-bhp-side .stat { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; min-height: 0; }
 .ar-st { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 4px; }
 .ar-st.up { color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4); }
 .ar-st.down { color: #ef4444; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); }
 .ar-st.burn { color: #f5853d; background: rgba(245,133,61,0.14); border: 1px solid rgba(245,133,61,0.45); }
-.ar-blog { margin-top: 16px; min-height: 64px; border-radius: 12px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); padding: 11px 14px; display: flex; flex-direction: column; gap: 5px; }
-.ar-blog .ln { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14.5px; line-height: 1.35; color: #c8c6d8; animation: ar-logpop 0.3s ease; }
-.ar-blog .ln.you { color: #ecd9a8; }
-.ar-blog .ln.foe { color: #d8b0b0; }
-.ar-blog .ln.crit { font-weight: 600; color: #f5b842; }
-.ar-blog .ln.neutral { font-family: "Cinzel", Georgia, serif; font-style: normal; font-size: 12px; color: #9090a8; line-height: 1.5; }
-.ar-bspace { flex: 1; min-height: 12px; }
 .ar-bmoves { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .ar-bmove { display: flex; flex-direction: column; gap: 4px; padding: 12px 12px 11px; border-radius: 13px; cursor: pointer; text-align: left; background: linear-gradient(180deg, #12122c, #0e0e24); border: 1px solid rgba(255,255,255,0.09); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, filter 0.12s ease; }
 .ar-bmove:active { transform: scale(0.97); filter: brightness(1.18); }
@@ -31107,7 +28207,6 @@ button.guildhall-summary-tile:active {
 .ar-bmove .tg { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.1em; color: #f5b842; }
 .ar-bmove.cd .tg { color: #6b6b86; }
 @keyframes arLowPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
-@media (prefers-reduced-motion: reduce) { .ar-bhp-side .bar i { transition: none; } .ar-bhp-side .bar.low i { animation: none; } .ar-blog .ln { animation: none; } }
 /* VS intro effectiveness row */
 .ar-vs-eff { display: flex; justify-content: center; margin: 12px 0 2px; min-height: 18px; }
 .ar-vs-even { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.18em; color: #6b6b86; }
@@ -31162,55 +28261,10 @@ button.guildhall-summary-tile:active {
   .ar-ko-fx.go .ar-ko-flash, .ar-ko-fx.go .ar-ko-slash { animation: none; }
   .ar-dmg-float, .ar-ko-flash, .ar-ko-slash { display: none; }
 }
-@media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; } .ar-combatant { width: 118px; } .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } .ar-bi-med { width: 128px; height: 128px; } .ar-bi-name { font-size: 23px; } .ar-vs-side { width: 116px; } }
+@media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; }  .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } .ar-bi-med { width: 128px; height: 128px; } .ar-bi-name { font-size: 23px; } .ar-vs-side { width: 116px; } }
 /* END Arena block */
 
 /* ── W210 Arena power breakdown (base + gear) + loadout strip ── */
-.ar-legend { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-.ar-legend > span { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 700; letter-spacing: 0.05em; color: #6b6b86; }
-.ar-legend .sw { width: 9px; height: 5px; border-radius: 2px; }
-.ar-legend .sw.gold { background: #f5b842; }
-.ar-legend .sw.violet { background: #a78bfa; }
-.ar-pr { display: grid; grid-template-columns: 58px 1fr 44px; align-items: center; gap: 10px; margin-bottom: 13px; }
-.ar-pr:last-child { margin-bottom: 0; }
-.ar-pr-you { text-align: right; }
-.ar-pr-val { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; line-height: 1; color: #c8c6d8; font-variant-numeric: tabular-nums; }
-.ar-pr-val.lead { color: #f5b842; }
-.ar-pr-split { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
-.ar-pr-split .b { color: #6b6b86; }
-.ar-pr-split .g { color: #a78bfa; }
-.ar-pr-role { display: block; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; color: #9090a8; margin-bottom: 5px; }
-.ar-pr-bars { display: flex; gap: 4px; height: 6px; }
-.ar-pr-track { flex: 1; display: flex; background: rgba(255,255,255,0.04); border-radius: 3px; overflow: hidden; }
-.ar-pr-track.you { justify-content: flex-end; }
-.ar-pr-track.foe { justify-content: flex-start; }
-.ar-pr-track .fill { height: 100%; display: flex; border-radius: 3px; overflow: hidden; }
-.ar-pr-track.you .fill .b { background: linear-gradient(90deg, #c08418, #f5b842); }
-.ar-pr-track.you .fill .g { background: linear-gradient(90deg, #a78bfa, #c4b5fd); box-shadow: inset 1px 0 0 rgba(4,4,13,0.4); }
-.ar-pr-track.foe .fill { width: 100%; background: linear-gradient(90deg, #7e8597, #3a3f4d); }
-.ar-pr-src { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 7.5px; color: #6b6b86; letter-spacing: 0.08em; margin-top: 4px; }
-.ar-pr-foe { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; color: #6b6b86; text-align: left; font-variant-numeric: tabular-nums; }
-.ar-pr-foe.lead { color: #9aa1b2; }
-.ar-loadout-wrap { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
-.ar-loadout-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; gap: 8px; }
-.ar-loadout-head .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em; color: #a78bfa; }
-.ar-loadout-head .tot { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.04em; color: #6b6b86; text-align: right; }
-.ar-loadout-head .tot b { color: #a78bfa; }
-.ar-loadout-chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.ar-relic-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px 6px 8px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); }
-.ar-relic-chip .gem { font-size: 11px; line-height: 1; }
-.ar-relic-chip .nm { font-family: "Cinzel", Georgia, serif; font-weight: 600; font-size: 11.5px; color: #f5f3fb; }
-.ar-relic-chip .tg { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; color: #a78bfa; letter-spacing: 0.02em; }
-.ar-loadout-empty { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: 13px; background: rgba(167,139,250,0.05); border: 1px dashed rgba(167,139,250,0.35); }
-.ar-loadout-empty .gem { flex: none; width: 32px; height: 32px; border-radius: 8px; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.35); display: flex; align-items: center; justify-content: center; color: #a78bfa; font-size: 14px; }
-.ar-loadout-empty .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.15em; color: #a78bfa; }
-.ar-loadout-empty .msg { font-family: -apple-system, system-ui, sans-serif; font-size: 11.5px; color: #9090a8; margin-top: 3px; line-height: 1.4; }
-.ar-loadout-empty .msg b { color: #c8c6d8; }
-@media (max-width: 380px) {
-  .ar-pr { grid-template-columns: 50px 1fr 38px; gap: 8px; }
-  .ar-pr-val, .ar-pr-foe { font-size: 15px; }
-  .ar-loadout-head { flex-direction: column; align-items: flex-start; gap: 4px; }
-}
 /* END W210 Arena loadout block */
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -31232,24 +28286,16 @@ button.guildhall-summary-tile:active {
 .asc-rating-lbl, .asc-daily-lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em; color: #6b6b86; }
 .asc-rating-row { display: flex; align-items: baseline; gap: 9px; margin-top: 3px; }
 .asc-rating-num { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 34px; line-height: 0.9; color: #f5b842; letter-spacing: -1px; text-shadow: 0 0 22px rgba(245,184,66,0.27); font-variant-numeric: tabular-nums; }
-.asc-rating-trend { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 11px; }
-.asc-rating-trend.up { color: #34d399; } .asc-rating-trend.down { color: #ef4444; }
-.asc-rating-tier { display: inline-flex; align-items: center; gap: 6px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.2em; margin-top: 4px; }
+ .asc-rating-tier { display: inline-flex; align-items: center; gap: 6px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.2em; margin-top: 4px; }
 .asc-rating-tier .gem { width: 6px; height: 6px; transform: rotate(45deg); }
 .asc-daily { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .asc-daily-val { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; color: #f5f3fb; }
 .asc-daily-val .max { color: #6b6b86; font-weight: 700; }
 .asc-daily-val.spent { color: #ef4444; }
 .asc-daily-pips { display: flex; align-items: center; gap: 5px; }
-.asc-pip { width: 12px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); }
-.asc-pip.on { background: #f5b842; box-shadow: 0 0 6px rgba(245,184,66,0.47); }
 .asc-heart { display: inline-flex; color: rgba(255,255,255,0.13); }
 .asc-heart svg { display: block; }
 .asc-heart.on { color: #f5b842; filter: drop-shadow(0 0 4px rgba(245,184,66,0.5)); }
-/* exit pill in header */
-.asc-exit { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 20px; cursor: pointer; background: rgba(245,184,66,0.1); border: 1px solid rgba(245,184,66,0.45); color: #f5b842; font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; -webkit-tap-highlight-color: transparent; }
-.asc-exit:active { background: rgba(245,184,66,0.2); }
-
 /* scroll body */
 .asc-scroll { padding: 0 18px calc(env(safe-area-inset-bottom,0px) + 20px); }
 
@@ -31373,10 +28419,6 @@ button.guildhall-summary-tile:active {
 .asc-cleared-flair { margin-top: 13px; padding: 11px 14px; border-radius: 12px; display: flex; align-items: center; gap: 11px; background: linear-gradient(180deg, rgba(52,211,153,0.1), rgba(52,211,153,0.03)); border: 1px solid rgba(52,211,153,0.4); }
 .asc-cleared-flair .txt { font-family: "Cinzel", serif; font-weight: 700; font-size: 15px; color: #34d399; }
 
-/* empty state */
-.asc-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 50px 24px; text-align: center; }
-.asc-empty .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 20px; color: #f5b842; }
-.asc-empty .sub { font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 14px; color: #9090a8; line-height: 1.5; max-width: 280px; }
 /* W240 — out-of-lives banner: the tower stays open for free rematches */
 .asc-livesout { margin: 4px 16px 14px; padding: 13px 16px; border-radius: 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); text-align: center; }
 .asc-livesout .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14.5px; color: #f5b842; }
