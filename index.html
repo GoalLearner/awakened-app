@@ -704,10 +704,6 @@
       </div>
     </main>
 
-    <!-- Achievements panel -->
-    <div id="achievements-panel" class="tab-panel hidden" data-panel="achievements">
-      <div id="achievements-grid" class="achievements-grid"></div>
-    </div>
 
     <!-- History panel -->
     <div id="history-panel" class="tab-panel hidden" data-panel="history">
@@ -1576,103 +1572,6 @@
     </div>
   </div>
 
-  <!-- XP·30D detail sheet (v2.1.0 status redesign).
-       Opens on tap of the XP·30D metric card in the header. Bottom-
-       sheet pattern matching the leaderboard ranking sheet (.vn-sheet).
-       Renders a larger version of the cumulative XP chart + a stats
-       grid (total / this week / last 7d / last 30d / days active /
-       best day). populateXpDetail() in app.js fills the dynamic
-       content on every open. -->
-  <div id="xp-detail-overlay" class="vn-overlay hidden"></div>
-  <div id="xp-detail-sheet"   class="vn-sheet   hidden">
-    <div class="vn-drag-handle"></div>
-    <div class="xp-detail-header">
-      <div class="xp-detail-eyebrow">XP · CUMULATIVE</div>
-      <h2 class="xp-detail-title">YOUR PROGRESS</h2>
-      <button id="xp-detail-close" class="vn-close-btn" aria-label="Close">✕</button>
-    </div>
-    <div class="xp-detail-body">
-      <!-- Big chart -->
-      <div class="xp-detail-chart-wrap">
-        <svg id="xp-detail-chart" class="xp-detail-chart" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="xp-detail-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"  stop-color="#fbbf24" stop-opacity="0.30"/>
-              <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <!-- Grid lines drawn statically; line + area + dot driven by JS -->
-          <line x1="0" y1="35"  x2="400" y2="35"  stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
-          <line x1="0" y1="70"  x2="400" y2="70"  stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
-          <line x1="0" y1="105" x2="400" y2="105" stroke="rgba(255,255,255,0.04)" stroke-dasharray="2 4"/>
-          <path id="xp-detail-area" fill="url(#xp-detail-gradient)" d=""/>
-          <path id="xp-detail-line" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d=""/>
-          <!-- Tier-2 light sweep — second path, same geometry as the
-               main line, with a short bright "head" that travels start
-               → end every 5s via animated stroke-dashoffset. JS sets
-               --sweep-end on this element to the path's negative length
-               so the animation knows how far to travel. -->
-          <path id="xp-detail-sweep" fill="none" stroke="#fef3c7" stroke-width="2.6"
-                stroke-linecap="round" stroke-linejoin="round" d=""
-                opacity="0"/>
-          <!-- Radar-ping ring — sits behind the main dot. Pulses outward
-               on infinite loop, fading as it grows. Tier-1 "alive" cue. -->
-          <circle id="xp-detail-dot-ping" cx="0" cy="140" r="3" fill="#fbbf24" opacity="0.5"/>
-          <circle id="xp-detail-dot" cx="0" cy="140" r="3" fill="#fbbf24" filter="drop-shadow(0 0 4px #fbbf24)"/>
-          <!-- Tier-2 floating particles — emit from the endpoint dot
-               and drift up + outward, fading. Group's transform is set
-               by JS to track the endpoint. 4 particles with staggered
-               delays so the emission feels continuous. -->
-          <g id="xp-detail-particles" transform="translate(0, 140)">
-            <circle class="xp-particle xp-particle--1" cx="0" cy="0" r="1.2" fill="#fbbf24"/>
-            <circle class="xp-particle xp-particle--2" cx="0" cy="0" r="1.0" fill="#fcd34d"/>
-            <circle class="xp-particle xp-particle--3" cx="0" cy="0" r="1.4" fill="#fbbf24"/>
-            <circle class="xp-particle xp-particle--4" cx="0" cy="0" r="0.9" fill="#fef3c7"/>
-          </g>
-        </svg>
-        <div class="xp-detail-axis">
-          <span id="xp-detail-axis-start">—</span>
-          <span id="xp-detail-axis-mid">—</span>
-          <span id="xp-detail-axis-end">—</span>
-        </div>
-      </div>
-
-      <!-- Stats grid — TOTAL → WEEKLY → DAILY (descending granularity)
-                       MONTHLY → DAYS ACTIVE → BEST DAY (complementary). -->
-      <div class="xp-detail-stats">
-        <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">TOTAL XP</div>
-          <div id="xp-detail-total" class="xp-detail-stat-value">0</div>
-          <div class="xp-detail-stat-sub">all-time</div>
-        </div>
-        <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">WEEKLY XP</div>
-          <div id="xp-detail-week" class="xp-detail-stat-value">0</div>
-          <div class="xp-detail-stat-sub">Sun → today</div>
-        </div>
-        <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">DAILY XP</div>
-          <div id="xp-detail-daily" class="xp-detail-stat-value">0</div>
-          <div class="xp-detail-stat-sub">today</div>
-        </div>
-        <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">MONTHLY XP</div>
-          <div id="xp-detail-monthly" class="xp-detail-stat-value">0</div>
-          <div id="xp-detail-monthly-sub" class="xp-detail-stat-sub">this month</div>
-        </div>
-        <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">DAYS ACTIVE</div>
-          <div id="xp-detail-days-active" class="xp-detail-stat-value">0</div>
-          <div class="xp-detail-stat-sub">last 30d</div>
-        </div>
-        <div class="xp-detail-stat">
-          <div class="xp-detail-stat-label">BEST DAY</div>
-          <div id="xp-detail-best-day" class="xp-detail-stat-value">0</div>
-          <div id="xp-detail-best-day-sub" class="xp-detail-stat-sub">XP · —</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- v3 Phase 1d — Hunter Build modal (replaces the v3 Phase 1a-c
        9-slot equipment panel). MOBA-style 6-slot active build:
