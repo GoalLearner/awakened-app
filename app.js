@@ -31071,6 +31071,11 @@
     } catch (_) { /* quota exceeded — best effort */ }
   }
 
+  // DEPRECATION (2026-06-12, live flagged-item session): the drain is a
+  // MIGRATION PATH only — it flushes historical queues from pre-1z.279
+  // installs in the wild. Nothing enqueues anymore (writer removed this
+  // session). Remove no earlier than v2.2.7, once legacy queues can
+  // reasonably be assumed empty. Richie verdict: KEEP until then.
   async function _drainVerifiedEventOutbox() {
     try { window.__probe.drainOutbox++; } catch (_) {}
     const queue = _loadVerifiedEventOutbox();
