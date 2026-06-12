@@ -352,4 +352,39 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ PASS — iOS public/ assets match root sources. Safe to archive."
+echo "✅ PASS — iOS public/ assets match root sources."
+
+# ── W266 — remote-freshness gate ─────────────────────────────────────
+# The knob comparison above can't catch a STALE CHECKOUT (root and
+# ios/public agree — both old) or a SECOND CLONE (consistent within
+# itself, never updated). Both have shipped old builds before. So:
+# show exactly which tree this is, and fail if origin/main is ahead.
+# Deliberately building an older ref? SKIP_FRESHNESS=1 bash scripts/...
+echo ""
+echo "── Tree identity ──"
+echo "  repo:  $(pwd)"
+echo "  HEAD:  $(git log --oneline -1 2>/dev/null || echo 'not a git repo?')"
+echo "  tag:   $(grep -m1 -oE "APP_BUILD_TAG[[:space:]]*=[[:space:]]*'[^']+'" app.js)"
+if [ "${SKIP_FRESHNESS:-0}" != "1" ]; then
+  if git fetch origin main --quiet 2>/dev/null; then
+    BEHIND="$(git rev-list --count HEAD..origin/main 2>/dev/null || echo '?')"
+    if [ "$BEHIND" != "0" ] && [ "$BEHIND" != "?" ]; then
+      echo ""
+      echo "❌ STALE CHECKOUT — this tree is $BEHIND commit(s) behind origin/main."
+      echo "   You are about to archive OLD code (knobs match, but they match"
+      echo "   each other, not the latest push)."
+      echo "   Fix:   git checkout main && git pull origin main"
+      echo "          bash scripts/prep-local-build.sh && npx cap copy ios"
+      echo "          bash scripts/verify-ios-public-assets.sh"
+      echo "   (Intentionally building an old ref? SKIP_FRESHNESS=1 re-run.)"
+      echo ""
+      echo "  DO NOT ARCHIVE."
+      exit 1
+    fi
+    echo "  fresh: up to date with origin/main ✓"
+  else
+    echo "  fresh: (offline — could not check origin/main; verify HEAD above manually)"
+  fi
+fi
+echo ""
+echo "✅ Safe to archive."
