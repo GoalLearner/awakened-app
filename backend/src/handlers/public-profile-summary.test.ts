@@ -547,6 +547,15 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
   });
   afterEach(() => { vi.useRealTimers(); });
 
+  it('accepts a W266 rating-ladder id (rt_grandmaster) through the same whitelist', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: 'rt_grandmaster' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+    expect(calls[0].binds[12]).toBe('rt_grandmaster');
+  });
+
   it('accepts a whitelisted arena title id and binds it (insert + sentinel)', async () => {
     const db = makeDb();
     const res = await handlePublicProfileSummaryPut(

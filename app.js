@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w265';
+  const APP_BUILD_TAG = '2.2.5-w266';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5840,16 +5840,16 @@
 
   // 10 hand-crafted milestone bosses (floor → boss). Each grants a title.
   const ASCENT_BOSSES = {
-    10:  { name: 'The Hollow Footman',  arch: 'aggressor',   taunt: 'You climbed ten floors. The tower has ten thousand.',          title: { id: 'asc_brawler',      name: 'Brawler' } },
-    20:  { name: 'The Pale Sentinel',   arch: 'sentinel',    taunt: 'None pass while I still stand.',                                title: { id: 'asc_wallbreaker',  name: 'Wallbreaker' } },
-    30:  { name: 'The Iron Revenant',   arch: 'juggernaut',  taunt: 'I broke long ago. Let me show you how.',                       title: { id: 'asc_ironbreaker',  name: 'Ironbreaker' } },
-    40:  { name: 'The Wraith Outcast',  arch: 'trickster',   taunt: 'You will not see the blow that ends you.',                     title: { id: 'asc_edgewalker',   name: 'Edgewalker' } },
-    50:  { name: 'The Ashen Reaver',    arch: 'glasscannon', taunt: 'Halfway. This is where the weak turn back.',                   title: { id: 'asc_duelist',      name: 'Reaver' } },
-    60:  { name: 'The Vow-Eater',       arch: 'aggressor',   taunt: 'Every promise you broke — I have eaten them all.',             title: { id: 'asc_unbroken',     name: 'Unbroken' } },
-    70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    taunt: 'Kneel, and I may let you keep your title.',                    title: { id: 'asc_tyrantsbane',  name: 'Tyrantsbane' } },
-    80:  { name: 'The Silent Warden',   arch: 'sentinel',    taunt: '…',                                                            title: { id: 'asc_siegebreaker', name: 'Siegebreaker' } },
-    90:  { name: 'The Dread Harbinger', arch: 'trickster',   taunt: 'The summit knows your name. It is not impressed.',             title: { id: 'asc_shadowcaller', name: 'Shadowcaller' } },
-    100: { name: 'The First Awakened',  arch: 'balanced',    taunt: 'I was the first to climb. No one has reached me since.',       title: { id: 'asc_sovereign',    name: 'The Second Awakened' } },
+    10:  { name: 'The Hollow Footman',  arch: 'aggressor',   taunt: 'You climbed ten floors. The tower has ten thousand.' },
+    20:  { name: 'The Pale Sentinel',   arch: 'sentinel',    taunt: 'None pass while I still stand.' },
+    30:  { name: 'The Iron Revenant',   arch: 'juggernaut',  taunt: 'I broke long ago. Let me show you how.' },
+    40:  { name: 'The Wraith Outcast',  arch: 'trickster',   taunt: 'You will not see the blow that ends you.' },
+    50:  { name: 'The Ashen Reaver',    arch: 'glasscannon', taunt: 'Halfway. This is where the weak turn back.' },
+    60:  { name: 'The Vow-Eater',       arch: 'aggressor',   taunt: 'Every promise you broke — I have eaten them all.' },
+    70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    taunt: 'Kneel, and I may let you keep your title.' },
+    80:  { name: 'The Silent Warden',   arch: 'sentinel',    taunt: '…' },
+    90:  { name: 'The Dread Harbinger', arch: 'trickster',   taunt: 'The summit knows your name. It is not impressed.' },
+    100: { name: 'The First Awakened',  arch: 'balanced',    taunt: 'I was the first to climb. No one has reached me since.' },
   };
 
   // Procedural name pool for the 90 regular floors (stable per floor via
@@ -5861,24 +5861,37 @@
 
   // Cosmetic titles: 10 boss titles + 4 rating milestones. Pure bragging
   // rights — never affect combat power or progression.
-  const ARENA_TITLES = (function () {
-    const boss = Object.keys(ASCENT_BOSSES).map(f => {
-      const b = ASCENT_BOSSES[f];
-      return { id: b.title.id, name: b.title.name, kind: 'boss', floor: parseInt(f, 10), blurb: 'Cleared floor ' + f + ' · ' + b.name };
-    });
-    const rating = [
-      { id: 'asc_rank_contender', name: 'Ranked Contender', kind: 'rating', need: 1200, blurb: 'Reached 1200 rating.' },
-      { id: 'asc_rank_duelist',   name: 'Ranked Blade',     kind: 'rating', need: 1500, blurb: 'Reached 1500 rating.' },
-      { id: 'asc_rank_elite',     name: 'Ranked Elite',     kind: 'rating', need: 1800, blurb: 'Reached 1800 rating.' },
-      { id: 'asc_rank_apex',      name: 'Apex',             kind: 'rating', need: 2000, blurb: 'Reached 2000 rating.' },
-    ];
-    return boss.concat(rating);
-  })();
-
+  // W266 — ClaudeDesign "Rating Milestone Titles" (Richie's call: "getting rid
+  // of the boss titles and only use rating milestones… final milestone
+  // Grandmaster"). One ladder, one currency: ARENA RATING (bestRating — a
+  // title, once earned, never un-earns). Gem tier deepens with the climb;
+  // gold is reserved for Monarch + Grandmaster. Boss floors still pay souls /
+  // clears / rating — they no longer mint titles.
+  const ARENA_TITLES = [
+    { id: 'rt_contender',   name: 'Contender',   need: 1100, tier: 'iron'   },
+    { id: 'rt_brawler',     name: 'Brawler',     need: 1200, tier: 'iron'   },
+    { id: 'rt_duelist',     name: 'Duelist',     need: 1300, tier: 'iron'   },
+    { id: 'rt_blade',       name: 'Blade',       need: 1400, tier: 'teal'   },
+    { id: 'rt_reaver',      name: 'Reaver',      need: 1500, tier: 'teal'   },
+    { id: 'rt_elite',       name: 'Elite',       need: 1600, tier: 'teal'   },
+    { id: 'rt_warbringer',  name: 'Warbringer',  need: 1700, tier: 'violet' },
+    { id: 'rt_sovereign',   name: 'Sovereign',   need: 1800, tier: 'violet' },
+    { id: 'rt_apex',        name: 'Apex',        need: 1900, tier: 'violet' },
+    { id: 'rt_monarch',     name: 'Monarch',     need: 2000, tier: 'gold'   },
+    { id: 'rt_grandmaster', name: 'Grandmaster', need: 2200, tier: 'gold'   },
+  ].map((t) => Object.assign(t, { kind: 'rating', blurb: 'Reached ' + t.need.toLocaleString('en-US') + ' arena rating.' }));
+  // Legacy id remap (W257-era equipped titles on devices). Ids whose meaning
+  // survives map to their successor; retired boss-only ids simply stop
+  // resolving (getEquippedArenaTitle returns null for unknown ids — no crash,
+  // no chip). Server-side: nothing to migrate — the title column ships with
+  // the same deploy that introduces the new ids.
+  const _ARENA_TITLE_LEGACY = {
+    asc_brawler: 'rt_brawler', asc_duelist: 'rt_reaver', asc_sovereign: 'rt_sovereign',
+    asc_rank_contender: 'rt_contender', asc_rank_duelist: 'rt_blade',
+    asc_rank_elite: 'rt_elite', asc_rank_apex: 'rt_apex',
+  };
   function _arenaTitleUnlocked(t, st) {
-    return (t.kind === 'boss')   ? (st.highestCleared >= t.floor)
-         : (t.kind === 'rating') ? (st.bestRating >= t.need)
-         : false;
+    return st.bestRating >= t.need;   // W266 — one currency; bestRating never decays
   }
 
   // ── v2 tower state ───────────────────────────────────────────────
@@ -5952,8 +5965,14 @@
   }
   function getEquippedArenaTitle() {
     try {
-      const id = localStorage.getItem(ARENA_TITLE_KEY);
+      let id = localStorage.getItem(ARENA_TITLE_KEY);
       if (!id) return null;
+      // W266 — one-time legacy remap: W257-era ids roll forward to their
+      // successors (and persist), retired ids fall through to null below.
+      if (_ARENA_TITLE_LEGACY[id]) {
+        id = _ARENA_TITLE_LEGACY[id];
+        try { localStorage.setItem(ARENA_TITLE_KEY, id); } catch (_) {}
+      }
       const t = ARENA_TITLES.find(x => x.id === id);
       return (t && _arenaTitleUnlocked(t, getAscentState())) ? t : null;  // only if still unlocked
     } catch (_) { return null; }
@@ -7514,7 +7533,7 @@
       : (info.opponent.archKey
           ? '<img src="assets/arena/foe_' + info.opponent.archKey + '.webp" alt="" class="asc-fa-img" onerror="window.__arFoeArtFail(this)">'
           : _arFoeSil());
-    const reward = isBoss ? '<div class="al-hero-reward">TITLE REWARD <b>“' + esc(ASCENT_BOSSES[info.floor].title.name) + '”</b></div>' : '';
+    const reward = '';   // W266 — boss titles retired; the rating ladder is the only title source
     const cta = left > 0
       ? '<button class="al-fight" data-ar="fight" data-floor="' + info.floor + '" type="button">FIGHT ▸</button>'
       : '<div class="al-fight al-fight--locked">OUT OF LIVES<span>rated climb resumes tomorrow · fallen foes stay open</span></div>';
@@ -7542,7 +7561,7 @@
     const mark = boss
       ? '<span class="al-dia"></span>'
       : '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.3l2.6 2.6L11 4.4" stroke="#6b6b86" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const title = boss ? '<span class="al-row-title">“' + esc(ASCENT_BOSSES[info.floor].title.name) + '”</span>' : '';
+    const title = '';   // W266 — boss titles retired (the gold diamond row remains)
     return '<div class="al-row' + (boss ? ' al-row--milestone' : '') + '" data-ar="rematch" data-floor="' + info.floor + '">' +
       mark + '<span class="fl">' + info.floor + '</span>' +
       '<span class="nm">' + esc(info.opponent.name) + '</span>' + title +
@@ -7807,7 +7826,7 @@
   function _ascStakesHtml(m) {
     const st = getAscentState();
     const boss = ASCENT_BOSSES[m.floor] || {};
-    const title = (boss.title && boss.title.name) ? boss.title.name : null;
+    const title = null;   // W266 — boss titles retired; stakes are rating + the life + the floor
     // Rematch (m.advances === false): nothing is on the line — no rating, no
     // re-grant of the title (W221). Show an honest exhibition note instead of
     // the win/lose stakes (which would falsely promise rating + the title).
@@ -9041,35 +9060,56 @@
   }
 
   // ── titles ────────────────────────────────────────────────────────
+  // W266 — Titles sheet remodeled to the rating ladder (ClaudeDesign "Rating
+  // Milestone Titles"): YOUR RATING band, 11 milestone rows. Unlocked rows are
+  // tap-to-equip (whole row), the worn row is gold-rimmed (tap to unequip),
+  // the FIRST locked row carries a live bestRating progress bar, deeper locks
+  // dim out. Progress runs on bestRating — the unlock currency.
   function _arRenderTitles() {
     _arView = 'titles';
     _arBodyMode(false);
     const st = getAscentState();
     const equipped = getEquippedArenaTitle();
-    const row = (t) => {
+    const tier = _ascTier(st.rating);
+    let firstLockedSeen = false;
+    const rows = ARENA_TITLES.map((t, i) => {
       const unlocked = _arenaTitleUnlocked(t, st);
-      const isEq = equipped && equipped.id === t.id;
-      const cls = isEq ? 'equipped' : unlocked ? '' : 'locked';
-      const action = isEq
-        ? '<span class="tequipped">✓ EQUIPPED</span>'
-        : unlocked ? '<button class="tequip" data-ar="equip" data-tid="' + esc(t.id) + '">EQUIP</button>'
-        : '<span class="tlocked">LOCKED</span>';
-      return '<div class="ar-trow ' + cls + '"><div class="sig">' + _ascStar() + '</div>' +
-        '<div class="tmid"><div class="tname">' + esc(t.name) + '</div><div class="treq">' + esc(t.blurb) + '</div></div>' + action + '</div>';
-    };
-    const boss = ARENA_TITLES.filter(t => t.kind === 'boss').map(row).join('');
-    const rating = ARENA_TITLES.filter(t => t.kind === 'rating').map(row).join('');
+      const isEq = !!(equipped && equipped.id === t.id);
+      const isNext = !unlocked && !firstLockedSeen;
+      if (isNext) firstLockedSeen = true;
+      let right;
+      if (isEq) right = '<span class="tm-worn">WORN</span>';
+      else if (unlocked) right = '<span class="tm-equip">EQUIP</span>';
+      else if (isNext) {
+        const prev = i > 0 ? ARENA_TITLES[i - 1].need : ASCENT_RATING_START;
+        const frac = Math.max(0, Math.min(1, (st.bestRating - prev) / (t.need - prev)));
+        right = '<span class="tm-prog"><span class="n">' + st.bestRating.toLocaleString('en-US') + ' / ' + t.need.toLocaleString('en-US') + '</span>' +
+          '<span class="bar"><span style="width:' + Math.round(frac * 100) + '%"></span></span></span>';
+      } else {
+        right = '<svg class="tm-lock" width="11" height="11" viewBox="0 0 14 14" aria-hidden="true"><g stroke="#6b6b86" stroke-width="1.2" fill="none"><rect x="3.2" y="6" width="7.6" height="5.6" rx="1.2"/><path d="M4.8 6V4.4a2.2 2.2 0 0 1 4.4 0V6"/></g></svg>';
+      }
+      const cls = 'tm-row tm-row--' + (t.tier || 'gold') + (isEq ? ' tm-row--worn' : '') +
+        (unlocked ? ' tm-row--open' : isNext ? ' tm-row--next' : ' tm-row--deep');
+      const tap = unlocked ? ' data-ar="equip" data-tid="' + esc(t.id) + '"' : '';
+      return '<div class="' + cls + '"' + tap + '>' +
+        '<span class="at">' + t.need.toLocaleString('en-US') + '</span>' +
+        '<span class="tm-gem' + (unlocked ? '' : ' locked') + '"></span>' +
+        '<span class="nm">' + esc(t.name) + '</span>' + right + '</div>';
+    }).join('');
     _arSet(
-      '<div class="ar-titles-head"><div class="ar-kicker" style="justify-content:center">The Ascent</div>' +
-        '<div class="ar-titles-name">Titles</div><div class="ar-sub">Cosmetic honors. Worn on your hunter profile.</div></div>' +
-      '<div class="ar-titles-group wins">BOSS TITLES</div>' + boss +
-      '<div class="ar-titles-group streak">RATING MILESTONES</div>' + rating +
+      '<div class="tm-head"><span class="tm-kicker"><i></i>THE ASCENT<i></i></span>' +
+        '<div class="tm-name">Titles</div>' +
+        '<div class="tm-sub">Earned by arena rating. Worn on your hunter profile.</div></div>' +
+      '<div class="tm-band"><span class="lbl">YOUR RATING</span>' +
+        '<span class="num">' + st.rating.toLocaleString('en-US') + '</span>' +
+        '<span class="tm-band-tier" style="color:' + tier.color + '"><i style="background:' + tier.color + '"></i>' + tier.name + '</span></div>' +
+      '<div class="tm-ladder">' + rows + '</div>' +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-ghost" data-ar="tower">‹ Back to the Tower</button>'
     );
   }
 
-  // ── open / close + wiring ─────────────────────────────────────────
+  // ── open / close + wiring ─────────────────────────────────────────  // ── open / close + wiring ─────────────────────────────────────────
   function openArena() {
     const ov = document.getElementById('arena-overlay');
     if (!ov) return;
@@ -32802,15 +32842,6 @@
   // Renders the rank-list content given a backend response. Splits
   // the user-row out of the top-N (or surfaces a separate "your rank"
   // line if me.rank > top.length). Empty top → first-to-rank message.
-  // W264 — title → shard tier (iron→teal→violet→gold by earn difficulty;
-  // gold reserved for the rarest: F90+, Apex). Unknown ids fall back to gold.
-  const _LB_TITLE_TIER = {
-    asc_brawler: 'iron',
-    asc_wallbreaker: 'teal', asc_ironbreaker: 'teal', asc_edgewalker: 'teal', asc_rank_contender: 'teal',
-    asc_duelist: 'violet', asc_unbroken: 'violet', asc_tyrantsbane: 'violet', asc_siegebreaker: 'violet',
-    asc_rank_duelist: 'violet', asc_rank_elite: 'violet',
-    asc_shadowcaller: 'gold', asc_sovereign: 'gold', asc_rank_apex: 'gold',
-  };
   function lbBuildRankList(metric, top, me, stale_footer) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return '';
@@ -32896,7 +32927,8 @@
         const tdef = ARENA_TITLES.find((t) => t.id === titleId);
         // W264 — gem-shard chip (ClaudeDesign direction C): faceted, tier-colored.
         // Unknown/absent ids still render nothing (back/forward compatible).
-        if (tdef) titleChip = '<span class="lb-title-shard lb-title-shard--' + (_LB_TITLE_TIER[tdef.id] || 'gold') + '"><span>' + esc(tdef.name) + '</span></span>';
+        // W266 — shard tier rides on the title def itself (one ladder, one source)
+        if (tdef) titleChip = '<span class="lb-title-shard lb-title-shard--' + (tdef.tier || 'gold') + '"><span>' + esc(tdef.name) + '</span></span>';
       }
       return '<div class="' + rankClass + '">' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +

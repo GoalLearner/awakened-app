@@ -31719,3 +31719,40 @@ button.guildhall-summary-tile:active {
 .al-dia::before { content: ""; width: 8px; height: 8px; transform: rotate(45deg); background: #f5b842; border-radius: 1.5px; box-shadow: 0 0 7px rgba(245,184,66,0.6); }
 .al-row-title { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; padding: 3px 8px 2px; flex: none; }
 .al-hint { text-align: center; padding: 18px 0 10px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 600; letter-spacing: 2px; color: #6b6b86; }
+
+/* ── W266 — Titles: rating-milestone ladder (ClaudeDesign) ──────────────── */
+.tm-head { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 6px 20px 0; }
+.tm-kicker { display: flex; align-items: center; gap: 10px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 3px; color: #f5b842; }
+.tm-kicker i { width: 22px; height: 1px; background: rgba(255,255,255,0.08); }
+.tm-name { font-family: "Cinzel", Georgia, serif; font-size: 26px; font-weight: 700; letter-spacing: 2px; color: #f5f3fb; line-height: 1; }
+.tm-sub { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14.5px; color: #9090a8; }
+.tm-band { margin: 18px 20px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 11px 16px; display: flex; align-items: center; gap: 10px; }
+.tm-band .lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.2px; color: #6b6b86; }
+.tm-band .num { font-family: "Cinzel", Georgia, serif; font-size: 19px; font-weight: 700; color: #f5b842; line-height: 1; margin-left: auto; }
+.tm-band-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.8px; }
+.tm-band-tier i { width: 5px; height: 5px; transform: rotate(45deg); border-radius: 1px; }
+.tm-ladder { margin-top: 16px; display: flex; flex-direction: column; gap: 5px; }
+.tm-row { --tm-c: #f5b842; --tm-hi: #ffe9b0; margin: 0 20px; border-radius: 11px; border: 1px solid transparent; background: rgba(255,255,255,0.03); padding: 0 14px; height: 47px; display: flex; align-items: center; gap: 13px; }
+.tm-row--iron   { --tm-c: #8b89a0; --tm-hi: #c8c6d8; }
+.tm-row--teal   { --tm-c: #5eead4; --tm-hi: #c8fff2; }
+.tm-row--violet { --tm-c: #a78bfa; --tm-hi: #ddd2ff; }
+.tm-row--gold   { --tm-c: #f5b842; --tm-hi: #ffe9b0; }
+.tm-row--open { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tm-row--worn { border-color: rgba(245,184,66,0.45); background: rgba(245,184,66,0.05); box-shadow: 0 0 14px rgba(245,184,66,0.08); }
+.tm-row--next { border-color: rgba(255,255,255,0.08); }
+.tm-row--deep { background: transparent; }
+.tm-row .at { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #9090a8; width: 36px; flex: none; text-align: right; }
+.tm-row--deep .at { color: #6b6b86; opacity: 0.6; }
+.tm-gem { width: 9px; height: 9px; transform: rotate(45deg); border-radius: 1.5px; flex: none; background: linear-gradient(135deg, var(--tm-hi) 0%, var(--tm-c) 60%); box-shadow: 0 0 8px var(--tm-c); box-sizing: border-box; }
+.tm-gem.locked { background: transparent; border: 1px solid #6b6b86; opacity: 0.45; box-shadow: none; }
+.tm-row .nm { font-family: "Cinzel", Georgia, serif; font-size: 15.5px; font-weight: 700; letter-spacing: 0.8px; color: var(--tm-hi); white-space: nowrap; }
+.tm-row--worn .nm { color: #f5f3fb; }
+.tm-row--deep .nm, .tm-row--next .nm { color: #6b6b86; }
+.tm-row--deep { opacity: 0.65; }
+.tm-worn { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.8px; color: #f5b842; border: 1px solid rgba(245,184,66,0.4); border-radius: 999px; padding: 3px 9px 2px; flex: none; }
+.tm-equip { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.8px; color: #6b6b86; flex: none; }
+.tm-prog { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.tm-prog .n { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 700; color: #9090a8; letter-spacing: 0.5px; }
+.tm-prog .bar { width: 56px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.tm-prog .bar span { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 6px rgba(245,184,66,0.4); }
+.tm-lock { margin-left: auto; flex: none; opacity: 0.5; }
