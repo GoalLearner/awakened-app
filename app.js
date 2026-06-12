@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w263';
+  const APP_BUILD_TAG = '2.2.5-w264';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -32800,6 +32800,15 @@
   // Renders the rank-list content given a backend response. Splits
   // the user-row out of the top-N (or surfaces a separate "your rank"
   // line if me.rank > top.length). Empty top → first-to-rank message.
+  // W264 — title → shard tier (iron→teal→violet→gold by earn difficulty;
+  // gold reserved for the rarest: F90+, Apex). Unknown ids fall back to gold.
+  const _LB_TITLE_TIER = {
+    asc_brawler: 'iron',
+    asc_wallbreaker: 'teal', asc_ironbreaker: 'teal', asc_edgewalker: 'teal', asc_rank_contender: 'teal',
+    asc_duelist: 'violet', asc_unbroken: 'violet', asc_tyrantsbane: 'violet', asc_siegebreaker: 'violet',
+    asc_rank_duelist: 'violet', asc_rank_elite: 'violet',
+    asc_shadowcaller: 'gold', asc_sovereign: 'gold', asc_rank_apex: 'gold',
+  };
   function lbBuildRankList(metric, top, me, stale_footer) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return '';
@@ -32883,7 +32892,9 @@
       let titleChip = '';
       if (titleId && typeof ARENA_TITLES !== 'undefined') {
         const tdef = ARENA_TITLES.find((t) => t.id === titleId);
-        if (tdef) titleChip = '<span class="lb-rank-title">“' + esc(tdef.name) + '”</span>';
+        // W264 — gem-shard chip (ClaudeDesign direction C): faceted, tier-colored.
+        // Unknown/absent ids still render nothing (back/forward compatible).
+        if (tdef) titleChip = '<span class="lb-title-shard lb-title-shard--' + (_LB_TITLE_TIER[tdef.id] || 'gold') + '"><span>' + esc(tdef.name) + '</span></span>';
       }
       return '<div class="' + rankClass + '">' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +

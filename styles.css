@@ -10856,25 +10856,43 @@ footer {
   font-size: 0.78rem;
   margin-left: 4px;
 }
-/* W257 — equipped Arena title chip beside the alias. Ellipsis-capped so a
-   long title ("The Second Awakened") never pushes the value column. */
-.lb-rank-title {
+/* W264 — ClaudeDesign "Leaderboard Title Treatments", direction C (gem shard).
+   Faceted hex chip, tier-colored (iron→teal→violet→gold by earn difficulty).
+   Replaces the W257 quoted pill — whose .lb-rank-title rule also collided with
+   the sheet-header <h2> of the same class and shrank it to a pill. The chip
+   now owns its own lb-title-shard family; the header rule earlier in the file
+   is back in charge of the h2. */
+.lb-title-shard {
+  --shard-c: #f5b842; --shard-hi: #ffe9b0; --shard-lo: #9a6c14;
+  --shard-glow: rgba(245,184,66,0.33); --shard-rim: rgba(245,184,66,0.27);
   flex: none;
-  max-width: 96px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-flex;
+  min-width: 0;
+  padding: 1px;
+  margin: 0 8px 0 -2px;
+  clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+  background: linear-gradient(110deg, var(--shard-lo), var(--shard-c) 50%, var(--shard-lo));
+  filter: drop-shadow(0 0 5px var(--shard-rim));
+}
+.lb-title-shard > span {
+  clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+  padding: 4px 13px 3px;
+  background: linear-gradient(180deg, #1f1c3c, #131128);
   font-family: "JetBrains Mono", monospace;
   font-size: 7.5px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #f5b842;
-  background: rgba(245,184,66,0.08);
-  border: 1px solid rgba(245,184,66,0.3);
-  border-radius: 999px;
-  padding: 2.5px 7px 2px;
-  margin: 0 8px 0 -2px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--shard-c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96px;
+  text-shadow: 0 0 8px var(--shard-glow);
 }
+.lb-title-shard--violet { --shard-c: #a78bfa; --shard-hi: #ddd2ff; --shard-lo: #6d51c4; --shard-glow: rgba(167,139,250,0.33); --shard-rim: rgba(167,139,250,0.27); }
+.lb-title-shard--teal   { --shard-c: #5eead4; --shard-hi: #c8fff2; --shard-lo: #2e9c89; --shard-glow: rgba(94,234,212,0.33); --shard-rim: rgba(94,234,212,0.27); }
+.lb-title-shard--iron   { --shard-c: #c8c6d8; --shard-hi: #f0effa; --shard-lo: #807e96; --shard-glow: rgba(200,198,216,0.30); --shard-rim: rgba(200,198,216,0.22); }
 .lb-rank-value {
   font-weight: 800;
   color: var(--text-primary);
