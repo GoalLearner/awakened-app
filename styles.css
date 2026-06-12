@@ -2691,28 +2691,6 @@ footer {
   gap: 10px;
 }
 
-.ach-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  transition: border-color 0.3s ease;
-}
-
-.ach-card.unlocked {
-  border-color: rgba(139,92,246,0.3);
-  background: rgba(139,92,246,0.05);
-}
-
-.ach-card.locked {
-  opacity: 0.45;
-}
-
-.ach-text { flex: 1; min-width: 0; }
-
 .ach-name {
   font-size: 15px;
   font-weight: 600;
@@ -2725,11 +2703,6 @@ footer {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.4;
-}
-
-.ach-status {
-  font-size: 18px;
-  flex-shrink: 0;
 }
 
 /* ── ACHIEVEMENT UNLOCK POPUP ── */
@@ -12734,43 +12707,6 @@ footer {
    ACHIEVEMENTS — categorized layout + progress bars
    ═══════════════════════════════════════════════════════════════ */
 
-/* Card layout — same shape as before with progress block added */
-.ach-card .ach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.ach-card.ach-recent {
-  border-color: rgba(245,158,11,0.55);
-  background: linear-gradient(160deg, rgba(245,158,11,0.08), transparent);
-}
-
-/* Progress bar on locked achievements */
-.ach-prog-bar {
-  margin-top: 6px;
-  height: 4px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 100px;
-  overflow: hidden;
-}
-.ach-prog-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), #a78bfa);
-  border-radius: 100px;
-  transition: width 0.4s ease-out;
-}
-.ach-prog-text {
-  margin-top: 4px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.ach-prog-text--unlocked {
-  color: #22c55e;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  margin-top: 2px;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    STREAK FORGIVENESS — chips, modals, comeback screen
    ═══════════════════════════════════════════════════════════════ */
@@ -13149,12 +13085,12 @@ footer {
 }
 .sc-origin-btn:active { transform: scale(0.96); }
 
-/* ═══════════════════════════════════════════════════════════════
-   ORIGIN STORY — bottom sheet popup
-   ═══════════════════════════════════════════════════════════════ */
-@keyframes origin-fade { from { opacity: 0 } to { opacity: 1 } @keyframes origin-up {
+@keyframes origin-fade { from { opacity: 0 } to { opacity: 1 } }
+
+@keyframes origin-up {
   from { transform: translateX(-50%) translateY(100%); }
   to   { transform: translateX(-50%) translateY(0); }
+}
 /* ═══════════════════════════════════════════════════════════════
    THE BEGINNING — full-screen reveal after onboarding completion
    ═══════════════════════════════════════════════════════════════ */
@@ -13235,7 +13171,9 @@ footer {
 .bg-hide .bg-content { animation: bg-out 0.32s ease-in forwards; }
 @keyframes bg-bg-in  { from { opacity: 0 } to { opacity: 1 } }
 @keyframes bg-cnt-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes bg-out    { to { opacity: 0 } /* ═══════════════════════════════════════════════════════════════
+@keyframes bg-out    { to { opacity: 0 } }
+
+/* ═══════════════════════════════════════════════════════════════
    BOSS FULL-SCREEN DETAIL MODAL
    Replaces the v1.1.7 bottom-sheet. Opens from any .bcard tap. Lives
    above all tabs at z-index 200. Background matches app bg so the
@@ -16155,33 +16093,6 @@ body.reveal-locked { overflow: hidden; }
   text-transform: uppercase;
   font-weight: 600;
 }
-/* Hunting pill icon image — circular crop on the boss portrait so it
-   reads as a compact avatar at pill size. Idle state uses the dungeon
-   tab icon (square, no circular crop). */
-.status-pill-img {
-  border-radius: 50%;
-  flex-shrink: 0;
-  object-fit: cover;
-  margin-right: 2px;
-  display: inline-block;
-  vertical-align: middle;
-}
-.status-pill--active {
-  border-color: rgba(245, 158, 11, 0.45);
-}
-/* Hunting view — boss pill is purple-accented; idle = no engaged bosses */
-.status-pill--boss {
-  border-color: rgba(139, 92, 246, 0.45);
-}
-/* v3 Phase 1z.58 — boss pills are tappable when engaged (data-boss-id
-   set by the renderer). Cursor + focus-ring previously matched the
-   duel pill (removed in 1z.279). */
-.status-pill--boss[data-boss-id] { cursor: pointer; }
-.status-pill--boss[data-boss-id]:hover { filter: brightness(1.1); }
-.status-pill--boss[data-boss-id]:focus-visible {
-  outline: 1px solid var(--gold);
-  outline-offset: 2px;
-}
 /* v3 Phase 1z.279 — .status-pill--duel header pill (v3 Phase 1x.5)
    removed along with the Duels subsystem. */
 
@@ -16201,49 +16112,10 @@ body.reveal-locked { overflow: hidden; }
 .metric-card--spark:active { transform: scale(0.99); }
 
 /* ─── XP·30D detail bottom-sheet ──────────────────────────── */
-.xp-detail-header {
-  padding: 14px 18px 8px;
-  position: relative;
-}
-.xp-detail-eyebrow {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--gold);
-  text-transform: uppercase;
-  text-align: center;
-  margin-bottom: 4px;
-}
-.xp-detail-title {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 1.45rem;
-  color: var(--gold-bright, var(--gold));
-  text-align: center;
-  margin: 0;
-  letter-spacing: 0.03em;
-  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.35));
-}
 #xp-detail-close {
   position: absolute;
   top: 14px;
   right: 14px;
-}
-.xp-detail-body {
-  padding: 8px 16px 24px;
-}
-.xp-detail-chart-wrap {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 12px 10px;
-  margin-bottom: 18px;
-}
-.xp-detail-chart {
-  width: 100%;
-  height: 140px;
-  display: block;
 }
 /* Tier-1 "alive" treatment for the cumulative-XP chart.
    - Line gets a soft gold glow via drop-shadow filter
@@ -16322,59 +16194,6 @@ body.reveal-locked { overflow: hidden; }
   60%  { opacity: 0.55; }
   100% { transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); opacity: 0; }
 }
-.xp-detail-axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
-  color: var(--text-tertiary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.xp-detail-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-.xp-detail-stat {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 8px;
-  text-align: center;
-  min-width: 0;
-}
-.xp-detail-stat-label {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.58rem;
-  font-weight: 500;
-  letter-spacing: 0.10em;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.xp-detail-stat-value {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 1.20rem;
-  font-weight: 700;
-  color: var(--gold-bright, var(--gold));
-  line-height: 1;
-  margin-bottom: 3px;
-}
-.xp-detail-stat-sub {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.55rem;
-  color: var(--text-tertiary);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ─── Narrow-viewport accommodations (iPhone width < 400px) ── */
 @media (max-width: 400px) {
   .metric-card { padding: 8px 8px 9px; gap: 5px; }
@@ -22445,22 +22264,6 @@ button.guildhall-summary-tile:active {
   stroke-width: 0.5;
   opacity: 0.45;
 }
-.guild-bosses-crest-letter {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-bottom: 2px;
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  font-size: 0.80rem;
-  color: var(--rank-color);
-  text-shadow: 0 0 6px var(--rank-glow);
-  line-height: 1;
-  pointer-events: none;
-}
-
 .guild-bosses-title {
   font-family: 'Cinzel', serif;
   font-weight: 600;
@@ -25722,11 +25525,6 @@ button.guildhall-summary-tile:active {
   padding: 18px 16px;
   text-align: center;
 }
-.social-empty-icon {
-  color: var(--text-tertiary);
-  margin-bottom: 4px;
-  opacity: 0.7;
-}
 .social-empty-title {
   font-size: 0.86rem;
   font-weight: 700;
@@ -27886,7 +27684,6 @@ button.guildhall-summary-tile:active {
 .ar-kicker { display: inline-flex; align-items: center; gap: 8px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.3em; color: #f5b842; text-transform: uppercase; }
 .ar-kicker::before { content: ""; width: 16px; height: 1px; background: linear-gradient(90deg, transparent, #f5b842); }
 .ar-sub { font-family: -apple-system, system-ui, sans-serif; font-size: 11px; font-style: italic; color: #6b6b86; margin-top: 3px; }
-.ar-tophead { display: flex; align-items: flex-start; justify-content: space-between; }
   .ar-medallion { width: 104px; height: 104px; border-radius: 18px; overflow: hidden; position: relative; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(120% 120% at 50% 30%, rgba(167,139,250,0.18), #04040d 72%); border: 1.5px solid rgba(245,184,66,0.5); box-shadow: 0 0 26px -8px rgba(245,184,66,0.55); }
 .ar-medallion img { width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
 .ar-vs { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 22px; color: #f5b842; text-shadow: 0 0 16px rgba(245,184,66,0.5); padding-top: 44px; }
@@ -27899,33 +27696,8 @@ button.guildhall-summary-tile:active {
 .ar-cta:active { transform: scale(0.99); }
 .ar-cta-sub { display: block; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; opacity: 0.7; margin-top: 3px; }
 .ar-ghost { width: 100%; padding: 13px; margin-top: 8px; background: transparent; border: none; color: #9090a8; font-family: -apple-system, system-ui, sans-serif; font-size: 13.5px; font-weight: 500; cursor: pointer; }
-.ar-pips { display: flex; gap: 8px; align-items: center; }
-.ar-pip { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #6b6b86; background: transparent; }
-.ar-pip.win { background: #f5b842; border: none; box-shadow: 0 0 8px rgba(245,184,66,0.55); }
-.ar-pip.loss { background: #ef4444; border: none; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-.ar-hp { margin-top: 16px; padding: 15px 16px; border-radius: 16px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.07); display: flex; align-items: flex-start; gap: 14px; }
-.ar-hp-side { flex: 1; }
-.ar-hp-name { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 12.5px; color: #f5f3fb; }
-.ar-hp-side.foe .ar-hp-name { justify-content: flex-end; }
-/* W217 — Direction A "refined slim bar" (ported from ClaudeDesign hpbar-css) */
-.ar-hp-bar { height: 10px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 3px rgba(0,0,0,0.65); overflow: hidden; display: flex; }
-.ar-hp-side.foe .ar-hp-bar { justify-content: flex-end; }
-.ar-hp-fill { position: relative; height: 100%; border-radius: 5px; transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.ar-hp-side.you .ar-hp-fill { background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 12px rgba(245,184,66,0.4), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.35); }
-.ar-hp-side.foe .ar-hp-fill { background: linear-gradient(270deg, #7f1d1d, #ef4444); box-shadow: 0 0 12px rgba(239,68,68,0.35), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.35); }
-/* ambient shimmer sweep on the lit fill */
-.ar-hp-fill::after { content: ''; position: absolute; inset: 0; border-radius: 5px; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%); background-size: 220% 100%; background-position: 180% 0; animation: ar-hpshimmer 3.4s linear infinite; }
 @keyframes ar-hpshimmer { 0%,18% { background-position: 180% 0; } 70%,100% { background-position: -80% 0; } }
-.ar-hp-vs { font-family: "Cinzel", serif; font-weight: 700; font-size: 13px; color: #6b6b86; padding-top: 16px; }
-.ar-log { margin-top: 18px; }
-.ar-log-head { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em; color: #6b6b86; margin-bottom: 10px; }
-.ar-logline { font-family: -apple-system, system-ui, sans-serif; font-size: 12.5px; line-height: 1.45; padding: 7px 12px; border-radius: 9px; margin-bottom: 6px; border-left: 2px solid transparent; animation: ar-logpop 0.3s ease; }
 @keyframes ar-logpop { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
-.ar-logline.you { color: #f7c558; background: rgba(245,184,66,0.07); border-left-color: #f5b842; }
-.ar-logline.foe { color: #f8a4a4; background: rgba(239,68,68,0.07); border-left-color: #ef4444; }
-.ar-logline.neutral { color: #c8c6d8; }
-.ar-skip { display: flex; justify-content: center; padding-top: 10px; }
-.ar-skip button { display: inline-flex; align-items: center; gap: 9px; padding: 8px 14px; border-radius: 20px; cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #9090a8; }
 .ar-result-hero { display: flex; flex-direction: column; align-items: center; margin-top: 18px; }
 .ar-result-word { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 40px; letter-spacing: 0.06em; margin-top: 8px; }
 .ar-result-word.win { color: #f5b842; text-shadow: 0 0 30px rgba(245,184,66,0.6); }
@@ -27983,21 +27755,8 @@ button.guildhall-summary-tile:active {
 .ar-bi-arch { margin-top: 8px; }
 .ar-bi-taunt { font-family: "Cinzel", "Cormorant Garamond", serif; font-style: italic; font-size: 16px; color: #b9b4cc; text-align: center; line-height: 1.5; max-width: 300px; margin: 16px 0; }
 .ar-bi-faceoff { width: 100%; margin-bottom: 22px; }
-/* Skip pill (shown during the cinematic reveal) */
-.ar-skipbtn { display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 22px; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #9090a8; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; -webkit-tap-highlight-color: transparent; }
-.ar-skipbtn:active { background: rgba(255,255,255,0.08); }
-/* Hit juice — shake + colored flash on the sheet */
-.ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe { animation: ar-shake 0.34s ease; }
-.ar-sheet.ar-juice-you::after, .ar-sheet.ar-juice-foe::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 20; animation: ar-flash 0.34s ease forwards; }
-.ar-sheet.ar-juice-you::after { background: radial-gradient(120% 80% at 50% 60%, rgba(245,184,66,0.26), transparent 70%); }
-.ar-sheet.ar-juice-foe::after { background: radial-gradient(120% 80% at 50% 60%, rgba(239,68,68,0.26), transparent 70%); }
 @keyframes ar-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
 @keyframes ar-flash { from { opacity: 1; } to { opacity: 0; } }
-/* Floating damage number */
-.ar-dmg-float { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 38px; pointer-events: none; z-index: 21; animation: ar-dmgfloat 0.85s ease-out forwards; }
-.ar-dmg-float.you { color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.7); }
-.ar-dmg-float.foe { color: #ef4444; text-shadow: 0 0 18px rgba(239,68,68,0.6); }
-.ar-dmg-float.crit { font-size: 52px; letter-spacing: 0.02em; text-shadow: 0 0 26px rgba(245,184,66,0.95), 0 0 8px #fff; }
 @keyframes ar-dmgfloat { 0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.7); } 25% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(1); } }
 /* W218 — combat RNG tags (crit / miss / type effectiveness) */
 .ar-tag { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 7px; padding: 2px 7px; border-radius: 5px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.13em; line-height: 1.4; }
@@ -28005,8 +27764,6 @@ button.guildhall-summary-tile:active {
 .ar-tag.miss  { color: #9090a8; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
 .ar-tag.super { color: #34d399; background: rgba(52,211,153,0.14); border: 1px solid rgba(52,211,153,0.5); }
 .ar-tag.weak  { color: #ef4444; background: rgba(239,68,68,0.13); border: 1px solid rgba(239,68,68,0.45); }
-/* extra gold burst when the just-revealed exchange is a crit */
-.ar-sheet.ar-juice-crit::after { background: radial-gradient(120% 90% at 50% 55%, rgba(255,236,170,0.4), rgba(245,184,66,0.18) 45%, transparent 72%) !important; }
 /* continue button */
 .ar-contbtn { display: block; width: 100%; padding: 16px 0; border-radius: 12px; cursor: pointer; text-align: center; border: 1px solid rgba(245,184,66,0.35); background: linear-gradient(180deg, rgba(245,184,66,0.1), rgba(245,184,66,0.04)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 800; letter-spacing: 0.3em; color: #f5b842; -webkit-tap-highlight-color: transparent; }
 .ar-contbtn:active { filter: brightness(1.15); }
@@ -28030,8 +27787,6 @@ button.guildhall-summary-tile:active {
 .ar-vs-eff { display: flex; justify-content: center; margin: 12px 0 2px; min-height: 18px; }
 .ar-vs-even { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.18em; color: #6b6b86; }
 .ar-vs-eff .ar-tag { margin-left: 0; padding: 3px 11px; font-size: 9px; letter-spacing: 0.16em; }
-/* Low-HP danger glow (Direction A critical state) — side-qualified to beat the per-side fill shadow */
-.ar-hp-side .ar-hp-fill.low { box-shadow: 0 0 14px rgba(239,68,68,0.65), inset 0 1px 0 rgba(255,255,255,0.45); animation: ar-lowhp 1.15s ease-in-out infinite; }
 @keyframes ar-lowhp {
   0%,100% { box-shadow: 0 0 8px rgba(239,68,68,0.45), inset 0 1px 0 rgba(255,255,255,0.45); filter: brightness(1); }
   50% { box-shadow: 0 0 18px rgba(239,68,68,0.85), 0 0 5px rgba(245,184,66,0.6), inset 0 1px 0 rgba(255,255,255,0.45); filter: brightness(1.3); }
@@ -28042,44 +27797,20 @@ button.guildhall-summary-tile:active {
 .asc-rtier.asc-tier-pulse { animation: ar-tierpulse 0.8s ease 2; }
 @keyframes ar-tierpulse { 0%,100% { transform: scale(1); filter: none; } 50% { transform: scale(1.1); filter: brightness(1.5); } }
 
-/* W216 → W217 — FLAWLESS one-hit KO theatre (ported from ClaudeDesign shared KO) */
-.ar-hp-fill.ko { transition: width 0.55s cubic-bezier(0.5, 0, 0.9, 0.4); }
-.ar-ko-stage { position: relative; display: flex; justify-content: center; align-items: center; margin-top: 20px; min-height: 156px; }
-.ar-ko-foe { width: 120px; display: flex; justify-content: center; transition: transform 0.5s ease, opacity 0.5s ease, filter 0.5s ease; }
-.ar-ko-foe svg, .ar-ko-foe .ar-foe-art { width: 100%; height: auto; }
-.ar-ko-foe.struck { animation: ar-ko-crumple 0.6s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
 @keyframes ar-ko-crumple { 0% { filter: none; transform: none; } 18% { filter: brightness(1.6); transform: scale(1.05); } 100% { filter: grayscale(1) brightness(0.4); transform: scale(0.88) rotate(6deg) translateY(8px); } }
-/* framed FLAWLESS plaque */
-.ar-ko-stamp { position: absolute; left: 50%; top: 50%; z-index: 6; text-align: center; transform: translate(-50%,-50%) rotate(-4deg); padding: 12px 24px; border-radius: 4px; pointer-events: none; background: rgba(8,8,20,0.82); border: 1px solid rgba(245,184,66,0.55); box-shadow: 0 0 0 3px rgba(8,8,20,0.82), 0 0 0 4px rgba(245,184,66,0.22), 0 18px 50px -12px rgba(0,0,0,0.85), inset 0 0 24px rgba(245,184,66,0.08); animation: ar-ko-stamp 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) forwards; }
-.ar-ko-stamp .big { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 31px; letter-spacing: 5px; color: #f5b842; text-shadow: 0 0 26px rgba(245,184,66,0.55), 0 1px 0 rgba(0,0,0,0.6); line-height: 1; }
-.ar-ko-rule { display: flex; align-items: center; gap: 8px; margin: 9px 0 8px; }
-.ar-ko-rule .l { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(245,184,66,0.53)); }
-.ar-ko-rule .r { flex: 1; height: 1px; background: linear-gradient(270deg, transparent, rgba(245,184,66,0.53)); }
-.ar-ko-rule .dia { width: 5px; height: 5px; transform: rotate(45deg); background: #f5b842; box-shadow: 0 0 6px #f5b842; }
-.ar-ko-stamp .sub { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 8.5px; letter-spacing: 4px; color: rgba(200,198,216,0.7); }
 @keyframes ar-ko-stamp { 0% { opacity: 0; transform: translate(-50%,-50%) rotate(-4deg) scale(2); filter: blur(7px); } 60% { opacity: 1; transform: translate(-50%,-50%) rotate(-4deg) scale(0.94); filter: blur(0); } 80% { transform: translate(-50%,-50%) rotate(-4deg) scale(1.04); } 100% { opacity: 1; transform: translate(-50%,-50%) rotate(-4deg) scale(1); } }
-/* white flash + slash streak — fired by .go (one-shot) */
-.ar-ko-fx { position: absolute; inset: 0; pointer-events: none; z-index: 23; overflow: hidden; }
-.ar-ko-flash { position: absolute; inset: 0; border-radius: 18px; opacity: 0; background: radial-gradient(circle at 72% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.25) 45%, transparent 70%); }
-.ar-ko-fx.go .ar-ko-flash { animation: ar-ko-flash 0.45s ease forwards; }
 @keyframes ar-ko-flash { 0% { opacity: 0; } 22% { opacity: 0.85; } 100% { opacity: 0; } }
-.ar-ko-slash { position: absolute; left: -12%; top: 50%; width: 124%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95) 35%, #fff 50%, rgba(255,255,255,0.95) 65%, transparent); box-shadow: 0 0 12px rgba(255,255,255,0.8); transform: rotate(-16deg) translateX(-130%); opacity: 0; }
-.ar-ko-fx.go .ar-ko-slash { animation: ar-ko-slash 0.5s ease forwards; }
 @keyframes ar-ko-slash { 0% { transform: rotate(-16deg) translateX(-130%); opacity: 0; } 30% { opacity: 1; } 70% { transform: rotate(-16deg) translateX(110%); opacity: 1; } 100% { transform: rotate(-16deg) translateX(130%); opacity: 0; } }
-.ar-sheet.ar-ko-shake { animation: ar-ko-shake 0.5s ease; }
 @keyframes ar-ko-shake { 0%,100% { transform: translate(0,0) rotate(0deg); } 18% { transform: translate(-6px, 4px) rotate(-0.6deg); } 36% { transform: translate(7px, -5px) rotate(0.5deg); } 54% { transform: translate(-5px, 3px) rotate(-0.4deg); } 72% { transform: translate(4px, -2px) rotate(0.3deg); } 88% { transform: translate(-2px, 1px) rotate(0deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ar-body, .ar-logline, .ar-versus, .ar-bossintro { animation: none; }
-  .ar-hp-fill, .ar-hp-fill.ko, .ar-ko-foe { transition: none; }
-  .ar-hp-fill::after { animation: none; display: none; }
-  .ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe,
+      .ar-sheet.ar-juice-you, .ar-sheet.ar-juice-foe,
   .ar-sheet.ar-juice-you::after, .ar-sheet.ar-juice-foe::after,
   .ar-dmg-float, .ar-hp-side .ar-hp-fill.low, .asc-rtier.asc-tier-pulse,
   .ar-ko-foe.struck, .ar-ko-stamp, .ar-sheet.ar-ko-shake,
   .ar-ko-fx.go .ar-ko-flash, .ar-ko-fx.go .ar-ko-slash { animation: none; }
-  .ar-dmg-float, .ar-ko-flash, .ar-ko-slash { display: none; }
-}
+  }
 @media (max-width: 380px) { .ar-body { padding-left: 15px; padding-right: 15px; }  .ar-medallion { width: 92px; height: 92px; } .ar-result-word { font-size: 34px; } .ar-bi-med { width: 128px; height: 128px; } .ar-bi-name { font-size: 23px; } .ar-vs-side { width: 116px; } }
 /* END Arena block */
 
