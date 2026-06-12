@@ -636,7 +636,7 @@
       rank:             'B',
       archetype:        'caster',
       flavorShort:      'A quiet flame that waits for discipline measured in steps.',
-      flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Reach the count five times, and it warms your hand. Fall short, and the wick darkens.',
+      flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Walk the distance two days running, and it warms your hand. Break the chain, and the wick darkens.',
       killCondShort:    '10,000 steps, 2 days back-to-back',
       killCondLong:     'Walk at least 10,000 verified steps on two consecutive days inside the 7-day hunt window. Steady ground beats sudden distance — prove it back-to-back.',
       failedCopy:       'The flame waited longer than you held.',
