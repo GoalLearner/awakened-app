@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w262';
+  const APP_BUILD_TAG = '2.2.5-w263';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -582,10 +582,13 @@
     },
 
     // v3 Phase 1z.271B — B-rank verified-only dungeon ("The Vow Keepers'
-    // Hollow"). W262: all three bosses now require 2 CONSECUTIVE
-    // (back-to-back) qualifying days/nights inside the 7-day hunt window
-    // — was 5-of-7. A completed miss day resets the run; the window
-    // leaves room to start again. Verified-only — no manual habit
+    // Hollow"). W262: all three bosses require 2 CONSECUTIVE
+    // (back-to-back) qualifying days/nights — was 5-of-7. W263: cadence
+    // weekly → DAILY with a 2-day hunt window (huntWindowDays override):
+    // daily drop economy, midnight re-engage lock, and a tight
+    // engage-and-do-it-now hunt. The engage day evaluates from its
+    // midnight, so same-day (and for sleep, last-night) pre-engage
+    // activity counts toward the pair. Verified-only — no manual habit
     // completion paths. Each boss maps to a future combat-triangle archetype
     // (1z.269A): Forge → Aggressor (STR+FOCUS), Vow Keeper → Sustainer
     // (VIT+WILL), Patient Flame → Caster/Discipline (FOCUS+WILL via
@@ -602,7 +605,7 @@
       flavorShort:      'A god-forge that opens only for the hammer that never falls.',
       flavorLong:       'A god-forge sealed since the second age. Its doors part only for those who lift on the days they do not want to. Stop, and the forge cools. Continue, and the steel between you and the world grows thinner with every blow.',
       killCondShort:    '30+ workout minutes, 2 days back-to-back',
-      killCondLong:     'Complete at least 30 verified workout minutes on two consecutive days inside the 7-day hunt window. Any qualifying Apple Health workout type counts. A gap day resets the run — the window leaves room to start again.',
+      killCondLong:     'Complete at least 30 verified workout minutes on two consecutive days inside the 2-day hunt window. Any qualifying Apple Health workout type counts. The day you engage counts from midnight — training already done today counts.',
       failedCopy:       'The hammer fell silent. The forge sealed.',
       // consecutiveDays = back-to-back days inside the window that must
       // hit the workoutMinutes threshold (W262 — was 5-of-7 qualifying
@@ -611,7 +614,8 @@
       workoutMinutes:   30,
       consecutiveDays:  2,
       streakTarget:     2,
-      cadence:          'weekly',
+      cadence:          'daily',
+      huntWindowDays:   2,   // W263 — a back-to-back pair needs two days
       statDomain:       'STR',
     },
     the_vow_keeper: {
@@ -622,12 +626,13 @@
       flavorShort:      'He watches the hours you swore to give yourself.',
       flavorLong:       'A silent figure crowned in unburned candles. He weighs the nights you slept against the nights you did not. He yields only when the count tips in your favor.',
       killCondShort:    '7+ hours of sleep, 2 nights back-to-back',
-      killCondLong:     'Sleep at least seven verified hours on two consecutive nights inside the 7-day hunt window. One good night is not enough. Hold it two nights running.',
+      killCondLong:     'Sleep at least seven verified hours on two consecutive nights inside the 2-day hunt window. Last night counts — engage with one good night banked and seal it tonight.',
       failedCopy:       'The vow went unkept. The keeper turned away.',
       sleepHours:       7,
       consecutiveNights: 2,
       streakTarget:     2,
-      cadence:          'weekly',
+      cadence:          'daily',
+      huntWindowDays:   2,   // W263 — a back-to-back pair needs two days
       statDomain:       'VIT',
     },
     the_patient_flame: {
@@ -638,12 +643,13 @@
       flavorShort:      'A quiet flame that waits for discipline measured in steps.',
       flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Walk the distance two days running, and it warms your hand. Break the chain, and the wick darkens.',
       killCondShort:    '10,000 steps, 2 days back-to-back',
-      killCondLong:     'Walk at least 10,000 verified steps on two consecutive days inside the 7-day hunt window. Steady ground beats sudden distance — prove it back-to-back.',
+      killCondLong:     'Walk at least 10,000 verified steps on two consecutive days inside the 2-day hunt window. The day you engage counts from midnight. Steady ground beats sudden distance.',
       failedCopy:       'The flame waited longer than you held.',
       stepThreshold:    10000,
       consecutiveDays:  2,
       streakTarget:     2,
-      cadence:          'weekly',
+      cadence:          'daily',
+      huntWindowDays:   2,   // W263 — a back-to-back pair needs two days
       statDomain:       'FOCUS',
     },
   };
@@ -701,6 +707,12 @@
   const _BOSS_HUNT_DAY_MS = 24 * 60 * 60 * 1000;
   function getBossHuntDurationMs(cfg) {
     if (!cfg) return _BOSS_HUNT_DAY_MS;
+    // W263 — per-boss window override. The B-rank consecutive bosses are
+    // cadence 'daily' (economy / midnight lock / label) but need a 2-day
+    // window to hold a back-to-back pair.
+    if (typeof cfg.huntWindowDays === 'number' && cfg.huntWindowDays > 0) {
+      return cfg.huntWindowDays * _BOSS_HUNT_DAY_MS;
+    }
     switch (cfg.cadence) {
       case 'weekly':    return 7 * _BOSS_HUNT_DAY_MS;
       case 'triweekly': return 3 * _BOSS_HUNT_DAY_MS;
@@ -862,27 +874,28 @@
       state.hunt_expires_at = getBossHuntExpiresAtMs(cfg, started);
       wrote = true;
     }
-    // W261 — Carouser cadence migration (weekly weekend-nights →
-    // daily 5-flights). An ACTIVE hunt engaged under the old
-    // end-of-Sunday rule would instantly expire when re-derived
-    // against the new 24h window (hunt_started_at can be days old).
-    // Convert in place: re-stamp a fresh daily window from now and
-    // zero the carried progress. Idempotent — converted windows are
-    // ≤24h, so the oversize check never re-fires. Also drops the
-    // retired weekend fields (any state shape, engaged or not, passes
-    // through here only when engaged — disengaged states simply keep
-    // inert leftovers that nothing reads anymore).
-    if (id === 'the_carouser' &&
-        typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0 &&
+    // W261/W263 — cadence-shrink migration. When an update SHRINKS a
+    // boss's canonical hunt window (Carouser weekly → daily in W261,
+    // the B-rank trio weekly → 2-day daily in W263), an ACTIVE legacy
+    // hunt would instantly expire when re-derived (hunt_started_at can
+    // be days old). Convert in place: re-stamp a fresh canonical window
+    // from now and zero the carried progress mirrors. Idempotent —
+    // converted windows match the canonical duration, so the oversize
+    // check never re-fires. Bosses whose duration didn't change are
+    // untouched (stored === canonical).
+    if (typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0 &&
         typeof state.hunt_expires_at === 'number' &&
-        (state.hunt_expires_at - state.hunt_started_at) > _BOSS_HUNT_DAY_MS + 60000) {
+        (state.hunt_expires_at - state.hunt_started_at) > getBossHuntDurationMs(cfg) + 60000) {
       const nowMs = Date.now();
       state.hunt_started_at = nowMs;
-      state.hunt_expires_at = nowMs + _BOSS_HUNT_DAY_MS;
+      state.hunt_expires_at = nowMs + getBossHuntDurationMs(cfg);
       state.streak = 0;
       state.flight_progress = 0;
-      delete state.weekend_burned;
-      delete state.current_weekend_id;
+      state.qualifying_progress = 0;
+      if (id === 'the_carouser') {
+        delete state.weekend_burned;   // retired W261 weekend fields
+        delete state.current_weekend_id;
+      }
       wrote = true;
     }
     if (wrote) setBossState(id, state);
@@ -1136,16 +1149,26 @@
       let evalEnd = huntEvalEnd;
       if (cfg.cadence === 'daily') {
         const nowDt = new Date(now);
-        start = Math.min(huntStart, _startOfLocalDayMs(nowDt));
-        evalEnd = Math.min(_endOfLocalDayMs(nowDt), now);
+        if (typeof cfg.consecutiveDays === 'number' || typeof cfg.consecutiveNights === 'number') {
+          // W263 — consecutive dailies (B-rank trio): evaluate FULL local
+          // days anchored to the ENGAGE day's midnight, so day-1
+          // qualification (incl. same-day pre-engage credit) stays stable
+          // on every later resolve. min(huntStart, today-midnight) would
+          // silently shrink day 1 to [engage-time, midnight] once the
+          // calendar rolled over, un-qualifying a banked day.
+          start = _startOfLocalDayMs(new Date(huntStart));
+        } else {
+          start = Math.min(huntStart, _startOfLocalDayMs(nowDt));
+          evalEnd = Math.min(_endOfLocalDayMs(nowDt), now);
+        }
       }
 
       let defeated = false;
 
-      // ── v3 Phase 1z.271B / W262 — B-rank back-to-back days/nights ──
+      // ── v3 Phase 1z.271B / W262 / W263 — B-rank back-to-back pair ──
       // Three bosses (Forge of Ten Thousand Days, Vow Keeper, Patient
       // Flame) require N CONSECUTIVE qualifying days/nights inside the
-      // weekly hunt window (W262 — was 5-of-7). Branches sit at the TOP
+      // 2-day hunt window (W262 — was 5-of-7 weekly). Branches sit at the TOP
       // of the chain so they take precedence over the single-pass
       // branches, which we also guard below with !cfg.consecutiveDays /
       // !cfg.consecutiveNights so a B-rank boss with both stepThreshold
@@ -2692,7 +2715,8 @@
   };
 
   // Drop rates per DROPS.md v1.4 — CADENCE-AWARE. Weekly bosses kill
-  // ~once per 7 days (the B-rank trio); daily bosses can kill every 2 days
+  // ~once per 7 days (none currently ship weekly — the W263 B-rank trio
+  // went daily; the tier stays for future weekly bosses); daily bosses can kill every 2 days
   // when on streak. To keep per-month expected-pull volume comparable
   // across cadences, weekly rates are multiplied (5× ultra-rare,
   // 3× rare, 2× common) over the daily baseline. Roll order stays
