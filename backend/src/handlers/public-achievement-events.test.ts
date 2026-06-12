@@ -1347,6 +1347,34 @@ describe('arena_title_earned (W258)', () => {
     expect(res.status).toBe(200);
   });
 
+  it('accepts a W266 rating-ladder title (Warbringer) with its exact label', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'rt_warbringer',
+        eventLabel: 'earned the title "Warbringer"',
+        clientEventId: 'arena_title:rt_warbringer',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+    expect(db._calls()[0]?.binds[4]).toBe('earned the title "Warbringer"');
+  });
+
+  it('rejects a legacy label on a W266 id (cross-era tamper)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'rt_monarch',
+        eventLabel: 'earned the title "The Second Awakened"',
+        clientEventId: 'arena_title:rt_monarch',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
   it('rejects an unknown title id', async () => {
     const db = makeDb();
     const res = await handlePublicAchievementEventsPost(

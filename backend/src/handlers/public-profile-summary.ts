@@ -87,6 +87,12 @@ const STREAK_LABEL_RE = /^\d{1,4}-day (MR|LI|stat|habit) streak$/;
 // client-side minigame); accepted cosmetic-only risk. This field can never
 // grant power, currency, or progression.
 const ARENA_TITLE_IDS = [
+  // W266 — rating-milestone ladder (current clients)
+  'rt_contender', 'rt_brawler', 'rt_duelist', 'rt_blade', 'rt_reaver',
+  'rt_elite', 'rt_warbringer', 'rt_sovereign', 'rt_apex', 'rt_monarch',
+  'rt_grandmaster',
+  // legacy W257-era ids — accepted from pre-W266 clients still in the wild;
+  // the client remaps them forward on its next launch
   'asc_brawler', 'asc_wallbreaker', 'asc_ironbreaker', 'asc_edgewalker',
   'asc_duelist', 'asc_unbroken', 'asc_tyrantsbane', 'asc_siegebreaker',
   'asc_shadowcaller', 'asc_sovereign',

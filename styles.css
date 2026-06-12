@@ -9472,25 +9472,43 @@ footer {
   font-size: 0.78rem;
   margin-left: 4px;
 }
-/* W257 — equipped Arena title chip beside the alias. Ellipsis-capped so a
-   long title ("The Second Awakened") never pushes the value column. */
-.lb-rank-title {
+/* W264 — ClaudeDesign "Leaderboard Title Treatments", direction C (gem shard).
+   Faceted hex chip, tier-colored (iron→teal→violet→gold by earn difficulty).
+   Replaces the W257 quoted pill — whose .lb-rank-title rule also collided with
+   the sheet-header <h2> of the same class and shrank it to a pill. The chip
+   now owns its own lb-title-shard family; the header rule earlier in the file
+   is back in charge of the h2. */
+.lb-title-shard {
+  --shard-c: #f5b842; --shard-hi: #ffe9b0; --shard-lo: #9a6c14;
+  --shard-glow: rgba(245,184,66,0.33); --shard-rim: rgba(245,184,66,0.27);
   flex: none;
-  max-width: 96px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-flex;
+  min-width: 0;
+  padding: 1px;
+  margin: 0 8px 0 -2px;
+  clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+  background: linear-gradient(110deg, var(--shard-lo), var(--shard-c) 50%, var(--shard-lo));
+  filter: drop-shadow(0 0 5px var(--shard-rim));
+}
+.lb-title-shard > span {
+  clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+  padding: 4px 13px 3px;
+  background: linear-gradient(180deg, #1f1c3c, #131128);
   font-family: "JetBrains Mono", monospace;
   font-size: 7.5px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #f5b842;
-  background: rgba(245,184,66,0.08);
-  border: 1px solid rgba(245,184,66,0.3);
-  border-radius: 999px;
-  padding: 2.5px 7px 2px;
-  margin: 0 8px 0 -2px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--shard-c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96px;
+  text-shadow: 0 0 8px var(--shard-glow);
 }
+.lb-title-shard--violet { --shard-c: #a78bfa; --shard-hi: #ddd2ff; --shard-lo: #6d51c4; --shard-glow: rgba(167,139,250,0.33); --shard-rim: rgba(167,139,250,0.27); }
+.lb-title-shard--teal   { --shard-c: #5eead4; --shard-hi: #c8fff2; --shard-lo: #2e9c89; --shard-glow: rgba(94,234,212,0.33); --shard-rim: rgba(94,234,212,0.27); }
+.lb-title-shard--iron   { --shard-c: #c8c6d8; --shard-hi: #f0effa; --shard-lo: #807e96; --shard-glow: rgba(200,198,216,0.30); --shard-rim: rgba(200,198,216,0.22); }
 .lb-rank-value {
   font-weight: 800;
   color: var(--text-primary);
@@ -28235,3 +28253,98 @@ button.guildhall-summary-tile:active {
 @media (prefers-reduced-motion: reduce) {
   .pkb-stage.clutch::before, .pkb-stage.clutch .pkb-plate .hp i, .ar-vs-wire .word { animation: none; }
 }
+
+/* ── W265 — The Ascent: Ledger remodel (ClaudeDesign direction A) ───────── */
+.al-head { padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 14px; }
+.al-head-row { display: flex; align-items: center; gap: 10px; }
+.al-wordmark { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 3px; color: #f5b842; }
+.al-title-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; background: rgba(245,184,66,0.05); padding: 4px 9px 3px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; -webkit-tap-highlight-color: transparent; }
+.al-head-nums { display: flex; align-items: flex-end; gap: 8px; }
+.al-lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.5px; color: #6b6b86; }
+.al-rating { display: flex; flex-direction: column; gap: 3px; }
+.al-rating-row { display: flex; align-items: baseline; gap: 9px; }
+.al-rating-row .num { font-family: "Cinzel", Georgia, serif; font-size: 28px; font-weight: 700; color: #f5b842; line-height: 1; }
+.al-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2px; }
+.al-tier i { width: 6px; height: 6px; transform: rotate(45deg); border-radius: 1px; }
+.al-lives { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; margin-left: auto; }
+.al-lives-row { display: flex; align-items: center; gap: 5px; }
+.al-lives-row .n { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; color: #9090a8; margin-left: 2px; }
+.al-scroll { padding-top: 4px; }
+.al-hero { margin: 6px 18px 0; border-radius: 16px; border: 1px solid rgba(245,184,66,0.4); background: linear-gradient(180deg, #15132f, #0e0e24); box-shadow: 0 0 28px rgba(245,184,66,0.08), inset 0 1px 0 rgba(255,255,255,0.06); padding: 18px 18px 16px; display: flex; flex-direction: column; }
+.al-hero-top { display: flex; align-items: flex-start; gap: 14px; }
+.al-hero-id { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; align-items: flex-start; }
+.al-hero-id .kick { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2.5px; color: #f5b842; }
+.al-hero-id .nm { font-family: "Cinzel", Georgia, serif; font-size: 24px; font-weight: 700; color: #f5f3fb; line-height: 1.1; }
+.al-hero-tg { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1.8px; color: #a78bfa; background: none; border: none; padding: 0; text-align: left; }
+.al-hero-tg.tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.al-hero-med { width: 64px; height: 64px; border-radius: 12px; flex: none; border: 1px solid rgba(255,255,255,0.08); background: #14122c; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.al-hero-med .asc-fa-img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.al-hero-med svg { width: 42px; height: 56px; }
+.al-hero-reward { margin-top: 11px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: #6b6b86; }
+.al-hero-reward b { color: #f5b842; font-weight: 800; }
+.al-hero-rule { height: 1px; background: rgba(255,255,255,0.08); margin: 14px 0 12px; }
+.al-hero-intel { display: flex; align-items: center; gap: 8px; }
+.al-hero-intel .read { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 15.5px; color: #c8c6d8; min-width: 0; }
+.al-hero-intel .read b { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 1.5px; color: #5eead4; }
+.al-hero-intel .odds { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; color: #6b6b86; margin-left: auto; flex: none; }
+.al-fight { margin-top: 14px; border: none; cursor: pointer; border-radius: 11px; padding: 15px 0; width: 100%; background: linear-gradient(180deg, #f5b842, #c08418); box-shadow: 0 4px 16px rgba(245,184,66,0.25); font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #241502; text-align: center; -webkit-tap-highlight-color: transparent; }
+.al-fight--locked { background: rgba(255,255,255,0.04); box-shadow: none; color: #9090a8; cursor: default; display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 12px 0; }
+.al-fight--locked span { font-size: 7.5px; font-weight: 600; letter-spacing: 1.2px; color: #6b6b86; text-transform: uppercase; }
+.al-hero .asc-scout { margin-top: 11px; }
+.al-hero--done .kick { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2.5px; color: #f5b842; }
+.al-hero--done .nm { font-family: "Cinzel", Georgia, serif; font-size: 22px; font-weight: 700; color: #f5f3fb; margin-top: 6px; display: block; }
+.al-rule { padding: 26px 18px 10px; display: flex; align-items: center; gap: 10px; }
+.al-rule .lbl { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2.5px; color: #6b6b86; flex: none; }
+.al-rule .line { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+.al-rule .right { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1px; color: #6b6b86; flex: none; }
+.al-row { margin: 0 18px 8px; border-radius: 11px; border: 1px solid transparent; background: rgba(255,255,255,0.03); padding: 0 14px; height: 46px; display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.al-row--milestone { border-color: rgba(245,184,66,0.28); background: rgba(245,184,66,0.04); }
+.al-row .fl { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #6b6b86; width: 22px; flex: none; }
+.al-row--milestone .fl { color: #f5b842; }
+.al-row .nm { font-family: "Cinzel", Georgia, serif; font-size: 14.5px; font-weight: 600; color: #9090a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-row--milestone .nm { color: #f5f3fb; }
+.al-row svg { flex: none; }
+.al-row .al-redo { margin-left: auto; }
+.al-row .al-row-title { margin-left: auto; }
+.al-row .al-row-title + .al-redo { margin-left: 0; }
+.al-dia { width: 16px; display: flex; justify-content: center; flex: none; }
+.al-dia::before { content: ""; width: 8px; height: 8px; transform: rotate(45deg); background: #f5b842; border-radius: 1.5px; box-shadow: 0 0 7px rgba(245,184,66,0.6); }
+.al-row-title { font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; padding: 3px 8px 2px; flex: none; }
+.al-hint { text-align: center; padding: 18px 0 10px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 600; letter-spacing: 2px; color: #6b6b86; }
+
+/* ── W266 — Titles: rating-milestone ladder (ClaudeDesign) ──────────────── */
+.tm-head { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 6px 20px 0; }
+.tm-kicker { display: flex; align-items: center; gap: 10px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 3px; color: #f5b842; }
+.tm-kicker i { width: 22px; height: 1px; background: rgba(255,255,255,0.08); }
+.tm-name { font-family: "Cinzel", Georgia, serif; font-size: 26px; font-weight: 700; letter-spacing: 2px; color: #f5f3fb; line-height: 1; }
+.tm-sub { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14.5px; color: #9090a8; }
+.tm-band { margin: 18px 20px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 11px 16px; display: flex; align-items: center; gap: 10px; }
+.tm-band .lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.2px; color: #6b6b86; }
+.tm-band .num { font-family: "Cinzel", Georgia, serif; font-size: 19px; font-weight: 700; color: #f5b842; line-height: 1; margin-left: auto; }
+.tm-band-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.8px; }
+.tm-band-tier i { width: 5px; height: 5px; transform: rotate(45deg); border-radius: 1px; }
+.tm-ladder { margin-top: 16px; display: flex; flex-direction: column; gap: 5px; }
+.tm-row { --tm-c: #f5b842; --tm-hi: #ffe9b0; margin: 0 20px; border-radius: 11px; border: 1px solid transparent; background: rgba(255,255,255,0.03); padding: 0 14px; height: 47px; display: flex; align-items: center; gap: 13px; }
+.tm-row--iron   { --tm-c: #8b89a0; --tm-hi: #c8c6d8; }
+.tm-row--teal   { --tm-c: #5eead4; --tm-hi: #c8fff2; }
+.tm-row--violet { --tm-c: #a78bfa; --tm-hi: #ddd2ff; }
+.tm-row--gold   { --tm-c: #f5b842; --tm-hi: #ffe9b0; }
+.tm-row--open { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tm-row--worn { border-color: rgba(245,184,66,0.45); background: rgba(245,184,66,0.05); box-shadow: 0 0 14px rgba(245,184,66,0.08); }
+.tm-row--next { border-color: rgba(255,255,255,0.08); }
+.tm-row--deep { background: transparent; }
+.tm-row .at { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #9090a8; width: 36px; flex: none; text-align: right; }
+.tm-row--deep .at { color: #6b6b86; opacity: 0.6; }
+.tm-gem { width: 9px; height: 9px; transform: rotate(45deg); border-radius: 1.5px; flex: none; background: linear-gradient(135deg, var(--tm-hi) 0%, var(--tm-c) 60%); box-shadow: 0 0 8px var(--tm-c); box-sizing: border-box; }
+.tm-gem.locked { background: transparent; border: 1px solid #6b6b86; opacity: 0.45; box-shadow: none; }
+.tm-row .nm { font-family: "Cinzel", Georgia, serif; font-size: 15.5px; font-weight: 700; letter-spacing: 0.8px; color: var(--tm-hi); white-space: nowrap; }
+.tm-row--worn .nm { color: #f5f3fb; }
+.tm-row--deep .nm, .tm-row--next .nm { color: #6b6b86; }
+.tm-row--deep { opacity: 0.65; }
+.tm-worn { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.8px; color: #f5b842; border: 1px solid rgba(245,184,66,0.4); border-radius: 999px; padding: 3px 9px 2px; flex: none; }
+.tm-equip { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 1.8px; color: #6b6b86; flex: none; }
+.tm-prog { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.tm-prog .n { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 700; color: #9090a8; letter-spacing: 0.5px; }
+.tm-prog .bar { width: 56px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.tm-prog .bar span { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 6px rgba(245,184,66,0.4); }
+.tm-lock { margin-left: auto; flex: none; opacity: 0.5; }

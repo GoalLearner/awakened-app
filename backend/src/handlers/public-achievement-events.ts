@@ -141,6 +141,19 @@ const STEP_100K_CLUB_VALUE = 100000;
 // event label must equal 'earned the title "<name>"' verbatim, so no free
 // text ever reaches the feed.
 const ARENA_TITLE_LABELS: Record<string, string> = {
+  // W266 — rating-milestone ladder (current clients)
+  rt_contender:       'Contender',
+  rt_brawler:         'Brawler',
+  rt_duelist:         'Duelist',
+  rt_blade:           'Blade',
+  rt_reaver:          'Reaver',
+  rt_elite:           'Elite',
+  rt_warbringer:      'Warbringer',
+  rt_sovereign:       'Sovereign',
+  rt_apex:            'Apex',
+  rt_monarch:         'Monarch',
+  rt_grandmaster:     'Grandmaster',
+  // legacy W257-era ids — events from pre-W266 clients still validate
   asc_brawler:        'Brawler',
   asc_wallbreaker:    'Wallbreaker',
   asc_ironbreaker:    'Ironbreaker',
