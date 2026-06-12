@@ -14354,33 +14354,6 @@ footer {
   opacity: 1;
 }
 
-/* Burned: Carouser's weekend_burned === true. Desaturated card +
-   forfeit overlay. Other regions still render (so user sees the
-   structure) but read as inert. Burned visual takes priority over
-   engaged/dormant — most informative state wins. */
-.bcard--burned {
-  filter: saturate(0.5) brightness(0.85);
-}
-.bcard-burned-overlay {
-  position: absolute;
-  top: 50%;
-  left: 6px;
-  right: 6px;
-  z-index: 5;
-  transform: translateY(-50%);
-  text-align: center;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  color: var(--gold);
-  text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.78);
-  padding: 8px 6px;
-  border-top: 1px solid rgba(245, 158, 11, 0.45);
-  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
-  pointer-events: none;
-}
-
 /* v3 Phase 1z.277C — Boss archetype pill (display-only).
    Modeled on .habit-schedule-chip — compact, uppercase, tracked.
    Color theming via data-archetype attribute: aggressor red,
