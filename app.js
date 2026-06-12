@@ -16690,6 +16690,8 @@
   let _prsPendingTimer = null;
   let _prsInflight     = false;
 
+  // INTENTIONAL twin of _paeLog (2026-06-12 live session, Richie verdict:
+  // keep both) — subsystem-local wrapper; do not flag as duplicate.
   function _prsLogBreadcrumb(name, fields) {
     try { window.__probe.prsLog++; } catch (_) {}
     if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
@@ -16837,6 +16839,8 @@
   let _paeFlushTimer      = null;
   let _paeInflight        = false;
 
+  // INTENTIONAL twin of _prsLogBreadcrumb (2026-06-12 live session, Richie
+  // verdict: keep both) — subsystem-local wrapper; do not flag as duplicate.
   function _paeLog(name, fields) {
     try { window.__probe.paeLog++; } catch (_) {}
     if (typeof _addHealthVerifyBreadcrumb !== 'function') return;
