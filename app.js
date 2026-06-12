@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w260';
+  const APP_BUILD_TAG = '2.2.5-w261';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -355,11 +355,11 @@
   // before midnight) or [0].start (earliest onset).
   //
   // STRICT WINDOW rationale: see autoVerifySleepBeforeMidnight comments
-  // and CLAUDE.md "HealthKit integration → bedtime detection". Both
-  // habit auto-verify (Sleep before midnight) and boss evaluators
-  // (The Carouser) consume this same helper — keeps the rule in ONE
-  // place so a future tightening (e.g., before-11-PM variant) can be
-  // applied consistently without drift between consumers.
+  // and CLAUDE.md "HealthKit integration → bedtime detection". Habit
+  // auto-verify (Sleep before midnight) consumes this helper — keeps
+  // the rule in ONE place so a future tightening (e.g., before-11-PM
+  // variant) applies consistently. (The Carouser read it too until its
+  // W261 rework to a daily flights climb.)
   function getBedtimeSamplesInWindow(samples) {
     const midnightToday = new Date();
     midnightToday.setHours(0, 0, 0, 0);
@@ -428,16 +428,22 @@
       id:               'the_carouser',
       name:             'The Carouser',
       rank:             'E',
-      archetype:        'sustainer', // 1z.277C — recovery + restraint → Sustainer
+      archetype:        'sustainer', // 1z.277C — restraint → Sustainer (kept through the W261 rework)
+      // W261 — reworked from the weekend sleep boss (Fri+Sat, 7h +
+      // before-midnight) to a DAILY 5-flights climb. Rides the generic
+      // flightThreshold resolver branch (same path as the Ascendant
+      // Colossus); the weekend evaluator, Friday-only engage gate and
+      // end-of-Sunday expiry are all retired. Stat domain stays WILL —
+      // the boss is still about refusing the easy way.
       flavorShort:      'He keeps a long table, and his guests rarely leave.',
-      flavorLong:       'Two nights a week he calls them home — Friday and Saturday — and most answer. Refuse him both nights running, and the door stays closed.',
-      killCondShort:    'Sleep 7+ hours and bed before midnight, both Friday and Saturday',
-      killCondLong:     'Sleep at least 7 hours AND go to bed before midnight on Friday AND Saturday of the same weekend. Miss either night, and the streak resets to start the next weekend.',
-      streakTarget:     2,
-      sleepHours:       7,
-      cadence:          'weekly',
+      flavorLong:       'He holds court at the bottom of every stairwell, pouring reasons to take the easy way up. Climb past him — five flights, any day — and the table sits empty.',
+      killCondShort:    'Climb 5+ verified flights today',
+      killCondLong:     'Climb at least 5 verified flights of stairs (Apple Health) during the 24-hour hunt window. Cumulative — every flight counts.',
+      failedCopy:       'The table won. The stairs went unclimbed.',
+      streakTarget:     1,
+      flightThreshold:  5,
+      cadence:          'daily',
       statDomain:       'WILL',
-      dayOfWeekScoped:  true, // only Fri + Sat nights count (2-night recalibration)
     },
     // v3 Phase 1v — D-rank boss roster. All three are TRUE daily-cadence
     // bosses (one defeat per qualifying day/night, no weekly cap). Souls
@@ -700,31 +706,6 @@
     }
   }
 
-  // v3 Phase 1z.57 — Carouser-specific end-of-Sunday helper.
-  // The Carouser's kill condition is two consecutive weekend nights
-  // (Fri + Sat), so a generic 7-day window after engagement is
-  // wrong: a Friday engagement should expire Sunday night, not the
-  // following Friday. Computes Sunday 23:59:59.999 device-local for
-  // the weekend containing `refMs`.
-  //
-  // Day-of-week math (JS Date.getDay() → 0=Sun..6=Sat):
-  //   Sun (0): daysUntilSun = (7-0) % 7 = 0  → today end-of-day
-  //   Mon (1): daysUntilSun = (7-1) % 7 = 6  → upcoming Sunday
-  //   Fri (5): daysUntilSun = 2              → this Sunday
-  //   Sat (6): daysUntilSun = 1              → this Sunday
-  //
-  // A Monday engagement maps to the UPCOMING Sunday (6 days out)
-  // rather than locking the user out — matches the spec's "set
-  // expiration to the upcoming Sunday" guidance.
-  function _endOfSundayLocalMs(refMs) {
-    const d = new Date(refMs);
-    const dow = d.getDay();
-    const daysUntilSun = (7 - dow) % 7;
-    d.setDate(d.getDate() + daysUntilSun);
-    d.setHours(23, 59, 59, 999);
-    return d.getTime();
-  }
-
   // v3 Phase 1z.73 — central boss-art path helper. All boss-art
   // render sites (boss-card, boss-detail hero, boss-defeated portrait,
   // hunting-pill icon, boss-defeated-from-pending re-open) call this
@@ -767,16 +748,6 @@
     imgEl.src = path;
   }
 
-  // v3 Phase 1z.58 — Carouser engagement is restricted to Friday
-  // (device-local). The 1z.57 end-of-Sunday timer already keeps an
-  // active hunt alive through Saturday + Sunday, but a NEW engage
-  // tap must only succeed when getDay() === 5. Centralised here so
-  // the engageBoss guard + the detail-screen CTA + HUNT AGAIN flow
-  // all share one source of truth.
-  function isCarouserEngageDay(date) {
-    const d = (date instanceof Date) ? date : new Date();
-    return d.getDay() === 5;
-  }
   // v3 Phase 1z.72 — device-local date-key formatter (YYYY-MM-DD).
   // Used by the daily kill-lock and daily verification windows.
   function _localDateKey(date) {
@@ -809,18 +780,11 @@
 
   // Generic engage-now gate. Returns { ok, reason, ctaText, blurb } so
   // callers can toast the reason OR render a custom locked-CTA state.
-  // v3 Phase 1z.58: Carouser Friday-only.
   // v3 Phase 1z.72: daily kill lock — a successfully-defeated daily
   //   boss is locked until the next device-local midnight.
+  // W261: the Carouser Friday-only branch (1z.58) is retired — the boss
+  //   is a daily flights climb now and uses the generic daily lock.
   function canEngageBossNow(bossId, cfg, now) {
-    if (bossId === 'the_carouser' && !isCarouserEngageDay(now)) {
-      return {
-        ok: false,
-        reason: 'The Carouser opens Friday.',
-        ctaText: 'AVAILABLE FRIDAY',
-        blurb: 'The Carouser only opens on Fridays. Return Friday to begin the hunt — it stays active through Sunday night.',
-      };
-    }
     if (cfg && cfg.cadence === 'daily') {
       const state = (typeof getBossState === 'function') ? getBossState(bossId) : null;
       if (wasDailyBossDefeatedToday(state, now)) {
@@ -835,21 +799,16 @@
     return { ok: true, reason: null };
   }
 
-  // v3 Phase 1z.57 — high-level expiration helper. Routes Carouser
-  // through the end-of-Sunday rule; everything else uses the
-  // duration-based math (24h / 3d / 7d / fallback).
-  // Three stamp sites call this: engageBoss (line ~864),
-  // _migrateBossHuntFields (legacy 1z.43 stamps), and
-  // _bossHuntExpiresMs (default derivation when no stored value
-  // is present). Each Carouser hunt's expiration is therefore
-  // deterministic from hunt_started_at — re-deriving from start
-  // ms always produces the same end-of-Sunday timestamp.
+  // High-level expiration helper — duration-based math (24h / 3d / 7d /
+  // fallback). Three stamp sites call this: engageBoss,
+  // _migrateBossHuntFields (legacy 1z.43 stamps), and _bossHuntExpiresMs
+  // (default derivation when no stored value is present).
+  // W261: the Carouser end-of-Sunday special case (1z.57) is retired —
+  // its daily cadence flows through getBossHuntDurationMs like every
+  // other boss.
   function getBossHuntExpiresAtMs(cfg, startedAtMs) {
     if (!cfg || !Number.isFinite(startedAtMs) || startedAtMs <= 0) {
       return 0;
-    }
-    if (cfg.id === 'the_carouser') {
-      return _endOfSundayLocalMs(startedAtMs);
     }
     return startedAtMs + getBossHuntDurationMs(cfg);
   }
@@ -875,10 +834,8 @@
     if (typeof state.hunt_expires_at === 'number' && state.hunt_expires_at > 0) {
       return state.hunt_expires_at;
     }
-    // v3 Phase 1z.57 — derive via getBossHuntExpiresAtMs so Carouser
-    // hunts default to end-of-Sunday device-local rather than 7-day.
-    // For all other bosses the helper returns start + duration, so
-    // behaviour is identical to the prior arithmetic.
+    // Derive via getBossHuntExpiresAtMs (start + cadence duration for
+    // every boss since the W261 Carouser rework).
     const start = _bossHuntStartMs(state);
     return start ? getBossHuntExpiresAtMs(cfg, start) : 0;
   }
@@ -902,21 +859,28 @@
       state.hunt_expires_at = getBossHuntExpiresAtMs(cfg, started);
       wrote = true;
     }
-    // v3 Phase 1z.57 — Carouser re-migration. Pre-1z.57 Carouser
-    // hunts stamped `hunt_expires_at = start + 7 days` because
-    // cadence === 'weekly'. Recompute to end-of-Sunday device-local
-    // so an active Carouser hunt from an older build picks up the
-    // correct expiration the next time anything reads it. Idempotent
-    // — only writes when the stored value disagrees with the
-    // canonical value. New Carouser engagements stamp the correct
-    // value via engageBoss → getBossHuntExpiresAtMs and skip this.
+    // W261 — Carouser cadence migration (weekly weekend-nights →
+    // daily 5-flights). An ACTIVE hunt engaged under the old
+    // end-of-Sunday rule would instantly expire when re-derived
+    // against the new 24h window (hunt_started_at can be days old).
+    // Convert in place: re-stamp a fresh daily window from now and
+    // zero the carried progress. Idempotent — converted windows are
+    // ≤24h, so the oversize check never re-fires. Also drops the
+    // retired weekend fields (any state shape, engaged or not, passes
+    // through here only when engaged — disengaged states simply keep
+    // inert leftovers that nothing reads anymore).
     if (id === 'the_carouser' &&
-        typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0) {
-      const correct = getBossHuntExpiresAtMs(cfg, state.hunt_started_at);
-      if (state.hunt_expires_at !== correct) {
-        state.hunt_expires_at = correct;
-        wrote = true;
-      }
+        typeof state.hunt_started_at === 'number' && state.hunt_started_at > 0 &&
+        typeof state.hunt_expires_at === 'number' &&
+        (state.hunt_expires_at - state.hunt_started_at) > _BOSS_HUNT_DAY_MS + 60000) {
+      const nowMs = Date.now();
+      state.hunt_started_at = nowMs;
+      state.hunt_expires_at = nowMs + _BOSS_HUNT_DAY_MS;
+      state.streak = 0;
+      state.flight_progress = 0;
+      delete state.weekend_burned;
+      delete state.current_weekend_id;
+      wrote = true;
     }
     if (wrote) setBossState(id, state);
     return wrote;
@@ -1081,9 +1045,9 @@
   //     Health.getSleepBetween across the whole window and check
   //     each night's totalAsleepHours from the byDate map. Any
   //     qualifying night defeats.
-  //   - Multi-night weekend boss (Carouser): the existing weekend-
-  //     scoped evaluator still drives kills; this resolver only
-  //     handles its expiration sweep.
+  //   - Flights boss (flightThreshold — Ascendant Colossus, and the
+  //     Carouser since its W261 daily rework): cumulative verified
+  //     flights inside the window; total >= threshold defeats.
   //
   // After the kill OR if no qualifying data is found AND the window
   // has expired, the hunt is marked expired (engaged=false, fields
@@ -1143,8 +1107,7 @@
       //
       // The hunt-expiration window stays at [hunt_started_at,
       // hunt_expires_at] for the timer; only the verification window
-      // changes. Carouser keeps its existing weekly logic (cadence !==
-      // 'daily').
+      // changes.
       let start = huntStart;
       let evalEnd = huntEvalEnd;
       if (cfg.cadence === 'daily') {
@@ -1429,9 +1392,6 @@
           }
         }
       }
-      // (Carouser is handled by its existing weekend-scoped evaluator;
-      //  this resolver only enforces its expiration below.)
-
       // ── Expire stale hunts ─────────────────────────────────
       if (!defeated && end && now > end) {
         _expireBossHunt(id);
@@ -1523,9 +1483,9 @@
     if (!cfg) return false;
     const state = getBossState(bossId);
     if (state.engaged === true) return true; // already engaged, no-op
-    // v3 Phase 1z.58 — date-scoped engage gate (Carouser is Friday-only).
-    // An already-engaged hunt bypasses this entirely (returned above),
-    // so a Friday engagement that crosses into Sat/Sun is unaffected.
+    // Engage gate (1z.72 daily kill-lock; the 1z.58 Friday-only gate
+    // retired with the W261 Carouser rework). An already-engaged hunt
+    // bypasses this entirely (returned above).
     {
       const gate = canEngageBossNow(bossId, cfg, new Date());
       if (!gate.ok) {
@@ -1574,8 +1534,6 @@
     state.engaged_at = new Date(_engageNow).toISOString();
     // v3 Phase 1z.43 — stamp explicit hunt window. Engagement IS the
     // start; expiration derives from cfg via the central helper.
-    // v3 Phase 1z.57 — getBossHuntExpiresAtMs routes Carouser through
-    // end-of-Sunday device-local; all other bosses get start + duration.
     // Clear any stale last_hunt_outcome from a prior expired/defeated
     // run so the new hunt renders cleanly.
     state.hunt_started_at = _engageNow;
@@ -1614,14 +1572,6 @@
     // Streak doesn't survive disengagement — re-engaging starts fresh.
     state.streak = 0;
     state.last_eval_date = null;
-    // Carouser-specific weekend fields — clear so re-engagement starts
-    // a clean weekend cycle. weekend_burned + current_weekend_id are
-    // orthogonal to engagement but should not carry stale state across
-    // a hunt-resume that may be weeks later.
-    if (bossId === 'the_carouser') {
-      state.weekend_burned = false;
-      state.current_weekend_id = null;
-    }
     setBossState(bossId, state);
     try {
       if (typeof showHabitToast === 'function') {
@@ -1650,10 +1600,6 @@
         b.last_eval_date = null;
         b.engaged = false;
         b.engaged_at = null;
-        if (id === 'the_carouser') {
-          b.weekend_burned = false;
-          b.current_weekend_id = null;
-        }
         mutated = true;
       }
       if (mutated) saveBosses(all);
@@ -2729,7 +2675,7 @@
   };
 
   // Drop rates per DROPS.md v1.4 — CADENCE-AWARE. Weekly bosses kill
-  // ~once per 7 days (Carouser); daily bosses can kill every 2 days
+  // ~once per 7 days (the B-rank trio); daily bosses can kill every 2 days
   // when on streak. To keep per-month expected-pull volume comparable
   // across cadences, weekly rates are multiplied (5× ultra-rare,
   // 3× rare, 2× common) over the daily baseline. Roll order stays
@@ -11048,7 +10994,7 @@
   // when no map entry exists.
   const BOSS_DEFEAT_CONDITIONS = {
     the_insomniac:     'Sleep goal achieved: 7+ hours',
-    the_carouser:      'Sober streak protected',
+    the_carouser:      '5 verified flights climbed',
     the_steel_wolf:    'Strength session sealed',
     the_iron_warden:   'Workout verified (10+ min)',
     the_glass_strider: '7,500 verified steps',
@@ -12516,21 +12462,6 @@
       String(d.getDate()).padStart(2, '0');
   }
 
-  // Most recent Friday's date in device-local 'YYYY-MM-DD' format.
-  // If today IS Friday, returns today. Used as the "weekendId" anchor
-  // for The Carouser — Fri + Sat nights both map to the same Friday.
-  function getMostRecentFridayDate() {
-    const d = new Date();
-    // Day index: 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
-    // Days to subtract to land on the most recent Friday:
-    //   Sun(0) → 2, Mon(1) → 3, Tue(2) → 4, Wed(3) → 5, Thu(4) → 6, Fri(5) → 0, Sat(6) → 1
-    const daysBack = (d.getDay() - 5 + 7) % 7;
-    d.setDate(d.getDate() - daysBack);
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
-  }
-
   // ── Insomniac kill-detection ─────────────────────────────────
   // Called from autoVerifySleep AFTER HealthKit returns sleep data.
   // Evaluates the most recent night's hours against the kill condition.
@@ -12627,129 +12558,6 @@
     if (state.last_eval_date < yesterday) {
       state.streak = 0;
       state.last_eval_date = yesterday;
-      setBossState(id, state);
-    }
-  }
-
-  // ── Carouser kill-detection ──────────────────────────────────
-  // Weekend-only boss. Evaluates one weekend night per call (Fri, Sat,
-  // or Sun nights — identified by the morning that follows them: Sat,
-  // Sun, or Mon device-local). Streak target = 3, all within the same
-  // weekend (anchored by the most-recent-Friday date). Any single failed
-  // night burns the weekend — `weekend_burned: true` prevents stale
-  // streak progress on subsequent same-weekend nights.
-  //
-  // State shape (extends base):
-  //   { streak, kill_count, last_eval_date, current_weekend_id, weekend_burned }
-  //
-  // Idempotent on nightDate. Pass condition: sleepHours ≥ 7 AND
-  // bedtimeBeforeMidnight === true. The bedtime boolean comes from
-  // getBedtimeSamplesInWindow(samples).length > 0 — same source-of-truth
-  // as the Sleep-before-midnight habit auto-verify.
-  function getCarouserState() {
-    const base = getBossState('the_carouser');
-    if (typeof base.current_weekend_id === 'undefined') base.current_weekend_id = null;
-    if (typeof base.weekend_burned === 'undefined') base.weekend_burned = false;
-    return base;
-  }
-
-  function evaluateCarouserForNight(sleepHours, bedtimeBeforeMidnight, nightDate) {
-    if (typeof sleepHours !== 'number' || !nightDate) return;
-    const id = 'the_carouser';
-    const cfg = BOSSES[id];
-    if (!cfg) return;
-    const state = getCarouserState();
-
-    // Idempotent on nightDate — visibility-change refires no-op.
-    if (state.last_eval_date === nightDate) return;
-
-    // v2.0.1 engagement gate — same rule as the other bosses.
-    if (state.engaged !== true) return;
-
-    // Classify the night by its start day-of-week. nightDate is the
-    // morning the user is in; the night being evaluated STARTED the
-    // prior day. Sat morning → Fri night; Sun morning → Sat night.
-    // Only those two mornings count — Sunday night (Mon morning, dow=1)
-    // is intentionally ignored. The 2-night recalibration dropped Sunday
-    // entirely from the Carouser eval; Sunday sleep data is irrelevant
-    // for this boss now.
-    const todayDate = new Date(nightDate + 'T00:00:00');
-    const todayDow = todayDate.getDay();
-    const isWeekendMorning = (todayDow === 6 || todayDow === 0);
-    if (!isWeekendMorning) return;
-
-    const weekendId = getMostRecentFridayDate();
-
-    // New weekend → fresh slate.
-    if (state.current_weekend_id !== weekendId) {
-      state.current_weekend_id = weekendId;
-      state.streak = 0;
-      state.weekend_burned = false;
-    }
-
-    // Weekend already burned — record the date but skip eval. A failed
-    // night earlier in the weekend means the streak is dead; later
-    // nights this weekend can't revive it.
-    if (state.weekend_burned) {
-      state.last_eval_date = nightDate;
-      setBossState(id, state);
-      return;
-    }
-
-    const passed = (sleepHours >= cfg.sleepHours) && (bedtimeBeforeMidnight === true);
-    if (passed) {
-      state.streak += 1;
-      state.last_eval_date = nightDate;
-      if (state.streak >= cfg.streakTarget) {
-        state.kill_count += 1;
-        state.streak = 0;
-        state.weekend_burned = false;
-        // v3 Phase 1z.6 — hunt ends on defeat. Same shape as the
-        // other evaluators. Carouser's weekend fields stay cleared
-        // (re-engagement gets a fresh weekend cycle).
-        // v3 Phase 1z.43 — also clear hunt-window fields.
-        _clearBossHuntFields(state);
-        state.last_defeated_at = new Date().toISOString();
-        state.last_hunt_outcome = 'defeated';
-        state.current_weekend_id = null;
-        setBossState(id, state);
-        const reward = killRewardSouls(cfg.rank);
-        if (reward > 0) earnSouls(reward, 'kill_' + id);
-        // v3 Phase 1z.277D — WLT Merchant bonus (weekend boss path).
-        const _wltBonus_2 = wltKillBonusSouls(cfg.rank);
-        if (_wltBonus_2 > 0) earnSouls(_wltBonus_2, 'wlt_bonus_kill_' + id);
-        const dropped = rollBossDrop(id);
-        announceKillAndDrop(cfg, reward, dropped);
-        try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
-        try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
-        return;
-      }
-      setBossState(id, state);
-    } else {
-      state.streak = 0;
-      state.weekend_burned = true;
-      state.last_eval_date = nightDate;
-      setBossState(id, state);
-    }
-    try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
-  }
-
-  // Init-time: if state references a past weekend, clear stale streak
-  // progress. Without this, a user who hit streak=2 last weekend and
-  // didn't open the app on Sun/Mon morning would see a stale "2/3"
-  // until the next weekend's first eval. kill_count is preserved.
-  function checkMissedWeekendForCarouser() {
-    const id = 'the_carouser';
-    const state = getCarouserState();
-    // Engagement gate — disengaged bosses already have cleared
-    // weekend state, no work to do.
-    if (state.engaged !== true) return;
-    if (!state.current_weekend_id) return;
-    const todayWeekendId = getMostRecentFridayDate();
-    if (state.current_weekend_id !== todayWeekendId) {
-      state.streak = 0;
-      state.weekend_burned = false;
-      state.current_weekend_id = null;
       setBossState(id, state);
     }
   }
@@ -13029,7 +12837,7 @@
   // ── Dream Tyrant — 7.5 hours of sleep ────────────────────────
   // Fed by autoVerifySleep's existing sleep-data fetch. Same data
   // path that powers Sleep / Sleep before midnight habit auto-verify,
-  // Insomniac + Carouser evals, and leaderboard sleep recording.
+  // the Insomniac eval, and leaderboard sleep recording.
   function evaluateDreamTyrantForNight(sleepHours, nightDate) {
     if (typeof sleepHours !== 'number' || !nightDate) return;
     const id = 'the_dream_tyrant';
@@ -13061,7 +12869,6 @@
     window.Bosses = {
       BOSSES, getBossState,
       evaluateInsomniacForNight,    checkMissedNightForInsomniac,
-      evaluateCarouserForNight,     checkMissedWeekendForCarouser,
       evaluateSteelWolfForDay,      checkMissedDayForSteelWolf,
       // v3 Phase 1v D-rank
       evaluateIronWardenForDay,     checkMissedDayForIronWarden,
@@ -34246,7 +34053,6 @@
   // State variants composed via classes:
   //   .bcard--active   — streak > 0, border pulses purple-gold
   //   .bcard--defeated — kill_count > 0, gold border + corner trophy
-  //   .bcard--burned   — Carouser's weekend_burned === true
   //
   // Illustration path derives from id by swapping underscores for
   // hyphens (the_insomniac → the-insomniac.png) since the source
@@ -34307,8 +34113,8 @@
     }
     if (state.streak > 0) stateClasses.push('bcard--active');
     if (state.kill_count > 0) stateClasses.push('bcard--defeated');
-    // weekend_burned only present on Carouser; default-false elsewhere.
-    if (state.weekend_burned === true) stateClasses.push('bcard--burned');
+    // W261 — the .bcard--burned variant (Carouser weekend forfeit) is
+    // retired with the weekend mechanic; weekend_burned is never set now.
     const classAttr = ['bcard'].concat(stateClasses).join(' ');
 
     // Top-right corner label. Mutually exclusive between HUNTING (engaged
@@ -34339,12 +34145,7 @@
       ? '<span class="bcard-corner-trophy" aria-hidden="true">🏆</span>'
       : '';
 
-    // Burned-state overlay text. Per CARDS.md: "Weekend forfeit —
-    // opens Friday." Sits above the rest of the card content via
-    // higher z-index when .bcard--burned is active.
-    const burnedOverlay = state.weekend_burned === true
-      ? '<div class="bcard-burned-overlay" aria-hidden="true">Weekend forfeit — opens Friday</div>'
-      : '';
+    const burnedOverlay = '';   // W261 — burned-state overlay retired with the Carouser weekend mechanic
 
     return (
       '<button type="button" class="' + classAttr + '" data-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
@@ -34624,15 +34425,10 @@
       }
     }
 
-    // Burned banner (Carouser only when weekend_burned === true)
+    // W261 — burned banner retired with the Carouser weekend mechanic;
+    // keep it hidden for any legacy DOM that still carries the node.
     const burnedBanner = document.getElementById('bfs-burned-banner');
-    if (burnedBanner) {
-      if (state.weekend_burned === true) {
-        burnedBanner.classList.remove('hidden');
-      } else {
-        burnedBanner.classList.add('hidden');
-      }
-    }
+    if (burnedBanner) burnedBanner.classList.add('hidden');
 
     // Engagement section (v2.0.1) — three mutually-exclusive states:
     // preview (rank locked), engaged, or not-engaged-but-unlockable.
@@ -43891,16 +43687,13 @@
     // visibility-change refires don't double-count.
     //
     // Bedtime boolean is computed once from the shared helper and
-    // reused below by Path B. The Carouser needs both signals (sleep
-    // hours + before-midnight onset) so it gets the boolean here.
+    // reused below by Path B. (The Carouser also read it until its
+    // W261 rework to a daily flights climb.)
     const bedtimeQualifying = getBedtimeSamplesInWindow(data.samples || []);
     const bedtimeBeforeMidnight = bedtimeQualifying.length > 0;
     try {
       evaluateInsomniacForNight(data.totalAsleepHours, getDeviceLocalDate());
     } catch (e) { console.warn('[Bosses] insomniac eval failed', e); }
-    try {
-      evaluateCarouserForNight(data.totalAsleepHours, bedtimeBeforeMidnight, getDeviceLocalDate());
-    } catch (e) { console.warn('[Bosses] carouser eval failed', e); }
     // v3 Phase 1v — Dream Tyrant (D-rank, 7.5 h threshold). Same
     // sleep data, different bar. Independent of habit presence.
     try {
@@ -45358,7 +45151,6 @@
     try { tryGrantDailyLoginBonus(); } catch (_) {}
     try { refreshSoulsDisplay(); } catch (_) {}
     try { checkMissedNightForInsomniac(); } catch (_) {}
-    try { checkMissedWeekendForCarouser(); } catch (_) {}
     try { checkMissedDayForSteelWolf(); } catch (_) {}
     // v3 Phase 1v D-rank — all three are streakTarget=1 daily, so
     // these helpers are mostly no-ops today, but kept for parity +

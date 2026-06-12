@@ -343,7 +343,7 @@ Single-commit revert removes the 2 helpers, 4 bonus `earnSouls` calls, 1 ledger 
 |---|---|---|---|
 | E | The Insomniac | SUSTAINER | Pure sleep recovery |
 | E | The Steel Wolf | SUSTAINER | Step endurance |
-| E | The Carouser | SUSTAINER | Recovery + restraint |
+| E | The Carouser | SUSTAINER | Daily climb discipline (W261: 5 flights) |
 | D | The Iron Warden | AGGRESSOR | Direct training |
 | D | The Glass Strider | SUSTAINER | Step endurance |
 | D | The Dream Tyrant | SUSTAINER | Sleep recovery |
