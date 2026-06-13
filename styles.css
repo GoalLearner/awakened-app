@@ -28633,3 +28633,32 @@ button.guildhall-summary-tile:active {
 
 /* leaderboard rows become tappable */
 .lb-rank-row[data-profile-alias], .lb-rank-row--me[data-profile-alias] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* ── W279 — The Wardrobe (avatar skins, Layer 1) ────────────────────────── */
+.wd-body { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 auto; padding: 4px 20px 8px; }
+.wd-hero { display: flex; flex-direction: column; align-items: center; padding: 14px 0 6px; position: relative; }
+.wd-hero::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(70% 55% at 50% 22%, rgba(245,184,66,0.12), transparent 62%); }
+.wd-hero .pc-med { width: 132px; height: 132px; }
+.wd-hero-name { margin-top: 16px; font-family: "Cinzel", Georgia, serif; font-size: 18px; font-weight: 700; color: #f5f3fb; }
+.wd-hero-sub { margin-top: 3px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 2px; color: #6b6b86; text-transform: uppercase; }
+.wd-section-label { display: flex; align-items: center; gap: 9px; margin: 20px 0 12px; }
+.wd-section-label span { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 2.4px; color: #9090a8; flex: none; }
+.wd-section-label .rule { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+.wd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; }
+.wd-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 13px; padding: 12px 6px 9px; position: relative; transition: border-color 0.15s ease, background 0.15s ease; }
+.wd-tile.is-equipped { border-color: rgba(245,184,66,0.6); background: rgba(245,184,66,0.07); box-shadow: 0 0 16px rgba(245,184,66,0.14); }
+.wd-tile-av { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex: none;
+  background: #14122c; border: 2px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
+.wd-tile.is-equipped .wd-tile-av { border-color: #f5b842; box-shadow: 0 0 12px rgba(245,184,66,0.4); }
+.wd-tile-av img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
+.wd-tile-name { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.6px; color: #c8c6d8; }
+.wd-tile.is-equipped .wd-tile-name { color: #f5b842; }
+.wd-tile-badge { position: absolute; top: 6px; right: 6px; font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.8px; color: #07070f; background: #5eead4; border-radius: 5px; padding: 2px 5px; }
+.wd-tile-tick { position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 50%; background: #f5b842; color: #07070f; font-size: 11px; line-height: 16px; text-align: center; font-weight: 800; }
+/* paid-shop teaser (Layer 2 lands here) */
+.wd-shop .wd-tile { cursor: default; opacity: 0.5; }
+.wd-shop .wd-tile-av { background: repeating-linear-gradient(135deg, #15132f, #15132f 6px, #0e0e24 6px, #0e0e24 12px); }
+.wd-lock { font-size: 20px; color: #6b6b86; }
+.wd-shop-note { margin-top: 12px; text-align: center; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14px; color: #9090a8; }

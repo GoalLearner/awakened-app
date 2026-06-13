@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w278';
+  const APP_BUILD_TAG = '2.2.6-w279';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20674,11 +20674,40 @@
     WLT:   'avatar-merchant.png',
     SAGE:  'avatar-sage.png',
   };
-  function getAvatarSrc() {
-    // Civilian (or pre-Lv5 in everything) always shows the base silhouette.
+  // ── W279 — Avatar skins (Layer 1: free "looks" + equip; paid Shop later) ──
+  // Catalog of equippable looks. Layer 1 = the class avatar set, all FREE/owned
+  // (a starter wardrobe with existing art). Paid skins (Layer 2, IAP) append here
+  // with owned:false until purchased. The 'class' entry equips '' (clear) → the
+  // class default. `file` is what getAvatarSrc returns + what syncs as avatar_id.
+  const AVATAR_SKINS = [
+    { id: 'class',            name: 'Your Class', file: '',                    klass: true },
+    { id: 'avatar-warrior.png',  name: 'Warrior',  file: 'avatar-warrior.png'  },
+    { id: 'avatar-ranger.png',   name: 'Ranger',   file: 'avatar-ranger.png'   },
+    { id: 'avatar-mage.png',     name: 'Mage',     file: 'avatar-mage.png'     },
+    { id: 'avatar-assassin.png', name: 'Assassin', file: 'avatar-assassin.png' },
+    { id: 'avatar-paladin.png',  name: 'Paladin',  file: 'avatar-paladin.png'  },
+    { id: 'avatar-merchant.png', name: 'Merchant', file: 'avatar-merchant.png' },
+    { id: 'avatar-sage.png',     name: 'Sage',     file: 'avatar-sage.png'     },
+    { id: 'avatar-base.png',     name: 'Wanderer', file: 'avatar-base.png'     },
+  ];
+  const AVATAR_SKIN_KEY = 'hb_avatar_skin';   // equipped skin file; '' / absent = class default
+  function getEquippedSkin() { try { return localStorage.getItem(AVATAR_SKIN_KEY) || ''; } catch (_) { return ''; } }
+  function setEquippedSkin(file) {
+    try { if (file) localStorage.setItem(AVATAR_SKIN_KEY, file); else localStorage.removeItem(AVATAR_SKIN_KEY); } catch (_) {}
+  }
+  // The class-derived default, ignoring any equipped skin (for the Wardrobe's
+  // "Your Class" tile + the silhouette fallback rules).
+  function _classDefaultAvatar() {
     if (!currentClass || currentClass === 'CIVILIAN') return 'avatar-base.png';
     if (totalPoints === 0)                            return 'avatar-base.png';
     return AVATAR_FILES[currentClass] || 'avatar-base.png';
+  }
+  function getAvatarSrc() {
+    // W279 — an equipped cosmetic skin overrides the class default everywhere
+    // the avatar renders (home portrait, profile card, arena, etc.).
+    const skin = getEquippedSkin();
+    if (skin) return skin;
+    return _classDefaultAvatar();
   }
   // Tracks the last-rendered avatar so we only crossfade when class actually changes.
   let _lastAvatarSrc = null;
@@ -21039,7 +21068,7 @@
             '<div class="sc-portrait-row">' +
               '<div class="sc-avatar-row">' +
                 '<img id="sc-avatar-img" class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
-                     'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to view armory" ' +
+                     'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to change your look" ' +
                      'loading="eager" ' +
                      'role="button" tabindex="0" ' +
                      'style="cursor:pointer">' +
@@ -24418,7 +24447,7 @@
         const av = e.target.closest && e.target.closest('#sc-avatar-img');
         if (av) {
           e.stopPropagation();
-          openEquipmentPanel();
+          openWardrobe();   // W279 — tap your avatar = change your look; gear lives on the Items-tab Armory button
         }
       });
       statusContent.dataset.armoryWired = '1';
@@ -33036,7 +33065,7 @@
   // ── W278 — Player Profile Card (ClaudeDesign "The Medallion") ──────
   const _PC_RANK_COLORS = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9', 'S+': '#facc15' };
   const _PC_TIER_COLORS = { iron: '#c8c6d8', teal: '#5eead4', violet: '#a78bfa', gold: '#f5b842' };
-  function _renderProfileCard(data) {
+  function _renderProfileCard(data, isOwn) {
     const body = document.getElementById('pc-body');
     if (!body) return;
     if (!data) { body.innerHTML = '<div class="pc-skeleton">Profile unavailable — try again.</div>'; return; }
@@ -33063,7 +33092,7 @@
           '<div class="pc-med-portrait"><img src="' + esc(avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
-      '<div class="pc-skintag"><i></i><span>' + (data._sim ? 'NPC HUNTER' : 'DEFAULT SKIN') + '</span></div></div>' +
+      (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>' + (data._sim ? 'NPC HUNTER' : 'DEFAULT SKIN') + '</span></div>') + '</div>' +
       '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div>' + shard + '</div>' +
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
@@ -33084,7 +33113,7 @@
     let data = null;
     try { data = await _profileCardResolve(alias, simRow); } catch (_) {}
     if (sh.classList.contains('hidden')) return;   // closed before the fetch landed
-    _renderProfileCard(data);
+    _renderProfileCard(data, _pcIsOwnAlias(alias));
   }
   function _closeProfileCard() {
     const ov = document.getElementById('pc-overlay'), sh = document.getElementById('pc-sheet');
@@ -33092,6 +33121,59 @@
     if (sh) sh.classList.add('hidden');
   }
   try { window.__openProfileCard = _openProfileCard; } catch (_) {}
+
+  // ── W279 — The Wardrobe (avatar skins, Layer 1: free looks + equip) ──
+  function _renderWardrobe() {
+    const body = document.getElementById('wd-body');
+    if (!body) return;
+    const equipped = getEquippedSkin();           // '' = class default
+    const classDef = _classDefaultAvatar();
+    const eq = AVATAR_SKINS.find((x) => (x.file || '') === equipped);
+    const tiles = AVATAR_SKINS.map((sk) => {
+      const img = sk.klass ? classDef : sk.file;
+      const isEq = (sk.file || '') === equipped;
+      return '<div class="wd-tile' + (isEq ? ' is-equipped' : '') + '" data-skin="' + esc(sk.file) + '">' +
+        (isEq ? '<span class="wd-tile-tick">\u2713</span>' : '') +
+        (sk.klass ? '<span class="wd-tile-badge">CLASS</span>' : '') +
+        '<div class="wd-tile-av"><img src="' + esc(img) + '" alt="" onerror="this.style.display=\'none\'"></div>' +
+        '<span class="wd-tile-name">' + esc(sk.name) + '</span></div>';
+    }).join('');
+    let shop = '';
+    for (let i = 0; i < 3; i++) shop += '<div class="wd-tile"><div class="wd-tile-av"><span class="wd-lock">\uD83D\uDD12</span></div><span class="wd-tile-name">SOON</span></div>';
+    body.innerHTML =
+      '<div class="wd-hero"><div class="pc-med"><span class="pc-med-ring"></span>' +
+        '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
+        '<div class="pc-med-portrait"><img src="' + esc(getAvatarSrc()) + '" alt="" onerror="this.style.display=\'none\'"></div></div></div>' +
+      '<div class="wd-hero-name">' + esc(eq ? eq.name : 'Your Class') + '</div><div class="wd-hero-sub">Equipped Look</div>' +
+      '<div class="wd-section-label"><span>YOUR LOOKS</span><span class="rule"></span></div>' +
+      '<div class="wd-grid">' + tiles + '</div>' +
+      '<div class="wd-section-label"><span>SHOP</span><span class="rule"></span></div>' +
+      '<div class="wd-grid wd-shop">' + shop + '</div>' +
+      '<div class="wd-shop-note">New skins arriving soon.</div>';
+  }
+  function openWardrobe() {
+    const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
+    if (!ov || !sh) return;
+    _renderWardrobe();
+    ov.classList.remove('hidden'); sh.classList.remove('hidden');
+  }
+  function closeWardrobe() {
+    const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
+    if (ov) ov.classList.add('hidden');
+    if (sh) sh.classList.add('hidden');
+  }
+  function _equipSkin(file) {
+    setEquippedSkin(file || '');
+    _renderWardrobe();
+    const src = getAvatarSrc();
+    try { const home = document.getElementById('sc-avatar-img'); if (home) { home.src = src; _lastAvatarSrc = src; } } catch (_) {}
+    try { const sh = document.getElementById('pc-sheet'); if (sh && !sh.classList.contains('hidden')) { const im = sh.querySelector('.pc-med-portrait img'); if (im) im.src = src; } } catch (_) {}
+    try { _maybeSubmitPublicRankSummary('avatar-change'); } catch (_) {}   // sync avatar_id
+  }
+  try { window.__openWardrobe = openWardrobe; } catch (_) {}
+  function _pcIsOwnAlias(alias) {
+    try { const me = lbGetMyAlias(); return !!(me && alias && me.toLowerCase() === String(alias).toLowerCase()); } catch (_) { return false; }
+  }
 
   function setupLeaderboardPreview() {
     const list = document.getElementById('lb-preview-list');
@@ -33194,6 +33276,26 @@
     if (pcClose && pcClose.getAttribute('data-wired') !== '1') { pcClose.setAttribute('data-wired', '1'); pcClose.addEventListener('click', _closeProfileCard); }
     const pcOverlay = document.getElementById('pc-overlay');
     if (pcOverlay && pcOverlay.getAttribute('data-wired') !== '1') { pcOverlay.setAttribute('data-wired', '1'); pcOverlay.addEventListener('click', _closeProfileCard); }
+    // W279 — Wardrobe close / overlay / equip-tile delegation
+    const wdClose = document.getElementById('wd-close');
+    if (wdClose && wdClose.getAttribute('data-wired') !== '1') { wdClose.setAttribute('data-wired', '1'); wdClose.addEventListener('click', closeWardrobe); }
+    const wdOverlay = document.getElementById('wd-overlay');
+    if (wdOverlay && wdOverlay.getAttribute('data-wired') !== '1') { wdOverlay.setAttribute('data-wired', '1'); wdOverlay.addEventListener('click', closeWardrobe); }
+    const wdBody = document.getElementById('wd-body');
+    if (wdBody && wdBody.getAttribute('data-wired') !== '1') {
+      wdBody.setAttribute('data-wired', '1');
+      wdBody.addEventListener('click', (e) => {
+        const tile = e.target && e.target.closest && e.target.closest('.wd-tile[data-skin]');
+        if (tile) _equipSkin(tile.getAttribute('data-skin'));
+      });
+    }
+    const pcBodyEl = document.getElementById('pc-body');
+    if (pcBodyEl && pcBodyEl.getAttribute('data-wd-wired') !== '1') {
+      pcBodyEl.setAttribute('data-wd-wired', '1');
+      pcBodyEl.addEventListener('click', (e) => {
+        if (e.target && e.target.closest && e.target.closest('[data-wardrobe]')) { _closeProfileCard(); openWardrobe(); }
+      });
+    }
   }
   try { window.openLeaderboardRanking = openLeaderboardRanking; } catch (_) {}
 
