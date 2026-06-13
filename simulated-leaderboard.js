@@ -108,22 +108,22 @@
   // with natural wobble. Backend cap remains 1000 for real users.
   const BOTS = [
     // Top tier — competitive with high-real-user weeks (40-50)
-    { name: 'ShadowMonarch_K', floorBase: 92, avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 52, flightsJitter: 6, title: 'rt_duelist' },
-    { name: 'AscendantNova', floorBase: 84,   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 42, flightsJitter: 6, title: 'rt_contender' },
+    { name: 'ShadowMonarch_K', floorBase: 16, avgDailySteps: 5800, stepStdDev: 900, sleepBase: 18, sleepJitter: 4, bedtimeBase: 15, bedtimeJitter: 4, flightsBase: 52, flightsJitter: 6, title: 'rt_duelist' },
+    { name: 'AscendantNova', floorBase: 14,   avgDailySteps: 5200, stepStdDev: 850, sleepBase: 12, sleepJitter: 3, bedtimeBase: 10, bedtimeJitter: 3, flightsBase: 42, flightsJitter: 6, title: 'rt_contender' },
 
     // Active — stairs-heavy week but not extreme (25-40)
-    { name: 'ghostlift', floorBase: 76,       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 33, flightsJitter: 6, title: 'rt_blade' },
-    { name: 'Marcus T.', floorBase: 68,       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2, flightsBase: 26, flightsJitter: 5 },
-    { name: 'Sienna K.', floorBase: 61,       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase: 20, flightsJitter: 5, title: 'rt_brawler' },
+    { name: 'ghostlift', floorBase: 12,       avgDailySteps: 4400, stepStdDev: 800, sleepBase:  9, sleepJitter: 3, bedtimeBase:  7, bedtimeJitter: 2, flightsBase: 33, flightsJitter: 6, title: 'rt_blade' },
+    { name: 'Marcus T.', floorBase: 10,       avgDailySteps: 3700, stepStdDev: 750, sleepBase:  7, sleepJitter: 2, bedtimeBase:  5, bedtimeJitter: 2, flightsBase: 26, flightsJitter: 5 },
+    { name: 'Sienna K.', floorBase: 8,       avgDailySteps: 3300, stepStdDev: 700, sleepBase:  6, sleepJitter: 2, bedtimeBase:  6, bedtimeJitter: 2, flightsBase: 20, flightsJitter: 5, title: 'rt_brawler' },
 
     // Normal — moderate stair use (10-25)
-    { name: 'voidwalker_88', floorBase: 53,   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase: 14, flightsJitter: 4, title: 'rt_brawler' },
-    { name: 'Jordan F.', floorBase: 45,       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1, flightsBase: 10, flightsJitter: 3 },
-    { name: 'AwakenedRen', floorBase: 33,     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  6, flightsJitter: 3 },
+    { name: 'voidwalker_88', floorBase: 7,   avgDailySteps: 2600, stepStdDev: 650, sleepBase:  4, sleepJitter: 2, bedtimeBase:  3, bedtimeJitter: 2, flightsBase: 14, flightsJitter: 4, title: 'rt_brawler' },
+    { name: 'Jordan F.', floorBase: 5,       avgDailySteps: 2100, stepStdDev: 600, sleepBase:  3, sleepJitter: 2, bedtimeBase:  2, bedtimeJitter: 1, flightsBase: 10, flightsJitter: 3 },
+    { name: 'AwakenedRen', floorBase: 4,     avgDailySteps: 1500, stepStdDev: 500, sleepBase:  2, sleepJitter: 2, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  6, flightsJitter: 3 },
 
     // Light / sedentary — minimal stair use (0-10)
-    { name: 'Priya N.', floorBase: 22,        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  3, flightsJitter: 2 },
-    { name: 'nightowl', floorBase: 11,        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1, flightsBase:  1, flightsJitter: 2 },
+    { name: 'Priya N.', floorBase: 2,        avgDailySteps: 1000, stepStdDev: 400, sleepBase:  1, sleepJitter: 1, bedtimeBase:  1, bedtimeJitter: 1, flightsBase:  3, flightsJitter: 2 },
+    { name: 'nightowl', floorBase: 1,        avgDailySteps:  550, stepStdDev: 300, sleepBase:  0, sleepJitter: 1, bedtimeBase:  0, bedtimeJitter: 1, flightsBase:  1, flightsJitter: 2 },
   ];
 
   // ─── PRNG ─────────────────────────────────────────────────
@@ -281,18 +281,31 @@
     return v;
   }
 
-  // ─── Per-bot best floor (W274 — all-time, name-stable) ─────
-  // floor_best is the highest Ascent floor ever cleared, so unlike
-  // the weekly metrics it does NOT reshuffle by week — seed by bot
-  // name alone and hold steady. Clamped to [1, 96] so the tie-bump
-  // can't nudge a bot to 100 (the summit stays a real-player honor).
-  function botFloorBest(bot) {
-    const base = bot.floorBase || 0;
-    const rng = mulberry32(hashKey(bot.name + '|floor_best'));
-    const jit = Math.floor(rng() * 5) - 2;   // ±2 stable wobble
-    let v = base + jit;
+  // ─── Per-bot best floor (W276 — slow-climbing beginners, capped) ──
+  // Bots are perpetual BEGINNERS: they start low and climb ~1 floor per
+  // week from launch, and NEVER pass floor 48 (FLOOR_CAP). Real hunters
+  // climb far faster and sit above them — that's the point of the board.
+  // Deterministic per (bot, week): stable within a week, +~1 each week.
+  const FLOOR_CAP = 48;
+  const FLOOR_LAUNCH_WEEK = '2026-06-08';   // the week Highest Floor shipped
+  function weeksSinceLaunch(weekStartKey) {
+    try {
+      const a = Date.parse(FLOOR_LAUNCH_WEEK + 'T00:00:00Z');
+      const b = Date.parse((weekStartKey || FLOOR_LAUNCH_WEEK) + 'T00:00:00Z');
+      if (isNaN(a) || isNaN(b)) return 0;
+      return Math.max(0, Math.round((b - a) / (7 * 24 * 3600 * 1000)));
+    } catch (e) { return 0; }
+  }
+  function botFloorBest(bot, weekStartKey) {
+    const base = bot.floorBase || 1;
+    const weeks = weeksSinceLaunch(weekStartKey);
+    // ~1 floor/week with a tiny per-bot rate variance (8-12 per 10 weeks ≈
+    // 0.8-1.2/week) so they don't all advance in lockstep.
+    const rng = mulberry32(hashKey(bot.name + '|floorclimb'));
+    const per10 = 8 + Math.floor(rng() * 5);
+    let v = base + Math.floor(weeks * per10 / 10);
     if (v < 1) v = 1;
-    if (v > 96) v = 96;
+    if (v > FLOOR_CAP) v = FLOOR_CAP;
     return v;
   }
 
@@ -322,8 +335,8 @@
         // v3 Phase 1z.125 — continuous-distribution weekly flights.
         val = botFlightsThroughDay(weekStartKey, bot, dow);
       } else if (metric === 'floor_best') {
-        // W274 — highest Ascent floor ever cleared (name-stable, ≤96).
-        val = botFloorBest(bot);
+        // W276 — slow-climbing beginner floor, hard-capped at 48.
+        val = botFloorBest(bot, weekStartKey);
       } else if (metric === 'sleep_streak' || metric === 'bedtime_streak' || metric === 'workout_streak') {
         // v3 Phase 1z.118 — workout_streak joins the streak family.
         val = rollBotStreak(weekStartKey, bot, metric);
@@ -340,6 +353,7 @@
       // tie-bump so a bot already at the cap (e.g. saturated)
       // can't be nudged 137 over by the tie-breaker.
       if (metric === 'step_total' && val > SIM_STEP_WEEKLY_CAP) val = SIM_STEP_WEEKLY_CAP;
+      if (metric === 'floor_best' && val > 48) val = 48;   // W276 — bots never pass 48
       // W257 — modest Arena-title chips on some bots (apex titles never simulated)
       fakes.push({ alias: bot.name, current_value: val, _sim: true, arena_title: bot.title || null });
     }
