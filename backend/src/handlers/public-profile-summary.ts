@@ -74,6 +74,7 @@ const RANK_POINTS_MAX = 999_999_999;
 // so tight that a legitimate hardcore user hits the wall.
 const BOSSES_SLAIN_MAX     = 999_999;
 const ULTRA_RARE_DROPS_MAX = 9_999;
+const POWER_MAX            = 1_000_000;   // display power cap (anti-garbage; well above any real build)
 // Streak label allowlist: "<digits>-day <type> streak". Types are
 // the four streak kinds the client tracks (Morning Routine, Locked-
 // In, top stat, top habit). The user's private habit name is NEVER
@@ -111,6 +112,8 @@ interface PutBody {
   clientUpdatedAt?: unknown;
   achievements?: unknown;
   arenaTitle?: unknown;
+  avatarId?: unknown;
+  power?: unknown;
 }
 
 // Per-field "was this key present in the achievements object?"
@@ -139,6 +142,9 @@ interface Validated {
   // verifiedStreakLabel: omitted key → preserve existing column; null →
   // deliberate "unequipped" clear; string → must be a whitelisted ID.
   arenaTitle: AchField<string>;
+  // Profile card (W-next) — same set/clear/preserve semantics.
+  avatarId: AchField<string>;
+  power: AchField<number>;
 }
 
 function isAllowedTier(v: unknown): v is (typeof ALLOWED_TIERS)[number] {
@@ -359,6 +365,26 @@ function validate(body: PutBody):
     }
   }
 
+  // W-next — profile card display fields. Omitted → preserve existing column.
+  let avatarId: AchField<string> = { set: false, value: null };
+  if ('avatarId' in body && body.avatarId !== undefined) {
+    if (body.avatarId === null) {
+      avatarId = { set: true, value: null };
+    } else if (typeof body.avatarId === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(body.avatarId)) {
+      avatarId = { set: true, value: body.avatarId };
+    } else {
+      return { ok: false, code: 'INVALID_AVATAR_ID', detail: 'avatarId must be a short id string or null.' };
+    }
+  }
+  let power: AchField<number> = { set: false, value: null };
+  if ('power' in body && body.power !== undefined) {
+    if (isSafeInt(body.power, 0, POWER_MAX)) {
+      power = { set: true, value: body.power };
+    } else {
+      return { ok: false, code: 'INVALID_POWER', detail: `power must be an integer in [0, ${POWER_MAX}].` };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -370,6 +396,8 @@ function validate(body: PutBody):
       clientUpdatedAt: body.clientUpdatedAt,
       achievements: achCheck.value,
       arenaTitle,
+      avatarId,
+      power,
     },
   };
 }
@@ -435,6 +463,8 @@ export async function handlePublicProfileSummaryPut(
   const achSet    = ach.hasAny ? 1 : 0;
   // W257 — equipped Arena title: same set/preserve sentinel pattern.
   const titleSet  = v.arenaTitle.set ? 1 : 0;
+  const avatarSet = v.avatarId.set ? 1 : 0;
+  const powerSet  = v.power.set ? 1 : 0;
 
   await env.DB.prepare(
     `INSERT INTO public_profile_summary (
@@ -443,9 +473,9 @@ export async function handlePublicProfileSummaryPut(
         client_updated_at, server_updated_at, metadata_json,
         bosses_slain_total, ultra_rare_drops_total,
         verified_streak_label, achievements_updated_at,
-        arena_title
+        arena_title, avatar_id, power
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
-        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?)
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0))
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
@@ -468,7 +498,9 @@ export async function handlePublicProfileSummaryPut(
                                        ELSE public_profile_summary.achievements_updated_at END,
         arena_title             = CASE WHEN ? = 1
                                        THEN ?
-                                       ELSE public_profile_summary.arena_title END`,
+                                       ELSE public_profile_summary.arena_title END,
+        avatar_id               = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avatar_id END,
+        power                   = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.power END`,
   )
     .bind(
       // INSERT bindings (positional with the VALUES clause)
@@ -485,12 +517,16 @@ export async function handlePublicProfileSummaryPut(
       ach.verifiedStreakLabel.value,
       achievementsUpdatedAt,
       v.arenaTitle.value,
+      v.avatarId.value,
+      v.power.value,
       // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
       bossesSet, ach.bossesSlainTotal.value,
       dropsSet,  ach.ultraRareDropsTotal.value,
       streakSet, ach.verifiedStreakLabel.value,
       achSet,    achievementsUpdatedAt,
       titleSet,  v.arenaTitle.value,
+      avatarSet, v.avatarId.value,
+      powerSet,  v.power.value,
     )
     .run();
 

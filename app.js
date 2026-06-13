@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w276';
+  const APP_BUILD_TAG = '2.2.6-w277';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16908,7 +16908,17 @@
     let arenaTitleId = null;
     try { const t = getEquippedArenaTitle(); arenaTitleId = (t && t.id) || null; } catch (_) {}
     payload.arenaTitle = arenaTitleId;
-    const achSig = _publicAchievementsSignature(achievements) + '|' + (arenaTitleId || '');
+    // W-next — profile card display fields ride the same heartbeat. avatarId
+    // is the synced avatar/skin id (class default today, equipped skin later);
+    // power is the display combat power ("YOUR POWER"). Both fold into the
+    // signature so a change triggers a fresh submit. (Harmless no-op against a
+    // backend that predates the columns — the fields are simply ignored.)
+    let avatarId = null; try { avatarId = getAvatarSrc(); } catch (_) {}
+    let powerLvl = 0; try { powerLvl = _arD(_ascPlayerPower()); } catch (_) {}
+    payload.avatarId = avatarId;
+    payload.power = powerLvl;
+    const achSig = _publicAchievementsSignature(achievements) + '|' + (arenaTitleId || '') +
+      '|' + (avatarId || '') + '|' + powerLvl;
     _prsLogBreadcrumb('public-achievements-summary-built', {
       bossesSlainTotal:        achievements.bossesSlainTotal,
       ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
@@ -33001,6 +33011,26 @@
       try { openGlobalRankingsHub(); } catch (_) {}
     }
   }
+
+  // W-next — unified profile-card data resolver. Sim bots (rows flagged
+  // _sim) synthesize locally; real users fetch GET /v1/users/:alias/profile.
+  // Returns the same shape either way (or null on failure). The card UI
+  // (ClaudeDesign, pending) renders whatever this returns.
+  async function _profileCardResolve(alias, simRow) {
+    try {
+      if (simRow && simRow._sim && window.SimulatedLeaderboard && typeof SimulatedLeaderboard.profile === 'function') {
+        const dk = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
+        const p = SimulatedLeaderboard.profile(alias, dk);
+        if (p) return p;
+      }
+      if (window.Auth && typeof Auth.fetchPublicProfile === 'function') {
+        const res = await Auth.fetchPublicProfile(alias);
+        if (res && res.ok) return res;
+      }
+    } catch (_) {}
+    return null;
+  }
+  try { window.__profileCardResolve = _profileCardResolve; } catch (_) {}
 
   function setupLeaderboardPreview() {
     const list = document.getElementById('lb-preview-list');

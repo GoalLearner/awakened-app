@@ -33,6 +33,7 @@ import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import { handleHallFinishPost, handleHallGet } from './handlers/hall-of-awakened';
+import { handlePublicProfileGet } from './handlers/public-profile-get';
 import {
   handlePublicAchievementEventsPost,
   handleFriendsActivityGet,
@@ -58,6 +59,9 @@ import { jsonError } from './lib/responses';
 // Capture group #1 is the row UUID. We accept the standard randomUUID()
 // charset (hex + dashes) — anything else 404s implicitly.
 const FRIENDS_ID_RE = /^\/v1\/friends\/([0-9a-fA-F-]{8,})\/(accept|decline|remove)$/;
+// W-next — public profile card by alias. Exact /v1/users/me/* routes are
+// matched before this, so the :alias capture never shadows them.
+const USER_PROFILE_RE = /^\/v1\/users\/([^/]+)\/profile$/;
 // v3 Phase 1z.279 — Duels permanently retired. The only remaining
 // duel-shaped route is POST /v1/duels/:id/resolve (legacy in-flight
 // settlement from pre-w160 clients). All other duel regexes removed.
@@ -160,6 +164,10 @@ export default {
           } else if (path === '/v1/hall-of-awakened' && method === 'GET') {
             // W270 — the Roll: top finishers + the caller's neighbourhood.
             response = await handleHallGet(request, env, session);
+          } else if (USER_PROFILE_RE.test(path) && method === 'GET') {
+            // W-next — public profile card for any user by alias.
+            const m = path.match(USER_PROFILE_RE)!;
+            response = await handlePublicProfileGet(request, env, session, m[1]);
           }
           // ── Friends + legacy-Duels residuals ──
           else if (path === '/v1/friends' && method === 'GET') {

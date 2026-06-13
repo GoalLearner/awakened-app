@@ -1182,6 +1182,12 @@
     const n = (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) ? Math.floor(limit) : 4;
     return _authedFetch('GET', '/v1/hall-of-awakened?limit=' + encodeURIComponent(n));
   }
+  // W-next — public profile card for any user by alias (rank, power, boss
+  // kills, avg steps/day, best floor, title, avatar). Real users only; sim
+  // bots are synthesized client-side.
+  function fetchPublicProfile(alias) {
+    return _authedFetch('GET', '/v1/users/' + encodeURIComponent(alias) + '/profile');
+  }
 
   function fetchFriends()                       { return _authedFetch('GET',  '/v1/friends'); }
   function sendFriendRequest(alias)             { return _authedFetch('POST', '/v1/friends/request', { alias: alias }); }
@@ -1239,6 +1245,8 @@
     // The Hall of the Awakened (W270) — finish submit + roll read.
     submitHallFinish,
     fetchHall,
+    // Profile card (W-next) — public profile by alias.
+    fetchPublicProfile,
     // Friends (v3 Phase 1x)
     fetchFriends,
     sendFriendRequest,

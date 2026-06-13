@@ -502,9 +502,38 @@
     return records;
   }
 
+  // ─── Synthetic profile card for a bot (W-next) ─────────────
+  // Sim bots have no backend row, so the profile card synthesizes their
+  // bundle deterministically from personality + leaderboard tier. Shape
+  // mirrors GET /v1/users/:alias/profile so the card renders uniformly.
+  const _BOT_CLASSES = ['avatar-warrior.png', 'avatar-ranger.png', 'avatar-mage.png', 'avatar-assassin.png', 'avatar-paladin.png', 'avatar-merchant.png', 'avatar-sage.png'];
+  const _BOT_RANKS = ['E', 'E', 'D', 'D', 'C', 'C', 'B'];
+  function botProfile(name, dateKey) {
+    const bot = BOTS.find(function (b) { return b.name === name; });
+    if (!bot) return null;
+    const weekKey = getWeekStartKey(dateKey) || dateKey;
+    const idx = BOTS.indexOf(bot);
+    const strength = BOTS.length > 1 ? (1 - idx / (BOTS.length - 1)) : 0.5;   // 1=strongest .. 0=weakest
+    const rng = mulberry32(hashKey(name + '|profile'));
+    const rankLabel = _BOT_RANKS[Math.min(_BOT_RANKS.length - 1, Math.round(strength * (_BOT_RANKS.length - 1)))];
+    return {
+      ok: true, _sim: true, alias: name,
+      rankLabel: rankLabel, rankTier: rankLabel,
+      power: Math.round(400 + strength * 2600 + rng() * 200),    // ~400-3200, beginner-ish
+      avatarId: _BOT_CLASSES[Math.floor(rng() * _BOT_CLASSES.length)],
+      arenaTitle: bot.title || null,
+      bossesSlain: Math.round(strength * 36 + rng() * 8),
+      ultraRareDrops: Math.floor(strength * 4 + rng() * 1.5),
+      verifiedStreakLabel: null,
+      avgStepsPerDay: bot.avgDailySteps || 0,
+      bestFloor: botFloorBest(bot, weekKey),
+    };
+  }
+
   if (typeof window !== 'undefined') {
     window.SimulatedLeaderboard = {
       SIMULATE_USERS:        SIMULATE_USERS,
+      profile:               botProfile,
       SIM_STEP_WEEKLY_CAP:   SIM_STEP_WEEKLY_CAP,
       merge:                 mergeWithSimulated,
       // v3 Phase 1z.37 — Hall of Fame client-side filler.
