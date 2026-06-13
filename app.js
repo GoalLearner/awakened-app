@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w271';
+  const APP_BUILD_TAG = '2.2.5-w272';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7301,11 +7301,15 @@
   // chip), one row of numbers (rating · tier | lives). Replaces the W259
   // header strip; the title chip keeps the W259 data-ar="titles" entry point.
   function _ascHeaderHtml(st) {
-    const tier = _ascTier(st.rating);
     const left = Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
     let hearts = '';
     for (let i = 0; i < ASCENT_DAILY_LIVES; i++) hearts += _ascHeartHtml(i < left);
     let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
+    // W272 — the left corner shows POWER (the climb's real progression metric)
+    // instead of arena RATING. Rating still runs under the hood (it drives the
+    // milestone titles in the chip above + the post-fight delta), it's just no
+    // longer the headline number — one less competing ranking on screen.
+    let pwr = 0; try { pwr = _arD(_ascPlayerPower()); } catch (_) {}
     return '<div class="al-head">' +
       '<div class="al-head-row"><span class="al-wordmark">THE ASCENT</span>' +
         '<button class="al-title-chip" data-ar="titles" type="button">' +
@@ -7313,9 +7317,8 @@
           '<svg width="7" height="9" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" stroke="#9090a8" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
         '</button></div>' +
       '<div class="al-head-nums">' +
-        '<div class="al-rating"><span class="al-lbl">RATING</span>' +
-          '<span class="al-rating-row"><span class="num">' + st.rating.toLocaleString('en-US') + '</span>' +
-            '<span class="al-tier" style="color:' + tier.color + '"><i style="background:' + tier.color + '"></i>' + tier.name + '</span></span></div>' +
+        '<div class="al-power"><span class="al-lbl">POWER</span>' +
+          '<span class="al-rating-row"><span class="num">' + pwr.toLocaleString('en-US') + '</span></span></div>' +
         '<div class="al-lives"><span class="al-lbl">LIVES</span>' +
           '<span class="al-lives-row">' + hearts + '<span class="n">' + left + '/' + ASCENT_DAILY_LIVES + '</span></span></div>' +
       '</div></div>';

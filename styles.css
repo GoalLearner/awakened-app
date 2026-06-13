@@ -28265,7 +28265,7 @@ button.guildhall-summary-tile:active {
 .al-title-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid rgba(245,184,66,0.35); border-radius: 999px; background: rgba(245,184,66,0.05); padding: 4px 9px 3px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; -webkit-tap-highlight-color: transparent; }
 .al-head-nums { display: flex; align-items: flex-end; gap: 8px; }
 .al-lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.5px; color: #6b6b86; }
-.al-rating { display: flex; flex-direction: column; gap: 3px; }
+.al-rating, .al-power { display: flex; flex-direction: column; gap: 3px; }   /* W272 — power replaces rating in the ledger header */
 .al-rating-row { display: flex; align-items: baseline; gap: 9px; }
 .al-rating-row .num { font-family: "Cinzel", Georgia, serif; font-size: 28px; font-weight: 700; color: #f5b842; line-height: 1; }
 .al-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2px; }
