@@ -28672,3 +28672,18 @@ button.guildhall-summary-tile:active {
 .wd-tile-rarity { font-family: "JetBrains Mono", monospace; font-size: 7px; font-weight: 800; letter-spacing: 1.4px; }
 .wd-tile--mythic .wd-tile-rarity { color: #f5b842; }
 .wd-tile--legendary .wd-tile-rarity { color: #a78bfa; }
+
+/* ── W283 — premium skin preview lightbox ──────────────────────────────── */
+.wd-preview-overlay { position: fixed; inset: 0; z-index: 340; background: rgba(5,5,16,0.88);
+  display: flex; align-items: center; justify-content: center; padding: 24px; animation: vn-fade 0.2s ease; }
+.wd-preview-overlay.hidden { display: none !important; }
+.wd-preview-card { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 320px; }
+.wd-preview-art { width: 234px; height: 351px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 14px 44px rgba(0,0,0,0.75)); }
+.wd-preview-art img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.wd-preview-name { margin-top: 14px; font-family: "Cinzel", Georgia, serif; font-size: 24px; font-weight: 700; color: #f5f3fb; letter-spacing: 0.4px; }
+.wd-preview-rarity { margin-top: 8px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 3px; padding: 3px 13px 2px; border-radius: 999px; border: 1px solid; }
+.wd-preview-rarity--mythic { color: #f5b842; border-color: rgba(245,184,66,0.5); background: rgba(245,184,66,0.06); }
+.wd-preview-rarity--legendary { color: #a78bfa; border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.06); }
+.wd-preview-blurb { margin-top: 13px; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 16px; color: #c8c6d8; }
+.wd-preview-soon { margin-top: 16px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #6b6b86; }
+.wd-preview-hint { margin-top: 6px; font-family: "JetBrains Mono", monospace; font-size: 8px; letter-spacing: 1.5px; color: #4a4a5e; }

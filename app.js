@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w282';
+  const APP_BUILD_TAG = '2.2.6-w283';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20681,12 +20681,12 @@
   // (owned:false) until the Layer 2 IAP purchase flow ships; shown in the
   // Wardrobe SHOP section as a storefront preview with their rarity ring.
   const PREMIUM_SKINS = [
-    { id: 'avatar-skin-stardust.png',       name: 'Stardust Sovereign', file: 'avatar-skin-stardust.png',        rarity: 'mythic',    owned: false },
-    { id: 'avatar-skin-dawnbringer.png',    name: 'Dawnbringer',        file: 'avatar-skin-dawnbringer.png',     rarity: 'mythic',    owned: false },
-    { id: 'avatar-skin-nullprotocol.png',   name: 'Null Protocol',      file: 'avatar-skin-nullprotocol.png',    rarity: 'mythic',    owned: false },
-    { id: 'avatar-skin-nullprotocol-2.png', name: 'Null Protocol II',   file: 'avatar-skin-nullprotocol-2.png',  rarity: 'mythic',    owned: false },
-    { id: 'avatar-skin-emberforged.png',    name: 'Emberforged',        file: 'avatar-skin-emberforged.png',     rarity: 'legendary', owned: false },
-    { id: 'avatar-skin-voidtouched.png',    name: 'The Void-Touched',   file: 'avatar-skin-voidtouched.png',     rarity: 'legendary', owned: false },
+    { id: 'avatar-skin-stardust.png',       name: 'Stardust Sovereign', file: 'avatar-skin-stardust.png',        rarity: 'mythic',    owned: false, blurb: 'They wear the night sky like a cloak.' },
+    { id: 'avatar-skin-dawnbringer.png',    name: 'Dawnbringer',        file: 'avatar-skin-dawnbringer.png',     rarity: 'mythic',    owned: false, blurb: 'The first light, given a body.' },
+    { id: 'avatar-skin-nullprotocol.png',   name: 'Null Protocol',      file: 'avatar-skin-nullprotocol.png',    rarity: 'mythic',    owned: false, blurb: "A hunter the system couldn't render." },
+    { id: 'avatar-skin-nullprotocol-2.png', name: 'Null Protocol II',   file: 'avatar-skin-nullprotocol-2.png',  rarity: 'mythic',    owned: false, blurb: "A glitch the system couldn't contain." },
+    { id: 'avatar-skin-emberforged.png',    name: 'Emberforged',        file: 'avatar-skin-emberforged.png',     rarity: 'legendary', owned: false, blurb: "Forged in the mountain's heart, never cooled." },
+    { id: 'avatar-skin-voidtouched.png',    name: 'The Void-Touched',   file: 'avatar-skin-voidtouched.png',     rarity: 'legendary', owned: false, blurb: 'Something reached back.' },
   ];
   const AVATAR_SKIN_KEY = 'hb_avatar_skin';   // equipped skin file; '' / absent = class default
   function getEquippedSkin() { try { return localStorage.getItem(AVATAR_SKIN_KEY) || ''; } catch (_) { return ''; } }
@@ -33154,6 +33154,20 @@
       '<div class="wd-grid wd-shop">' + shop + '</div>' +
       '<div class="wd-shop-note">Premium skins — purchasable in a future update.</div>';
   }
+  // W283 — premium skin preview lightbox (try-before-you-buy on a locked skin).
+  function _wdPreviewSkin(id) {
+    const sk = PREMIUM_SKINS.find((x) => x.id === id);
+    const ov = document.getElementById('wd-preview-overlay');
+    if (!sk || !ov) return;
+    const img = document.getElementById('wd-preview-img'); if (img) img.src = sk.file;
+    const nm = document.getElementById('wd-preview-name'); if (nm) nm.textContent = sk.name;
+    const rar = document.getElementById('wd-preview-rarity');
+    if (rar) { rar.textContent = (sk.rarity || '').toUpperCase(); rar.className = 'wd-preview-rarity wd-preview-rarity--' + (sk.rarity || ''); }
+    const bl = document.getElementById('wd-preview-blurb'); if (bl) bl.textContent = sk.blurb || '';
+    ov.classList.remove('hidden');
+  }
+  function _wdClosePreview() { const ov = document.getElementById('wd-preview-overlay'); if (ov) ov.classList.add('hidden'); }
+
   function openWardrobe() {
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
     if (!ov || !sh) return;
@@ -33284,12 +33298,16 @@
     if (wdClose && wdClose.getAttribute('data-wired') !== '1') { wdClose.setAttribute('data-wired', '1'); wdClose.addEventListener('click', closeWardrobe); }
     const wdOverlay = document.getElementById('wd-overlay');
     if (wdOverlay && wdOverlay.getAttribute('data-wired') !== '1') { wdOverlay.setAttribute('data-wired', '1'); wdOverlay.addEventListener('click', closeWardrobe); }
+    const wdPrev = document.getElementById('wd-preview-overlay');
+    if (wdPrev && wdPrev.getAttribute('data-wired') !== '1') { wdPrev.setAttribute('data-wired', '1'); wdPrev.addEventListener('click', _wdClosePreview); }
     const wdBody = document.getElementById('wd-body');
     if (wdBody && wdBody.getAttribute('data-wired') !== '1') {
       wdBody.setAttribute('data-wired', '1');
       wdBody.addEventListener('click', (e) => {
         const tile = e.target && e.target.closest && e.target.closest('.wd-tile[data-skin]');
-        if (tile) _equipSkin(tile.getAttribute('data-skin'));
+        if (tile) { _equipSkin(tile.getAttribute('data-skin')); return; }
+        const prem = e.target && e.target.closest && e.target.closest('.wd-tile--premium[data-premium]');
+        if (prem) _wdPreviewSkin(prem.getAttribute('data-premium'));
       });
     }
     const pcBodyEl = document.getElementById('pc-body');
