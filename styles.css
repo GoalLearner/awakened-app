@@ -28407,3 +28407,72 @@ button.guildhall-summary-tile:active {
 .ao-open-cta { border:none; cursor:pointer; border-radius:13px; padding:17px 0; width:100%; text-align:center;
   background:linear-gradient(180deg,#f5b842,#c08418); font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:800; letter-spacing:3.5px; color:#241502;
   -webkit-tap-highlight-color:transparent; }
+
+/* ── W269 — The Summit (finale) + Hall of the Awakened (ClaudeDesign) ───── */
+@keyframes fnHalo   { 0%,100% { opacity:.5; } 50% { opacity:.95; } }
+@keyframes fnEmber  { 0%,100% { opacity:.25; transform: translateY(0); } 50% { opacity:.7; transform: translateY(-8px); } }
+@keyframes fnCta    { 0%,100% { box-shadow: 0 4px 18px rgba(245,184,66,0.24); } 50% { box-shadow: 0 4px 28px rgba(245,184,66,0.46); } }
+@keyframes fnRise   { 0% { opacity:0; transform: translateY(13px); } 100% { opacity:1; transform: translateY(0); } }
+@keyframes fnStrike { 0% { opacity:0; transform: scale(1.35); letter-spacing: 12px; } 100% { opacity:1; transform: scale(1); } }
+
+.fn-summit { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fn-portrait { position: absolute; top: 0; left: 0; right: 0; height: 64%; display: flex; align-items: center; justify-content: center;
+  background: repeating-linear-gradient(45deg, rgba(245,184,66,0.045) 0 6px, rgba(245,184,66,0.012) 6px 12px), radial-gradient(70% 65% at 50% 26%, #211c12 0%, #0d0c20 72%); }
+.fn-portrait img { max-width: 78%; max-height: 92%; object-fit: contain; object-position: center top; filter: drop-shadow(0 8px 30px rgba(0,0,0,0.6)); position: relative; z-index: 1; }
+.fn-portrait .fn-halo { position: absolute; top: 30%; left: 50%; transform: translate(-50%,-50%); width: 210px; height: 210px; border-radius: 50%; background: radial-gradient(circle, rgba(245,184,66,0.18) 0%, transparent 68%); }
+.fn-portrait .fn-ember { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #f5b842; }
+.fn-portrait-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,7,15,0.25) 0%, rgba(7,7,15,0) 24%, rgba(7,7,15,0.5) 50%, #07070f 80%); }
+.fn-summit-body { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; padding: max(56px, env(safe-area-inset-top)) 30px max(28px, env(safe-area-inset-bottom)); }
+.fn-summit-kick { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 4px; color: #f5b842; }
+.fn-summit-spacer { flex: 1; }
+.fn-struck-line { text-align: center; margin-bottom: 22px; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 17px; line-height: 1.4; color: #9090a8; text-decoration: line-through; text-decoration-color: rgba(245,184,66,0.5); text-decoration-thickness: 1px; }
+.fn-summit-answer { text-align: center; margin-bottom: 26px; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 25px; line-height: 1.34; color: #c8c6d8; text-shadow: 0 2px 12px rgba(0,0,0,0.8); }
+.fn-summit-answer .by { margin-top: 11px; font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 8px; font-weight: 700; letter-spacing: 2.5px; color: #6b6b86; }
+.fn-trophy { text-align: center; margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.fn-trophy .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 3px; color: #9090a8; }
+.fn-trophy-plate { clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%); padding: 13px 30px;
+  background: radial-gradient(120% 200% at 50% -40%, #2a2150 0%, #15122e 55%, #0e0e24 100%);
+  border: 1.5px solid transparent; filter: drop-shadow(0 0 14px rgba(245,184,66,0.27)); }
+.fn-trophy-name { font-family: "Cinzel", Georgia, serif; font-size: 23px; font-weight: 700; letter-spacing: 2px; white-space: nowrap;
+  background-image: linear-gradient(180deg, #ffe9b0 0%, #f5b842 50%, #9a6c14 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.6)); }
+.fn-obj-complete { display: flex; align-items: stretch; justify-content: center; width: 250px; margin: 0 auto 9px; }
+.fn-obj-complete .cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fn-obj-complete .cell b { font-family: "Cinzel", Georgia, serif; font-size: 22px; font-weight: 700; color: #f5b842; line-height: 1; }
+.fn-obj-complete .cell i { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 7.5px; font-weight: 800; letter-spacing: 2px; color: #9090a8; }
+.fn-obj-complete .div { width: 1px; background: rgba(255,255,255,0.08); margin: 3px 0; }
+.fn-obj-stamp { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 22px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 3.5px; color: #f5b842; }
+.fn-obj-stamp .d { width: 5px; height: 5px; transform: rotate(45deg); background: #f5b842; border-radius: 1px; box-shadow: 0 0 7px #f5b842; }
+.fn-cta { border: none; cursor: pointer; width: 100%; border-radius: 13px; padding: 16px 0; text-align: center; background: linear-gradient(180deg, #f5b842, #c08418); font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 800; letter-spacing: 3px; color: #241502; -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 18px rgba(245,184,66,0.24); }
+
+.fn-hall { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: max(54px, env(safe-area-inset-top)) 0 max(22px, env(safe-area-inset-bottom)); }
+.fn-hall-head { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 20px; }
+.fn-hall-head .rule { width: 22px; height: 1px; background: rgba(255,255,255,0.08); }
+.fn-hall-head .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 3px; color: #f5b842; }
+.fn-hall-title { text-align: center; margin-top: 7px; font-family: "Cinzel", Georgia, serif; font-size: 25px; font-weight: 700; letter-spacing: 1.5px; color: #f5f3fb; }
+.fn-hall-sub { text-align: center; margin-top: 6px; padding: 0 30px; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14.5px; color: #9090a8; }
+.fn-hall-plate { margin: 24px 22px 0; position: relative; border-radius: 6px; box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+  background: repeating-linear-gradient(100deg, rgba(255,255,255,0.016) 0 3px, transparent 3px 9px), radial-gradient(130% 100% at 30% -10%, #232038 0%, #16142c 55%, #100e22 100%);
+  border: 1px solid rgba(245,184,66,0.4); box-shadow: 0 0 30px rgba(245,184,66,0.10), inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 10px rgba(0,0,0,0.5); }
+.fn-hall-plate .med { width: 46px; height: 46px; border-radius: 10px; flex: none; overflow: hidden; background: #14122c; border: 1px solid rgba(245,184,66,0.4); }
+.fn-hall-plate .med img { width: 100%; height: 100%; object-fit: cover; }
+.fn-hall-plate .who { flex: 1; min-width: 0; }
+.fn-hall-plate .you { font-family: "Cinzel", Georgia, serif; font-size: 20px; font-weight: 700; letter-spacing: 1px; color: #f5f3fb; }
+.fn-hall-plate .chip { margin-top: 6px; display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2px; color: #f5b842; border: 1px solid rgba(245,184,66,0.4); border-radius: 999px; padding: 3px 10px 2px; }
+.fn-hall-plate .when { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1px; color: #6b6b86; flex: none; align-self: flex-start; }
+.fn-hall-note { margin: 18px 28px 0; text-align: center; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 15px; line-height: 1.45; color: #9090a8; }
+.fn-hall-foot { flex: 1; }
+.fn-hall .ar-cta { margin: 0 20px; }
+
+.tm-row--summit { border-color: rgba(245,184,66,0.45) !important; background: linear-gradient(180deg, rgba(245,184,66,0.07), rgba(245,184,66,0.02)) !important; }
+.tm-prog--summit .n { color: #f5b842 !important; }
+.tm-prog--summit .bar > span { background: linear-gradient(90deg, #c08418, #ffe9b0) !important; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fn-summit .fn-halo { animation: fnHalo 5s ease-in-out infinite; }
+  .fn-summit .fn-ember { animation: fnEmber 4.5s ease-in-out infinite; }
+  .fn-summit .fn-cta { animation: fnCta 3.6s ease-in-out infinite; }
+  .fn-summit .fn-rise { animation: fnRise 760ms cubic-bezier(.2,.8,.2,1) both; }
+  .fn-summit .fn-rise-2 { animation: fnRise 760ms cubic-bezier(.2,.8,.2,1) 220ms both; }
+  .fn-summit .fn-rise-3 { animation: fnRise 760ms cubic-bezier(.2,.8,.2,1) 440ms both; }
+  .fn-trophy-name { animation: fnStrike 620ms cubic-bezier(.16,1,.3,1) 520ms both; }
+}

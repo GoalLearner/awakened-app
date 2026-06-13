@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w268';
+  const APP_BUILD_TAG = '2.2.5-w269';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5795,7 +5795,7 @@
     70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    taunt: 'Kneel, and I may let you keep your title.' },
     80:  { name: 'The Silent Warden',   arch: 'sentinel',    taunt: '…' },
     90:  { name: 'The Dread Harbinger', arch: 'trickster',   taunt: 'The summit knows your name. It is not impressed.' },
-    100: { name: 'The First Awakened',  arch: 'balanced',    taunt: 'I was the first to climb. No one has reached me since.' },
+    100: { name: 'The First Awakened',  arch: 'trickster',   taunt: 'I was the first to climb. No one has reached me since.' },
   };
 
   // Procedural name pool for the 90 regular floors (stable per floor via
@@ -5824,7 +5824,9 @@
     { id: 'rt_apex',        name: 'Apex',        need: 1900, tier: 'violet' },
     { id: 'rt_monarch',     name: 'Monarch',     need: 2000, tier: 'gold'   },
     { id: 'rt_grandmaster', name: 'Grandmaster', need: 2200, tier: 'gold'   },
-  ].map((t) => Object.assign(t, { kind: 'rating', blurb: 'Reached ' + t.need.toLocaleString('en-US') + ' arena rating.' }));
+  ].map((t) => Object.assign(t, { kind: 'rating', blurb: 'Reached ' + t.need.toLocaleString('en-US') + ' arena rating.' }))
+   .concat([{ id: 'summit_second_awakened', name: 'The Second Awakened', kind: 'summit', tier: 'summit',
+     blurb: 'Climbed all 100 floors and bested the First Awakened.' }]);   // W269 — the one title earned a single way, off the rating ladder
   // Legacy id remap (W257-era equipped titles on devices). Ids whose meaning
   // survives map to their successor; retired boss-only ids simply stop
   // resolving (getEquippedArenaTitle returns null for unknown ids — no crash,
@@ -5843,6 +5845,7 @@
     asc_shadowcaller: 'rt_monarch',
   };
   function _arenaTitleUnlocked(t, st) {
+    if (t.kind === 'summit') return (st.highestCleared || 0) >= ASCENT_FLOORS;   // W269 — the summit trophy: clear all 100 floors
     return st.bestRating >= t.need;   // W266 — one currency; bestRating never decays
   }
 
@@ -7431,7 +7434,8 @@
       ? '<div class="al-hero al-hero--done"><span class="kick">THE SUMMIT</span>' +
         '<span class="nm">The tower is climbed.</span>' +
         '<div class="al-hero-rule"></div>' +
-        '<div class="al-hero-intel"><span class="read">Every floor has fallen. The ledger below is yours.</span></div></div>'
+        '<div class="al-hero-intel"><span class="read">Every floor has fallen. The ledger below is yours.</span></div>' +
+        '<button type="button" class="al-fight" data-ar="hall" style="margin-top:14px">ENTER THE HALL ▸</button></div>'   // W269 — revisit the Hall of the Awakened
       : _ascHeroHtml(ascentFloorInfo(cur), left);
     let ledger = '';
     const curBandIdx = ASCENT_BANDS.indexOf(_ascentBandFor(cur));
@@ -8660,9 +8664,85 @@
       return !(b && Array.isArray(b.slots) && b.slots[3]);
     } catch (_) { return false; }
   }
+  // ── W269 · THE SUMMIT (finale, ClaudeDesign 'The Passing') ──────────
+  // The first clear of Floor 100. Bookends the opening: the First Awakened's
+  // 'No one has reached me since.' strikes through, his torch-passing line
+  // rises, and the one-way trophy 'The Second Awakened' is bestowed. The
+  // engine already committed the win + the title at KO; this only presents it.
+  function _arRenderSummit() {
+    _arView = 'summit';
+    _arBodyMode(false);
+    try { if (_AUD.musicLoop) _audStopMusic(0.5); } catch (_) {}
+    try { _audPlayMusic('victory_sting', false); } catch (_) {}   // the sting carries the moment (absent slot = silent)
+    const portrait = 'assets/coach/first-awakened-idle.png';
+    _arSet(
+      '<div class="fn-summit">' +
+        '<div class="fn-portrait" aria-hidden="true">' +
+          '<span class="fn-halo"></span>' +
+          '<img src="' + portrait + '" alt="" onerror="this.style.display=0===0?\'none\':\'\'">' +
+          '<span class="fn-ember" style="top:34%;left:38%"></span>' +
+          '<span class="fn-ember" style="top:40%;right:34%;animation-delay:1.6s"></span>' +
+          '<span class="fn-portrait-scrim"></span>' +
+        '</div>' +
+        '<div class="fn-summit-body">' +
+          '<div class="fn-summit-kick">THE SUMMIT · FLOOR ' + ASCENT_FLOORS + '</div>' +
+          '<div class="fn-summit-spacer"></div>' +
+          '<div class="fn-rise fn-struck-line">“No one has reached me since.”</div>' +
+          '<div class="fn-rise-2 fn-summit-answer">“Then it is done.<br>Climb past me.”' +
+            '<div class="by">— THE FIRST AWAKENED</div></div>' +
+          '<div class="fn-rise-3 fn-trophy">' +
+            '<div class="eyebrow">A TITLE NONE BUT THE FIRST HAS WORN</div>' +
+            '<div class="fn-trophy-plate"><span class="fn-trophy-name">The Second Awakened</span></div></div>' +
+          '<div class="fn-obj-complete">' +
+            '<span class="cell"><b>' + ASCENT_FLOORS + '</b><i>FLOORS</i></span><span class="div"></span>' +
+            '<span class="cell"><b>1</b><i>SUMMIT</i></span><span class="div"></span>' +
+            '<span class="cell"><b>1</b><i>BESTED</i></span></div>' +
+          '<div class="fn-obj-stamp"><span class="d"></span>THE ASCENT · COMPLETE<span class="d"></span></div>' +
+          '<button type="button" class="fn-cta" data-ar="hall">ENTER THE HALL ▸</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // ── W269 · THE HALL OF THE AWAKENED (placeholder) ───────────────────
+  // The eternal registry of everyone who has finished all 100 floors, in
+  // finish order — #1 forever. The global ordinal is server-assigned, so the
+  // live roll arrives with the W270 backend (finisher table + ordinal handler
+  // + endpoint). Until deployed, the player's own inscription shows here with
+  // an honest 'opens soon' note — never a fake number.
+  function _arRenderHall() {
+    _arView = 'hall';
+    _arBodyMode(false);
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    let when = ''; try { when = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(); } catch (_) {}
+    const finished = (getAscentState().highestCleared || 0) >= ASCENT_FLOORS;
+    _arSet(
+      '<div class="fn-hall">' +
+        '<div class="fn-hall-head"><span class="rule"></span>' +
+          '<span class="k">FLOOR ' + ASCENT_FLOORS + ' · FINISHERS</span><span class="rule"></span></div>' +
+        '<div class="fn-hall-title">The Hall of the Awakened</div>' +
+        '<div class="fn-hall-sub">Every soul who reached the summit, in the order they arrived.</div>' +
+        (finished
+          ? '<div class="fn-hall-plate">' +
+              '<div class="med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+              '<div class="who"><div class="you">You</div>' +
+                '<div class="chip">THE SECOND AWAKENED</div></div>' +
+              '<div class="when">' + esc(when) + '</div></div>' +
+            '<div class="fn-hall-note">Your place among all who have ever finished is being recorded. ' +
+              'The full Hall opens soon.</div>'
+          : '<div class="fn-hall-note">The Hall records those who climb all ' + ASCENT_FLOORS + ' floors and best the First Awakened. ' +
+              'Its doors are not yet open to you.</div>') +
+        '<div class="fn-hall-foot"></div>' +
+        '<button type="button" class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
+      '</div>'
+    );
+  }
+
   function _arRenderResult() {
     _arClearTimers();
     _arRevealing = false;
+    // W269 — the Summit: the first clear of Floor 100 is the ending, not a result card.
+    if (_arFight && _arFight.won && _arFight.advanced && _arFight.floorCleared === ASCENT_FLOORS) { _arRenderSummit(); return; }
     _arView = 'result';
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}   // forfeit path: loop never outlives the fight
@@ -8747,6 +8827,11 @@
       let right;
       if (isEq) right = '<span class="tm-worn">WORN</span>';
       else if (unlocked) right = '<span class="tm-equip">EQUIP</span>';
+      else if (t.kind === 'summit') {
+        const fc = st.highestCleared || 0;
+        right = '<span class="tm-prog tm-prog--summit"><span class="n">FLOOR ' + fc + ' / ' + ASCENT_FLOORS + '</span>' +
+          '<span class="bar"><span style="width:' + Math.round(Math.min(1, fc / ASCENT_FLOORS) * 100) + '%"></span></span></span>';
+      }
       else if (isNext) {
         const prev = i > 0 ? ARENA_TITLES[i - 1].need : ASCENT_RATING_START;
         const frac = Math.max(0, Math.min(1, (st.bestRating - prev) / (t.need - prev)));
@@ -8759,7 +8844,7 @@
         (unlocked ? ' tm-row--open' : isNext ? ' tm-row--next' : ' tm-row--deep');
       const tap = unlocked ? ' data-ar="equip" data-tid="' + esc(t.id) + '"' : '';
       return '<div class="' + cls + '"' + tap + '>' +
-        '<span class="at">' + t.need.toLocaleString('en-US') + '</span>' +
+        '<span class="at">' + (t.kind === 'summit' ? 'F' + ASCENT_FLOORS : t.need.toLocaleString('en-US')) + '</span>' +
         '<span class="tm-gem' + (unlocked ? '' : ' locked') + '"></span>' +
         '<span class="nm">' + esc(t.name) + '</span>' + right + '</div>';
     }).join('');
@@ -8884,6 +8969,7 @@
       }
       else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
       else if (a === 'tower')   _arRenderTower();
+      else if (a === 'hall')    _arRenderHall();
       else if (a === 'alscout') { try { const sl = document.getElementById('al-scout-slot'); if (sl) sl.style.display = sl.style.display === 'none' ? '' : 'none'; } catch (_) {} }
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'equip')   {

@@ -91,6 +91,9 @@ const ARENA_TITLE_IDS = [
   'rt_contender', 'rt_brawler', 'rt_duelist', 'rt_blade', 'rt_reaver',
   'rt_elite', 'rt_warbringer', 'rt_sovereign', 'rt_apex', 'rt_monarch',
   'rt_grandmaster',
+  // W269 — the summit trophy "The Second Awakened" (clear all 100 floors; off
+  // the rating ladder). Display name resolves client-side, same as the rest.
+  'summit_second_awakened',
   // legacy W257-era ids — accepted from pre-W266 clients still in the wild;
   // the client remaps them forward on its next launch
   'asc_brawler', 'asc_wallbreaker', 'asc_ironbreaker', 'asc_edgewalker',
