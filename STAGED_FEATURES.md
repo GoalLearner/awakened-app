@@ -15,3 +15,11 @@ KEEP — do not re-flag. Verdicts recorded live with Richie, 2026-06-12.
 Removed as ABANDONED in the same session (Duels permanently retired):
 `preview-social.html` ("Discipline Duels tab") and the untracked
 `preview-duels-polish.html`, plus the `social-empty-icon` CSS orphan.
+
+## Parked engineering follow-ups (no mockup)
+
+- **Hall-ordinal cross-link** (W276, parked 2026-06-12) — join `hall_of_awakened`
+  to show each finisher's ordinal on the floor-100 crown of the Highest Floor
+  leaderboard ("the 47th to awaken" instead of a bare crown). Build when the
+  first real climber nears floor 100. Breadcrumb at the query:
+  `backend/src/handlers/leaderboard-top.ts` (search "CROSS-LINK (parked)").

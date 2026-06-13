@@ -83,6 +83,7 @@ export async function handleLeaderboardTop(
   // Top-N query. Uses idx_leaderboard_metric_week_value (weekly path)
   // or idx_leaderboard_metric_value (non-weekly) for index-only range
   // scan; no full-table sort.
+  // CROSS-LINK (parked): join hall_of_awakened to show finisher ordinal on the floor-100 crown — build when first real climber nears floor 100
   const topResult = weekly
     ? await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
