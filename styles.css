@@ -28662,3 +28662,13 @@ button.guildhall-summary-tile:active {
 .wd-shop .wd-tile-av { background: repeating-linear-gradient(135deg, #15132f, #15132f 6px, #0e0e24 6px, #0e0e24 12px); }
 .wd-lock { font-size: 20px; color: #6b6b86; }
 .wd-shop-note { margin-top: 12px; text-align: center; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 14px; color: #9090a8; }
+
+/* ── W281 — premium skin tiles (Wardrobe SHOP; full art + rarity ring) ──── */
+.wd-shop .wd-tile--premium { opacity: 1; cursor: default; }
+.wd-tile--premium .wd-tile-av { border-width: 2px; background: #14122c; }
+.wd-tile--mythic .wd-tile-av { border-color: #f5b842; box-shadow: 0 0 14px rgba(245,184,66,0.45); }
+.wd-tile--legendary .wd-tile-av { border-color: #a78bfa; box-shadow: 0 0 14px rgba(167,139,250,0.45); }
+.wd-tile-lockbadge { position: absolute; top: 6px; right: 6px; font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.8px; color: #0e0e24; background: #9090a8; border-radius: 5px; padding: 2px 5px; }
+.wd-tile-rarity { font-family: "JetBrains Mono", monospace; font-size: 7px; font-weight: 800; letter-spacing: 1.4px; }
+.wd-tile--mythic .wd-tile-rarity { color: #f5b842; }
+.wd-tile--legendary .wd-tile-rarity { color: #a78bfa; }

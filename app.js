@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w280';
+  const APP_BUILD_TAG = '2.2.6-w281';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20677,6 +20677,17 @@
     { id: 'avatar-sage.png',     name: 'Sage',     file: 'avatar-sage.png'     },
     { id: 'avatar-base.png',     name: 'Wanderer', file: 'avatar-base.png'     },
   ];
+  // W281 — premium avatar skins (Midjourney art, 400×600 cutouts). Locked
+  // (owned:false) until the Layer 2 IAP purchase flow ships; shown in the
+  // Wardrobe SHOP section as a storefront preview with their rarity ring.
+  const PREMIUM_SKINS = [
+    { id: 'avatar-skin-stardust.png',       name: 'Stardust Sovereign', file: 'avatar-skin-stardust.png',        rarity: 'mythic',    owned: false },
+    { id: 'avatar-skin-dawnbringer.png',    name: 'Dawnbringer',        file: 'avatar-skin-dawnbringer.png',     rarity: 'mythic',    owned: false },
+    { id: 'avatar-skin-nullprotocol.png',   name: 'Null Protocol',      file: 'avatar-skin-nullprotocol.png',    rarity: 'mythic',    owned: false },
+    { id: 'avatar-skin-nullprotocol-2.png', name: 'Null Protocol II',   file: 'avatar-skin-nullprotocol-2.png',  rarity: 'mythic',    owned: false },
+    { id: 'avatar-skin-emberforged.png',    name: 'Emberforged',        file: 'avatar-skin-emberforged.png',     rarity: 'legendary', owned: false },
+    { id: 'avatar-skin-voidtouched.png',    name: 'The Void-Touched',   file: 'avatar-skin-voidtouched.png',     rarity: 'legendary', owned: false },
+  ];
   const AVATAR_SKIN_KEY = 'hb_avatar_skin';   // equipped skin file; '' / absent = class default
   function getEquippedSkin() { try { return localStorage.getItem(AVATAR_SKIN_KEY) || ''; } catch (_) { return ''; } }
   function setEquippedSkin(file) {
@@ -33125,8 +33136,13 @@
         '<div class="wd-tile-av"><img src="' + esc(img) + '" alt="" onerror="this.style.display=\'none\'"></div>' +
         '<span class="wd-tile-name">' + esc(sk.name) + '</span></div>';
     }).join('');
-    let shop = '';
-    for (let i = 0; i < 3; i++) shop += '<div class="wd-tile"><div class="wd-tile-av"><span class="wd-lock">\uD83D\uDD12</span></div><span class="wd-tile-name">SOON</span></div>';
+    const shop = PREMIUM_SKINS.map((sk) =>
+      '<div class="wd-tile wd-tile--premium wd-tile--' + sk.rarity + '" data-premium="' + esc(sk.id) + '">' +
+        '<span class="wd-tile-lockbadge">SOON</span>' +
+        '<div class="wd-tile-av"><img src="' + esc(sk.file) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>' +
+        '<span class="wd-tile-name">' + esc(sk.name) + '</span>' +
+        '<span class="wd-tile-rarity">' + (sk.rarity || '').toUpperCase() + '</span></div>'
+    ).join('');
     body.innerHTML =
       '<div class="wd-hero"><div class="pc-med"><span class="pc-med-ring"></span>' +
         '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
@@ -33136,7 +33152,7 @@
       '<div class="wd-grid">' + tiles + '</div>' +
       '<div class="wd-section-label"><span>SHOP</span><span class="rule"></span></div>' +
       '<div class="wd-grid wd-shop">' + shop + '</div>' +
-      '<div class="wd-shop-note">New skins arriving soon.</div>';
+      '<div class="wd-shop-note">Premium skins — purchasable in a future update.</div>';
   }
   function openWardrobe() {
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
