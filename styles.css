@@ -28388,9 +28388,19 @@ button.guildhall-summary-tile:active {
   background:radial-gradient(120% 70% at 50% 0%, #12122c 0%, #07070f 62%);
   display:flex; flex-direction:column; transition:opacity 400ms ease; }
 .ao-opening.is-hiding { opacity:0; }
-.ao-open-portrait { position:absolute; top:0; left:0; right:0; height:70%; overflow:hidden;
+.ao-open-portrait { position:absolute; top:0; left:0; right:0; height:66%; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
   background:radial-gradient(80% 70% at 50% 30%, #1d1a3d 0%, #0d0c22 70%); }
-.ao-open-portrait img { width:100%; height:100%; object-fit:cover; object-position:center 20%; }
+/* W271 — CONTAIN, not cover: show the FULL figure (head-to-hem, no shin crop)
+   as a centered portrait with negative space, instead of a width-cropped
+   edge-to-edge blow-up. Sized to ~72% so it clears the THE ASCENT kicker and
+   leaves the robe hem visible above the quote. Square 600×600 asset → width
+   is the binding cap on a phone; the modest side air reads as composed. */
+.ao-open-portrait img { width:auto; height:auto; max-width:90%; max-height:46vh;
+  object-fit:contain; object-position:center; filter:drop-shadow(0 10px 34px rgba(0,0,0,0.5)); }
+/* max-height in vh (not %) so SHORT screens (16:9) shrink the figure just
+   enough to keep air above the head + the hem clear of the quote; on tall
+   screens the 90% width cap binds first, so the composition is unchanged. */
 .ao-open-portrait .ao-ember { position:absolute; width:3px; height:3px; border-radius:50%; background:#f5b842; }
 .ao-open-scrim { position:absolute; inset:0; background:linear-gradient(180deg, rgba(7,7,15,0.35) 0%, rgba(7,7,15,0) 28%, rgba(7,7,15,0.55) 56%, #07070f 86%); }
 .ao-open-body { position:relative; flex:1; display:flex; flex-direction:column; padding:max(58px,env(safe-area-inset-top)) 30px max(30px,env(safe-area-inset-bottom)); }
