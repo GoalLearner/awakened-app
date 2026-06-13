@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w274';
+  const APP_BUILD_TAG = '2.2.6-w275';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -32216,7 +32216,9 @@
   // there). While false, floor_best is a client-only metric: the sheet renders
   // the sim board (bots + the player's own highestCleared) with no backend
   // round-trip. Flip true AFTER `wrangler deploy` to go live cross-device.
-  const LEADERBOARD_FLOOR_BACKEND_ENABLED = false;
+  // W275 — flipped true after backend deploy (Worker version e4d721a0,
+  // 2026-06-12) carrying floor_best in metrics.ts. Live cross-device.
+  const LEADERBOARD_FLOOR_BACKEND_ENABLED = true;
 
   // ───────────────────────────────────────────────────────────────
   // v3 Phase 1z.164 — Social Hub / Guild Hall.
