@@ -90,4 +90,13 @@ export interface Env {
    *  30/min per user — matches the existing read budget for the
    *  other friend-adjacent reads (RL_FRIENDS_READ, HoF, 100K Club). */
   RL_PUBLIC_EVENTS_READ: RateLimit;
+  /** The Hall of the Awakened (W270) — guards POST
+   *  /v1/users/me/hall-of-awakened. namespace_id 1017 in wrangler.toml.
+   *  Once-ever per user, so the budget is tiny: 6/min covers retries on
+   *  a flaky network without permitting abuse. */
+  RL_HALL_WRITE: RateLimit;
+  /** The Hall of the Awakened (W270) — guards GET /v1/hall-of-awakened.
+   *  namespace_id 1018 in wrangler.toml. 30/min per user — matches the
+   *  other friend-adjacent reads. */
+  RL_HALL_READ: RateLimit;
 }

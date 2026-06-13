@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w269';
+  const APP_BUILD_TAG = '2.2.5-w270';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8674,6 +8674,7 @@
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.5); } catch (_) {}
     try { _audPlayMusic('victory_sting', false); } catch (_) {}   // the sting carries the moment (absent slot = silent)
+    try { _hallRecordFinish(); } catch (_) {}   // W270 — claim the eternal ordinal in the Hall of the Awakened
     const portrait = 'assets/coach/first-awakened-idle.png';
     _arSet(
       '<div class="fn-summit">' +
@@ -8704,38 +8705,86 @@
     );
   }
 
-  // ── W269 · THE HALL OF THE AWAKENED (placeholder) ───────────────────
+  // ── W270 · THE HALL OF THE AWAKENED (live roll) ─────────────────────
   // The eternal registry of everyone who has finished all 100 floors, in
-  // finish order — #1 forever. The global ordinal is server-assigned, so the
-  // live roll arrives with the W270 backend (finisher table + ordinal handler
-  // + endpoint). Until deployed, the player's own inscription shows here with
-  // an honest 'opens soon' note — never a fake number.
+  // finish order — #1 forever. The global ordinal is server-assigned; the
+  // client only displays it. Paints from cache instantly, then refreshes
+  // from the backend; falls back to the finisher's own inscription when
+  // offline / unauthed / before the backend is deployed.
+  const _HALL_CACHE_KEY = 'hb_hall_roll';
+  const _HALL_FINISH_KEY = 'hb_hall_finish';
+  function _hallReadCache() { try { return JSON.parse(localStorage.getItem(_HALL_CACHE_KEY) || 'null'); } catch (_) { return null; } }
+  function _hallWriteCache(roll) { try { localStorage.setItem(_HALL_CACHE_KEY, JSON.stringify(roll)); } catch (_) {} }
+  // POST the finish exactly once per device; cache the assigned ordinal so
+  // the Hall can show it even before the next roll fetch lands.
+  function _hallRecordFinish() {
+    let done = false; try { done = !!JSON.parse(localStorage.getItem(_HALL_FINISH_KEY) || 'null'); } catch (_) {}
+    if (done) return;
+    if (!(window.Auth && typeof Auth.submitHallFinish === 'function')) return;
+    const iso = (function () { try { return new Date().toISOString(); } catch (_) { return null; } })();
+    Promise.resolve(Auth.submitHallFinish(iso)).then((res) => {
+      if (res && res.ok && typeof res.ordinal === 'number') {
+        try { localStorage.setItem(_HALL_FINISH_KEY, JSON.stringify({ ordinal: res.ordinal, total: res.total, at: iso })); } catch (_) {}
+      }
+    }).catch(() => {});
+  }
+  function _hallOrdinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+  function _hallDate(ms) {
+    try { return new Date(ms).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(); } catch (_) { return ''; }
+  }
+  function _hallRowHtml(r) {
+    const first = r.ordinal === 1, you = !!r.you;
+    return '<div class="fn-roll-row' + (you ? ' you' : '') + (first ? ' first' : '') + '">' +
+      '<span class="ord"><b>' + r.ordinal + '</b>' + (first ? '<i>FIRST</i>' : '') + '</span>' +
+      '<span class="who"><span class="nm">' + (you ? 'You' : esc(r.alias || '—')) + '</span>' +
+        '<span class="sub">THE ' + _hallOrdinal(r.ordinal) + ' TO AWAKEN</span></span>' +
+      '<span class="date">' + _hallDate(r.finishedAtMs) + '</span></div>';
+  }
+  function _hallHtml(roll, finished) {
+    const head = '<div class="fn-hall-head"><span class="rule"></span>' +
+      '<span class="k">FLOOR ' + ASCENT_FLOORS + ' · FINISHERS</span><span class="rule"></span></div>' +
+      '<div class="fn-hall-title">The Hall of the Awakened</div>' +
+      '<div class="fn-hall-sub">Every soul who reached the summit, in the order they arrived.</div>';
+    let mid, foot = '';
+    const hasRoll = roll && Array.isArray(roll.top) && roll.top.length;
+    if (hasRoll) {
+      const top = roll.top.slice();
+      const near = (Array.isArray(roll.near) ? roll.near : []);
+      let rows = top.map(_hallRowHtml).join('');
+      if (near.length) {
+        rows += '<div class="fn-roll-divider"><span></span>YOUR PLACE<span></span></div>' + near.map(_hallRowHtml).join('');
+      }
+      mid = '<div class="fn-roll">' + rows + '</div>';
+      const myOrd = roll.me && roll.me.ordinal;
+      if (myOrd) foot = '<div class="fn-hall-youline">You are the ' + _hallOrdinal(myOrd) + ' to awaken.</div>';
+    } else if (finished) {
+      let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+      let cached = null; try { cached = JSON.parse(localStorage.getItem(_HALL_FINISH_KEY) || 'null'); } catch (_) {}
+      const when = cached && cached.at ? _hallDate(Date.parse(cached.at)) : _hallDate(Date.now());
+      const ordLine = cached && cached.ordinal ? 'You are the ' + _hallOrdinal(cached.ordinal) + ' to awaken.' : 'Your place is being recorded. The full Hall opens soon.';
+      mid = '<div class="fn-hall-plate"><div class="med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+        '<div class="who"><div class="you">You</div><div class="chip">THE SECOND AWAKENED</div></div>' +
+        '<div class="when">' + esc(when) + '</div></div>' +
+        '<div class="fn-hall-note">' + esc(ordLine) + '</div>';
+    } else {
+      mid = '<div class="fn-hall-note">The Hall records those who climb all ' + ASCENT_FLOORS + ' floors and best the First Awakened. Its doors are not yet open to you.</div>';
+    }
+    return '<div class="fn-hall">' + head + mid + '<div class="fn-hall-foot"></div>' + foot +
+      '<button type="button" class="ar-cta" data-ar="tower">BACK TO THE TOWER</button></div>';
+  }
   function _arRenderHall() {
     _arView = 'hall';
     _arBodyMode(false);
-    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
-    let when = ''; try { when = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(); } catch (_) {}
     const finished = (getAscentState().highestCleared || 0) >= ASCENT_FLOORS;
-    _arSet(
-      '<div class="fn-hall">' +
-        '<div class="fn-hall-head"><span class="rule"></span>' +
-          '<span class="k">FLOOR ' + ASCENT_FLOORS + ' · FINISHERS</span><span class="rule"></span></div>' +
-        '<div class="fn-hall-title">The Hall of the Awakened</div>' +
-        '<div class="fn-hall-sub">Every soul who reached the summit, in the order they arrived.</div>' +
-        (finished
-          ? '<div class="fn-hall-plate">' +
-              '<div class="med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
-              '<div class="who"><div class="you">You</div>' +
-                '<div class="chip">THE SECOND AWAKENED</div></div>' +
-              '<div class="when">' + esc(when) + '</div></div>' +
-            '<div class="fn-hall-note">Your place among all who have ever finished is being recorded. ' +
-              'The full Hall opens soon.</div>'
-          : '<div class="fn-hall-note">The Hall records those who climb all ' + ASCENT_FLOORS + ' floors and best the First Awakened. ' +
-              'Its doors are not yet open to you.</div>') +
-        '<div class="fn-hall-foot"></div>' +
-        '<button type="button" class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
-      '</div>'
-    );
+    _arSet(_hallHtml(_hallReadCache(), finished));   // instant paint from cache (or placeholder)
+    if (!(window.Auth && typeof Auth.fetchHall === 'function')) return;
+    Promise.resolve(Auth.fetchHall(4)).then((res) => {
+      if (_arView !== 'hall') return;   // navigated away mid-fetch
+      if (res && res.ok && (Array.isArray(res.top) || res.me)) {
+        _hallWriteCache({ top: res.top || [], near: res.near || [], me: res.me || null, total: res.total });
+        _arSet(_hallHtml({ top: res.top || [], near: res.near || [], me: res.me || null, total: res.total }, finished));
+      }
+    }).catch(() => {});
   }
 
   function _arRenderResult() {

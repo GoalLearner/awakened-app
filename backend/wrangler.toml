@@ -188,3 +188,19 @@ name = "RL_PUBLIC_EVENTS_READ"
 type = "ratelimit"
 namespace_id = "1016"
 simple = { limit = 30, period = 60 }  # 30/min per user
+
+# The Hall of the Awakened (W270). Once-ever finish write — tiny
+# budget, just enough to survive a flaky-network retry.
+[[unsafe.bindings]]
+name = "RL_HALL_WRITE"
+type = "ratelimit"
+namespace_id = "1017"
+simple = { limit = 6, period = 60 }  # 6/min per user
+
+# The Hall of the Awakened (W270). Roll read — matches the other
+# friend-adjacent read budgets.
+[[unsafe.bindings]]
+name = "RL_HALL_READ"
+type = "ratelimit"
+namespace_id = "1018"
+simple = { limit = 30, period = 60 }  # 30/min per user

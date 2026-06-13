@@ -1170,6 +1170,19 @@
     return _authedFetch('GET', '/v1/friends/activity?limit=' + encodeURIComponent(n));
   }
 
+  // W270 — The Hall of the Awakened. submitHallFinish records the caller
+  // as a finisher of all 100 Ascent floors; the server assigns the eternal
+  // global ordinal (once-ever — re-submits return the same ordinal).
+  // fetchHall reads the roll (top finishers + the caller's neighbourhood).
+  function submitHallFinish(clientFinishedAt) {
+    return _authedFetch('POST', '/v1/users/me/hall-of-awakened',
+      clientFinishedAt ? { clientFinishedAt: clientFinishedAt } : {});
+  }
+  function fetchHall(limit) {
+    const n = (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) ? Math.floor(limit) : 4;
+    return _authedFetch('GET', '/v1/hall-of-awakened?limit=' + encodeURIComponent(n));
+  }
+
   function fetchFriends()                       { return _authedFetch('GET',  '/v1/friends'); }
   function sendFriendRequest(alias)             { return _authedFetch('POST', '/v1/friends/request', { alias: alias }); }
   function acceptFriendRequest(friendshipId)    { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/accept'); }
@@ -1223,6 +1236,9 @@
     // batch submit + friend-scoped feed read.
     submitPublicAchievementEvents,
     fetchFriendsActivity,
+    // The Hall of the Awakened (W270) — finish submit + roll read.
+    submitHallFinish,
+    fetchHall,
     // Friends (v3 Phase 1x)
     fetchFriends,
     sendFriendRequest,

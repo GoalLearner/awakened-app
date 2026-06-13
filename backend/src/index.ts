@@ -32,6 +32,7 @@ import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
+import { handleHallFinishPost, handleHallGet } from './handlers/hall-of-awakened';
 import {
   handlePublicAchievementEventsPost,
   handleFriendsActivityGet,
@@ -151,6 +152,14 @@ export default {
             // newest events across accepted friends + self with
             // alias + rankLabel joined for one-roundtrip render.
             response = await handleFriendsActivityGet(request, env, session);
+          } else if (path === '/v1/users/me/hall-of-awakened' && method === 'POST') {
+            // W270 — The Hall of the Awakened. Records the caller as a
+            // finisher of all 100 Ascent floors and assigns the eternal
+            // global ordinal (once-ever; #1 is the first finisher forever).
+            response = await handleHallFinishPost(request, env, session);
+          } else if (path === '/v1/hall-of-awakened' && method === 'GET') {
+            // W270 — the Roll: top finishers + the caller's neighbourhood.
+            response = await handleHallGet(request, env, session);
           }
           // ── Friends + legacy-Duels residuals ──
           else if (path === '/v1/friends' && method === 'GET') {
