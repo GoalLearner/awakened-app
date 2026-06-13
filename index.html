@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=401">
+  <link rel="stylesheet" href="styles.css?v=402">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1550,6 +1550,12 @@
       <button id="lb-rank-close" class="vn-close-btn" aria-label="Close">✕</button>
     </div>
     <div class="lb-rank-body">
+      <!-- W274 — Steps ⇄ Highest Floor metric switch. Shown (via JS) only for
+           that metric pair; openLeaderboardRanking toggles .hidden + .is-active. -->
+      <div id="lb-rank-metric-switch" class="lb-metric-switch hidden" role="tablist">
+        <button type="button" role="tab" class="lb-metric-btn is-active" data-lb-metric-switch="step_total" aria-selected="true">Steps</button>
+        <button type="button" role="tab" class="lb-metric-btn" data-lb-metric-switch="floor_best" aria-selected="false">Highest Floor</button>
+      </div>
       <!-- v3 Phase 1z.36 — segmented control for Steps: This Week / Hall of Fame.
            Hidden for non-step metrics (sleep_streak, bedtime_streak) which keep
            their single-list rendering. JS toggles `.is-active` on the buttons
@@ -2751,7 +2757,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=7"></script>
-  <script src="app.js?v=720"></script>
+  <script src="app.js?v=721"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3236,7 +3242,7 @@
 
     <!-- Version footer — also the 5-tap debug-info unlock target.
          _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.6 · BUILD W273</div>
+    <div class="settings-v2-foot" id="settings-app-ver">v2.2.6 · BUILD W274</div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

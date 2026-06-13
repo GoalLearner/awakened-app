@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w273';
+  const APP_BUILD_TAG = '2.2.6-w274';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13542,6 +13542,12 @@
       if (typeof LEADERBOARD_FLIGHTS_BACKEND_ENABLED !== 'undefined' &&
           LEADERBOARD_FLIGHTS_BACKEND_ENABLED) {
         metrics.push(['flights_climbed', snap.flights_this_week]);
+      }
+      // W274 — floor_best joins the submit list once the backend flag is on.
+      // Value is the highest cleared Ascent floor (all-time; backend MAX-keeps).
+      if (typeof LEADERBOARD_FLOOR_BACKEND_ENABLED !== 'undefined' &&
+          LEADERBOARD_FLOOR_BACKEND_ENABLED) {
+        try { metrics.push(['floor_best', (getAscentState().highestCleared | 0)]); } catch (_) {}
       }
       // v3 Phase 1w.1 defensive guard — refuse to submit if ALL three
       // metrics are zero. A wipe-zero submit overwrites the backend's
@@ -31556,6 +31562,14 @@
       unit:  'flights',
       formatValue: n => (n || 0).toLocaleString('en-US'),
     },
+    // W274 — the race to Floor 100. All-time best Ascent floor (not weekly).
+    // Companion to the Hall of the Awakened (the floor-100 finisher registry).
+    floor_best: {
+      title: 'Highest floor',
+      blurb: 'The furthest anyone has climbed The Ascent. The first to clear Floor 100 is crowned forever in the Hall of the Awakened.',
+      unit:  'floor',
+      formatValue: n => 'Floor ' + (n || 0),
+    },
   };
 
   // localStorage cache key per metric. Object shape:
@@ -31828,10 +31842,17 @@
         // W266 — shard tier rides on the title def itself (one ladder, one source)
         if (tdef) titleChip = '<span class="lb-title-shard lb-title-shard--' + (tdef.tier || 'gold') + '"><span>' + esc(tdef.name) + '</span></span>';
       }
-      return '<div class="' + rankClass + '">' +
+      // W274 — finishers (Floor 100, in the Hall of the Awakened) wear a gold
+      // crown on the floor board, cross-linking the race to the finish line.
+      const crown = (metric === 'floor_best' && (row.current_value || 0) >= 100)
+        ? '<span class="lb-rank-crown" title="Awakened — cleared all 100 floors" aria-label="Awakened">' +
+            '<svg viewBox="0 0 16 12" width="13" height="10" aria-hidden="true"><path d="M1 11h14l-1.2-7L10 7.5 8 1 6 7.5 2.2 4z" fill="#f5b842" stroke="#c08418" stroke-width="0.7" stroke-linejoin="round"/></svg>' +
+          '</span>'
+        : '';
+      return '<div class="' + rankClass + (crown ? ' lb-rank-row--awakened' : '') + '">' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
         '<span class="lb-rank-name">' + esc(displayAliases[i] || '—') + '</span>' +
-        titleChip +
+        crown + titleChip +
         '<span class="lb-rank-value">' + meta.formatValue(row.current_value) + '</span>' +
       '</div>';
     }).join('');
@@ -32027,7 +32048,7 @@
   // leaderboard card was retired); workout_streak takes its place
   // with the same simulated-merge shape (small integer, ±jitter).
   // v3 Phase 1z.125 — flights_climbed joins the sim-eligible set.
-  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1 };
+  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1, floor_best: 1 };
   // v3 Phase 1z.116 — per-metric minimum-score filter applied AFTER
   // simulated-leaderboard merge but BEFORE the rank list renders.
   // Rationale: a "7+ hour sleep streak" leaderboard showing entries
@@ -32080,6 +32101,7 @@
         else if (metric === 'sleep_streak')   localSnapValue = snap.current_sleep_streak   || 0;
         else if (metric === 'workout_streak') localSnapValue = snap.current_workout_streak || 0;
         else if (metric === 'flights_climbed') localSnapValue = snap.flights_this_week || 0;
+        else if (metric === 'floor_best') { try { localSnapValue = (getAscentState().highestCleared | 0); } catch (_) { localSnapValue = 0; } }
       }
     } catch (_) {}
 
@@ -32189,6 +32211,12 @@
   // the Status tab; access via the "More rankings" link below the
   // 3 main cards.
   const LEADERBOARD_FLIGHTS_BACKEND_ENABLED = true;
+  // W274 — floor_best (highest Ascent floor) global board. Stays FALSE until
+  // the backend redeploys with 'floor_best' in metrics.ts (it's already added
+  // there). While false, floor_best is a client-only metric: the sheet renders
+  // the sim board (bots + the player's own highestCleared) with no backend
+  // round-trip. Flip true AFTER `wrangler deploy` to go live cross-device.
+  const LEADERBOARD_FLOOR_BACKEND_ENABLED = false;
 
   // ───────────────────────────────────────────────────────────────
   // v3 Phase 1z.164 — Social Hub / Guild Hall.
@@ -32211,9 +32239,10 @@
   // When the flag flips true, workout_streak is removed from this
   // set and routed through the standard backend fetch path, which
   // simulated-rows-merge fills around for sparse boards.
-  const _LB_CLIENT_ONLY_METRICS = LEADERBOARD_WORKOUT_BACKEND_ENABLED
-    ? new Set([])
-    : new Set(['workout_streak']);
+  const _LB_CLIENT_ONLY_METRICS = new Set([
+    ...(LEADERBOARD_WORKOUT_BACKEND_ENABLED ? [] : ['workout_streak']),
+    ...(LEADERBOARD_FLOOR_BACKEND_ENABLED ? [] : ['floor_best']),   // W274 — sim-only until backend deploy
+  ]);
 
   // Renders the "This Week" view (current-weekly ranking with sim
   // merge). Extracted from openLeaderboardRanking so the same flow
@@ -32762,6 +32791,21 @@
       });
     }
 
+    // W274 — Steps ⇄ Highest Floor metric switch (shown only for that pair;
+    // other metrics opened directly keep their single-list header).
+    const switchEl = document.getElementById('lb-rank-metric-switch');
+    if (switchEl) {
+      const inPair = metric === 'step_total' || metric === 'floor_best';
+      switchEl.classList.toggle('hidden', !inPair);
+      if (inPair) {
+        switchEl.querySelectorAll('.lb-metric-btn').forEach((b) => {
+          const on = b.getAttribute('data-lb-metric-switch') === metric;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+      }
+    }
+
     _lbCurrentOpenMetric = metric;
     _lbCurrentTab = 'this-week';
 
@@ -33026,6 +33070,19 @@
         if (!btn) return;
         const tab = btn.getAttribute('data-lb-tab');
         if (tab) _lbSwitchTab(tab);
+      });
+    }
+    // W274 — Steps ⇄ Highest Floor switch. Re-opens the sheet on the chosen
+    // metric (preserving hub-return routing if we came from the hub).
+    const metricSwitchEl = document.getElementById('lb-rank-metric-switch');
+    if (metricSwitchEl) {
+      metricSwitchEl.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest && e.target.closest('.lb-metric-btn');
+        if (!btn) return;
+        const m = btn.getAttribute('data-lb-metric-switch');
+        if (m && m !== _lbCurrentOpenMetric) {
+          openLeaderboardRanking(m, { returnTarget: _lbDetailReturnTarget });
+        }
       });
     }
   }

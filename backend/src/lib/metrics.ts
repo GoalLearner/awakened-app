@@ -30,7 +30,12 @@
 // Apple Health HKQuantityTypeIdentifierFlightsClimbed via the
 // existing 'stairs' auth alias (no new permission needed).
 // Storage shape unchanged — leaderboard_snapshots is metric-agnostic.
-export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak', 'flights_climbed'] as const;
+// W274 — floor_best: highest Ascent floor ever cleared (1–100). The
+// "race to floor 100" global board, companion to the Hall of the
+// Awakened (the floor-100 finisher registry). NOT weekly — it's an
+// all-time best, carried forward via the snapshot's MAX-preserved
+// best_value (same storage shape as every other metric; no migration).
+export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak', 'flights_climbed', 'floor_best'] as const;
 export type Metric = (typeof METRICS)[number];
 
 export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
@@ -52,6 +57,9 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
    * flights), catching obvious garbage without blocking elite
    * stair-climbers. v3 Phase 1z.125. */
   flights_climbed: 1000,
+  /** Highest Ascent floor ever cleared. Hard ceiling is the tower
+   * height (100); anything above is corrupt-client garbage. W274. */
+  floor_best: 100,
 };
 
 export function isValidMetric(value: unknown): value is Metric {

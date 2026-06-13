@@ -28506,3 +28506,50 @@ button.guildhall-summary-tile:active {
 .fn-roll-row.you .date { color: #f5b842; }
 .fn-roll-divider { display: flex; align-items: center; gap: 10px; padding: 4px 8px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 700; letter-spacing: 2px; color: #6b6b86; }
 .fn-roll-divider span { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+
+/* ── W274 — Steps ⇄ Highest Floor metric switch + finisher crown ──────────── */
+/* The metric switch is the headline toggle (which board am I viewing); the
+   .lb-rank-tabs below it stay the per-Steps sub-views (This Week / HoF / 100K).
+   Slightly bolder than the sub-tabs so the two levels read as a hierarchy. */
+.lb-metric-switch {
+  display: flex;
+  gap: 0;
+  margin: 0 0 12px;
+  padding: 3px;
+  background: var(--bg-card);
+  border: 1px solid rgba(245, 184, 66, 0.28);
+  border-radius: 11px;
+  font-size: 0.86rem;
+}
+.lb-metric-btn {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.lb-metric-btn:focus-visible { outline: 2px solid rgba(245, 184, 66, 0.7); outline-offset: 2px; }
+.lb-metric-btn.is-active {
+  background: linear-gradient(180deg, rgba(245,184,66,0.30), rgba(245,184,66,0.14));
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+}
+/* Finisher crown — sits between the alias and the value on Floor-100 rows. */
+.lb-rank-crown {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 6px 0 2px;
+  flex: none;
+  filter: drop-shadow(0 0 5px rgba(245,184,66,0.5));
+}
+.lb-rank-row--awakened {
+  border-color: rgba(245,184,66,0.42) !important;
+  background: linear-gradient(180deg, rgba(245,184,66,0.07), rgba(245,184,66,0.02)) !important;
+}
