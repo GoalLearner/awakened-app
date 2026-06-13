@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w279';
+  const APP_BUILD_TAG = '2.2.6-w280';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5804,27 +5804,30 @@
   const _ASC_NOUN   = ['Warden', 'Stalker', 'Revenant', 'Husk', 'Sentinel', 'Reaver', 'Pilgrim', 'Outcast', 'Shade', 'Marauder', 'Acolyte', 'Vagrant', 'Herald', 'Drifter', 'Penitent', 'Forsworn'];
   function _ascentSeed(floor) { let h = floor * 2654435761 % 2147483647; return () => (h = (h * 48271) % 2147483647) / 2147483647; }
 
-  // Cosmetic titles: 10 boss titles + 4 rating milestones. Pure bragging
-  // rights — never affect combat power or progression.
-  // W266 — ClaudeDesign "Rating Milestone Titles" (Richie's call: "getting rid
-  // of the boss titles and only use rating milestones… final milestone
-  // Grandmaster"). One ladder, one currency: ARENA RATING (bestRating — a
-  // title, once earned, never un-earns). Gem tier deepens with the climb;
-  // gold is reserved for Monarch + Grandmaster. Boss floors still pay souls /
-  // clears / rating — they no longer mint titles.
+  // Cosmetic titles: 11 climb-milestone titles + the summit trophy. Pure
+  // bragging rights — never affect combat power or progression.
+  // W280 — arena rating WIPED from the app (Richie: "this will not be used").
+  // Titles re-based onto ASCENT FLOOR reached (Contender@5 → Grandmaster@90),
+  // unlocked by st.highestCleared; floor 100 = the separate "Second Awakened"
+  // summit trophy. Gem tier deepens with the climb; gold = Monarch + Grandmaster.
+  // (W266 had briefly tied titles to an ELO arena rating — now removed; the
+  // climb is the one progression.)
+  // W280 — arena rating wiped. Titles unlock by ASCENT FLOOR reached (the
+  // climb is the game). 11 ladder titles ramp floor 5 → 90; floor 100 is the
+  // separate "Second Awakened" summit trophy. Tier colors unchanged.
   const ARENA_TITLES = [
-    { id: 'rt_contender',   name: 'Contender',   need: 1100, tier: 'iron'   },
-    { id: 'rt_brawler',     name: 'Brawler',     need: 1200, tier: 'iron'   },
-    { id: 'rt_duelist',     name: 'Duelist',     need: 1300, tier: 'iron'   },
-    { id: 'rt_blade',       name: 'Blade',       need: 1400, tier: 'teal'   },
-    { id: 'rt_reaver',      name: 'Reaver',      need: 1500, tier: 'teal'   },
-    { id: 'rt_elite',       name: 'Elite',       need: 1600, tier: 'teal'   },
-    { id: 'rt_warbringer',  name: 'Warbringer',  need: 1700, tier: 'violet' },
-    { id: 'rt_sovereign',   name: 'Sovereign',   need: 1800, tier: 'violet' },
-    { id: 'rt_apex',        name: 'Apex',        need: 1900, tier: 'violet' },
-    { id: 'rt_monarch',     name: 'Monarch',     need: 2000, tier: 'gold'   },
-    { id: 'rt_grandmaster', name: 'Grandmaster', need: 2200, tier: 'gold'   },
-  ].map((t) => Object.assign(t, { kind: 'rating', blurb: 'Reached ' + t.need.toLocaleString('en-US') + ' arena rating.' }))
+    { id: 'rt_contender',   name: 'Contender',   floor: 5,  tier: 'iron'   },
+    { id: 'rt_brawler',     name: 'Brawler',     floor: 10, tier: 'iron'   },
+    { id: 'rt_duelist',     name: 'Duelist',     floor: 15, tier: 'iron'   },
+    { id: 'rt_blade',       name: 'Blade',       floor: 20, tier: 'teal'   },
+    { id: 'rt_reaver',      name: 'Reaver',      floor: 30, tier: 'teal'   },
+    { id: 'rt_elite',       name: 'Elite',       floor: 40, tier: 'teal'   },
+    { id: 'rt_warbringer',  name: 'Warbringer',  floor: 50, tier: 'violet' },
+    { id: 'rt_sovereign',   name: 'Sovereign',   floor: 60, tier: 'violet' },
+    { id: 'rt_apex',        name: 'Apex',        floor: 70, tier: 'violet' },
+    { id: 'rt_monarch',     name: 'Monarch',     floor: 80, tier: 'gold'   },
+    { id: 'rt_grandmaster', name: 'Grandmaster', floor: 90, tier: 'gold'   },
+  ].map((t) => Object.assign(t, { kind: 'floor', blurb: 'Reached floor ' + t.floor + ' of the Ascent.' }))
    .concat([{ id: 'summit_second_awakened', name: 'The Second Awakened', kind: 'summit', tier: 'summit',
      blurb: 'Climbed all 100 floors and bested the First Awakened.' }]);   // W269 — the one title earned a single way, off the rating ladder
   // Legacy id remap (W257-era equipped titles on devices). Ids whose meaning
@@ -5846,7 +5849,7 @@
   };
   function _arenaTitleUnlocked(t, st) {
     if (t.kind === 'summit') return (st.highestCleared || 0) >= ASCENT_FLOORS;   // W269 — the summit trophy: clear all 100 floors
-    return st.bestRating >= t.need;   // W266 — one currency; bestRating never decays
+    return (st.highestCleared || 0) >= (t.floor || Infinity);   // W280 — unlock by Ascent floor (rating wiped)
   }
 
   // ── v2 tower state ───────────────────────────────────────────────
@@ -6788,12 +6791,10 @@
       dpDealt: Math.round(sess.dmgDealt.p), dbDealt: Math.round(sess.dmgDealt.b),
       reason: (sess.turn > _BATTLE_TURN_CAP ? 'timeout' : 'ko'),
     };
-    const ratingBefore = st.rating;
-    let delta = 0, advanced = false, floorCleared = null, bossCleared = null;
+    // W280 — arena rating wiped. Outcomes = wins/losses/streak/lives + the
+    // floor climb; no rating points computed or stored.
+    let advanced = false, floorCleared = null, bossCleared = null;
     if (rated) {
-      delta = _ascentRatingDelta(st.rating, _ascentFloorRating(m.floor), won);
-      st.rating = Math.max(ASCENT_RATING_FLOOR, st.rating + delta);
-      if (st.rating > st.bestRating) st.bestRating = st.rating;
       if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
       else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
       if (won && m.floor === st.currentFloor && m.floor > st.highestCleared) {
@@ -6807,7 +6808,6 @@
     const newTitles = ARENA_TITLES.filter(t => beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
     return {
       result, state: st, won, rated,
-      ratingBefore, ratingAfter: st.rating, ratingDelta: delta,
       advanced, floorCleared, bossCleared, newTitles,
       livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
     };
@@ -7593,22 +7593,19 @@
   function _ascStakesHtml(m) {
     const st = getAscentState();
     const boss = ASCENT_BOSSES[m.floor] || {};
-    const title = null;   // W266 — boss titles retired; stakes are rating + the life + the floor
-    // Rematch (m.advances === false): nothing is on the line — no rating, no
-    // re-grant of the title (W221). Show an honest exhibition note instead of
-    // the win/lose stakes (which would falsely promise rating + the title).
+    // W280 — arena rating wiped. The stakes are the CLIMB: a win ascends a
+    // floor, a loss spends one of the day's lives. No points, no rating.
     if (!m.advances) {
       return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
         '<div class="asc-stakes exhibition"><div class="exb"><div class="exb-tag">EXHIBITION</div>' +
-        '<div class="exb-txt">Nothing at stake — rating already earned' + (title ? ', title already yours' : '') + '.' +
+        '<div class="exb-txt">Nothing at stake — floor already cleared.' +
         '<br><span class="dim">Replay for the fight, or to chase a FLAWLESS.</span></div></div></div></div>';
     }
-    const fr = _ascentFloorRating(m.floor);
-    const winD = _ascentRatingDelta(st.rating, fr, true);
-    const loseD = _ascentRatingDelta(st.rating, fr, false);   // negative
-    const winRows = '<div class="row"><span class="v">+' + winD + '</span><span class="d">Arena rating</span></div>' +
-      (title ? '<div class="row"><span class="v">TITLE</span><span class="d">“' + esc(title) + '” — yours to equip</span></div>' : '');
-    const loseTxt = 'Rating dips <b>' + loseD + '</b><br>A life spent.<br><span class="dim">Grow stronger, return.</span>';
+    const nextFloor = Math.min(ASCENT_FLOORS, m.floor + 1);
+    const winRows = '<div class="row"><span class="v">▲</span><span class="d">' +
+      (m.floor >= ASCENT_FLOORS ? 'The summit — the First Awakened falls'
+        : (_ascentIsBoss(m.floor) ? 'Slay the boss · ascend to floor ' + nextFloor : 'Ascend to floor ' + nextFloor)) + '</span></div>';
+    const loseTxt = 'A life spent.<br><span class="dim">Grow stronger, return.</span>';
     return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
       '<div class="asc-stakes"><div class="col"><div class="lbl win">ON VICTORY</div>' + winRows + '</div>' +
       '<div class="vdiv"></div><div class="col"><div class="lbl">ON DEFEAT</div><div class="txt">' + loseTxt + '</div></div></div></div>';
@@ -8564,8 +8561,8 @@
       _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', _PKB_T.koHold, () => {
         _pkbAfter(_PKB_T.ko, () => {
           if (s.won && fin) {
-            if (fin.rated) _pkbVicFloat('+' + fin.ratingDelta + ' RATING', 'rating');
-            else _pkbVicFloat('UNRATED CLEAR', 'unrated');
+            if (fin.advanced) _pkbVicFloat(fin.bossCleared ? 'BOSS SLAIN' : 'FLOOR ' + fin.floorCleared + ' CLEARED', 'rating');
+            else _pkbVicFloat('VICTORY', 'unrated');
             if (fin.newTitles && fin.newTitles.length) _pkbAfter(_PKB_T.vicGap, () => _pkbVicFloat('“' + fin.newTitles[0].name + '”', 'title'));
             _pkbHold(_PKB_T.vicFloat + _PKB_T.vicGap, () => { _pkbLock(false); _pkbRefreshMoves(); });
           } else { _pkbLock(false); _pkbRefreshMoves(); }
@@ -8798,10 +8795,8 @@
     _arView = 'result';
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}   // forfeit path: loop never outlives the fight
-    const f = _arFight, won = f.won, up = f.ratingDelta >= 0;
+    const f = _arFight, won = f.won;
     const score = won ? (f.result.pWins + '–' + f.result.bWins) : (f.result.bWins + '–' + f.result.pWins);
-    const tierB = _ascTier(f.ratingBefore), tierA = _ascTier(f.ratingAfter);
-    const tierChanged = tierB.name !== tierA.name;
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const flair = f.advanced
       ? '<div class="asc-cleared-flair"><span class="sig" style="color:#34d399;width:30px;height:30px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(52,211,153,0.14);border:1px solid rgba(52,211,153,0.5)">' + _ascStar() + '</span>' +
@@ -8814,21 +8809,18 @@
         '<div><div class="eyebrow">NEW TITLE UNLOCKED</div><div class="name">' + esc(f.newTitles[0].name) + '</div>' +
         '<div class="hint">' + esc(f.newTitles[0].blurb) + ' · tap Titles to equip</div></div></div>'
       : '';
-    const gem = '<span class="gem" style="background:' + tierA.color + ';box-shadow:0 0 7px ' + tierA.color + 'aa"></span>';
     // Rated fights show the rating change; a rematch (replay) shows nothing
     // changed — rating only moves when you climb, never from re-beating a floor.
-    const ratingStrip = f.rated
-      ? '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
-          '<span class="before">' + f.ratingBefore.toLocaleString('en-US') + '</span><span class="arrow">→</span>' +
-          '<span class="after"><span id="ar-rating-num">' + f.ratingBefore.toLocaleString('en-US') + '</span>' +
-            '<span class="delta ' + (up ? 'up' : 'down') + '">' + (up ? '▲+' : '▼') + Math.abs(f.ratingDelta) + '</span></span></div>' +
-          '<div class="asc-rtier' + (tierChanged ? ' asc-tier-pulse' : '') + '" style="color:' + tierA.color + '">' + gem +
-            tierA.name + ' TIER' + (tierChanged ? (up ? ' · PROMOTED' : ' · DEMOTED') : '') + '</div>' +
-          '<div class="lbl">ARENA RATING · ' + f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY</div></div>'
-      : '<div class="asc-rstrip"><div class="asc-rstrip-row">' +
-          '<span class="after">' + f.ratingAfter.toLocaleString('en-US') + '</span></div>' +
-          '<div class="asc-rtier" style="color:' + tierA.color + '">' + gem + tierA.name + ' TIER</div>' +
-          '<div class="lbl">REMATCH · RATING UNCHANGED</div></div>';
+    // W280 — rating wiped. The post-fight strip shows the CLIMB result + lives.
+    const _livesTxt = f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY';
+    const ratingStrip = f.advanced
+      ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">FLOOR ' + f.floorCleared + ' CLEARED</span></div>' +
+          '<div class="lbl">' + _livesTxt + '</div></div>'
+      : (f.rated
+          ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">HELD AT FLOOR ' + _arMatchup.floor + '</span></div>' +
+              '<div class="lbl">' + _livesTxt + '</div></div>'
+          : '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">EXHIBITION</span></div>' +
+              '<div class="lbl">NO STAKES · FLOOR ALREADY CLEARED</div></div>');
     _arSet(
       '<div class="ar-result-hero">' +
         '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
@@ -8849,13 +8841,9 @@
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'
     );
-    // sound + haptics + animated rating
+    // sound + haptics (W280 — rating count-up + rating sfx removed with rating)
     try { playSfx(won ? (f.bossCleared ? 'boss_victory' : 'ar_win') : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(f.bossCleared ? 22 : 12); } catch (_) {}
-    if (f.rated) {
-      try { _arCountUp(document.getElementById('ar-rating-num'), f.ratingBefore, f.ratingAfter, 700); } catch (_) {}
-      try { playSfx(up ? 'ar_rating_up' : 'ar_rating_down'); } catch (_) {}
-    }
   }
 
   // ── titles ────────────────────────────────────────────────────────
@@ -8869,7 +8857,6 @@
     _arBodyMode(false);
     const st = getAscentState();
     const equipped = getEquippedArenaTitle();
-    const tier = _ascTier(st.rating);
     let firstLockedSeen = false;
     const rows = ARENA_TITLES.map((t, i) => {
       const unlocked = _arenaTitleUnlocked(t, st);
@@ -8885,9 +8872,10 @@
           '<span class="bar"><span style="width:' + Math.round(Math.min(1, fc / ASCENT_FLOORS) * 100) + '%"></span></span></span>';
       }
       else if (isNext) {
-        const prev = i > 0 ? ARENA_TITLES[i - 1].need : ASCENT_RATING_START;
-        const frac = Math.max(0, Math.min(1, (st.bestRating - prev) / (t.need - prev)));
-        right = '<span class="tm-prog"><span class="n">' + st.bestRating.toLocaleString('en-US') + ' / ' + t.need.toLocaleString('en-US') + '</span>' +
+        const prevFloor = i > 0 ? (ARENA_TITLES[i - 1].floor || 0) : 0;
+        const fc = st.highestCleared || 0;
+        const frac = Math.max(0, Math.min(1, (fc - prevFloor) / ((t.floor || 1) - prevFloor)));
+        right = '<span class="tm-prog"><span class="n">FLOOR ' + fc + ' / ' + t.floor + '</span>' +
           '<span class="bar"><span style="width:' + Math.round(frac * 100) + '%"></span></span></span>';
       } else {
         right = '<svg class="tm-lock" width="11" height="11" viewBox="0 0 14 14" aria-hidden="true"><g stroke="#6b6b86" stroke-width="1.2" fill="none"><rect x="3.2" y="6" width="7.6" height="5.6" rx="1.2"/><path d="M4.8 6V4.4a2.2 2.2 0 0 1 4.4 0V6"/></g></svg>';
@@ -8896,17 +8884,16 @@
         (unlocked ? ' tm-row--open' : isNext ? ' tm-row--next' : ' tm-row--deep');
       const tap = unlocked ? ' data-ar="equip" data-tid="' + esc(t.id) + '"' : '';
       return '<div class="' + cls + '"' + tap + '>' +
-        '<span class="at">' + (t.kind === 'summit' ? 'F' + ASCENT_FLOORS : t.need.toLocaleString('en-US')) + '</span>' +
+        '<span class="at">' + (t.kind === 'summit' ? 'F' + ASCENT_FLOORS : 'F' + t.floor) + '</span>' +
         '<span class="tm-gem' + (unlocked ? '' : ' locked') + '"></span>' +
         '<span class="nm">' + esc(t.name) + '</span>' + right + '</div>';
     }).join('');
     _arSet(
       '<div class="tm-head"><span class="tm-kicker"><i></i>THE ASCENT<i></i></span>' +
         '<div class="tm-name">Titles</div>' +
-        '<div class="tm-sub">Earned by arena rating. Worn on your hunter profile.</div></div>' +
-      '<div class="tm-band"><span class="lbl">YOUR RATING</span>' +
-        '<span class="num">' + st.rating.toLocaleString('en-US') + '</span>' +
-        '<span class="tm-band-tier" style="color:' + tier.color + '"><i style="background:' + tier.color + '"></i>' + tier.name + '</span></div>' +
+        '<div class="tm-sub">Earned by climbing the Ascent. Worn on your hunter profile.</div></div>' +
+      '<div class="tm-band"><span class="lbl">HIGHEST FLOOR</span>' +
+        '<span class="num">' + (st.highestCleared || 0) + '<span style="font-size:0.5em;color:#6b6b86"> / ' + ASCENT_FLOORS + '</span></span></div>' +
       '<div class="tm-ladder">' + rows + '</div>' +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-ghost" data-ar="tower">‹ Back to the Tower</button>'
