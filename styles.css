@@ -28553,3 +28553,83 @@ button.guildhall-summary-tile:active {
   border-color: rgba(245,184,66,0.42) !important;
   background: linear-gradient(180deg, rgba(245,184,66,0.07), rgba(245,184,66,0.02)) !important;
 }
+
+/* ── W278 — Player Profile Card (ClaudeDesign "The Medallion") ──────────── */
+.pc-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 18px 0; flex: 0 0 auto; }
+.pc-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 2.2px; color: #a78bfa; }
+.pc-body { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 auto; }
+
+/* hero block — radial glow stage behind the medallion */
+.pc-hero { position: relative; padding: 30px 22px 8px; display: flex; flex-direction: column; align-items: center; }
+.pc-hero::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(85% 60% at 50% 14%, rgba(245,184,66,0.13), transparent 60%),
+              radial-gradient(70% 55% at 50% 92%, rgba(167,139,250,0.16), transparent 72%); }
+.pc-med-wrap { position: relative; }
+
+/* the medallion — circular, gold gradient frame, glowing rarity ring, gem mounts */
+.pc-med { position: relative; width: 176px; height: 176px; border-radius: 50%; flex: none;
+  background: linear-gradient(150deg, #ffe9b0, var(--pc-ring, #f5b842) 42%, #c08418);
+  padding: 4px; box-shadow: 0 0 34px rgba(245,184,66,0.40), inset 0 1px 0 rgba(255,255,255,0.28); }
+.pc-med-ring { position: absolute; inset: -13px; border-radius: 50%; border: 1px solid var(--pc-ring, #f5b842); opacity: 0.55;
+  box-shadow: 0 0 30px rgba(245,184,66,0.22), inset 0 0 20px rgba(245,184,66,0.12); }
+@media (prefers-reduced-motion: no-preference) { .pc-med-ring { animation: pcRing 3.4s ease-in-out infinite; } }
+@keyframes pcRing { 0%,100% { opacity: 0.4; } 50% { opacity: 0.85; } }
+.pc-med-portrait { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; position: relative;
+  background: repeating-linear-gradient(135deg, #15132f, #15132f 7px, #0e0e24 7px, #0e0e24 14px);
+  display: flex; align-items: center; justify-content: center; }
+.pc-med-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; display: block; }
+.pc-gem { position: absolute; width: 16px; height: 16px; transform: translate(-50%,-50%) rotate(45deg);
+  background: linear-gradient(135deg, #ffe9b0, var(--pc-ring, #f5b842)); box-shadow: 0 0 10px rgba(245,184,66,0.7); border-radius: 2px; }
+.pc-gem.n { left: 50%; top: -13px; } .pc-gem.s { left: 50%; top: calc(100% + 13px); }
+.pc-gem.w { left: -13px; top: 50%; } .pc-gem.e { left: calc(100% + 13px); top: 50%; }
+
+/* rank crest — pinned to the base of the medallion, in the rank's own color */
+.pc-crest { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+  width: 50px; height: 50px; border-radius: 13px; border: 3px solid #07070f;
+  background: radial-gradient(circle at 50% 30%, var(--pc-rank), color-mix(in srgb, var(--pc-rank) 80%, black));
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 25px; color: #07070f; line-height: 1;
+  box-shadow: 0 0 20px var(--pc-rank), 0 4px 12px rgba(0,0,0,0.5); }
+.pc-med-floor { width: 200px; height: 22px; margin-top: 16px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(245,184,66,0.40), transparent 70%); filter: blur(5px); }
+
+/* skin tag — signals the avatar is swappable / purchasable */
+.pc-skintag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 13px; margin-top: -2px;
+  border-radius: 20px; background: rgba(245,184,66,0.08); border: 1px solid rgba(245,184,66,0.27); }
+.pc-skintag i { width: 7px; height: 7px; transform: rotate(45deg); background: #f5b842; box-shadow: 0 0 7px #f5b842; }
+.pc-skintag span { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #f5b842; }
+
+/* identity */
+.pc-identity { padding: 6px 22px 0; display: flex; flex-direction: column; align-items: center; }
+.pc-alias { font-family: "Cinzel", Georgia, serif; font-size: 27px; font-weight: 700; color: #f5f3fb; letter-spacing: 0.4px; }
+.pc-shard { display: inline-flex; align-items: center; gap: 7px; margin-top: 9px; padding: 4px 11px 4px 9px; border-radius: 3px;
+  background: color-mix(in srgb, var(--pc-tier) 8%, transparent); border: 1px solid color-mix(in srgb, var(--pc-tier) 34%, transparent); }
+.pc-shard i { width: 8px; height: 8px; transform: rotate(45deg); background: var(--pc-tier); box-shadow: 0 0 8px var(--pc-tier); }
+.pc-shard span { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px; color: var(--pc-tier); text-transform: uppercase; }
+
+/* stat grid + floor bar */
+.pc-stats { padding: 18px 22px 0; }
+.pc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.pc-stat { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 13px 14px; display: flex; flex-direction: column; gap: 5px; }
+.pc-stat .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1.4px; color: #9090a8; }
+.pc-stat .v { font-family: "Cinzel", Georgia, serif; font-size: 25px; font-weight: 700; color: #f5f3fb; line-height: 1; font-variant-numeric: tabular-nums; }
+.pc-stat .v.gold { color: #f5b842; } .pc-stat .v.violet { color: #a78bfa; }
+.pc-floor { margin-top: 9px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 13px 14px; }
+.pc-floor-top { display: flex; align-items: baseline; justify-content: space-between; }
+.pc-floor-top .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1.4px; color: #9090a8; }
+.pc-floor-top .v { font-family: "Cinzel", Georgia, serif; font-size: 17px; font-weight: 700; color: #f5b842; }
+.pc-floor-top .v small { color: #6b6b86; font-size: 12px; }
+.pc-floor-bar { margin-top: 9px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.pc-floor-bar i { display: block; height: 100%; background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 8px rgba(245,184,66,0.40); }
+
+/* flavor + provenance */
+.pc-flavor { margin: 16px 22px 0; display: flex; align-items: center; gap: 9px; padding: 11px 14px; border-radius: 10px;
+  background: rgba(94,234,212,0.06); border: 1px solid rgba(94,234,212,0.2); }
+.pc-flavor i { width: 7px; height: 7px; border-radius: 4px; background: #5eead4; box-shadow: 0 0 8px #5eead4; flex: none; }
+.pc-flavor span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 15px; color: #f5f3fb; }
+.pc-prov { margin-top: 16px; padding: 12px 18px 4px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
+.pc-prov span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 13px; color: #9090a8; }
+.pc-skeleton { padding: 60px 22px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 2px; color: #6b6b86; }
+
+/* leaderboard rows become tappable */
+.lb-rank-row[data-profile-alias], .lb-rank-row--me[data-profile-alias] { cursor: pointer; -webkit-tap-highlight-color: transparent; }

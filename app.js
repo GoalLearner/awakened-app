@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w277';
+  const APP_BUILD_TAG = '2.2.6-w278';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -31786,7 +31786,7 @@
       const inTopN = top.some(r => r && r.alias === myAlias);
       if (!inTopN) {
         yourRankLine =
-          '<div class="lb-rank-row lb-rank-row--me lb-rank-row--out-of-top">' +
+          '<div class="lb-rank-row lb-rank-row--me lb-rank-row--out-of-top" data-profile-alias="' + esc(myAlias || '') + '">' +
             '<span class="lb-rank-pos">#' + me.rank + '</span>' +
             '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + '</span>' +
             '<span class="lb-rank-value">' + meta.formatValue(me.current_value) + '</span>' +
@@ -31859,7 +31859,8 @@
             '<svg viewBox="0 0 16 12" width="13" height="10" aria-hidden="true"><path d="M1 11h14l-1.2-7L10 7.5 8 1 6 7.5 2.2 4z" fill="#f5b842" stroke="#c08418" stroke-width="0.7" stroke-linejoin="round"/></svg>' +
           '</span>'
         : '';
-      return '<div class="' + rankClass + (crown ? ' lb-rank-row--awakened' : '') + '">' +
+      return '<div class="' + rankClass + (crown ? ' lb-rank-row--awakened' : '') + '"' +
+        ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
         '<span class="lb-rank-name">' + esc(displayAliases[i] || '—') + '</span>' +
         crown + titleChip +
@@ -33032,6 +33033,66 @@
   }
   try { window.__profileCardResolve = _profileCardResolve; } catch (_) {}
 
+  // ── W278 — Player Profile Card (ClaudeDesign "The Medallion") ──────
+  const _PC_RANK_COLORS = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9', 'S+': '#facc15' };
+  const _PC_TIER_COLORS = { iron: '#c8c6d8', teal: '#5eead4', violet: '#a78bfa', gold: '#f5b842' };
+  function _renderProfileCard(data) {
+    const body = document.getElementById('pc-body');
+    if (!body) return;
+    if (!data) { body.innerHTML = '<div class="pc-skeleton">Profile unavailable — try again.</div>'; return; }
+    const rankLetter = data.rankTier || ((data.rankLabel || '').trim().split(' ')[0]) || 'E';
+    const rankColor = _PC_RANK_COLORS[rankLetter] || '#a78bfa';
+    let titleName = null, tierColor = _PC_TIER_COLORS.iron;
+    try {
+      if (data.arenaTitle && typeof ARENA_TITLES !== 'undefined') {
+        let tid = data.arenaTitle;
+        if (typeof _ARENA_TITLE_LEGACY !== 'undefined' && _ARENA_TITLE_LEGACY[tid]) tid = _ARENA_TITLE_LEGACY[tid];
+        const t = ARENA_TITLES.find((x) => x.id === tid);
+        if (t) { titleName = t.name; tierColor = _PC_TIER_COLORS[t.tier] || tierColor; }
+      }
+    } catch (_) {}
+    const avatar = data.avatarId || 'avatar-base.png';
+    const num = (n) => (n != null ? Number(n).toLocaleString('en-US') : '0');
+    const floor = Math.max(0, data.bestFloor | 0);
+    const shard = titleName ? '<div class="pc-shard" style="--pc-tier:' + tierColor + '"><i></i><span>' + esc(titleName) + '</span></div>' : '';
+    const flavor = data.verifiedStreakLabel ? '<div class="pc-flavor"><i></i><span>' + esc(data.verifiedStreakLabel) + '</span></div>' : '';
+    body.innerHTML =
+      '<div class="pc-hero"><div class="pc-med-wrap">' +
+        '<div class="pc-med"><span class="pc-med-ring"></span>' +
+          '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
+          '<div class="pc-med-portrait"><img src="' + esc(avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +
+        '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
+      '</div><div class="pc-med-floor"></div>' +
+      '<div class="pc-skintag"><i></i><span>' + (data._sim ? 'NPC HUNTER' : 'DEFAULT SKIN') + '</span></div></div>' +
+      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div>' + shard + '</div>' +
+      '<div class="pc-stats"><div class="pc-grid">' +
+        '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
+        '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +
+        '<div class="pc-stat"><span class="k">AVG STEPS / DAY</span><span class="v">' + num(data.avgStepsPerDay) + '</span></div>' +
+        '<div class="pc-stat"><span class="k">ULTRA-RARE DROPS</span><span class="v violet">' + num(data.ultraRareDrops) + '</span></div>' +
+      '</div><div class="pc-floor"><div class="pc-floor-top"><span class="k">BEST FLOOR · THE ASCENT</span>' +
+        '<span class="v">' + floor + '<small> / 100</small></span></div>' +
+        '<div class="pc-floor-bar"><i style="width:' + Math.min(100, floor) + '%"></i></div></div></div>' +
+      flavor +
+      '<div class="pc-prov"><span>Tapped from the global leaderboard · standings update in real time</span></div>';
+  }
+  async function _openProfileCard(alias, simRow) {
+    const ov = document.getElementById('pc-overlay'), sh = document.getElementById('pc-sheet'), body = document.getElementById('pc-body');
+    if (!ov || !sh || !body) return;
+    body.innerHTML = '<div class="pc-skeleton">Summoning…</div>';
+    ov.classList.remove('hidden'); sh.classList.remove('hidden');
+    let data = null;
+    try { data = await _profileCardResolve(alias, simRow); } catch (_) {}
+    if (sh.classList.contains('hidden')) return;   // closed before the fetch landed
+    _renderProfileCard(data);
+  }
+  function _closeProfileCard() {
+    const ov = document.getElementById('pc-overlay'), sh = document.getElementById('pc-sheet');
+    if (ov) ov.classList.add('hidden');
+    if (sh) sh.classList.add('hidden');
+  }
+  try { window.__openProfileCard = _openProfileCard; } catch (_) {}
+
   function setupLeaderboardPreview() {
     const list = document.getElementById('lb-preview-list');
     if (list) {
@@ -33117,6 +33178,22 @@
         }
       });
     }
+    // W278 — tap a hunter row → profile card. Delegated so re-rendered rows work.
+    const pcList = document.getElementById('lb-rank-list');
+    if (pcList && pcList.getAttribute('data-pc-wired') !== '1') {
+      pcList.setAttribute('data-pc-wired', '1');
+      pcList.addEventListener('click', (e) => {
+        const row = e.target && e.target.closest && e.target.closest('[data-profile-alias]');
+        if (!row) return;
+        const alias = row.getAttribute('data-profile-alias');
+        if (!alias) return;
+        _openProfileCard(alias, row.getAttribute('data-profile-sim') === '1' ? { _sim: true } : null);
+      });
+    }
+    const pcClose = document.getElementById('pc-close');
+    if (pcClose && pcClose.getAttribute('data-wired') !== '1') { pcClose.setAttribute('data-wired', '1'); pcClose.addEventListener('click', _closeProfileCard); }
+    const pcOverlay = document.getElementById('pc-overlay');
+    if (pcOverlay && pcOverlay.getAttribute('data-wired') !== '1') { pcOverlay.setAttribute('data-wired', '1'); pcOverlay.addEventListener('click', _closeProfileCard); }
   }
   try { window.openLeaderboardRanking = openLeaderboardRanking; } catch (_) {}
 
