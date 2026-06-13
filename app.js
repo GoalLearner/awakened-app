@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.5';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.5-w267';
+  const APP_BUILD_TAG = '2.2.5-w268';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7180,6 +7180,99 @@
     return { name: 'MASTER', color: '#ef4444' };
   }
   function _ascPlayerPower() { try { return _arenaCombatProfile(_arenaPlayerStatline()).power; } catch (_) { return 0; } }
+
+  // ── W268 — The Ascent: opening challenge + home climb tracker
+  // (ClaudeDesign 'Ascent Opening & Climb Tracker'). The 100-floor climb is the
+  // game's stated objective; these two surfaces make it 'a big deal from the
+  // beginning'. CSS-only tower silhouette (stacked segments, fills bottom-up).
+  function _aoTowerHtml(pct, w, h, litColor, beacon) {
+    const segs = 14, gap = 3, segH = (h / segs) - gap;
+    const litCount = Math.round(pct * segs);
+    let html = '<span class="ao-tower" style="position:relative;width:' + w + 'px;height:' + h + 'px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">';
+    if (beacon) html += '<span class="ao-beacon" style="position:absolute;top:-2px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle,#ffe9b0,#f5b842 50%,transparent 75%);box-shadow:0 0 16px #f5b842"></span>';
+    for (let i = 0; i < segs; i++) {
+      const fromTop = segs - 1 - i, taper = 1 - (i / segs) * 0.42, isLit = fromTop < litCount, isCrown = i === 0;
+      const bg = isLit ? 'linear-gradient(180deg,' + litColor + ',#c08418)' : 'rgba(255,255,255,0.045)';
+      const bd = isLit ? 'rgba(245,184,66,0.5)' : 'rgba(255,255,255,0.08)';
+      const sh = isLit ? '0 0 10px ' + litColor + '44' : 'none';
+      const crownR = isCrown ? 'border-top-left-radius:5px;border-top-right-radius:5px;' : '';
+      html += '<span style="width:' + (w * taper).toFixed(1) + 'px;height:' + segH.toFixed(1) + 'px;margin-bottom:' + gap + 'px;border-radius:2px;background:' + bg + ';border:1px solid ' + bd + ';box-shadow:' + sh + ';position:relative;' + crownR + '">';
+      if (isCrown) {
+        const nC = isLit ? litColor : 'rgba(255,255,255,0.12)';
+        html += '<span style="position:absolute;top:-4px;left:0;right:0;height:4px;display:flex;justify-content:space-between;padding:0 3px">' +
+          '<i style="width:4px;height:4px;background:' + nC + '"></i><i style="width:4px;height:4px;background:' + nC + '"></i><i style="width:4px;height:4px;background:' + nC + '"></i></span>';
+      }
+      html += '</span>';
+    }
+    html += '<span style="width:' + (w + 6) + 'px;height:5px;border-radius:2px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08)"></span></span>';
+    return html;
+  }
+  // Home tracker strip — reads live ascent state; FLOOR N / 100 + band, tower
+  // lights bottom-up. Rendered INSIDE button#sc-arena-btn so the existing
+  // delegated open-arena handler is preserved unchanged.
+  function _scClimbStripHtml() {
+    let floor = 1, done = 0;
+    try { const stx = getAscentState(); floor = Math.max(1, Math.min(100, stx.currentFloor || 1)); done = stx.highestCleared || 0; } catch (_) {}
+    const finished = done >= 100;
+    const dispFloor = finished ? 100 : floor;
+    let bandName = ''; try { bandName = _ascentBandFor(dispFloor).name; } catch (_) {}
+    if (finished) bandName = 'The Tower is Yours';
+    const summit = finished || dispFloor >= 91;
+    const litColor = (dispFloor >= 40 || summit) ? '#f5b842' : '#c8c6d8';
+    return _aoTowerHtml(dispFloor / 100, 30, 92, litColor, summit) +
+      '<span class="sc-climb-mid">' +
+        '<span class="sc-climb-eyebrow">THE ASCENT</span>' +
+        '<span class="sc-climb-floor"><b>' + dispFloor + '</b><span class="of">/ 100</span><span class="lbl">FLOORS</span></span>' +
+        '<span class="sc-climb-band' + (summit ? ' summit' : '') + '">' + esc(bandName) + '</span>' +
+      '</span>' +
+      '<span class="sc-climb-right">' +
+        '<span class="sc-climb-cta' + (summit ? ' summit' : '') + '">' + (summit ? 'SUMMIT' : 'CLIMB') + '</span>' +
+        '<svg width="9" height="13" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</span>';
+  }
+  // Opening challenge overlay — the First Awakened issues the challenge and the
+  // objective is declared (100 / 1 / 1). Shown ONCE (hb_ascent_opening_seen_v1),
+  // and never stacked over the educational intro (gated on hb_onboarding_seen_v2).
+  function _aoOpeningHtml() {
+    return '<div class="ao-opening" id="ao-opening">' +
+      '<div class="ao-open-portrait" aria-hidden="true">' +
+        '<img src="assets/coach/first-awakened-idle.png" alt="">' +
+        '<span class="ao-ember" style="top:30%;left:24%"></span>' +
+        '<span class="ao-ember" style="top:44%;right:28%;animation-delay:1.4s"></span>' +
+        '<span class="ao-open-scrim"></span>' +
+      '</div>' +
+      '<div class="ao-open-body">' +
+        '<div class="ao-open-kicker">THE ASCENT</div>' +
+        '<div class="ao-open-spacer"></div>' +
+        '<div class="ao-open-line ao-rise"><span class="q">“I was the first to climb.<br>No one has reached me since.”</span>' +
+          '<span class="by">— THE FIRST AWAKENED</span></div>' +
+        '<div class="ao-open-obj">' +
+          '<span class="cell"><b>100</b><i>FLOORS</i></span><span class="div"></span>' +
+          '<span class="cell"><b>1</b><i>SUMMIT</i></span><span class="div"></span>' +
+          '<span class="cell"><b>1</b><i>TO BEAT</i></span>' +
+        '</div>' +
+        '<button type="button" class="ao-open-cta ao-cta-glow" id="ao-begin-btn">BEGIN THE ASCENT ▸</button>' +
+      '</div>' +
+    '</div>';
+  }
+  function _aoMaybeShowOpening() {
+    try {
+      if (localStorage.getItem('hb_ascent_opening_seen_v1')) return;
+      if (!localStorage.getItem('hb_onboarding_seen_v2')) return;
+      if (document.getElementById('ao-opening')) return;
+      const wrap = document.createElement('div');
+      wrap.innerHTML = _aoOpeningHtml();
+      const el = wrap.firstChild;
+      document.body.appendChild(el);
+      const dismiss = (openAfter) => {
+        try { localStorage.setItem('hb_ascent_opening_seen_v1', '1'); } catch (_) {}
+        el.classList.add('is-hiding');
+        setTimeout(() => { try { el.remove(); } catch (_) {} if (openAfter) { try { if (typeof openArena === 'function') openArena(); } catch (_) {} } }, 420);
+      };
+      const btn = el.querySelector('#ao-begin-btn');
+      if (btn) btn.addEventListener('click', () => dismiss(true));
+    } catch (_) {}
+  }
   function _ascDiffHtml(you, foe) {
     const d = _ascDiff(you, foe), o = _ascOdds(you, foe);
     return '<span class="asc-diff"><span class="pill ' + d.cls + '"><span class="d"></span>' + d.key + '</span>' +
@@ -20763,21 +20856,9 @@
         // readability scrim, a looming foe silhouette at the right edge, and a
         // slow gold light-sweep idle. Same id + delegated handler; pure chrome.
         '<div class="sc-origin-row">' +
-          '<button class="scab" id="sc-arena-btn" type="button" aria-label="The Arena — test your build">' +
-            '<span class="scab-vista" aria-hidden="true"><img src="assets/backgrounds/bg_s.webp" alt="" decoding="async"></span>' +
-            '<span class="scab-foe" aria-hidden="true"><img src="assets/arena/foe_juggernaut.webp" alt="" decoding="async"></span>' +
-            '<span class="scab-scrim" aria-hidden="true"></span>' +
-            '<span class="scab-sweep" aria-hidden="true"><i></i></span>' +
-            '<span class="scab-body">' +
-              '<span class="scab-roundel" aria-hidden="true">' +
-                '<svg width="19" height="19" viewBox="0 0 20 20"><g stroke="#f5b842" stroke-width="1.4" fill="none" stroke-linecap="round">' +
-                '<path d="M4 3l10.5 10.5M14.5 13.5l1.8 1.8M12.6 15.4l3.7-3.7"/>' +
-                '<path d="M16 3L5.5 13.5M5.5 13.5l-1.8 1.8M7.4 15.4l-3.7-3.7"/></g></svg></span>' +
-              '<span class="scab-text"><span class="scab-title">THE ARENA</span>' +
-                '<span class="scab-whisper">The tower is waiting.</span></span>' +
-              '<svg class="scab-chev" width="11" height="17" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" stroke="#f5b842" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-            '</span>' +
-          '</button>' +
+          '<button class="sc-climb" id="sc-arena-btn" type="button" aria-label="The Ascent - climb the tower">' +
+              _scClimbStripHtml() +
+            '</button>' +
         '</div>' +
         // Portrait frame — avatar + radar inside one bounded gold-cornered
         // zone with hex grid backdrop.
@@ -42919,6 +43000,7 @@
       // 600ms covers the 0.55s fade with a hair of slack. The node
       // is decorative; nothing reads it once hidden.
       setTimeout(() => { try { el.remove(); } catch (_) {} }, 600);
+      setTimeout(() => { try { _aoMaybeShowOpening(); } catch (_) {} }, 700);   // W268 — declare the objective once, post-splash
     }, wait);
   }
   // Kick the "Preparing your system…" line if loading drags past

@@ -28352,3 +28352,58 @@ button.guildhall-summary-tile:active {
 .tm-prog .bar { width: 56px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.05); overflow: hidden; }
 .tm-prog .bar span { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #c08418, #f5b842); box-shadow: 0 0 6px rgba(245,184,66,0.4); }
 .tm-lock { margin-left: auto; flex: none; opacity: 0.5; }
+
+/* ── W268 — The Ascent: opening challenge + home climb tracker (ClaudeDesign) ── */
+@media (prefers-reduced-motion: no-preference) {
+  .ao-ember { animation: aoEmber 4.5s ease-in-out infinite; }
+  .ao-beacon { animation: aoBeacon 3.4s ease-in-out infinite; }
+  .ao-cta-glow { animation: aoCta 3.6s ease-in-out infinite; }
+  .ao-rise { animation: aoRise 700ms cubic-bezier(.2,.8,.2,1) both; }
+}
+@keyframes aoEmber { 0%,100% { opacity:.3; } 50% { opacity:.7; } }
+@keyframes aoBeacon { 0%,100% { opacity:.55; transform:translateX(-50%) scale(1); } 50% { opacity:1; transform:translateX(-50%) scale(1.12); } }
+@keyframes aoCta { 0%,100% { box-shadow:0 4px 18px rgba(245,184,66,.22); } 50% { box-shadow:0 4px 26px rgba(245,184,66,.42); } }
+@keyframes aoRise { 0% { opacity:0; transform:translateY(12px); } 100% { opacity:1; transform:translateY(0); } }
+
+/* home climb tracker strip (replaces the W255 arena banner; same #sc-arena-btn) */
+.sc-climb { width:100%; box-sizing:border-box; border-radius:16px; border:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg,#15132f,#0e0e24); box-shadow:0 8px 20px rgba(0,0,0,0.4);
+  padding:16px 18px; display:flex; align-items:center; gap:18px; text-align:left; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:transform 120ms ease, filter 120ms ease; }
+.sc-climb:active { transform:scale(0.985); filter:brightness(1.06); }
+.sc-climb-mid { display:flex; flex-direction:column; gap:7px; flex:1; min-width:0; }
+.sc-climb-eyebrow { font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:800; letter-spacing:2.5px; color:#f5b842; }
+.sc-climb-floor { display:flex; align-items:baseline; gap:6px; }
+.sc-climb-floor b { font-family:"Cinzel",Georgia,serif; font-size:30px; font-weight:700; color:#f5f3fb; line-height:1; }
+.sc-climb-floor .of { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; color:#6b6b86; }
+.sc-climb-floor .lbl { font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:700; letter-spacing:1.5px; color:#6b6b86; margin-left:2px; }
+.sc-climb-band { font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:16px; color:#c8c6d8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sc-climb-band.summit { color:#f5b842; }
+.sc-climb-right { display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex:none; }
+.sc-climb-cta { font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:800; letter-spacing:1.5px; color:#9090a8; }
+.sc-climb-cta.summit { color:#f5b842; }
+
+/* opening challenge overlay (one-time, full-screen) */
+.ao-opening { position:fixed; inset:0; z-index:99000; overflow:hidden; opacity:1;
+  background:radial-gradient(120% 70% at 50% 0%, #12122c 0%, #07070f 62%);
+  display:flex; flex-direction:column; transition:opacity 400ms ease; }
+.ao-opening.is-hiding { opacity:0; }
+.ao-open-portrait { position:absolute; top:0; left:0; right:0; height:70%; overflow:hidden;
+  background:radial-gradient(80% 70% at 50% 30%, #1d1a3d 0%, #0d0c22 70%); }
+.ao-open-portrait img { width:100%; height:100%; object-fit:cover; object-position:center 20%; }
+.ao-open-portrait .ao-ember { position:absolute; width:3px; height:3px; border-radius:50%; background:#f5b842; }
+.ao-open-scrim { position:absolute; inset:0; background:linear-gradient(180deg, rgba(7,7,15,0.35) 0%, rgba(7,7,15,0) 28%, rgba(7,7,15,0.55) 56%, #07070f 86%); }
+.ao-open-body { position:relative; flex:1; display:flex; flex-direction:column; padding:max(58px,env(safe-area-inset-top)) 30px max(30px,env(safe-area-inset-bottom)); }
+.ao-open-kicker { text-align:center; font-family:"JetBrains Mono",monospace; font-size:9px; font-weight:800; letter-spacing:4px; color:#f5b842; }
+.ao-open-spacer { flex:1; }
+.ao-open-line { text-align:center; margin-bottom:26px; }
+.ao-open-line .q { font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:25px; line-height:1.35; color:#c8c6d8; text-shadow:0 2px 12px rgba(0,0,0,0.8); }
+.ao-open-line .by { display:block; margin-top:12px; font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:700; letter-spacing:2.5px; color:#6b6b86; }
+.ao-open-obj { display:flex; align-items:stretch; justify-content:center; margin-bottom:26px; }
+.ao-open-obj .cell { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 6px; }
+.ao-open-obj .cell b { font-family:"Cinzel",Georgia,serif; font-size:26px; font-weight:700; color:#f5b842; line-height:1; }
+.ao-open-obj .cell i { font-family:"JetBrains Mono",monospace; font-style:normal; font-size:7.5px; font-weight:800; letter-spacing:2px; color:#9090a8; }
+.ao-open-obj .div { width:1px; background:rgba(255,255,255,0.08); margin:4px 0; }
+.ao-open-cta { border:none; cursor:pointer; border-radius:13px; padding:17px 0; width:100%; text-align:center;
+  background:linear-gradient(180deg,#f5b842,#c08418); font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:800; letter-spacing:3.5px; color:#241502;
+  -webkit-tap-highlight-color:transparent; }
