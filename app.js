@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w287';
+  const APP_BUILD_TAG = '2.2.6-w288';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -653,27 +653,29 @@
       statDomain:       'FOCUS',
     },
 
-    // ── v3 Phase W287 — A-rank dungeon REWORKED: each boss now demands a DUAL
-    // condition (one active pillar + 7h sleep) held 2 consecutive days, making
-    // sleep consistency the spine of the rank. `dailyAllOf` routes them through
-    // the multi-metric resolver branch. Each drops 2 ultra + 2 rare (NO commons)
-    // via `dropTable` {ultra 8% / rare 25% / 67% nothing}; collectively the
-    // "Wakeful Vigil" set — BiS for the 5 slots Erebus never touches (cape/
-    // amulet/ring/gloves/boots) + the second-best weapon (Duskforge). Souls
-    // economy already supports A (engage 400 / kill 800).
+    // ── v3 Phase W287 — A-rank dungeon (conditions finalized W288). Sleep was
+    // dropped from the iPhone-native bosses so watch-less players are not locked
+    // out (HealthKit only counts "Asleep" samples, which need a wearable); ONLY
+    // the Sleepless Ascent keeps a sleep pillar, by design, as the wearable-only
+    // elite. `dailyAllOf` routes the multi-metric bosses through the shared
+    // resolver branch; the Anvil is a single-day flights boss (Carouser path).
+    // Each drops 2 ultra + 2 rare (NO commons) via `dropTable` {ultra 8% / rare
+    // 25% / 67% nothing}; collectively the "Wakeful Vigil" set — BiS for the 5
+    // slots Erebus never touches (cape/amulet/ring/gloves/boots) + the second-
+    // best weapon (Duskforge). Souls economy already supports A (engage 400 / kill 800).
     the_tideless_marcher: {
       id:               'the_tideless_marcher',
       name:             'The Tideless Marcher',
       rank:             'A',
       archetype:        'sustainer',
       flavorShort:      'He has not stopped walking since the world was young.',
-      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — but he honors only those who walk far AND rest deep. Match both, two days running, and he steps aside.',
-      killCondShort:    '10,000 steps + 7h sleep, 2 days back-to-back',
-      killCondLong:     'On two consecutive days inside the 2-day hunt window, reach BOTH 10,000 verified steps and 7 hours of sleep. Miss either pillar on either day and the march resets. The road rewards the rested.',
-      failedCopy:       'You fell behind — too tired, or too still. The march went on.',
+      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — to match him you must cover ground both flat and rising, two days running. Break stride once, and he leaves you behind.',
+      killCondShort:    '10,000 steps + 5 flights, 2 days back-to-back',
+      killCondLong:     'On two consecutive days inside the 2-day hunt window, reach BOTH 10,000 verified steps and 5 flights of stairs climbed. Miss either on either day and the march resets.',
+      failedCopy:       'You fell behind. The march went on without you.',
       dailyAllOf:       true,
       stepThreshold:    10000,
-      sleepHours:       7,
+      flightThreshold:  5,
       consecutiveDays:  2,
       streakTarget:     2,
       cadence:          'daily',
@@ -686,31 +688,11 @@
       name:             'The Sleepless Ascent',
       rank:             'A',
       archetype:        'caster',
-      flavorShort:      'A stairway that climbs only for those who also lie down.',
-      flavorLong:       'An endless flight of steps rising into the dark. It tests not just the will to climb but the wisdom to rest — for none reach the top sleepless. Climb high and sleep deep, two days running, and the stair lets you pass.',
-      killCondShort:    '10 flights + 7h sleep, 2 days back-to-back',
-      killCondLong:     'On two consecutive days inside the 2-day hunt window, reach BOTH 10 verified flights of stairs climbed and 7 hours of sleep. Miss either pillar on either day and the ascent resets. The summit belongs to the rested.',
-      failedCopy:       'The stair went dark. You climbed but did not rest — or rested but did not climb.',
-      dailyAllOf:       true,
-      flightThreshold:  10,
-      sleepHours:       7,
-      consecutiveDays:  2,
-      streakTarget:     2,
-      cadence:          'daily',
-      huntWindowDays:   2,
-      dropTable:        { ultra_rare: 0.08, rare: 0.25 },
-      statDomain:       'VIT',
-    },
-    the_unbroken_anvil: {
-      id:               'the_unbroken_anvil',
-      name:             'The Unbroken Anvil',
-      rank:             'A',
-      archetype:        'aggressor',
-      flavorShort:      'It is moved only by those who labor, then rest, then return.',
-      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It answers to relentless work — but it knows recovery forges the strongest steel. Train hard and sleep deep, two days running, and it yields.',
+      flavorShort:      'It demands you spend yourself by day and restore yourself by night.',
+      flavorLong:       'An endless ascent that tests not just effort but recovery — for none reach the summit running on empty. Train hard and sleep deep, two days running, and the way opens. The one trial that asks for a tracked night of rest.',
       killCondShort:    '30min workout + 7h sleep, 2 days back-to-back',
-      killCondLong:     'On two consecutive days inside the 2-day hunt window, complete BOTH a 30-minute workout and 7 hours of sleep. Any Apple Health workout type counts. Miss either pillar on either day and the steel cools.',
-      failedCopy:       'The forge went cold. Effort without rest is just exhaustion.',
+      killCondLong:     'On two consecutive days inside the 2-day hunt window, complete BOTH a 30-minute workout and 7 hours of sleep. Any Apple Health workout type counts. Miss either pillar on either day and the ascent resets. Note: tracking a workout and sleep needs a wearable — this is the wearable-only elite of the dungeon.',
+      failedCopy:       'The stair went dark. Effort without rest, or rest without effort — the climb demands both.',
       dailyAllOf:       true,
       workoutMinutes:   30,
       sleepHours:       7,
@@ -719,16 +701,31 @@
       cadence:          'daily',
       huntWindowDays:   2,
       dropTable:        { ultra_rare: 0.08, rare: 0.25 },
+      statDomain:       'WILL',
+    },
+    the_unbroken_anvil: {
+      id:               'the_unbroken_anvil',
+      name:             'The Unbroken Anvil',
+      rank:             'A',
+      archetype:        'aggressor',
+      flavorShort:      'It is moved only by those who climb to reach it.',
+      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It sits at the top of a long ascent, and answers only to those who make the climb in earnest — fifteen flights of stairs in a single day, no fewer.',
+      killCondShort:    '15 flights of stairs in one day',
+      killCondLong:     'Climb at least 15 verified flights of stairs in a single day inside the hunt window. One honest day of climbing and the anvil yields.',
+      failedCopy:       'The climb fell short. The anvil stayed sealed.',
+      flightThreshold:  15,
+      streakTarget:     1,
+      cadence:          'daily',
+      dropTable:        { ultra_rare: 0.08, rare: 0.25 },
       statDomain:       'STR',
     },
 
-    // ── v3 Phase W286 — S-rank dungeon: the SOLE apex. ONE boss, the hardest
-    // condition in the app — 3 consecutive days each hitting ALL THREE pillars
-    // (steps + a workout + sleep). `dailyAllOf` routes it through the shared
-    // multi-metric resolver branch; `dropTable` drives its bespoke roll.
-    // Souls economy already supports S (engage 800 / kill
-    // 1600). Drops the only Mythic in the game (Nightfall) plus the 3 ultra
-    // Sovereign's Regalia pieces — see CARDS + the bespoke rollBossDrop path.
+    // ── v3 Phase W286 — S-rank dungeon: the SOLE apex. ONE boss. (W288: condition
+    // changed to BOTH pillars — 10k steps + 10 flights — every day for 3 days, all
+    // iPhone-native so the apex is not wearable-gated.) `dailyAllOf` routes it
+    // through the shared multi-metric branch; `dropTable` drives its bespoke roll.
+    // Souls economy already supports S (engage 800 / kill 1600). Drops the only
+    // Mythic in the game (Nightfall) plus the 3 ultra Sovereign's Regalia pieces.
     erebus_the_shadow_sovereign: {
       id:               'erebus_the_shadow_sovereign',
       name:             'Erebus, the Shadow Sovereign',
@@ -736,14 +733,13 @@
       archetype:        'caster',
       flavorShort:      'The crowned dark that waits at the summit of the climb.',
       flavorLong:       'A sovereign wreathed in living shadow, throned above every lesser terror in the dungeon. He does not test one virtue but all at once — body, will, and rest, held together without falter. Master every discipline for three days unbroken, and the shadow yields what nothing else will: the regalia of the Sovereign himself.',
-      killCondShort:    '10k steps + a workout + 7h sleep — all three, 3 days back-to-back',
-      killCondLong:     'On three consecutive days inside the 3-day hunt window, every day must reach ALL THREE: 10,000 verified steps, a 30-minute workout, and 7 hours of sleep. Miss any single pillar on any day and the run resets to zero. The summit of the dungeon — and the only source of the Mythic blade Nightfall.',
-      failedCopy:       'One pillar fell, and the whole vigil with it. The shadow keeps its crown.',
+      killCondShort:    '10k steps + 10 flights — both, 3 days back-to-back',
+      killCondLong:     'On three consecutive days inside the 3-day hunt window, every day must reach BOTH 10,000 verified steps and 10 flights of stairs climbed. Miss either on any day and the run resets to zero. The summit of the dungeon, and the only source of the Mythic blade Nightfall.',
+      failedCopy:       'One day fell short, and the whole climb with it. The shadow keeps its crown.',
       dailyAllOf:       true,
       dropTable:        { mythic: 0.01, ultra_rare: 0.30 },
       stepThreshold:    10000,
-      workoutMinutes:   30,
-      sleepHours:       7,
+      flightThreshold:  10,
       consecutiveDays:  3,
       streakTarget:     3,
       cadence:          'daily',
