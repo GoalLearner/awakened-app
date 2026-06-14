@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w308';
+  const APP_BUILD_TAG = '2.2.6-w309';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8062,7 +8062,7 @@
   const _LDT_RNAME  = { common: 'COMMON', rare: 'RARE', ultra_rare: 'ULTRA-RARE', 'ultra-rare': 'ULTRA-RARE', ultra: 'ULTRA-RARE' };
   function _ldtSlotLabels() {
     try { if (typeof EQUIPMENT_SLOTS !== 'undefined') return EQUIPMENT_SLOTS.map((s) => s.label); } catch (_) {}
-    return ['HELM', 'AMULET', 'CAPE', 'WEAPON', 'PLATE', 'GLOVES', 'BOOTS', 'RING'];
+    return ['HELM', 'AMULET', 'CAPE', 'WEAPON', 'ARMOR', 'GLOVES', 'BOOTS', 'RING'];
   }
   function _ldtCardAt(i) {
     try { let s = []; const b = getHunterBuild(); if (b && Array.isArray(b.slots)) s = b.slots;
@@ -9634,7 +9634,7 @@
     { key: 'amulet', label: 'AMULET' },
     { key: 'cape',   label: 'CAPE'   },
     { key: 'weapon', label: 'WEAPON' },
-    { key: 'plate',  label: 'PLATE'  },
+    { key: 'plate',  label: 'ARMOR'  },
     { key: 'gloves', label: 'GLOVES' },
     { key: 'boots',  label: 'BOOTS'  },
     { key: 'ring',   label: 'RING'   },
@@ -25155,7 +25155,7 @@
     const title = document.getElementById('build-picker-title');
     if (title) title.textContent = 'SELECT ' + slotDef.label;
     const sub = document.getElementById('build-picker-sub');
-    if (sub) sub.textContent = 'Choose a ' + slotDef.label.toLowerCase() + ' from your collection.';
+    if (sub) sub.textContent = 'Choose your ' + slotDef.label.toLowerCase() + ' from your collection.';
 
     // Build the list of discovered cards FOR THIS SLOT TYPE. Sort
     // by rarity then name.
@@ -44512,7 +44512,7 @@
         '</div>').join('') +
       '</div>';
     } else if (step.extra === 'slots') {
-      const slots = ['HELM', 'WEAPON', 'PLATE', 'GLOVES', 'BOOTS', 'RING'];
+      const slots = ['HELM', 'WEAPON', 'ARMOR', 'GLOVES', 'BOOTS', 'RING'];
       // Mark first two "filled" purely visually for the preview.
       wrap.innerHTML = '<div class="intro-ob-slot-grid">' +
         slots.map((label, i) => '<div class="intro-ob-slot-tile' +
