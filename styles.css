@@ -28281,6 +28281,17 @@ button.guildhall-summary-tile:active {
 .al-lives { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; margin-left: auto; }
 .al-lives-row { display: flex; align-items: center; gap: 5px; }
 .al-lives-row .n { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; color: #9090a8; margin-left: 2px; }
+/* W294 — combat-styles tip chip (Ascent header) + triangle modal */
+.al-tips { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #4a4a66; background: rgba(255,255,255,0.04); color: #9090a8; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; line-height: 1; padding: 0; margin-left: 5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.al-tips:hover, .al-tips:active { color: #ffd24a; border-color: #ffd24a; }
+#ct-overlay { z-index: 12400; }
+.ct-modal { z-index: 12401; max-width: 380px; }
+.ct-tri { display: flex; justify-content: center; padding: 8px 0 2px; }
+.ct-svg { width: 100%; max-width: 320px; height: auto; }
+.ct-styles { list-style: none; padding: 0; margin: 4px 0 12px; display: flex; flex-direction: column; gap: 7px; }
+.ct-styles li { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #b8b6c8; }
+.ct-styles li b { color: #e8e8ea; }
+.ct-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .al-scroll { padding-top: 4px; }
 .al-hero { margin: 6px 18px 0; border-radius: 16px; border: 1px solid rgba(245,184,66,0.4); background: linear-gradient(180deg, #15132f, #0e0e24); box-shadow: 0 0 28px rgba(245,184,66,0.08), inset 0 1px 0 rgba(255,255,255,0.06); padding: 18px 18px 16px; display: flex; flex-direction: column; }
 .al-hero-top { display: flex; align-items: flex-start; gap: 14px; }

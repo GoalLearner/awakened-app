@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w293';
+  const APP_BUILD_TAG = '2.2.6-w294';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5865,6 +5865,28 @@
   // explaining earn/spend mechanics. Static info only; no live
   // stats per design call. Reuses the .modal-overlay + .modal
   // pattern; closes via backdrop tap, X button, or ESC.
+  // W294 — combat-styles triangle explainer. Static content lives in #ct-modal
+  // (index.html); these just toggle it, mirroring the souls-info modal.
+  function _arOpenCombatTriangle() {
+    const o = document.getElementById('ct-overlay'), m = document.getElementById('ct-modal');
+    if (!o || !m) return;
+    o.classList.remove('hidden'); m.classList.remove('hidden');
+  }
+  function _arCloseCombatTriangle() {
+    const o = document.getElementById('ct-overlay'), m = document.getElementById('ct-modal');
+    if (!o || !m) return;
+    o.classList.add('hidden'); m.classList.add('hidden');
+  }
+  function setupCombatTriangleModal() {
+    const o = document.getElementById('ct-overlay'), c = document.getElementById('ct-close');
+    if (o && o.getAttribute('data-wired') !== '1') { o.setAttribute('data-wired', '1'); o.addEventListener('click', _arCloseCombatTriangle); }
+    if (c && c.getAttribute('data-wired') !== '1') { c.setAttribute('data-wired', '1'); c.addEventListener('click', _arCloseCombatTriangle); }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const m = document.getElementById('ct-modal');
+      if (m && !m.classList.contains('hidden')) _arCloseCombatTriangle();
+    });
+  }
   function openSoulsInfoModal() {
     const overlay = document.getElementById('souls-info-overlay');
     const modal   = document.getElementById('souls-info-modal');
@@ -7753,7 +7775,8 @@
         '<div class="al-power"><span class="al-lbl">POWER</span>' +
           '<span class="al-rating-row"><span class="num">' + pwr.toLocaleString('en-US') + '</span></span></div>' +
         '<div class="al-lives"><span class="al-lbl">LIVES</span>' +
-          '<span class="al-lives-row">' + hearts + '<span class="n">' + left + '/' + ASCENT_DAILY_LIVES + '</span></span></div>' +
+          '<span class="al-lives-row">' + hearts + '<span class="n">' + left + '/' + ASCENT_DAILY_LIVES + '</span>' +
+            '<button class="al-tips" data-ar="tips" type="button" aria-label="Combat styles">?</button></span></div>' +
       '</div></div>';
   }
 
@@ -9444,6 +9467,7 @@
       else if (a === 'hall')    _arRenderHall();
       else if (a === 'alscout') { try { const sl = document.getElementById('al-scout-slot'); if (sl) sl.style.display = sl.style.display === 'none' ? '' : 'none'; } catch (_) {} }
       else if (a === 'titles')  _arRenderTitles();
+      else if (a === 'tips')    { try { _arOpenCombatTriangle(); } catch (_) {} }   // W294 combat-styles primer
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
         const cur = getEquippedArenaTitle();
@@ -44991,6 +45015,7 @@
     setupQuestsGate();
     setupLeaderboardPreview();
     setupSoulsInfoModal();
+    try { setupCombatTriangleModal(); } catch (_) {}
     // v3 Phase 1z.44 — Souls Ledger sheet wiring (drag-dismiss + X + overlay tap).
     try { setupSoulsLedger(); } catch (_) {}
     // v3 Phase 1z.171 — Guild Members roster sheet wiring. Tile

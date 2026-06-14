@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=409">
+  <link rel="stylesheet" href="styles.css?v=410">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1721,6 +1721,54 @@
   <!-- Souls info modal (v2.0.1). Centered card pattern reusing
        .modal-overlay + .modal base styles. Opens on souls-badge tap;
        static info only (earn paths + spend costs). No live stats. -->
+  <!-- W294 — combat-styles triangle explainer (opened by the "?" next to the Ascent LIVES count) -->
+  <div id="ct-overlay" class="modal-overlay hidden"></div>
+  <div id="ct-modal" class="modal ct-modal hidden" role="dialog" aria-labelledby="ct-title">
+    <button id="ct-close" class="souls-info-close" type="button" aria-label="Close">&#10005;</button>
+    <div class="souls-info-body-scroll">
+      <div class="souls-info-header">
+        <h2 id="ct-title" class="souls-info-title">COMBAT STYLES</h2>
+        <p class="souls-info-subtitle">Your top stats set your fighting style.</p>
+      </div>
+      <div class="ct-tri">
+        <svg viewBox="0 0 340 290" xmlns="http://www.w3.org/2000/svg" class="ct-svg" role="img" aria-label="Combat triangle: Melee beats Ranged, Ranged beats Magic, Magic beats Melee">
+          <defs>
+            <marker id="ctm-r" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0 0L5 3L0 6z" fill="#ef4444"/></marker>
+            <marker id="ctm-g" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0 0L5 3L0 6z" fill="#22c55e"/></marker>
+            <marker id="ctm-b" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0 0L5 3L0 6z" fill="#3b82f6"/></marker>
+          </defs>
+          <line x1="190" y1="83" x2="256" y2="173" stroke="#ef4444" stroke-width="2.4" marker-end="url(#ctm-r)"/>
+          <line x1="242" y1="200" x2="98" y2="200" stroke="#22c55e" stroke-width="2.4" marker-end="url(#ctm-g)"/>
+          <line x1="84" y1="173" x2="150" y2="83" stroke="#3b82f6" stroke-width="2.4" marker-end="url(#ctm-b)"/>
+          <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="10.5" font-weight="700">
+            <rect x="185" y="118" width="78" height="18" rx="5" fill="#ef4444"/><text x="224" y="131" fill="#fff" text-anchor="middle">out-muscles</text>
+            <rect x="131" y="191" width="78" height="18" rx="5" fill="#22c55e"/><text x="170" y="204" fill="#fff" text-anchor="middle">out-ranges</text>
+            <rect x="73" y="118" width="88" height="18" rx="5" fill="#3b82f6"/><text x="117" y="131" fill="#fff" text-anchor="middle">pierces armor</text>
+          </g>
+          <g font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">
+            <circle cx="170" cy="56" r="34" fill="rgba(239,68,68,0.14)" stroke="#ef4444" stroke-width="2"/>
+            <text x="170" y="65" font-size="23">&#9876;&#65039;</text>
+            <text x="170" y="108" font-size="13" font-weight="800" fill="#ef6a6a">MELEE</text>
+            <circle cx="64" cy="200" r="34" fill="rgba(59,130,246,0.14)" stroke="#3b82f6" stroke-width="2"/>
+            <text x="64" y="209" font-size="23">&#128302;</text>
+            <text x="64" y="252" font-size="13" font-weight="800" fill="#6aa0f6">MAGIC</text>
+            <circle cx="276" cy="200" r="34" fill="rgba(34,197,94,0.14)" stroke="#22c55e" stroke-width="2"/>
+            <text x="276" y="209" font-size="23">&#127993;</text>
+            <text x="276" y="252" font-size="13" font-weight="800" fill="#4ade80">RANGED</text>
+          </g>
+        </svg>
+      </div>
+      <section class="souls-info-section">
+        <ul class="ct-styles">
+          <li><span class="ct-dot" style="background:#ef4444"></span><span><b>Melee</b> &mdash; Strength</span></li>
+          <li><span class="ct-dot" style="background:#3b82f6"></span><span><b>Magic</b> &mdash; Intelligence + Vitality</span></li>
+          <li><span class="ct-dot" style="background:#22c55e"></span><span><b>Ranged</b> &mdash; Focus + Will</span></li>
+        </ul>
+        <p class="souls-info-body">Each style beats one and loses to another. Match a foe&rsquo;s weakness and you hit harder; lose the matchup and you hit softer. A <b>Neutral</b> build (no stat clearly leading) trades evenly with everyone.</p>
+      </section>
+    </div>
+  </div>
+
   <div id="souls-info-overlay" class="modal-overlay hidden"></div>
   <!-- v3 Phase 1z.44 — markup refactor for X-close fix on iPhone.
        Previously the X close button was `position: absolute` inside
@@ -2797,7 +2845,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=9"></script>
-  <script src="app.js?v=739"></script>
+  <script src="app.js?v=740"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
