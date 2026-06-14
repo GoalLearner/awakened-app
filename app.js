@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w289';
+  const APP_BUILD_TAG = '2.2.6-w290';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9853,8 +9853,21 @@
   // early E-rank rare. TIER_BASE includes A/S so future content prices
   // itself automatically. All knobs are tunable here.
   const RELIC_TRADEABLE_RARITIES = { rare: true, ultra_rare: true, mythic: true };
-  const RELIC_TIER_BASE   = { E: 90, D: 160, C: 280, B: 480, A: 760, S: 1200 };
-  const RELIC_RARITY_MULT = { rare: 1.0, ultra_rare: 1.9, mythic: 3.6 };
+  // W290 — GRIND-BASED pricing table. base = (expected defeats to drop a specific
+  // item) x (that boss's gross kill reward), tier-monotonic (D floored > E, S > A).
+  // Final buy = base + RELIC_STAT_WEIGHT * stats. Buying always costs ~2x the net
+  // grind (kills net half their gross), so the market is a premium, never a shortcut.
+  //   E/D/C/B ultra: ~20 defeats (5% drop); rare ~12 (8.3%)
+  //   A ultra: ~25 defeats (stingy 4%); A rare ~8 (12.5%)
+  //   S (Erebus) ultra: ~10 defeats (generous 10%) -> floored above A for tier order
+  const RELIC_GRIND_BASE = {
+    E: { rare:  600, ultra_rare:  1000 },
+    D: { rare:  700, ultra_rare:  1100 },
+    C: { rare: 2400, ultra_rare:  4000 },
+    B: { rare: 4800, ultra_rare:  8000 },
+    A: { rare: 6400, ultra_rare: 20000 },
+    S: { rare: 8000, ultra_rare: 24000 },
+  };
   const RELIC_STAT_WEIGHT = 10;    // souls per total stat-bonus point
   const RELIC_SELL_RATIO  = 0.70;  // sell = 70% of buy (recover 70%, ~1.4× spread)
 
@@ -9879,9 +9892,10 @@
     // ~100 S-boss defeats (100 x 800 net souls) + mythic prestige premium + stats.
     // The bare formula (S-base x 3.6 + stats) would undervalue a unique BiS item.
     if (card.id === 'nightfall_blade') return 88000;
-    const base = (RELIC_TIER_BASE[card.tier] != null) ? RELIC_TIER_BASE[card.tier] : RELIC_TIER_BASE.C;
-    const mult = RELIC_RARITY_MULT[card.rarity] || 1;
-    const raw  = base * mult + RELIC_STAT_WEIGHT * _relicTotalBonus(card);
+    const tierTbl = RELIC_GRIND_BASE[card.tier] || RELIC_GRIND_BASE.C;
+    const base = (tierTbl[card.rarity] != null) ? tierTbl[card.rarity] : null;
+    if (base == null) return null; // only rare/ultra are priced (commons untradeable)
+    const raw  = base + RELIC_STAT_WEIGHT * _relicTotalBonus(card);
     return Math.max(10, Math.round(raw / 10) * 10);
   }
   function relicSellPrice(cardId) {
