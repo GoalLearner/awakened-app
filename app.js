@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w309';
+  const APP_BUILD_TAG = '2.2.6-w310';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10803,6 +10803,13 @@
     // upstream resolver has confirmed the kill — never fires on
     // engage or failed/expired hunts.
     try { playSfx('boss_victory'); } catch (_) {}
+    // W310 — Rendell's "log vs homepage" non-sequitur: the home "BOSSES · SLAIN"
+    // card (updateHeaderMetrics) + the guild summary tile read loadBosses() just
+    // like the Kill Log, but were NOT refreshed after a kill (only the quests
+    // panel was) -> stale count. This is the single confirmed-kill convergence
+    // point, and setBossState has already persisted kill_count in every path above.
+    try { updateHeaderMetrics(); } catch (_) {}
+    try { renderGuildhallSummary(); } catch (_) {}
     const soulsSuffix = soulsReward > 0 ? ' +' + soulsReward + ' souls.' : '';
     let toastMsg = cfg.name + ' defeated.' + soulsSuffix;
 
