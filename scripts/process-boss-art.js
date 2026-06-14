@@ -9,11 +9,11 @@ const fs = require('fs');
 const path = require('path');
 
 const JOBS = [
-  { src: 'the-tideless-marcher.png',        dst: 'assets/bosses/the-tideless-marcher.png',        kind: 'boss' },
-  { src: 'striders-of-the-tideless-road.png', dst: 'assets/items/striders-of-the-tideless-road.png', kind: 'item' },
-  { src: 'mantle-of-the-long-vigil.png',    dst: 'assets/items/mantle-of-the-long-vigil.png',    kind: 'item' },
-  { src: 'band-of-the-roadkeeper.png',      dst: 'assets/items/band-of-the-roadkeeper.png',      kind: 'item' },
-  { src: 'restplate-of-the-wanderer.png',   dst: 'assets/items/restplate-of-the-wanderer.png',   kind: 'item' },
+  { src: 'the-sleepless-ascent.png',        dst: 'assets/bosses/the-sleepless-ascent.png',        kind: 'boss' },
+  { src: 'amulet-of-the-endless-stair.png', dst: 'assets/items/amulet-of-the-endless-stair.png', kind: 'item' },
+  { src: 'skyward-vigil-ring.png',          dst: 'assets/items/skyward-vigil-ring.png',          kind: 'item' },
+  { src: 'nightcrown-of-the-climb.png',     dst: 'assets/items/nightcrown-of-the-climb.png',     kind: 'item' },
+  { src: 'ascent-worn-cloak.png',           dst: 'assets/items/ascent-worn-cloak.png',           kind: 'item' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });
