@@ -28687,3 +28687,24 @@ button.guildhall-summary-tile:active {
 .wd-preview-blurb { margin-top: 13px; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 16px; color: #c8c6d8; }
 .wd-preview-soon { margin-top: 16px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #6b6b86; }
 .wd-preview-hint { margin-top: 6px; font-family: "JetBrains Mono", monospace; font-size: 8px; letter-spacing: 1.5px; color: #4a4a5e; }
+
+/* ══ W286 — Mythic rarity (the lone apex tier; only Nightfall holds it).
+   Prismatic gold-magenta-cyan, brighter and busier than ultra-rare's
+   purple/gold so the one Mythic in the game unmistakably outshines every
+   other drop. Appended last → wins on source order over the ultra rules. ══ */
+.bfs-last-drop[data-rarity="mythic"] { border-color: rgba(255,210,74,0.85); box-shadow: 0 0 16px rgba(255,210,74,0.55), 0 0 26px rgba(255,93,177,0.35), inset 0 1px 0 rgba(255,255,255,0.06); }
+.bfs-last-drop[data-rarity="mythic"] .bfs-last-drop-meta { color: #ffd24a; }
+.bfs-hunt-history-row-rarity[data-rarity="mythic"] { color: #ffd24a; background: rgba(255,210,74,0.12); border: 0.5px solid rgba(255,210,74,0.6); }
+.archive-card--new-mythic { box-shadow: 0 0 20px rgba(255,210,74,0.6), 0 0 32px rgba(255,93,177,0.35), inset 0 1px 0 rgba(255,255,255,0.05); }
+.market-sheet-art--mythic { border-color: rgba(255,210,74,0.6); background: radial-gradient(120% 120% at 50% 36%, rgba(255,210,74,0.22), rgba(255,93,177,0.12) 45%, #04040d 78%); box-shadow: 0 0 26px -5px rgba(255,210,74,0.55); }
+.market-sheet-rarity--mythic { color: #ffd24a; text-shadow: 0 0 12px rgba(255,210,74,0.4), 0 0 18px rgba(255,93,177,0.3); }
+.pokedex-card--mythic { border-color: rgba(255,210,74,0.7); box-shadow: 0 0 18px rgba(255,210,74,0.4), 0 0 26px rgba(255,93,177,0.28); }
+.pokedex-card--mythic .pokedex-card-art { background: linear-gradient(135deg, rgba(94,234,255,0.18), rgba(255,93,177,0.20), rgba(255,210,74,0.20), rgba(0,0,0,0.40)); }
+.reveal-overlay--mythic .reveal-particles { display: block; }
+.reveal-overlay--mythic .reveal-card { border-image: linear-gradient(135deg, #5eeaff 0%, #ff5db1 35%, #ffd24a 70%, #5eeaff 100%) 1; box-shadow: 0 0 34px rgba(255,210,74,0.55), 0 0 34px rgba(255,93,177,0.5), 0 0 34px rgba(94,234,255,0.4); }
+.reveal-overlay--showing.reveal-overlay--mythic .reveal-card { animation: reveal-card-materialize 0.6s 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, reveal-card-ultra-pulse 2.6s 1.0s ease-in-out infinite; }
+.reveal-overlay--mythic .reveal-card-rarity { background: linear-gradient(90deg, #5eeaff, #ff5db1, #ffd24a, #5eeaff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.carddetail-overlay--mythic .carddetail-modal { border-image: linear-gradient(135deg, #5eeaff 0%, #ff5db1 35%, #ffd24a 70%, #5eeaff 100%) 1; box-shadow: 0 0 26px rgba(255,210,74,0.45), 0 0 26px rgba(255,93,177,0.42), 0 0 26px rgba(94,234,255,0.32); }
+.carddetail-overlay--mythic .carddetail-rarity { background: linear-gradient(90deg, #5eeaff, #ff5db1, #ffd24a, #5eeaff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.bro-reward--relic[data-rarity="mythic"] { border-color: #ffd24a; box-shadow: 0 0 26px rgba(255,210,74,0.5), 0 0 30px rgba(255,93,177,0.3), inset 0 1px 0 rgba(255,255,255,0.06); }
+.bro-relic-rarity-pill[data-rarity="mythic"] { background: rgba(255,210,74,0.12); border-color: rgba(255,210,74,0.65); color: #ffd24a; box-shadow: 0 0 10px rgba(255,210,74,0.45); }

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w285';
+  const APP_BUILD_TAG = '2.2.6-w286';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -710,58 +710,30 @@
       statDomain:       'WILL',
     },
 
-    // ── v3 Phase W285 — S-rank dungeon ("The Sovereign Reach"). The summit of
-    // the dungeon: FOUR consecutive days/nights at peak thresholds. Souls
-    // economy already supports S (engage 800 / kill 1600). Rank-gated to S.
-    the_eternal_pilgrim: {
-      id:               'the_eternal_pilgrim',
-      name:             'The Eternal Pilgrim',
-      rank:             'S',
-      archetype:        'sustainer',
-      flavorShort:      'His road has no end, and he has already walked most of it.',
-      flavorLong:       'The first traveler, still walking the path he began before memory. None have kept his pace to the horizon. To match him four days unbroken is to glimpse what endlessness costs.',
-      killCondShort:    '15,000+ steps, 4 days back-to-back',
-      killCondLong:     'Walk at least 15,000 verified steps on four consecutive days inside the 4-day hunt window. The pilgrimage allows no rest — one short day and the road begins again.',
-      failedCopy:       'The horizon swallowed him. You stopped; he did not.',
-      stepThreshold:    15000,
-      consecutiveDays:  4,
-      streakTarget:     4,
-      cadence:          'daily',
-      huntWindowDays:   4,
-      statDomain:       'VIT',
-    },
-    the_titan_ascendant: {
-      id:               'the_titan_ascendant',
-      name:             'The Titan Ascendant',
-      rank:             'S',
-      archetype:        'aggressor',
-      flavorShort:      'The last weight you lift before the world cannot move you.',
-      flavorLong:       'A titan mid-ascension, hardened by labor beyond counting. It recognizes only relentless effort — four days of work, each harder than the last. Survive the climb and you rise with it.',
-      killCondShort:    '45+ workout minutes, 4 days back-to-back',
-      killCondLong:     'Complete at least 45 verified workout minutes on four consecutive days inside the 4-day hunt window. Any Apple Health workout type counts. A single day off ends the ascension.',
-      failedCopy:       'The ascent stalled. The titan turned to stone.',
-      workoutMinutes:   45,
-      consecutiveDays:  4,
-      streakTarget:     4,
-      cadence:          'daily',
-      huntWindowDays:   4,
-      statDomain:       'STR',
-    },
-    the_sovereign_of_hours: {
-      id:               'the_sovereign_of_hours',
-      name:             'The Sovereign of Hours',
+    // ── v3 Phase W286 — S-rank dungeon: the SOLE apex. ONE boss, the hardest
+    // condition in the app — 3 consecutive days each hitting ALL THREE pillars
+    // (steps + a workout + sleep). `tripleDaily` flags the new triple-AND
+    // resolver branch. Souls economy already supports S (engage 800 / kill
+    // 1600). Drops the only Mythic in the game (Nightfall) plus the 3 ultra
+    // Sovereign's Regalia pieces — see CARDS + the bespoke rollBossDrop path.
+    erebus_the_shadow_sovereign: {
+      id:               'erebus_the_shadow_sovereign',
+      name:             'Erebus, the Shadow Sovereign',
       rank:             'S',
       archetype:        'caster',
-      flavorShort:      'Even time bows to the one who masters the night.',
-      flavorLong:       'A crowned figure seated at the edge of every dawn. He rules the hours others squander. Keep eight true hours four nights running, and for a moment, time itself yields to you.',
-      killCondShort:    '8+ hours of sleep, 4 nights back-to-back',
-      killCondLong:     'Sleep at least 8 verified hours on four consecutive nights inside the 4-day hunt window. Eight hours, four nights, no exceptions — the sovereign does not bargain.',
-      failedCopy:       'The hours slipped your grasp. The sovereign reigns on.',
-      sleepHours:       8,
-      consecutiveNights: 4,
-      streakTarget:     4,
+      flavorShort:      'The crowned dark that waits at the summit of the climb.',
+      flavorLong:       'A sovereign wreathed in living shadow, throned above every lesser terror in the dungeon. He does not test one virtue but all at once — body, will, and rest, held together without falter. Master every discipline for three days unbroken, and the shadow yields what nothing else will: the regalia of the Sovereign himself.',
+      killCondShort:    '10k steps + a workout + 7h sleep — all three, 3 days back-to-back',
+      killCondLong:     'On three consecutive days inside the 3-day hunt window, every day must reach ALL THREE: 10,000 verified steps, a 30-minute workout, and 7 hours of sleep. Miss any single pillar on any day and the run resets to zero. The summit of the dungeon — and the only source of the Mythic blade Nightfall.',
+      failedCopy:       'One pillar fell, and the whole vigil with it. The shadow keeps its crown.',
+      tripleDaily:      true,
+      stepThreshold:    10000,
+      workoutMinutes:   30,
+      sleepHours:       7,
+      consecutiveDays:  3,
+      streakTarget:     3,
       cadence:          'daily',
-      huntWindowDays:   4,
+      huntWindowDays:   3,
       statDomain:       'WILL',
     },
   };
@@ -1279,8 +1251,58 @@
       // !cfg.consecutiveNights so a B-rank boss with both stepThreshold
       // AND consecutiveDays can't accidentally fire the single-day path.
 
+      // ── S-rank triple boss (Erebus, the Shadow Sovereign) ──
+      // W286 — every day in the run must hit ALL THREE pillars at once:
+      // steps + a workout + sleep. Build per-day flags by AND-ing the three
+      // metrics, then scan for `consecutiveDays` back-to-back days. Sits above
+      // the single-metric consecutive branches, which are guarded with
+      // !cfg.tripleDaily so this boss can never fire them on a single pillar.
+      if (cfg.tripleDaily === true &&
+          typeof cfg.stepThreshold === 'number' &&
+          typeof cfg.workoutMinutes === 'number' &&
+          typeof cfg.sleepHours === 'number' &&
+          typeof cfg.consecutiveDays === 'number' &&
+          typeof Health.getStepsBetween === 'function' &&
+          typeof Health.getStrengthWorkoutsBetween === 'function' &&
+          typeof Health.getSleepBetween === 'function') {
+        const days = _huntWindowLocalDays(start, evalEnd);
+        let _sleepRes = null;
+        try { _sleepRes = await Health.getSleepBetween(new Date(start - 12 * 3600 * 1000).toISOString(), new Date(evalEnd).toISOString()); } catch (_) { _sleepRes = null; }
+        const _sleepByDate = (_sleepRes && _sleepRes.byDate) || {};
+        const flags = [];
+        for (const dayIso of days) {
+          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+          let steps = null;
+          try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { steps = null; }
+          const stepsOk = typeof steps === 'number' && steps >= cfg.stepThreshold;
+          let workouts = null;
+          try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+          const wlist = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+          let totalMin = 0;
+          for (const w of wlist) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) totalMin += m; }
+          const workoutOk = totalMin >= cfg.workoutMinutes;
+          const _se = _sleepByDate[dayIso];
+          const sleepHrs = _se && typeof _se.totalAsleepHours === 'number' ? _se.totalAsleepHours : 0;
+          const sleepOk = sleepHrs >= cfg.sleepHours;
+          flags.push(stepsOk && workoutOk && sleepOk);
+        }
+        const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
+        const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
+        state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
+        setBossState(id, state);
+        if (scan.hitIndex >= 0) {
+          _awardHuntKillFromBackfill(id, cfg, days[scan.hitIndex]);
+          defeated = true;
+        }
+      }
+
       // ── B-rank steps boss (Patient Flame) ──────────────────
-      if (typeof cfg.consecutiveDays === 'number' &&
+      if (!defeated &&
+          cfg.tripleDaily !== true &&
+          typeof cfg.consecutiveDays === 'number' &&
           typeof cfg.stepThreshold === 'number' &&
           typeof Health.getStepsBetween === 'function') {
         const days = _huntWindowLocalDays(start, evalEnd);
@@ -1311,6 +1333,7 @@
       // semantics adapted to a window via getStrengthWorkoutsBetween;
       // we sum durations per day from the returned sample list.
       if (!defeated &&
+          cfg.tripleDaily !== true &&
           typeof cfg.consecutiveDays === 'number' &&
           typeof cfg.workoutMinutes === 'number' &&
           typeof cfg.activeEnergyKcal !== 'number' &&  // not the dual-condition boss
@@ -2795,6 +2818,68 @@
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
+
+    // ── W286 — Erebus, the Shadow Sovereign (S, the sole apex). Drops only
+    // these 4, all best-in-slot: the one Mythic in the game (Nightfall) + the
+    // 3 ultra "Sovereign's Regalia" pieces. Stats sit above the entire ultra
+    // ceiling so the set is provably BiS; the Mythic blade is the strongest
+    // item bar none and carries the Eclipse double-strike kit (WEAPON_MOVES).
+    nightfall_blade: {
+      id: 'nightfall_blade',
+      name: 'Nightfall, Blade of the Shadow Sovereign',
+      slot: 'weapon',
+      source_boss: 'erebus_the_shadow_sovereign',
+      rarity: 'mythic',
+      tier: 'S',
+      flavor: 'Forged from the eclipse itself, its edge falls twice — once through the light, and once through the shadow that follows. The only Mythic blade in existence. Best in slot, and beyond it.',
+      art_path: 'assets/items/nightfall-blade-of-the-sovereign.png',
+      bonuses:       { str: 14, vit: 6, int: 4, focus: 9, will: 9, wlt: 0 },
+      bonus_ranges:  { str: [12,16], vit: [4,8], int: [2,6], focus: [7,11], will: [7,11], wlt: [0,0] },
+      set_id: 'sovereign_regalia', required_level: null, special_effect: 'Eclipse: your signature strike lands twice.',
+      on_equip: null, cooldown_seconds: null,
+    },
+    crown_of_eternal_night: {
+      id: 'crown_of_eternal_night',
+      name: 'Crown of Eternal Night',
+      slot: 'helm',
+      source_boss: 'erebus_the_shadow_sovereign',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'The crown of the Shadow Sovereign, set with a gem that drinks the dawn. Best in slot.',
+      art_path: 'assets/items/crown-of-eternal-night.png',
+      bonuses:       { str: 5, vit: 9, int: 7, focus: 9, will: 7, wlt: 0 },
+      bonus_ranges:  { str: [3,7], vit: [7,11], int: [5,9], focus: [7,11], will: [5,9], wlt: [0,0] },
+      set_id: 'sovereign_regalia', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    mantle_of_the_sovereign: {
+      id: 'mantle_of_the_sovereign',
+      name: 'Mantle of the Shadow Sovereign',
+      slot: 'body',
+      source_boss: 'erebus_the_shadow_sovereign',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'A regal mantle of obsidian plate and torn shadow, worn only by the one who rules the summit. Best in slot.',
+      art_path: 'assets/items/mantle-of-the-shadow-sovereign.png',
+      bonuses:       { str: 9, vit: 13, int: 3, focus: 6, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [7,11], vit: [11,15], int: [1,5], focus: [4,8], will: [4,8], wlt: [0,0] },
+      set_id: 'sovereign_regalia', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    greaves_of_the_umbral_throne: {
+      id: 'greaves_of_the_umbral_throne',
+      name: 'Greaves of the Umbral Throne',
+      slot: 'legs',
+      source_boss: 'erebus_the_shadow_sovereign',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'Greaves cut from the throne of endless dusk, gold-veined and wreathed in shadow. Best in slot.',
+      art_path: 'assets/items/greaves-of-the-umbral-throne.png',
+      bonuses:       { str: 8, vit: 9, int: 3, focus: 7, will: 7, wlt: 0 },
+      bonus_ranges:  { str: [6,10], vit: [7,11], int: [1,5], focus: [5,9], will: [5,9], wlt: [0,0] },
+      set_id: 'sovereign_regalia', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
   };
 
   // Slot icons for placeholder rendering (until DALL-E art lands at
@@ -2817,6 +2902,7 @@
     common:     'Common',
     rare:       'Rare',
     ultra_rare: 'Ultra-Rare',
+    mythic:     'Mythic',
   };
 
   // Drop rates per DROPS.md v1.4 — CADENCE-AWARE. Weekly bosses kill
@@ -2955,6 +3041,7 @@
     common:     1,
     rare:       3,
     ultra_rare: Infinity,
+    mythic:     Infinity,
   };
 
   let _souls = null; // lazy-loaded; loadSouls() initializes
@@ -6253,6 +6340,7 @@
     titan_oathblade: ['aggressor', 'juggernaut'], hammerfall_warmaul: ['sentinel'],
     kilnforged_warblade: ['aggressor'], ten_thousand_step_blade: ['trickster', 'glasscannon'],
     vessel_of_refusal: ['sentinel'],
+    nightfall_blade: ['aggressor', 'glasscannon', 'juggernaut', 'sentinel', 'trickster', 'balanced'],
   };
   let _arSeedCtr = 0;
   function _arMulberry32(a) {
@@ -6275,6 +6363,7 @@
     cleave:     { name: 'Cleave',       gl: 'sword',  power: 1.55, acc: 0.82, cd: 2, desc: 'Wide, heavy swing.' },
     crush:      { name: 'Crush',        gl: 'sword',  power: 1.55, acc: 0.78, cd: 2, desc: 'Bone-breaking blow.' },
     oathstrike: { name: 'Oathstrike',   gl: 'sword',  power: 1.95, acc: 0.88, cd: 3, desc: 'A vow made steel.' },
+    eclipse:    { name: 'Eclipse',      gl: 'sword',  power: 1.1,  acc: 0.9,  hits: 2, cd: 2, desc: 'Strikes twice — once in light, once in shadow.' },
     flurry:     { name: 'Flurry',       gl: 'dagger', power: 0.5,  acc: 0.95, hits: 3, cd: 1, desc: 'Three fast cuts.' },
     quickstep:  { name: 'Quickstep',    gl: 'dagger', power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Always strikes first.' },
     thousand:   { name: 'Thousand Cuts',gl: 'dagger', power: 0.45, acc: 0.95, hits: 4, cd: 3, desc: 'A storm of blades.' },
@@ -6303,6 +6392,7 @@
     kilnforged_warblade:   ['searing', 'ember', 'temper', 'immolate'],
     ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
     vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
+    nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
   // W234 rearmament: walls (sentinel/juggernaut) carry REFUSE so they can
@@ -10054,6 +10144,7 @@
 
     const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
     const pools = {
+      mythic:     bossCards.filter(c => c.rarity === 'mythic'),
       ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
       rare:       bossCards.filter(c => c.rarity === 'rare'),
       common:     bossCards.filter(c => c.rarity === 'common'),
@@ -10078,6 +10169,15 @@
     let dropped = null;
     let fromPity = false;
     let pityType = null;
+    // W286 — Erebus (S apex) bespoke table: 1% Mythic / 30% ultra (10/10/10
+    // split across the 3 Regalia pieces) / 69% nothing. No commons, no rares,
+    // and NO pity machinery — the Mythic Nightfall is a true 1% chase. The
+    // shared awarding tail below still runs on whatever this picks.
+    if (cfg.tripleDaily === true) {
+      const _r = Math.random();
+      if (_r < 0.01 && pools.mythic && pools.mythic.length) dropped = pickFromPool(pools.mythic);
+      else if (_r < 0.31 && pools.ultra_rare.length) dropped = pickFromPool(pools.ultra_rare);
+    } else {
     if (Math.random() < effectiveUltraRate && pools.ultra_rare.length) {
       dropped = pickFromPool(pools.ultra_rare);
       if (ultraHardForced) { fromPity = true; pityType = 'ultra_hard'; }
@@ -10115,6 +10215,8 @@
         if (dropped) { fromPity = true; pityType = 'any_drop'; }
       }
     }
+
+    } // end standard (non-Erebus) selection + pity
 
     // No drop AND no pity → record the empty kill and bail.
     if (!dropped) {
@@ -10155,7 +10257,7 @@
     }
 
     // Queue reveal modal for first-acquisition rare/ultra-rare drops.
-    if (wasFirstAcquisition && !wasCapped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare')) {
+    if (wasFirstAcquisition && !wasCapped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare' || dropped.rarity === 'mythic')) {
       if (!inv.reveal_queue.includes(dropped.id)) inv.reveal_queue.push(dropped.id);
     }
 
