@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w292';
+  const APP_BUILD_TAG = '2.2.6-w293';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6090,14 +6090,14 @@
   // left F4–F5 as power-walls for a fresh account; the remaining ramp misses are
   // structural — %maxHP DoT/heals — and are reported in the doc, not tunable here).
   const _ASCENT_RAMP_ANCHOR = 1.0, _ASCENT_RAMP_SLOPE = 0.7;   // F1–F5 = anchor + slope×(f−1)
-  // W291 — verified (via Arena.simAscent, 60k+ seeded battles): the max build is
-  // VIT-heavy → SENTINEL, which is type-WEAK vs the Trickster summit, so despite
-  // raw power ≈468-479 > F100≈446 the summit is NOT a stomp — Nightfall ~85% /
-  // Duskforge ~65% at F100, both clearly doable, F1-90 ~100%. Already in the
-  // sweet spot, so the floor curve is left UNCHANGED. (A 0.55×maxHP per-move
-  // damage cap pins fights at ~5 turns regardless of HP, and the Nightfall-vs-
-  // Duskforge gap is structurally ~20pts, so 90/60 isn't jointly reachable by
-  // floor tuning — see Arena.simAscent.)
+  // W293 — verified (Arena.simAscent): after the OSRS stat re-pairing (attack=STR,
+  // defense=INT+VIT, edge=FOCUS+WILL) the BiS max build's stats are spread enough
+  // that it derives to NEUTRAL (no role >40% share), so the summit is decided by
+  // power + kit, not a type headwind. Profile weights (STR×2.3 / (INT+VIT)×1.15 /
+  // (FOCUS+WILL)×1.15, max power ≈503) are tuned so F100 stays in the doable band:
+  // Nightfall ~85% / Duskforge ~63%, F1-90 ~100%. Floor curve UNCHANGED. All three
+  // styles stay reachable by skewed builds; the ~0.55×maxHP per-move damage cap
+  // still pins fights at ~5 turns — see Arena.simAscent.)
   function _ascentFloorPower(floor) {
     const f = Math.max(1, floor);
     if (f <= 5) return _ASCENT_RAMP_ANCHOR + _ASCENT_RAMP_SLOPE * (f - 1);
@@ -6125,13 +6125,18 @@
 
   // Archetypes redistribute an opponent's total power across the three
   // roles (sum of weights = 3, so total power is preserved).
+  // W293 — labels are the player-facing OSRS combat-style names; the KEYS stay
+  // (aggressor/sentinel/trickster) so _ARENA_EFF_EDGES, ARCH_MOVES, _WEAPON_ATTUNE,
+  // sprite paths + selfTest are all untouched. Key→style: aggressor=Melee,
+  // sentinel=Magic, trickster=Ranged. (Independent of the dungeon BOSS_CONFIG
+  // 'aggressor/sustainer/caster' flavor field — a different system.)
   const ASCENT_ARCHETYPES = {
-    balanced:    { label: 'Balanced',     atk: 1.00, def: 1.00, edge: 1.00 },
-    aggressor:   { label: 'Aggressor',    atk: 1.45, def: 0.80, edge: 0.75 },
-    sentinel:    { label: 'Sentinel',     atk: 0.80, def: 1.45, edge: 0.75 },
-    trickster:   { label: 'Trickster',    atk: 0.78, def: 0.77, edge: 1.45 },
-    glasscannon: { label: 'Glass Cannon', atk: 1.70, def: 0.55, edge: 0.75 },
-    juggernaut:  { label: 'Juggernaut',   atk: 0.75, def: 1.70, edge: 0.55 },
+    balanced:    { label: 'Neutral',       atk: 1.00, def: 1.00, edge: 1.00 },
+    aggressor:   { label: 'Melee',         atk: 1.45, def: 0.80, edge: 0.75 },
+    sentinel:    { label: 'Magic',         atk: 0.80, def: 1.45, edge: 0.75 },
+    trickster:   { label: 'Ranged',        atk: 0.78, def: 0.77, edge: 1.45 },
+    glasscannon: { label: 'Intense Melee', atk: 1.70, def: 0.55, edge: 0.75 },
+    juggernaut:  { label: 'Intense Magic', atk: 0.75, def: 1.70, edge: 0.55 },
   };
 
   // 10 hand-crafted milestone bosses (floor → boss). Each grants a title.
@@ -6318,18 +6323,23 @@
     });
     return out; // { STR, VIT, INT, FOCUS, WILL, WLT }
   }
-  // Map five stats to combat roles. WLT (Wealth) is intentionally EXCLUDED —
-  // it has no combat role (see the 1z.277 reward-only design); folding it into
-  // EDGE was a mistake. EDGE = INT × 1.6 so a balanced build's power is
-  // unchanged (old INT×0.8 + WLT×0.8 == 1.6·INT when INT==WLT), keeping the
-  // tower curve anchored — only Wealth-heavy builds lose (intended).
-  //   Attack  = STR(lead) + FOCUS(accuracy)
-  //   Defense = VIT(lead) + WILL(resilience)
-  //   Edge    = INT(initiative / finesse)
+  // W293 — combat roles re-paired to the OSRS fighting-style triangle (the
+  // player-facing names Melee/Magic/Ranged; internal archetype KEYS unchanged —
+  // see ASCENT_ARCHETYPES). WLT (Wealth) stays EXCLUDED (reward-only). Weights
+  // are role-normalized: STR is the lone Melee stat so it carries ~2× the
+  // per-stat weight of the two-stat roles, so a FLAT build lands all three roles
+  // equal (→ balanced) with the SAME total power as the old formula (tower curve
+  // stays anchored). Weights are sim-locked (see the function below).
+  //   Attack  (Melee)  = STR
+  //   Defense (Magic)  = INT + VIT      (toughness / HP)
+  //   Edge    (Ranged) = FOCUS + WILL   (accuracy / crit / initiative)
+  // Locked weights (W293 sim sweep): STR is the lone Melee stat at ×2.3, equal to
+  // each of the four two-stat-role stats ×1.15 ×2 — so a FLAT build is balanced and
+  // the BiS max build derives to Neutral; F100 win ~85% (Nightfall) / ~63% (Duskforge).
   function _arenaCombatProfile(s) {
-    const attack  = s.STR * 1.6 + s.FOCUS * 1.0;
-    const defense = s.VIT * 1.4 + s.WILL * 1.0;
-    const edge    = s.INT * 1.6;
+    const attack  = s.STR * 2.3;                       // Melee
+    const defense = (s.INT + s.VIT) * 1.15;            // Magic
+    const edge    = (s.FOCUS + s.WILL) * 1.15;         // Ranged
     return { attack, defense, edge, power: attack + defense + edge, stats: s };
   }
 
@@ -7919,9 +7929,9 @@
     const eff = _arenaEffectiveness(playerArch, foeArch);
     const foeLabel = (ASCENT_ARCHETYPES[foeArch] || {}).label || 'Foe';
     const roles = [
-      { key: 'ATTACK',  pv: P.attack,  fv: F.attack,  parts: [['STR', 1.6], ['FOCUS', 1.0]] },
-      { key: 'DEFENSE', pv: P.defense, fv: F.defense, parts: [['VIT', 1.4], ['WILL', 1.0]] },
-      { key: 'EDGE',    pv: P.edge,    fv: F.edge,    parts: [['INT', 1.6]] },
+      { key: 'ATTACK',  label: 'ATTACK · Melee',   pv: P.attack,  fv: F.attack,  parts: [['STR', 2.3]] },
+      { key: 'DEFENSE', label: 'DEFENSE · Magic',  pv: P.defense, fv: F.defense, parts: [['INT', 1.15], ['VIT', 1.15]] },
+      { key: 'EDGE',    label: 'EDGE · Ranged',    pv: P.edge,    fv: F.edge,    parts: [['FOCUS', 1.15], ['WILL', 1.15]] },
     ];
     let rows = '';
     roles.forEach((r) => {
@@ -7938,13 +7948,13 @@
           (g > 0 ? ' <b class="rel">+' + g + '</b>' : '') + '</span><span class="ct">' + contrib + '</span></span>';
       }).join('');
       const detail = '<div class="asc-tale-calc">' + partHtml +
-        '<span class="cp total"><span class="s">' + r.key + '</span><span class="src"></span>' +
+        '<span class="cp total"><span class="s">' + r.label + '</span><span class="src"></span>' +
         '<span class="ct">' + pv + '</span></span></div>' +
         '<div class="asc-tale-note">' + (youLead ? 'You lead this exchange.' : 'They lead this exchange.') + '</div>';
       rows += '<div class="asc-tale-row" data-ar="tale" data-role="' + r.key + '">' +
         '<div class="asc-tale-head">' +
           '<span class="pv' + (youLead ? ' lead' : '') + '">' + pv + '</span>' +
-          '<span class="mid"><span class="rk">' + r.key + '<svg width="8" height="5" viewBox="0 0 8 5" class="chev"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg></span>' +
+          '<span class="mid"><span class="rk">' + r.label + '<svg width="8" height="5" viewBox="0 0 8 5" class="chev"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg></span>' +
             '<span class="asc-tale-bars"><span class="b you"><i style="width:' + Math.round(pv / max * 100) + '%"></i></span>' +
               '<span class="b foe"><i style="width:' + Math.round(fv / max * 100) + '%"></i></span></span></span>' +
           '<span class="fv' + (youLead ? '' : ' lead') + '">' + fv + '</span>' +
@@ -8563,7 +8573,7 @@
   function _pkbArchTint(archKey) {
     if (archKey === 'aggressor' || archKey === 'glasscannon') return '#ef4444';
     if (archKey === 'sentinel' || archKey === 'juggernaut') return '#3b82f6';
-    if (archKey === 'trickster') return '#a78bfa';
+    if (archKey === 'trickster') return '#22c55e';   // W293 — Ranged = OSRS green
     return '#6b6b86';
   }
   // W249 — tier backgrounds. Tier derivation = _ascentBandFor — the ONE shared
