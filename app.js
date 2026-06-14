@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w290';
+  const APP_BUILD_TAG = '2.2.6-w292';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13958,6 +13958,13 @@
     // backend cap in backend/src/lib/metrics.ts (1000 = ~3-5× the
     // world-class human max).
     flights_climbed: 1000,
+    // W292 BUGFIX — the Ascent tops out at floor 100 (mirrors backend
+    // METRIC_CAPS.floor_best). This entry was MISSING, so lbSanitizeValue did
+    // Math.min(floor, LB_CLIENT_CAPS['floor_best'] || 0) = Math.min(floor, 0) = 0
+    // — every floor_best submit was zeroed before sending, so the Highest-Floor
+    // board showed every OTHER real player at Floor 0 (your own row was correct
+    // only because it reads highestCleared directly, bypassing the sanitizer).
+    floor_best:     100,
   };
   function lbSanitizeValue(metric, raw) {
     const n = Number(raw);
