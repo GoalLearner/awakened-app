@@ -52,7 +52,7 @@ describe('GET /v1/users/:alias/profile', () => {
       alias: 'legacy', rank_label: 'C I', rank_tier: 'C', power: 1782,
       avatar_id: null, arena_title: null, bosses_slain_total: 60,
       ultra_rare_drops_total: 5, verified_streak_label: null,
-      avg_steps_per_day: null, step_week: 94194, best_floor: 53,
+      avg_steps_per_day: 0, step_week: 94194, best_floor: 53,   // DEFAULT-0 existing row
     });
     const res = await handlePublicProfileGet(req(), makeEnv(db), session, 'legacy');
     const b = await res.json() as Record<string, unknown>;

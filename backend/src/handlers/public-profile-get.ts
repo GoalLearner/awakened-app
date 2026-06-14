@@ -82,7 +82,7 @@ export async function handlePublicProfileGet(
     bossesSlain: row.bosses_slain_total ?? 0,
     ultraRareDrops: row.ultra_rare_drops_total ?? 0,
     verifiedStreakLabel: row.verified_streak_label,
-    avgStepsPerDay: row.avg_steps_per_day ?? Math.round(stepWeek / 7),
+    avgStepsPerDay: row.avg_steps_per_day || Math.round(stepWeek / 7),
     bestFloor: row.best_floor ?? 0,
   });
 }
