@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w283';
+  const APP_BUILD_TAG = '2.2.6-w284';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20687,6 +20687,11 @@
     { id: 'avatar-skin-nullprotocol-2.png', name: 'Null Protocol II',   file: 'avatar-skin-nullprotocol-2.png',  rarity: 'mythic',    owned: false, blurb: "A glitch the system couldn't contain." },
     { id: 'avatar-skin-emberforged.png',    name: 'Emberforged',        file: 'avatar-skin-emberforged.png',     rarity: 'legendary', owned: false, blurb: "Forged in the mountain's heart, never cooled." },
     { id: 'avatar-skin-voidtouched.png',    name: 'The Void-Touched',   file: 'avatar-skin-voidtouched.png',     rarity: 'legendary', owned: false, blurb: 'Something reached back.' },
+    // W284 — female line
+    { id: 'avatar-skin-frostweaver.png',    name: 'Frostweaver',        file: 'avatar-skin-frostweaver.png',     rarity: 'mythic',    owned: false, blurb: 'Winter answers when she calls.' },
+    { id: 'avatar-skin-tempest.png',        name: 'Tempest',            file: 'avatar-skin-tempest.png',         rarity: 'mythic',    owned: false, blurb: "She doesn't chase the storm. She is it." },
+    { id: 'avatar-skin-verdant.png',        name: 'The Verdant Oracle', file: 'avatar-skin-verdant.png',         rarity: 'legendary', owned: false, blurb: 'The forest wears her like a crown.' },
+    { id: 'avatar-skin-bloodmoon.png',      name: 'Bloodmoon',          file: 'avatar-skin-bloodmoon.png',       rarity: 'legendary', owned: false, blurb: 'Beautiful, and the last thing they see.' },
   ];
   const AVATAR_SKIN_KEY = 'hb_avatar_skin';   // equipped skin file; '' / absent = class default
   function getEquippedSkin() { try { return localStorage.getItem(AVATAR_SKIN_KEY) || ''; } catch (_) { return ''; } }
