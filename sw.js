@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.637';
+const CACHE_VERSION = 'v5.638';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -125,6 +125,11 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_lunge.m4a',
   '/assets/audio/sfx_hit_normal.m4a',
   '/assets/audio/sfx_hit_crit.m4a',
+  '/assets/audio/sfx_hit_slice.m4a',
+  '/assets/audio/sfx_hit_burst.m4a',
+  '/assets/audio/sfx_hit_heavy.m4a',
+  '/assets/audio/sfx_hit_magic.m4a',
+  '/assets/audio/sfx_hit_arrow.m4a',
   '/assets/audio/sfx_miss_dodge.m4a',
   '/assets/audio/sfx_hp_drain.m4a',
   '/assets/audio/sfx_ko.m4a',
