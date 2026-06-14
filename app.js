@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w284';
+  const APP_BUILD_TAG = '2.2.6-w285';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -651,6 +651,118 @@
       cadence:          'daily',
       huntWindowDays:   2,   // W263 — a back-to-back pair needs two days
       statDomain:       'FOCUS',
+    },
+
+    // ── v3 Phase W285 — A-rank dungeon ("The Apex Reach"). Escalates the
+    // B-rank "2 days back-to-back" to THREE consecutive days/nights at higher
+    // thresholds. Same resolver paths as B (steps/workout/sleep × consecutive);
+    // souls economy already supports A (engage 400 / kill 800). Rank-gated via
+    // isGateUnlocked; engageBoss refuses defensively below A.
+    the_tideless_marcher: {
+      id:               'the_tideless_marcher',
+      name:             'The Tideless Marcher',
+      rank:             'A',
+      archetype:        'sustainer',
+      flavorShort:      'He has not stopped walking since the world was young.',
+      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire, does not slow, does not stop. To stand against him you must match his pace three days running — break stride once, and he leaves you behind.',
+      killCondShort:    '12,000+ steps, 3 days back-to-back',
+      killCondLong:     'Walk at least 12,000 verified steps on three consecutive days inside the 3-day hunt window. Miss a single day\'s distance and the march resets.',
+      failedCopy:       'You fell behind. The march went on without you.',
+      stepThreshold:    12000,
+      consecutiveDays:  3,
+      streakTarget:     3,
+      cadence:          'daily',
+      huntWindowDays:   3,
+      statDomain:       'VIT',
+    },
+    the_unbroken_anvil: {
+      id:               'the_unbroken_anvil',
+      name:             'The Unbroken Anvil',
+      rank:             'A',
+      archetype:        'aggressor',
+      flavorShort:      'Every blow that ever struck it only made it harder.',
+      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It answers only to those who return to the work day after day. Three days at the forge — no less will move it.',
+      killCondShort:    '40+ workout minutes, 3 days back-to-back',
+      killCondLong:     'Complete at least 40 verified workout minutes on three consecutive days inside the 3-day hunt window. Any Apple Health workout type counts. One rest day and the steel cools.',
+      failedCopy:       'The forge went cold. The anvil sealed.',
+      workoutMinutes:   40,
+      consecutiveDays:  3,
+      streakTarget:     3,
+      cadence:          'daily',
+      huntWindowDays:   3,
+      statDomain:       'STR',
+    },
+    the_vigil: {
+      id:               'the_vigil',
+      name:             'The Vigil',
+      rank:             'A',
+      archetype:        'caster',
+      flavorShort:      'He keeps watch over the promises you make at night.',
+      flavorLong:       'A hooded sentinel who guards the threshold of rest. He weighs not the hours you mean to sleep, but the ones you actually take. Keep faith three nights running, and he stands aside.',
+      killCondShort:    '7.5+ hours of sleep, 3 nights back-to-back',
+      killCondLong:     'Sleep at least 7.5 verified hours on three consecutive nights inside the 3-day hunt window. A single short night breaks the vigil.',
+      failedCopy:       'The vigil broke. Sleep was owed, and unpaid.',
+      sleepHours:       7.5,
+      consecutiveNights: 3,
+      streakTarget:     3,
+      cadence:          'daily',
+      huntWindowDays:   3,
+      statDomain:       'WILL',
+    },
+
+    // ── v3 Phase W285 — S-rank dungeon ("The Sovereign Reach"). The summit of
+    // the dungeon: FOUR consecutive days/nights at peak thresholds. Souls
+    // economy already supports S (engage 800 / kill 1600). Rank-gated to S.
+    the_eternal_pilgrim: {
+      id:               'the_eternal_pilgrim',
+      name:             'The Eternal Pilgrim',
+      rank:             'S',
+      archetype:        'sustainer',
+      flavorShort:      'His road has no end, and he has already walked most of it.',
+      flavorLong:       'The first traveler, still walking the path he began before memory. None have kept his pace to the horizon. To match him four days unbroken is to glimpse what endlessness costs.',
+      killCondShort:    '15,000+ steps, 4 days back-to-back',
+      killCondLong:     'Walk at least 15,000 verified steps on four consecutive days inside the 4-day hunt window. The pilgrimage allows no rest — one short day and the road begins again.',
+      failedCopy:       'The horizon swallowed him. You stopped; he did not.',
+      stepThreshold:    15000,
+      consecutiveDays:  4,
+      streakTarget:     4,
+      cadence:          'daily',
+      huntWindowDays:   4,
+      statDomain:       'VIT',
+    },
+    the_titan_ascendant: {
+      id:               'the_titan_ascendant',
+      name:             'The Titan Ascendant',
+      rank:             'S',
+      archetype:        'aggressor',
+      flavorShort:      'The last weight you lift before the world cannot move you.',
+      flavorLong:       'A titan mid-ascension, hardened by labor beyond counting. It recognizes only relentless effort — four days of work, each harder than the last. Survive the climb and you rise with it.',
+      killCondShort:    '45+ workout minutes, 4 days back-to-back',
+      killCondLong:     'Complete at least 45 verified workout minutes on four consecutive days inside the 4-day hunt window. Any Apple Health workout type counts. A single day off ends the ascension.',
+      failedCopy:       'The ascent stalled. The titan turned to stone.',
+      workoutMinutes:   45,
+      consecutiveDays:  4,
+      streakTarget:     4,
+      cadence:          'daily',
+      huntWindowDays:   4,
+      statDomain:       'STR',
+    },
+    the_sovereign_of_hours: {
+      id:               'the_sovereign_of_hours',
+      name:             'The Sovereign of Hours',
+      rank:             'S',
+      archetype:        'caster',
+      flavorShort:      'Even time bows to the one who masters the night.',
+      flavorLong:       'A crowned figure seated at the edge of every dawn. He rules the hours others squander. Keep eight true hours four nights running, and for a moment, time itself yields to you.',
+      killCondShort:    '8+ hours of sleep, 4 nights back-to-back',
+      killCondLong:     'Sleep at least 8 verified hours on four consecutive nights inside the 4-day hunt window. Eight hours, four nights, no exceptions — the sovereign does not bargain.',
+      failedCopy:       'The hours slipped your grasp. The sovereign reigns on.',
+      sleepHours:       8,
+      consecutiveNights: 4,
+      streakTarget:     4,
+      cadence:          'daily',
+      huntWindowDays:   4,
+      statDomain:       'WILL',
     },
   };
 
