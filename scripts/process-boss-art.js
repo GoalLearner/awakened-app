@@ -9,11 +9,11 @@ const fs = require('fs');
 const path = require('path');
 
 const JOBS = [
-  { src: 'the-sleepless-ascent.png',        dst: 'assets/bosses/the-sleepless-ascent.png',        kind: 'boss' },
-  { src: 'amulet-of-the-endless-stair.png', dst: 'assets/items/amulet-of-the-endless-stair.png', kind: 'item' },
-  { src: 'skyward-vigil-ring.png',          dst: 'assets/items/skyward-vigil-ring.png',          kind: 'item' },
-  { src: 'nightcrown-of-the-climb.png',     dst: 'assets/items/nightcrown-of-the-climb.png',     kind: 'item' },
-  { src: 'ascent-worn-cloak.png',           dst: 'assets/items/ascent-worn-cloak.png',           kind: 'item' },
+  { src: 'the-unbroken-anvil.png',           dst: 'assets/bosses/the-unbroken-anvil.png',           kind: 'boss' },
+  { src: 'duskforge-the-anvils-verdict.png', dst: 'assets/items/duskforge-the-anvils-verdict.png', kind: 'item' },
+  { src: 'forgewarden-gauntlets.png',        dst: 'assets/items/forgewarden-gauntlets.png',        kind: 'item' },
+  { src: 'anvilrest-cuirass.png',            dst: 'assets/items/anvilrest-cuirass.png',            kind: 'item' },
+  { src: 'charm-of-the-emberkeeper.png',     dst: 'assets/items/charm-of-the-emberkeeper.png',     kind: 'item' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });
