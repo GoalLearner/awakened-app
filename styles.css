@@ -14526,6 +14526,14 @@ body.bfs-locked { overflow: hidden; }
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.20);
 }
 
+/* W289 — MEGA RARE header: prismatic gradient text, the apex tier */
+.archive-rarity-header--mythic .pokedex-section-label {
+  background: linear-gradient(90deg, #5eeaff, #ff5db1, #ffd24a, #5eeaff);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 14px rgba(255, 210, 74, 0.30);
+}
+
 /* ─── Mystery (undiscovered) info modal ────────────────────── */
 .mystery-card-overlay {
   position: fixed;

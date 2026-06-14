@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w288';
+  const APP_BUILD_TAG = '2.2.6-w289';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3045,7 +3045,7 @@
     common:     'Common',
     rare:       'Rare',
     ultra_rare: 'Ultra-Rare',
-    mythic:     'Mythic',
+    mythic:     'Mega-Rare',
   };
 
   // Drop rates per DROPS.md v1.4 — CADENCE-AWARE. Weekly bosses kill
@@ -3184,7 +3184,7 @@
     common:     1,
     rare:       3,
     ultra_rare: Infinity,
-    mythic:     Infinity,
+    mythic:     1,            // W289 — the one Mega-Rare is unique per account
   };
 
   let _souls = null; // lazy-loaded; loadSouls() initializes
@@ -9852,9 +9852,9 @@
   // Rounded to the nearest 10. A late-game B-rank ultra runs ~7× an
   // early E-rank rare. TIER_BASE includes A/S so future content prices
   // itself automatically. All knobs are tunable here.
-  const RELIC_TRADEABLE_RARITIES = { rare: true, ultra_rare: true };
+  const RELIC_TRADEABLE_RARITIES = { rare: true, ultra_rare: true, mythic: true };
   const RELIC_TIER_BASE   = { E: 90, D: 160, C: 280, B: 480, A: 760, S: 1200 };
-  const RELIC_RARITY_MULT = { rare: 1.0, ultra_rare: 1.9 };
+  const RELIC_RARITY_MULT = { rare: 1.0, ultra_rare: 1.9, mythic: 3.6 };
   const RELIC_STAT_WEIGHT = 10;    // souls per total stat-bonus point
   const RELIC_SELL_RATIO  = 0.70;  // sell = 70% of buy (recover 70%, ~1.4× spread)
 
@@ -9875,6 +9875,10 @@
   function relicBuyPrice(cardId) {
     const card = CARDS[cardId];
     if (!card || !_relicIsTradeable(cardId)) return null;
+    // W289 — Nightfall (the one Mega-Rare) is HAND-PRICED, not formula-derived:
+    // ~100 S-boss defeats (100 x 800 net souls) + mythic prestige premium + stats.
+    // The bare formula (S-base x 3.6 + stats) would undervalue a unique BiS item.
+    if (card.id === 'nightfall_blade') return 88000;
     const base = (RELIC_TIER_BASE[card.tier] != null) ? RELIC_TIER_BASE[card.tier] : RELIC_TIER_BASE.C;
     const mult = RELIC_RARITY_MULT[card.rarity] || 1;
     const raw  = base * mult + RELIC_STAT_WEIGHT * _relicTotalBonus(card);
@@ -9883,7 +9887,11 @@
   function relicSellPrice(cardId) {
     const buy = relicBuyPrice(cardId);
     if (buy == null) return null;
-    return Math.max(10, Math.round(buy * RELIC_SELL_RATIO / 10) * 10);
+    // W289 — the Mega-Rare cashes out at only 10% (vs 70% rare/ultra): a lucky 1%
+    // Erebus drop is a modest windfall, but the 88k buy is never a profitable flip.
+    const card = CARDS[cardId];
+    const ratio = (card && card.rarity === 'mythic') ? 0.10 : RELIC_SELL_RATIO;
+    return Math.max(10, Math.round(buy * ratio / 10) * 10);
   }
 
   // Pre-flight checks. Both return { ok, reason, ... } so the UI can
@@ -12165,6 +12173,7 @@
     } catch (_) {}
 
     const sections = [
+      { key: 'mythic',     label: 'MEGA RARE' },
       { key: 'ultra_rare', label: 'ULTRA-RARE RELICS' },
       { key: 'rare',       label: 'RARE RELICS' },
       { key: 'common',     label: 'COMMON RELICS' },
@@ -12275,7 +12284,7 @@
       const bodyHtml = visibleCards.length === 0
         ? '<div class="pokedex-section-empty">No items in this tier yet.</div>'
         : '<div class="pokedex-grid">' + cardsHtml + '</div>';
-      const headerExtra = s.key === 'ultra_rare' ? ' archive-rarity-header--ultra' : '';
+      const headerExtra = s.key === 'mythic' ? ' archive-rarity-header--mythic' : (s.key === 'ultra_rare' ? ' archive-rarity-header--ultra' : '');
       return (
         '<div class="pokedex-section pokedex-section--' + s.key + (isCollapsed ? ' pokedex-section--collapsed' : '') + '" data-section-key="' + s.key + '">' +
           '<button class="pokedex-section-header archive-rarity-header' + headerExtra + '" type="button" data-section-toggle="' + s.key + '" aria-expanded="' + (isCollapsed ? 'false' : 'true') + '">' +
