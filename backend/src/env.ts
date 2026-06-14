@@ -43,6 +43,14 @@ export interface Env {
    * Value: "LK8FVGBQPL". Set with `wrangler secret put APPLE_TEAM_ID`. */
   APPLE_TEAM_ID: string;
 
+  /** Shared secret for the RevenueCat purchase webhook (skin IAP, W297).
+   * The EXACT value RevenueCat sends in the Authorization header — set the
+   * same string here and in the RevenueCat dashboard (Project → Webhooks →
+   * Authorization header). Recommended form: "Bearer <openssl rand -hex 32>".
+   * Set with `wrangler secret put REVENUECAT_WEBHOOK_AUTH`. The webhook fails
+   * closed if this is unset, so a misconfigured deploy can't grant skins. */
+  REVENUECAT_WEBHOOK_AUTH: string;
+
   /** Rate limiters — one per endpoint. Cloudflare's API supports only
    * 10s or 60s periods, so the "12/hour" submit cap from BACKEND.md §8
    * is approximated as 2/minute (≈ 120/hour). Client-side debounce at

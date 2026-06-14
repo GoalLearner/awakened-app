@@ -31,6 +31,8 @@ import { handleStep100kClub } from './handlers/step-100k-club';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleUserAccoladesGet } from './handlers/accolades';
+import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
+import { handleEntitlementsGet } from './handlers/iap-entitlements';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import { handleHallFinishPost, handleHallGet } from './handlers/hall-of-awakened';
 import { handlePublicProfileGet } from './handlers/public-profile-get';
@@ -90,6 +92,12 @@ export default {
       if (path === '/v1/auth/verify' && method === 'POST') {
         response = await handleAuthVerify(request, env);
       }
+      // ── RevenueCat purchase webhook (W297 — public; shared-secret auth) ──
+      // Called by RevenueCat's servers, not the app, so it has no session JWT;
+      // it authenticates via the REVENUECAT_WEBHOOK_AUTH shared secret instead.
+      else if (path === '/v1/iap/revenuecat-webhook' && method === 'POST') {
+        response = await handleRevenueCatWebhook(request, env);
+      }
       // ── Health check (uncached, no auth) ──
       else if (path === '/health' && method === 'GET') {
         response = Response.json({
@@ -139,6 +147,10 @@ export default {
           } else if (path === '/v1/users/me/accolades' && method === 'GET') {
             // v3 Phase 1z.27 — 100K Step Club + future accolade types.
             response = await handleUserAccoladesGet(request, env, session);
+          } else if (path === '/v1/users/me/entitlements' && method === 'GET') {
+            // W297 — owned cosmetic skin ids (real-money IAP). Source of truth
+            // for skin ownership; the client caches it display-only.
+            response = await handleEntitlementsGet(request, env, session);
           } else if (path === '/v1/users/me/public-profile-summary' && method === 'PUT') {
             // v3 Phase 1z.190 — Friend rank badges MVP. Upserts the
             // caller's public_profile_summary row. Read path is the
