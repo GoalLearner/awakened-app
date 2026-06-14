@@ -6090,6 +6090,14 @@
   // left F4–F5 as power-walls for a fresh account; the remaining ramp misses are
   // structural — %maxHP DoT/heals — and are reported in the doc, not tunable here).
   const _ASCENT_RAMP_ANCHOR = 1.0, _ASCENT_RAMP_SLOPE = 0.7;   // F1–F5 = anchor + slope×(f−1)
+  // W291 — verified (via Arena.simAscent, 60k+ seeded battles): the max build is
+  // VIT-heavy → SENTINEL, which is type-WEAK vs the Trickster summit, so despite
+  // raw power ≈468-479 > F100≈446 the summit is NOT a stomp — Nightfall ~85% /
+  // Duskforge ~65% at F100, both clearly doable, F1-90 ~100%. Already in the
+  // sweet spot, so the floor curve is left UNCHANGED. (A 0.55×maxHP per-move
+  // damage cap pins fights at ~5 turns regardless of HP, and the Nightfall-vs-
+  // Duskforge gap is structurally ~20pts, so 90/60 isn't jointly reachable by
+  // floor tuning — see Arena.simAscent.)
   function _ascentFloorPower(floor) {
     const f = Math.max(1, floor);
     if (f <= 5) return _ASCENT_RAMP_ANCHOR + _ASCENT_RAMP_SLOPE * (f - 1);
@@ -7424,6 +7432,73 @@
     try { console.log('[ArenaSelfTest]', res.pass ? 'PASS' : 'FAIL', passed + '/' + checks.length, res); } catch (_) {}
     return res;
   }
+
+  // W291 — dev-only Ascent balance sim. Runs the REAL engine for a MAX build
+  // (base 20 + the 8 best-in-slot bonuses, weapon = weaponId) vs floor `floor`,
+  // N seeded battles, reports win-rate. Drives the player with the engine's own
+  // _arenaPickMove so both sides play competently. Additive/non-engine.
+  function _arenaSimAscent(floor, weaponId, opts) {
+    opts = opts || {};
+    const n = opts.n || 2000, seed0 = (opts.seed0 != null) ? opts.seed0 : 1;
+    const BIS = {
+      helm:   'crown_of_eternal_night',
+      weapon: weaponId,
+      plate:  'mantle_of_the_sovereign',     // body(37) > greaves legs(34) for the shared plate slot
+      cape:   'mantle_of_the_long_vigil',
+      amulet: 'amulet_of_the_endless_stair',
+      ring:   'skyward_vigil_ring',
+      gloves: 'forgewarden_gauntlets',
+      boots:  'striders_of_the_tideless_road',
+    };
+    const gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    Object.keys(BIS).forEach((slot) => {
+      const c = CARDS[BIS[slot]];
+      if (c && c.bonuses) ['str', 'vit', 'int', 'focus', 'will', 'wlt'].forEach((k) => { gear[k] += (c.bonuses[k] || 0); });
+    });
+    const sline = { STR: 20 + gear.str, VIT: 20 + gear.vit, INT: 20 + gear.int, FOCUS: 20 + gear.focus, WILL: 20 + gear.will, WLT: 20 + gear.wlt };
+    const prof = _arenaCombatProfile(sline);
+    const player = { name: 'Hunter', attack: prof.attack, defense: prof.defense, edge: prof.edge, stats: sline, isBot: false };
+    const playerArch = _arenaArchOf(player);
+    const kit = (WEAPON_MOVES[weaponId] || WEAPON_MOVES.unarmed).map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
+    const attuned = (_WEAPON_ATTUNE[weaponId] || []).indexOf(playerArch) !== -1 ? _ATTUNED_MULT : 1;
+    let wins = 0, koWins = 0, toWins = 0, foePower = 0;
+    const turnsArr = [], marginArr = [];
+    for (let i = 0; i < n; i++) {
+      const opp = _ascentOpponent(floor);
+      if (opts.foeAtkMul) opp.attack *= opts.foeAtkMul;     // experiment knob: lethality
+      if (opts.foeDefMul) opp.defense *= opts.foeDefMul;    // experiment knob: HP / fight length
+      opp.power = opp.attack + opp.defense + opp.edge;
+      foePower = opp.power;
+      const sess = arenaStartBattle({ floor: floor, advances: false, player: player, bot: opp }, seed0 + i);
+      sess.pMoves = kit;          // headless: override the closure-read (empty) kit
+      sess.pAttuned = attuned;    // load-bearing: real attunement, not the headless default 1
+      let g = 0;
+      while (!sess.done && g++ < 300) {
+        const mv = _arenaPickMove({
+          moves: sess.pMoves, cd: sess.cd,
+          selfHP: sess.pHP, selfMax: sess.pMax, selfS: sess.pS,
+          foeHP: sess.bHP, foeMax: sess.bMax, foeS: sess.bS,
+          typeEff: sess.pEff, rng: sess.rng,
+        });
+        if (!arenaTakeTurn(sess, mv.id)) break;
+      }
+      if (sess.won) { wins++; if (sess.bHP <= 0) koWins++; else toWins++; }
+      turnsArr.push(sess.turn);
+      marginArr.push(sess.pHP / sess.pMax - sess.bHP / sess.bMax);
+    }
+    const med = (arr) => { const a = arr.slice().sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0; };
+    return {
+      floor: floor, weaponId: weaponId, n: n,
+      playerPower: Math.round(prof.power), playerArch: playerArch, attuned: attuned,
+      foePower: Math.round(foePower),
+      winRate: +(wins / n).toFixed(3),
+      medianTurns: med(turnsArr),
+      medianHpMargin: +med(marginArr).toFixed(3),
+      koWins: koWins, timeoutWins: toWins,
+      effStats: sline,
+    };
+  }
+
   try {
     window.Arena = {
       matchup:         arenaMatchup,
@@ -7438,6 +7513,7 @@
       setTitle:        setEquippedArenaTitle,
       _statline:       _arenaPlayerStatline,   // debug
       selfTest:        _arenaSelfTest,         // W232 dev hook
+      simAscent:       _arenaSimAscent,        // W291 balance-verification sim (max build vs floor N)
       _battle:         { start: arenaStartBattle, turn: arenaTakeTurn, finalize: arenaFinalizeBattle },
     };
   } catch (_) {}
