@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.638';
+const CACHE_VERSION = 'v5.639';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -140,6 +140,11 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_rare_drop.m4a',
   '/assets/audio/sfx_perfect_day.m4a',
   '/assets/audio/sfx_hall_greeting.m4a',
+  '/assets/audio/sfx_habit_check.m4a',
+  '/assets/audio/sfx_heal.m4a',
+  '/assets/audio/sfx_status_burn.m4a',
+  '/assets/audio/sfx_status_stun.m4a',
+  '/assets/audio/sfx_cauterize.m4a',
   '/assets/audio/sfx_mythic_reveal.m4a',
   '/assets/audio/battle_loop.mp3',
   '/assets/audio/boss_loop.mp3',
@@ -149,6 +154,11 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_lunge.mp3',
   '/assets/audio/sfx_hit_normal.mp3',
   '/assets/audio/sfx_hit_crit.mp3',
+  '/assets/audio/sfx_hit_slice.mp3',
+  '/assets/audio/sfx_hit_burst.mp3',
+  '/assets/audio/sfx_hit_heavy.mp3',
+  '/assets/audio/sfx_hit_magic.mp3',
+  '/assets/audio/sfx_hit_arrow.mp3',
   '/assets/audio/sfx_miss_dodge.mp3',
   '/assets/audio/sfx_hp_drain.mp3',
   '/assets/audio/sfx_ko.mp3',
@@ -159,6 +169,11 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_rare_drop.mp3',
   '/assets/audio/sfx_perfect_day.mp3',
   '/assets/audio/sfx_hall_greeting.mp3',
+  '/assets/audio/sfx_habit_check.mp3',
+  '/assets/audio/sfx_heal.mp3',
+  '/assets/audio/sfx_status_burn.mp3',
+  '/assets/audio/sfx_status_stun.mp3',
+  '/assets/audio/sfx_cauterize.mp3',
   '/assets/audio/sfx_mythic_reveal.mp3',
   // W296 — mythic mega-rare hero art (the Eclipse Coronation reveal)
   '/assets/items/nightfall-blade-of-the-sovereign.png',
