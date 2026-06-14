@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w286';
+  const APP_BUILD_TAG = '2.2.6-w287';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -653,26 +653,52 @@
       statDomain:       'FOCUS',
     },
 
-    // ── v3 Phase W285 — A-rank dungeon ("The Apex Reach"). Escalates the
-    // B-rank "2 days back-to-back" to THREE consecutive days/nights at higher
-    // thresholds. Same resolver paths as B (steps/workout/sleep × consecutive);
-    // souls economy already supports A (engage 400 / kill 800). Rank-gated via
-    // isGateUnlocked; engageBoss refuses defensively below A.
+    // ── v3 Phase W287 — A-rank dungeon REWORKED: each boss now demands a DUAL
+    // condition (one active pillar + 7h sleep) held 2 consecutive days, making
+    // sleep consistency the spine of the rank. `dailyAllOf` routes them through
+    // the multi-metric resolver branch. Each drops 2 ultra + 2 rare (NO commons)
+    // via `dropTable` {ultra 8% / rare 25% / 67% nothing}; collectively the
+    // "Wakeful Vigil" set — BiS for the 5 slots Erebus never touches (cape/
+    // amulet/ring/gloves/boots) + the second-best weapon (Duskforge). Souls
+    // economy already supports A (engage 400 / kill 800).
     the_tideless_marcher: {
       id:               'the_tideless_marcher',
       name:             'The Tideless Marcher',
       rank:             'A',
       archetype:        'sustainer',
       flavorShort:      'He has not stopped walking since the world was young.',
-      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire, does not slow, does not stop. To stand against him you must match his pace three days running — break stride once, and he leaves you behind.',
-      killCondShort:    '12,000+ steps, 3 days back-to-back',
-      killCondLong:     'Walk at least 12,000 verified steps on three consecutive days inside the 3-day hunt window. Miss a single day\'s distance and the march resets.',
-      failedCopy:       'You fell behind. The march went on without you.',
-      stepThreshold:    12000,
-      consecutiveDays:  3,
-      streakTarget:     3,
+      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — but he honors only those who walk far AND rest deep. Match both, two days running, and he steps aside.',
+      killCondShort:    '10,000 steps + 7h sleep, 2 days back-to-back',
+      killCondLong:     'On two consecutive days inside the 2-day hunt window, reach BOTH 10,000 verified steps and 7 hours of sleep. Miss either pillar on either day and the march resets. The road rewards the rested.',
+      failedCopy:       'You fell behind — too tired, or too still. The march went on.',
+      dailyAllOf:       true,
+      stepThreshold:    10000,
+      sleepHours:       7,
+      consecutiveDays:  2,
+      streakTarget:     2,
       cadence:          'daily',
-      huntWindowDays:   3,
+      huntWindowDays:   2,
+      dropTable:        { ultra_rare: 0.08, rare: 0.25 },
+      statDomain:       'VIT',
+    },
+    the_sleepless_ascent: {
+      id:               'the_sleepless_ascent',
+      name:             'The Sleepless Ascent',
+      rank:             'A',
+      archetype:        'caster',
+      flavorShort:      'A stairway that climbs only for those who also lie down.',
+      flavorLong:       'An endless flight of steps rising into the dark. It tests not just the will to climb but the wisdom to rest — for none reach the top sleepless. Climb high and sleep deep, two days running, and the stair lets you pass.',
+      killCondShort:    '10 flights + 7h sleep, 2 days back-to-back',
+      killCondLong:     'On two consecutive days inside the 2-day hunt window, reach BOTH 10 verified flights of stairs climbed and 7 hours of sleep. Miss either pillar on either day and the ascent resets. The summit belongs to the rested.',
+      failedCopy:       'The stair went dark. You climbed but did not rest — or rested but did not climb.',
+      dailyAllOf:       true,
+      flightThreshold:  10,
+      sleepHours:       7,
+      consecutiveDays:  2,
+      streakTarget:     2,
+      cadence:          'daily',
+      huntWindowDays:   2,
+      dropTable:        { ultra_rare: 0.08, rare: 0.25 },
       statDomain:       'VIT',
     },
     the_unbroken_anvil: {
@@ -680,40 +706,27 @@
       name:             'The Unbroken Anvil',
       rank:             'A',
       archetype:        'aggressor',
-      flavorShort:      'Every blow that ever struck it only made it harder.',
-      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It answers only to those who return to the work day after day. Three days at the forge — no less will move it.',
-      killCondShort:    '40+ workout minutes, 3 days back-to-back',
-      killCondLong:     'Complete at least 40 verified workout minutes on three consecutive days inside the 3-day hunt window. Any Apple Health workout type counts. One rest day and the steel cools.',
-      failedCopy:       'The forge went cold. The anvil sealed.',
-      workoutMinutes:   40,
-      consecutiveDays:  3,
-      streakTarget:     3,
+      flavorShort:      'It is moved only by those who labor, then rest, then return.',
+      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It answers to relentless work — but it knows recovery forges the strongest steel. Train hard and sleep deep, two days running, and it yields.',
+      killCondShort:    '30min workout + 7h sleep, 2 days back-to-back',
+      killCondLong:     'On two consecutive days inside the 2-day hunt window, complete BOTH a 30-minute workout and 7 hours of sleep. Any Apple Health workout type counts. Miss either pillar on either day and the steel cools.',
+      failedCopy:       'The forge went cold. Effort without rest is just exhaustion.',
+      dailyAllOf:       true,
+      workoutMinutes:   30,
+      sleepHours:       7,
+      consecutiveDays:  2,
+      streakTarget:     2,
       cadence:          'daily',
-      huntWindowDays:   3,
+      huntWindowDays:   2,
+      dropTable:        { ultra_rare: 0.08, rare: 0.25 },
       statDomain:       'STR',
-    },
-    the_vigil: {
-      id:               'the_vigil',
-      name:             'The Vigil',
-      rank:             'A',
-      archetype:        'caster',
-      flavorShort:      'He keeps watch over the promises you make at night.',
-      flavorLong:       'A hooded sentinel who guards the threshold of rest. He weighs not the hours you mean to sleep, but the ones you actually take. Keep faith three nights running, and he stands aside.',
-      killCondShort:    '7.5+ hours of sleep, 3 nights back-to-back',
-      killCondLong:     'Sleep at least 7.5 verified hours on three consecutive nights inside the 3-day hunt window. A single short night breaks the vigil.',
-      failedCopy:       'The vigil broke. Sleep was owed, and unpaid.',
-      sleepHours:       7.5,
-      consecutiveNights: 3,
-      streakTarget:     3,
-      cadence:          'daily',
-      huntWindowDays:   3,
-      statDomain:       'WILL',
     },
 
     // ── v3 Phase W286 — S-rank dungeon: the SOLE apex. ONE boss, the hardest
     // condition in the app — 3 consecutive days each hitting ALL THREE pillars
-    // (steps + a workout + sleep). `tripleDaily` flags the new triple-AND
-    // resolver branch. Souls economy already supports S (engage 800 / kill
+    // (steps + a workout + sleep). `dailyAllOf` routes it through the shared
+    // multi-metric resolver branch; `dropTable` drives its bespoke roll.
+    // Souls economy already supports S (engage 800 / kill
     // 1600). Drops the only Mythic in the game (Nightfall) plus the 3 ultra
     // Sovereign's Regalia pieces — see CARDS + the bespoke rollBossDrop path.
     erebus_the_shadow_sovereign: {
@@ -726,7 +739,8 @@
       killCondShort:    '10k steps + a workout + 7h sleep — all three, 3 days back-to-back',
       killCondLong:     'On three consecutive days inside the 3-day hunt window, every day must reach ALL THREE: 10,000 verified steps, a 30-minute workout, and 7 hours of sleep. Miss any single pillar on any day and the run resets to zero. The summit of the dungeon — and the only source of the Mythic blade Nightfall.',
       failedCopy:       'One pillar fell, and the whole vigil with it. The shadow keeps its crown.',
-      tripleDaily:      true,
+      dailyAllOf:       true,
+      dropTable:        { mythic: 0.01, ultra_rare: 0.30 },
       stepThreshold:    10000,
       workoutMinutes:   30,
       sleepHours:       7,
@@ -744,6 +758,10 @@
   // and future verified metrics) measures in "day/days".
   function _bossProgressNoun(cfg) {
     if (!cfg) return 'day';
+    // W287 — multi-metric "all-of" bosses (Erebus, A duals) measure in days,
+    // even though they carry flightThreshold/sleepHours that would otherwise
+    // route to 'flights'/'nights' below.
+    if (cfg.dailyAllOf === true) return cfg.consecutiveDays === 1 ? 'day' : 'days';
     // v3 Phase 1z.63 — flight-threshold bosses (Ascendant Colossus)
     // measure cumulative flights inside the hunt window, not
     // qualifying days/nights. Singular/plural switch on the
@@ -1251,43 +1269,52 @@
       // !cfg.consecutiveNights so a B-rank boss with both stepThreshold
       // AND consecutiveDays can't accidentally fire the single-day path.
 
-      // ── S-rank triple boss (Erebus, the Shadow Sovereign) ──
-      // W286 — every day in the run must hit ALL THREE pillars at once:
-      // steps + a workout + sleep. Build per-day flags by AND-ing the three
-      // metrics, then scan for `consecutiveDays` back-to-back days. Sits above
-      // the single-metric consecutive branches, which are guarded with
-      // !cfg.tripleDaily so this boss can never fire them on a single pillar.
-      if (cfg.tripleDaily === true &&
-          typeof cfg.stepThreshold === 'number' &&
-          typeof cfg.workoutMinutes === 'number' &&
-          typeof cfg.sleepHours === 'number' &&
-          typeof cfg.consecutiveDays === 'number' &&
-          typeof Health.getStepsBetween === 'function' &&
-          typeof Health.getStrengthWorkoutsBetween === 'function' &&
-          typeof Health.getSleepBetween === 'function') {
+      // ── Multi-metric "all-of, every day" consecutive boss ──
+      // W287 — generalizes the W286 Erebus branch. Every day in the run must
+      // hit ALL the metrics this boss declares (any of stepThreshold /
+      // workoutMinutes / flightThreshold / sleepHours); AND them per day, then
+      // scan for `consecutiveDays` back-to-back days. Covers S Erebus (3
+      // pillars) and the A duals (one active pillar + sleep). Single-metric
+      // branches below are guarded with !cfg.dailyAllOf so this can't fire them.
+      if (cfg.dailyAllOf === true && typeof cfg.consecutiveDays === 'number') {
         const days = _huntWindowLocalDays(start, evalEnd);
-        let _sleepRes = null;
-        try { _sleepRes = await Health.getSleepBetween(new Date(start - 12 * 3600 * 1000).toISOString(), new Date(evalEnd).toISOString()); } catch (_) { _sleepRes = null; }
-        const _sleepByDate = (_sleepRes && _sleepRes.byDate) || {};
+        let _sleepByDate = {};
+        if (typeof cfg.sleepHours === 'number' && typeof Health.getSleepBetween === 'function') {
+          let _sr = null;
+          try { _sr = await Health.getSleepBetween(new Date(start - 12 * 3600 * 1000).toISOString(), new Date(evalEnd).toISOString()); } catch (_) { _sr = null; }
+          _sleepByDate = (_sr && _sr.byDate) || {};
+        }
         const flags = [];
         for (const dayIso of days) {
           const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
           const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
           const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
           const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
-          let steps = null;
-          try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { steps = null; }
-          const stepsOk = typeof steps === 'number' && steps >= cfg.stepThreshold;
-          let workouts = null;
-          try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
-          const wlist = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-          let totalMin = 0;
-          for (const w of wlist) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) totalMin += m; }
-          const workoutOk = totalMin >= cfg.workoutMinutes;
-          const _se = _sleepByDate[dayIso];
-          const sleepHrs = _se && typeof _se.totalAsleepHours === 'number' ? _se.totalAsleepHours : 0;
-          const sleepOk = sleepHrs >= cfg.sleepHours;
-          flags.push(stepsOk && workoutOk && sleepOk);
+          let ok = true;
+          if (ok && typeof cfg.stepThreshold === 'number') {
+            let steps = null;
+            try { steps = (typeof Health.getStepsBetween === 'function') ? await Health.getStepsBetween(sIso, eIso) : null; } catch (_) { steps = null; }
+            ok = typeof steps === 'number' && steps >= cfg.stepThreshold;
+          }
+          if (ok && typeof cfg.workoutMinutes === 'number') {
+            let workouts = null;
+            try { workouts = (typeof Health.getStrengthWorkoutsBetween === 'function') ? await Health.getStrengthWorkoutsBetween(sIso, eIso) : null; } catch (_) { workouts = null; }
+            const wlist = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+            let totalMin = 0;
+            for (const w of wlist) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) totalMin += m; }
+            ok = totalMin >= cfg.workoutMinutes;
+          }
+          if (ok && typeof cfg.flightThreshold === 'number') {
+            let flights = null;
+            try { flights = (typeof Health.getFlightsClimbedBetween === 'function') ? await Health.getFlightsClimbedBetween(sIso, eIso) : null; } catch (_) { flights = null; }
+            ok = typeof flights === 'number' && flights >= cfg.flightThreshold;
+          }
+          if (ok && typeof cfg.sleepHours === 'number') {
+            const _se = _sleepByDate[dayIso];
+            const sleepHrs = _se && typeof _se.totalAsleepHours === 'number' ? _se.totalAsleepHours : 0;
+            ok = sleepHrs >= cfg.sleepHours;
+          }
+          flags.push(ok);
         }
         const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
         const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
@@ -1301,7 +1328,7 @@
 
       // ── B-rank steps boss (Patient Flame) ──────────────────
       if (!defeated &&
-          cfg.tripleDaily !== true &&
+          cfg.dailyAllOf !== true &&
           typeof cfg.consecutiveDays === 'number' &&
           typeof cfg.stepThreshold === 'number' &&
           typeof Health.getStepsBetween === 'function') {
@@ -1333,7 +1360,7 @@
       // semantics adapted to a window via getStrengthWorkoutsBetween;
       // we sum durations per day from the returned sample list.
       if (!defeated &&
-          cfg.tripleDaily !== true &&
+          cfg.dailyAllOf !== true &&
           typeof cfg.consecutiveDays === 'number' &&
           typeof cfg.workoutMinutes === 'number' &&
           typeof cfg.activeEnergyKcal !== 'number' &&  // not the dual-condition boss
@@ -1477,7 +1504,7 @@
       // window query — total >= flightThreshold defeats. Writes
       // state.flight_progress for the live "N / 10 flights" detail
       // label even before the threshold is hit.
-      else if (typeof cfg.flightThreshold === 'number' && typeof Health.getFlightsClimbedBetween === 'function') {
+      else if (cfg.dailyAllOf !== true && typeof cfg.flightThreshold === 'number' && typeof Health.getFlightsClimbedBetween === 'function') {
         const sIso = new Date(start).toISOString();
         const eIso = new Date(evalEnd).toISOString();
         let flights = null;
@@ -2879,6 +2906,126 @@
       bonus_ranges:  { str: [6,10], vit: [7,11], int: [1,5], focus: [5,9], will: [5,9], wlt: [0,0] },
       set_id: 'sovereign_regalia', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── W287 — A-rank "Wakeful Vigil" set. 12 pieces across the 3 reworked A
+    // bosses (2 ultra + 2 rare each, no commons). BiS for the 5 slots Erebus
+    // never touches (cape/amulet/ring/gloves/boots) + the second-best weapon
+    // (Duskforge). Stats sit above B's ~28 ultra ceiling and below the Sovereign
+    // Regalia (34-42), so A is a real step up that the Regalia still tops.
+
+    // The Tideless Marcher (steps + sleep) — road / endurance
+    striders_of_the_tideless_road: {
+      id: 'striders_of_the_tideless_road', name: 'Striders of the Tideless Road', slot: 'boots',
+      source_boss: 'the_tideless_marcher', rarity: 'ultra_rare', tier: 'A',
+      flavor: 'Boots that have outlasted every road. Best in slot — they carry the rested farthest.',
+      art_path: 'assets/items/striders-of-the-tideless-road.png',
+      bonuses:       { str: 2, vit: 12, int: 2, focus: 9, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [0,4], vit: [10,14], int: [0,4], focus: [7,11], will: [4,8], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    mantle_of_the_long_vigil: {
+      id: 'mantle_of_the_long_vigil', name: 'Mantle of the Long Vigil', slot: 'cape',
+      source_boss: 'the_tideless_marcher', rarity: 'ultra_rare', tier: 'A',
+      flavor: 'A traveling cloak worn thin by distance and deep rest alike. Best in slot.',
+      art_path: 'assets/items/mantle-of-the-long-vigil.png',
+      bonuses:       { str: 3, vit: 11, int: 3, focus: 7, will: 7, wlt: 0 },
+      bonus_ranges:  { str: [1,5], vit: [9,13], int: [1,5], focus: [5,9], will: [5,9], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    band_of_the_roadkeeper: {
+      id: 'band_of_the_roadkeeper', name: 'Band of the Roadkeeper', slot: 'ring',
+      source_boss: 'the_tideless_marcher', rarity: 'rare', tier: 'A',
+      flavor: 'A plain band given to those who keep the long road and the long night.',
+      art_path: 'assets/items/band-of-the-roadkeeper.png',
+      bonuses:       { str: 1, vit: 7, int: 2, focus: 6, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [0,3], vit: [5,9], int: [0,4], focus: [4,8], will: [3,7], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    restplate_of_the_wanderer: {
+      id: 'restplate_of_the_wanderer', name: 'Restplate of the Wanderer', slot: 'legs',
+      source_boss: 'the_tideless_marcher', rarity: 'rare', tier: 'A',
+      flavor: 'Legplates light enough to walk all day, warm enough to rest all night.',
+      art_path: 'assets/items/restplate-of-the-wanderer.png',
+      bonuses:       { str: 4, vit: 8, int: 1, focus: 5, will: 4, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [6,10], int: [0,3], focus: [3,7], will: [2,6], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+
+    // The Sleepless Ascent (flights + sleep) — the climb
+    amulet_of_the_endless_stair: {
+      id: 'amulet_of_the_endless_stair', name: 'Amulet of the Endless Stair', slot: 'amulet',
+      source_boss: 'the_sleepless_ascent', rarity: 'ultra_rare', tier: 'A',
+      flavor: 'A pendant shaped like a stair with no top. Best in slot — it climbs while you rest.',
+      art_path: 'assets/items/amulet-of-the-endless-stair.png',
+      bonuses:       { str: 3, vit: 8, int: 6, focus: 9, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [1,5], vit: [6,10], int: [4,8], focus: [7,11], will: [4,8], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    skyward_vigil_ring: {
+      id: 'skyward_vigil_ring', name: 'Skyward Vigil Ring', slot: 'ring',
+      source_boss: 'the_sleepless_ascent', rarity: 'ultra_rare', tier: 'A',
+      flavor: 'A ring for those who climb toward the dawn and still sleep before it. Best in slot.',
+      art_path: 'assets/items/skyward-vigil-ring.png',
+      bonuses:       { str: 2, vit: 9, int: 4, focus: 9, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [0,4], vit: [7,11], int: [2,6], focus: [7,11], will: [4,8], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    nightcrown_of_the_climb: {
+      id: 'nightcrown_of_the_climb', name: 'Nightcrown of the Climb', slot: 'helm',
+      source_boss: 'the_sleepless_ascent', rarity: 'rare', tier: 'A',
+      flavor: 'A circlet for the sleepless climber — second only to the Crown of Eternal Night.',
+      art_path: 'assets/items/nightcrown-of-the-climb.png',
+      bonuses:       { str: 2, vit: 7, int: 5, focus: 6, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [0,4], vit: [5,9], int: [3,7], focus: [4,8], will: [3,7], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    ascent_worn_cloak: {
+      id: 'ascent_worn_cloak', name: 'Ascent-Worn Cloak', slot: 'cape',
+      source_boss: 'the_sleepless_ascent', rarity: 'rare', tier: 'A',
+      flavor: 'A cloak frayed by a thousand stairs and folded for a thousand nights.',
+      art_path: 'assets/items/ascent-worn-cloak.png',
+      bonuses:       { str: 2, vit: 8, int: 2, focus: 6, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [0,4], vit: [6,10], int: [0,4], focus: [4,8], will: [3,7], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+
+    // The Unbroken Anvil (workout + sleep) — forge / strength. Drops the SECOND-BEST WEAPON.
+    duskforge_greatblade: {
+      id: 'duskforge_greatblade', name: 'Duskforge, Verdict of the Anvil', slot: 'weapon',
+      source_boss: 'the_unbroken_anvil', rarity: 'ultra_rare', tier: 'A',
+      flavor: 'A greatblade forged through labor and rest in equal measure. The second-strongest weapon in the world — and the only one that rivals Nightfall.',
+      art_path: 'assets/items/duskforge-the-anvils-verdict.png',
+      bonuses:       { str: 12, vit: 5, int: 2, focus: 8, will: 7, wlt: 0 },
+      bonus_ranges:  { str: [10,14], vit: [3,7], int: [0,4], focus: [6,10], will: [5,9], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: 'A relentless single edge — Cleave / Oathstrike / Immolate kit.', on_equip: null, cooldown_seconds: null,
+    },
+    forgewarden_gauntlets: {
+      id: 'forgewarden_gauntlets', name: 'Forgewarden Gauntlets', slot: 'gloves',
+      source_boss: 'the_unbroken_anvil', rarity: 'ultra_rare', tier: 'A',
+      flavor: 'Gauntlets that grip the hammer by day and rest open by night. Best in slot.',
+      art_path: 'assets/items/forgewarden-gauntlets.png',
+      bonuses:       { str: 9, vit: 8, int: 1, focus: 6, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [7,11], vit: [6,10], int: [0,3], focus: [4,8], will: [4,8], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    anvilrest_cuirass: {
+      id: 'anvilrest_cuirass', name: 'Anvilrest Cuirass', slot: 'body',
+      source_boss: 'the_unbroken_anvil', rarity: 'rare', tier: 'A',
+      flavor: 'Heavy plate built for the work, lined for the rest after — second to the Sovereign Mantle.',
+      art_path: 'assets/items/anvilrest-cuirass.png',
+      bonuses:       { str: 7, vit: 9, int: 1, focus: 4, will: 4, wlt: 0 },
+      bonus_ranges:  { str: [5,9], vit: [7,11], int: [0,3], focus: [2,6], will: [2,6], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
+    },
+    charm_of_the_emberkeeper: {
+      id: 'charm_of_the_emberkeeper', name: 'Charm of the Emberkeeper', slot: 'amulet',
+      source_boss: 'the_unbroken_anvil', rarity: 'rare', tier: 'A',
+      flavor: 'A warm coal kept close — for the will to train and the calm to sleep.',
+      art_path: 'assets/items/charm-of-the-emberkeeper.png',
+      bonuses:       { str: 3, vit: 5, int: 4, focus: 6, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [1,5], vit: [3,7], int: [2,6], focus: [4,8], will: [3,7], wlt: [0,0] },
+      set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
   };
 
@@ -6341,6 +6488,7 @@
     kilnforged_warblade: ['aggressor'], ten_thousand_step_blade: ['trickster', 'glasscannon'],
     vessel_of_refusal: ['sentinel'],
     nightfall_blade: ['aggressor', 'glasscannon', 'juggernaut', 'sentinel', 'trickster', 'balanced'],
+    duskforge_greatblade: ['aggressor', 'juggernaut'],
   };
   let _arSeedCtr = 0;
   function _arMulberry32(a) {
@@ -6393,6 +6541,7 @@
     ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
     vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
     nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],
+    duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'temper'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
   // W234 rearmament: walls (sentinel/juggernaut) carry REFUSE so they can
@@ -10169,14 +10318,23 @@
     let dropped = null;
     let fromPity = false;
     let pityType = null;
-    // W286 — Erebus (S apex) bespoke table: 1% Mythic / 30% ultra (10/10/10
-    // split across the 3 Regalia pieces) / 69% nothing. No commons, no rares,
-    // and NO pity machinery — the Mythic Nightfall is a true 1% chase. The
-    // shared awarding tail below still runs on whatever this picks.
-    if (cfg.tripleDaily === true) {
+    // W286/W287 — config-driven bespoke drop table (cfg.dropTable). No pity, no
+    // commons unless listed. Rarities rolled best-first with cumulative
+    // probability; pickFromPool splits evenly within a rarity (Erebus 3 ultras
+    // at 30% → 10% each; an A boss's 2 ultras at 8% → 4% each). Erebus =
+    // { mythic: 0.01, ultra_rare: 0.30 }; A bosses = { ultra_rare: 0.08, rare: 0.25 }.
+    if (cfg.dropTable) {
       const _r = Math.random();
-      if (_r < 0.01 && pools.mythic && pools.mythic.length) dropped = pickFromPool(pools.mythic);
-      else if (_r < 0.31 && pools.ultra_rare.length) dropped = pickFromPool(pools.ultra_rare);
+      let _acc = 0;
+      const _order = ['mythic', 'ultra_rare', 'rare', 'common'];
+      for (let _i = 0; _i < _order.length; _i++) {
+        const _rar = _order[_i];
+        const _p = cfg.dropTable[_rar];
+        if (typeof _p === 'number' && _p > 0 && pools[_rar] && pools[_rar].length) {
+          _acc += _p;
+          if (_r < _acc) { dropped = pickFromPool(pools[_rar]); break; }
+        }
+      }
     } else {
     if (Math.random() < effectiveUltraRate && pools.ultra_rare.length) {
       dropped = pickFromPool(pools.ultra_rare);
