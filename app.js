@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w306';
+  const APP_BUILD_TAG = '2.2.6-w307';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -45397,6 +45397,19 @@
     // balance), then try the daily login bonus (idempotent on
     // device-local calendar day). Order matters: load before grant.
     try { loadSouls(); } catch (_) {}
+    // ══════════════════════════════════════════════════════════════════
+    // W307 — TEMPORARY TESTFLIGHT SOULS GRANT — REMOVE BEFORE THE REAL SUBMIT.
+    // One-time +500,000 souls per device (flag-gated, additive — never wipes
+    // earned souls). Lets testers bank souls to try the new shop weapons; the
+    // souls persist in localStorage after this block is stripped + re-pushed.
+    // NOT for the App Store build. Search W307 to delete.
+    try {
+      if (!localStorage.getItem('hb_devgrant_500k_v1')) {
+        localStorage.setItem('hb_devgrant_500k_v1', '1');
+        if (typeof earnSouls === 'function') earnSouls(500000, 'devgrant_testflight');
+      }
+    } catch (_) {}
+    // ══════════════════════════════════════════════════════════════════
     try { tryGrantDailyLoginBonus(); } catch (_) {}
     try { refreshSoulsDisplay(); } catch (_) {}
     try { checkMissedNightForInsomniac(); } catch (_) {}
