@@ -1254,15 +1254,19 @@
   }
   // Purchase a skin by App Store product id. On success RevenueCat fires the
   // backend webhook (server-side grant); the caller then refreshes entitlements.
-  // NOTE: confirm the exact RC Capacitor method names against the installed
-  // plugin version when wiring live (getProducts / purchaseStoreProduct here
-  // match @revenuecat/purchases-capacitor v7).
+  // W311 — v8 API VERIFIED against @revenuecat/purchases-capacitor source:
+  // configure / getProducts({products}) / purchaseStoreProduct({product}) /
+  // restorePurchases are UNCHANGED v7->v8 (the break was native-only: iOS SDK
+  // v5 / StoreKit 2 + Android BillingClient 7, not the Capacitor JS API). The one
+  // v8 fix: getProducts type defaults to SUBSCRIPTION, so a NON-CONSUMABLE must
+  // pass NON_SUBSCRIPTION (ignored on iOS, REQUIRED on Android). StoreKit 2 also
+  // needs an In-App Purchase Key set in the RevenueCat dashboard (see SETUP_IAP.md).
   async function purchaseSkin(productId) {
     const cfg = await configurePurchases();
     if (!cfg.ok) return cfg;
     const rc = _rcPlugin();
     try {
-      const got = await rc.getProducts({ productIdentifiers: [productId] });
+      const got = await rc.getProducts({ productIdentifiers: [productId], type: 'NON_SUBSCRIPTION' });
       const product = got && got.products && got.products[0];
       if (!product) return { ok: false, code: 'NO_PRODUCT' };
       await rc.purchaseStoreProduct({ product });
