@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w304';
+  const APP_BUILD_TAG = '2.2.6-w306';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2995,6 +2995,29 @@
       bonuses:       { str: 12, vit: 5, int: 2, focus: 8, will: 7, wlt: 0 },
       bonus_ranges:  { str: [10,14], vit: [3,7], int: [0,4], focus: [6,10], will: [5,9], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: 'A relentless single edge — Cleave / Oathstrike / Immolate kit.', on_equip: null, cooldown_seconds: null,
+    },
+    // W306 — Aetherspire (staff): first MAGIC player weapon. Shop-buyable
+    // (no source_boss -> no drop-pool dilution; renders in the ULTRA RARE dex
+    // section). Stats lean INT+VIT (Magic). First of a magic/ranger weapon line.
+    aetherspire_staff: {
+      id: 'aetherspire_staff', name: 'Aetherspire, the Conduit', slot: 'weapon',
+      source_boss: null, rarity: 'ultra_rare', tier: 'A',
+      flavor: 'A greatstaff crowned with caged starlight. It does not cut — it unmakes. The arcanist’s answer to the blade.',
+      art_path: 'assets/items/aetherspire-staff.png',
+      bonuses:       { str: 3, vit: 11, int: 14, focus: 5, will: 8, wlt: 0 },
+      bonus_ranges:  { str: [1,5], vit: [9,13], int: [12,16], focus: [3,7], will: [6,10], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: 'Arcane mastery — Arcane Bolt / Force Wave / Shatter Hex / Siphon kit.', on_equip: null, cooldown_seconds: null,
+    },
+    // W306 — Wraithwind (bow): first RANGED player weapon. Shop-buyable.
+    // Stats lean FOCUS+WILL (Ranged).
+    wraithwind_bow: {
+      id: 'wraithwind_bow', name: 'Wraithwind, the Long Hunt', slot: 'weapon',
+      source_boss: null, rarity: 'ultra_rare', tier: 'A',
+      flavor: 'A recurve bow strung with captured wind. Its arrows find the gap no armor closes. Death, at a distance.',
+      art_path: 'assets/items/wraithwind-bow.png',
+      bonuses:       { str: 4, vit: 7, int: 3, focus: 14, will: 11, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [5,9], int: [1,5], focus: [12,16], will: [9,13], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: 'A ranger’s volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.', on_equip: null, cooldown_seconds: null,
     },
     forgewarden_gauntlets: {
       id: 'forgewarden_gauntlets', name: 'Forgewarden Gauntlets', slot: 'gloves',
@@ -6172,7 +6195,7 @@
     70:  { name: 'The Gilded Tyrant',   arch: 'balanced',    taunt: 'Kneel, and I may let you keep your title.' },
     80:  { name: 'The Silent Warden',   arch: 'sentinel',    taunt: '…' },
     90:  { name: 'The Dread Harbinger', arch: 'trickster',   taunt: 'The summit knows your name. It is not impressed.' },
-    100: { name: 'The First Awakened',  arch: 'trickster',   taunt: 'I was the first to climb. No one has reached me since.' },
+    100: { name: 'The First Awakened',  arch: 'balanced',    taunt: 'I was the first to climb. No one has reached me since.' },
   };
 
   // Procedural name pool for the 90 regular floors (stable per floor via
@@ -6394,11 +6417,15 @@
       archKey = pool[((f + attempts) % pool.length + pool.length) % pool.length];
     }
     const a = ASCENT_ARCHETYPES[archKey] || ASCENT_ARCHETYPES.balanced;
-    const per = power / 3;
+    // W306 — the type-fair (balanced) summit is tankier than the old trickster
+    // (even power split -> more HP); trim ONLY F100 power to restore the doable
+    // band. Floors 1-99 are byte-identical.
+    const eff = (f === ASCENT_FLOORS) ? power * _FIRST_AWAKENED_POWER : power;
+    const per = eff / 3;
     const attack = per * a.atk, defense = per * a.def, edge = per * a.edge;
     return {
       name, rankLabel: band.tier, archetype: a.label, archKey,
-      attack, defense, edge, power, floor: f, isBoss: _ascentIsBoss(f), isBot: true,
+      attack, defense, edge, power: eff, floor: f, isBoss: _ascentIsBoss(f), isBot: true,
     };
   }
 
@@ -6527,6 +6554,8 @@
     vessel_of_refusal: ['sentinel'],
     nightfall_blade: ['aggressor', 'glasscannon', 'juggernaut', 'sentinel', 'trickster', 'balanced'],
     duskforge_greatblade: ['aggressor', 'juggernaut'],
+    aetherspire_staff: ['sentinel', 'juggernaut'],
+    wraithwind_bow: ['trickster'],
   };
   let _arSeedCtr = 0;
   function _arMulberry32(a) {
@@ -6584,6 +6613,9 @@
     tumble:     { name: 'Tumble',       gl: 'ranged', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: 'Roll aside — 40% dodge (2t).' },
     flamearrow: { name: 'Flame Arrow',  gl: 'ranged', power: 1.1,  acc: 0.9,  cd: 1, fx: { t: 'burn', mag: 0.16, dur: 3 }, desc: 'A shaft wrapped in fire.' },
     quickshot:  { name: 'Quick Shot',   gl: 'ranged', power: 1.0,  acc: 0.95, cd: 0, desc: 'A clean shot.' },
+    // W306 — BiS signature finishers for the staff/bow (oathstrike-class: 1.95/0.88/cd3).
+    cataclysm:  { name: 'Cataclysm',    gl: 'magic',  power: 1.95, acc: 0.88, cd: 3, desc: 'The heavens answer.' },
+    heartseeker:{ name: 'Heartseeker',  gl: 'ranged', power: 1.95, acc: 0.88, cd: 3, desc: 'One arrow. One heart.' },
   };
   // Weapon id → 4 move ids (the weapon names your kit). Unknown weapon → unarmed.
   const WEAPON_MOVES = {
@@ -6596,6 +6628,8 @@
     vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
     nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],
     duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'temper'],
+    aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
+    wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
   // W234 rearmament: walls (sentinel/juggernaut) carry a cleanse so they can
@@ -6646,7 +6680,14 @@
   // (no Searing): kit COMPOSITION varies by floor tier (content design, like
   // bosses); move DEFINITIONS never fork (the locked anti-fork principle).
   const _TRICK_LESSER = ['arrowvolley', 'snapshot', 'tumble', 'quickshot'];
+  // W306 — The First Awakened (F100) fights TYPE-FAIR (archetype 'balanced' -> no
+  // triangle edge vs any player build, so Magic/Ranged are not punished at the
+  // summit) but wields a deadly master kit so the climb still ends in a wall.
+  // Sim-tuned via Arena.simAscent to the doable band (best build ~85%).
+  const _FIRST_AWAKENED_KIT = ['arrowvolley', 'snapshot', 'tumble', 'flamearrow'];
+  const _FIRST_AWAKENED_POWER = 0.96;   // W306 — type-fair summit trim (sim: NF ~86% / A-weapons ~57%)
   function _arenaFoeKit(arch, floor) {
+    if (floor === ASCENT_FLOORS) return _FIRST_AWAKENED_KIT.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
     const ids = (arch === 'trickster' && floor >= 4 && floor <= 5)
       ? _TRICK_LESSER
       : (ARCH_MOVES[arch] || ARCH_MOVES.balanced);
