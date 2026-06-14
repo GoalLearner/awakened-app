@@ -28988,4 +28988,5 @@ button.guildhall-summary-tile:active {
 .reveal-overlay--mythic.is-reduced .rc-stats{ animation:beat-in 500ms ease forwards 1100ms !important; }
 .reveal-overlay--mythic.is-reduced .rc-flavor{ animation:beat-in 700ms ease forwards 1300ms !important; }
 .reveal-overlay--mythic.is-reduced .forever-mark{ animation:plaque-up 700ms ease forwards 1500ms !important; }
-
+/* W297 — premium-skin BUY badge (shown only when IAP is live; dormant otherwise) */
+.wd-tile--premium .wd-tile-buy { background: #ffd24a; color: #1a1206; border-color: #ffd24a; }

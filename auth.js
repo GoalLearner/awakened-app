@@ -1211,6 +1211,91 @@
   }
 
   // Expose on window for app.js + Settings interactions.
+  // ── W297 — Skins IAP (RevenueCat) + entitlements ───────────────────
+  // Real-money cosmetic skin purchases. DORMANT until IAP_ENABLED flips true,
+  // which requires: (1) @revenuecat/purchases-capacitor installed + `npx cap
+  // sync ios` on the Mac, (2) the 10 non-consumable products live in App Store
+  // Connect + RevenueCat, (3) REVENUECAT_PUBLIC_SDK_KEY set below. Backend grants
+  // ownership via the RevenueCat webhook; the client reads truth from GET
+  // /v1/users/me/entitlements. Cosmetic only — never power. See SETUP_IAP.md.
+  const IAP_ENABLED = false;                              // ← flip true once setup is done
+  const REVENUECAT_PUBLIC_SDK_KEY = 'appl_REPLACE_ME';    // RevenueCat → API keys → Apple
+
+  function _rcPlugin() {
+    try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) || null; }
+    catch (_) { return null; }
+  }
+  function iapAvailable() {
+    try {
+      return !!(IAP_ENABLED && _rcPlugin() &&
+        window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    } catch (_) { return false; }
+  }
+  // Backend user_id lives in the session JWT's `sub` claim (setSubject(userId)).
+  // RevenueCat's appUserID MUST equal it so webhook grants land on this account.
+  function getBackendUserId() {
+    try {
+      const u = readUser();
+      if (!u || !u.jwt || u.jwt === LOCALHOST_DEV_STUB || u.jwt === 'PHASE_A_STUB') return null;
+      const part = u.jwt.split('.')[1];
+      if (!part) return null;
+      const payload = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+      return (payload && typeof payload.sub === 'string' && payload.sub) ? payload.sub : null;
+    } catch (_) { return null; }
+  }
+  // Configure RevenueCat with the backend user_id as appUserID. Idempotent;
+  // no-op while IAP is disabled or off-device.
+  async function configurePurchases() {
+    if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
+    const uid = getBackendUserId();
+    if (!uid) return { ok: false, code: 'NOT_SIGNED_IN' };
+    try { await _rcPlugin().configure({ apiKey: REVENUECAT_PUBLIC_SDK_KEY, appUserID: uid }); return { ok: true }; }
+    catch (e) { return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) }; }
+  }
+  // Purchase a skin by App Store product id. On success RevenueCat fires the
+  // backend webhook (server-side grant); the caller then refreshes entitlements.
+  // NOTE: confirm the exact RC Capacitor method names against the installed
+  // plugin version when wiring live (getProducts / purchaseStoreProduct here
+  // match @revenuecat/purchases-capacitor v7).
+  async function purchaseSkin(productId) {
+    const cfg = await configurePurchases();
+    if (!cfg.ok) return cfg;
+    const rc = _rcPlugin();
+    try {
+      const got = await rc.getProducts({ productIdentifiers: [productId] });
+      const product = got && got.products && got.products[0];
+      if (!product) return { ok: false, code: 'NO_PRODUCT' };
+      await rc.purchaseStoreProduct({ product });
+      return { ok: true };
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      if (e && (e.userCancelled || /cancel/i.test(msg))) return { ok: false, code: 'CANCELLED' };
+      return { ok: false, code: 'ERROR', detail: msg };
+    }
+  }
+  // Restore previously-purchased skins (App Store requirement). Webhook re-grants.
+  async function restorePurchases() {
+    if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
+    try { await _rcPlugin().restorePurchases(); return { ok: true }; }
+    catch (e) { return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) }; }
+  }
+  // GET /v1/users/me/entitlements → owned cosmetic skin ids. Mirrors
+  // fetchAccolades; the backend is the source of truth for ownership.
+  async function fetchEntitlements() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    const url = BACKEND_URL + '/v1/users/me/entitlements';
+    let res;
+    try { res = await fetch(url, { method: 'GET', headers: { 'Authorization': 'Bearer ' + u.jwt } }); }
+    catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
+    let data; try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [] };
+    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
+    return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
   window.Auth = {
     getCurrentUser,
     getJwt,
@@ -1232,6 +1317,13 @@
     fetchStep100kClub,
     // 100K Step Club + future accolades (v3 Phase 1z.27)
     fetchAccolades,
+    // W297 — skins IAP (RevenueCat) + entitlements
+    iapAvailable,
+    getBackendUserId,
+    configurePurchases,
+    purchaseSkin,
+    restorePurchases,
+    fetchEntitlements,
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,
     uploadCloudState,

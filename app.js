@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w296';
+  const APP_BUILD_TAG = '2.2.6-w297';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21469,6 +21469,58 @@
   // Tracks the last-rendered avatar so we only crossfade when class actually changes.
   let _lastAvatarSrc = null;
 
+  // ── W297 — Skin entitlements (owned premium skins). Mirrors the accolades
+  // SWR module: the backend (skin_entitlements) is the source of truth;
+  // localStorage is a display-only cache. Hydrated on wardrobe open, revalidated
+  // from GET /v1/users/me/entitlements, refreshed after a purchase. Cosmetic only.
+  const SKINS_CACHE_KEY = 'hb_skins_owned_cache';
+  let _ownedSkins = new Set();
+  let _skinsInFlight = false;
+  // Mirror backend lib/skin-products.ts: com.goallearner.awakened.skin.<slug>,
+  // slug = skin id minus the 'avatar-skin-' prefix, '.png', and dashes.
+  function _skinProductId(skinId) {
+    const slug = String(skinId || '').replace(/^avatar-skin-/, '').replace(/\.png$/, '').replace(/-/g, '');
+    return 'com.goallearner.awakened.skin.' + slug;
+  }
+  function _skinsCacheRead() {
+    try { const raw = localStorage.getItem(SKINS_CACHE_KEY); if (!raw) return null;
+      const p = JSON.parse(raw); return (p && Array.isArray(p.skins)) ? p.skins : null; } catch (_) { return null; }
+  }
+  function _skinsCacheWrite(skins) {
+    try { localStorage.setItem(SKINS_CACHE_KEY, JSON.stringify({ skins: skins, at: Date.now() })); } catch (_) {}
+  }
+  function _hydrateOwnedSkinsFromCache() { const c = _skinsCacheRead(); if (c) _ownedSkins = new Set(c); }
+  function isSkinOwned(skinId) { try { return _ownedSkins.has(skinId); } catch (_) { return false; } }
+  async function refreshSkinEntitlements() {
+    if (_skinsInFlight) return;
+    if (!(window.Auth && typeof Auth.fetchEntitlements === 'function')) return;
+    _skinsInFlight = true;
+    try {
+      const r = await Auth.fetchEntitlements();
+      if (r && r.ok && Array.isArray(r.skins)) {
+        _ownedSkins = new Set(r.skins);
+        _skinsCacheWrite(r.skins);
+        try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
+      }
+    } catch (_) {} finally { _skinsInFlight = false; }
+  }
+  // Buy a premium skin → on success the RevenueCat webhook grants server-side;
+  // we then revalidate (one short retry for webhook lag) and auto-equip.
+  async function _buySkin(sk) {
+    if (!sk || !(window.Auth && typeof Auth.purchaseSkin === 'function')) return;
+    let r; try { r = await Auth.purchaseSkin(_skinProductId(sk.id)); } catch (_) { r = { ok: false, code: 'ERROR' }; }
+    if (r && r.ok) {
+      await refreshSkinEntitlements();
+      if (!isSkinOwned(sk.id)) { await new Promise((res) => setTimeout(res, 1500)); await refreshSkinEntitlements(); }
+      if (isSkinOwned(sk.id)) _equipSkin(sk.file);
+      else { try { _renderWardrobe(); } catch (_) {} }
+    } else if (r && r.code === 'CANCELLED') {
+      /* user cancelled — silent */
+    } else {
+      try { if (typeof showToast === 'function') showToast('Purchase failed. Please try again.'); } catch (_) {}
+    }
+  }
+
   function getTitle() {
     for (let i = ACHIEVEMENTS.length - 1; i >= 0; i--) {
       if (unlockedAchievements.has(ACHIEVEMENTS[i].id)) return ACHIEVEMENTS[i].name;
@@ -33895,13 +33947,24 @@
         '<div class="wd-tile-av"><img src="' + esc(img) + '" alt="" onerror="this.style.display=\'none\'"></div>' +
         '<span class="wd-tile-name">' + esc(sk.name) + '</span></div>';
     }).join('');
-    const shop = PREMIUM_SKINS.map((sk) =>
-      '<div class="wd-tile wd-tile--premium wd-tile--' + sk.rarity + '" data-premium="' + esc(sk.id) + '">' +
-        '<span class="wd-tile-lockbadge">SOON</span>' +
+    // W297 — IAP-aware shop tiles. When IAP is off (default) every tile shows
+    // SOON and owned is always empty, so this renders identically to before.
+    const iapOn = !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable());
+    const shop = PREMIUM_SKINS.map((sk) => {
+      const owned = isSkinOwned(sk.id);
+      const isEqP = owned && (sk.file || '') === equipped;
+      let badge;
+      if (isEqP)        badge = '<span class="wd-tile-tick">✓</span>';
+      else if (owned)   badge = '<span class="wd-tile-badge">OWNED</span>';
+      else if (iapOn)   badge = '<span class="wd-tile-lockbadge wd-tile-buy">BUY</span>';
+      else              badge = '<span class="wd-tile-lockbadge">SOON</span>';
+      return '<div class="wd-tile wd-tile--premium wd-tile--' + sk.rarity + (isEqP ? ' is-equipped' : '') +
+        '" data-premium="' + esc(sk.id) + '"' + (owned ? ' data-owned="1"' : '') + '>' +
+        badge +
         '<div class="wd-tile-av"><img src="' + esc(sk.file) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>' +
         '<span class="wd-tile-name">' + esc(sk.name) + '</span>' +
-        '<span class="wd-tile-rarity">' + (sk.rarity || '').toUpperCase() + '</span></div>'
-    ).join('');
+        '<span class="wd-tile-rarity">' + (sk.rarity || '').toUpperCase() + '</span></div>';
+    }).join('');
     body.innerHTML =
       '<div class="wd-hero"><div class="pc-med"><span class="pc-med-ring"></span>' +
         '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
@@ -33911,7 +33974,7 @@
       '<div class="wd-grid">' + tiles + '</div>' +
       '<div class="wd-section-label"><span>SHOP</span><span class="rule"></span></div>' +
       '<div class="wd-grid wd-shop">' + shop + '</div>' +
-      '<div class="wd-shop-note">Premium skins — purchasable in a future update.</div>';
+      '<div class="wd-shop-note">' + (iapOn ? 'Tap to preview, buy, or equip. Restore purchases from Settings.' : 'Premium skins — purchasable in a future update.') + '</div>';
   }
   // W283 — premium skin preview lightbox (try-before-you-buy on a locked skin).
   function _wdPreviewSkin(id) {
@@ -33930,8 +33993,10 @@
   function openWardrobe() {
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
     if (!ov || !sh) return;
+    _hydrateOwnedSkinsFromCache();        // W297 — instant display from cache
     _renderWardrobe();
     ov.classList.remove('hidden'); sh.classList.remove('hidden');
+    try { refreshSkinEntitlements(); } catch (_) {}   // W297 — revalidate ownership from backend
   }
   function closeWardrobe() {
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
@@ -34066,7 +34131,13 @@
         const tile = e.target && e.target.closest && e.target.closest('.wd-tile[data-skin]');
         if (tile) { _equipSkin(tile.getAttribute('data-skin')); return; }
         const prem = e.target && e.target.closest && e.target.closest('.wd-tile--premium[data-premium]');
-        if (prem) _wdPreviewSkin(prem.getAttribute('data-premium'));
+        if (prem) {
+          const pid = prem.getAttribute('data-premium');
+          const psk = PREMIUM_SKINS.find((x) => x.id === pid);
+          if (psk && isSkinOwned(pid)) { _equipSkin(psk.file); return; }                                  // W297 owned → equip
+          if (psk && window.Auth && Auth.iapAvailable && Auth.iapAvailable()) { _buySkin(psk); return; }   // buyable → purchase
+          _wdPreviewSkin(pid);                                                                              // else (SOON) → preview
+        }
       });
     }
     const pcBodyEl = document.getElementById('pc-body');
