@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.630';
+const CACHE_VERSION = 'v5.632';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -135,6 +135,7 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_rare_drop.m4a',
   '/assets/audio/sfx_perfect_day.m4a',
   '/assets/audio/sfx_hall_greeting.m4a',
+  '/assets/audio/sfx_mythic_reveal.m4a',
   '/assets/audio/battle_loop.mp3',
   '/assets/audio/boss_loop.mp3',
   '/assets/audio/arena_menu.mp3',
@@ -153,6 +154,9 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_rare_drop.mp3',
   '/assets/audio/sfx_perfect_day.mp3',
   '/assets/audio/sfx_hall_greeting.mp3',
+  '/assets/audio/sfx_mythic_reveal.mp3',
+  // W296 — mythic mega-rare hero art (the Eclipse Coronation reveal)
+  '/assets/items/nightfall-blade-of-the-sovereign.png',
   // W251 — NPC battle sprites (archetypes; boss portraits added as art lands)
   '/assets/arena/foe_aggressor.webp',
   '/assets/arena/foe_sentinel.webp',

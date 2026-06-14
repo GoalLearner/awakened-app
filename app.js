@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w294';
+  const APP_BUILD_TAG = '2.2.6-w296';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7690,7 +7690,8 @@
   }
   // Opening challenge overlay — the First Awakened issues the challenge and the
   // objective is declared (100 / 1 / 1). Shown ONCE (hb_ascent_opening_seen_v1),
-  // and never stacked over the educational intro (gated on hb_onboarding_seen_v2).
+  // fired from openArena() on first Arena entry (W295 — relocated off the post-
+  // splash path so it can't fire mid-onboarding before the hunter is named).
   function _aoOpeningHtml() {
     return '<div class="ao-opening" id="ao-opening">' +
       '<div class="ao-open-portrait" aria-hidden="true">' +
@@ -7728,7 +7729,7 @@
         setTimeout(() => { try { el.remove(); } catch (_) {} if (openAfter) { try { if (typeof openArena === 'function') openArena(); } catch (_) {} } }, 420);
       };
       const btn = el.querySelector('#ao-begin-btn');
-      if (btn) btn.addEventListener('click', () => dismiss(true));
+      if (btn) btn.addEventListener('click', () => dismiss(false));
     } catch (_) {}
   }
   function _ascDiffHtml(you, foe) {
@@ -9369,6 +9370,12 @@
     ov.classList.remove('hidden');
     ov.setAttribute('aria-hidden', 'false');
     document.addEventListener('keydown', _arKeydown, true);
+    // W295 — the First Awakened's opening challenge fires ONCE, here, the first
+    // time the user actually enters the Arena (relocated from the post-splash
+    // path so it can never fire mid-onboarding before the hunter is named).
+    // Synchronous: the full-screen overlay must be in the DOM before the first
+    // paint, else the bare tower flashes for a few frames behind it.
+    try { _aoMaybeShowOpening(); } catch (_) {}
   }
   function closeArena() {
     const ov = document.getElementById('arena-overlay');
@@ -11364,6 +11371,243 @@
     if (stage) stage.innerHTML = '';
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // W296 — NIGHTFALL · THE ECLIPSE CORONATION (mythic mega-rare reveal).
+  // Ported from the ClaudeDesign handoff. Takes over the reveal modal when a
+  // rarity==='mythic' card lands; the rare/ultra sigil-bloom path is untouched.
+  // Atoms mount into #sigil-bloom-stage with mega-* classes; state hooks are
+  // is-mega-phase-0..4 / is-strike-1/2 / is-revealed / is-aftermath / is-reduced.
+  // ══════════════════════════════════════════════════════════════════
+  let _megaTimers = [], _megaRafId = 0, _megaState = 'idle', _megaAudio = null;
+  function _megaT(fn, ms) { _megaTimers.push(setTimeout(fn, ms)); }
+  function _megaWielderName() {
+    try { if (typeof _viewerAliasLower === 'string' && _viewerAliasLower) return _viewerAliasLower; } catch (_) {}
+    try { if (typeof playerName === 'string' && playerName) return playerName; } catch (_) {}
+    return 'Hunter';
+  }
+  function _megaDateStamp() {
+    try { const d = new Date();
+      const mo = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+      return mo + ' ' + d.getDate() + ' \u00b7 ' + d.getFullYear();
+    } catch (_) { return ''; }
+  }
+  function _megaStatBadges(card) {
+    const b = (card && card.bonuses) || {};
+    const order = ['str','vit','int','focus','will'];
+    const lbl = { str:'STR', vit:'VIT', int:'INT', focus:'FOCUS', will:'WILL' };
+    let out = '';
+    order.forEach(function(k){ if (b[k]) out += '<span class="rc-stat">+' + b[k] + ' ' + lbl[k] + '</span>'; });
+    return out;
+  }
+  function _buildMegaRevealDOM(card) {
+    const stage = document.getElementById('sigil-bloom-stage');
+    if (!stage) return;
+    const bossName = (card && card.source_boss && BOSSES[card.source_boss] && BOSSES[card.source_boss].name) || 'Erebus, the Shadow Sovereign';
+    const bossUpper = String(bossName).toUpperCase();
+    const nm = (card && card.name) || 'Nightfall';
+    const ci = nm.indexOf(',');
+    const name1 = (ci >= 0 ? nm.slice(0, ci) : nm).trim().toUpperCase();
+    const name2 = (ci >= 0 ? nm.slice(ci + 1) : '').trim();
+    const flavor = (card && card.flavor) || 'Forged from the eclipse itself, its edge falls twice \u2014 once through the light, and once through the shadow that follows. The only Mythic blade in existence. Best in slot, and beyond it.';
+    const rcKicker = 'MYTHIC\u00a0\u00a0\u00b7\u00a0\u00a0' + ((RARITY_LABELS[card.rarity] || 'MEGA-RARE').toUpperCase());
+    const wielder = _megaWielderName();
+    const dateStamp = _megaDateStamp();
+    const art = (card && card.art_path) || 'assets/items/nightfall-blade-of-the-sovereign.png';
+    stage.innerHTML =
+      '<div class="pre-snapshot"><b>' + esc(bossUpper) + ' \u2014 FELLED</b></div>' +
+      '<div class="light-drain"></div>' +
+      '<div class="mega-vignette"></div>' +
+      '<div class="mega-rays mega-rays--umbral"></div>' +
+      '<div class="mega-silhouette"><div class="body"></div><div class="head"></div><div class="crown"></div><div class="eye"></div></div>' +
+      '<div class="black-sun"><div class="disc"></div><div class="corona"></div><div class="beads"><i></i><i></i><i></i></div></div>' +
+      '<div class="mega-particles"></div>' +
+      '<div class="eclipse-seam"></div>' +
+      '<div class="mega-rays mega-rays--prism"></div>' +
+      '<div class="mega-flash mega-flash--1"></div><div class="mega-flash mega-flash--2"></div><div class="mega-flash mega-flash--ghost"></div>' +
+      '<div class="mega-systemline"></div>' +
+      '<div class="mega-wordmark"><div class="mega-wordmark-kicker">S-RANK SOVEREIGN FELLED</div><div class="mega-wordmark-whisper">The eclipse answers.</div></div>' +
+      '<div class="reveal-group">' +
+        '<div class="mega-card-wrap"><div class="prism-ring"></div>' +
+          '<div class="mega-card"><div class="mega-card-inner">' +
+            '<div class="blade-stage">' +
+              '<div class="blade-fallback"><div class="blade-shape"></div><div class="blade-guard"></div><div class="blade-grip"></div><div class="blade-pommel"></div></div>' +
+              '<div class="blade-art" id="megaBladeArt" style="background-image:url(\'' + art + '\')"></div>' +
+              '<div class="blade-specular"></div>' +
+            '</div>' +
+            '<div class="card-scrim"></div>' +
+            '<div class="rc-kicker">' + rcKicker + '</div>' +
+            '<div class="rc-name"><div class="rc-name-1">' + esc(name1) + '</div><div class="rc-name-2">' + esc(name2) + '</div></div>' +
+          '</div></div>' +
+        '</div>' +
+        '<div class="rc-beats">' +
+          '<div class="rc-flex">DROP RATE <span class="odo" id="megaOdo">1%</span>\u00a0 \u2014 \u00a0THE ONLY MYTHIC IN EXISTENCE</div>' +
+          '<div class="rc-onlypill">\u25c6 1 OF 1 \u00b7 FIRST IN THE REALM</div>' +
+          '<div class="rc-source">FELLED: ' + esc(bossUpper) + '</div>' +
+          '<div class="rc-stats">' + _megaStatBadges(card) + '<span class="eclipse-badge"><span class="glyph"></span>ECLIPSE \u00b7 STRIKE LANDS TWICE (\u00d72)</span></div>' +
+          '<div class="rc-flavor">' + esc(flavor) + '</div>' +
+        '</div>' +
+        '<div class="forever-mark">' +
+          '<div class="fm-label">HALL OF THE FIRST WIELDER</div>' +
+          '<div class="fm-name">FIRST WIELDER: ' + esc(wielder) + '</div>' +
+          '<div class="fm-stamp">ECLIPSE \u00b7 ' + esc(dateStamp) + '</div>' +
+          '<div class="fm-copy">Your name is now written into the Ascent.</div>' +
+        '</div>' +
+        '<div class="aftermath-actions"><div class="mega-continue-hint">TAP TO CLAIM YOUR LEGEND</div></div>' +
+      '</div>';
+  }
+  function _megaSetPhase(cls) {
+    const stage = document.getElementById('sigil-bloom-stage'); if (!stage) return;
+    stage.classList.remove('is-mega-phase-0','is-mega-phase-1','is-mega-phase-2','is-mega-phase-3','is-mega-phase-4');
+    if (cls) stage.classList.add(cls);
+  }
+  function _megaHaptic(pattern, force) {
+    try {
+      if (!force) { let r = false; try { r = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {} if (r) return; }
+      if ('vibrate' in navigator) navigator.vibrate(pattern);
+    } catch (_) {}
+  }
+  function _playMythicRevealSfx() {
+    if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+      if (!window.__bloomCtx) window.__bloomCtx = new Ctx();
+      const ctx = window.__bloomCtx;
+      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) {} }
+      _cutMythicSfx();
+      // Decode + play through the app's already-unlocked reveal AudioContext
+      // (more reliable on iOS WKWebView than a fresh HTMLAudio). m4a first, mp3
+      // twin as the decode fallback; both precached so the fetch is instant.
+      const playBuf = function(url, onFail) {
+        fetch(url).then(function(r){ return r.arrayBuffer(); })
+          .then(function(buf){ return ctx.decodeAudioData(buf); })
+          .then(function(audioBuf){
+            const src = ctx.createBufferSource(); src.buffer = audioBuf;
+            const g = ctx.createGain(); g.gain.value = 0.9;
+            src.connect(g); g.connect(ctx.destination); src.start();
+            _megaAudio = src;
+          })
+          .catch(function(){ if (onFail) onFail(); });
+      };
+      playBuf('assets/audio/sfx_mythic_reveal.m4a', function(){ playBuf('assets/audio/sfx_mythic_reveal.mp3', null); });
+    } catch (_) {}
+  }
+  function _cutMythicSfx() { try { if (_megaAudio) { try { _megaAudio.stop(); } catch (_) {} _megaAudio = null; } } catch (_) {} }
+  function _megaRunLightDrain(drain) {
+    if (!drain) return;
+    const dur = 600, t0 = performance.now();
+    cancelAnimationFrame(_megaRafId);
+    (function step(now){ const p = Math.min(1, (now - t0) / dur), e = p * p;
+      drain.style.setProperty('--drain', (150 - 150 * e) + '%');
+      if (p < 1) _megaRafId = requestAnimationFrame(step); else drain.style.setProperty('--drain','0%');
+    })(t0);
+  }
+  function _megaSpawnMotes(n, kind) {
+    const stage = document.getElementById('sigil-bloom-stage'); if (!stage) return;
+    const wrap = stage.querySelector('.mega-particles'); if (!wrap) return;
+    wrap.innerHTML = '';
+    const pal = ['#5eeaff','#ff5db1','#ffd24a','#b07bff'];
+    for (let i = 0; i < n; i++) {
+      const sp = document.createElement('span'); sp.className = 'mega-mote';
+      const ang = Math.random() * Math.PI * 2, dist = 170 + Math.random() * 230;
+      sp.style.setProperty('--sx', (Math.cos(ang) * dist).toFixed(0) + 'px');
+      sp.style.setProperty('--sy', (Math.sin(ang) * dist).toFixed(0) + 'px');
+      sp.style.setProperty('--ty', (((Math.random() * 2 - 1)) * 190).toFixed(0) + 'px');
+      const c = pal[i % 4]; sp.style.background = c; sp.style.boxShadow = '0 0 8px ' + c;
+      const sz = (kind === 'aftermath') ? (4 + Math.random() * 4) : (2 + Math.random() * 3);
+      sp.style.width = sz + 'px'; sp.style.height = sz + 'px';
+      if (kind === 'aftermath') { sp.classList.add('mega-mote--drift'); sp.style.setProperty('--dx', (((Math.random() * 2 - 1)) * 70) + 'px'); sp.style.animationDelay = (Math.random() * 1600) + 'ms'; }
+      else { sp.style.animationDelay = (Math.random() * 260) + 'ms'; }
+      wrap.appendChild(sp);
+    }
+  }
+  function _megaRunOdometer() {
+    const el = document.getElementById('megaOdo'); if (!el) return;
+    const t0 = performance.now(), dur = 900;
+    (function tick(now){ const p = Math.min(1, (now - t0) / dur); el.textContent = (p >= 1) ? '1%' : p.toFixed(2) + '%'; if (p < 1) requestAnimationFrame(tick); })(t0);
+  }
+  function _megaLockFinalState() {
+    const stage = document.getElementById('sigil-bloom-stage'); if (!stage) return;
+    const imp = function(e, prop, val){ if (e) e.style.setProperty(prop, val, 'important'); };
+    const O = function(sel, v){ imp(stage.querySelector(sel), 'opacity', v || '1'); };
+    ['.reveal-group','.mega-card','.rc-kicker','.rc-name-1','.rc-name-2','.rc-flex','.rc-onlypill','.rc-source','.rc-stats','.rc-flavor','.forever-mark','.aftermath-actions','.mega-continue-hint'].forEach(function(sel){ O(sel); });
+    O('.prism-ring','0.85');
+    imp(stage.querySelector('.blade-stage'),'clip-path','inset(0 0 0 0)');
+    imp(stage.querySelector('.rc-name-1'),'clip-path','inset(0 0 0 0)');
+    imp(stage.querySelector('.rc-name-2'),'clip-path','inset(0 0 0 0)');
+    imp(stage.querySelector('.mega-card'),'transform','none');
+    imp(stage.querySelector('.forever-mark'),'transform','none');
+  }
+  function _teardownMegaReveal() {
+    _megaTimers.forEach(clearTimeout); _megaTimers = [];
+    cancelAnimationFrame(_megaRafId);
+    _cutMythicSfx();
+    _megaState = 'idle';
+    const overlay = document.getElementById('reveal-overlay');
+    const stage = document.getElementById('sigil-bloom-stage');
+    if (stage) { stage.classList.remove('is-mega-phase-0','is-mega-phase-1','is-mega-phase-2','is-mega-phase-3','is-mega-phase-4','is-strike-1','is-strike-2','is-revealed','is-aftermath','is-kick'); stage.innerHTML = ''; }
+    if (overlay) overlay.classList.remove('is-reduced');
+  }
+  function _megaFastForwardToSettled() {
+    const stage = document.getElementById('sigil-bloom-stage'); if (!stage) return;
+    _megaTimers.forEach(clearTimeout); _megaTimers = [];
+    _megaState = 'settled';
+    stage.classList.add('is-strike-2','is-revealed','is-aftermath');
+    const w = stage.querySelector('.mega-wordmark'); if (w) w.classList.remove('is-kicker','is-whisper');
+    _megaSetPhase('is-mega-phase-4');
+    const p = stage.querySelector('.mega-particles'); if (p) p.innerHTML = '';
+    if (!stage.querySelector('.mega-mote--drift')) _megaSpawnMotes(7, 'aftermath');
+    _megaLockFinalState();
+  }
+  function _megaPointerTap() {
+    try {
+      if (_megaState === 'reveal' || _megaState === 'aftermath') { _megaFastForwardToSettled(); return; }
+      if (_megaState === 'settled') { closeCardRevealModal(); return; }
+      // cut / totality / forge \u2014 you cannot rush reverence
+    } catch (_) {}
+  }
+  function _megaRunReducedPath() {
+    const overlay = document.getElementById('reveal-overlay');
+    const stage = document.getElementById('sigil-bloom-stage');
+    if (!overlay || !stage) return;
+    _megaState = 'reveal';
+    overlay.classList.add('is-reduced');
+    stage.classList.add('is-revealed','is-aftermath');
+    _megaSetPhase('is-mega-phase-4');
+    _playMythicRevealSfx();
+    _megaRunOdometer();
+    _megaT(function(){ _megaHaptic(40, true); }, 600);
+    _megaT(function(){ _megaState = 'settled'; _megaLockFinalState(); }, 2500);
+  }
+  function _runMegaReveal(card) {
+    const overlay = document.getElementById('reveal-overlay');
+    const stage = document.getElementById('sigil-bloom-stage');
+    if (!overlay || !stage) return;
+    _teardownMegaReveal();
+    _buildMegaRevealDOM(card);
+    try { const ia = document.getElementById('megaBladeArt'); if (ia) { const im = new Image(); im.onerror = function(){ ia.style.display = 'none'; }; im.src = (card && card.art_path) || 'assets/items/nightfall-blade-of-the-sovereign.png'; } } catch (_) {}
+    let reduced = false; try { reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    if (reduced) { _megaRunReducedPath(); return; }
+    const drain = stage.querySelector('.light-drain');
+    // M0 — THE INTERRUPT
+    _megaState = 'cut'; _megaSetPhase('is-mega-phase-0');
+    _cutMythicSfx(); _megaRunLightDrain(drain); _playMythicRevealSfx(); _megaHaptic(60);
+    // M1 — TOTALITY / THE HELD BREATH
+    _megaT(function(){ _megaState = 'totality'; _megaSetPhase('is-mega-phase-1'); }, 900);
+    _megaT(function(){ _megaHaptic([90,220,90]); }, 2700);
+    _megaT(function(){ const w = stage.querySelector('.mega-wordmark'); if (w) w.classList.add('is-kicker'); }, 2650);
+    _megaT(function(){ const w = stage.querySelector('.mega-wordmark'); if (w) w.classList.add('is-whisper'); }, 3450);
+    // M2 — THE FORGING / EDGE FALLS TWICE
+    _megaT(function(){ _megaState = 'forge'; _megaSetPhase('is-mega-phase-2'); const w = stage.querySelector('.mega-wordmark'); if (w) w.classList.remove('is-kicker','is-whisper'); _megaSpawnMotes(26, 'forge'); }, 4200);
+    _megaT(function(){ stage.classList.add('is-strike-1'); _megaHaptic([40,30,80,30,140]); }, 6300);
+    _megaT(function(){ stage.classList.add('is-strike-2'); stage.classList.add('is-kick'); _megaT(function(){ stage.classList.remove('is-kick'); }, 160); }, 6420);
+    // M3 — THE REVEAL
+    _megaT(function(){ _megaState = 'reveal'; _megaSetPhase('is-mega-phase-3'); stage.classList.add('is-revealed'); const p = stage.querySelector('.mega-particles'); if (p) p.innerHTML = ''; _megaRunOdometer(); }, 6800);
+    _megaT(function(){ _megaHaptic(40); }, 8250);
+    // M4 — THE FOREVER-MARK + AFTERMATH
+    _megaT(function(){ _megaState = 'aftermath'; _megaSetPhase('is-mega-phase-4'); stage.classList.add('is-aftermath'); _megaSpawnMotes(7, 'aftermath'); }, 9800);
+    _megaT(function(){ _megaState = 'settled'; _megaLockFinalState(); }, 11300);
+  }
+
   // v3 Phase 1z.7 — short per-boss defeat-condition copy for the
   // overlay's gold-bordered VERIFIED row. Falls back to cfg.killCondShort
   // when no map entry exists.
@@ -12028,7 +12272,7 @@
     // acquisition cinematic reveals. The boss-defeated modal path
     // still uses celebrateRareDrop for duplicate rare/ultra drops
     // (they don't reach this modal).
-    try { _runSigilBloom(card.rarity); } catch (_) {}
+    try { if (card.rarity === 'mythic') { _runMegaReveal(card); } else { _runSigilBloom(card.rarity); } } catch (_) {}   // W296 — mythic = Eclipse Coronation
   }
 
   function closeCardRevealModal() {
@@ -12044,6 +12288,7 @@
       // v3 Phase 1z.74 — strip the sigil-bloom state so the next
       // reveal (if queued) starts clean.
       try { _teardownSigilBloom(); } catch (_) {}
+      try { _teardownMegaReveal(); } catch (_) {}   // W296
       // Pop the head of the queue and chain to the next one if any.
       const inv = getInventory();
       if (inv.reveal_queue && inv.reveal_queue.length > 0) {
@@ -12068,6 +12313,7 @@
     //   on first tap as before.
     overlay.addEventListener('click', () => {
       if (!overlay.classList.contains('reveal-overlay--showing')) return;
+      if (overlay.classList.contains('reveal-overlay--mythic')) { try { _megaPointerTap(); } catch (_) {} return; }   // W296
       const isSigil = overlay.classList.contains('reveal-overlay--sigil');
       const cardRevealed = overlay.classList.contains('is-card-revealed');
       const bloomReady = overlay.classList.contains('is-bloom-ready');
@@ -43940,7 +44186,6 @@
       // 600ms covers the 0.55s fade with a hair of slack. The node
       // is decorative; nothing reads it once hidden.
       setTimeout(() => { try { el.remove(); } catch (_) {} }, 600);
-      setTimeout(() => { try { _aoMaybeShowOpening(); } catch (_) {} }, 700);   // W268 — declare the objective once, post-splash
     }, wait);
   }
   // Kick the "Preparing your system…" line if loading drags past
@@ -45046,6 +45291,14 @@
     // v2.0.1 DROPS Phase 1 — inventory + reveal + Pokédex wiring.
     try { loadInventory(); } catch (_) {}
     setupCardRevealModal();
+    // W296 DEV QA — preview the Eclipse Coronation without an in-game drop:
+    // load the app with #megareveal in the URL. Ships gated (no item grant,
+    // no inventory write); safe to remove once QA is done.
+    try {
+      if (location.hash === '#megareveal' && typeof CARDS !== 'undefined' && CARDS['nightfall_blade']) {
+        setTimeout(function(){ try { openCardRevealModal(CARDS['nightfall_blade']); } catch (_) {} }, 700);
+      }
+    } catch (_) {}
     setupPokedex();
     setupCardDetailModal();
     setupMysteryCardModal();
