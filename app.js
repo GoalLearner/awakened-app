@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w300';
+  const APP_BUILD_TAG = '2.2.6-w301';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8276,6 +8276,8 @@
     musicSlot: null, want: null,   // W248 — want: slot to auto-start once its buffer decodes (menu-music race)
     slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting', 'arena_menu',
             'sfx_lunge', 'sfx_hit_normal', 'sfx_hit_crit', 'sfx_miss_dodge', 'sfx_hp_drain', 'sfx_ko', 'sfx_boss_intro',
+            // W301 — per-move-family hit cues (drop-in slots; synth until generated)
+            'sfx_hit_slice', 'sfx_hit_burst', 'sfx_hit_heavy', 'sfx_hit_magic', 'sfx_hit_arrow',
             // W250 — main-screen earned-moment cues (habit_check is a drop-in slot, absent today)
             'sfx_habit_check', 'sfx_rank_up', 'sfx_achievement', 'sfx_stat_up', 'sfx_rare_drop', 'sfx_perfect_day', 'sfx_hall_greeting',
             // W260 — clutch-mode heartbeat (drop-in slot; synth lub-dub until generated)
@@ -8287,6 +8289,7 @@
   const _AUD_FILE_CUES = {
     lunge: 0.5, hit_normal: 0.7, hit_crit: 0.85, miss_dodge: 0.5,
     hp_drain: 0.16, ko: 0.9, boss_intro: 0.8, heartbeat: 0.55,
+    hit_slice: 0.7, hit_burst: 0.72, hit_heavy: 0.78, hit_magic: 0.72, hit_arrow: 0.72,  // W301 — drop-in
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
   function _audMusicOn() { return _audSet('hb_music', 'on') !== 'off'; }
