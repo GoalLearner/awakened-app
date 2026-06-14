@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w299';
+  const APP_BUILD_TAG = '2.2.6-w300';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6414,6 +6414,8 @@
       shield: '<path d="M7 1.4l4.8 1.7v3.8c0 3.2-2.1 5.2-4.8 6-2.7-.8-4.8-2.8-4.8-6V3.1z" stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linejoin="round"/>',
       dagger: '<path d="M7 1.2v7.6M7 8.8L5 12.8h4zM4.6 6h4.8" ' + rc + '/>',
       burst:  '<path d="M7 1.2v3M7 9.8v3M1.2 7h3M9.8 7h3M2.9 2.9l2.1 2.1M9 9l2.1 2.1M11.1 2.9L9 5M5 9l-2.1 2.1" stroke="' + color + '" stroke-width="1.3" fill="none" stroke-linecap="round"/>',
+      magic:  '<path d="M7 1.4L8.2 5.8 12.6 7 8.2 8.2 7 12.6 5.8 8.2 1.4 7 5.8 5.8z" stroke="' + color + '" stroke-width="1.2" fill="none" stroke-linejoin="round"/>',
+      ranged: '<path d="M1.8 7h8.4M8 4.6L11.2 7 8 9.4M1.8 7l1.6-1.5M1.8 7l1.6 1.5" ' + rc + '/>',
       eye:    '<g stroke="' + color + '" stroke-width="1.2" fill="none"><path d="M1.5 7C3 4.2 5 2.8 7 2.8S11 4.2 12.5 7C11 9.8 9 11.2 7 11.2S3 9.8 1.5 7z" stroke-linejoin="round"/><circle cx="7" cy="7" r="1.7"/></g>',
     };
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="display:block;flex:none" aria-hidden="true">' + (p[type] || '') + '</svg>';
@@ -6566,6 +6568,22 @@
     evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
     refuse:     { name: 'Refuse',       gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Guard and shed afflictions.' },
     lastvow:    { name: 'Last Vow',     gl: 'shield', power: 0,    acc: 1,    cd: 4, fx: { t: 'heal', mag: 0.4 }, desc: 'Restore 40% of your health.' },
+    // ── W300 — Mage kit (gl 'magic'). Stats MIRROR the melee moves they replace
+    // 1:1 so balance is neutral: arcanebolt≡slash, forcewave≡crush, manaward≡brace,
+    // dispel≡refuse, siphon≡wardstrike, shatterhex≡quake. Only name/glyph/SFX change.
+    arcanebolt: { name: 'Arcane Bolt',  gl: 'magic',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A bolt of raw mana.' },
+    forcewave:  { name: 'Force Wave',   gl: 'magic',  power: 1.55, acc: 0.78, cd: 2, desc: 'A crushing wave of force.' },
+    manaward:   { name: 'Mana Ward',    gl: 'magic',  power: 0,    acc: 1,    cd: 2, fx: { t: 'defUp', kind: 'brace', mag: -0.35, dur: 2 }, desc: 'Glyphs blunt the blows — take 35% less (2t).' },
+    dispel:     { name: 'Dispel',       gl: 'magic',  power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Unravel afflictions and ward.' },
+    siphon:     { name: 'Siphon',       gl: 'magic',  power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'heal', mag: 0.12 }, desc: 'Drain vitality — strike and mend.' },
+    shatterhex: { name: 'Shatter Hex',  gl: 'magic',  power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', kind: 'quake', mag: 0.2, dur: 2 }, desc: 'A hex that cracks armor −20% (2t).' },
+    // ── W300 — Ranger kit (gl 'ranged'). arrowvolley≡flurry, snapshot≡quickstep,
+    // tumble≡evade, flamearrow≡searing, quickshot≡slash (lesser-kit basic shot).
+    arrowvolley:{ name: 'Arrow Volley', gl: 'ranged', power: 0.5,  acc: 0.95, hits: 3, cd: 1, desc: 'Three arrows in a breath.' },
+    snapshot:   { name: 'Snap Shot',    gl: 'ranged', power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Looses first — always strikes first.' },
+    tumble:     { name: 'Tumble',       gl: 'ranged', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: 'Roll aside — 40% dodge (2t).' },
+    flamearrow: { name: 'Flame Arrow',  gl: 'ranged', power: 1.1,  acc: 0.9,  cd: 1, fx: { t: 'burn', mag: 0.16, dur: 3 }, desc: 'A shaft wrapped in fire.' },
+    quickshot:  { name: 'Quick Shot',   gl: 'ranged', power: 1.0,  acc: 0.95, cd: 0, desc: 'A clean shot.' },
   };
   // Weapon id → 4 move ids (the weapon names your kit). Unknown weapon → unarmed.
   const WEAPON_MOVES = {
@@ -6580,16 +6598,20 @@
     duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'temper'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
-  // W234 rearmament: walls (sentinel/juggernaut) carry REFUSE so they can
-  // cleanse DoT (Kilnforged was structurally unbeatable-against); trickster
-  // gets a real kit (chip + priority + a DoT threat) so its column isn't
-  // ladder-wide free wins via rotation.
+  // W234 rearmament: walls (sentinel/juggernaut) carry a cleanse so they can
+  // shed DoT (Kilnforged was structurally unbeatable-against); trickster gets a
+  // real kit (chip + priority + a DoT threat) so its column isn't ladder-wide
+  // free wins via rotation.
+  // W300: the Magic/Ranged columns now wield thematic kits (mage spells / ranger
+  // shots). Stats MIRROR the prior melee moves 1:1 — pure reskin + SFX, so the
+  // AI (picks by fx/power) and the triangle (by archetype) are unchanged. The
+  // wall cleanse is now 'dispel'; trickster keeps its chip/priority/DoT shape.
   const ARCH_MOVES = {
     aggressor:   ['cleave', 'sunder', 'slash', 'focus'],
     glasscannon: ['oathstrike', 'cleave', 'slash', 'temper'],
-    sentinel:    ['slash', 'brace', 'refuse', 'wardstrike'],
-    juggernaut:  ['crush', 'brace', 'refuse', 'quake'],
-    trickster:   ['flurry', 'quickstep', 'evade', 'searing'],
+    sentinel:    ['arcanebolt', 'manaward', 'dispel', 'siphon'],
+    juggernaut:  ['forcewave', 'manaward', 'dispel', 'shatterhex'],
+    trickster:   ['arrowvolley', 'snapshot', 'tumble', 'flamearrow'],
     balanced:    ['slash', 'guard', 'focus', 'lunge'],
   };
   function _arenaMaxHP(c) { return Math.max(20, Math.round(_HP_BASE + (c.defense || 0) * _HP_PER_DEF)); }
@@ -6623,7 +6645,7 @@
   // W237 tiered foe kits — early-route tricksters (F4–F5) carry a LESSER kit
   // (no Searing): kit COMPOSITION varies by floor tier (content design, like
   // bosses); move DEFINITIONS never fork (the locked anti-fork principle).
-  const _TRICK_LESSER = ['flurry', 'quickstep', 'evade', 'slash'];
+  const _TRICK_LESSER = ['arrowvolley', 'snapshot', 'tumble', 'quickshot'];
   function _arenaFoeKit(arch, floor) {
     const ids = (arch === 'trickster' && floor >= 4 && floor <= 5)
       ? _TRICK_LESSER
@@ -7297,8 +7319,8 @@
       arenaFinalizeBattle(s10);
       ok('T10 unrated commits nothing', JSON.stringify(getAscentState()) === before10);
       // T11 W234 foe kits — walls carry Refuse; trickster has the rearmed kit
-      ok('T11 rearmed foe kits', ARCH_MOVES.sentinel.indexOf('refuse') !== -1 && ARCH_MOVES.juggernaut.indexOf('refuse') !== -1 &&
-        JSON.stringify(ARCH_MOVES.trickster) === JSON.stringify(['flurry', 'quickstep', 'evade', 'searing']));
+      ok('T11 rearmed foe kits', ARCH_MOVES.sentinel.indexOf('dispel') !== -1 && ARCH_MOVES.juggernaut.indexOf('dispel') !== -1 &&
+        JSON.stringify(ARCH_MOVES.trickster) === JSON.stringify(['arrowvolley', 'snapshot', 'tumble', 'flamearrow']));
       // T12 Refuse cleanses an active burn+bleed (and shred/debuffs) + guards
       const s12 = arenaStartBattle(M(mk(30, 30, 10, null, 'You'), mk(30, 30, 10, 'sentinel', 'Foe')), 12);
       s12.bS.mods.push({ k: 'dot', kind: 'burn', mag: 0.16, dur: 3, src: 'p' });
@@ -7323,7 +7345,7 @@
       s15.bS.mods.push({ k: 'dot', kind: 'burn', mag: 0.16, dur: 3, src: 'p' });
       s15.bS.mods.push({ k: 'dot', kind: 'bleed', mag: 0.12, dur: 3, src: 'p' });
       let refuseSeen = false;
-      for (let i = 0; i < 2 && !refuseSeen; i++) { if (_arenaFoePick(s15).id === 'refuse') refuseSeen = true; }
+      for (let i = 0; i < 2 && !refuseSeen; i++) { if (_arenaFoePick(s15).id === 'dispel') refuseSeen = true; }
       ok('T15 wall-AI cleanses DoT (Refuse ≤2 picks)', refuseSeen);
       // T16 (W235 AI v2) — a Kilnforged-AI reaches Temper via the SETUP branch
       const s16 = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'aggressor', 'Foe')), 16);
@@ -7371,7 +7393,7 @@
       const k5 = _arenaFoeKit('trickster', 5).map((x) => x.id).join(',');
       const k6 = _arenaFoeKit('trickster', 6).map((x) => x.id).join(',');
       ok('T24 tiered trickster kits (lesser F4–F5, full F6+)',
-        k4 === 'flurry,quickstep,evade,slash' && k5 === k4 && k6 === 'flurry,quickstep,evade,searing');
+        k4 === 'arrowvolley,snapshot,tumble,quickshot' && k5 === k4 && k6 === 'arrowvolley,snapshot,tumble,flamearrow');
       // T25 (W237) — lever values shipped: Willbreak dur 2, Crush 1.55, TS edge 1.18 reciprocal
       ok('T25 W237 lever constants', ARENA_MOVE_LIB.willbreak.fx.dur === 2 &&
         Math.abs(ARENA_MOVE_LIB.crush.power - 1.55) < 1e-9 &&
@@ -7411,7 +7433,7 @@
       const st29b = stMk('sentinel', 'balanced');
       st29b.self.S.mods = [{ k: 'dot', kind: 'burn', mag: 0.05, dur: 3 }];
       const p29b = _aiDiscipline(st29b, st29b.self.kit, 0);
-      ok('T29 cleanse: real DoT yes, trivial DoT no', !!p29 && p29.id === 'refuse' && (!p29b || p29b.id !== 'refuse'));
+      ok('T29 cleanse: real DoT yes, trivial DoT no', !!p29 && p29.id === 'dispel' && (!p29b || p29b.id !== 'dispel'));
       // T30 counter-timing — hold defense for the nuke's return; ignore small threats
       const st30 = stMk('sentinel', 'balanced'); st30.foe.atk = 60; st30.foe.cd = { lunge: 1 };
       const nk30 = _aiFoeNuke(st30);
@@ -8392,6 +8414,14 @@
         _audNoise({ dur: 0.13, peak: 0.24, filter: { type: 'lowpass', f0: 1900, f1: 260 } });
         _audOsc({ type: 'sine', f0: 110, f1: 40, dur: 0.3, peak: 0.42 });
         _audOsc({ type: 'square', f0: 240, f1: 150, t: 0.015, dur: 0.13, peak: 0.07, filter: { type: 'bandpass', f0: 500, q: 2 } }); break;
+      case 'hit_magic':   _audSpend(0.24);   // magic — arcane zap + airy shimmer
+        _audOsc({ type: 'square', f0: 320, f1: 760, dur: 0.14, peak: 0.12, filter: { type: 'lowpass', f0: 2200 } });
+        _audOsc({ type: 'sine', f0: 880, f1: 1320, t: 0.02, dur: 0.16, peak: 0.07 });
+        _audNoise({ dur: 0.12, peak: 0.08, filter: { type: 'highpass', f0: 3000, f1: 6000 } }); break;
+      case 'hit_arrow':   _audSpend(0.18);   // ranged — bow thwip + thudding impact
+        _audNoise({ dur: 0.05, peak: 0.12, filter: { type: 'bandpass', f0: 1600, f1: 3600, q: 1.5 } });
+        _audOsc({ type: 'sine', f0: 220, f1: 90, t: 0.03, dur: 0.12, peak: 0.22 });
+        _audOsc({ type: 'square', f0: 180, f1: 120, t: 0.03, dur: 0.06, peak: 0.05 }); break;
       case 'super_effective': _audSpend(0.3);
         _audOsc({ type: 'square', f0: 740, dur: 0.1, peak: 0.1 });
         _audOsc({ type: 'square', f0: 1108, t: 0.1, dur: 0.16, peak: 0.1 }); break;
@@ -8847,6 +8877,8 @@
       case 'dagger': return 'hit_slice';
       case 'burst':  return 'hit_burst';
       case 'shield': return 'hit_heavy';
+      case 'magic':  return 'hit_magic';
+      case 'ranged': return 'hit_arrow';
       default:       return 'hit_normal';
     }
   }
