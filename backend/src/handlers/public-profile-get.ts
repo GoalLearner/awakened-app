@@ -26,6 +26,7 @@ interface ProfileRow {
   ultra_rare_drops_total: number | null;
   verified_streak_label: string | null;
   step_week: number | null;
+  avg_steps_per_day: number | null;
   best_floor: number | null;
 }
 
@@ -52,6 +53,7 @@ export async function handlePublicProfileGet(
             pps.bosses_slain_total AS bosses_slain_total,
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
             pps.verified_streak_label AS verified_streak_label,
+            pps.avg_steps_per_day AS avg_steps_per_day,
             (SELECT current_value FROM leaderboard_snapshots
               WHERE user_id = u.id AND metric = 'step_total'
               ORDER BY week_start DESC LIMIT 1) AS step_week,
@@ -80,7 +82,7 @@ export async function handlePublicProfileGet(
     bossesSlain: row.bosses_slain_total ?? 0,
     ultraRareDrops: row.ultra_rare_drops_total ?? 0,
     verifiedStreakLabel: row.verified_streak_label,
-    avgStepsPerDay: Math.round(stepWeek / 7),
+    avgStepsPerDay: row.avg_steps_per_day ?? Math.round(stepWeek / 7),
     bestFloor: row.best_floor ?? 0,
   });
 }

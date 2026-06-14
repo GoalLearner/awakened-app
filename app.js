@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w303';
+  const APP_BUILD_TAG = '2.2.6-w304';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13623,6 +13623,11 @@
         flights_daily:              raw.flights_daily              || {},
         best_7day_flights_total:    raw.best_7day_flights_total    || 0,
         best_7day_flights_window_end: raw.best_7day_flights_window_end || null,
+        // W304 — lifetime avg steps/day: a running total + first-record date,
+        // both of which survive the 30-day daily-map prune (the daily map alone
+        // can't yield a true all-time average). Submitted on the profile heartbeat.
+        lifetime_steps_total:      raw.lifetime_steps_total      || 0,
+        lifetime_steps_start_date: raw.lifetime_steps_start_date || null,
       };
     } catch (_) {
       return {
@@ -13632,6 +13637,7 @@
         best_7day_step_total: 0, best_7day_step_window_end: null,
         flights_daily: {},
         best_7day_flights_total: 0, best_7day_flights_window_end: null,
+        lifetime_steps_total: 0, lifetime_steps_start_date: null,
       };
     }
   }
@@ -13721,6 +13727,24 @@
     const today = getDeviceLocalDate();
     const prev  = state.steps_daily[today] || 0;
     const next  = Math.round(steps);
+    // W304 — lifetime steps accrual (for all-time avg steps/day on the profile
+    // card). On the first-ever record, bootstrap from the retained daily map (up
+    // to 30 days) so existing users start with a representative average, not a
+    // 1-day one. Thereafter add only the delta (next - prev) so a backfilled-
+    // upward HealthKit figure for today never double-counts. Runs BEFORE the
+    // steps_daily[today] write so the seed sees today's previous value.
+    if (!state.lifetime_steps_start_date) {
+      const _keys = Object.keys(state.steps_daily);
+      if (_keys.length) {
+        state.lifetime_steps_start_date = _keys.sort()[0];
+        let _seed = 0; _keys.forEach((k) => { _seed += (state.steps_daily[k] || 0); });
+        state.lifetime_steps_total = _seed;   // includes today's prev; the delta below adds only the increase
+      } else {
+        state.lifetime_steps_start_date = today;
+      }
+    }
+    const _stepDelta = next - prev;
+    if (_stepDelta > 0) state.lifetime_steps_total = (state.lifetime_steps_total || 0) + _stepDelta;
     state.steps_daily[today] = next;
     lbPruneDailyMap(state.steps_daily, LB_DAILY_RETENTION_DAYS);
 
@@ -14196,8 +14220,18 @@
       _guildhallMaybeFireStreakMilestone('Workout', workoutCurrent);
     } catch (_) {}
 
+    // W304 — lifetime avg steps/day = running total / days since first record.
+    // Inclusive of the start day; divisor floored at 1 (never NaN/zero).
+    let _avgStepsLifetime = 0;
+    try {
+      const _sd = state.lifetime_steps_start_date;
+      let _days = 1;
+      if (_sd) { const _ms = Date.now() - new Date(_sd + 'T00:00:00').getTime(); _days = Math.max(1, Math.floor(_ms / 86400000) + 1); }
+      _avgStepsLifetime = Math.round((state.lifetime_steps_total || 0) / _days);
+    } catch (_) {}
     return {
       steps_last_7_days:         lbSumCurrentWeekSteps(state.steps_daily),
+      avg_steps_per_day_lifetime: _avgStepsLifetime,
       best_7day_step_total:      state.best_7day_step_total,
       best_7day_step_window_end: state.best_7day_step_window_end,
       current_sleep_streak:      currentSleepStreak,
@@ -17719,8 +17753,13 @@
     let powerLvl = 0; try { powerLvl = _arD(_ascPlayerPower()); } catch (_) {}
     payload.avatarId = avatarId;
     payload.power = powerLvl;
+    // W304 — lifetime avg steps/day rides the same heartbeat (folded into the
+    // signature so a change triggers a fresh submit). Backend stores + serves it,
+    // replacing the old weekly-snapshot ÷ 7 derivation.
+    let avgStepsLife = 0; try { avgStepsLife = lbGetSnapshot().avg_steps_per_day_lifetime | 0; } catch (_) {}
+    payload.avgStepsPerDay = avgStepsLife;
     const achSig = _publicAchievementsSignature(achievements) + '|' + (arenaTitleId || '') +
-      '|' + (avatarId || '') + '|' + powerLvl;
+      '|' + (avatarId || '') + '|' + powerLvl + '|' + avgStepsLife;
     _prsLogBreadcrumb('public-achievements-summary-built', {
       bossesSlainTotal:        achievements.bossesSlainTotal,
       ultraRareDropsTotal:     achievements.ultraRareDropsTotal,

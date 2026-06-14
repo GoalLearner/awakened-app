@@ -75,6 +75,7 @@ const RANK_POINTS_MAX = 999_999_999;
 const BOSSES_SLAIN_MAX     = 999_999;
 const ULTRA_RARE_DROPS_MAX = 9_999;
 const POWER_MAX            = 1_000_000;   // display power cap (anti-garbage; well above any real build)
+const AVG_STEPS_MAX        = 1_000_000;   // W304 — lifetime avg steps/day cap (anti-garbage)
 // Streak label allowlist: "<digits>-day <type> streak". Types are
 // the four streak kinds the client tracks (Morning Routine, Locked-
 // In, top stat, top habit). The user's private habit name is NEVER
@@ -114,6 +115,7 @@ interface PutBody {
   arenaTitle?: unknown;
   avatarId?: unknown;
   power?: unknown;
+  avgStepsPerDay?: unknown;
 }
 
 // Per-field "was this key present in the achievements object?"
@@ -145,6 +147,7 @@ interface Validated {
   // Profile card (W-next) — same set/clear/preserve semantics.
   avatarId: AchField<string>;
   power: AchField<number>;
+  avgStepsPerDay: AchField<number>;
 }
 
 function isAllowedTier(v: unknown): v is (typeof ALLOWED_TIERS)[number] {
@@ -385,6 +388,15 @@ function validate(body: PutBody):
     }
   }
 
+  let avgStepsPerDay: AchField<number> = { set: false, value: null };
+  if ('avgStepsPerDay' in body && body.avgStepsPerDay !== undefined) {
+    if (isSafeInt(body.avgStepsPerDay, 0, AVG_STEPS_MAX)) {
+      avgStepsPerDay = { set: true, value: body.avgStepsPerDay };
+    } else {
+      return { ok: false, code: 'INVALID_AVG_STEPS', detail: 'avgStepsPerDay must be an integer in [0, ' + AVG_STEPS_MAX + '].' };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -398,6 +410,7 @@ function validate(body: PutBody):
       arenaTitle,
       avatarId,
       power,
+      avgStepsPerDay,
     },
   };
 }
@@ -465,6 +478,7 @@ export async function handlePublicProfileSummaryPut(
   const titleSet  = v.arenaTitle.set ? 1 : 0;
   const avatarSet = v.avatarId.set ? 1 : 0;
   const powerSet  = v.power.set ? 1 : 0;
+  const avgStepsSet = v.avgStepsPerDay.set ? 1 : 0;
 
   await env.DB.prepare(
     `INSERT INTO public_profile_summary (
@@ -473,9 +487,9 @@ export async function handlePublicProfileSummaryPut(
         client_updated_at, server_updated_at, metadata_json,
         bosses_slain_total, ultra_rare_drops_total,
         verified_streak_label, achievements_updated_at,
-        arena_title, avatar_id, power
+        arena_title, avatar_id, power, avg_steps_per_day
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
-        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0))
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0))
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
@@ -500,7 +514,8 @@ export async function handlePublicProfileSummaryPut(
                                        THEN ?
                                        ELSE public_profile_summary.arena_title END,
         avatar_id               = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avatar_id END,
-        power                   = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.power END`,
+        power                   = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.power END,
+        avg_steps_per_day       = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avg_steps_per_day END`,
   )
     .bind(
       // INSERT bindings (positional with the VALUES clause)
@@ -519,6 +534,7 @@ export async function handlePublicProfileSummaryPut(
       v.arenaTitle.value,
       v.avatarId.value,
       v.power.value,
+      v.avgStepsPerDay.value,
       // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
       bossesSet, ach.bossesSlainTotal.value,
       dropsSet,  ach.ultraRareDropsTotal.value,
@@ -527,6 +543,7 @@ export async function handlePublicProfileSummaryPut(
       titleSet,  v.arenaTitle.value,
       avatarSet, v.avatarId.value,
       powerSet,  v.power.value,
+      avgStepsSet, v.avgStepsPerDay.value,
     )
     .run();
 

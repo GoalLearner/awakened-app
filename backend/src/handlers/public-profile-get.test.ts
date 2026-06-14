@@ -26,12 +26,13 @@ const session = { userId: 'viewer-1' } as never;
 const req = () => new Request('https://x/v1/users/rendiesel/profile', { method: 'GET' });
 
 describe('GET /v1/users/:alias/profile', () => {
-  it('returns the public card bundle and derives avg steps/day (÷7)', async () => {
+  it('serves the client-computed lifetime avg steps/day', async () => {
     const db = makeDb({
       alias: 'rendiesel', rank_label: 'C I', rank_tier: 'C', power: 1782,
       avatar_id: 'avatar-warrior.png', arena_title: 'rt_reaver',
       bosses_slain_total: 60, ultra_rare_drops_total: 5,
       verified_streak_label: '27-night sleep streak',
+      avg_steps_per_day: 4200,
       step_week: 94194, best_floor: 53,
     });
     const res = await handlePublicProfileGet(req(), makeEnv(db), session, 'rendiesel');
@@ -42,8 +43,20 @@ describe('GET /v1/users/:alias/profile', () => {
     expect(b.avatarId).toBe('avatar-warrior.png');
     expect(b.bossesSlain).toBe(60);
     expect(b.bestFloor).toBe(53);
-    expect(b.avgStepsPerDay).toBe(Math.round(94194 / 7)); // 13456
+    expect(b.avgStepsPerDay).toBe(4200); // lifetime value served verbatim
     expect('rankPoints' in b).toBe(false); // exact XP never exposed
+  });
+
+  it('falls back to weekly ÷7 when the lifetime avg is absent (pre-W304 clients)', async () => {
+    const db = makeDb({
+      alias: 'legacy', rank_label: 'C I', rank_tier: 'C', power: 1782,
+      avatar_id: null, arena_title: null, bosses_slain_total: 60,
+      ultra_rare_drops_total: 5, verified_streak_label: null,
+      avg_steps_per_day: null, step_week: 94194, best_floor: 53,
+    });
+    const res = await handlePublicProfileGet(req(), makeEnv(db), session, 'legacy');
+    const b = await res.json() as Record<string, unknown>;
+    expect(b.avgStepsPerDay).toBe(Math.round(94194 / 7)); // 13456 weekly fallback
   });
 
   it('coalesces nulls (no profile summary yet) to safe defaults', async () => {
@@ -51,7 +64,7 @@ describe('GET /v1/users/:alias/profile', () => {
       alias: 'newbie', rank_label: null, rank_tier: null, power: null,
       avatar_id: null, arena_title: null, bosses_slain_total: null,
       ultra_rare_drops_total: null, verified_streak_label: null,
-      step_week: null, best_floor: null,
+      avg_steps_per_day: null, step_week: null, best_floor: null,
     });
     const res = await handlePublicProfileGet(req(), makeEnv(db), session, 'newbie');
     const b = await res.json() as Record<string, unknown>;
