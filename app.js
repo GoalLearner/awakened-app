@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w298';
+  const APP_BUILD_TAG = '2.2.6-w299';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7038,7 +7038,7 @@
         if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
         else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
         sess.dmgDealt[side] += effective;
-        events.push({ side, t: 'hit', crit: anyCrit, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
+        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
       } else if (dodged && !missed) {
         events.push({ side, t: 'dodge', text: defName + ' dodges ' + move.name + '!' });
       } else {
@@ -8381,6 +8381,17 @@
         _audNoise({ dur: 0.1, peak: 0.26, filter: { type: 'lowpass', f0: 3200, f1: 500 } });
         _audOsc({ type: 'sine', f0: 200, f1: 55, dur: 0.22, peak: 0.38 });
         _audOsc({ type: 'square', f0: 520, f1: 1040, t: 0.05, dur: 0.16, peak: 0.09 }); break;
+      case 'hit_slice':   _audSpend(0.14);   // dagger — fast, light, high cut (great rapid-fire for multi-hits)
+        _audNoise({ dur: 0.06, peak: 0.17, filter: { type: 'highpass', f0: 2200, f1: 5600 } });
+        _audOsc({ type: 'sine', f0: 380, f1: 180, dur: 0.07, peak: 0.12 }); break;
+      case 'hit_burst':   _audSpend(0.26);   // burst — fiery whoosh + arcane growl
+        _audNoise({ dur: 0.2, peak: 0.15, filter: { type: 'bandpass', f0: 700, f1: 2800, q: 0.7 } });
+        _audOsc({ type: 'sawtooth', f0: 240, f1: 80, dur: 0.22, peak: 0.16, filter: { type: 'lowpass', f0: 1500 } });
+        _audOsc({ type: 'square', f0: 90, f1: 60, dur: 0.18, peak: 0.08 }); break;
+      case 'hit_heavy':   _audSpend(0.34);   // shield/blunt — deep thud + metallic clang
+        _audNoise({ dur: 0.13, peak: 0.24, filter: { type: 'lowpass', f0: 1900, f1: 260 } });
+        _audOsc({ type: 'sine', f0: 110, f1: 40, dur: 0.3, peak: 0.42 });
+        _audOsc({ type: 'square', f0: 240, f1: 150, t: 0.015, dur: 0.13, peak: 0.07, filter: { type: 'bandpass', f0: 500, q: 2 } }); break;
       case 'super_effective': _audSpend(0.3);
         _audOsc({ type: 'square', f0: 740, dur: 0.1, peak: 0.1 });
         _audOsc({ type: 'square', f0: 1108, t: 0.1, dur: 0.16, peak: 0.1 }); break;
@@ -8827,11 +8838,23 @@
   // one beat per engine event. Stacking order for an attack: announce → lunge →
   // impact → number + drain → crit toast → effectiveness toast → (status events
   // follow in-queue with their own holds). Post-drain settle ONLY if no toast.
+  // W299 — per-move-family impact sound. The move's glyph family (gl) picks a
+  // distinct hit cue so attacks stop sounding identical: sword = solid thwack,
+  // dagger = fast light slice, burst = fiery whoosh, shield/blunt = heavy clang.
+  // Crits keep their own bright cue; unknown families fall back to the sword baseline.
+  function _arHitCueFor(gl) {
+    switch (gl) {
+      case 'dagger': return 'hit_slice';
+      case 'burst':  return 'hit_burst';
+      case 'shield': return 'hit_heavy';
+      default:       return 'hit_normal';
+    }
+  }
   function _pkbImpactFx(e, defSide, dmgShown) {
     const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
     if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
     else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
-    try { _audCue(e.crit ? 'hit_crit' : 'hit_normal'); } catch (_) {}
+    try { _audCue(e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
