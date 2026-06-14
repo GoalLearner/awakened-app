@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w297';
+  const APP_BUILD_TAG = '2.2.6-w298';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34228,6 +34228,19 @@
     }
     if (state.streak > 0) stateClasses.push('bcard--active');
     if (state.kill_count > 0) stateClasses.push('bcard--defeated');
+    // W298 — Rendell feedback: surface per-cadence completion on the GRID so
+    // the player reads "done for now" at a glance instead of opening each boss.
+    // Cleared = unlocked, not currently hunting, and the engage gate reports a
+    // cadence clear (e.g. a daily defeated today -> "resets at midnight"). So
+    // re-huntable bosses stay bright; this mirrors the boss-detail HUNT COMPLETE
+    // pill one level up. Wrapped defensively — a bad gate never breaks the card.
+    let _clearedNow = false;
+    try {
+      _clearedNow = !isPreview && state.engaged !== true &&
+        typeof canEngageBossNow === 'function' &&
+        canEngageBossNow(id, cfg).ok === false;
+    } catch (_) {}
+    if (_clearedNow) stateClasses.push('bcard--cleared');
     // W261 — the .bcard--burned variant (Carouser weekend forfeit) is
     // retired with the weekend mechanic; weekend_burned is never set now.
     const classAttr = ['bcard'].concat(stateClasses).join(' ');
@@ -34260,10 +34273,17 @@
       ? '<span class="bcard-corner-trophy" aria-hidden="true">🏆</span>'
       : '';
 
+    // W298 — green check overlay for a cadence-cleared boss (top-left corner;
+    // the rank pill is hidden under it via CSS). Sits beside the lifetime trophy.
+    const cornerCleared = _clearedNow
+      ? '<span class="bcard-corner-cleared" aria-hidden="true">✓</span>'
+      : '';
+
     return (
       '<button type="button" class="' + classAttr + '" data-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
         cornerTrophy +
         cornerLabel +
+        cornerCleared +
         // Region a: Header strip — rank pill (absolute, left) +
         // boss name (centered in the full strip width).
         '<div class="bcard-header">' +

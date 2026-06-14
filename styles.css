@@ -12564,6 +12564,41 @@ footer {
 .bcard--defeated {
   border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
 }
+/* W298 — Rendell feedback: a boss cleared for its current cadence (e.g. a daily
+   defeated today) fades its body + desaturates its art so the eye skips it; a
+   crisp green check marks it done. Bright cards = still to hunt. Clears when the
+   cadence resets. The content regions dim (not the whole button), so the corner
+   check + trophy stay full-strength above the faded card. */
+.bcard--cleared > .bcard-header,
+.bcard--cleared > .bcard-stats,
+.bcard--cleared > .bcard-flavor,
+.bcard--cleared > .bcard-cond,
+.bcard--cleared > .bcard-progress,
+.bcard--cleared > .boss-archetype-pill { opacity: 0.42; }
+.bcard--cleared > .bcard-art { opacity: 0.6; }
+.bcard--cleared .bcard-art img { filter: saturate(0.45) brightness(0.82); }
+.bcard--cleared.bcard--active { animation: none; }   /* cleared = quiet, no pulse */
+.bcard--cleared .bcard-rank-pill { display: none; }  /* the green check takes the corner */
+.bcard-corner-cleared {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 6;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(34, 197, 94, 0.20);
+  border: 1.2px solid #22c55e;
+  color: #22c55e;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.55));
+  pointer-events: none;
+}
 .bcard-corner-trophy {
   position: absolute;
   top: 4px;
