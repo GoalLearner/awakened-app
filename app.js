@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w326';
+  const APP_BUILD_TAG = '2.2.6-w327';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46576,6 +46576,25 @@
         if (!t) return;
         if (t.hasAttribute('data-founder-buy')) _founderBuy();
         else if (t.hasAttribute('data-founder-restore')) _founderRestore();
+      });
+      // W327 — App Store Restore Purchases (Apple requires it for non-
+      // consumables). Wired to the EXISTING Auth.restorePurchases; gated
+      // on iapAvailable so it never errors before IAP is live.
+      const rpBtn = document.getElementById('settings-restore-purchases');
+      if (rpBtn) rpBtn.addEventListener('click', function () {
+        if (!(window.Auth && Auth.iapAvailable && Auth.iapAvailable())) {
+          if (typeof showHabitToast === 'function') showHabitToast('Restore is available once purchases are live.');
+          return;
+        }
+        if (typeof showHabitToast === 'function') showHabitToast('Restoring\u2026');
+        try {
+          Promise.resolve(Auth.restorePurchases()).then(function () {
+            try { if (typeof refreshSkinEntitlements === 'function') refreshSkinEntitlements(); } catch (_) {}
+            if (typeof showHabitToast === 'function') showHabitToast('Purchases restored.');
+          }, function () {
+            if (typeof showHabitToast === 'function') showHabitToast('Nothing to restore.');
+          });
+        } catch (_) {}
       });
       // ESC closes (web/dev); harmless on iOS.
       document.addEventListener('keydown', (e) => {

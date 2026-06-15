@@ -2863,7 +2863,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=771"></script>
+  <script src="app.js?v=772"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3146,6 +3146,12 @@
           <div class="settings-v2-btnrow">
             <button id="settings-account-signout" type="button" class="settings-v2-btn settings-v2-btn--ghost">Sign out</button>
             <button id="settings-account-delete" type="button" class="settings-v2-btn settings-v2-btn--redtext">Delete account</button>
+          </div>
+          <!-- W327 — App Store Restore Purchases (required for non-consumables;
+               wired to the existing Auth.restorePurchases). Distinct from the
+               cloud-backup Restore above. -->
+          <div class="settings-v2-btnrow">
+            <button id="settings-restore-purchases" type="button" class="settings-v2-btn settings-v2-btn--ghost">Restore purchases</button>
           </div>
 
         </div>

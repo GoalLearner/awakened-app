@@ -54,6 +54,77 @@ _[paste current promotional text]_
 
 ---
 
+## ✅ READY TO PASTE — ASO copy (W327, drafted 2026-06-15)
+
+Paste into App Store Connect. Name + Subtitle + Keywords are the INDEXED
+fields — do NOT repeat name/subtitle words in Keywords (wasted space).
+No new build is required for metadata-only updates.
+
+### Subtitle (30 max) — RECOMMENDED
+`A habit RPG for real growth` (27 chars)
+
+> Names the category for ASO relevance and adds a benefit ("growth").
+> A/B alternative: `Real habits. RPG rewards.` (25) — punchier, test later.
+
+### Keywords (100 max — comma-separated, NO spaces)
+
+```
+tracker,streak,routine,discipline,motivation,goals,fitness,workout,steps,sleep,quest,boss,level,rank
+```
+
+> Exactly 100/100. Excludes words Apple already indexes from the name
+> ("awakened","habit","rpg") and subtitle ("growth"). Singular forms only
+> (Apple matches plural automatically).
+
+### Promotional text (170 max)
+
+> Turn your habits into an RPG. Complete real vows — verified by Apple Health — to earn XP, rank up your hunter, and slay bosses with pure discipline. The grind, witnessed.
+
+### Description (4,000 max)
+
+```
+AWAKENED — TURN YOUR HABITS INTO AN RPG
+
+You already know what to do. Awakened makes you want to do it.
+
+Every habit you keep in real life levels up a hunter inside the game. Walk your steps, sleep enough, finish a workout — Apple Health verifies it, and you earn XP, grow your stats, and climb from E-rank to Sovereign. No fake check-ins. No logging you can game. Only real discipline counts.
+
+HOW IT WORKS
+• Set your vows (your habits). Keep them daily.
+• Apple Health verifies steps, sleep, workouts and more — automatically.
+• Earn XP, level up, and rank up your hunter.
+• Build streaks. The system remembers every one.
+
+FIGHT BOSSES WITH REAL DISCIPLINE
+Each boss falls only when you hit a real-world goal — 10,000 verified steps, a logged strength workout, a flight of stairs. Slay it, claim relics and souls, grow stronger.
+
+CLIMB THE ASCENT
+100 floors, each harder than the last. The summit — The First Awakened — is the endgame. Only a fully-built hunter reaches it.
+
+COMPETE & SHARE
+• Weekly Steps leaderboard, reset every Sunday — race real hunters and your friends.
+• "Hunters in your rank" — a board you can actually win.
+• Share your boss kills and your Hunter Report card straight to your story.
+
+FREE AND FAIR
+The core — habits, bosses, the Ascent, the leaderboard — is free and stays fair forever. Nothing is pay-to-win. Cosmetics only.
+
+The system is watching. Keep what you swore.
+```
+
+### What’s new — next version (match to the shipped build before pasting)
+
+> Hunter — the system reaches further.
+>
+> • Share your boss kills and Hunter Report as a card — straight to your story
+> • New boards: Hunters in your rank, and a Friends leaderboard
+> • The weekly Steps board now shows a live "resets Sunday" countdown
+> • Become a Founder — back Awakened once, keep it forever
+>
+> Keep what you swore.
+
+---
+
 ## W189 candidates (pending decision)
 
 ### Subtitle — ClaudeDesign + W189-Prep recommendation
