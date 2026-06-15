@@ -23,3 +23,16 @@ Removed as ABANDONED in the same session (Duels permanently retired):
   leaderboard ("the 47th to awaken" instead of a bare crown). Build when the
   first real climber nears floor 100. Breadcrumb at the query:
   `backend/src/handlers/leaderboard-top.ts` (search "CROSS-LINK (parked)").
+
+- **Promote the "hunters in your rank" (rank_band) cohort board** (W319, flagged 2026-06-15
+  for ClaudeDesign's incoming leaderboard reorg) — the rank-tier cohort board currently renders
+  as the **5th row of the Global Rankings Hub** (reachable only by tapping the World Rank header
+  card), while the **Friends** board got a visible **tab** on the Steps sheet. rank_band is the
+  strongest retention surface — a small, fair, *winnable* cohort vs same-tier peers ("people
+  like me, beatable") — so the reorg should PROMOTE it to a discoverable spot with **comparable
+  visibility to Friends**, NOT hub-only. To relocate: move the ENTRY POINT
+  `_lbHubBuildRow('rank_band', ...)` out of `_lbHubRender` (app.js, search `'hunters in your rank'`)
+  onto the chosen surface (a Steps-sheet tab or a top-level board). The render path
+  (`_lbRenderRankBandTab` / `openLeaderboardRanking('rank_band')`) ALREADY works from any caller,
+  and the backend (`GET /v1/leaderboard/rank-band`) is deployed — so ONLY the entry surface
+  moves; no render or backend change needed.
