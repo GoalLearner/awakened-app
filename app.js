@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w321';
+  const APP_BUILD_TAG = '2.2.6-w322';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34389,7 +34389,9 @@
     const champAlias = esc(champ.alias || 'A hunter');
     let line;
     if (me && me.rank === 1) {
-      line = '<span class="lb-lw-you">You won last week</span> — ' + fmt(champ.steps) + ' steps. Defend it.';
+      var crowns = (d.myTitle && d.myTitle.count) ? d.myTitle.count : 1;
+      var ord = (typeof _hallOrdinal === 'function') ? _hallOrdinal(crowns) : (crowns + 'x');
+      line = '<span class="lb-lw-you">You won last week</span> — your ' + ord + ' Step Crown. Defend it.';
     } else if (me) {
       line = '<span class="lb-lw-champ">' + champAlias + '</span> won with ' + fmt(champ.steps) +
              ' · <span class="lb-lw-you">you placed #' + me.rank + ' of ' + (d.total || 0) + '</span>';

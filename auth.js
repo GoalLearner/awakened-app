@@ -475,6 +475,7 @@
         champion:  data.champion || null,
         me:        data.me || null,
         records:   Array.isArray(data.records) ? data.records : [],
+        myTitle:   data.myTitle || null,
       };
     }
     if (res.status === 401) {
