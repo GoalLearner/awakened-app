@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w313';
+  const APP_BUILD_TAG = '2.2.6-w314';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27450,6 +27450,7 @@
       const name = opts.bossName || ('Floor ' + floor);
       return {
         source: 'ascent',
+        floor: floor,
         alias: alias,
         bossName: name,
         artPath: summit ? _BKS_SUMMIT_ART : (opts.bossId ? getBossArtPath(opts.bossId) : null),
@@ -27693,17 +27694,17 @@
 
   function _bksShareCopy(d) {
     if (d && d.source === 'ascent') {
+      const cap = (typeof ASCENT_FLOORS === 'number') ? ASCENT_FLOORS : 100;
       if (/SUMMIT/.test(d.context || '')) {
-        return 'I reached the Summit of the Ascent in Awakened — Floor ' +
-          ((typeof ASCENT_FLOORS === 'number') ? ASCENT_FLOORS : 100) +
-          ', the First Awakened bested. Turn your habits into an RPG.';
+        return 'Just hit Floor ' + cap + ' in Awakened and beat the First Awakened. ' +
+          'The whole game runs on real-world habits — turn yours into an RPG.';
       }
-      return 'I cleared ' + (d.context || 'a floor of the Ascent') +
-        ' in Awakened — by moving in the real world. Turn your habits into an RPG.';
+      return 'Just cleared Floor ' + (d.floor || 0) + ' of the Ascent in Awakened — ' +
+        'powered by real-world movement. Turn your habits into an RPG.';
     }
     if (d && d.bossName) {
-      return 'I just felled ' + d.bossName +
-        ' in Awakened — a boss you beat by hitting real fitness goals. Turn your habits into an RPG.';
+      return 'Just beat ' + d.bossName + ' in Awakened — you only kill bosses here ' +
+        'by hitting real workout and step goals. It turns your habits into an RPG.';
     }
     return 'Turn your habits into an RPG. — Awakened';
   }
