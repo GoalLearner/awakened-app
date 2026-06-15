@@ -29186,3 +29186,7 @@ button.guildhall-summary-tile:active {
 }
 .signin-guest-btn:hover { color: #f5b842; }
 .signin-guest-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── W330 · Guest "sign in & save" Settings CTA (gold-emphasised) ── */
+.settings-guest-claim { border: 1px solid rgba(245,184,66,0.5); }
+.settings-guest-claim .settings-v2-fmrow-label { color: #f5b842; }

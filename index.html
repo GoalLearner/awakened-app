@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=423">
+  <link rel="stylesheet" href="styles.css?v=424">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -131,6 +131,28 @@
         <div id="signin-alias-suggestions" class="signin-suggestions"></div>
         <div id="signin-alias-error" class="signin-error" role="alert"></div>
         <button id="signin-alias-continue" type="button" class="signin-alias-continue">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- W330 — Guest deferred-claim modal. Reuses the signin-gate CSS. A guest
+       signs in here to claim a permanent account; their local progress is
+       adopted on reload. Native-only authorize (iOS-only message on web). -->
+  <div id="guest-claim-overlay" class="signin-gate hidden">
+    <div class="signin-gate-inner">
+      <div class="signin-step">
+        <div class="signin-brand">AWAKENED</div>
+        <h1 class="signin-title">Save your progress</h1>
+        <p class="signin-blurb">Sign in to keep your hunter forever, climb the leaderboards, and back up across devices. Everything you have built so far comes with you.</p>
+        <input id="guest-claim-name" type="text" class="signin-alias-input" maxlength="20" placeholder="HunterShadow" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <div class="signin-alias-hint">3–20 characters · letters, numbers, spaces, _ and - only</div>
+        <div id="guest-claim-suggestions" class="signin-suggestions"></div>
+        <button id="guest-claim-apple" type="button" class="signin-apple-btn" aria-label="Sign in with Apple">
+          <span class="signin-apple-logo" aria-hidden="true"></span>
+          <span class="signin-apple-text">Sign in with Apple</span>
+        </button>
+        <div id="guest-claim-error" class="signin-error" role="alert"></div>
+        <button id="guest-claim-cancel" type="button" class="signin-guest-btn">Not now</button>
       </div>
     </div>
   </div>
@@ -2881,7 +2903,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=774"></script>
+  <script src="app.js?v=775"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3067,6 +3089,22 @@
         <span class="settings-v2-wctop-sub">Back Awakened. Yours forever.</span>
       </span>
       <span class="settings-v2-wctop-chev" aria-hidden="true">›</span>
+    </button>
+
+    <!-- W330 — guest claim CTA. Shown only for guests (JS toggles via
+         Auth.isGuest); opens the deferred Apple sign-in claim. -->
+    <button id="settings-guest-claim" class="settings-v2-fmrow settings-guest-claim hidden" type="button">
+      <span class="settings-v2-fmrow-glyph" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+          <path d="M13 6 H7 a2 2 0 0 0-2 2 v16 a2 2 0 0 0 2 2 h6" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M18 11 l5 5-5 5 M23 16 H12" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="settings-v2-fmrow-text">
+        <span class="settings-v2-fmrow-label">Sign in &amp; save your progress</span>
+        <span class="settings-v2-fmrow-sub">You're playing as a guest. Keep your hunter forever.</span>
+      </span>
+      <span class="settings-v2-fmrow-chev" aria-hidden="true">›</span>
     </button>
 
     <!-- v3 Phase 1z.231 — promoted "What's Coming" hero card. Lives

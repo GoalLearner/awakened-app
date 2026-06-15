@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w329';
+  const APP_BUILD_TAG = '2.2.6-w330';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35016,6 +35016,101 @@
     } catch (_) {}
   }
   try { window.__openFounder = openFounder; } catch (_) {}
+
+  // ── W330 — Guest deferred sign-in claim ──────────────────────────
+  // A guest (GUEST_STUB) plays the full local loop; here they sign in with
+  // Apple to claim a permanent account. completeSignIn overwrites the guest
+  // hb_user with the real one; on reload CloudSync.maybeSyncOnInit ADOPTS the
+  // guest's local state as the cloud baseline (no merge code). Self-contained
+  // (authorize + claim back-to-back, so the Apple token TTL is a non-issue).
+  function _guestClaimRenderSuggestions(suggested, nameIn, box) {
+    if (!box) return;
+    box.innerHTML = '';
+    if (!Array.isArray(suggested) || !suggested.length) { box.style.display = 'none'; return; }
+    const label = document.createElement('div');
+    label.className = 'signin-suggestions-label';
+    label.textContent = 'Try one of these:';
+    box.appendChild(label);
+    suggested.forEach(function (s) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'signin-suggestion-chip';
+      chip.textContent = s;
+      chip.addEventListener('click', function () { if (nameIn) { nameIn.value = s; try { nameIn.focus(); } catch (_) {} } });
+      box.appendChild(chip);
+    });
+    box.style.display = 'block';
+  }
+  function openGuestClaim() {
+    const ov = document.getElementById('guest-claim-overlay');
+    if (!ov) return;
+    const nameIn = document.getElementById('guest-claim-name');
+    if (nameIn && !nameIn.value) {
+      let pre = '';
+      try { pre = localStorage.getItem('hb_name') || ''; } catch (_) {}
+      if (!pre) { try { pre = (window.Auth && Auth.getPendingGivenName && Auth.getPendingGivenName()) || ''; } catch (_) {} }
+      nameIn.value = pre;
+    }
+    const err = document.getElementById('guest-claim-error'); if (err) err.textContent = '';
+    const sug = document.getElementById('guest-claim-suggestions'); if (sug) { sug.innerHTML = ''; sug.style.display = 'none'; }
+    ov.classList.remove('hidden');
+  }
+  function closeGuestClaim() {
+    const ov = document.getElementById('guest-claim-overlay'); if (ov) ov.classList.add('hidden');
+  }
+  try { window.__openGuestClaim = openGuestClaim; } catch (_) {}
+  function _wireGuestClaimOnce() {
+    const ov = document.getElementById('guest-claim-overlay');
+    if (!ov || ov.getAttribute('data-wired') === '1') return;
+    ov.setAttribute('data-wired', '1');
+    const appleBtn  = document.getElementById('guest-claim-apple');
+    const cancelBtn = document.getElementById('guest-claim-cancel');
+    const nameIn    = document.getElementById('guest-claim-name');
+    const errEl     = document.getElementById('guest-claim-error');
+    const sugBox    = document.getElementById('guest-claim-suggestions');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeGuestClaim);
+    if (appleBtn) appleBtn.addEventListener('click', async function () {
+      const Auth = window.Auth;
+      const name = (nameIn ? nameIn.value : '').trim();
+      if (errEl) errEl.textContent = '';
+      if (sugBox) { sugBox.innerHTML = ''; sugBox.style.display = 'none'; }
+      if (!Auth || typeof Auth.validateAlias !== 'function' || !Auth.validateAlias(name)) {
+        if (errEl) errEl.textContent = '3–20 chars · letters, numbers, spaces, _ and - only.';
+        return;
+      }
+      if (!Auth.isNative || !Auth.isNative()) {
+        if (errEl) errEl.textContent = 'Sign in with Apple is only available in the iOS app.';
+        return;
+      }
+      appleBtn.disabled = true;
+      try {
+        const resp = await Auth.signInWithApple();
+        if (!resp) { appleBtn.disabled = false; return; }   // user cancelled
+        let result;
+        try { result = await Auth.completeSignIn(name); } catch (_) { result = { ok: false, code: 'NETWORK' }; }
+        if (result && result.ok) {
+          // Real account written; the guest hb_user is replaced. Reload so
+          // CloudSync.maybeSyncOnInit adopts the local state as the baseline.
+          window.location.reload();
+          return;
+        }
+        const code = result && result.code;
+        if (code === 'ALIAS_TAKEN') {
+          if (errEl) errEl.textContent = 'That name is taken — pick another.';
+          _guestClaimRenderSuggestions(result.suggested, nameIn, sugBox);
+        } else if (code === 'NO_PENDING_TOKEN' || code === 'APPLE_TOKEN_INVALID') {
+          if (errEl) errEl.textContent = 'Sign-in expired. Tap Sign in with Apple again.';
+        } else {
+          if (errEl) errEl.textContent = (result && result.reason) || 'Could not sign in. Try again.';
+        }
+        appleBtn.disabled = false;
+      } catch (e) {
+        if (e && e.message === 'NATIVE_ONLY') { if (errEl) errEl.textContent = 'Sign in with Apple is only available in the iOS app.'; }
+        else { if (errEl) errEl.textContent = 'Sign in failed — please try again.'; }
+        appleBtn.disabled = false;
+      }
+    });
+  }
   function _pcIsOwnAlias(alias) {
     try { const me = lbGetMyAlias(); return !!(me && alias && me.toLowerCase() === String(alias).toLowerCase()); } catch (_) { return false; }
   }
@@ -46568,6 +46663,20 @@
     setupNotifTapRouting();
     setupStatDetail();
     setupSettings();
+    // W330 — wire the guest deferred-claim modal + the "sign in & save"
+    // Settings CTA (shown only for guests).
+    try { _wireGuestClaimOnce(); } catch (_) {}
+    try {
+      const _gcRow = document.getElementById('settings-guest-claim');
+      if (_gcRow) {
+        const _isG = !!(window.Auth && Auth.isGuest && Auth.isGuest());
+        _gcRow.classList.toggle('hidden', !_isG);
+        if (!_gcRow.getAttribute('data-wired')) {
+          _gcRow.setAttribute('data-wired', '1');
+          _gcRow.addEventListener('click', function () { try { closeSettings(); } catch (_) {} try { openGuestClaim(); } catch (_) {} });
+        }
+      }
+    } catch (_) {}
     setupStreakDanger();
     setupMorningNudge();
     setupDoubleXpBanner();
