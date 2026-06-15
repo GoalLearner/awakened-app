@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=421">
+  <link rel="stylesheet" href="styles.css?v=422">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2609,6 +2609,21 @@
     </div>
   </div>
 
+  <!-- W328 — first Apple-Health-verified completion celebration. Reuses the
+       comeback-screen CSS shell; fired once via the levelUpQueue. -->
+  <div id="firstverify-screen" class="comeback-screen firstverify-screen hidden">
+    <div class="cb-bg"></div>
+    <div class="cb-content">
+      <div class="cb-eyebrow">THE SYSTEM RECOGNIZES YOU</div>
+      <div class="cb-line cb-line-1">You moved in the real world.</div>
+      <div class="cb-line cb-line-2">The system saw it — and answered.</div>
+      <div id="fv-message" class="cb-message"></div>
+      <div id="fv-xp" class="cb-xp"></div>
+      <div id="fv-founder" class="fv-founder hidden"></div>
+      <div class="cb-hint">Tap anywhere to continue</div>
+    </div>
+  </div>
+
   <!-- The Beginning — full-screen reveal after onboarding completion -->
   <div id="beginning-screen" class="beginning-screen hidden">
     <div class="bg-bg"></div>
@@ -2863,7 +2878,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=772"></script>
+  <script src="app.js?v=773"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

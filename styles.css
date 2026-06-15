@@ -29148,3 +29148,22 @@ button.guildhall-summary-tile:active {
 .founder-owned { text-align: center; padding: 16px; border-radius: 14px; font-weight: 700; color: #f5b842; background: rgba(245,184,66,0.10); border: 1px solid rgba(245,184,66,0.4); }
 .founder-fineprint { text-align: center; margin-top: 14px; font-size: 0.72rem; color: #6f6f88; letter-spacing: 0.03em; }
 .settings-v2-founder { background: linear-gradient(180deg, rgba(245,184,66,0.16), rgba(245,184,66,0.05)) !important; border-color: rgba(245,184,66,0.5) !important; }
+
+/* ── W328 · First-verified completion celebration (reuses comeback shell) ── */
+.firstverify-screen .cb-eyebrow { color: #f5b842; }
+.firstverify-screen .cb-xp { color: #e8c889; }
+.fv-founder { margin-top: 20px; }
+.fv-founder-cta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1b1405;
+  background: linear-gradient(180deg, #f7c558, #f5b842);
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 22px;
+  cursor: pointer;
+  box-shadow: 0 6px 22px rgba(245,184,66,0.35);
+}

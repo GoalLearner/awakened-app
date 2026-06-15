@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w327';
+  const APP_BUILD_TAG = '2.2.6-w328';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19557,6 +19557,10 @@
     const item = levelUpQueue.shift();
     levelUpActive = true;
     if      (item.type === 'comeback')    showComebackScreen(item);
+    else if (item.type === 'first_verified') {
+      try { showFirstVerifiedScreen(item); }
+      catch (_) { levelUpActive = false; drainLevelUpQueue(); }
+    }
     else if (item.type === 'rank')        showRankUpScreen(item.rank);
     else if (item.type === 'class')       showClassChangePopup(item.classData);
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
@@ -24304,6 +24308,17 @@
         // the user shared or skipped.
         levelUpQueue.splice(2, 0, { type: 'hunter_report', rankId: newRank.id });
       }
+
+      // W328 — first Apple-Health-verified completion: celebrate the "aha"
+      // once, ever. Gated on `silent` (the HealthKit auto-verify path) so it
+      // fires on the verified magic, never a manual tap. Additive enqueue.
+      try {
+        if (silent && !_firstVerifiedSeen()) {
+          _markFirstVerifiedSeen();
+          const _fvHabit = habits.find(function (h) { return h.id === id; });
+          levelUpQueue.push({ type: 'first_verified', habitName: _fvHabit ? _fvHabit.name : '' });
+        }
+      } catch (_) {}
 
       // Detect stat level-ups — every level triggers a notification
       STATS.forEach(st => {
@@ -36283,6 +36298,62 @@
     setTimeout(dismiss, 5500);
   }
 
+  // W328 — first Apple-Health-verified completion celebration (the genuine
+  // "aha": a real-world act sealed a habit with no tapping). One-time, fired
+  // via the levelUpQueue. The Founder hand-off appears ONLY once the offer is
+  // purchasable (iapAvailable) — dormant today, so right now this is purely an
+  // activation moment.
+  function _firstVerifiedSeen() {
+    try { return localStorage.getItem('hb_first_verified') === '1'; } catch (_) { return true; }
+  }
+  function _markFirstVerifiedSeen() {
+    try { localStorage.setItem('hb_first_verified', '1'); } catch (_) {}
+  }
+  function showFirstVerifiedScreen(item) {
+    const overlay = document.getElementById('firstverify-screen');
+    if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
+    const hn = (item && item.habitName) ? item.habitName : 'A vow';
+    const msgEl = document.getElementById('fv-message');
+    const xpEl  = document.getElementById('fv-xp');
+    const fdEl  = document.getElementById('fv-founder');
+    if (msgEl) msgEl.textContent = '\u201c' + hn + '\u201d sealed itself \u2014 verified by Apple Health.';
+    if (xpEl)  xpEl.textContent  = 'No tapping. You did it in the real world, and the system answered.';
+    if (fdEl) {
+      let live = false;
+      try { live = !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable()); } catch (_) {}
+      if (live) {
+        fdEl.innerHTML = '<button type="button" class="fv-founder-cta" id="fv-founder-cta">Become a Founder \u2014 keep Awakened forever</button>';
+        fdEl.classList.remove('hidden');
+      } else {
+        fdEl.innerHTML = '';
+        fdEl.classList.add('hidden');
+      }
+    }
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('cb-show');
+    try { if (typeof playComebackChime === 'function') playComebackChime(); } catch (_) {}
+    try { navigator.vibrate && navigator.vibrate([30, 40, 90]); } catch (_) {}
+    const dismiss = function () {
+      overlay.classList.remove('cb-show');
+      overlay.classList.add('cb-hide');
+      overlay.addEventListener('animationend', function () {
+        overlay.classList.remove('cb-hide');
+        overlay.classList.add('hidden');
+        levelUpActive = false;
+        drainLevelUpQueue();
+      }, { once: true });
+      overlay.removeEventListener('click', onClick);
+    };
+    const onClick = function (e) {
+      const cta = (e.target && e.target.closest) ? e.target.closest('#fv-founder-cta') : null;
+      dismiss();
+      if (cta) { try { if (typeof openFounder === 'function') openFounder(); } catch (_) {} }
+    };
+    overlay.addEventListener('click', onClick);
+    setTimeout(dismiss, 7000);
+  }
+  try { window.__showFirstVerifiedScreen = showFirstVerifiedScreen; } catch (_) {}
 
   function renderCompoundProgress() {
     const wrap = document.getElementById('compound-progress');
