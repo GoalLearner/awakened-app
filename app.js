@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w323';
+  const APP_BUILD_TAG = '2.2.6-w324';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16686,6 +16686,10 @@
   // Skipped entirely if user has zero habits.
   const MIDDAY_TIME = '13:00';
   const MIDDAY_NOTIF_ID = 99998; // reserved; out of typical djb2 hash range, distinct from CHECKIN
+  // W324 — weekly-reset reminder. Saturday (final day before the Sunday-
+  // Pacific leaderboard reset) at 10 AM device-local. Singleton lane 99997.
+  const WEEKLY_RESET_TIME = '10:00';
+  const WEEKLY_RESET_NOTIF_ID = 99997; // reserved; distinct from CHECKIN/MIDDAY
 
   // v3 Phase 1n — Evening Closeout 7 PM voice. 5 progress states ×
   // 5 lines each. Less "Hunter," more system-state framing. Variable
@@ -16798,6 +16802,32 @@
     if (target <= now) target.setDate(target.getDate() + 1);
     return target;
   }
+
+  // W324 — next weekly-reset reminder fire time: the FINAL day (Saturday) of
+  // the current Sunday-Pacific leaderboard week, at WEEKLY_RESET_TIME device-
+  // local. Pure function of lbGetCurrentWeekStartPT (reused, never recomputed)
+  // so the whole decision is unit-testable on web. Optional nowMs for tests.
+  function computeNextWeeklyResetDate(nowMs) {
+    const ms = (typeof nowMs === 'number') ? nowMs : Date.now();
+    let wk;
+    try { wk = lbGetCurrentWeekStartPT(ms); } catch (_) { return null; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(wk)) return null;
+    const tp = WEEKLY_RESET_TIME.split(':');
+    const th = parseInt(tp[0], 10), tm = parseInt(tp[1], 10);
+    const fire = new Date(parseInt(wk.slice(0, 4), 10), parseInt(wk.slice(5, 7), 10) - 1, parseInt(wk.slice(8, 10), 10));
+    fire.setDate(fire.getDate() + 6);                       // Sunday + 6 = Saturday (final day)
+    fire.setHours(Number.isFinite(th) ? th : 10, Number.isFinite(tm) ? tm : 0, 0, 0);
+    if (fire.getTime() <= ms) fire.setDate(fire.getDate() + 7);  // this week's window passed -> next week
+    return fire;
+  }
+
+  // Reset-relative copy (NOT countdown-precise) so a far-timezone user never
+  // sees a wrong "X hours left" — the boundary is Sunday-Pacific, the fire is
+  // device-local.
+  function composeWeeklyResetBody() {
+    return 'Last day - the weekly steps board resets Sunday. Lock in your rank.';
+  }
+  try { window.__computeNextWeeklyResetDate = computeNextWeeklyResetDate; } catch (_) {}
 
   // Body for the 1 PM mid-day check-in. Returns null to indicate the
   // notification should be SKIPPED (priority 4 — user has zero habits).
@@ -20800,12 +20830,17 @@
       const plug = cap && cap.Plugins && cap.Plugins.LocalNotifications;
       if (!plug || !plug.addListener) return;
       plug.addListener('localNotificationActionPerformed', (event) => {
-        // Always route notification taps to the Habits tab. Easy mental
-        // model — tap any reminder, you land where you act on it.
+        // Route by kind: the weekly-reset ping deep-links to the steps
+        // leaderboard (where you act on it); everything else lands on Habits.
         try {
-          const targetTab = 'habits';
-          const btn = document.getElementById('tab-' + targetTab);
-          if (btn) btn.click();
+          let kind = '';
+          try { kind = (event && event.notification && event.notification.extra && event.notification.extra.kind) || ''; } catch (_) {}
+          if (kind === 'weekly' && typeof openLeaderboardRanking === 'function') {
+            openLeaderboardRanking('step_total');
+          } else {
+            const btn = document.getElementById('tab-habits');
+            if (btn) btn.click();
+          }
         } catch (_) {}
       });
     } catch (_) { /* native plugin not present (web preview) — no-op */ }
@@ -41748,6 +41783,7 @@
       // the freshest state at every reschedule.
       try { await scheduleDailyCheckin(); } catch (_) {}
       try { await scheduleMidDayCheckin(); } catch (_) {}
+      try { await scheduleWeeklyReset(); } catch (_) {}
     }
 
     // Called from toggleHabit when a user marks a habit complete TODAY.
@@ -41762,6 +41798,7 @@
       // (the at-risk-streak set changes when habits get completed).
       try { await scheduleDailyCheckin(); } catch (_) {}
       try { await scheduleMidDayCheckin(); } catch (_) {}
+      try { await scheduleWeeklyReset(); } catch (_) {}
     }
 
     function status() {
@@ -42080,6 +42117,44 @@
     async function reapplyMidDay() {
       return scheduleMidDayCheckin();
     }
+    // W324 — weekly-reset reminder (Saturday 10 AM local). Mirrors the mid-day
+    // check-in: same guard order, same cancel-then-schedule, own ID lane.
+    async function cancelWeeklyReset() {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: WEEKLY_RESET_NOTIF_ID }] }); } catch (_) {}
+    }
+    async function scheduleWeeklyReset() {
+      await cancelWeeklyReset();
+      const p = plugin();
+      if (!p || !isNative()) return false;
+      if (isDisabled() || isPaused()) return false;
+      if (isDayOne()) return false;
+      const body = composeWeeklyResetBody();
+      if (!body) return false;
+      const resetHM = parseHM(WEEKLY_RESET_TIME);
+      if (resetHM && isInQuietHours(resetHM)) return false;
+      try {
+        const fireAt = computeNextWeeklyResetDate();
+        if (!fireAt) return false;
+        await p.schedule({
+          notifications: [{
+            id:       WEEKLY_RESET_NOTIF_ID,
+            title:    composeDigestTitle(),
+            body:     body,
+            schedule: { at: fireAt, allowWhileIdle: true },
+            extra:    { kind: 'weekly' },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('weekly-reset schedule failed', e);
+        return false;
+      }
+    }
+    async function reapplyWeeklyReset() {
+      return scheduleWeeklyReset();
+    }
 
     // Re-arm the digest after pause/disable changes or app restart.
     async function reapplyDigest() {
@@ -42111,6 +42186,8 @@
       scheduleDailyCheckin, cancelDailyCheckin, reapplyCheckin,
       // mid-day check-in (1 PM local — souls/streak/caught-up conditional)
       scheduleMidDayCheckin, cancelMidDayCheckin, reapplyMidDay,
+      // weekly-reset reminder (Saturday — final day before the Sunday-PT reset)
+      scheduleWeeklyReset, cancelWeeklyReset, reapplyWeeklyReset,
       composeDigestTitle, composeDigestBody,
       // internals exposed for the UI
       copyFor, parseHM, isPaused, isDisabled,
@@ -46464,6 +46541,7 @@
       // resilience if the per-habit path is ever short-circuited).
       try { Notif.reapplyCheckin(); } catch (_) {}
       try { Notif.reapplyMidDay(); } catch (_) {}
+      try { Notif.reapplyWeeklyReset(); } catch (_) {}
       // v2.1.0 Phase C — fire the leaderboard snapshot submission
       // after main app mounts. Debounced via hb_lb_last_submit so a
       // hot relaunch within 5 min stays quiet.
