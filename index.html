@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=422">
+  <link rel="stylesheet" href="styles.css?v=423">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -117,6 +117,9 @@
           <span class="signin-apple-text">Sign in with Apple</span>
         </button>
         <div id="signin-apple-error" class="signin-error" role="alert"></div>
+        <!-- W329 — guest "try-it-first" entry. Starts a local session; the
+             gate's guest branch mounts the full single-player loop. -->
+        <button id="signin-guest-btn" type="button" class="signin-guest-btn">Try it first — no account needed</button>
         <p class="signin-footnote">Only your alias and three Apple Health metrics (step total, sleep streak, bedtime streak) are sent. Everything else stays on your device.</p>
       </div>
       <div id="signin-step-alias" class="signin-step hidden">
@@ -2873,12 +2876,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=28"></script>
+  <script src="auth.js?v=29"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=773"></script>
+  <script src="app.js?v=774"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

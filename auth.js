@@ -38,6 +38,10 @@
   // verifySessionJwt time — defense-in-depth so dev state can never
   // reach the prod user table.
   const LOCALHOST_DEV_STUB = 'LOCALHOST_DEV_STUB';
+  // v3 W329 — Guest "try-it-first" stub. Native-allowed (unlike the
+  // localhost dev stub). Always-valid locally; every server helper no-ops
+  // through _stubGate until the user signs in and claims an alias.
+  const GUEST_STUB = 'GUEST_STUB';
 
   // Legacy Phase A stub marker (kept as a STRING LITERAL ONLY for
   // migration purposes — no longer assigned anywhere). Phase A
@@ -107,6 +111,7 @@
     if (u.jwt === 'PHASE_A_STUB') return null;
     // Localhost dev stub is always valid on localhost (no expiry check).
     if (u.jwt === LOCALHOST_DEV_STUB) return u;
+    if (u.jwt === GUEST_STUB) return u;   // W329 — guest is always valid locally
     const nowMs = Date.now();
     if (typeof u.jwt_expires_at === 'number' && u.jwt_expires_at <= nowMs) {
       return null;
@@ -131,6 +136,7 @@
     const u = readUser();
     if (!u || !u.jwt_expires_at) return true;
     if (u.jwt === LOCALHOST_DEV_STUB) return false;
+    if (u.jwt === GUEST_STUB) return false;   // W329 — no backend session to refresh
     if (u.jwt === 'PHASE_A_STUB') return true;  // force re-auth
     const nowMs = Date.now();
     const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
@@ -377,6 +383,7 @@
   function _stubGate(u) {
     if (!u || !u.jwt) return { ok: false, code: 'NOT_SIGNED_IN' };
     if (u.jwt === LOCALHOST_DEV_STUB) return { ok: false, code: 'LOCAL_DEV_SKIP' };
+    if (u.jwt === GUEST_STUB) return { ok: false, code: 'GUEST_SKIP' };   // W329
     if (u.jwt === 'PHASE_A_STUB') return { ok: false, code: 'STUB_USER' };
     return null; // proceed with real call
   }
@@ -870,6 +877,28 @@
     });
     try { localStorage.setItem('hb_name', 'DevUser'); } catch (_) {}
     return true;
+  }
+
+  // v3 W329 — Guest "try-it-first". Writes a GUEST_STUB hb_user with NO
+  // alias, so the sign-in gate mounts the app via its dedicated guest branch
+  // (not the alias pass) and every server helper no-ops through _stubGate.
+  // Native-ALLOWED (the whole point). Never overwrites an existing session.
+  // The full single-player loop is local; a later Apple sign-in claims the
+  // alias and the existing CloudSync adopt-local path keeps all progress.
+  function startGuest() {
+    if (readUser()) return false; // respect any existing real/pending/guest state
+    writeUser({
+      sub:            'guest-local',
+      alias:          null,
+      jwt:            GUEST_STUB,
+      jwt_expires_at: Date.now() + (1000 * 60 * 60 * 24 * 365 * 10),
+      signed_in_date: deviceLocalDate(),
+      is_guest:       true,
+    });
+    return true;
+  }
+  function isGuest() {
+    try { const u = readUser(); return !!(u && u.jwt === GUEST_STUB); } catch (_) { return false; }
   }
 
   // ── v2.1 Phase D — JSON export / import data safety net ──
@@ -1457,6 +1486,8 @@
     submitVerifiedEvents,
     devSignInIfLocalhost,
     isLocalhostDev,
+    startGuest,
+    isGuest,
     isNative,
     BACKEND_URL,
     // v2.1 Phase D — JSON export / import

@@ -29167,3 +29167,22 @@ button.guildhall-summary-tile:active {
   cursor: pointer;
   box-shadow: 0 6px 22px rgba(245,184,66,0.35);
 }
+
+/* ── W329 · Guest "try-it-first" entry (under the Apple button) ── */
+.signin-guest-btn {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  border: 0;
+  color: #9090a8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.signin-guest-btn:hover { color: #f5b842; }
+.signin-guest-btn:disabled { opacity: 0.5; cursor: default; }

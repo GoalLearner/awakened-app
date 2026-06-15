@@ -31,6 +31,15 @@
     if (typeof window.Auth.isApplePending === 'function' && window.Auth.isApplePending()) {
       return false;
     }
+    // v3 W329 — Guest "try-it-first" mount. A guest has a GUEST_STUB hb_user
+    // (no alias) so the (user && user.alias) pass above does NOT fire; mount
+    // the full local app here instead of the gate. Placed AFTER the real-user
+    // (24-25) and Apple-pending (31-33) passes so a guest can never shadow a
+    // real session. typeof-guarded so a stale/old auth.js fails open exactly
+    // like the window.Auth-undefined guard at the top of this function.
+    if (typeof window.Auth.isGuest === 'function' && window.Auth.isGuest()) {
+      return false;
+    }
     const gate = document.getElementById('signin-gate');
     if (!gate) return false; // gate markup missing — fail open
     gate.classList.remove('hidden');
@@ -93,6 +102,18 @@
         } finally {
           appleBtn.disabled = false;
         }
+      });
+    }
+
+    // v3 W329 — "Try it first" guest entry. Starts a local guest session and
+    // reloads; the gate's guest branch (after the real-user + Apple-pending
+    // passes) then mounts the full single-player app with no network.
+    const guestBtn = document.getElementById('signin-guest-btn');
+    if (guestBtn) {
+      guestBtn.addEventListener('click', function () {
+        guestBtn.disabled = true;
+        try { if (window.Auth && typeof window.Auth.startGuest === 'function') window.Auth.startGuest(); } catch (_) {}
+        window.location.reload();
       });
     }
 
@@ -195,7 +216,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w328';
+  const APP_BUILD_TAG = '2.2.6-w329';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -40220,11 +40241,13 @@
       // user retry without leaving the cinematic.
       const Auth = window.Auth;
       const pending = !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
+      // W329 — validate the chosen name client-side for BOTH guest and pending
+      // (a guest's name is reused verbatim as the alias at the deferred claim).
+      if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
+        _showNameError('3–20 chars · letters, numbers, spaces, _ and - only.');
+        return;
+      }
       if (pending) {
-        if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
-          _showNameError('3–20 chars · letters, numbers, spaces, _ and - only.');
-          return;
-        }
         confirm.disabled = true;
         let result;
         try {
