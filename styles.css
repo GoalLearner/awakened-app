@@ -27631,8 +27631,8 @@ button.guildhall-summary-tile:active {
 }
 .hr-canvas {
   display: block;
-  width: 100%;
-  height: auto;
+  width: 100% !important;
+  height: auto !important;
   /* aspect-ratio: 1200 / 1500;  -- enforced by JS via inline style */
 }
 .hr-canvas-loading {

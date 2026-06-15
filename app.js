@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w316';
+  const APP_BUILD_TAG = '2.2.6-w317';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27316,9 +27316,23 @@
 
   // Share orchestrator. Mirrors the (since-removed) shareOriginStory 3-tier fallback
   // (line ~25980): files → text+url → clipboard.
+  // W317 — identity-aware share copy for the Hunter Report card (the generic
+  // line felt unfinished). References class/rank + Ascent floor + bosses,
+  // matching the casual voice of the boss-kill cards.
+  function _hrShareCopy(data) {
+    data = data || {};
+    const cls = (data.className && data.className !== 'Awakened') ? data.className : 'hunter';
+    const rank = data.rank || 'E';
+    const bits = [];
+    if (data.floor && data.floor > 0) bits.push('Floor ' + data.floor + ' of the Ascent');
+    if (data.bosses && data.bosses > 0) bits.push(_hrFmtNum(data.bosses) + ' bosses down');
+    const tail = bits.length ? (' — ' + bits.join(', ')) : '';
+    return "I'm a Rank " + rank + ' ' + cls + ' in Awakened' + tail + '. Turn your habits into an RPG.';
+  }
+
   async function _hrShareReport(data, canvas) {
     const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
-    const TEXT = 'Turn your habits into an RPG. — Awakened';
+    const TEXT = _hrShareCopy(data);
     try {
       const file = await _hrCanvasToFile(canvas);
       if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
