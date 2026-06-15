@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w311';
+  const APP_BUILD_TAG = '2.2.6-w312';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4804,10 +4804,11 @@
     const totalTxt = group.total.toLocaleString('en-US') + ' SLAIN';
     const labelTxt = rank + ' Rank';
     const rowsHtml = group.bosses.map(b => (
-      '<div class="guild-bosses-row guild-bosses-row--archive">' +
+      '<div class="guild-bosses-row guild-bosses-row--archive" data-bkshare data-bk-source="dungeon" data-boss-id="' + esc(b.id) + '" role="button" tabindex="0">' +
         '<span class="guild-bosses-row-dot" aria-hidden="true"></span>' +
         '<span class="guild-bosses-title">' + esc(b.name) + '</span>' +
         _killLogKillCapsule(b.kill_count) +
+        '<span class="guild-bosses-row-share" aria-hidden="true">' + _bksShareIconSvg() + '</span>' +
       '</div>'
     )).join('');
     return (
@@ -9258,6 +9259,7 @@
             '<span class="cell"><b>1</b><i>SUMMIT</i></span><span class="div"></span>' +
             '<span class="cell"><b>1</b><i>BESTED</i></span></div>' +
           '<div class="fn-obj-stamp"><span class="d"></span>THE ASCENT · COMPLETE<span class="d"></span></div>' +
+          '<button type="button" class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="ascent" data-floor="' + ASCENT_FLOORS + '" data-boss-name="The First Awakened">' + _bksShareIconSvg() + 'Share the summit</button>' +
           '<button type="button" class="fn-cta" data-ar="hall">ENTER THE HALL ▸</button>' +
         '</div>' +
       '</div>'
@@ -9398,6 +9400,7 @@
       '</div>' + flair + titleHtml + ratingStrip + _ascRecapHtml(f) +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
+      (won ? '<button class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="ascent" data-floor="' + (f.floorCleared || _arMatchup.floor) + '" data-boss-name="' + esc((f.bossCleared && f.bossCleared.name) || (_arMatchup.bot && _arMatchup.bot.name) || ('Floor ' + (f.floorCleared || _arMatchup.floor))) + '">' + _bksShareIconSvg() + 'Share this win</button>' : '') +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'
     );
     // sound + haptics (W280 — rating count-up + rating sfx removed with rating)
@@ -27389,6 +27392,408 @@
   } catch (_) {}
   document.addEventListener('DOMContentLoaded', _hrSetupOnce);
 
+  // ════════════════════════════════════════════════════════════════
+  // W312 — Boss-Kill Share Card (the growth engine).
+  //
+  // A self-contained, PRESENTATION-ONLY module: it renders a 1080×1920
+  // dark/gold card of a defeated boss to a canvas (reusing the Hunter-
+  // Report _hr* draw helpers + the real boss art), then one-taps it
+  // into the native share sheet via the SAME proven Web-Share path the
+  // Hunter Report card uses (navigator.share with files → text+url →
+  // clipboard). On iOS Capacitor this surfaces the system share sheet
+  // (Stories / iMessage / X / Save Image).
+  //
+  // Triggered from: the Ascent result + summit screens, the boss-
+  // defeated full-screen (which is also the persistent RE-TRIGGER
+  // surface), and the Kill Log rows.
+  //
+  // Touches NO engine / economy / commit path / selfTest. If image
+  // generation fails it falls back to a text share and never blocks
+  // the originating screen. Ships ENABLED.
+  // ════════════════════════════════════════════════════════════════
+
+  function _bksShareIconSvg() {
+    return '<svg class="bks-share-ico" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">' +
+      '<path d="M12 3l4 4m-4-4L8 7m4-4v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>';
+  }
+
+  function _bksRankPalette(rankId) {
+    return _hrPaletteForRank((rankId || 'E').toUpperCase());
+  }
+
+  // Normalize a kill into the card's data shape from any trigger.
+  //   opts.source : 'dungeon' | 'ascent'
+  //   dungeon : opts.bossId (+ optional opts.cfg)
+  //   ascent  : opts.floor, opts.bossName, opts.bossId (optional)
+  function _bksCollectData(opts) {
+    opts = opts || {};
+    let alias = 'Hunter';
+    try {
+      const u = (typeof Auth !== 'undefined' && Auth && Auth.getCurrentUser) ? Auth.getCurrentUser() : null;
+      if (u && u.alias) alias = u.alias;
+    } catch (_) {}
+
+    if (opts.source === 'ascent') {
+      const cap = (typeof ASCENT_FLOORS === 'number') ? ASCENT_FLOORS : 100;
+      const floor = opts.floor || 0;
+      const summit = floor >= cap;
+      const name = opts.bossName || ('Floor ' + floor);
+      return {
+        source: 'ascent',
+        alias: alias,
+        bossName: name,
+        artPath: opts.bossId ? getBossArtPath(opts.bossId) : null,
+        rankId: 'S',
+        context: summit ? 'THE ASCENT · THE SUMMIT' : ('THE ASCENT · FLOOR ' + floor),
+        feat: summit ? ('Floor ' + cap + ' — the First Awakened, bested') : ('Floor ' + floor + ' cleared, the climb continues'),
+        killNo: 0,
+        stamp: summit ? 'SUMMIT' : 'CLEARED',
+      };
+    }
+
+    // dungeon
+    const id  = opts.bossId;
+    const cfg = opts.cfg || ((typeof BOSSES === 'object' && BOSSES && id) ? BOSSES[id] : null) || {};
+    let killNo = 0;
+    try {
+      const all = (typeof loadBosses === 'function') ? (loadBosses() || {}) : {};
+      const s = all[id];
+      if (s && typeof s.kill_count === 'number') killNo = s.kill_count;
+    } catch (_) {}
+    const rank = (cfg.rank || 'E').toUpperCase();
+    return {
+      source: 'dungeon',
+      alias: alias,
+      bossName: cfg.name || 'The Boss',
+      artPath: id ? getBossArtPath(id) : null,
+      rankId: rank,
+      context: rank + '-RANK · DUNGEON HUNT',
+      feat: cfg.killCondShort || '',
+      killNo: killNo,
+      stamp: 'DEFEATED',
+    };
+  }
+
+  // Center-aligned word-wrap, capped at maxLines (ellipsis on overflow).
+  function _bksDrawWrapped(ctx, text, cx, y, maxW, lineH, maxLines) {
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const lines = [];
+    let cur = '';
+    for (let i = 0; i < words.length; i++) {
+      const test = cur ? (cur + ' ' + words[i]) : words[i];
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = words[i]; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+    const cap = maxLines || 2;
+    const shown = lines.slice(0, cap);
+    if (lines.length > cap && shown.length) {
+      shown[shown.length - 1] = shown[shown.length - 1].replace(/[\s.,;:]*\S*$/, '') + '…';
+    }
+    for (let i = 0; i < shown.length; i++) ctx.fillText(shown[i], cx, y + i * lineH);
+    return shown.length;
+  }
+
+  // Render the boss-kill card to a 1080×1920 canvas. Fail-soft on art.
+  async function _bksRenderCanvas(d, canvasEl) {
+    const W = 1080, H = 1920, DPR = 2;
+    try { await _hrLoadFonts(); } catch (_) {}
+
+    // Preload boss art (cover-fit). Missing art → rank-crest fallback.
+    let art = null;
+    if (d.artPath) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = d.artPath;
+        await img.decode();
+        art = img;
+      } catch (_) { art = null; }
+    }
+
+    const canvas = canvasEl || document.createElement('canvas');
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    const r = _bksRankPalette(d.rankId);
+
+    // ── 1. Opaque base + layered glows ──
+    ctx.fillStyle = '#08081a';
+    ctx.fillRect(0, 0, W, H);
+    const baseG = ctx.createLinearGradient(0, 0, 0, H);
+    baseG.addColorStop(0, '#0a0a1f');
+    baseG.addColorStop(0.55, '#050513');
+    baseG.addColorStop(1, '#030309');
+    ctx.fillStyle = baseG;
+    ctx.fillRect(0, 0, W, H);
+    const topGlow = ctx.createRadialGradient(W / 2, -160, 0, W / 2, -160, W * 1.05);
+    topGlow.addColorStop(0, _hrWithAlpha(r.glow, 0.22));
+    topGlow.addColorStop(0.5, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topGlow;
+    ctx.fillRect(0, 0, W, H);
+    const violet = ctx.createRadialGradient(W / 2, H * 0.1, 0, W / 2, H * 0.1, W * 0.85);
+    violet.addColorStop(0, 'rgba(167,139,250,0.10)');
+    violet.addColorStop(0.5, 'rgba(0,0,0,0)');
+    ctx.fillStyle = violet;
+    ctx.fillRect(0, 0, W, H);
+    const vign = ctx.createRadialGradient(W / 2, H / 2, W * 0.4, W / 2, H / 2, H * 0.62);
+    vign.addColorStop(0, 'rgba(0,0,0,0)');
+    vign.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.fillStyle = vign;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. Double gold frame ──
+    const fi = 44, fr = 24;
+    const fg = ctx.createLinearGradient(0, fi, 0, H - fi);
+    fg.addColorStop(0, '#f7c558');
+    fg.addColorStop(0.5, '#c08418');
+    fg.addColorStop(1, '#f5b842');
+    ctx.strokeStyle = fg;
+    ctx.lineWidth = 3;
+    _hrRoundRectPath(ctx, fi, fi, W - fi * 2, H - fi * 2, fr);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(245,184,66,0.32)';
+    ctx.lineWidth = 1;
+    _hrRoundRectPath(ctx, fi + 10, fi + 10, W - (fi + 10) * 2, H - (fi + 10) * 2, fr - 6);
+    ctx.stroke();
+
+    // ── 3. Header ──
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '600 30px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#f5b842';
+    _hrDrawSpacedText(ctx, 'AWAKENED', W / 2, 152, 10);
+    _hrDrawGoldRule(ctx, W / 2, 190, 480, true);
+    ctx.font = '800 22px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#9090a8';
+    _hrDrawSpacedText(ctx, d.context, W / 2, 244, 4);
+
+    // ── 4. Boss-art plate ──
+    const plateX = 110, plateY = 300, plateW = W - plateX * 2, plateH = 760;
+    const pg = ctx.createRadialGradient(W / 2, plateY + plateH * 0.42, 0, W / 2, plateY + plateH * 0.42, plateW * 0.72);
+    pg.addColorStop(0, _hrWithAlpha(r.glow, 0.32));
+    pg.addColorStop(0.7, 'rgba(0,0,0,0)');
+    ctx.fillStyle = pg;
+    ctx.fillRect(plateX - 60, plateY - 60, plateW + 120, plateH + 120);
+
+    ctx.save();
+    _hrRoundRectPath(ctx, plateX, plateY, plateW, plateH, 26);
+    const plg = ctx.createLinearGradient(0, plateY, 0, plateY + plateH);
+    plg.addColorStop(0, '#0e0e24');
+    plg.addColorStop(1, '#070713');
+    ctx.fillStyle = plg;
+    ctx.fill();
+    ctx.clip();
+    if (art) {
+      const iw = art.naturalWidth || art.width || plateW;
+      const ih = art.naturalHeight || art.height || plateH;
+      const scale = Math.max(plateW / iw, plateH / ih);
+      const dw = iw * scale, dh = ih * scale;
+      ctx.drawImage(art, W / 2 - dw / 2, plateY + plateH / 2 - dh / 2, dw, dh);
+      const fade = ctx.createLinearGradient(0, plateY + plateH - 260, 0, plateY + plateH);
+      fade.addColorStop(0, 'rgba(7,7,19,0)');
+      fade.addColorStop(1, 'rgba(7,7,19,0.92)');
+      ctx.fillStyle = fade;
+      ctx.fillRect(plateX, plateY + plateH - 260, plateW, 260);
+    } else {
+      _hrDrawRankCrest(ctx, W / 2, plateY + plateH / 2, 320, d.rankId, '', r);
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(245,184,66,0.55)';
+    ctx.lineWidth = 2;
+    _hrRoundRectPath(ctx, plateX, plateY, plateW, plateH, 26);
+    ctx.stroke();
+
+    // ── 5. Stamp + boss name + feat ──
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const stampY = plateY + plateH + 96;
+    ctx.font = '700 76px "Cinzel", Georgia, serif';
+    const stampGold = (d.source === 'ascent');
+    ctx.fillStyle = stampGold ? '#f5b842' : '#ef5350';
+    ctx.shadowColor = stampGold ? 'rgba(245,184,66,0.5)' : 'rgba(239,83,80,0.5)';
+    ctx.shadowBlur = 24;
+    _hrDrawSpacedText(ctx, d.stamp, W / 2, stampY, 14);
+    ctx.shadowBlur = 0;
+
+    const maxTextW = W - 200;
+    let nameSize = 64;
+    ctx.fillStyle = '#f4f4fa';
+    ctx.font = '700 ' + nameSize + 'px "Cinzel", Georgia, serif';
+    while (ctx.measureText(d.bossName).width > maxTextW && nameSize > 34) {
+      nameSize -= 3;
+      ctx.font = '700 ' + nameSize + 'px "Cinzel", Georgia, serif';
+    }
+    ctx.fillText(d.bossName, W / 2, stampY + 98);
+
+    let featLines = 0;
+    if (d.feat) {
+      ctx.font = '500 italic 40px "Cormorant Garamond", Georgia, serif';
+      ctx.fillStyle = r.letter;
+      featLines = _bksDrawWrapped(ctx, d.feat, W / 2, stampY + 168, maxTextW, 50, 2);
+    }
+
+    // ── 6. Kill-count chip (repeat kills = social proof) ──
+    if (d.killNo && d.killNo > 1) {
+      const chipTxt = 'KILL #' + _hrFmtNum(d.killNo);
+      ctx.font = '800 24px "JetBrains Mono", monospace';
+      const cw = ctx.measureText(chipTxt).width + 64;
+      const cx0 = W / 2 - cw / 2;
+      const cy0 = stampY + 168 + (featLines > 0 ? featLines * 50 : 0) + 26;
+      ctx.fillStyle = 'rgba(245,184,66,0.10)';
+      _hrRoundRectPath(ctx, cx0, cy0, cw, 58, 29);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(245,184,66,0.5)';
+      ctx.lineWidth = 1.5;
+      _hrRoundRectPath(ctx, cx0, cy0, cw, 58, 29);
+      ctx.stroke();
+      ctx.fillStyle = '#f5b842';
+      ctx.textBaseline = 'middle';
+      _hrDrawSpacedText(ctx, chipTxt, W / 2, cy0 + 30, 2);
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // ── 7. Footer: alias + wordmark ──
+    _hrDrawGoldRule(ctx, W / 2, H - 240, 440, true);
+    ctx.font = '500 italic 48px "Cormorant Garamond", Georgia, serif';
+    ctx.fillStyle = '#cfcfe0';
+    ctx.fillText('— ' + d.alias, W / 2, H - 174);
+    ctx.font = '700 20px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#7a7a96';
+    _hrDrawSpacedText(ctx, 'AWAKENED · TURN YOUR HABITS INTO AN RPG', W / 2, H - 116, 3);
+
+    return canvas;
+  }
+
+  function _bksCanvasToFile(canvas, name) {
+    return new Promise(function (resolve, reject) {
+      try {
+        canvas.toBlob(function (blob) {
+          if (!blob) { reject(new Error('toBlob returned null')); return; }
+          try { resolve(new File([blob], name || 'awakened-kill.png', { type: 'image/png' })); }
+          catch (e) { reject(e); }
+        }, 'image/png', 0.92);
+      } catch (e) { reject(e); }
+    });
+  }
+
+  function _bksShareCopy(d) {
+    if (d && d.source === 'ascent') {
+      if (/SUMMIT/.test(d.context || '')) {
+        return 'I reached the Summit of the Ascent in Awakened — Floor ' +
+          ((typeof ASCENT_FLOORS === 'number') ? ASCENT_FLOORS : 100) +
+          ', the First Awakened bested. Turn your habits into an RPG.';
+      }
+      return 'I cleared ' + (d.context || 'a floor of the Ascent') +
+        ' in Awakened — by moving in the real world. Turn your habits into an RPG.';
+    }
+    if (d && d.bossName) {
+      return 'I just felled ' + d.bossName +
+        ' in Awakened — a boss you beat by hitting real fitness goals. Turn your habits into an RPG.';
+    }
+    return 'Turn your habits into an RPG. — Awakened';
+  }
+
+  // Share an already-rendered canvas. Mirrors _hrShareReport's 3-tier
+  // fallback but with boss-named copy (the viral hook).
+  async function _bksShareCanvas(canvas, d) {
+    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const TEXT = _bksShareCopy(d);
+    try {
+      const file = await _bksCanvasToFile(canvas, 'awakened-kill.png');
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        try {
+          await navigator.share({ files: [file], text: TEXT, url: APP_URL });
+          return { ok: true, mode: 'file' };
+        } catch (_) { /* cancelled / unsupported → fall through */ }
+      }
+    } catch (_) { /* canvas/file failed → fall through */ }
+    return _bksShareText(d);
+  }
+
+  // Text-only fallback (also the path used when the canvas never renders).
+  async function _bksShareText(d) {
+    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const TEXT = _bksShareCopy(d);
+    if (navigator.share) {
+      try { await navigator.share({ text: TEXT, url: APP_URL }); return { ok: true, mode: 'text' }; }
+      catch (_) {}
+    }
+    try {
+      await navigator.clipboard.writeText(TEXT + '\n' + APP_URL);
+      if (typeof showHabitToast === 'function') showHabitToast('Copied — paste to share');
+      return { ok: true, mode: 'clipboard' };
+    } catch (_) {
+      if (typeof showHabitToast === 'function') showHabitToast('Sharing not supported on this device');
+      return { ok: false, mode: 'none' };
+    }
+  }
+
+  // ── Public entries (never throw to the caller) ──
+  async function shareBossKill(bossId) {
+    let d = null;
+    try {
+      d = _bksCollectData({ source: 'dungeon', bossId: bossId });
+      const canvas = await _bksRenderCanvas(d, null);
+      await _bksShareCanvas(canvas, d);
+    } catch (_) {
+      try { await _bksShareText(d || { source: 'dungeon' }); } catch (_) {}
+    }
+  }
+
+  async function shareAscentClear(floor, bossName, bossId) {
+    let d = null;
+    try {
+      d = _bksCollectData({ source: 'ascent', floor: floor, bossName: bossName, bossId: bossId });
+      const canvas = await _bksRenderCanvas(d, null);
+      await _bksShareCanvas(canvas, d);
+    } catch (_) {
+      try { await _bksShareText(d || { source: 'ascent' }); } catch (_) {}
+    }
+  }
+
+  // One delegated, capture-phase listener for every [data-bkshare]
+  // trigger (result/summit buttons, the defeated CTA, kill-log rows).
+  function _bksSetupOnce() {
+    if (document.__bksWired) return;
+    document.__bksWired = true;
+    document.addEventListener('click', function (e) {
+      const btn = e.target && e.target.closest ? e.target.closest('[data-bkshare]') : null;
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (btn.__bksBusy) return;
+      btn.__bksBusy = true;
+      const release = function () { btn.__bksBusy = false; };
+      const src = btn.getAttribute('data-bk-source') || 'dungeon';
+      if (src === 'ascent') {
+        const floor = parseInt(btn.getAttribute('data-floor') || '0', 10) || 0;
+        const name = btn.getAttribute('data-boss-name') || '';
+        const id = btn.getAttribute('data-boss-id') || '';
+        Promise.resolve(shareAscentClear(floor, name, id)).then(release, release);
+      } else {
+        const id = btn.getAttribute('data-boss-id') || '';
+        Promise.resolve(shareBossKill(id)).then(release, release);
+      }
+    }, true);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _bksSetupOnce);
+  else _bksSetupOnce();
+
+  try {
+    window.__shareBossKill = shareBossKill;
+    window.__shareAscentClear = shareAscentClear;
+    window.__bksRenderCanvas = _bksRenderCanvas;
+    window.__bksCollectData = _bksCollectData;
+  } catch (_) {}
+
+
   // v3 Phase 1z.282D — Rank-up congratulations orchestrator.
   // Called from drainLevelUpQueue() when a 'fa_rankup' item is
   // dispatched (queued by toggleHabit immediately after the
@@ -35048,6 +35453,24 @@
       ctaBtn.setAttribute('data-boss-id', id);
       const cost = (typeof engageCostSouls === 'function') ? engageCostSouls(cfg.rank) : 0;
       ctaBtn.textContent = cost > 0 ? ('HUNT AGAIN — ' + cost + ' SOULS') : 'HUNT AGAIN';
+    }
+    // W312 — boss-kill share affordance. Persistent RE-TRIGGER surface
+    // (this screen reopens for any defeated boss). Append once; just
+    // refresh the boss id on each open.
+    if (ctaSection) {
+      let _bksBtn = document.getElementById('bfs-defeated-share');
+      if (!_bksBtn) {
+        _bksBtn = document.createElement('button');
+        _bksBtn.id = 'bfs-defeated-share';
+        _bksBtn.className = 'bks-share-cta bks-share-cta--block';
+        _bksBtn.setAttribute('type', 'button');
+        _bksBtn.setAttribute('data-bkshare', '');
+        _bksBtn.setAttribute('data-bk-source', 'dungeon');
+        _bksBtn.innerHTML = _bksShareIconSvg() + 'Share this kill';
+        if (ctaFoot && ctaFoot.parentNode === ctaSection) ctaSection.insertBefore(_bksBtn, ctaFoot);
+        else ctaSection.appendChild(_bksBtn);
+      }
+      _bksBtn.setAttribute('data-boss-id', id);
     }
     if (ctaFoot) {
       const cadence = cfg.cadence || 'daily';
