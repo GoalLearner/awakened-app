@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w317';
+  const APP_BUILD_TAG = '2.2.6-w318';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33724,6 +33724,36 @@
   // Renders the "This Week" view (current-weekly ranking with sim
   // merge). Extracted from openLeaderboardRanking so the same flow
   // can be triggered on tab switch without re-opening the sheet.
+  // W318 — days remaining until the next Sunday-Pacific weekly reset.
+  // Reuses the single-sourced Pacific week key (lbGetCurrentWeekStartPT)
+  // and _getPTDateParts; pure date-string math, DST-safe, no hour offset.
+  function _lbWeekResetCountdownText() {
+    try {
+      const wk = lbGetCurrentWeekStartPT();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(wk)) return '';
+      const fmt = _getPTDateParts();
+      let ty = 0, tm = 0, td = 0;
+      if (fmt) {
+        const parts = fmt.formatToParts(new Date());
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i];
+          if      (p.type === 'year')  ty = parseInt(p.value, 10);
+          else if (p.type === 'month') tm = parseInt(p.value, 10);
+          else if (p.type === 'day')   td = parseInt(p.value, 10);
+        }
+      }
+      if (!ty) return '';
+      const wkMs    = Date.UTC(parseInt(wk.slice(0, 4), 10), parseInt(wk.slice(5, 7), 10) - 1, parseInt(wk.slice(8, 10), 10));
+      const todayMs = Date.UTC(ty, tm - 1, td);
+      let elapsed = Math.round((todayMs - wkMs) / 86400000);
+      if (elapsed < 0) elapsed = 0;
+      if (elapsed > 6) elapsed = 6;
+      const daysLeft = 7 - elapsed;
+      if (daysLeft === 1) return 'Final day \u2014 resets Sunday';
+      return daysLeft + ' days left \u00b7 resets Sunday';
+    } catch (_) { return ''; }
+  }
+
   async function _lbRenderThisWeekTab(metric) {
     const listEl   = document.getElementById('lb-rank-list');
     const meBestEl = document.getElementById('lb-rank-mebest');
@@ -33744,6 +33774,13 @@
       if (range) blurbText = range + ' · resets Sunday 12:00 AM Pacific Time. Apple Health is the only source.';
     }
     if (blurbEl) blurbEl.textContent = blurbText;
+    // W318 — visible reset countdown badge (urgency). Weekly metrics only.
+    const _resetEl = document.getElementById('lb-week-reset');
+    if (_resetEl) {
+      const _cd = LB_WEEKLY_METRICS.has(metric) ? _lbWeekResetCountdownText() : '';
+      if (_cd) { _resetEl.textContent = _cd; _resetEl.classList.remove('hidden'); }
+      else { _resetEl.textContent = ''; _resetEl.classList.add('hidden'); }
+    }
 
     // v3 Phase 1z.122 — decisive route breadcrumb at modal open.
     // Records exactly which branch the rendering will take so
@@ -34089,6 +34126,7 @@
     const meBestEl = document.getElementById('lb-rank-mebest');
     const blurbEl  = document.getElementById('lb-rank-blurb');
     if (!listEl) return;
+    var _hofRe = document.getElementById('lb-week-reset'); if (_hofRe) _hofRe.classList.add('hidden');
 
     if (blurbEl) blurbEl.textContent = 'Highest verified weekly totals ever recorded.';
 
@@ -34192,6 +34230,7 @@
     const meBestEl = document.getElementById('lb-rank-mebest');
     const blurbEl  = document.getElementById('lb-rank-blurb');
     if (!listEl) return;
+    var _clubRe = document.getElementById('lb-week-reset'); if (_clubRe) _clubRe.classList.add('hidden');
 
     if (blurbEl) blurbEl.textContent = 'Hunters who recorded 100,000+ verified steps in a single week.';
 
