@@ -29190,3 +29190,20 @@ button.guildhall-summary-tile:active {
 /* ── W330 · Guest "sign in & save" Settings CTA (gold-emphasised) ── */
 .settings-guest-claim { border: 1px solid rgba(245,184,66,0.5); }
 .settings-guest-claim .settings-v2-fmrow-label { color: #f5b842; }
+
+/* ── W331 · Guest "sign in to join" block (leaderboard surfaces) ── */
+.lb-guest-join {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 40px 24px 30px; gap: 10px;
+}
+.lb-guest-join-icon { opacity: 0.95; }
+.lb-guest-join-title { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.15rem; color: var(--text-primary, #f3f4f6); }
+.lb-guest-join-sub { font-size: 0.86rem; color: var(--text-secondary, #9090a8); max-width: 290px; line-height: 1.5; }
+.lb-guest-join-btn {
+  margin-top: 12px; padding: 13px 22px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase; color: #1b1405;
+  background: linear-gradient(180deg, #f7c558, #f5b842);
+  border: 0; border-radius: 12px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}

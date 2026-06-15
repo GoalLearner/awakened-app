@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w330';
+  const APP_BUILD_TAG = '2.2.6-w331';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34508,6 +34508,23 @@
     el.classList.remove('hidden');
   }
 
+  // W331 — "Sign in to join" block shown to guests on social surfaces.
+  // The button routes (via a delegated [data-guest-join] handler) to the
+  // W330 guest claim modal.
+  function _guestJoinHtml(headline, sub) {
+    return '<div class="lb-guest-join">' +
+      '<div class="lb-guest-join-icon" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" width="30" height="30" fill="none">' +
+          '<path d="M7 11V8a5 5 0 0 1 9.6-2" stroke="#f5b842" stroke-width="1.6" stroke-linecap="round"/>' +
+          '<rect x="5" y="11" width="14" height="9" rx="2" stroke="#f5b842" stroke-width="1.6"/>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="lb-guest-join-title">' + esc(headline) + '</div>' +
+      '<div class="lb-guest-join-sub">' + esc(sub) + '</div>' +
+      '<button type="button" class="lb-guest-join-btn" data-guest-join>Sign in &amp; save your progress</button>' +
+    '</div>';
+  }
+
   async function openLeaderboardRanking(metric, opts) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
@@ -34522,6 +34539,19 @@
     const overlay = document.getElementById('lb-rank-overlay');
     const listEl  = document.getElementById('lb-rank-list');
     if (!sheet || !overlay || !listEl) return;
+    // W331 — guests cannot post scores; nudge sign-in rather than show an
+    // empty board. Show the sheet with the join prompt and skip the fetch.
+    if (window.Auth && typeof Auth.isGuest === 'function' && Auth.isGuest()) {
+      const _t = document.getElementById('lb-rank-title'); if (_t) _t.textContent = (meta.title || 'Leaderboard');
+      ['lb-rank-tabs','lb-rank-metric-switch','lb-rank-mebest','lb-week-reset'].forEach(function (id) {
+        const el = document.getElementById(id); if (el) el.classList.add('hidden');
+      });
+      const _bl = document.getElementById('lb-rank-blurb'); if (_bl) _bl.textContent = '';
+      listEl.innerHTML = _guestJoinHtml('Join the leaderboard', 'Sign in to post your scores and climb against real hunters.');
+      overlay.classList.remove('hidden');
+      sheet.classList.remove('hidden');
+      return;
+    }
 
     // v3 Phase 1z.36 — title is "Steps" when the HoF tab is available
     // (the segmented control labels handle the "This Week" framing);
@@ -34709,6 +34739,14 @@
     const sheet   = document.getElementById('lb-hub-sheet');
     const overlay = document.getElementById('lb-hub-overlay');
     if (!sheet || !overlay) return;
+    // W331 — guest nudge instead of the hub.
+    if (window.Auth && typeof Auth.isGuest === 'function' && Auth.isGuest()) {
+      const _hl = document.getElementById('lb-hub-list');
+      if (_hl) _hl.innerHTML = _guestJoinHtml('Join the rankings', 'Sign in to compete on the global leaderboards.');
+      overlay.classList.remove('hidden');
+      sheet.classList.remove('hidden');
+      return;
+    }
     try { _lbHubRender(); } catch (_) {}
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
@@ -46666,6 +46704,21 @@
     // W330 — wire the guest deferred-claim modal + the "sign in & save"
     // Settings CTA (shown only for guests).
     try { _wireGuestClaimOnce(); } catch (_) {}
+    // W331 — one delegated handler: any [data-guest-join] button closes the
+    // social surface and opens the guest claim modal.
+    try {
+      if (!document.__guestJoinWired) {
+        document.__guestJoinWired = true;
+        document.addEventListener('click', function (e) {
+          const b = (e.target && e.target.closest) ? e.target.closest('[data-guest-join]') : null;
+          if (!b) return;
+          e.preventDefault();
+          try { if (typeof closeLeaderboardRanking === 'function') closeLeaderboardRanking(); } catch (_) {}
+          try { if (typeof closeGlobalRankingsHub === 'function') closeGlobalRankingsHub(); } catch (_) {}
+          try { openGuestClaim(); } catch (_) {}
+        }, true);
+      }
+    } catch (_) {}
     try {
       const _gcRow = document.getElementById('settings-guest-claim');
       if (_gcRow) {
