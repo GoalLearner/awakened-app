@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w314';
+  const APP_BUILD_TAG = '2.2.6-w315';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7115,6 +7115,8 @@
   }
   function _arApplyFx(sess, side, fx, events, atkName, defName) {
     const selfS = side === 'p' ? sess.pS : sess.bS, foeS = side === 'p' ? sess.bS : sess.pS;
+    // W315 — subject-aware copula: "You are burning" but "Sentinel is burning".
+    const isAre = defName === 'You' ? 'are' : 'is';
     switch (fx.t) {
       case 'burn': case 'bleed': {
         // W236 Cauterize: a fresh cleanse grants 2 turns of DoT immunity — new
@@ -7133,14 +7135,14 @@
         const ex = foeS.mods.find((x) => x.k === 'dot' && x.kind === fx.t);   // refresh-by-kind to highest, never additive
         if (ex) { ex.dur = Math.max(ex.dur, fx.dur); ex.mag = Math.max(ex.mag, magEff); ex.src = side; }
         else foeS.mods.push({ k: 'dot', kind: fx.t, mag: magEff, dur: fx.dur, src: side });
-        events.push({ side, t: 'fx', text: defName + ' is ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
+        events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
       }
       case 'stun':
         // W233 flinch model: 1 skipped ACTION (this turn if the target hasn't
         // acted yet, else next turn); decremented when the skip occurs. A stun
         // on an already-stunned target is wasted (no chain-lock; cd still spent).
-        if (foeS.stun > 0) { events.push({ side, t: 'fx', text: defName + ' is already reeling.' }); }
-        else { foeS.stun = 1; events.push({ side, t: 'fx', text: defName + ' is stunned.' }); }
+        if (foeS.stun > 0) { events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' already reeling.' }); }
+        else { foeS.stun = 1; events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' stunned.' }); }
         break;
       case 'atkUp': _arPushMod(selfS, 'atk', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — attack up.' }); break;
       case 'atkDown': _arPushMod(foeS, 'atk', fx.kind || fx.t, -fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — attack down.' }); break;
@@ -22056,6 +22058,7 @@
             '<span class="sc-metric-lbl">Today</span>' +
           '</div>' +
         '</div>' +
+        '<button type="button" class="bks-share-cta bks-share-cta--block sc-share-card-btn" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'Share my hunter card</button>' +
       '</div>';
 
     requestAnimationFrame(() => {
@@ -27781,7 +27784,15 @@
       btn.__bksBusy = true;
       const release = function () { btn.__bksBusy = false; };
       const src = btn.getAttribute('data-bk-source') || 'dungeon';
-      if (src === 'ascent') {
+      if (src === 'profile') {
+        // W315 — open the existing Hunter Report card on demand (reuses the
+        // #hr-overlay modal + 3-tier share). Bypasses the one-shot rank-up gate.
+        let pdata = null;
+        try { pdata = (typeof _hrCollectData === 'function') ? _hrCollectData({}) : null; } catch (_) {}
+        if (pdata && typeof openHunterReportPreview === 'function') {
+          Promise.resolve(openHunterReportPreview(pdata, null)).then(release, release);
+        } else { release(); }
+      } else if (src === 'ascent') {
         const floor = parseInt(btn.getAttribute('data-floor') || '0', 10) || 0;
         const name = btn.getAttribute('data-boss-name') || '';
         const id = btn.getAttribute('data-boss-id') || '';

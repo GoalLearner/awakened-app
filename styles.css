@@ -22304,6 +22304,14 @@ button.guildhall-summary-tile:active {
   --rank-soft:  rgba(245,184,66,0.14);
 }
 .guild-bosses-row:last-child { border-bottom: 0; }
+/* W315 — archive rows carry BOTH .guild-bosses-row and --archive; the base
+   rule above is later in source and re-declares grid-template-columns, so it
+   overrode the modifier. This 2-class (higher-specificity) rule restores the
+   4-track grid (dot | title | capsule | share) so the share button gets its
+   own right-edge column instead of wrapping below the boss name. */
+.guild-bosses-row.guild-bosses-row--archive {
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+}
 /* Fantasy shield crest — SVG path painted entirely in --rank-color. */
 .guild-bosses-crest {
   position: relative;
@@ -29060,10 +29068,17 @@ button.guildhall-summary-tile:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 8px;
+  width: 28px;
+  height: 28px;
+  margin: -6px -4px -6px 2px;
+  border-radius: 8px;
   flex: none;
-  color: rgba(245,184,66,0.5);
-  opacity: 0.75;
-  transition: opacity .15s ease, color .15s ease;
+  color: rgba(245,184,66,0.55);
+  opacity: 0.8;
+  transition: opacity .15s ease, color .15s ease, background .15s ease;
 }
-.guild-bosses-row--archive[data-bkshare]:hover .guild-bosses-row-share { opacity: 1; color: #f5b842; }
+.guild-bosses-row--archive[data-bkshare]:hover .guild-bosses-row-share,
+.guild-bosses-row--archive[data-bkshare]:active .guild-bosses-row-share {
+  opacity: 1; color: #f5b842; background: rgba(245,184,66,0.10);
+}
+.sc-share-card-btn { margin-top: 14px; }
