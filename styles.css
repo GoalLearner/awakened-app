@@ -29122,3 +29122,29 @@ button.guildhall-summary-tile:active {
 .lb-lw-line { font-size: 0.82rem; color: var(--text-secondary, #b8b8c8); line-height: 1.3; }
 .lb-lw-champ { color: var(--text-primary, #f3f4f6); font-weight: 700; }
 .lb-lw-you { color: #f5b842; font-weight: 700; }
+
+/* ── W326 · Founder's Lifetime offer surface ─────────────────────── */
+.founder-body { padding: 4px 18px 26px; }
+.founder-hero { text-align: center; padding: 6px 0 16px; }
+.founder-crest { width: 62px; height: 62px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, rgba(245,184,66,0.30), rgba(245,184,66,0.06)); border: 1.5px solid rgba(245,184,66,0.55); box-shadow: 0 0 26px rgba(245,184,66,0.25); }
+.founder-crest-spark { font-size: 26px; color: #f5b842; }
+.founder-title { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.5rem; color: #f4f4fa; letter-spacing: 0.02em; }
+.founder-tagline { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.05rem; color: #b9b9cc; margin-top: 4px; }
+.founder-price { margin-top: 14px; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.founder-price-num { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 2rem; color: #f5b842; }
+.founder-price-cadence { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8aa2; }
+.founder-benefits { display: flex; flex-direction: column; gap: 12px; margin: 4px 0 20px; }
+.founder-benefit { display: flex; gap: 12px; align-items: flex-start; }
+.founder-benefit-glyph { flex: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f5b842; border-radius: 8px; background: rgba(245,184,66,0.10); border: 1px solid rgba(245,184,66,0.28); }
+.founder-benefit-text { display: flex; flex-direction: column; gap: 2px; }
+.founder-benefit-title { font-weight: 700; font-size: 0.92rem; color: #f3f3f8; }
+.founder-benefit-body { font-size: 0.82rem; line-height: 1.4; color: #9a9ab0; }
+.founder-cta-wrap { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.founder-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border: 0; border-radius: 14px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.04em; color: #1b1405; background: linear-gradient(180deg, #f7c558, #e2a32f); box-shadow: 0 6px 20px rgba(245,184,66,0.28); -webkit-tap-highlight-color: transparent; }
+.founder-cta:active { transform: scale(0.985); }
+.founder-cta--soon { background: linear-gradient(180deg, rgba(245,184,66,0.22), rgba(245,184,66,0.10)); color: #f5b842; box-shadow: none; border: 1px solid rgba(245,184,66,0.4); }
+.founder-cta-spark { font-size: 14px; }
+.founder-restore { background: none; border: 0; color: #8a8aa2; font-size: 0.82rem; padding: 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.founder-owned { text-align: center; padding: 16px; border-radius: 14px; font-weight: 700; color: #f5b842; background: rgba(245,184,66,0.10); border: 1px solid rgba(245,184,66,0.4); }
+.founder-fineprint { text-align: center; margin-top: 14px; font-size: 0.72rem; color: #6f6f88; letter-spacing: 0.03em; }
+.settings-v2-founder { background: linear-gradient(180deg, rgba(245,184,66,0.16), rgba(245,184,66,0.05)) !important; border-color: rgba(245,184,66,0.5) !important; }

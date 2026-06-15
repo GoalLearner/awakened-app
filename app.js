@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w325';
+  const APP_BUILD_TAG = '2.2.6-w326';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34889,6 +34889,97 @@
     try { _maybeSubmitPublicRankSummary('avatar-change'); } catch (_) {}   // sync avatar_id
   }
   try { window.__openWardrobe = openWardrobe; } catch (_) {}
+
+  // ── W326 — Founder's Lifetime offer (presentation surface) ───────────
+  // The headline monetization play: one-time, additive-only, never pay-to-win.
+  // This builds the OFFER SCREEN only. The buy CTA calls Auth.purchaseFounders
+  // (a hook the OWNER wires to RevenueCat); until that + IAP exist it degrades
+  // to a graceful toast. Edit price/benefits in this one config.
+  const FOUNDER_OFFER = {
+    productId: 'com.goallearner.awakened.founders_lifetime',
+    price:     '$49.99',
+    cadence:   'one-time',
+    title:     'Become a Founder',
+    tagline:   'Back Awakened once. Yours forever.',
+    benefits: [
+      { glyph: '\u221E', title: 'Lifetime, one payment', body: 'Pay once. Every premium feature, now and forever. No subscription, ever.' },
+      { glyph: '\u2726', title: 'The Founder\u2019s mark', body: 'A permanent Founder frame + badge on your hunter card and the leaderboard.' },
+      { glyph: '\u25C6', title: 'A Founder-exclusive look', body: 'An avatar skin only Founders carry \u2014 separate from the a-la-carte shop.' },
+      { glyph: '\u2694', title: 'Never pay-to-win', body: 'Cosmetic only. The Ascent, bosses, and the boards stay free and fair for everyone.' },
+      { glyph: '\u2665', title: 'Fund a solo studio', body: 'Awakened is built by one person. You\u2019re backing the work directly.' },
+    ],
+    fineprint: 'One-time payment \u00b7 no subscription \u00b7 restore anytime.',
+  };
+
+  function _founderIapReady() {
+    try { return !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable() && typeof Auth.purchaseFounders === 'function'); }
+    catch (_) { return false; }
+  }
+  function _founderOwned() {
+    try { return !!(window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder()); } catch (_) { return false; }
+  }
+  function _renderFounder() {
+    const body = document.getElementById('founder-body');
+    if (!body) return;
+    const o = FOUNDER_OFFER;
+    const owned = _founderOwned();
+    const ready = _founderIapReady();
+    const benefits = o.benefits.map(function (b) {
+      return '<div class="founder-benefit">' +
+        '<span class="founder-benefit-glyph" aria-hidden="true">' + b.glyph + '</span>' +
+        '<span class="founder-benefit-text"><span class="founder-benefit-title">' + esc(b.title) + '</span>' +
+        '<span class="founder-benefit-body">' + esc(b.body) + '</span></span></div>';
+    }).join('');
+    let cta;
+    if (owned) {
+      cta = '<div class="founder-owned">\u2713 You\u2019re a Founder. Thank you.</div>';
+    } else {
+      const label = ready ? ('Become a Founder \u2014 ' + o.price) : (o.price + ' \u00b7 Coming soon');
+      cta = '<button type="button" class="founder-cta' + (ready ? '' : ' founder-cta--soon') + '" data-founder-buy>' +
+        '<span class="founder-cta-spark" aria-hidden="true">\u2726</span>' + esc(label) + '</button>' +
+        '<button type="button" class="founder-restore" data-founder-restore>Restore purchase</button>';
+    }
+    body.innerHTML =
+      '<div class="founder-hero">' +
+        '<div class="founder-crest" aria-hidden="true"><span class="founder-crest-spark">\u2726</span></div>' +
+        '<div class="founder-title">' + esc(o.title) + '</div>' +
+        '<div class="founder-tagline">' + esc(o.tagline) + '</div>' +
+        '<div class="founder-price"><span class="founder-price-num">' + esc(o.price) + '</span>' +
+          '<span class="founder-price-cadence">' + esc(o.cadence) + '</span></div>' +
+      '</div>' +
+      '<div class="founder-benefits">' + benefits + '</div>' +
+      '<div class="founder-cta-wrap">' + cta + '</div>' +
+      '<div class="founder-fineprint">' + esc(o.fineprint) + '</div>';
+  }
+  function openFounder() {
+    const ov = document.getElementById('founder-overlay'), sh = document.getElementById('founder-sheet');
+    if (!ov || !sh) return;
+    _renderFounder();
+    ov.classList.remove('hidden'); sh.classList.remove('hidden');
+  }
+  function closeFounder() {
+    const ov = document.getElementById('founder-overlay'), sh = document.getElementById('founder-sheet');
+    if (ov) ov.classList.add('hidden');
+    if (sh) sh.classList.add('hidden');
+  }
+  function _founderBuy() {
+    if (_founderIapReady()) {
+      try { Promise.resolve(Auth.purchaseFounders(FOUNDER_OFFER.productId)).then(function () { _renderFounder(); }, function () {}); } catch (_) {}
+    } else if (typeof showHabitToast === 'function') {
+      showHabitToast('Founder\u2019s Lifetime unlocks soon \u2014 thank you for the support.');
+    }
+  }
+  function _founderRestore() {
+    if (!(window.Auth && Auth.iapAvailable && Auth.iapAvailable())) {
+      if (typeof showHabitToast === 'function') showHabitToast('Restore is available once purchases are live.');
+      return;
+    }
+    try {
+      Promise.resolve(Auth.restorePurchases()).then(function () { _renderFounder(); if (typeof showHabitToast === 'function') showHabitToast('Purchases restored.'); },
+        function () { if (typeof showHabitToast === 'function') showHabitToast('Nothing to restore.'); });
+    } catch (_) {}
+  }
+  try { window.__openFounder = openFounder; } catch (_) {}
   function _pcIsOwnAlias(alias) {
     try { const me = lbGetMyAlias(); return !!(me && alias && me.toLowerCase() === String(alias).toLowerCase()); } catch (_) { return false; }
   }
@@ -46471,6 +46562,20 @@
       if (mvDone)  mvDone.addEventListener('click', closeManageVows);
       if (mvOver)  mvOver.addEventListener('click', function (e) {
         if (e.target === mvOver) closeManageVows();
+      });
+      // W326 — Founder's Lifetime offer entry + sheet chrome.
+      const fdRow = document.getElementById('settings-founder-row');
+      if (fdRow) fdRow.addEventListener('click', function () { try { closeSettings(); } catch (_) {} try { openFounder(); } catch (_) {} });
+      const fdClose = document.getElementById('founder-close');
+      if (fdClose) fdClose.addEventListener('click', closeFounder);
+      const fdOver = document.getElementById('founder-overlay');
+      if (fdOver) fdOver.addEventListener('click', function (e) { if (e.target === fdOver) closeFounder(); });
+      const fdSheet = document.getElementById('founder-sheet');
+      if (fdSheet) fdSheet.addEventListener('click', function (e) {
+        const t = e.target && e.target.closest ? e.target.closest('[data-founder-buy],[data-founder-restore]') : null;
+        if (!t) return;
+        if (t.hasAttribute('data-founder-buy')) _founderBuy();
+        else if (t.hasAttribute('data-founder-restore')) _founderRestore();
       });
       // ESC closes (web/dev); harmless on iOS.
       document.addEventListener('keydown', (e) => {
