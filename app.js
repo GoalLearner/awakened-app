@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w324';
+  const APP_BUILD_TAG = '2.2.6-w325';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27010,13 +27010,13 @@
     ctx.restore();
 
     // ── 6. RANK CREST pendant (overlaps medallion bottom) ──
-    const crestSize = 140;
+    const crestSize = 112;
     const crestCx = W / 2;
-    const crestCy = medTop + medH - 4;
+    const crestCy = medTop + medH + 40;
     _hrDrawRankCrest(ctx, crestCx, crestCy, crestSize, data.rank, data.division, r);
 
     // ── 7. ALIAS (Cinzel 84) ──
-    const aliasY = crestCy + crestSize * 0.62;
+    const aliasY = crestCy + crestSize / 2 + 72;
     ctx.font = '700 84px "Cinzel", Georgia, serif';
     ctx.fillStyle = '#f5f3fb';
     ctx.shadowColor = 'rgba(245,184,66,0.28)';
