@@ -451,6 +451,38 @@
   // GET /v1/leaderboard/top?metric=X&limit=N. Returns top + caller's
   // rank+value (or me === null if caller hasn't submitted this
   // metric yet).
+  // W319 — "Hunters in your rank" cohort board read.
+  async function fetchRankBand(limit) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    const lim = (Number.isInteger(limit) && limit > 0 && limit <= 50) ? limit : 25;
+    const url = BACKEND_URL + '/v1/leaderboard/rank-band?limit=' + lim;
+    let res;
+    try {
+      res = await fetch(url, { method: 'GET', headers: { 'Authorization': 'Bearer ' + u.jwt } });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      return {
+        ok: true,
+        tier:  data.tier || null,
+        total: data.total || 0,
+        top:   Array.isArray(data.top) ? data.top : [],
+        me:    data.me || null,
+        near:  Array.isArray(data.near) ? data.near : [],
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
   async function fetchLeaderboardTop(metric, limit) {
     const u = readUser();
     const gate = _stubGate(u);
@@ -1315,6 +1347,7 @@
     deleteAccount,
     submitLeaderboardSnapshot,
     fetchLeaderboardTop,
+    fetchRankBand,
     // Weekly Steps Hall of Fame (v3 Phase 1z.36)
     fetchLeaderboardHallOfFame,
     // 100K Step Club roster (v3 Phase 1z.52)

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w318';
+  const APP_BUILD_TAG = '2.2.6-w319';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33044,6 +33044,14 @@
       unit:  'floor',
       formatValue: n => 'Floor ' + (n || 0),
     },
+    // W319 — "Hunters in your rank" cohort board. Ranks the caller's rank
+    // tier by power (server-side), blended with sim filler for thin bands.
+    rank_band: {
+      title: 'Hunters in your rank',
+      blurb: 'The hunters who share your rank — ranked by power. Climb the cohort closest to your level.',
+      unit:  'power',
+      formatValue: n => (n || 0).toLocaleString('en-US'),
+    },
   };
 
   // localStorage cache key per metric. Object shape:
@@ -33523,7 +33531,7 @@
   // leaderboard card was retired); workout_streak takes its place
   // with the same simulated-merge shape (small integer, ±jitter).
   // v3 Phase 1z.125 — flights_climbed joins the sim-eligible set.
-  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1, floor_best: 1 };
+  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1, floor_best: 1, rank_band: 1 };
   // v3 Phase 1z.116 — per-metric minimum-score filter applied AFTER
   // simulated-leaderboard merge but BEFORE the rank list renders.
   // Rationale: a "7+ hour sleep streak" leaderboard showing entries
@@ -33577,6 +33585,7 @@
         else if (metric === 'workout_streak') localSnapValue = snap.current_workout_streak || 0;
         else if (metric === 'flights_climbed') localSnapValue = snap.flights_this_week || 0;
         else if (metric === 'floor_best') { try { localSnapValue = (getAscentState().highestCleared | 0); } catch (_) { localSnapValue = 0; } }
+        else if (metric === 'rank_band') { try { localSnapValue = Math.max(0, Math.round(_ascPlayerPower())); } catch (_) { localSnapValue = 0; } }
       }
     } catch (_) {}
 
@@ -34274,6 +34283,53 @@
     }
   }
 
+  // W319 — "Hunters in your rank" cohort board. Fetches the caller's rank-
+  // tier board (ranked by power) and blends sim filler so thin bands still
+  // feel populated. Reuses lbBuildRankList (profile-card taps work for free)
+  // + the _lbMaybeSimulate machinery. Not weekly, so the reset badge hides.
+  async function _lbRenderRankBandTab(metric) {
+    const listEl = document.getElementById('lb-rank-list');
+    if (!listEl) return;
+    var _rbRe = document.getElementById('lb-week-reset'); if (_rbRe) _rbRe.classList.add('hidden');
+    const meBestEl = document.getElementById('lb-rank-mebest');
+    if (meBestEl) meBestEl.classList.add('hidden');
+    const blurbEl = document.getElementById('lb-rank-blurb');
+    if (blurbEl) blurbEl.textContent = (LB_METRIC_META.rank_band && LB_METRIC_META.rank_band.blurb) || '';
+
+    const cached = lbCacheRead('rank_band');
+    if (cached) {
+      const sim1 = _lbMaybeSimulate('rank_band', cached.top, cached.me);
+      listEl.innerHTML = lbBuildRankList('rank_band', sim1.top, sim1.me);
+    } else {
+      listEl.innerHTML = lbBuildLoadingSkeleton();
+    }
+
+    let result;
+    try {
+      result = await window.Auth.fetchRankBand();
+    } catch (e) {
+      result = { ok: false, code: 'NETWORK' };
+    }
+    if (_lbCurrentOpenMetric !== 'rank_band') return;
+
+    if (result && result.ok) {
+      if (result.tier) {
+        const tEl = document.getElementById('lb-rank-title');
+        if (tEl) tEl.textContent = 'Rank ' + result.tier + ' Cohort';
+      }
+      lbCacheWrite('rank_band', result.top || [], result.me || null);
+      const sim = _lbMaybeSimulate('rank_band', result.top || [], result.me || null);
+      listEl.innerHTML = lbBuildRankList('rank_band', sim.top, sim.me);
+    } else if (result && result.code === 'EXPIRED') {
+      window.location.reload();
+    } else if (!cached) {
+      // Backend unreachable (pre-deploy / offline). Sim-only so the cohort
+      // board still populates around the caller's local power.
+      const sim = _lbMaybeSimulate('rank_band', [], null);
+      listEl.innerHTML = lbBuildRankList('rank_band', sim.top, sim.me);
+    }
+  }
+
   async function openLeaderboardRanking(metric, opts) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
@@ -34351,7 +34407,8 @@
     }
 
     // Default tab is always This Week.
-    await _lbRenderThisWeekTab(metric);
+    if (metric === 'rank_band') { await _lbRenderRankBandTab(metric); }
+    else { await _lbRenderThisWeekTab(metric); }
   }
 
   // Tab click handler — switches active tab for the current open
@@ -34442,11 +34499,19 @@
       ? 'Best week: <b>' + _lbHubFmt(snap.best_flights_week) + '</b>'
       : 'Best week: —';
 
+    // W319 — "Hunters in your rank" cohort row (local power + rank label).
+    let rbPower = 0, rbRankLabel = '';
+    try { rbPower = Math.max(0, Math.round(_ascPlayerPower())); } catch (_) {}
+    try { const _di = getRankDivisionInfo(totalPoints); rbRankLabel = (_di && _di.fullLabel) || ''; } catch (_) {}
+    const rankIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 18 H20 M5 18 L7 9 L12 14 L17 7 L19 18 Z" fill="none" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+    const rbSub = rbRankLabel ? ('Your rank: <b>' + esc(rbRankLabel) + '</b>') : 'Your cohort';
+
     list.innerHTML =
       _lbHubBuildRow('step_total',     walkIcon,    stepsVal,   'steps this week',           stepsSub) +
       _lbHubBuildRow('sleep_streak',   sleepIcon,   sleepVal,   'sleep streak · 7+ hr',      sleepSub) +
       _lbHubBuildRow('workout_streak', workoutIcon, workoutVal, 'workout streak · 30+ min',  workoutSub) +
-      _lbHubBuildRow('flights_climbed', flightsIcon, flightsVal, 'flights this week',         flightsSub);
+      _lbHubBuildRow('flights_climbed', flightsIcon, flightsVal, 'flights this week',         flightsSub) +
+      _lbHubBuildRow('rank_band',      rankIcon,    _lbHubFmt(rbPower), 'hunters in your rank', rbSub);
   }
   // v3 Phase 1z.132 — parent-aware close. When a detail leaderboard
   // sheet is opened from a hub row tap, _lbDetailReturnTarget is set

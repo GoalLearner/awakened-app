@@ -340,6 +340,12 @@
       } else if (metric === 'sleep_streak' || metric === 'bedtime_streak' || metric === 'workout_streak') {
         // v3 Phase 1z.118 — workout_streak joins the streak family.
         val = rollBotStreak(weekStartKey, bot, metric);
+      } else if (metric === 'rank_band') {
+        // W319 — "Hunters in your rank" cohort. Bots use their intrinsic
+        // realistic power (botPower) so the board value MATCHES the bot's
+        // profile card exactly. A typical new hunter (~130 power) sits near
+        // the weakest bots (beatable); a maxed build climbs past them all.
+        val = botPower(bot.name);
       } else {
         // Unknown metric — skip simulation, return real only.
         const passthrough = (realTop || []).slice();
@@ -508,6 +514,19 @@
   // mirrors GET /v1/users/:alias/profile so the card renders uniformly.
   const _BOT_CLASSES = ['avatar-warrior.png', 'avatar-ranger.png', 'avatar-mage.png', 'avatar-assassin.png', 'avatar-paladin.png', 'avatar-merchant.png', 'avatar-sage.png'];
   const _BOT_RANKS = ['E', 'E', 'D', 'D', 'C', 'C', 'B'];
+  // Deterministic intrinsic "power" for a bot, realistic against the real
+  // engine (new hunter ~130, maxed ~503). Single source so a bot's rank-
+  // band leaderboard value and its profile-card POWER agree exactly.
+  // Strength = roster position (index 0 strongest).
+  function botPower(name) {
+    const bot = BOTS.find(function (b) { return b.name === name; });
+    if (!bot) return 0;
+    const idx = BOTS.indexOf(bot);
+    const strength = BOTS.length > 1 ? (1 - idx / (BOTS.length - 1)) : 0.5;
+    const rng = mulberry32(hashKey(name + '|power'));
+    return Math.round(140 + strength * 360 + rng() * 40);   // ~140-540
+  }
+
   function botProfile(name, dateKey) {
     const bot = BOTS.find(function (b) { return b.name === name; });
     if (!bot) return null;
@@ -519,7 +538,7 @@
     return {
       ok: true, _sim: true, alias: name,
       rankLabel: rankLabel, rankTier: rankLabel,
-      power: Math.round(400 + strength * 2600 + rng() * 200),    // ~400-3200, beginner-ish
+      power: botPower(name),
       avatarId: _BOT_CLASSES[Math.floor(rng() * _BOT_CLASSES.length)],
       arenaTitle: bot.title || null,
       bossesSlain: Math.round(strength * 36 + rng() * 8),
