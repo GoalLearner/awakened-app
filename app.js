@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w312';
+  const APP_BUILD_TAG = '2.2.6-w313';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27423,6 +27423,14 @@
     return _hrPaletteForRank((rankId || 'E').toUpperCase());
   }
 
+  // The canonical summit / F100 hero art — the same First Awakened
+  // portrait the summit ending screen (_arRenderSummit) shows, so the
+  // share card matches the moment the player just saw. Already in
+  // sw.js PRECACHE_ASSETS (offline-safe); the renderer cover-fits it
+  // into the boss-art plate exactly like dungeon art and falls back to
+  // the rank crest if it ever fails to load.
+  const _BKS_SUMMIT_ART = 'assets/coach/first-awakened-idle.png';
+
   // Normalize a kill into the card's data shape from any trigger.
   //   opts.source : 'dungeon' | 'ascent'
   //   dungeon : opts.bossId (+ optional opts.cfg)
@@ -27444,7 +27452,7 @@
         source: 'ascent',
         alias: alias,
         bossName: name,
-        artPath: opts.bossId ? getBossArtPath(opts.bossId) : null,
+        artPath: summit ? _BKS_SUMMIT_ART : (opts.bossId ? getBossArtPath(opts.bossId) : null),
         rankId: 'S',
         context: summit ? 'THE ASCENT · THE SUMMIT' : ('THE ASCENT · FLOOR ' + floor),
         feat: summit ? ('Floor ' + cap + ' — the First Awakened, bested') : ('Floor ' + floor + ' cleared, the climb continues'),
