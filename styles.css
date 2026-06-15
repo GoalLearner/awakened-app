@@ -9288,7 +9288,7 @@ footer {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-size: 0.82rem;
+  font-size: 0.73rem;
 }
 .lb-rank-tab {
   flex: 1;
@@ -9297,7 +9297,8 @@ footer {
   background: transparent;
   border: 0;
   color: var(--text-secondary);
-  padding: 8px 10px;
+  padding: 8px 6px;
+  white-space: nowrap;
   border-radius: 7px;
   font-weight: 600;
   letter-spacing: 0.2px;

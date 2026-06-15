@@ -48,6 +48,7 @@ import {
   handleFriendsDecline,
   handleFriendsRemove,
 } from './handlers/friends';
+import { handleFriendsLeaderboardGet } from './handlers/friends-leaderboard';
 import {
   // v3 Phase 1z.279 — Duels permanently retired. Only two endpoints
   // remain to handle in-flight settlements + legacy outbox drains
@@ -190,6 +191,11 @@ export default {
           // ── Friends + legacy-Duels residuals ──
           else if (path === '/v1/friends' && method === 'GET') {
             response = await handleFriendsList(request, env, session);
+          } else if (path === '/v1/friends/leaderboard' && method === 'GET') {
+            // W320 — friends leaderboard: steps this week among accepted
+            // friends + self. Reuses leaderboard_snapshots + the friend graph
+            // (no new schema/binding; read budget shares RL_FRIENDS_READ).
+            response = await handleFriendsLeaderboardGet(request, env, session);
           } else if (path === '/v1/friends/request' && method === 'POST') {
             response = await handleFriendsRequest(request, env, session);
           } else if (FRIENDS_ID_RE.test(path) && method === 'POST') {

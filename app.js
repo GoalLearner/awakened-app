@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w319';
+  const APP_BUILD_TAG = '2.2.6-w320';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34330,6 +34330,54 @@
     }
   }
 
+  // W320 — empty/solo state for the Friends tab. No sim filler ever (friends
+  // are real people you added); a solo user gets an add-by-alias nudge.
+  function _lbFriendsEmptyHtml() {
+    return '<div class="lb-rank-empty">' +
+      '<div class="lb-rank-empty-icon" aria-hidden="true">\uD83E\uDD1D</div>' +
+      '<div class="lb-rank-empty-title">Race your friends.</div>' +
+      '<div class="lb-rank-empty-body">Add hunters by alias from the Social tab, then chase their step count every week.</div>' +
+    '</div>';
+  }
+
+  // W320 — "Friends" tab: steps this week among accepted friends + self.
+  // Real-only (NO sim filler). Renders through lbBuildRankList with the
+  // step_total meta so steps formatting + profile-card taps work for free.
+  async function _lbRenderFriendsTab(metric) {
+    const listEl = document.getElementById('lb-rank-list');
+    if (!listEl) return;
+    const meBestEl = document.getElementById('lb-rank-mebest');
+    if (meBestEl) meBestEl.classList.add('hidden');
+    const blurbEl = document.getElementById('lb-rank-blurb');
+    if (blurbEl) blurbEl.textContent = 'Steps this week among your hunters. Apple Health is the only source.';
+    // Friends-by-steps is weekly → keep the reset countdown badge visible.
+    const _frRe = document.getElementById('lb-week-reset');
+    if (_frRe) { const _cd = _lbWeekResetCountdownText(); if (_cd) { _frRe.textContent = _cd; _frRe.classList.remove('hidden'); } else { _frRe.classList.add('hidden'); } }
+
+    listEl.innerHTML = lbBuildLoadingSkeleton();
+
+    let result;
+    try {
+      result = await window.Auth.fetchFriendsLeaderboard('step_total');
+    } catch (e) {
+      result = { ok: false, code: 'NETWORK' };
+    }
+    if (_lbCurrentOpenMetric !== metric || _lbCurrentTab !== 'friends') return;
+
+    if (result && result.ok) {
+      const rows = Array.isArray(result.rows) ? result.rows : [];
+      if (rows.length <= 1) {
+        listEl.innerHTML = _lbFriendsEmptyHtml();
+      } else {
+        listEl.innerHTML = lbBuildRankList('step_total', rows, result.me);
+      }
+    } else if (result && result.code === 'EXPIRED') {
+      window.location.reload();
+    } else {
+      listEl.innerHTML = lbBuildErrorState(result && result.code);
+    }
+  }
+
   async function openLeaderboardRanking(metric, opts) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
@@ -34417,7 +34465,7 @@
   // v3 Phase 1z.52 — added 'club-100k' tab routing.
   async function _lbSwitchTab(tab) {
     if (!_lbCurrentOpenMetric) return;
-    if (tab !== 'this-week' && tab !== 'hof' && tab !== 'club-100k') return;
+    if (tab !== 'this-week' && tab !== 'hof' && tab !== 'club-100k' && tab !== 'friends') return;
     if (_lbCurrentTab === tab) return;
     _lbCurrentTab = tab;
     const tabsEl = document.getElementById('lb-rank-tabs');
@@ -34435,6 +34483,8 @@
       await _lbRenderHofTab(_lbCurrentOpenMetric);
     } else if (tab === 'club-100k') {
       await _lbRender100kClubTab(_lbCurrentOpenMetric);
+    } else if (tab === 'friends') {
+      await _lbRenderFriendsTab(_lbCurrentOpenMetric);
     }
   }
 
