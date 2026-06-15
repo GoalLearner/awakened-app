@@ -35,6 +35,7 @@ import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
 import { handleEntitlementsGet } from './handlers/iap-entitlements';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import { handleHallFinishPost, handleHallGet } from './handlers/hall-of-awakened';
+import { handleRankBandGet } from './handlers/leaderboard-rank-band';
 import { handlePublicProfileGet } from './handlers/public-profile-get';
 import {
   handlePublicAchievementEventsPost,
@@ -136,6 +137,11 @@ export default {
           } else if (path === '/v1/leaderboard/step-100k-club' && method === 'GET') {
             // v3 Phase 1z.52 — 100K Step Club roster (real users only).
             response = await handleStep100kClub(request, env, session);
+          } else if (path === '/v1/leaderboard/rank-band' && method === 'GET') {
+            // W319 — "Hunters in your rank" cohort board. Ranks the caller's
+            // rank_tier by power; reuses public_profile_summary (no new schema,
+            // no new binding — read budget shares RL_HALL_READ).
+            response = await handleRankBandGet(request, env, session);
           } else if (path === '/v1/account/delete' && method === 'POST') {
             response = await handleAccountDelete(request, env, session);
           } else if (path === '/v1/users/me/state' && method === 'GET') {
