@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w322';
+  const APP_BUILD_TAG = '2.2.6-w323';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26660,9 +26660,13 @@
         else if (started) { ascFloor = cur; ascBand = (typeof _ascentBandFor === 'function') ? (_ascentBandFor(cur).name || '') : ''; }
       }
     } catch (_) { ascFloor = 0; ascBand = ''; }
+    // W323 — weekly Step Crown count (cached from the last-week recap fetch).
+    let stepCrowns = 0;
+    try { stepCrowns = parseInt(localStorage.getItem('hb_step_crowns') || '0', 10) || 0; } catch (_) { stepCrowns = 0; }
     return {
       floor:       ascFloor,
       bandName:    ascBand,
+      crowns:      stepCrowns,
       alias:       alias,
       className:   cls.name,
       classStat:   currentClass || 'SAGE',
@@ -27000,6 +27004,12 @@
       { text: '·',       color: '#5c5c78' },
       { text: metaDiv,   color: '#9090a8' },
     ];
+    // W323 — weekly Step Crown flex on the identity line (if the hunter has
+    // ever topped a weekly steps board). Omitted cleanly when crowns = 0.
+    if (data.crowns && data.crowns > 0) {
+      segs.push({ text: '·', color: '#5c5c78' });
+      segs.push({ text: data.crowns + '\u00d7 CHAMPION', color: '#f5b842' });
+    }
     const gap = 16;
     let metaTotal = 0;
     segs.forEach(function (s, i) {
@@ -34421,6 +34431,8 @@
       el.classList.add('hidden'); el.innerHTML = '';
       return;
     }
+    // W323 — cache the weekly Step Crown count for the Hunter Report card.
+    try { if (result.myTitle && result.myTitle.count > 0) localStorage.setItem('hb_step_crowns', String(result.myTitle.count)); } catch (_) {}
     el.innerHTML = _lbLastWeekRecapHtml(result);
     el.classList.remove('hidden');
   }
