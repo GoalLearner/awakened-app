@@ -451,6 +451,39 @@
   // GET /v1/leaderboard/top?metric=X&limit=N. Returns top + caller's
   // rank+value (or me === null if caller hasn't submitted this
   // metric yet).
+  // W321 — last week's final step standings (champion + caller placement).
+  async function fetchLastWeekSteps(limit) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    const lim = (Number.isInteger(limit) && limit > 0 && limit <= 100) ? limit : 50;
+    const url = BACKEND_URL + '/v1/leaderboard/last-week?limit=' + lim;
+    let res;
+    try {
+      res = await fetch(url, { method: 'GET', headers: { 'Authorization': 'Bearer ' + u.jwt } });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      return {
+        ok: true,
+        weekStart: data.weekStart,
+        weekEnd:   data.weekEnd,
+        total:     data.total || 0,
+        champion:  data.champion || null,
+        me:        data.me || null,
+        records:   Array.isArray(data.records) ? data.records : [],
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
   // W320 — friends leaderboard read (steps this week among accepted friends).
   async function fetchFriendsLeaderboard(metric, limit) {
     const u = readUser();
@@ -1382,6 +1415,7 @@
     fetchLeaderboardTop,
     fetchRankBand,
     fetchFriendsLeaderboard,
+    fetchLastWeekSteps,
     // Weekly Steps Hall of Fame (v3 Phase 1z.36)
     fetchLeaderboardHallOfFame,
     // 100K Step Club roster (v3 Phase 1z.52)

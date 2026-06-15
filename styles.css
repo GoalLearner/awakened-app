@@ -29104,3 +29104,21 @@ button.guildhall-summary-tile:active {
   border-radius: 999px;
 }
 .lb-week-reset::before { content: '\21bb'; font-size: 13px; opacity: 0.9; }
+
+/* ── W321 · Last-week recap (champion + your placement) ────── */
+.lb-lastweek-recap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.03));
+  border: 1px solid rgba(245,184,66,0.28);
+  border-radius: 12px;
+}
+.lb-lw-trophy { font-size: 20px; flex: none; line-height: 1; }
+.lb-lw-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lb-lw-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; color: #f5b842; opacity: 0.85; }
+.lb-lw-line { font-size: 0.82rem; color: var(--text-secondary, #b8b8c8); line-height: 1.3; }
+.lb-lw-champ { color: var(--text-primary, #f3f4f6); font-weight: 700; }
+.lb-lw-you { color: #f5b842; font-weight: 700; }

@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w320';
+  const APP_BUILD_TAG = '2.2.6-w321';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33790,6 +33790,8 @@
       if (_cd) { _resetEl.textContent = _cd; _resetEl.classList.remove('hidden'); }
       else { _resetEl.textContent = ''; _resetEl.classList.add('hidden'); }
     }
+    // W321 — last-week recap (step_total only; non-blocking fire-and-forget).
+    try { _lbPopulateLastWeekRecap(metric); } catch (_) {}
 
     // v3 Phase 1z.122 — decisive route breadcrumb at modal open.
     // Records exactly which branch the rendering will take so
@@ -34378,6 +34380,49 @@
     }
   }
 
+  // W321 — build the last-week recap line. champion + the caller's placement
+  // (loss-aversion: "you placed #N — beat the champion this week").
+  function _lbLastWeekRecapHtml(d) {
+    const champ = d.champion;
+    const me = d.me;
+    const fmt = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
+    const champAlias = esc(champ.alias || 'A hunter');
+    let line;
+    if (me && me.rank === 1) {
+      line = '<span class="lb-lw-you">You won last week</span> — ' + fmt(champ.steps) + ' steps. Defend it.';
+    } else if (me) {
+      line = '<span class="lb-lw-champ">' + champAlias + '</span> won with ' + fmt(champ.steps) +
+             ' · <span class="lb-lw-you">you placed #' + me.rank + ' of ' + (d.total || 0) + '</span>';
+    } else {
+      line = '<span class="lb-lw-champ">' + champAlias + '</span> won with ' + fmt(champ.steps) +
+             ' steps · <span class="lb-lw-you">your week starts now</span>';
+    }
+    return '<span class="lb-lw-trophy" aria-hidden="true">\uD83C\uDFC6</span>' +
+      '<span class="lb-lw-body">' +
+        '<span class="lb-lw-eyebrow">LAST WEEK</span>' +
+        '<span class="lb-lw-line">' + line + '</span>' +
+      '</span>';
+  }
+
+  // Fetch + paint the last-week recap. step_total only; hides itself if
+  // there is no completed prior week yet (new app) or on any error.
+  async function _lbPopulateLastWeekRecap(metric) {
+    const el = document.getElementById('lb-lastweek-recap');
+    if (!el) return;
+    if (metric !== 'step_total') { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    let result;
+    try { result = await window.Auth.fetchLastWeekSteps(); }
+    catch (_) { result = { ok: false }; }
+    // Guard: the user may have switched metric/tab while the fetch was inflight.
+    if (_lbCurrentOpenMetric !== 'step_total' || _lbCurrentTab !== 'this-week') return;
+    if (!result || !result.ok || !result.champion) {
+      el.classList.add('hidden'); el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = _lbLastWeekRecapHtml(result);
+    el.classList.remove('hidden');
+  }
+
   async function openLeaderboardRanking(metric, opts) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return;
@@ -34468,6 +34513,9 @@
     if (tab !== 'this-week' && tab !== 'hof' && tab !== 'club-100k' && tab !== 'friends') return;
     if (_lbCurrentTab === tab) return;
     _lbCurrentTab = tab;
+    // W321 — the last-week recap is This-Week-only; hide on every switch
+    // (the This Week render re-populates it). Keeps it off HoF/100K/Friends.
+    var _lwHide = document.getElementById('lb-lastweek-recap'); if (_lwHide) _lwHide.classList.add('hidden');
     const tabsEl = document.getElementById('lb-rank-tabs');
     if (tabsEl) {
       const buttons = tabsEl.querySelectorAll('.lb-rank-tab');
