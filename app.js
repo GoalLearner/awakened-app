@@ -195,7 +195,7 @@
   const APP_VERSION = '2.2.6';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.6-w315';
+  const APP_BUILD_TAG = '2.2.6-w316';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26646,7 +26646,23 @@
         souls = (sObj && typeof sObj.balance === 'number') ? sObj.balance : 0;
       }
     } catch (_) {}
+    // W316 — Ascent floor + band name, reusing the Status climb-strip's
+    // source of truth (getAscentState + _ascentBandFor) so the card can't
+    // drift. Omitted (floor 0) when the hunter hasn't started the Ascent.
+    let ascFloor = 0, ascBand = '';
+    try {
+      const stx = (typeof getAscentState === 'function') ? getAscentState() : null;
+      if (stx) {
+        const cur = Math.max(1, Math.min(100, stx.currentFloor || 1));
+        const cleared = stx.highestCleared || 0;
+        const started = cleared >= 1 || (stx.currentFloor || 0) > 1;
+        if (cleared >= 100) { ascFloor = 100; ascBand = 'The Tower is Yours'; }
+        else if (started) { ascFloor = cur; ascBand = (typeof _ascentBandFor === 'function') ? (_ascentBandFor(cur).name || '') : ''; }
+      }
+    } catch (_) { ascFloor = 0; ascBand = ''; }
     return {
+      floor:       ascFloor,
+      bandName:    ascBand,
       alias:       alias,
       className:   cls.name,
       classStat:   currentClass || 'SAGE',
@@ -26999,8 +27015,31 @@
     });
     ctx.textAlign = 'center';
 
+    // ── 8b. ASCENT FLOOR headline (the spine of the app — headline weight) ──
+    let floorBlockH = 0;
+    if (data.floor && data.floor > 0) {
+      const fY = metaY + 56;
+      const fTxt = 'FLOOR ' + data.floor + (data.bandName ? ' · ' + String(data.bandName).toUpperCase() : '');
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f5b842';
+      ctx.shadowColor = 'rgba(245,184,66,0.30)';
+      ctx.shadowBlur = 18;
+      let fSize = 32;
+      ctx.font = '800 ' + fSize + 'px "JetBrains Mono", monospace';
+      while (ctx.measureText(fTxt).width + 3 * Math.max(0, fTxt.length - 1) > 900 && fSize > 22) {
+        fSize -= 2; ctx.font = '800 ' + fSize + 'px "JetBrains Mono", monospace';
+      }
+      _hrDrawSpacedText(ctx, fTxt, W / 2, fY, 3);
+      ctx.shadowBlur = 0;
+      const fW = ctx.measureText(fTxt).width + 3 * Math.max(0, fTxt.length - 1);
+      ctx.fillStyle = 'rgba(245,184,66,0.5)';
+      ctx.fillRect(W / 2 - fW / 2 - 40, fY - 11, 26, 2);
+      ctx.fillRect(W / 2 + fW / 2 + 14, fY - 11, 26, 2);
+      floorBlockH = 70;
+    }
+
     // ── 9. STAT GRID 2×2 ──
-    const gridY = metaY + 60;
+    const gridY = metaY + 60 + floorBlockH;
     const gridW = 880;
     const gridH = 240;
     const gridX = W / 2 - gridW / 2;
