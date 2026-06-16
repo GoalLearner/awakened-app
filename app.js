@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w362'; // W362
+  const APP_BUILD_TAG = '2.2.7-w363'; // W363
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26636,14 +26636,15 @@
     // v3 Phase 1z.283 W176 — Active-count gate. An all-archived user
     // is functionally "new again"; welcome-back is the wrong moment
     // (First Vow picker is what they should see).
-    if (!Array.isArray(habits) || getActiveHabitCount() === 0) return;
-    if (localStorage.getItem('hb_tour_welcome_back_v1') === '1') return;
+    if (!Array.isArray(habits) || getActiveHabitCount() === 0) return false;
+    if (localStorage.getItem('hb_tour_welcome_back_v1') === '1') return false;
     _faRunCoachmark({
       context: 'welcome_back',
       beats: FA_WELCOME_BACK_BEATS,
       cta: 'CONTINUE',
       storageKey: 'hb_tour_welcome_back_v1',
     });
+    return true; // W363 — joins the one-per-launch dispatcher ladder
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -26800,6 +26801,7 @@
   // does not retry, does not queue. Next launch reconsiders.
   function maybeShowFirstAwakenedRetentionMoment() {
     if (_isAnyHigherPriorityModalActive()) return;
+    if (showWelcomeBackCoachmark()) return; // W363 — existing-user intro; was a separate +1500ms timer that raced this dispatcher
     if (showStreakLossCoachmark()) return;
     if (showDay7Coachmark()) return;
     if (showDay3Coachmark()) return;
@@ -47353,14 +47355,10 @@
         // W361 — the daily insight now fires via the unified early-journey
         // dispatcher (maybeShowFirstAwakenedRetentionMoment) so it can never
         // stack with the welcome-back screen or a milestone beat.
-        // v3 Phase 1z.282C — One-time welcome for existing users.
-        // Defers 1.5s so the habits list paints first; existing
-        // users see their familiar app, THEN The First Awakened
-        // appears to introduce himself. Storage gate inside
-        // showWelcomeBackCoachmark() prevents re-show.
-        setTimeout(() => {
-          try { showWelcomeBackCoachmark(); } catch (_) {}
-        }, 1500);
+        // W363 — the existing-user welcome coachmark now fires via the
+        // one-per-launch dispatcher below (it was a separate +1500ms timer
+        // that raced the +2500ms dispatcher: a fast tap-through let the
+        // welcome AND a day-3/day-7 milestone fire back-to-back).
         // v3 Phase 1z.283 W186 — Retention moments check.
         // Defers 2.5s so welcome-back has cleanly mounted (if it
         // was going to). The orchestrator's _isAnyHigherPriorityModalActive
