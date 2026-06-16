@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w348';
+  const APP_BUILD_TAG = '2.2.7-w349';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14614,8 +14614,28 @@
       const _s = lbGetSnapshot();
       const localSteps = (_s && _s.steps_last_7_days) || 0;
       const lastSub = parseInt(localStorage.getItem('hb_lb_last_step_submitted') || '0', 10) || 0;
-      return localSteps > lastSub;
+      if (localSteps > lastSub) return true;
+      // W349 — also break the throttle when a non-step submitted metric
+      // (flights / streaks) changed since the last submit, so it does not
+      // lag on foreground when steps are flat.
+      const _sig = _lbSubmitSignature(_s);
+      const _lastSig = localStorage.getItem('hb_lb_last_submit_sig') || '';
+      return _sig !== '' && _sig !== _lastSig;
     } catch (_) { return false; }
+  }
+  // W349 — signature of the metrics a submit sends (weekly + streaks), so the
+  // foreground catch-up can detect a NON-step metric change, not just steps.
+  function _lbSubmitSignature(snap) {
+    try {
+      if (!snap) return '';
+      return [
+        snap.steps_last_7_days || 0,
+        snap.flights_this_week || 0,
+        snap.current_sleep_streak || 0,
+        snap.current_bedtime_streak || 0,
+        snap.current_workout_streak || 0,
+      ].join(',');
+    } catch (_) { return ''; }
   }
   const LB_SUBMIT_DEBOUNCE_MS = 5 * 60 * 1000;
   // v3 Phase 1z.254 — Concurrency guard so the new lbRecordStepsToday
@@ -14647,6 +14667,7 @@
               // catch-up can tell when local steps have advanced past the board.
               const _lbS = lbGetSnapshot();
               localStorage.setItem('hb_lb_last_step_submitted', String((_lbS && _lbS.steps_last_7_days) || 0));
+              localStorage.setItem('hb_lb_last_submit_sig', _lbSubmitSignature(_lbS));
             } catch (_) {}
           }
         })
