@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w350';
+  const APP_BUILD_TAG = '2.2.7-w351';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30295,7 +30295,7 @@
       // Re-arm all schedules so notifications resume immediately.
       if (result === 'granted') {
         try {
-          if (typeof Notif.rescheduleAll === 'function') { await Notif.rescheduleAll(); }
+          if (typeof Notif.rescheduleAll === 'function') { await Notif.rescheduleAll(habits, today, completions[today] || []); }
           if (typeof Notif.reapplyDigest === 'function') { await Notif.reapplyDigest(); }
           if (typeof Notif.reapplyCheckin === 'function') { await Notif.reapplyCheckin(); }
           if (typeof Notif.reapplyMidDay === 'function') { await Notif.reapplyMidDay(); }
