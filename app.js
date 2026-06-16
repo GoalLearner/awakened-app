@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w339';
+  const APP_BUILD_TAG = '2.2.7-w340';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19449,6 +19449,23 @@
       drainLevelUpQueue();
     };
     document.getElementById('rankup-continue').onclick = dismiss;
+    // W340 — tasteful Founder upsell at the rank-up peak (a rare, high-intent
+    // moment). Gated on a LIVE IAP + non-owner, so it stays dormant until the
+    // owner flips IAP_ENABLED, then surfaces automatically. Reuses .fv-founder-cta.
+    const _ruFounder = document.getElementById('rankup-founder');
+    if (_ruFounder) {
+      let _ruLive = false;
+      try { _ruLive = !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable()) && !_founderOwned(); } catch (_) {}
+      if (_ruLive) {
+        _ruFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="rankup-founder-cta">\u2726 Become a Founder \u2014 back the climb</button>';
+        _ruFounder.classList.remove('hidden');
+        const _ruCta = document.getElementById('rankup-founder-cta');
+        if (_ruCta) _ruCta.onclick = function (e) { try { e.stopPropagation(); } catch (_) {} dismiss(); try { openFounder(); } catch (_) {} };
+      } else {
+        _ruFounder.innerHTML = '';
+        _ruFounder.classList.add('hidden');
+      }
+    }
   }
 
   function spawnBurstParticles(count, color) {
@@ -35141,7 +35158,7 @@
     price:     '$49.99',
     cadence:   'one-time',
     title:     'Become a Founder',
-    tagline:   'Back Awakened once. Yours forever.',
+    tagline:   'Unlock everything. Yours for life.',
     benefits: [
       { glyph: '\u221E', title: 'Lifetime, one payment', body: 'Pay once. Every premium feature, now and forever. No subscription, ever.' },
       { glyph: '\u2726', title: 'The Founder\u2019s mark', body: 'A permanent Founder frame + badge on your hunter card and the leaderboard.' },
