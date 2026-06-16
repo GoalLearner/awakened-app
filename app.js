@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w336';
+  const APP_BUILD_TAG = '2.2.7-w337';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19604,6 +19604,36 @@
     return levels;
   }
 
+  // W337 — "First Mark" celebration (first-ever manual completion). Rides
+  // the levelUpQueue, so it sequences with any other beat; releases the
+  // queue lock on dismiss (CTA tap or backdrop).
+  function showFirstWinScreen(item) {
+    const overlay = document.getElementById('first-win-overlay');
+    if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
+    const xpEl = document.getElementById('first-win-xp');
+    if (xpEl) xpEl.textContent = '+' + ((item && item.xp) || 0) + ' XP';
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    try { playSfx('rank_fanfare'); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate([40, 30, 70]); } catch (_) {}
+    const btn = overlay.querySelector('#first-win-cta');
+    let done = false;
+    function dismiss() {
+      if (done) return; done = true;
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.removeEventListener('click', onBackdrop);
+      if (btn) btn.removeEventListener('click', dismiss);
+      levelUpActive = false;
+      drainLevelUpQueue();
+    }
+    function onBackdrop(e) { if (e.target === overlay) dismiss(); }
+    overlay.addEventListener('click', onBackdrop);
+    if (btn) btn.addEventListener('click', dismiss);
+  }
+  // Dev/QA hook: trigger the First Mark modal without a real first completion.
+  try { window.__showFirstWin = function () { showFirstWinScreen({ xp: 3 }); }; } catch (_) {}
+
   function drainLevelUpQueue() {
     if (levelUpActive) return;
     if (!levelUpQueue.length) {
@@ -19615,6 +19645,10 @@
     if      (item.type === 'comeback')    showComebackScreen(item);
     else if (item.type === 'first_verified') {
       try { showFirstVerifiedScreen(item); }
+      catch (_) { levelUpActive = false; drainLevelUpQueue(); }
+    }
+    else if (item.type === 'first_win') {
+      try { showFirstWinScreen(item); }
       catch (_) { levelUpActive = false; drainLevelUpQueue(); }
     }
     else if (item.type === 'rank')        showRankUpScreen(item.rank);
@@ -24419,6 +24453,19 @@
       // origin story), and multi-stat ties prompt the class-choice screen.
       if (STATS.some(st => statLevel(stats[st.id]?.pts || 0) > (oldStatLevels[st.id] || 0))) {
         checkClassChange(false);
+      }
+
+      // W337 — the activation "First Mark": the user's first-ever manual
+      // completion. totalCompletions === 1 right after check(id) is true
+      // exactly once per lifetime (veterans are past 1; a post-Reset fresh
+      // start re-earns it). Unshift -> shown ahead of any other beat.
+      if (!silent) {
+        try {
+          const _tc = Object.values(completions).reduce((n, a) => n + (a ? a.length : 0), 0);
+          if (_tc === 1) {
+            levelUpQueue.unshift({ type: 'first_win', habitName: habit ? habit.name : '', xp: (habit ? diffPts(habit.difficulty) : 0) });
+          }
+        } catch (_) {}
       }
 
       if (levelUpQueue.length && !levelUpActive) drainLevelUpQueue();

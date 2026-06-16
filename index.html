@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=429">
+  <link rel="stylesheet" href="styles.css?v=430">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1013,6 +1013,22 @@
       <!-- W336 — Manage Vows relocated here from Settings (release / archive vows). -->
       <button id="habits-manage-vows" class="habits-managevows-link" type="button">Manage vows</button>
     </footer>
+  </div>
+
+  <!-- W337 — First Mark: the activation celebration on a user's first-ever
+       habit completion. Shown once (totalCompletions===1) via levelUpQueue. -->
+  <div id="first-win-overlay" class="first-win-overlay hidden" aria-hidden="true">
+    <div class="first-win-card" role="dialog" aria-labelledby="first-win-title">
+      <div class="first-win-sigil" aria-hidden="true">
+        <span class="first-win-ring"></span>
+        <svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/></svg>
+      </div>
+      <div class="first-win-eyebrow">THE FIRST AWAKENED</div>
+      <h2 id="first-win-title" class="first-win-title">Your First Mark</h2>
+      <p class="first-win-verse">The system counts only what you do.<br>You have begun.</p>
+      <div class="first-win-reward"><span id="first-win-xp">+0 XP</span><span class="first-win-dot">·</span><span>Day 1</span></div>
+      <button id="first-win-cta" class="first-win-cta" type="button">ONWARD</button>
+    </div>
   </div>
 
   <!-- Context menu -->
@@ -2899,7 +2915,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=781"></script>
+  <script src="app.js?v=782"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -29412,3 +29412,55 @@ button.guildhall-summary-tile:active {
 }
 #main-footer .habits-managevows-link:active { color: var(--text-primary); }
 
+/* ──────────────────────────────
+   W337 · First Mark — activation celebration on the first-ever completion.
+   ────────────────────────────── */
+.first-win-overlay {
+  position: fixed; inset: 0; z-index: 4000;
+  display: flex; align-items: center; justify-content: center; padding: 28px;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(20,18,46,0.92), rgba(5,5,15,0.96));
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  animation: fw-fade 0.3s ease-out;
+}
+.first-win-overlay.hidden { display: none; }
+@keyframes fw-fade { from { opacity: 0; } to { opacity: 1; } }
+.first-win-card {
+  position: relative; width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 34px 26px 24px; border-radius: 24px;
+  background: linear-gradient(180deg, rgba(30,26,58,0.96), rgba(16,14,38,0.98));
+  border: 1px solid rgba(245,184,66,0.35);
+  box-shadow: 0 0 60px rgba(245,184,66,0.18), 0 24px 60px rgba(0,0,0,0.6);
+  animation: fw-pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes fw-pop { from { opacity: 0; transform: scale(0.9) translateY(8px); } to { opacity: 1; transform: none; } }
+.first-win-sigil { position: relative; width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.first-win-sigil svg { position: relative; filter: drop-shadow(0 0 12px rgba(245,184,66,0.7)); }
+.first-win-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 1.5px solid rgba(245,184,66,0.5);
+  box-shadow: 0 0 24px rgba(245,184,66,0.3), inset 0 0 18px rgba(245,184,66,0.12);
+  animation: fw-ring 2.6s ease-in-out infinite;
+}
+@keyframes fw-ring { 0%,100% { opacity: 0.45; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.08); } }
+.first-win-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 2.4px; color: #a78bfa; }
+.first-win-title { font-family: "Cinzel", Georgia, serif; font-size: 1.7rem; font-weight: 700; color: #f3f1fb; letter-spacing: 0.4px; margin: 8px 0 0; }
+.first-win-verse { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 1.05rem; line-height: 1.5; color: #bdbad6; margin: 12px 0 0; }
+.first-win-reward {
+  display: inline-flex; align-items: center; gap: 9px; margin: 18px 0 0; padding: 8px 16px;
+  border-radius: 999px; background: rgba(245,184,66,0.1); border: 1px solid rgba(245,184,66,0.32);
+  font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700; color: #f5b842;
+}
+.first-win-reward .first-win-dot { color: rgba(245,184,66,0.5); }
+.first-win-cta {
+  margin: 24px 0 0; width: 100%; height: 50px; border: none; border-radius: 14px; cursor: pointer;
+  font-family: "JetBrains Mono", monospace; font-size: 0.82rem; font-weight: 800; letter-spacing: 2.4px;
+  color: #1b1405; background: linear-gradient(180deg, #f7c65c, #e3a52f);
+  box-shadow: 0 0 18px rgba(245,184,66,0.35); -webkit-appearance: none; appearance: none;
+}
+.first-win-cta:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: reduce) {
+  .first-win-overlay, .first-win-card { animation: none; }
+  .first-win-ring { animation: none; }
+}
+
