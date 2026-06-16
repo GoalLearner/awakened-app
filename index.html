@@ -1031,6 +1031,21 @@
     </div>
   </div>
 
+  <!-- W339 — Day-2 welcome-back: the activation payoff that rewards an early-
+       journey return (fires once/day, days 2-7). Reuses First Mark styling. -->
+  <div id="welcome-back-overlay" class="first-win-overlay hidden" aria-hidden="true">
+    <div class="first-win-card" role="dialog" aria-labelledby="welcome-back-title">
+      <div class="first-win-sigil" aria-hidden="true">
+        <span class="first-win-ring"></span>
+        <svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/></svg>
+      </div>
+      <div class="first-win-eyebrow" id="welcome-back-eyebrow">DAY 2 OF YOUR ASCENT</div>
+      <h2 id="welcome-back-title" class="first-win-title">Welcome Back</h2>
+      <p class="first-win-verse">The chain holds.<br>Today is yours to claim.</p>
+      <button id="welcome-back-cta" class="first-win-cta" type="button">LET'S GO</button>
+    </div>
+  </div>
+
   <!-- Context menu -->
   <div id="ctx-overlay" class="ctx-overlay hidden"></div>
   <div id="ctx-menu" class="ctx-menu hidden">
@@ -2915,7 +2930,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=783"></script>
+  <script src="app.js?v=784"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

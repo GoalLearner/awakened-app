@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w338';
+  const APP_BUILD_TAG = '2.2.7-w339';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19633,6 +19633,50 @@
   }
   // Dev/QA hook: trigger the First Mark modal without a real first completion.
   try { window.__showFirstWin = function () { showFirstWinScreen({ xp: 3 }); }; } catch (_) {}
+
+  // W339 — Day-2 welcome-back (activation payoff). Reuses the First Mark
+  // overlay styling; fired at app-open for an early-journey return.
+  function showWelcomeBackScreen(jd) {
+    const overlay = document.getElementById('welcome-back-overlay');
+    if (!overlay) return;
+    const eb = document.getElementById('welcome-back-eyebrow');
+    if (eb) eb.textContent = 'DAY ' + jd + ' OF YOUR ASCENT';
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    try { playSfx('rank_fanfare'); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate([30, 20, 50]); } catch (_) {}
+    const btn = overlay.querySelector('#welcome-back-cta');
+    let done = false;
+    function dismiss() {
+      if (done) return; done = true;
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.removeEventListener('click', onBackdrop);
+      if (btn) btn.removeEventListener('click', dismiss);
+    }
+    function onBackdrop(e) { if (e.target === overlay) dismiss(); }
+    overlay.addEventListener('click', onBackdrop);
+    if (btn) btn.addEventListener('click', dismiss);
+  }
+  // Open-time gate: once per day for an early-journey user (days 2-7)
+  // returning on a NEW day with prior activity, never while a comeback
+  // (multi-day break) is pending or another celebration is active.
+  function _maybeShowWelcomeBack() {
+    try {
+      if (localStorage.getItem('hb_welcomed') !== '1') return;
+      if (typeof levelUpActive !== 'undefined' && levelUpActive) return;
+      if (typeof pendingComeback !== 'undefined' && pendingComeback) return;
+      if (!lastActiveDate || lastActiveDate === today) return;
+      const _ob = localStorage.getItem('hb_onboarding_first_xp_date');
+      if (!_ob || !/^\d{4}-\d{2}-\d{2}$/.test(_ob)) return;
+      const _jd = Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(_ob + 'T12:00:00Z')) / 86400000) + 1;
+      if (_jd < 2 || _jd > 7) return;
+      if (localStorage.getItem('hb_welcomeback_last') === today) return;
+      localStorage.setItem('hb_welcomeback_last', today);
+      showWelcomeBackScreen(_jd);
+    } catch (_) {}
+  }
+  try { window.__showWelcomeBack = function () { showWelcomeBackScreen(2); }; } catch (_) {}
 
   function drainLevelUpQueue() {
     if (levelUpActive) return;
@@ -46840,6 +46884,8 @@
     // has a pending break flag.
     processStreakRollover();
     setTimeout(() => flushPendingShieldNotices(), 800);
+    // W339 — open-time Day-2 welcome-back payoff (after shield notices settle).
+    setTimeout(() => { try { _maybeShowWelcomeBack(); } catch (_) {} }, 1100);
     migratePRsIfNeeded();
     setupEmojiPicker();
     setupCustomHabitModal();
