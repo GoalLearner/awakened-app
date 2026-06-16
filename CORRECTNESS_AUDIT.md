@@ -63,9 +63,11 @@ verify first — confident audit findings are often wrong.
 
 ## ❌ REJECTED / ⚠️ DEFERRED
 
-- **V6 — bidirectional duplicate friend rows (backend):** leaning FALSE-ALARM (Cloudflare D1
-  serializes writes per DB; the read-check-insert is sequential awaits). A fix would be a D1
-  schema migration — **NOT touched** (never blind-apply migrations). Verify-by-query first.
+- **V6 — bidirectional duplicate friend rows (backend):** **CONFIRMED FALSE ALARM** by read-only
+  prod query (2026-06-16): 5 friend rows, **0** bidirectional dups, **0** same-direction dups. The
+  `friends` table has `UNIQUE(requester_user_id, recipient_user_id)` enforcing same-direction
+  uniqueness at the DB level, and no `(A→B)`+`(B→A)` pairs exist. No schema change made (and none
+  warranted) — never blind-apply migrations.
 - **V5 `verified_streak`:** left with its `Date.now()` id — re-reaching a band after a break may
   be an intentional re-announce. Verify the seen-marker reset semantics before making it deterministic.
 - **V7–V10 — `Array.isArray` guards on `days`/`completions`:** defensive-only; every in-app write
