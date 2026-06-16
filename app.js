@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w361'; // W361
+  const APP_BUILD_TAG = '2.2.7-w362'; // W362
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26783,6 +26783,7 @@
       'mv-overlay',           // manage vows
       'system-full-overlay',  // 25-cap modal
       'reveal-overlay',       // boss / card reveal
+      'wn-overlay',      // W362 - post-update What’s New sheet must defer day-beats
     ];
     for (let i = 0; i < ids.length; i++) {
       const el = document.getElementById(ids[i]);
@@ -37321,7 +37322,7 @@
     // Don't preempt other live modals. If What's New is currently up,
     // skip this fire — visibilitychange will retry next resume, by
     // which time the user will have dismissed What's New.
-    const whatsNewSheet = document.getElementById('whats-new-sheet');
+    const whatsNewSheet = document.getElementById('wn-overlay');
     if (whatsNewSheet && !whatsNewSheet.classList.contains('hidden')) return false;
     const beginningScreen = document.getElementById('beginning-screen');
     if (beginningScreen && !beginningScreen.classList.contains('hidden')) return false;
