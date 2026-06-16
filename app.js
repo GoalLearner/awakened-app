@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w346';
+  const APP_BUILD_TAG = '2.2.7-w347';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -43186,10 +43186,32 @@
         });
         // result shape: { countReturn, resultData: [{ value, ...}, ...] }
         const samples = (result && result.resultData) || [];
+        // W347 — dedupe HealthKit step samples by SOURCE before totaling.
+        // HealthKit returns a separate sample per source (iPhone + Apple Watch
+        // + 3rd-party apps); naively summing ALL of them double-counts the
+        // overlapping samples for the same walk (the rendiesel bug: ~15k real
+        // read as ~30k). Sum per source; when >1 source is present prefer the
+        // single highest-total source -- the most complete picture without the
+        // overlap double-count. ONE source (the common case) is unchanged, and
+        // if the plugin tags no source we fall back to the raw sum. The proper
+        // fix is a native HKStatisticsQuery cumulativeSum (see the spec doc).
         let total = 0;
+        const _bySource = Object.create(null);
+        let _srcCount = 0;
         for (const s of samples) {
           const v = Number(s && s.value);
-          if (isFinite(v) && v > 0) total += v;
+          if (!isFinite(v) || v <= 0) continue;
+          total += v;
+          const _src = (s && (s.sourceBundleId || s.sourceName)) || '';
+          if (_src) {
+            if (_bySource[_src] === undefined) { _bySource[_src] = 0; _srcCount++; }
+            _bySource[_src] += v;
+          }
+        }
+        if (_srcCount > 1) {
+          let _maxSrc = 0;
+          for (const _k in _bySource) { if (_bySource[_k] > _maxSrc) _maxSrc = _bySource[_k]; }
+          total = _maxSrc;
         }
         // First successful read confirms 'granted' — if iOS had silently
         // denied, the query would have thrown or returned empty.
