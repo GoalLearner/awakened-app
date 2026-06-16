@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w368'; // W368
+  const APP_BUILD_TAG = '2.2.7-w369'; // W369
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35189,13 +35189,17 @@
     const floor = Math.max(0, data.bestFloor | 0);
     const shard = titleName ? '<div class="pc-shard" style="--pc-tier:' + tierColor + '"><i></i><span>' + esc(titleName) + '</span></div>' : '';
     const flavor = data.verifiedStreakLabel ? '<div class="pc-flavor"><i></i><span>' + esc(data.verifiedStreakLabel) + '</span></div>' : '';
+    // W369 — 100K Club prestige badge (gold), shown for real members (sims never qualify).
+    const clubBadge = (data.club100k && typeof data.club100k === 'object')
+      ? '<div class="pc-club100k"><span class="pc-club100k-ic" aria-hidden="true">\u25C6</span><span class="pc-club100k-txt">100K CLUB</span>' + (((data.club100k.repeatCount | 0) > 1) ? '<b>\u00D7' + (data.club100k.repeatCount | 0) + '</b>' : '') + '</div>'
+      : '';
     body.innerHTML =
       '<div class="pc-hero"><div class="pc-med-wrap">' +
         '<div class="pc-med"><span class="pc-med-ring"></span>' +
           '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
           '<div class="pc-med-portrait"><img src="' + esc(avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
-      '</div><div class="pc-med-floor"></div>' +
+      '</div><div class="pc-med-floor"></div>' + clubBadge +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>' + (data._sim ? 'NPC HUNTER' : 'DEFAULT SKIN') + '</span></div>') + '</div>' +
       '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div>' + shard + '</div>' +
       '<div class="pc-stats"><div class="pc-grid">' +

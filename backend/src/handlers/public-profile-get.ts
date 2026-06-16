@@ -28,6 +28,8 @@ interface ProfileRow {
   step_week: number | null;
   avg_steps_per_day: number | null;
   best_floor: number | null;
+  club_100k_repeat: number | null;
+  club_100k_best: number | null;
 }
 
 export async function handlePublicProfileGet(
@@ -58,7 +60,11 @@ export async function handlePublicProfileGet(
               WHERE user_id = u.id AND metric = 'step_total'
               ORDER BY week_start DESC LIMIT 1) AS step_week,
             (SELECT best_value FROM leaderboard_snapshots
-              WHERE user_id = u.id AND metric = 'floor_best' LIMIT 1) AS best_floor
+              WHERE user_id = u.id AND metric = 'floor_best' LIMIT 1) AS best_floor,
+            (SELECT repeat_count FROM user_accolades
+              WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_repeat,
+            (SELECT best_value FROM user_accolades
+              WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_best
      FROM users u
      LEFT JOIN public_profile_summary pps ON pps.user_id = u.id
      WHERE LOWER(u.alias) = LOWER(?)
@@ -84,5 +90,8 @@ export async function handlePublicProfileGet(
     verifiedStreakLabel: row.verified_streak_label,
     avgStepsPerDay: row.avg_steps_per_day || Math.round(stepWeek / 7),
     bestFloor: row.best_floor ?? 0,
+    club100k: row.club_100k_repeat != null
+      ? { repeatCount: Number(row.club_100k_repeat) || 1, best: Number(row.club_100k_best) || 0 }
+      : null,
   });
 }
