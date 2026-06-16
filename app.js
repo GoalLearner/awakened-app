@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w349';
+  const APP_BUILD_TAG = '2.2.7-w350';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3240,7 +3240,7 @@
         const parsed = JSON.parse(raw);
         // Backfill any missing fields defensively.
         _souls = {
-          balance:            typeof parsed.balance === 'number' ? parsed.balance : 0,
+          balance:            Math.max(0, typeof parsed.balance === 'number' ? parsed.balance : 0), // W350 (G8) clamp
           lastDailyBonusDate: parsed.lastDailyBonusDate || null,
           totalEarned:        typeof parsed.totalEarned === 'number' ? parsed.totalEarned : (parsed.balance || 0),
           totalSpent:         typeof parsed.totalSpent === 'number'  ? parsed.totalSpent  : 0,
@@ -3300,6 +3300,9 @@
   function spendSouls(amount, sink) {
     if (typeof amount !== 'number' || amount <= 0) return;
     if (!_souls) loadSouls();
+    // W350 (G2) — never let a spend drive the balance negative (defensive;
+    // all current callers pre-check, so valid spends are unchanged).
+    if (_souls.balance < amount) return;
     _souls.balance -= amount;
     _souls.totalSpent += amount;
     persistSouls();
