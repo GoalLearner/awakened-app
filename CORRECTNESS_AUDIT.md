@@ -120,9 +120,54 @@ unreachable condition.
 
 ---
 
-_10 fixes total across rounds 1–4 (W350–W359). About **25 candidate findings were rejected or
-deferred** after verification vs 10 shipped — including two that would have been catastrophic if
-applied blindly (the PT→device-local streak rewrite in R3, and a confident "mythic gets downgraded"
-that is actually unreachable in R4). The verify-before-fix discipline held on every round. selfTest
-stayed 37/37; production read-only; IAP/purchase untouched. A round-5 (migrations / notif / restore /
-persistence) is in progress._
+---
+
+# Round 5 — 2026-06-16 (migrations, notif scheduling, data restore, persistence round-trip)
+
+**1 fix of 11 findings.** This round audited the persistence layer; most findings were spent
+migrations, false alarms, or defensive smells.
+
+| Item | Verdict | Why |
+|---|---|---|
+| **W360** `fe2b63f` | ✅ SHIPPED | `deleteHabit` filtered `completions[d]` without an array check. `restoreState` writes snapshot strings without per-value type validation and `load()` only checks `completions` is an object — so a corrupted/old-format restore with a non-array value would `TypeError` and block habit deletion. Trivial `Array.isArray` guard on an ongoing user-facing op. |
+| #1–#4 migration **flag-before-persist** (boss-rename, inventory-commons, bedtime, strength) | ⚠️ NOTED (pattern), not fixed | The completion flag is set outside the try, so a `setItem` quota-failure marks the migration done without applying. Real anti-pattern — **but**: #2 self-heals (loadInventory re-backfills every read, comment 46700), #3/#4 are XP-reversal migrations where "run exactly once" is *safer* than retrying (a partial-save retry could double-reverse XP), and **all four target spent release windows** (already run for applicable users). Recommendation logged for **future** migrations: set the guard flag only after the persist succeeds. |
+| #5 reminders not rescheduled on schedule-days change | ❌ REJECTED | `rescheduleAll` schedules from the per-habit **reminder-time** map as **daily repeats** (comment 42394, never reads `habit.days`). Editing scheduled days doesn't change reminders, so no reschedule is needed. The daily-reset reschedule would self-correct regardless. |
+| #6 migration flags in `SNAPSHOT_KEYS` | ❌ REJECTED | Syncing the guard flags **with** the already-migrated data is correct — a restored device gets new-format data + matching flags, so skipping re-migration is right, not a bug. |
+| #8 origin-story migration "runs twice" | ❌ REJECTED | The early-return-without-flag during onboarding is **intentional** (stories can't be generated until a class is chosen post-onboarding). The agent's suggested fix would set the flag during onboarding and **permanently skip** story generation. Current code is correct. |
+| #9 `LS_KEY_LAST_RESTORE` in snapshot · #10 no restore-time JSON validation · #11 habit coercion drops malformed habits | ⚠️ DEFERRED / ❌ REJECTED | #10/#11: `load()` already defensively coerces on the next read (agent concedes this). #9: a nuanced restore-detection edge in cloud-sync — delicate area, low impact, left for a deliberate look. |
+
+---
+
+# ✅ FINAL SUMMARY — autonomous correctness sprint (2026-06-16, 03:40–~05:40 PDT)
+
+**Five read-only audit rounds (20 finder agents) over the entire app surface → 11 verified fixes,
+W350–W360.** selfTest stayed **37/37** every round; production stayed **read-only** (one D1 query, a
+`SELECT`); IAP/purchase **untouched**; every change CRLF-safe and pushed.
+
+| # | Commit | Fix |
+|---|---|---|
+| W350 | `4ce2ab0` | souls balance underflow guards |
+| W351 | `06c9b87` | notif re-arm after permission recovery |
+| W352 | `1e5b808` | ascent record double-count on finalize throw |
+| W353 | `4c6dad2` | flights backfill PT-week timezone |
+| W354 | `0287493` | mythic drop resets pity counters |
+| W355 | `394d255` | spendSouls returns bool; buyRelic+engage enforce the charge |
+| W356 | `57838ad` | deleteHabit clears orphaned habitNotes |
+| W357 | `42d4361` | 4 social-event ids deterministic (no crash-window feed dupes) |
+| W358 | `e90d8c7` | verified_streak id deterministic + source-scoped |
+| W359 | `6f786cd` | **canSellRelic guards the LIVE Hunter Build** (was checking dead legacy slots → selling orphaned build slots) |
+| W360 | `fe2b63f` | deleteHabit guarded against a non-array completions value |
+
+**The discipline is the point:** ~36 candidate findings were **rejected or deferred** after verifying
+against the real code — more than were shipped. Two would have been **catastrophic** if applied blindly:
+the R3 "streaks use PT, switch to device-local" (would have broken every user's streak + leaderboard
+sync — PT-anchoring is intentional) and the R4 "mythic drops get downgraded to rare" (confident and
+plausible, but **unreachable** — dropTable bosses skip the pity block entirely). V6 (friend-row dup)
+was closed as a false alarm by a read-only prod query.
+
+**Highest-impact fix:** W359 — a near-universal data-integrity bug (every user selling a build-equipped
+relic's last copy silently orphaned the slot). **Notable deferrals** (need the owner / a device / a
+deliberate call): the dormant skins/entitlement findings (gated behind `IAP_ENABLED`, off the
+RevenueCat track), G7 weekly-reset DST timing (needs a device test), and the migration flag-before-persist
+pattern (recommended for **future** migrations). Device-verification steps for the testable fixes are in
+DEVICE_TEST_CHECKLIST.md.
