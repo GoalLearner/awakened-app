@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w366'; // W366
+  const APP_BUILD_TAG = '2.2.7-w367'; // W367
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26858,19 +26858,20 @@
     return false;
   }
 
-  // Single decision point. Priority order:
-  //   1. Streak-loss recovery (most emotionally important)
-  //   2. Day 7 check-in
-  //   3. Day 3 check-in
+  // Single decision point — ONE beat per launch. Priority order:
+  //   1. Day-2 welcome-back screen (day-2-ONLY; cannot defer, so it is first)
+  //   2. Existing-user welcome coachmark (once-ever; W363)
+  //   3. Streak-loss recovery (most emotionally important)
+  //   4. Day 7   ·   5. Day 3   ·   6. Daily insight (lowest)
   // Returns silently if a higher-priority modal is mounted —
   // does not retry, does not queue. Next launch reconsiders.
   function maybeShowFirstAwakenedRetentionMoment() {
     if (_isAnyHigherPriorityModalActive()) return;
+    if (_maybeShowWelcomeBack()) return; // W367 — day-2 welcome-back screen is day-2-ONLY (cannot defer); must outrank the deferrable intro/milestones
     if (showWelcomeBackCoachmark()) return; // W363 — existing-user intro; was a separate +1500ms timer that raced this dispatcher
     if (showStreakLossCoachmark()) return;
     if (showDay7Coachmark()) return;
     if (showDay3Coachmark()) return;
-    if (_maybeShowWelcomeBack()) return; // W361 — day-2 payoff joins the one-per-open ladder
     if (typeof shouldShowDailyInsight === 'function' && shouldShowDailyInsight()) { showDailyInsight(); return; } // W361 — daily insight is the lowest-priority beat
   }
 
@@ -47420,13 +47421,11 @@
         // one-per-launch dispatcher below (it was a separate +1500ms timer
         // that raced the +2500ms dispatcher: a fast tap-through let the
         // welcome AND a day-3/day-7 milestone fire back-to-back).
-        // v3 Phase 1z.283 W186 — Retention moments check.
-        // Defers 2.5s so welcome-back has cleanly mounted (if it
-        // was going to). The orchestrator's _isAnyHigherPriorityModalActive
-        // guard sees an open welcome-back coachmark and defers
-        // the retention moment to the next launch — preventing
-        // back-to-back character beats. One moment per launch,
-        // priority-ordered (streak-loss > Day 7 > Day 3).
+        // v3 Phase 1z.283 W186 — Retention moments check (one beat per launch).
+        // Defers 2.5s so any What’s New / welcome screen has settled, then the
+        // dispatcher’s own one-per-launch ladder (W367) picks exactly ONE beat:
+        // day-2 screen > welcome coachmark > streak-loss > Day 7 > Day 3 > insight.
+        // Prevents back-to-back character beats.
         setTimeout(() => {
           try { maybeShowFirstAwakenedRetentionMoment(); } catch (_) {}
         }, 2500);
