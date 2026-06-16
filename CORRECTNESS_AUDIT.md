@@ -48,4 +48,32 @@ verify first — confident audit findings are often wrong.
   `last_eval_date` guards; daily-login bonus is idempotent; ascent floor double-advance is
   blocked by `> highestCleared`.
 
-_No code was changed except the four fixes above. selfTest stayed 37/37 throughout._
+---
+
+# Round 2 — 2026-06-16 (drops/inventory, habits CRUD, social/guild, achievements)
+
+## ✅ FIXED (verified, logic-tested, committed)
+
+| Audit | Commit | Fix |
+|---|---|---|
+| **V1** drops | W354 `0287493` | A mythic drop matched no branch in `resetDropPityAfterDrop` → pity counters never reset → skewed every later drop-rate/hard-pity calc for that boss. Mythic now resets all three (joins the ultra_rare branch). |
+| **V2 + V3** souls | W355 `394d255` | Completes W350: `spendSouls` now returns a bool and `buyRelic` + boss-engage abort the grant if the charge fails (enforces the "never grant before charging" invariant that W350's silent no-op had quietly broken). |
+| **V4** habits | W356 `57838ad` | `deleteHabit` now removes the orphaned `habitNotes[id]` (was leaking into `hb_notes`). |
+| **V5** social | W357 `42d4361` | Four public-event ids carried a `Date.now()` suffix → a crash before the seen-marker re-emitted with a new id → backend UNIQUE didn't dedup → friend feed showed it twice. Made them deterministic (match their eventKey), like `boss_kill`/`step_milestone_bucket`. |
+
+## ❌ REJECTED / ⚠️ DEFERRED
+
+- **V6 — bidirectional duplicate friend rows (backend):** leaning FALSE-ALARM (Cloudflare D1
+  serializes writes per DB; the read-check-insert is sequential awaits). A fix would be a D1
+  schema migration — **NOT touched** (never blind-apply migrations). Verify-by-query first.
+- **V5 `verified_streak`:** left with its `Date.now()` id — re-reaching a band after a break may
+  be an intentional re-announce. Verify the seen-marker reset semantics before making it deterministic.
+- **V7–V10 — `Array.isArray` guards on `days`/`completions`:** defensive-only; every in-app write
+  path writes arrays, so corruption needs external/cloud-restore tampering. Optional hardening, not urgent.
+
+## ✅ CLEAN (round 2)
+- **MISC** (achievements / one-time bonuses / state restore) — all idempotency guards confirmed.
+- **SOCIAL** — guild-activity dedup, friend-activity authorization (viewer-scoped), event
+  attribution (verified-JWT userId), and boss-kill/step-milestone dedupe (deterministic ids) all sound.
+
+_8 fixes total across both rounds (W350–W357). selfTest stayed 37/37 throughout; production read-only; IAP/purchase untouched._
