@@ -99,6 +99,30 @@ computations are sound; the only real issues are in the dormant, off-limits skin
 
 ---
 
-_9 fixes total across rounds 1–3 (W350–W358). Roughly as many findings were rejected/deferred after
-verification as were shipped — the verify-before-fix discipline held throughout. selfTest stayed 37/37;
-production read-only; IAP/purchase untouched. A round-4 (combat/relic/drop/XP math) is in progress._
+---
+
+# Round 4 — 2026-06-16 (combat math, relic effects, drop/pity economy, XP/stat curves)
+
+**1 genuine fix of 9 findings.** The calculation-heavy systems surfaced one real, near-universal
+data-integrity bug; the other 8 were verified down to defensive smells, intentional UX, or an
+unreachable condition.
+
+| Item | Verdict | Why |
+|---|---|---|
+| **W359** `6f786cd` | ✅ SHIPPED (high) | `canSellRelic` blocked selling an equipped relic via `isCardEquipped` (the **dead legacy** slot system) instead of `isItemEquippedInBuild` (the **live** Hunter Build). For ~every user the legacy store is empty/stale, so the guard never fired → selling the last copy orphaned the build slot (count:0 card still referenced). Now checks the live build. |
+| rare-mercy downgrades mythic → rare (`10668`) | ❌ REJECTED | **Unreachable.** The rare-mercy block is inside the `else` (non-dropTable) branch; mythic is produced **only** by the `cfg.dropTable` path (Erebus), and dropTable bosses run **no pity** (comment, 10630). Mythic never reaches rare-mercy. The agent missed the if/else mutual exclusivity. |
+| stat level-up multi-fire / invalid level (`24563`) | ❌ REJECTED | Agent itself says "design-correct for normal progression." The undefined-oldLv case makes the loop condition `NaN<=newLv` false → loop skips safely. `statLevel` is bounded by `while(lv<20)`. No live bug. |
+| AI damage-cap formula ≠ actual (`6916`) | ❌ REJECTED | The AI uses a probability-weighted cap for an **expected-value estimate**; actual combat uses the per-turn binary cap. Both are correct for their purpose — an AI heuristic approximation, not a data-integrity bug. |
+| rank-division rounding (`17685`) / NaN divisionProgress (`17692`) | ❌ REJECTED | Both low-confidence; agent's own analysis concludes "benign" / "Not NaN" — the `Math.max(1,…)` and clamp guards hold. |
+| displayed damage shows 1 when <0.5 (`7160`) | ❌ REJECTED | Intentional UX — never show "0 damage" for a landed hit; HP uses the true fractional value. |
+| stat bonus past S+ cap (`18910`) | ❌ REJECTED | Not a bug: `totalPoints` is lifetime XP and **should** keep growing past the last rank threshold; the rank correctly stays S+ and the leaderboard ranks by XP. No double-grant. |
+| `statLevel` no final `[1,20]` clamp (`18866`) | ⚠️ DEFERRED | Defensive-only; the `while(lv<20)` loop + `!pts→1` already bound it. No live trigger. A `Math.max(1,Math.min(20,…))` clamp is cheap hardening if desired later. |
+
+---
+
+_10 fixes total across rounds 1–4 (W350–W359). About **25 candidate findings were rejected or
+deferred** after verification vs 10 shipped — including two that would have been catastrophic if
+applied blindly (the PT→device-local streak rewrite in R3, and a confident "mythic gets downgraded"
+that is actually unreachable in R4). The verify-before-fix discipline held on every round. selfTest
+stayed 37/37; production read-only; IAP/purchase untouched. A round-5 (migrations / notif / restore /
+persistence) is in progress._
