@@ -29207,3 +29207,116 @@ button.guildhall-summary-tile:active {
   border: 0; border-radius: 12px; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ──────────────────────────────
+   W333 · ClaudeDesign "Global Leaderboard" redesign
+   Calmer hierarchy, the list is the hero, #1 enthroned. Lands in the
+   SHARED row renderer (lbBuildRankList), so it propagates to every
+   ranked board: This Week, Friends, Hunters-in-your-rank, Highest
+   Floor, and the sleep / workout / flights streak boards.
+   ────────────────────────────── */
+
+/* per-row progress fill — each row’s value vs the current leader */
+.lb-rank-row { position: relative; overflow: hidden; }
+.lb-rank-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: var(--lb-fill, 0%);
+  background: linear-gradient(90deg, rgba(245,184,66,0.07), rgba(245,184,66,0));
+  pointer-events: none;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lb-rank-row > .lb-rank-pos,
+.lb-rank-row > .lb-rank-id,
+.lb-rank-row > .lb-rank-name,
+.lb-rank-row > .lb-rank-crown,
+.lb-rank-row > .lb-rank-value { position: relative; }
+
+/* medal-tinted rank numbers for #2 / #3 (the throne is the hero card) */
+.lb-rank-row--medal2 .lb-rank-pos { color: #c8c6d8; text-shadow: 0 0 9px rgba(200,198,216,0.40); }
+.lb-rank-row--medal3 .lb-rank-pos { color: #d59a52; text-shadow: 0 0 9px rgba(213,154,82,0.40); }
+
+/* two-line identity cell: name on top, gem class-label below */
+.lb-rank-id {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+}
+.lb-rank-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lb-rank-id > .lb-rank-name-row > .lb-rank-name { flex: 0 1 auto; min-width: 0; }
+.lb-you-pill {
+  flex: none;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px; font-weight: 800; letter-spacing: 1.4px;
+  color: #f5b842;
+  border: 1px solid rgba(245,184,66,0.5); border-radius: 999px;
+  padding: 2px 6px 1px;
+}
+
+/* gem class-label (tier-colored) — the design’s ClassLabel atom */
+.lb-rank-class {
+  --gem-c: #f5b842; --gem-hi: #ffe9b0; --gem-glow: rgba(245,184,66,0.40);
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--gem-c);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb-rank-gem {
+  width: 7px; height: 7px; flex: none;
+  transform: rotate(45deg); border-radius: 1.5px;
+  background: linear-gradient(135deg, var(--gem-hi), var(--gem-c) 62%);
+  box-shadow: 0 0 7px var(--gem-glow);
+}
+.lb-rank-class--violet { --gem-c: #a78bfa; --gem-hi: #ddd2ff; --gem-glow: rgba(167,139,250,0.42); }
+.lb-rank-class--teal   { --gem-c: #5eead4; --gem-hi: #c8fff2; --gem-glow: rgba(94,234,212,0.42); }
+.lb-rank-class--iron   { --gem-c: #c8c6d8; --gem-hi: #f0effa; --gem-glow: rgba(200,198,216,0.36); }
+.lb-rank-class--gold   { --gem-c: #f5b842; --gem-hi: #ffe9b0; --gem-glow: rgba(245,184,66,0.40); }
+
+/* #1 leader — enthroned hero card */
+.lb-rank-leader {
+  position: relative; overflow: hidden;
+  border-radius: 16px; padding: 14px 16px; margin-bottom: 2px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.11), rgba(245,184,66,0.02));
+  border: 1px solid rgba(245,184,66,0.45);
+  box-shadow: 0 0 0 1px rgba(245,184,66,0.10), 0 14px 30px rgba(0,0,0,0.45);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.lb-rank-leader-glow {
+  position: absolute; top: -50px; right: -34px; width: 170px; height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,184,66,0.18), transparent 70%);
+  pointer-events: none;
+}
+.lb-rank-leader-row {
+  position: relative; display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px;
+}
+.lb-rank-leader-info { min-width: 0; }
+.lb-rank-leader-eyebrow {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 2px; color: #f5b842;
+}
+.lb-rank-leader-name {
+  display: flex; align-items: center; gap: 7px;
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 1.4rem; font-weight: 700; color: var(--text-primary);
+  letter-spacing: 0.4px; margin-top: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb-rank-leader .lb-rank-class { margin-top: 6px; }
+.lb-rank-leader-stat { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+.lb-rank-leader-value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.7rem; font-weight: 800; color: #f5b842; line-height: 1;
+  text-shadow: 0 0 18px rgba(245,184,66,0.45); font-variant-numeric: tabular-nums;
+}
+.lb-rank-leader-unit {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 1.6px;
+  color: var(--text-secondary); margin-top: 6px;
+}
+.lb-rank-leader--me {
+  border-color: rgba(245,184,66,0.65);
+  box-shadow: 0 0 0 1px rgba(245,184,66,0.18), 0 14px 34px rgba(0,0,0,0.5);
+}
+

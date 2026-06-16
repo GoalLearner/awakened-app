@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w332';
+  const APP_BUILD_TAG = '2.2.7-w333';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33386,6 +33386,9 @@
     // Build display aliases for the top-N list — lowercase + no
     // spaces, dedup suffixes on collisions, allowlist for "Richie".
     const displayAliases = lbBuildDisplayAliases(top);
+    // W333 — ClaudeDesign redesign: the top value sets the 100% baseline
+    // for each row's gold progress fill.
+    const _lbLeaderVal = (top[0] && Number(top[0].current_value)) || 0;
     const topRows = top.map((row, i) => {
       const isMe = myAlias && row.alias === myAlias;
       const rankClass = isMe ? 'lb-rank-row lb-rank-row--me' : 'lb-rank-row';
@@ -33397,13 +33400,18 @@
       if (isMe) { try { const t = getEquippedArenaTitle(); titleId = (t && t.id) || titleId; } catch (_) {} }
       // W267 — legacy ids from pre-W266 clients render as their ladder successors
       try { if (titleId && _ARENA_TITLE_LEGACY[titleId]) titleId = _ARENA_TITLE_LEGACY[titleId]; } catch (_) {}
-      let titleChip = '';
+      // W333 — ClaudeDesign redesign: the equipped title becomes a quiet
+      // gem "class label" UNDER the name (tier-colored), replacing the inline
+      // shard pill. Same tier ladder (iron / teal / violet / gold).
+      let classLabel = '';
       if (titleId && typeof ARENA_TITLES !== 'undefined') {
         const tdef = ARENA_TITLES.find((t) => t.id === titleId);
-        // W264 — gem-shard chip (ClaudeDesign direction C): faceted, tier-colored.
-        // Unknown/absent ids still render nothing (back/forward compatible).
-        // W266 — shard tier rides on the title def itself (one ladder, one source)
-        if (tdef) titleChip = '<span class="lb-title-shard lb-title-shard--' + (tdef.tier || 'gold') + '"><span>' + esc(tdef.name) + '</span></span>';
+        if (tdef) {
+          const _lbTier = tdef.tier || 'gold';
+          classLabel = '<span class="lb-rank-class lb-rank-class--' + _lbTier + '">' +
+            '<i class="lb-rank-gem" aria-hidden="true"></i>' + esc(tdef.name) +
+          '</span>';
+        }
       }
       // W274 — finishers (Floor 100, in the Hall of the Awakened) wear a gold
       // crown on the floor board, cross-linking the race to the finish line.
@@ -33412,11 +33420,44 @@
             '<svg viewBox="0 0 16 12" width="13" height="10" aria-hidden="true"><path d="M1 11h14l-1.2-7L10 7.5 8 1 6 7.5 2.2 4z" fill="#f5b842" stroke="#c08418" stroke-width="0.7" stroke-linejoin="round"/></svg>' +
           '</span>'
         : '';
-      return '<div class="' + rankClass + (crown ? ' lb-rank-row--awakened' : '') + '"' +
+      // W333 — progress fill ratio (this value vs the current leader).
+      const _pct = _lbLeaderVal > 0
+        ? Math.max(5, Math.min(100, Math.round((Number(row.current_value) || 0) / _lbLeaderVal * 100)))
+        : 0;
+      const _medal = (row.rank >= 2 && row.rank <= 3) ? ' lb-rank-row--medal' + row.rank : '';
+      const _youPill = isMe ? '<span class="lb-you-pill">YOU</span>' : '';
+      const _nameDisp = esc(displayAliases[i] || '—');
+
+      // #1 is enthroned as a hero card; the rest form the calm list below.
+      if (row.rank === 1) {
+        return '<div class="lb-rank-leader' + (isMe ? ' lb-rank-leader--me' : '') + '"' +
+          ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
+          '<span class="lb-rank-leader-glow" aria-hidden="true"></span>' +
+          '<span class="lb-rank-leader-row">' +
+            '<span class="lb-rank-leader-info">' +
+              '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER') + '</span>' +
+              '<span class="lb-rank-leader-name">' + _nameDisp + crown + '</span>' +
+              classLabel +
+            '</span>' +
+            '<span class="lb-rank-leader-stat">' +
+              '<span class="lb-rank-leader-value">' + meta.formatValue(row.current_value) + '</span>' +
+              '<span class="lb-rank-leader-unit">' + esc(String(meta.unit || '').toUpperCase()) + '</span>' +
+            '</span>' +
+          '</span>' +
+        '</div>';
+      }
+
+      return '<div class="' + rankClass + _medal + (crown ? ' lb-rank-row--awakened' : '') + '"' +
+        ' style="--lb-fill:' + _pct + '%"' +
         ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
+        '<span class="lb-rank-fill" aria-hidden="true"></span>' +
         '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
-        '<span class="lb-rank-name">' + esc(displayAliases[i] || '—') + '</span>' +
-        crown + titleChip +
+        '<span class="lb-rank-id">' +
+          '<span class="lb-rank-name-row">' +
+            '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + _youPill +
+          '</span>' +
+          classLabel +
+        '</span>' +
         '<span class="lb-rank-value">' + meta.formatValue(row.current_value) + '</span>' +
       '</div>';
     }).join('');
