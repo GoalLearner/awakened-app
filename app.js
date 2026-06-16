@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w354';
+  const APP_BUILD_TAG = '2.2.7-w355';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1740,7 +1740,7 @@
       } catch (_) {}
       return false;
     }
-    if (cost > 0) spendSouls(cost, 'engage_' + bossId);
+    if (cost > 0 && !spendSouls(cost, 'engage_' + bossId)) return false; // W355 (V3)
     state.engaged = true;
     const _engageNow = Date.now();
     state.engaged_at = new Date(_engageNow).toISOString();
@@ -3302,13 +3302,14 @@
     if (!_souls) loadSouls();
     // W350 (G2) — never let a spend drive the balance negative (defensive;
     // all current callers pre-check, so valid spends are unchanged).
-    if (_souls.balance < amount) return;
+    if (_souls.balance < amount) return false; // W355 (V2)
     _souls.balance -= amount;
     _souls.totalSpent += amount;
     persistSouls();
     // v3 Phase 1z.44 — record the spend.
     try { recordSoulsTransaction(-amount, sink); } catch (_) {}
     refreshSoulsDisplay();
+    return true; // W355 (V2) — charge succeeded
   }
 
   // ─── v3 Phase 1z.44 — Souls Ledger ──────────────────────────
@@ -10231,7 +10232,7 @@
     if (!chk.ok) return chk;
     const price = chk.price;
     // Pay first (balance already verified) — never grant before charging.
-    spendSouls(price, 'relic_buy_' + cardId);
+    if (!spendSouls(price, 'relic_buy_' + cardId)) return { ok: false, reason: 'insufficient' }; // W355 (V2)
     const inv = getInventory();
     const entry = inv.cards[cardId] || _stubCard();
     const wasFirstAcquisition = !entry.discovered;
