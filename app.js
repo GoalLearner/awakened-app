@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w355';
+  const APP_BUILD_TAG = '2.2.7-w356';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -38351,6 +38351,7 @@
     habits = habits.filter(h => h.id !== id);
     for (const d in completions) completions[d] = completions[d].filter(x => x !== id);
     delete streaks[id];
+    try { delete habitNotes[id]; } catch (_) {} // W356 (V4) clean up orphaned note
     save();
     // Permanently cancel this habit's reminder + drop it from storage.
     try { Notif.clearReminder(id); } catch (_) {}
