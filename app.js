@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w359'; // W359
+  const APP_BUILD_TAG = '2.2.7-w360'; // W360
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -38349,7 +38349,7 @@
   // ── DELETE ───────────────────────────────────────────────
   function deleteHabit(id) {
     habits = habits.filter(h => h.id !== id);
-    for (const d in completions) completions[d] = completions[d].filter(x => x !== id);
+    for (const d in completions) if (Array.isArray(completions[d])) completions[d] = completions[d].filter(x => x !== id); // W360 - guard a non-array (corrupted/restored) value from crashing habit deletion
     delete streaks[id];
     try { delete habitNotes[id]; } catch (_) {} // W356 (V4) clean up orphaned note
     save();
