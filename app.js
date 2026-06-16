@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w342';
+  const APP_BUILD_TAG = '2.2.7-w343';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21150,6 +21150,25 @@
       drainLevelUpQueue();
     };
     dismissBtn.onclick = dismiss;
+    // W343 — perfect-day Founder surface. At the first proven week (the day-7
+    // "WEEK WARRIOR" milestone) offer Founder at this earned, high-intent peak.
+    // Gated on the shared cap (W342) + live IAP, so it stays dormant until the
+    // owner flips IAP_ENABLED. Mirrors W340: tap opens the offer, CONTINUE dismisses.
+    const _pdFounder = document.getElementById('pd-founder');
+    if (_pdFounder) {
+      let _pdLive = false;
+      try { _pdLive = (ms.day === 7) && _canShowFounderPrompt(); } catch (_) {}
+      if (_pdLive) {
+        _pdFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="pd-founder-cta">\u2726 Become a Founder \u2014 stay the course</button>';
+        try { _recordFounderPrompt(); } catch (_) {}
+        const _pdCta = document.getElementById('pd-founder-cta');
+        if (_pdCta) _pdCta.onclick = function (e) { try { e.stopPropagation(); } catch (_) {} dismiss(); try { openFounder(); } catch (_) {} };
+        setTimeout(function () { if (live) _pdFounder.classList.remove('hidden'); }, 1400);
+      } else {
+        _pdFounder.innerHTML = '';
+        _pdFounder.classList.add('hidden');
+      }
+    }
   }
 
   // ── RENDER ────────────────────────────────────────────────
