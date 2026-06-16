@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w347';
+  const APP_BUILD_TAG = '2.2.7-w348';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44214,10 +44214,29 @@
           limit: 0,
         });
         const samples = (result && result.resultData) || [];
+        // W348 — dedupe by source (same fix as W347 for steps). HealthKit
+        // returns a sample per source (iPhone + Apple Watch + 3rd-party apps);
+        // summing all double-counts overlapping samples. Sum per source; when
+        // >1 source prefer the max single-source total. One source unchanged;
+        // no source -> raw sum fallback. Native HKStatisticsQuery is the proper
+        // uniform fix (see spec).
         let total = 0;
+        const _bySource = Object.create(null);
+        let _srcCount = 0;
         for (const s of samples) {
           const v = Number(s && s.value);
-          if (isFinite(v) && v > 0) total += v;
+          if (!isFinite(v) || v <= 0) continue;
+          total += v;
+          const _src = (s && (s.sourceBundleId || s.sourceName)) || '';
+          if (_src) {
+            if (_bySource[_src] === undefined) { _bySource[_src] = 0; _srcCount++; }
+            _bySource[_src] += v;
+          }
+        }
+        if (_srcCount > 1) {
+          let _maxSrc = 0;
+          for (const _k in _bySource) { if (_bySource[_k] > _maxSrc) _maxSrc = _bySource[_k]; }
+          total = _maxSrc;
         }
         setStatus('granted');
         return Math.round(total);
@@ -44303,10 +44322,29 @@
           limit: 0,
         });
         const samples = (result && result.resultData) || [];
+        // W348 — dedupe by source (same fix as W347 for steps). HealthKit
+        // returns a sample per source (iPhone + Apple Watch + 3rd-party apps);
+        // summing all double-counts overlapping samples. Sum per source; when
+        // >1 source prefer the max single-source total. One source unchanged;
+        // no source -> raw sum fallback. Native HKStatisticsQuery is the proper
+        // uniform fix (see spec).
         let total = 0;
+        const _bySource = Object.create(null);
+        let _srcCount = 0;
         for (const s of samples) {
           const v = Number(s && s.value);
-          if (isFinite(v) && v > 0) total += v;
+          if (!isFinite(v) || v <= 0) continue;
+          total += v;
+          const _src = (s && (s.sourceBundleId || s.sourceName)) || '';
+          if (_src) {
+            if (_bySource[_src] === undefined) { _bySource[_src] = 0; _srcCount++; }
+            _bySource[_src] += v;
+          }
+        }
+        if (_srcCount > 1) {
+          let _maxSrc = 0;
+          for (const _k in _bySource) { if (_bySource[_k] > _maxSrc) _maxSrc = _bySource[_k]; }
+          total = _maxSrc;
         }
         setStatus('granted');
         return Math.round(total);
