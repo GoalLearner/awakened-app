@@ -29402,15 +29402,27 @@ button.guildhall-summary-tile:active {
 .settings-danger-row--reset { border-color: rgba(239,106,106,0.3); background: rgba(239,106,106,0.06); color: #ef6a6a; }
 .settings-danger-row--reset span { font-weight: 700; }
 
-/* W336 · Manage Vows link on the Habits-tab footer (subtle, under Add Habits) */
+/* W364 — promoted from faint text to a clear SECONDARY button. Neutral
+   border (not the purple dashed "Add Habits" CTA) so it reads as "manage
+   existing" and stays subordinate to the primary create action. */
 #main-footer .habits-managevows-link {
-  display: block; width: 100%; margin: 8px 0 0; padding: 7px 0;
-  background: transparent; border: none; cursor: pointer; font-family: inherit;
-  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em;
-  color: var(--text-secondary); text-align: center;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin: 10px 0 0; padding: 13px 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border); border-radius: 12px;
+  cursor: pointer; font-family: inherit;
+  font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--text-primary); text-align: center;
   -webkit-appearance: none; appearance: none;
+  transition: border-color .15s, background .15s;
 }
-#main-footer .habits-managevows-link:active { color: var(--text-primary); }
+#main-footer .habits-managevows-link::before {
+  content: '\2699\FE0E'; /* gear, text-presentation so iOS renders it monochrome (not a color emoji) */
+  font-size: 0.95rem; opacity: 0.8; line-height: 1;
+}
+#main-footer .habits-managevows-link:active {
+  border-color: var(--border-accent); background: var(--accent-glow);
+}
 
 /* ──────────────────────────────
    W337 · First Mark — activation celebration on the first-ever completion.
