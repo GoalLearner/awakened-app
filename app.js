@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w341';
+  const APP_BUILD_TAG = '2.2.7-w342';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19455,10 +19455,11 @@
     const _ruFounder = document.getElementById('rankup-founder');
     if (_ruFounder) {
       let _ruLive = false;
-      try { _ruLive = !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable()) && !_founderOwned(); } catch (_) {}
+      try { _ruLive = _canShowFounderPrompt(); } catch (_) {}
       if (_ruLive) {
         _ruFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="rankup-founder-cta">\u2726 Become a Founder \u2014 back the climb</button>';
         _ruFounder.classList.remove('hidden');
+        try { _recordFounderPrompt(); } catch (_) {}
         const _ruCta = document.getElementById('rankup-founder-cta');
         if (_ruCta) _ruCta.onclick = function (e) { try { e.stopPropagation(); } catch (_) {} dismiss(); try { openFounder(); } catch (_) {} };
       } else {
@@ -35175,6 +35176,26 @@
   }
   function _founderOwned() {
     try { return !!(window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder()); } catch (_) { return false; }
+  }
+  // W342 — shared Founder-prompt throttle. One mechanism for every value-peak
+  // surface (rank-up, perfect-day) so a user never sees two upsells stacked.
+  // Dormant while IAP is off: _founderIapReady() is false until the owner flips
+  // IAP_ENABLED, so this returns false and nothing renders. Presentation-only.
+  let _founderPromptsThisSession = 0;
+  const FOUNDER_PROMPT_MIN_INTERVAL_MS = 3600000; // 1h minimum between any two prompts
+  function _canShowFounderPrompt() {
+    try {
+      if (_founderOwned()) return false;
+      if (!_founderIapReady()) return false;
+      if (_founderPromptsThisSession >= 1) return false;
+      const last = parseInt(localStorage.getItem('hb_founder_last_prompt_ms') || '0', 10) || 0;
+      if (Date.now() - last < FOUNDER_PROMPT_MIN_INTERVAL_MS) return false;
+      return true;
+    } catch (_) { return false; }
+  }
+  function _recordFounderPrompt() {
+    try { localStorage.setItem('hb_founder_last_prompt_ms', String(Date.now())); } catch (_) {}
+    _founderPromptsThisSession++;
   }
   function _renderFounder() {
     const body = document.getElementById('founder-body');
