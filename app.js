@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w360'; // W360
+  const APP_BUILD_TAG = '2.2.7-w361'; // W361
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19736,20 +19736,21 @@
   // Open-time gate: once per day for an early-journey user (days 2-7)
   // returning on a NEW day with prior activity, never while a comeback
   // (multi-day break) is pending or another celebration is active.
-  function _maybeShowWelcomeBack() {
+  function _maybeShowWelcomeBack() { // W361 — returns true if shown; day-2 only
     try {
-      if (localStorage.getItem('hb_welcomed') !== '1') return;
-      if (typeof levelUpActive !== 'undefined' && levelUpActive) return;
-      if (typeof pendingComeback !== 'undefined' && pendingComeback) return;
-      if (!lastActiveDate || lastActiveDate === today) return;
+      if (localStorage.getItem('hb_welcomed') !== '1') return false;
+      if (typeof levelUpActive !== 'undefined' && levelUpActive) return false;
+      if (typeof pendingComeback !== 'undefined' && pendingComeback) return false;
+      if (!lastActiveDate || lastActiveDate === today) return false;
       const _ob = localStorage.getItem('hb_onboarding_first_xp_date');
-      if (!_ob || !/^\d{4}-\d{2}-\d{2}$/.test(_ob)) return;
+      if (!_ob || !/^\d{4}-\d{2}-\d{2}$/.test(_ob)) return false;
       const _jd = Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(_ob + 'T12:00:00Z')) / 86400000) + 1;
-      if (_jd < 2 || _jd > 7) return;
-      if (localStorage.getItem('hb_welcomeback_last') === today) return;
+      if (_jd !== 2) return false; // W361 — day-2 only; days 3-7 belong to the milestone/insight beats
+      if (localStorage.getItem('hb_welcomeback_last') === today) return false;
       localStorage.setItem('hb_welcomeback_last', today);
       showWelcomeBackScreen(_jd);
-    } catch (_) {}
+      return true;
+    } catch (_) { return false; }
   }
   try { window.__showWelcomeBack = function () { showWelcomeBackScreen(2); }; } catch (_) {}
 
@@ -26801,6 +26802,8 @@
     if (showStreakLossCoachmark()) return;
     if (showDay7Coachmark()) return;
     if (showDay3Coachmark()) return;
+    if (_maybeShowWelcomeBack()) return; // W361 — day-2 payoff joins the one-per-open ladder
+    if (typeof shouldShowDailyInsight === 'function' && shouldShowDailyInsight()) { showDailyInsight(); return; } // W361 — daily insight is the lowest-priority beat
   }
 
   try {
@@ -47070,8 +47073,8 @@
     // has a pending break flag.
     processStreakRollover();
     setTimeout(() => flushPendingShieldNotices(), 800);
-    // W339 — open-time Day-2 welcome-back payoff (after shield notices settle).
-    setTimeout(() => { try { _maybeShowWelcomeBack(); } catch (_) {} }, 1100);
+    // W339/W361 — the Day-2 welcome-back payoff now fires via the unified
+    // early-journey dispatcher (one beat per open), not its own timer.
     migratePRsIfNeeded();
     setupEmojiPicker();
     setupCustomHabitModal();
@@ -47346,9 +47349,9 @@
         render();
         setupFridayBanner();
         maybeAutoShowWhatsNew();
-        setTimeout(() => {
-          try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
-        }, 900);
+        // W361 — the daily insight now fires via the unified early-journey
+        // dispatcher (maybeShowFirstAwakenedRetentionMoment) so it can never
+        // stack with the welcome-back screen or a milestone beat.
         // v3 Phase 1z.282C — One-time welcome for existing users.
         // Defers 1.5s so the habits list paints first; existing
         // users see their familiar app, THEN The First Awakened
