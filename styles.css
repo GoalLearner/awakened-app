@@ -5388,6 +5388,23 @@ footer {
 }
 
 /* ── Total Level ── */
+/* W366 — Stats tab "Next Growth" lower panel (ClaudeDesign Stats Lower Panel, recommended variant). */
+.stats-growth-panel { position: relative; margin: 16px 14px 0; background: linear-gradient(180deg, #16163c 0%, #0d0d24 100%); border: 1px solid rgba(139,92,246,0.22); border-radius: 14px; overflow: hidden; box-shadow: 0 0 22px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04); padding: 13px 15px 14px; display: flex; gap: 13px; align-items: flex-start; cursor: pointer; -webkit-tap-highlight-color: transparent; text-align: left; transition: transform .1s ease; }
+.stats-growth-panel:active { transform: scale(0.992); }
+.sgp-wash { position: absolute; top: 0; left: 0; bottom: 0; width: 80px; pointer-events: none; }
+.sgp-emblem { width: 46px; height: 46px; border-radius: 12px; flex: 0 0 auto; margin-top: 1px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+.sgp-emblem img { width: 30px; height: 30px; object-fit: contain; }
+.sgp-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.sgp-eyebrow { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 2px; color: #f5b842; }
+.sgp-sigil { flex: none; filter: drop-shadow(0 0 3px rgba(245,184,66,0.53)); }
+.sgp-headline { display: block; font-family: -apple-system, "SF Pro Display", system-ui, sans-serif; font-size: 15.5px; font-weight: 700; color: #f4f3fb; letter-spacing: -0.2px; line-height: 1.2; }
+.sgp-headline b { font-weight: 800; }
+.sgp-bar { display: block; margin: 9px 16px 0 0; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.sgp-bar-fill { display: block; height: 100%; border-radius: 3px; }
+.sgp-guide { display: block; margin: 9px 12px 0 0; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 13.5px; color: #9aa0bd; line-height: 1.45; }
+.sgp-guide b { color: #f4f3fb; font-style: normal; font-weight: 700; }
+.sgp-chev { position: absolute; right: 13px; top: 50%; margin-top: -6px; color: #6b6b86; opacity: 0.5; }
+
 .osrs-total-level {
   text-align: right;
   font-size: 0.75rem;

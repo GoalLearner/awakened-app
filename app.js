@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w365'; // W365
+  const APP_BUILD_TAG = '2.2.7-w366'; // W366
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21680,6 +21680,56 @@
     renderStatus();
   }
 
+  // W366 — ClaudeDesign "Stats Lower Panel" (recommended: Next Growth). One panel
+  // below TOTAL LEVEL: the non-maxed stat closest to its next level, a progress bar,
+  // and a theme-guidance line. Live stat data; tappable -> Habits tab.
+  const _NG_THEME = { STR: 'Strength', VIT: 'Vitality', INT: 'Learning', FOCUS: 'Focus', WILL: 'Discipline', WLT: 'Wealth' };
+  function _sgpRgba(hex, a) {
+    var h = String(hex || '#8b5cf6').replace('#', '');
+    var r = parseInt(h.substring(0, 2), 16) || 0, g = parseInt(h.substring(2, 4), 16) || 0, b = parseInt(h.substring(4, 6), 16) || 0;
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  function _buildNextGrowthPanel() {
+    var best = null;
+    STATS.forEach(function (st) {
+      var pts = (stats[st.id] && stats[st.id].pts) || 0;
+      var lv = statLevel(pts);
+      if (lv >= 20) return;
+      var needed = xpToNextLevel(lv);
+      if (needed <= 0) return;
+      var ptsInLv = pts - xpForLevel(lv);
+      var remaining = Math.max(0, needed - ptsInLv);
+      var pct = Math.max(0, Math.min(100, Math.round((ptsInLv / needed) * 100)));
+      if (!best || remaining < best.remaining || (remaining === best.remaining && pct > best.pct)) {
+        best = { st: st, lv: lv, remaining: remaining, pct: pct };
+      }
+    });
+    if (!best) return null; // every stat at Level 20
+    var st = best.st, nextLv = best.lv + 1, A = st.color || '#8b5cf6', pct = best.pct;
+    var theme = _NG_THEME[st.id] || st.name || st.label;
+    var nEst = Math.max(1, Math.ceil(best.remaining / 3));
+    var guide = (nEst <= 9)
+      ? 'Complete <b>' + nEst + ' ' + theme + '</b> habit' + (nEst !== 1 ? 's' : '') + ' to reach Level ' + nextLv + '.'
+      : 'Complete <b>' + theme + '</b> habits to reach Level ' + nextLv + '.';
+    var d = document.createElement('div');
+    d.className = 'stats-growth-panel';
+    d.setAttribute('role', 'button');
+    d.setAttribute('tabindex', '0');
+    d.setAttribute('aria-label', 'Next growth: ' + st.label + ' approaching Level ' + nextLv + '. Open Habits.');
+    d.innerHTML =
+      '<span class="sgp-wash" style="background:linear-gradient(90deg,' + _sgpRgba(A, 0.11) + ',transparent)"></span>' +
+      '<span class="sgp-emblem" style="background:radial-gradient(circle at 50% 36%,' + _sgpRgba(A, 0.18) + ' 0%,rgba(0,0,0,0.4) 74%);border:1px solid ' + _sgpRgba(A, 0.4) + ';box-shadow:inset 0 0 12px ' + _sgpRgba(A, 0.15) + ',0 0 12px ' + _sgpRgba(A, 0.13) + '"><img src="' + st.iconImg + '" alt="" /></span>' +
+      '<span class="sgp-body">' +
+        '<span class="sgp-eyebrow"><svg class="sgp-sigil" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0l1.4 3.6L10 5 6.4 6.4 5 10 3.6 6.4 0 5l3.6-1.4z" fill="#f5b842"/></svg>NEXT GROWTH</span>' +
+        '<span class="sgp-headline"><span class="sgp-stat" style="color:' + A + ';text-shadow:0 0 10px ' + _sgpRgba(A, 0.4) + '">' + esc(st.label) + '</span> is close to <b>Level ' + nextLv + '</b></span>' +
+        '<span class="sgp-bar"><span class="sgp-bar-fill" style="width:' + pct + '%;background:linear-gradient(90deg,' + _sgpRgba(A, 0.8) + ',' + A + ');box-shadow:0 0 8px ' + _sgpRgba(A, 0.67) + '"></span></span>' +
+        '<span class="sgp-guide">' + guide + '</span>' +
+      '</span>' +
+      '<svg class="sgp-chev" width="7" height="12" viewBox="0 0 7 12" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    d.addEventListener('click', function () { try { switchTab('habits'); } catch (_) {} });
+    return d;
+  }
+
   function renderStats() {
     const el = document.getElementById('stats-content');
     el.innerHTML = '';
@@ -21798,6 +21848,8 @@
       + ' <span class="osrs-total-max">/ 120</span>'
       + (isAllMaxed ? ' <span class="osrs-total-crown">👑 FULLY AWAKENED</span>' : '');
     el.appendChild(totalEl);
+    // W366 — ClaudeDesign Stats Lower Panel (Next Growth), below TOTAL LEVEL.
+    try { var _ngPanel = _buildNextGrowthPanel(); if (_ngPanel) el.appendChild(_ngPanel); } catch (_) {}
 
     // ── Next Stat Bonus — consolidated into alignment card (v2.1) ──
     // Previously a standalone section below the stat grid. The progress
