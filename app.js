@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w337';
+  const APP_BUILD_TAG = '2.2.7-w338';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -42383,6 +42383,20 @@
       if (count === 0) {
         return name + ', clean rest day. Recover on purpose.';
       }
+
+      // W338 — Early-journey pull. Day 1->2 is the biggest retention leak, so a
+      // brand-new user's morning digest gets a momentum / loss-aversion line
+      // (instead of the generic count) through their first week. Journey date
+      // is written by _completeOnboardingFinish (hb_onboarding_first_xp_date).
+      try {
+        const _ob = localStorage.getItem('hb_onboarding_first_xp_date');
+        if (_ob && /^\d{4}-\d{2}-\d{2}$/.test(_ob)) {
+          const _td = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : new Date().toISOString().slice(0, 10);
+          const _jd = Math.round((Date.parse(_td + 'T12:00:00Z') - Date.parse(_ob + 'T12:00:00Z')) / 86400000) + 1;
+          if (_jd === 2) return name + ', Day 2 — your chain is one link long. Keep it alive: ' + count + ' objectives today.';
+          if (_jd >= 3 && _jd <= 7) return name + ', Day ' + _jd + ' of the ascent — the chain holds. ' + count + ' objectives await.';
+        }
+      } catch (_) {}
 
       // Special trigger: yesterday was a perfect day. Honors any day-of-week.
       // Detected by checking the perfect-streak count > 0 (it increments on
