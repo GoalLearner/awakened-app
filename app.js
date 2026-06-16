@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w351';
+  const APP_BUILD_TAG = '2.2.7-w352';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7317,7 +7317,14 @@
       }
     }
     _persistAscentState(st);
-    const newTitles = ARENA_TITLES.filter(t => beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
+    // W352 (G4/G9) — the title step is the throwable tail AFTER wins/losses are
+    // persisted (above). If it threw, callers left _finalized unset and
+    // _arFinishSession re-ran finalize -> double-counted records (forfeit: lost
+    // the loss). Make it non-throwing so finalize always completes once.
+    let newTitles = [];
+    try {
+      newTitles = ARENA_TITLES.filter(t => beforeTitleIds.indexOf(t.id) === -1 && _arenaTitleUnlocked(t, st));
+    } catch (_) {}
     return {
       result, state: st, won, rated,
       advanced, floorCleared, bossCleared, newTitles,
