@@ -29320,3 +29320,110 @@ button.guildhall-summary-tile:active {
   box-shadow: 0 0 0 1px rgba(245,184,66,0.18), 0 14px 34px rgba(0,0,0,0.5);
 }
 
+/* ──────────────────────────────
+   W334 · ClaudeDesign "Souls Sheet" redesign
+   Two parallel rank tables (kill reward / engage cost) merged into ONE
+   rank-keyed economy table. Table + takeaway are populated from the live
+   SOULS_* constants (see _renderSoulsEconomy) so they never drift.
+   ────────────────────────────── */
+.souls-info-modal { background: radial-gradient(140% 60% at 50% 0%, #15153a 0%, #0a0a22 60%); }
+.souls-info-intro {
+  margin: 11px 0 0; font-size: 0.84rem; line-height: 1.5;
+  color: var(--text-secondary); text-align: center;
+}
+.souls-info-intro span { color: var(--text-primary); }
+
+/* WAYS TO EARN · daily-login callout */
+.souls-econ-block { margin: 0 0 18px; }
+.souls-daily {
+  display: flex; align-items: center; gap: 13px;
+  padding: 12px 14px; border-radius: 14px;
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+}
+.souls-daily-amt {
+  width: 42px; height: 42px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 11px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.2), rgba(245,184,66,0.05));
+  border: 1px solid rgba(245,184,66,0.4);
+  font-family: "JetBrains Mono", monospace; font-size: 0.86rem; font-weight: 800; color: #f5b842;
+}
+.souls-daily-text { flex: 1; min-width: 0; }
+.souls-daily-title { font-size: 0.96rem; font-weight: 700; color: var(--text-primary); }
+.souls-daily-sub { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* BOSS ECONOMY · merged rank table */
+.souls-econ {
+  border-radius: 16px; border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02); overflow: hidden;
+}
+.souls-econ-takeaway {
+  display: flex; align-items: center; gap: 9px; padding: 11px 14px;
+  background: linear-gradient(90deg, rgba(245,184,66,0.12), rgba(245,184,66,0.03));
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.84rem; color: var(--text-primary); font-weight: 500; line-height: 1.4;
+}
+.souls-econ-takeaway strong { color: #f7c558; font-weight: 800; }
+.souls-econ-take-icon { font-size: 0.95rem; line-height: 1; flex: none; }
+.souls-econ-head,
+.souls-econ-row { display: grid; grid-template-columns: 46px 1fr 1fr; align-items: center; }
+.souls-econ-head {
+  padding: 10px 14px 8px;
+  font-family: "JetBrains Mono", monospace; font-size: 0.56rem; font-weight: 800; letter-spacing: 1.2px;
+}
+.souls-econ-head > span:first-child { color: var(--text-tertiary); }
+.souls-econ-h-earn { text-align: right; color: #caa258; }
+.souls-econ-h-cost { text-align: right; color: #c98a8a; }
+.souls-econ-row { padding: 10px 14px; }
+.souls-econ-row:nth-child(even) { background: rgba(255,255,255,0.022); }
+.souls-econ-earn {
+  text-align: right; font-family: "JetBrains Mono", monospace; font-size: 1rem; font-weight: 800;
+  color: #f5b842; font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(245,184,66,0.4);
+}
+.souls-econ-cost {
+  text-align: right; font-family: "JetBrains Mono", monospace; font-size: 1rem; font-weight: 700;
+  color: #caa258; font-variant-numeric: tabular-nums;
+}
+.souls-econ-foot {
+  padding: 8px 14px 11px; border-top: 1px solid rgba(255,255,255,0.07);
+  font-family: "JetBrains Mono", monospace; font-size: 0.56rem; font-weight: 600; letter-spacing: 0.6px;
+  color: var(--text-tertiary); text-align: right;
+}
+
+/* boss-rank chips (rank hues) */
+.souls-rank-chip {
+  width: 30px; height: 30px; border-radius: 8px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 0.94rem; line-height: 1;
+  background: color-mix(in srgb, var(--rh) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rh) 34%, transparent);
+  color: var(--rh);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--rh) 15%, transparent);
+}
+.souls-rank-chip--E { --rh: #a78bfa; }
+.souls-rank-chip--D { --rh: #34d399; }
+.souls-rank-chip--C { --rh: #3b82f6; }
+.souls-rank-chip--B { --rh: #6366f1; }
+.souls-rank-chip--A { --rh: #fbbf24; }
+.souls-rank-chip--S { --rh: #ef4444; }
+
+/* non-refundable rule callout */
+.souls-rule {
+  display: flex; gap: 11px; padding: 12px 14px; border-radius: 14px; margin: 0 0 18px;
+  background: rgba(239,106,106,0.08); border: 1px solid rgba(239,106,106,0.28);
+}
+.souls-rule-bar { width: 4px; flex: none; border-radius: 2px; background: #ef6a6a; align-self: stretch; }
+.souls-rule-title { font-size: 0.84rem; font-weight: 800; color: #ef6a6a; letter-spacing: 0.2px; }
+.souls-rule-body { font-size: 0.78rem; color: #c98a8a; line-height: 1.5; margin-top: 3px; }
+
+/* VIEW TRANSACTIONS — design's dark closing action (overrides the 1z.45 rule) */
+.souls-info-ledger-btn {
+  margin: 0; padding: 0; height: 50px; border-radius: 14px;
+  font-family: "JetBrains Mono", monospace; font-size: 0.74rem; font-weight: 800; letter-spacing: 2.4px;
+  color: #f7c558;
+  background: linear-gradient(180deg, #211d3a, #14122a);
+  border: 1px solid rgba(245,184,66,0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.souls-info-ledger-btn:hover  { background: linear-gradient(180deg, #262040, #15132c); border-color: rgba(245,184,66,0.6); }
+.souls-info-ledger-btn:active { transform: scale(0.98); }
+

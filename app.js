@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w333';
+  const APP_BUILD_TAG = '2.2.7-w334';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5932,10 +5932,45 @@
       if (m && !m.classList.contains('hidden')) _arCloseCombatTriangle();
     });
   }
+  // W334 — ClaudeDesign "Souls Sheet" redesign. The merged economy table
+  // (kill earns / engage cost per rank) and the "2x wager" takeaway render
+  // from the LIVE constants so the modal can never drift from the real
+  // economy again (this also corrects the prior hard-coded D values).
+  function _renderSoulsEconomy() {
+    const ranks = ['E', 'D', 'C', 'B', 'A', 'S'];
+    const fmt = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
+    const rowsEl = document.getElementById('souls-econ-rows');
+    if (rowsEl) {
+      rowsEl.innerHTML = ranks.map(function (r) {
+        const earn = SOULS_KILL_REWARDS[r] || 0;
+        const cost = SOULS_ENGAGE_COSTS[r] || 0;
+        return '<div class="souls-econ-row">' +
+          '<span class="souls-rank-chip souls-rank-chip--' + r + '">' + r + '</span>' +
+          '<span class="souls-econ-earn">+' + fmt(earn) + '</span>' +
+          '<span class="souls-econ-cost">\u2212' + fmt(cost) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+    const takeEl = document.getElementById('souls-econ-takeaway');
+    if (takeEl) {
+      const exceptions = ranks.filter(function (r) {
+        return (SOULS_KILL_REWARDS[r] || 0) !== 2 * (SOULS_ENGAGE_COSTS[r] || 0);
+      });
+      const msg = (exceptions.length === 0)
+        ? 'A kill always pays back <strong>2\u00d7 its wager</strong>.'
+        : 'A kill pays back <strong>2\u00d7 its wager</strong> \u2014 every rank but ' + exceptions.join(', ') + '.';
+      takeEl.innerHTML = '<span class="souls-econ-take-icon" aria-hidden="true">\u26a1</span><span>' + msg + '</span>';
+    }
+    const dailyEl = document.getElementById('souls-daily-amt');
+    if (dailyEl && typeof SOULS_DAILY_BONUS !== 'undefined') {
+      dailyEl.textContent = '+' + SOULS_DAILY_BONUS;
+    }
+  }
   function openSoulsInfoModal() {
     const overlay = document.getElementById('souls-info-overlay');
     const modal   = document.getElementById('souls-info-modal');
     if (!overlay || !modal) return;
+    try { _renderSoulsEconomy(); } catch (_) {}
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
   }

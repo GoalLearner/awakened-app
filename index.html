@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=426">
+  <link rel="stylesheet" href="styles.css?v=427">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1828,53 +1828,47 @@
         <img class="souls-info-icon" src="assets/icons/souls-icon.png" alt="" draggable="false" loading="lazy" decoding="async">
         <h2 id="souls-info-title" class="souls-info-title">SOULS</h2>
         <p class="souls-info-subtitle">The currency of the dungeon.</p>
+        <p class="souls-info-intro">The essence of defeated bosses. Spend them to engage new bosses — <span>every fight is a wager.</span></p>
       </div>
 
-      <!-- v3 Phase 1z.45 — VIEW TRANSACTIONS promoted to the top of
-           the info modal so it's visible the instant the modal opens
-           (above-the-fold on iPhone). Previously sat below the rate
-           tables and the warning section; users had to scroll the
-           entire info card to find it. -->
-      <button id="souls-info-ledger-btn" class="souls-info-ledger-btn" type="button">
-        VIEW TRANSACTIONS
-      </button>
+      <!-- W334 — ClaudeDesign "Souls Sheet" redesign: one rank-keyed economy
+           table (populated from the live SOULS_* constants so it can't drift),
+           a daily-login callout, the non-refundable rule, and VIEW
+           TRANSACTIONS as the closing action. -->
+      <div class="souls-econ-block">
+        <h3 class="souls-info-section-label">Ways to earn</h3>
+        <div class="souls-daily">
+          <span class="souls-daily-amt" id="souls-daily-amt">+15</span>
+          <div class="souls-daily-text">
+            <div class="souls-daily-title">Daily login</div>
+            <div class="souls-daily-sub">Souls every day you open the app — free.</div>
+          </div>
+        </div>
+      </div>
 
-      <section class="souls-info-section">
-        <p class="souls-info-body">Souls are the essence collected from defeated dungeon bosses. You spend them to engage new bosses — every fight requires a wager. Hunt wisely.</p>
-      </section>
+      <div class="souls-econ-block">
+        <h3 class="souls-info-section-label">Boss economy · per rank</h3>
+        <div class="souls-econ">
+          <div class="souls-econ-takeaway" id="souls-econ-takeaway"></div>
+          <div class="souls-econ-head">
+            <span>RANK</span>
+            <span class="souls-econ-h-earn">KILL EARNS</span>
+            <span class="souls-econ-h-cost">ENGAGE COST</span>
+          </div>
+          <div id="souls-econ-rows"></div>
+          <div class="souls-econ-foot">VALUES IN SOULS</div>
+        </div>
+      </div>
 
-      <section class="souls-info-section">
-        <h3 class="souls-info-section-label">HOW TO EARN</h3>
-        <ul class="souls-info-list">
-          <li><img class="souls-info-bullet-icon" src="assets/habit-icons/icon-pack-morning.png" alt="" draggable="false" loading="lazy" decoding="async"><span class="souls-info-list-text"><b>Daily login</b> — +15 souls every day you open the app</span></li>
-          <li><img class="souls-info-bullet-icon" src="assets/tab-icons/tab-habits.png" alt="" draggable="false" loading="lazy" decoding="async"><span class="souls-info-list-text"><b>Boss kills</b> — souls awarded based on rank</span></li>
-        </ul>
-        <table class="souls-info-table">
-          <tr><td>E-rank kill</td><td>+50 souls</td></tr>
-          <tr><td>D-rank kill</td><td>+100 souls</td></tr>
-          <tr><td>C-rank kill</td><td>+200 souls</td></tr>
-          <tr><td>B-rank kill</td><td>+400 souls</td></tr>
-          <tr><td>A-rank kill</td><td>+800 souls</td></tr>
-          <tr><td>S-rank kill</td><td>+1,600 souls</td></tr>
-        </table>
-      </section>
+      <div class="souls-rule">
+        <span class="souls-rule-bar" aria-hidden="true"></span>
+        <div>
+          <div class="souls-rule-title">Wagers are non-refundable</div>
+          <div class="souls-rule-body">Disengage without a kill and your engage cost is gone. Only a victory pays out. Hunt wisely.</div>
+        </div>
+      </div>
 
-      <section class="souls-info-section">
-        <h3 class="souls-info-section-label">HOW TO SPEND</h3>
-        <p class="souls-info-body">Engaging a boss costs souls based on its rank:</p>
-        <table class="souls-info-table">
-          <tr><td>E-rank engage</td><td>25 souls</td></tr>
-          <tr><td>D-rank engage</td><td>50 souls</td></tr>
-          <tr><td>C-rank engage</td><td>100 souls</td></tr>
-          <tr><td>B-rank engage</td><td>200 souls</td></tr>
-          <tr><td>A-rank engage</td><td>400 souls</td></tr>
-          <tr><td>S-rank engage</td><td>800 souls</td></tr>
-        </table>
-      </section>
-
-      <section class="souls-info-section souls-info-warning">
-        <p class="souls-info-body"><b>Souls spent on engagement are non-refundable.</b> If you disengage without a kill, your souls are lost. Hunt only what you intend to defeat.</p>
-      </section>
+      <button id="souls-info-ledger-btn" class="souls-info-ledger-btn" type="button">VIEW TRANSACTIONS</button>
     </div>
   </div>
 
@@ -2903,7 +2897,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=778"></script>
+  <script src="app.js?v=779"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
