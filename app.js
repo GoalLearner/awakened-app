@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w352';
+  const APP_BUILD_TAG = '2.2.7-w353';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13987,13 +13987,17 @@
         return { ok: false, reason: 'no-range-query' };
       }
 
-      // Build [Sunday, today] inclusive list of device-local dates.
-      const today = new Date();
-      const todayDow = today.getDay(); // 0=Sun, 6=Sat
-      const days = [];
-      let dateStr = getDeviceLocalDate();
-      for (let i = 0; i <= todayDow; i++) {
-        days.unshift(dateStr); // unshift so days[0] = Sunday
+      // W353 (G6) — build the day list to match the PT week the weekly SUM uses
+      // (lbSumCurrentWeekFlights walks back to lbGetCurrentWeekStartPT). The old
+      // device-local day-of-week range could miss PT-week days for non-PT users
+      // near the Sunday-midnight-PT boundary -> those read 0 -> understated weekly
+      // flights. Mirror lbSumCurrentWeekSteps. Always include today (no empty list).
+      const _flWeekStart = lbGetCurrentWeekStartPT();
+      const days = [getDeviceLocalDate()];
+      let dateStr = lbPrevDate(days[0]);
+      let _flGuard = 0;
+      while (dateStr >= _flWeekStart && _flGuard++ < 8) {
+        days.unshift(dateStr);
         dateStr = lbPrevDate(dateStr);
       }
       const weekStartISO = new Date(days[0] + 'T00:00:00').toISOString();
