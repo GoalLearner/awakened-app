@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w358'; // W358
+  const APP_BUILD_TAG = '2.2.7-w359'; // W359
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10220,7 +10220,7 @@
     const entry = getInventory().cards[cardId] || _stubCard();
     if ((entry.count || 0) < 1) return { ok: false, reason: 'not_owned' };
     // Block selling the LAST copy of an equipped relic (a duplicate is fine).
-    if ((entry.count || 0) === 1 && isCardEquipped(cardId)) return { ok: false, reason: 'equipped' };
+    if ((entry.count || 0) === 1 && isItemEquippedInBuild(cardId)) return { ok: false, reason: 'equipped' }; // W359 - the LIVE Hunter Build is the equip surface (legacy isCardEquipped/_equipped is dead post-migration)
     return { ok: true, price: relicSellPrice(cardId) };
   }
 
