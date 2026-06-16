@@ -76,4 +76,27 @@ verify first — confident audit findings are often wrong.
 - **SOCIAL** — guild-activity dedup, friend-activity authorization (viewer-scoped), event
   attribution (verified-JWT userId), and boss-kill/step-milestone dedupe (deterministic ids) all sound.
 
-_8 fixes total across both rounds (W350–W357). selfTest stayed 37/37 throughout; production read-only; IAP/purchase untouched._
+---
+
+# Round 3 — 2026-06-16 (onboarding/first-run, day-reset, skins, stats/share-cards)
+
+**Outcome: 0 new autonomous fixes — and that is the valuable result.** Four read-only finder
+agents produced 7 confident "high" findings; verification against the real code rejected 3
+(one of which would have been catastrophic) and deferred 4 (a dormant, off-limits system).
+Plus one deferred round-2 item was completed:
+
+| Item | Verdict | Why |
+|---|---|---|
+| **W358** `e90d8c7` | ✅ SHIPPED | Completed V5: `verified_streak` event id made deterministic + **source-scoped** (the seen-marker is per-(source,band), so a bare band-only id would have wrongly deduped a real workout-30 *and* sleep-30 into one feed entry). All five PAE ids now deterministic. |
+| #1 onboarding XP double-grant | ❌ REJECTED | The +25 grant at `app.js:41750` is guarded by its own persisted flag `hb_onboarding_first_xp_awarded_v1`, checked+set in one synchronous block. The interrupted-onboarding path grants **exactly once**, not twice. Comment documents the intent verbatim. |
+| #2 + #3 streaks/completions use PT not device-local | ❌ REJECTED (would have been **catastrophic**) | The agent inverted the comment at `app.js:16014`: it says device-local is for features that are *not* the **"PT-anchored streak day."** Streaks/completions are **intentionally** PT-anchored to align with the PT leaderboard. The "fix" would shift every user's streak boundary up to 7h, break existing streak continuity, and desync from the leaderboard. |
+| #4–#7 skins/entitlements (no ownership check, not loaded at init, no invalid-file fallback, silent entitlement-fetch catch) | ⚠️ DEFERRED | The skins IAP is **dormant** (shipped without skins, gated behind `IAP_ENABLED`) → zero live impact (no one can own/equip a premium skin), and the entitlement code is adjacent to the owner's parallel RevenueCat track. Real for when skins go live; not touched autonomously. Logged here. |
+
+Round 3 confirms onboarding idempotency, the (intentional) PT-anchored day model, and stats/share-card
+computations are sound; the only real issues are in the dormant, off-limits skins system.
+
+---
+
+_9 fixes total across rounds 1–3 (W350–W358). Roughly as many findings were rejected/deferred after
+verification as were shipped — the verify-before-fix discipline held throughout. selfTest stayed 37/37;
+production read-only; IAP/purchase untouched. A round-4 (combat/relic/drop/XP math) is in progress._
