@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w356';
+  const APP_BUILD_TAG = '2.2.7-w357'; // W357
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18113,7 +18113,7 @@
       eventLabel:      _PAE_VERIFIED_WORKOUT_LABEL,
       eventValue:      null,
       rarity:          null,
-      clientEventId:   'verified_workout:' + dateKey + ':' + Date.now().toString(36),
+      clientEventId:   'verified_workout:' + dateKey,
       clientCreatedAt: new Date().toISOString(),
     });
     try { localStorage.setItem(mk, '1'); } catch (_) {}
@@ -18130,7 +18130,7 @@
       eventLabel:      _PAE_VERIFIED_SLEEP_7H_LABEL,
       eventValue:      null,
       rarity:          null,
-      clientEventId:   'verified_sleep_7h:' + nightDateKey + ':' + Date.now().toString(36),
+      clientEventId:   'verified_sleep_7h:' + nightDateKey,
       clientCreatedAt: new Date().toISOString(),
     });
     try { localStorage.setItem(mk, '1'); } catch (_) {}
@@ -18150,7 +18150,7 @@
         eventLabel:      'climbed ' + bucket + ' flights today',
         eventValue:      bucket,
         rarity:          null,
-        clientEventId:   'flights_milestone_bucket:' + dateKey + ':' + bucket + ':' + Date.now().toString(36),
+        clientEventId:   'flights_milestone_bucket:' + dateKey + ':' + bucket,
         clientCreatedAt: new Date().toISOString(),
       });
       try { localStorage.setItem(mk, '1'); } catch (_) {}
@@ -18384,7 +18384,7 @@
       eventLabel:      'joined the 100K Step Club',
       eventValue:      100000,
       rarity:          null,
-      clientEventId:   'step_100k_club:' + Date.now().toString(36),
+      clientEventId:   'step_100k_club',
       clientCreatedAt: new Date().toISOString(),
     });
     try { localStorage.setItem(_PAE_STEP_100K_SUBMITTED_KEY, '1'); } catch (_) {}
