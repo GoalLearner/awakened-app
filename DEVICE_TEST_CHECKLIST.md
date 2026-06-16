@@ -41,6 +41,31 @@ These render NOTHING until `IAP_ENABLED=true` (auth.js) — so on this build the
   + the in-app Day-2 welcome-back (W339).
 - In the JS console: `Arena.selfTest()` → **37/37**.
 
+## Correctness sprint (W350–W359) — data-integrity fixes (next build, 2.2.7-w359)
+Five 5-round read-only audits → 10 verified fixes (full record in CORRECTNESS_AUDIT.md). Most are
+edge-case / crash-window / backend-logic and **can't be forced on a device** — listed at the end for
+awareness. These **are** device-checkable:
+
+- **W359 — can't sell an equipped relic (the highest-value one).** Equip a relic in your **Hunter
+  Build**, get it down to a **single copy** (count 1), then try to **sell** it.
+  ✅ PASS: the sale is **blocked** ("equipped"). Unequip it from the build → now it **can** be sold.
+  ✗ FAIL (the old bug): it sells, and the build slot is left pointing at a relic you no longer own.
+- **W352 — ascent record counts once.** Engage a boss, then **forfeit / lose**.
+  ✅ PASS: your win/loss record changes by exactly **one** (a forfeit records the loss once; no double-count).
+- **W355 — souls charged correctly.** Buy a relic, and separately engage a boss.
+  ✅ PASS: balance drops by **exactly** the price/cost; if you can't afford it the action is refused and
+  nothing is granted/charged.
+- **W356 — deleting a habit clears its note.** Add a note to a habit → delete that habit → create a new
+  habit. ✅ PASS: no stale note appears; `hb_notes` has no orphaned entry.
+- **W351 — reminders re-arm after permission recovery.** In iOS Settings, **deny** notifications, reopen
+  the app, then **re-grant** them. ✅ PASS: per-habit reminders re-arm **immediately** (not only after the
+  next cold start).
+
+_Logic-only (verified by code/tests, not forceable on device): W350 souls-underflow guards · W353 flights
+PT-week sum · W354 mythic pity reset · W357/W358 social-feed crash-window de-dupe · (W349 submit timeliness)._
+
 ## Ship
-- Build with `prep-local-build.sh 317` (it syncs the native Marketing Version from APP_VERSION = 2.2.7).
-- Xcode → Product → Archive → Distribute. Bundles everything through **W348** + the handoff docs.
+- Build with `prep-local-build.sh <next#>` (it syncs the native Marketing Version from APP_VERSION = 2.2.7).
+- Xcode → Product → Archive → Distribute. The next build bundles everything through **W359** + the
+  correctness-sprint fixes (W349–W359) and the handoff docs.
+- In the JS console after launch: `Arena.selfTest()` → **37/37**.
