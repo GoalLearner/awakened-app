@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w343';
+  const APP_BUILD_TAG = '2.2.7-w344';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -23828,6 +23828,18 @@
     const isLate = hour >= 23;
 
     if (isLate && !streakDangerDismissed) {
+      // W344 — stakes-aware copy: name the chain on the line + the count left.
+      try {
+        const _sdRemaining = todayHabits.filter(function (h) { return !isChecked(h.id); }).length;
+        const _sdChain = (perfectStreak && perfectStreak.lastDate === prevDay(today)) ? (perfectStreak.count || 0) : 0;
+        const _sdTxt = el.querySelector('.sd-text');
+        if (_sdTxt) {
+          const _sdUnit = _sdRemaining === 1 ? ' habit' : ' habits';
+          _sdTxt.textContent = _sdChain >= 1
+            ? 'Your ' + _sdChain + '-day chain breaks at midnight \u2014 ' + _sdRemaining + _sdUnit + ' to go.'
+            : 'Under an hour left \u2014 ' + _sdRemaining + _sdUnit + ' to go.';
+        }
+      } catch (_) {}
       el.classList.remove('hidden');
     } else {
       el.classList.add('hidden');
