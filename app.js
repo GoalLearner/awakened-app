@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w364'; // W364
+  const APP_BUILD_TAG = '2.2.7-w365'; // W365
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22903,11 +22903,24 @@
     const sealed = arr.reduce((n, h) => n + (isChecked(h.id) ? 1 : 0), 0);
     const pct = total > 0 ? Math.round((sealed / total) * 100) : 0;
     hdr.innerHTML =
-      '<div class="vows-header-titles">' +
-        '<div class="vows-header-kicker">TODAY’S VOWS</div>' +
-        '<div class="vows-header-title">Seal your vows</div>' +
+      '<div class="vows-header-row">' +
+        '<div class="vows-header-titles">' +
+          '<div class="vows-header-kicker">TODAY’S VOWS</div>' +
+          '<div class="vows-header-title">Seal your vows</div>' +
+        '</div>' +
+        '<button class="vows-manage-btn" type="button" aria-label="Manage Vows">' +
+          '<svg class="vows-manage-glyph" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
+            '<path d="M10 3.2 16.8 10 10 16.8 3.2 10z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity="0.5"/>' +
+            '<path d="M12.4 2.1l3.4 3.4-2 2-3.4-3.4z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="currentColor" fill-opacity="0.2"/>' +
+          '</svg>' +
+          '<span>Manage</span>' +
+        '</button>' +
       '</div>' +
       '<div class="vows-header-bar"><div id="vows-header-fill" class="vows-header-fill" style="width:' + pct + '%"></div></div>';
+    // W365 — wire the in-header Manage control. Re-attached each render because
+    // this innerHTML is rebuilt; the prior button (and its listener) is discarded.
+    var _mvBtn = hdr.querySelector('.vows-manage-btn');
+    if (_mvBtn) _mvBtn.addEventListener('click', function () { try { openManageVows(); } catch (_) {} });
   }
 
   // v3 Phase 1z.284 W192 — One-time List View introduction hint.
@@ -47189,12 +47202,8 @@
       if (fmRow) fmRow.addEventListener('click', function () {
         try { openFieldManual(); } catch (_) {}
       });
-      // W336 — Manage Vows entry relocated to the Habits-tab footer (was a
-      // Settings row). Opens the soft-archive sheet; always accessible.
-      const mvRow = document.getElementById('habits-manage-vows');
-      if (mvRow) mvRow.addEventListener('click', function () {
-        try { openManageVows(); } catch (_) {}
-      });
+      // W365 — Manage Vows now lives in the "Seal your vows" header (wired in
+      // _renderVowsHeader); the W336/W364 footer button was removed.
       // v3 Phase 1z.283 — Manage Vows sheet chrome wiring.
       const mvClose = document.getElementById('mv-close-btn');
       const mvDone  = document.getElementById('mv-done-btn');
