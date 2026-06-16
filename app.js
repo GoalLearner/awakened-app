@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w334';
+  const APP_BUILD_TAG = '2.2.7-w335';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -39911,6 +39911,17 @@
       if (!body) return;
       toggle.addEventListener('click', () => {
         const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        // W335 — one-at-a-time accordion: collapse any other open group first.
+        if (!expanded) {
+          toggles.forEach(other => {
+            if (other === toggle) return;
+            const ob = document.getElementById(other.id.replace('-toggle', '-body'));
+            if (ob && !ob.classList.contains('settings-collapsible-body--collapsed')) {
+              other.setAttribute('aria-expanded', 'false');
+              ob.classList.add('settings-collapsible-body--collapsed');
+            }
+          });
+        }
         toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
         body.classList.toggle('settings-collapsible-body--collapsed', expanded);
       });

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=427">
+  <link rel="stylesheet" href="styles.css?v=428">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2897,7 +2897,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=779"></script>
+  <script src="app.js?v=780"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3074,15 +3074,20 @@
       <button id="settings-close" class="settings-close-btn" aria-label="Close">✕</button>
     </div>
 
-    <!-- W326 — Become a Founder entry (gold-tinted hero row). Opens the
-         Founder's Lifetime offer sheet. -->
-    <button id="settings-founder-row" class="settings-v2-wctop settings-v2-founder" type="button">
-      <span class="settings-v2-wctop-spark" aria-hidden="true">✦</span>
-      <span class="settings-v2-wctop-text">
-        <span class="settings-v2-wctop-label">Become a Founder</span>
-        <span class="settings-v2-wctop-sub">Back Awakened. Yours forever.</span>
+    <!-- W335 — ClaudeDesign Settings redesign: single Founder banner (was 5 hero cards). -->
+    <button id="settings-founder-row" class="settings-founder-banner" type="button">
+      <span class="settings-founder-glow" aria-hidden="true"></span>
+      <span class="settings-founder-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2.5l2.2 6.4 6.8.2-5.4 4.1 2 6.5-5.6-4-5.6 4 2-6.5-5.4-4.1 6.8-.2z" fill="#f5b842" stroke="#f7c558" stroke-width="0.8" stroke-linejoin="round"/></svg>
       </span>
-      <span class="settings-v2-wctop-chev" aria-hidden="true">›</span>
+      <span class="settings-founder-text">
+        <span class="settings-founder-titlerow">
+          <span class="settings-founder-title">Become a Founder</span>
+          <span class="settings-founder-badge">LIFETIME</span>
+        </span>
+        <span class="settings-founder-sub">Back Awakened. Yours forever.</span>
+      </span>
+      <span class="settings-founder-chev" aria-hidden="true">›</span>
     </button>
 
     <!-- W330 — guest claim CTA. Shown only for guests (JS toggles via
@@ -3101,56 +3106,8 @@
       <span class="settings-v2-fmrow-chev" aria-hidden="true">›</span>
     </button>
 
-    <!-- v3 Phase 1z.231 — promoted "What's Coming" hero card. Lives
-         at the top of the sheet (above the list) so users see the
-         teaser before any settings rows. Opens the atmospheric
-         Combat Reveal sheet (1z.230). -->
-    <button id="settings-whats-coming-top" class="settings-v2-wctop" type="button">
-      <span class="settings-v2-wctop-spark" aria-hidden="true">✦</span>
-      <span class="settings-v2-wctop-text">
-        <span class="settings-v2-wctop-label">What's Coming</span>
-        <span class="settings-v2-wctop-sub">A glimpse</span>
-      </span>
-      <span class="settings-v2-wctop-chev" aria-hidden="true">›</span>
-    </button>
-
-    <!-- v3 Phase 1z.282 — Field Manual entry. Premium-highlighted row
-         that mirrors the .settings-v2-wctop visual treatment but with
-         a Field-Manual rule-glyph and gold "system manual" framing.
-         Opens the Field Manual bottom sheet hosted by The First
-         Awakened. Always re-readable; no first-time storage key. -->
-    <button id="settings-field-manual-row" class="settings-v2-fmrow" type="button">
-      <span class="settings-v2-fmrow-glyph" aria-hidden="true">
-        <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
-          <path d="M16 3 L29 16 L16 29 L3 16 Z" stroke="#f5b842" stroke-width="1.4"/>
-          <circle cx="16" cy="16" r="3" fill="#f5b842"/>
-        </svg>
-      </span>
-      <span class="settings-v2-fmrow-text">
-        <span class="settings-v2-fmrow-label">Field Manual</span>
-        <span class="settings-v2-fmrow-sub">The system, plainly stated.</span>
-      </span>
-      <span class="settings-v2-fmrow-chev" aria-hidden="true">›</span>
-    </button>
-
-    <!-- v3 Phase 1z.283 — Manage Vows entry. Same premium row pattern.
-         Custom "release sigil" — a diamond with one corner detached,
-         lifted away — visual metaphor for soft archive (the vow is
-         not destroyed; it simply leaves the active list). -->
-    <button id="settings-manage-vows-row" class="settings-v2-fmrow" type="button">
-      <span class="settings-v2-fmrow-glyph" aria-hidden="true">
-        <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
-          <path d="M16 29 L3 16 L16 3 L24 11" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M16 29 L29 16 L24.5 11.5" stroke="#f5b842" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
-          <path d="M27 8 L31 12 L29 14 L25 10 Z" fill="#f5b842" opacity="0.9"/>
-        </svg>
-      </span>
-      <span class="settings-v2-fmrow-text">
-        <span class="settings-v2-fmrow-label">Manage Vows</span>
-        <span class="settings-v2-fmrow-sub">Release vows you no longer keep.</span>
-      </span>
-      <span class="settings-v2-fmrow-chev" aria-hidden="true">›</span>
-    </button>
+    <!-- W335 — What's Coming / Field Manual moved into Help & About; Manage
+         Vows moved into the Habits group (below). -->
 
     <div class="settings-v2-list">
 
@@ -3193,14 +3150,9 @@
             <button id="settings-cloud-backup-now" type="button" class="settings-v2-btn settings-v2-btn--gold">Back up now</button>
             <button id="settings-cloud-restore-now" type="button" class="settings-v2-btn settings-v2-btn--ghost">Restore</button>
           </div>
+          <!-- W335 — Delete account relocated to the Danger zone. -->
           <div class="settings-v2-btnrow">
             <button id="settings-account-signout" type="button" class="settings-v2-btn settings-v2-btn--ghost">Sign out</button>
-            <button id="settings-account-delete" type="button" class="settings-v2-btn settings-v2-btn--redtext">Delete account</button>
-          </div>
-          <!-- W327 — App Store Restore Purchases (required for non-consumables;
-               wired to the existing Auth.restorePurchases). Distinct from the
-               cloud-backup Restore above. -->
-          <div class="settings-v2-btnrow">
             <button id="settings-restore-purchases" type="button" class="settings-v2-btn settings-v2-btn--ghost">Restore purchases</button>
           </div>
 
@@ -3351,37 +3303,95 @@
         </div><!-- /settings-health-body -->
       </div>
 
-      <!-- SOUND — inline row. Toggle relocated from header. -->
-      <div class="settings-v2-soundrow">
-        <span class="settings-collapsible-lbl">SOUND</span>
-        <span class="settings-v2-fright">
-          <button id="sound-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habit completion sounds"></button>
-        </span>
+      <!-- W335 — SOUND group (was loose Sound/Music/Volume rows) -->
+      <div class="settings-collapsible">
+        <button id="settings-sound-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="sound">
+          <span class="settings-collapsible-lbl">SOUND</span>
+          <span class="settings-collapsible-summary">Effects &amp; music</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-sound-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Sound effects</span>
+            <span class="settings-v2-fright">
+              <button id="sound-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habit completion sounds"></button>
+            </span>
+          </div>
+          <div class="settings-v2-frow">
+            <span class="settings-v2-fname">Music</span>
+            <span class="settings-v2-fright">
+              <button id="music-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Battle music"></button>
+            </span>
+          </div>
+          <div class="settings-v2-subh">Levels</div>
+          <div class="settings-v2-frow aud-volrow settings-vol-row">
+            <span class="settings-v2-fname">Music vol</span>
+            <input type="range" id="music-vol" min="0" max="100" step="5" aria-label="Music volume">
+          </div>
+          <div class="settings-v2-frow aud-volrow settings-vol-row">
+            <span class="settings-v2-fname">SFX vol</span>
+            <input type="range" id="sfx-vol" min="0" max="100" step="5" aria-label="Sound effects volume">
+          </div>
+        </div>
       </div>
 
-      <!-- W243 — battle audio: music toggle + volume sliders (persisted, applied live) -->
-      <div class="settings-v2-soundrow">
-        <span class="settings-collapsible-lbl">MUSIC</span>
-        <span class="settings-v2-fright">
-          <button id="music-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Battle music"></button>
-        </span>
-      </div>
-      <div class="settings-v2-soundrow aud-volrow">
-        <span class="settings-collapsible-lbl">MUSIC VOL</span>
-        <input type="range" id="music-vol" min="0" max="100" step="5" aria-label="Music volume">
-      </div>
-      <div class="settings-v2-soundrow aud-volrow">
-        <span class="settings-collapsible-lbl">SFX VOL</span>
-        <input type="range" id="sfx-vol" min="0" max="100" step="5" aria-label="Sound effects volume">
+      <!-- W335 — HABITS group (list view + Manage Vows). Manage Vows kept here
+           until its planned relocation to the Habits tab. -->
+      <div class="settings-collapsible">
+        <button id="settings-habits-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="habits">
+          <span class="settings-collapsible-lbl">HABITS</span>
+          <span class="settings-collapsible-summary">List view</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-habits-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+          <div class="settings-v2-frow">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Habit list view</div>
+              <div class="settings-v2-fsub">Show habits as a list instead of a grid</div>
+            </div>
+            <span class="settings-v2-fright">
+              <button id="settings-habits-view-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habits list view"></button>
+            </span>
+          </div>
+          <button id="settings-manage-vows-row" class="settings-v2-frow settings-v2-rowbtn" type="button">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Manage Vows</div>
+              <div class="settings-v2-fsub">Release vows you no longer keep</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+        </div>
       </div>
 
-      <!-- v3 Phase 1z.284 W191 — Habits view mode. List is the default
-           (inline HealthKit progress); flip OFF for the compact grid. -->
-      <div class="settings-v2-soundrow">
-        <span class="settings-collapsible-lbl">HABITS · LIST VIEW</span>
-        <span class="settings-v2-fright">
-          <button id="settings-habits-view-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habits list view"></button>
-        </span>
+      <!-- W335 — HELP & ABOUT group (Field Manual + What's Coming + Version/debug) -->
+      <div class="settings-collapsible">
+        <button id="settings-help-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="help">
+          <span class="settings-collapsible-lbl">HELP &amp; ABOUT</span>
+          <span class="settings-collapsible-summary">v2.2.7</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-help-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+          <button id="settings-field-manual-row" class="settings-v2-frow settings-v2-rowbtn" type="button">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Field Manual</div>
+              <div class="settings-v2-fsub">The system, plainly stated</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+          <button id="settings-whats-coming-top" class="settings-v2-frow settings-v2-rowbtn" type="button">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">What's Coming</div>
+              <div class="settings-v2-fsub">A glimpse of what's coming</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+          <div class="settings-v2-frow">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Version</div>
+              <div class="settings-v2-foot settings-ver-line" id="settings-app-ver">v2.2.7 · BUILD W334</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- LEGAL — collapsible (end-of-list per convention) -->
@@ -3401,21 +3411,26 @@
 
     </div><!-- /settings-v2-list -->
 
-    <!-- Reset all progress — alone, bottom block. Long warning lives
-         in the existing two-step #reset1-modal / #reset2-modal flow. -->
-    <button id="reset-open-btn" class="settings-v2-reset" type="button">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M3 4h10M6 4V2.6h4V4M5 4l.7 9.4h4.6L11 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Reset all progress
-    </button>
-
-    <!-- v3 Phase 1z.231 — bottom "What's Coming" link removed; the
-         hero card at the top of the sheet now owns this affordance. -->
-
-    <!-- Version footer — also the 5-tap debug-info unlock target.
-         _setupDebugInfoUnlock() wires the gesture to this element. -->
-    <div class="settings-v2-foot" id="settings-app-ver">v2.2.6 · BUILD W287</div>
+    <!-- W335 — Danger zone (ClaudeDesign Settings redesign). Reset keeps its
+         two-step #reset1/#reset2 flow; Delete account relocated here from the
+         Account group; version + 5-tap debug moved into Help & About. -->
+    <div class="settings-danger">
+      <div class="settings-danger-label">Danger zone</div>
+      <button id="reset-open-btn" class="settings-danger-row settings-danger-row--reset" type="button">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 4h10M6 4V2.6h4V4M5 4l.7 9.4h4.6L11 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Reset all progress</span>
+      </button>
+      <button id="settings-account-delete" class="settings-danger-row" type="button">
+        <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M3.5 15a5.5 5.5 0 0111 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M13.5 6l3 3m0-3l-3 3" stroke="#ef6a6a" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span>Delete account</span>
+      </button>
+    </div>
   </div>
 
   <!-- v3 Phase 1z.230 — "What's Coming · Combat Reveal" atmospheric

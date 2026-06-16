@@ -29427,3 +29427,77 @@ button.guildhall-summary-tile:active {
 .souls-info-ledger-btn:hover  { background: linear-gradient(180deg, #262040, #15132c); border-color: rgba(245,184,66,0.6); }
 .souls-info-ledger-btn:active { transform: scale(0.98); }
 
+/* ──────────────────────────────
+   W335 · ClaudeDesign "Settings" redesign
+   5 hero cards -> 1 Founder banner; flat collapsibles + loose toggles ->
+   uniform gem-headed group cards; Delete + Reset -> pinned Danger zone;
+   version 5-tap moved into Help & About. Inner row atoms (.settings-v2-frow/
+   -pill/-timechip/-seg/-btn/-cloudcard) are reused as-is.
+   ────────────────────────────── */
+.settings-sheet.settings-v2 { background: radial-gradient(140% 62% at 50% 0%, #15153a 0%, #0a0a22 60%); }
+.settings-v2 .settings-title { font-family: "Cinzel", Georgia, serif; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.5px; }
+
+/* Founder banner (single hero) */
+.settings-founder-banner {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 13px;
+  width: calc(100% - 32px); margin: 6px 16px 4px; padding: 15px 16px; border-radius: 16px;
+  text-align: left; cursor: pointer; font-family: inherit; color: inherit;
+  -webkit-appearance: none; appearance: none;
+  background: linear-gradient(180deg, rgba(245,184,66,0.13), rgba(245,184,66,0.03));
+  border: 1px solid rgba(245,184,66,0.45);
+  box-shadow: 0 0 0 1px rgba(245,184,66,0.08), 0 16px 36px rgba(0,0,0,0.45);
+}
+.settings-founder-glow { position: absolute; top: -56px; right: -40px; width: 170px; height: 170px; border-radius: 50%; background: radial-gradient(circle, rgba(245,184,66,0.2), transparent 70%); pointer-events: none; }
+.settings-founder-icon { position: relative; width: 46px; height: 46px; flex: none; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(180deg, rgba(245,184,66,0.22), rgba(245,184,66,0.05)); border: 1px solid rgba(245,184,66,0.45); }
+.settings-founder-text { position: relative; flex: 1; min-width: 0; }
+.settings-founder-titlerow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.settings-founder-title { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.06rem; letter-spacing: 0.4px; color: #f3f1fb; white-space: nowrap; }
+.settings-founder-badge { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 1.5px; color: #f5b842; padding: 3px 7px; border-radius: 6px; background: rgba(245,184,66,0.12); border: 1px solid rgba(245,184,66,0.35); }
+.settings-founder-sub { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 0.95rem; color: #caa258; margin-top: 3px; }
+.settings-founder-chev { position: relative; color: #caa258; font-size: 1.4rem; flex: none; }
+
+/* Group cards (gem-headed, separated) */
+.settings-v2 .settings-v2-list { display: flex; flex-direction: column; gap: 11px; padding: 2px 16px 0; }
+.settings-v2 .settings-v2-list .settings-collapsible {
+  margin: 0; border-radius: 16px; border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.035); overflow: hidden;
+}
+.settings-v2 .settings-v2-list .settings-collapsible + .settings-collapsible,
+.settings-v2 .settings-v2-list .settings-collapsible + .settings-v2-soundrow,
+.settings-v2 .settings-v2-list .settings-v2-soundrow + .settings-collapsible { border-top: none; }
+.settings-v2 .settings-collapsible-toggle { min-height: 56px; gap: 11px; }
+.settings-v2 .settings-collapsible-toggle::before {
+  content: ''; --grp: #9492ac; width: 9px; height: 9px; flex: none; transform: rotate(45deg); border-radius: 2px;
+  background: linear-gradient(135deg, var(--grp), color-mix(in srgb, var(--grp) 55%, transparent) 65%);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--grp) 33%, transparent);
+}
+.settings-v2 .settings-collapsible-toggle[data-collapsible="account"]::before  { --grp: #f5b842; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="reminders"]::before { --grp: #a78bfa; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="health"]::before    { --grp: #34d399; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="sound"]::before      { --grp: #5eead4; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="habits"]::before     { --grp: #a78bfa; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="help"]::before       { --grp: #c08efb; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="legal"]::before      { --grp: #9492ac; }
+.settings-v2 .settings-collapsible-lbl { font-size: 14px; letter-spacing: 1.4px; text-transform: uppercase; color: #f3f1fb; }
+
+/* volume rows inside the Sound group (keep .aud-volrow gold thumb, go full width) */
+.settings-v2 .settings-vol-row { gap: 11px; }
+.settings-v2 .settings-vol-row .settings-v2-fname { width: 78px; flex: none; }
+.settings-v2 .settings-vol-row input[type="range"] { flex: 1; width: auto; }
+
+/* version line inside Help & About */
+.settings-v2 .settings-ver-line { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; color: #5f5d78; margin-top: 3px; }
+
+/* Danger zone */
+.settings-danger { margin: 18px 16px 0; display: flex; flex-direction: column; gap: 9px; }
+.settings-danger-label { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 2.4px; color: #c98a8a; text-transform: uppercase; padding: 0 4px; }
+.settings-danger-row {
+  display: flex; align-items: center; gap: 11px; min-height: 52px; padding: 0 16px; width: 100%;
+  border-radius: 14px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.02);
+  cursor: pointer; text-align: left; font-family: inherit; color: #c98a8a;
+  -webkit-appearance: none; appearance: none;
+}
+.settings-danger-row span { font-family: -apple-system, system-ui, sans-serif; font-size: 15px; font-weight: 600; }
+.settings-danger-row--reset { border-color: rgba(239,106,106,0.3); background: rgba(239,106,106,0.06); color: #ef6a6a; }
+.settings-danger-row--reset span { font-weight: 700; }
+
