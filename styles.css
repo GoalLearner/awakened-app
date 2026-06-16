@@ -23452,15 +23452,6 @@ button.guildhall-summary-tile:active {
 }
 
 /* Inline SOUND row */
-.settings-v2 .settings-v2-soundrow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 54px;
-  padding: 0 16px;
-}
-
 /* Quiet-hours times row */
 .settings-v2 .settings-v2-quiettimes {
   display: flex;
@@ -23486,27 +23477,6 @@ button.guildhall-summary-tile:active {
 }
 
 /* Reset all progress */
-.settings-v2 .settings-v2-reset {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  width: calc(100% - 32px);
-  margin: 22px 16px 0;
-  min-height: 52px;
-  border-radius: 14px;
-  border: 1px solid rgba(240,89,107,0.32);
-  background: rgba(240,89,107,0.06);
-  color: #f0596b;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  font-family: inherit;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
 /* Version footer (5-tap debug unlock target) */
 .settings-v2 .settings-v2-foot {
   text-align: center;
@@ -23827,73 +23797,6 @@ button.guildhall-summary-tile:active {
    Tasteful gold-accent card: sparkle, Cinzel label, secondary teaser,
    chevron. Tappable across the entire row. Scoped under .settings-v2.
    ═══════════════════════════════════════════════════════════════════ */
-
-.settings-v2 .settings-v2-wctop {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: calc(100% - 32px);
-  margin: 4px 16px 14px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: linear-gradient(180deg,
-    rgba(245, 184, 66, 0.10),
-    rgba(139, 92, 246, 0.08));
-  border: 1px solid rgba(245, 184, 66, 0.32);
-  box-shadow: 0 0 18px rgba(245, 184, 66, 0.10);
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  font-family: inherit;
-  appearance: none;
-  -webkit-appearance: none;
-}
-.settings-v2 .settings-v2-wctop:active {
-  background: linear-gradient(180deg,
-    rgba(245, 184, 66, 0.14),
-    rgba(139, 92, 246, 0.12));
-}
-
-.settings-v2 .settings-v2-wctop-spark {
-  font-size: 22px;
-  color: #f5b842;
-  text-shadow: 0 0 12px rgba(245, 184, 66, 0.55);
-  flex: 0 0 auto;
-  line-height: 1;
-}
-
-.settings-v2 .settings-v2-wctop-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.settings-v2 .settings-v2-wctop-label {
-  font-family: "Cinzel", "Cormorant Garamond", Georgia, serif;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 1.4px;
-  color: #ffd270;
-  text-shadow: 0 0 10px rgba(245, 184, 66, 0.35);
-  line-height: 1.2;
-}
-.settings-v2 .settings-v2-wctop-sub {
-  font-family: "Cormorant Garamond", Georgia, serif;
-  font-style: italic;
-  font-size: 13px;
-  color: #bdbad6;
-  margin-top: 3px;
-  letter-spacing: 0.2px;
-}
-
-.settings-v2 .settings-v2-wctop-chev {
-  color: #f5b842;
-  font-size: 22px;
-  font-weight: 400;
-  flex: 0 0 auto;
-  opacity: 0.85;
-  margin-left: 2px;
-}
 
 /* ═══════════════════════════════════════════════════════════════════
    v3 Phase 1z.233 — Cinematic Onboarding (Direction A "Reveal")
@@ -29147,8 +29050,6 @@ button.guildhall-summary-tile:active {
 .founder-restore { background: none; border: 0; color: #8a8aa2; font-size: 0.82rem; padding: 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .founder-owned { text-align: center; padding: 16px; border-radius: 14px; font-weight: 700; color: #f5b842; background: rgba(245,184,66,0.10); border: 1px solid rgba(245,184,66,0.4); }
 .founder-fineprint { text-align: center; margin-top: 14px; font-size: 0.72rem; color: #6f6f88; letter-spacing: 0.03em; }
-.settings-v2-founder { background: linear-gradient(180deg, rgba(245,184,66,0.16), rgba(245,184,66,0.05)) !important; border-color: rgba(245,184,66,0.5) !important; }
-
 /* ── W328 · First-verified completion celebration (reuses comeback shell) ── */
 .firstverify-screen .cb-eyebrow { color: #f5b842; }
 .firstverify-screen .cb-xp { color: #e8c889; }
@@ -29475,7 +29376,7 @@ button.guildhall-summary-tile:active {
 .settings-v2 .settings-collapsible-toggle[data-collapsible="reminders"]::before { --grp: #a78bfa; }
 .settings-v2 .settings-collapsible-toggle[data-collapsible="health"]::before    { --grp: #34d399; }
 .settings-v2 .settings-collapsible-toggle[data-collapsible="sound"]::before      { --grp: #5eead4; }
-.settings-v2 .settings-collapsible-toggle[data-collapsible="habits"]::before     { --grp: #a78bfa; }
+.settings-v2 .settings-collapsible-toggle[data-collapsible="appearance"]::before     { --grp: #a78bfa; }
 .settings-v2 .settings-collapsible-toggle[data-collapsible="help"]::before       { --grp: #c08efb; }
 .settings-v2 .settings-collapsible-toggle[data-collapsible="legal"]::before      { --grp: #9492ac; }
 .settings-v2 .settings-collapsible-lbl { font-size: 14px; letter-spacing: 1.4px; text-transform: uppercase; color: #f3f1fb; }
@@ -29500,4 +29401,14 @@ button.guildhall-summary-tile:active {
 .settings-danger-row span { font-family: -apple-system, system-ui, sans-serif; font-size: 15px; font-weight: 600; }
 .settings-danger-row--reset { border-color: rgba(239,106,106,0.3); background: rgba(239,106,106,0.06); color: #ef6a6a; }
 .settings-danger-row--reset span { font-weight: 700; }
+
+/* W336 · Manage Vows link on the Habits-tab footer (subtle, under Add Habits) */
+#main-footer .habits-managevows-link {
+  display: block; width: 100%; margin: 8px 0 0; padding: 7px 0;
+  background: transparent; border: none; cursor: pointer; font-family: inherit;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--text-secondary); text-align: center;
+  -webkit-appearance: none; appearance: none;
+}
+#main-footer .habits-managevows-link:active { color: var(--text-primary); }
 

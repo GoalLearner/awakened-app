@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=428">
+  <link rel="stylesheet" href="styles.css?v=429">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1010,6 +1010,8 @@
         <span class="add-plus">+</span>
         <span>Add Habits</span>
       </button>
+      <!-- W336 — Manage Vows relocated here from Settings (release / archive vows). -->
+      <button id="habits-manage-vows" class="habits-managevows-link" type="button">Manage vows</button>
     </footer>
   </div>
 
@@ -2897,7 +2899,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=780"></script>
+  <script src="app.js?v=781"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3335,15 +3337,14 @@
         </div>
       </div>
 
-      <!-- W335 — HABITS group (list view + Manage Vows). Manage Vows kept here
-           until its planned relocation to the Habits tab. -->
+      <!-- W336 — APPEARANCE group (Manage Vows relocated to the Habits tab). -->
       <div class="settings-collapsible">
-        <button id="settings-habits-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="habits">
-          <span class="settings-collapsible-lbl">HABITS</span>
+        <button id="settings-appearance-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="appearance">
+          <span class="settings-collapsible-lbl">APPEARANCE</span>
           <span class="settings-collapsible-summary">List view</span>
           <span class="settings-collapsible-chevron">›</span>
         </button>
-        <div id="settings-habits-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+        <div id="settings-appearance-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
           <div class="settings-v2-frow">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Habit list view</div>
@@ -3353,13 +3354,6 @@
               <button id="settings-habits-view-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habits list view"></button>
             </span>
           </div>
-          <button id="settings-manage-vows-row" class="settings-v2-frow settings-v2-rowbtn" type="button">
-            <div class="settings-v2-fcol">
-              <div class="settings-v2-fname">Manage Vows</div>
-              <div class="settings-v2-fsub">Release vows you no longer keep</div>
-            </div>
-            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
-          </button>
         </div>
       </div>
 

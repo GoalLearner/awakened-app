@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w335';
+  const APP_BUILD_TAG = '2.2.7-w336';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46890,10 +46890,9 @@
       if (fmRow) fmRow.addEventListener('click', function () {
         try { openFieldManual(); } catch (_) {}
       });
-      // v3 Phase 1z.283 — Manage Vows entry point in Settings.
-      // Opens the soft-archive sheet. Always accessible (no storage
-      // gate — users may want to release vows before hitting the cap).
-      const mvRow = document.getElementById('settings-manage-vows-row');
+      // W336 — Manage Vows entry relocated to the Habits-tab footer (was a
+      // Settings row). Opens the soft-archive sheet; always accessible.
+      const mvRow = document.getElementById('habits-manage-vows');
       if (mvRow) mvRow.addEventListener('click', function () {
         try { openManageVows(); } catch (_) {}
       });
