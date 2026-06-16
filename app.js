@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w345';
+  const APP_BUILD_TAG = '2.2.7-w346';
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14606,17 +14606,28 @@
   // doesn't hammer the backend. The flag is written BEFORE the
   // submit fires so two near-simultaneous visibility events still
   // only result in one network roundtrip.
+  // W346 — has the local weekly step total advanced past what we last
+  // submitted to the board? Used to break the 5-min throttle on app
+  // foreground so a user's real steps reach others without a long lag.
+  function _lbStepsAdvancedSinceSubmit() {
+    try {
+      const _s = lbGetSnapshot();
+      const localSteps = (_s && _s.steps_last_7_days) || 0;
+      const lastSub = parseInt(localStorage.getItem('hb_lb_last_step_submitted') || '0', 10) || 0;
+      return localSteps > lastSub;
+    } catch (_) { return false; }
+  }
   const LB_SUBMIT_DEBOUNCE_MS = 5 * 60 * 1000;
   // v3 Phase 1z.254 — Concurrency guard so the new lbRecordStepsToday
   // trigger (which calls debounced when HK step data lands) can't
   // race with the existing cold-launch / visibilitychange triggers.
   let _lbSubmitInFlight = false;
-  function lbSubmitAllMetricsDebounced() {
+  function lbSubmitAllMetricsDebounced(force) {
     try {
       if (_lbSubmitInFlight) return;
       const lastStr = localStorage.getItem('hb_lb_last_submit');
       const last    = lastStr ? parseInt(lastStr, 10) : 0;
-      if (Number.isFinite(last) && (Date.now() - last) < LB_SUBMIT_DEBOUNCE_MS) {
+      if (!force && Number.isFinite(last) && (Date.now() - last) < LB_SUBMIT_DEBOUNCE_MS) {
         return;
       }
       // v3 Phase 1z.254 — Throttle stamp moved from BEFORE the call to
@@ -14630,7 +14641,13 @@
         .then(() => lbSubmitAllMetrics())
         .then((didSubmit) => {
           if (didSubmit) {
-            try { localStorage.setItem('hb_lb_last_submit', String(Date.now())); } catch (_) {}
+            try {
+              localStorage.setItem('hb_lb_last_submit', String(Date.now()));
+              // W346 — remember the step value we just submitted so the foreground
+              // catch-up can tell when local steps have advanced past the board.
+              const _lbS = lbGetSnapshot();
+              localStorage.setItem('hb_lb_last_step_submitted', String((_lbS && _lbS.steps_last_7_days) || 0));
+            } catch (_) {}
           }
         })
         .catch(() => {})
@@ -18375,6 +18392,10 @@
       queued++;
     }
     if (queued > 0) {
+      // W346 — a new step milestone just crossed; push the leaderboard snapshot
+      // immediately (force past the 5-min throttle) so others see the real steps
+      // at the same moment the guild feed credits them.
+      try { lbSubmitAllMetricsDebounced(true); } catch (_) {}
       try {
         seen[dateKey] = Array.from(seenSet);
         // Keep the seen map bounded — drop entries older than 7 days.
@@ -47152,7 +47173,7 @@
       // v2.1.0 Phase C — push fresh metric snapshot to backend on
       // resume. Debounced to 5 min so rapid foreground/background
       // cycling doesn't hammer the workers.
-      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      try { lbSubmitAllMetricsDebounced(_lbStepsAdvancedSinceSubmit()); } catch (_) {}
       // v3 Phase 1z.279 — Header duel pill refresh removed (Duels
       // permanently retired). What remains below is the Social tab
       // foreground render which is now Friends-only.
@@ -47186,7 +47207,7 @@
       // v2.1.0 Phase C — fire the leaderboard snapshot submission
       // after main app mounts. Debounced via hb_lb_last_submit so a
       // hot relaunch within 5 min stays quiet.
-      try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      try { lbSubmitAllMetricsDebounced(_lbStepsAdvancedSinceSubmit()); } catch (_) {}
       // v3 Phase 1z.279 — Duels permanently retired. Cold-launch no
       // longer wires the header duel pill or kicks duel scoring. The
       // outbox drain remains so any legacy queued events get flushed
