@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w367'; // W367
+  const APP_BUILD_TAG = '2.2.7-w368'; // W368
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33859,16 +33859,17 @@
       const isMe = myAlias && m.alias === myAlias;
       const aliasDisplay = lbNormalizeAliasForDisplay(m.alias);
       const weekLabel = lbFormatWeekRangeFromIso(m.unlock_week_start, m.unlock_week_end);
-      const repeats = (typeof m.repeat_count === 'number' && m.repeat_count > 1)
-        ? ('Qualified ' + m.repeat_count + 'x')
+      // W368 — repeat qualifiers get a gold ×N prestige chip beside the name
+      // (was a quiet grey "Qualified Nx" sub-line). best_value stays the headline.
+      const mult = (typeof m.repeat_count === 'number' && m.repeat_count > 1)
+        ? '<span class="lb-club-mult" title="Qualified ' + m.repeat_count + ' separate weeks">×' + m.repeat_count + '</span>'
         : '';
       const rowClass = 'lb-rank-row lb-rank-row--club-100k' + (isMe ? ' lb-rank-row--me' : '');
-      const subRow = [weekLabel, repeats].filter(Boolean).join(' · ');
       return '<div class="' + rowClass + '">' +
         '<span class="lb-rank-pos">#' + (m.rank || '?') + '</span>' +
         '<span class="lb-rank-name">' +
-          esc(aliasDisplay || '—') +
-          (subRow ? '<span class="lb-rank-row__weeks">' + esc(subRow) + '</span>' : '') +
+          esc(aliasDisplay || '—') + mult +
+          (weekLabel ? '<span class="lb-rank-row__weeks">' + esc(weekLabel) + '</span>' : '') +
         '</span>' +
         '<span class="lb-rank-value">' + esc(lbFormatStepsCompact(m.best_value)) + ' steps</span>' +
       '</div>';
@@ -33882,17 +33883,16 @@
       return '<div class="lb-rank-mebest__empty">No 100K Club record yet. Reach 100,000 verified steps in one week to join.</div>';
     }
     const weekLabel = lbFormatWeekRangeFromIso(me.unlock_week_start, me.unlock_week_end);
-    const repeats = (typeof me.repeat_count === 'number' && me.repeat_count > 1)
-      ? (' · Qualified ' + me.repeat_count + 'x')
+    const mult = (typeof me.repeat_count === 'number' && me.repeat_count > 1)
+      ? ' <span class="lb-club-mult" title="Qualified ' + me.repeat_count + ' separate weeks">×' + me.repeat_count + '</span>'
       : '';
     return (
       '<div>' +
         '<div class="lb-rank-mebest__label">Your 100K Club record</div>' +
         '<div class="lb-rank-mebest__value">' +
           '#' + (me.rank || '?') + ' · ' +
-          esc(lbFormatStepsCompact(me.best_value)) + ' steps' +
+          esc(lbFormatStepsCompact(me.best_value)) + ' steps' + mult +
           (weekLabel ? ' · ' + esc(weekLabel) : '') +
-          esc(repeats) +
         '</div>' +
       '</div>'
     );
