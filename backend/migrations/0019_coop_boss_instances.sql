@@ -14,7 +14,8 @@
 --   completed — resolved as a WIN (result='success'); combined >= goal.
 --   expired   — 24h elapsed without reaching the goal (result='defeat').
 --   declined  — partner declined the invite.
---   cancelled — challenger withdrew a still-pending invite.
+--   cancelled — challenger withdrew a pending invite, OR either participant
+--               left an active hunt (W384).
 --
 -- The combined step total is NOT stored here — it is computed live from
 -- verified_events (see 0020) as SUM over participants of MAX(value) per

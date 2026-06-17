@@ -417,8 +417,13 @@ export async function handleCoopBossCancel(
   const row = await loadInstance(env, id);
   if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
 
+  // W384.1 — participant gate FIRST (matches handleCoopBossGet/Resolve), so a
+  // non-participant gets a uniform 403 for ANY status (no terminal-vs-active
+  // state enumeration via 400-vs-403).
+  if (!isParticipant(row, session.userId)) {
+    return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
+  }
   const isChallenger = row.challenger_user_id === session.userId;
-  const isPartner = row.partner_user_id === session.userId;
 
   if (row.status === 'pending') {
     // Withdraw an invite the partner hasn't accepted yet — challenger only
@@ -427,10 +432,7 @@ export async function handleCoopBossCancel(
       return jsonError(403, 'FORBIDDEN', 'Only the challenger can withdraw a pending invite.');
     }
   } else if (row.status === 'active') {
-    // Leave an in-progress hunt — EITHER participant may.
-    if (!isChallenger && !isPartner) {
-      return jsonError(403, 'FORBIDDEN', 'Only a hunter in this hunt can leave it.');
-    }
+    // Leave an in-progress hunt — EITHER participant may (verified above).
     // Don't let a leave throw away an already-earned win: if the combined goal
     // is met it must resolve as a WIN, not vanish. (The client also auto-resolves
     // on goal-met; this guards the small race where a leave races the resolve.)
@@ -442,18 +444,24 @@ export async function handleCoopBossCancel(
     return jsonError(400, 'BAD_STATE', `Cannot cancel from status "${row.status}".`);
   }
 
-  await env.DB.prepare(
+  const upd = await env.DB.prepare(
     `UPDATE coop_boss_instances
         SET status = 'cancelled', resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND status IN ('pending','active')`,
   )
     .bind(id)
     .run();
+  const cancelled = Number(upd?.meta?.changes ?? 0) > 0;
 
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back instance.');
   const aliasMap = await getAliasMap(env, [refreshed.challenger_user_id, refreshed.partner_user_id]);
-  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, new Map()) });
+  // W384.1 — if the cancel did NOT apply (it raced a /resolve or expiry that
+  // committed a terminal status first), return the REAL current row with REAL
+  // steps so the client can still award a won hunt and show correct totals.
+  // When it DID cancel, the steps are irrelevant (empty map is fine).
+  const byUser = cancelled ? new Map<string, number>() : await getCoopStepsByUser(env, refreshed.id);
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, byUser) });
 }
 
 /** Shared pending→terminal transition for decline/cancel. */
