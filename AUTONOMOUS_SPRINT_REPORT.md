@@ -200,6 +200,21 @@ testing, conflicts with another finding, or is a product decision.
   Confirmed but currently unreachable (IAP gated off / undeployed). Fix before enabling IAP:
   ensure `configurePurchases()` completes first. *(Left alone — your real-money domain + dormant.)*
 
+### Security hardening (hunt #4 — the keys-to-the-kingdom paths are CLEAN)
+A 4th adversarial hunt (find → refute) over the security-critical backend found **no
+reachable defects**: **JWT / Apple-sign-in verification, cloud-sync isolation (no
+cross-user read/write), and the verified-events ingest (no user_id / boss-instance
+spoof; the dedup holds)** all returned **zero findings**. Two LOW defense-in-depth
+notes remain on the **dormant** RevenueCat webhook (both refuted as non-reachable
+today, both need a worker deploy — fix before enabling IAP):
+- **[LOW] No rate-limiter** — the only public endpoint without an `RL_*` binding. Not
+  abusable (the shared-secret check is the first statement and short-circuits before
+  any JSON parse / DB write), but add `RL_REVENUECAT_WEBHOOK` keyed on `CF-Connecting-IP`
+  for symmetry with `/v1/auth/verify`.
+- **[LOW] Non-constant-time secret compare** (`provided !== expected`) — a theoretical
+  timing side-channel with no measurable signal behind Cloudflare's edge (cosmetic-skin
+  blast radius only). Optional: constant-time compare when you wire IAP.
+
 ### Performance (mobile WebView, boot/asset critical path)
 - **[HIGH] Dungeon-gate PNGs are ~6–10× oversized** — six gate images are
   ~1122×1402 / ~2.5MB each but shown at ~150px (~15MB total). Re-export at ~400px
