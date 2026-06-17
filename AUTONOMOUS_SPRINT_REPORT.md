@@ -24,9 +24,20 @@ balance changes, no backend migrations or deploys, no IAP, nothing outward-facin
 | `fd55f5c` | **W377** — pre-launch correctness sprint: 4 verified fixes |
 | `6fcfeab` | **W378** — Arena: exit mid-final-blow now commits the rated result |
 | `0f6e2c7` | **W379** — a11y: active-tab `aria-current` + dialog semantics |
+| `e3ae8e4` | **W380** — fix a W378 regression caught by self-review (see below) |
 
-Cache knobs advanced `v5.711 → v5.715` (app.js?v=820 → 824, build w375 → w379).
+Cache knobs advanced `v5.711 → v5.716` (app.js?v=820 → 825, build w375 → w380).
 `APP_VERSION` (2.2.7) left untouched — that's your release knob.
+
+> **Self-review caught my own bug.** I ran an adversarial regression review over my
+> own W377–W379 diff before it could reach your build. W377 and W379 came back
+> clean, but it found a **real high-severity regression in W378**: my exit-finalize
+> routed *all* decided-but-uncommitted rated fights straight to the tower — fine for
+> a loss, but for a **floor-100 WIN** it committed the win yet skipped the summit
+> ceremony **and `_hallRecordFinish()`** (the once-per-device eternal Hall ordinal,
+> reachable from no other path). Fixed in **W380** by routing wins through the
+> canonical `_arFinishSession()` and independently re-verified SAFE. This is exactly
+> why I self-reviewed — the regression would otherwise have shipped silently.
 
 ---
 
