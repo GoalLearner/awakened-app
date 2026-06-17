@@ -400,14 +400,60 @@ export async function handleCoopBossDecline(
   return setTerminalStatus(env, session, id, 'declined', 'partner');
 }
 
-// ── POST /v1/coop-boss/:id/cancel — challenger withdraws ────────────
+// ── POST /v1/coop-boss/:id/cancel — withdraw a PENDING invite (challenger
+//    only) OR leave an ACTIVE hunt (either participant). W384.
+//    Co-op has no economy/penalty stake (nothing is wagered; rewards land only
+//    on a win), so leaving an active hunt simply forfeits both hunters' in-window
+//    progress — there is nothing to refund and nothing to exploit.
 export async function handleCoopBossCancel(
   _request: Request,
   env: Env,
   session: SessionPayload,
   id: string,
 ): Promise<Response> {
-  return setTerminalStatus(env, session, id, 'cancelled', 'challenger');
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+
+  const row = await loadInstance(env, id);
+  if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
+
+  const isChallenger = row.challenger_user_id === session.userId;
+  const isPartner = row.partner_user_id === session.userId;
+
+  if (row.status === 'pending') {
+    // Withdraw an invite the partner hasn't accepted yet — challenger only
+    // (the partner uses /decline instead).
+    if (!isChallenger) {
+      return jsonError(403, 'FORBIDDEN', 'Only the challenger can withdraw a pending invite.');
+    }
+  } else if (row.status === 'active') {
+    // Leave an in-progress hunt — EITHER participant may.
+    if (!isChallenger && !isPartner) {
+      return jsonError(403, 'FORBIDDEN', 'Only a hunter in this hunt can leave it.');
+    }
+    // Don't let a leave throw away an already-earned win: if the combined goal
+    // is met it must resolve as a WIN, not vanish. (The client also auto-resolves
+    // on goal-met; this guards the small race where a leave races the resolve.)
+    const byUser = await getCoopStepsByUser(env, row.id);
+    if (combinedFrom(row, byUser) >= row.goal_steps) {
+      return jsonError(409, 'ALREADY_WON', 'This hunt already hit its goal — claim the win instead.');
+    }
+  } else {
+    return jsonError(400, 'BAD_STATE', `Cannot cancel from status "${row.status}".`);
+  }
+
+  await env.DB.prepare(
+    `UPDATE coop_boss_instances
+        SET status = 'cancelled', resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND status IN ('pending','active')`,
+  )
+    .bind(id)
+    .run();
+
+  const refreshed = await loadInstance(env, id);
+  if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back instance.');
+  const aliasMap = await getAliasMap(env, [refreshed.challenger_user_id, refreshed.partner_user_id]);
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, new Map()) });
 }
 
 /** Shared pending→terminal transition for decline/cancel. */
