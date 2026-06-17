@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w379'; // W379
+  const APP_BUILD_TAG = '2.2.7-w380'; // W380
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9641,12 +9641,18 @@
     // animation is mid-drain, so the single arenaFinalizeBattle at the KO/timeout
     // beat hasn't run) must still finalize on exit. Otherwise leaving during the
     // final-blow animation discards the result and refunds the daily life —
-    // dodging a rated loss. No confirm: the outcome is already determined; we only
-    // commit it. _arClearTimers() then cancels the pending drain (all beat timers
-    // route through _arTimers), so arenaFinalizeBattle runs exactly once.
+    // dodging a rated loss. _arClearTimers() cancels the pending drain first (all
+    // beat timers route through _arTimers), so the commit happens EXACTLY once.
     if (_arSess && _arSess.done && !_arSess._finalized && _arMatchup && _arMatchup.advances) {
+      _arClearTimers(); _arRevealing = false;
+      // W380 — a committed WIN must run the canonical finalize+render (_arFinishSession)
+      // so the victory screen, the F100 summit ceremony, AND the once-per-device
+      // _hallRecordFinish (the eternal Hall ordinal, reachable from NO other path)
+      // all fire — routing straight to the tower would silently drop them. A loss
+      // finalizes and returns to the tower like a forfeit.
+      if (_arSess.won) { _arFinishSession(); return; }
       try { _arFight = arenaFinalizeBattle(_arSess); _arSess._finalized = true; } catch (_) {}
-      _arClearTimers(); _arSess = null; _arRevealing = false; _arRenderTower(); return;
+      _arSess = null; _arRenderTower(); return;
     }
     if (_arView && _arView !== 'tower') { _arClearTimers(); _arRevealing = false; _arSess = null; _arRenderTower(); return; }
     closeArena();
