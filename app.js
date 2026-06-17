@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w371'; // W371
+  const APP_BUILD_TAG = '2.2.7-w372'; // W372
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -36593,23 +36593,23 @@
   // exactly like a solo kill.
   // ════════════════════════════════════════════════════════════
   const COOP_BOSSES = {
-    the_dire_pack: {
-      id:              'the_dire_pack',
-      name:            'The Dire Pack',
+    the_twin_maw: {
+      id:              'the_twin_maw',
+      name:            'The Twin Maw',
       rank:            'E',
-      artId:           'the_steel_wolf',   // reuse Steel Wolf art (mechanic now, art later)
+      artId:           'the_twin_maw',     // its own dedicated art (assets/bosses/the-twin-maw.png)
       dropSourceBoss:  'the_steel_wolf',   // shared E-rank relic pool
       coopGoalSteps:   16000,
       coopRewardSouls: 50,
       coopWindowHours: 24,
       statDomain:      'VIT',
-      flavorShort:     'A pack too vast for a lone hunter.',
-      flavorLong:      'Wolves move as one mind across the borderlands, too many teeth for a single blade. Hunt it with an ally, and split the miles between you.',
+      flavorShort:     'A beast with two heads, and no blind side.',
+      flavorLong:      'It coils across the old border road, one head watching the way ahead, the other the way behind. No lone traveler slips past both. Hunt it with an ally, and split its gaze between you.',
       killCondShort:   'Two hunters: 16,000 combined steps in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 16,000 verified steps between you. Both hunters are credited the kill.',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 16,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
     },
   };
-  const COOP_PRIMARY_BOSS_ID = 'the_dire_pack';
+  const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
   let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null };
   let _coopPollTimer = null;
 
@@ -36869,7 +36869,7 @@
   function _coopRecruitHtml(inst) {
     const cfg = _coopSheet.cfg;
     let note = '';
-    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The pack slipped away last time. The miles fell short.</div>';
+    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The Twin Maw slipped back into the mist last time. The miles fell short.</div>';
     else if (inst && (inst.status === 'declined' || inst.status === 'cancelled')) note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
     const dis = _coopSheet.busy ? ' disabled' : '';
     return (
@@ -36942,8 +36942,8 @@
     const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
     const combined = (inst.combined_steps || 0).toLocaleString('en-US');
     return (
-      '<div class="coop-victory">THE PACK FALLS</div>' +
-      '<p class="coop-lead">You and ' + themAlias + ' walked ' + combined + ' steps together. The Dire Pack is scattered.</p>' +
+      '<div class="coop-victory">BOTH HEADS FALL</div>' +
+      '<p class="coop-lead">You and ' + themAlias + ' walked ' + combined + ' steps together, enough to fell both heads of the Twin Maw.</p>' +
       '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 a relic claimed</div>' +
       '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
     );
