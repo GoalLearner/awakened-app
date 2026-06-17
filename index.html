@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=435">
+  <link rel="stylesheet" href="styles.css?v=436">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1211,6 +1211,25 @@
        hero art, long flavor, stats grid, kill condition, current
        progress, and a deferred DROPS section. Closed via Back button,
        ESC key, or any tab switch (handled in switchTab). -->
+  <!-- W370 — Co-op Dungeon Boss sheet. Reuses the .bfs-overlay full-screen
+       pattern; body content is rendered by renderCoopSheet(). -->
+  <div id="coop-fs-overlay" class="bfs-overlay coop-overlay hidden">
+    <header class="bfs-header">
+      <button id="coop-fs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
+        <span class="bfs-back-chev" aria-hidden="true">‹</span> Back
+      </button>
+      <span class="bfs-rank-pill rank-badge" data-rank="E" aria-hidden="true">E</span>
+    </header>
+    <div class="bfs-hero">
+      <img id="coop-fs-hero-img" src="" alt="" draggable="false" loading="lazy" decoding="async">
+      <div class="bfs-hero-fade" aria-hidden="true"></div>
+    </div>
+    <div class="bfs-name-block">
+      <h1 id="coop-fs-name" class="bfs-name">—</h1>
+      <div class="bfs-rank-label">CO-OP HUNT</div>
+    </div>
+    <div id="coop-fs-body" class="coop-body"></div>
+  </div>
   <div id="boss-fs-overlay" class="bfs-overlay hidden">
     <header class="bfs-header">
       <button id="bfs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
@@ -2924,12 +2943,12 @@
     </div>
   </div>
 
-  <script src="auth.js?v=29"></script>
+  <script src="auth.js?v=30"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=814"></script>
+  <script src="app.js?v=815"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

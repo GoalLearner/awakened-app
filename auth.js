@@ -1338,6 +1338,17 @@
     return _authedFetch('POST', '/v1/verified-events', { events: events });
   }
 
+  // Co-op Dungeon Bosses v1 (W370) — client API wrappers. The boss roster
+  // + goal/reward are server-authoritative; these only drive the
+  // create/join/decline/cancel/resolve lifecycle + list/detail reads.
+  function coopBossList()      { return _authedFetch('GET',  '/v1/coop-boss'); }
+  function coopBossGet(id)     { return _authedFetch('GET',  '/v1/coop-boss/' + encodeURIComponent(id)); }
+  function coopBossCreate(partnerUserId, bossId) { return _authedFetch('POST', '/v1/coop-boss', { partner_user_id: partnerUserId, boss_id: bossId }); }
+  function coopBossJoin(id)    { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/join'); }
+  function coopBossDecline(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/decline'); }
+  function coopBossCancel(id)  { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/cancel'); }
+  function coopBossResolve(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/resolve'); }
+
   // Expose on window for app.js + Settings interactions.
   // ── W297 — Skins IAP (RevenueCat) + entitlements ───────────────────
   // Real-money cosmetic skin purchases. DORMANT until IAP_ENABLED flips true,
@@ -1484,6 +1495,14 @@
     // duel-named helper; the 9 other duel API wrappers were removed
     // along with the Duels subsystem).
     submitVerifiedEvents,
+    // Co-op Dungeon Bosses v1 (W370)
+    coopBossList,
+    coopBossGet,
+    coopBossCreate,
+    coopBossJoin,
+    coopBossDecline,
+    coopBossCancel,
+    coopBossResolve,
     devSignInIfLocalhost,
     isLocalhostDev,
     startGuest,

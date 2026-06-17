@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w369'; // W369
+  const APP_BUILD_TAG = '2.2.7-w370'; // W370
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35895,6 +35895,14 @@
     }
     list.classList.add('bosses-list--cards');
     list.innerHTML = bossIds.map(buildBossCardHTML).join('');
+    // W370 — co-op boss card(s) live in the E-rank dungeon only. Appended
+    // before the setBossImage loop so their art (reused Steel Wolf) wires too.
+    if (effectiveRank === 'E') {
+      try {
+        const _coopHtml = Object.keys(COOP_BOSSES).map(buildCoopBossCardHTML).join('');
+        if (_coopHtml) list.insertAdjacentHTML('beforeend', _coopHtml);
+      } catch (_) {}
+    }
     // v3 Phase 1z.80 — wire boss art via setBossImage post-render so the
     // robust start-hidden / onload-reveals pattern applies to every card.
     try {
@@ -36490,11 +36498,15 @@
     const list = document.getElementById('bosses-list');
     if (list) {
       list.addEventListener('click', (e) => {
+        // W370 — co-op card opens its own sheet (data-coop-boss, separate path).
+        const coopCard = e.target.closest('.bcard[data-coop-boss]');
+        if (coopCard) { const cid = coopCard.getAttribute('data-coop-boss'); if (cid) { try { openCoopSheet(cid); } catch (_) {} } return; }
         const card = e.target.closest('.bcard[data-boss]');
         if (!card) return;
         const id = card.getAttribute('data-boss');
         if (id) openBossFullScreen(id);
       });
+      try { _coopWireOverlay(); } catch (_) {}
     }
     // Wire the modal's Back button + ESC key.
     const backBtn = document.getElementById('bfs-back');
@@ -36570,6 +36582,407 @@
   // Per-rank header/flavor copy lives in DUNGEON_FLAVOR. The boss list
   // filters by rank; if a tier is unlocked but has no bosses defined,
   // the empty-state copy in renderBossesPanel surfaces.
+  // ════════════════════════════════════════════════════════════
+  // Co-op Dungeon Bosses v1 (W370). ONE shared E-rank boss. Kept
+  // fully isolated from the solo BOSSES loop: its own config, sheet,
+  // and flow. Reuses helper FUNCTIONS only (getBossArtPath,
+  // rollBossDrop, earnSouls, announceKillAndDrop) so the shipped
+  // solo machinery is untouched. The backend owns the shared win
+  // decision; souls + the relic drop are granted CLIENT-SIDE here,
+  // exactly like a solo kill.
+  // ════════════════════════════════════════════════════════════
+  const COOP_BOSSES = {
+    the_dire_pack: {
+      id:              'the_dire_pack',
+      name:            'The Dire Pack',
+      rank:            'E',
+      artId:           'the_steel_wolf',   // reuse Steel Wolf art (mechanic now, art later)
+      dropSourceBoss:  'the_steel_wolf',   // shared E-rank relic pool
+      coopGoalSteps:   16000,
+      coopRewardSouls: 50,
+      coopWindowHours: 24,
+      statDomain:      'VIT',
+      flavorShort:     'A pack too vast for a lone hunter.',
+      flavorLong:      'Wolves move as one mind across the borderlands, too many teeth for a single blade. Hunt it with an ally, and split the miles between you.',
+      killCondShort:   'Two hunters: 16,000 combined steps in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 16,000 verified steps between you. Both hunters are credited the kill.',
+    },
+  };
+  const COOP_PRIMARY_BOSS_ID = 'the_dire_pack';
+  let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null };
+  let _coopPollTimer = null;
+
+  function _loadCoopAwarded() {
+    try { return JSON.parse(localStorage.getItem('hb_coop_awarded') || '{}') || {}; }
+    catch (_) { return {}; }
+  }
+  function _saveCoopAwarded(map) {
+    try { localStorage.setItem('hb_coop_awarded', JSON.stringify(map || {})); } catch (_) {}
+  }
+
+  // Boss card rendered inside the E-rank dungeon (data-coop-boss, NOT
+  // data-boss, so the solo .bcard[data-boss] click path never sees it).
+  function buildCoopBossCardHTML(id) {
+    const cfg = COOP_BOSSES[id];
+    if (!cfg) return '';
+    const imgId = cfg.artId || id;
+    return (
+      '<button type="button" class="bcard bcard--coop bcard--dormant" data-coop-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
+        '<span class="bcard-coop-badge" aria-hidden="true">CO-OP</span>' +
+        '<div class="bcard-header">' +
+          '<span class="bcard-rank-pill rank-badge" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + '</span>' +
+          '<span class="bcard-name">' + esc(cfg.name) + '</span>' +
+        '</div>' +
+        '<div class="bcard-art">' +
+          '<img alt="" draggable="false" data-boss-art-id="' + esc(imgId) + '" style="display:none">' +
+        '</div>' +
+        '<div class="bcard-stats">' +
+          '<span class="bcard-stat-label">STAT</span> ' +
+          '<span class="bcard-stat-value">' + esc(cfg.statDomain) + '</span>' +
+          '<span class="bcard-stat-sep">\u00B7</span>' +
+          '<span class="bcard-stat-label">HUNTERS</span> ' +
+          '<span class="bcard-stat-value">2</span>' +
+        '</div>' +
+        '<div class="bcard-flavor">' + esc(cfg.flavorShort) + '</div>' +
+        '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
+        '<div class="boss-archetype-pill" data-archetype="coop">Requires 2 Hunters</div>' +
+      '</button>'
+    );
+  }
+
+  // ── Sheet lifecycle ──
+  function openCoopSheet(bossId) {
+    const cfg = COOP_BOSSES[bossId || COOP_PRIMARY_BOSS_ID];
+    if (!cfg) return;
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (!overlay) return;
+    _coopSheet = { instance: null, cfg: cfg, loading: true, error: null, busy: false, picking: false, friends: null };
+    overlay.classList.remove('hidden');
+    document.body.classList.add('bfs-locked');
+    renderCoopSheet();
+    _coopRefresh();
+  }
+  function closeCoopSheet() {
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    overlay.classList.add('hidden');
+    document.body.classList.remove('bfs-locked');
+    overlay.scrollTop = 0;
+    _coopStopPolling();
+  }
+  try { window.openCoopSheet = openCoopSheet; } catch (_) {}
+  try { window.closeCoopSheet = closeCoopSheet; } catch (_) {}
+
+  function _coopStartPolling() { if (_coopPollTimer) return; try { _coopPollTimer = setInterval(function () { _coopPollTick(); }, 60000); } catch (_) {} }
+  function _coopStopPolling() { if (_coopPollTimer) { try { clearInterval(_coopPollTimer); } catch (_) {} _coopPollTimer = null; } }
+
+  async function _coopRefresh() {
+    const cfg = _coopSheet.cfg; if (!cfg) return;
+    _coopSheet.loading = true; _coopSheet.error = null; renderCoopSheet();
+    let res;
+    try { res = await Auth.coopBossList(); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    _coopSheet.loading = false;
+    if (!res || !res.ok) { _coopSheet.error = (res && res.code) || 'ERROR'; renderCoopSheet(); return; }
+    const list = Array.isArray(res.instances) ? res.instances : [];
+    const forBoss = list.filter(function (x) { return x && x.boss_id === cfg.id; });
+    const live = forBoss.find(function (x) { return x.status === 'pending' || x.status === 'active'; });
+    _coopSheet.instance = live || forBoss[0] || null;
+    _coopAfterInstanceUpdate();
+  }
+
+  function _coopAfterInstanceUpdate() {
+    const inst = _coopSheet.instance;
+    if (inst && inst.status === 'active') {
+      if ((inst.combined_steps || 0) >= (inst.goal_steps || Infinity)) { _coopResolve(inst.id); return; }
+      if (inst.time_remaining_ms === 0) { _coopResolve(inst.id); return; }
+      _coopStartPolling();
+    } else {
+      _coopStopPolling();
+      if (inst && inst.status === 'completed' && inst.result === 'success') { _awardCoopKill(inst); }
+    }
+    renderCoopSheet();
+  }
+
+  async function _coopResolve(id) {
+    let res;
+    try { res = await Auth.coopBossResolve(id); } catch (_) { res = { ok: false }; }
+    if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; }
+    _coopAfterInstanceUpdate();
+  }
+
+  async function _coopPollTick() {
+    const inst = _coopSheet.instance;
+    if (!inst || inst.status !== 'active') { _coopStopPolling(); return; }
+    await _coopSubmitMySteps(inst);
+    let res;
+    try { res = await Auth.coopBossGet(inst.id); } catch (_) { res = { ok: false }; }
+    if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
+  }
+
+  // Query my verified steps inside the hunt window. HealthKit on device;
+  // falls back to today's local verified steps (preview / no HealthKit).
+  async function _coopQueryWindowSteps(inst) {
+    try {
+      if (typeof Health !== 'undefined' && Health && typeof Health.getStepsBetween === 'function' && inst.starts_at) {
+        const n = await Health.getStepsBetween(inst.starts_at, new Date().toISOString());
+        if (typeof n === 'number' && n >= 0) return Math.round(n);
+      }
+    } catch (_) {}
+    try {
+      const t = (typeof state !== 'undefined' && state && state.steps_daily) ? state.steps_daily[getDeviceLocalDate()] : 0;
+      if (typeof t === 'number' && t >= 0) return Math.round(t);
+    } catch (_) {}
+    return 0;
+  }
+
+  async function _coopSubmitMySteps(inst) {
+    if (!inst || inst.status !== 'active') return;
+    const steps = await _coopQueryWindowSteps(inst);
+    if (!(steps > 0)) return;
+    const ev = {
+      client_event_id: 'coop_' + inst.id + '_' + Date.now(),
+      event_type: 'steps_total',
+      metric: 'steps',
+      value: steps,
+      source: 'apple_health',
+      occurred_at: new Date().toISOString(),
+      boss_instance_id: inst.id,
+      window_start: inst.starts_at || null,
+      window_end: inst.ends_at || null,
+    };
+    try { await Auth.submitVerifiedEvents([ev]); } catch (_) {}
+  }
+
+  // Grant the co-op kill on THIS device, once per instance. Souls +
+  // a relic from the shared E-rank pool, announced via the normal
+  // victory beat. Each hunter grants their own reward on their own
+  // device (the awarded-set is per-device, keyed by instance id).
+  function _awardCoopKill(inst) {
+    if (!inst || !inst.id) return;
+    const cfg = COOP_BOSSES[inst.boss_id]; if (!cfg) return;
+    const awarded = _loadCoopAwarded();
+    if (awarded[inst.id]) return;
+    awarded[inst.id] = true; _saveCoopAwarded(awarded);
+    const reward = cfg.coopRewardSouls || 0;
+    try { earnSouls(reward, 'coop_' + cfg.id); } catch (_) {}
+    let dropInfo = null;
+    try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf'); } catch (_) {}
+    try {
+      announceKillAndDrop(
+        { id: cfg.id, name: cfg.name, rank: cfg.rank, killCondShort: cfg.killCondShort },
+        reward, dropInfo);
+    } catch (_) {}
+  }
+
+  // ── Picker / create / lifecycle actions ──
+  async function openCoopPartnerPicker() {
+    _coopSheet.picking = true; _coopSheet.friends = null; _coopSheet.error = null; renderCoopSheet();
+    let res;
+    try { res = await Auth.fetchFriends(); } catch (_) { res = { ok: false }; }
+    if (res && res.ok) { _coopSheet.friends = Array.isArray(res.friends) ? res.friends : []; }
+    else { _coopSheet.friends = []; _coopSheet.error = (res && res.code) || 'ERROR'; }
+    renderCoopSheet();
+  }
+  async function _coopCreate(partnerUserId) {
+    const cfg = _coopSheet.cfg; if (!cfg) return;
+    _coopSheet.busy = true; renderCoopSheet();
+    let res;
+    try { res = await Auth.coopBossCreate(partnerUserId, cfg.id); } catch (_) { res = { ok: false }; }
+    _coopSheet.busy = false;
+    if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
+    else { _coopSheet.error = (res && res.code) || 'ERROR'; renderCoopSheet(); }
+  }
+
+  async function _coopHandleAction(action, btn) {
+    if (_coopSheet.busy) return;
+    if (action === 'invite') { openCoopPartnerPicker(); return; }
+    if (action === 'pick-cancel') { _coopSheet.picking = false; renderCoopSheet(); return; }
+    if (action === 'pick') { const uid = btn.getAttribute('data-user-id'); _coopSheet.picking = false; if (uid) _coopCreate(uid); return; }
+    if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
+    const inst = _coopSheet.instance;
+    if (!inst) return;
+    _coopSheet.busy = true; renderCoopSheet();
+    let res = null;
+    try {
+      if (action === 'join') res = await Auth.coopBossJoin(inst.id);
+      else if (action === 'decline') res = await Auth.coopBossDecline(inst.id);
+      else if (action === 'cancel') res = await Auth.coopBossCancel(inst.id);
+    } catch (_) { res = { ok: false }; }
+    _coopSheet.busy = false;
+    if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
+    else { _coopRefresh(); }
+  }
+
+  // ── Render ──
+  function _coopView(inst) {
+    const ch = inst.challenger || {}; const pa = inst.partner || {};
+    if (inst.role === 'partner') return { me: pa, them: ch };
+    return { me: ch, them: pa };
+  }
+  function _coopFmtRemaining(ms) {
+    if (typeof ms !== 'number' || ms <= 0) return 'Time is up';
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60); const m = totalMin % 60;
+    return (h > 0 ? (h + 'h ' + m + 'm') : (m + 'm')) + ' left';
+  }
+  function _coopErrText(code) {
+    switch (code) {
+      case 'NOT_FRIENDS': return 'You can only co-op with an accepted friend.';
+      case 'ALREADY_ACTIVE': return 'You already have a hunt going with that hunter.';
+      case 'SELF_PARTNER': return 'Pick a friend other than yourself.';
+      case 'NETWORK': return 'Could not reach the server. Check your connection.';
+      case 'EXPIRED': return 'Your session expired. Sign in again.';
+      case 'RATE_LIMITED': return 'Too fast, try again in a moment.';
+      default: return 'Something went wrong. Try again.';
+    }
+  }
+  function _coopAlias(a) { try { return (typeof _displayAliasLower === 'function') ? _displayAliasLower(a || '') : (a || ''); } catch (_) { return a || ''; } }
+
+  function renderCoopSheet() {
+    const cfg = _coopSheet.cfg;
+    const body = document.getElementById('coop-fs-body');
+    if (!cfg || !body) return;
+    const heroImg = document.getElementById('coop-fs-hero-img');
+    if (heroImg) { try { setBossImage(heroImg, cfg.artId || cfg.id); } catch (_) {} }
+    const nameEl = document.getElementById('coop-fs-name');
+    if (nameEl) nameEl.textContent = cfg.name;
+
+    if (_coopSheet.picking) { body.innerHTML = _coopPickerHtml(); return; }
+    if (_coopSheet.loading && !_coopSheet.instance) { body.innerHTML = '<div class="coop-msg">Loading the hunt...</div>'; return; }
+    const inst = _coopSheet.instance;
+    if (inst && inst.status === 'pending') { body.innerHTML = _coopPendingHtml(inst); return; }
+    if (inst && inst.status === 'active') { body.innerHTML = _coopActiveHtml(inst); return; }
+    if (inst && inst.status === 'completed' && inst.result === 'success') { body.innerHTML = _coopVictoryHtml(inst); return; }
+    body.innerHTML = _coopRecruitHtml(inst);
+  }
+
+  function _coopErrBlock() {
+    return _coopSheet.error ? '<div class="coop-note coop-note--loss">' + esc(_coopErrText(_coopSheet.error)) + '</div>' : '';
+  }
+
+  function _coopRecruitHtml(inst) {
+    const cfg = _coopSheet.cfg;
+    let note = '';
+    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The pack slipped away last time. The miles fell short.</div>';
+    else if (inst && (inst.status === 'declined' || inst.status === 'cancelled')) note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
+    const dis = _coopSheet.busy ? ' disabled' : '';
+    return (
+      note +
+      '<p class="coop-lead">' + esc(cfg.flavorLong) + '</p>' +
+      '<div class="coop-goal-card">' +
+        '<div class="coop-goal-big">' + cfg.coopGoalSteps.toLocaleString('en-US') + '</div>' +
+        '<div class="coop-goal-sub">combined steps \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters</div>' +
+      '</div>' +
+      _coopErrBlock() +
+      '<button class="coop-cta" data-coop-action="invite"' + dis + '>RECRUIT A HUNTER</button>' +
+      '<p class="coop-foot">Both hunters earn ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.</p>'
+    );
+  }
+
+  function _coopPendingHtml(inst) {
+    const cfg = _coopSheet.cfg;
+    const v = _coopView(inst);
+    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
+    const dis = _coopSheet.busy ? ' disabled' : '';
+    if (inst.role === 'partner') {
+      return (
+        '<p class="coop-lead">' + themAlias + ' wants to hunt ' + esc(cfg.name) + ' with you.</p>' +
+        '<div class="coop-goal-card">' +
+          '<div class="coop-goal-big">' + cfg.coopGoalSteps.toLocaleString('en-US') + '</div>' +
+          '<div class="coop-goal-sub">combined steps \u00B7 ' + cfg.coopWindowHours + 'h from when you join</div>' +
+        '</div>' +
+        _coopErrBlock() +
+        '<button class="coop-cta" data-coop-action="join"' + dis + '>JOIN THE HUNT</button>' +
+        '<button class="coop-cta coop-cta--ghost" data-coop-action="decline"' + dis + '>DECLINE</button>'
+      );
+    }
+    return (
+      '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + themAlias + ' to accept</div>' +
+      '<p class="coop-lead">The 24-hour hunt begins the moment ' + themAlias + ' joins.</p>' +
+      _coopErrBlock() +
+      '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL INVITE</button>'
+    );
+  }
+
+  function _coopActiveHtml(inst) {
+    const cfg = _coopSheet.cfg;
+    const v = _coopView(inst);
+    const goal = inst.goal_steps || cfg.coopGoalSteps;
+    const combined = inst.combined_steps || 0;
+    const pct = Math.max(0, Math.min(100, Math.round(combined / goal * 100)));
+    const meSteps = (v.me && v.me.steps) || 0;
+    const themSteps = (v.them && v.them.steps) || 0;
+    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'ally'));
+    const dis = _coopSheet.busy ? ' disabled' : '';
+    return (
+      '<div class="coop-timer">' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + '</div>' +
+      '<div class="coop-combined">' +
+        '<div class="coop-combined-num">' + combined.toLocaleString('en-US') + ' <span>/ ' + goal.toLocaleString('en-US') + '</span></div>' +
+        '<div class="coop-bar"><div class="coop-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="coop-combined-label">combined steps</div>' +
+      '</div>' +
+      '<div class="coop-split">' +
+        '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + meSteps.toLocaleString('en-US') + '</span></div>' +
+        '<div class="coop-split-row"><span class="coop-split-name">' + themAlias + '</span><span class="coop-split-val">' + themSteps.toLocaleString('en-US') + '</span></div>' +
+      '</div>' +
+      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : 'SYNC MY STEPS') + '</button>' +
+      '<p class="coop-foot">Steps sync on their own while this is open. Tap to push yours now.</p>'
+    );
+  }
+
+  function _coopVictoryHtml(inst) {
+    const cfg = _coopSheet.cfg;
+    const v = _coopView(inst);
+    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
+    const combined = (inst.combined_steps || 0).toLocaleString('en-US');
+    return (
+      '<div class="coop-victory">THE PACK FALLS</div>' +
+      '<p class="coop-lead">You and ' + themAlias + ' walked ' + combined + ' steps together. The Dire Pack is scattered.</p>' +
+      '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 a relic claimed</div>' +
+      '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
+    );
+  }
+
+  function _coopPickerHtml() {
+    const friends = _coopSheet.friends;
+    if (friends === null) return '<div class="coop-msg">Loading hunters...</div>';
+    let rows;
+    if (!friends.length) {
+      rows = '<div class="coop-note">No hunters yet. Add a friend from the Guild tab first.</div>';
+    } else {
+      rows = friends.filter(function (f) { return f && f.user_id; }).map(function (f) {
+        return '<button class="coop-friend" data-coop-action="pick" data-user-id="' + esc(f.user_id) + '">' +
+          '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
+          '<span class="coop-friend-go" aria-hidden="true">\u203A</span>' +
+        '</button>';
+      }).join('');
+    }
+    return (
+      '<div class="coop-picker-head">SELECT YOUR ALLY</div>' +
+      _coopErrBlock() +
+      '<div class="coop-friend-list">' + rows + '</div>' +
+      '<button class="coop-cta coop-cta--ghost" data-coop-action="pick-cancel">BACK</button>'
+    );
+  }
+
+  // Wire the co-op overlay once (Back + ESC + delegated body actions).
+  function _coopWireOverlay() {
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (!overlay || overlay._coopWired) return;
+    overlay._coopWired = true;
+    const back = document.getElementById('coop-fs-back');
+    if (back) back.addEventListener('click', closeCoopSheet);
+    overlay.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-coop-action]');
+      if (!btn) return;
+      _coopHandleAction(btn.getAttribute('data-coop-action'), btn);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!overlay.classList.contains('hidden')) closeCoopSheet();
+    });
+  }
+
   let questsGateExpanded = false;
   let currentDungeonRank = 'E'; // which rank tier the dungeon-view shows
 

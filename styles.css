@@ -29511,3 +29511,81 @@ button.guildhall-summary-tile:active {
   .first-win-ring { animation: none; }
 }
 
+/* ── W370 — Co-op Dungeon Boss ────────────────────────────────── */
+/* Card variant in the E-rank dungeon grid */
+.bcard--coop { position: relative; }
+.bcard-coop-badge {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.6rem;
+  font-weight: 800; letter-spacing: 1.5px; color: #7fe3c0; padding: 2px 7px;
+  border-radius: 6px; background: rgba(40, 90, 78, 0.35);
+  border: 1px solid rgba(127, 227, 192, 0.5); box-shadow: 0 0 8px rgba(127, 227, 192, 0.18);
+}
+.boss-archetype-pill[data-archetype="coop"] {
+  color: #7fe3c0; background: linear-gradient(180deg, rgba(127,227,192,0.18), rgba(127,227,192,0.05));
+  border: 1px solid rgba(127, 227, 192, 0.5);
+}
+
+/* Sheet body */
+.coop-overlay .bfs-rank-label { color: #7fe3c0; letter-spacing: 3px; }
+.coop-body { padding: 0 20px 48px; max-width: 560px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.coop-msg { text-align: center; color: rgba(255,255,255,0.6); padding: 40px 0; font-size: 0.95rem; }
+.coop-lead { color: rgba(255,255,255,0.78); font-size: 0.96rem; line-height: 1.5; margin: 14px 0 18px; }
+.coop-note { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; font-size: 0.88rem;
+  color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.coop-note--loss { color: #f3b0b0; background: rgba(120,40,40,0.18); border-color: rgba(220,120,120,0.35); }
+
+.coop-goal-card { text-align: center; padding: 20px; margin: 0 0 20px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.02));
+  border: 1px solid rgba(245,184,66,0.32); }
+.coop-goal-big { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 2.4rem;
+  font-weight: 800; color: #f5b842; line-height: 1; text-shadow: 0 0 16px rgba(245,184,66,0.35); }
+.coop-goal-sub { margin-top: 8px; font-size: 0.82rem; letter-spacing: 0.5px; color: rgba(255,255,255,0.6); }
+
+.coop-cta { display: block; width: 100%; margin: 12px 0 0; padding: 15px; border: none; border-radius: 14px;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.92rem; font-weight: 800; letter-spacing: 1.5px;
+  color: #1a1410; background: linear-gradient(180deg, #f7c860, #e6a832); cursor: pointer;
+  box-shadow: 0 4px 18px rgba(245,184,66,0.3); }
+.coop-cta:active { transform: translateY(1px); }
+.coop-cta[disabled] { opacity: 0.55; cursor: default; box-shadow: none; }
+.coop-cta--ghost { background: transparent; color: rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.18); box-shadow: none; }
+.coop-foot { margin: 14px 0 0; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
+
+.coop-partner-row { display: flex; align-items: center; gap: 9px; font-size: 0.95rem;
+  color: rgba(255,255,255,0.82); margin: 16px 0 4px; }
+.coop-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.coop-dot--wait { background: #f5b842; box-shadow: 0 0 8px rgba(245,184,66,0.6); animation: coopPulse 1.4s ease-in-out infinite; }
+@keyframes coopPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.coop-timer { text-align: center; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.85rem;
+  letter-spacing: 1px; color: #f5b842; margin: 14px 0 18px; }
+.coop-combined { text-align: center; margin: 0 0 18px; }
+.coop-combined-num { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 2rem; font-weight: 800; color: #fff; }
+.coop-combined-num span { font-size: 1.1rem; font-weight: 600; color: rgba(255,255,255,0.45); }
+.coop-combined-label { margin-top: 6px; font-size: 0.78rem; letter-spacing: 1px; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+.coop-bar { height: 12px; border-radius: 8px; margin: 12px 0 0; overflow: hidden;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); }
+.coop-bar-fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg, #e6a832, #f7c860);
+  box-shadow: 0 0 12px rgba(245,184,66,0.5); transition: width 0.5s ease; }
+
+.coop-split { margin: 4px 0 20px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+.coop-split-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+  background: rgba(255,255,255,0.03); }
+.coop-split-row + .coop-split-row { border-top: 1px solid rgba(255,255,255,0.06); }
+.coop-split-name { color: rgba(255,255,255,0.78); font-size: 0.92rem; }
+.coop-split-val { font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700; color: #fff; }
+
+.coop-victory { text-align: center; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 1.5rem;
+  font-weight: 800; letter-spacing: 2px; color: #f5b842; margin: 18px 0 10px; text-shadow: 0 0 18px rgba(245,184,66,0.5); }
+.coop-reward { text-align: center; font-size: 1rem; color: #ffe9b0; margin: 0 0 22px; font-weight: 600; }
+
+.coop-picker-head { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.78rem; letter-spacing: 2px;
+  color: rgba(255,255,255,0.55); margin: 16px 0 12px; text-align: center; }
+.coop-friend-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.coop-friend { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 14px 16px;
+  border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+.coop-friend:active { background: rgba(255,255,255,0.08); }
+.coop-friend-name { color: #fff; font-size: 0.95rem; }
+.coop-friend-go { color: rgba(255,255,255,0.4); font-size: 1.3rem; }
+
