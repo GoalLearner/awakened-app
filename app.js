@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w384'; // W384
+  const APP_BUILD_TAG = '2.2.7-w385'; // W385
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35304,9 +35304,9 @@
           '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
           '<div class="pc-med-portrait"><img src="' + esc(avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
-      '</div><div class="pc-med-floor"></div>' + clubBadge +
+      '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>' + (data._sim ? 'NPC HUNTER' : 'DEFAULT SKIN') + '</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div>' + shard + '</div>' +
+      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div><div class="pc-idrow">' + shard + clubBadge + '</div></div>' +
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
         '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +
