@@ -26,8 +26,9 @@ balance changes, no backend migrations or deploys, no IAP, nothing outward-facin
 | `0f6e2c7` | **W379** — a11y: active-tab `aria-current` + dialog semantics |
 | `e3ae8e4` | **W380** — fix a W378 regression caught by self-review (see below) |
 | `4b7f189` | **W381** — hunt #2: backup JWT-leak (SECURITY) + notification digest re-arm |
+| `c6f9b2c` | **W382** — hunt #3: Hall finish self-heals (recover an F100 ordinal recorded offline) |
 
-Cache knobs advanced `v5.711 → v5.717` (app.js?v=820 → 826, auth.js?v=30 → 31, build w375 → w381).
+Cache knobs advanced `v5.711 → v5.718` (app.js?v=820 → 827, auth.js?v=30 → 31, build w375 → w382).
 `APP_VERSION` (2.2.7) left untouched — that's your release knob.
 
 > **Self-review caught my own bug.** I ran an adversarial regression review over my
@@ -118,6 +119,18 @@ Two more candidates were correctly **refuted** by the verifiers (a streak-shield
 "never re-earns shields" claim — the milestone counter is intentionally monotonic;
 and an uncertain partial-restore-corruption case with no constructible trigger).
 
+## Bugs fixed — hunt #3 (highest-stakes: IAP, account-deletion, social, Hall, HealthKit)
+
+8. **Hall finish self-heals** (W382, `c6f9b2c`) — the F100 eternal Hall ordinal was
+   claimed by a single offline-fragile POST fired once at summit; a player who cleared
+   the summit offline lost their inscription forever with no recovery. Now re-attempted
+   (idempotently — no double-claim) on every Hall open by a finisher. Frontend, boot-verified.
+   Complements W380, which ensured the summit path runs at all on an exit-during-win.
+
+Hunt #3's other confirmed findings are **backend** (account-deletion, social graph) or in
+the dormant IAP path — documented in the backlog below rather than auto-fixed, because they
+are backend code with **deploy-order sensitivity** and no way to test from here.
+
 ---
 
 ## Backlog — found but deliberately NOT auto-fixed (your call)
@@ -151,6 +164,28 @@ testing, conflicts with another finding, or is a product decision.
   d1_migrations key); just document + use unique prefixes going forward.
 - **[LOW] `verify-ios-public-assets.sh` freshness gate silently passes offline** —
   consider requiring `SKIP_FRESHNESS=1` to make an offline build deliberate.
+
+### Backend correctness (hunt #3 — needs your deploy + a D1 check; I did NOT touch backend code)
+- **[MEDIUM — App Store] Account deletion orphans real-money IAP rows.** `handleAccountDelete`
+  (backend `account-delete.ts`) deletes only `users` (+6 cascading tables) and
+  `user_state_snapshots`; `skin_entitlements` (migration 0017, no FK) is never removed, so a
+  buyer's purchase records (`product_id`, `store_txn_id`, `acquired_at`) survive forever. Apple
+  guideline **5.1.1(v)** requires deleting purchase data on account deletion. The handler's
+  comment ("no need to clean up other tables") is stale/wrong. Fix:
+  `DELETE FROM skin_entitlements WHERE user_id = ?` (or CASCADE FKs long-term).
+  **⚠️ deploy-order:** the skin/co-op tables may not be applied in prod yet — a `DELETE FROM`
+  a not-yet-created table would *break* account deletion until its migration lands. Sequence
+  carefully. (Exactly why I didn't auto-fix it.)
+- **[LOW] Other user rows orphaned on deletion** — `friends`, `verified_events`,
+  `user_souls_ledger`, `coop_boss_instances` likewise lack cascade and aren't deleted. Same
+  remediation. (Friends-list reads degrade gracefully, so it's residue/privacy, not a crash.)
+- **[LOW] Reciprocal friend-request race** — two users sending requests to each other at the
+  same moment can create two accepted edges; removing one leaves a dangling edge. Fix: a
+  canonical-pair UNIQUE index, or check both directions inside a transaction before INSERT.
+- **[Dormant] `restorePurchases()` runs before `configurePurchases()`** — on a fresh install,
+  Restore Purchases calls the RevenueCat SDK unconfigured and silently restores nothing.
+  Confirmed but currently unreachable (IAP gated off / undeployed). Fix before enabling IAP:
+  ensure `configurePurchases()` completes first. *(Left alone — your real-money domain + dormant.)*
 
 ### Performance (mobile WebView, boot/asset critical path)
 - **[HIGH] Dungeon-gate PNGs are ~6–10× oversized** — six gate images are
