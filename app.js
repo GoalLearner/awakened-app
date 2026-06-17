@@ -36694,7 +36694,7 @@
     },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
-  let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null };
+  let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
   let _coopPollTimer = null;
 
   function _loadCoopAwarded() {
@@ -36741,7 +36741,7 @@
     if (!cfg) return;
     const overlay = document.getElementById('coop-fs-overlay');
     if (!overlay) return;
-    _coopSheet = { instance: null, cfg: cfg, loading: true, error: null, busy: false, picking: false, friends: null };
+    _coopSheet = { instance: null, cfg: cfg, loading: true, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
     renderCoopSheet();
@@ -36751,6 +36751,8 @@
     const overlay = document.getElementById('coop-fs-overlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
     overlay.classList.add('hidden');
+    overlay.classList.remove('coop-overlay--summons');
+    _coopSheet._summonsShown = false;
     document.body.classList.remove('bfs-locked');
     overlay.scrollTop = 0;
     _coopStopPolling();
@@ -36928,6 +36930,27 @@
   }
   function _coopAlias(a) { try { return (typeof _displayAliasLower === 'function') ? _displayAliasLower(a || '') : (a || ''); } catch (_) { return a || ''; } }
 
+  // W376 — toggle the cinematic "war summons" treatment (recipient's
+  // pending-invite view only) and bind its hero title + threat rank.
+  // Idempotent: re-adding the class on a busy re-render doesn't replay
+  // the entrance animation (no display change); leaving the state resets
+  // the once-only entrance flag so re-entering plays it again.
+  function _coopApplySummonsMode(on) {
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (!overlay) return;
+    if (on) {
+      overlay.classList.add('coop-overlay--summons');
+      const cfg = _coopSheet.cfg;
+      const tEl = document.getElementById('coopsm-title');
+      if (tEl && cfg) tEl.textContent = cfg.name;
+      const rEl = document.getElementById('coopsm-threat-rank');
+      if (rEl && cfg && cfg.rank) rEl.textContent = String(cfg.rank) + '-RANK';
+    } else {
+      if (overlay.classList.contains('coop-overlay--summons')) _coopSheet._summonsShown = false;
+      overlay.classList.remove('coop-overlay--summons');
+    }
+  }
+
   function renderCoopSheet() {
     const cfg = _coopSheet.cfg;
     const body = document.getElementById('coop-fs-body');
@@ -36937,9 +36960,12 @@
     const nameEl = document.getElementById('coop-fs-name');
     if (nameEl) nameEl.textContent = cfg.name;
 
+    const inst = _coopSheet.instance;
+    const isSummons = !_coopSheet.picking && !!inst && inst.status === 'pending' && inst.role === 'partner';
+    _coopApplySummonsMode(isSummons);
+
     if (_coopSheet.picking) { body.innerHTML = _coopPickerHtml(); return; }
     if (_coopSheet.loading && !_coopSheet.instance) { body.innerHTML = '<div class="coop-msg">Loading the hunt...</div>'; return; }
-    const inst = _coopSheet.instance;
     if (inst && inst.status === 'pending') { body.innerHTML = _coopPendingHtml(inst); return; }
     if (inst && inst.status === 'active') { body.innerHTML = _coopActiveHtml(inst); return; }
     if (inst && inst.status === 'completed' && inst.result === 'success') { body.innerHTML = _coopVictoryHtml(inst); return; }
@@ -36970,27 +36996,78 @@
   }
 
   function _coopPendingHtml(inst) {
-    const cfg = _coopSheet.cfg;
     const v = _coopView(inst);
     const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
     const dis = _coopSheet.busy ? ' disabled' : '';
-    if (inst.role === 'partner') {
-      return (
-        '<p class="coop-lead">' + themAlias + ' wants to hunt ' + esc(cfg.name) + ' with you.</p>' +
-        '<div class="coop-goal-card">' +
-          '<div class="coop-goal-big">' + cfg.coopGoalSteps.toLocaleString('en-US') + '</div>' +
-          '<div class="coop-goal-sub">combined steps \u00B7 ' + cfg.coopWindowHours + 'h from when you join</div>' +
-        '</div>' +
-        _coopErrBlock() +
-        '<button class="coop-cta" data-coop-action="join"' + dis + '>JOIN THE HUNT</button>' +
-        '<button class="coop-cta coop-cta--ghost" data-coop-action="decline"' + dis + '>DECLINE</button>'
-      );
-    }
+    // W376 \u2014 the recipient's view is the cinematic war summons (its own
+    // hero FX live in #coop-fs-overlay; this renders the lower content).
+    if (inst.role === 'partner') return _coopSummonsHtml(inst);
     return (
       '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + themAlias + ' to accept</div>' +
       '<p class="coop-lead">The 24-hour hunt begins the moment ' + themAlias + ' joins.</p>' +
       _coopErrBlock() +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL INVITE</button>'
+    );
+  }
+
+  // W376 — the recipient's pending-invite view, rebuilt as the cinematic
+  // "Twin Maw Summons" (ClaudeDesign). The hero FX (art, eyes, flicker,
+  // title, threat tag) live statically in #coop-fs-overlay and are toggled
+  // by _coopApplySummonsMode(); this builds the lower content + CTAs.
+  // Truthful by design: threat = the real boss rank (E, set in the hero),
+  // the challenger is shown by real alias (no fabricated hunter rank), and
+  // there is NO "expires" countdown — a pending invite has no TTL server-side
+  // (the 24h clock starts on accept), so we say exactly that instead.
+  function _coopSummonsHtml(inst) {
+    const cfg = _coopSheet.cfg;
+    const v = _coopView(inst);
+    const themRaw = _coopAlias((v.them && v.them.alias) || 'your ally');
+    const themAlias = esc(themRaw);
+    const initial = esc((String(themRaw).trim().charAt(0) || '?').toUpperCase());
+    const dis = _coopSheet.busy ? ' disabled' : '';
+    // Entrance animations play once per entry into the summons state — not on
+    // every busy re-render (which would re-trigger the rise on tap/network).
+    const firstShow = !_coopSheet._summonsShown;
+    _coopSheet._summonsShown = true;
+    const r2 = firstShow ? ' coopsm-reveal coopsm-d2' : '';
+    const r3 = firstShow ? ' coopsm-reveal coopsm-d3' : '';
+    const r4 = firstShow ? ' coopsm-reveal coopsm-d4' : '';
+    const goal = (inst.goal_steps || cfg.coopGoalSteps).toLocaleString('en-US');
+    const hrs = cfg.coopWindowHours;
+    return (
+      // sr-only context (the decorative hero FX — title + threat rank — is aria-hidden)
+      '<p class="hidden-compat">Incoming co-op hunt summons from ' + themAlias + ': ' + esc(cfg.name) + ', rank ' + esc(cfg.rank) + '.</p>' +
+      '<div class="coopsm-msg' + r2 + '">' +
+        '<div class="coopsm-msg-head">' +
+          '<div class="coopsm-av">' + initial + '</div>' +
+          '<div class="coopsm-meta">' +
+            '<div class="coopsm-eyebrow">' + themAlias + ' summons you</div>' +
+            '<div class="coopsm-name">' + themAlias + '</div>' +
+            '<div class="coopsm-sub">Guild Ally</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="coopsm-cry"><span class="coopsm-q">“</span>Stand with me against ' +
+          '<span class="coopsm-accent">' + esc(cfg.name) + '</span>.<span class="coopsm-q">”</span></div>' +
+      '</div>' +
+      '<div class="coopsm-pact' + r3 + '">' +
+        '<div class="coopsm-pact-label">The Pact</div>' +
+        '<div class="coopsm-pact-num">' + goal + '</div>' +
+        '<div class="coopsm-pact-sub"><b>combined steps</b> · ' + hrs + 'h from when you join</div>' +
+        '<div class="coopsm-pact-split">' +
+          '<span class="coopsm-who">You</span>' +
+          '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
+          '<span class="coopsm-who">' + themAlias + '</span>' +
+        '</div>' +
+      '</div>' +
+      _coopErrBlock() +
+      '<div class="coopsm-ctas' + r4 + '">' +
+        '<button class="coopsm-join" data-coop-action="join"' + dis + '>' +
+          '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l9 9 1.6-1.1L4.4 1.4zM15 3l-5.5 5.5 1.2 1.2L16 4.2zM9 11l-1 5h2z" fill="#1a1206"/></svg>' +
+          'Join the Hunt' +
+        '</button>' +
+        '<button class="coopsm-decline" data-coop-action="decline"' + dis + '>Decline</button>' +
+        '<div class="coopsm-expires">The ' + hrs + '-hour hunt begins the instant you accept.</div>' +
+      '</div>'
     );
   }
 

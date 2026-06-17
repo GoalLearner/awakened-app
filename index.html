@@ -16,7 +16,7 @@
        replaced once Cinzel is ready (no layout-shift flash). -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=439">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
@@ -1223,6 +1223,23 @@
     <div class="bfs-hero">
       <img id="coop-fs-hero-img" src="" alt="" draggable="false" loading="lazy" decoding="async">
       <div class="bfs-hero-fade" aria-hidden="true"></div>
+      <!-- W376 — cinematic co-op summons FX. Inert/hidden unless the overlay
+           carries .coop-overlay--summons (recipient's pending-invite state),
+           set by renderCoopSheet(). Title + threat rank are bound there. -->
+      <div class="coopsm-fx" aria-hidden="true">
+        <div class="coopsm-art"></div>
+        <div class="coopsm-flick"></div>
+        <div class="coopsm-eye coopsm-eye--l"></div>
+        <div class="coopsm-eye coopsm-eye--r"></div>
+        <div class="coopsm-vig"></div>
+        <div class="coopsm-art-fade"></div>
+        <div class="coopsm-tag coopsm-tag--summons"><span class="coopsm-blip"></span>Incoming Summons</div>
+        <div class="coopsm-tag coopsm-threat"><span class="coopsm-skull">☠</span><span id="coopsm-threat-rank">E-RANK</span></div>
+        <div class="coopsm-titlewrap">
+          <div class="coopsm-kicker coopsm-reveal">Co-op Hunt</div>
+          <div class="coopsm-title coopsm-reveal coopsm-d1" id="coopsm-title">The Twin Maw</div>
+        </div>
+      </div>
     </div>
     <div class="bfs-name-block">
       <h1 id="coop-fs-name" class="bfs-name">—</h1>
