@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w381'; // W381
+  const APP_BUILD_TAG = '2.2.7-w382'; // W382
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9469,6 +9469,13 @@
     _arView = 'hall';
     _arBodyMode(false);
     const finished = (getAscentState().highestCleared || 0) >= ASCENT_FLOORS;
+    // W382 — self-heal the Hall finish. The summit clear records the eternal
+    // ordinal via a one-time _arRenderSummit -> _hallRecordFinish POST; if that
+    // happened OFFLINE the POST failed and the ordinal would be lost forever (no
+    // other trigger). _hallRecordFinish is idempotent (it only sets hb_hall_finish
+    // on success, no-ops thereafter), so re-attempting on every Hall open by a
+    // finisher recovers an un-recorded finish without any risk of double-claim.
+    if (finished) { try { _hallRecordFinish(); } catch (_) {} }
     _arSet(_hallHtml(_hallReadCache(), finished));   // instant paint from cache (or placeholder)
     if (!(window.Auth && typeof Auth.fetchHall === 'function')) return;
     Promise.resolve(Auth.fetchHall(4)).then((res) => {
