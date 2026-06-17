@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w374'; // W374
+  const APP_BUILD_TAG = '2.2.7-w375'; // W375
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -444,6 +444,21 @@
       stepThreshold:    6000, // semantic-specific, parallel to Insomniac's sleepHours
       cadence:          'daily',
       statDomain:       'VIT',
+    },
+    the_twin_maw: {
+      // W375 — co-op-only DROP SOURCE, not a solo dungeon boss. It is
+      // rendered from COOP_BOSSES; the coopOnly flag keeps it out of the
+      // dungeon grid (see the renderBossesPanel BOSSES filter below). This
+      // entry exists only so rollBossDrop('the_twin_maw') resolves a cfg +
+      // its dedicated dropTable. Generous co-op rates over a 2-rare +
+      // 1-ultra weapon pool (no commons): 22% ultra + 55% rare = 77% drop.
+      id:         'the_twin_maw',
+      name:       'The Twin Maw',
+      rank:       'E',
+      coopOnly:   true,
+      archetype:  'sustainer',
+      statDomain: 'VIT',
+      dropTable:  { ultra_rare: 0.22, rare: 0.55 },
     },
     the_carouser: {
       id:               'the_carouser',
@@ -1954,6 +1969,54 @@
       bonuses: { str: 0, vit: 3, int: 0, focus: 3, will: 6, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [2,4], int: [0,0], focus: [2,4], will: [4,8], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Twin Maw (E, co-op) — 3 dedicated weapons: 2 rare + 1 ultra ──
+    // W375. Melee (STR) + Mage (INT) rares, Ranger (FOCUS) ultra. Weapon
+    // class is cosmetic (name / flavor / stat-alignment); special_effect is
+    // display-only kit flavor. Art ships later — card art falls back to a
+    // rarity gradient + slot emoji when the PNG is absent.
+    twin_fang_cleaver: {
+      id: 'twin_fang_cleaver',
+      name: 'Twin-Fang Cleaver',
+      slot: 'weapon',
+      source_boss: 'the_twin_maw',
+      rarity: 'rare',
+      tier: 'E',
+      flavor: 'Torn from the beast that bites both ways. One edge for the road ahead, one for the road behind.',
+      art_path: 'assets/items/twin_fang_cleaver.png',
+      bonuses: { str: 5, vit: 2, int: 0, focus: 0, will: 1, wlt: 0 },
+      bonus_ranges: { str: [4,6], vit: [1,3], int: [0,0], focus: [0,0], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A duelist's edge — Slash / Cleave / Crush / Lunge kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+    twofold_gaze: {
+      id: 'twofold_gaze',
+      name: 'The Twofold Gaze',
+      slot: 'weapon',
+      source_boss: 'the_twin_maw',
+      rarity: 'rare',
+      tier: 'E',
+      flavor: "A focus set with both of the beast's eyes. It watches the way you came and the way you go, at once.",
+      art_path: 'assets/items/twofold_gaze.png',
+      bonuses: { str: 0, vit: 1, int: 5, focus: 2, will: 0, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [0,2], int: [4,6], focus: [1,3], will: [0,0], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      on_equip: null, cooldown_seconds: null,
+    },
+    bothsight_longbow: {
+      id: 'bothsight_longbow',
+      name: 'Bothsight, the Long Hunt',
+      slot: 'weapon',
+      source_boss: 'the_twin_maw',
+      rarity: 'ultra_rare',
+      tier: 'E',
+      flavor: "Strung from the beast's own sinew. No traveler outruns a bow that watches both roads at once. Best in slot — until a keener eye opens.",
+      art_path: 'assets/items/bothsight_longbow.png',
+      bonuses: { str: 2, vit: 3, int: 0, focus: 8, will: 2, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [2,4], int: [0,0], focus: [6,10], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
       on_equip: null, cooldown_seconds: null,
     },
 
@@ -35896,7 +35959,7 @@
       ? rankFilter
       : ((typeof currentDungeonRank === 'string' && currentDungeonRank) ? currentDungeonRank : null);
     const bossIds = Object.keys(BOSSES).filter(id =>
-      !effectiveRank || BOSSES[id].rank === effectiveRank
+      !BOSSES[id].coopOnly && (!effectiveRank || BOSSES[id].rank === effectiveRank)
     );
     try {
       if (typeof _addHealthVerifyBreadcrumb === 'function') {
@@ -36619,7 +36682,7 @@
       name:            'The Twin Maw',
       rank:            'E',
       artId:           'the_twin_maw',     // its own dedicated art (assets/bosses/the-twin-maw.png)
-      dropSourceBoss:  'the_steel_wolf',   // shared E-rank relic pool
+      dropSourceBoss:  'the_twin_maw',     // W375 — its own co-op-exclusive weapon pool
       coopGoalSteps:   16000,
       coopRewardSouls: 50,
       coopWindowHours: 24,
