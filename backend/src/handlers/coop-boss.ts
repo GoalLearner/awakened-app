@@ -38,7 +38,7 @@ const COOP_BOSS_CFG: Record<
   string,
   { rank: string; goalSteps: number; rewardSouls: number; windowHours: number }
 > = {
-  the_dire_pack: { rank: 'E', goalSteps: 16000, rewardSouls: 50, windowHours: 24 },
+  the_twin_maw: { rank: 'E', goalSteps: 16000, rewardSouls: 50, windowHours: 24 },
 };
 
 const STEPS_EVENT_TYPE = 'steps_total';
