@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w372'; // W372
+  const APP_BUILD_TAG = '2.2.7-w373'; // W373
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35190,8 +35190,17 @@
     const shard = titleName ? '<div class="pc-shard" style="--pc-tier:' + tierColor + '"><i></i><span>' + esc(titleName) + '</span></div>' : '';
     const flavor = data.verifiedStreakLabel ? '<div class="pc-flavor"><i></i><span>' + esc(data.verifiedStreakLabel) + '</span></div>' : '';
     // W369 — 100K Club prestige badge (gold), shown for real members (sims never qualify).
+    // ClaudeDesign "Hunter Profile - 100K Club" (W373) — the 100K STEP CLUB
+    // reads as a coveted gold SEAL (hex sigil + STEP CLUB / ELITE MEMBER +
+    // shimmer), not a plain pill. Repeat qualifiers keep their \u00D7N acknowledgement.
     const clubBadge = (data.club100k && typeof data.club100k === 'object')
-      ? '<div class="pc-club100k"><span class="pc-club100k-ic" aria-hidden="true">\u25C6</span><span class="pc-club100k-txt">100K CLUB</span>' + (((data.club100k.repeatCount | 0) > 1) ? '<b>\u00D7' + (data.club100k.repeatCount | 0) + '</b>' : '') + '</div>'
+      ? '<div class="pc-club100k"><span class="pc-club100k-shine" aria-hidden="true"></span>' +
+        '<span class="pc-club100k-seal" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 30 30">' +
+        '<path d="M15 1.5 27 8.5 27 21.5 15 28.5 3 21.5 3 8.5Z" fill="#1a1206" stroke="rgba(255,236,180,0.55)" stroke-width="1"/>' +
+        '<path d="M15 5 23.2 9.8 23.2 19.2 15 24 6.8 19.2 6.8 9.8Z" fill="none" stroke="#f5b842" stroke-width="0.8" opacity="0.6"/>' +
+        '</svg><span class="pc-club100k-seal-n">100K</span></span>' +
+        '<span class="pc-club100k-txt"><span class="pc-club100k-t1">STEP\u00A0CLUB</span>' +
+        '<span class="pc-club100k-t2">ELITE\u00A0MEMBER' + (((data.club100k.repeatCount | 0) > 1) ? '\u2002\u00B7\u2002\u00D7' + (data.club100k.repeatCount | 0) : '') + '</span></span></div>'
       : '';
     body.innerHTML =
       '<div class="pc-hero"><div class="pc-med-wrap">' +

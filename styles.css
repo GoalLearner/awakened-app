@@ -28591,12 +28591,22 @@ button.guildhall-summary-tile:active {
   border-radius: 20px; background: rgba(245,184,66,0.08); border: 1px solid rgba(245,184,66,0.27); }
 .pc-skintag i { width: 7px; height: 7px; transform: rotate(45deg); background: #f5b842; box-shadow: 0 0 7px #f5b842; }
 .pc-skintag span { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #f5b842; }
-/* W369 — 100K Club prestige badge on the profile card */
-.pc-club100k { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 5px 14px; border-radius: 20px;
-  background: linear-gradient(180deg, rgba(245,184,66,0.22), rgba(245,184,66,0.07)); border: 1px solid rgba(245,184,66,0.55); box-shadow: 0 0 14px rgba(245,184,66,0.28); }
-.pc-club100k-ic { color: #f5b842; font-size: 10px; line-height: 1; text-shadow: 0 0 8px #f5b842; }
-.pc-club100k-txt { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #f5b842; text-shadow: 0 0 8px rgba(245,184,66,0.5); }
-.pc-club100k b { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: #ffe9b0; }
+/* ClaudeDesign "Hunter Profile - 100K Club" (W373) — the 100K STEP CLUB as a coveted gold seal */
+.pc-club100k { position: relative; display: inline-flex; align-items: center; gap: 11px; margin-top: 12px;
+  padding: 9px 18px 9px 13px; border-radius: 999px; overflow: hidden;
+  background: linear-gradient(180deg, #ffe9b0 0%, #f5b842 46%, #c08418 100%);
+  box-shadow: 0 0 22px rgba(245,184,66,0.40), 0 4px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 6px rgba(120,70,0,0.4);
+  border: 1px solid rgba(255,236,180,0.7); }
+.pc-club100k-shine { position: absolute; top: 0; bottom: 0; left: -40%; width: 28%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.85), transparent);
+  transform: skewX(-18deg); animation: pc-club-sweep 3.4s ease-in-out infinite; pointer-events: none; }
+@keyframes pc-club-sweep { 0% { left: -45%; } 55% { left: 125%; } 100% { left: 125%; } }
+.pc-club100k-seal { position: relative; width: 30px; height: 30px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; }
+.pc-club100k-seal-n { position: absolute; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 9.5px; color: #ffe9b0; letter-spacing: -0.3px; text-shadow: 0 0 6px #f5b842; }
+.pc-club100k-txt { position: relative; display: inline-flex; flex-direction: column; line-height: 1.1; }
+.pc-club100k-t1 { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; letter-spacing: 1.2px; color: #241502; }
+.pc-club100k-t2 { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.4px; color: rgba(40,21,2,0.66); margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) { .pc-club100k-shine { animation: none; opacity: 0; } }
 
 /* identity */
 .pc-identity { padding: 6px 22px 0; display: flex; flex-direction: column; align-items: center; }
