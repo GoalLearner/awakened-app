@@ -57,6 +57,17 @@ import {
   handleDuelsResolve,
   handleVerifiedEventsSubmit,
 } from './handlers/duels';
+import {
+  // Co-op Dungeon Bosses v1 (W370) — two friends jointly meet a combined
+  // verified-step goal to defeat one shared boss; both are credited.
+  handleCoopBossCreate,
+  handleCoopBossList,
+  handleCoopBossGet,
+  handleCoopBossJoin,
+  handleCoopBossDecline,
+  handleCoopBossCancel,
+  handleCoopBossResolve,
+} from './handlers/coop-boss';
 import { handlePreflight, withCors } from './lib/cors';
 import { jsonError } from './lib/responses';
 
@@ -71,6 +82,11 @@ const USER_PROFILE_RE = /^\/v1\/users\/([^/]+)\/profile$/;
 // duel-shaped route is POST /v1/duels/:id/resolve (legacy in-flight
 // settlement from pre-w160 clients). All other duel regexes removed.
 const DUELS_RESOLVE_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/resolve$/;
+// Co-op Dungeon Bosses v1 (W370). Action routes (capture #1 = instance id,
+// #2 = action) are matched before the bare detail route so /:id/join etc.
+// never shadow GET /:id.
+const COOP_BOSS_ACTION_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})\/(join|decline|cancel|resolve)$/;
+const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
 
 export default {
   async fetch(
@@ -230,6 +246,30 @@ export default {
             // foreground. Backend dedupes via UNIQUE(user_id,
             // client_event_id).
             response = await handleVerifiedEventsSubmit(request, env, session);
+          }
+          // ── Co-op Dungeon Bosses (W370) ──
+          else if (path === '/v1/coop-boss' && method === 'POST') {
+            // Challenger invites an accepted friend to a shared boss hunt.
+            response = await handleCoopBossCreate(request, env, session);
+          } else if (path === '/v1/coop-boss' && method === 'GET') {
+            // List the caller's co-op hunts (both challenger + partner roles).
+            response = await handleCoopBossList(request, env, session);
+          } else if (COOP_BOSS_ACTION_RE.test(path) && method === 'POST') {
+            const match = path.match(COOP_BOSS_ACTION_RE)!;
+            const instanceId = match[1];
+            const action = match[2];
+            if (action === 'join') {
+              response = await handleCoopBossJoin(request, env, session, instanceId);
+            } else if (action === 'decline') {
+              response = await handleCoopBossDecline(request, env, session, instanceId);
+            } else if (action === 'cancel') {
+              response = await handleCoopBossCancel(request, env, session, instanceId);
+            } else {
+              response = await handleCoopBossResolve(request, env, session, instanceId);
+            }
+          } else if (COOP_BOSS_ID_RE.test(path) && method === 'GET') {
+            const match = path.match(COOP_BOSS_ID_RE)!;
+            response = await handleCoopBossGet(request, env, session, match[1]);
           } else {
             response = jsonError(404, 'NOT_FOUND', `No route for ${method} ${path}.`);
           }

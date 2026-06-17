@@ -763,6 +763,11 @@ export async function handleVerifiedEventsSubmit(
     const source        = typeof e.source          === 'string' ? e.source          : '';
     const occurredAt    = typeof e.occurred_at     === 'string' ? e.occurred_at     : '';
     const duelId        = typeof e.duel_id         === 'string' ? e.duel_id         : null;
+    // Co-op Dungeon Bosses v1 (W370) — a co-op step submission is just a
+    // 'steps_total' event tagged with boss_instance_id instead of duel_id.
+    // Same endpoint, dedupe, and rate limiter; the resolver in coop-boss.ts
+    // aggregates MAX(value) per user over these rows.
+    const bossInstanceId = typeof e.boss_instance_id === 'string' ? e.boss_instance_id : null;
     const metricDate    = typeof e.metric_date     === 'string' ? e.metric_date     : null;
     const windowStart   = typeof e.window_start    === 'string' ? e.window_start    : null;
     const windowEnd     = typeof e.window_end      === 'string' ? e.window_end      : null;
@@ -791,16 +796,17 @@ export async function handleVerifiedEventsSubmit(
     try {
       const result = await env.DB.prepare(
         `INSERT OR IGNORE INTO verified_events (
-           id, user_id, duel_id, event_type, metric, value, source,
+           id, user_id, duel_id, boss_instance_id, event_type, metric, value, source,
            occurred_at, metric_date, window_start, window_end,
            client_event_id, client_created_at, server_created_at,
            metadata_json
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
       )
         .bind(
           crypto.randomUUID(),
           session.userId,
           duelId,
+          bossInstanceId,
           eventType,
           metric,
           value,
