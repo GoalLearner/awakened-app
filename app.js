@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w373'; // W373
+  const APP_BUILD_TAG = '2.2.7-w374'; // W374
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35627,10 +35627,22 @@
         _openProfileCard(alias, row.getAttribute('data-profile-sim') === '1' ? { _sim: true } : null);
       });
     }
-    const pcClose = document.getElementById('pc-close');
-    if (pcClose && pcClose.getAttribute('data-wired') !== '1') { pcClose.setAttribute('data-wired', '1'); pcClose.addEventListener('click', _closeProfileCard); }
+    // W374 — the ✕ is gone; the profile sheet dismisses by swipe-down + backdrop tap.
     const pcOverlay = document.getElementById('pc-overlay');
     if (pcOverlay && pcOverlay.getAttribute('data-wired') !== '1') { pcOverlay.setAttribute('data-wired', '1'); pcOverlay.addEventListener('click', _closeProfileCard); }
+    const pcSheetEl = document.getElementById('pc-sheet');
+    if (pcSheetEl && pcSheetEl.getAttribute('data-drag-wired') !== '1' && typeof attachSheetDismissGesture === 'function') {
+      pcSheetEl.setAttribute('data-drag-wired', '1');
+      // ClaudeDesign "Hunter Profile - 100K Club" (W374) — drag the sheet down to
+      // dismiss. Drag from the grabber/header, or the body when scrolled to top;
+      // past ~28% of height (or a downward flick) closes, else it springs back.
+      attachSheetDismissGesture(pcSheetEl, pcOverlay, _closeProfileCard, {
+        baseTransform:    'translateX(-50%) ',
+        handleSelector:   '.vn-drag-handle, .pc-head',
+        scrollTarget:     '.pc-body',
+        dismissThreshold: 0.28,
+      });
+    }
     // W279 — Wardrobe close / overlay / equip-tile delegation
     const wdClose = document.getElementById('wd-close');
     if (wdClose && wdClose.getAttribute('data-wired') !== '1') { wdClose.setAttribute('data-wired', '1'); wdClose.addEventListener('click', closeWardrobe); }

@@ -28550,6 +28550,9 @@ button.guildhall-summary-tile:active {
 /* ── W278 — Player Profile Card (ClaudeDesign "The Medallion") ──────────── */
 .pc-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 18px 0; flex: 0 0 auto; }
 .pc-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 2.2px; color: #a78bfa; }
+/* W374 — swipe-to-close hint (replaces the X on the profile sheet) */
+.pc-swipe-hint { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; color: rgba(150,162,190,0.5); user-select: none; -webkit-user-select: none; }
+.pc-swipe-hint b { font-size: 12px; line-height: 1; font-weight: 700; color: rgba(150,162,190,0.72); }
 .pc-body { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 auto; }
 
 /* hero block — radial glow stage behind the medallion */
