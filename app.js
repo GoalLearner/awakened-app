@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w378'; // W378
+  const APP_BUILD_TAG = '2.2.7-w379'; // W379
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -25904,7 +25904,7 @@
     try { document.body.dataset.activeTab = tab; } catch (_) {}
     // Exit reorder mode whenever we leave the habits tab
     document.getElementById('habit-list').classList.remove('reorder-mode');
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-btn').forEach(b => { const _on = b.dataset.tab === tab; b.classList.toggle('active', _on); if (_on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); // W379 — expose active tab to assistive tech
     const profilePanel = document.getElementById('profile-panel');
     const habitsPanel  = document.getElementById('main-scroll');
     const statsPanel   = document.getElementById('stats-panel');

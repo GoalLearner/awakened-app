@@ -627,8 +627,8 @@
          NOTE: tab icon PNGs in assets/tab-icons/ may need their backgrounds
          removed via remove.bg (or similar) if dark/white squares appear
          behind them. The CSS can't make non-transparent PNG pixels see-through. -->
-    <nav class="tab-bar">
-      <button id="tab-profile"  class="tab-btn active" data-tab="profile"  aria-label="Status">
+    <nav class="tab-bar" aria-label="Main">
+      <button id="tab-profile"  class="tab-btn active" data-tab="profile"  aria-label="Status" aria-current="page">
         <img class="tab-icon" src="assets/tab-icons/tab-status.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
       </button>
       <button id="tab-habits"   class="tab-btn"        data-tab="habits"   aria-label="Habits">
@@ -1213,7 +1213,7 @@
        ESC key, or any tab switch (handled in switchTab). -->
   <!-- W370 — Co-op Dungeon Boss sheet. Reuses the .bfs-overlay full-screen
        pattern; body content is rendered by renderCoopSheet(). -->
-  <div id="coop-fs-overlay" class="bfs-overlay coop-overlay hidden">
+  <div id="coop-fs-overlay" class="bfs-overlay coop-overlay hidden" role="dialog" aria-labelledby="coop-fs-name">
     <header class="bfs-header">
       <button id="coop-fs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
         <span class="bfs-back-chev" aria-hidden="true">‹</span> Back
@@ -1247,7 +1247,7 @@
     </div>
     <div id="coop-fs-body" class="coop-body"></div>
   </div>
-  <div id="boss-fs-overlay" class="bfs-overlay hidden">
+  <div id="boss-fs-overlay" class="bfs-overlay hidden" role="dialog" aria-labelledby="bfs-name">
     <header class="bfs-header">
       <button id="bfs-back" type="button" class="bfs-back" aria-label="Back to dungeon">
         <span class="bfs-back-chev" aria-hidden="true">‹</span> Back
@@ -2965,7 +2965,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=823"></script>
+  <script src="app.js?v=824"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
