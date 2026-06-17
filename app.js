@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w370'; // W370
+  const APP_BUILD_TAG = '2.2.7-w371'; // W371
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35901,6 +35901,7 @@
       try {
         const _coopHtml = Object.keys(COOP_BOSSES).map(buildCoopBossCardHTML).join('');
         if (_coopHtml) list.insertAdjacentHTML('beforeend', _coopHtml);
+        try { _coopApplyBadge(); _coopRefreshBadge(); } catch (_) {}
       } catch (_) {}
     }
     // v3 Phase 1z.80 — wire boss art via setBossImage post-render so the
@@ -36692,6 +36693,7 @@
 
   function _coopAfterInstanceUpdate() {
     const inst = _coopSheet.instance;
+    if (inst && (inst.status === 'pending' || inst.status === 'active')) _coopSetEngaged(true);
     if (inst && inst.status === 'active') {
       if ((inst.combined_steps || 0) >= (inst.goal_steps || Infinity)) { _coopResolve(inst.id); return; }
       if (inst.time_remaining_ms === 0) { _coopResolve(inst.id); return; }
@@ -36724,14 +36726,18 @@
   async function _coopQueryWindowSteps(inst) {
     try {
       if (typeof Health !== 'undefined' && Health && typeof Health.getStepsBetween === 'function' && inst.starts_at) {
-        const n = await Health.getStepsBetween(inst.starts_at, new Date().toISOString());
+        // W371 — clamp the upper bound to the hunt end so post-window steps
+        // never inflate the value (the backend also rejects out-of-window
+        // submits; this keeps the client honest at the boundary).
+        let endIso = new Date().toISOString();
+        if (inst.ends_at && Date.parse(inst.ends_at) < Date.now()) endIso = inst.ends_at;
+        const n = await Health.getStepsBetween(inst.starts_at, endIso);
         if (typeof n === 'number' && n >= 0) return Math.round(n);
       }
     } catch (_) {}
-    try {
-      const t = (typeof state !== 'undefined' && state && state.steps_daily) ? state.steps_daily[getDeviceLocalDate()] : 0;
-      if (typeof t === 'number' && t >= 0) return Math.round(t);
-    } catch (_) {}
+    // W371 — no real windowed HealthKit data (preview / permission error):
+    // contribute 0 rather than today's whole-day total, which would count
+    // pre-hunt steps and inflate the shared goal.
     return 0;
   }
 
@@ -36981,6 +36987,88 @@
       if (e.key !== 'Escape') return;
       if (!overlay.classList.contains('hidden')) closeCoopSheet();
     });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Co-op background sync (W371) — the fix that makes co-op actually
+  // work between two people who just WALK, without camping the sheet.
+  // Runs from the same always-on app-resume + 60s hooks the solo bosses
+  // use: for each ACTIVE instance the caller is in, push the caller's
+  // in-window steps, resolve, and grant the reward for any won instance;
+  // collect rewards for already-won instances; and self-disable when no
+  // live hunt remains. Skipped while the sheet is open (its own poll
+  // covers it). Gated on an 'engaged' flag so users who never touch
+  // co-op pay no network cost.
+  // ════════════════════════════════════════════════════════════
+  function _coopEngaged() { try { return localStorage.getItem('hb_coop_engaged') === '1'; } catch (_) { return false; } }
+  function _coopSetEngaged(on) { try { if (on) localStorage.setItem('hb_coop_engaged', '1'); else localStorage.removeItem('hb_coop_engaged'); } catch (_) {} }
+  let _coopBgInFlight = false;
+  let _coopBgLast = 0;
+  async function _coopBackgroundSync() {
+    if (!_coopEngaged()) return;
+    if (!window.Auth || typeof Auth.coopBossList !== 'function') return;
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (overlay && !overlay.classList.contains('hidden')) return;
+    if (_coopBgInFlight) return;
+    const now = Date.now();
+    if (now - _coopBgLast < 30000) return;
+    _coopBgInFlight = true; _coopBgLast = now;
+    try {
+      let res;
+      try { res = await Auth.coopBossList(); } catch (_) { res = null; }
+      if (!res || !res.ok) return;
+      const list = Array.isArray(res.instances) ? res.instances : [];
+      let liveRemains = false;
+      for (const inst of list) {
+        if (!inst) continue;
+        if (inst.status === 'active') {
+          liveRemains = true;
+          try { await _coopSubmitMySteps(inst); } catch (_) {}
+          let r;
+          try { r = await Auth.coopBossResolve(inst.id); } catch (_) { r = null; }
+          const fresh = (r && r.ok && r.instance) ? r.instance : inst;
+          if (fresh.status === 'completed' && fresh.result === 'success') { try { _awardCoopKill(fresh); } catch (_) {} }
+        } else if (inst.status === 'pending') {
+          liveRemains = true;
+        } else if (inst.status === 'completed' && inst.result === 'success') {
+          try { _awardCoopKill(inst); } catch (_) {}
+        }
+      }
+      if (!liveRemains) _coopSetEngaged(false);
+    } finally {
+      _coopBgInFlight = false;
+    }
+  }
+  try { window._coopBackgroundSync = _coopBackgroundSync; } catch (_) {}
+
+  // Live-state badge on the co-op dungeon card so an invited friend
+  // DISCOVERS a pending hunt without a push (there is no push infra).
+  // Cached so re-renders keep the badge; the network refresh is throttled.
+  let _coopLastBadge = null;
+  let _coopBadgeLast = 0;
+  function _coopApplyBadge() {
+    const card = document.querySelector('#bosses-list .bcard--coop[data-coop-boss]');
+    if (!card) return;
+    const badge = card.querySelector('.bcard-coop-badge');
+    card.classList.remove('bcard--coop-invite', 'bcard--coop-active');
+    if (_coopLastBadge === 'invite') { card.classList.add('bcard--coop-invite'); if (badge) badge.textContent = 'INVITE'; }
+    else if (_coopLastBadge === 'active') { card.classList.add('bcard--coop-active'); if (badge) badge.textContent = 'HUNTING'; }
+    else if (badge) { badge.textContent = 'CO-OP'; }
+  }
+  async function _coopRefreshBadge() {
+    if (!window.Auth || typeof Auth.coopBossList !== 'function') return;
+    const now = Date.now();
+    if (now - _coopBadgeLast < 20000) return;
+    _coopBadgeLast = now;
+    let res;
+    try { res = await Auth.coopBossList(); } catch (_) { return; }
+    if (!res || !res.ok) return;
+    const list = Array.isArray(res.instances) ? res.instances : [];
+    const invite = list.find(function (x) { return x && x.status === 'pending' && x.role === 'partner'; });
+    const active = list.find(function (x) { return x && x.status === 'active'; });
+    if (invite || active) _coopSetEngaged(true);
+    _coopLastBadge = invite ? 'invite' : (active ? 'active' : null);
+    _coopApplyBadge();
   }
 
   let questsGateExpanded = false;
@@ -47764,13 +47852,16 @@
       // event outbox drain remains so any pre-retirement queued events
       // on legacy installs get flushed once.
       try { _drainVerifiedEventOutbox(); } catch (_) {}
+      // W371 — co-op background sync: push this hunter's in-window steps,
+      // resolve, and collect rewards even when the sheet was never opened.
+      try { _coopBackgroundSync(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
       // shown today, modal-stack conflict).
       try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} }, 60_000);
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
@@ -47795,6 +47886,8 @@
       // outbox drain remains so any legacy queued events get flushed
       // once and then the queue stays empty forever.
       try { _drainVerifiedEventOutbox(); } catch (_) {}
+      // W371 — co-op reconcile on cold launch (collect any won reward / push steps).
+      try { _coopBackgroundSync(); } catch (_) {}
       // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
       // fresh installs with a cloud backup; otherwise schedules a
       // baseline upload). Visibility-hidden flush keeps cloud

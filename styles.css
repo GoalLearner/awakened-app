@@ -29589,3 +29589,12 @@ button.guildhall-summary-tile:active {
 .coop-friend-name { color: #fff; font-size: 0.95rem; }
 .coop-friend-go { color: rgba(255,255,255,0.4); font-size: 1.3rem; }
 
+/* W371 — co-op card live-state badges (invite discovery) */
+.bcard--coop-invite .bcard-coop-badge {
+  color: #1a1410; background: linear-gradient(180deg, #f7c860, #e6a832);
+  border-color: rgba(245, 184, 66, 0.85); box-shadow: 0 0 12px rgba(245, 184, 66, 0.55);
+  animation: coopBadgePulse 1.5s ease-in-out infinite;
+}
+.bcard--coop-active .bcard-coop-badge { color: #7fe3c0; border-color: rgba(127, 227, 192, 0.7); }
+@keyframes coopBadgePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
