@@ -1518,4 +1518,59 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     const json = await res.json() as { events: Array<{ rankLabel: unknown }> };
     expect(json.events[0]?.rankLabel).toBeNull();
   });
+
+  // W389 — floor-contradicting 'earned the title' orphan suppression.
+  it('suppresses an arena_title_earned event whose required floor exceeds floor_best (galilea/Contender desync)', async () => {
+    const db = makeDb({ feedRows: [{
+      id: 'evt-title', user_id: 'galilea-uid', event_type: 'arena_title_earned',
+      event_key: 'rt_contender', event_label: 'earned the title "Contender"',
+      event_value: null, rarity: null, server_created_at: NOW_UTC,
+      alias: 'galilea', rank_label: 'C', floor_best: 2,   // Contender needs floor 5
+    }] });
+    const req = new Request('https://example.com/v1/friends/activity');
+    const res = await handleFriendsActivityGet(req, makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const json = await res.json() as { events: unknown[] };
+    expect(json.events).toEqual([]);
+  });
+
+  it('keeps an arena_title_earned event when floor_best supports the title', async () => {
+    const db = makeDb({ feedRows: [{
+      id: 'evt-title2', user_id: 'real-uid', event_type: 'arena_title_earned',
+      event_key: 'rt_contender', event_label: 'earned the title "Contender"',
+      event_value: null, rarity: null, server_created_at: NOW_UTC,
+      alias: 'realclimber', rank_label: 'C', floor_best: 5,
+    }] });
+    const req = new Request('https://example.com/v1/friends/activity');
+    const res = await handleFriendsActivityGet(req, makeEnv(db), session);
+    const json = await res.json() as { events: Array<{ eventKey: string }> };
+    expect(json.events.length).toBe(1);
+    expect(json.events[0]?.eventKey).toBe('rt_contender');
+  });
+
+  it('fails open for a legacy/unknown title id even at floor_best 0', async () => {
+    const db = makeDb({ feedRows: [{
+      id: 'evt-legacy', user_id: 'old-uid', event_type: 'arena_title_earned',
+      event_key: 'asc_tyrantsbane', event_label: 'earned the title "Tyrantsbane"',
+      event_value: null, rarity: null, server_created_at: NOW_UTC,
+      alias: 'veteran', rank_label: null, floor_best: 0,
+    }] });
+    const req = new Request('https://example.com/v1/friends/activity');
+    const res = await handleFriendsActivityGet(req, makeEnv(db), session);
+    const json = await res.json() as { events: unknown[] };
+    expect(json.events.length).toBe(1);
+  });
+
+  it('never suppresses non-title events regardless of floor_best', async () => {
+    const db = makeDb({ feedRows: [{
+      id: 'evt-boss', user_id: 'x-uid', event_type: 'boss_kill',
+      event_key: 'glass_strider', event_label: 'defeated The Glass Strider',
+      event_value: 4, rarity: 'D', server_created_at: NOW_UTC,
+      alias: 'someone', rank_label: 'D II', floor_best: 0,
+    }] });
+    const req = new Request('https://example.com/v1/friends/activity');
+    const res = await handleFriendsActivityGet(req, makeEnv(db), session);
+    const json = await res.json() as { events: unknown[] };
+    expect(json.events.length).toBe(1);
+  });
 });

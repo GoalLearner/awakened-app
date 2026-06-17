@@ -170,6 +170,19 @@ const ARENA_TITLE_LABELS: Record<string, string> = {
   asc_rank_apex:      'Apex',
 };
 
+// W389 — required Ascent floor for each CURRENT (rt_*) arena title. These unlock
+// STRICTLY by floor (app.js _arenaTitleUnlocked: highestCleared >= t.floor;
+// "W280 — unlock by Ascent floor, rating wiped"), so an 'earned the title' feed
+// event is only truthful if the hunter's floor_best supports it. Mirrors the
+// floors in app.js ARENA_TITLES. Legacy asc_* ids are intentionally ABSENT —
+// their original unlock was rating-based, so they fail open (never suppressed).
+const ARENA_TITLE_FLOORS: Record<string, number> = {
+  rt_contender: 5,  rt_brawler: 10,  rt_duelist: 15,  rt_blade: 20,
+  rt_reaver: 30,    rt_elite: 40,    rt_warbringer: 50, rt_sovereign: 60,
+  rt_apex: 70,      rt_monarch: 80,  rt_grandmaster: 90,
+  summit_second_awakened: 100,
+};
+
 // v3 Phase 1z.226A — verified streak milestone bands. Allowlist
 // is { 7, 14, 30, 100, 365 } only. Every other length rejected.
 // Label/key/value are cross-validated so a client cannot post
@@ -835,6 +848,9 @@ interface FeedRow {
   server_created_at: number;
   alias: string;
   rank_label: string | null;
+  // W389 — the hunter's sticky-MAX Ascent floor (floor_best best_value), used to
+  // suppress floor-contradicting 'earned the title' orphans. Null = no floor row.
+  floor_best: number | null;
 }
 
 export async function handleFriendsActivityGet(
@@ -878,7 +894,9 @@ export async function handleFriendsActivityGet(
             e.rarity            AS rarity,
             e.server_created_at AS server_created_at,
             u.alias             AS alias,
-            p.rank_label        AS rank_label
+            p.rank_label        AS rank_label,
+            (SELECT best_value FROM leaderboard_snapshots
+              WHERE user_id = e.user_id AND metric = 'floor_best' LIMIT 1) AS floor_best
        FROM public_achievement_events e
        JOIN users u ON u.id = e.user_id
        LEFT JOIN public_profile_summary p ON p.user_id = e.user_id
@@ -903,7 +921,20 @@ export async function handleFriendsActivityGet(
     )
     .all<FeedRow>();
 
-  const events = (results.results ?? []).map(r => ({
+  const events = (results.results ?? [])
+    // W389 — drop floor-contradicting 'earned the title' orphans: a write-once
+    // arena_title_earned event whose required Ascent floor exceeds the hunter's
+    // current floor_best (e.g. a reinstall / multi-device desync — the exact
+    // case where a floor-2 hunter's feed claimed "earned the title Contender",
+    // floor 5). Keeps the guild feed consistent with the profile's BEST FLOOR.
+    // Only the current rt_* ladder is gated; unknown/legacy ids fail open.
+    .filter((r) => {
+      if (r.event_type !== 'arena_title_earned') return true;
+      const need = ARENA_TITLE_FLOORS[r.event_key];
+      if (need === undefined) return true;
+      return Number(r.floor_best ?? 0) >= need;
+    })
+    .map(r => ({
     id:          r.id,
     // user_id is INTENTIONALLY omitted from the response. The
     // viewer already knows their friends; surfacing user_id adds
